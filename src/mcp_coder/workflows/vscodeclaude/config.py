@@ -3,9 +3,12 @@
 import json
 import logging
 import re
+from importlib import resources
 from pathlib import Path
+from typing import Any, cast
 
 from ...utils.github_operations import get_authenticated_username
+from ...utils.github_operations.label_config import load_labels_config
 from ...utils.user_config import get_config_file_path, get_config_values
 from .types import (
     DEFAULT_MAX_SESSIONS,
@@ -14,6 +17,36 @@ from .types import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _load_labels_config() -> dict[str, Any]:
+    """Load labels configuration from bundled package config.
+
+    Returns:
+        Labels config dict with workflow_labels and ignore_labels
+    """
+    config_resource = resources.files("mcp_coder.config") / "labels.json"
+    config_path = Path(str(config_resource))
+    result: dict[str, Any] = load_labels_config(config_path)
+    return result
+
+
+def get_vscodeclaude_config(status: str) -> dict[str, Any] | None:
+    """Get vscodeclaude config for a status label.
+
+    Shared helper used by workspace.py, helpers.py, and issues.py.
+
+    Args:
+        status: Status label like "status-07:code-review"
+
+    Returns:
+        vscodeclaude config dict or None if not found
+    """
+    labels_config = _load_labels_config()
+    for label in labels_config["workflow_labels"]:
+        if label["name"] == status and "vscodeclaude" in label:
+            return cast(dict[str, Any], label["vscodeclaude"])
+    return None
 
 
 def load_vscodeclaude_config() -> VSCodeClaudeConfig:

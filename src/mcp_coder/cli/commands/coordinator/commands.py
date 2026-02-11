@@ -558,130 +558,36 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
     Returns:
         Exit code (0 success)
     """
-    from pathlib import Path
-
-    from tabulate import tabulate
-
-    from ....workflows.vscodeclaude import (
-        check_vscode_running,
-        clear_vscode_window_cache,
-        is_vscode_window_open_for_folder,
-    )
-    from ....workflows.vscodeclaude.helpers import get_issue_status
     from ....workflows.vscodeclaude.issues import (
-        get_ignore_labels,
-        get_matching_ignore_label,
+        build_eligible_issues_with_branch_check,
     )
-    from ....workflows.vscodeclaude.sessions import update_session_status
-    from ....workflows.vscodeclaude.status import (
-        get_next_action,
-        is_session_stale,
-    )
+    from ....workflows.vscodeclaude.status import display_status_table
 
     # Get repo list for cache building
     config_data = load_config()
     repos_section = config_data.get("coordinator", {}).get("repos", {})
     repo_names = list(repos_section.keys())
 
-    # Build cached issues and track failures
-    cached_issues_by_repo, failed_repos = _build_cached_issues_by_repo(repo_names)
-
-    # Load ignore labels once
-    ignore_labels = get_ignore_labels()
-
-    # Refresh window cache once for all sessions
-    clear_vscode_window_cache()
+    # Build cached issues for staleness checks
+    cached_issues_by_repo, _ = _build_cached_issues_by_repo(repo_names)
 
     # Load sessions
     store = load_sessions()
     sessions = store["sessions"]
 
-    # Apply repo filter if specified
-    if args.repo:
-        sessions = [s for s in sessions if args.repo in s["repo"]]
+    # Build eligible issues list and issues_without_branch set
+    eligible_issues, issues_without_branch = build_eligible_issues_with_branch_check(
+        repo_names
+    )
 
-    if not sessions:
-        print("No active sessions")
-        return 0
-
-    # Build table data
-    table_data = []
-    for session in sessions:
-        issue_num = f"#{session['issue_number']}"
-        repo_full_name = session["repo"]
-        repo_short = repo_full_name.split("/")[-1]
-        issue_number = session["issue_number"]
-
-        # Check if API failed for this repo
-        api_failed = repo_full_name in failed_repos
-
-        # Get current status from cache (or use stored if API failed)
-        current_status = session["status"]
-        blocked_label: str | None = None
-
-        if not api_failed:
-            repo_issues = cached_issues_by_repo.get(repo_full_name, {})
-            if issue_number in repo_issues:
-                issue = repo_issues[issue_number]
-                # Get current status from GitHub
-                current_status = get_issue_status(issue)
-                # Check for blocked label
-                blocked_label = get_matching_ignore_label(
-                    issue["labels"], ignore_labels
-                )
-
-                # Update session if status changed
-                if current_status != session["status"]:
-                    update_session_status(session["folder"], current_status)
-                    logger.debug(
-                        "Updated session status for #%d: %s -> %s",
-                        issue_number,
-                        session["status"],
-                        current_status,
-                    )
-
-        # Format status for display (remove "status-" prefix)
-        status_display = current_status.replace("status-", "") if current_status else ""
-        if api_failed:
-            status_display += " (?)"
-
-        # Check if VSCode is running
-        is_running = is_vscode_window_open_for_folder(
-            session["folder"],
-            issue_number=issue_number,
-            repo=repo_full_name,
-        ) or check_vscode_running(session.get("vscode_pid"))
-        vscode_status = "Running" if is_running else "Closed"
-
-        # Check for uncommitted changes
-        folder_path = Path(session["folder"])
-        changes = get_folder_git_status(folder_path)
-        # Derive is_dirty from status: only "Clean" is not dirty
-        is_dirty = changes != "Clean"
-
-        # Check if session is stale
-        repo_cached_issues = cached_issues_by_repo.get(repo_full_name)
-        stale = is_session_stale(session, cached_issues=repo_cached_issues)
-
-        # Determine next action with blocked support
-        next_action = get_next_action(
-            is_stale=stale,
-            is_dirty=is_dirty,
-            is_vscode_running=is_running,
-            blocked_label=blocked_label,
-        )
-
-        # Add intervention marker
-        if session.get("is_intervention"):
-            issue_num = f"{issue_num} [I]"
-
-        table_data.append(
-            [issue_num, repo_short, status_display, vscode_status, changes, next_action]
-        )
-
-    # Print table
-    headers = ["Issue", "Repo", "Status", "VSCode", "Changes", "Next Action"]
-    print(tabulate(table_data, headers=headers, tablefmt="simple"))
+    # Use display_status_table from status.py
+    display_status_table(
+        sessions=sessions,
+        eligible_issues=eligible_issues,
+        repo_filter=args.repo,
+        cached_issues_by_repo=cached_issues_by_repo,
+        issues_without_branch=issues_without_branch,
+    )
 
     return 0
 

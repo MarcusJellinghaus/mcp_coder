@@ -82,7 +82,6 @@ class TestValidateIssues:
             "status-01:created",
             "status-03:planning",
         }
-        assert len(result["ok"]) == 0
         assert len(result["warnings"]) == 0
 
     def test_detects_stale_bot_process_as_warning(
@@ -130,12 +129,11 @@ class TestValidateIssues:
         assert result["warnings"][0]["threshold"] == 120
         assert 149 <= result["warnings"][0]["elapsed"] <= 151
         assert len(result["errors"]) == 0
-        assert len(result["ok"]) == 0
 
-    def test_marks_valid_issues_as_ok(
+    def test_validates_issues_without_errors_or_warnings(
         self, sample_labels_config: dict[str, Any]
     ) -> None:
-        """Test that valid issues are marked as OK."""
+        """Test that valid issues pass validation without errors or warnings."""
         issues: list[IssueData] = [
             {
                 "number": 1,
@@ -184,7 +182,6 @@ class TestValidateIssues:
             issues, sample_labels_config, mock_issue_manager, dry_run=False
         )
 
-        assert result["ok"] == [1, 2]
         assert len(result["errors"]) == 0
         assert len(result["warnings"]) == 0
 
@@ -270,8 +267,7 @@ class TestValidateIssues:
             issues, sample_labels_config, mock_issue_manager, dry_run=False
         )
 
-        # Should be marked as OK (staleness check skipped)
-        assert result["ok"] == [50]
+        # Should pass validation (staleness check skipped when timeout not configured)
         assert len(result["errors"]) == 0
         assert len(result["warnings"]) == 0
         # API should not be called when timeout is not configured

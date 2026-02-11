@@ -1,6 +1,6 @@
 """Test issue selection and filtering for VSCode Claude."""
 
-from typing import cast
+from typing import Any, cast
 from unittest.mock import Mock
 
 import pytest
@@ -8,6 +8,7 @@ import pytest
 from mcp_coder.utils.github_operations.issues import IssueData
 from mcp_coder.workflows.vscodeclaude.issues import (
     _filter_eligible_vscodeclaude_issues,
+    build_eligible_issues_with_branch_check,
     get_cached_eligible_vscodeclaude_issues,
     get_eligible_vscodeclaude_issues,
     get_human_action_labels,
@@ -15,6 +16,7 @@ from mcp_coder.workflows.vscodeclaude.issues import (
     get_linked_branch_for_issue,
     get_matching_ignore_label,
     is_status_eligible_for_session,
+    status_requires_linked_branch,
 )
 
 
@@ -686,3 +688,498 @@ class TestIsStatusEligibleForSession:
         """Check if status should have a VSCodeClaude session."""
         result = is_status_eligible_for_session(status)
         assert result == expected, f"Expected {expected} for status '{status}'"
+
+
+class TestStatusRequiresLinkedBranch:
+    """Tests for status_requires_linked_branch()."""
+
+    def test_status_01_does_not_require_branch(self) -> None:
+        """status-01:created allows fallback to main."""
+        assert status_requires_linked_branch("status-01:created") is False
+
+    def test_status_04_requires_branch(self) -> None:
+        """status-04:plan-review requires linked branch."""
+        assert status_requires_linked_branch("status-04:plan-review") is True
+
+    def test_status_07_requires_branch(self) -> None:
+        """status-07:code-review requires linked branch."""
+        assert status_requires_linked_branch("status-07:code-review") is True
+
+    def test_bot_statuses_do_not_require_branch(self) -> None:
+        """Bot statuses don't require linked branch."""
+        assert status_requires_linked_branch("status-02:bot-pickup") is False
+        assert status_requires_linked_branch("status-05:bot-pickup") is False
+        assert status_requires_linked_branch("status-08:bot-pickup") is False
+
+    def test_pr_created_does_not_require_branch(self) -> None:
+        """status-10:pr-created doesn't require linked branch."""
+        assert status_requires_linked_branch("status-10:pr-created") is False
+
+    def test_empty_string_returns_false(self) -> None:
+        """Empty string returns False."""
+        assert status_requires_linked_branch("") is False
+
+    def test_invalid_status_returns_false(self) -> None:
+        """Invalid status string returns False."""
+        assert status_requires_linked_branch("invalid") is False
+        assert status_requires_linked_branch("status-99:unknown") is False
+
+
+class TestBuildEligibleIssuesWithBranchCheck:
+    """Tests for build_eligible_issues_with_branch_check()."""
+
+    def test_returns_empty_for_no_repos(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Empty repo list returns empty results."""
+        # Mock load_config to return empty repos
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.load_config",
+            lambda: {"coordinator": {"repos": {}}},
+        )
+
+        eligible_issues, issues_without_branch = (
+            build_eligible_issues_with_branch_check([])
+        )
+
+        assert eligible_issues == []
+        assert issues_without_branch == set()
+
+    def test_returns_eligible_issues(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Returns eligible issues from all repos."""
+        # Mock config
+        mock_config = {
+            "coordinator": {
+                "repos": {
+                    "test-repo": {"repo_url": "https://github.com/owner/repo.git"},
+                },
+                "vscodeclaude": {"github_username": "testuser"},
+            }
+        }
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.load_config",
+            lambda: mock_config,
+        )
+
+        # Mock vscodeclaude config
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
+            lambda: {"github_username": "testuser"},
+        )
+
+        # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
+        mock_issue_manager = Mock()
+        mock_branch_manager = Mock()
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
+        )
+
+        # Mock eligible issues
+        mock_issue = {
+            "number": 1,
+            "title": "Test",
+            "body": "",
+            "state": "open",
+            "labels": ["status-01:created"],
+            "assignees": ["testuser"],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "https://github.com/owner/repo/issues/1",
+            "locked": False,
+        }
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_cached_eligible_vscodeclaude_issues",
+            lambda **kwargs: [mock_issue],
+        )
+
+        # Mock get_issue_status
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_issue_status",
+            lambda issue: "status-01:created",
+        )
+
+        eligible_issues, issues_without_branch = (
+            build_eligible_issues_with_branch_check(["test-repo"])
+        )
+
+        assert len(eligible_issues) == 1
+        assert eligible_issues[0][0] == "owner/repo"
+        assert eligible_issues[0][1]["number"] == 1
+        assert issues_without_branch == set()
+
+    def test_identifies_status_04_without_branch(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Issues at status-04 without linked branch added to set."""
+        # Mock config
+        mock_config = {
+            "coordinator": {
+                "repos": {
+                    "test-repo": {"repo_url": "https://github.com/owner/repo.git"},
+                },
+                "vscodeclaude": {"github_username": "testuser"},
+            }
+        }
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.load_config",
+            lambda: mock_config,
+        )
+
+        # Mock vscodeclaude config
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
+            lambda: {"github_username": "testuser"},
+        )
+
+        # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
+        mock_issue_manager = Mock()
+        mock_branch_manager = Mock()
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
+        )
+
+        # Mock issue at status-04
+        mock_issue = {
+            "number": 1,
+            "title": "Test",
+            "body": "",
+            "state": "open",
+            "labels": ["status-04:plan-review"],
+            "assignees": ["testuser"],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "https://github.com/owner/repo/issues/1",
+            "locked": False,
+        }
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_cached_eligible_vscodeclaude_issues",
+            lambda **kwargs: [mock_issue],
+        )
+
+        # Mock get_issue_status
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_issue_status",
+            lambda issue: "status-04:plan-review",
+        )
+
+        # Mock get_linked_branch_for_issue to return None (no branch)
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_linked_branch_for_issue",
+            lambda branch_manager, issue_number: None,
+        )
+
+        eligible_issues, issues_without_branch = (
+            build_eligible_issues_with_branch_check(["test-repo"])
+        )
+
+        assert len(eligible_issues) == 1
+        assert ("owner/repo", 1) in issues_without_branch
+
+    def test_identifies_status_07_without_branch(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Issues at status-07 without linked branch added to set."""
+        # Mock config
+        mock_config = {
+            "coordinator": {
+                "repos": {
+                    "test-repo": {"repo_url": "https://github.com/owner/repo.git"},
+                },
+                "vscodeclaude": {"github_username": "testuser"},
+            }
+        }
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.load_config",
+            lambda: mock_config,
+        )
+
+        # Mock vscodeclaude config
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
+            lambda: {"github_username": "testuser"},
+        )
+
+        # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
+        mock_issue_manager = Mock()
+        mock_branch_manager = Mock()
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
+        )
+
+        # Mock issue at status-07
+        mock_issue = {
+            "number": 2,
+            "title": "Test",
+            "body": "",
+            "state": "open",
+            "labels": ["status-07:code-review"],
+            "assignees": ["testuser"],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "https://github.com/owner/repo/issues/2",
+            "locked": False,
+        }
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_cached_eligible_vscodeclaude_issues",
+            lambda **kwargs: [mock_issue],
+        )
+
+        # Mock get_issue_status
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_issue_status",
+            lambda issue: "status-07:code-review",
+        )
+
+        # Mock get_linked_branch_for_issue to return None (no branch)
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_linked_branch_for_issue",
+            lambda branch_manager, issue_number: None,
+        )
+
+        eligible_issues, issues_without_branch = (
+            build_eligible_issues_with_branch_check(["test-repo"])
+        )
+
+        assert len(eligible_issues) == 1
+        assert ("owner/repo", 2) in issues_without_branch
+
+    def test_handles_multiple_branches(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Issues with multiple linked branches added to set."""
+        # Mock config
+        mock_config = {
+            "coordinator": {
+                "repos": {
+                    "test-repo": {"repo_url": "https://github.com/owner/repo.git"},
+                },
+                "vscodeclaude": {"github_username": "testuser"},
+            }
+        }
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.load_config",
+            lambda: mock_config,
+        )
+
+        # Mock vscodeclaude config
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
+            lambda: {"github_username": "testuser"},
+        )
+
+        # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
+        mock_issue_manager = Mock()
+        mock_branch_manager = Mock()
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
+        )
+
+        # Mock issue at status-04
+        mock_issue = {
+            "number": 3,
+            "title": "Test",
+            "body": "",
+            "state": "open",
+            "labels": ["status-04:plan-review"],
+            "assignees": ["testuser"],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "https://github.com/owner/repo/issues/3",
+            "locked": False,
+        }
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_cached_eligible_vscodeclaude_issues",
+            lambda **kwargs: [mock_issue],
+        )
+
+        # Mock get_issue_status
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_issue_status",
+            lambda issue: "status-04:plan-review",
+        )
+
+        # Mock get_linked_branch_for_issue to raise ValueError (multiple branches)
+        def mock_get_linked_branch(branch_manager: Mock, issue_number: int) -> None:
+            raise ValueError("Multiple branches")
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_linked_branch_for_issue",
+            mock_get_linked_branch,
+        )
+
+        eligible_issues, issues_without_branch = (
+            build_eligible_issues_with_branch_check(["test-repo"])
+        )
+
+        assert len(eligible_issues) == 1
+        assert ("owner/repo", 3) in issues_without_branch
+
+    def test_status_01_without_branch_not_in_set(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """status-01 issues without branch NOT added to set."""
+        # Mock config
+        mock_config = {
+            "coordinator": {
+                "repos": {
+                    "test-repo": {"repo_url": "https://github.com/owner/repo.git"},
+                },
+                "vscodeclaude": {"github_username": "testuser"},
+            }
+        }
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.load_config",
+            lambda: mock_config,
+        )
+
+        # Mock vscodeclaude config
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
+            lambda: {"github_username": "testuser"},
+        )
+
+        # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
+        mock_issue_manager = Mock()
+        mock_branch_manager = Mock()
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
+        )
+
+        # Mock issue at status-01
+        mock_issue = {
+            "number": 4,
+            "title": "Test",
+            "body": "",
+            "state": "open",
+            "labels": ["status-01:created"],
+            "assignees": ["testuser"],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "https://github.com/owner/repo/issues/4",
+            "locked": False,
+        }
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_cached_eligible_vscodeclaude_issues",
+            lambda **kwargs: [mock_issue],
+        )
+
+        # Mock get_issue_status
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_issue_status",
+            lambda issue: "status-01:created",
+        )
+
+        # Mock get_linked_branch_for_issue to return None (no branch)
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_linked_branch_for_issue",
+            lambda branch_manager, issue_number: None,
+        )
+
+        eligible_issues, issues_without_branch = (
+            build_eligible_issues_with_branch_check(["test-repo"])
+        )
+
+        assert len(eligible_issues) == 1
+        assert ("owner/repo", 4) not in issues_without_branch
+        assert issues_without_branch == set()
+
+    def test_continues_on_repo_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Continues processing if one repo fails."""
+        # Mock config with two repos
+        mock_config = {
+            "coordinator": {
+                "repos": {
+                    "bad-repo": {"repo_url": "https://github.com/owner/bad.git"},
+                    "good-repo": {"repo_url": "https://github.com/owner/good.git"},
+                },
+                "vscodeclaude": {"github_username": "testuser"},
+            }
+        }
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.load_config",
+            lambda: mock_config,
+        )
+
+        # Mock vscodeclaude config
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
+            lambda: {"github_username": "testuser"},
+        )
+
+        # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
+        mock_issue_manager = Mock()
+        mock_branch_manager = Mock()
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
+        )
+
+        # Mock get_cached_eligible_vscodeclaude_issues to fail for bad-repo
+        def mock_get_cached(repo_full_name: str, **kwargs: Any) -> list[dict[str, Any]]:
+            if "bad" in repo_full_name:
+                raise Exception("API error")
+            return [
+                {
+                    "number": 5,
+                    "title": "Good issue",
+                    "body": "",
+                    "state": "open",
+                    "labels": ["status-01:created"],
+                    "assignees": ["testuser"],
+                    "user": None,
+                    "created_at": None,
+                    "updated_at": None,
+                    "url": "https://github.com/owner/good/issues/5",
+                    "locked": False,
+                }
+            ]
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_cached_eligible_vscodeclaude_issues",
+            mock_get_cached,
+        )
+
+        # Mock get_issue_status
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_issue_status",
+            lambda issue: "status-01:created",
+        )
+
+        eligible_issues, issues_without_branch = (
+            build_eligible_issues_with_branch_check(["bad-repo", "good-repo"])
+        )
+
+        # Should have issue from good-repo only
+        assert len(eligible_issues) == 1
+        assert eligible_issues[0][0] == "owner/good"
+        assert eligible_issues[0][1]["number"] == 5

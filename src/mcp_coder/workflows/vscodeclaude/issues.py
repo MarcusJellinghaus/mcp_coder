@@ -4,8 +4,9 @@ import logging
 import re
 from importlib import resources
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
+from ...utils.github_operations.github_utils import RepoIdentifier
 from ...utils.github_operations.issues import (
     IssueBranchManager,
     IssueData,
@@ -13,6 +14,9 @@ from ...utils.github_operations.issues import (
     get_all_cached_issues,
 )
 from ...utils.github_operations.label_config import load_labels_config
+from ...utils.user_config import get_cache_refresh_minutes, load_config
+from .config import get_vscodeclaude_config, load_vscodeclaude_config
+from .helpers import get_issue_status
 
 logger = logging.getLogger(__name__)
 
@@ -87,24 +91,6 @@ def _get_status_priority(label: str) -> int:
     return int(match.group(1)) if match else 0
 
 
-def get_vscodeclaude_config(status: str) -> dict[str, Any] | None:
-    """Get vscodeclaude config for a status label.
-
-    Shared helper used by workspace.py and helpers.py.
-
-    Args:
-        status: Status label like "status-07:code-review"
-
-    Returns:
-        vscodeclaude config dict or None if not found
-    """
-    labels_config = _load_labels_config()
-    for label in labels_config["workflow_labels"]:
-        if label["name"] == status and "vscodeclaude" in label:
-            return cast(dict[str, Any], label["vscodeclaude"])
-    return None
-
-
 def is_status_eligible_for_session(status: str) -> bool:
     """Check if status should have a VSCodeClaude session.
 
@@ -130,6 +116,19 @@ def is_status_eligible_for_session(status: str) -> bool:
         return False
     initial_command = config.get("initial_command")
     return initial_command is not None
+
+
+def status_requires_linked_branch(status: str) -> bool:
+    """Check if status requires a linked branch to start/restart session.
+
+    Args:
+        status: Status label like "status-04:plan-review"
+
+    Returns:
+        True if status requires linked branch (status-04, status-07)
+        False for status-01 and all other statuses
+    """
+    return status in ("status-04:plan-review", "status-07:code-review")
 
 
 def _is_issue_eligible(
@@ -318,3 +317,95 @@ def get_linked_branch_for_issue(
         )
 
     return branches[0]
+
+
+def build_eligible_issues_with_branch_check(
+    repo_names: list[str],
+) -> tuple[list[tuple[str, IssueData]], set[tuple[str, int]]]:
+    """Build eligible issues list with branch requirement checking.
+
+    Args:
+        repo_names: List of repo config names from coordinator.repos
+
+    Returns:
+        Tuple of:
+        - List of (repo_full_name, issue) tuples for eligible issues
+        - Set of (repo_full_name, issue_number) tuples for issues
+          that require but lack a linked branch
+
+    This function:
+    1. Loops through each repo
+    2. Loads repo config and GitHub username
+    3. Gets eligible vscodeclaude issues (cached)
+    4. For status-04/07 issues, checks for linked branch
+    5. Adds to issues_without_branch set if branch missing/multiple
+    """
+    eligible_issues_list: list[tuple[str, IssueData]] = []
+    issues_without_branch: set[tuple[str, int]] = set()
+
+    for repo_name in repo_names:
+        try:
+            # Load repo config
+            config_data = load_config()
+            repos_section = config_data.get("coordinator", {}).get("repos", {})
+            repo_config = repos_section.get(repo_name, {})
+            repo_url = repo_config.get("repo_url", "")
+            if not repo_url:
+                continue
+
+            # Get repo_full_name from repo_url
+            try:
+                repo_identifier = RepoIdentifier.from_repo_url(repo_url)
+                repo_full_name = repo_identifier.full_name
+            except ValueError:
+                # Fallback: extract from URL directly
+                url_clean = repo_url.rstrip("/")
+                if url_clean.endswith(".git"):
+                    url_clean = url_clean[:-4]
+                parts = url_clean.split("/")
+                if len(parts) >= 2:
+                    repo_full_name = f"{parts[-2]}/{parts[-1]}"
+                else:
+                    continue
+
+            # Load vscodeclaude config for github_username
+            vscodeclaude_config = load_vscodeclaude_config()
+            github_username = str(vscodeclaude_config.get("github_username", ""))
+            if not github_username:
+                continue
+
+            # Get eligible issues using cache
+            issue_manager = IssueManager(repo_url=repo_url)
+            eligible_issues = get_cached_eligible_vscodeclaude_issues(
+                repo_full_name=repo_full_name,
+                issue_manager=issue_manager,
+                github_username=github_username,
+                force_refresh=False,
+                cache_refresh_minutes=get_cache_refresh_minutes(),
+            )
+
+            # Create branch manager for linked branch checks
+            branch_manager = IssueBranchManager(repo_url=repo_url)
+
+            # Add to result list and check branch requirements
+            for issue in eligible_issues:
+                eligible_issues_list.append((repo_full_name, issue))
+
+                # Check if this issue needs branch but doesn't have one
+                status = get_issue_status(issue)
+                if status_requires_linked_branch(status):
+                    try:
+                        branch = get_linked_branch_for_issue(
+                            branch_manager, issue["number"]
+                        )
+                        if branch is None:
+                            issues_without_branch.add((repo_full_name, issue["number"]))
+                    except ValueError:
+                        # Multiple branches - also add to set
+                        issues_without_branch.add((repo_full_name, issue["number"]))
+
+        except Exception as e:
+            logger.warning(f"Failed to process repo {repo_name}: {e}")
+            continue
+
+    return eligible_issues_list, issues_without_branch

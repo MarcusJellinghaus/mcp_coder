@@ -29,8 +29,6 @@ class TestFormatValidationSummary:
             "initialized": [],
             "errors": [],
             "warnings": [],
-            "ok": [],
-            "skipped": 0,
         }
         repo_url = "https://github.com/owner/repo"
 
@@ -53,8 +51,6 @@ class TestFormatValidationSummary:
             "initialized": [12, 45, 78],
             "errors": [],
             "warnings": [],
-            "ok": [],
-            "skipped": 0,
         }
         repo_url = "https://github.com/owner/repo"
 
@@ -79,8 +75,6 @@ class TestFormatValidationSummary:
                 }
             ],
             "warnings": [],
-            "ok": [],
-            "skipped": 0,
         }
         repo_url = "https://github.com/owner/repo"
 
@@ -110,8 +104,6 @@ class TestFormatValidationSummary:
                     "threshold": 120,
                 }
             ],
-            "ok": [],
-            "skipped": 0,
         }
         repo_url = "https://github.com/owner/repo"
 
@@ -135,8 +127,6 @@ class TestFormatValidationSummary:
             "initialized": [],
             "errors": [],
             "warnings": [],
-            "ok": [1, 2, 3],
-            "skipped": 0,
         }
         repo_url = "https://github.com/owner/repo"
 

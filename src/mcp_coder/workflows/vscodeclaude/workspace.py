@@ -17,8 +17,7 @@ from ...utils.subprocess_runner import (
     CommandOptions,
     execute_subprocess,
 )
-from .config import sanitize_folder_name
-from .issues import get_vscodeclaude_config
+from .config import get_vscodeclaude_config, sanitize_folder_name
 from .types import DEFAULT_PROMPT_TIMEOUT
 
 logger = logging.getLogger(__name__)
