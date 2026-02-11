@@ -323,6 +323,7 @@ def get_all_cached_issues(
     issue_manager: "IssueManager",
     force_refresh: bool = False,
     cache_refresh_minutes: int = 1440,
+    additional_issues: list[int] | None = None,
 ) -> List[IssueData]:
     """Get all cached issues using cache for performance and duplicate protection.
 
@@ -338,6 +339,8 @@ def get_all_cached_issues(
         issue_manager: IssueManager for GitHub API calls
         force_refresh: Bypass cache entirely
         cache_refresh_minutes: Full refresh threshold (default: 1440 = 24 hours)
+        additional_issues: Optional list of issue numbers to fetch even if closed.
+                          These are fetched via individual API calls and merged into cache.
 
     Returns:
         List of ALL cached issues (unfiltered). Caller is responsible for filtering.

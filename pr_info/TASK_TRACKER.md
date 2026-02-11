@@ -26,7 +26,7 @@ See [step_1.md](./steps/step_1.md) for details.
 
 - [x] Write test file `tests/utils/github_operations/test_issue_cache.py` with 5 test cases
 - [x] Run tests to verify they fail (TDD approach)
-- [ ] Add `additional_issues` parameter to `get_all_cached_issues()` function signature
+- [x] Add `additional_issues` parameter to `get_all_cached_issues()` function signature
 - [ ] Implement `_fetch_additional_issues()` helper function
 - [ ] Add logic to call helper and merge results into cache
 - [ ] Add debug logging for additional issues fetch
