@@ -383,8 +383,11 @@ def get_all_cached_issues(  # pylint: disable=too-many-locals
         issue_manager: IssueManager for GitHub API calls
         force_refresh: Bypass cache entirely
         cache_refresh_minutes: Full refresh threshold (default: 1440 = 24 hours)
-        additional_issues: Optional list of issue numbers to fetch even if closed.
-                          These are fetched via individual API calls and merged into cache.
+        additional_issues: Optional list of specific issue numbers to fetch in addition to open issues.
+                          This is useful for fetching closed issues (e.g., from existing sessions)
+                          that wouldn't be included in normal cache queries. Each issue is fetched
+                          via individual API call and merged into cache. Issues already in cache
+                          are skipped to avoid duplicate API calls.
 
     Returns:
         List of ALL cached issues (unfiltered). Caller is responsible for filtering.
