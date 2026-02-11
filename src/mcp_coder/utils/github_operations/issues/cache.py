@@ -284,9 +284,7 @@ def _fetch_additional_issues(
                 logger.debug(f"Fetched additional issue #{issue_num} for {repo_name}")
         except Exception as e:  # pylint: disable=broad-exception-caught
             # Generic exception handling - catches all API failures (404, rate limits, etc.)
-            logger.warning(
-                f"Failed to fetch additional issue #{issue_num} for {repo_name}: {e}"
-            )
+            logger.warning(f"Failed to fetch issue #{issue_num}: {e}")
 
     return result
 
@@ -423,39 +421,8 @@ def get_all_cached_issues(  # pylint: disable=too-many-locals
                 f"Invalid timestamp in cache: {cache_data['last_checked']}, error: {e}"
             )
 
-    # Step 2: Check duplicate protection (50 second window)
-    now = now_utc()
-    if (
-        not force_refresh
-        and last_checked
-        and is_within_duration(last_checked, DUPLICATE_PROTECTION_SECONDS, now)
-    ):
-        age_seconds = int((now - last_checked).total_seconds())
-        _log_cache_metrics(
-            "hit",
-            repo_name,
-            age_minutes=0,
-            reason=f"duplicate_protection_{age_seconds}s",
-        )
-        logger.debug(f"Skipping {repo_name} - checked {age_seconds}s ago")
-        return list(cache_data["issues"].values())
-
-    # Step 3: Fetch and merge issues
-    fresh_issues = _fetch_and_merge_issues(
-        issue_manager,
-        cache_data,
-        repo_name,
-        force_refresh,
-        last_checked,
-        now,
-        cache_refresh_minutes,
-    )
-
-    # Step 4: Update cache with fresh data
-    fresh_dict = {str(issue["number"]): issue for issue in fresh_issues}
-    cache_data["issues"].update(fresh_dict)
-
-    # Step 4.5: Fetch additional issues if provided
+    # Step 2: Fetch additional issues BEFORE duplicate protection check
+    # This ensures specific issues are fetched even if cache is recent
     if additional_issues:
         logger.debug(
             f"Fetching {len(additional_issues)} additional issues for {repo_name}"
@@ -472,13 +439,45 @@ def get_all_cached_issues(  # pylint: disable=too-many-locals
                 f"Added {len(additional_dict)} additional issues to cache for {repo_name}"
             )
 
+    # Step 3: Check duplicate protection (50 second window)
+    now = now_utc()
+    if (
+        not force_refresh
+        and last_checked
+        and is_within_duration(last_checked, DUPLICATE_PROTECTION_SECONDS, now)
+    ):
+        age_seconds = int((now - last_checked).total_seconds())
+        _log_cache_metrics(
+            "hit",
+            repo_name,
+            age_minutes=0,
+            reason=f"duplicate_protection_{age_seconds}s",
+        )
+        logger.debug(f"Skipping {repo_name} - checked {age_seconds}s ago")
+        return list(cache_data["issues"].values())
+
+    # Step 4: Fetch and merge issues
+    fresh_issues = _fetch_and_merge_issues(
+        issue_manager,
+        cache_data,
+        repo_name,
+        force_refresh,
+        last_checked,
+        now,
+        cache_refresh_minutes,
+    )
+
+    # Step 5: Update cache with fresh data
+    fresh_dict = {str(issue["number"]): issue for issue in fresh_issues}
+    cache_data["issues"].update(fresh_dict)
+
     cache_data["last_checked"] = format_for_cache(now)
 
-    # Save cache
+    # Step 6: Save cache
     if _save_cache_file(_get_cache_file_path(repo_identifier), cache_data):
         _log_cache_metrics("save", repo_name, total_issues=len(cache_data["issues"]))
 
-    # Step 5: Return ALL cached issues (unfiltered)
+    # Step 7: Return ALL cached issues (unfiltered)
     all_cached_issues = list(cache_data["issues"].values())
     _log_cache_metrics(
         "hit",

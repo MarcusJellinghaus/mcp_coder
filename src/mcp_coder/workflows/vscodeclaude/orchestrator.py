@@ -832,6 +832,11 @@ def _build_cached_issues_by_repo(
     Returns:
         Dict mapping repo_full_name to dict of issues (issue_number -> IssueData)
     """
+    # Early return if no sessions
+    if not sessions:
+        logger.debug("No sessions to build cache for")
+        return {}
+
     logger.debug(
         "Building cache for %d sessions",
         len(sessions),
@@ -912,6 +917,11 @@ def restart_closed_sessions(
     from .sessions import remove_session
 
     store = load_sessions()
+
+    # Early return if no sessions
+    if not store["sessions"]:
+        logger.debug("No sessions to restart")
+        return []
 
     # Build cache with session issues if not provided
     if cached_issues_by_repo is None:
