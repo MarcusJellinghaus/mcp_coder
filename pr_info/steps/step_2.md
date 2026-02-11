@@ -263,7 +263,7 @@ sessions_by_repo: dict[str, list[int]]
 
 - [ ] Write test file with 5 test cases above
 - [ ] Run tests (should fail - TDD)
-- [ ] Add import for `defaultdict` from `collections`
+- [ ] Add import for `defaultdict` from `collections` (if not already present)
 - [ ] Implement `_build_cached_issues_by_repo()` helper
 - [ ] Modify `restart_closed_sessions()` to call helper if cache not provided
 - [ ] Add debug logging for cache building
@@ -293,6 +293,8 @@ The issue description suggests building cache in the orchestrator command handle
 4. Easier to test
 
 If needed, we can later refactor to build cache at a higher level, but this approach satisfies the immediate requirement.
+
+**Decision**: Keep the simpler approach (build cache inside function). The note in Step 2 is sufficient documentation - no separate decision file needed.
 
 ### Integration with Status Display
 The status display function `display_status_table()` already accepts `cached_issues_by_repo`. If we want to optimize further, we could build the cache once in the orchestrator command and pass it to both `restart_closed_sessions()` and `display_status_table()`. However, this is an optimization for later, not required for the fix.

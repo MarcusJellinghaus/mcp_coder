@@ -294,9 +294,11 @@ Add or verify these log messages exist:
 
 3. **Status** (`status.py`):
    ```python
-   # Existing warning is fine:
+   # Keep existing warning as-is - serves as safety check (defense-in-depth)
    logger.warning(f"is_session_stale called on closed issue #{issue_number} - filter these out first")
    ```
+   
+   **Decision**: Warning remains at WARNING level. With the fix, it should rarely trigger, but serves as a useful safety net if closed issues somehow slip through earlier filters.
 
 ---
 
@@ -337,3 +339,8 @@ Integration tests may be slower than unit tests due to:
 - Potential file I/O
 
 Keep integration tests focused and minimal.
+
+**Decision**: No explicit performance verification step needed. The additional API calls are minimal (typically <10 sessions) and we have duplicate protection. Performance impact should be negligible.
+
+### Manual Testing
+**Decision**: Automated integration tests are sufficient. No separate manual verification checklist needed beyond normal PR testing.

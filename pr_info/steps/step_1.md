@@ -134,6 +134,7 @@ def _fetch_additional_issues(issue_manager, additional_issue_numbers, repo_name)
             if issue["number"] != 0:  # Valid issue
                 result[str(issue_num)] = issue
         except Exception as e:
+            # Generic exception handling - catches all API failures (404, rate limits, etc.)
             logger.warning(f"Failed to fetch issue #{issue_num}: {e}")
     
     return result
@@ -226,6 +227,6 @@ additional_dict: Dict[str, IssueData]
 ## NOTES
 
 - **Backward Compatibility**: Default value `None` ensures existing calls work unchanged
-- **Error Handling**: Individual issue fetch failures are logged but don't stop overall operation
+- **Error Handling**: Generic `Exception` catching is intentional - simpler and catches all API failures (404, rate limits, network errors, etc.). Individual failures are logged but don't stop overall operation.
 - **Cache Efficiency**: Check if issue already in cache before API call
 - **Logging**: Use DEBUG level for additional issues fetch to avoid noise
