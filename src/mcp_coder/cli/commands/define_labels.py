@@ -36,8 +36,6 @@ class ValidationResults(TypedDict):
     warnings: list[
         dict[str, Any]
     ]  # {'issue': int, 'label': str, 'elapsed': int, 'threshold': int}
-    ok: list[int]  # Issue numbers with valid single label
-    skipped: int  # Count of ignored issues
 
 
 def _log_dry_run_changes(changes: dict[str, list[str]]) -> None:
@@ -227,8 +225,6 @@ def validate_issues(
         "initialized": [],
         "errors": [],
         "warnings": [],
-        "ok": [],
-        "skipped": 0,
     }
 
     for issue in issues:
@@ -259,15 +255,6 @@ def validate_issues(
                             "threshold": timeout,
                         }
                     )
-                else:
-                    results["ok"].append(issue_number)
-            else:
-                # Not bot_busy - OK
-                results["ok"].append(issue_number)
-        else:
-            # No status labels (count == 0) - should have been initialized
-            # This is handled by initialize_issues, so we count as OK
-            results["ok"].append(issue_number)
 
     return results
 
