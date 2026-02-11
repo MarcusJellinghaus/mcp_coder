@@ -831,6 +831,7 @@ def _build_cached_issues_by_repo(
 
     Returns:
         Dict mapping repo_full_name to dict of issues (issue_number -> IssueData)
+        Returns empty dict if GitHub token is not configured (e.g., in test contexts)
     """
     # Early return if no sessions
     if not sessions:
@@ -861,28 +862,39 @@ def _build_cached_issues_by_repo(
             repo_full_name,
             issue_numbers,
         )
-        repo_url = f"https://github.com/{repo_full_name}"
-        issue_manager = IssueManager(repo_url=repo_url)
+        try:
+            repo_url = f"https://github.com/{repo_full_name}"
+            issue_manager = IssueManager(repo_url=repo_url)
 
-        # Fetch with additional_issues to include closed session issues
-        all_issues = get_all_cached_issues(
-            repo_full_name=repo_full_name,
-            issue_manager=issue_manager,
-            force_refresh=False,
-            cache_refresh_minutes=get_cache_refresh_minutes(),
-            additional_issues=issue_numbers,  # ← KEY CHANGE
-        )
+            # Fetch with additional_issues to include closed session issues
+            all_issues = get_all_cached_issues(
+                repo_full_name=repo_full_name,
+                issue_manager=issue_manager,
+                force_refresh=False,
+                cache_refresh_minutes=get_cache_refresh_minutes(),
+                additional_issues=issue_numbers,  # ← KEY CHANGE
+            )
 
-        logger.debug(
-            "Retrieved %d total issues for %s (including session issues)",
-            len(all_issues),
-            repo_full_name,
-        )
+            logger.debug(
+                "Retrieved %d total issues for %s (including session issues)",
+                len(all_issues),
+                repo_full_name,
+            )
 
-        # Convert to dict for fast lookup
-        cached_issues_by_repo[repo_full_name] = {
-            issue["number"]: issue for issue in all_issues
-        }
+            # Convert to dict for fast lookup
+            cached_issues_by_repo[repo_full_name] = {
+                issue["number"]: issue for issue in all_issues
+            }
+        except ValueError as e:
+            # GitHub token not configured - return empty dict for this repo
+            # This is expected in test contexts where token may not be set
+            logger.warning(
+                "Failed to build cache for %s (likely missing GitHub token): %s",
+                repo_full_name,
+                e,
+            )
+            # Return empty dict - tests will provide cached_issues_by_repo parameter
+            return {}
 
     logger.debug(
         "Built cache for %d repos with session issues",

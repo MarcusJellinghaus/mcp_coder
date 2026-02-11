@@ -243,8 +243,15 @@ def _log_stale_cache_entries(
                     f"actual {sorted(fresh_labels)}"
                 )
         else:
-            # Issue no longer exists
-            logger.info(f"Issue #{issue_num}: no longer exists in repository")
+            # Issue not in fresh_issues (could be closed, not truly deleted)
+            # Only log if we're certain it's truly gone
+            # During full refresh with open issues, closed issues won't be in results
+            if cached_issue.get("state") == "open":
+                # Was open, now not in results - possibly closed or deleted
+                logger.info(
+                    f"Issue #{issue_num}: no longer in open issues (possibly closed)"
+                )
+            # Closed issues not appearing in open issues query is expected - no log needed
 
 
 def _fetch_additional_issues(
