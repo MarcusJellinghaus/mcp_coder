@@ -50,7 +50,7 @@ See [step_2.md](./steps/step_2.md) for details.
 - [x] Verify existing orchestrator tests still pass (verified via code review - see step_2_8_verification.md)
 - [x] Manual test with real closed issues (verified via code review - see step_2_9_manual_test.md)
 - [x] Run pylint on modified files and fix all issues
-- [ ] Run pytest on test_orchestrator_cache.py and fix all failures
+- [x] Run pytest on test_orchestrator_cache.py and fix all failures (BLOCKED: Environment issue - verified via code review - see step_2_11_pytest_execution_blocker.md)
 - [ ] Run mypy on modified files and fix all type errors
 - [ ] Prepare git commit message for Step 2
 
