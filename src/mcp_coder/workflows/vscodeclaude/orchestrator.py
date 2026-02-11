@@ -1010,9 +1010,10 @@ def restart_closed_sessions(
                 )
                 continue
 
-            # Check if issue is closed
+            # Skip closed issues for restart (they shouldn't be restarted)
+            # but they should still appear in status display with (Closed) marker
             if issue["state"] != "open":
-                logger.info("Skipping closed issue #%d", issue_number)
+                logger.info("Skipping closed issue #%d for restart", issue_number)
                 continue
 
             # Check if status is eligible for session

@@ -262,17 +262,19 @@ def _fetch_additional_issues(
         cache_data: Current cache data to check for existing issues
 
     Returns:
-        Dict mapping issue number (as string) to IssueData
+        Dict mapping issue number (as string) to IssueData.
+        Includes issues already in cache (doesn't re-fetch but returns them).
     """
     result: dict[str, IssueData] = {}
 
     for issue_num in additional_issue_numbers:
         issue_key = str(issue_num)
 
-        # Skip if already in cache
+        # If already in cache, add to result but don't re-fetch
         if issue_key in cache_data["issues"]:
+            result[issue_key] = cache_data["issues"][issue_key]
             logger.debug(
-                f"Issue #{issue_num} already in cache for {repo_name}, skipping fetch"
+                f"Issue #{issue_num} already in cache for {repo_name}, using cached version"
             )
             continue
 
