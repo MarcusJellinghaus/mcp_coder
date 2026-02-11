@@ -1,9 +1,0 @@
-# CI Failure Analysis
-
-The unit tests are failing due to a circular import in the mcp_coder.workflows.vscodeclaude module. The error "ImportError: cannot import name 'get_vscodeclaude_config' from partially initialized module 'mcp_coder.workflows.vscodeclaude.issues'" appears 49 times across multiple test files, indicating a systemic import cycle between issues.py and helpers.py.
-
-The circular dependency chain is: issues.py (line 19) imports get_issue_status from helpers.py, while helpers.py (line 13) imports get_vscodeclaude_config from issues.py. This creates an unresolvable import loop where neither module can fully initialize because each depends on the other being fully loaded first. The issue affects all tests that import from the vscodeclaude workflow module, including tests for cleanup, orchestrator, sessions, status, templates, and workspace components.
-
-To fix this circular import, one or more of the following changes are needed: (1) Move get_vscodeclaude_config to a separate module like config.py that both issues.py and helpers.py can import from, (2) Move get_issue_status to a different module to break the cycle, (3) Use lazy imports (import statements inside functions rather than at module level) for one of the cross-dependencies, or (4) Refactor the code to eliminate the mutual dependency by consolidating related functions into a single module.
-
-The primary files requiring changes are src/mcp_coder/workflows/vscodeclaude/issues.py and src/mcp_coder/workflows/vscodeclaude/helpers.py. Additionally, any module that imports from these files may need minor updates if the refactoring changes the import paths. The cleanup.py file at line 8 is the entry point where the circular import is first triggered during the import chain.
