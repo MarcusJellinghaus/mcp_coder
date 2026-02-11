@@ -135,12 +135,12 @@ class TestBuildCachedIssuesByRepo:
 
             # Mock get_all_cached_issues to return different issues for different repos
             def get_cache_side_effect(
-                repo_full_name,
-                issue_manager,
-                force_refresh,
-                cache_refresh_minutes,
-                additional_issues,
-            ):
+                repo_full_name: str,
+                issue_manager: Mock,
+                force_refresh: bool,
+                cache_refresh_minutes: int,
+                additional_issues: list[int],
+            ) -> list[IssueData]:
                 if repo_full_name == "owner/repo":
                     # Return both session issues (414, 408) and an open issue (100)
                     return [issue_414, issue_408, issue_100]
