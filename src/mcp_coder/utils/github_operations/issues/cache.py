@@ -247,6 +247,50 @@ def _log_stale_cache_entries(
             logger.info(f"Issue #{issue_num}: no longer exists in repository")
 
 
+def _fetch_additional_issues(
+    issue_manager: "IssueManager",
+    additional_issue_numbers: list[int],
+    repo_name: str,
+    cache_data: CacheData,
+) -> dict[str, IssueData]:
+    """Fetch specific issues by number via individual API calls.
+
+    Args:
+        issue_manager: IssueManager for GitHub API calls
+        additional_issue_numbers: List of issue numbers to fetch
+        repo_name: Repository name for logging
+        cache_data: Current cache data to check for existing issues
+
+    Returns:
+        Dict mapping issue number (as string) to IssueData
+    """
+    result: dict[str, IssueData] = {}
+
+    for issue_num in additional_issue_numbers:
+        issue_key = str(issue_num)
+
+        # Skip if already in cache
+        if issue_key in cache_data["issues"]:
+            logger.debug(
+                f"Issue #{issue_num} already in cache for {repo_name}, skipping fetch"
+            )
+            continue
+
+        # Fetch via API
+        try:
+            issue = issue_manager.get_issue(issue_num)
+            if issue["number"] != 0:  # Valid issue
+                result[issue_key] = issue
+                logger.debug(f"Fetched additional issue #{issue_num} for {repo_name}")
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            # Generic exception handling - catches all API failures (404, rate limits, etc.)
+            logger.warning(
+                f"Failed to fetch additional issue #{issue_num} for {repo_name}: {e}"
+            )
+
+    return result
+
+
 def _fetch_and_merge_issues(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     issue_manager: "IssueManager",
     cache_data: CacheData,
@@ -318,7 +362,7 @@ def _fetch_and_merge_issues(  # pylint: disable=too-many-arguments,too-many-posi
     return fresh_issues
 
 
-def get_all_cached_issues(
+def get_all_cached_issues(  # pylint: disable=too-many-locals
     repo_full_name: str,
     issue_manager: "IssueManager",
     force_refresh: bool = False,
@@ -407,6 +451,24 @@ def get_all_cached_issues(
     # Step 4: Update cache with fresh data
     fresh_dict = {str(issue["number"]): issue for issue in fresh_issues}
     cache_data["issues"].update(fresh_dict)
+
+    # Step 4.5: Fetch additional issues if provided
+    if additional_issues:
+        logger.debug(
+            f"Fetching {len(additional_issues)} additional issues for {repo_name}"
+        )
+        additional_dict = _fetch_additional_issues(
+            issue_manager,
+            additional_issues,
+            repo_name,
+            cache_data,
+        )
+        cache_data["issues"].update(additional_dict)
+        if additional_dict:
+            logger.debug(
+                f"Added {len(additional_dict)} additional issues to cache for {repo_name}"
+            )
+
     cache_data["last_checked"] = format_for_cache(now)
 
     # Save cache
