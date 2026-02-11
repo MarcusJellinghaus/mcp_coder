@@ -240,6 +240,7 @@ PR CREATED (status-10:pr-created)
 import logging
 import platform
 import shutil
+from collections import defaultdict
 from pathlib import Path
 from typing import NamedTuple
 

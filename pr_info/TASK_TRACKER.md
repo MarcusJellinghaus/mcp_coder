@@ -42,7 +42,7 @@ See [step_2.md](./steps/step_2.md) for details.
 
 - [x] Write test file `tests/workflows/vscodeclaude/test_orchestrator_cache.py` with 5 test cases
 - [x] Run tests to verify they fail (TDD approach)
-- [ ] Add import for `defaultdict` from `collections` (if not already present)
+- [x] Add import for `defaultdict` from `collections` (if not already present)
 - [ ] Implement `_build_cached_issues_by_repo()` helper function
 - [ ] Modify `restart_closed_sessions()` to call helper if cache not provided
 - [ ] Add debug logging for cache building
