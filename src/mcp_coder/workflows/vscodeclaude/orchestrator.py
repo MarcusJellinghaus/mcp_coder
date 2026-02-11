@@ -889,6 +889,11 @@ def restart_closed_sessions(
     from .sessions import remove_session
 
     store = load_sessions()
+
+    # Build cache with session issues if not provided
+    if cached_issues_by_repo is None:
+        cached_issues_by_repo = _build_cached_issues_by_repo(store["sessions"])
+
     restarted: list[VSCodeClaudeSession] = []
 
     # Refresh caches once for all sessions (window cache is fast, process cache is slow)
