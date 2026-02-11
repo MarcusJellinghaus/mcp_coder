@@ -1532,6 +1532,12 @@ class TestRestartClosedSessionsBranchHandling:
             mock_create_status,
         )
 
+        # Mock create_startup_script to avoid Linux NotImplementedError
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.create_startup_script",
+            lambda **kwargs: tmp_path / ".vscodeclaude_start.bat",
+        )
+
         # Mock git rev-parse to return the branch that was checked out
         def mock_execute(cmd: list[str], options: Any) -> Any:
             if "rev-parse" in cmd and "--abbrev-ref" in cmd:
@@ -1722,6 +1728,12 @@ class TestRestartClosedSessionsBranchHandling:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.workspace.create_status_file",
             mock_create_status,
+        )
+
+        # Mock create_startup_script to avoid Linux NotImplementedError
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.create_startup_script",
+            lambda **kwargs: tmp_path / ".vscodeclaude_start.bat",
         )
 
         # Call regenerate_session_files

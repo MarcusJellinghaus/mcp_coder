@@ -765,6 +765,18 @@ class TestBuildEligibleIssuesWithBranchCheck:
             lambda: {"github_username": "testuser"},
         )
 
+        # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
+        mock_issue_manager = Mock()
+        mock_branch_manager = Mock()
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
+        )
+
         # Mock eligible issues
         mock_issue = {
             "number": 1,
@@ -821,6 +833,18 @@ class TestBuildEligibleIssuesWithBranchCheck:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
             lambda: {"github_username": "testuser"},
+        )
+
+        # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
+        mock_issue_manager = Mock()
+        mock_branch_manager = Mock()
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
         )
 
         # Mock issue at status-04
@@ -885,6 +909,18 @@ class TestBuildEligibleIssuesWithBranchCheck:
             lambda: {"github_username": "testuser"},
         )
 
+        # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
+        mock_issue_manager = Mock()
+        mock_branch_manager = Mock()
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
+        )
+
         # Mock issue at status-07
         mock_issue = {
             "number": 2,
@@ -943,6 +979,18 @@ class TestBuildEligibleIssuesWithBranchCheck:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
             lambda: {"github_username": "testuser"},
+        )
+
+        # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
+        mock_issue_manager = Mock()
+        mock_branch_manager = Mock()
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
         )
 
         # Mock issue at status-04
@@ -1010,6 +1058,18 @@ class TestBuildEligibleIssuesWithBranchCheck:
             lambda: {"github_username": "testuser"},
         )
 
+        # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
+        mock_issue_manager = Mock()
+        mock_branch_manager = Mock()
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
+        )
+
         # Mock issue at status-01
         mock_issue = {
             "number": 4,
@@ -1070,6 +1130,18 @@ class TestBuildEligibleIssuesWithBranchCheck:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
             lambda: {"github_username": "testuser"},
+        )
+
+        # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
+        mock_issue_manager = Mock()
+        mock_branch_manager = Mock()
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
         )
 
         # Mock get_cached_eligible_vscodeclaude_issues to fail for bad-repo
