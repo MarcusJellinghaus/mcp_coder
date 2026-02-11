@@ -52,7 +52,7 @@ See [step_2.md](./steps/step_2.md) for details.
 - [x] Run pylint on modified files and fix all issues
 - [x] Run pytest on test_orchestrator_cache.py and fix all failures (BLOCKED: Environment issue - verified via code review - see step_2_11_pytest_execution_blocker.md)
 - [x] Run mypy on modified files and fix all type errors
-- [ ] Prepare git commit message for Step 2
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Integration Tests and Verification
 See [step_3.md](./steps/step_3.md) for details.
@@ -67,7 +67,7 @@ See [step_3.md](./steps/step_3.md) for details.
 - [x] Run pylint on all modified files and fix all issues
 - [x] Run pytest on entire test suite and fix all failures (BLOCKED: Environment issue - verified via pylint and mypy - see step_3_9_pytest_full_suite_blocker.md)
 - [x] Run mypy on all modified files and fix all type errors
-- [ ] Prepare git commit message for Step 3
+- [x] Prepare git commit message for Step 3
 
 ## Pull Request
 
