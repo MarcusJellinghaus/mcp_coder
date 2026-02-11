@@ -40,7 +40,7 @@ See [step_1.md](./steps/step_1.md) for details.
 ### Step 2: Update Orchestrator to Use `additional_issues`
 See [step_2.md](./steps/step_2.md) for details.
 
-- [ ] Write test file `tests/workflows/vscodeclaude/test_orchestrator_cache.py` with 5 test cases
+- [x] Write test file `tests/workflows/vscodeclaude/test_orchestrator_cache.py` with 5 test cases
 - [ ] Run tests to verify they fail (TDD approach)
 - [ ] Add import for `defaultdict` from `collections` (if not already present)
 - [ ] Implement `_build_cached_issues_by_repo()` helper function
