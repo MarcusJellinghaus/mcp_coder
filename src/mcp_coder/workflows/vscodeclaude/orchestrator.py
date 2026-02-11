@@ -596,9 +596,22 @@ def process_eligible_issues(
 
     for issue in issues_to_start[:available_slots]:
         try:
-            # Get issue status and linked branch
+            # Get issue status
             status = get_issue_status(issue)
-            branch_name = get_linked_branch_for_issue(branch_manager, issue["number"])
+
+            # Get linked branch (handle multiple branches case)
+            try:
+                branch_name = get_linked_branch_for_issue(
+                    branch_manager, issue["number"]
+                )
+            except ValueError:
+                # Multiple branches linked to issue
+                logger.error(
+                    "Issue #%d at %s has multiple branches linked - skipping",
+                    issue["number"],
+                    status,
+                )
+                continue
 
             # Check if status requires linked branch
             if status_requires_linked_branch(status) and branch_name is None:

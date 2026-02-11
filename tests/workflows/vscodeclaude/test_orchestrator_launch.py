@@ -395,3 +395,94 @@ class TestProcessEligibleIssuesBranchRequirement:
         mock_launch.assert_called_once()
         call_kwargs = mock_launch.call_args.kwargs
         assert call_kwargs["branch_name"] == "feat-456"
+
+    def test_status_04_with_multiple_branches_skips_issue(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """status-04 with multiple linked branches skips issue and logs error."""
+        mock_issue: IssueData = {
+            "number": 456,
+            "title": "Plan Review Issue",
+            "labels": ["status-04:plan-review"],
+            "assignees": ["testuser"],
+            "state": "open",
+            "url": "https://github.com/owner/repo/issues/456",
+            "body": "",
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "locked": False,
+        }
+
+        # Mock IssueManager and IssueBranchManager to avoid token validation
+        mock_issue_manager = MagicMock()
+        mock_branch_manager = MagicMock()
+        mock_branch_manager.get_linked_branches.return_value = [
+            "feat-456-v1",
+            "feat-456-v2",
+        ]
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
+        )
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.get_all_cached_issues",
+            lambda *args, **kwargs: [mock_issue],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator._filter_eligible_vscodeclaude_issues",
+            lambda *args, **kwargs: [mock_issue],
+        )
+
+        # Mock get_linked_branch_for_issue to raise ValueError (multiple branches)
+        def mock_get_linked_branch(*args: Any, **kwargs: Any) -> None:
+            raise ValueError("Multiple branches linked to issue")
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.get_linked_branch_for_issue",
+            mock_get_linked_branch,
+        )
+
+        mock_launch = MagicMock()
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.prepare_and_launch_session",
+            mock_launch,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.get_session_for_issue",
+            lambda *args, **kwargs: None,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.get_active_session_count",
+            lambda: 0,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.get_github_username",
+            lambda: "testuser",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.orchestrator.load_repo_vscodeclaude_config",
+            lambda *args, **kwargs: {},
+        )
+
+        with caplog.at_level(logging.ERROR):
+            result = process_eligible_issues(
+                repo_name="test-repo",
+                repo_config={"repo_url": "https://github.com/owner/repo"},
+                vscodeclaude_config={"workspace_base": "/tmp", "max_sessions": 3},
+                max_sessions=3,
+            )
+
+        # Session should NOT be launched
+        mock_launch.assert_not_called()
+        # Error should be logged
+        assert "multiple branches" in caplog.text.lower()
+        assert "#456" in caplog.text
+        # Empty result
+        assert result == []
