@@ -832,14 +832,30 @@ def _build_cached_issues_by_repo(
     Returns:
         Dict mapping repo_full_name to dict of issues (issue_number -> IssueData)
     """
+    logger.debug(
+        "Building cache for %d sessions",
+        len(sessions),
+    )
+
     # Group sessions by repo
     sessions_by_repo: dict[str, list[int]] = defaultdict(list)
     for session in sessions:
         sessions_by_repo[session["repo"]].append(session["issue_number"])
 
+    logger.debug(
+        "Grouped sessions into %d repos: %s",
+        len(sessions_by_repo),
+        {repo: len(issues) for repo, issues in sessions_by_repo.items()},
+    )
+
     # Fetch cached issues for each repo with session issue numbers
     cached_issues_by_repo: dict[str, dict[int, IssueData]] = {}
     for repo_full_name, issue_numbers in sessions_by_repo.items():
+        logger.debug(
+            "Fetching cache for %s with additional_issues=%s",
+            repo_full_name,
+            issue_numbers,
+        )
         repo_url = f"https://github.com/{repo_full_name}"
         issue_manager = IssueManager(repo_url=repo_url)
 
@@ -850,6 +866,12 @@ def _build_cached_issues_by_repo(
             force_refresh=False,
             cache_refresh_minutes=get_cache_refresh_minutes(),
             additional_issues=issue_numbers,  # ← KEY CHANGE
+        )
+
+        logger.debug(
+            "Retrieved %d total issues for %s (including session issues)",
+            len(all_issues),
+            repo_full_name,
         )
 
         # Convert to dict for fast lookup
