@@ -818,6 +818,53 @@ def _prepare_restart_branch(
     return BranchPrepResult(True, None, linked_branch)
 
 
+def _build_cached_issues_by_repo(
+    sessions: list[VSCodeClaudeSession],
+) -> dict[str, dict[int, IssueData]]:
+    """Build cached issues dict for all repos with sessions.
+
+    Fetches issues from cache with additional_issues parameter to ensure
+    closed issues from existing sessions are included.
+
+    Args:
+        sessions: List of all sessions
+
+    Returns:
+        Dict mapping repo_full_name to dict of issues (issue_number -> IssueData)
+    """
+    # Group sessions by repo
+    sessions_by_repo: dict[str, list[int]] = defaultdict(list)
+    for session in sessions:
+        sessions_by_repo[session["repo"]].append(session["issue_number"])
+
+    # Fetch cached issues for each repo with session issue numbers
+    cached_issues_by_repo: dict[str, dict[int, IssueData]] = {}
+    for repo_full_name, issue_numbers in sessions_by_repo.items():
+        repo_url = f"https://github.com/{repo_full_name}"
+        issue_manager = IssueManager(repo_url=repo_url)
+
+        # Fetch with additional_issues to include closed session issues
+        all_issues = get_all_cached_issues(
+            repo_full_name=repo_full_name,
+            issue_manager=issue_manager,
+            force_refresh=False,
+            cache_refresh_minutes=get_cache_refresh_minutes(),
+            additional_issues=issue_numbers,  # ← KEY CHANGE
+        )
+
+        # Convert to dict for fast lookup
+        cached_issues_by_repo[repo_full_name] = {
+            issue["number"]: issue for issue in all_issues
+        }
+
+    logger.debug(
+        "Built cache for %d repos with session issues",
+        len(cached_issues_by_repo),
+    )
+
+    return cached_issues_by_repo
+
+
 def restart_closed_sessions(
     cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
 ) -> list[VSCodeClaudeSession]:
