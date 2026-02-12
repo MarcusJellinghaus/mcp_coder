@@ -33,12 +33,10 @@ if errorlevel 1 (
 if defined MCP_CODER_PROJECT_DIR (
     if not "%MCP_CODER_PROJECT_DIR%"=="%CD%" (
         echo.
-        echo WARNING: MCP_CODER_PROJECT_DIR mismatch detected
-        echo   Expected: %CD%
-        echo   Found:    %MCP_CODER_PROJECT_DIR%
+        echo INFO: MCP_CODER_PROJECT_DIR updated for this session
+        echo   Found:      %MCP_CODER_PROJECT_DIR%
+        echo   Changed to: %CD%
         echo.
-        echo Press any key to continue...
-        pause >nul
     )
 )
 set "MCP_CODER_PROJECT_DIR=%CD%"
