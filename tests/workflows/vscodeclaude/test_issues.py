@@ -765,6 +765,12 @@ class TestBuildEligibleIssuesWithBranchCheck:
             lambda: {"github_username": "testuser"},
         )
 
+        # Mock get_github_username to avoid needing GitHub token
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_github_username",
+            lambda: "testuser",
+        )
+
         # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
         mock_issue_manager = Mock()
         mock_branch_manager = Mock()
@@ -833,6 +839,12 @@ class TestBuildEligibleIssuesWithBranchCheck:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
             lambda: {"github_username": "testuser"},
+        )
+
+        # Mock get_github_username to avoid needing GitHub token
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_github_username",
+            lambda: "testuser",
         )
 
         # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
@@ -909,6 +921,12 @@ class TestBuildEligibleIssuesWithBranchCheck:
             lambda: {"github_username": "testuser"},
         )
 
+        # Mock get_github_username to avoid needing GitHub token
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_github_username",
+            lambda: "testuser",
+        )
+
         # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
         mock_issue_manager = Mock()
         mock_branch_manager = Mock()
@@ -979,6 +997,12 @@ class TestBuildEligibleIssuesWithBranchCheck:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
             lambda: {"github_username": "testuser"},
+        )
+
+        # Mock get_github_username to avoid needing GitHub token
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_github_username",
+            lambda: "testuser",
         )
 
         # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
@@ -1058,6 +1082,12 @@ class TestBuildEligibleIssuesWithBranchCheck:
             lambda: {"github_username": "testuser"},
         )
 
+        # Mock get_github_username to avoid needing GitHub token
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_github_username",
+            lambda: "testuser",
+        )
+
         # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
         mock_issue_manager = Mock()
         mock_branch_manager = Mock()
@@ -1130,6 +1160,12 @@ class TestBuildEligibleIssuesWithBranchCheck:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
             lambda: {"github_username": "testuser"},
+        )
+
+        # Mock get_github_username to avoid needing GitHub token
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_github_username",
+            lambda: "testuser",
         )
 
         # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
