@@ -383,17 +383,34 @@ def _get_repo_full_name_from_url(repo_url: str) -> str:
 
 def _build_cached_issues_by_repo(
     repo_names: list[str],
+    sessions: list[VSCodeClaudeSession] | None = None,
 ) -> tuple[dict[str, dict[int, IssueData]], set[str]]:
     """Build cached issues dict for all configured repos.
 
     Args:
         repo_names: List of repository config names
+        sessions: Optional list of sessions. If provided, session issue numbers
+                  will be included as additional_issues to ensure closed issues
+                  from existing sessions are fetched.
 
     Returns:
         Tuple of (cached_issues_by_repo, failed_repos)
     """
+    from collections import defaultdict
+
     cached_issues_by_repo: dict[str, dict[int, IssueData]] = {}
     failed_repos: set[str] = set()
+
+    # Build session issue numbers by repo if sessions provided
+    sessions_by_repo: dict[str, list[int]] = defaultdict(list)
+    if sessions:
+        for session in sessions:
+            sessions_by_repo[session["repo"]].append(session["issue_number"])
+        logger.debug(
+            "Building cache with %d session issue numbers across %d repos",
+            sum(len(issues) for issues in sessions_by_repo.values()),
+            len(sessions_by_repo),
+        )
 
     for repo_name in repo_names:
         repo_full_name = ""
@@ -407,6 +424,16 @@ def _build_cached_issues_by_repo(
             if not repo_full_name:
                 continue
 
+            # Get session issue numbers for this repo (if sessions provided)
+            additional_issues: list[int] | None = None
+            if sessions and repo_full_name in sessions_by_repo:
+                additional_issues = sessions_by_repo[repo_full_name]
+                logger.debug(
+                    "Fetching cache for %s with %d additional session issues",
+                    repo_full_name,
+                    len(additional_issues),
+                )
+
             # Create issue manager and fetch cached issues
             issue_manager_instance: IssueManager = IssueManager(repo_url=repo_url)
             all_issues = get_all_cached_issues(
@@ -414,6 +441,7 @@ def _build_cached_issues_by_repo(
                 issue_manager=issue_manager_instance,
                 force_refresh=False,
                 cache_refresh_minutes=get_cache_refresh_minutes(),
+                additional_issues=additional_issues,  # ← Include closed session issues
             )
 
             # Build issues_by_number dict
@@ -563,17 +591,18 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
     )
     from ....workflows.vscodeclaude.status import display_status_table
 
+    # Load sessions first (needed for cache building)
+    store = load_sessions()
+    sessions = store["sessions"]
+
     # Get repo list for cache building
     config_data = load_config()
     repos_section = config_data.get("coordinator", {}).get("repos", {})
     repo_names = list(repos_section.keys())
 
-    # Build cached issues for staleness checks
-    cached_issues_by_repo, _ = _build_cached_issues_by_repo(repo_names)
-
-    # Load sessions
-    store = load_sessions()
-    sessions = store["sessions"]
+    # Build cached issues for staleness checks, including session issues
+    # to ensure closed issues from existing sessions are properly detected
+    cached_issues_by_repo, _ = _build_cached_issues_by_repo(repo_names, sessions)
 
     # Build eligible issues list and issues_without_branch set
     eligible_issues, issues_without_branch = build_eligible_issues_with_branch_check(
