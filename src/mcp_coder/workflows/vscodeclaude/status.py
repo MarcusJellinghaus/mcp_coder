@@ -3,11 +3,20 @@
 import logging
 from pathlib import Path
 
+from tabulate import tabulate
+
 from ...utils.github_operations.issues import IssueData, IssueManager
 from ...utils.subprocess_runner import CommandOptions, execute_subprocess
 from .helpers import get_issue_status
 from .issues import is_status_eligible_for_session, status_requires_linked_branch
-from .sessions import check_vscode_running, load_sessions
+from .sessions import (
+    check_vscode_running,
+    clear_vscode_process_cache,
+    clear_vscode_window_cache,
+    is_vscode_open_for_folder,
+    is_vscode_window_open_for_folder,
+    load_sessions,
+)
 from .types import VSCodeClaudeSession
 
 logger = logging.getLogger(__name__)
@@ -208,7 +217,7 @@ def get_next_action(
                      "No branch", "Dirty", "Git error", "Multi-branch"
 
     Returns:
-        Action string like "(active)", "→ Restart", "!! No branch"
+        Action string like "(active)", "-> Restart", "!! No branch"
     """
     if is_vscode_running:
         return "(active)"
@@ -226,9 +235,9 @@ def get_next_action(
     if is_stale:
         if is_dirty:
             return "!! Manual cleanup"
-        return "→ Delete (with --cleanup)"
+        return "-> Delete (with --cleanup)"
 
-    return "→ Restart"
+    return "-> Restart"
 
 
 def display_status_table(
@@ -248,35 +257,24 @@ def display_status_table(
                                If provided, avoids API calls for staleness checks.
         issues_without_branch: Set of (repo_full_name, issue_number) tuples
                                for issues that require but lack a linked branch.
-                               Used to show "→ Needs branch" indicator.
+                               Used to show "-> Needs branch" indicator.
 
     Columns:
-    - Folder
+    - Repo
     - Issue
     - Status
+    - Folder
+    - Git (Clean/Dirty/Missing/No Git/Error)
     - VSCode
-    - Repo
     - Next Action
     """
-    # Column widths
-    col_folder = 20
-    col_issue = 6
-    col_status = 16
-    col_vscode = 10
-    col_repo = 15
-    col_action = 25
+    # Refresh caches once for all sessions (window cache is fast, process cache is slow)
+    clear_vscode_window_cache()
+    clear_vscode_process_cache()
 
-    # Print header
-    header = (
-        f"{'Folder':<{col_folder}} "
-        f"{'Issue':<{col_issue}} "
-        f"{'Status':<{col_status}} "
-        f"{'VSCode':<{col_vscode}} "
-        f"{'Repo':<{col_repo}} "
-        f"{'Next Action':<{col_action}}"
-    )
-    print(header)
-    print("-" * len(header))
+    # Build table rows
+    headers = ["Repo", "Issue", "Status", "Folder", "Git", "VSCode", "Next Action"]
+    rows: list[list[str]] = []
 
     # Track session issue keys to identify eligible issues not in sessions
     session_keys: set[tuple[str, int]] = set()
@@ -316,17 +314,26 @@ def display_status_table(
         if is_closed:
             status = f"(Closed) {status}"
 
-        # Truncate folder name if too long
-        if len(folder_name) > col_folder - 1:
-            folder_name = folder_name[: col_folder - 4] + "..."
-
-        # Truncate status if too long
-        if len(status) > col_status - 1:
-            status = status[: col_status - 4] + "..."
-
-        # Check VSCode and stale status
+        # Check VSCode status using multi-check approach (more reliable than PID alone)
+        # Check 1: PID-based check (quick but unreliable on Windows)
         is_running = check_vscode_running(session.get("vscode_pid"))
+
+        # Check 2: Window title check (Windows only, fast and reliable)
+        if not is_running:
+            is_running = is_vscode_window_open_for_folder(
+                str(folder_path),
+                issue_number=session["issue_number"],
+                repo=session["repo"],
+            )
+
+        # Check 3: Process cmdline check (slow fallback, cross-platform)
+        if not is_running:
+            is_running, _ = is_vscode_open_for_folder(str(folder_path))
+
         is_dirty = check_folder_dirty(folder_path) if folder_path.exists() else False
+        git_status = (
+            get_folder_git_status(folder_path) if folder_path.exists() else "Missing"
+        )
 
         # Get current status for eligibility check
         # Use cached status if available, fall back to session status
@@ -341,29 +348,32 @@ def display_status_table(
         is_eligible = is_status_eligible_for_session(status_for_eligibility)
 
         # Compute is_stale: closed OR ineligible OR status changed
-        status_changed = is_session_stale(session, cached_issues=repo_cached_issues)
-        stale = is_closed or not is_eligible or status_changed
+        # Only check status_changed for open issues to avoid warning
+        if is_closed:
+            stale = True
+        else:
+            status_changed = is_session_stale(session, cached_issues=repo_cached_issues)
+            stale = not is_eligible or status_changed
 
         vscode_status = "Running" if is_running else "Closed"
         action = get_next_action(stale, is_dirty, is_running)
 
-        # Show status change indicator
-        if stale:
-            status = (
-                f"→ {status[:col_status - 4]}"
-                if len(status) > col_status - 3
-                else f"→ {status}"
-            )
+        # Show status change indicator (but not for closed issues which already have prefix)
+        if stale and not is_closed:
+            status = f"-> {status}"
 
-        row = (
-            f"{folder_name:<{col_folder}} "
-            f"{issue_num:<{col_issue}} "
-            f"{status:<{col_status}} "
-            f"{vscode_status:<{col_vscode}} "
-            f"{repo_short:<{col_repo}} "
-            f"{action:<{col_action}}"
+        # Add row to table
+        rows.append(
+            [
+                repo_short,
+                issue_num,
+                status,
+                folder_name,
+                git_status,
+                vscode_status,
+                action,
+            ]
         )
-        print(row)
 
         session_keys.add((session["repo"], session["issue_number"]))
 
@@ -393,24 +403,15 @@ def display_status_table(
         )
 
         if needs_branch:
-            action = "→ Needs branch"
+            action = "-> Needs branch"
         else:
-            action = "→ Create and start"
+            action = "-> Create and start"
 
-        # Truncate status if too long
-        if len(status) > col_status - 1:
-            status = status[: col_status - 4] + "..."
+        # Add row to table
+        rows.append([repo_short, issue_num, status, "-", "-", "-", action])
 
-        row = (
-            f"{'-':<{col_folder}} "
-            f"{issue_num:<{col_issue}} "
-            f"{status:<{col_status}} "
-            f"{'-':<{col_vscode}} "
-            f"{repo_short:<{col_repo}} "
-            f"{action:<{col_action}}"
-        )
-        print(row)
-
-    # Handle empty case
-    if not sessions and not eligible_issues:
+    # Print table
+    if rows:
+        print(tabulate(rows, headers=headers, tablefmt="simple"))
+    else:
         print("No sessions or eligible issues found.")

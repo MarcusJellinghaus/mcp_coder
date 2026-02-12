@@ -262,16 +262,14 @@ def is_vscode_window_open_for_folder(
 ) -> bool:
     """Check if VSCode has a window open for the folder (Windows only).
 
-    Matching strategies (tried in order):
-    1. If issue_number and repo provided: Match '#N' + repo_name in title
-       (e.g., '[#323 review]... - mcp_coder' matches issue 323 in mcp_coder)
-    2. Fallback: Match folder_name in title
-       (e.g., 'file.py - mcp_coder - Visual Studio Code' matches folder mcp_coder)
+    For vscodeclaude sessions with issue numbers, only matches windows with
+    the issue number pattern (e.g., '[#219 ...'). This prevents false positives
+    from matching the main repo window instead of the issue workspace window.
 
     Args:
         folder_path: Full path to the workspace folder
-        issue_number: Optional issue number (enables issue-based matching)
-        repo: Optional repo full name 'owner/repo' (enables issue-based matching)
+        issue_number: Optional issue number (required for reliable matching)
+        repo: Optional repo full name 'owner/repo' (used with issue_number)
 
     Returns:
         True if a VSCode window matching the session is found
@@ -282,7 +280,9 @@ def is_vscode_window_open_for_folder(
     titles = _get_vscode_window_titles()
     folder_name = Path(folder_path).name.lower()
 
-    # Strategy 1: Issue number + repo name matching (most reliable for Claude sessions)
+    # For vscodeclaude sessions: Only match if issue number is in window title
+    # Workspace windows have format: "[#N stage] title - repo - Visual Studio Code"
+    # This prevents matching the main repo window ("repo - Visual Studio Code")
     if issue_number is not None and repo:
         repo_name = repo.split("/")[-1].lower() if "/" in repo else repo.lower()
         issue_pattern = f"#{issue_number}"
@@ -298,13 +298,6 @@ def is_vscode_window_open_for_folder(
                     title,
                 )
                 return True
-
-    # Strategy 2: Folder name fallback (for regular editor windows)
-    for title in titles:
-        title_lower = title.lower()
-        if folder_name in title_lower:
-            logger.debug("Found VSCode window for folder %s: %s", folder_name, title)
-            return True
 
     logger.debug(
         "No VSCode window found for folder: %s (issue=#%s, repo=%s)",

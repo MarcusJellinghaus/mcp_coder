@@ -11,6 +11,7 @@ from mcp_coder.workflows.vscodeclaude.sessions import (
     get_active_session_count,
     get_session_for_issue,
     get_sessions_file_path,
+    is_vscode_window_open_for_folder,
     load_sessions,
     remove_session,
     save_sessions,
@@ -463,3 +464,177 @@ class TestUpdateSessionStatus:
 
         updated_store = json.loads(sessions_file.read_text())
         assert updated_store["last_updated"] != "old-timestamp"
+
+
+class TestWindowTitleMatching:
+    """Tests for is_vscode_window_open_for_folder function.
+
+    These tests verify that window title matching correctly identifies
+    workspace windows while avoiding false positives from main repo windows.
+    """
+
+    def test_matches_window_with_issue_number_and_repo(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should match window with issue number pattern and repo name."""
+        # Mock window titles to return a workspace window
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
+            lambda: ["[#219 plan-review] Fix bug - mcp_coder - Visual Studio Code"],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            True,
+        )
+
+        result = is_vscode_window_open_for_folder(
+            folder_path="/workspace/mcp_coder_219",
+            issue_number=219,
+            repo="MarcusJellinghaus/mcp_coder",
+        )
+
+        assert result is True
+
+    def test_does_not_match_main_repo_window(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should NOT match main repo window without issue number pattern."""
+        # Mock window titles to return only main repo window (no issue number)
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
+            lambda: ["mcp_coder - Visual Studio Code"],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            True,
+        )
+
+        result = is_vscode_window_open_for_folder(
+            folder_path="/workspace/mcp_coder_219",
+            issue_number=219,
+            repo="MarcusJellinghaus/mcp_coder",
+        )
+
+        # This is the key test - should be False to avoid false positive
+        assert result is False
+
+    def test_does_not_match_different_issue_number(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should NOT match window for a different issue."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
+            lambda: ["[#123 code-review] Other issue - mcp_coder - Visual Studio Code"],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            True,
+        )
+
+        result = is_vscode_window_open_for_folder(
+            folder_path="/workspace/mcp_coder_219",
+            issue_number=219,
+            repo="MarcusJellinghaus/mcp_coder",
+        )
+
+        assert result is False
+
+    def test_matches_with_different_repo_format(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should extract repo name from owner/repo format."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
+            lambda: ["[#219 created] New issue - my_repo - Visual Studio Code"],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            True,
+        )
+
+        result = is_vscode_window_open_for_folder(
+            folder_path="/workspace/my_repo_219",
+            issue_number=219,
+            repo="owner/my_repo",
+        )
+
+        assert result is True
+
+    def test_case_insensitive_matching(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Should match case-insensitively."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
+            lambda: ["[#219 review] Title - MCP_CODER - Visual Studio Code"],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            True,
+        )
+
+        result = is_vscode_window_open_for_folder(
+            folder_path="/workspace/mcp_coder_219",
+            issue_number=219,
+            repo="owner/mcp_coder",
+        )
+
+        assert result is True
+
+    def test_returns_false_when_no_windows_open(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should return False when no VSCode windows exist."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
+            lambda: [],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            True,
+        )
+
+        result = is_vscode_window_open_for_folder(
+            folder_path="/workspace/mcp_coder_219",
+            issue_number=219,
+            repo="owner/mcp_coder",
+        )
+
+        assert result is False
+
+    def test_returns_false_on_non_windows(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should return False when win32gui not available."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            False,
+        )
+
+        result = is_vscode_window_open_for_folder(
+            folder_path="/workspace/mcp_coder_219",
+            issue_number=219,
+            repo="owner/mcp_coder",
+        )
+
+        assert result is False
+
+    def test_requires_both_issue_and_repo_in_title(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should require BOTH issue number AND repo name in title."""
+        # Window has issue number but wrong repo
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
+            lambda: ["[#219 review] Title - different_repo - Visual Studio Code"],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            True,
+        )
+
+        result = is_vscode_window_open_for_folder(
+            folder_path="/workspace/mcp_coder_219",
+            issue_number=219,
+            repo="owner/mcp_coder",
+        )
+
+        assert result is False

@@ -275,23 +275,31 @@ def _fetch_additional_issues(
     for issue_num in additional_issue_numbers:
         issue_key = str(issue_num)
 
-        # If already in cache, add to result but don't re-fetch
-        if issue_key in cache_data["issues"]:
-            result[issue_key] = cache_data["issues"][issue_key]
-            logger.debug(
-                f"Issue #{issue_num} already in cache for {repo_name}, using cached version"
-            )
-            continue
-
-        # Fetch via API
+        # Always re-fetch additional_issues to ensure fresh data
+        # (these are often closed issues that need current state)
         try:
             issue = issue_manager.get_issue(issue_num)
             if issue["number"] != 0:  # Valid issue
                 result[issue_key] = issue
-                logger.debug(f"Fetched additional issue #{issue_num} for {repo_name}")
+                # Log whether this was an update or new fetch
+                if issue_key in cache_data["issues"]:
+                    logger.debug(
+                        f"Refreshed issue #{issue_num} in cache for {repo_name}"
+                    )
+                else:
+                    logger.debug(
+                        f"Fetched additional issue #{issue_num} for {repo_name}"
+                    )
         except Exception as e:  # pylint: disable=broad-exception-caught
             # Generic exception handling - catches all API failures (404, rate limits, etc.)
-            logger.warning(f"Failed to fetch issue #{issue_num}: {e}")
+            # On fetch failure, use cached version if available as fallback
+            if issue_key in cache_data["issues"]:
+                result[issue_key] = cache_data["issues"][issue_key]
+                logger.warning(
+                    f"Failed to fetch issue #{issue_num}: {e}, using cached version"
+                )
+            else:
+                logger.warning(f"Failed to fetch issue #{issue_num}: {e}")
 
     return result
 

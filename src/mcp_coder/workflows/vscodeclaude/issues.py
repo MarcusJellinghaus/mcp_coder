@@ -15,7 +15,11 @@ from ...utils.github_operations.issues import (
 )
 from ...utils.github_operations.label_config import load_labels_config
 from ...utils.user_config import get_cache_refresh_minutes, load_config
-from .config import get_vscodeclaude_config, load_vscodeclaude_config
+from .config import (
+    get_github_username,
+    get_vscodeclaude_config,
+    load_vscodeclaude_config,
+)
 from .helpers import get_issue_status
 
 logger = logging.getLogger(__name__)
@@ -368,10 +372,11 @@ def build_eligible_issues_with_branch_check(
                 else:
                     continue
 
-            # Load vscodeclaude config for github_username
-            vscodeclaude_config = load_vscodeclaude_config()
-            github_username = str(vscodeclaude_config.get("github_username", ""))
-            if not github_username:
+            # Get GitHub username from authenticated session
+            try:
+                github_username = get_github_username()
+            except ValueError as e:
+                logger.warning(f"Failed to get GitHub username for {repo_name}: {e}")
                 continue
 
             # Get eligible issues using cache

@@ -1,0 +1,57 @@
+# Auto detect text files and normalize line endings to LF in the repo
+* text=auto
+
+# Source code
+*.py text diff=python
+*.pyi text diff=python
+*.pyx text diff=python
+
+# Configuration files
+*.json text
+*.toml text
+*.yaml text
+*.yml text
+*.ini text
+*.cfg text
+
+# Documentation
+*.md text
+*.rst text
+*.txt text
+
+# Shell scripts
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Windows scripts
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Git
+.gitattributes text
+.gitignore text
+.gitmodules text
+
+# CI/CD
+.github/**/* text
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.gz binary
+*.zip binary
+*.tar binary
+*.pyc binary
+*.pyd binary
+*.so binary
+*.dll binary
+*.exe binary
