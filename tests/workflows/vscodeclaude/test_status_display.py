@@ -43,6 +43,14 @@ def mock_status_checks(monkeypatch: pytest.MonkeyPatch) -> Any:
             lambda pid: is_running,
         )
         monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_vscode_window_open_for_folder",
+            lambda folder, issue_number=None, repo=None: is_running,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_vscode_open_for_folder",
+            lambda folder: (is_running, None),
+        )
+        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
             lambda path: is_dirty,
         )

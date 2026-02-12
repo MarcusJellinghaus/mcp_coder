@@ -9,7 +9,12 @@ from ...utils.github_operations.issues import IssueData, IssueManager
 from ...utils.subprocess_runner import CommandOptions, execute_subprocess
 from .helpers import get_issue_status
 from .issues import is_status_eligible_for_session, status_requires_linked_branch
-from .sessions import check_vscode_running, load_sessions
+from .sessions import (
+    check_vscode_running,
+    is_vscode_open_for_folder,
+    is_vscode_window_open_for_folder,
+    load_sessions,
+)
 from .types import VSCodeClaudeSession
 
 logger = logging.getLogger(__name__)
@@ -303,8 +308,22 @@ def display_status_table(
         if is_closed:
             status = f"(Closed) {status}"
 
-        # Check VSCode and stale status
+        # Check VSCode status using multi-check approach (more reliable than PID alone)
+        # Check 1: PID-based check (quick but unreliable on Windows)
         is_running = check_vscode_running(session.get("vscode_pid"))
+
+        # Check 2: Window title check (Windows only, fast and reliable)
+        if not is_running:
+            is_running = is_vscode_window_open_for_folder(
+                str(folder_path),
+                issue_number=session["issue_number"],
+                repo=session["repo"],
+            )
+
+        # Check 3: Process cmdline check (slow fallback, cross-platform)
+        if not is_running:
+            is_running, _ = is_vscode_open_for_folder(str(folder_path))
+
         is_dirty = check_folder_dirty(folder_path) if folder_path.exists() else False
         git_status = (
             get_folder_git_status(folder_path) if folder_path.exists() else "Missing"
