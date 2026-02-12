@@ -341,14 +341,18 @@ def display_status_table(
         is_eligible = is_status_eligible_for_session(status_for_eligibility)
 
         # Compute is_stale: closed OR ineligible OR status changed
-        status_changed = is_session_stale(session, cached_issues=repo_cached_issues)
-        stale = is_closed or not is_eligible or status_changed
+        # Only check status_changed for open issues to avoid warning
+        if is_closed:
+            stale = True
+        else:
+            status_changed = is_session_stale(session, cached_issues=repo_cached_issues)
+            stale = not is_eligible or status_changed
 
         vscode_status = "Running" if is_running else "Closed"
         action = get_next_action(stale, is_dirty, is_running)
 
-        # Show status change indicator
-        if stale:
+        # Show status change indicator (but not for closed issues which already have prefix)
+        if stale and not is_closed:
             status = (
                 f"-> {status[:col_status - 4]}"
                 if len(status) > col_status - 3
