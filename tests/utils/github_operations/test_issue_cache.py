@@ -1383,22 +1383,38 @@ class TestAdditionalIssuesParameter:
             assert "100" in saved_data["issues"]
             assert "123" in saved_data["issues"]
 
-    def test_additional_issues_skipped_if_in_cache(
+    def test_additional_issues_always_refreshed(
         self, mock_cache_issue_manager: Mock
     ) -> None:
-        """Test that additional issues already in cache are not re-fetched.
+        """Test that additional issues are always re-fetched for freshness.
 
-        Given: Cache already has issue #123
+        Given: Cache already has issue #123 with stale state (was open, now closed)
         When: Call get_all_cached_issues(additional_issues=[123])
         Then:
-        - No API call for #123
-        - Issue #123 is in returned list (from cache)
+        - API call is made for #123 to get fresh data
+        - Issue #123 is in returned list with updated state
         """
         from mcp_coder.utils.github_operations.issues.cache import get_all_cached_issues
 
+        # Cached issue with stale state (open)
         existing_issue: IssueData = {
             "number": 123,
-            "state": "closed",
+            "state": "open",  # Stale - was open, now closed
+            "labels": ["bug"],
+            "assignees": [],
+            "user": "testuser",
+            "created_at": "2025-12-31T07:00:00Z",
+            "locked": False,
+            "title": "Existing issue",
+            "body": "Existing body",
+            "url": "http://test.com/123",
+            "updated_at": "2025-12-31T09:00:00Z",
+        }
+
+        # Fresh issue state from API (closed)
+        fresh_issue: IssueData = {
+            "number": 123,
+            "state": "closed",  # Fresh - actually closed now
             "labels": ["bug"],
             "assignees": [],
             "user": "testuser",
@@ -1412,6 +1428,7 @@ class TestAdditionalIssuesParameter:
 
         mock_cache_issue_manager.list_issues.return_value = []
         mock_cache_issue_manager.repo_url = "https://github.com/owner/repo"
+        mock_cache_issue_manager.get_issue.return_value = fresh_issue
 
         with (
             patch(
@@ -1442,12 +1459,13 @@ class TestAdditionalIssuesParameter:
                 additional_issues=[123],
             )
 
-            # Verify get_issue was NOT called (already in cache)
-            mock_cache_issue_manager.get_issue.assert_not_called()
+            # Verify get_issue WAS called to refresh data
+            mock_cache_issue_manager.get_issue.assert_called_once_with(123)
 
-            # Verify issue #123 is in result from cache
+            # Verify issue #123 is in result with FRESH state (closed)
             assert len(result) == 1
             assert result[0]["number"] == 123
+            assert result[0]["state"] == "closed"  # Fresh state, not stale
 
     def test_no_additional_issues_backward_compatible(
         self, mock_cache_issue_manager: Mock
