@@ -11,6 +11,8 @@ from .helpers import get_issue_status
 from .issues import is_status_eligible_for_session, status_requires_linked_branch
 from .sessions import (
     check_vscode_running,
+    clear_vscode_process_cache,
+    clear_vscode_window_cache,
     is_vscode_open_for_folder,
     is_vscode_window_open_for_folder,
     load_sessions,
@@ -266,6 +268,10 @@ def display_status_table(
     - VSCode
     - Next Action
     """
+    # Refresh caches once for all sessions (window cache is fast, process cache is slow)
+    clear_vscode_window_cache()
+    clear_vscode_process_cache()
+
     # Build table rows
     headers = ["Repo", "Issue", "Status", "Folder", "Git", "VSCode", "Next Action"]
     rows: list[list[str]] = []
