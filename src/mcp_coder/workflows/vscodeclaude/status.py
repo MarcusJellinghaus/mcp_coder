@@ -208,7 +208,7 @@ def get_next_action(
                      "No branch", "Dirty", "Git error", "Multi-branch"
 
     Returns:
-        Action string like "(active)", "→ Restart", "!! No branch"
+        Action string like "(active)", "-> Restart", "!! No branch"
     """
     if is_vscode_running:
         return "(active)"
@@ -226,9 +226,9 @@ def get_next_action(
     if is_stale:
         if is_dirty:
             return "!! Manual cleanup"
-        return "→ Delete (with --cleanup)"
+        return "-> Delete (with --cleanup)"
 
-    return "→ Restart"
+    return "-> Restart"
 
 
 def display_status_table(
@@ -248,7 +248,7 @@ def display_status_table(
                                If provided, avoids API calls for staleness checks.
         issues_without_branch: Set of (repo_full_name, issue_number) tuples
                                for issues that require but lack a linked branch.
-                               Used to show "→ Needs branch" indicator.
+                               Used to show "-> Needs branch" indicator.
 
     Columns:
     - Folder
@@ -350,9 +350,9 @@ def display_status_table(
         # Show status change indicator
         if stale:
             status = (
-                f"→ {status[:col_status - 4]}"
+                f"-> {status[:col_status - 4]}"
                 if len(status) > col_status - 3
-                else f"→ {status}"
+                else f"-> {status}"
             )
 
         row = (
@@ -393,9 +393,9 @@ def display_status_table(
         )
 
         if needs_branch:
-            action = "→ Needs branch"
+            action = "-> Needs branch"
         else:
-            action = "→ Create and start"
+            action = "-> Create and start"
 
         # Truncate status if too long
         if len(status) > col_status - 1:

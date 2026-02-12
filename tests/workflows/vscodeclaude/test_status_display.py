@@ -1057,7 +1057,7 @@ class TestDisplayStatusTableBranchIndicators:
     def test_eligible_issue_without_branch_shows_needs_branch(
         self, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        """Eligible issue without linked branch shows '→ Needs branch'."""
+        """Eligible issue without linked branch shows '-> Needs branch'."""
         mock_issue: IssueData = {
             "number": 123,
             "title": "Test Issue",
@@ -1082,13 +1082,13 @@ class TestDisplayStatusTableBranchIndicators:
         )
 
         captured = capsys.readouterr()
-        assert "→ Needs branch" in captured.out
+        assert "-> Needs branch" in captured.out
         assert "#123" in captured.out
 
     def test_eligible_issue_with_branch_shows_create_and_start(
         self, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        """Eligible issue with linked branch shows '→ Create and start'."""
+        """Eligible issue with linked branch shows '-> Create and start'."""
         mock_issue: IssueData = {
             "number": 456,
             "title": "Test Issue",
@@ -1113,13 +1113,13 @@ class TestDisplayStatusTableBranchIndicators:
         )
 
         captured = capsys.readouterr()
-        assert "→ Create and start" in captured.out
+        assert "-> Create and start" in captured.out
         assert "#456" in captured.out
 
     def test_status_01_without_branch_shows_create_and_start(
         self, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        """Status-01 issue without branch still shows '→ Create and start'."""
+        """Status-01 issue without branch still shows '-> Create and start'."""
         mock_issue: IssueData = {
             "number": 789,
             "title": "Test Issue",
@@ -1146,7 +1146,7 @@ class TestDisplayStatusTableBranchIndicators:
 
         captured = capsys.readouterr()
         # Should show Create and start, not Needs branch (status-01 allows main)
-        assert "→ Create and start" in captured.out
+        assert "-> Create and start" in captured.out
 
     def test_session_with_skip_reason_shows_indicator(self) -> None:
         """Session with skip_reason shows appropriate indicator."""
@@ -1163,7 +1163,7 @@ class TestDisplayStatusTableBranchIndicators:
     def test_none_issues_without_branch_uses_default_behavior(
         self, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        """None issues_without_branch uses default '→ Create and start'."""
+        """None issues_without_branch uses default '-> Create and start'."""
         mock_issue: IssueData = {
             "number": 111,
             "title": "Test Issue",
@@ -1188,12 +1188,12 @@ class TestDisplayStatusTableBranchIndicators:
 
         captured = capsys.readouterr()
         # Default behavior when branch info not available
-        assert "→ Create and start" in captured.out
+        assert "-> Create and start" in captured.out
 
     def test_status_07_without_branch_shows_needs_branch(
         self, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        """Status-07:code-review without branch shows '→ Needs branch'."""
+        """Status-07:code-review without branch shows '-> Needs branch'."""
         mock_issue: IssueData = {
             "number": 222,
             "title": "Test Issue",
@@ -1218,7 +1218,7 @@ class TestDisplayStatusTableBranchIndicators:
         )
 
         captured = capsys.readouterr()
-        assert "→ Needs branch" in captured.out
+        assert "-> Needs branch" in captured.out
         assert "#222" in captured.out
 
     def test_skip_reason_dirty_shows_dirty_indicator(self) -> None:

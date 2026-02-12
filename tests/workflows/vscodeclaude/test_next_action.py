@@ -168,4 +168,4 @@ class TestGetNextActionSkipReason:
             is_vscode_running=False,
             skip_reason=None,
         )
-        assert result == "→ Restart"
+        assert result == "-> Restart"
