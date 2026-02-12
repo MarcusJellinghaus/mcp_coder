@@ -1290,3 +1290,350 @@ class TestCacheUpdateIntegration:
                 "Cache update failed" in msg or "Cache error" in msg
                 for msg in warning_messages
             )
+
+
+class TestAdditionalIssuesParameter:
+    """Tests for additional_issues parameter in get_all_cached_issues."""
+
+    def test_additional_issues_fetched_and_cached(
+        self, mock_cache_issue_manager: Mock
+    ) -> None:
+        """Test that additional issues are fetched via API and added to cache.
+
+        Given: Cache has open issues, additional_issues=[123] where #123 is closed
+        When: Call get_all_cached_issues(additional_issues=[123])
+        Then:
+        - Issue #123 is fetched via API
+        - Issue #123 is in returned list
+        - Issue #123 is saved to cache
+        """
+        from mcp_coder.utils.github_operations.issues.cache import get_all_cached_issues
+
+        # Mock the open issues API call
+        open_issue: IssueData = {
+            "number": 100,
+            "state": "open",
+            "labels": ["bug"],
+            "assignees": [],
+            "user": "testuser",
+            "created_at": "2025-12-31T08:00:00Z",
+            "locked": False,
+            "title": "Open issue",
+            "body": "Open body",
+            "url": "http://test.com/100",
+            "updated_at": "2025-12-31T08:00:00Z",
+        }
+
+        # Mock the closed issue API call
+        closed_issue: IssueData = {
+            "number": 123,
+            "state": "closed",
+            "labels": ["bug"],
+            "assignees": [],
+            "user": "testuser",
+            "created_at": "2025-12-31T07:00:00Z",
+            "locked": False,
+            "title": "Closed issue",
+            "body": "Closed body",
+            "url": "http://test.com/123",
+            "updated_at": "2025-12-31T09:00:00Z",
+        }
+
+        mock_cache_issue_manager.list_issues.return_value = [open_issue]
+        mock_cache_issue_manager.get_issue.return_value = closed_issue
+        mock_cache_issue_manager.repo_url = "https://github.com/owner/repo"
+
+        with (
+            patch(
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
+            ) as mock_path,
+            patch(
+                "mcp_coder.utils.github_operations.issues.cache._load_cache_file"
+            ) as mock_load,
+            patch(
+                "mcp_coder.utils.github_operations.issues.cache._save_cache_file"
+            ) as mock_save,
+        ):
+            import tempfile
+            from pathlib import Path
+
+            mock_path.return_value = Path(tempfile.gettempdir()) / "test_cache.json"
+            mock_load.return_value = {"last_checked": None, "issues": {}}
+            mock_save.return_value = True
+
+            # Call with additional_issues parameter
+            result = get_all_cached_issues(
+                "owner/repo",
+                mock_cache_issue_manager,
+                additional_issues=[123],
+            )
+
+            # Verify issue #123 was fetched via get_issue
+            mock_cache_issue_manager.get_issue.assert_called_once_with(123)
+
+            # Verify both open and closed issues are in result
+            assert len(result) == 2
+            issue_numbers = {issue["number"] for issue in result}
+            assert 100 in issue_numbers
+            assert 123 in issue_numbers
+
+            # Verify save was called (cache includes additional issue)
+            assert mock_save.called
+            saved_data = mock_save.call_args[0][1]
+            assert "100" in saved_data["issues"]
+            assert "123" in saved_data["issues"]
+
+    def test_additional_issues_skipped_if_in_cache(
+        self, mock_cache_issue_manager: Mock
+    ) -> None:
+        """Test that additional issues already in cache are not re-fetched.
+
+        Given: Cache already has issue #123
+        When: Call get_all_cached_issues(additional_issues=[123])
+        Then:
+        - No API call for #123
+        - Issue #123 is in returned list (from cache)
+        """
+        from mcp_coder.utils.github_operations.issues.cache import get_all_cached_issues
+
+        existing_issue: IssueData = {
+            "number": 123,
+            "state": "closed",
+            "labels": ["bug"],
+            "assignees": [],
+            "user": "testuser",
+            "created_at": "2025-12-31T07:00:00Z",
+            "locked": False,
+            "title": "Existing issue",
+            "body": "Existing body",
+            "url": "http://test.com/123",
+            "updated_at": "2025-12-31T09:00:00Z",
+        }
+
+        mock_cache_issue_manager.list_issues.return_value = []
+        mock_cache_issue_manager.repo_url = "https://github.com/owner/repo"
+
+        with (
+            patch(
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
+            ) as mock_path,
+            patch(
+                "mcp_coder.utils.github_operations.issues.cache._load_cache_file"
+            ) as mock_load,
+            patch(
+                "mcp_coder.utils.github_operations.issues.cache._save_cache_file"
+            ) as mock_save,
+        ):
+            import tempfile
+            from pathlib import Path
+
+            mock_path.return_value = Path(tempfile.gettempdir()) / "test_cache.json"
+            # Cache already has issue #123
+            mock_load.return_value = {
+                "last_checked": None,
+                "issues": {"123": existing_issue},
+            }
+            mock_save.return_value = True
+
+            # Call with additional_issues parameter
+            result = get_all_cached_issues(
+                "owner/repo",
+                mock_cache_issue_manager,
+                additional_issues=[123],
+            )
+
+            # Verify get_issue was NOT called (already in cache)
+            mock_cache_issue_manager.get_issue.assert_not_called()
+
+            # Verify issue #123 is in result from cache
+            assert len(result) == 1
+            assert result[0]["number"] == 123
+
+    def test_no_additional_issues_backward_compatible(
+        self, mock_cache_issue_manager: Mock
+    ) -> None:
+        """Test backward compatibility when additional_issues not provided.
+
+        Given: Existing cache with open issues
+        When: Call get_all_cached_issues() (without additional_issues)
+        Then:
+        - Behaves exactly as before
+        - Only open issues returned
+        """
+        from mcp_coder.utils.github_operations.issues.cache import get_all_cached_issues
+
+        open_issue: IssueData = {
+            "number": 100,
+            "state": "open",
+            "labels": ["bug"],
+            "assignees": [],
+            "user": "testuser",
+            "created_at": "2025-12-31T08:00:00Z",
+            "locked": False,
+            "title": "Open issue",
+            "body": "Open body",
+            "url": "http://test.com/100",
+            "updated_at": "2025-12-31T08:00:00Z",
+        }
+
+        mock_cache_issue_manager.list_issues.return_value = [open_issue]
+        mock_cache_issue_manager.repo_url = "https://github.com/owner/repo"
+
+        with (
+            patch(
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
+            ) as mock_path,
+            patch(
+                "mcp_coder.utils.github_operations.issues.cache._load_cache_file"
+            ) as mock_load,
+            patch(
+                "mcp_coder.utils.github_operations.issues.cache._save_cache_file"
+            ) as mock_save,
+        ):
+            import tempfile
+            from pathlib import Path
+
+            mock_path.return_value = Path(tempfile.gettempdir()) / "test_cache.json"
+            mock_load.return_value = {"last_checked": None, "issues": {}}
+            mock_save.return_value = True
+
+            # Call WITHOUT additional_issues parameter
+            result = get_all_cached_issues("owner/repo", mock_cache_issue_manager)
+
+            # Verify get_issue was NOT called
+            mock_cache_issue_manager.get_issue.assert_not_called()
+
+            # Verify only open issues returned
+            assert len(result) == 1
+            assert result[0]["number"] == 100
+            assert result[0]["state"] == "open"
+
+    def test_additional_issues_with_api_failure(
+        self, mock_cache_issue_manager: Mock, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test graceful handling when API fails for additional issue.
+
+        Given: API fails for issue #123
+        When: Call get_all_cached_issues(additional_issues=[123])
+        Then:
+        - Warning logged
+        - Other issues still returned
+        - No exception raised
+        """
+        import logging
+
+        from mcp_coder.utils.github_operations.issues.cache import get_all_cached_issues
+
+        caplog.set_level(
+            logging.WARNING, logger="mcp_coder.utils.github_operations.issues.cache"
+        )
+
+        open_issue: IssueData = {
+            "number": 100,
+            "state": "open",
+            "labels": ["bug"],
+            "assignees": [],
+            "user": "testuser",
+            "created_at": "2025-12-31T08:00:00Z",
+            "locked": False,
+            "title": "Open issue",
+            "body": "Open body",
+            "url": "http://test.com/100",
+            "updated_at": "2025-12-31T08:00:00Z",
+        }
+
+        mock_cache_issue_manager.list_issues.return_value = [open_issue]
+        mock_cache_issue_manager.get_issue.side_effect = Exception("API Error")
+        mock_cache_issue_manager.repo_url = "https://github.com/owner/repo"
+
+        with (
+            patch(
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
+            ) as mock_path,
+            patch(
+                "mcp_coder.utils.github_operations.issues.cache._load_cache_file"
+            ) as mock_load,
+            patch(
+                "mcp_coder.utils.github_operations.issues.cache._save_cache_file"
+            ) as mock_save,
+        ):
+            import tempfile
+            from pathlib import Path
+
+            mock_path.return_value = Path(tempfile.gettempdir()) / "test_cache.json"
+            mock_load.return_value = {"last_checked": None, "issues": {}}
+            mock_save.return_value = True
+
+            # Call with additional_issues - should not raise exception
+            result = get_all_cached_issues(
+                "owner/repo",
+                mock_cache_issue_manager,
+                additional_issues=[123],
+            )
+
+            # Verify warning was logged
+            assert "Failed to fetch issue #123" in caplog.text
+
+            # Verify other issues still returned
+            assert len(result) == 1
+            assert result[0]["number"] == 100
+
+    def test_additional_issues_empty_list(self, mock_cache_issue_manager: Mock) -> None:
+        """Test that empty additional_issues list behaves as if not provided.
+
+        Given: Cache with open issues
+        When: Call get_all_cached_issues(additional_issues=[])
+        Then:
+        - Behaves as if parameter not provided
+        - Only open issues returned
+        """
+        from mcp_coder.utils.github_operations.issues.cache import get_all_cached_issues
+
+        open_issue: IssueData = {
+            "number": 100,
+            "state": "open",
+            "labels": ["bug"],
+            "assignees": [],
+            "user": "testuser",
+            "created_at": "2025-12-31T08:00:00Z",
+            "locked": False,
+            "title": "Open issue",
+            "body": "Open body",
+            "url": "http://test.com/100",
+            "updated_at": "2025-12-31T08:00:00Z",
+        }
+
+        mock_cache_issue_manager.list_issues.return_value = [open_issue]
+        mock_cache_issue_manager.repo_url = "https://github.com/owner/repo"
+
+        with (
+            patch(
+                "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path"
+            ) as mock_path,
+            patch(
+                "mcp_coder.utils.github_operations.issues.cache._load_cache_file"
+            ) as mock_load,
+            patch(
+                "mcp_coder.utils.github_operations.issues.cache._save_cache_file"
+            ) as mock_save,
+        ):
+            import tempfile
+            from pathlib import Path
+
+            mock_path.return_value = Path(tempfile.gettempdir()) / "test_cache.json"
+            mock_load.return_value = {"last_checked": None, "issues": {}}
+            mock_save.return_value = True
+
+            # Call with EMPTY additional_issues list
+            result = get_all_cached_issues(
+                "owner/repo",
+                mock_cache_issue_manager,
+                additional_issues=[],
+            )
+
+            # Verify get_issue was NOT called
+            mock_cache_issue_manager.get_issue.assert_not_called()
+
+            # Verify only open issues returned
+            assert len(result) == 1
+            assert result[0]["number"] == 100

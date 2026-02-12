@@ -240,6 +240,7 @@ PR CREATED (status-10:pr-created)
 import logging
 import platform
 import shutil
+from collections import defaultdict
 from pathlib import Path
 from typing import NamedTuple
 
@@ -817,6 +818,92 @@ def _prepare_restart_branch(
     return BranchPrepResult(True, None, linked_branch)
 
 
+def _build_cached_issues_by_repo(
+    sessions: list[VSCodeClaudeSession],
+) -> dict[str, dict[int, IssueData]]:
+    """Build cached issues dict for all repos with sessions.
+
+    Fetches issues from cache with additional_issues parameter to ensure
+    closed issues from existing sessions are included.
+
+    Args:
+        sessions: List of all sessions
+
+    Returns:
+        Dict mapping repo_full_name to dict of issues (issue_number -> IssueData)
+        Returns empty dict if GitHub token is not configured (e.g., in test contexts)
+    """
+    # Early return if no sessions
+    if not sessions:
+        logger.debug("No sessions to build cache for")
+        return {}
+
+    logger.debug(
+        "Building cache for %d sessions",
+        len(sessions),
+    )
+
+    # Group sessions by repo
+    sessions_by_repo: dict[str, list[int]] = defaultdict(list)
+    for session in sessions:
+        sessions_by_repo[session["repo"]].append(session["issue_number"])
+
+    logger.debug(
+        "Grouped sessions into %d repos: %s",
+        len(sessions_by_repo),
+        {repo: len(issues) for repo, issues in sessions_by_repo.items()},
+    )
+
+    # Fetch cached issues for each repo with session issue numbers
+    cached_issues_by_repo: dict[str, dict[int, IssueData]] = {}
+    for repo_full_name, issue_numbers in sessions_by_repo.items():
+        logger.debug(
+            "Fetching cache for %s with additional_issues=%s",
+            repo_full_name,
+            issue_numbers,
+        )
+        try:
+            repo_url = f"https://github.com/{repo_full_name}"
+            issue_manager = IssueManager(repo_url=repo_url)
+
+            # Fetch with additional_issues to include closed session issues
+            all_issues = get_all_cached_issues(
+                repo_full_name=repo_full_name,
+                issue_manager=issue_manager,
+                force_refresh=False,
+                cache_refresh_minutes=get_cache_refresh_minutes(),
+                additional_issues=issue_numbers,  # ← KEY CHANGE
+            )
+
+            logger.debug(
+                "Retrieved %d total issues for %s (including session issues)",
+                len(all_issues),
+                repo_full_name,
+            )
+
+            # Convert to dict for fast lookup
+            cached_issues_by_repo[repo_full_name] = {
+                issue["number"]: issue for issue in all_issues
+            }
+        except ValueError as e:
+            # GitHub token not configured - return empty dict for this repo
+            # This is expected in test contexts where token may not be set
+            logger.warning(
+                "Failed to build cache for %s (likely missing GitHub token): %s",
+                repo_full_name,
+                e,
+            )
+            # Return empty dict - tests will provide cached_issues_by_repo parameter
+            return {}
+
+    logger.debug(
+        "Built cache for %d repos with session issues",
+        len(cached_issues_by_repo),
+    )
+
+    return cached_issues_by_repo
+
+
 def restart_closed_sessions(
     cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
 ) -> list[VSCodeClaudeSession]:
@@ -832,6 +919,7 @@ def restart_closed_sessions(
     - Issue status unchanged (not stale)
     - Folder still exists
     - Repo is still configured in config file
+    - Issue is still open (closed issues are skipped)
 
     Before restarting, regenerates all session files with fresh issue data.
 
@@ -841,6 +929,16 @@ def restart_closed_sessions(
     from .sessions import remove_session
 
     store = load_sessions()
+
+    # Early return if no sessions
+    if not store["sessions"]:
+        logger.debug("No sessions to restart")
+        return []
+
+    # Build cache with session issues if not provided
+    if cached_issues_by_repo is None:
+        cached_issues_by_repo = _build_cached_issues_by_repo(store["sessions"])
+
     restarted: list[VSCodeClaudeSession] = []
 
     # Refresh caches once for all sessions (window cache is fast, process cache is slow)
@@ -924,9 +1022,10 @@ def restart_closed_sessions(
                 )
                 continue
 
-            # Check if issue is closed
+            # Skip closed issues for restart (they shouldn't be restarted)
+            # but they should still appear in status display with (Closed) marker
             if issue["state"] != "open":
-                logger.info("Skipping closed issue #%d", issue_number)
+                logger.info("Skipping closed issue #%d for restart", issue_number)
                 continue
 
             # Check if status is eligible for session

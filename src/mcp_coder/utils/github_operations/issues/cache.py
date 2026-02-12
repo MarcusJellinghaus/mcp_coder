@@ -243,8 +243,57 @@ def _log_stale_cache_entries(
                     f"actual {sorted(fresh_labels)}"
                 )
         else:
-            # Issue no longer exists
-            logger.info(f"Issue #{issue_num}: no longer exists in repository")
+            # Issue not in fresh_issues (could be closed, not truly deleted)
+            # Only log if we're certain it's truly gone
+            # During full refresh with open issues, closed issues won't be in results
+            if cached_issue.get("state") == "open":
+                # Was open, now not in results - possibly closed or deleted
+                logger.info(f"Issue #{issue_num}: no longer exists in repository")
+            # Closed issues not appearing in open issues query is expected - no log needed
+
+
+def _fetch_additional_issues(
+    issue_manager: "IssueManager",
+    additional_issue_numbers: list[int],
+    repo_name: str,
+    cache_data: CacheData,
+) -> dict[str, IssueData]:
+    """Fetch specific issues by number via individual API calls.
+
+    Args:
+        issue_manager: IssueManager for GitHub API calls
+        additional_issue_numbers: List of issue numbers to fetch
+        repo_name: Repository name for logging
+        cache_data: Current cache data to check for existing issues
+
+    Returns:
+        Dict mapping issue number (as string) to IssueData.
+        Includes issues already in cache (doesn't re-fetch but returns them).
+    """
+    result: dict[str, IssueData] = {}
+
+    for issue_num in additional_issue_numbers:
+        issue_key = str(issue_num)
+
+        # If already in cache, add to result but don't re-fetch
+        if issue_key in cache_data["issues"]:
+            result[issue_key] = cache_data["issues"][issue_key]
+            logger.debug(
+                f"Issue #{issue_num} already in cache for {repo_name}, using cached version"
+            )
+            continue
+
+        # Fetch via API
+        try:
+            issue = issue_manager.get_issue(issue_num)
+            if issue["number"] != 0:  # Valid issue
+                result[issue_key] = issue
+                logger.debug(f"Fetched additional issue #{issue_num} for {repo_name}")
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            # Generic exception handling - catches all API failures (404, rate limits, etc.)
+            logger.warning(f"Failed to fetch issue #{issue_num}: {e}")
+
+    return result
 
 
 def _fetch_and_merge_issues(  # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -318,11 +367,12 @@ def _fetch_and_merge_issues(  # pylint: disable=too-many-arguments,too-many-posi
     return fresh_issues
 
 
-def get_all_cached_issues(
+def get_all_cached_issues(  # pylint: disable=too-many-locals
     repo_full_name: str,
     issue_manager: "IssueManager",
     force_refresh: bool = False,
     cache_refresh_minutes: int = 1440,
+    additional_issues: list[int] | None = None,
 ) -> List[IssueData]:
     """Get all cached issues using cache for performance and duplicate protection.
 
@@ -338,6 +388,11 @@ def get_all_cached_issues(
         issue_manager: IssueManager for GitHub API calls
         force_refresh: Bypass cache entirely
         cache_refresh_minutes: Full refresh threshold (default: 1440 = 24 hours)
+        additional_issues: Optional list of specific issue numbers to fetch in addition to open issues.
+                          This is useful for fetching closed issues (e.g., from existing sessions)
+                          that wouldn't be included in normal cache queries. Each issue is fetched
+                          via individual API call and merged into cache. Issues already in cache
+                          are skipped to avoid duplicate API calls.
 
     Returns:
         List of ALL cached issues (unfiltered). Caller is responsible for filtering.
@@ -373,7 +428,26 @@ def get_all_cached_issues(
                 f"Invalid timestamp in cache: {cache_data['last_checked']}, error: {e}"
             )
 
-    # Step 2: Check duplicate protection (50 second window)
+    # Step 2: Fetch additional issues BEFORE duplicate protection check
+    # This ensures specific issues are fetched even if cache is recent
+    additional_dict: dict[str, IssueData] = {}
+    if additional_issues:
+        logger.debug(
+            f"Fetching {len(additional_issues)} additional issues for {repo_name}"
+        )
+        additional_dict = _fetch_additional_issues(
+            issue_manager,
+            additional_issues,
+            repo_name,
+            cache_data,
+        )
+        cache_data["issues"].update(additional_dict)
+        if additional_dict:
+            logger.debug(
+                f"Added {len(additional_dict)} additional issues to cache for {repo_name}"
+            )
+
+    # Step 3: Check duplicate protection (50 second window)
     now = now_utc()
     if (
         not force_refresh
@@ -390,7 +464,9 @@ def get_all_cached_issues(
         logger.debug(f"Skipping {repo_name} - checked {age_seconds}s ago")
         return list(cache_data["issues"].values())
 
-    # Step 3: Fetch and merge issues
+    # Step 4: Fetch and merge issues
+    # Note: _fetch_and_merge_issues may clear cache on full refresh
+    # So we need to preserve and restore additional_dict after
     fresh_issues = _fetch_and_merge_issues(
         issue_manager,
         cache_data,
@@ -401,16 +477,21 @@ def get_all_cached_issues(
         cache_refresh_minutes,
     )
 
-    # Step 4: Update cache with fresh data
+    # Step 5: Update cache with fresh data
     fresh_dict = {str(issue["number"]): issue for issue in fresh_issues}
     cache_data["issues"].update(fresh_dict)
+
+    # Step 5b: Restore additional issues (they may have been cleared during full refresh)
+    if additional_dict:
+        cache_data["issues"].update(additional_dict)
+
     cache_data["last_checked"] = format_for_cache(now)
 
-    # Save cache
+    # Step 6: Save cache
     if _save_cache_file(_get_cache_file_path(repo_identifier), cache_data):
         _log_cache_metrics("save", repo_name, total_issues=len(cache_data["issues"]))
 
-    # Step 5: Return ALL cached issues (unfiltered)
+    # Step 7: Return ALL cached issues (unfiltered)
     all_cached_issues = list(cache_data["issues"].values())
     _log_cache_metrics(
         "hit",
