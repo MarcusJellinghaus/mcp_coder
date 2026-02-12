@@ -253,15 +253,16 @@ def display_status_table(
                                Used to show "-> Needs branch" indicator.
 
     Columns:
-    - Folder
+    - Repo
     - Issue
     - Status
+    - Folder
+    - Git (Clean/Dirty/Missing/No Git/Error)
     - VSCode
-    - Repo
     - Next Action
     """
     # Build table rows
-    headers = ["Folder", "Issue", "Status", "VSCode", "Repo", "Next Action"]
+    headers = ["Repo", "Issue", "Status", "Folder", "Git", "VSCode", "Next Action"]
     rows: list[list[str]] = []
 
     # Track session issue keys to identify eligible issues not in sessions
@@ -305,6 +306,7 @@ def display_status_table(
         # Check VSCode and stale status
         is_running = check_vscode_running(session.get("vscode_pid"))
         is_dirty = check_folder_dirty(folder_path) if folder_path.exists() else False
+        git_status = get_folder_git_status(folder_path) if folder_path.exists() else "Missing"
 
         # Get current status for eligibility check
         # Use cached status if available, fall back to session status
@@ -334,7 +336,7 @@ def display_status_table(
             status = f"-> {status}"
 
         # Add row to table
-        rows.append([folder_name, issue_num, status, vscode_status, repo_short, action])
+        rows.append([repo_short, issue_num, status, folder_name, git_status, vscode_status, action])
 
         session_keys.add((session["repo"], session["issue_number"]))
 
@@ -369,7 +371,7 @@ def display_status_table(
             action = "-> Create and start"
 
         # Add row to table
-        rows.append(["-", issue_num, status, "-", repo_short, action])
+        rows.append([repo_short, issue_num, status, "-", "-", "-", action])
 
     # Print table
     if rows:
