@@ -280,20 +280,20 @@ class TestIssueManagerIntegration:
 
             # Test adding comment with empty body
             print("\n4.3: Trying to add empty comment...")
-            empty_comment = issue_manager.add_comment(issue_number, "")
-            assert empty_comment["id"] == 0, "Should return empty CommentData"
+            with pytest.raises(ValueError, match="Comment body cannot be empty"):
+                issue_manager.add_comment(issue_number, "")
             print("✓ Empty comment body validation works")
 
             # Test adding comment with whitespace only
             print("\n4.4: Trying to add whitespace-only comment...")
-            whitespace_comment = issue_manager.add_comment(issue_number, "   \n\t   ")
-            assert whitespace_comment["id"] == 0
+            with pytest.raises(ValueError, match="Comment body cannot be empty"):
+                issue_manager.add_comment(issue_number, "   \n\t   ")
             print("✓ Whitespace-only comment body validation works")
 
             # Test editing comment with empty body
             print("\n4.5: Trying to edit comment with empty body...")
-            empty_edit = issue_manager.edit_comment(issue_number, comment1_id, "")
-            assert empty_edit["id"] == 0
+            with pytest.raises(ValueError, match="Comment body cannot be empty"):
+                issue_manager.edit_comment(issue_number, comment1_id, "")
             # Verify original comment unchanged
             verify_comments = issue_manager.get_comments(issue_number)
             unchanged = next(
@@ -399,22 +399,22 @@ class TestIssueManagerIntegration:
 
         # Test with invalid issue numbers
         print("\n2. Testing with invalid issue numbers...")
-        result = issue_manager.close_issue(-1)
-        assert result["number"] == 0
+        with pytest.raises(ValueError, match="Issue number must be a positive integer"):
+            issue_manager.close_issue(-1)
         print("✓ Negative issue number")
 
-        result = issue_manager.close_issue(0)
-        assert result["number"] == 0
+        with pytest.raises(ValueError, match="Issue number must be a positive integer"):
+            issue_manager.close_issue(0)
         print("✓ Zero issue number")
 
         # Test creating issues with invalid input
         print("\n3. Testing issue creation with invalid input...")
-        result = issue_manager.create_issue(title="", body="Valid body")
-        assert result["number"] == 0
+        with pytest.raises(ValueError, match="Issue title cannot be empty"):
+            issue_manager.create_issue(title="", body="Valid body")
         print("✓ Empty title")
 
-        result = issue_manager.create_issue(title="   \n\t   ", body="Valid body")
-        assert result["number"] == 0
+        with pytest.raises(ValueError, match="Issue title cannot be empty"):
+            issue_manager.create_issue(title="   \n\t   ", body="Valid body")
         print("✓ Whitespace-only title")
 
         print("\n✓ All error handling tests passed (0 issues created)")

@@ -224,11 +224,13 @@ class TestSubprocessCwdParameter:
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
 
         # Create proper subprocess result mock with all required attributes
-        # The CLI returns JSON, so we need to mock valid JSON output
+        # The CLI uses stream-json format (NDJSON) by default
         mock_result = MagicMock()
         mock_result.return_code = 0
+        # Mock stream-json format: NDJSON with result message
         mock_result.stdout = (
-            '{"result": "Claude response", "session_id": "test-session-123"}'
+            '{"type": "assistant", "message": {"content": [{"type": "text", "text": "Claude response"}]}}\n'
+            '{"type": "result", "session_id": "test-session-123", "result": "Claude response"}'
         )
         mock_result.stderr = ""
         mock_result.timed_out = False
@@ -275,11 +277,13 @@ class TestSubprocessCwdParameter:
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
 
         # Create proper subprocess result mock with all required attributes
-        # The CLI returns JSON, so we need to mock valid JSON output
+        # The CLI uses stream-json format (NDJSON) by default
         mock_result = MagicMock()
         mock_result.return_code = 0
+        # Mock stream-json format: NDJSON with result message
         mock_result.stdout = (
-            '{"result": "Claude response", "session_id": "test-session-456"}'
+            '{"type": "assistant", "message": {"content": [{"type": "text", "text": "Claude response"}]}}\n'
+            '{"type": "result", "session_id": "test-session-456", "result": "Claude response"}'
         )
         mock_result.stderr = ""
         mock_result.timed_out = False
@@ -366,14 +370,16 @@ class TestSubprocessCwdParameter:
     @patch("mcp_coder.workflows.create_plan.validate_output_files")
     @patch("mcp_coder.workflows.create_plan.commit_all_changes")
     @patch("mcp_coder.workflows.create_plan.git_push")
-    @patch("mcp_coder.workflows.create_plan.verify_steps_directory")
+    @patch("mcp_coder.workflows.create_plan.create_pr_info_structure")
+    @patch("mcp_coder.workflows.create_plan.check_pr_info_not_exists")
     @patch("mcp_coder.workflows.create_plan.manage_branch")
     @patch("mcp_coder.workflows.create_plan.check_prerequisites")
     def test_create_plan_workflow_passes_execution_dir_to_llm(
         self,
         mock_check_prereq: MagicMock,
         mock_manage_branch: MagicMock,
-        mock_verify_steps: MagicMock,
+        mock_check_pr_info: MagicMock,
+        mock_create_structure: MagicMock,
         mock_push: MagicMock,
         mock_commit: MagicMock,
         mock_validate: MagicMock,
@@ -407,17 +413,20 @@ class TestSubprocessCwdParameter:
         }
         mock_check_prereq.return_value = (True, mock_issue_data)
         mock_manage_branch.return_value = "feature-branch"
-        mock_verify_steps.return_value = True
+        mock_check_pr_info.return_value = True
+        mock_create_structure.return_value = True
         mock_validate.return_value = True
         mock_commit.return_value = {"success": True, "commit_hash": "abc123"}
         mock_push.return_value = {"success": True}
 
         # Mock subprocess to return valid responses
-        # The CLI returns JSON, so we need to mock valid JSON output
+        # The CLI uses stream-json format (NDJSON) by default
         mock_result = MagicMock()
         mock_result.return_code = 0
+        # Mock stream-json format: NDJSON with result message
         mock_result.stdout = (
-            '{"result": "Plan generated", "session_id": "plan-session-789"}'
+            '{"type": "assistant", "message": {"content": [{"type": "text", "text": "Plan generated"}]}}\n'
+            '{"type": "result", "session_id": "plan-session-789", "result": "Plan generated"}'
         )
         mock_result.stderr = ""
         mock_result.timed_out = False
@@ -467,10 +476,14 @@ class TestSubprocessCwdParameter:
         mock_get_diff.return_value = "diff output"
 
         # Create proper subprocess result mock with all required attributes
-        # The CLI returns JSON, so we need to mock valid JSON output
+        # The CLI uses stream-json format (NDJSON) by default
         mock_result = MagicMock()
         mock_result.return_code = 0
-        mock_result.stdout = '{"result": "feat: add new feature", "session_id": null}'
+        # Mock stream-json format: NDJSON with result message
+        mock_result.stdout = (
+            '{"type": "assistant", "message": {"content": [{"type": "text", "text": "feat: add new feature"}]}}\n'
+            '{"type": "result", "session_id": null, "result": "feat: add new feature"}'
+        )
         mock_result.stderr = ""
         mock_result.timed_out = False
         mock_execute_subprocess.return_value = mock_result
@@ -517,11 +530,13 @@ class TestSubprocessCwdParameter:
         execution_dir.mkdir()
 
         # Create proper subprocess result mock with all required attributes
-        # The CLI returns JSON, so we need to mock valid JSON output
+        # The CLI uses stream-json format (NDJSON) by default
         mock_result = MagicMock()
         mock_result.return_code = 0
+        # Mock stream-json format: NDJSON with result message
         mock_result.stdout = (
-            '{"result": "LLM response", "session_id": "llm-session-abc"}'
+            '{"type": "assistant", "message": {"content": [{"type": "text", "text": "LLM response"}]}}\n'
+            '{"type": "result", "session_id": "llm-session-abc", "result": "LLM response"}'
         )
         mock_result.stderr = ""
         mock_result.timed_out = False
@@ -562,11 +577,13 @@ class TestSubprocessCwdParameter:
         project_dir.mkdir()
 
         # Create proper subprocess result mock with all required attributes
-        # The CLI returns JSON, so we need to mock valid JSON output
+        # The CLI uses stream-json format (NDJSON) by default
         mock_result = MagicMock()
         mock_result.return_code = 0
+        # Mock stream-json format: NDJSON with result message
         mock_result.stdout = (
-            '{"result": "LLM response", "session_id": "sep-session-xyz"}'
+            '{"type": "assistant", "message": {"content": [{"type": "text", "text": "LLM response"}]}}\n'
+            '{"type": "result", "session_id": "sep-session-xyz", "result": "LLM response"}'
         )
         mock_result.stderr = ""
         mock_result.timed_out = False
