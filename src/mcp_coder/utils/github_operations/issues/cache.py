@@ -287,7 +287,9 @@ def _fetch_additional_issues(
                         f"Refreshed issue #{issue_num} in cache for {repo_name}"
                     )
                 else:
-                    logger.debug(f"Fetched additional issue #{issue_num} for {repo_name}")
+                    logger.debug(
+                        f"Fetched additional issue #{issue_num} for {repo_name}"
+                    )
         except Exception as e:  # pylint: disable=broad-exception-caught
             # Generic exception handling - catches all API failures (404, rate limits, etc.)
             # On fetch failure, use cached version if available as fallback

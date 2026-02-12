@@ -306,7 +306,9 @@ def display_status_table(
         # Check VSCode and stale status
         is_running = check_vscode_running(session.get("vscode_pid"))
         is_dirty = check_folder_dirty(folder_path) if folder_path.exists() else False
-        git_status = get_folder_git_status(folder_path) if folder_path.exists() else "Missing"
+        git_status = (
+            get_folder_git_status(folder_path) if folder_path.exists() else "Missing"
+        )
 
         # Get current status for eligibility check
         # Use cached status if available, fall back to session status
@@ -336,7 +338,17 @@ def display_status_table(
             status = f"-> {status}"
 
         # Add row to table
-        rows.append([repo_short, issue_num, status, folder_name, git_status, vscode_status, action])
+        rows.append(
+            [
+                repo_short,
+                issue_num,
+                status,
+                folder_name,
+                git_status,
+                vscode_status,
+                action,
+            ]
+        )
 
         session_keys.add((session["repo"], session["issue_number"]))
 
