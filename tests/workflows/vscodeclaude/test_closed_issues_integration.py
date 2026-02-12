@@ -150,7 +150,7 @@ class TestClosedIssueIntegration:
             "number": 100,
             "state": "open",
             "labels": ["bug", "status-07:code-review"],
-            "assignees": [],
+            "assignees": ["testuser"],
             "user": "testuser",
             "created_at": "2025-12-31T08:00:00Z",
             "locked": False,
@@ -218,7 +218,10 @@ class TestClosedIssueIntegration:
         cached_issues = {"owner/repo": {414: issue_414}}
         eligible_issues: list[tuple[str, IssueData]] = []
 
-        with patch("builtins.print") as mock_print:
+        with (
+            patch("builtins.print") as mock_print,
+            patch("pathlib.Path.exists", return_value=True),
+        ):
             # Call display_status_table with required parameters
             display_status_table(
                 sessions=sessions,
@@ -316,7 +319,7 @@ class TestClosedIssueIntegration:
             "number": 100,
             "state": "open",
             "labels": ["bug", "status-01:created"],
-            "assignees": [],
+            "assignees": ["testuser"],
             "user": "testuser",
             "created_at": "2025-12-31T08:00:00Z",
             "locked": False,
@@ -475,7 +478,10 @@ class TestClosedIssueIntegration:
 
         # Step 2: Test status display
         eligible_issues: list[tuple[str, IssueData]] = []
-        with patch("builtins.print") as mock_print:
+        with (
+            patch("builtins.print") as mock_print,
+            patch("pathlib.Path.exists", return_value=True),
+        ):
             # Call status display with required parameters
             display_status_table(
                 sessions=sessions,

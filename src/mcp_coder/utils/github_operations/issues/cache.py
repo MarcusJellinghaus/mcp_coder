@@ -248,9 +248,7 @@ def _log_stale_cache_entries(
             # During full refresh with open issues, closed issues won't be in results
             if cached_issue.get("state") == "open":
                 # Was open, now not in results - possibly closed or deleted
-                logger.info(
-                    f"Issue #{issue_num}: no longer in open issues (possibly closed)"
-                )
+                logger.info(f"Issue #{issue_num}: no longer exists in repository")
             # Closed issues not appearing in open issues query is expected - no log needed
 
 
@@ -432,6 +430,7 @@ def get_all_cached_issues(  # pylint: disable=too-many-locals
 
     # Step 2: Fetch additional issues BEFORE duplicate protection check
     # This ensures specific issues are fetched even if cache is recent
+    additional_dict: dict[str, IssueData] = {}
     if additional_issues:
         logger.debug(
             f"Fetching {len(additional_issues)} additional issues for {repo_name}"
@@ -466,6 +465,8 @@ def get_all_cached_issues(  # pylint: disable=too-many-locals
         return list(cache_data["issues"].values())
 
     # Step 4: Fetch and merge issues
+    # Note: _fetch_and_merge_issues may clear cache on full refresh
+    # So we need to preserve and restore additional_dict after
     fresh_issues = _fetch_and_merge_issues(
         issue_manager,
         cache_data,
@@ -479,6 +480,10 @@ def get_all_cached_issues(  # pylint: disable=too-many-locals
     # Step 5: Update cache with fresh data
     fresh_dict = {str(issue["number"]): issue for issue in fresh_issues}
     cache_data["issues"].update(fresh_dict)
+
+    # Step 5b: Restore additional issues (they may have been cleared during full refresh)
+    if additional_dict:
+        cache_data["issues"].update(additional_dict)
 
     cache_data["last_checked"] = format_for_cache(now)
 
