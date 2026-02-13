@@ -38,8 +38,8 @@ if TYPE_CHECKING:
     from .commit_operations import (
         generate_commit_message_with_llm,
         parse_llm_commit_response,
-        strip_claude_footers,
     )
+    from .llm_response_utils import strip_claude_footers
 
 __all__ = [
     # Base branch detection
@@ -75,9 +75,12 @@ def __getattr__(name: str) -> Any:
     if name in (
         "generate_commit_message_with_llm",
         "parse_llm_commit_response",
-        "strip_claude_footers",
     ):
         from . import commit_operations
 
         return getattr(commit_operations, name)
+    if name == "strip_claude_footers":
+        from . import llm_response_utils
+
+        return getattr(llm_response_utils, name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

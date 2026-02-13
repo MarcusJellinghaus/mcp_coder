@@ -13,48 +13,12 @@ from ..llm.interface import ask_llm
 from ..llm.providers.claude.claude_code_api import ClaudeAPIError
 from ..utils.git_operations import get_git_diff_for_commit, stage_all_changes
 from ..utils.git_utils import get_branch_name_for_logging
+from .llm_response_utils import strip_claude_footers
 
 # Constants
 LLM_COMMIT_TIMEOUT_SECONDS = 120  # 2 minutes for commit message generation
 
 logger = logging.getLogger(__name__)
-
-
-def strip_claude_footers(message: str) -> str:
-    """Remove Claude Code footer lines from commit message.
-
-    Removes lines starting with 🤖 (robot emoji) and exact matches for
-    'Co-Authored-By: Claude <noreply@anthropic.com>' from the end of the message.
-    Also cleans up trailing blank lines.
-
-    Args:
-        message: The commit message to clean
-
-    Returns:
-        Cleaned commit message with Claude footers removed
-    """
-    if not message:
-        return ""
-
-    # Split message into lines
-    lines = message.split("\n")
-
-    # Work backwards from the end, removing footers and empty lines
-    while lines:
-        last_line = lines[-1].strip()
-
-        # Check if line is a footer pattern or empty
-        if (
-            last_line.startswith("🤖")
-            or last_line == "Co-Authored-By: Claude <noreply@anthropic.com>"
-            or last_line == ""
-        ):
-            lines.pop()
-        else:
-            break
-
-    # Join lines back together
-    return "\n".join(lines)
 
 
 def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
