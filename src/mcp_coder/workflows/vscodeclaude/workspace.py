@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from ...utils.git_operations import checkout_branch, fetch_remote
 from ...utils.subprocess_runner import (
     CalledProcessError,
     CommandOptions,
@@ -178,13 +179,24 @@ def setup_git_repo(
     # Checkout and pull
     branch = branch_name or "main"
     logger.info("Checking out branch %s", branch)
-    checkout_options = CommandOptions(cwd=str(folder_path), check=True)
-    execute_subprocess(
-        ["git", "checkout", branch],
-        checkout_options,
-    )
 
+    # Use git operations utility to checkout branch (handles remote tracking)
+    if not checkout_branch(branch, folder_path):
+        raise CalledProcessError(
+            returncode=1,
+            cmd=["git", "checkout", branch],
+            output=f"Failed to checkout branch '{branch}'",
+        )
+
+    # Fetch and pull latest changes
     logger.info("Pulling latest changes")
+    if not fetch_remote(folder_path):
+        raise CalledProcessError(
+            returncode=1,
+            cmd=["git", "fetch"],
+            output="Failed to fetch from origin",
+        )
+
     pull_options = CommandOptions(cwd=str(folder_path), check=True)
     execute_subprocess(
         ["git", "pull"],

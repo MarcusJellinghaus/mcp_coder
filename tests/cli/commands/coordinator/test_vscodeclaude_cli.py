@@ -362,11 +362,24 @@ class TestCommandHandlers:
             execute_coordinator_vscodeclaude_status,
         )
 
+        # Mock load_sessions to return empty
         monkeypatch.setattr(
             "mcp_coder.cli.commands.coordinator.commands.load_sessions",
             lambda: {"sessions": [], "last_updated": "2024-01-01T00:00:00Z"},
         )
         # Mock build_eligible_issues to return empty list (no eligible issues)
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.build_eligible_issues_with_branch_check",
+            lambda repo_names: ([], set()),
+        )
+
+        # Mock load_config to return empty repos
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.commands.load_config",
+            lambda: {"coordinator": {"repos": {}}},
+        )
+
+        # Mock build_eligible_issues_with_branch_check to return empty
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.build_eligible_issues_with_branch_check",
             lambda repo_names: ([], set()),
