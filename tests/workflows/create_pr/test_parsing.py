@@ -1,5 +1,7 @@
 """Tests for create_PR workflow PR parsing functionality."""
 
+import pytest
+
 from mcp_coder.workflows.create_pr.core import parse_pr_summary
 
 
@@ -146,3 +148,54 @@ docs: Update readme"""
         assert title == "feat: Add authentication"
         assert "I found several commits:" in body
         assert "fix: Resolve bug" in body
+
+    @pytest.mark.parametrize(
+        "llm_response,expected_title,expected_body",
+        [
+            # Robot emoji footer
+            (
+                "TITLE: feat: add feature\nBODY:\n## Summary\nAdds feature\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+                "feat: add feature",
+                "## Summary\nAdds feature",
+            ),
+            # Co-Authored-By footer
+            (
+                "TITLE: fix: bug fix\nBODY:\n## Summary\nFixes bug\n\nCo-authored-by: Claude Opus 4.5 <noreply@anthropic.com>",
+                "fix: bug fix",
+                "## Summary\nFixes bug",
+            ),
+            # Both footers
+            (
+                "TITLE: docs: update\nBODY:\n## Summary\nUpdates docs\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>",
+                "docs: update",
+                "## Summary\nUpdates docs",
+            ),
+            # Empty body
+            ("TITLE: feat: test\nBODY:\n", "feat: test", ""),
+        ],
+    )
+    def test_parse_pr_summary_strips_footers(
+        self, llm_response: str, expected_title: str, expected_body: str
+    ) -> None:
+        """Test that parse_pr_summary() strips Claude footers from PR body."""
+        title, body = parse_pr_summary(llm_response)
+
+        assert title == expected_title
+        assert body == expected_body
+
+    def test_parse_pr_summary_preserves_footer_mentions_in_content(self) -> None:
+        """Test that legitimate PR body content mentioning footers is preserved."""
+        llm_response = (
+            "TITLE: feat: add footer support\n"
+            "BODY:\n"
+            "## Summary\n"
+            "This PR adds support for 🤖 robot emojis in content.\n"
+            "The Co-Authored-By field is also documented."
+        )
+
+        title, body = parse_pr_summary(llm_response)
+
+        assert title == "feat: add footer support"
+        assert "## Summary" in body
+        assert "🤖 robot emojis" in body
+        assert "Co-Authored-By field" in body
