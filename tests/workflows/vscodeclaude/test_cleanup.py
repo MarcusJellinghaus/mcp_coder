@@ -991,6 +991,86 @@ class TestGetStaleSessions:
         assert session["issue_number"] == 400
         assert git_status == "Clean"
 
+    def test_closed_issue_does_not_call_is_session_stale(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should NOT call is_session_stale for closed issues (short-circuit evaluation)."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        mock_sessions = {
+            "sessions": [
+                {
+                    "folder": str(tmp_path / "repo_closed"),
+                    "repo": "owner/repo",
+                    "issue_number": 999,
+                    "status": "status-07:code-review",
+                    "vscode_pid": None,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                }
+            ],
+            "last_updated": "",
+        }
+        sessions_file.write_text(json.dumps(mock_sessions))
+
+        # Issue is CLOSED
+        mock_issue: IssueData = {
+            "number": 999,
+            "title": "Closed Issue",
+            "state": "closed",
+            "labels": ["status-07:code-review"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "body": "",
+            "locked": False,
+        }
+        mock_cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {999: mock_issue}
+        }
+
+        # Create folder
+        (tmp_path / "repo_closed").mkdir()
+
+        # Track if is_session_stale is called
+        stale_called: list[bool] = []
+
+        def mock_is_session_stale(session: VSCodeClaudeSession) -> bool:
+            stale_called.append(True)
+            return False
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_folder_git_status",
+            lambda path: "Clean",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_stale",
+            mock_is_session_stale,
+        )
+
+        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+
+        # Session should be included (closed issues are stale)
+        assert len(result) == 1
+        # But is_session_stale should NOT have been called (short-circuit)
+        assert (
+            len(stale_called) == 0
+        ), "is_session_stale should not be called for closed issues"
+
     def test_excludes_eligible_status_sessions(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
