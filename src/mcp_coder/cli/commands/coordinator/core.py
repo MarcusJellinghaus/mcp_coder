@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import List, Optional
 from urllib.parse import quote
 
+from ....utils.github_operations.github_utils import parse_github_url
 from ....utils.github_operations.issues import (
     CacheData,
     IssueBranchManager,
@@ -392,13 +393,33 @@ def dispatch_workflow(
     if workflow_config["branch_strategy"] == "main":
         branch_name = "main"
     else:  # from_issue
-        branches = branch_manager.get_linked_branches(issue["number"])
-        if not branches:
-            logger.warning(
-                f"No linked branch found for issue #{issue['number']}, skipping workflow dispatch"
+        # Parse repo URL to extract owner and name for branch resolution
+        parsed_url = parse_github_url(repo_config["repo_url"])
+        if not parsed_url:
+            logger.error(
+                f"Invalid GitHub URL in repo config: {repo_config['repo_url']}"
             )
             return
-        branch_name = branches[0]
+
+        repo_owner, repo_name = parsed_url
+
+        # Resolve branch with PR fallback (checks linkedBranches then draft/open PRs)
+        resolved_branch = branch_manager.get_branch_with_pr_fallback(
+            issue_number=issue["number"],
+            repo_owner=repo_owner,
+            repo_name=repo_name,
+        )
+
+        if not resolved_branch:
+            logger.error(
+                f"No branch found for issue #{issue['number']} \"{issue['title']}\"\n"
+                f"  Checked: linkedBranches, draft/open PRs\n"
+                f"  Issue URL: {issue['url']}\n"
+                f"  Requirement: Issue must have linked branch or draft/open PR"
+            )
+            return
+
+        branch_name = resolved_branch
 
     # Step 3: Select appropriate command template based on executor_os and build command
     executor_os = repo_config.get("executor_os", "linux")

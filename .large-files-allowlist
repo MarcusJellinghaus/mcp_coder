@@ -9,7 +9,6 @@ docs/processes-prompts/development-process.md
 src/mcp_coder/cli/commands/coordinator/commands.py
 src/mcp_coder/prompt_manager.py
 src/mcp_coder/workflows/implement/core.py
-src/mcp_coder/workflows/vscodeclaude/orchestrator.py
 tests/cli/commands/coordinator/test_core.py
 tests/cli/commands/test_commit.py
 tests/cli/test_main.py
@@ -27,6 +26,5 @@ tests/workflows/implement/test_task_processing.py
 tests/workflows/test_issue_stats.py
 tests/workflows/test_validate_labels.py
 tests/workflows/vscodeclaude/test_cleanup.py
-tests/workflows/vscodeclaude/test_issues.py
 tests/workflows/vscodeclaude/test_orchestrator_sessions.py
 tests/workflows/vscodeclaude/test_status_display.py
