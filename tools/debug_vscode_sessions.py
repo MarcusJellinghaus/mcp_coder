@@ -5,6 +5,8 @@ import json
 import sys
 from pathlib import Path
 
+import psutil
+
 try:
     import win32gui
     import win32process
@@ -12,7 +14,6 @@ except ImportError:
     print("ERROR: pywin32 not installed. Run: pip install pywin32")
     sys.exit(1)
 
-import psutil
 
 
 def get_vscode_pids() -> set[int]:
