@@ -493,10 +493,11 @@ class TestDispatchWorkflow:
         assert "git pull" in command
         assert "mcp-coder --log-level INFO create-plan 123" in command
 
+    @patch("mcp_coder.cli.commands.coordinator.core.parse_github_url")
     def test_dispatch_workflow_handles_missing_branch_gracefully(
-        self, caplog: pytest.LogCaptureFixture
+        self, mock_parse_url: MagicMock, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Test that dispatch_workflow logs warning and returns early when no branch found."""
+        """Test that dispatch_workflow logs error and returns early when no branch found."""
         # Setup - Mock issue with status-08:ready-pr label (requires branch)
         issue: IssueData = {
             "number": 156,
@@ -525,11 +526,14 @@ class TestDispatchWorkflow:
         mock_issue_mgr = MagicMock()
         mock_branch_mgr = MagicMock()
 
-        # Mock get_linked_branches to return empty list (missing branch scenario)
-        mock_branch_mgr.get_linked_branches.return_value = []
+        # Mock parse_github_url to return owner and repo
+        mock_parse_url.return_value = ("test", "repo")
+
+        # Mock get_branch_with_pr_fallback to return None (missing branch scenario)
+        mock_branch_mgr.get_branch_with_pr_fallback.return_value = None
 
         # Set up logging capture
-        caplog.set_level(logging.WARNING, logger="mcp_coder.cli.commands.coordinator")
+        caplog.set_level(logging.ERROR, logger="mcp_coder.cli.commands.coordinator")
 
         # Execute - should complete gracefully without raising exception
         dispatch_workflow(
@@ -542,14 +546,16 @@ class TestDispatchWorkflow:
             log_level="INFO",
         )
 
-        # Verify branch manager was called with correct issue number
-        mock_branch_mgr.get_linked_branches.assert_called_once_with(156)
+        # Verify parse_github_url was called
+        mock_parse_url.assert_called_once_with("https://github.com/test/repo.git")
 
-        # Verify warning was logged with correct message
-        assert (
-            "No linked branch found for issue #156, skipping workflow dispatch"
-            in caplog.text
+        # Verify branch manager was called with correct parameters
+        mock_branch_mgr.get_branch_with_pr_fallback.assert_called_once_with(
+            issue_number=156, repo_owner="test", repo_name="repo"
         )
+
+        # Verify error was logged with correct message
+        assert "No branch found for issue #156" in caplog.text
 
         # Verify no Jenkins job was triggered (should return early)
         mock_jenkins.start_job.assert_not_called()
@@ -558,8 +564,9 @@ class TestDispatchWorkflow:
         mock_issue_mgr.remove_labels.assert_not_called()
         mock_issue_mgr.add_labels.assert_not_called()
 
+    @patch("mcp_coder.cli.commands.coordinator.core.parse_github_url")
     def test_dispatch_workflow_preserves_existing_behavior_with_valid_branch(
-        self,
+        self, mock_parse_url: MagicMock
     ) -> None:
         """Test that existing functionality works unchanged when branch exists."""
         # Setup - Mock issue with status-05:plan-ready label (requires branch)
@@ -590,8 +597,11 @@ class TestDispatchWorkflow:
         mock_issue_mgr = MagicMock()
         mock_branch_mgr = MagicMock()
 
-        # Mock get_linked_branches to return valid branch
-        mock_branch_mgr.get_linked_branches.return_value = ["feature/issue-123"]
+        # Mock parse_github_url to return owner and repo
+        mock_parse_url.return_value = ("test", "repo")
+
+        # Mock get_branch_with_pr_fallback to return valid branch
+        mock_branch_mgr.get_branch_with_pr_fallback.return_value = "feature/issue-123"
 
         # Mock Jenkins responses
         mock_jenkins.start_job.return_value = 98765
@@ -609,8 +619,13 @@ class TestDispatchWorkflow:
             log_level="INFO",
         )
 
-        # Verify branch manager was called
-        mock_branch_mgr.get_linked_branches.assert_called_once_with(123)
+        # Verify parse_github_url was called
+        mock_parse_url.assert_called_once_with("https://github.com/test/repo.git")
+
+        # Verify branch manager was called with correct parameters
+        mock_branch_mgr.get_branch_with_pr_fallback.assert_called_once_with(
+            issue_number=123, repo_owner="test", repo_name="repo"
+        )
 
         # Verify Jenkins job was triggered with correct branch
         mock_jenkins.start_job.assert_called_once()
