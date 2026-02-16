@@ -93,7 +93,8 @@ def get_stale_sessions(
                     is_ineligible = not is_status_eligible_for_session(current_status)
 
         # Check if session is stale, blocked, closed, or ineligible
-        if is_session_stale(session) or is_blocked or is_closed or is_ineligible:
+        # Check is_closed first to avoid calling is_session_stale on closed issues
+        if is_closed or is_blocked or is_ineligible or is_session_stale(session):
             folder_path = Path(session["folder"])
             git_status = get_folder_git_status(folder_path)
             stale_sessions.append((session, git_status))
