@@ -19,8 +19,6 @@ gh issue view <issue_number> --json title,body
 3. Draft updated issue text with:
    - Clear, concise title
    - Well-structured body with implementation ideas
-   - Preserve the original issue content at the bottom under:
-     `# Original issue: [old title]\n[old body]`
 
 4. Write the issue body to a temp file (avoids bash escaping issues with markdown):
 ```python
@@ -48,4 +46,3 @@ The base branch must be a single line. Multiple lines will cause an error during
 - Summary of the requirement
 - Discussed implementation approach (concise)
 - Any constraints or considerations identified
-- Original issue content preserved
