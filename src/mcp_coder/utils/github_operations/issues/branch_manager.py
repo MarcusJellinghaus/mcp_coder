@@ -548,6 +548,12 @@ class IssueBranchManager(BaseGitHubManager):
 
             timeline_items = issue_data.get("timelineItems", {}).get("nodes", [])
 
+            # Check if we hit the API limit (might be truncated)
+            if len(timeline_items) == 100:
+                logger.debug(
+                    f"Issue #{issue_number}: Retrieved 100 timeline items (API limit reached, may be truncated)"
+                )
+
             # Filter for OPEN PRs using helper method
             open_prs = self._extract_open_prs(timeline_items)
 
