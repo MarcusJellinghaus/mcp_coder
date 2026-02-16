@@ -3,7 +3,7 @@
 import logging
 import re
 from pathlib import Path
-from typing import List, Optional, TypedDict
+from typing import Any, List, Optional, TypedDict, cast
 
 from mcp_coder.utils.log_utils import log_function_call
 
@@ -124,6 +124,35 @@ class IssueBranchManager(BaseGitHubManager):
             )
             return False
         return True
+
+    @staticmethod
+    def _extract_open_prs(timeline_items: List[dict[str, Any]]) -> List[dict[str, Any]]:
+        """Extract OPEN PRs from timeline items.
+
+        Args:
+            timeline_items: List of timeline item nodes from GraphQL response
+
+        Returns:
+            List of PR source objects that are in OPEN state
+        """
+        open_prs = []
+        for node in timeline_items:
+            if not node or node.get("__typename") != "CrossReferencedEvent":
+                continue
+
+            source = node.get("source")
+            if not source:
+                continue
+
+            # Check if source is a PR (has PR-specific fields)
+            if "state" not in source or "headRefName" not in source:
+                continue
+
+            # Only consider OPEN PRs
+            if source.get("state") == "OPEN":
+                open_prs.append(source)
+
+        return open_prs
 
     @log_function_call
     @_handle_github_errors(default_return=[])
@@ -395,6 +424,166 @@ class IssueBranchManager(BaseGitHubManager):
                 error=error_msg,
                 existing_branches=[],
             )
+
+    @log_function_call
+    @_handle_github_errors(default_return=None)
+    def get_branch_with_pr_fallback(
+        self, issue_number: int, repo_owner: str, repo_name: str
+    ) -> Optional[str]:
+        """Get branch for issue using linkedBranches with PR timeline fallback.
+
+        This method implements a two-step resolution strategy:
+        1. Query linkedBranches (primary path, fast)
+        2. Query issue timeline for draft/open PRs (fallback)
+
+        Args:
+            issue_number: Issue number to find branch for
+            repo_owner: Repository owner (e.g., "anthropics")
+            repo_name: Repository name (e.g., "mcp-coder")
+
+        Returns:
+            Branch name if found, None otherwise
+
+        Examples:
+            >>> manager = IssueBranchManager(Path.cwd())
+            >>> # Case 1: linkedBranches returns branch (primary path)
+            >>> branch = manager.get_branch_with_pr_fallback(123, "owner", "repo")
+            >>> print(branch)  # "123-feature-branch"
+            >>>
+            >>> # Case 2: No linkedBranches, but draft PR exists (fallback)
+            >>> branch = manager.get_branch_with_pr_fallback(456, "owner", "repo")
+            >>> print(branch)  # "456-draft-pr-branch"
+            >>>
+            >>> # Case 3: Multiple PRs found (ambiguous)
+            >>> branch = manager.get_branch_with_pr_fallback(789, "owner", "repo")
+            >>> print(branch)  # None (logs warning with PR numbers)
+
+        Notes:
+            - Returns immediately if linkedBranches found (short-circuit)
+            - Only considers OPEN PRs (includes both draft and non-draft)
+            - Filters out CLOSED/MERGED PRs
+            - Returns None if multiple PRs found (logs warning)
+            - Comprehensive logging for debugging
+        """
+        # Step 1: Validate issue number
+        if not self._validate_issue_number(issue_number):
+            logger.debug(f"Invalid issue number: {issue_number}")
+            return None
+
+        # Step 2: Get repository
+        repo = self._get_repository()
+        if repo is None:
+            logger.warning("Failed to get repository for branch resolution")
+            return None
+
+        # Step 3: Try primary path - query linkedBranches (fast)
+        linked_branches = self.get_linked_branches(issue_number)
+        if linked_branches:
+            branch_name = linked_branches[0]
+            logger.debug(
+                f"Issue #{issue_number}: Found branch via linkedBranches: {branch_name}"
+            )
+            return branch_name
+
+        # Step 4: Fallback - query issue timeline for PRs
+        logger.debug(
+            f"Issue #{issue_number}: No linkedBranches found, querying PR timeline"
+        )
+
+        # GraphQL query for issue timeline
+        # Note: Limit 100 timeline items (GitHub API max). Issues with >100
+        # cross-references will only check the first 100. This covers most cases.
+        query = """
+        query($owner: String!, $repo: String!, $issueNumber: Int!) {
+          repository(owner: $owner, name: $repo) {
+            issue(number: $issueNumber) {
+              timelineItems(itemTypes: [CROSS_REFERENCED_EVENT], first: 100) {
+                nodes {
+                  __typename
+                  ... on CrossReferencedEvent {
+                    source {
+                      ... on PullRequest {
+                        number
+                        state
+                        isDraft
+                        headRefName
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        """
+
+        variables = {
+            "owner": repo_owner,
+            "repo": repo_name,
+            "issueNumber": issue_number,
+        }
+
+        # Execute GraphQL query
+        _, result = self._github_client._Github__requester.graphql_query(  # type: ignore[attr-defined]
+            query=query, variables=variables
+        )
+
+        # Step 5: Parse response and filter for OPEN PRs
+        try:
+            # Extract timeline nodes
+            data = result.get("data")
+            if data is None:
+                logger.debug(f"Issue #{issue_number}: Malformed GraphQL response")
+                return None
+
+            repository = data.get("repository")
+            if repository is None:
+                logger.debug(f"Issue #{issue_number}: Repository not found")
+                return None
+
+            issue_data = repository.get("issue")
+            if issue_data is None:
+                logger.debug(f"Issue #{issue_number}: Issue not found")
+                return None
+
+            timeline_items = issue_data.get("timelineItems", {}).get("nodes", [])
+
+            # Check if we hit the API limit (might be truncated)
+            if len(timeline_items) == 100:
+                logger.debug(
+                    f"Issue #{issue_number}: Retrieved 100 timeline items (API limit reached, may be truncated)"
+                )
+
+            # Filter for OPEN PRs using helper method
+            open_prs = self._extract_open_prs(timeline_items)
+
+            # Step 6: Handle results based on count
+            if len(open_prs) == 0:
+                logger.debug(f"Issue #{issue_number}: No open PRs found")
+                return None
+
+            if len(open_prs) == 1:
+                pr_data: dict[str, Any] = open_prs[0]
+                branch_name = cast(str, pr_data["headRefName"])
+                pr_number = pr_data["number"]
+                is_draft = pr_data.get("isDraft", False)
+                pr_type = "draft" if is_draft else "open"
+                logger.debug(
+                    f"Issue #{issue_number}: Found branch via {pr_type} PR #{pr_number}: {branch_name}"
+                )
+                return branch_name
+
+            # Multiple PRs found - ambiguous
+            pr_numbers = [pr["number"] for pr in open_prs]
+            logger.warning(
+                f"Issue #{issue_number}: Multiple open PRs found: {pr_numbers}. "
+                f"Cannot determine which branch to use."
+            )
+            return None
+
+        except (KeyError, TypeError) as e:
+            logger.error(f"Issue #{issue_number}: Error parsing timeline response: {e}")
+            return None
 
     @log_function_call
     @_handle_github_errors(default_return=False)

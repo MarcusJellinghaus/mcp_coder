@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """Debug script to enumerate all visible windows on Windows."""
+import psutil
 
 try:
     import win32gui
@@ -8,7 +9,6 @@ except ImportError:
     print("ERROR: pywin32 not installed. Run: pip install pywin32")
     exit(1)
 
-import psutil
 
 
 def get_process_info(hwnd):
