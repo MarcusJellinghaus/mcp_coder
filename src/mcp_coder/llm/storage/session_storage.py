@@ -8,7 +8,9 @@ import json
 import logging
 import os
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
+
+from ..types import LLMResponseDict
 
 logger = logging.getLogger(__name__)
 
@@ -19,14 +21,20 @@ __all__ = [
 
 
 def store_session(
-    response_data: Dict[str, Any], prompt: str, store_path: Optional[str] = None
+    response_data: Union[LLMResponseDict, Dict[str, Any]],
+    prompt: str,
+    store_path: Optional[str] = None,
+    step_name: Optional[str] = None,
+    branch_name: Optional[str] = None,
 ) -> str:
     """Store complete session data to .mcp-coder/responses/ directory.
 
     Args:
-        response_data: Response dictionary from ask_claude_code_api_detailed_sync
+        response_data: Response dictionary (LLMResponseDict or legacy dict format)
         prompt: Original user prompt
         store_path: Optional custom path for storage directory
+        step_name: Optional step name; if provided, filename uses {timestamp}_{step_name}.json
+        branch_name: Optional branch name added to metadata
 
     Returns:
         File path of stored session for potential user reference
@@ -48,20 +56,34 @@ def store_session(
 
     # Generate timestamp-based filename
     timestamp = datetime.now().isoformat().replace(":", "-").split(".")[0]
-    filename = f"response_{timestamp}.json"
+    if step_name:
+        filename = f"{timestamp}_{step_name}.json"
+    else:
+        filename = f"response_{timestamp}.json"
     file_path = os.path.join(storage_dir, filename)
+
+    # Extract model using triple-fallback to support both LLMResponseDict and old dict formats
+    model = (
+        response_data.get("raw_response", {}).get("session_info", {}).get("model")  # type: ignore[union-attr]
+        or response_data.get("session_info", {}).get("model")  # type: ignore[union-attr]
+        or response_data.get("provider", "claude")
+    )
+
+    metadata: Dict[str, Any] = {
+        "timestamp": datetime.now().isoformat() + "Z",
+        "working_directory": os.getcwd(),
+        "model": model,
+    }
+    if branch_name is not None:
+        metadata["branch_name"] = branch_name
+    if step_name is not None:
+        metadata["step_name"] = step_name
 
     # Create complete session JSON structure
     session_data = {
         "prompt": prompt,
         "response_data": response_data,
-        "metadata": {
-            "timestamp": datetime.now().isoformat() + "Z",
-            "working_directory": os.getcwd(),
-            "model": response_data.get("session_info", {}).get(
-                "model", "claude-3-5-sonnet"
-            ),
-        },
+        "metadata": metadata,
     }
 
     # Write JSON file
@@ -120,6 +142,12 @@ def extract_session_id(file_path: str) -> Optional[str]:
         session_id = session_data.get("metadata", {}).get("session_id")
         if session_id and isinstance(session_id, str):
             logger.debug("Found session_id in metadata: %s", session_id)
+            return session_id
+
+        # Path 4: response_data.session_id (LLMResponseDict format)
+        session_id = session_data.get("response_data", {}).get("session_id")
+        if session_id and isinstance(session_id, str):
+            logger.debug("Found session_id in response_data: %s", session_id)
             return session_id
 
         logger.warning("No session_id found in file: %s", file_path)

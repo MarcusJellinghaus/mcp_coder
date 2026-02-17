@@ -9,6 +9,7 @@ from unittest.mock import Mock, mock_open, patch
 import pytest
 
 from mcp_coder.llm.storage.session_storage import extract_session_id, store_session
+from mcp_coder.llm.types import LLMResponseDict
 
 
 class TestStoreSession:
@@ -36,6 +37,141 @@ class TestStoreSession:
                 data = json.load(f)
                 assert data["prompt"] == "Test prompt"
                 assert data["response_data"]["text"] == "Hello"
+
+    def test_store_session_with_llm_response_dict(self) -> None:
+        """Test store_session with a proper LLMResponseDict."""
+        with tempfile.TemporaryDirectory() as tmp_path:
+            response_data: LLMResponseDict = {
+                "version": "1.0",
+                "timestamp": "2025-10-02T14:30:00.000000",
+                "text": "Hello from LLM",
+                "session_id": "llm-session-abc",
+                "method": "cli",
+                "provider": "claude",
+                "raw_response": {"session_info": {"model": "claude-sonnet-4"}},
+            }
+
+            file_path = store_session(response_data, "Test prompt", tmp_path)
+
+            with open(file_path, "r") as f:
+                data = json.load(f)
+            assert data["prompt"] == "Test prompt"
+            assert data["response_data"] == response_data
+            assert "metadata" in data
+
+    def test_store_session_step_name_filename_format(self) -> None:
+        """Test filename format when step_name is provided."""
+        with tempfile.TemporaryDirectory() as tmp_path:
+            response_data: Dict[str, Any] = {
+                "session_info": {"model": "claude"},
+            }
+
+            file_path = store_session(
+                response_data, "prompt", tmp_path, step_name="step_1"
+            )
+
+            filename = os.path.basename(file_path)
+            assert filename.endswith("_step_1.json")
+            assert not filename.startswith("response_")
+
+    def test_store_session_no_step_name_legacy_format(self) -> None:
+        """Test filename format when step_name is not provided."""
+        with tempfile.TemporaryDirectory() as tmp_path:
+            response_data: Dict[str, Any] = {
+                "session_info": {"model": "claude"},
+            }
+
+            file_path = store_session(response_data, "prompt", tmp_path)
+
+            filename = os.path.basename(file_path)
+            assert filename.startswith("response_")
+            assert filename.endswith(".json")
+
+    def test_store_session_branch_name_in_metadata(self) -> None:
+        """Test that branch_name appears in metadata when provided."""
+        with tempfile.TemporaryDirectory() as tmp_path:
+            response_data: Dict[str, Any] = {"session_info": {"model": "claude"}}
+
+            file_path = store_session(
+                response_data, "prompt", tmp_path, branch_name="342-improve-logging"
+            )
+
+            with open(file_path, "r") as f:
+                data = json.load(f)
+            assert data["metadata"]["branch_name"] == "342-improve-logging"
+
+    def test_store_session_step_name_in_metadata(self) -> None:
+        """Test that step_name appears in metadata when provided."""
+        with tempfile.TemporaryDirectory() as tmp_path:
+            response_data: Dict[str, Any] = {"session_info": {"model": "claude"}}
+
+            file_path = store_session(
+                response_data, "prompt", tmp_path, step_name="step_1"
+            )
+
+            with open(file_path, "r") as f:
+                data = json.load(f)
+            assert data["metadata"]["step_name"] == "step_1"
+
+    def test_store_session_model_from_raw_response(self) -> None:
+        """Test model extraction from raw_response.session_info.model (LLMResponseDict format)."""
+        with tempfile.TemporaryDirectory() as tmp_path:
+            response_data: LLMResponseDict = {
+                "version": "1.0",
+                "timestamp": "2025-10-02T14:30:00",
+                "text": "response",
+                "session_id": "abc",
+                "method": "cli",
+                "provider": "claude",
+                "raw_response": {"session_info": {"model": "claude-sonnet-4-new"}},
+            }
+
+            file_path = store_session(response_data, "prompt", tmp_path)
+
+            with open(file_path, "r") as f:
+                data = json.load(f)
+            assert data["metadata"]["model"] == "claude-sonnet-4-new"
+
+    def test_store_session_model_fallback_to_provider(self) -> None:
+        """Test model falls back to provider field when no session_info.model."""
+        with tempfile.TemporaryDirectory() as tmp_path:
+            response_data: LLMResponseDict = {
+                "version": "1.0",
+                "timestamp": "2025-10-02T14:30:00",
+                "text": "response",
+                "session_id": "abc",
+                "method": "cli",
+                "provider": "claude-fallback",
+                "raw_response": {},
+            }
+
+            file_path = store_session(response_data, "prompt", tmp_path)
+
+            with open(file_path, "r") as f:
+                data = json.load(f)
+            assert data["metadata"]["model"] == "claude-fallback"
+
+    def test_store_session_no_branch_name_not_in_metadata(self) -> None:
+        """Test that branch_name key is absent from metadata when not provided."""
+        with tempfile.TemporaryDirectory() as tmp_path:
+            response_data: Dict[str, Any] = {"session_info": {"model": "claude"}}
+
+            file_path = store_session(response_data, "prompt", tmp_path)
+
+            with open(file_path, "r") as f:
+                data = json.load(f)
+            assert "branch_name" not in data["metadata"]
+
+    def test_store_session_no_step_name_not_in_metadata(self) -> None:
+        """Test that step_name key is absent from metadata when not provided."""
+        with tempfile.TemporaryDirectory() as tmp_path:
+            response_data: Dict[str, Any] = {"session_info": {"model": "claude"}}
+
+            file_path = store_session(response_data, "prompt", tmp_path)
+
+            with open(file_path, "r") as f:
+                data = json.load(f)
+            assert "step_name" not in data["metadata"]
 
 
 class TestExtractSessionId:
@@ -85,3 +221,26 @@ class TestExtractSessionId:
 
             session_id = extract_session_id(str(file_path))
             assert session_id is None
+
+    def test_extract_session_id_from_llm_response_dict_format(self) -> None:
+        """Test extracting session_id from LLMResponseDict format (response_data.session_id)."""
+        with tempfile.TemporaryDirectory() as tmp_path:
+            session_data = {
+                "prompt": "Test",
+                "response_data": {
+                    "version": "1.0",
+                    "timestamp": "2025-10-02T14:30:00",
+                    "text": "response text",
+                    "session_id": "llm-dict-session-xyz",
+                    "method": "cli",
+                    "provider": "claude",
+                    "raw_response": {},
+                },
+            }
+
+            file_path = os.path.join(tmp_path, "llm_response.json")
+            with open(file_path, "w") as f:
+                json.dump(session_data, f)
+
+            session_id = extract_session_id(str(file_path))
+            assert session_id == "llm-dict-session-xyz"

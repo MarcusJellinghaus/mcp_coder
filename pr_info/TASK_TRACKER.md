@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 See [step_1.md](./steps/step_1.md) for full details.
 
-- [ ] Implement Step 1: extend `store_session()` with `step_name`/`branch_name` params and new filename format; add `LLMResponseDict` support; update `extract_session_id()` with new lookup path
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues found
-- [ ] Prepare git commit message for Step 1
+- [x] Implement Step 1: extend `store_session()` with `step_name`/`branch_name` params and new filename format; add `LLMResponseDict` support; update `extract_session_id()` with new lookup path
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues found
+- [x] Prepare git commit message for Step 1
 
 ### Step 2 – Simplify LLM Interface: `ask_llm()` thin wrapper + centralise `TimeoutExpired` + delete `claude_code_interface.py`
 
