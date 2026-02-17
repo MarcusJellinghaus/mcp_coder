@@ -499,8 +499,15 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         repos_section = config_data.get("coordinator", {}).get("repos", {})
         repo_names = list(repos_section.keys())
 
+        # Load sessions early so closed session issues are included in the cache
+        store = load_sessions()
+        sessions_list = store["sessions"]
+
         # Build cached issues for all repos (used for staleness checks)
-        cached_issues_by_repo, _ = _build_cached_issues_by_repo(repo_names)
+        # Pass sessions so closed session issues are included (mirrors status command)
+        cached_issues_by_repo, _ = _build_cached_issues_by_repo(
+            repo_names, sessions_list
+        )
 
         # Step 1: Handle cleanup (BEFORE restart)
         # - Always runs: dry_run=True shows what would be cleaned, dry_run=False actually deletes

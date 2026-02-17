@@ -363,7 +363,7 @@ def _fetch_and_merge_issues(  # pylint: disable=too-many-arguments,too-many-posi
             f"Incremental refresh for {repo_name} since {last_checked} (age={cache_age_minutes}m)"
         )
         fresh_issues = issue_manager.list_issues(
-            state="open", include_pull_requests=False, since=last_checked
+            state="all", include_pull_requests=False, since=last_checked
         )
         _log_cache_metrics(
             "refresh",
@@ -396,11 +396,11 @@ def get_all_cached_issues(  # pylint: disable=too-many-locals
         issue_manager: IssueManager for GitHub API calls
         force_refresh: Bypass cache entirely
         cache_refresh_minutes: Full refresh threshold (default: 1440 = 24 hours)
-        additional_issues: Optional list of specific issue numbers to fetch in addition to open issues.
-                          This is useful for fetching closed issues (e.g., from existing sessions)
-                          that wouldn't be included in normal cache queries. Each issue is fetched
-                          via individual API call and merged into cache. Issues already in cache
-                          are skipped to avoid duplicate API calls.
+        additional_issues: Extends the full refresh with known closed issues.
+                          Full refresh uses state="open" so closed issues are never returned.
+                          Pass session issue numbers here to ensure closed session issues
+                          are always fetched individually, regardless of refresh type or the
+                          duplicate protection window (fetched before that check).
 
     Returns:
         List of ALL cached issues (unfiltered). Caller is responsible for filtering.

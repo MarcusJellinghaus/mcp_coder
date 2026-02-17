@@ -25,7 +25,10 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-VSCODE_PROCESS_NAME = "code"
+# Exact process names for VSCode on each platform.
+# Using exact match prevents false positives from processes whose names
+# contain "code" as a substring (e.g. "mcp-code-checker.exe").
+VSCODE_PROCESS_NAMES = {"code.exe", "code"}  # Windows / Linux+macOS
 
 
 def get_sessions_file_path() -> Path:
@@ -95,14 +98,24 @@ def check_vscode_running(pid: int | None) -> bool:
           Use is_vscode_open_for_folder() for more reliable folder-based check.
     """
     if pid is None:
+        logger.debug("check_vscode_running: pid=None -> False")
         return False
 
     if not psutil.pid_exists(pid):
+        logger.debug("check_vscode_running: pid=%d does not exist -> False", pid)
         return False
     try:
         process = psutil.Process(pid)
-        return VSCODE_PROCESS_NAME in process.name().lower()
+        result = process.name().lower() in VSCODE_PROCESS_NAMES
+        logger.debug(
+            "check_vscode_running: pid=%d name=%s -> %s",
+            pid,
+            process.name(),
+            result,
+        )
+        return result
     except (psutil.NoSuchProcess, psutil.AccessDenied):
+        logger.debug("check_vscode_running: pid=%d access error -> False", pid)
         return False
 
 
@@ -129,7 +142,7 @@ def _get_vscode_processes(refresh: bool = False) -> list[dict[str, Any]]:
     for proc in psutil.process_iter(["pid", "name", "cmdline"]):
         try:
             proc_name = proc.info.get("name", "") or ""
-            if VSCODE_PROCESS_NAME not in proc_name.lower():
+            if proc_name.lower() not in VSCODE_PROCESS_NAMES:
                 continue
 
             cmdline = proc.info.get("cmdline") or []
@@ -402,17 +415,83 @@ def remove_session(folder: str) -> bool:
     return False
 
 
-def get_active_session_count() -> int:
-    """Count sessions with running VSCode processes.
+def session_has_artifacts(folder: str) -> bool:
+    """Check if session folder or workspace file still exist on disk.
+
+    A session's artifacts are its working folder and its .code-workspace file.
+    If both are gone, any still-running VSCode process is a zombie for this
+    session (it was launched with artifacts that have since been deleted).
+
+    Args:
+        folder: Full path to the session's working folder
 
     Returns:
-        Number of sessions where VSCode PID is still running
+        True if the folder or workspace file exists
+    """
+    folder_path = Path(folder)
+    workspace_file = folder_path.parent / f"{folder_path.name}.code-workspace"
+    return folder_path.exists() or workspace_file.exists()
+
+
+def is_session_active(session: VSCodeClaudeSession) -> bool:
+    """Check if a session's VSCode is currently running.
+
+    Single entry point for all VSCode detection logic. Callers should always
+    use this instead of assembling individual checks themselves.
+
+    Runs three checks in order (fast to slow):
+    1. PID-based check (fast but unreliable on Windows — launcher exits immediately)
+    2. Window title check (Windows only, reliable for vscodeclaude workspaces)
+    3. Process cmdline check (slow fallback, cross-platform)
+
+    Pre-condition: only runs checks if session artifacts exist. If both the
+    folder and workspace file are gone, any matching process is a zombie.
+
+    Args:
+        session: Session to check
+
+    Returns:
+        True if VSCode is running for this session
+    """
+    folder = session.get("folder", "")
+    issue_num = session.get("issue_number")
+    if not session_has_artifacts(folder):
+        logger.debug("is_session_active #%s: no artifacts -> False", issue_num)
+        return False
+    if check_vscode_running(session.get("vscode_pid")):
+        logger.debug("is_session_active #%s: PID check -> True", issue_num)
+        return True
+    if is_vscode_window_open_for_folder(
+        folder,
+        issue_number=issue_num,
+        repo=session.get("repo"),
+    ):
+        logger.debug("is_session_active #%s: window check -> True", issue_num)
+        return True
+    is_open, _ = is_vscode_open_for_folder(folder)
+    logger.debug("is_session_active #%s: process check -> %s", issue_num, is_open)
+    return is_open
+
+
+def get_active_session_count() -> int:
+    """Count sessions with running VSCode processes and existing artifacts.
+
+    Uses the current VSCode detection caches without refreshing them, so the
+    result is consistent with whatever scan ran most recently (e.g. the fresh
+    scan performed by restart_closed_sessions()). Callers that need a
+    guaranteed fresh scan should call clear_vscode_window_cache() and
+    clear_vscode_process_cache() before this function.
+
+    Returns:
+        Number of active sessions according to is_session_active().
     """
     store = load_sessions()
-    count = 0
-    for session in store["sessions"]:
-        if check_vscode_running(session.get("vscode_pid")):
-            count += 1
+    count = sum(1 for s in store["sessions"] if is_session_active(s))
+    logger.debug(
+        "get_active_session_count: %d/%d sessions active",
+        count,
+        len(store["sessions"]),
+    )
     return count
 
 

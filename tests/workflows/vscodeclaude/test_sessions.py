@@ -2,12 +2,16 @@
 
 import json
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from mcp_coder.workflows.vscodeclaude.sessions import (
+    VSCODE_PROCESS_NAMES,
+    _get_vscode_processes,
     add_session,
     check_vscode_running,
+    clear_vscode_process_cache,
     get_active_session_count,
     get_session_for_issue,
     get_sessions_file_path,
@@ -15,6 +19,7 @@ from mcp_coder.workflows.vscodeclaude.sessions import (
     load_sessions,
     remove_session,
     save_sessions,
+    session_has_artifacts,
     update_session_pid,
     update_session_status,
 )
@@ -216,7 +221,7 @@ class TestSessionManagement:
     def test_get_active_session_count_with_mocked_pid_check(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Counts only sessions with running PIDs."""
+        """Counts only sessions with running PIDs and existing artifacts."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
@@ -232,9 +237,14 @@ class TestSessionManagement:
             mock_check,
         )
 
+        # Create folder for the active session so its artifacts exist.
+        # Session with PID 2222 has no folder — simulates a zombie VSCode.
+        folder_a = tmp_path / "session_a"
+        folder_a.mkdir()
+
         sessions = [
             {
-                "folder": "/a",
+                "folder": str(folder_a),
                 "repo": "o/r",
                 "issue_number": 1,
                 "status": "s",
@@ -243,7 +253,7 @@ class TestSessionManagement:
                 "is_intervention": False,
             },
             {
-                "folder": "/b",
+                "folder": str(tmp_path / "session_b"),  # folder not created
                 "repo": "o/r",
                 "issue_number": 2,
                 "status": "s",
@@ -256,7 +266,7 @@ class TestSessionManagement:
         sessions_file.write_text(json.dumps(store))
 
         count = get_active_session_count()
-        assert count == 1  # Only PID 1111 is "running"
+        assert count == 1  # Only session_a: PID 1111 running + folder exists
 
     def test_update_session_pid(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -333,6 +343,38 @@ class TestSessionManagement:
         assert sessions_file.exists()
         loaded = json.loads(sessions_file.read_text(encoding="utf-8"))
         assert "sessions" in loaded
+
+
+class TestSessionHasArtifacts:
+    """Tests for session_has_artifacts function."""
+
+    def test_returns_true_when_folder_exists(self, tmp_path: Path) -> None:
+        """Returns True when the session folder exists."""
+        folder = tmp_path / "mcp_coder_123"
+        folder.mkdir()
+        assert session_has_artifacts(str(folder)) is True
+
+    def test_returns_true_when_workspace_file_exists(self, tmp_path: Path) -> None:
+        """Returns True when only the .code-workspace file exists."""
+        folder = tmp_path / "mcp_coder_123"
+        # Don't create the folder, but create the workspace file
+        workspace = tmp_path / "mcp_coder_123.code-workspace"
+        workspace.write_text("{}")
+        assert session_has_artifacts(str(folder)) is True
+
+    def test_returns_false_when_neither_exists(self, tmp_path: Path) -> None:
+        """Returns False when neither folder nor workspace file exists (zombie session)."""
+        folder = tmp_path / "mcp_coder_123"
+        # Neither folder nor workspace file created
+        assert session_has_artifacts(str(folder)) is False
+
+    def test_returns_true_when_both_exist(self, tmp_path: Path) -> None:
+        """Returns True when both folder and workspace file exist."""
+        folder = tmp_path / "mcp_coder_123"
+        folder.mkdir()
+        workspace = tmp_path / "mcp_coder_123.code-workspace"
+        workspace.write_text("{}")
+        assert session_has_artifacts(str(folder)) is True
 
 
 class TestUpdateSessionStatus:
@@ -464,6 +506,128 @@ class TestUpdateSessionStatus:
 
         updated_store = json.loads(sessions_file.read_text())
         assert updated_store["last_updated"] != "old-timestamp"
+
+
+class TestVSCodeProcessNameMatching:
+    """Tests that VSCode process detection uses exact name matching.
+
+    Regression tests for the bug where VSCODE_PROCESS_NAME was a substring
+    ("code"), causing processes like mcp-code-checker.exe to be mistakenly
+    identified as VSCode and stored as session PIDs.
+    """
+
+    def test_vscode_process_names_contains_expected_values(self) -> None:
+        """VSCODE_PROCESS_NAMES includes code.exe and code."""
+        assert "code.exe" in VSCODE_PROCESS_NAMES
+        assert "code" in VSCODE_PROCESS_NAMES
+
+    def test_vscode_process_names_excludes_code_checker(self) -> None:
+        """mcp-code-checker.exe is not in VSCODE_PROCESS_NAMES (substring trap)."""
+        assert "mcp-code-checker.exe" not in VSCODE_PROCESS_NAMES
+
+    def test_check_vscode_running_rejects_mcp_code_checker(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """check_vscode_running returns False for mcp-code-checker.exe PIDs."""
+        mock_process = MagicMock()
+        mock_process.name.return_value = "mcp-code-checker.exe"
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.psutil.pid_exists",
+            lambda pid: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.psutil.Process",
+            lambda pid: mock_process,
+        )
+
+        assert check_vscode_running(12345) is False
+
+    def test_check_vscode_running_accepts_code_exe(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """check_vscode_running returns True for Code.exe PIDs."""
+        mock_process = MagicMock()
+        mock_process.name.return_value = "Code.exe"
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.psutil.pid_exists",
+            lambda pid: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.psutil.Process",
+            lambda pid: mock_process,
+        )
+
+        assert check_vscode_running(12345) is True
+
+    def test_check_vscode_running_accepts_code_linux(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """check_vscode_running returns True for 'code' (Linux/macOS process name)."""
+        mock_process = MagicMock()
+        mock_process.name.return_value = "code"
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.psutil.pid_exists",
+            lambda pid: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.psutil.Process",
+            lambda pid: mock_process,
+        )
+
+        assert check_vscode_running(12345) is True
+
+    def test_get_vscode_processes_excludes_mcp_code_checker(self) -> None:
+        """_get_vscode_processes does not include mcp-code-checker.exe processes."""
+        # Build mock process entries: one real VSCode, one mcp-code-checker
+        mock_vscode = MagicMock()
+        mock_vscode.info = {
+            "pid": 1001,
+            "name": "Code.exe",
+            "cmdline": [
+                r"C:\Program Files\VSCode\Code.exe",
+                "workspace.code-workspace",
+            ],
+        }
+        mock_checker = MagicMock()
+        mock_checker.info = {
+            "pid": 2002,
+            "name": "mcp-code-checker.exe",
+            "cmdline": [r"C:\tools\mcp-code-checker.exe", "--project", "my_repo_42"],
+        }
+
+        clear_vscode_process_cache()
+        with patch(
+            "mcp_coder.workflows.vscodeclaude.sessions.psutil.process_iter",
+            return_value=[mock_vscode, mock_checker],
+        ):
+            processes = _get_vscode_processes(refresh=True)
+
+        pids = [p["pid"] for p in processes]
+        assert 1001 in pids  # real VSCode included
+        assert 2002 not in pids  # mcp-code-checker excluded
+
+    def test_get_vscode_processes_excludes_code_insiders(
+        self,
+    ) -> None:
+        """_get_vscode_processes does not include Code - Insiders.exe processes."""
+        mock_insiders = MagicMock()
+        mock_insiders.info = {
+            "pid": 3003,
+            "name": "Code - Insiders.exe",
+            "cmdline": [r"C:\Program Files\VSCode Insiders\Code - Insiders.exe"],
+        }
+
+        clear_vscode_process_cache()
+        with patch(
+            "mcp_coder.workflows.vscodeclaude.sessions.psutil.process_iter",
+            return_value=[mock_insiders],
+        ):
+            processes = _get_vscode_processes(refresh=True)
+
+        assert all(p["pid"] != 3003 for p in processes)
 
 
 class TestWindowTitleMatching:

@@ -277,13 +277,12 @@ from .issues import (
 )
 from .sessions import (
     add_session,
-    check_vscode_running,
     clear_vscode_process_cache,
     clear_vscode_window_cache,
     get_active_session_count,
     get_session_for_issue,
+    is_session_active,
     is_vscode_open_for_folder,
-    is_vscode_window_open_for_folder,
     load_sessions,
     update_session_pid,
     update_session_status,
@@ -955,27 +954,12 @@ def restart_closed_sessions(
     for session in store["sessions"]:
         folder_path = Path(session["folder"])
 
-        # Check 1: PID-based check (quick but unreliable on Windows)
-        if check_vscode_running(session.get("vscode_pid")):
-            continue
-
-        # Check 2: Window title check (Windows only, fast and reliable)
-        if is_vscode_window_open_for_folder(
-            session["folder"],
-            issue_number=session["issue_number"],
-            repo=session["repo"],
-        ):
-            logger.debug(
-                "VSCode window open for issue #%d (detected via window title)",
-                session["issue_number"],
-            )
-            continue
-
-        # Check 3: Process cmdline check (slow fallback, rarely matches)
-        is_open, found_pid = is_vscode_open_for_folder(session["folder"])
-        if is_open:
-            # VSCode is open but PID changed - update stored PID
-            if found_pid:
+        # Use is_session_active() for consistent detection across all callers.
+        # Also run cmdline check separately to update stored PID if it changed
+        # (avoids slow scan on next run).
+        if is_session_active(session):
+            _, found_pid = is_vscode_open_for_folder(session["folder"])
+            if found_pid and found_pid != session.get("vscode_pid"):
                 update_session_pid(session["folder"], found_pid)
             continue
 
