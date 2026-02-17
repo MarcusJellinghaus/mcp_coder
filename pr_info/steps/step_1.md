@@ -28,9 +28,10 @@ add three new test methods for `_try_delete_empty_directory`:
 All mocks via monkeypatch. No real filesystem locking required.
 Follow the existing test style in the file exactly (pytest, monkeypatch, tmp_path).
 
-Also update the existing test `test_try_delete_empty_directory_locked_moves_to_staging`
-to patch `time.sleep` (no-op) so that the retry loop added in Step 2 does not
-cause that test to actually sleep.
+Also update these two existing tests to patch `time.sleep` (no-op) so that the
+retry loop added in Step 2 does not cause them to actually sleep:
+- `test_try_delete_empty_directory_locked_moves_to_staging`
+- `test_try_delete_empty_directory_all_fail`
 ```
 
 ---
@@ -39,7 +40,9 @@ cause that test to actually sleep.
 
 - **File:** `tests/utils/test_folder_deletion.py`
 - **Class:** `TestHelperFunctions` (existing)
-- **Modified method:** `test_try_delete_empty_directory_locked_moves_to_staging` — add `time.sleep` patch
+- **Modified methods:**
+  - `test_try_delete_empty_directory_locked_moves_to_staging` — add `time.sleep` patch
+  - `test_try_delete_empty_directory_all_fail` — add `time.sleep` patch
 - **New methods:** 3 test methods added inside `TestHelperFunctions`
 
 ---
