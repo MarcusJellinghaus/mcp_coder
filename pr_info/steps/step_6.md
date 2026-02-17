@@ -3,7 +3,7 @@
 ## Context
 See `pr_info/steps/summary.md` for the full picture.
 
-After Steps 1–5, `store_session()` accepts `LLMResponseDict` directly and all implement workflow calls are migrated. This step migrates the remaining two callers:
+After Steps 1–5, `store_session()` accepts `LLMResponseDict` directly and all implement workflow calls are migrated. This step migrates the remaining two callers. It is also the step where the `store_session()` type annotation is narrowed from `Union[LLMResponseDict, Dict[str, Any]]` (set in Step 1) to `LLMResponseDict` alone, and the triple-fallback model extraction in `store_session()` is simplified to a single expression.
 
 1. **`create_plan.py`** — currently wraps `LLMResponseDict` into a manually-built dict before calling `store_session()`. Remove the wrapping; pass `LLMResponseDict` directly.
 
@@ -13,6 +13,8 @@ After Steps 1–5, `store_session()` accepts `LLMResponseDict` directly and all 
    - **json / session-id** modes: already use `prompt_llm()` correctly; no `store_session()` calls here, no changes needed.
 
 **Key simplification**: formatters are NOT changed. They receive `llm_response["raw_response"]` which has the same shape as before (`session_info`, `result_info`, `raw_messages`, `api_metadata` keys). This avoids touching `formatters.py` and `test_formatters.py`.
+
+**CLI in verbose/raw mode**: After this step, verbose/raw mode calls `prompt_llm()` which supports both `method="cli"` and `method="api"`. CLI `raw_response` shape compatibility with the formatters is trusted — any mismatch will surface in tests. No guard or forced API-only restriction is added.
 
 ---
 
@@ -52,6 +54,25 @@ stored_path = store_session(response_1, "Initial Analysis", store_path=session_s
 Three call sites: `response_1` / `"Initial Analysis"`, `response_2` / `"Simplification Review"`, `response_3` / `"Implementation Plan Creation"`.
 
 No other changes to `create_plan.py`.
+
+### `session_storage.py` — narrow type annotation and simplify model extraction
+
+Once all callers pass `LLMResponseDict` directly, the Step 1 compatibility shims can be removed:
+
+```python
+# Replace Union signature:
+def store_session(
+    response_data: LLMResponseDict,  # narrowed from Union[LLMResponseDict, Dict[str, Any]]
+    ...
+
+# Replace triple-fallback with single expression:
+model = (
+    response_data["raw_response"].get("session_info", {}).get("model")
+    or response_data["provider"]
+)
+```
+
+Remove the `Union` import from `session_storage.py` if no longer needed elsewhere.
 
 ### `prompt.py` — just-text mode with `--store-response`
 

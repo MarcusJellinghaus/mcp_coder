@@ -24,7 +24,7 @@ This step is purely additive — no callers are changed yet. Existing callers ke
 
 ```python
 def store_session(
-    response_data: LLMResponseDict,
+    response_data: Union[LLMResponseDict, Dict[str, Any]],
     prompt: str,
     store_path: Optional[str] = None,
     step_name: Optional[str] = None,    # NEW
@@ -32,15 +32,21 @@ def store_session(
 ) -> str:
 ```
 
+**Note on type annotation**: `Union[LLMResponseDict, Dict[str, Any]]` is used here because existing callers in `create_plan.py` and `prompt.py` still pass the old manually-built dict until Step 6. The type will be narrowed to `LLMResponseDict` alone in Step 6 once all callers are migrated.
+
 **Filename logic:**
 - `step_name` provided → `2025-10-02T14-30-00_step_1.json`  (datetime first, then step name)
 - `step_name` absent  → `response_2025-10-02T14-30-00.json` (existing format — create_plan sessions unaffected)
 
 **Model name extraction** for `metadata.model`:
 ```python
-model = response_data["raw_response"].get("session_info", {}).get("model") or response_data["provider"]
+model = (
+    response_data.get("raw_response", {}).get("session_info", {}).get("model")  # new LLMResponseDict format
+    or response_data.get("session_info", {}).get("model")                        # old dict format (create_plan/prompt callers until Step 6)
+    or response_data.get("provider", "claude")                                    # final fallback
+)
 ```
-This tries the specific model string first (API calls), falls back to provider name (e.g. `"claude"`) for CLI calls.
+This triple-fallback ensures all existing callers (which pass the old `{"session_info": {...}}` dict) continue to work correctly between Steps 1 and 6, keeping tests green throughout the migration. The fallback can be simplified to a single line in Step 6 once all old callers are removed.
 
 **Metadata block additions:**
 ```json
@@ -70,8 +76,10 @@ session_id = session_data.get("response_data", {}).get("session_id")
 
 **Imports to add** in `session_storage.py`:
 ```python
+from typing import Union
 from ..types import LLMResponseDict
 ```
+(`Union` and `Dict` are already imported via `from typing import Any, Dict, Optional` — just add `Union`.)
 
 ---
 
@@ -83,7 +91,11 @@ store_session(response_data, prompt, store_path, step_name, branch_name):
     os.makedirs(storage_dir, exist_ok=True)
     timestamp = now().isoformat().replace(":", "-").split(".")[0]
     filename = f"{timestamp}_{step_name}.json" if step_name else f"response_{timestamp}.json"
-    model = response_data["raw_response"].get("session_info", {}).get("model") or response_data["provider"]
+    model = (
+        response_data.get("raw_response", {}).get("session_info", {}).get("model")
+        or response_data.get("session_info", {}).get("model")
+        or response_data.get("provider", "claude")
+    )
     metadata = {"timestamp": ..., "working_directory": ..., "model": model}
     if branch_name: metadata["branch_name"] = branch_name
     if step_name: metadata["step_name"] = step_name
@@ -161,8 +173,8 @@ Key changes:
 1. Add `step_name: Optional[str] = None` and `branch_name: Optional[str] = None` params to `store_session()`
 2. Change filename: if step_name provided → `{timestamp}_{step_name}.json`; else keep `response_{timestamp}.json`
 3. Add branch_name and step_name to metadata (only when not None)
-4. Extract model from `response_data["raw_response"].get("session_info", {}).get("model") or response_data["provider"]`
-5. Add import `from ..types import LLMResponseDict` and update type annotation of `response_data` param
+4. Extract model using a triple-fallback (see step_1.md WHAT section) — uses `.get()` throughout to support both old and new dict formats
+5. Add imports `from typing import Union` and `from ..types import LLMResponseDict`; set type annotation to `Union[LLMResponseDict, Dict[str, Any]]` (narrowed to `LLMResponseDict` in Step 6)
 6. In `extract_session_id()`, add a new lookup path: `session_data.get("response_data", {}).get("session_id")`
 
 Do NOT change the outer JSON structure ({ prompt, response_data, metadata }).
