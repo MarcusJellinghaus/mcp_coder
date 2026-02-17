@@ -12,7 +12,8 @@ from typing import Any, Optional
 
 from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS, PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
-from mcp_coder.llm.interface import ask_llm
+from mcp_coder.llm.interface import prompt_llm
+from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.prompt_manager import get_prompt, get_prompt_with_substitutions
 from mcp_coder.utils import commit_all_changes, get_full_status
 from mcp_coder.utils.git_operations import (
@@ -152,17 +153,29 @@ def _run_ci_analysis(
     try:
         logger.info("Calling LLM for CI failure analysis...")
         branch_name = get_branch_name_for_logging(config.project_dir)
-        analysis_response = ask_llm(
+        llm_response = prompt_llm(
             analysis_prompt,
             provider=config.provider,
             method=config.method,
             timeout=LLM_CI_ANALYSIS_TIMEOUT_SECONDS,
             env_vars=config.env_vars,
-            project_dir=str(config.project_dir),
             execution_dir=config.cwd,
             mcp_config=config.mcp_config,
             branch_name=branch_name,
         )
+        analysis_response = llm_response["text"]
+        try:
+            store_session(
+                llm_response,
+                analysis_prompt,
+                store_path=str(
+                    config.project_dir / ".mcp-coder" / "implement_sessions"
+                ),
+                step_name=f"ci_analysis_{fix_attempt + 1}",
+                branch_name=branch_name,
+            )
+        except Exception as e:
+            logger.warning("Failed to store CI analysis session: %s", e)
 
         # Handle empty response (retry once)
         if not analysis_response or not analysis_response.strip():
@@ -214,17 +227,29 @@ def _run_ci_fix(
     try:
         logger.info("Calling LLM to fix CI issues...")
         branch_name = get_branch_name_for_logging(config.project_dir)
-        fix_response = ask_llm(
+        llm_response = prompt_llm(
             fix_prompt,
             provider=config.provider,
             method=config.method,
             timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
             env_vars=config.env_vars,
-            project_dir=str(config.project_dir),
             execution_dir=config.cwd,
             mcp_config=config.mcp_config,
             branch_name=branch_name,
         )
+        fix_response = llm_response["text"]
+        try:
+            store_session(
+                llm_response,
+                fix_prompt,
+                store_path=str(
+                    config.project_dir / ".mcp-coder" / "implement_sessions"
+                ),
+                step_name=f"ci_fix_{fix_attempt + 1}",
+                branch_name=branch_name,
+            )
+        except Exception as e:
+            logger.warning("Failed to store CI fix session: %s", e)
 
         # Handle empty response
         if not fix_response or not fix_response.strip():
@@ -638,17 +663,27 @@ def prepare_task_tracker(
 
         # Call LLM with the prompt
         branch_name = get_branch_name_for_logging(project_dir)
-        response = ask_llm(
+        llm_response = prompt_llm(
             prompt_template,
             provider=provider,
             method=method,
             timeout=LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS,
             env_vars=env_vars,
-            project_dir=str(project_dir),
             execution_dir=str(execution_dir) if execution_dir else None,
             mcp_config=mcp_config,
             branch_name=branch_name,
         )
+        response = llm_response["text"]
+        try:
+            store_session(
+                llm_response,
+                prompt_template,
+                store_path=str(project_dir / ".mcp-coder" / "implement_sessions"),
+                step_name="task_tracker",
+                branch_name=branch_name,
+            )
+        except Exception as e:
+            logger.warning("Failed to store task tracker session: %s", e)
 
         if not response or not response.strip():
             logger.error("LLM returned empty response for task tracker update")
@@ -810,17 +845,27 @@ def run_finalisation(
     env_vars = prepare_llm_environment(project_dir)
     branch_name = get_branch_name_for_logging(project_dir)
 
-    response = ask_llm(
+    llm_response = prompt_llm(
         FINALISATION_PROMPT,
         provider=provider,
         method=method,
         timeout=LLM_FINALISATION_TIMEOUT_SECONDS,
         env_vars=env_vars,
-        project_dir=str(project_dir),
         execution_dir=str(execution_dir) if execution_dir else None,
         mcp_config=mcp_config,
         branch_name=branch_name,
     )
+    response = llm_response["text"]
+    try:
+        store_session(
+            llm_response,
+            FINALISATION_PROMPT,
+            store_path=str(project_dir / ".mcp-coder" / "implement_sessions"),
+            step_name="finalisation",
+            branch_name=branch_name,
+        )
+    except Exception as e:
+        logger.warning("Failed to store finalisation session: %s", e)
 
     # 3. Check for empty/failed response
     if not response or not response.strip():

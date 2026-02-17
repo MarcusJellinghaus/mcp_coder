@@ -59,9 +59,9 @@ See [step_4.md](./steps/step_4.md) for full details.
 
 See [step_5.md](./steps/step_5.md) for full details.
 
-- [ ] Implement Step 5: replace all four `ask_llm()` call sites in `core.py` (`_run_ci_analysis`, `_run_ci_fix`, `prepare_task_tracker`, `run_finalisation`) with `prompt_llm()` + `store_session()`; wrap storage in try/except; update tests
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues found
-- [ ] Prepare git commit message for Step 5
+- [x] Implement Step 5: replace all four `ask_llm()` call sites in `core.py` (`_run_ci_analysis`, `_run_ci_fix`, `prepare_task_tracker`, `run_finalisation`) with `prompt_llm()` + `store_session()`; wrap storage in try/except; update tests
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues found
+- [x] Prepare git commit message for Step 5
 
 ### Step 6 – Update `create_plan.py` and `prompt.py` to pass `LLMResponseDict` directly to `store_session()`
 
