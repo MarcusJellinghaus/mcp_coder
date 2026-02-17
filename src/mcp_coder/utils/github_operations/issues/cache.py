@@ -363,7 +363,7 @@ def _fetch_and_merge_issues(  # pylint: disable=too-many-arguments,too-many-posi
             f"Incremental refresh for {repo_name} since {last_checked} (age={cache_age_minutes}m)"
         )
         fresh_issues = issue_manager.list_issues(
-            state="open", include_pull_requests=False, since=last_checked
+            state="all", include_pull_requests=False, since=last_checked
         )
         _log_cache_metrics(
             "refresh",

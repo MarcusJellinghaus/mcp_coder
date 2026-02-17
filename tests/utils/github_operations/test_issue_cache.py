@@ -537,8 +537,9 @@ class TestGetCachedEligibleIssues:
 
             assert result == [sample_issue]
             # Should call with since parameter for incremental update
+            # state="all" ensures recently closed issues are also detected
             mock_cache_issue_manager.list_issues.assert_called_once_with(
-                state="open", include_pull_requests=False, since=cache_time
+                state="all", include_pull_requests=False, since=cache_time
             )
 
     def test_get_cached_eligible_issues_full_refresh(
