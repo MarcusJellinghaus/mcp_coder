@@ -11,7 +11,6 @@ from mcp_coder.llm.providers.claude.claude_code_api import (
     ask_claude_code_api_detailed_sync,
 )
 from mcp_coder.llm.providers.claude.claude_code_cli import ask_claude_code_cli
-from mcp_coder.llm.providers.claude.claude_code_interface import ask_claude_code
 
 
 class TestInputValidation:
@@ -21,7 +20,6 @@ class TestInputValidation:
         "_function_name,function",
         [
             ("ask_llm", ask_llm),
-            ("ask_claude_code", ask_claude_code),
             ("ask_claude_code_cli", ask_claude_code_cli),
             ("ask_claude_code_api", ask_claude_code_api),
             ("ask_claude_code_api_detailed_sync", ask_claude_code_api_detailed_sync),
@@ -40,7 +38,6 @@ class TestInputValidation:
         "_function_name,function",
         [
             ("ask_llm", ask_llm),
-            ("ask_claude_code", ask_claude_code),
             ("ask_claude_code_cli", ask_claude_code_cli),
             ("ask_claude_code_api", ask_claude_code_api),
             ("ask_claude_code_api_detailed_sync", ask_claude_code_api_detailed_sync),
@@ -59,7 +56,6 @@ class TestInputValidation:
         "_function_name,function",
         [
             ("ask_llm", ask_llm),
-            ("ask_claude_code", ask_claude_code),
             ("ask_claude_code_cli", ask_claude_code_cli),
             ("ask_claude_code_api", ask_claude_code_api),
             ("ask_claude_code_api_detailed_sync", ask_claude_code_api_detailed_sync),
@@ -76,7 +72,6 @@ class TestInputValidation:
         "_function_name,function",
         [
             ("ask_llm", ask_llm),
-            ("ask_claude_code", ask_claude_code),
             ("ask_claude_code_cli", ask_claude_code_cli),
             ("ask_claude_code_api", ask_claude_code_api),
             ("ask_claude_code_api_detailed_sync", ask_claude_code_api_detailed_sync),
@@ -93,11 +88,6 @@ class TestInputValidation:
         """Test that invalid provider raises ValueError."""
         with pytest.raises(ValueError, match="Unsupported provider: invalid"):
             ask_llm("test question", provider="invalid")
-
-    def test_ask_claude_code_invalid_method_raises_error(self) -> None:
-        """Test that invalid method raises ValueError."""
-        with pytest.raises(ValueError, match="Unsupported method: invalid"):
-            ask_claude_code("test question", method="invalid")
 
     def test_ask_llm_invalid_method_raises_error(self) -> None:
         """Test that invalid method in ask_llm raises ValueError."""

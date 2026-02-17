@@ -35,9 +35,9 @@ See [step_1.md](./steps/step_1.md) for full details.
 
 See [step_2.md](./steps/step_2.md) for full details.
 
-- [ ] Implement Step 2: rewrite `ask_llm()` as thin wrapper over `prompt_llm()`; add `TimeoutExpired` handling to `prompt_llm()`; delete `claude_code_interface.py` and its test file; update `test_interface.py` mocks
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues found
-- [ ] Prepare git commit message for Step 2
+- [x] Implement Step 2: rewrite `ask_llm()` as thin wrapper over `prompt_llm()`; add `TimeoutExpired` handling to `prompt_llm()`; delete `claude_code_interface.py` and its test file; update `test_interface.py` mocks
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues found
+- [x] Prepare git commit message for Step 2
 
 ### Step 3 – Remove `pr_info/.conversations/` logging infrastructure
 

@@ -1,11 +1,16 @@
 """High-level LLM interface for extensible provider support."""
 
+import logging
+
+from mcp_coder.utils.subprocess_runner import TimeoutExpired
+
 from .providers.claude.claude_code_api import ask_claude_code_api
 from .providers.claude.claude_code_cli import ask_claude_code_cli
-from .providers.claude.claude_code_interface import ask_claude_code
 
 # Serialization functions are now in .serialization module
 from .types import LLMResponseDict
+
+logger = logging.getLogger(__name__)
 
 # Constants
 LLM_DEFAULT_TIMEOUT_SECONDS = 30  # Default timeout for LLM requests
@@ -76,28 +81,18 @@ def ask_llm(  # pylint: disable=too-many-positional-arguments
         - prompt_llm() for high-level session-aware interface
         - ask_claude_code_cli() or ask_claude_code_api() directly for provider-specific control
     """
-    # Input validation
-    if not question or not question.strip():
-        raise ValueError("Question cannot be empty or whitespace only")
-
-    if timeout <= 0:
-        raise ValueError("Timeout must be a positive number")
-
-    if provider == "claude":
-        return ask_claude_code(
-            question,
-            method=method,
-            session_id=session_id,
-            timeout=timeout,
-            env_vars=env_vars,
-            cwd=execution_dir,
-            mcp_config=mcp_config,
-            branch_name=branch_name,
-        )
-    else:
-        raise ValueError(
-            f"Unsupported provider: {provider}. Currently supported: 'claude'"
-        )
+    return prompt_llm(
+        question,
+        provider=provider,
+        method=method,
+        session_id=session_id,
+        timeout=timeout,
+        env_vars=env_vars,
+        project_dir=project_dir,
+        execution_dir=execution_dir,
+        mcp_config=mcp_config,
+        branch_name=branch_name,
+    )["text"]
 
 
 def prompt_llm(  # pylint: disable=too-many-positional-arguments
@@ -180,31 +175,44 @@ def prompt_llm(  # pylint: disable=too-many-positional-arguments
 
     # Route to provider-specific implementation
     # Call lower-level functions directly to get LLMResponseDict
-    if provider == "claude":
-        if method == "cli":
-            return ask_claude_code_cli(
-                question,
-                session_id=session_id,
-                timeout=timeout,
-                env_vars=env_vars,
-                cwd=execution_dir,
-                mcp_config=mcp_config,
-                branch_name=branch_name,
-            )
-        elif method == "api":
-            return ask_claude_code_api(
-                question,
-                session_id=session_id,
-                timeout=timeout,
-                env_vars=env_vars,
-                cwd=execution_dir,
-                mcp_config=mcp_config,
-            )
+    try:
+        if provider == "claude":
+            if method == "cli":
+                return ask_claude_code_cli(
+                    question,
+                    session_id=session_id,
+                    timeout=timeout,
+                    env_vars=env_vars,
+                    cwd=execution_dir,
+                    mcp_config=mcp_config,
+                    branch_name=branch_name,
+                )
+            elif method == "api":
+                return ask_claude_code_api(
+                    question,
+                    session_id=session_id,
+                    timeout=timeout,
+                    env_vars=env_vars,
+                    cwd=execution_dir,
+                    mcp_config=mcp_config,
+                )
+            else:
+                raise ValueError(
+                    f"Unsupported method: {method}. Supported methods: 'cli', 'api'"
+                )
         else:
             raise ValueError(
-                f"Unsupported method: {method}. Supported methods: 'cli', 'api'"
+                f"Unsupported provider: {provider}. Currently supported: 'claude'"
             )
-    else:
-        raise ValueError(
-            f"Unsupported provider: {provider}. Currently supported: 'claude'"
+    except TimeoutExpired:
+        logger.error("LLM request timed out after %ds", timeout)
+        logger.error(
+            "Prompt length: %d characters (%d words)",
+            len(question),
+            len(question.split()),
         )
+        logger.error("LLM method: %s/%s", provider, method)
+        logger.error(
+            "Consider: checking network, simplifying prompt, increasing timeout"
+        )
+        raise  # re-raise original TimeoutExpired — type transparent to callers
