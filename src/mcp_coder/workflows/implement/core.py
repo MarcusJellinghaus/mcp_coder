@@ -164,26 +164,24 @@ def _run_ci_analysis(
             branch_name=branch_name,
         )
         analysis_response = llm_response["text"]
-        try:
-            store_session(
-                llm_response,
-                analysis_prompt,
-                store_path=str(
-                    config.project_dir / ".mcp-coder" / "implement_sessions"
-                ),
-                step_name=f"ci_analysis_{fix_attempt + 1}",
-                branch_name=branch_name,
-            )
-        except Exception as e:
-            logger.warning("Failed to store CI analysis session: %s", e)
-
-        # Handle empty response (retry once)
-        if not analysis_response or not analysis_response.strip():
-            logger.warning("LLM returned empty analysis response")
-            return None
-
     except Exception as e:
         logger.warning(f"LLM analysis failed: {e}")
+        return None
+
+    try:
+        store_session(
+            llm_response,
+            analysis_prompt,
+            store_path=str(config.project_dir / ".mcp-coder" / "implement_sessions"),
+            step_name=f"ci_analysis_{fix_attempt + 1}",
+            branch_name=branch_name,
+        )
+    except Exception as e:
+        logger.warning("Failed to store CI analysis session: %s", e)
+
+    # Handle empty response (retry once)
+    if not analysis_response or not analysis_response.strip():
+        logger.warning("LLM returned empty analysis response")
         return None
 
     # Read problem description from temp file or use response
@@ -238,26 +236,24 @@ def _run_ci_fix(
             branch_name=branch_name,
         )
         fix_response = llm_response["text"]
-        try:
-            store_session(
-                llm_response,
-                fix_prompt,
-                store_path=str(
-                    config.project_dir / ".mcp-coder" / "implement_sessions"
-                ),
-                step_name=f"ci_fix_{fix_attempt + 1}",
-                branch_name=branch_name,
-            )
-        except Exception as e:
-            logger.warning("Failed to store CI fix session: %s", e)
-
-        # Handle empty response
-        if not fix_response or not fix_response.strip():
-            logger.warning("LLM returned empty fix response")
-            return False
-
     except Exception as e:
         logger.warning(f"LLM fix failed: {e}")
+        return False
+
+    try:
+        store_session(
+            llm_response,
+            fix_prompt,
+            store_path=str(config.project_dir / ".mcp-coder" / "implement_sessions"),
+            step_name=f"ci_fix_{fix_attempt + 1}",
+            branch_name=branch_name,
+        )
+    except Exception as e:
+        logger.warning("Failed to store CI fix session: %s", e)
+
+    # Handle empty response
+    if not fix_response or not fix_response.strip():
+        logger.warning("LLM returned empty fix response")
         return False
 
     # Run formatters (non-critical, continue even if fails)

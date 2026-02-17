@@ -167,5 +167,7 @@ class TestSessionPriority:
         mock_prompt_llm.assert_called_once()
         assert mock_prompt_llm.call_args[1]["session_id"] == "file-789"
 
+        # Should show resumption message (session discovery no longer prints file count
+        # as find_latest_session() replaced direct glob usage)
         captured = capsys.readouterr()
         assert "Resuming session" in captured.out
