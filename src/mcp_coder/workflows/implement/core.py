@@ -119,6 +119,7 @@ def _run_ci_analysis(
     config: CIFixConfig,
     failed_summary: dict[str, Any],
     fix_attempt: int,
+    branch_name: Optional[str] = None,
 ) -> Optional[str]:
     """Run CI failure analysis and return problem description.
 
@@ -152,7 +153,6 @@ def _run_ci_analysis(
     # Call LLM with analysis prompt
     try:
         logger.info("Calling LLM for CI failure analysis...")
-        branch_name = get_branch_name_for_logging(config.project_dir)
         llm_response = prompt_llm(
             analysis_prompt,
             provider=config.provider,
@@ -201,6 +201,7 @@ def _run_ci_fix(
     config: CIFixConfig,
     problem_description: str,
     fix_attempt: int,
+    branch_name: Optional[str] = None,
 ) -> bool:
     """Attempt to fix CI failure. Returns True if push succeeded.
 
@@ -226,7 +227,6 @@ def _run_ci_fix(
     # Call LLM with fix prompt
     try:
         logger.info("Calling LLM to fix CI issues...")
-        branch_name = get_branch_name_for_logging(config.project_dir)
         llm_response = prompt_llm(
             fix_prompt,
             provider=config.provider,
@@ -414,8 +414,12 @@ def _run_ci_analysis_and_fix(
         logger.warning("No failed jobs found in CI status")
         return False, True  # Graceful exit (success)
 
+    branch_name = get_branch_name_for_logging(config.project_dir)
+
     # Run analysis phase
-    problem_description = _run_ci_analysis(config, failed_summary, fix_attempt)
+    problem_description = _run_ci_analysis(
+        config, failed_summary, fix_attempt, branch_name
+    )
 
     if not problem_description:
         # Analysis failed - retry on first attempt, graceful exit otherwise
@@ -425,7 +429,7 @@ def _run_ci_analysis_and_fix(
         return False, True  # Graceful exit (success)
 
     # Run fix phase
-    fix_succeeded = _run_ci_fix(config, problem_description, fix_attempt)
+    fix_succeeded = _run_ci_fix(config, problem_description, fix_attempt, branch_name)
 
     if not fix_succeeded:
         return True, None  # Continue to next attempt

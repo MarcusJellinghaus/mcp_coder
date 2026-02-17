@@ -158,6 +158,11 @@ def execute_prompt(
             )
             # Output complete response as JSON (includes session_id)
             formatted_output = json.dumps(response_dict, indent=2, default=str)
+
+            # Store response if requested
+            if getattr(args, "store_response", False):
+                stored_path = store_session(response_dict, args.prompt)
+                logger.info("Response stored to: %s", stored_path)
         elif verbosity == "just-text":
             # Use unified prompt_llm interface for simple text output
             provider, method = parse_llm_method_from_args(llm_method)
@@ -185,6 +190,7 @@ def execute_prompt(
         else:
             # Use prompt_llm for verbose/raw modes that need metadata
             provider, method = parse_llm_method_from_args(llm_method)
+            branch_name = get_branch_name_for_logging(project_dir)
             llm_response = prompt_llm(
                 args.prompt,
                 provider=provider,
@@ -195,6 +201,7 @@ def execute_prompt(
                 project_dir=str(project_dir),
                 execution_dir=str(execution_dir),
                 mcp_config=mcp_config,
+                branch_name=branch_name,
             )
 
             # Store response if requested

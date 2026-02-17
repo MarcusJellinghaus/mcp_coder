@@ -173,7 +173,6 @@ mcp-coder implement --project-dir /path/to/project
   - `resolver.py` - LLM method parsing and session resolution (tests: `llm/session/test_resolver.py`)
 - **Providers**: `llm/providers/` - Provider implementations
   - `claude/` - Claude Code CLI/API integration (tests: `llm/providers/claude/test_*.py`)
-    - `claude_code_interface.py` - Claude routing interface
     - `claude_code_cli.py` - Claude Code CLI integration with stream-json session logging
     - `claude_code_api.py` - Claude Code API integration
     - `logging_utils.py` - Logging utilities for LLM requests/responses/errors (tests: `test_logging_utils.py`)
@@ -408,7 +407,6 @@ For quick LLM navigation to core architectural components:
 
 **Core Interfaces:**
 - `src/mcp_coder/llm/interface.py` - Main LLM abstraction
-- `src/mcp_coder/llm/providers/claude/claude_code_interface.py` - Claude routing
 
 **Workflow Engine:**
 - `src/mcp_coder/cli/main.py` - CLI entry and command routing

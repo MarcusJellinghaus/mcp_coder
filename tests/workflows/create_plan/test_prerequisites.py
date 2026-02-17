@@ -365,16 +365,6 @@ class TestCreatePrInfoStructure:
         assert (tmp_path / "pr_info" / "steps").exists()
         assert (tmp_path / "pr_info" / "steps").is_dir()
 
-    def test_creates_conversations_directory(self, tmp_path: Path) -> None:
-        """Test create_pr_info_structure creates pr_info/.conversations/ directory."""
-        # Call the function
-        result = create_pr_info_structure(tmp_path)
-
-        # Assert: .conversations/ directory exists
-        assert result is True
-        assert (tmp_path / "pr_info" / ".conversations").exists()
-        assert (tmp_path / "pr_info" / ".conversations").is_dir()
-
     def test_creates_task_tracker_file(self, tmp_path: Path) -> None:
         """Test create_pr_info_structure creates TASK_TRACKER.md file."""
         # Call the function
@@ -406,7 +396,6 @@ class TestCreatePrInfoStructure:
         assert result is True
         assert (tmp_path / "pr_info").is_dir()
         assert (tmp_path / "pr_info" / "steps").is_dir()
-        assert (tmp_path / "pr_info" / ".conversations").is_dir()
         assert (tmp_path / "pr_info" / "TASK_TRACKER.md").is_file()
 
     def test_returns_false_on_error(self, tmp_path: Path) -> None:

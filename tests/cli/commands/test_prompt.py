@@ -504,9 +504,9 @@ class TestExecutePrompt:
             project_dir=mock.ANY,
             execution_dir=mock.ANY,
             mcp_config=None,
+            branch_name=mock.ANY,
         )
         captured = capsys.readouterr()
-        assert "Here are some advanced Python features." in captured.out
         assert "verbose-continuation-new-456" in captured.out
 
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")

@@ -30,7 +30,7 @@ def store_session(
     """Store complete session data to .mcp-coder/responses/ directory.
 
     Args:
-        response_data: Response dictionary (LLMResponseDict or legacy dict format)
+        response_data: Response dictionary from prompt_llm()
         prompt: Original user prompt
         store_path: Optional custom path for storage directory
         step_name: Optional step name; if provided, filename uses {timestamp}_{step_name}.json
@@ -64,9 +64,7 @@ def store_session(
 
     # Extract model from LLMResponseDict
     raw_response = response_data["raw_response"]
-    session_info = (
-        raw_response.get("session_info") if isinstance(raw_response, dict) else None
-    )
+    session_info = raw_response.get("session_info")
     model = (
         session_info.get("model") if isinstance(session_info, dict) else None
     ) or response_data["provider"]
