@@ -18,6 +18,8 @@ import stat
 import sys
 import tempfile
 import uuid
+from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import Callable, Union
 
@@ -25,6 +27,32 @@ logger = logging.getLogger(__name__)
 
 # Internal constant - not exposed to callers
 MAX_RETRIES = 50
+
+
+class DeletionFailureReason(Enum):
+    """Reason a safe_delete_folder call failed."""
+
+    LOCKED_EMPTY_DIR = (
+        "locked_empty_dir"  # Empty dir locked by OS (Windows Explorer etc.)
+    )
+    PERMISSION_ERROR = "permission_error"  # Permission denied on an unidentifiable file
+    OS_ERROR = "os_error"  # OS-level error during deletion
+    MAX_RETRIES = "max_retries"  # Exceeded retry limit without completing deletion
+
+
+@dataclass
+class DeletionResult:
+    """Result of a safe_delete_folder call.
+
+    Attributes:
+        success: True if the folder was deleted (or did not exist).
+        reason: Failure reason enum, set only when success is False.
+        detail: Human-readable detail string (e.g. path of the locked file/dir).
+    """
+
+    success: bool
+    reason: DeletionFailureReason | None = field(default=None)
+    detail: str | None = field(default=None)
 
 
 def _get_default_staging_dir() -> Path:
@@ -250,7 +278,7 @@ def safe_delete_folder(
     *,
     staging_dir: Union[Path, str, None] = None,
     cleanup_staging: bool = True,
-) -> bool:
+) -> DeletionResult:
     """Safely delete a folder, handling locked files via staging directory.
 
     This function implements a three-step deletion strategy:
@@ -266,21 +294,21 @@ def safe_delete_folder(
             deletion. Defaults to True.
 
     Returns:
-        True if the folder was deleted (or didn't exist), False if deletion
-        failed after MAX_RETRIES attempts.
+        DeletionResult with success=True if folder was deleted or did not exist.
+        On failure, reason and detail describe the cause.
 
     Example:
         >>> from mcp_coder.utils.folder_deletion import safe_delete_folder
-        >>> safe_delete_folder("/path/to/folder")
+        >>> safe_delete_folder("/path/to/folder").success
         True
     """
     # Convert to Path
     path = Path(path)
 
-    # Idempotent: return True if folder doesn't exist
+    # Idempotent: return success if folder doesn't exist
     if not path.exists():
         logger.debug("Folder does not exist (already deleted): %s", path)
-        return True
+        return DeletionResult(success=True)
 
     # Resolve staging_dir
     resolved_staging: Path | None
@@ -308,7 +336,11 @@ def safe_delete_folder(
             )
             if cleanup_staging:
                 _cleanup_staging(resolved_staging)
-            return False
+            return DeletionResult(
+                success=False,
+                reason=DeletionFailureReason.LOCKED_EMPTY_DIR,
+                detail=str(path),
+            )
 
         try:
             if _try_rmtree(path):
@@ -322,7 +354,12 @@ def safe_delete_folder(
             if should_fail:
                 if cleanup_staging:
                     _cleanup_staging(resolved_staging)
-                return False
+                detail = f"{e.filename}: {e.strerror}" if e.filename else str(e)
+                return DeletionResult(
+                    success=False,
+                    reason=DeletionFailureReason.PERMISSION_ERROR,
+                    detail=detail,
+                )
             if should_break:
                 break
 
@@ -333,7 +370,11 @@ def safe_delete_folder(
             logger.warning("OS error during deletion: %s - %s", path, e)
             if cleanup_staging:
                 _cleanup_staging(resolved_staging)
-            return False
+            return DeletionResult(
+                success=False,
+                reason=DeletionFailureReason.OS_ERROR,
+                detail=f"{path}: {e}",
+            )
 
     else:
         # Loop completed without break - exceeded MAX_RETRIES
@@ -342,7 +383,11 @@ def safe_delete_folder(
         )
         if cleanup_staging:
             _cleanup_staging(resolved_staging)
-        return False
+        return DeletionResult(
+            success=False,
+            reason=DeletionFailureReason.MAX_RETRIES,
+            detail=str(path),
+        )
 
     # Success - optionally clean up staging
     if cleanup_staging:
@@ -352,4 +397,4 @@ def safe_delete_folder(
                 "Staging cleanup: deleted=%d, remaining=%d", deleted, remaining
             )
 
-    return True
+    return DeletionResult(success=True)

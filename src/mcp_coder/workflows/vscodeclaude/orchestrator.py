@@ -1004,7 +1004,7 @@ def restart_closed_sessions(
         if cached_issues_by_repo is not None:
             repo_cached_issues = cached_issues_by_repo.get(repo_full_name)
 
-        # Get issue data from cache or fetch from API
+        # Get issue data from cache or fetch through caching layer
         issue_number = session["issue_number"]
         repo_url = f"https://github.com/{repo_full_name}"
 
@@ -1012,8 +1012,31 @@ def restart_closed_sessions(
             if repo_cached_issues and issue_number in repo_cached_issues:
                 issue = repo_cached_issues[issue_number]
             else:
+                # Issue missing from cache — unexpected, since _build_cached_issues_by_repo
+                # uses additional_issues to include all session issues.
+                # Fetch through the caching layer to populate and avoid double API calls.
+                logger.warning(
+                    "Issue #%d missing from cache for %s, fetching individually",
+                    issue_number,
+                    repo_full_name,
+                )
                 issue_manager = IssueManager(repo_url=repo_url)
-                issue = issue_manager.get_issue(issue_number)
+                fetched = get_all_cached_issues(
+                    repo_full_name=repo_full_name,
+                    issue_manager=issue_manager,
+                    additional_issues=[issue_number],
+                )
+                fetched_dict: dict[int, IssueData] = {i["number"]: i for i in fetched}
+                if cached_issues_by_repo is not None:
+                    cached_issues_by_repo[repo_full_name] = fetched_dict
+                repo_cached_issues = fetched_dict
+                if issue_number not in fetched_dict:
+                    logger.warning(
+                        "Failed to fetch issue #%d, skipping restart",
+                        issue_number,
+                    )
+                    continue
+                issue = fetched_dict[issue_number]
 
             if issue["number"] == 0:
                 logger.warning(

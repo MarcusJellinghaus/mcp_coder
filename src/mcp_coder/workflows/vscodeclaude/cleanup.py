@@ -3,8 +3,13 @@
 import logging
 from pathlib import Path
 
-from ...utils.folder_deletion import safe_delete_folder
-from ...utils.github_operations.issues import IssueData
+from ...utils.folder_deletion import (
+    DeletionFailureReason,
+    DeletionResult,
+    safe_delete_folder,
+)
+from ...utils.github_operations.issues import IssueData, IssueManager
+from ...utils.github_operations.issues.cache import get_all_cached_issues
 from .issues import (
     get_ignore_labels,
     get_matching_ignore_label,
@@ -65,15 +70,38 @@ def get_stale_sessions(
         is_blocked = False
         is_closed = False
         is_ineligible = False
+        issue_number = session["issue_number"]
+        cached_for_stale_check: dict[int, IssueData] | None = None
         if cached_issues_by_repo:
             repo_issues = cached_issues_by_repo.get(repo_full_name, {})
-            issue_number = session["issue_number"]
             if issue_number not in repo_issues:
-                logger.debug(
-                    "Issue #%d not in cache, skipping eligibility check",
+                # Issue missing from cache — unexpected, since _build_cached_issues_by_repo
+                # uses additional_issues to include all session issues.
+                # Fetch through the caching layer to populate and avoid double API calls.
+                logger.warning(
+                    "Issue #%d missing from cache for %s, fetching individually",
                     issue_number,
+                    repo_full_name,
                 )
-            elif issue_number in repo_issues:
+                try:
+                    repo_url = f"https://github.com/{repo_full_name}"
+                    issue_manager = IssueManager(repo_url=repo_url)
+                    fetched = get_all_cached_issues(
+                        repo_full_name=repo_full_name,
+                        issue_manager=issue_manager,
+                        additional_issues=[issue_number],
+                    )
+                    fetched_dict: dict[int, IssueData] = {
+                        i["number"]: i for i in fetched
+                    }
+                    cached_issues_by_repo[repo_full_name] = fetched_dict
+                    repo_issues = fetched_dict
+                except Exception:
+                    logger.debug(
+                        "Failed to fetch issue #%d individually; skipping eligibility checks",
+                        issue_number,
+                    )
+            if issue_number in repo_issues:
                 issue = repo_issues[issue_number]
                 # Check if issue is closed
                 is_closed = issue["state"] == "closed"
@@ -91,10 +119,19 @@ def get_stale_sessions(
                 if status_labels:
                     current_status = status_labels[0]
                     is_ineligible = not is_status_eligible_for_session(current_status)
+                # Only pass cache to is_session_stale when issue is in it
+                # (passing cache with a missing issue causes ValueError in fallback)
+                cached_for_stale_check = repo_issues
 
         # Check if session is stale, blocked, closed, or ineligible
-        # Check is_closed first to avoid calling is_session_stale on closed issues
-        if is_closed or is_blocked or is_ineligible or is_session_stale(session):
+        # Check is_closed first to short-circuit and avoid calling is_session_stale
+        # on closed issues (which would trigger a spurious warning)
+        if (
+            is_closed
+            or is_blocked
+            or is_ineligible
+            or is_session_stale(session, cached_issues=cached_for_stale_check)
+        ):
             folder_path = Path(session["folder"])
             git_status = get_folder_git_status(folder_path)
             stale_sessions.append((session, git_status))
@@ -118,8 +155,24 @@ def delete_session_folder(session: VSCodeClaudeSession) -> bool:
     try:
         # Use safe_delete_folder for robust folder deletion
         if folder_path.exists():
-            if not safe_delete_folder(folder_path):
-                logger.error("Failed to delete session folder: %s", folder_path)
+            deletion = safe_delete_folder(folder_path)
+            if not deletion.success:
+                if deletion.reason == DeletionFailureReason.LOCKED_EMPTY_DIR:
+                    logger.error(
+                        "Failed to delete session folder - directory is empty "
+                        "but locked by Windows (close Explorer or any app with "
+                        "a window open to this folder, then retry): %s",
+                        deletion.detail or folder_path,
+                    )
+                else:
+                    reason_label = (
+                        deletion.reason.value if deletion.reason else "unknown"
+                    )
+                    logger.error(
+                        "Failed to delete session folder (%s): %s",
+                        reason_label,
+                        deletion.detail or folder_path,
+                    )
                 return False
             logger.info("Deleted folder: %s", folder_path)
 

@@ -15,6 +15,8 @@ from unittest.mock import Mock
 import pytest
 
 from mcp_coder.utils.folder_deletion import (
+    DeletionFailureReason,
+    DeletionResult,
     _cleanup_staging,
     _get_default_staging_dir,
     _is_directory_empty,
@@ -34,7 +36,7 @@ class TestSafeDeleteFolder:
 
         result = safe_delete_folder(nonexistent)
 
-        assert result is True
+        assert result.success is True
         assert not nonexistent.exists()
 
     def test_empty_folder_deleted(self, tmp_path: Path) -> None:
@@ -44,7 +46,7 @@ class TestSafeDeleteFolder:
 
         result = safe_delete_folder(folder)
 
-        assert result is True
+        assert result.success is True
         assert not folder.exists()
 
     def test_folder_with_files_deleted(self, tmp_path: Path) -> None:
@@ -59,7 +61,7 @@ class TestSafeDeleteFolder:
 
         result = safe_delete_folder(folder)
 
-        assert result is True
+        assert result.success is True
         assert not folder.exists()
 
     def test_readonly_files_handled(self, tmp_path: Path) -> None:
@@ -75,7 +77,7 @@ class TestSafeDeleteFolder:
         try:
             result = safe_delete_folder(folder)
 
-            assert result is True
+            assert result.success is True
             assert not folder.exists()
         finally:
             # Cleanup in case test fails
@@ -124,7 +126,7 @@ class TestSafeDeleteFolder:
 
         result = safe_delete_folder(folder, staging_dir=staging_dir)
 
-        assert result is True
+        assert result.success is True
 
     def test_cleanup_staging_false_skips_cleanup(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -148,7 +150,7 @@ class TestSafeDeleteFolder:
 
         result = safe_delete_folder(folder, cleanup_staging=False)
 
-        assert result is True
+        assert result.success is True
         assert cleanup_called is False
 
     def test_cleanup_staging_true_runs_cleanup(
@@ -173,7 +175,7 @@ class TestSafeDeleteFolder:
 
         result = safe_delete_folder(folder, cleanup_staging=True)
 
-        assert result is True
+        assert result.success is True
         assert cleanup_called is True
 
     def test_max_retries_exceeded_returns_false(
@@ -200,7 +202,8 @@ class TestSafeDeleteFolder:
 
         result = safe_delete_folder(folder, cleanup_staging=False)
 
-        assert result is False
+        assert result.success is False
+        assert result.reason == DeletionFailureReason.MAX_RETRIES
         assert folder.exists()
 
     def test_empty_locked_directory_handled(
@@ -254,7 +257,7 @@ class TestSafeDeleteFolder:
 
         result = safe_delete_folder(folder, staging_dir=staging_dir)
 
-        assert result is True
+        assert result.success is True
         assert rmdir_attempts > 0  # Confirm rmdir was attempted
 
     def test_directory_becomes_empty_during_deletion(
@@ -310,7 +313,7 @@ class TestSafeDeleteFolder:
 
         result = safe_delete_folder(folder, cleanup_staging=False)
 
-        assert result is True
+        assert result.success is True
 
     def test_string_path_accepted(self, tmp_path: Path) -> None:
         """Test that string paths are accepted and converted."""
@@ -320,7 +323,7 @@ class TestSafeDeleteFolder:
 
         result = safe_delete_folder(str(folder))
 
-        assert result is True
+        assert result.success is True
         assert not folder.exists()
 
     def test_custom_staging_dir(self, tmp_path: Path) -> None:
@@ -332,7 +335,7 @@ class TestSafeDeleteFolder:
 
         result = safe_delete_folder(folder, staging_dir=custom_staging)
 
-        assert result is True
+        assert result.success is True
         # Staging dir created only if needed (not for successful direct delete)
 
     def test_string_staging_dir_accepted(self, tmp_path: Path) -> None:
@@ -344,7 +347,7 @@ class TestSafeDeleteFolder:
 
         result = safe_delete_folder(folder, staging_dir=str(custom_staging))
 
-        assert result is True
+        assert result.success is True
 
 
 class TestMoveToStaging:
