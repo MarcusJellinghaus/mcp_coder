@@ -25,7 +25,10 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-VSCODE_PROCESS_NAME = "code"
+# Exact process names for VSCode on each platform.
+# Using exact match prevents false positives from processes whose names
+# contain "code" as a substring (e.g. "mcp-code-checker.exe").
+VSCODE_PROCESS_NAMES = {"code.exe", "code"}  # Windows / Linux+macOS
 
 
 def get_sessions_file_path() -> Path:
@@ -103,7 +106,7 @@ def check_vscode_running(pid: int | None) -> bool:
         return False
     try:
         process = psutil.Process(pid)
-        result = VSCODE_PROCESS_NAME in process.name().lower()
+        result = process.name().lower() in VSCODE_PROCESS_NAMES
         logger.debug(
             "check_vscode_running: pid=%d name=%s -> %s",
             pid,
@@ -139,7 +142,7 @@ def _get_vscode_processes(refresh: bool = False) -> list[dict[str, Any]]:
     for proc in psutil.process_iter(["pid", "name", "cmdline"]):
         try:
             proc_name = proc.info.get("name", "") or ""
-            if VSCODE_PROCESS_NAME not in proc_name.lower():
+            if proc_name.lower() not in VSCODE_PROCESS_NAMES:
                 continue
 
             cmdline = proc.info.get("cmdline") or []
