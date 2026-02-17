@@ -17,7 +17,8 @@ add three new test methods for `_try_delete_empty_directory`:
 
 2. `test_try_delete_empty_directory_succeeds_on_second_attempt` — verifies early
    exit when rmdir succeeds on the second attempt. Mock rmdir to raise on the first
-   call, succeed on the second. Assert _move_to_staging is never called and result
+   call, succeed on the second. Mock `time.sleep` to be a no-op (avoids real 1-second
+   sleep between attempts). Assert _move_to_staging is never called and result
    is True.
 
 3. `test_try_delete_empty_directory_sleep_called_between_retries` — verifies
@@ -87,6 +88,7 @@ assert rmdir call count == 3
 
 # test 2: succeeds on second rmdir attempt
 mock rmdir → raise on call 1, succeed on call 2
+mock time.sleep → no-op
 mock _move_to_staging → track if called
 call _try_delete_empty_directory(empty_dir, staging_dir)
 assert result is True AND _move_to_staging not called
