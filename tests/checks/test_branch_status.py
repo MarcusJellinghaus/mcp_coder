@@ -4,18 +4,35 @@ This module tests the BranchStatusReport dataclass and related utilities
 for reporting the readiness status of branches.
 """
 
-from dataclasses import dataclass
+from dataclasses import FrozenInstanceError
 from pathlib import Path
-from typing import List, Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.checks.branch_status import (
+    CI_FAILED,
+    CI_NOT_CONFIGURED,
+    CI_PASSED,
+    CI_PENDING,
+    DEFAULT_LABEL,
+    EMPTY_RECOMMENDATIONS,
+    BranchStatusReport,
+    _build_ci_error_details,
+    _collect_ci_status,
+    _collect_github_label,
+    _collect_rebase_status,
+    _collect_task_status,
+    _generate_recommendations,
+    collect_branch_status,
+    create_empty_report,
+    truncate_ci_details,
+)
+from mcp_coder.utils.github_operations.issues import IssueData
+
 
 def test_branch_status_report_creation() -> None:
     """Test BranchStatusReport dataclass creation with all fields."""
-    from mcp_coder.checks.branch_status import BranchStatusReport
-
     report = BranchStatusReport(
         branch_name="feature/123-test",
         base_branch="main",
@@ -41,8 +58,6 @@ def test_branch_status_report_creation() -> None:
 
 def test_branch_status_report_failed_ci() -> None:
     """Test BranchStatusReport with failed CI status."""
-    from mcp_coder.checks.branch_status import BranchStatusReport
-
     ci_error = "FAILED tests/test_example.py::test_function - AssertionError"
 
     report = BranchStatusReport(
@@ -68,8 +83,6 @@ def test_branch_status_report_failed_ci() -> None:
 
 def test_format_for_human_passed_status() -> None:
     """Test format_for_human with all systems green."""
-    from mcp_coder.checks.branch_status import BranchStatusReport
-
     report = BranchStatusReport(
         branch_name="feature/123-test",
         base_branch="main",
@@ -104,8 +117,6 @@ def test_format_for_human_passed_status() -> None:
 
 def test_format_for_human_failed_status() -> None:
     """Test format_for_human with failures and issues."""
-    from mcp_coder.checks.branch_status import BranchStatusReport
-
     ci_error = "FAILED tests/test_example.py::test_function - AssertionError\nFAILED tests/test_other.py::test_other - KeyError"
 
     report = BranchStatusReport(
@@ -139,8 +150,6 @@ def test_format_for_human_failed_status() -> None:
 
 def test_format_for_human_pending_status() -> None:
     """Test format_for_human with pending CI status."""
-    from mcp_coder.checks.branch_status import BranchStatusReport
-
     report = BranchStatusReport(
         branch_name="feature/789-pending",
         base_branch="main",
@@ -161,8 +170,6 @@ def test_format_for_human_pending_status() -> None:
 
 def test_format_for_human_not_configured() -> None:
     """Test format_for_human with CI not configured."""
-    from mcp_coder.checks.branch_status import BranchStatusReport
-
     report = BranchStatusReport(
         branch_name="feature/101-no-ci",
         base_branch="main",
@@ -182,8 +189,6 @@ def test_format_for_human_not_configured() -> None:
 
 def test_format_for_llm_basic() -> None:
     """Test format_for_llm basic functionality."""
-    from mcp_coder.checks.branch_status import BranchStatusReport
-
     report = BranchStatusReport(
         branch_name="feature/123-test",
         base_branch="main",
@@ -209,8 +214,6 @@ def test_format_for_llm_basic() -> None:
 
 def test_format_for_llm_truncation() -> None:
     """Test format_for_llm truncates CI details when they exceed max_lines."""
-    from mcp_coder.checks.branch_status import BranchStatusReport
-
     # Create CI details with 400 lines (exceeds default 300)
     ci_lines = [f"Error line {i+1}" for i in range(400)]
     long_ci_details = "\n".join(ci_lines)
@@ -240,8 +243,6 @@ def test_format_for_llm_truncation() -> None:
 
 def test_format_for_llm_no_truncation() -> None:
     """Test format_for_llm doesn't truncate short CI details."""
-    from mcp_coder.checks.branch_status import BranchStatusReport
-
     short_ci_details = "Short error message"
 
     report = BranchStatusReport(
@@ -266,8 +267,6 @@ def test_format_for_llm_no_truncation() -> None:
 
 def test_create_empty_report() -> None:
     """Test create_empty_report function."""
-    from mcp_coder.checks.branch_status import create_empty_report
-
     report = create_empty_report()
 
     assert report.branch_name == "unknown"
@@ -283,8 +282,6 @@ def test_create_empty_report() -> None:
 
 def test_truncate_ci_details_no_truncation() -> None:
     """Test truncate_ci_details with short content."""
-    from mcp_coder.checks.branch_status import truncate_ci_details
-
     short_content = "Short error\nAnother line\nThird line"
     result = truncate_ci_details(short_content, max_lines=200)
 
@@ -294,8 +291,6 @@ def test_truncate_ci_details_no_truncation() -> None:
 
 def test_truncate_ci_details_with_truncation() -> None:
     """Test truncate_ci_details with long content requiring truncation."""
-    from mcp_coder.checks.branch_status import truncate_ci_details
-
     # Create content with 400 lines
     lines = [f"Line {i+1}" for i in range(400)]
     long_content = "\n".join(lines)
@@ -316,15 +311,11 @@ def test_truncate_ci_details_with_truncation() -> None:
 
 def test_truncate_ci_details_empty() -> None:
     """Test truncate_ci_details with empty content."""
-    from mcp_coder.checks.branch_status import truncate_ci_details
-
     assert truncate_ci_details("") == ""
 
 
 def test_truncate_ci_details_custom_max_lines() -> None:
     """Test truncate_ci_details with custom max_lines parameter."""
-    from mcp_coder.checks.branch_status import truncate_ci_details
-
     # Create content with 100 lines
     lines = [f"Line {i+1}" for i in range(100)]
     content = "\n".join(lines)
@@ -341,15 +332,6 @@ def test_truncate_ci_details_custom_max_lines() -> None:
 
 def test_branch_status_constants() -> None:
     """Test that required constants are defined."""
-    from mcp_coder.checks.branch_status import (
-        CI_FAILED,
-        CI_NOT_CONFIGURED,
-        CI_PASSED,
-        CI_PENDING,
-        DEFAULT_LABEL,
-        EMPTY_RECOMMENDATIONS,
-    )
-
     assert CI_PASSED == "PASSED"
     assert CI_FAILED == "FAILED"
     assert CI_NOT_CONFIGURED == "NOT_CONFIGURED"
@@ -360,10 +342,6 @@ def test_branch_status_constants() -> None:
 
 def test_dataclass_immutability() -> None:
     """Test that BranchStatusReport is immutable (frozen)."""
-    from dataclasses import FrozenInstanceError
-
-    from mcp_coder.checks.branch_status import BranchStatusReport
-
     report = BranchStatusReport(
         branch_name="feature/123-test",
         base_branch="main",
@@ -387,8 +365,6 @@ def test_dataclass_immutability() -> None:
 
 def test_collect_branch_status_all_good() -> None:
     """Test collect_branch_status with all systems green."""
-    from mcp_coder.checks.branch_status import collect_branch_status
-
     project_dir = Path("/test/repo")
 
     with (
@@ -433,8 +409,6 @@ def test_collect_branch_status_all_good() -> None:
 
 def test_collect_branch_status_ci_failed() -> None:
     """Test collect_branch_status with CI failures."""
-    from mcp_coder.checks.branch_status import collect_branch_status
-
     project_dir = Path("/test/repo")
     ci_error = "FAILED tests/test_example.py::test_function - AssertionError"
 
@@ -472,8 +446,6 @@ def test_collect_branch_status_ci_failed() -> None:
 
 def test_collect_branch_status_rebase_needed() -> None:
     """Test collect_branch_status with rebase required."""
-    from mcp_coder.checks.branch_status import collect_branch_status
-
     project_dir = Path("/test/repo")
 
     with (
@@ -509,8 +481,6 @@ def test_collect_branch_status_rebase_needed() -> None:
 
 def test_collect_branch_status_tasks_incomplete() -> None:
     """Test collect_branch_status with incomplete tasks."""
-    from mcp_coder.checks.branch_status import collect_branch_status
-
     project_dir = Path("/test/repo")
 
     with (
@@ -546,8 +516,6 @@ def test_collect_branch_status_tasks_incomplete() -> None:
 
 def test_collect_branch_status_with_truncation() -> None:
     """Test collect_branch_status with CI log truncation enabled."""
-    from mcp_coder.checks.branch_status import collect_branch_status
-
     project_dir = Path("/test/repo")
     long_ci_error = "\n".join([f"Error line {i}" for i in range(300)])
 
@@ -585,8 +553,6 @@ def test_collect_branch_status_with_truncation() -> None:
 
 def test_collect_branch_status_all_failed() -> None:
     """Test collect_branch_status with all systems failing."""
-    from mcp_coder.checks.branch_status import collect_branch_status
-
     project_dir = Path("/test/repo")
     ci_error = "Multiple test failures"
 
@@ -638,8 +604,6 @@ def test_collect_branch_status_all_failed() -> None:
 
 def test_collect_ci_status_with_truncation() -> None:
     """Test _collect_ci_status with log truncation."""
-    from mcp_coder.checks.branch_status import _collect_ci_status
-
     project_dir = Path("/test/repo")
     long_logs = "\n".join([f"Log line {i}" for i in range(400)])
 
@@ -679,8 +643,6 @@ def test_collect_ci_status_with_truncation() -> None:
 
 def test_collect_ci_status_no_truncation() -> None:
     """Test _collect_ci_status without truncation."""
-    from mcp_coder.checks.branch_status import _collect_ci_status
-
     project_dir = Path("/test/repo")
 
     with patch("mcp_coder.checks.branch_status.CIResultsManager") as mock_ci_manager:
@@ -701,8 +663,6 @@ def test_collect_ci_status_no_truncation() -> None:
 
 def test_collect_ci_status_error_handling() -> None:
     """Test _collect_ci_status with API errors."""
-    from mcp_coder.checks.branch_status import _collect_ci_status
-
     project_dir = Path("/test/repo")
 
     with patch("mcp_coder.checks.branch_status.CIResultsManager") as mock_ci_manager:
@@ -720,8 +680,6 @@ def test_collect_ci_status_error_handling() -> None:
 
 def test_collect_rebase_status_edge_cases() -> None:
     """Test _collect_rebase_status with various edge cases."""
-    from mcp_coder.checks.branch_status import _collect_rebase_status
-
     project_dir = Path("/test/repo")
 
     # Test normal case
@@ -746,8 +704,6 @@ def test_collect_rebase_status_edge_cases() -> None:
 
 def test_collect_task_status() -> None:
     """Test _collect_task_status function."""
-    from mcp_coder.checks.branch_status import _collect_task_status
-
     project_dir = Path("/test/repo")
 
     # Test tasks complete - pr_info doesn't exist so no incomplete work
@@ -797,9 +753,6 @@ def test_collect_task_status() -> None:
 
 def test_collect_github_label() -> None:
     """Test _collect_github_label function with issue_data provided."""
-    from mcp_coder.checks.branch_status import _collect_github_label
-    from mcp_coder.utils.github_operations.issues import IssueData
-
     project_dir = Path("/test/repo")
 
     # Issue data with status labels - must conform to IssueData TypedDict
@@ -825,11 +778,6 @@ def test_collect_github_label() -> None:
 
 def test_collect_github_label_without_issue_data() -> None:
     """Test _collect_github_label function without issue_data returns default."""
-    from mcp_coder.checks.branch_status import (
-        DEFAULT_LABEL,
-        _collect_github_label,
-    )
-
     project_dir = Path("/test/repo")
 
     # Call without issue_data (None)
@@ -840,12 +788,6 @@ def test_collect_github_label_without_issue_data() -> None:
 
 def test_collect_github_label_no_status_label() -> None:
     """Test _collect_github_label when no status label found."""
-    from mcp_coder.checks.branch_status import (
-        DEFAULT_LABEL,
-        _collect_github_label,
-    )
-    from mcp_coder.utils.github_operations.issues import IssueData
-
     project_dir = Path("/test/repo")
 
     # Issue data with no status labels - must conform to IssueData TypedDict
@@ -870,12 +812,6 @@ def test_collect_github_label_no_status_label() -> None:
 
 def test_collect_github_label_empty_labels() -> None:
     """Test _collect_github_label with empty labels list."""
-    from mcp_coder.checks.branch_status import (
-        DEFAULT_LABEL,
-        _collect_github_label,
-    )
-    from mcp_coder.utils.github_operations.issues import IssueData
-
     project_dir = Path("/test/repo")
 
     # Issue data with empty labels - must conform to IssueData TypedDict
@@ -900,8 +836,6 @@ def test_collect_github_label_empty_labels() -> None:
 
 def test_generate_recommendations_logic() -> None:
     """Test _generate_recommendations function logic."""
-    from mcp_coder.checks.branch_status import _generate_recommendations
-
     # Test all good case (CI passed, tasks complete, no rebase needed)
     report_data = {
         "ci_status": "PASSED",
@@ -975,8 +909,6 @@ def test_generate_recommendations_logic() -> None:
 
 def test_build_ci_error_details_single_failure() -> None:
     """Test _build_ci_error_details with single failed job."""
-    from mcp_coder.checks.branch_status import _build_ci_error_details
-
     status_result = {
         "run": {"id": 123},
         "jobs": [
@@ -1008,8 +940,6 @@ def test_build_ci_error_details_single_failure() -> None:
 
 def test_build_ci_error_details_multiple_failures() -> None:
     """Test _build_ci_error_details shows multiple failed jobs that fit in limit."""
-    from mcp_coder.checks.branch_status import _build_ci_error_details
-
     status_result = {
         "run": {"id": 123},
         "jobs": [
@@ -1053,8 +983,6 @@ def test_build_ci_error_details_multiple_failures() -> None:
 
 def test_build_ci_error_details_no_failed_jobs() -> None:
     """Test _build_ci_error_details with no failed jobs returns None."""
-    from mcp_coder.checks.branch_status import _build_ci_error_details
-
     status_result = {
         "run": {"id": 123},
         "jobs": [
@@ -1077,8 +1005,6 @@ def test_build_ci_error_details_no_failed_jobs() -> None:
 
 def test_truncate_ci_details_custom_head_lines() -> None:
     """Test truncate_ci_details with custom head_lines parameter."""
-    from mcp_coder.checks.branch_status import truncate_ci_details
-
     # Create content with 200 lines
     lines = [f"Line {i+1}" for i in range(200)]
     content = "\n".join(lines)
@@ -1103,8 +1029,6 @@ def test_truncate_ci_details_custom_head_lines() -> None:
 
 def test_collect_branch_status_includes_branch_info() -> None:
     """Test that collect_branch_status includes branch_name and base_branch."""
-    from mcp_coder.checks.branch_status import collect_branch_status
-
     project_dir = Path("/test/repo")
 
     with (
@@ -1147,8 +1071,6 @@ def test_collect_branch_status_includes_branch_info() -> None:
 
 def test_collect_branch_status_shares_issue_data() -> None:
     """Test that collect_branch_status fetches issue data once and shares it."""
-    from mcp_coder.checks.branch_status import collect_branch_status
-
     project_dir = Path("/test/repo")
 
     with (
