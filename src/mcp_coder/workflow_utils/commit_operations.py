@@ -155,7 +155,6 @@ def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
             method=method,
             timeout=LLM_COMMIT_TIMEOUT_SECONDS,
             env_vars=env_vars,
-            project_dir=str(project_dir),
             execution_dir=execution_dir,
             branch_name=branch_name,
         )

@@ -12,7 +12,8 @@ from typing import Any, Optional
 
 from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS, PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
-from mcp_coder.llm.interface import ask_llm
+from mcp_coder.llm.interface import prompt_llm
+from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.prompt_manager import get_prompt, get_prompt_with_substitutions
 from mcp_coder.utils import commit_all_changes, get_full_status
 from mcp_coder.utils.git_operations import (
@@ -64,7 +65,6 @@ from .task_processing import (
     process_single_task,
     push_changes,
     run_formatters,
-    save_conversation,
 )
 
 # Finalisation prompt for completing remaining tasks
@@ -119,6 +119,7 @@ def _run_ci_analysis(
     config: CIFixConfig,
     failed_summary: dict[str, Any],
     fix_attempt: int,
+    branch_name: Optional[str] = None,
 ) -> Optional[str]:
     """Run CI failure analysis and return problem description.
 
@@ -152,26 +153,35 @@ def _run_ci_analysis(
     # Call LLM with analysis prompt
     try:
         logger.info("Calling LLM for CI failure analysis...")
-        branch_name = get_branch_name_for_logging(config.project_dir)
-        analysis_response = ask_llm(
+        llm_response = prompt_llm(
             analysis_prompt,
             provider=config.provider,
             method=config.method,
             timeout=LLM_CI_ANALYSIS_TIMEOUT_SECONDS,
             env_vars=config.env_vars,
-            project_dir=str(config.project_dir),
             execution_dir=config.cwd,
             mcp_config=config.mcp_config,
             branch_name=branch_name,
         )
-
-        # Handle empty response (retry once)
-        if not analysis_response or not analysis_response.strip():
-            logger.warning("LLM returned empty analysis response")
-            return None
-
+        analysis_response = llm_response["text"]
     except Exception as e:
         logger.warning(f"LLM analysis failed: {e}")
+        return None
+
+    try:
+        store_session(
+            llm_response,
+            analysis_prompt,
+            store_path=str(config.project_dir / ".mcp-coder" / "implement_sessions"),
+            step_name=f"ci_analysis_{fix_attempt + 1}",
+            branch_name=branch_name,
+        )
+    except Exception as e:
+        logger.warning("Failed to store CI analysis session: %s", e)
+
+    # Handle empty response (retry once)
+    if not analysis_response or not analysis_response.strip():
+        logger.warning("LLM returned empty analysis response")
         return None
 
     # Read problem description from temp file or use response
@@ -182,14 +192,6 @@ def _run_ci_analysis(
         logger.warning("No problem description available")
         return None
 
-    # Save conversation for debugging
-    save_conversation(
-        config.project_dir,
-        f"# CI Failure Analysis\n\n{problem_description}",
-        0,
-        f"ci_analysis_{fix_attempt + 1}",
-    )
-
     return problem_description
 
 
@@ -197,6 +199,7 @@ def _run_ci_fix(
     config: CIFixConfig,
     problem_description: str,
     fix_attempt: int,
+    branch_name: Optional[str] = None,
 ) -> bool:
     """Attempt to fix CI failure. Returns True if push succeeded.
 
@@ -222,35 +225,36 @@ def _run_ci_fix(
     # Call LLM with fix prompt
     try:
         logger.info("Calling LLM to fix CI issues...")
-        branch_name = get_branch_name_for_logging(config.project_dir)
-        fix_response = ask_llm(
+        llm_response = prompt_llm(
             fix_prompt,
             provider=config.provider,
             method=config.method,
             timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
             env_vars=config.env_vars,
-            project_dir=str(config.project_dir),
             execution_dir=config.cwd,
             mcp_config=config.mcp_config,
             branch_name=branch_name,
         )
-
-        # Handle empty response
-        if not fix_response or not fix_response.strip():
-            logger.warning("LLM returned empty fix response")
-            return False
-
+        fix_response = llm_response["text"]
     except Exception as e:
         logger.warning(f"LLM fix failed: {e}")
         return False
 
-    # Save conversation for debugging
-    save_conversation(
-        config.project_dir,
-        f"# CI Fix Attempt {fix_attempt + 1}\n\n{fix_response}",
-        0,
-        f"ci_fix_{fix_attempt + 1}",
-    )
+    try:
+        store_session(
+            llm_response,
+            fix_prompt,
+            store_path=str(config.project_dir / ".mcp-coder" / "implement_sessions"),
+            step_name=f"ci_fix_{fix_attempt + 1}",
+            branch_name=branch_name,
+        )
+    except Exception as e:
+        logger.warning("Failed to store CI fix session: %s", e)
+
+    # Handle empty response
+    if not fix_response or not fix_response.strip():
+        logger.warning("LLM returned empty fix response")
+        return False
 
     # Run formatters (non-critical, continue even if fails)
     run_formatters(config.project_dir)
@@ -406,8 +410,12 @@ def _run_ci_analysis_and_fix(
         logger.warning("No failed jobs found in CI status")
         return False, True  # Graceful exit (success)
 
+    branch_name = get_branch_name_for_logging(config.project_dir)
+
     # Run analysis phase
-    problem_description = _run_ci_analysis(config, failed_summary, fix_attempt)
+    problem_description = _run_ci_analysis(
+        config, failed_summary, fix_attempt, branch_name
+    )
 
     if not problem_description:
         # Analysis failed - retry on first attempt, graceful exit otherwise
@@ -417,7 +425,7 @@ def _run_ci_analysis_and_fix(
         return False, True  # Graceful exit (success)
 
     # Run fix phase
-    fix_succeeded = _run_ci_fix(config, problem_description, fix_attempt)
+    fix_succeeded = _run_ci_fix(config, problem_description, fix_attempt, branch_name)
 
     if not fix_succeeded:
         return True, None  # Continue to next attempt
@@ -655,17 +663,27 @@ def prepare_task_tracker(
 
         # Call LLM with the prompt
         branch_name = get_branch_name_for_logging(project_dir)
-        response = ask_llm(
+        llm_response = prompt_llm(
             prompt_template,
             provider=provider,
             method=method,
             timeout=LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS,
             env_vars=env_vars,
-            project_dir=str(project_dir),
             execution_dir=str(execution_dir) if execution_dir else None,
             mcp_config=mcp_config,
             branch_name=branch_name,
         )
+        response = llm_response["text"]
+        try:
+            store_session(
+                llm_response,
+                prompt_template,
+                store_path=str(project_dir / ".mcp-coder" / "implement_sessions"),
+                step_name="task_tracker",
+                branch_name=branch_name,
+            )
+        except Exception as e:
+            logger.warning("Failed to store task tracker session: %s", e)
 
         if not response or not response.strip():
             logger.error("LLM returned empty response for task tracker update")
@@ -827,17 +845,27 @@ def run_finalisation(
     env_vars = prepare_llm_environment(project_dir)
     branch_name = get_branch_name_for_logging(project_dir)
 
-    response = ask_llm(
+    llm_response = prompt_llm(
         FINALISATION_PROMPT,
         provider=provider,
         method=method,
         timeout=LLM_FINALISATION_TIMEOUT_SECONDS,
         env_vars=env_vars,
-        project_dir=str(project_dir),
         execution_dir=str(execution_dir) if execution_dir else None,
         mcp_config=mcp_config,
         branch_name=branch_name,
     )
+    response = llm_response["text"]
+    try:
+        store_session(
+            llm_response,
+            FINALISATION_PROMPT,
+            store_path=str(project_dir / ".mcp-coder" / "implement_sessions"),
+            step_name="finalisation",
+            branch_name=branch_name,
+        )
+    except Exception as e:
+        logger.warning("Failed to store finalisation session: %s", e)
 
     # 3. Check for empty/failed response
     if not response or not response.strip():

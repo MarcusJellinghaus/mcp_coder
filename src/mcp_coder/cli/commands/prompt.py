@@ -1,32 +1,11 @@
-"""Prompt command for the MCP Coder CLI.
-
-Dual Message Format Compatibility:
-This module handles two different message formats to maintain backward compatibility:
-
-1. Dictionary format: Used in tests and legacy code
-   - Accessed with .get() method: message.get("role")
-   - Example: {"role": "assistant", "content": "text"}
-
-2. SDK object format: Used in production with real Claude API
-   - Accessed with attributes: message.role or message.subtype
-   - Example: SystemMessage(subtype="test", data={...})
-
-The utility functions (_is_sdk_message, _get_message_role, etc.) provide unified
-access to both formats, preventing AttributeError when SDK objects are accessed
-with dictionary methods like .get(). This fixes the original issue where
-'SystemMessage' object has no attribute 'get' occurred in verbose/raw output."""
+"""Prompt command for the MCP Coder CLI."""
 
 import argparse
-import glob
 import json
 import logging
-import os
-import os.path
-import re
 import sys
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Optional
 
 from ...llm.env import prepare_llm_environment
 from ...llm.formatting.formatters import (
@@ -34,22 +13,7 @@ from ...llm.formatting.formatters import (
     format_text_response,
     format_verbose_response,
 )
-from ...llm.formatting.sdk_serialization import (
-    extract_tool_interactions,
-    get_message_role,
-    get_message_tool_calls,
-    is_sdk_message,
-    serialize_message_for_json,
-)
-from ...llm.interface import ask_llm
-from ...llm.providers.claude.claude_code_api import (
-    AssistantMessage,
-    ResultMessage,
-    SystemMessage,
-    TextBlock,
-    UserMessage,
-    ask_claude_code_api_detailed_sync,
-)
+from ...llm.interface import prompt_llm
 from ...llm.storage import extract_session_id, find_latest_session, store_session
 from ...utils.git_utils import get_branch_name_for_logging
 from ..utils import (
@@ -153,10 +117,9 @@ def execute_prompt(
         mcp_config = resolve_mcp_config_path(mcp_config)
 
         # Route to appropriate method based on output_format and verbosity
+        formatted_output = ""
         if output_format == "session-id":
             # Session ID only mode - return only the session_id for shell script capture
-            from ...llm.interface import prompt_llm
-
             provider, method = parse_llm_method_from_args(llm_method)
             response_dict = prompt_llm(
                 args.prompt,
@@ -165,7 +128,6 @@ def execute_prompt(
                 timeout=timeout,
                 session_id=resume_session_id,
                 env_vars=env_vars,
-                project_dir=str(project_dir),
                 execution_dir=str(execution_dir),
                 mcp_config=mcp_config,
             )
@@ -180,8 +142,6 @@ def execute_prompt(
 
         elif output_format == "json":
             # JSON output mode - return full LLMResponseDict
-            from ...llm.interface import prompt_llm
-
             provider, method = parse_llm_method_from_args(llm_method)
             branch_name = get_branch_name_for_logging(project_dir)
             response_dict = prompt_llm(
@@ -191,61 +151,71 @@ def execute_prompt(
                 timeout=timeout,
                 session_id=resume_session_id,
                 env_vars=env_vars,
-                project_dir=str(project_dir),
                 execution_dir=str(execution_dir),
                 mcp_config=mcp_config,
                 branch_name=branch_name,
             )
             # Output complete response as JSON (includes session_id)
             formatted_output = json.dumps(response_dict, indent=2, default=str)
+
+            # Store response if requested
+            if getattr(args, "store_response", False):
+                stored_path = store_session(response_dict, args.prompt)
+                logger.info("Response stored to: %s", stored_path)
         elif verbosity == "just-text":
-            # Use unified ask_llm interface for simple text output
+            # Use unified prompt_llm interface for simple text output
             provider, method = parse_llm_method_from_args(llm_method)
             branch_name = get_branch_name_for_logging(project_dir)
-            response = ask_llm(
+            llm_response = prompt_llm(
                 args.prompt,
                 provider=provider,
                 method=method,
                 timeout=timeout,
                 session_id=resume_session_id,
                 env_vars=env_vars,
-                project_dir=str(project_dir),
                 execution_dir=str(execution_dir),
                 mcp_config=mcp_config,
                 branch_name=branch_name,
             )
 
             # Simple text output with tool summary
-            formatted_output = response.strip()
+            formatted_output = llm_response["text"].strip()
 
             # Store simple response if requested
             if getattr(args, "store_response", False):
-                # Create minimal response data for storage
-                response_data = {
-                    "text": response,
-                    "session_info": {"model": "claude", "tools": []},
-                    "result_info": {"duration_ms": 0, "cost_usd": 0.0},
-                }
-                stored_path = store_session(response_data, args.prompt)
+                stored_path = store_session(llm_response, args.prompt)
                 logger.info("Response stored to: %s", stored_path)
         else:
-            # Use detailed API for verbose/raw modes that need metadata
-            response_data = ask_claude_code_api_detailed_sync(
-                args.prompt, timeout, resume_session_id, env_vars, str(project_dir)
+            # Use prompt_llm for verbose/raw modes that need metadata
+            provider, method = parse_llm_method_from_args(llm_method)
+            branch_name = get_branch_name_for_logging(project_dir)
+            llm_response = prompt_llm(
+                args.prompt,
+                provider=provider,
+                method=method,
+                timeout=timeout,
+                session_id=resume_session_id,
+                env_vars=env_vars,
+                execution_dir=str(execution_dir),
+                mcp_config=mcp_config,
+                branch_name=branch_name,
             )
 
             # Store response if requested
             if getattr(args, "store_response", False):
-                stored_path = store_session(response_data, args.prompt)
+                stored_path = store_session(llm_response, args.prompt)
                 logger.info("Response stored to: %s", stored_path)
+
+            # Pass raw_response sub-dict to formatters — same shape as before
+            raw_data = llm_response["raw_response"]
 
             # Format based on verbosity level
             if verbosity == "raw":
-                formatted_output = format_raw_response(response_data)
+                formatted_output = format_raw_response(raw_data)
             elif verbosity == "verbose":
-                formatted_output = format_verbose_response(response_data)
+                formatted_output = format_verbose_response(raw_data)
             else:
-                formatted_output = format_text_response(response_data)
+                formatted_output = format_text_response(raw_data)
 
         # Print formatted output to stdout
         print(formatted_output)

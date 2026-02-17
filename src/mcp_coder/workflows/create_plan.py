@@ -186,7 +186,6 @@ def create_pr_info_structure(project_dir: Path) -> bool:
     Creates:
     - pr_info/
     - pr_info/steps/
-    - pr_info/.conversations/
     - pr_info/TASK_TRACKER.md (from template)
 
     Args:
@@ -205,10 +204,6 @@ def create_pr_info_structure(project_dir: Path) -> bool:
         # Create pr_info/steps/ directory
         steps_dir = pr_info_dir / "steps"
         steps_dir.mkdir()
-
-        # Create pr_info/.conversations/ directory
-        conversations_dir = pr_info_dir / ".conversations"
-        conversations_dir.mkdir()
 
         # Write TASK_TRACKER_TEMPLATE to pr_info/TASK_TRACKER.md
         task_tracker_path = pr_info_dir / "TASK_TRACKER.md"
@@ -333,7 +328,6 @@ def run_planning_prompts(
             session_id=None,
             timeout=600,
             env_vars=env_vars,
-            project_dir=str(project_dir),
             execution_dir=str(execution_dir) if execution_dir else None,
             mcp_config=mcp_config,
             branch_name=branch_name,
@@ -352,17 +346,8 @@ def run_planning_prompts(
 
         # Store conversation for logging/debugging
         try:
-            # Convert LLMResponseDict to format expected by store_session
-            response_data = {
-                "text": response_1["text"],
-                "session_info": {
-                    "session_id": session_id,
-                    "model": response_1.get("provider", "claude"),
-                },
-                "result_info": response_1.get("raw_response", {}),
-            }
             stored_path = store_session(
-                response_data, "Initial Analysis", store_path=session_storage_path
+                response_1, "Initial Analysis", store_path=session_storage_path
             )
             logger.info(f"Prompt 1 conversation logged to file: {stored_path}")
             logger.debug(f"  Response length: {len(response_1['text'])} chars")
@@ -386,7 +371,6 @@ def run_planning_prompts(
             session_id=session_id,
             timeout=600,
             env_vars=env_vars,
-            project_dir=str(project_dir),
             execution_dir=str(execution_dir) if execution_dir else None,
             mcp_config=mcp_config,
             branch_name=branch_name,
@@ -400,16 +384,8 @@ def run_planning_prompts(
 
         # Store conversation for logging/debugging
         try:
-            response_data = {
-                "text": response_2["text"],
-                "session_info": {
-                    "session_id": session_id,
-                    "model": response_2.get("provider", "claude"),
-                },
-                "result_info": response_2.get("raw_response", {}),
-            }
             stored_path = store_session(
-                response_data, "Simplification Review", store_path=session_storage_path
+                response_2, "Simplification Review", store_path=session_storage_path
             )
             logger.info(f"Prompt 2 conversation logged to file: {stored_path}")
             logger.debug(f"  Response length: {len(response_2['text'])} chars")
@@ -433,7 +409,6 @@ def run_planning_prompts(
             session_id=session_id,
             timeout=PROMPT_3_TIMEOUT,
             env_vars=env_vars,
-            project_dir=str(project_dir),
             execution_dir=str(execution_dir) if execution_dir else None,
             mcp_config=mcp_config,
             branch_name=branch_name,
@@ -447,16 +422,8 @@ def run_planning_prompts(
 
         # Store conversation for logging/debugging
         try:
-            response_data = {
-                "text": response_3["text"],
-                "session_info": {
-                    "session_id": session_id,
-                    "model": response_3.get("provider", "claude"),
-                },
-                "result_info": response_3.get("raw_response", {}),
-            }
             stored_path = store_session(
-                response_data,
+                response_3,
                 "Implementation Plan Creation",
                 store_path=session_storage_path,
             )

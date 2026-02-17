@@ -2,6 +2,7 @@
 
 import sys
 from pathlib import Path
+from typing import Any, Dict
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -15,6 +16,19 @@ from mcp_coder.workflows.implement.core import (
     run_implement_workflow,
 )
 from mcp_coder.workflows.utils import resolve_project_dir
+
+
+# Reusable LLMResponseDict mock value
+def _make_llm_response(text: str = "LLM response text") -> Dict[str, Any]:
+    return {
+        "text": text,
+        "session_id": "test-session",
+        "version": "1.0",
+        "timestamp": "2025-01-01T00:00:00",
+        "method": "cli",
+        "provider": "claude",
+        "raw_response": {},
+    }
 
 
 class TestResolveProjectDir:
@@ -112,14 +126,16 @@ class TestPrepareTaskTracker:
     @patch("mcp_coder.workflows.implement.core.commit_all_changes")
     @patch("mcp_coder.workflows.implement.core.has_implementation_tasks")
     @patch("mcp_coder.workflows.implement.core.get_full_status")
-    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.store_session")
+    @patch("mcp_coder.workflows.implement.core.prompt_llm")
     @patch("mcp_coder.workflows.implement.core.get_prompt")
     @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     def test_prepare_task_tracker_success(
         self,
         mock_prepare_env: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
         mock_has_tasks: MagicMock,
         mock_commit: MagicMock,
@@ -140,7 +156,9 @@ class TestPrepareTaskTracker:
             "MCP_CODER_VENV_DIR": str(tmp_path / ".venv"),
         }
         mock_get_prompt.return_value = "Task tracker update prompt"
-        mock_ask_llm.return_value = "LLM updated the task tracker"
+        mock_prompt_llm.return_value = _make_llm_response(
+            "LLM updated the task tracker"
+        )
         mock_get_status.return_value = {
             "staged": [],
             "modified": ["pr_info/TASK_TRACKER.md"],
@@ -153,24 +171,30 @@ class TestPrepareTaskTracker:
         assert result is True
         assert mock_has_tasks.call_count == 2
         mock_get_prompt.assert_called_once()
-        # No longer need to parse LLM method - using structured parameters
-        mock_ask_llm.assert_called_once()
+        mock_prompt_llm.assert_called_once()
         # Verify execution_dir parameter is passed as None by default
-        call_kwargs = mock_ask_llm.call_args[1]
+        call_kwargs = mock_prompt_llm.call_args[1]
         assert call_kwargs.get("execution_dir") is None
         mock_get_status.assert_called_once_with(tmp_path)
         mock_commit.assert_called_once()
+        # Verify store_session called with task_tracker step_name
+        mock_store_session.assert_called_once()
+        store_call_kwargs = mock_store_session.call_args[1]
+        assert store_call_kwargs.get("step_name") == "task_tracker"
+        assert "implement_sessions" in store_call_kwargs.get("store_path", "")
 
     @patch("mcp_coder.workflows.implement.core.has_implementation_tasks")
     @patch("mcp_coder.workflows.implement.core.get_full_status")
-    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.store_session")
+    @patch("mcp_coder.workflows.implement.core.prompt_llm")
     @patch("mcp_coder.workflows.implement.core.get_prompt")
     @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     def test_prepare_task_tracker_empty_llm_response(
         self,
         mock_prepare_env: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
         mock_has_tasks: MagicMock,
         tmp_path: Path,
@@ -186,7 +210,7 @@ class TestPrepareTaskTracker:
             "MCP_CODER_VENV_DIR": str(tmp_path / ".venv"),
         }
         mock_get_prompt.return_value = "Task tracker update prompt"
-        mock_ask_llm.return_value = ""  # Empty response
+        mock_prompt_llm.return_value = _make_llm_response("")  # Empty text response
 
         result = prepare_task_tracker(tmp_path, "claude", "cli")
 
@@ -194,14 +218,16 @@ class TestPrepareTaskTracker:
 
     @patch("mcp_coder.workflows.implement.core.has_implementation_tasks")
     @patch("mcp_coder.workflows.implement.core.get_full_status")
-    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.store_session")
+    @patch("mcp_coder.workflows.implement.core.prompt_llm")
     @patch("mcp_coder.workflows.implement.core.get_prompt")
     @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     def test_prepare_task_tracker_unexpected_files_changed(
         self,
         mock_prepare_env: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
         mock_has_tasks: MagicMock,
         tmp_path: Path,
@@ -217,7 +243,7 @@ class TestPrepareTaskTracker:
             "MCP_CODER_VENV_DIR": str(tmp_path / ".venv"),
         }
         mock_get_prompt.return_value = "Task tracker update prompt"
-        mock_ask_llm.return_value = "LLM response"
+        mock_prompt_llm.return_value = _make_llm_response("LLM response")
         mock_get_status.return_value = {
             "staged": [],
             "modified": ["pr_info/TASK_TRACKER.md", "src/unexpected_file.py"],
@@ -231,14 +257,16 @@ class TestPrepareTaskTracker:
     @patch("mcp_coder.workflows.implement.core.commit_all_changes")
     @patch("mcp_coder.workflows.implement.core.has_implementation_tasks")
     @patch("mcp_coder.workflows.implement.core.get_full_status")
-    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.store_session")
+    @patch("mcp_coder.workflows.implement.core.prompt_llm")
     @patch("mcp_coder.workflows.implement.core.get_prompt")
     @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     def test_prepare_task_tracker_still_no_tasks_after_update(
         self,
         mock_prepare_env: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
         mock_has_tasks: MagicMock,
         mock_commit: MagicMock,
@@ -255,7 +283,7 @@ class TestPrepareTaskTracker:
             "MCP_CODER_VENV_DIR": str(tmp_path / ".venv"),
         }
         mock_get_prompt.return_value = "Task tracker update prompt"
-        mock_ask_llm.return_value = "LLM response"
+        mock_prompt_llm.return_value = _make_llm_response("LLM response")
         mock_get_status.return_value = {
             "staged": [],
             "modified": ["pr_info/TASK_TRACKER.md"],
@@ -269,14 +297,16 @@ class TestPrepareTaskTracker:
     @patch("mcp_coder.workflows.implement.core.commit_all_changes")
     @patch("mcp_coder.workflows.implement.core.has_implementation_tasks")
     @patch("mcp_coder.workflows.implement.core.get_full_status")
-    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.store_session")
+    @patch("mcp_coder.workflows.implement.core.prompt_llm")
     @patch("mcp_coder.workflows.implement.core.get_prompt")
     @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     def test_prepare_task_tracker_commit_fails(
         self,
         mock_prepare_env: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
         mock_has_tasks: MagicMock,
         mock_commit: MagicMock,
@@ -293,7 +323,7 @@ class TestPrepareTaskTracker:
             "MCP_CODER_VENV_DIR": str(tmp_path / ".venv"),
         }
         mock_get_prompt.return_value = "Task tracker update prompt"
-        mock_ask_llm.return_value = "LLM response"
+        mock_prompt_llm.return_value = _make_llm_response("LLM response")
         mock_get_status.return_value = {
             "staged": [],
             "modified": ["pr_info/TASK_TRACKER.md"],
@@ -323,14 +353,16 @@ class TestPrepareTaskTracker:
     @patch("mcp_coder.workflows.implement.core.commit_all_changes")
     @patch("mcp_coder.workflows.implement.core.has_implementation_tasks")
     @patch("mcp_coder.workflows.implement.core.get_full_status")
-    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.store_session")
+    @patch("mcp_coder.workflows.implement.core.prompt_llm")
     @patch("mcp_coder.workflows.implement.core.get_prompt")
     @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     def test_prepare_task_tracker_ignores_uv_lock(
         self,
         mock_prepare_env: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
         mock_has_tasks: MagicMock,
         mock_commit: MagicMock,
@@ -352,7 +384,9 @@ class TestPrepareTaskTracker:
             "MCP_CODER_VENV_DIR": str(tmp_path / ".venv"),
         }
         mock_get_prompt.return_value = "Task tracker update prompt"
-        mock_ask_llm.return_value = "LLM updated the task tracker"
+        mock_prompt_llm.return_value = _make_llm_response(
+            "LLM updated the task tracker"
+        )
         # uv.lock is also modified - should be ignored
         mock_get_status.return_value = {
             "staged": [],
@@ -364,6 +398,52 @@ class TestPrepareTaskTracker:
         result = prepare_task_tracker(tmp_path, "claude", "cli")
 
         # Should succeed - uv.lock should be filtered out
+        assert result is True
+        mock_commit.assert_called_once()
+
+    @patch("mcp_coder.workflows.implement.core.commit_all_changes")
+    @patch("mcp_coder.workflows.implement.core.has_implementation_tasks")
+    @patch("mcp_coder.workflows.implement.core.get_full_status")
+    @patch("mcp_coder.workflows.implement.core.store_session")
+    @patch("mcp_coder.workflows.implement.core.prompt_llm")
+    @patch("mcp_coder.workflows.implement.core.get_prompt")
+    @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
+    def test_prepare_task_tracker_store_session_failure_is_non_critical(
+        self,
+        mock_prepare_env: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
+        mock_get_status: MagicMock,
+        mock_has_tasks: MagicMock,
+        mock_commit: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test prepare_task_tracker succeeds even when store_session raises."""
+        # Create steps directory
+        steps_dir = tmp_path / "pr_info" / "steps"
+        steps_dir.mkdir(parents=True)
+
+        mock_has_tasks.side_effect = [False, True]
+        mock_prepare_env.return_value = {
+            "MCP_CODER_PROJECT_DIR": str(tmp_path),
+            "MCP_CODER_VENV_DIR": str(tmp_path / ".venv"),
+        }
+        mock_get_prompt.return_value = "Task tracker update prompt"
+        mock_prompt_llm.return_value = _make_llm_response(
+            "LLM updated the task tracker"
+        )
+        mock_store_session.side_effect = Exception("Storage failure")
+        mock_get_status.return_value = {
+            "staged": [],
+            "modified": ["pr_info/TASK_TRACKER.md"],
+            "untracked": [],
+        }
+        mock_commit.return_value = {"success": True, "commit_hash": "abc123"}
+
+        # Should still succeed even though store_session raises
+        result = prepare_task_tracker(tmp_path, "claude", "cli")
+
         assert result is True
         mock_commit.assert_called_once()
 
@@ -596,20 +676,22 @@ class TestPrepareTaskTrackerExecutionDir:
     @patch("mcp_coder.workflows.implement.core.commit_all_changes")
     @patch("mcp_coder.workflows.implement.core.has_implementation_tasks")
     @patch("mcp_coder.workflows.implement.core.get_full_status")
-    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.store_session")
+    @patch("mcp_coder.workflows.implement.core.prompt_llm")
     @patch("mcp_coder.workflows.implement.core.get_prompt")
     @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
-    def test_execution_dir_passed_to_ask_llm(
+    def test_execution_dir_passed_to_prompt_llm(
         self,
         mock_prepare_env: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
         mock_has_tasks: MagicMock,
         mock_commit: MagicMock,
         tmp_path: Path,
     ) -> None:
-        """Test execution_dir is passed to ask_llm call."""
+        """Test execution_dir is passed to prompt_llm call."""
         # Create steps directory
         steps_dir = tmp_path / "pr_info" / "steps"
         steps_dir.mkdir(parents=True)
@@ -621,7 +703,9 @@ class TestPrepareTaskTrackerExecutionDir:
             "MCP_CODER_VENV_DIR": str(tmp_path / ".venv"),
         }
         mock_get_prompt.return_value = "Task tracker update prompt"
-        mock_ask_llm.return_value = "LLM updated the task tracker"
+        mock_prompt_llm.return_value = _make_llm_response(
+            "LLM updated the task tracker"
+        )
         mock_get_status.return_value = {
             "staged": [],
             "modified": ["pr_info/TASK_TRACKER.md"],
@@ -637,27 +721,29 @@ class TestPrepareTaskTrackerExecutionDir:
         result = prepare_task_tracker(tmp_path, "claude", "cli", execution_dir=exec_dir)
 
         assert result is True
-        # Verify execution_dir was passed to ask_llm
-        call_kwargs = mock_ask_llm.call_args[1]
+        # Verify execution_dir was passed to prompt_llm
+        call_kwargs = mock_prompt_llm.call_args[1]
         assert call_kwargs.get("execution_dir") == str(exec_dir)
 
     @patch("mcp_coder.workflows.implement.core.commit_all_changes")
     @patch("mcp_coder.workflows.implement.core.has_implementation_tasks")
     @patch("mcp_coder.workflows.implement.core.get_full_status")
-    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.store_session")
+    @patch("mcp_coder.workflows.implement.core.prompt_llm")
     @patch("mcp_coder.workflows.implement.core.get_prompt")
     @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     def test_execution_dir_none_uses_default(
         self,
         mock_prepare_env: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
         mock_has_tasks: MagicMock,
         mock_commit: MagicMock,
         tmp_path: Path,
     ) -> None:
-        """Test execution_dir=None passes None to ask_llm."""
+        """Test execution_dir=None passes None to prompt_llm."""
         # Create steps directory
         steps_dir = tmp_path / "pr_info" / "steps"
         steps_dir.mkdir(parents=True)
@@ -669,7 +755,9 @@ class TestPrepareTaskTrackerExecutionDir:
             "MCP_CODER_VENV_DIR": str(tmp_path / ".venv"),
         }
         mock_get_prompt.return_value = "Task tracker update prompt"
-        mock_ask_llm.return_value = "LLM updated the task tracker"
+        mock_prompt_llm.return_value = _make_llm_response(
+            "LLM updated the task tracker"
+        )
         mock_get_status.return_value = {
             "staged": [],
             "modified": ["pr_info/TASK_TRACKER.md"],
@@ -682,7 +770,7 @@ class TestPrepareTaskTrackerExecutionDir:
 
         assert result is True
         # Verify execution_dir was passed as None
-        call_kwargs = mock_ask_llm.call_args[1]
+        call_kwargs = mock_prompt_llm.call_args[1]
         assert call_kwargs.get("execution_dir") is None
 
 
@@ -702,21 +790,23 @@ class TestRunFinalisation:
         mock_has_incomplete.assert_called_once_with(str(tmp_path / "pr_info"))
 
     @patch("mcp_coder.workflows.implement.core.get_full_status")
-    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.store_session")
+    @patch("mcp_coder.workflows.implement.core.prompt_llm")
     @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
     def test_run_finalisation_calls_llm_when_incomplete_tasks(
         self,
         mock_has_incomplete: MagicMock,
         mock_prepare_env: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
         tmp_path: Path,
     ) -> None:
         """Test run_finalisation calls LLM when there are incomplete tasks."""
         mock_has_incomplete.return_value = True
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
-        mock_ask_llm.return_value = "Finalisation completed"
+        mock_prompt_llm.return_value = _make_llm_response("Finalisation completed")
         # No changes after LLM call
         mock_get_status.return_value = {
             "staged": [],
@@ -727,24 +817,30 @@ class TestRunFinalisation:
         result = run_finalisation(tmp_path, "claude", "cli")
 
         assert result is True
-        mock_ask_llm.assert_called_once()
+        mock_prompt_llm.assert_called_once()
         # Verify the prompt contains key finalisation instructions
-        call_args = mock_ask_llm.call_args
-        prompt = call_args[0][0] if call_args[0] else call_args[1].get("prompt", "")
+        call_args = mock_prompt_llm.call_args
+        prompt = call_args[0][0] if call_args[0] else call_args[1].get("question", "")
         assert "TASK_TRACKER.md" in prompt
         assert "unchecked tasks" in prompt
+        # Verify store_session called with finalisation step_name
+        mock_store_session.assert_called_once()
+        store_call_kwargs = mock_store_session.call_args[1]
+        assert store_call_kwargs.get("step_name") == "finalisation"
 
     @patch("mcp_coder.workflows.implement.core.push_changes")
     @patch("mcp_coder.workflows.implement.core.commit_all_changes")
     @patch("mcp_coder.workflows.implement.core.get_full_status")
-    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.store_session")
+    @patch("mcp_coder.workflows.implement.core.prompt_llm")
     @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
     def test_run_finalisation_commits_and_pushes_when_changes_exist(
         self,
         mock_has_incomplete: MagicMock,
         mock_prepare_env: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
         mock_commit: MagicMock,
         mock_push: MagicMock,
@@ -753,7 +849,7 @@ class TestRunFinalisation:
         """Test run_finalisation commits and pushes changes when they exist."""
         mock_has_incomplete.return_value = True
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
-        mock_ask_llm.return_value = "Finalisation completed"
+        mock_prompt_llm.return_value = _make_llm_response("Finalisation completed")
         mock_get_status.return_value = {
             "staged": [],
             "modified": ["some_file.py"],
@@ -780,14 +876,16 @@ class TestRunFinalisation:
     @patch("mcp_coder.workflows.implement.core.commit_all_changes")
     @patch("mcp_coder.workflows.implement.core.generate_commit_message_with_llm")
     @patch("mcp_coder.workflows.implement.core.get_full_status")
-    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.store_session")
+    @patch("mcp_coder.workflows.implement.core.prompt_llm")
     @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
     def test_run_finalisation_uses_llm_generated_message_when_file_missing(
         self,
         mock_has_incomplete: MagicMock,
         mock_prepare_env: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
         mock_generate_commit_msg: MagicMock,
         mock_commit: MagicMock,
@@ -797,7 +895,7 @@ class TestRunFinalisation:
         """Test run_finalisation uses LLM-generated message when commit file missing."""
         mock_has_incomplete.return_value = True
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
-        mock_ask_llm.return_value = "Finalisation completed"
+        mock_prompt_llm.return_value = _make_llm_response("Finalisation completed")
         mock_get_status.return_value = {
             "staged": [],
             "modified": ["some_file.py"],
@@ -825,14 +923,16 @@ class TestRunFinalisation:
     @patch("mcp_coder.workflows.implement.core.commit_all_changes")
     @patch("mcp_coder.workflows.implement.core.generate_commit_message_with_llm")
     @patch("mcp_coder.workflows.implement.core.get_full_status")
-    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.store_session")
+    @patch("mcp_coder.workflows.implement.core.prompt_llm")
     @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
     def test_run_finalisation_uses_default_message_when_llm_fails(
         self,
         mock_has_incomplete: MagicMock,
         mock_prepare_env: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
         mock_generate_commit_msg: MagicMock,
         mock_commit: MagicMock,
@@ -842,7 +942,7 @@ class TestRunFinalisation:
         """Test run_finalisation uses default message when both file and LLM fail."""
         mock_has_incomplete.return_value = True
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
-        mock_ask_llm.return_value = "Finalisation completed"
+        mock_prompt_llm.return_value = _make_llm_response("Finalisation completed")
         mock_get_status.return_value = {
             "staged": [],
             "modified": ["some_file.py"],
@@ -865,21 +965,23 @@ class TestRunFinalisation:
         mock_push.assert_called_once_with(tmp_path)
 
     @patch("mcp_coder.workflows.implement.core.get_full_status")
-    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.store_session")
+    @patch("mcp_coder.workflows.implement.core.prompt_llm")
     @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
     def test_run_finalisation_no_commit_when_no_changes(
         self,
         mock_has_incomplete: MagicMock,
         mock_prepare_env: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
         tmp_path: Path,
     ) -> None:
         """Test run_finalisation skips commit when no changes after LLM."""
         mock_has_incomplete.return_value = True
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
-        mock_ask_llm.return_value = "Finalisation completed"
+        mock_prompt_llm.return_value = _make_llm_response("Finalisation completed")
         mock_get_status.return_value = {
             "staged": [],
             "modified": [],
@@ -904,20 +1006,22 @@ class TestRunFinalisation:
 
         assert result is False
 
-    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.store_session")
+    @patch("mcp_coder.workflows.implement.core.prompt_llm")
     @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
     def test_run_finalisation_returns_false_on_empty_llm_response(
         self,
         mock_has_incomplete: MagicMock,
         mock_prepare_env: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         tmp_path: Path,
     ) -> None:
         """Test run_finalisation returns False when LLM returns empty response."""
         mock_has_incomplete.return_value = True
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
-        mock_ask_llm.return_value = ""  # Empty response
+        mock_prompt_llm.return_value = _make_llm_response("")  # Empty text
 
         result = run_finalisation(tmp_path, "claude", "cli")
 
@@ -925,14 +1029,16 @@ class TestRunFinalisation:
 
     @patch("mcp_coder.workflows.implement.core.commit_all_changes")
     @patch("mcp_coder.workflows.implement.core.get_full_status")
-    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.store_session")
+    @patch("mcp_coder.workflows.implement.core.prompt_llm")
     @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
     def test_run_finalisation_returns_false_when_commit_fails(
         self,
         mock_has_incomplete: MagicMock,
         mock_prepare_env: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
         mock_commit: MagicMock,
         tmp_path: Path,
@@ -940,7 +1046,7 @@ class TestRunFinalisation:
         """Test run_finalisation returns False when commit fails."""
         mock_has_incomplete.return_value = True
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
-        mock_ask_llm.return_value = "Finalisation completed"
+        mock_prompt_llm.return_value = _make_llm_response("Finalisation completed")
         mock_get_status.return_value = {
             "staged": [],
             "modified": ["some_file.py"],
@@ -955,14 +1061,16 @@ class TestRunFinalisation:
     @patch("mcp_coder.workflows.implement.core.push_changes")
     @patch("mcp_coder.workflows.implement.core.commit_all_changes")
     @patch("mcp_coder.workflows.implement.core.get_full_status")
-    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.store_session")
+    @patch("mcp_coder.workflows.implement.core.prompt_llm")
     @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
     def test_run_finalisation_returns_false_when_push_fails(
         self,
         mock_has_incomplete: MagicMock,
         mock_prepare_env: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
         mock_commit: MagicMock,
         mock_push: MagicMock,
@@ -971,7 +1079,7 @@ class TestRunFinalisation:
         """Test run_finalisation returns False when push fails."""
         mock_has_incomplete.return_value = True
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
-        mock_ask_llm.return_value = "Finalisation completed"
+        mock_prompt_llm.return_value = _make_llm_response("Finalisation completed")
         mock_get_status.return_value = {
             "staged": [],
             "modified": ["some_file.py"],
@@ -983,6 +1091,36 @@ class TestRunFinalisation:
         result = run_finalisation(tmp_path, "claude", "cli")
 
         assert result is False
+
+    @patch("mcp_coder.workflows.implement.core.get_full_status")
+    @patch("mcp_coder.workflows.implement.core.store_session")
+    @patch("mcp_coder.workflows.implement.core.prompt_llm")
+    @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
+    @patch("mcp_coder.workflows.implement.core.has_incomplete_work")
+    def test_run_finalisation_store_session_failure_is_non_critical(
+        self,
+        mock_has_incomplete: MagicMock,
+        mock_prepare_env: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
+        mock_get_status: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test run_finalisation succeeds even when store_session raises."""
+        mock_has_incomplete.return_value = True
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
+        mock_prompt_llm.return_value = _make_llm_response("Finalisation completed")
+        mock_store_session.side_effect = Exception("Storage failure")
+        mock_get_status.return_value = {
+            "staged": [],
+            "modified": [],
+            "untracked": [],
+        }
+
+        # Should still succeed even though store_session raises
+        result = run_finalisation(tmp_path, "claude", "cli")
+
+        assert result is True
 
 
 class TestRunImplementWorkflow:
@@ -1166,7 +1304,8 @@ class TestIntegration:
     @patch("mcp_coder.workflows.implement.core.commit_all_changes")
     @patch("mcp_coder.workflows.implement.core.has_implementation_tasks")
     @patch("mcp_coder.workflows.implement.core.get_full_status")
-    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.store_session")
+    @patch("mcp_coder.workflows.implement.core.prompt_llm")
     @patch("mcp_coder.workflows.implement.core.get_prompt")
     @patch("mcp_coder.workflows.implement.core.prepare_llm_environment")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
@@ -1179,7 +1318,8 @@ class TestIntegration:
         mock_check_prereq: MagicMock,
         mock_prepare_env: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
         mock_has_tasks: MagicMock,
         mock_commit: MagicMock,
@@ -1204,7 +1344,7 @@ class TestIntegration:
             "MCP_CODER_VENV_DIR": str(tmp_path / ".venv"),
         }
         mock_get_prompt.return_value = "Task tracker update prompt"
-        mock_ask_llm.return_value = "LLM updated task tracker"
+        mock_prompt_llm.return_value = _make_llm_response("LLM updated task tracker")
         mock_get_status.return_value = {
             "staged": [],
             "modified": ["pr_info/TASK_TRACKER.md"],
@@ -1238,7 +1378,7 @@ class TestIntegration:
         # Verify task tracker was prepared
         assert mock_has_tasks.call_count == 2
         mock_get_prompt.assert_called_once()
-        mock_ask_llm.assert_called_once()
+        mock_prompt_llm.assert_called_once()
         mock_commit.assert_called_once()
 
         # Verify task processing

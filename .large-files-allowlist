@@ -11,6 +11,7 @@ src/mcp_coder/prompt_manager.py
 src/mcp_coder/workflows/implement/core.py
 tests/cli/commands/coordinator/test_core.py
 tests/cli/commands/test_commit.py
+tests/cli/commands/test_prompt.py
 tests/cli/test_main.py
 tests/llm/test_interface.py
 tests/utils/github_operations/test_base_manager.py

@@ -5,20 +5,15 @@ workflows. It supports multiple LLM providers and implementation methods.
 
 Main Interfaces:
     ask_llm: High-level interface supporting multiple LLM providers and methods
-    ask_claude_code: Claude-specific interface with CLI and API method routing
+    prompt_llm: High-level interface returning full LLMResponseDict with session management
 
 Example:
     >>> from mcp_coder import ask_llm
     >>> response = ask_llm("Explain recursion", provider="claude", method="api")
     >>> print(response)
-
-    >>> from mcp_coder import ask_claude_code
-    >>> response = ask_claude_code("Review this code", method="cli")
-    >>> print(response)
 """
 
 from .llm.interface import ask_llm, prompt_llm
-from .llm.providers.claude.claude_code_interface import ask_claude_code
 from .llm.providers.claude.claude_executable_finder import (
     find_claude_executable,
     verify_claude_installation,
@@ -58,7 +53,6 @@ except Exception:
 
 __all__ = [
     # Core LLM interfaces
-    "ask_claude_code",
     "ask_llm",
     "prompt_llm",
     "serialize_llm_response",

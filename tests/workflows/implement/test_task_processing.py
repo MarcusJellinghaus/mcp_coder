@@ -1,7 +1,5 @@
 """Tests for implement workflow task processing."""
 
-import json
-from datetime import datetime
 from pathlib import Path
 from unittest.mock import ANY, MagicMock, patch
 
@@ -15,9 +13,20 @@ from mcp_coder.workflows.implement.task_processing import (
     process_single_task,
     push_changes,
     run_formatters,
-    save_conversation,
-    save_conversation_comprehensive,
 )
+
+
+def _make_llm_response(text: str = "LLM response") -> dict[str, object]:
+    """Create a minimal LLMResponseDict-compatible dict for mocking."""
+    return {
+        "version": "1.0",
+        "timestamp": "2025-10-01T10:30:00",
+        "text": text,
+        "session_id": "test-session-id",
+        "method": "api",
+        "provider": "claude",
+        "raw_response": {},
+    }
 
 
 class TestGetNextTask:
@@ -58,119 +67,6 @@ class TestGetNextTask:
         mock_get_incomplete.assert_called_once_with(
             str(Path("/test/project") / "pr_info"), exclude_meta_tasks=True
         )
-
-
-class TestSaveConversation:
-    """Test save_conversation function."""
-
-    def test_save_conversation_basic(self, tmp_path: Path) -> None:
-        """Test saving conversation with basic parameters."""
-        project_dir = tmp_path
-        content = "Test conversation content"
-        step_num = 1
-
-        save_conversation(project_dir, content, step_num)
-
-        conversations_dir = project_dir / "pr_info" / ".conversations"
-        assert conversations_dir.exists()
-
-        conversation_file = conversations_dir / "step_1.md"
-        assert conversation_file.exists()
-        assert conversation_file.read_text(encoding="utf-8") == content
-
-    def test_save_conversation_with_type(self, tmp_path: Path) -> None:
-        """Test saving conversation with conversation type."""
-        project_dir = tmp_path
-        content = "Test mypy conversation"
-        step_num = 2
-        conversation_type = "mypy"
-
-        save_conversation(project_dir, content, step_num, conversation_type)
-
-        conversations_dir = project_dir / "pr_info" / ".conversations"
-        conversation_file = conversations_dir / "step_2_mypy.md"
-        assert conversation_file.exists()
-        assert conversation_file.read_text(encoding="utf-8") == content
-
-    def test_save_conversation_duplicate_names(self, tmp_path: Path) -> None:
-        """Test saving conversation handles duplicate filenames with counter."""
-        project_dir = tmp_path
-        conversations_dir = project_dir / "pr_info" / ".conversations"
-        conversations_dir.mkdir(parents=True)
-
-        # Create existing file
-        existing_file = conversations_dir / "step_1.md"
-        existing_file.write_text("existing content")
-
-        # Save new conversation - should create step_1_2.md
-        content = "New conversation content"
-        save_conversation(project_dir, content, 1)
-
-        new_file = conversations_dir / "step_1_2.md"
-        assert new_file.exists()
-        assert new_file.read_text(encoding="utf-8") == content
-        # Original file should be unchanged
-        assert existing_file.read_text(encoding="utf-8") == "existing content"
-
-
-class TestSaveConversationComprehensive:
-    """Test save_conversation_comprehensive function."""
-
-    def test_save_comprehensive_with_data(self, tmp_path: Path) -> None:
-        """Test saving comprehensive conversation with comprehensive data."""
-        project_dir = tmp_path
-        content = "Test conversation"
-        step_num = 1
-        conversation_type = "main"
-        comprehensive_data = {
-            "text": "LLM response",
-            "usage": {"input_tokens": 100, "output_tokens": 50},
-            "session_id": "test-session-123",
-        }
-
-        save_conversation_comprehensive(
-            project_dir, content, step_num, conversation_type, comprehensive_data
-        )
-
-        conversations_dir = project_dir / "pr_info" / ".conversations"
-
-        # Check markdown file
-        md_file = conversations_dir / "step_1_main.md"
-        assert md_file.exists()
-        assert md_file.read_text(encoding="utf-8") == content
-
-        # Check comprehensive JSON file
-        json_file = conversations_dir / "step_1_main_comprehensive.json"
-        assert json_file.exists()
-
-        with open(json_file, "r", encoding="utf-8") as f:
-            saved_data = json.load(f)
-
-        assert saved_data["step"] == 1
-        assert saved_data["type"] == "main"
-        assert saved_data["conversation_markdown"] == content
-        assert saved_data["llm_response_data"] == comprehensive_data
-        assert "timestamp" in saved_data
-        assert saved_data["metadata"]["workflow"] == "implement"
-
-    def test_save_comprehensive_without_data(self, tmp_path: Path) -> None:
-        """Test saving comprehensive conversation without comprehensive data."""
-        project_dir = tmp_path
-        content = "Test conversation"
-        step_num = 2
-
-        save_conversation_comprehensive(project_dir, content, step_num)
-
-        conversations_dir = project_dir / "pr_info" / ".conversations"
-
-        # Only markdown file should exist
-        md_file = conversations_dir / "step_2.md"
-        assert md_file.exists()
-        assert md_file.read_text(encoding="utf-8") == content
-
-        # No JSON file should be created
-        json_file = conversations_dir / "step_2_comprehensive.json"
-        assert not json_file.exists()
 
 
 class TestCommitMessageFile:
@@ -499,62 +395,64 @@ class TestCheckAndFixMypy:
         assert result is True
         mock_mypy_check.assert_called_once_with(Path("/test/project"))
 
-    @patch(
-        "mcp_coder.workflows.implement.task_processing.save_conversation_comprehensive"
-    )
-    @patch(
-        "mcp_coder.workflows.implement.task_processing._call_llm_with_comprehensive_capture"
-    )
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
     @patch("mcp_coder.workflows.implement.task_processing._run_mypy_check")
     def test_check_and_fix_mypy_fixes_errors(
         self,
         mock_mypy_check: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_llm_call: MagicMock,
-        mock_save_conversation: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
     ) -> None:
         """Test mypy check fixes errors successfully."""
         # First call returns errors, second call returns None (fixed)
         mock_mypy_check.side_effect = ["mypy error output", None]
         mock_get_prompt.return_value = "Fix mypy errors: [mypy_output]"
-        mock_llm_call.return_value = ("Fixed the errors", {"response": "data"})
+        mock_prompt_llm.return_value = _make_llm_response("Fixed the errors")
 
         result = check_and_fix_mypy(Path("/test/project"), 1, "claude", "api")
 
         assert result is True
         assert mock_mypy_check.call_count == 2
         mock_get_prompt.assert_called_once()
-        mock_llm_call.assert_called_once()
-        mock_save_conversation.assert_called_once()
+        mock_prompt_llm.assert_called_once()
+        # Verify store_session called with correct step_name
+        mock_store_session.assert_called_once()
+        call_kwargs = mock_store_session.call_args
+        assert call_kwargs.kwargs.get("step_name") == "step_1_mypy_1" or (
+            len(call_kwargs.args) >= 4 and call_kwargs.args[3] == "step_1_mypy_1"
+        )
+        assert "implement_sessions" in (
+            call_kwargs.kwargs.get("store_path", "")
+            or (call_kwargs.args[2] if len(call_kwargs.args) >= 3 else "")
+        )
 
-    @patch(
-        "mcp_coder.workflows.implement.task_processing.save_conversation_comprehensive"
-    )
-    @patch(
-        "mcp_coder.workflows.implement.task_processing._call_llm_with_comprehensive_capture"
-    )
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
     @patch("mcp_coder.workflows.implement.task_processing._run_mypy_check")
     def test_check_and_fix_mypy_max_attempts(
         self,
         mock_mypy_check: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_llm_call: MagicMock,
-        mock_save_conversation: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
     ) -> None:
         """Test mypy check stops after max identical attempts."""
         # Always return same error (identical outputs)
         mock_mypy_check.return_value = "same mypy error"
         mock_get_prompt.return_value = "Fix mypy errors: [mypy_output]"
-        mock_llm_call.return_value = ("Attempted fix", {"response": "data"})
+        mock_prompt_llm.return_value = _make_llm_response("Attempted fix")
 
         result = check_and_fix_mypy(Path("/test/project"), 1, "claude", "cli")
 
         assert result is False
         # Should attempt fixes until max identical attempts reached
-        assert mock_llm_call.call_count == 3  # max_identical_attempts
-        assert mock_save_conversation.call_count == 3
+        assert mock_prompt_llm.call_count == 3  # max_identical_attempts
+        # store_session should be called once per attempt
+        assert mock_store_session.call_count == 3
 
     @patch("mcp_coder.workflows.implement.task_processing._run_mypy_check")
     def test_check_and_fix_mypy_exception(self, mock_mypy_check: MagicMock) -> None:
@@ -577,20 +475,16 @@ class TestProcessSingleTask:
     @patch("mcp_coder.workflows.implement.task_processing.run_formatters")
     @patch("mcp_coder.workflows.implement.task_processing.check_and_fix_mypy")
     @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
-    @patch(
-        "mcp_coder.workflows.implement.task_processing.save_conversation_comprehensive"
-    )
-    @patch(
-        "mcp_coder.workflows.implement.task_processing._call_llm_with_comprehensive_capture"
-    )
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
     @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
     def test_process_single_task_success(
         self,
         mock_get_next_task: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_llm_call: MagicMock,
-        mock_save_conversation: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
         mock_check_mypy: MagicMock,
         mock_run_formatters: MagicMock,
@@ -601,7 +495,7 @@ class TestProcessSingleTask:
         # Setup mocks
         mock_get_next_task.return_value = "Step 1: Create test file"
         mock_get_prompt.return_value = "Implementation template"
-        mock_llm_call.return_value = ("LLM response", {"comprehensive": "data"})
+        mock_prompt_llm.return_value = _make_llm_response("LLM response")
         mock_get_status.return_value = {
             "staged": ["file1.py"],
             "modified": [],
@@ -620,13 +514,23 @@ class TestProcessSingleTask:
         # Verify all steps were called
         mock_get_next_task.assert_called_once()
         mock_get_prompt.assert_called_once()
-        mock_llm_call.assert_called_once()
-        mock_save_conversation.assert_called_once()
+        mock_prompt_llm.assert_called_once()
         mock_get_status.assert_called_once()
         mock_check_mypy.assert_called_once()
         mock_run_formatters.assert_called_once()
         mock_commit.assert_called_once()
         mock_push.assert_called_once()
+
+        # Verify store_session called with step_name="step_1"
+        mock_store_session.assert_called_once()
+        call_kwargs = mock_store_session.call_args
+        assert call_kwargs.kwargs.get("step_name") == "step_1" or (
+            len(call_kwargs.args) >= 4 and call_kwargs.args[3] == "step_1"
+        )
+        assert "implement_sessions" in (
+            call_kwargs.kwargs.get("store_path", "")
+            or (call_kwargs.args[2] if len(call_kwargs.args) >= 3 else "")
+        )
 
     @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
     def test_process_single_task_no_tasks(self, mock_get_next_task: MagicMock) -> None:
@@ -652,21 +556,19 @@ class TestProcessSingleTask:
         assert success is False
         assert reason == "error"
 
-    @patch(
-        "mcp_coder.workflows.implement.task_processing._call_llm_with_comprehensive_capture"
-    )
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
     @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
     def test_process_single_task_llm_error(
         self,
         mock_get_next_task: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_llm_call: MagicMock,
+        mock_prompt_llm: MagicMock,
     ) -> None:
         """Test processing single task with LLM error."""
         mock_get_next_task.return_value = "Step 1: Test task"
         mock_get_prompt.return_value = "Template"
-        mock_llm_call.side_effect = Exception("LLM error")
+        mock_prompt_llm.side_effect = Exception("LLM error")
 
         success, reason = process_single_task(Path("/test/project"), "claude", "cli")
 
@@ -674,32 +576,30 @@ class TestProcessSingleTask:
         assert reason == "error"
 
     @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
-    @patch(
-        "mcp_coder.workflows.implement.task_processing.save_conversation_comprehensive"
-    )
-    @patch(
-        "mcp_coder.workflows.implement.task_processing._call_llm_with_comprehensive_capture"
-    )
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
     @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
     def test_process_single_task_no_changes(
         self,
         mock_get_next_task: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_llm_call: MagicMock,
-        mock_save_conversation: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
     ) -> None:
         """Test processing single task when no files changed."""
         mock_get_next_task.return_value = "Step 1: Test task"
         mock_get_prompt.return_value = "Template"
-        mock_llm_call.return_value = ("Response", {})
+        mock_prompt_llm.return_value = _make_llm_response("Response")
         mock_get_status.return_value = {"staged": [], "modified": [], "untracked": []}
 
         success, reason = process_single_task(Path("/test/project"), "claude", "cli")
 
         assert success is True
         assert reason == "completed"
+        # store_session still called even with no changes
+        mock_store_session.assert_called_once()
         # Should not continue to formatting/commit/push when no changes
 
     @patch(
@@ -708,20 +608,16 @@ class TestProcessSingleTask:
     @patch("mcp_coder.workflows.implement.task_processing.run_formatters")
     @patch("mcp_coder.workflows.implement.task_processing.check_and_fix_mypy")
     @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
-    @patch(
-        "mcp_coder.workflows.implement.task_processing.save_conversation_comprehensive"
-    )
-    @patch(
-        "mcp_coder.workflows.implement.task_processing._call_llm_with_comprehensive_capture"
-    )
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
     @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
     def test_process_single_task_formatters_fail(
         self,
         mock_get_next_task: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_llm_call: MagicMock,
-        mock_save_conversation: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
         mock_check_mypy: MagicMock,
         mock_run_formatters: MagicMock,
@@ -729,7 +625,7 @@ class TestProcessSingleTask:
         """Test processing single task when formatters fail."""
         mock_get_next_task.return_value = "Step 1: Test task"
         mock_get_prompt.return_value = "Template"
-        mock_llm_call.return_value = ("Response", {})
+        mock_prompt_llm.return_value = _make_llm_response("Response")
         mock_get_status.return_value = {
             "staged": ["file.py"],
             "modified": [],
@@ -755,12 +651,8 @@ class TestIntegration:
     @patch("mcp_coder.workflows.implement.task_processing.run_formatters")
     @patch("mcp_coder.workflows.implement.task_processing.check_and_fix_mypy")
     @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
-    @patch(
-        "mcp_coder.workflows.implement.task_processing.save_conversation_comprehensive"
-    )
-    @patch(
-        "mcp_coder.workflows.implement.task_processing._call_llm_with_comprehensive_capture"
-    )
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
     @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
     @patch("mcp_coder.workflows.implement.task_processing.prepare_llm_environment")
@@ -769,8 +661,8 @@ class TestIntegration:
         mock_prepare_env: MagicMock,
         mock_get_next_task: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_llm_call: MagicMock,
-        mock_save_conversation: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
         mock_check_mypy: MagicMock,
         mock_run_formatters: MagicMock,
@@ -779,7 +671,6 @@ class TestIntegration:
     ) -> None:
         """Test complete task processing workflow end-to-end."""
         project_dir = Path("/test/project")
-        llm_method = "claude_code_api"
 
         # Setup successful workflow
         mock_prepare_env.return_value = {
@@ -788,14 +679,7 @@ class TestIntegration:
         }
         mock_get_next_task.return_value = "Step 2: Implement feature X"
         mock_get_prompt.return_value = "Implementation Prompt: [task_info]"
-        mock_llm_call.return_value = (
-            "I'll implement feature X...",
-            {
-                "text": "I'll implement feature X...",
-                "usage": {"input_tokens": 150, "output_tokens": 75},
-                "session_id": "session-456",
-            },
-        )
+        mock_prompt_llm.return_value = _make_llm_response("I'll implement feature X...")
         mock_get_status.return_value = {
             "staged": [],
             "modified": ["src/feature.py"],
@@ -823,25 +707,27 @@ class TestIntegration:
 Current task from TASK_TRACKER.md: Step 2: Implement feature X
 
 Please implement this task step by step."""
-        mock_llm_call.assert_called_once_with(
+        mock_prompt_llm.assert_called_once_with(
             expected_prompt,
-            "claude",
-            "api",
+            provider="claude",
+            method="api",
             timeout=3600,
             env_vars=ANY,
-            cwd=ANY,
+            execution_dir=ANY,
             mcp_config=None,
+            branch_name=ANY,
         )
 
-        # Verify conversation saved with comprehensive data
-        mock_save_conversation.assert_called_once()
-        save_args = mock_save_conversation.call_args
-        assert save_args[0][0] == project_dir  # project_dir
-        assert "Step 2: Implement feature X" in save_args[0][1]  # content contains task
-        assert save_args[0][2] == 2  # step_num extracted from task
-        assert (
-            save_args[1]["comprehensive_data"] is not None
-        )  # comprehensive_data provided
+        # Verify store_session called with step_name="step_2" and implement_sessions path
+        mock_store_session.assert_called_once()
+        call_kwargs = mock_store_session.call_args
+        assert call_kwargs.kwargs.get("step_name") == "step_2" or (
+            len(call_kwargs.args) >= 4 and call_kwargs.args[3] == "step_2"
+        )
+        store_path = call_kwargs.kwargs.get("store_path") or (
+            call_kwargs.args[2] if len(call_kwargs.args) >= 3 else ""
+        )
+        assert "implement_sessions" in store_path
 
         # Verify processing steps
         mock_get_status.assert_called_once_with(project_dir)

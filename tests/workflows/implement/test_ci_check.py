@@ -242,19 +242,19 @@ class TestCheckAndFixCI:
         assert result is True  # Graceful exit
 
     @patch("mcp_coder.workflows.implement.core.CIResultsManager")
-    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.prompt_llm")
+    @patch("mcp_coder.workflows.implement.core.store_session")
     @patch("mcp_coder.workflows.implement.core.run_formatters")
     @patch("mcp_coder.workflows.implement.core.commit_changes")
     @patch("mcp_coder.workflows.implement.core.push_changes")
     @patch("mcp_coder.workflows.implement.core.time.sleep")
-    @patch("mcp_coder.workflows.implement.core.save_conversation")
     def test_ci_fails_fix_succeeds_returns_true(
         self,
-        mock_save_conversation: MagicMock,
         mock_sleep: MagicMock,
         mock_push: MagicMock,
         mock_commit: MagicMock,
         mock_format: MagicMock,
+        mock_store_session: MagicMock,
         mock_llm: MagicMock,
         mock_ci_manager: MagicMock,
     ) -> None:
@@ -293,7 +293,15 @@ class TestCheckAndFixCI:
             "test/1_Run tests.txt": "Error: test failed"
         }
 
-        mock_llm.return_value = "Analysis complete"
+        mock_llm.return_value = {
+            "text": "Analysis complete",
+            "session_id": "test-session",
+            "version": "1.0",
+            "timestamp": "2025-01-01T00:00:00",
+            "method": "api",
+            "provider": "claude",
+            "raw_response": {},
+        }
         mock_format.return_value = True
         mock_commit.return_value = True
         mock_push.return_value = True
@@ -308,19 +316,19 @@ class TestCheckAndFixCI:
         assert result is True
 
     @patch("mcp_coder.workflows.implement.core.CIResultsManager")
-    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.prompt_llm")
+    @patch("mcp_coder.workflows.implement.core.store_session")
     @patch("mcp_coder.workflows.implement.core.run_formatters")
     @patch("mcp_coder.workflows.implement.core.commit_changes")
     @patch("mcp_coder.workflows.implement.core.push_changes")
     @patch("mcp_coder.workflows.implement.core.time.sleep")
-    @patch("mcp_coder.workflows.implement.core.save_conversation")
     def test_max_attempts_exhausted_returns_false(
         self,
-        mock_save_conversation: MagicMock,
         mock_sleep: MagicMock,
         mock_push: MagicMock,
         mock_commit: MagicMock,
         mock_format: MagicMock,
+        mock_store_session: MagicMock,
         mock_llm: MagicMock,
         mock_ci_manager: MagicMock,
     ) -> None:
@@ -358,7 +366,15 @@ class TestCheckAndFixCI:
         ]
         mock_manager.get_run_logs.return_value = {"test/1_Run tests.txt": "Error"}
 
-        mock_llm.return_value = "Analysis/fix response"
+        mock_llm.return_value = {
+            "text": "Analysis/fix response",
+            "session_id": "test-session",
+            "version": "1.0",
+            "timestamp": "2025-01-01T00:00:00",
+            "method": "api",
+            "provider": "claude",
+            "raw_response": {},
+        }
         mock_format.return_value = True
         mock_commit.return_value = True
         mock_push.return_value = True
@@ -393,19 +409,19 @@ class TestCheckAndFixCI:
         assert result is True  # Graceful handling
 
     @patch("mcp_coder.workflows.implement.core.CIResultsManager")
-    @patch("mcp_coder.workflows.implement.core.ask_llm")
+    @patch("mcp_coder.workflows.implement.core.prompt_llm")
+    @patch("mcp_coder.workflows.implement.core.store_session")
     @patch("mcp_coder.workflows.implement.core.run_formatters")
     @patch("mcp_coder.workflows.implement.core.commit_changes")
     @patch("mcp_coder.workflows.implement.core.push_changes")
     @patch("mcp_coder.workflows.implement.core.time.sleep")
-    @patch("mcp_coder.workflows.implement.core.save_conversation")
     def test_git_push_error_returns_false(
         self,
-        mock_save_conversation: MagicMock,
         mock_sleep: MagicMock,
         mock_push: MagicMock,
         mock_commit: MagicMock,
         mock_format: MagicMock,
+        mock_store_session: MagicMock,
         mock_llm: MagicMock,
         mock_ci_manager: MagicMock,
     ) -> None:
@@ -430,7 +446,15 @@ class TestCheckAndFixCI:
             "test/1_Run tests.txt": "Error: test failed"
         }
 
-        mock_llm.return_value = "Analysis/fix complete"
+        mock_llm.return_value = {
+            "text": "Analysis/fix complete",
+            "session_id": "test-session",
+            "version": "1.0",
+            "timestamp": "2025-01-01T00:00:00",
+            "method": "api",
+            "provider": "claude",
+            "raw_response": {},
+        }
         mock_format.return_value = True
         mock_commit.return_value = True
         mock_push.return_value = False  # Git push fails

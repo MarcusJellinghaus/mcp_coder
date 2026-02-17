@@ -589,12 +589,12 @@ class TestSubprocessCwdParameter:
         mock_result.timed_out = False
         mock_execute_subprocess.return_value = mock_result
 
-        # Execute with different project_dir and execution_dir
+        # Execute with execution_dir only (project_dir is not a parameter of ask_llm;
+        # it is passed via env_vars by callers that need it)
         result = ask_llm(
             "Test question",
             provider="claude",
             method="cli",
-            project_dir=str(project_dir),
             execution_dir=str(execution_dir),
         )
 
@@ -609,8 +609,3 @@ class TestSubprocessCwdParameter:
         options = call_args[1]
         assert options.cwd == str(execution_dir)
         assert options.cwd != str(project_dir)
-
-        # Verify project_dir is in environment variables (not cwd)
-        assert "env" in options.__dict__ or "env" in dir(options)
-        # The env vars should contain project_dir, not execution_dir
-        # (This validates separation of concerns)

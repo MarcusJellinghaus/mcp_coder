@@ -10,6 +10,8 @@ import os
 from datetime import datetime
 from typing import Any, Dict, Optional
 
+from ..types import LLMResponseDict
+
 logger = logging.getLogger(__name__)
 
 __all__ = [
@@ -19,14 +21,20 @@ __all__ = [
 
 
 def store_session(
-    response_data: Dict[str, Any], prompt: str, store_path: Optional[str] = None
+    response_data: LLMResponseDict,
+    prompt: str,
+    store_path: Optional[str] = None,
+    step_name: Optional[str] = None,
+    branch_name: Optional[str] = None,
 ) -> str:
     """Store complete session data to .mcp-coder/responses/ directory.
 
     Args:
-        response_data: Response dictionary from ask_claude_code_api_detailed_sync
+        response_data: Response dictionary from prompt_llm()
         prompt: Original user prompt
         store_path: Optional custom path for storage directory
+        step_name: Optional step name; if provided, filename uses {timestamp}_{step_name}.json
+        branch_name: Optional branch name added to metadata
 
     Returns:
         File path of stored session for potential user reference
@@ -48,20 +56,34 @@ def store_session(
 
     # Generate timestamp-based filename
     timestamp = datetime.now().isoformat().replace(":", "-").split(".")[0]
-    filename = f"response_{timestamp}.json"
+    if step_name:
+        filename = f"{timestamp}_{step_name}.json"
+    else:
+        filename = f"response_{timestamp}.json"
     file_path = os.path.join(storage_dir, filename)
+
+    # Extract model from LLMResponseDict
+    raw_response = response_data["raw_response"]
+    session_info = raw_response.get("session_info")
+    model = (
+        session_info.get("model") if isinstance(session_info, dict) else None
+    ) or response_data["provider"]
+
+    metadata: Dict[str, Any] = {
+        "timestamp": datetime.now().isoformat() + "Z",
+        "working_directory": os.getcwd(),
+        "model": model,
+    }
+    if branch_name is not None:
+        metadata["branch_name"] = branch_name
+    if step_name is not None:
+        metadata["step_name"] = step_name
 
     # Create complete session JSON structure
     session_data = {
         "prompt": prompt,
         "response_data": response_data,
-        "metadata": {
-            "timestamp": datetime.now().isoformat() + "Z",
-            "working_directory": os.getcwd(),
-            "model": response_data.get("session_info", {}).get(
-                "model", "claude-3-5-sonnet"
-            ),
-        },
+        "metadata": metadata,
     }
 
     # Write JSON file
@@ -97,29 +119,12 @@ def extract_session_id(file_path: str) -> Optional[str]:
         with open(file_path, "r", encoding="utf-8") as f:
             session_data = json.load(f)
 
-        # Try multiple paths to find session_id
-        # Path 1: response_data.session_info.session_id (detailed API response)
-        session_id: Optional[str] = (
-            session_data.get("response_data", {})
-            .get("session_info", {})
-            .get("session_id")
+        # Extract session_id from LLMResponseDict format: response_data.session_id
+        session_id: Optional[str] = session_data.get("response_data", {}).get(
+            "session_id"
         )
         if session_id and isinstance(session_id, str):
-            logger.debug(
-                "Found session_id in response_data.session_info: %s", session_id
-            )
-            return session_id
-
-        # Path 2: Direct session_id field (simple response format)
-        session_id = session_data.get("session_id")
-        if session_id and isinstance(session_id, str):
-            logger.debug("Found session_id at root level: %s", session_id)
-            return session_id
-
-        # Path 3: metadata.session_id (alternative storage location)
-        session_id = session_data.get("metadata", {}).get("session_id")
-        if session_id and isinstance(session_id, str):
-            logger.debug("Found session_id in metadata: %s", session_id)
+            logger.debug("Found session_id in response_data: %s", session_id)
             return session_id
 
         logger.warning("No session_id found in file: %s", file_path)

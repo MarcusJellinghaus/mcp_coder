@@ -1,11 +1,16 @@
 """High-level LLM interface for extensible provider support."""
 
+import logging
+
+from mcp_coder.utils.subprocess_runner import TimeoutExpired
+
 from .providers.claude.claude_code_api import ask_claude_code_api
 from .providers.claude.claude_code_cli import ask_claude_code_cli
-from .providers.claude.claude_code_interface import ask_claude_code
 
 # Serialization functions are now in .serialization module
 from .types import LLMResponseDict
+
+logger = logging.getLogger(__name__)
 
 # Constants
 LLM_DEFAULT_TIMEOUT_SECONDS = 30  # Default timeout for LLM requests
@@ -16,14 +21,13 @@ __all__ = [
 ]
 
 
-def ask_llm(  # pylint: disable=too-many-positional-arguments
+def ask_llm(
     question: str,
     provider: str = "claude",
     method: str = "cli",
     session_id: str | None = None,
     timeout: int = LLM_DEFAULT_TIMEOUT_SECONDS,
     env_vars: dict[str, str] | None = None,
-    project_dir: str | None = None,
     execution_dir: str | None = None,
     mcp_config: str | None = None,
     branch_name: str | None = None,
@@ -45,9 +49,12 @@ def ask_llm(  # pylint: disable=too-many-positional-arguments
                    Note: This function doesn't return session_id. Use prompt_llm()
                    for full session management capabilities.
         timeout: Timeout in seconds for the request (default: 30)
-        env_vars: Optional environment variables to pass to the LLM subprocess
-        project_dir: Optional project directory for MCP_CODER_PROJECT_DIR env var
-        execution_dir: Optional working directory for LLM subprocess (default: current directory)
+        env_vars: Optional environment variables to pass to the LLM subprocess.
+            MCP server configuration (e.g. MCP_CODER_PROJECT_DIR) is passed here
+            via prepare_llm_environment(); see execution_dir for MCP discovery.
+        execution_dir: Working directory for the LLM subprocess. Claude discovers
+            .mcp.json (and therefore which MCP servers to load) relative to this
+            directory. Defaults to the caller's current working directory.
         mcp_config: Optional path to MCP configuration file
         branch_name: Optional git branch name to include in log filename
 
@@ -76,28 +83,17 @@ def ask_llm(  # pylint: disable=too-many-positional-arguments
         - prompt_llm() for high-level session-aware interface
         - ask_claude_code_cli() or ask_claude_code_api() directly for provider-specific control
     """
-    # Input validation
-    if not question or not question.strip():
-        raise ValueError("Question cannot be empty or whitespace only")
-
-    if timeout <= 0:
-        raise ValueError("Timeout must be a positive number")
-
-    if provider == "claude":
-        return ask_claude_code(
-            question,
-            method=method,
-            session_id=session_id,
-            timeout=timeout,
-            env_vars=env_vars,
-            cwd=execution_dir,
-            mcp_config=mcp_config,
-            branch_name=branch_name,
-        )
-    else:
-        raise ValueError(
-            f"Unsupported provider: {provider}. Currently supported: 'claude'"
-        )
+    return prompt_llm(
+        question,
+        provider=provider,
+        method=method,
+        session_id=session_id,
+        timeout=timeout,
+        env_vars=env_vars,
+        execution_dir=execution_dir,
+        mcp_config=mcp_config,
+        branch_name=branch_name,
+    )["text"]
 
 
 def prompt_llm(  # pylint: disable=too-many-positional-arguments
@@ -107,7 +103,6 @@ def prompt_llm(  # pylint: disable=too-many-positional-arguments
     session_id: str | None = None,
     timeout: int = LLM_DEFAULT_TIMEOUT_SECONDS,
     env_vars: dict[str, str] | None = None,
-    project_dir: str | None = None,
     execution_dir: str | None = None,
     mcp_config: str | None = None,
     branch_name: str | None = None,
@@ -126,9 +121,12 @@ def prompt_llm(  # pylint: disable=too-many-positional-arguments
                 - "api": Uses Claude Code Python SDK (automatic authentication)
         session_id: Optional session ID to resume previous conversation
         timeout: Timeout in seconds for the request (default: 30)
-        env_vars: Optional environment variables to pass to the LLM subprocess
-        project_dir: Optional project directory for MCP_CODER_PROJECT_DIR env var
-        execution_dir: Optional working directory for LLM subprocess (default: current directory)
+        env_vars: Optional environment variables to pass to the LLM subprocess.
+            MCP server configuration (e.g. MCP_CODER_PROJECT_DIR) is passed here
+            via prepare_llm_environment(); see execution_dir for MCP discovery.
+        execution_dir: Working directory for the LLM subprocess. Claude discovers
+            .mcp.json (and therefore which MCP servers to load) relative to this
+            directory. Defaults to the caller's current working directory.
         mcp_config: Optional path to MCP configuration file
         branch_name: Optional git branch name to include in log filename
 
@@ -180,31 +178,44 @@ def prompt_llm(  # pylint: disable=too-many-positional-arguments
 
     # Route to provider-specific implementation
     # Call lower-level functions directly to get LLMResponseDict
-    if provider == "claude":
-        if method == "cli":
-            return ask_claude_code_cli(
-                question,
-                session_id=session_id,
-                timeout=timeout,
-                env_vars=env_vars,
-                cwd=execution_dir,
-                mcp_config=mcp_config,
-                branch_name=branch_name,
-            )
-        elif method == "api":
-            return ask_claude_code_api(
-                question,
-                session_id=session_id,
-                timeout=timeout,
-                env_vars=env_vars,
-                cwd=execution_dir,
-                mcp_config=mcp_config,
-            )
+    try:
+        if provider == "claude":
+            if method == "cli":
+                return ask_claude_code_cli(
+                    question,
+                    session_id=session_id,
+                    timeout=timeout,
+                    env_vars=env_vars,
+                    cwd=execution_dir,
+                    mcp_config=mcp_config,
+                    branch_name=branch_name,
+                )
+            elif method == "api":
+                return ask_claude_code_api(
+                    question,
+                    session_id=session_id,
+                    timeout=timeout,
+                    env_vars=env_vars,
+                    cwd=execution_dir,
+                    mcp_config=mcp_config,
+                )
+            else:
+                raise ValueError(
+                    f"Unsupported method: {method}. Supported methods: 'cli', 'api'"
+                )
         else:
             raise ValueError(
-                f"Unsupported method: {method}. Supported methods: 'cli', 'api'"
+                f"Unsupported provider: {provider}. Currently supported: 'claude'"
             )
-    else:
-        raise ValueError(
-            f"Unsupported provider: {provider}. Currently supported: 'claude'"
+    except TimeoutExpired:
+        logger.error("LLM request timed out after %ds", timeout)
+        logger.error(
+            "Prompt length: %d characters (%d words)",
+            len(question),
+            len(question.split()),
         )
+        logger.error("LLM method: %s/%s", provider, method)
+        logger.error(
+            "Consider: checking network, simplifying prompt, increasing timeout"
+        )
+        raise  # re-raise original TimeoutExpired — type transparent to callers
