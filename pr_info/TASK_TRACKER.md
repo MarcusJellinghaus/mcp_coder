@@ -26,7 +26,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Move source file and update test ([step_1.md](./steps/step_1.md))
 
 - [x] Copy `src/mcp_coder/workflow_utils/branch_status.py` to `src/mcp_coder/checks/branch_status.py` (no code changes)
-- [ ] Copy `tests/workflow_utils/test_branch_status.py` to `tests/checks/test_branch_status.py` and update all imports (`workflow_utils.branch_status` → `checks.branch_status`)
+- [x] Copy `tests/workflow_utils/test_branch_status.py` to `tests/checks/test_branch_status.py` and update all imports (`workflow_utils.branch_status` → `checks.branch_status`)
 - [ ] Delete `src/mcp_coder/workflow_utils/branch_status.py`
 - [ ] Delete `tests/workflow_utils/test_branch_status.py`
 - [ ] Run pylint on changed files and fix all issues found
