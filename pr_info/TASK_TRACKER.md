@@ -26,9 +26,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1 — Tests: `_try_delete_empty_directory` retry behaviour
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implement Step 1: add 3 new test methods for `_try_delete_empty_directory` in `tests/utils/test_folder_deletion.py` (`TestHelperFunctions` class), and patch `time.sleep` in the 2 existing tests
-- [ ] Quality checks: run pylint, pytest, mypy — fix all issues found
-- [ ] Prepare git commit message for Step 1
+- [x] Implement Step 1: add 3 new test methods for `_try_delete_empty_directory` in `tests/utils/test_folder_deletion.py` (`TestHelperFunctions` class), and patch `time.sleep` in the 2 existing tests
+- [x] Quality checks: run pylint, pytest, mypy — fix all issues found
+- [x] Prepare git commit message for Step 1
 
 ### Step 2 — Implementation: `_try_delete_empty_directory` retry loop
 See [step_2.md](./steps/step_2.md)
