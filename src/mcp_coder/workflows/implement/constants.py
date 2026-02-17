@@ -7,7 +7,6 @@ single source of truth.
 
 # Directory paths
 PR_INFO_DIR = "pr_info"
-CONVERSATIONS_DIR = f"{PR_INFO_DIR}/.conversations"
 COMMIT_MESSAGE_FILE = f"{PR_INFO_DIR}/.commit_message.txt"
 
 # LLM timeout settings (in seconds)

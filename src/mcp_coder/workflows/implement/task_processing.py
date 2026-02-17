@@ -4,26 +4,18 @@ This module contains functions for processing individual implementation tasks,
 including LLM integration, mypy fixes, formatting, and git operations.
 """
 
-import json
 import logging
 import re
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.formatters import format_code
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import ask_llm
-from mcp_coder.llm.providers.claude.claude_code_api import (
-    ask_claude_code_api_detailed_sync,
-)
-
-# Import removed - using structured parameters instead
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils import commit_all_changes, get_full_status, git_push
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
-from mcp_coder.utils.subprocess_runner import TimeoutExpired
 from mcp_coder.workflow_utils.commit_operations import (
     generate_commit_message_with_llm,
     parse_llm_commit_response,
@@ -32,7 +24,6 @@ from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 
 from .constants import (
     COMMIT_MESSAGE_FILE,
-    CONVERSATIONS_DIR,
     LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
     PR_INFO_DIR,
     RUN_MYPY_AFTER_EACH_TASK,
@@ -65,209 +56,6 @@ def get_next_task(project_dir: Path) -> Optional[str]:
     except Exception as e:
         logger.error(f"Error getting incomplete tasks: {e}")
         return None
-
-
-def save_conversation(
-    project_dir: Path, content: str, step_num: int, conversation_type: str = ""
-) -> None:
-    """Save conversation content to pr_info/.conversations/step_N[_type][_counter].md."""
-    logger.debug(
-        f"Saving conversation for step {step_num} (type: {conversation_type or 'main'})..."
-    )
-
-    # Create conversations directory if it doesn't exist
-    conversations_dir = project_dir / CONVERSATIONS_DIR
-    conversations_dir.mkdir(parents=True, exist_ok=True)
-
-    # Build base filename with optional type
-    if conversation_type:
-        base_name = f"step_{step_num}_{conversation_type}"
-    else:
-        base_name = f"step_{step_num}"
-
-    # Find next available filename for this step and type
-    counter = 1
-    filename = f"{base_name}.md"
-
-    while (conversations_dir / filename).exists():
-        counter += 1
-        filename = f"{base_name}_{counter}.md"
-
-    # Save the conversation
-    conversation_path = conversations_dir / filename
-    conversation_path.write_text(content, encoding="utf-8")
-
-    logger.debug(f"Conversation saved to {conversation_path.absolute()}")
-
-
-def _call_llm_with_comprehensive_capture(  # pylint: disable=too-many-positional-arguments
-    prompt: str,
-    provider: str,
-    method: str,
-    timeout: int = 300,
-    env_vars: dict[str, str] | None = None,
-    cwd: str | None = None,
-    mcp_config: str | None = None,
-) -> tuple[str, dict[Any, Any]]:
-    """Call LLM and capture both text response and comprehensive data.
-
-    Args:
-        prompt: The prompt to send to the LLM
-        provider: LLM provider (e.g., 'claude')
-        method: LLM method (e.g., 'cli' or 'api')
-        timeout: Request timeout in seconds
-        env_vars: Optional environment variables for the subprocess
-        cwd: Optional working directory for the LLM subprocess
-        mcp_config: Optional path to MCP configuration file
-
-    Returns:
-        Tuple of (response_text, comprehensive_data_dict)
-        For CLI method, comprehensive_data will be empty dict
-    """
-    # Use provided structured parameters
-
-    if method == "api":
-        # Use detailed API call to get comprehensive data
-        try:
-            logger.info(f"Calling Claude API with {timeout}s timeout...")
-            logger.debug(
-                f"Prompt preview: {prompt[:200]}{'...' if len(prompt) > 200 else ''}"
-            )
-            start_time = datetime.now()
-            detailed_response = ask_claude_code_api_detailed_sync(
-                prompt, timeout=timeout, env_vars=env_vars, cwd=cwd
-            )
-            duration = (datetime.now() - start_time).total_seconds()
-            logger.info(f"Claude API call completed in {duration:.1f}s")
-
-            # Extract text response from detailed response structure
-            response_text = detailed_response.get("text", "")
-
-            if not response_text:
-                logger.warning("Detailed API response had no text content")
-                logger.debug(f"Response structure: {list(detailed_response.keys())}")
-
-            return response_text, detailed_response
-
-        except TimeoutExpired as e:
-            duration = (
-                (datetime.now() - start_time).total_seconds()
-                if "start_time" in locals()
-                else timeout
-            )
-            logger.error(
-                f"Claude API call timed out after {timeout}s (actual: {duration:.1f}s): {e}"
-            )
-            logger.error(
-                f"Prompt length: {len(prompt)} characters ({len(prompt.split())} words)"
-            )
-            logger.error(f"LLM method: {provider}/{method}")
-            logger.error(
-                "This may indicate: network issues, complex prompt, long-running MCP tools, or insufficient timeout"
-            )
-            logger.error(
-                "Consider: checking network, simplifying prompt, waiting for MCP tools to complete, or increasing timeout"
-            )
-            raise Exception(f"LLM request timed out after {timeout} seconds") from e
-        except Exception as e:
-            logger.error(f"Claude API call failed: {e}")
-            raise Exception(f"LLM request failed: {e}") from e
-    else:
-        # CLI method - no comprehensive data available
-        try:
-            logger.info(f"Calling Claude CLI with {timeout}s timeout...")
-            branch_name = get_branch_name_for_logging(cwd)
-            response_text = ask_llm(
-                prompt,
-                provider=provider,
-                method=method,
-                timeout=timeout,
-                env_vars=env_vars,
-                execution_dir=cwd,
-                mcp_config=mcp_config,
-                branch_name=branch_name,
-            )
-            return response_text, {}
-        except TimeoutExpired as e:
-            logger.error(f"Claude CLI call timed out after {timeout}s: {e}")
-            logger.error(f"Prompt length: {len(prompt)} characters")
-            logger.error(f"LLM method: {provider}/{method}")
-            logger.error(
-                "This may indicate: network issues, complex prompt, long-running MCP tools, or insufficient timeout"
-            )
-            logger.error(
-                "Consider: checking network, simplifying prompt, waiting for MCP tools to complete, or increasing timeout"
-            )
-            raise Exception(f"LLM request timed out after {timeout} seconds") from e
-        except Exception as e:
-            logger.error(f"Claude CLI call failed: {e}")
-            logger.error(f"Prompt length: {len(prompt)} characters")
-            logger.error(f"LLM method: {provider}/{method}")
-            raise Exception(f"LLM request failed: {e}") from e
-
-
-def save_conversation_comprehensive(
-    project_dir: Path,
-    content: str,
-    step_num: int,
-    conversation_type: str = "",
-    comprehensive_data: dict[Any, Any] | None = None,
-) -> None:
-    """Save both markdown conversation and comprehensive JSON data.
-
-    Args:
-        project_dir: Project directory path
-        content: Conversation content (markdown)
-        step_num: Step number
-        conversation_type: Type of conversation (e.g., 'mypy', 'main')
-        comprehensive_data: Full API response data including session info, cost, usage, etc.
-    """
-    # Save the regular markdown conversation
-    save_conversation(project_dir, content, step_num, conversation_type)
-
-    # Save comprehensive JSON data if provided
-    if comprehensive_data:
-        logger.debug(
-            f"Saving comprehensive data for step {step_num} (type: {conversation_type or 'main'})..."
-        )
-
-        conversations_dir = project_dir / CONVERSATIONS_DIR
-        conversations_dir.mkdir(parents=True, exist_ok=True)
-
-        # Build filename for comprehensive data
-        if conversation_type:
-            base_name = f"step_{step_num}_{conversation_type}_comprehensive"
-        else:
-            base_name = f"step_{step_num}_comprehensive"
-
-        # Find next available filename
-        counter = 1
-        filename = f"{base_name}.json"
-
-        while (conversations_dir / filename).exists():
-            counter += 1
-            filename = f"{base_name}_{counter}.json"
-
-        # Prepare comprehensive data structure
-        comprehensive_json = {
-            "step": step_num,
-            "type": conversation_type or "main",
-            "timestamp": datetime.now().isoformat(),
-            "conversation_markdown": content,
-            "llm_response_data": comprehensive_data,
-            "metadata": {
-                "workflow": "implement",
-                "version": "1.0",
-                "comprehensive_export": True,
-            },
-        }
-
-        # Save comprehensive JSON
-        json_path = conversations_dir / filename
-        with open(json_path, "w", encoding="utf-8") as f:
-            json.dump(comprehensive_json, f, indent=2, default=str, ensure_ascii=False)
-
-        logger.debug(f"Comprehensive data saved to {json_path.absolute()}")
 
 
 def run_formatters(project_dir: Path) -> bool:
@@ -474,46 +262,27 @@ def check_and_fix_mypy(
                 logger.error(f"Error loading mypy fix prompt: {e}")
                 return False
 
-            # Call LLM for fixes with comprehensive data capture
+            # Call LLM for fixes
             try:
-                fix_response, mypy_comprehensive_data = (
-                    _call_llm_with_comprehensive_capture(
-                        mypy_prompt,
-                        provider,
-                        method,
-                        timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
-                        env_vars=env_vars,
-                        cwd=str(execution_dir) if execution_dir else str(project_dir),
-                        mcp_config=mcp_config,
-                    )
+                branch_name = get_branch_name_for_logging(
+                    str(execution_dir) if execution_dir else str(project_dir)
+                )
+                fix_response = ask_llm(
+                    mypy_prompt,
+                    provider=provider,
+                    method=method,
+                    timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
+                    env_vars=env_vars,
+                    execution_dir=(
+                        str(execution_dir) if execution_dir else str(project_dir)
+                    ),
+                    mcp_config=mcp_config,
+                    branch_name=branch_name,
                 )
 
                 if not fix_response or not fix_response.strip():
                     logger.error("LLM returned empty response for mypy fixes")
                     return False
-
-                # Save this mypy fix conversation immediately with comprehensive data
-                mypy_conversation = f"""# Mypy Fix Attempt {mypy_attempt_counter}
-
-## Mypy Errors:
-{mypy_result}
-
-## Prompt Sent to LLM:
-{mypy_prompt}
-
-## LLM Fix Response:
-{fix_response}
-
----
-Mypy fix generated on: {datetime.now().isoformat()}
-"""
-                save_conversation_comprehensive(
-                    project_dir,
-                    mypy_conversation,
-                    step_num,
-                    "mypy",
-                    comprehensive_data=mypy_comprehensive_data,
-                )
 
                 logger.info(
                     f"Applied mypy fixes from LLM (attempt {mypy_attempt_counter})"
@@ -602,7 +371,7 @@ def process_single_task(
         logger.error(f"Error loading prompt template: {e}")
         return False, "error"
 
-    # Step 4: Call LLM with prompt and capture comprehensive data
+    # Step 4: Call LLM with prompt
     logger.info("Calling LLM for implementation...")
     try:
         # Create the full prompt by combining template with task context
@@ -612,23 +381,21 @@ Current task from TASK_TRACKER.md: {next_task}
 
 Please implement this task step by step."""
 
-        response, comprehensive_data = _call_llm_with_comprehensive_capture(
+        branch_name = get_branch_name_for_logging(cwd)
+        response = ask_llm(
             full_prompt,
-            provider,
-            method,
+            provider=provider,
+            method=method,
             timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
             env_vars=env_vars,
-            cwd=cwd,
+            execution_dir=cwd,
             mcp_config=mcp_config,
+            branch_name=branch_name,
         )
 
         if not response or not response.strip():
             logger.error("LLM returned empty response")
             logger.debug(f"Response was: {repr(response)}")
-            if comprehensive_data:
-                logger.debug(
-                    f"Comprehensive data keys: {list(comprehensive_data.keys())}"
-                )
             return False, "error"
 
         logger.info("LLM response received successfully")
@@ -637,34 +404,9 @@ Please implement this task step by step."""
         logger.error(f"Error calling LLM: {e}")
         return False, "error"
 
-    # Step 5: Extract step number and save initial implementation conversation
-    try:
-        # Extract step number from task for conversation naming
-        step_match = re.search(r"Step (\d+)", next_task)
-        step_num = int(step_match.group(1)) if step_match else 1
-
-        # Save initial implementation conversation with comprehensive data
-        initial_conversation = f"""# Implementation Task: {next_task}
-
-## Prompt Sent to LLM:
-{full_prompt}
-
-## LLM Response:
-{response}
-
----
-Generated on: {datetime.now().isoformat()}"""
-
-        save_conversation_comprehensive(
-            project_dir,
-            initial_conversation,
-            step_num,
-            comprehensive_data=comprehensive_data,
-        )
-
-    except Exception as e:
-        logger.error(f"Error saving initial conversation: {e}")
-        return False, "error"
+    # Step 5: Extract step number from task
+    step_match = re.search(r"Step (\d+)", next_task)
+    step_num = int(step_match.group(1)) if step_match else 1
 
     # Step 6: Check if any files were actually changed
     try:

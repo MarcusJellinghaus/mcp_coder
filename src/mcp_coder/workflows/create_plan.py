@@ -186,7 +186,6 @@ def create_pr_info_structure(project_dir: Path) -> bool:
     Creates:
     - pr_info/
     - pr_info/steps/
-    - pr_info/.conversations/
     - pr_info/TASK_TRACKER.md (from template)
 
     Args:
@@ -205,10 +204,6 @@ def create_pr_info_structure(project_dir: Path) -> bool:
         # Create pr_info/steps/ directory
         steps_dir = pr_info_dir / "steps"
         steps_dir.mkdir()
-
-        # Create pr_info/.conversations/ directory
-        conversations_dir = pr_info_dir / ".conversations"
-        conversations_dir.mkdir()
 
         # Write TASK_TRACKER_TEMPLATE to pr_info/TASK_TRACKER.md
         task_tracker_path = pr_info_dir / "TASK_TRACKER.md"

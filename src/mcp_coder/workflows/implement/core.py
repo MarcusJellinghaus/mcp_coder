@@ -64,7 +64,6 @@ from .task_processing import (
     process_single_task,
     push_changes,
     run_formatters,
-    save_conversation,
 )
 
 # Finalisation prompt for completing remaining tasks
@@ -182,14 +181,6 @@ def _run_ci_analysis(
         logger.warning("No problem description available")
         return None
 
-    # Save conversation for debugging
-    save_conversation(
-        config.project_dir,
-        f"# CI Failure Analysis\n\n{problem_description}",
-        0,
-        f"ci_analysis_{fix_attempt + 1}",
-    )
-
     return problem_description
 
 
@@ -243,14 +234,6 @@ def _run_ci_fix(
     except Exception as e:
         logger.warning(f"LLM fix failed: {e}")
         return False
-
-    # Save conversation for debugging
-    save_conversation(
-        config.project_dir,
-        f"# CI Fix Attempt {fix_attempt + 1}\n\n{fix_response}",
-        0,
-        f"ci_fix_{fix_attempt + 1}",
-    )
 
     # Run formatters (non-critical, continue even if fails)
     run_formatters(config.project_dir)

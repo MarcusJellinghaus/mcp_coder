@@ -43,9 +43,9 @@ See [step_2.md](./steps/step_2.md) for full details.
 
 See [step_3.md](./steps/step_3.md) for full details.
 
-- [ ] Implement Step 3: delete `save_conversation()`, `save_conversation_comprehensive()`, `_call_llm_with_comprehensive_capture()`; remove `CONVERSATIONS_DIR`; remove `.conversations/` dir creation; replace call sites with `ask_llm()`; update tests
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues found
-- [ ] Prepare git commit message for Step 3
+- [x] Implement Step 3: delete `save_conversation()`, `save_conversation_comprehensive()`, `_call_llm_with_comprehensive_capture()`; remove `CONVERSATIONS_DIR`; remove `.conversations/` dir creation; replace call sites with `ask_llm()`; update tests
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues found
+- [x] Prepare git commit message for Step 3
 
 ### Step 4 – Switch `task_processing.py` to `prompt_llm()` + `store_session()`
 
