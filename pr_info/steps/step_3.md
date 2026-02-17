@@ -5,27 +5,26 @@
 Read pr_info/steps/summary.md and pr_info/steps/step_3.md before starting.
 
 The file move and import updates are complete (steps 1-2).
-Now verify that architectural boundary tools still pass, and fix only what breaks.
+Now update the architectural boundary config files and verify all tools pass.
 
 Tasks:
 
-1. Run tach check (tools/tach_check.bat or `tach check`)
-   - If it reports a violation involving `mcp_coder.checks`, add
-     `{ path = "mcp_coder.checks" }` to the `depends_on` list of the
-     `mcp_coder.cli` module entry in `tach.toml`.
-   - If `mcp_coder.workflows` also shows a violation, add it there too.
-   - If `tests` module shows a violation, add `{ path = "mcp_coder.checks" }` there too.
-   - If tach passes with no changes needed, do not touch tach.toml.
+1. Update `tach.toml` — these changes are required:
+   - Add `"tools"` to the `layers` list between `"application"` and `"domain"`.
+   - Add a new `[[modules]]` entry for `mcp_coder.checks` at the `tools` layer
+     with depends_on = [workflow_utils, utils, config, constants].
+   - Add `{ path = "mcp_coder.checks" }` to the `depends_on` list of `mcp_coder.cli`.
+   - Add `{ path = "mcp_coder.checks" }` to the `depends_on` list of `mcp_coder.workflows`.
+   - Add `{ path = "mcp_coder.checks" }` to the `depends_on` list of `tests`.
+   - Then run `tach check` to verify no violations remain.
 
-2. Run lint-imports (tools/lint_imports.bat or `lint-imports`)
-   - If it reports a layered_architecture violation involving `mcp_coder.checks`,
-     add `mcp_coder.checks` to the appropriate layer in the `layered_architecture`
-     contract in `.importlinter` (same layer as `mcp_coder.workflow_utils`).
-   - If lint-imports passes with no changes needed, do not touch .importlinter.
+2. Update `.importlinter` — these changes are required:
+   - In the `layered_architecture` contract, insert `mcp_coder.checks` as a new
+     layer between `mcp_coder.workflows` and `mcp_coder.workflow_utils`.
+   - Add `tests.checks` to the `test_module_independence` contract.
+   - Then run `lint-imports` to verify no violations remain.
 
 3. Run the full test suite one final time to confirm everything is green.
-
-Do NOT make any changes unless the tools actually report a violation.
 ```
 
 ---
@@ -33,56 +32,100 @@ Do NOT make any changes unless the tools actually report a violation.
 ## WHERE
 | File | Change type |
 |---|---|
-| `tach.toml` | Add `mcp_coder.checks` to depends_on entries (only if tach check fails) |
-| `.importlinter` | Add `mcp_coder.checks` to layered contract (only if lint-imports fails) |
+| `tach.toml` | Add `tools` layer; add `[[modules]]` entry for `mcp_coder.checks`; update `depends_on` for `cli`, `workflows`, `tests` |
+| `.importlinter` | Insert `mcp_coder.checks` as new layer; add `tests.checks` to independence contract |
 
 ## WHAT
 
-### `tach.toml` — conditional addition to `mcp_coder.cli` module:
+### `tach.toml` — required changes:
+
+Add `"tools"` to the `layers` list (between `"application"` and `"domain"`):
 ```toml
-[[modules]]
-path = "mcp_coder.cli"
-layer = "presentation"
-depends_on = [
-    ...existing entries...
-    { path = "mcp_coder.checks" },   # ← add only if tach check reports violation
+layers = [
+    "presentation",
+    "application",
+    "tools",           # ← new: high-level modules backing CLI subcommands
+    "domain",
+    "infrastructure",
+    "foundation"
 ]
 ```
 
-Same pattern for `mcp_coder.workflows` and `tests` if they also report violations.
+Add a new `[[modules]]` entry for `mcp_coder.checks`:
+```toml
+[[modules]]
+path = "mcp_coder.checks"
+layer = "tools"
+# High-level check modules backing CLI subcommands. Reusable by cli and workflows.
+depends_on = [
+    { path = "mcp_coder.workflow_utils" },
+    { path = "mcp_coder.utils" },
+    { path = "mcp_coder.config" },
+    { path = "mcp_coder.constants" },
+]
+```
 
-### `.importlinter` — conditional addition to layered_architecture contract:
+Add `{ path = "mcp_coder.checks" }` to the `depends_on` lists of `mcp_coder.cli`,
+`mcp_coder.workflows`, and `tests`.
+
+### `.importlinter` — required changes:
+
+Insert `mcp_coder.checks` as a new layer between `mcp_coder.workflows` and
+`mcp_coder.workflow_utils` in the `layered_architecture` contract:
 ```ini
 [importlinter:contract:layered_architecture]
 layers =
     mcp_coder.cli
     mcp_coder.workflows
-    mcp_coder.workflow_utils | mcp_coder.checks   # ← add checks at same level as workflow_utils
+    mcp_coder.checks          # ← new layer: below workflows, above workflow_utils
+    mcp_coder.workflow_utils
     mcp_coder.llm | mcp_coder.formatters | mcp_coder.prompt_manager
     mcp_coder.utils | mcp_coder.mcp_code_checker
     mcp_coder.config | mcp_coder.constants
 ```
 
+Add `tests.checks` to the `test_module_independence` contract:
+```ini
+[importlinter:contract:test_module_independence]
+modules =
+    tests.cli
+    tests.llm
+    tests.utils
+    tests.workflows
+    tests.formatters
+    tests.workflow_utils
+    tests.checks              # ← add this
+```
+
 ## HOW
-Both tools use `exact = false` / non-strict mode, so they may pass without changes.
-Only edit config files when a tool explicitly reports `mcp_coder.checks` as a violation.
+Both config files require updates after the move — `mcp_coder.checks` is not registered
+in either `tach.toml` or `.importlinter` today. Apply the changes described above, then
+run the tools to verify no violations remain.
+
+The `tools` layer sits between `application` (workflows) and `domain` (llm/formatters)
+in tach, reflecting that `mcp_coder.checks` is a high-level module that:
+- Is consumed by both `cli` and `workflows` (layers above)
+- Imports from `workflow_utils` and `utils` (layers below)
 
 ## ALGORITHM
 ```
-run tach check
-if violation mentions mcp_coder.checks:
-    add { path = "mcp_coder.checks" } to affected module depends_on in tach.toml
+# tach.toml
+add "tools" to layers list
+add [[modules]] entry for mcp_coder.checks at tools layer
+add { path = "mcp_coder.checks" } to depends_on for cli, workflows, tests
+run tach check → assert passes
 
-run lint-imports
-if violation mentions mcp_coder.checks in layered_architecture:
-    add mcp_coder.checks at workflow_utils layer in .importlinter
+# .importlinter
+insert mcp_coder.checks layer between workflows and workflow_utils
+add tests.checks to test_module_independence contract
+run lint-imports → assert passes
 
 run full pytest suite
 assert all tests pass
 ```
 
 ## DATA
-No code changes. Config-only edits, and only if tools require them.
+No code changes. Config-only edits.
 
 ## Verification
 ```

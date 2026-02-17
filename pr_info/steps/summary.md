@@ -49,6 +49,7 @@ tests/
 - **No new exports in `checks/__init__.py`** — callers import directly from `mcp_coder.checks.branch_status`,
   consistent with the pattern established by `check_branch_status.py` command.
 - `checks/` package is the home for modules backing CLI `check` subcommands.
+- **`mcp_coder.checks` is a new `tools` layer** in tach, sitting between `application` (workflows) and `domain` (llm/formatters). This reflects that check modules are consumed by both `cli` and `workflows`, and import from `workflow_utils` and `utils`.
 
 ---
 
@@ -65,9 +66,8 @@ tests/
 | `src/mcp_coder/cli/commands/check_branch_status.py` | Update import path |
 | `src/mcp_coder/workflows/implement/core.py` | Update import path |
 | `tests/cli/commands/test_check_branch_status.py` | Update import path |
-| `docs/architecture/architecture.md` | Update branch_status location reference |
-| `tach.toml` | Add `mcp_coder.checks` to cli/workflows depends_on (if tach check fails) |
-| `.importlinter` | Add `mcp_coder.checks` to layered contract (if lint-imports fails) |
+| `tach.toml` | Add `tools` layer; add `[[modules]]` for `mcp_coder.checks`; update `depends_on` for `cli`, `workflows`, `tests` |
+| `.importlinter` | Insert `mcp_coder.checks` as new layer; add `tests.checks` to independence contract |
 
 ## Files Deleted
 | File | Action |

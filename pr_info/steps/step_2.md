@@ -26,10 +26,6 @@ Tasks (in order):
    - Change: `from mcp_coder.workflow_utils.branch_status import BranchStatusReport`
    - To:     `from mcp_coder.checks.branch_status import BranchStatusReport`
 
-5. `docs/architecture/architecture.md`
-   - Find the line referencing `workflow_utils/branch_status.py` (Branch status section)
-   - Update it to reference `checks/branch_status.py`
-
 Verify: Run the full test suite and confirm all tests pass.
 Do NOT change any logic in any of these files.
 ```
@@ -43,7 +39,6 @@ Do NOT change any logic in any of these files.
 | `src/mcp_coder/cli/commands/check_branch_status.py` | Update one import |
 | `src/mcp_coder/workflows/implement/core.py` | Update one import |
 | `tests/cli/commands/test_check_branch_status.py` | Update one import |
-| `docs/architecture/architecture.md` | Update one reference line |
 
 ## WHAT
 
