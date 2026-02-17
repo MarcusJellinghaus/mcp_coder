@@ -347,39 +347,6 @@ class TestAskLLMExecutionDir:
         assert result == "Response with default dir"
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
-    def test_execution_dir_independent_of_project_dir(
-        self, mock_ask_claude_code_cli: MagicMock
-    ) -> None:
-        """execution_dir and project_dir should be independent."""
-        mock_ask_claude_code_cli.return_value = {
-            "text": "Response with both dirs",
-            "session_id": "test-session",
-            "version": "1.0",
-            "timestamp": "2025-10-01T10:30:00",
-            "method": "cli",
-            "provider": "claude",
-            "raw_response": {},
-        }
-
-        result = ask_llm(
-            "Test question",
-            project_dir="/project/path",
-            execution_dir="/execution/path",
-        )
-
-        # execution_dir should be passed as cwd, not project_dir
-        mock_ask_claude_code_cli.assert_called_once_with(
-            "Test question",
-            session_id=None,
-            timeout=30,
-            env_vars=None,
-            cwd="/execution/path",
-            mcp_config=None,
-            branch_name=None,
-        )
-        assert result == "Response with both dirs"
-
-    @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_execution_dir_with_absolute_path(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
@@ -867,41 +834,6 @@ class TestPromptLLMExecutionDir:
             mcp_config=None,
         )
         assert result["text"] == "API response with execution_dir"
-
-    @patch("mcp_coder.llm.interface.ask_claude_code_cli")
-    def test_execution_dir_and_project_dir_both_work(
-        self, mock_ask_claude_code_cli: MagicMock
-    ) -> None:
-        """Both project_dir and execution_dir should work together."""
-        mock_response = {
-            "version": "1.0",
-            "timestamp": "2025-10-01T10:30:00",
-            "text": "Response with both directories",
-            "session_id": "both-dirs-123",
-            "method": "cli",
-            "provider": "claude",
-            "raw_response": {},
-        }
-        mock_ask_claude_code_cli.return_value = mock_response
-
-        result = prompt_llm(
-            "Test question",
-            method="cli",
-            project_dir="/project/dir",
-            execution_dir="/execution/dir",
-        )
-
-        # execution_dir should be passed as cwd
-        mock_ask_claude_code_cli.assert_called_once_with(
-            "Test question",
-            session_id=None,
-            timeout=30,
-            env_vars=None,
-            cwd="/execution/dir",
-            mcp_config=None,
-            branch_name=None,
-        )
-        assert result["text"] == "Response with both directories"
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_execution_dir_none_defaults_to_cwd(

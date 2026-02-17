@@ -117,6 +117,7 @@ def execute_prompt(
         mcp_config = resolve_mcp_config_path(mcp_config)
 
         # Route to appropriate method based on output_format and verbosity
+        formatted_output = ""
         if output_format == "session-id":
             # Session ID only mode - return only the session_id for shell script capture
             provider, method = parse_llm_method_from_args(llm_method)
@@ -127,7 +128,6 @@ def execute_prompt(
                 timeout=timeout,
                 session_id=resume_session_id,
                 env_vars=env_vars,
-                project_dir=str(project_dir),
                 execution_dir=str(execution_dir),
                 mcp_config=mcp_config,
             )
@@ -151,7 +151,6 @@ def execute_prompt(
                 timeout=timeout,
                 session_id=resume_session_id,
                 env_vars=env_vars,
-                project_dir=str(project_dir),
                 execution_dir=str(execution_dir),
                 mcp_config=mcp_config,
                 branch_name=branch_name,
@@ -174,7 +173,6 @@ def execute_prompt(
                 timeout=timeout,
                 session_id=resume_session_id,
                 env_vars=env_vars,
-                project_dir=str(project_dir),
                 execution_dir=str(execution_dir),
                 mcp_config=mcp_config,
                 branch_name=branch_name,
@@ -198,7 +196,6 @@ def execute_prompt(
                 timeout=timeout,
                 session_id=resume_session_id,
                 env_vars=env_vars,
-                project_dir=str(project_dir),
                 execution_dir=str(execution_dir),
                 mcp_config=mcp_config,
                 branch_name=branch_name,

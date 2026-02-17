@@ -213,7 +213,6 @@ class TestExecutePrompt:
             timeout=30,
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
-            project_dir=mock.ANY,
             execution_dir=mock.ANY,
             mcp_config=None,
             branch_name=mock.ANY,
@@ -284,7 +283,6 @@ class TestExecutePrompt:
             timeout=30,
             session_id="previous-session-456",
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
-            project_dir=mock.ANY,
             execution_dir=mock.ANY,
             mcp_config=None,
             branch_name=mock.ANY,
@@ -331,7 +329,6 @@ class TestExecutePrompt:
             timeout=30,
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
-            project_dir=mock.ANY,
             execution_dir=mock.ANY,
             mcp_config=None,
             branch_name=mock.ANY,
@@ -383,7 +380,6 @@ class TestExecutePrompt:
             timeout=30,
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
-            project_dir=mock.ANY,
             execution_dir=mock.ANY,
             mcp_config=None,
             branch_name=mock.ANY,
@@ -437,7 +433,6 @@ class TestExecutePrompt:
             timeout=30,
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
-            project_dir=mock.ANY,
             execution_dir=mock.ANY,
             mcp_config=None,
             branch_name=mock.ANY,
@@ -495,7 +490,6 @@ class TestExecutePrompt:
             timeout=30,
             session_id="verbose-continuation-123",
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
-            project_dir=mock.ANY,
             execution_dir=mock.ANY,
             mcp_config=None,
             branch_name=mock.ANY,
@@ -545,7 +539,6 @@ class TestExecutePrompt:
             timeout=30,
             session_id=None,
             env_vars=mock_env_vars,
-            project_dir=mock.ANY,
             execution_dir=mock.ANY,
             mcp_config=None,
             branch_name=mock.ANY,
@@ -590,7 +583,6 @@ class TestExecutePrompt:
             timeout=30,
             session_id=None,
             env_vars=None,
-            project_dir=mock.ANY,
             execution_dir=mock.ANY,
             mcp_config=None,
             branch_name=mock.ANY,
@@ -788,7 +780,6 @@ class TestPromptExecutionDir:
         # Verify all arguments were passed correctly
         call_kwargs = mock_prompt_llm.call_args[1]
         assert call_kwargs["execution_dir"] == str(execution_dir)
-        assert call_kwargs["project_dir"] == str(project_dir)
         assert call_kwargs["timeout"] == 60
         assert call_kwargs["session_id"] == "test-session-123"
         captured = capsys.readouterr()
