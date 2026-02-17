@@ -47,9 +47,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4 — Implementation: empty-folder gate in `cleanup_stale_sessions`
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implement Step 4: replace unconditional skip in the `else` branch of `cleanup_stale_sessions()` in `src/mcp_coder/workflows/vscodeclaude/cleanup.py` with an emptiness check that deletes empty folders and skips non-empty ones
-- [ ] Quality checks: run pylint, pytest, mypy — fix all issues found
-- [ ] Prepare git commit message for Step 4
+- [x] Implement Step 4: replace unconditional skip in the `else` branch of `cleanup_stale_sessions()` in `src/mcp_coder/workflows/vscodeclaude/cleanup.py` with an emptiness check that deletes empty folders and skips non-empty ones
+- [x] Quality checks: run pylint, pytest, mypy — fix all issues found
+- [x] Prepare git commit message for Step 4
 
 ---
 
