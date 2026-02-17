@@ -12,7 +12,8 @@ from typing import Optional
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.formatters import format_code
 from mcp_coder.llm.env import prepare_llm_environment
-from mcp_coder.llm.interface import ask_llm
+from mcp_coder.llm.interface import prompt_llm
+from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils import commit_all_changes, get_full_status, git_push
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
@@ -267,7 +268,7 @@ def check_and_fix_mypy(
                 branch_name = get_branch_name_for_logging(
                     str(execution_dir) if execution_dir else str(project_dir)
                 )
-                fix_response = ask_llm(
+                llm_response = prompt_llm(
                     mypy_prompt,
                     provider=provider,
                     method=method,
@@ -279,10 +280,24 @@ def check_and_fix_mypy(
                     mcp_config=mcp_config,
                     branch_name=branch_name,
                 )
+                fix_response = llm_response["text"]
 
                 if not fix_response or not fix_response.strip():
                     logger.error("LLM returned empty response for mypy fixes")
                     return False
+
+                try:
+                    store_session(
+                        response_data=llm_response,
+                        prompt=mypy_prompt,
+                        store_path=str(
+                            project_dir / ".mcp-coder" / "implement_sessions"
+                        ),
+                        step_name=f"step_{step_num}_mypy_{mypy_attempt_counter}",
+                        branch_name=branch_name,
+                    )
+                except Exception as store_err:
+                    logger.warning("Failed to store implement session: %s", store_err)
 
                 logger.info(
                     f"Applied mypy fixes from LLM (attempt {mypy_attempt_counter})"
@@ -371,7 +386,11 @@ def process_single_task(
         logger.error(f"Error loading prompt template: {e}")
         return False, "error"
 
-    # Step 4: Call LLM with prompt
+    # Step 4: Extract step number from task (needed for store_session step_name)
+    step_match = re.search(r"Step (\d+)", next_task)
+    step_num = int(step_match.group(1)) if step_match else 1
+
+    # Step 5: Call LLM with prompt
     logger.info("Calling LLM for implementation...")
     try:
         # Create the full prompt by combining template with task context
@@ -382,7 +401,7 @@ Current task from TASK_TRACKER.md: {next_task}
 Please implement this task step by step."""
 
         branch_name = get_branch_name_for_logging(cwd)
-        response = ask_llm(
+        llm_response = prompt_llm(
             full_prompt,
             provider=provider,
             method=method,
@@ -392,6 +411,7 @@ Please implement this task step by step."""
             mcp_config=mcp_config,
             branch_name=branch_name,
         )
+        response = llm_response["text"]
 
         if not response or not response.strip():
             logger.error("LLM returned empty response")
@@ -400,13 +420,20 @@ Please implement this task step by step."""
 
         logger.info("LLM response received successfully")
 
+        try:
+            store_session(
+                response_data=llm_response,
+                prompt=full_prompt,
+                store_path=str(project_dir / ".mcp-coder" / "implement_sessions"),
+                step_name=f"step_{step_num}",
+                branch_name=branch_name,
+            )
+        except Exception as store_err:
+            logger.warning("Failed to store implement session: %s", store_err)
+
     except Exception as e:
         logger.error(f"Error calling LLM: {e}")
         return False, "error"
-
-    # Step 5: Extract step number from task
-    step_match = re.search(r"Step (\d+)", next_task)
-    step_num = int(step_match.group(1)) if step_match else 1
 
     # Step 6: Check if any files were actually changed
     try:

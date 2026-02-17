@@ -16,6 +16,19 @@ from mcp_coder.workflows.implement.task_processing import (
 )
 
 
+def _make_llm_response(text: str = "LLM response") -> dict:
+    """Create a minimal LLMResponseDict-compatible dict for mocking."""
+    return {
+        "version": "1.0",
+        "timestamp": "2025-10-01T10:30:00",
+        "text": text,
+        "session_id": "test-session-id",
+        "method": "api",
+        "provider": "claude",
+        "raw_response": {},
+    }
+
+
 class TestGetNextTask:
     """Test get_next_task function."""
 
@@ -382,48 +395,64 @@ class TestCheckAndFixMypy:
         assert result is True
         mock_mypy_check.assert_called_once_with(Path("/test/project"))
 
-    @patch("mcp_coder.workflows.implement.task_processing.ask_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
     @patch("mcp_coder.workflows.implement.task_processing._run_mypy_check")
     def test_check_and_fix_mypy_fixes_errors(
         self,
         mock_mypy_check: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
     ) -> None:
         """Test mypy check fixes errors successfully."""
         # First call returns errors, second call returns None (fixed)
         mock_mypy_check.side_effect = ["mypy error output", None]
         mock_get_prompt.return_value = "Fix mypy errors: [mypy_output]"
-        mock_ask_llm.return_value = "Fixed the errors"
+        mock_prompt_llm.return_value = _make_llm_response("Fixed the errors")
 
         result = check_and_fix_mypy(Path("/test/project"), 1, "claude", "api")
 
         assert result is True
         assert mock_mypy_check.call_count == 2
         mock_get_prompt.assert_called_once()
-        mock_ask_llm.assert_called_once()
+        mock_prompt_llm.assert_called_once()
+        # Verify store_session called with correct step_name
+        mock_store_session.assert_called_once()
+        call_kwargs = mock_store_session.call_args
+        assert call_kwargs.kwargs.get("step_name") == "step_1_mypy_1" or (
+            len(call_kwargs.args) >= 4 and call_kwargs.args[3] == "step_1_mypy_1"
+        )
+        assert "implement_sessions" in (
+            call_kwargs.kwargs.get("store_path", "")
+            or (call_kwargs.args[2] if len(call_kwargs.args) >= 3 else "")
+        )
 
-    @patch("mcp_coder.workflows.implement.task_processing.ask_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
     @patch("mcp_coder.workflows.implement.task_processing._run_mypy_check")
     def test_check_and_fix_mypy_max_attempts(
         self,
         mock_mypy_check: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
     ) -> None:
         """Test mypy check stops after max identical attempts."""
         # Always return same error (identical outputs)
         mock_mypy_check.return_value = "same mypy error"
         mock_get_prompt.return_value = "Fix mypy errors: [mypy_output]"
-        mock_ask_llm.return_value = "Attempted fix"
+        mock_prompt_llm.return_value = _make_llm_response("Attempted fix")
 
         result = check_and_fix_mypy(Path("/test/project"), 1, "claude", "cli")
 
         assert result is False
         # Should attempt fixes until max identical attempts reached
-        assert mock_ask_llm.call_count == 3  # max_identical_attempts
+        assert mock_prompt_llm.call_count == 3  # max_identical_attempts
+        # store_session should be called once per attempt
+        assert mock_store_session.call_count == 3
 
     @patch("mcp_coder.workflows.implement.task_processing._run_mypy_check")
     def test_check_and_fix_mypy_exception(self, mock_mypy_check: MagicMock) -> None:
@@ -446,14 +475,16 @@ class TestProcessSingleTask:
     @patch("mcp_coder.workflows.implement.task_processing.run_formatters")
     @patch("mcp_coder.workflows.implement.task_processing.check_and_fix_mypy")
     @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
-    @patch("mcp_coder.workflows.implement.task_processing.ask_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
     @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
     def test_process_single_task_success(
         self,
         mock_get_next_task: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
         mock_check_mypy: MagicMock,
         mock_run_formatters: MagicMock,
@@ -464,7 +495,7 @@ class TestProcessSingleTask:
         # Setup mocks
         mock_get_next_task.return_value = "Step 1: Create test file"
         mock_get_prompt.return_value = "Implementation template"
-        mock_ask_llm.return_value = "LLM response"
+        mock_prompt_llm.return_value = _make_llm_response("LLM response")
         mock_get_status.return_value = {
             "staged": ["file1.py"],
             "modified": [],
@@ -483,12 +514,23 @@ class TestProcessSingleTask:
         # Verify all steps were called
         mock_get_next_task.assert_called_once()
         mock_get_prompt.assert_called_once()
-        mock_ask_llm.assert_called_once()
+        mock_prompt_llm.assert_called_once()
         mock_get_status.assert_called_once()
         mock_check_mypy.assert_called_once()
         mock_run_formatters.assert_called_once()
         mock_commit.assert_called_once()
         mock_push.assert_called_once()
+
+        # Verify store_session called with step_name="step_1"
+        mock_store_session.assert_called_once()
+        call_kwargs = mock_store_session.call_args
+        assert call_kwargs.kwargs.get("step_name") == "step_1" or (
+            len(call_kwargs.args) >= 4 and call_kwargs.args[3] == "step_1"
+        )
+        assert "implement_sessions" in (
+            call_kwargs.kwargs.get("store_path", "")
+            or (call_kwargs.args[2] if len(call_kwargs.args) >= 3 else "")
+        )
 
     @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
     def test_process_single_task_no_tasks(self, mock_get_next_task: MagicMock) -> None:
@@ -514,19 +556,19 @@ class TestProcessSingleTask:
         assert success is False
         assert reason == "error"
 
-    @patch("mcp_coder.workflows.implement.task_processing.ask_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
     @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
     def test_process_single_task_llm_error(
         self,
         mock_get_next_task: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
     ) -> None:
         """Test processing single task with LLM error."""
         mock_get_next_task.return_value = "Step 1: Test task"
         mock_get_prompt.return_value = "Template"
-        mock_ask_llm.side_effect = Exception("LLM error")
+        mock_prompt_llm.side_effect = Exception("LLM error")
 
         success, reason = process_single_task(Path("/test/project"), "claude", "cli")
 
@@ -534,26 +576,30 @@ class TestProcessSingleTask:
         assert reason == "error"
 
     @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
-    @patch("mcp_coder.workflows.implement.task_processing.ask_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
     @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
     def test_process_single_task_no_changes(
         self,
         mock_get_next_task: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
     ) -> None:
         """Test processing single task when no files changed."""
         mock_get_next_task.return_value = "Step 1: Test task"
         mock_get_prompt.return_value = "Template"
-        mock_ask_llm.return_value = "Response"
+        mock_prompt_llm.return_value = _make_llm_response("Response")
         mock_get_status.return_value = {"staged": [], "modified": [], "untracked": []}
 
         success, reason = process_single_task(Path("/test/project"), "claude", "cli")
 
         assert success is True
         assert reason == "completed"
+        # store_session still called even with no changes
+        mock_store_session.assert_called_once()
         # Should not continue to formatting/commit/push when no changes
 
     @patch(
@@ -562,14 +608,16 @@ class TestProcessSingleTask:
     @patch("mcp_coder.workflows.implement.task_processing.run_formatters")
     @patch("mcp_coder.workflows.implement.task_processing.check_and_fix_mypy")
     @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
-    @patch("mcp_coder.workflows.implement.task_processing.ask_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
     @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
     def test_process_single_task_formatters_fail(
         self,
         mock_get_next_task: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
         mock_check_mypy: MagicMock,
         mock_run_formatters: MagicMock,
@@ -577,7 +625,7 @@ class TestProcessSingleTask:
         """Test processing single task when formatters fail."""
         mock_get_next_task.return_value = "Step 1: Test task"
         mock_get_prompt.return_value = "Template"
-        mock_ask_llm.return_value = "Response"
+        mock_prompt_llm.return_value = _make_llm_response("Response")
         mock_get_status.return_value = {
             "staged": ["file.py"],
             "modified": [],
@@ -603,7 +651,8 @@ class TestIntegration:
     @patch("mcp_coder.workflows.implement.task_processing.run_formatters")
     @patch("mcp_coder.workflows.implement.task_processing.check_and_fix_mypy")
     @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
-    @patch("mcp_coder.workflows.implement.task_processing.ask_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
     @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
     @patch("mcp_coder.workflows.implement.task_processing.prepare_llm_environment")
@@ -612,7 +661,8 @@ class TestIntegration:
         mock_prepare_env: MagicMock,
         mock_get_next_task: MagicMock,
         mock_get_prompt: MagicMock,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
         mock_get_status: MagicMock,
         mock_check_mypy: MagicMock,
         mock_run_formatters: MagicMock,
@@ -629,7 +679,7 @@ class TestIntegration:
         }
         mock_get_next_task.return_value = "Step 2: Implement feature X"
         mock_get_prompt.return_value = "Implementation Prompt: [task_info]"
-        mock_ask_llm.return_value = "I'll implement feature X..."
+        mock_prompt_llm.return_value = _make_llm_response("I'll implement feature X...")
         mock_get_status.return_value = {
             "staged": [],
             "modified": ["src/feature.py"],
@@ -657,7 +707,7 @@ class TestIntegration:
 Current task from TASK_TRACKER.md: Step 2: Implement feature X
 
 Please implement this task step by step."""
-        mock_ask_llm.assert_called_once_with(
+        mock_prompt_llm.assert_called_once_with(
             expected_prompt,
             provider="claude",
             method="api",
@@ -667,6 +717,17 @@ Please implement this task step by step."""
             mcp_config=None,
             branch_name=ANY,
         )
+
+        # Verify store_session called with step_name="step_2" and implement_sessions path
+        mock_store_session.assert_called_once()
+        call_kwargs = mock_store_session.call_args
+        assert call_kwargs.kwargs.get("step_name") == "step_2" or (
+            len(call_kwargs.args) >= 4 and call_kwargs.args[3] == "step_2"
+        )
+        store_path = call_kwargs.kwargs.get("store_path") or (
+            call_kwargs.args[2] if len(call_kwargs.args) >= 3 else ""
+        )
+        assert "implement_sessions" in store_path
 
         # Verify processing steps
         mock_get_status.assert_called_once_with(project_dir)

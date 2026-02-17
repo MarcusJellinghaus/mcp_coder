@@ -51,9 +51,9 @@ See [step_3.md](./steps/step_3.md) for full details.
 
 See [step_4.md](./steps/step_4.md) for full details.
 
-- [ ] Implement Step 4: replace `ask_llm()` calls in `process_single_task()` and `check_and_fix_mypy()` with `prompt_llm()` + `store_session()`; write sessions to `.mcp-coder/implement_sessions/`; update tests
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues found
-- [ ] Prepare git commit message for Step 4
+- [x] Implement Step 4: replace `ask_llm()` calls in `process_single_task()` and `check_and_fix_mypy()` with `prompt_llm()` + `store_session()`; write sessions to `.mcp-coder/implement_sessions/`; update tests
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues found
+- [x] Prepare git commit message for Step 4
 
 ### Step 5 – Switch `core.py` to `prompt_llm()` + `store_session()`
 
