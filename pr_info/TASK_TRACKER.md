@@ -40,9 +40,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3 — Tests: empty "No Git" / "Error" folder deletion in `cleanup_stale_sessions`
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implement Step 3: update 2 existing tests to use non-empty folders, and add 4 new empty-folder test methods in `tests/workflows/vscodeclaude/test_cleanup.py` (`TestCleanup` class)
-- [ ] Quality checks: run pylint, pytest, mypy — fix all issues found
-- [ ] Prepare git commit message for Step 3
+- [x] Implement Step 3: update 2 existing tests to use non-empty folders, and add 4 new empty-folder test methods in `tests/workflows/vscodeclaude/test_cleanup.py` (`TestCleanup` class)
+- [x] Quality checks: run pylint, pytest, mypy — fix all issues found
+- [x] Prepare git commit message for Step 3
 
 ### Step 4 — Implementation: empty-folder gate in `cleanup_stale_sessions`
 See [step_4.md](./steps/step_4.md)
