@@ -34,6 +34,7 @@ type = layers
 layers =
     mcp_coder.cli
     mcp_coder.workflows
+    mcp_coder.checks
     mcp_coder.workflow_utils
     mcp_coder.llm | mcp_coder.formatters | mcp_coder.prompt_manager
     mcp_coder.utils | mcp_coder.mcp_code_checker
@@ -399,6 +400,7 @@ modules =
     tests.workflows
     tests.formatters
     tests.workflow_utils
+    tests.checks
 # Allowed: Importing shared fixtures from tests.utils.conftest
 # TODO: Refactor to use pytest's conftest discovery instead of explicit imports
 ignore_imports =

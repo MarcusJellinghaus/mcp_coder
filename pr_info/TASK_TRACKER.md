@@ -27,34 +27,34 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 - [x] Copy `src/mcp_coder/workflow_utils/branch_status.py` to `src/mcp_coder/checks/branch_status.py` (no code changes)
 - [x] Copy `tests/workflow_utils/test_branch_status.py` to `tests/checks/test_branch_status.py` and update all imports (`workflow_utils.branch_status` → `checks.branch_status`)
-- [ ] Delete `src/mcp_coder/workflow_utils/branch_status.py`
-- [ ] Delete `tests/workflow_utils/test_branch_status.py`
-- [ ] Run pylint on changed files and fix all issues found
-- [ ] Run pytest `tests/checks/test_branch_status.py` and confirm all tests pass
-- [ ] Run mypy on changed files and fix all issues found
-- [ ] Prepare git commit message for Step 1
+- [x] Delete `src/mcp_coder/workflow_utils/branch_status.py`
+- [x] Delete `tests/workflow_utils/test_branch_status.py`
+- [x] Run pylint on changed files and fix all issues found
+- [x] Run pytest `tests/checks/test_branch_status.py` and confirm all tests pass
+- [x] Run mypy on changed files and fix all issues found
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Update all callers and remove old exports ([step_2.md](./steps/step_2.md))
 
-- [ ] Remove `from .branch_status import (...)` block from `src/mcp_coder/workflow_utils/__init__.py` and remove all branch_status symbols from `__all__`
-- [ ] Update import in `src/mcp_coder/cli/commands/check_branch_status.py` (`workflow_utils.branch_status` → `checks.branch_status`)
-- [ ] Update import in `src/mcp_coder/workflows/implement/core.py` (`workflow_utils.branch_status` → `checks.branch_status`)
-- [ ] Update import in `tests/cli/commands/test_check_branch_status.py` (`workflow_utils.branch_status` → `checks.branch_status`)
-- [ ] Run pylint on changed files and fix all issues found
-- [ ] Run full pytest suite (excluding integration markers) and confirm all tests pass
-- [ ] Run mypy on changed files and fix all issues found
-- [ ] Prepare git commit message for Step 2
+- [x] Remove `from .branch_status import (...)` block from `src/mcp_coder/workflow_utils/__init__.py` and remove all branch_status symbols from `__all__`
+- [x] Update import in `src/mcp_coder/cli/commands/check_branch_status.py` (`workflow_utils.branch_status` → `checks.branch_status`)
+- [x] Update import in `src/mcp_coder/workflows/implement/core.py` (`workflow_utils.branch_status` → `checks.branch_status`)
+- [x] Update import in `tests/cli/commands/test_check_branch_status.py` (`workflow_utils.branch_status` → `checks.branch_status`)
+- [x] Run pylint on changed files and fix all issues found
+- [x] Run full pytest suite (excluding integration markers) and confirm all tests pass
+- [x] Run mypy on changed files and fix all issues found
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Verify architectural boundary tools ([step_3.md](./steps/step_3.md))
 
-- [ ] Update `tach.toml`: add `"tools"` to layers list, add `[[modules]]` entry for `mcp_coder.checks` at `tools` layer, add `mcp_coder.checks` to `depends_on` for `cli`, `workflows`, and `tests`
-- [ ] Update `.importlinter`: insert `mcp_coder.checks` as new layer between `mcp_coder.workflows` and `mcp_coder.workflow_utils`, and add `tests.checks` to the `test_module_independence` contract
-- [ ] Run `tach check` and confirm no violations
-- [ ] Run `lint-imports` and confirm no violations
-- [ ] Run pylint on changed files and fix all issues found
-- [ ] Run full pytest suite (excluding integration markers) and confirm all tests pass
-- [ ] Run mypy on changed files and fix all issues found
-- [ ] Prepare git commit message for Step 3
+- [x] Update `tach.toml`: add `"tools"` to layers list, add `[[modules]]` entry for `mcp_coder.checks` at `tools` layer, add `mcp_coder.checks` to `depends_on` for `cli`, `workflows`, and `tests`
+- [x] Update `.importlinter`: insert `mcp_coder.checks` as new layer between `mcp_coder.workflows` and `mcp_coder.workflow_utils`, and add `tests.checks` to the `test_module_independence` contract
+- [x] Run `tach check` and confirm no violations
+- [x] Run `lint-imports` and confirm no violations
+- [x] Run pylint on changed files and fix all issues found
+- [x] Run full pytest suite (excluding integration markers) and confirm all tests pass
+- [x] Run mypy on changed files and fix all issues found
+- [x] Prepare git commit message for Step 3
 
 ## Pull Request
 
