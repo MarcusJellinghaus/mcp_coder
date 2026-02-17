@@ -38,7 +38,7 @@ class TestCleanup:
         # Mock session is stale - patch at cleanup where it's imported
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.is_session_stale",
-            lambda s: True,
+            lambda s, cached_issues=None: True,
         )
 
         # Mock folder git status - patch at cleanup where it's imported
@@ -1133,7 +1133,7 @@ class TestGetStaleSessions:
         # Mock is_session_stale to return False (status matches, no change)
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.is_session_stale",
-            lambda s: False,
+            lambda s, cached_issues=None: False,
         )
 
         result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
