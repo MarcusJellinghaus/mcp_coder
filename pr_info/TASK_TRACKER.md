@@ -33,9 +33,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2 — Implementation: `_try_delete_empty_directory` retry loop
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implement Step 2: add `import time` and replace single `rmdir` attempt with 3-attempt retry loop in `_try_delete_empty_directory()` in `src/mcp_coder/utils/folder_deletion.py`
-- [ ] Quality checks: run pylint, pytest, mypy — fix all issues found
-- [ ] Prepare git commit message for Step 2
+- [x] Implement Step 2: add `import time` and replace single `rmdir` attempt with 3-attempt retry loop in `_try_delete_empty_directory()` in `src/mcp_coder/utils/folder_deletion.py`
+- [x] Quality checks: run pylint, pytest, mypy — fix all issues found
+- [x] Prepare git commit message for Step 2
 
 ### Step 3 — Tests: empty "No Git" / "Error" folder deletion in `cleanup_stale_sessions`
 See [step_3.md](./steps/step_3.md)
