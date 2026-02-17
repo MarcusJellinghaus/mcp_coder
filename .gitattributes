@@ -60,6 +60,12 @@
 *.cmd text eol=crlf
 *.ps1 text eol=crlf
 
+# Claude Code settings
+# Claude Code may rewrite this file on startup and writes LF on Windows,
+# overriding the CRLF that git would normally check out. Force LF to prevent
+# spurious line-ending-only diffs.
+.claude/settings.local.json text eol=lf
+
 # Git
 .gitattributes text
 .gitignore text
