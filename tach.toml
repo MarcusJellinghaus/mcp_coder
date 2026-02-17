@@ -106,9 +106,10 @@ depends_on = [
 
 [[modules]]
 path = "mcp_coder.checks"
-layer = "tools"
+layer = "application"
 # High-level check modules backing CLI subcommands. Reusable by cli and workflows.
 depends_on = [
+    { path = "mcp_coder" },              # Root module (mcp_server_filesystem)
     { path = "mcp_coder.workflow_utils" },
     { path = "mcp_coder.utils" },
     { path = "mcp_coder.config" },
