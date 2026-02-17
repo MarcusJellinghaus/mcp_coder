@@ -95,14 +95,24 @@ def check_vscode_running(pid: int | None) -> bool:
           Use is_vscode_open_for_folder() for more reliable folder-based check.
     """
     if pid is None:
+        logger.debug("check_vscode_running: pid=None -> False")
         return False
 
     if not psutil.pid_exists(pid):
+        logger.debug("check_vscode_running: pid=%d does not exist -> False", pid)
         return False
     try:
         process = psutil.Process(pid)
-        return VSCODE_PROCESS_NAME in process.name().lower()
+        result = VSCODE_PROCESS_NAME in process.name().lower()
+        logger.debug(
+            "check_vscode_running: pid=%d name=%s -> %s",
+            pid,
+            process.name(),
+            result,
+        )
+        return result
     except (psutil.NoSuchProcess, psutil.AccessDenied):
+        logger.debug("check_vscode_running: pid=%d access error -> False", pid)
         return False
 
 
@@ -441,17 +451,22 @@ def is_session_active(session: VSCodeClaudeSession) -> bool:
         True if VSCode is running for this session
     """
     folder = session.get("folder", "")
+    issue_num = session.get("issue_number")
     if not session_has_artifacts(folder):
+        logger.debug("is_session_active #%s: no artifacts -> False", issue_num)
         return False
     if check_vscode_running(session.get("vscode_pid")):
+        logger.debug("is_session_active #%s: PID check -> True", issue_num)
         return True
     if is_vscode_window_open_for_folder(
         folder,
-        issue_number=session.get("issue_number"),
+        issue_number=issue_num,
         repo=session.get("repo"),
     ):
+        logger.debug("is_session_active #%s: window check -> True", issue_num)
         return True
     is_open, _ = is_vscode_open_for_folder(folder)
+    logger.debug("is_session_active #%s: process check -> %s", issue_num, is_open)
     return is_open
 
 
@@ -468,7 +483,13 @@ def get_active_session_count() -> int:
         Number of active sessions according to is_session_active().
     """
     store = load_sessions()
-    return sum(1 for s in store["sessions"] if is_session_active(s))
+    count = sum(1 for s in store["sessions"] if is_session_active(s))
+    logger.debug(
+        "get_active_session_count: %d/%d sessions active",
+        count,
+        len(store["sessions"]),
+    )
+    return count
 
 
 def update_session_pid(folder: str, pid: int) -> None:
