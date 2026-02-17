@@ -36,16 +36,18 @@ dist/
 .mcp.macos.json
 checks_output.txt
 bash.exe.stackdump
-/.mcp-coder/responses
 /.mcp-coder-tmp/
 *.isorted
+
+# Log folder for LLM sessions etc
+/.mcp-coder/*
+
 
 # profiler data
 docs/tests/performance_data/prof/*.prof
 
 # Generated dependency reports (regenerate with: tach report)
 docs/architecture/dependencies/dependency_report.html
-/.mcp-coder/create_plan_sessions
 
 # Lock files (regenerate with: uv sync)
 uv.lock
