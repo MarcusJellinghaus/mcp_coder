@@ -67,9 +67,9 @@ See [step_5.md](./steps/step_5.md) for full details.
 
 See [step_6.md](./steps/step_6.md) for full details.
 
-- [ ] Implement Step 6: remove manual dict wrapping in `create_plan.py` (×3 call sites); switch `prompt.py` just-text mode to `prompt_llm()`; switch `prompt.py` verbose/raw mode to `prompt_llm()`; narrow `store_session()` type annotation; simplify model extraction; remove unused imports; update tests
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues found
-- [ ] Prepare git commit message for Step 6
+- [x] Implement Step 6: remove manual dict wrapping in `create_plan.py` (×3 call sites); switch `prompt.py` just-text mode to `prompt_llm()`; switch `prompt.py` verbose/raw mode to `prompt_llm()`; narrow `store_session()` type annotation; simplify model extraction; remove unused imports; update tests
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues found
+- [x] Prepare git commit message for Step 6
 
 ---
 

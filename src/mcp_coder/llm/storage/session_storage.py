@@ -8,7 +8,7 @@ import json
 import logging
 import os
 from datetime import datetime
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
 from ..types import LLMResponseDict
 
@@ -21,7 +21,7 @@ __all__ = [
 
 
 def store_session(
-    response_data: Union[LLMResponseDict, Dict[str, Any]],
+    response_data: LLMResponseDict,
     prompt: str,
     store_path: Optional[str] = None,
     step_name: Optional[str] = None,
@@ -62,12 +62,14 @@ def store_session(
         filename = f"response_{timestamp}.json"
     file_path = os.path.join(storage_dir, filename)
 
-    # Extract model using triple-fallback to support both LLMResponseDict and old dict formats
-    model = (
-        response_data.get("raw_response", {}).get("session_info", {}).get("model")  # type: ignore[union-attr]
-        or response_data.get("session_info", {}).get("model")  # type: ignore[union-attr]
-        or response_data.get("provider", "claude")
+    # Extract model from LLMResponseDict
+    raw_response = response_data["raw_response"]
+    session_info = (
+        raw_response.get("session_info") if isinstance(raw_response, dict) else None
     )
+    model = (
+        session_info.get("model") if isinstance(session_info, dict) else None
+    ) or response_data["provider"]
 
     metadata: Dict[str, Any] = {
         "timestamp": datetime.now().isoformat() + "Z",

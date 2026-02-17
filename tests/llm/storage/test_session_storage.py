@@ -3,7 +3,6 @@
 import json
 import os
 import tempfile
-from typing import Any, Dict
 from unittest.mock import Mock, mock_open, patch
 
 import pytest
@@ -18,10 +17,14 @@ class TestStoreSession:
     def test_store_session_creates_file(self) -> None:
         """Test that store_session creates a JSON file."""
         with tempfile.TemporaryDirectory() as tmp_path:
-            response_data = {
+            response_data: LLMResponseDict = {
+                "version": "1.0",
+                "timestamp": "2025-10-02T14:30:00",
                 "text": "Hello",
-                "session_info": {"session_id": "test-123", "model": "claude"},
-                "result_info": {},
+                "session_id": "test-123",
+                "method": "cli",
+                "provider": "claude",
+                "raw_response": {"session_info": {"model": "claude"}},
             }
 
             store_path = str(tmp_path)
@@ -62,8 +65,14 @@ class TestStoreSession:
     def test_store_session_step_name_filename_format(self) -> None:
         """Test filename format when step_name is provided."""
         with tempfile.TemporaryDirectory() as tmp_path:
-            response_data: Dict[str, Any] = {
-                "session_info": {"model": "claude"},
+            response_data: LLMResponseDict = {
+                "version": "1.0",
+                "timestamp": "2025-10-02T14:30:00",
+                "text": "",
+                "session_id": None,
+                "method": "cli",
+                "provider": "claude",
+                "raw_response": {},
             }
 
             file_path = store_session(
@@ -77,8 +86,14 @@ class TestStoreSession:
     def test_store_session_no_step_name_legacy_format(self) -> None:
         """Test filename format when step_name is not provided."""
         with tempfile.TemporaryDirectory() as tmp_path:
-            response_data: Dict[str, Any] = {
-                "session_info": {"model": "claude"},
+            response_data: LLMResponseDict = {
+                "version": "1.0",
+                "timestamp": "2025-10-02T14:30:00",
+                "text": "",
+                "session_id": None,
+                "method": "cli",
+                "provider": "claude",
+                "raw_response": {},
             }
 
             file_path = store_session(response_data, "prompt", tmp_path)
@@ -90,7 +105,15 @@ class TestStoreSession:
     def test_store_session_branch_name_in_metadata(self) -> None:
         """Test that branch_name appears in metadata when provided."""
         with tempfile.TemporaryDirectory() as tmp_path:
-            response_data: Dict[str, Any] = {"session_info": {"model": "claude"}}
+            response_data: LLMResponseDict = {
+                "version": "1.0",
+                "timestamp": "2025-10-02T14:30:00",
+                "text": "",
+                "session_id": None,
+                "method": "cli",
+                "provider": "claude",
+                "raw_response": {},
+            }
 
             file_path = store_session(
                 response_data, "prompt", tmp_path, branch_name="342-improve-logging"
@@ -103,7 +126,15 @@ class TestStoreSession:
     def test_store_session_step_name_in_metadata(self) -> None:
         """Test that step_name appears in metadata when provided."""
         with tempfile.TemporaryDirectory() as tmp_path:
-            response_data: Dict[str, Any] = {"session_info": {"model": "claude"}}
+            response_data: LLMResponseDict = {
+                "version": "1.0",
+                "timestamp": "2025-10-02T14:30:00",
+                "text": "",
+                "session_id": None,
+                "method": "cli",
+                "provider": "claude",
+                "raw_response": {},
+            }
 
             file_path = store_session(
                 response_data, "prompt", tmp_path, step_name="step_1"
@@ -154,7 +185,15 @@ class TestStoreSession:
     def test_store_session_no_branch_name_not_in_metadata(self) -> None:
         """Test that branch_name key is absent from metadata when not provided."""
         with tempfile.TemporaryDirectory() as tmp_path:
-            response_data: Dict[str, Any] = {"session_info": {"model": "claude"}}
+            response_data: LLMResponseDict = {
+                "version": "1.0",
+                "timestamp": "2025-10-02T14:30:00",
+                "text": "",
+                "session_id": None,
+                "method": "cli",
+                "provider": "claude",
+                "raw_response": {},
+            }
 
             file_path = store_session(response_data, "prompt", tmp_path)
 
@@ -165,7 +204,15 @@ class TestStoreSession:
     def test_store_session_no_step_name_not_in_metadata(self) -> None:
         """Test that step_name key is absent from metadata when not provided."""
         with tempfile.TemporaryDirectory() as tmp_path:
-            response_data: Dict[str, Any] = {"session_info": {"model": "claude"}}
+            response_data: LLMResponseDict = {
+                "version": "1.0",
+                "timestamp": "2025-10-02T14:30:00",
+                "text": "",
+                "session_id": None,
+                "method": "cli",
+                "provider": "claude",
+                "raw_response": {},
+            }
 
             file_path = store_session(response_data, "prompt", tmp_path)
 

@@ -347,17 +347,8 @@ def run_planning_prompts(
 
         # Store conversation for logging/debugging
         try:
-            # Convert LLMResponseDict to format expected by store_session
-            response_data = {
-                "text": response_1["text"],
-                "session_info": {
-                    "session_id": session_id,
-                    "model": response_1.get("provider", "claude"),
-                },
-                "result_info": response_1.get("raw_response", {}),
-            }
             stored_path = store_session(
-                response_data, "Initial Analysis", store_path=session_storage_path
+                response_1, "Initial Analysis", store_path=session_storage_path
             )
             logger.info(f"Prompt 1 conversation logged to file: {stored_path}")
             logger.debug(f"  Response length: {len(response_1['text'])} chars")
@@ -395,16 +386,8 @@ def run_planning_prompts(
 
         # Store conversation for logging/debugging
         try:
-            response_data = {
-                "text": response_2["text"],
-                "session_info": {
-                    "session_id": session_id,
-                    "model": response_2.get("provider", "claude"),
-                },
-                "result_info": response_2.get("raw_response", {}),
-            }
             stored_path = store_session(
-                response_data, "Simplification Review", store_path=session_storage_path
+                response_2, "Simplification Review", store_path=session_storage_path
             )
             logger.info(f"Prompt 2 conversation logged to file: {stored_path}")
             logger.debug(f"  Response length: {len(response_2['text'])} chars")
@@ -442,16 +425,8 @@ def run_planning_prompts(
 
         # Store conversation for logging/debugging
         try:
-            response_data = {
-                "text": response_3["text"],
-                "session_info": {
-                    "session_id": session_id,
-                    "model": response_3.get("provider", "claude"),
-                },
-                "result_info": response_3.get("raw_response", {}),
-            }
             stored_path = store_session(
-                response_data,
+                response_3,
                 "Implementation Plan Creation",
                 store_path=session_storage_path,
             )

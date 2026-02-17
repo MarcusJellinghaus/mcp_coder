@@ -16,7 +16,7 @@ from mcp_coder.workflows.implement.task_processing import (
 )
 
 
-def _make_llm_response(text: str = "LLM response") -> dict:
+def _make_llm_response(text: str = "LLM response") -> dict[str, object]:
     """Create a minimal LLMResponseDict-compatible dict for mocking."""
     return {
         "version": "1.0",
