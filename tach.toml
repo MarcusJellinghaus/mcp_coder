@@ -32,7 +32,8 @@ ignore_type_checking_imports = true
 
 layers = [
     "presentation",
-    "application", 
+    "application",
+    "tools",
     "domain",
     "infrastructure",
     "foundation"
@@ -55,6 +56,7 @@ depends_on = [
     { path = "mcp_coder" },              # Root module exports for convenience
     { path = "mcp_coder.workflows" },     # High-level workflow orchestration
     { path = "mcp_coder.workflow_utils" }, # Workflow helper utilities
+    { path = "mcp_coder.checks" },        # High-level check modules
     { path = "mcp_coder.llm" },           # LLM interaction services
     { path = "mcp_coder.formatters" },    # Code formatting services
     { path = "mcp_coder.prompt_manager" }, # Prompt template management
@@ -79,6 +81,7 @@ layer = "application"
 # They orchestrate domain services and utilities to complete tasks.
 depends_on = [
     { path = "mcp_coder.workflow_utils" }, # Shared workflow helpers
+    { path = "mcp_coder.checks" },         # High-level check modules
     { path = "mcp_coder.llm" },           # LLM for code generation
     { path = "mcp_coder.formatters" },    # Code formatting after generation
     { path = "mcp_coder.prompt_manager" }, # Load workflow-specific prompts
@@ -99,6 +102,18 @@ depends_on = [
     { path = "mcp_coder.utils" },         # General utilities
     { path = "mcp_coder.config" },        # Configuration access
     { path = "mcp_coder.constants" },     # Shared constants
+]
+
+[[modules]]
+path = "mcp_coder.checks"
+layer = "application"
+# High-level check modules backing CLI subcommands. Reusable by cli and workflows.
+depends_on = [
+    { path = "mcp_coder" },              # Root module (mcp_server_filesystem)
+    { path = "mcp_coder.workflow_utils" },
+    { path = "mcp_coder.utils" },
+    { path = "mcp_coder.config" },
+    { path = "mcp_coder.constants" },
 ]
 
 # =============================================================================
@@ -360,6 +375,7 @@ depends_on = [
     { path = "mcp_coder.cli" },
     { path = "mcp_coder.workflows" },
     { path = "mcp_coder.workflow_utils" },
+    { path = "mcp_coder.checks" },
     { path = "mcp_coder.llm" },
     { path = "mcp_coder.formatters" },
     { path = "mcp_coder.prompt_manager" },

@@ -13,7 +13,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from mcp_coder.workflow_utils.branch_status import BranchStatusReport
+from mcp_coder.checks.branch_status import BranchStatusReport
 
 # Test-first approach: Try to import the module, skip dependent tests if not available
 try:

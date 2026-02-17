@@ -10,8 +10,8 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+from ...checks.branch_status import BranchStatusReport, collect_branch_status
 from ...utils.git_operations.readers import get_current_branch_name
-from ...workflow_utils.branch_status import BranchStatusReport, collect_branch_status
 from ...workflows.implement.core import check_and_fix_ci
 from ...workflows.utils import resolve_project_dir
 from ..utils import (
