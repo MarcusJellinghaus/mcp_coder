@@ -225,11 +225,11 @@ class TestExtractSessionId:
     """Tests for extract_session_id function."""
 
     def test_extract_session_id_from_detailed_response(self) -> None:
-        """Test extracting session ID from detailed API response format."""
+        """Test extracting session ID from LLMResponseDict format."""
         with tempfile.TemporaryDirectory() as tmp_path:
             session_data = {
                 "prompt": "Test",
-                "response_data": {"session_info": {"session_id": "extracted-id-123"}},
+                "response_data": {"session_id": "extracted-id-123"},
             }
 
             file_path = os.path.join(tmp_path, "test_session.json")

@@ -75,7 +75,7 @@ prompt.py verbose/raw:
 | `src/mcp_coder/workflows/implement/task_processing.py` | Remove `save_conversation`, `save_conversation_comprehensive`, `_call_llm_with_comprehensive_capture`; switch to `prompt_llm()` + `store_session()` |
 | `src/mcp_coder/workflows/implement/core.py` | Remove `save_conversation` calls; switch `ask_llm()` to `prompt_llm()` + `store_session()` |
 | `src/mcp_coder/workflows/create_plan.py` | Remove `.conversations/` dir creation; pass `LLMResponseDict` directly to `store_session()` |
-| `src/mcp_coder/cli/commands/prompt.py` | verbose/raw: switch to `prompt_llm()`; pass `LLMResponseDict` to `store_session()`; just-text: same |
+| `src/mcp_coder/cli/commands/prompt.py` | verbose/raw: switch to `prompt_llm()`; pass `LLMResponseDict` to `store_session()`; just-text: same. **Behaviour change**: verbose/raw mode previously forced API method internally; now respects `--llm-method` (default: `claude:api`). Users relying on implicit API behaviour should pass `--llm-method claude:api` explicitly. |
 | `tests/llm/storage/test_session_storage.py` | Add tests for new params, new format, updated `extract_session_id()` |
 | `tests/llm/providers/claude/test_claude_code_interface.py` | **Delete** (module deleted) |
 | `tests/llm/test_interface.py` | Update mocks: `ask_claude_code` → `ask_claude_code_cli/api` |

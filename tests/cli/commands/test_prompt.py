@@ -255,9 +255,7 @@ class TestExecutePrompt:
     ) -> None:
         """Test successful continuation from stored response file using session_id."""
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
-        stored_response = {
-            "response_data": {"session_info": {"session_id": "previous-session-456"}}
-        }
+        stored_response = {"response_data": {"session_id": "previous-session-456"}}
 
         mock_exists.return_value = True
         mock_file_open.return_value.read.return_value = json.dumps(stored_response)
@@ -461,11 +459,7 @@ class TestExecutePrompt:
     ) -> None:
         """Test continuation functionality works with verbose verbosity."""
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
-        stored_response = {
-            "response_data": {
-                "session_info": {"session_id": "verbose-continuation-123"}
-            }
-        }
+        stored_response = {"response_data": {"session_id": "verbose-continuation-123"}}
 
         mock_exists.return_value = True
         mock_file_open.return_value.read.return_value = json.dumps(stored_response)

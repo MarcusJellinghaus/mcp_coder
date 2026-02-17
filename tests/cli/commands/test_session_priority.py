@@ -45,11 +45,7 @@ class TestSessionPriority:
     @patch("mcp_coder.cli.commands.prompt.prompt_llm")
     @patch(
         "builtins.open",
-        mock_open(
-            read_data=json.dumps(
-                {"response_data": {"session_info": {"session_id": "file-456"}}}
-            )
-        ),
+        mock_open(read_data=json.dumps({"response_data": {"session_id": "file-456"}})),
     )
     @patch("os.path.exists", return_value=True)
     def test_session_id_overrides_continue_session_from(
@@ -80,11 +76,7 @@ class TestSessionPriority:
     @patch("mcp_coder.llm.storage.find_latest_session")
     @patch(
         "builtins.open",
-        mock_open(
-            read_data=json.dumps(
-                {"response_data": {"session_info": {"session_id": "file-789"}}}
-            )
-        ),
+        mock_open(read_data=json.dumps({"response_data": {"session_id": "file-789"}})),
     )
     @patch("os.path.exists", return_value=True)
     def test_session_id_overrides_continue_session(
@@ -116,11 +108,7 @@ class TestSessionPriority:
     @patch("mcp_coder.cli.commands.prompt.prompt_llm")
     @patch(
         "builtins.open",
-        mock_open(
-            read_data=json.dumps(
-                {"response_data": {"session_info": {"session_id": "file-456"}}}
-            )
-        ),
+        mock_open(read_data=json.dumps({"response_data": {"session_id": "file-456"}})),
     )
     @patch("os.path.exists", return_value=True)
     def test_continue_session_from_when_no_session_id(
@@ -151,11 +139,7 @@ class TestSessionPriority:
     @patch("mcp_coder.cli.commands.prompt.find_latest_session")
     @patch(
         "builtins.open",
-        mock_open(
-            read_data=json.dumps(
-                {"response_data": {"session_info": {"session_id": "file-789"}}}
-            )
-        ),
+        mock_open(read_data=json.dumps({"response_data": {"session_id": "file-789"}})),
     )
     @patch("os.path.exists", return_value=True)
     def test_continue_session_when_no_session_id(

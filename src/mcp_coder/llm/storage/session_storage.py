@@ -119,33 +119,10 @@ def extract_session_id(file_path: str) -> Optional[str]:
         with open(file_path, "r", encoding="utf-8") as f:
             session_data = json.load(f)
 
-        # Try multiple paths to find session_id
-        # Path 1: response_data.session_info.session_id (detailed API response)
-        session_id: Optional[str] = (
-            session_data.get("response_data", {})
-            .get("session_info", {})
-            .get("session_id")
+        # Extract session_id from LLMResponseDict format: response_data.session_id
+        session_id: Optional[str] = session_data.get("response_data", {}).get(
+            "session_id"
         )
-        if session_id and isinstance(session_id, str):
-            logger.debug(
-                "Found session_id in response_data.session_info: %s", session_id
-            )
-            return session_id
-
-        # Path 2: Direct session_id field (simple response format)
-        session_id = session_data.get("session_id")
-        if session_id and isinstance(session_id, str):
-            logger.debug("Found session_id at root level: %s", session_id)
-            return session_id
-
-        # Path 3: metadata.session_id (alternative storage location)
-        session_id = session_data.get("metadata", {}).get("session_id")
-        if session_id and isinstance(session_id, str):
-            logger.debug("Found session_id in metadata: %s", session_id)
-            return session_id
-
-        # Path 4: response_data.session_id (LLMResponseDict format)
-        session_id = session_data.get("response_data", {}).get("session_id")
         if session_id and isinstance(session_id, str):
             logger.debug("Found session_id in response_data: %s", session_id)
             return session_id
