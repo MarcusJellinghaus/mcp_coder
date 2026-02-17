@@ -15,6 +15,7 @@ from mcp_coder.workflows.vscodeclaude.sessions import (
     load_sessions,
     remove_session,
     save_sessions,
+    session_has_artifacts,
     update_session_pid,
     update_session_status,
 )
@@ -216,7 +217,7 @@ class TestSessionManagement:
     def test_get_active_session_count_with_mocked_pid_check(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Counts only sessions with running PIDs."""
+        """Counts only sessions with running PIDs and existing artifacts."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
@@ -232,9 +233,14 @@ class TestSessionManagement:
             mock_check,
         )
 
+        # Create folder for the active session so its artifacts exist.
+        # Session with PID 2222 has no folder — simulates a zombie VSCode.
+        folder_a = tmp_path / "session_a"
+        folder_a.mkdir()
+
         sessions = [
             {
-                "folder": "/a",
+                "folder": str(folder_a),
                 "repo": "o/r",
                 "issue_number": 1,
                 "status": "s",
@@ -243,7 +249,7 @@ class TestSessionManagement:
                 "is_intervention": False,
             },
             {
-                "folder": "/b",
+                "folder": str(tmp_path / "session_b"),  # folder not created
                 "repo": "o/r",
                 "issue_number": 2,
                 "status": "s",
@@ -256,7 +262,7 @@ class TestSessionManagement:
         sessions_file.write_text(json.dumps(store))
 
         count = get_active_session_count()
-        assert count == 1  # Only PID 1111 is "running"
+        assert count == 1  # Only session_a: PID 1111 running + folder exists
 
     def test_update_session_pid(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -333,6 +339,38 @@ class TestSessionManagement:
         assert sessions_file.exists()
         loaded = json.loads(sessions_file.read_text(encoding="utf-8"))
         assert "sessions" in loaded
+
+
+class TestSessionHasArtifacts:
+    """Tests for session_has_artifacts function."""
+
+    def test_returns_true_when_folder_exists(self, tmp_path: Path) -> None:
+        """Returns True when the session folder exists."""
+        folder = tmp_path / "mcp_coder_123"
+        folder.mkdir()
+        assert session_has_artifacts(str(folder)) is True
+
+    def test_returns_true_when_workspace_file_exists(self, tmp_path: Path) -> None:
+        """Returns True when only the .code-workspace file exists."""
+        folder = tmp_path / "mcp_coder_123"
+        # Don't create the folder, but create the workspace file
+        workspace = tmp_path / "mcp_coder_123.code-workspace"
+        workspace.write_text("{}")
+        assert session_has_artifacts(str(folder)) is True
+
+    def test_returns_false_when_neither_exists(self, tmp_path: Path) -> None:
+        """Returns False when neither folder nor workspace file exists (zombie session)."""
+        folder = tmp_path / "mcp_coder_123"
+        # Neither folder nor workspace file created
+        assert session_has_artifacts(str(folder)) is False
+
+    def test_returns_true_when_both_exist(self, tmp_path: Path) -> None:
+        """Returns True when both folder and workspace file exist."""
+        folder = tmp_path / "mcp_coder_123"
+        folder.mkdir()
+        workspace = tmp_path / "mcp_coder_123.code-workspace"
+        workspace.write_text("{}")
+        assert session_has_artifacts(str(folder)) is True
 
 
 class TestUpdateSessionStatus:

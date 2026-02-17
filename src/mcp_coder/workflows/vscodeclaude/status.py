@@ -16,6 +16,7 @@ from .sessions import (
     is_vscode_open_for_folder,
     is_vscode_window_open_for_folder,
     load_sessions,
+    session_has_artifacts,
 )
 from .types import VSCodeClaudeSession
 
@@ -314,21 +315,26 @@ def display_status_table(
         if is_closed:
             status = f"(Closed) {status}"
 
-        # Check VSCode status using multi-check approach (more reliable than PID alone)
-        # Check 1: PID-based check (quick but unreliable on Windows)
-        is_running = check_vscode_running(session.get("vscode_pid"))
+        # Check VSCode status using multi-check approach (more reliable than PID alone).
+        # Pre-condition: only run process checks if session artifacts exist.
+        # If both the folder and workspace file are gone, any VSCode process with a
+        # matching PID or cmdline is a zombie from a deleted session - don't count it.
+        is_running = False
+        if session_has_artifacts(session["folder"]):
+            # Check 1: PID-based check (quick but unreliable on Windows)
+            is_running = check_vscode_running(session.get("vscode_pid"))
 
-        # Check 2: Window title check (Windows only, fast and reliable)
-        if not is_running:
-            is_running = is_vscode_window_open_for_folder(
-                str(folder_path),
-                issue_number=session["issue_number"],
-                repo=session["repo"],
-            )
+            # Check 2: Window title check (Windows only, fast and reliable)
+            if not is_running:
+                is_running = is_vscode_window_open_for_folder(
+                    str(folder_path),
+                    issue_number=session["issue_number"],
+                    repo=session["repo"],
+                )
 
-        # Check 3: Process cmdline check (slow fallback, cross-platform)
-        if not is_running:
-            is_running, _ = is_vscode_open_for_folder(str(folder_path))
+            # Check 3: Process cmdline check (slow fallback, cross-platform)
+            if not is_running:
+                is_running, _ = is_vscode_open_for_folder(str(folder_path))
 
         is_dirty = check_folder_dirty(folder_path) if folder_path.exists() else False
         git_status = (

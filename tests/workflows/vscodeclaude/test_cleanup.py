@@ -647,7 +647,7 @@ class TestGetStaleSessions:
     def test_excludes_running_blocked_sessions(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Should not include blocked sessions with running VSCode."""
+        """Should not include blocked sessions with running VSCode and existing artifacts."""
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
@@ -686,6 +686,10 @@ class TestGetStaleSessions:
         mock_cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {123: mock_issue}
         }
+
+        # Create the folder so session artifacts exist — VSCode running WITH artifacts
+        # is a healthy active session and should be skipped by cleanup.
+        (tmp_path / "repo_123").mkdir()
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
@@ -1074,6 +1078,63 @@ class TestGetStaleSessions:
         assert (
             len(stale_called) == 0
         ), "is_session_stale should not be called for closed issues"
+
+    def test_does_not_skip_zombie_vscode_session(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should NOT skip a session when VSCode is running but all artifacts are gone.
+
+        This is the zombie scenario: the folder and workspace file were deleted
+        while VSCode was still open. The process is alive but not meaningful for
+        this session, so cleanup should proceed.
+        """
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        mock_sessions = {
+            "sessions": [
+                {
+                    "folder": str(tmp_path / "repo_zombie"),  # folder NOT created
+                    "repo": "owner/repo",
+                    "issue_number": 123,
+                    "status": "status-04:plan-review",
+                    "vscode_pid": 9999,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                }
+            ],
+            "last_updated": "",
+        }
+        sessions_file.write_text(json.dumps(mock_sessions))
+
+        # VSCode PID is "running" (simulates zombie process)
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
+            lambda pid: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_stale",
+            lambda s, cached_issues=None: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_folder_git_status",
+            lambda path: "Missing",
+        )
+
+        result = get_stale_sessions()
+
+        # Zombie session must appear in stale list despite VSCode PID being alive
+        assert len(result) == 1
+        session, git_status = result[0]
+        assert session["issue_number"] == 123
+        assert git_status == "Missing"
 
     def test_excludes_eligible_status_sessions(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

@@ -402,16 +402,40 @@ def remove_session(folder: str) -> bool:
     return False
 
 
-def get_active_session_count() -> int:
-    """Count sessions with running VSCode processes.
+def session_has_artifacts(folder: str) -> bool:
+    """Check if session folder or workspace file still exist on disk.
+
+    A session's artifacts are its working folder and its .code-workspace file.
+    If both are gone, any still-running VSCode process is a zombie for this
+    session (it was launched with artifacts that have since been deleted).
+
+    Args:
+        folder: Full path to the session's working folder
 
     Returns:
-        Number of sessions where VSCode PID is still running
+        True if the folder or workspace file exists
+    """
+    folder_path = Path(folder)
+    workspace_file = folder_path.parent / f"{folder_path.name}.code-workspace"
+    return folder_path.exists() or workspace_file.exists()
+
+
+def get_active_session_count() -> int:
+    """Count sessions with running VSCode processes and existing artifacts.
+
+    Returns:
+        Number of sessions where VSCode PID is still running AND the session
+        folder or workspace file still exists. Sessions where both artifacts
+        are gone are excluded even if a VSCode process with a matching PID
+        exists (zombie VSCode from a deleted session).
     """
     store = load_sessions()
     count = 0
     for session in store["sessions"]:
-        if check_vscode_running(session.get("vscode_pid")):
+        folder = session.get("folder", "")
+        if session_has_artifacts(folder) and check_vscode_running(
+            session.get("vscode_pid")
+        ):
             count += 1
     return count
 
