@@ -16,7 +16,7 @@ class TestSessionIdOutputFormat:
     """Tests for --output-format session-id functionality."""
 
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
-    @patch("mcp_coder.llm.interface.prompt_llm")
+    @patch("mcp_coder.cli.commands.prompt.prompt_llm")
     def test_session_id_format_returns_only_session_id(
         self,
         mock_prompt_llm: Mock,
@@ -56,7 +56,7 @@ class TestSessionIdOutputFormat:
         assert captured.out.strip() == "abc123-session-id"
 
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
-    @patch("mcp_coder.llm.interface.prompt_llm")
+    @patch("mcp_coder.cli.commands.prompt.prompt_llm")
     def test_session_id_format_error_when_no_session_id(
         self,
         mock_prompt_llm: Mock,
@@ -96,7 +96,7 @@ class TestSessionIdOutputFormat:
         assert "Error: No session_id in response" in captured.err
 
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
-    @patch("mcp_coder.llm.interface.prompt_llm")
+    @patch("mcp_coder.cli.commands.prompt.prompt_llm")
     def test_session_id_format_error_when_empty_session_id(
         self,
         mock_prompt_llm: Mock,
@@ -136,7 +136,7 @@ class TestSessionIdOutputFormat:
         assert "Error: No session_id in response" in captured.err
 
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
-    @patch("mcp_coder.llm.interface.prompt_llm")
+    @patch("mcp_coder.cli.commands.prompt.prompt_llm")
     def test_session_id_format_with_resume(
         self,
         mock_prompt_llm: Mock,
