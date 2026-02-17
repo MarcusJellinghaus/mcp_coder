@@ -19,7 +19,7 @@ tests/utils/github_operations/test_github_utils.py
 tests/utils/github_operations/test_issue_branch_manager.py
 tests/utils/github_operations/test_issue_cache.py
 tests/utils/github_operations/test_issue_manager_label_update.py
-tests/workflow_utils/test_branch_status.py
+tests/checks/test_branch_status.py
 tests/workflow_utils/test_commit_operations.py
 tests/workflow_utils/test_task_tracker.py
 tests/workflows/implement/test_core.py
