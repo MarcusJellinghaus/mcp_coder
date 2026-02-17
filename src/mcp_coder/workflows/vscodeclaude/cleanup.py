@@ -16,7 +16,12 @@ from .issues import (
     is_status_eligible_for_session,
 )
 from .orchestrator import _get_configured_repos
-from .sessions import check_vscode_running, load_sessions, remove_session, session_has_artifacts
+from .sessions import (
+    check_vscode_running,
+    load_sessions,
+    remove_session,
+    session_has_artifacts,
+)
 from .status import get_folder_git_status, is_session_stale
 from .types import VSCodeClaudeSession
 
