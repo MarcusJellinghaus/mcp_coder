@@ -289,8 +289,8 @@ class TestOrchestration:
 
         # Mock vscode not running
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            lambda session: False,
         )
 
         # Create session with non-existent folder
@@ -327,8 +327,8 @@ class TestOrchestration:
 
         # Mock vscode not running
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            lambda session: False,
         )
 
         # Mock _get_configured_repos to return a different repo (not owner/unconfigured)
@@ -375,8 +375,8 @@ class TestOrchestration:
 
         # Mock vscode not running - patch at orchestrator since that's where it's imported
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            lambda session: False,
         )
 
         # Mock _get_configured_repos to return the test repo
@@ -461,8 +461,8 @@ class TestOrchestration:
 
         # Mock vscode running
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
-            lambda pid: True,
+            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            lambda session: True,
         )
 
         session = {
@@ -527,8 +527,8 @@ class TestOrchestration:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
@@ -581,8 +581,8 @@ class TestOrchestration:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
@@ -656,8 +656,8 @@ class TestOrchestration:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
@@ -713,8 +713,8 @@ class TestOrchestration:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
@@ -771,8 +771,8 @@ class TestOrchestration:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
@@ -829,8 +829,8 @@ class TestOrchestration:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
@@ -903,8 +903,8 @@ class TestOrchestration:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
@@ -1225,8 +1225,8 @@ class TestRestartClosedSessionsBranchHandling:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
@@ -1333,8 +1333,8 @@ class TestRestartClosedSessionsBranchHandling:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
@@ -1412,8 +1412,8 @@ class TestRestartClosedSessionsBranchHandling:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
@@ -1488,8 +1488,8 @@ class TestRestartClosedSessionsBranchHandling:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
@@ -1617,8 +1617,8 @@ class TestRestartClosedSessionsBranchHandling:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
@@ -1800,8 +1800,8 @@ class TestBranchHandlingIntegration:
 
         # Phase 2: Issue status changes to status-04 with linked branch
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
@@ -2003,8 +2003,8 @@ class TestBranchHandlingIntegration:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
@@ -2135,8 +2135,8 @@ class TestBranchHandlingIntegration:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",

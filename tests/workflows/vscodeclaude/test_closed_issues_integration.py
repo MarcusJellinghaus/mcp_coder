@@ -76,14 +76,8 @@ class TestClosedIssueIntegration:
                 "mcp_coder.workflows.vscodeclaude.orchestrator.load_sessions"
             ) as mock_load,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running"
-            ) as mock_running,
-            patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.is_vscode_window_open_for_folder"
-            ) as mock_window,
-            patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.is_vscode_open_for_folder"
-            ) as mock_folder,
+                "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active"
+            ) as mock_active,
             patch(
                 "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos"
             ) as mock_repos,
@@ -97,9 +91,7 @@ class TestClosedIssueIntegration:
         ):
             # Setup mocks
             mock_load.return_value = {"sessions": sessions}
-            mock_running.return_value = False  # VSCode not running
-            mock_window.return_value = False
-            mock_folder.return_value = (False, None)
+            mock_active.return_value = False  # VSCode not running
             mock_repos.return_value = {"owner/repo"}
             mock_build_cache.return_value = {"owner/repo": {414: issue_414}}
             mock_exists.return_value = True  # Folder exists
@@ -336,14 +328,8 @@ class TestClosedIssueIntegration:
                 "mcp_coder.workflows.vscodeclaude.orchestrator.load_sessions"
             ) as mock_load,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running"
-            ) as mock_running,
-            patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.is_vscode_window_open_for_folder"
-            ) as mock_window,
-            patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.is_vscode_open_for_folder"
-            ) as mock_folder,
+                "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active"
+            ) as mock_active,
             patch(
                 "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos"
             ) as mock_repos,
@@ -357,9 +343,7 @@ class TestClosedIssueIntegration:
         ):
             # Setup mocks
             mock_load.return_value = {"sessions": sessions}
-            mock_running.return_value = False
-            mock_window.return_value = False
-            mock_folder.return_value = (False, None)
+            mock_active.return_value = False
             mock_repos.return_value = {"owner/repo"}
             mock_build_cache.return_value = cached_issues
             mock_exists.return_value = True
@@ -441,14 +425,8 @@ class TestClosedIssueIntegration:
                 "mcp_coder.workflows.vscodeclaude.orchestrator.load_sessions"
             ) as mock_load,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.check_vscode_running"
-            ) as mock_running,
-            patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.is_vscode_window_open_for_folder"
-            ) as mock_window,
-            patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.is_vscode_open_for_folder"
-            ) as mock_folder,
+                "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active"
+            ) as mock_active,
             patch(
                 "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos"
             ) as mock_repos,
@@ -461,9 +439,7 @@ class TestClosedIssueIntegration:
             ) as mock_launch,
         ):
             mock_load.return_value = {"sessions": sessions}
-            mock_running.return_value = False
-            mock_window.return_value = False
-            mock_folder.return_value = (False, None)
+            mock_active.return_value = False
             mock_repos.return_value = {"owner/repo"}
             mock_build_cache.return_value = cached_issues
             mock_exists.return_value = True

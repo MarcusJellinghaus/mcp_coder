@@ -17,10 +17,9 @@ from .issues import (
 )
 from .orchestrator import _get_configured_repos
 from .sessions import (
-    check_vscode_running,
+    is_session_active,
     load_sessions,
     remove_session,
-    session_has_artifacts,
 )
 from .status import get_folder_git_status, is_session_stale
 from .types import VSCodeClaudeSession
@@ -61,10 +60,7 @@ def get_stale_sessions(
         # If both the folder and workspace file are gone, the VSCode process is a
         # zombie (launched for this session but kept running after its files were
         # deleted). Don't let a zombie process block cleanup.
-        folder = session.get("folder", "")
-        if session_has_artifacts(folder) and check_vscode_running(
-            session.get("vscode_pid")
-        ):
+        if is_session_active(session):
             continue
 
         # Skip sessions for unconfigured repos

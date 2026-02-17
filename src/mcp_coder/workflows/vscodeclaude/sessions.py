@@ -420,24 +420,54 @@ def session_has_artifacts(folder: str) -> bool:
     return folder_path.exists() or workspace_file.exists()
 
 
+def is_session_active(session: VSCodeClaudeSession) -> bool:
+    """Check if a session's VSCode is currently running.
+
+    Single entry point for all VSCode detection logic. Callers should always
+    use this instead of assembling individual checks themselves.
+
+    Runs three checks in order (fast to slow):
+    1. PID-based check (fast but unreliable on Windows — launcher exits immediately)
+    2. Window title check (Windows only, reliable for vscodeclaude workspaces)
+    3. Process cmdline check (slow fallback, cross-platform)
+
+    Pre-condition: only runs checks if session artifacts exist. If both the
+    folder and workspace file are gone, any matching process is a zombie.
+
+    Args:
+        session: Session to check
+
+    Returns:
+        True if VSCode is running for this session
+    """
+    folder = session.get("folder", "")
+    if not session_has_artifacts(folder):
+        return False
+    if check_vscode_running(session.get("vscode_pid")):
+        return True
+    if is_vscode_window_open_for_folder(
+        folder,
+        issue_number=session.get("issue_number"),
+        repo=session.get("repo"),
+    ):
+        return True
+    is_open, _ = is_vscode_open_for_folder(folder)
+    return is_open
+
+
 def get_active_session_count() -> int:
     """Count sessions with running VSCode processes and existing artifacts.
 
+    Refreshes VSCode detection caches before counting to ensure an accurate
+    result regardless of what ran before this call.
+
     Returns:
-        Number of sessions where VSCode PID is still running AND the session
-        folder or workspace file still exists. Sessions where both artifacts
-        are gone are excluded even if a VSCode process with a matching PID
-        exists (zombie VSCode from a deleted session).
+        Number of active sessions according to is_session_active().
     """
+    clear_vscode_window_cache()
+    clear_vscode_process_cache()
     store = load_sessions()
-    count = 0
-    for session in store["sessions"]:
-        folder = session.get("folder", "")
-        if session_has_artifacts(folder) and check_vscode_running(
-            session.get("vscode_pid")
-        ):
-            count += 1
-    return count
+    return sum(1 for s in store["sessions"] if is_session_active(s))
 
 
 def update_session_pid(folder: str, pid: int) -> None:

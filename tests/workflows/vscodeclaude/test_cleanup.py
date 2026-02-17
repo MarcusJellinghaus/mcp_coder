@@ -32,8 +32,8 @@ class TestCleanup:
 
         # Mock VSCode not running - patch at cleanup where it's imported
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
+            lambda session: False,
         )
 
         # Mock session is stale - patch at cleanup where it's imported
@@ -87,8 +87,8 @@ class TestCleanup:
 
         # Mock VSCode not running
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
+            lambda session: False,
         )
 
         # Mock _get_configured_repos to return a DIFFERENT repo
@@ -130,8 +130,8 @@ class TestCleanup:
 
         # Mock VSCode running - patch at cleanup where it's imported
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
-            lambda pid: True,
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
+            lambda session: True,
         )
 
         session = {
@@ -488,8 +488,8 @@ class TestGetStaleSessions:
         (tmp_path / "repo_123").mkdir()
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
@@ -558,8 +558,8 @@ class TestGetStaleSessions:
         (tmp_path / "repo_456").mkdir()
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
@@ -624,8 +624,8 @@ class TestGetStaleSessions:
         (tmp_path / "repo_789").mkdir()
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
@@ -692,8 +692,8 @@ class TestGetStaleSessions:
         (tmp_path / "repo_123").mkdir()
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
-            lambda pid: True,
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
+            lambda session: True,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
@@ -752,8 +752,8 @@ class TestGetStaleSessions:
         (tmp_path / "repo_closed").mkdir()
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
@@ -825,8 +825,8 @@ class TestGetStaleSessions:
         (tmp_path / "repo_bot_pickup").mkdir()
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
@@ -898,8 +898,8 @@ class TestGetStaleSessions:
         (tmp_path / "repo_bot_busy").mkdir()
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
@@ -971,8 +971,8 @@ class TestGetStaleSessions:
         (tmp_path / "repo_pr_created").mkdir()
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
@@ -1054,8 +1054,8 @@ class TestGetStaleSessions:
             return False
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
@@ -1110,10 +1110,12 @@ class TestGetStaleSessions:
         }
         sessions_file.write_text(json.dumps(mock_sessions))
 
-        # VSCode PID is "running" (simulates zombie process)
+        # VSCode PID is "running" but artifacts are gone — is_session_active returns False
+        # because session_has_artifacts() returns False (folder not created above).
+        # No need to patch is_session_active: the real implementation handles this correctly.
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
-            lambda pid: True,
+            "mcp_coder.workflows.vscodeclaude.sessions.check_vscode_running",
+            lambda pid: True,  # PID alive (zombie)
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
@@ -1184,8 +1186,8 @@ class TestGetStaleSessions:
         (tmp_path / "repo_eligible").mkdir()
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.check_vscode_running",
-            lambda pid: False,
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
+            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
