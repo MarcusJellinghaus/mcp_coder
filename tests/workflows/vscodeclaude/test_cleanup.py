@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from mcp_coder.utils.folder_deletion import DeletionResult
 from mcp_coder.utils.github_operations.issues import IssueData
 from mcp_coder.workflows.vscodeclaude.cleanup import (
     cleanup_stale_sessions,
@@ -306,12 +307,12 @@ class TestCleanup:
 
         safe_delete_called: list[Path] = []
 
-        def mock_safe_delete(path: Path, **kwargs: object) -> bool:
+        def mock_safe_delete(path: Path, **kwargs: object) -> DeletionResult:
             safe_delete_called.append(path)
             # Actually delete for the test
             if Path(path).exists():
                 shutil.rmtree(path)
-            return True
+            return DeletionResult(success=True)
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.safe_delete_folder",
@@ -1041,7 +1042,10 @@ class TestGetStaleSessions:
         # Track if is_session_stale is called
         stale_called: list[bool] = []
 
-        def mock_is_session_stale(session: VSCodeClaudeSession) -> bool:
+        def mock_is_session_stale(
+            session: VSCodeClaudeSession,
+            cached_issues: dict[int, IssueData] | None = None,
+        ) -> bool:
             stale_called.append(True)
             return False
 

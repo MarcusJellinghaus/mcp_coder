@@ -27,7 +27,7 @@ from .subprocess_runner import (
     execute_subprocess,
 )
 from .user_config import create_default_config, get_config_file_path, get_config_values
-from .folder_deletion import safe_delete_folder
+from .folder_deletion import DeletionFailureReason, DeletionResult, safe_delete_folder
 
 # Layer 2: Operations (depend on Layer 1)
 from .git_operations import (
@@ -113,5 +113,7 @@ __all__ = [
     "JobStatus",
     "QueueSummary",
     # Folder deletion
+    "DeletionFailureReason",
+    "DeletionResult",
     "safe_delete_folder",
 ]
