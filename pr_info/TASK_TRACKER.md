@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: Create `session_restart.py`
 
-- [ ] Implement: Create `src/mcp_coder/workflows/vscodeclaude/session_restart.py` — copy `BranchPrepResult`, `_prepare_restart_branch`, `_build_cached_issues_by_repo`, `restart_closed_sessions`, `handle_pr_created_issues` verbatim from `orchestrator.py`; import `_get_configured_repos` from `.config`, import `launch_vscode`/`regenerate_session_files` from `.session_launch`; `__all__` contains only the two public functions (see [step_3.md](./steps/step_3.md))
-- [ ] Quality checks: run pylint (error/fatal), mypy, pytest (excluding integration markers) — fix any import errors, no logic changes
-- [ ] Git commit message: `refactor: extract session restart functions into session_restart.py`
+- [x] Implement: Create `src/mcp_coder/workflows/vscodeclaude/session_restart.py` — copy `BranchPrepResult`, `_prepare_restart_branch`, `_build_cached_issues_by_repo`, `restart_closed_sessions`, `handle_pr_created_issues` verbatim from `orchestrator.py`; import `_get_configured_repos` from `.config`, import `launch_vscode`/`regenerate_session_files` from `.session_launch`; `__all__` contains only the two public functions (see [step_3.md](./steps/step_3.md))
+- [x] Quality checks: run pylint (error/fatal), mypy, pytest (excluding integration markers) — fix any import errors, no logic changes
+- [x] Git commit message: `refactor: extract session restart functions into session_restart.py`
 
 ### Step 4: Update `__init__.py` — Docstring + Re-exports
 
