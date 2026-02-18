@@ -27,17 +27,17 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 See [step_1.md](./steps/step_1.md) for full details.
 
-- [ ] Implement Step 1: update `get_stale_sessions` in `src/mcp_coder/workflows/vscodeclaude/cleanup.py`
+- [x] Implement Step 1: update `get_stale_sessions` in `src/mcp_coder/workflows/vscodeclaude/cleanup.py`
   - Change return type from `list[tuple[VSCodeClaudeSession, str]]` to `list[tuple[VSCodeClaudeSession, str, str]]`
   - Add `status_labels: list[str] = []` initialisation before the `if cached_issues_by_repo:` block
   - Break short-circuit `or` condition into explicit `is_stale` bool
   - Build `reasons` list from `is_closed`, `is_blocked`, `is_ineligible`, `is_stale` flags
   - Append `(session, git_status, reason)` instead of `(session, git_status)`
-- [ ] Quality checks for Step 1
-  - [ ] Run pylint and fix all issues found
-  - [ ] Run pytest and fix all failing tests
-  - [ ] Run mypy and fix all type errors
-- [ ] Prepare git commit message for Step 1
+- [x] Quality checks for Step 1
+  - [x] Run pylint and fix all issues found
+  - [x] Run pytest and fix all failing tests
+  - [x] Run mypy and fix all type errors
+- [x] Prepare git commit message for Step 1
 
 ---
 

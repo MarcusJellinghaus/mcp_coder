@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 def get_stale_sessions(
     cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
-) -> list[tuple[VSCodeClaudeSession, str]]:
+) -> list[tuple[VSCodeClaudeSession, str, str]]:
     """Get stale sessions with git status.
 
     Only checks sessions for repos that are still configured.
@@ -44,11 +44,11 @@ def get_stale_sessions(
         cached_issues_by_repo: Optional cache of issues for state/blocked/eligibility detection
 
     Returns:
-        List of (session, git_status) tuples where git_status is one of:
+        List of (session, git_status, reason) tuples where git_status is one of:
         "Clean", "Dirty", "Missing", "No Git", "Error"
     """
     store = load_sessions()
-    stale_sessions: list[tuple[VSCodeClaudeSession, str]] = []
+    stale_sessions: list[tuple[VSCodeClaudeSession, str, str]] = []
 
     # Load configured repos (skip sessions for repos no longer in config)
     configured_repos = _get_configured_repos()
@@ -80,6 +80,7 @@ def get_stale_sessions(
         is_ineligible = False
         issue_number = session["issue_number"]
         cached_for_stale_check: dict[int, IssueData] | None = None
+        status_labels: list[str] = []
         if cached_issues_by_repo:
             repo_issues = cached_issues_by_repo.get(repo_full_name, {})
             if issue_number not in repo_issues:
@@ -121,7 +122,7 @@ def get_stale_sessions(
                     is_blocked = True
                 # Check if current status is eligible for session
                 # Get status from issue labels (most current)
-                status_labels = [
+                status_labels = [  # noqa: PLW2901
                     lbl for lbl in issue["labels"] if lbl.startswith("status-")
                 ]
                 if status_labels:
@@ -134,15 +135,30 @@ def get_stale_sessions(
         # Check if session is stale, blocked, closed, or ineligible
         # Check is_closed first to short-circuit and avoid calling is_session_stale
         # on closed issues (which would trigger a spurious warning)
-        if (
-            is_closed
-            or is_blocked
-            or is_ineligible
-            or is_session_stale(session, cached_issues=cached_for_stale_check)
-        ):
+        is_stale = (
+            not is_closed
+            and not is_blocked
+            and not is_ineligible
+            and is_session_stale(session, cached_issues=cached_for_stale_check)
+        )
+
+        if is_closed or is_blocked or is_ineligible or is_stale:
+            reasons: list[str] = []
+            if is_closed:
+                reasons.append("closed")
+            if is_blocked:
+                reasons.append("blocked")
+            if is_ineligible:
+                reasons.append("bot status")
+            if is_stale:
+                if cached_for_stale_check is not None and status_labels:
+                    reasons.append(f"stale \u2192 {status_labels[0]}")
+                else:
+                    reasons.append("stale")
+            reason = ", ".join(reasons)
             folder_path = Path(session["folder"])
             git_status = get_folder_git_status(folder_path)
-            stale_sessions.append((session, git_status))
+            stale_sessions.append((session, git_status, reason))
 
     return stale_sessions
 
@@ -223,7 +239,7 @@ def cleanup_stale_sessions(
 
     stale_sessions = get_stale_sessions(cached_issues_by_repo=cached_issues_by_repo)
 
-    for session, git_status in stale_sessions:
+    for session, git_status in stale_sessions:  # type: ignore[misc]  # Step 2 will unpack 3-tuple
         folder = session["folder"]
 
         if git_status == "Clean":
