@@ -668,7 +668,7 @@ class TestHelperFunctions:
 
         move_to_staging_called = False
 
-        def mock_move_to_staging(path: Path, staging: Path | None) -> bool:
+        def mock_move_to_staging(path: Path, _staging: Path | None) -> bool:
             nonlocal move_to_staging_called
             move_to_staging_called = True
             return True
@@ -707,7 +707,7 @@ class TestHelperFunctions:
 
         move_to_staging_called = False
 
-        def mock_move_to_staging(path: Path, staging: Path | None) -> bool:
+        def mock_move_to_staging(path: Path, _staging: Path | None) -> bool:
             nonlocal move_to_staging_called
             move_to_staging_called = True
             return True
@@ -743,7 +743,7 @@ class TestHelperFunctions:
 
         monkeypatch.setattr(
             "mcp_coder.utils.folder_deletion._move_to_staging",
-            lambda path, staging: True,
+            lambda path, _staging: True,
         )
 
         _try_delete_empty_directory(empty_dir, staging_dir)
