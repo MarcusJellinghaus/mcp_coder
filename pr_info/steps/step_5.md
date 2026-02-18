@@ -49,7 +49,7 @@ If any of these files still import from `.orchestrator`, fix them before deletin
 ## ALGORITHM
 
 ```
-1. Grep for any remaining `orchestrator` imports in src/ (should be zero)
+1. Use `mcp__filesystem__read_file` to check import blocks in src/ for any remaining `orchestrator` imports (should be zero)
 2. If zero: delete orchestrator.py
 3. Remove `src/mcp_coder/workflows/vscodeclaude/orchestrator.py` from .large-files-allowlist
 4. Run lint-imports and tach check

@@ -29,3 +29,9 @@ Decisions made during plan review discussion for issue #458.
 ## Decision 4: No bash `grep` commands anywhere in plan LLM prompts
 
 **Rationale:** `grep` is not in the project's allowlist (`.claude/settings.local.json`). All verification steps in LLM prompts must use `mcp__filesystem__read_file` or other allowed MCP tools instead of bash grep commands.
+
+---
+
+## Decision 5: Adding `regenerate_session_files` to `__init__.py` fixes an existing omission, not an API expansion
+
+**Rationale:** During plan review it was discovered that `regenerate_session_files` is already listed in `orchestrator.py.__all__` (marked as public) but was never forwarded through `__init__.py` — neither in the import block nor in `__init__.py.__all__`. Step 4 adding it to `__init__.py` corrects this pre-existing omission rather than expanding the public API surface.

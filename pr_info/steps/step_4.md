@@ -71,7 +71,7 @@ Note: `get_stage_display_name` and `truncate_title` are re-exported from `orches
 from .helpers import get_stage_display_name, truncate_title
 ```
 
-Also add `regenerate_session_files` to `__all__` (it was not previously exported but is now a public function in its own module).
+Also add `regenerate_session_files` to `__all__` — it is already in `orchestrator.py.__all__` (intended as public) but was never forwarded through `__init__.py`. Adding it here fixes an existing omission.
 
 ---
 
