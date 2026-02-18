@@ -445,6 +445,35 @@ class TestStatusDisplay:
         assert "#456" in captured.out
         assert "Create and start" in captured.out
 
+    def test_pr_created_eligible_issue_shows_awaiting_merge(
+        self,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Eligible issue with status-10:pr-created shows (awaiting merge) action."""
+        issue: IssueData = {
+            "number": 435,
+            "title": "PR created issue",
+            "body": "",
+            "state": "open",
+            "labels": ["status-10:pr-created"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "https://github.com/owner/repo/issues/435",
+            "locked": False,
+        }
+
+        eligible_issues: list[tuple[str, IssueData]] = [("owner/repo", issue)]
+
+        display_status_table(
+            sessions=[], eligible_issues=eligible_issues, repo_filter=None
+        )
+
+        captured = capsys.readouterr()
+        assert "(awaiting merge)" in captured.out
+        assert "-> Create and start" not in captured.out
+
 
 class TestClosedIssuePrefixDisplay:
     """Test (Closed) prefix display for closed issues in status table."""
