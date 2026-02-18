@@ -677,9 +677,10 @@ class TestHelperFunctions:
             "mcp_coder.utils.folder_deletion._move_to_staging", mock_move_to_staging
         )
 
-        _try_delete_empty_directory(empty_dir, staging_dir)
+        result = _try_delete_empty_directory(empty_dir, staging_dir)
 
         assert rmdir_call_count == 3
+        assert result is True
 
     def test_try_delete_empty_directory_succeeds_on_second_attempt(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
