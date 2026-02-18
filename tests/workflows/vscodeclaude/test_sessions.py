@@ -802,3 +802,29 @@ class TestWindowTitleMatching:
         )
 
         assert result is False
+
+    def test_does_not_match_title_without_bracket_prefix(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should NOT match window where issue number appears without [ prefix.
+
+        Regression test: GitHub extension can show e.g. '#219 - mcp_coder' in
+        the window title when browsing an issue, which should NOT be treated as
+        an active vscodeclaude workspace session.
+        """
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
+            lambda: ["#219 Fix the thing - mcp_coder - Visual Studio Code"],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            True,
+        )
+
+        result = is_vscode_window_open_for_folder(
+            folder_path="/workspace/mcp_coder_219",
+            issue_number=219,
+            repo="owner/mcp_coder",
+        )
+
+        assert result is False

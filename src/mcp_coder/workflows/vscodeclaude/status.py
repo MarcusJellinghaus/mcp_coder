@@ -319,16 +319,14 @@ def display_status_table(
             get_folder_git_status(folder_path) if folder_path.exists() else "Missing"
         )
 
-        # Get current status for eligibility check
+        # Get current status for eligibility check and stale display
         # Use cached status if available, fall back to session status
+        current_status: str | None = None
         if repo_cached_issues is not None:
             current_status, _ = get_issue_current_status(
                 session["issue_number"], cached_issues=repo_cached_issues
             )
-            status_for_eligibility = current_status or session["status"]
-        else:
-            # No cache available - use session's recorded status
-            status_for_eligibility = session["status"]
+        status_for_eligibility = current_status or session["status"]
         is_eligible = is_status_eligible_for_session(status_for_eligibility)
 
         # Compute is_stale: closed OR ineligible OR status changed
@@ -343,8 +341,9 @@ def display_status_table(
         action = get_next_action(stale, is_dirty, is_running)
 
         # Show status change indicator (but not for closed issues which already have prefix)
+        # Show current (new) status when stale, not the stored (old) status
         if stale and not is_closed:
-            status = f"-> {status}"
+            status = f"-> {current_status or status}"
 
         # Add row to table
         rows.append(

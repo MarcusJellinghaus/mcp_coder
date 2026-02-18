@@ -298,11 +298,15 @@ def is_vscode_window_open_for_folder(
     # This prevents matching the main repo window ("repo - Visual Studio Code")
     if issue_number is not None and repo:
         repo_name = repo.split("/")[-1].lower() if "/" in repo else repo.lower()
-        issue_pattern = f"#{issue_number}"
+        # Require "[#N" bracket prefix to match vscodeclaude workspace title format:
+        # "[#N stage_short] title - repo_name"
+        # This avoids false positives from GitHub extension or other tools
+        # that may show issue numbers without the bracket (e.g. "#458 - mcp_coder")
+        issue_pattern = f"[#{issue_number}"
 
         for title in titles:
             title_lower = title.lower()
-            # Both issue number AND repo name must be present
+            # Both issue number (with bracket) AND repo name must be present
             if issue_pattern in title and repo_name in title_lower:
                 logger.debug(
                     "Found VSCode window for issue #%d (%s): %s",
