@@ -10,7 +10,6 @@ from typing import Any, cast
 from ...utils.github_operations import get_authenticated_username
 from ...utils.github_operations.label_config import load_labels_config
 from ...utils.user_config import get_config_file_path, get_config_values, load_config
-from .helpers import get_repo_full_name
 from .types import (
     DEFAULT_MAX_SESSIONS,
     RepoVSCodeClaudeConfig,
@@ -148,6 +147,47 @@ def load_repo_vscodeclaude_config(repo_name: str) -> RepoVSCodeClaudeConfig:
 
 # Re-export for backwards compatibility
 get_github_username = get_authenticated_username
+
+
+def get_repo_short_name(repo_config: dict[str, str]) -> str:
+    """Extract short repo name from repo_url.
+
+    Args:
+        repo_config: Repository config dict with repo_url
+
+    Returns:
+        Short repo name (e.g., "mcp-coder" from the URL)
+    """
+    repo_url = repo_config.get("repo_url", "")
+    if "/" in repo_url:
+        url_clean = repo_url.rstrip("/")
+        if url_clean.endswith(".git"):
+            url_clean = url_clean[:-4]
+        return url_clean.split("/")[-1]
+    return "repo"
+
+
+def get_repo_full_name(repo_config: dict[str, str]) -> str:
+    """Extract full repo name (owner/repo) from repo_url.
+
+    Args:
+        repo_config: Repository config dict with repo_url
+
+    Returns:
+        Full repo name (e.g., "owner/repo")
+
+    Raises:
+        ValueError: If repo URL cannot be parsed
+    """
+    repo_url = repo_config.get("repo_url", "")
+    if "/" in repo_url:
+        url_clean = repo_url.rstrip("/")
+        if url_clean.endswith(".git"):
+            url_clean = url_clean[:-4]
+        parts = url_clean.split("/")
+        if len(parts) >= 2:
+            return f"{parts[-2]}/{parts[-1]}"
+    raise ValueError(f"Cannot parse repo URL: {repo_url}")
 
 
 def sanitize_folder_name(name: str) -> str:
