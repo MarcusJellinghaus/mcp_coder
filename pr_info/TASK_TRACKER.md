@@ -39,11 +39,11 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3 — Remove duplicate anti-pattern call sites in three other files
 
-- [ ] Replace `_load_labels_config()` body in `src/mcp_coder/workflows/vscodeclaude/config.py`
-- [ ] Replace `_load_labels_config()` body in `src/mcp_coder/workflows/vscodeclaude/issues.py`
-- [ ] Replace inline anti-pattern blocks in `_filter_eligible_issues()` and `get_eligible_issues()` in `src/mcp_coder/cli/commands/coordinator/core.py`
-- [ ] Run pylint, pytest, mypy — fix all issues found
-- [ ] Prepare git commit message for Step 3
+- [x] Replace `_load_labels_config()` body in `src/mcp_coder/workflows/vscodeclaude/config.py`
+- [x] Replace `_load_labels_config()` body in `src/mcp_coder/workflows/vscodeclaude/issues.py`
+- [x] Replace inline anti-pattern blocks in `_filter_eligible_issues()` and `get_eligible_issues()` in `src/mcp_coder/cli/commands/coordinator/core.py`
+- [x] Run pylint, pytest, mypy — fix all issues found
+- [x] Prepare git commit message for Step 3
 
 ## Pull Request
 
