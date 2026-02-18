@@ -40,14 +40,14 @@ See [step_1.md](./steps/step_1.md) for full details.
 
 See [step_2.md](./steps/step_2.md) for full details.
 
-- [ ] Read `src/mcp_coder/cli/commands/coordinator/commands.py` in full before making changes
-- [ ] Derive `repo_full_name` and `all_cached_issues` from `cached_issues_by_repo` in the per-repo loop
-- [ ] Add error log when `repo_full_name` is empty or not in `cached_issues_by_repo`
-- [ ] Pass `all_cached_issues=all_cached_issues` as keyword argument to `process_eligible_issues`
-- [ ] Run pylint, fix all issues found
-- [ ] Run pytest, confirm no tests are broken
-- [ ] Run mypy, fix all issues found
-- [ ] Prepare git commit message for Step 2
+- [x] Read `src/mcp_coder/cli/commands/coordinator/commands.py` in full before making changes
+- [x] Derive `repo_full_name` and `all_cached_issues` from `cached_issues_by_repo` in the per-repo loop
+- [x] Add error log when `repo_full_name` is empty or not in `cached_issues_by_repo`
+- [x] Pass `all_cached_issues=all_cached_issues` as keyword argument to `process_eligible_issues`
+- [x] Run pylint, fix all issues found
+- [x] Run pytest, confirm no tests are broken
+- [x] Run mypy, fix all issues found
+- [x] Prepare git commit message for Step 2
 
 ---
 
