@@ -338,6 +338,18 @@ def create_workspace_file(
     return workspace_file
 
 
+def _escape_batch_title(text: str) -> str:
+    """Escape special characters in text for Windows batch echo commands.
+
+    Prevents shell injection when issue titles contain characters like >
+    that cmd.exe would otherwise interpret as redirection operators.
+    Order matters: ^ must be escaped first to avoid double-escaping.
+    """
+    for char in ("^", "&", "|", "<", ">"):
+        text = text.replace(char, f"^{char}")
+    return text
+
+
 def create_startup_script(
     folder_path: Path,
     issue_number: int,
@@ -389,6 +401,7 @@ def create_startup_script(
     title_display = issue_title[:58] if len(issue_title) > 58 else issue_title
 
     if is_windows:
+        title_display = _escape_batch_title(title_display)
         if is_intervention:
             # Intervention mode - plain claude, no automation
             script_content = INTERVENTION_SCRIPT_WINDOWS.format(
