@@ -49,9 +49,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 5: Delete `orchestrator.py` and Update `.large-files-allowlist`
 
-- [ ] Implement: Verify no remaining `orchestrator` imports in `src/`; delete `src/mcp_coder/workflows/vscodeclaude/orchestrator.py`; remove its entry from `.large-files-allowlist` (see [step_5.md](./steps/step_5.md))
-- [ ] Quality checks: run `tools\lint_imports.bat`, `tools\tach_check.bat`, pytest — note that `test_orchestrator_*.py` failures are expected and accepted (test restructuring is a separate follow-up issue)
-- [ ] Git commit message: `refactor: delete orchestrator.py, remove from large-files-allowlist`
+- [x] Implement: Verify no remaining `orchestrator` imports in `src/`; delete `src/mcp_coder/workflows/vscodeclaude/orchestrator.py`; remove its entry from `.large-files-allowlist` (see [step_5.md](./steps/step_5.md))
+- [x] Quality checks: run `tools\lint_imports.bat`, `tools\tach_check.bat`, pytest — note that `test_orchestrator_*.py` failures are expected and accepted (test restructuring is a separate follow-up issue)
+- [x] Git commit message: `refactor: delete orchestrator.py, remove from large-files-allowlist`
 
 ---
 

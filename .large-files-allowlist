@@ -32,4 +32,3 @@ tests/workflows/vscodeclaude/test_sessions.py
 tests/workflows/vscodeclaude/test_issues.py
 tests/workflows/vscodeclaude/test_orchestrator_sessions.py
 tests/workflows/vscodeclaude/test_status_display.py
-src/mcp_coder/workflows/vscodeclaude/orchestrator.py
