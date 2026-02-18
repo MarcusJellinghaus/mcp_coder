@@ -19,10 +19,10 @@ from mcp_coder.utils.folder_deletion import (
     DeletionResult,
     _cleanup_staging,
     _get_default_staging_dir,
-    _is_directory_empty,
     _move_to_staging,
     _rmtree_remove_readonly,
     _try_delete_empty_directory,
+    is_directory_empty,
     safe_delete_folder,
 )
 
@@ -285,9 +285,9 @@ class TestSafeDeleteFolder:
 
         monkeypatch.setattr(shutil, "rmtree", mock_rmtree)
 
-        # Make _is_directory_empty return True after first rmtree attempt
+        # Make is_directory_empty return True after first rmtree attempt
         empty_check_count = 0
-        original_is_empty = _is_directory_empty
+        original_is_empty = is_directory_empty
 
         def mock_is_empty(path: Path) -> bool:
             nonlocal empty_check_count
@@ -297,7 +297,7 @@ class TestSafeDeleteFolder:
             return original_is_empty(path)
 
         monkeypatch.setattr(
-            "mcp_coder.utils.folder_deletion._is_directory_empty", mock_is_empty
+            "mcp_coder.utils.folder_deletion.is_directory_empty", mock_is_empty
         )
 
         # Make _try_delete_empty_directory succeed
@@ -537,28 +537,28 @@ class TestHelperFunctions:
         assert result.parent == Path(tempfile.gettempdir())
 
     def test_is_directory_empty_true(self, tmp_path: Path) -> None:
-        """Test _is_directory_empty returns True for empty directory."""
+        """Test is_directory_empty returns True for empty directory."""
         empty_dir = tmp_path / "empty"
         empty_dir.mkdir()
 
-        result = _is_directory_empty(empty_dir)
+        result = is_directory_empty(empty_dir)
 
         assert result is True
 
     def test_is_directory_empty_false(self, tmp_path: Path) -> None:
-        """Test _is_directory_empty returns False for non-empty directory."""
+        """Test is_directory_empty returns False for non-empty directory."""
         non_empty_dir = tmp_path / "non_empty"
         non_empty_dir.mkdir()
         (non_empty_dir / "file.txt").write_text("content")
 
-        result = _is_directory_empty(non_empty_dir)
+        result = is_directory_empty(non_empty_dir)
 
         assert result is False
 
     def test_is_directory_empty_permission_error(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test _is_directory_empty returns False on permission error."""
+        """Test is_directory_empty returns False on permission error."""
         dir_path = tmp_path / "locked"
         dir_path.mkdir()
 
@@ -567,7 +567,7 @@ class TestHelperFunctions:
 
         monkeypatch.setattr(Path, "iterdir", mock_iterdir)
 
-        result = _is_directory_empty(dir_path)
+        result = is_directory_empty(dir_path)
 
         assert result is False
 
@@ -608,6 +608,9 @@ class TestHelperFunctions:
             raise PermissionError("Directory locked")
 
         monkeypatch.setattr(Path, "rmdir", mock_rmdir)
+        monkeypatch.setattr(
+            "mcp_coder.utils.folder_deletion.time.sleep", lambda _: None
+        )
 
         result = _try_delete_empty_directory(empty_dir, staging_dir)
 
@@ -628,6 +631,9 @@ class TestHelperFunctions:
             raise PermissionError("Directory locked")
 
         monkeypatch.setattr(Path, "rmdir", mock_rmdir)
+        monkeypatch.setattr(
+            "mcp_coder.utils.folder_deletion.time.sleep", lambda _: None
+        )
 
         # Mock move to fail
         def mock_move(src: str, dst: str) -> str:
@@ -639,3 +645,108 @@ class TestHelperFunctions:
 
         assert result is False
         assert empty_dir.exists()
+
+    def test_try_delete_empty_directory_retries_rmdir_before_staging(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test rmdir is retried 3 times before _move_to_staging is attempted."""
+        empty_dir = tmp_path / "empty"
+        empty_dir.mkdir()
+        staging_dir = tmp_path / "staging"
+
+        rmdir_call_count = 0
+
+        def mock_rmdir(self: Path) -> None:
+            nonlocal rmdir_call_count
+            rmdir_call_count += 1
+            raise PermissionError("Directory locked")
+
+        monkeypatch.setattr(Path, "rmdir", mock_rmdir)
+        monkeypatch.setattr(
+            "mcp_coder.utils.folder_deletion.time.sleep", lambda _: None
+        )
+
+        move_to_staging_called = False
+
+        def mock_move_to_staging(path: Path, _staging: Path | None) -> bool:
+            nonlocal move_to_staging_called
+            move_to_staging_called = True
+            return True
+
+        monkeypatch.setattr(
+            "mcp_coder.utils.folder_deletion._move_to_staging", mock_move_to_staging
+        )
+
+        result = _try_delete_empty_directory(empty_dir, staging_dir)
+
+        assert rmdir_call_count == 3
+        assert result is True
+
+    def test_try_delete_empty_directory_succeeds_on_second_attempt(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test early exit when rmdir succeeds on the second attempt."""
+        empty_dir = tmp_path / "empty"
+        empty_dir.mkdir()
+        staging_dir = tmp_path / "staging"
+
+        rmdir_call_count = 0
+        original_rmdir = Path.rmdir
+
+        def mock_rmdir(self: Path) -> None:
+            nonlocal rmdir_call_count
+            rmdir_call_count += 1
+            if rmdir_call_count == 1:
+                raise PermissionError("Directory locked")
+            original_rmdir(self)
+
+        monkeypatch.setattr(Path, "rmdir", mock_rmdir)
+        monkeypatch.setattr(
+            "mcp_coder.utils.folder_deletion.time.sleep", lambda _: None
+        )
+
+        move_to_staging_called = False
+
+        def mock_move_to_staging(path: Path, _staging: Path | None) -> bool:
+            nonlocal move_to_staging_called
+            move_to_staging_called = True
+            return True
+
+        monkeypatch.setattr(
+            "mcp_coder.utils.folder_deletion._move_to_staging", mock_move_to_staging
+        )
+
+        result = _try_delete_empty_directory(empty_dir, staging_dir)
+
+        assert result is True
+        assert move_to_staging_called is False
+
+    def test_try_delete_empty_directory_sleep_called_between_retries(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test time.sleep(1) is called between retry attempts."""
+        empty_dir = tmp_path / "empty"
+        empty_dir.mkdir()
+        staging_dir = tmp_path / "staging"
+
+        def mock_rmdir(self: Path) -> None:
+            raise PermissionError("Directory locked")
+
+        monkeypatch.setattr(Path, "rmdir", mock_rmdir)
+
+        sleep_calls: list[int | float] = []
+
+        def mock_sleep(seconds: int | float) -> None:
+            sleep_calls.append(seconds)
+
+        monkeypatch.setattr("mcp_coder.utils.folder_deletion.time.sleep", mock_sleep)
+
+        monkeypatch.setattr(
+            "mcp_coder.utils.folder_deletion._move_to_staging",
+            lambda path, _staging: True,
+        )
+
+        _try_delete_empty_directory(empty_dir, staging_dir)
+
+        assert len(sleep_calls) == 2
+        assert all(s == 1 for s in sleep_calls)

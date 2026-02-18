@@ -8,7 +8,7 @@ from unittest.mock import Mock
 import pytest
 
 from mcp_coder.utils.github_operations.issues import IssueData
-from mcp_coder.workflows.vscodeclaude.orchestrator import regenerate_session_files
+from mcp_coder.workflows.vscodeclaude.session_launch import regenerate_session_files
 from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeSession
 
 

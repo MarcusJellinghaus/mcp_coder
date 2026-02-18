@@ -14,6 +14,7 @@ tests/cli/commands/test_commit.py
 tests/cli/commands/test_prompt.py
 tests/cli/test_main.py
 tests/llm/test_interface.py
+tests/utils/test_folder_deletion.py
 tests/utils/github_operations/test_base_manager.py
 tests/utils/github_operations/test_github_utils.py
 tests/utils/github_operations/test_issue_branch_manager.py
@@ -31,4 +32,3 @@ tests/workflows/vscodeclaude/test_sessions.py
 tests/workflows/vscodeclaude/test_issues.py
 tests/workflows/vscodeclaude/test_orchestrator_sessions.py
 tests/workflows/vscodeclaude/test_status_display.py
-src/mcp_coder/workflows/vscodeclaude/orchestrator.py

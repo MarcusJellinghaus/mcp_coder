@@ -3,10 +3,12 @@
 import pytest
 
 from mcp_coder.utils.github_operations.issues import IssueData
-from mcp_coder.workflows.vscodeclaude.helpers import (
-    get_issue_status,
+from mcp_coder.workflows.vscodeclaude.config import (
     get_repo_full_name,
     get_repo_short_name,
+)
+from mcp_coder.workflows.vscodeclaude.helpers import (
+    get_issue_status,
     get_repo_short_name_from_full,
     get_stage_display_name,
     truncate_title,

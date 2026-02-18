@@ -397,11 +397,13 @@ def create_startup_script(
     initial_cmd = config["initial_command"] if config else None
     emoji = config["emoji"] if config else "📋"
 
-    # Truncate title if too long
+    # Default: use raw title (for non-Windows platforms when implemented)
     title_display = issue_title[:58] if len(issue_title) > 58 else issue_title
 
     if is_windows:
-        title_display = _escape_batch_title(title_display)
+        # Escape first so expansion from escaping is counted in the truncation
+        title_display = _escape_batch_title(issue_title)
+        title_display = title_display[:58].rstrip("^")
         if is_intervention:
             # Intervention mode - plain claude, no automation
             script_content = INTERVENTION_SCRIPT_WINDOWS.format(

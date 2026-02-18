@@ -17,6 +17,7 @@ import shutil
 import stat
 import sys
 import tempfile
+import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
@@ -82,7 +83,7 @@ def _rmtree_remove_readonly(func: Callable[..., None], path: str, exc: object) -
     func(path)
 
 
-def _is_directory_empty(path: Path) -> bool:
+def is_directory_empty(path: Path) -> bool:
     """Check if a directory is empty.
 
     Args:
@@ -183,16 +184,19 @@ def _try_delete_empty_directory(path: Path, staging_dir: Path | None) -> bool:
     Returns:
         True if the directory was deleted or moved, False otherwise.
     """
-    # First attempt: simple rmdir
-    try:
-        path.rmdir()
-        if not path.exists():
-            logger.debug("Deleted empty directory: %s", path)
-            return True
-    except (PermissionError, OSError):
-        pass  # Expected if locked
+    # Attempt rmdir up to 3 times, sleeping 1 s between failed attempts
+    for attempt in range(3):
+        try:
+            path.rmdir()
+            if not path.exists():
+                logger.debug("Deleted empty directory: %s", path)
+                return True
+        except (PermissionError, OSError):
+            if attempt < 2:  # sleep only between attempts, not after last
+                time.sleep(1)
 
-    # Directory is locked - try moving to staging
+    logger.debug("rmdir failed after 3 attempts, trying staging: %s", path)
+    # All attempts failed — try moving to staging
     if _move_to_staging(path, staging_dir):
         logger.debug("Moved locked empty directory to staging: %s", path)
         return True
@@ -325,7 +329,7 @@ def safe_delete_folder(
 
         # Special handling for empty directories
         # Empty dirs can be locked at the directory level (not file level)
-        if _is_directory_empty(path):
+        if is_directory_empty(path):
             if _try_delete_empty_directory(path, resolved_staging):
                 break
             # If we couldn't delete an empty dir, no point retrying with rmtree

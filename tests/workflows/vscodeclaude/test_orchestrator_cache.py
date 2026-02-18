@@ -27,7 +27,7 @@ class TestBuildCachedIssuesByRepo:
         - First call: additional_issues=[414, 408]
         - Second call: additional_issues=[123]
         """
-        from mcp_coder.workflows.vscodeclaude.orchestrator import (
+        from mcp_coder.workflows.vscodeclaude.session_restart import (
             _build_cached_issues_by_repo,
         )
 
@@ -118,13 +118,13 @@ class TestBuildCachedIssuesByRepo:
 
         with (
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager"
+                "mcp_coder.workflows.vscodeclaude.session_restart.IssueManager"
             ) as mock_issue_manager_class,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.get_all_cached_issues"
+                "mcp_coder.workflows.vscodeclaude.session_restart.get_all_cached_issues"
             ) as mock_get_cache,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.get_cache_refresh_minutes"
+                "mcp_coder.workflows.vscodeclaude.session_restart.get_cache_refresh_minutes"
             ) as mock_refresh_minutes,
         ):
             # Mock IssueManager instantiation
@@ -196,12 +196,12 @@ class TestBuildCachedIssuesByRepo:
         - No cache fetches
         - No errors
         """
-        from mcp_coder.workflows.vscodeclaude.orchestrator import (
+        from mcp_coder.workflows.vscodeclaude.session_restart import (
             _build_cached_issues_by_repo,
         )
 
         with patch(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_all_cached_issues"
+            "mcp_coder.workflows.vscodeclaude.session_restart.get_all_cached_issues"
         ) as mock_get_cache:
             result = _build_cached_issues_by_repo([])
 
@@ -227,7 +227,7 @@ class TestRestartClosedSessions:
         - Issue #414 is in cache (closed issue from session)
         - Issue #100 is in cache (open issue from session)
         """
-        from mcp_coder.workflows.vscodeclaude.orchestrator import (
+        from mcp_coder.workflows.vscodeclaude.session_restart import (
             restart_closed_sessions,
         )
 
@@ -283,16 +283,16 @@ class TestRestartClosedSessions:
 
         with (
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.load_sessions"
+                "mcp_coder.workflows.vscodeclaude.session_restart.load_sessions"
             ) as mock_load,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active"
+                "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active"
             ) as mock_active,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos"
+                "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos"
             ) as mock_repos,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator._build_cached_issues_by_repo"
+                "mcp_coder.workflows.vscodeclaude.session_restart._build_cached_issues_by_repo"
             ) as mock_build_cache,
         ):
             # Setup mocks
@@ -322,7 +322,7 @@ class TestRestartClosedSessions:
         - Provided cache is used (not rebuilt)
         - No additional cache fetch calls
         """
-        from mcp_coder.workflows.vscodeclaude.orchestrator import (
+        from mcp_coder.workflows.vscodeclaude.session_restart import (
             restart_closed_sessions,
         )
 
@@ -357,16 +357,16 @@ class TestRestartClosedSessions:
 
         with (
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.load_sessions"
+                "mcp_coder.workflows.vscodeclaude.session_restart.load_sessions"
             ) as mock_load,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active"
+                "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active"
             ) as mock_active,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos"
+                "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos"
             ) as mock_repos,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator._build_cached_issues_by_repo"
+                "mcp_coder.workflows.vscodeclaude.session_restart._build_cached_issues_by_repo"
             ) as mock_build_cache,
         ):
             # Setup mocks
@@ -395,12 +395,12 @@ class TestRestartClosedSessions:
         """
         import logging
 
-        from mcp_coder.workflows.vscodeclaude.orchestrator import (
+        from mcp_coder.workflows.vscodeclaude.session_restart import (
             restart_closed_sessions,
         )
 
         caplog.set_level(
-            logging.INFO, logger="mcp_coder.workflows.vscodeclaude.orchestrator"
+            logging.INFO, logger="mcp_coder.workflows.vscodeclaude.session_restart"
         )
 
         # Mock session
@@ -433,20 +433,20 @@ class TestRestartClosedSessions:
 
         with (
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.load_sessions"
+                "mcp_coder.workflows.vscodeclaude.session_restart.load_sessions"
             ) as mock_load,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active"
+                "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active"
             ) as mock_active,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos"
+                "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos"
             ) as mock_repos,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator._build_cached_issues_by_repo"
+                "mcp_coder.workflows.vscodeclaude.session_restart._build_cached_issues_by_repo"
             ) as mock_build_cache,
             patch("pathlib.Path.exists") as mock_exists,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.launch_vscode"
+                "mcp_coder.workflows.vscodeclaude.session_restart.launch_vscode"
             ) as mock_launch,
         ):
             # Setup mocks
@@ -478,16 +478,16 @@ class TestRestartClosedSessions:
         - No cache fetches
         - No errors
         """
-        from mcp_coder.workflows.vscodeclaude.orchestrator import (
+        from mcp_coder.workflows.vscodeclaude.session_restart import (
             restart_closed_sessions,
         )
 
         with (
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.load_sessions"
+                "mcp_coder.workflows.vscodeclaude.session_restart.load_sessions"
             ) as mock_load,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator._build_cached_issues_by_repo"
+                "mcp_coder.workflows.vscodeclaude.session_restart._build_cached_issues_by_repo"
             ) as mock_build_cache,
         ):
             # No sessions

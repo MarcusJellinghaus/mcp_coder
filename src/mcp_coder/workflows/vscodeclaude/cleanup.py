@@ -6,16 +6,17 @@ from pathlib import Path
 from ...utils.folder_deletion import (
     DeletionFailureReason,
     DeletionResult,
+    is_directory_empty,
     safe_delete_folder,
 )
 from ...utils.github_operations.issues import IssueData, IssueManager
 from ...utils.github_operations.issues.cache import get_all_cached_issues
+from .config import _get_configured_repos
 from .issues import (
     get_ignore_labels,
     get_matching_ignore_label,
     is_status_eligible_for_session,
 )
-from .orchestrator import _get_configured_repos
 from .sessions import (
     is_session_active,
     load_sessions,
@@ -254,10 +255,25 @@ def cleanup_stale_sessions(
             result["skipped"].append(folder)
 
         else:  # "No Git" or "Error"
-            # Skip - needs manual investigation
-            logger.warning("Skipping folder (%s): %s", git_status.lower(), folder)
-            print(f"[WARN] Skipping ({git_status.lower()}): {folder}")
-            result["skipped"].append(folder)
+            folder_path = Path(folder)
+            if is_directory_empty(folder_path):
+                # Empty folder — safe to delete regardless of git status
+                if dry_run:
+                    print(
+                        f"Add --cleanup to delete (empty, {git_status.lower()}): {folder}"
+                    )
+                else:
+                    if delete_session_folder(session):
+                        print(f"Deleted: {folder}")
+                        result["deleted"].append(folder)
+                    else:
+                        print(f"Failed to delete: {folder}")
+                        result["skipped"].append(folder)
+            else:
+                # Non-empty — needs manual investigation
+                logger.warning("Skipping folder (%s): %s", git_status.lower(), folder)
+                print(f"[WARN] Skipping ({git_status.lower()}): {folder}")
+                result["skipped"].append(folder)
 
     if not stale_sessions:
         print("No stale sessions to clean up.")

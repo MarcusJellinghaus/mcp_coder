@@ -397,7 +397,9 @@ class TestCleanup:
             "is_intervention": False,
         }
 
-        (tmp_path / "no_git_folder").mkdir()
+        no_git_folder = tmp_path / "no_git_folder"
+        no_git_folder.mkdir()
+        (no_git_folder / "some_file.txt").write_text("x")
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
@@ -424,7 +426,9 @@ class TestCleanup:
             "is_intervention": False,
         }
 
-        (tmp_path / "error_folder").mkdir()
+        error_folder = tmp_path / "error_folder"
+        error_folder.mkdir()
+        (error_folder / "some_file.txt").write_text("x")
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
@@ -436,6 +440,124 @@ class TestCleanup:
         # Folder should still exist
         assert (tmp_path / "error_folder").exists()
         assert str(tmp_path / "error_folder") in result.get("skipped", [])
+
+    def test_cleanup_deletes_empty_no_git_folder(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Deletes empty No Git folders (no files inside)."""
+        no_git_session = {
+            "folder": str(tmp_path / "no_git_folder"),
+            "repo": "owner/repo",
+            "issue_number": 888,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        (tmp_path / "no_git_folder").mkdir()  # empty folder, no files
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
+            lambda cached_issues_by_repo=None: [(no_git_session, "No Git")],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.delete_session_folder",
+            lambda s: True,
+        )
+
+        result = cleanup_stale_sessions(dry_run=False)
+
+        assert str(tmp_path / "no_git_folder") in result.get("deleted", [])
+        assert str(tmp_path / "no_git_folder") not in result.get("skipped", [])
+
+    def test_cleanup_dry_run_reports_empty_no_git_folder(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Dry run reports empty No Git folder without deleting."""
+        no_git_session = {
+            "folder": str(tmp_path / "no_git_folder"),
+            "repo": "owner/repo",
+            "issue_number": 888,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        (tmp_path / "no_git_folder").mkdir()  # empty folder, no files
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
+            lambda cached_issues_by_repo=None: [(no_git_session, "No Git")],
+        )
+
+        result = cleanup_stale_sessions(dry_run=True)
+
+        assert result["deleted"] == []
+        assert "Add --cleanup to delete" in capsys.readouterr().out
+
+    def test_cleanup_deletes_empty_error_folder(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Deletes empty Error folders (no files inside)."""
+        error_session = {
+            "folder": str(tmp_path / "error_folder"),
+            "repo": "owner/repo",
+            "issue_number": 777,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        (tmp_path / "error_folder").mkdir()  # empty folder, no files
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
+            lambda cached_issues_by_repo=None: [(error_session, "Error")],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.delete_session_folder",
+            lambda s: True,
+        )
+
+        result = cleanup_stale_sessions(dry_run=False)
+
+        assert str(tmp_path / "error_folder") in result.get("deleted", [])
+        assert str(tmp_path / "error_folder") not in result.get("skipped", [])
+
+    def test_cleanup_dry_run_reports_empty_error_folder(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Dry run reports empty Error folder without deleting."""
+        error_session = {
+            "folder": str(tmp_path / "error_folder"),
+            "repo": "owner/repo",
+            "issue_number": 777,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        (tmp_path / "error_folder").mkdir()  # empty folder, no files
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
+            lambda cached_issues_by_repo=None: [(error_session, "Error")],
+        )
+
+        result = cleanup_stale_sessions(dry_run=True)
+
+        assert result["deleted"] == []
+        assert "Add --cleanup to delete" in capsys.readouterr().out
 
 
 class TestGetStaleSessions:

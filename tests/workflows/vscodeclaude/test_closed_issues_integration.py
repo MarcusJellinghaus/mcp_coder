@@ -35,12 +35,12 @@ class TestClosedIssueIntegration:
         """
         import logging
 
-        from mcp_coder.workflows.vscodeclaude.orchestrator import (
+        from mcp_coder.workflows.vscodeclaude.session_restart import (
             restart_closed_sessions,
         )
 
         caplog.set_level(
-            logging.INFO, logger="mcp_coder.workflows.vscodeclaude.orchestrator"
+            logging.INFO, logger="mcp_coder.workflows.vscodeclaude.session_restart"
         )
 
         # Mock session for closed issue
@@ -73,20 +73,20 @@ class TestClosedIssueIntegration:
 
         with (
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.load_sessions"
+                "mcp_coder.workflows.vscodeclaude.session_restart.load_sessions"
             ) as mock_load,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active"
+                "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active"
             ) as mock_active,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos"
+                "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos"
             ) as mock_repos,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator._build_cached_issues_by_repo"
+                "mcp_coder.workflows.vscodeclaude.session_restart._build_cached_issues_by_repo"
             ) as mock_build_cache,
             patch("pathlib.Path.exists") as mock_exists,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.launch_vscode"
+                "mcp_coder.workflows.vscodeclaude.session_restart.launch_vscode"
             ) as mock_launch,
         ):
             # Setup mocks
@@ -245,7 +245,7 @@ class TestClosedIssueIntegration:
         - Issues #414 and #408 are skipped (closed)
         - Issue #100 is considered for restart (if VSCode closed and repo clean)
         """
-        from mcp_coder.workflows.vscodeclaude.orchestrator import (
+        from mcp_coder.workflows.vscodeclaude.session_restart import (
             restart_closed_sessions,
         )
 
@@ -325,20 +325,20 @@ class TestClosedIssueIntegration:
 
         with (
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.load_sessions"
+                "mcp_coder.workflows.vscodeclaude.session_restart.load_sessions"
             ) as mock_load,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active"
+                "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active"
             ) as mock_active,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos"
+                "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos"
             ) as mock_repos,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator._build_cached_issues_by_repo"
+                "mcp_coder.workflows.vscodeclaude.session_restart._build_cached_issues_by_repo"
             ) as mock_build_cache,
             patch("pathlib.Path.exists") as mock_exists,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.launch_vscode"
+                "mcp_coder.workflows.vscodeclaude.session_restart.launch_vscode"
             ) as mock_launch,
         ):
             # Setup mocks
@@ -380,13 +380,13 @@ class TestClosedIssueIntegration:
         """
         import logging
 
-        from mcp_coder.workflows.vscodeclaude.orchestrator import (
+        from mcp_coder.workflows.vscodeclaude.session_restart import (
             restart_closed_sessions,
         )
         from mcp_coder.workflows.vscodeclaude.status import display_status_table
 
         caplog.set_level(
-            logging.INFO, logger="mcp_coder.workflows.vscodeclaude.orchestrator"
+            logging.INFO, logger="mcp_coder.workflows.vscodeclaude.session_restart"
         )
 
         # Mock session
@@ -422,20 +422,20 @@ class TestClosedIssueIntegration:
         # Step 1: Test restart_closed_sessions
         with (
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.load_sessions"
+                "mcp_coder.workflows.vscodeclaude.session_restart.load_sessions"
             ) as mock_load,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active"
+                "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active"
             ) as mock_active,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos"
+                "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos"
             ) as mock_repos,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator._build_cached_issues_by_repo"
+                "mcp_coder.workflows.vscodeclaude.session_restart._build_cached_issues_by_repo"
             ) as mock_build_cache,
             patch("pathlib.Path.exists") as mock_exists,
             patch(
-                "mcp_coder.workflows.vscodeclaude.orchestrator.launch_vscode"
+                "mcp_coder.workflows.vscodeclaude.session_restart.launch_vscode"
             ) as mock_launch,
         ):
             mock_load.return_value = {"sessions": sessions}

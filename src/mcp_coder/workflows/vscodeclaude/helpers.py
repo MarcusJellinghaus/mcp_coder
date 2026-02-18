@@ -13,52 +13,13 @@ from ...utils.github_operations.issues import IssueData
 from .config import get_vscodeclaude_config
 from .types import VSCodeClaudeSession
 
-
-def get_repo_short_name(repo_config: dict[str, str]) -> str:
-    """Extract short repo name from repo_url.
-
-    Args:
-        repo_config: Repository config dict with repo_url
-
-    Returns:
-        Short repo name (e.g., "mcp-coder" from the URL)
-    """
-    repo_url = repo_config.get("repo_url", "")
-    # Extract from URLs like https://github.com/owner/repo.git
-    if "/" in repo_url:
-        # Use endswith check instead of rstrip to avoid stripping extra characters
-        url_clean = repo_url.rstrip("/")
-        if url_clean.endswith(".git"):
-            url_clean = url_clean[:-4]
-        name = url_clean.split("/")[-1]
-        return name
-    return "repo"
-
-
-def get_repo_full_name(repo_config: dict[str, str]) -> str:
-    """Extract full repo name (owner/repo) from repo_url.
-
-    Args:
-        repo_config: Repository config dict with repo_url
-
-    Returns:
-        Full repo name (e.g., "owner/repo")
-
-    Raises:
-        ValueError: If repo URL cannot be parsed
-    """
-    repo_url = repo_config.get("repo_url", "")
-    # Extract from URLs like https://github.com/owner/repo.git
-    if "/" in repo_url:
-        # Use removesuffix instead of rstrip to avoid stripping extra characters
-        # rstrip(".git") would strip chars {'.','g','i','t'} which corrupts names like "mcp-config"
-        url_clean = repo_url.rstrip("/")
-        if url_clean.endswith(".git"):
-            url_clean = url_clean[:-4]
-        parts = url_clean.split("/")
-        if len(parts) >= 2:
-            return f"{parts[-2]}/{parts[-1]}"
-    raise ValueError(f"Cannot parse repo URL: {repo_url}")
+__all__ = [
+    "build_session",
+    "get_issue_status",
+    "get_repo_short_name_from_full",
+    "get_stage_display_name",
+    "truncate_title",
+]
 
 
 def get_repo_short_name_from_full(repo_full_name: str) -> str:
