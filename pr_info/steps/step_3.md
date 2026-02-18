@@ -68,7 +68,7 @@ Affected tests:
 - `test_includes_bot_pickup_status_sessions`
 - `test_includes_bot_busy_status_sessions`
 - `test_includes_pr_created_status_sessions`
-- `test_does_not_skip_zombie_vscode_session`
+- `test_does_not_skip_zombie_vscode_session` — unpack `session, git_status, reason = result[0]`
 - `test_get_stale_sessions_returns_stale` (in `TestCleanup`) uses index access
   `result[0][1]` — add `result[0][2]` assertion
 
@@ -91,9 +91,9 @@ Affected tests:
 - Assert `reason == "bot status"`
 
 #### `test_reason_stale_with_cache`
-- Issue open, eligible status in session, different eligible status in cache
-  (e.g. session has `"status-01:created"`, cache has `"status-04:plan-review"`)
-- Mock `is_session_stale` → `True` (or let it compute from the data)
+- Issue open, eligible status in session, different eligible status in cache:
+  session has `"status": "status-01:created"`, cached issue has label `"status-04:plan-review"`
+- Do NOT mock `is_session_stale` — let it compute from the real session/cache data
 - Assert `reason == "stale → status-04:plan-review"`
 
 #### `test_reason_stale_no_cache`
