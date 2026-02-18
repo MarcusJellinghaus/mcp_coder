@@ -82,7 +82,13 @@ if is_closed or is_blocked or is_ineligible or is_stale:
 
 **Important:** `is_session_stale` is only called when `is_closed`, `is_blocked`, and
 `is_ineligible` are all `False` — exactly as before (short-circuit preserved via explicit
-guard). `status_labels` is already in scope when `cached_for_stale_check` is not `None`.
+guard).
+
+Also add `status_labels: list[str] = []` before the `if cached_issues_by_repo:` block.
+This makes the scoping explicit and prevents any theoretical `UnboundLocalError` if the
+code is ever restructured. The reason-building logic reads `status_labels` only when
+`cached_for_stale_check is not None`, which is safe, but the initialisation removes the
+reliance on implicit scoping.
 
 ---
 
