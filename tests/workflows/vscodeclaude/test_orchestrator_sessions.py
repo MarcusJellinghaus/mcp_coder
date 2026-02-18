@@ -8,12 +8,14 @@ import pytest
 
 from mcp_coder.utils.github_operations.issues import IssueData
 from mcp_coder.utils.subprocess_runner import CalledProcessError
-from mcp_coder.workflows.vscodeclaude.orchestrator import (
+from mcp_coder.workflows.vscodeclaude.session_launch import (
+    prepare_and_launch_session,
+    process_eligible_issues,
+)
+from mcp_coder.workflows.vscodeclaude.session_restart import (
     BranchPrepResult,
     _prepare_restart_branch,
     handle_pr_created_issues,
-    prepare_and_launch_session,
-    process_eligible_issues,
     restart_closed_sessions,
 )
 from mcp_coder.workflows.vscodeclaude.sessions import load_sessions
@@ -32,43 +34,43 @@ class TestOrchestration:
         """Creates session with all components."""
         # Mock all dependencies
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.create_working_folder",
+            "mcp_coder.workflows.vscodeclaude.session_launch.create_working_folder",
             lambda p: True,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.setup_git_repo",
+            "mcp_coder.workflows.vscodeclaude.session_launch.setup_git_repo",
             lambda *args: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.validate_mcp_json",
+            "mcp_coder.workflows.vscodeclaude.session_launch.validate_mcp_json",
             lambda p: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.update_gitignore",
+            "mcp_coder.workflows.vscodeclaude.session_launch.update_gitignore",
             lambda p: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.create_workspace_file",
+            "mcp_coder.workflows.vscodeclaude.session_launch.create_workspace_file",
             lambda *args, **kwargs: tmp_path / "test.code-workspace",
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.create_startup_script",
+            "mcp_coder.workflows.vscodeclaude.session_launch.create_startup_script",
             lambda *args, **kwargs: tmp_path / ".vscodeclaude_start.bat",
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.create_vscode_task",
+            "mcp_coder.workflows.vscodeclaude.session_launch.create_vscode_task",
             lambda *args: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.create_status_file",
+            "mcp_coder.workflows.vscodeclaude.session_launch.create_status_file",
             lambda *args, **kwargs: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.launch_vscode",
+            "mcp_coder.workflows.vscodeclaude.session_launch.launch_vscode",
             lambda p: 9999,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.add_session",
+            "mcp_coder.workflows.vscodeclaude.session_launch.add_session",
             lambda s: None,
         )
 
@@ -123,7 +125,7 @@ class TestOrchestration:
             return True
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.create_working_folder",
+            "mcp_coder.workflows.vscodeclaude.session_launch.create_working_folder",
             mock_create_folder,
         )
 
@@ -131,7 +133,7 @@ class TestOrchestration:
             raise CalledProcessError(1, "git clone")
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.setup_git_repo",
+            "mcp_coder.workflows.vscodeclaude.session_launch.setup_git_repo",
             failing_git,
         )
 
@@ -179,19 +181,19 @@ class TestOrchestration:
             return True
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.create_working_folder",
+            "mcp_coder.workflows.vscodeclaude.session_launch.create_working_folder",
             mock_create_folder,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.setup_git_repo",
+            "mcp_coder.workflows.vscodeclaude.session_launch.setup_git_repo",
             lambda *args: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.validate_mcp_json",
+            "mcp_coder.workflows.vscodeclaude.session_launch.validate_mcp_json",
             lambda p: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.validate_setup_commands",
+            "mcp_coder.workflows.vscodeclaude.session_launch.validate_setup_commands",
             lambda c: None,
         )
 
@@ -199,7 +201,7 @@ class TestOrchestration:
             raise CalledProcessError(1, "uv sync")
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.run_setup_commands",
+            "mcp_coder.workflows.vscodeclaude.session_launch.run_setup_commands",
             failing_setup,
         )
 
@@ -227,7 +229,7 @@ class TestOrchestration:
 
         # Mock platform to Windows to trigger setup commands
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.platform.system",
+            "mcp_coder.workflows.vscodeclaude.session_launch.platform.system",
             lambda: "Windows",
         )
 
@@ -249,7 +251,7 @@ class TestOrchestration:
     ) -> None:
         """Doesn't start sessions beyond max."""
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_active_session_count",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_active_session_count",
             lambda: 2,
         )
 
@@ -289,7 +291,7 @@ class TestOrchestration:
 
         # Mock vscode not running
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
             lambda session: False,
         )
 
@@ -327,13 +329,13 @@ class TestOrchestration:
 
         # Mock vscode not running
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
             lambda session: False,
         )
 
         # Mock _get_configured_repos to return a different repo (not owner/unconfigured)
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
             lambda: {"owner/configured_repo"},  # Different from session's repo
         )
 
@@ -375,25 +377,25 @@ class TestOrchestration:
 
         # Mock vscode not running - patch at orchestrator since that's where it's imported
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
             lambda session: False,
         )
 
         # Mock _get_configured_repos to return the test repo
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
             lambda: {"owner/repo"},
         )
 
         # Mock regenerate_session_files to avoid issue fetching
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.regenerate_session_files",
+            "mcp_coder.workflows.vscodeclaude.session_restart.regenerate_session_files",
             lambda session, issue: tmp_path / "script.bat",
         )
 
         # Mock _prepare_restart_branch to avoid git operations
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._prepare_restart_branch",
+            "mcp_coder.workflows.vscodeclaude.session_restart._prepare_restart_branch",
             lambda *args, **kwargs: BranchPrepResult(True, None, None),
         )
 
@@ -406,7 +408,7 @@ class TestOrchestration:
         # Mock launch_vscode
         new_pid = 9999
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.launch_vscode",
+            "mcp_coder.workflows.vscodeclaude.session_restart.launch_vscode",
             lambda _: new_pid,
         )
 
@@ -461,7 +463,7 @@ class TestOrchestration:
 
         # Mock vscode running
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
             lambda session: True,
         )
 
@@ -527,11 +529,11 @@ class TestOrchestration:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
             lambda session: False,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
             lambda: {"owner/repo"},
         )
         working_folder = tmp_path / "repo_123"
@@ -581,19 +583,19 @@ class TestOrchestration:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
             lambda session: False,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
             lambda: {"owner/repo"},
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.regenerate_session_files",
+            "mcp_coder.workflows.vscodeclaude.session_restart.regenerate_session_files",
             lambda session, issue: tmp_path / "script.bat",
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.launch_vscode",
+            "mcp_coder.workflows.vscodeclaude.session_restart.launch_vscode",
             lambda _: 9999,
         )
 
@@ -605,7 +607,7 @@ class TestOrchestration:
         # Track status updates
         status_updates = []
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.update_session_status",
+            "mcp_coder.workflows.vscodeclaude.session_restart.update_session_status",
             lambda folder, status: status_updates.append((folder, status)),
         )
 
@@ -656,11 +658,11 @@ class TestOrchestration:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
             lambda session: False,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
             lambda: {"owner/repo"},
         )
 
@@ -713,11 +715,11 @@ class TestOrchestration:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
             lambda session: False,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
             lambda: {"owner/repo"},
         )
 
@@ -771,11 +773,11 @@ class TestOrchestration:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
             lambda session: False,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
             lambda: {"owner/repo"},
         )
 
@@ -829,25 +831,25 @@ class TestOrchestration:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
             lambda session: False,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
             lambda: {"owner/repo"},
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.regenerate_session_files",
+            "mcp_coder.workflows.vscodeclaude.session_restart.regenerate_session_files",
             lambda session, issue: tmp_path / "script.bat",
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.launch_vscode",
+            "mcp_coder.workflows.vscodeclaude.session_restart.launch_vscode",
             lambda _: 9999,
         )
 
         # Mock _prepare_restart_branch to avoid git operations
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._prepare_restart_branch",
+            "mcp_coder.workflows.vscodeclaude.session_restart._prepare_restart_branch",
             lambda *args, **kwargs: BranchPrepResult(True, None, None),
         )
 
@@ -903,32 +905,32 @@ class TestOrchestration:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
             lambda session: False,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
             lambda: {"owner/repo"},
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.regenerate_session_files",
+            "mcp_coder.workflows.vscodeclaude.session_restart.regenerate_session_files",
             lambda session, issue: tmp_path / "script.bat",
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.launch_vscode",
+            "mcp_coder.workflows.vscodeclaude.session_restart.launch_vscode",
             lambda _: 8888,
         )
 
         # Track status updates
         status_updates: list[tuple[str, str]] = []
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.update_session_status",
+            "mcp_coder.workflows.vscodeclaude.session_restart.update_session_status",
             lambda folder, status: status_updates.append((folder, status)),
         )
 
         # Mock _prepare_restart_branch to avoid git operations
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._prepare_restart_branch",
+            "mcp_coder.workflows.vscodeclaude.session_restart._prepare_restart_branch",
             lambda *args, **kwargs: BranchPrepResult(True, None, None),
         )
 
@@ -990,7 +992,7 @@ class TestPrepareRestartBranch:
         """status-01 doesn't require branch - returns success immediately."""
         # Mock git fetch to succeed
         mock_execute = monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.execute_subprocess",
+            "mcp_coder.workflows.vscodeclaude.session_restart.execute_subprocess",
             lambda cmd, options: type(
                 "Result", (), {"stdout": "", "stderr": "", "return_code": 0}
             )(),
@@ -1012,13 +1014,13 @@ class TestPrepareRestartBranch:
     ) -> None:
         """status-04 without linked branch returns No branch skip."""
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.execute_subprocess",
+            "mcp_coder.workflows.vscodeclaude.session_restart.execute_subprocess",
             lambda cmd, options: type(
                 "Result", (), {"stdout": "", "stderr": "", "return_code": 0}
             )(),
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_linked_branch_for_issue",
+            "mcp_coder.workflows.vscodeclaude.session_restart.get_linked_branch_for_issue",
             lambda _bm, _issue_num: None,
         )
         mock_branch_manager = type("MockBranchManager", (), {})()
@@ -1037,17 +1039,17 @@ class TestPrepareRestartBranch:
     ) -> None:
         """status-07 with dirty repo returns Dirty skip."""
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.execute_subprocess",
+            "mcp_coder.workflows.vscodeclaude.session_restart.execute_subprocess",
             lambda cmd, options: type(
                 "Result", (), {"stdout": "", "stderr": "", "return_code": 0}
             )(),
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_linked_branch_for_issue",
+            "mcp_coder.workflows.vscodeclaude.session_restart.get_linked_branch_for_issue",
             lambda _bm, _issue_num: "feat-branch",
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_folder_git_status",
+            "mcp_coder.workflows.vscodeclaude.session_restart.get_folder_git_status",
             lambda folder: "Dirty",
         )
         mock_branch_manager = type("MockBranchManager", (), {})()
@@ -1072,15 +1074,15 @@ class TestPrepareRestartBranch:
             return type("Result", (), {"stdout": "", "stderr": "", "return_code": 0})()
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.execute_subprocess",
+            "mcp_coder.workflows.vscodeclaude.session_restart.execute_subprocess",
             mock_execute,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_linked_branch_for_issue",
+            "mcp_coder.workflows.vscodeclaude.session_restart.get_linked_branch_for_issue",
             lambda _bm, _issue_num: "feat-123",
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_folder_git_status",
+            "mcp_coder.workflows.vscodeclaude.session_restart.get_folder_git_status",
             lambda folder: "Clean",
         )
         mock_branch_manager = type("MockBranchManager", (), {})()
@@ -1108,15 +1110,15 @@ class TestPrepareRestartBranch:
             return type("Result", (), {"stdout": "", "stderr": "", "return_code": 0})()
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.execute_subprocess",
+            "mcp_coder.workflows.vscodeclaude.session_restart.execute_subprocess",
             execute_side_effect,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_linked_branch_for_issue",
+            "mcp_coder.workflows.vscodeclaude.session_restart.get_linked_branch_for_issue",
             lambda _bm, _issue_num: "feat-branch",
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_folder_git_status",
+            "mcp_coder.workflows.vscodeclaude.session_restart.get_folder_git_status",
             lambda folder: "Clean",
         )
         mock_branch_manager = type("MockBranchManager", (), {})()
@@ -1141,7 +1143,7 @@ class TestPrepareRestartBranch:
             return type("Result", (), {"stdout": "", "stderr": "", "return_code": 0})()
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.execute_subprocess",
+            "mcp_coder.workflows.vscodeclaude.session_restart.execute_subprocess",
             mock_execute,
         )
         mock_branch_manager = type("MockBranchManager", (), {})()
@@ -1168,7 +1170,7 @@ class TestPrepareRestartBranch:
             return type("Result", (), {"stdout": "", "stderr": "", "return_code": 0})()
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.execute_subprocess",
+            "mcp_coder.workflows.vscodeclaude.session_restart.execute_subprocess",
             execute_side_effect,
         )
         mock_branch_manager = type("MockBranchManager", (), {})()
@@ -1187,7 +1189,7 @@ class TestPrepareRestartBranch:
     ) -> None:
         """Multiple branches linked to issue returns Multi-branch skip."""
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.execute_subprocess",
+            "mcp_coder.workflows.vscodeclaude.session_restart.execute_subprocess",
             lambda cmd, options: type(
                 "Result", (), {"stdout": "", "stderr": "", "return_code": 0}
             )(),
@@ -1197,7 +1199,7 @@ class TestPrepareRestartBranch:
             raise ValueError("Multiple branches linked")
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_linked_branch_for_issue",
+            "mcp_coder.workflows.vscodeclaude.session_restart.get_linked_branch_for_issue",
             raise_value_error,
         )
         mock_branch_manager = type("MockBranchManager", (), {})()
@@ -1225,11 +1227,11 @@ class TestRestartClosedSessionsBranchHandling:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
             lambda session: False,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
             lambda: {"owner/repo"},
         )
 
@@ -1240,11 +1242,11 @@ class TestRestartClosedSessionsBranchHandling:
         mock_branch_manager = MagicMock()
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager",
+            "mcp_coder.workflows.vscodeclaude.session_restart.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueBranchManager",
+            "mcp_coder.workflows.vscodeclaude.session_restart.IssueBranchManager",
             lambda **kwargs: mock_branch_manager,
         )
 
@@ -1267,15 +1269,15 @@ class TestRestartClosedSessionsBranchHandling:
             return BranchPrepResult(True, None, None)
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._prepare_restart_branch",
+            "mcp_coder.workflows.vscodeclaude.session_restart._prepare_restart_branch",
             mock_prepare,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.regenerate_session_files",
+            "mcp_coder.workflows.vscodeclaude.session_restart.regenerate_session_files",
             lambda session, issue: tmp_path / "script.bat",
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.launch_vscode",
+            "mcp_coder.workflows.vscodeclaude.session_restart.launch_vscode",
             lambda _: 9999,
         )
 
@@ -1333,11 +1335,11 @@ class TestRestartClosedSessionsBranchHandling:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
             lambda session: False,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
             lambda: {"owner/repo"},
         )
 
@@ -1348,16 +1350,16 @@ class TestRestartClosedSessionsBranchHandling:
         mock_branch_manager = MagicMock()
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager",
+            "mcp_coder.workflows.vscodeclaude.session_restart.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueBranchManager",
+            "mcp_coder.workflows.vscodeclaude.session_restart.IssueBranchManager",
             lambda **kwargs: mock_branch_manager,
         )
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._prepare_restart_branch",
+            "mcp_coder.workflows.vscodeclaude.session_restart._prepare_restart_branch",
             lambda **kwargs: BranchPrepResult(False, "No branch", None),
         )
 
@@ -1412,11 +1414,11 @@ class TestRestartClosedSessionsBranchHandling:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
             lambda session: False,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
             lambda: {"owner/repo"},
         )
 
@@ -1427,16 +1429,16 @@ class TestRestartClosedSessionsBranchHandling:
         mock_branch_manager = MagicMock()
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager",
+            "mcp_coder.workflows.vscodeclaude.session_restart.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueBranchManager",
+            "mcp_coder.workflows.vscodeclaude.session_restart.IssueBranchManager",
             lambda **kwargs: mock_branch_manager,
         )
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._prepare_restart_branch",
+            "mcp_coder.workflows.vscodeclaude.session_restart._prepare_restart_branch",
             lambda **kwargs: BranchPrepResult(False, "Dirty", None),
         )
 
@@ -1488,11 +1490,11 @@ class TestRestartClosedSessionsBranchHandling:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
             lambda session: False,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
             lambda: {"owner/repo"},
         )
 
@@ -1503,16 +1505,16 @@ class TestRestartClosedSessionsBranchHandling:
         mock_branch_manager = MagicMock()
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager",
+            "mcp_coder.workflows.vscodeclaude.session_restart.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueBranchManager",
+            "mcp_coder.workflows.vscodeclaude.session_restart.IssueBranchManager",
             lambda **kwargs: mock_branch_manager,
         )
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._prepare_restart_branch",
+            "mcp_coder.workflows.vscodeclaude.session_restart._prepare_restart_branch",
             lambda **kwargs: BranchPrepResult(True, None, "feat-123"),
         )
 
@@ -1524,7 +1526,7 @@ class TestRestartClosedSessionsBranchHandling:
 
         # Patch create_status_file in both orchestrator and workspace modules
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.create_status_file",
+            "mcp_coder.workflows.vscodeclaude.session_launch.create_status_file",
             mock_create_status,
         )
         monkeypatch.setattr(
@@ -1535,7 +1537,7 @@ class TestRestartClosedSessionsBranchHandling:
         # Mock create_startup_script to avoid Linux NotImplementedError
         mock_script_path = tmp_path / ".vscodeclaude_start.bat"
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.create_startup_script",
+            "mcp_coder.workflows.vscodeclaude.session_launch.create_startup_script",
             lambda **kwargs: mock_script_path,
         )
         monkeypatch.setattr(
@@ -1552,12 +1554,12 @@ class TestRestartClosedSessionsBranchHandling:
             return type("Result", (), {"stdout": "", "stderr": "", "return_code": 0})()
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.execute_subprocess",
+            "mcp_coder.workflows.vscodeclaude.session_launch.execute_subprocess",
             mock_execute,
         )
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.launch_vscode",
+            "mcp_coder.workflows.vscodeclaude.session_restart.launch_vscode",
             lambda _: 9999,
         )
 
@@ -1617,15 +1619,15 @@ class TestRestartClosedSessionsBranchHandling:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
             lambda session: False,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
             lambda: {"owner/repo"},
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._prepare_restart_branch",
+            "mcp_coder.workflows.vscodeclaude.session_restart._prepare_restart_branch",
             lambda **kwargs: BranchPrepResult(False, "No branch", None),
         )
 
@@ -1722,11 +1724,11 @@ class TestRestartClosedSessionsBranchHandling:
             status_file_calls.append(kwargs)
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.execute_subprocess",
+            "mcp_coder.workflows.vscodeclaude.session_launch.execute_subprocess",
             mock_execute,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.create_status_file",
+            "mcp_coder.workflows.vscodeclaude.session_launch.create_status_file",
             mock_create_status,
         )
         # Also patch in workspace module since that's where it's imported from
@@ -1738,7 +1740,7 @@ class TestRestartClosedSessionsBranchHandling:
         # Mock create_startup_script to avoid Linux NotImplementedError
         mock_script_path = tmp_path / ".vscodeclaude_start.bat"
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.create_startup_script",
+            "mcp_coder.workflows.vscodeclaude.session_launch.create_startup_script",
             lambda **kwargs: mock_script_path,
         )
         monkeypatch.setattr(
@@ -1747,7 +1749,7 @@ class TestRestartClosedSessionsBranchHandling:
         )
 
         # Call regenerate_session_files
-        from mcp_coder.workflows.vscodeclaude.orchestrator import (
+        from mcp_coder.workflows.vscodeclaude.session_launch import (
             regenerate_session_files,
         )
 
@@ -1800,11 +1802,11 @@ class TestBranchHandlingIntegration:
 
         # Phase 2: Issue status changes to status-04 with linked branch
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
             lambda session: False,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
             lambda: {"owner/repo"},
         )
 
@@ -1815,11 +1817,11 @@ class TestBranchHandlingIntegration:
         mock_branch_manager = MagicMock()
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager",
+            "mcp_coder.workflows.vscodeclaude.session_restart.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueBranchManager",
+            "mcp_coder.workflows.vscodeclaude.session_restart.IssueBranchManager",
             lambda **kwargs: mock_branch_manager,
         )
 
@@ -1837,7 +1839,7 @@ class TestBranchHandlingIntegration:
             return BranchPrepResult(True, None, "feat-100")
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._prepare_restart_branch",
+            "mcp_coder.workflows.vscodeclaude.session_restart._prepare_restart_branch",
             mock_prepare,
         )
 
@@ -1848,7 +1850,7 @@ class TestBranchHandlingIntegration:
             return tmp_path / "script.bat"
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.regenerate_session_files",
+            "mcp_coder.workflows.vscodeclaude.session_restart.regenerate_session_files",
             mock_regenerate,
         )
 
@@ -1856,7 +1858,7 @@ class TestBranchHandlingIntegration:
             operations.append(f"create_status:branch={kwargs.get('branch_name')}")
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.create_status_file",
+            "mcp_coder.workflows.vscodeclaude.session_launch.create_status_file",
             mock_create_status,
         )
 
@@ -1865,13 +1867,13 @@ class TestBranchHandlingIntegration:
             return 9999
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.launch_vscode",
+            "mcp_coder.workflows.vscodeclaude.session_restart.launch_vscode",
             mock_launch,
         )
 
         status_updates: list[str] = []
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.update_session_status",
+            "mcp_coder.workflows.vscodeclaude.session_restart.update_session_status",
             lambda folder, status: status_updates.append(status),
         )
 
@@ -1917,11 +1919,11 @@ class TestBranchHandlingIntegration:
 
         # Test process_eligible_issues skipping
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_active_session_count",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_active_session_count",
             lambda: 0,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_github_username",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_github_username",
             lambda: "testuser",
         )
 
@@ -1930,11 +1932,11 @@ class TestBranchHandlingIntegration:
         mock_branch_manager.get_linked_branches = lambda issue_num: []
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager",
+            "mcp_coder.workflows.vscodeclaude.session_launch.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueBranchManager",
+            "mcp_coder.workflows.vscodeclaude.session_launch.IssueBranchManager",
             lambda **kwargs: mock_branch_manager,
         )
 
@@ -1956,24 +1958,24 @@ class TestBranchHandlingIntegration:
         ]
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_all_cached_issues",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_all_cached_issues",
             lambda **kwargs: mock_issues,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._filter_eligible_vscodeclaude_issues",
+            "mcp_coder.workflows.vscodeclaude.session_launch._filter_eligible_vscodeclaude_issues",
             lambda issues, user: issues,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_session_for_issue",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_session_for_issue",
             lambda _repo, _num: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.load_repo_vscodeclaude_config",
+            "mcp_coder.workflows.vscodeclaude.session_launch.load_repo_vscodeclaude_config",
             lambda name: {},
         )
         # No linked branch
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_linked_branch_for_issue",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_linked_branch_for_issue",
             lambda _bm, _num: None,
         )
 
@@ -2003,11 +2005,11 @@ class TestBranchHandlingIntegration:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
             lambda session: False,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
             lambda: {"owner/repo"},
         )
 
@@ -2016,15 +2018,15 @@ class TestBranchHandlingIntegration:
             return type("Result", (), {"stdout": "", "stderr": "", "return_code": 0})()
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.execute_subprocess",
+            "mcp_coder.workflows.vscodeclaude.session_restart.execute_subprocess",
             mock_execute,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_linked_branch_for_issue",
+            "mcp_coder.workflows.vscodeclaude.session_restart.get_linked_branch_for_issue",
             lambda _bm, _num: "feat-branch",
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_folder_git_status",
+            "mcp_coder.workflows.vscodeclaude.session_restart.get_folder_git_status",
             lambda folder: "Dirty",
         )
 
@@ -2077,7 +2079,7 @@ class TestBranchHandlingIntegration:
             return type("Result", (), {"stdout": "", "stderr": "", "return_code": 0})()
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.execute_subprocess",
+            "mcp_coder.workflows.vscodeclaude.session_restart.execute_subprocess",
             mock_execute,
         )
 
@@ -2096,11 +2098,11 @@ class TestBranchHandlingIntegration:
 
         # Test with status-04
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_linked_branch_for_issue",
+            "mcp_coder.workflows.vscodeclaude.session_restart.get_linked_branch_for_issue",
             lambda _bm, _num: "feat-branch",
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_folder_git_status",
+            "mcp_coder.workflows.vscodeclaude.session_restart.get_folder_git_status",
             lambda folder: "Clean",
         )
 
@@ -2135,11 +2137,11 @@ class TestBranchHandlingIntegration:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.is_session_active",
+            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
             lambda session: False,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._get_configured_repos",
+            "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
             lambda: {"owner/repo"},
         )
 
@@ -2151,17 +2153,17 @@ class TestBranchHandlingIntegration:
         mock_branch_manager = MagicMock()
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager",
+            "mcp_coder.workflows.vscodeclaude.session_restart.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueBranchManager",
+            "mcp_coder.workflows.vscodeclaude.session_restart.IssueBranchManager",
             lambda **kwargs: mock_branch_manager,
         )
 
         # Return "No branch" skip reason
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._prepare_restart_branch",
+            "mcp_coder.workflows.vscodeclaude.session_restart._prepare_restart_branch",
             lambda **kwargs: BranchPrepResult(False, "No branch", None),
         )
 

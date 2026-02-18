@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from mcp_coder.utils.github_operations.issues import IssueData
-from mcp_coder.workflows.vscodeclaude.orchestrator import (
+from mcp_coder.workflows.vscodeclaude.session_launch import (
     launch_vscode,
     process_eligible_issues,
 )
@@ -28,7 +28,7 @@ class TestLaunch:
             return 12345
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.launch_process",
+            "mcp_coder.workflows.vscodeclaude.session_launch.launch_process",
             mock_launch_process,
         )
 
@@ -53,7 +53,7 @@ class TestLaunch:
             return 1
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.launch_process",
+            "mcp_coder.workflows.vscodeclaude.session_launch.launch_process",
             mock_launch_process,
         )
 
@@ -102,46 +102,46 @@ class TestProcessEligibleIssuesBranchRequirement:
         mock_branch_manager.get_linked_branches.return_value = []
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager",
+            "mcp_coder.workflows.vscodeclaude.session_launch.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueBranchManager",
+            "mcp_coder.workflows.vscodeclaude.session_launch.IssueBranchManager",
             lambda **kwargs: mock_branch_manager,
         )
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_all_cached_issues",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_all_cached_issues",
             lambda *args, **kwargs: [mock_issue],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._filter_eligible_vscodeclaude_issues",
+            "mcp_coder.workflows.vscodeclaude.session_launch._filter_eligible_vscodeclaude_issues",
             lambda *args, **kwargs: [mock_issue],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_linked_branch_for_issue",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_linked_branch_for_issue",
             lambda *args, **kwargs: None,  # No linked branch
         )
 
         mock_launch = MagicMock()
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.prepare_and_launch_session",
+            "mcp_coder.workflows.vscodeclaude.session_launch.prepare_and_launch_session",
             mock_launch,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_session_for_issue",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_session_for_issue",
             lambda *args, **kwargs: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_active_session_count",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_active_session_count",
             lambda: 0,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_github_username",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_github_username",
             lambda: "testuser",
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.load_repo_vscodeclaude_config",
+            "mcp_coder.workflows.vscodeclaude.session_launch.load_repo_vscodeclaude_config",
             lambda *args, **kwargs: {},
         )
 
@@ -181,46 +181,46 @@ class TestProcessEligibleIssuesBranchRequirement:
         mock_branch_manager.get_linked_branches.return_value = []
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager",
+            "mcp_coder.workflows.vscodeclaude.session_launch.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueBranchManager",
+            "mcp_coder.workflows.vscodeclaude.session_launch.IssueBranchManager",
             lambda **kwargs: mock_branch_manager,
         )
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_all_cached_issues",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_all_cached_issues",
             lambda *args, **kwargs: [mock_issue],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._filter_eligible_vscodeclaude_issues",
+            "mcp_coder.workflows.vscodeclaude.session_launch._filter_eligible_vscodeclaude_issues",
             lambda *args, **kwargs: [mock_issue],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_linked_branch_for_issue",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_linked_branch_for_issue",
             lambda *args, **kwargs: None,  # No linked branch
         )
 
         mock_launch = MagicMock()
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.prepare_and_launch_session",
+            "mcp_coder.workflows.vscodeclaude.session_launch.prepare_and_launch_session",
             mock_launch,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_session_for_issue",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_session_for_issue",
             lambda *args, **kwargs: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_active_session_count",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_active_session_count",
             lambda: 0,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_github_username",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_github_username",
             lambda: "testuser",
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.load_repo_vscodeclaude_config",
+            "mcp_coder.workflows.vscodeclaude.session_launch.load_repo_vscodeclaude_config",
             lambda *args, **kwargs: {},
         )
 
@@ -264,46 +264,46 @@ class TestProcessEligibleIssuesBranchRequirement:
         mock_branch_manager.get_linked_branches.return_value = []
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager",
+            "mcp_coder.workflows.vscodeclaude.session_launch.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueBranchManager",
+            "mcp_coder.workflows.vscodeclaude.session_launch.IssueBranchManager",
             lambda **kwargs: mock_branch_manager,
         )
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_all_cached_issues",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_all_cached_issues",
             lambda *args, **kwargs: [mock_issue],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._filter_eligible_vscodeclaude_issues",
+            "mcp_coder.workflows.vscodeclaude.session_launch._filter_eligible_vscodeclaude_issues",
             lambda *args, **kwargs: [mock_issue],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_linked_branch_for_issue",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_linked_branch_for_issue",
             lambda *args, **kwargs: None,
         )
 
         mock_launch = MagicMock()
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.prepare_and_launch_session",
+            "mcp_coder.workflows.vscodeclaude.session_launch.prepare_and_launch_session",
             mock_launch,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_session_for_issue",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_session_for_issue",
             lambda *args, **kwargs: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_active_session_count",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_active_session_count",
             lambda: 0,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_github_username",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_github_username",
             lambda: "testuser",
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.load_repo_vscodeclaude_config",
+            "mcp_coder.workflows.vscodeclaude.session_launch.load_repo_vscodeclaude_config",
             lambda *args, **kwargs: {},
         )
 
@@ -342,46 +342,46 @@ class TestProcessEligibleIssuesBranchRequirement:
         mock_branch_manager.get_linked_branches.return_value = ["feat-456"]
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager",
+            "mcp_coder.workflows.vscodeclaude.session_launch.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueBranchManager",
+            "mcp_coder.workflows.vscodeclaude.session_launch.IssueBranchManager",
             lambda **kwargs: mock_branch_manager,
         )
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_all_cached_issues",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_all_cached_issues",
             lambda *args, **kwargs: [mock_issue],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._filter_eligible_vscodeclaude_issues",
+            "mcp_coder.workflows.vscodeclaude.session_launch._filter_eligible_vscodeclaude_issues",
             lambda *args, **kwargs: [mock_issue],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_linked_branch_for_issue",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_linked_branch_for_issue",
             lambda *args, **kwargs: "feat-456",  # Has linked branch
         )
 
         mock_launch = MagicMock()
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.prepare_and_launch_session",
+            "mcp_coder.workflows.vscodeclaude.session_launch.prepare_and_launch_session",
             mock_launch,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_session_for_issue",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_session_for_issue",
             lambda *args, **kwargs: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_active_session_count",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_active_session_count",
             lambda: 0,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_github_username",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_github_username",
             lambda: "testuser",
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.load_repo_vscodeclaude_config",
+            "mcp_coder.workflows.vscodeclaude.session_launch.load_repo_vscodeclaude_config",
             lambda *args, **kwargs: {},
         )
 
@@ -423,20 +423,20 @@ class TestProcessEligibleIssuesBranchRequirement:
         ]
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueManager",
+            "mcp_coder.workflows.vscodeclaude.session_launch.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.IssueBranchManager",
+            "mcp_coder.workflows.vscodeclaude.session_launch.IssueBranchManager",
             lambda **kwargs: mock_branch_manager,
         )
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_all_cached_issues",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_all_cached_issues",
             lambda *args, **kwargs: [mock_issue],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator._filter_eligible_vscodeclaude_issues",
+            "mcp_coder.workflows.vscodeclaude.session_launch._filter_eligible_vscodeclaude_issues",
             lambda *args, **kwargs: [mock_issue],
         )
 
@@ -445,29 +445,29 @@ class TestProcessEligibleIssuesBranchRequirement:
             raise ValueError("Multiple branches linked to issue")
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_linked_branch_for_issue",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_linked_branch_for_issue",
             mock_get_linked_branch,
         )
 
         mock_launch = MagicMock()
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.prepare_and_launch_session",
+            "mcp_coder.workflows.vscodeclaude.session_launch.prepare_and_launch_session",
             mock_launch,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_session_for_issue",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_session_for_issue",
             lambda *args, **kwargs: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_active_session_count",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_active_session_count",
             lambda: 0,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.get_github_username",
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_github_username",
             lambda: "testuser",
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.orchestrator.load_repo_vscodeclaude_config",
+            "mcp_coder.workflows.vscodeclaude.session_launch.load_repo_vscodeclaude_config",
             lambda *args, **kwargs: {},
         )
 
