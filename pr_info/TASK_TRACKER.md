@@ -45,17 +45,17 @@ See [step_1.md](./steps/step_1.md) for full details.
 
 See [step_2.md](./steps/step_2.md) for full details.
 
-- [ ] Implement Step 2: update `cleanup_stale_sessions` in `src/mcp_coder/workflows/vscodeclaude/cleanup.py`
+- [x] Implement Step 2: update `cleanup_stale_sessions` in `src/mcp_coder/workflows/vscodeclaude/cleanup.py`
   - Change `for session, git_status in stale_sessions:` to `for session, git_status, reason in stale_sessions:`
   - Update non-empty No Git / Error warning messages to include `reason`:
     - `logger.warning("Skipping folder (%s, %s): %s", git_status.lower(), reason, folder)`
     - `print(f"[WARN] Skipping ({git_status.lower()}, {reason}): {folder}")`
   - Leave dirty-folder warnings unchanged
-- [ ] Quality checks for Step 2
-  - [ ] Run pylint and fix all issues found
-  - [ ] Run pytest and fix all failing tests
-  - [ ] Run mypy and fix all type errors
-- [ ] Prepare git commit message for Step 2
+- [x] Quality checks for Step 2
+  - [x] Run pylint and fix all issues found
+  - [x] Run pytest and fix all failing tests
+  - [x] Run mypy and fix all type errors
+- [x] Prepare git commit message for Step 2
 
 ---
 

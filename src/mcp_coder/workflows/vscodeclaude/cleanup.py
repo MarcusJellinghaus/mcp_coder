@@ -239,7 +239,7 @@ def cleanup_stale_sessions(
 
     stale_sessions = get_stale_sessions(cached_issues_by_repo=cached_issues_by_repo)
 
-    for session, git_status in stale_sessions:  # type: ignore[misc]  # Step 2 will unpack 3-tuple
+    for session, git_status, reason in stale_sessions:
         folder = session["folder"]
 
         if git_status == "Clean":
@@ -287,8 +287,10 @@ def cleanup_stale_sessions(
                         result["skipped"].append(folder)
             else:
                 # Non-empty — needs manual investigation
-                logger.warning("Skipping folder (%s): %s", git_status.lower(), folder)
-                print(f"[WARN] Skipping ({git_status.lower()}): {folder}")
+                logger.warning(
+                    "Skipping folder (%s, %s): %s", git_status.lower(), reason, folder
+                )
+                print(f"[WARN] Skipping ({git_status.lower()}, {reason}): {folder}")
                 result["skipped"].append(folder)
 
     if not stale_sessions:
