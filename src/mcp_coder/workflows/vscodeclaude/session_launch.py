@@ -16,12 +16,15 @@ from ...utils.subprocess_runner import (
     launch_process,
 )
 from ...utils.user_config import get_cache_refresh_minutes
-from .config import get_github_username, load_repo_vscodeclaude_config
+from .config import (
+    get_github_username,
+    get_repo_full_name,
+    get_repo_short_name,
+    load_repo_vscodeclaude_config,
+)
 from .helpers import (
     build_session,
     get_issue_status,
-    get_repo_full_name,
-    get_repo_short_name,
     get_repo_short_name_from_full,
     get_stage_display_name,
     truncate_title,

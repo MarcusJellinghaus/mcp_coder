@@ -397,6 +397,9 @@ def create_startup_script(
     initial_cmd = config["initial_command"] if config else None
     emoji = config["emoji"] if config else "📋"
 
+    # Default: use raw title (for non-Windows platforms when implemented)
+    title_display = issue_title[:58] if len(issue_title) > 58 else issue_title
+
     if is_windows:
         # Escape first so expansion from escaping is counted in the truncation
         title_display = _escape_batch_title(issue_title)

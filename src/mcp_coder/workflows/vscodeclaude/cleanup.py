@@ -6,7 +6,7 @@ from pathlib import Path
 from ...utils.folder_deletion import (
     DeletionFailureReason,
     DeletionResult,
-    _is_directory_empty,
+    is_directory_empty,
     safe_delete_folder,
 )
 from ...utils.github_operations.issues import IssueData, IssueManager
@@ -256,7 +256,7 @@ def cleanup_stale_sessions(
 
         else:  # "No Git" or "Error"
             folder_path = Path(folder)
-            if _is_directory_empty(folder_path):
+            if is_directory_empty(folder_path):
                 # Empty folder — safe to delete regardless of git status
                 if dry_run:
                     print(f"Add --cleanup to delete: {folder}")

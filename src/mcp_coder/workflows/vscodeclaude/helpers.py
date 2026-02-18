@@ -10,14 +10,12 @@ Contains utility functions for:
 from datetime import datetime, timezone
 
 from ...utils.github_operations.issues import IssueData
-from .config import get_repo_full_name, get_repo_short_name, get_vscodeclaude_config
+from .config import get_vscodeclaude_config
 from .types import VSCodeClaudeSession
 
 __all__ = [
     "build_session",
     "get_issue_status",
-    "get_repo_full_name",
-    "get_repo_short_name",
     "get_repo_short_name_from_full",
     "get_stage_display_name",
     "truncate_title",

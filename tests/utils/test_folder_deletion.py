@@ -19,10 +19,10 @@ from mcp_coder.utils.folder_deletion import (
     DeletionResult,
     _cleanup_staging,
     _get_default_staging_dir,
-    _is_directory_empty,
     _move_to_staging,
     _rmtree_remove_readonly,
     _try_delete_empty_directory,
+    is_directory_empty,
     safe_delete_folder,
 )
 
@@ -285,9 +285,9 @@ class TestSafeDeleteFolder:
 
         monkeypatch.setattr(shutil, "rmtree", mock_rmtree)
 
-        # Make _is_directory_empty return True after first rmtree attempt
+        # Make is_directory_empty return True after first rmtree attempt
         empty_check_count = 0
-        original_is_empty = _is_directory_empty
+        original_is_empty = is_directory_empty
 
         def mock_is_empty(path: Path) -> bool:
             nonlocal empty_check_count
@@ -297,7 +297,7 @@ class TestSafeDeleteFolder:
             return original_is_empty(path)
 
         monkeypatch.setattr(
-            "mcp_coder.utils.folder_deletion._is_directory_empty", mock_is_empty
+            "mcp_coder.utils.folder_deletion.is_directory_empty", mock_is_empty
         )
 
         # Make _try_delete_empty_directory succeed
@@ -537,28 +537,28 @@ class TestHelperFunctions:
         assert result.parent == Path(tempfile.gettempdir())
 
     def test_is_directory_empty_true(self, tmp_path: Path) -> None:
-        """Test _is_directory_empty returns True for empty directory."""
+        """Test is_directory_empty returns True for empty directory."""
         empty_dir = tmp_path / "empty"
         empty_dir.mkdir()
 
-        result = _is_directory_empty(empty_dir)
+        result = is_directory_empty(empty_dir)
 
         assert result is True
 
     def test_is_directory_empty_false(self, tmp_path: Path) -> None:
-        """Test _is_directory_empty returns False for non-empty directory."""
+        """Test is_directory_empty returns False for non-empty directory."""
         non_empty_dir = tmp_path / "non_empty"
         non_empty_dir.mkdir()
         (non_empty_dir / "file.txt").write_text("content")
 
-        result = _is_directory_empty(non_empty_dir)
+        result = is_directory_empty(non_empty_dir)
 
         assert result is False
 
     def test_is_directory_empty_permission_error(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test _is_directory_empty returns False on permission error."""
+        """Test is_directory_empty returns False on permission error."""
         dir_path = tmp_path / "locked"
         dir_path.mkdir()
 
@@ -567,7 +567,7 @@ class TestHelperFunctions:
 
         monkeypatch.setattr(Path, "iterdir", mock_iterdir)
 
-        result = _is_directory_empty(dir_path)
+        result = is_directory_empty(dir_path)
 
         assert result is False
 

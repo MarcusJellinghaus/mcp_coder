@@ -83,7 +83,7 @@ def _rmtree_remove_readonly(func: Callable[..., None], path: str, exc: object) -
     func(path)
 
 
-def _is_directory_empty(path: Path) -> bool:
+def is_directory_empty(path: Path) -> bool:
     """Check if a directory is empty.
 
     Args:
@@ -328,7 +328,7 @@ def safe_delete_folder(
 
         # Special handling for empty directories
         # Empty dirs can be locked at the directory level (not file level)
-        if _is_directory_empty(path):
+        if is_directory_empty(path):
             if _try_delete_empty_directory(path, resolved_staging):
                 break
             # If we couldn't delete an empty dir, no point retrying with rmtree
