@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Create `session_launch.py`
 
-- [ ] Implement: Create `src/mcp_coder/workflows/vscodeclaude/session_launch.py` — copy `launch_vscode`, `prepare_and_launch_session`, `process_eligible_issues`, `regenerate_session_files` verbatim from `orchestrator.py` with trimmed imports and `__all__` (see [step_1.md](./steps/step_1.md))
-- [ ] Quality checks: run pylint (error/fatal), mypy — fix any import errors found, no logic changes
-- [ ] Git commit message: `refactor: extract session launch functions into session_launch.py`
+- [x] Implement: Create `src/mcp_coder/workflows/vscodeclaude/session_launch.py` — copy `launch_vscode`, `prepare_and_launch_session`, `process_eligible_issues`, `regenerate_session_files` verbatim from `orchestrator.py` with trimmed imports and `__all__` (see [step_1.md](./steps/step_1.md))
+- [x] Quality checks: run pylint (error/fatal), mypy — fix any import errors found, no logic changes
+- [x] Git commit message: `refactor: extract session launch functions into session_launch.py`
 
 ### Step 2: Move `_get_configured_repos` to `config.py`, Update `cleanup.py`
 
