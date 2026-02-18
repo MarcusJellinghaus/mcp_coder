@@ -63,7 +63,7 @@ See [step_2.md](./steps/step_2.md) for full details.
 
 See [step_3.md](./steps/step_3.md) for full details.
 
-- [ ] Implement Step 3: update `tests/workflows/vscodeclaude/test_cleanup.py`
+- [x] Implement Step 3: update `tests/workflows/vscodeclaude/test_cleanup.py`
   - **Fix existing tests (2-tuple → 3-tuple mocks):** Add dummy reason string to all `monkeypatch.setattr` lambdas returning `get_stale_sessions` results in `TestCleanup`:
     - `test_cleanup_stale_sessions_dry_run`
     - `test_cleanup_stale_sessions_skips_dirty`
@@ -94,11 +94,11 @@ See [step_3.md](./steps/step_3.md) for full details.
   - **Extend two warning tests with `capsys`:**
     - `test_cleanup_skips_no_git_folder` — add `capsys`, assert `"no git, closed"` in stdout
     - `test_cleanup_skips_error_folder` — add `capsys`, assert `"error, blocked"` in stdout
-- [ ] Quality checks for Step 3
-  - [ ] Run pylint and fix all issues found
-  - [ ] Run pytest and fix all failing tests
-  - [ ] Run mypy and fix all type errors
-- [ ] Prepare git commit message for Step 3
+- [x] Quality checks for Step 3
+  - [x] Run pylint and fix all issues found
+  - [x] Run pytest and fix all failing tests
+  - [x] Run mypy and fix all type errors
+- [x] Prepare git commit message for Step 3
 
 ---
 
