@@ -249,6 +249,7 @@ def process_eligible_issues(
     vscodeclaude_config: VSCodeClaudeConfig,
     max_sessions: int,
     repo_filter: str | None = None,
+    all_cached_issues: list[IssueData] | None = None,
 ) -> list[VSCodeClaudeSession]:
     """Process eligible issues for a repository.
 
@@ -300,12 +301,16 @@ def process_eligible_issues(
     branch_manager = IssueBranchManager(repo_url=repo_url)
 
     # Get all cached issues and filter for vscodeclaude eligibility
-    all_cached_issues = get_all_cached_issues(
-        repo_full_name=repo_full_name,
-        issue_manager=issue_manager,
-        force_refresh=False,
-        cache_refresh_minutes=get_cache_refresh_minutes(),
-    )
+    if all_cached_issues is None:
+        logger.debug(
+            "process_eligible_issues: no pre-fetched issues provided, fetching from cache"
+        )
+        all_cached_issues = get_all_cached_issues(
+            repo_full_name=repo_full_name,
+            issue_manager=issue_manager,
+            force_refresh=False,
+            cache_refresh_minutes=get_cache_refresh_minutes(),
+        )
     eligible_issues = _filter_eligible_vscodeclaude_issues(
         all_cached_issues, github_username
     )

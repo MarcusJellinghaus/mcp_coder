@@ -27,14 +27,14 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 See [step_1.md](./steps/step_1.md) for full details.
 
-- [ ] Read `tests/workflows/vscodeclaude/test_orchestrator_launch.py` and `src/mcp_coder/workflows/vscodeclaude/session_launch.py` in full before making changes
-- [ ] Add test class `TestProcessEligibleIssuesPrefetchedIssues` with test `test_pre_fetched_issues_bypasses_get_all_cached_issues` to `test_orchestrator_launch.py`
-- [ ] Add `all_cached_issues: list[IssueData] | None = None` optional parameter to `process_eligible_issues` in `session_launch.py`
-- [ ] Replace unconditional `get_all_cached_issues` call with conditional guard (only call when `all_cached_issues is None`)
-- [ ] Run pylint, fix all issues found
-- [ ] Run pytest, confirm new test passes and no existing tests are broken
-- [ ] Run mypy, fix all issues found
-- [ ] Prepare git commit message for Step 1
+- [x] Read `tests/workflows/vscodeclaude/test_orchestrator_launch.py` and `src/mcp_coder/workflows/vscodeclaude/session_launch.py` in full before making changes
+- [x] Add test class `TestProcessEligibleIssuesPrefetchedIssues` with test `test_pre_fetched_issues_bypasses_get_all_cached_issues` to `test_orchestrator_launch.py`
+- [x] Add `all_cached_issues: list[IssueData] | None = None` optional parameter to `process_eligible_issues` in `session_launch.py`
+- [x] Replace unconditional `get_all_cached_issues` call with conditional guard (only call when `all_cached_issues is None`)
+- [x] Run pylint, fix all issues found
+- [x] Run pytest, confirm new test passes and no existing tests are broken
+- [x] Run mypy, fix all issues found
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Pass Pre-Fetched Issues from Caller in `execute_coordinator_vscodeclaude`
 
