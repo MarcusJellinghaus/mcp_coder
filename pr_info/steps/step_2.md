@@ -21,10 +21,11 @@ Modify `src/mcp_coder/utils/github_operations/label_config.py` as follows:
        return config_resource
 
 3. Change `load_labels_config` signature to accept `Path | Traversable`.
-   Replace the existing body with branching logic:
-   - If the argument is a Path: keep existing behaviour (exists() check + open())
-   - If it is a Traversable: call .read_text(encoding="utf-8") and parse with json.loads()
-     (no filesystem existence check needed — the resource is bundled)
+   Replace the existing body with the simplified logic:
+   - Raise FileNotFoundError only if the argument is a Path and does not exist
+   - Call .read_text(encoding="utf-8") on the argument (works for both Path and Traversable)
+   - Parse with json.loads() and validate "workflow_labels" key as before
+   (No if/else split needed — both types share .read_text())
 
 4. Update the docstring of `load_labels_config` to reflect the new accepted types.
 
@@ -75,17 +76,17 @@ def load_labels_config(config_path: Path | Traversable) -> Dict[str, Any]:
 
 ```python
 # load_labels_config body
-if isinstance(config_path, Path):
-    if not config_path.exists():
-        raise FileNotFoundError(f"Label configuration not found: {config_path}")
-    text = config_path.read_text(encoding="utf-8")
-else:                                          # Traversable (bundled resource)
-    text = config_path.read_text(encoding="utf-8")
+if isinstance(config_path, Path) and not config_path.exists():
+    raise FileNotFoundError(f"Label configuration not found: {config_path}")
+text = config_path.read_text(encoding="utf-8")
 config = json.loads(text)
 if "workflow_labels" not in config:
     raise ValueError("Configuration missing required key: 'workflow_labels'")
 return config
 ```
+
+> Both `Path` and `Traversable` expose `.read_text()`, so the branch only needs to
+> guard the `FileNotFoundError`. No duplication.
 
 ## DATA
 
