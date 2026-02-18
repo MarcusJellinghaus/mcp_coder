@@ -552,6 +552,34 @@ class TestCreateStartupScript:
         content = script_path.read_text(encoding="utf-8")
         assert "/issue_analyse 123" in content
 
+    def test_batch_title_escapes_redirection_characters(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+    ) -> None:
+        """Issue title with > is escaped in .bat to prevent shell redirection."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: "Windows",
+        )
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=453,
+            issue_title="Fix issue -> Create and start",
+            status="status-07:code-review",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/453",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        # The > should be escaped as ^> to prevent shell redirection
+        assert "^>" in content
+        # The unescaped sequence -> should not appear in the title section
+        assert "-> Create" not in content
+
     def test_includes_discussion_section(
         self,
         tmp_path: Path,

@@ -387,6 +387,8 @@ def display_status_table(
 
         if needs_branch:
             action = "-> Needs branch"
+        elif not is_status_eligible_for_session(status):
+            action = "(awaiting merge)"
         else:
             action = "-> Create and start"
 
