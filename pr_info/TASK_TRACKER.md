@@ -43,9 +43,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 4: Update `__init__.py` — Docstring + Re-exports
 
-- [ ] Implement: Replace short `__init__.py` docstring with full ~310-line docstring from `orchestrator.py`; replace `from .orchestrator import (...)` block with imports from `.session_launch`, `.session_restart`, and `.helpers`; add `regenerate_session_files` to `__all__` (see [step_4.md](./steps/step_4.md))
-- [ ] Quality checks: run pylint (error/fatal), mypy, pytest (excluding integration markers) — fix any import errors, no logic changes
-- [ ] Git commit message: `refactor: update __init__.py re-exports and add package docstring`
+- [x] Implement: Replace short `__init__.py` docstring with full ~310-line docstring from `orchestrator.py`; replace `from .orchestrator import (...)` block with imports from `.session_launch`, `.session_restart`, and `.helpers`; add `regenerate_session_files` to `__all__` (see [step_4.md](./steps/step_4.md))
+- [x] Quality checks: run pylint (error/fatal), mypy, pytest (excluding integration markers) — fix any import errors, no logic changes
+- [x] Git commit message: `refactor: update __init__.py re-exports and add package docstring`
 
 ### Step 5: Delete `orchestrator.py` and Update `.large-files-allowlist`
 
