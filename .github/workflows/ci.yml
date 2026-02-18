@@ -105,7 +105,7 @@ jobs:
         check:
           - {name: "black", cmd: "black --version && black --check src tests"}
           - {name: "isort", cmd: "isort --version && isort --check --profile=black --float-to-top src tests"}
-          - {name: "pylint", cmd: "pylint --version && pylint -E ./src ./tests"}
+          - {name: "pylint", cmd: "pylint --version && pylint -E --enable=R0401 ./src ./tests"}  # -E: errors only; R0401: cyclic-import (catches circular import bugs)
           - {name: "unit-tests", cmd: "pytest --version && pytest -m 'not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration' --junitxml=unit-tests.xml"}
           - {name: "integration-tests", cmd: "pytest --version && pytest -m 'git_integration or formatter_integration or github_integration' --junitxml=integration-tests.xml"}
           - {name: "mypy", cmd: "mypy --version && mypy --strict src tests"}
