@@ -34,15 +34,13 @@ src/mcp_coder/workflows/vscodeclaude/orchestrator.py
 
 ## HOW
 
-Before deleting, verify no remaining imports from `orchestrator`:
+Before deleting, verify no remaining imports from `orchestrator` in `src/`.
+Use `mcp__filesystem__read_file` to read the import blocks of:
+- `src/mcp_coder/workflows/vscodeclaude/cleanup.py`
+- `src/mcp_coder/workflows/vscodeclaude/session_restart.py`
+- `src/mcp_coder/workflows/vscodeclaude/__init__.py`
 
-```bash
-# Should return no results:
-grep -r "from .orchestrator import" src/mcp_coder/workflows/vscodeclaude/
-grep -r "vscodeclaude.orchestrator" src/ tests/
-```
-
-If any results appear, fix them before deleting.
+If any of these files still import from `.orchestrator`, fix them before deleting.
 
 > **Note on test files:** The test files `test_orchestrator_*.py` import from and patch `mcp_coder.workflows.vscodeclaude.orchestrator.*`. These will fail after deletion. This is **expected and accepted** — test restructuring is tracked in a separate follow-up issue per the issue spec.
 
@@ -72,10 +70,12 @@ No data — this is a deletion step.
 Read pr_info/steps/summary.md and pr_info/steps/step_5.md.
 Steps 1–4 are complete.
 
-1. First, verify there are no remaining imports from orchestrator in src/:
-   Use Grep to search for "from .orchestrator" in src/mcp_coder/workflows/vscodeclaude/
-   and for "vscodeclaude.orchestrator" in src/.
-   If any results appear (other than in test files), fix them before proceeding.
+1. First, verify there are no remaining imports from orchestrator in src/.
+   Use mcp__filesystem__read_file to read the import blocks of:
+   - src/mcp_coder/workflows/vscodeclaude/cleanup.py
+   - src/mcp_coder/workflows/vscodeclaude/session_restart.py
+   - src/mcp_coder/workflows/vscodeclaude/__init__.py
+   If any of these files still import from `.orchestrator`, fix them before proceeding.
 
 2. Delete `src/mcp_coder/workflows/vscodeclaude/orchestrator.py` entirely.
    No re-export shim. No stub. Complete deletion per the refactoring guide.

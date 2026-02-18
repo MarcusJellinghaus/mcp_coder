@@ -110,6 +110,18 @@ No new data. `__init__.py` remains a re-export facade — no logic.
 Read pr_info/steps/summary.md and pr_info/steps/step_4.md.
 Steps 1–3 are complete.
 
+Before making any changes, verify that no code imports `get_stage_display_name` or
+`truncate_title` directly from `.orchestrator` (bypassing `__init__.py`).
+Use mcp__filesystem__read_file to read these files and check their import blocks:
+- src/mcp_coder/workflows/vscodeclaude/cleanup.py
+- src/mcp_coder/workflows/vscodeclaude/sessions.py
+- src/mcp_coder/workflows/vscodeclaude/status.py
+- src/mcp_coder/workflows/vscodeclaude/helpers.py
+- src/mcp_coder/workflows/vscodeclaude/workspace.py
+- src/mcp_coder/cli/commands/coordinator/core.py
+If any file imports these two functions directly from `.orchestrator`, fix those imports
+before proceeding.
+
 Modify `src/mcp_coder/workflows/vscodeclaude/__init__.py`:
 
 1. Replace the existing short module docstring with the full ~310-line docstring
@@ -130,7 +142,7 @@ Do NOT touch orchestrator.py yet.
 After making changes, run:
 - mcp__code-checker__run_pylint_check (categories: error, fatal)
 - mcp__code-checker__run_mypy_check
-- mcp__code-checker__run_pytest_check (extra_args: ["tests/workflows/vscodeclaude/"])
+- mcp__code-checker__run_pytest_check (extra_args: ["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration"])
 
 Fix any import errors, but make no logic changes.
 ```

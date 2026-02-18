@@ -50,7 +50,7 @@ vscodeclaude/
 session_restart.py
   └─imports─► session_launch.py   (regenerate_session_files, launch_vscode)
   └─imports─► config.py           (_get_configured_repos)
-  └─imports─► types.py            (BranchPrepResult defined here)
+  └─defines──  BranchPrepResult   (private NamedTuple, not re-exported)
 
 cleanup.py
   └─imports─► config.py           (_get_configured_repos)   ← was orchestrator
@@ -91,8 +91,8 @@ __init__.py
 | Step | Action | Files Touched |
 |---|---|---|
 | 1 | Create `session_launch.py` | new file |
-| 2 | Create `session_restart.py` | new file |
-| 3 | Move `_get_configured_repos` to `config.py`, update `cleanup.py` | config.py, cleanup.py |
+| 2 | Move `_get_configured_repos` to `config.py`, update `cleanup.py` | config.py, cleanup.py |
+| 3 | Create `session_restart.py` | new file |
 | 4 | Update `__init__.py` re-exports + docstring | __init__.py |
 | 5 | Delete `orchestrator.py`, update allowlist | orchestrator.py, .large-files-allowlist |
 | 6 | Verify: lint-imports, tach check, pytest | — |

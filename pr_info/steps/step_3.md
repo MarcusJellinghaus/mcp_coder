@@ -1,77 +1,90 @@
-# Step 3: Move `_get_configured_repos` to `config.py`, Update `cleanup.py`
+# Step 3: Create `session_restart.py`
 
 ## Context
 See `pr_info/steps/summary.md` for the full architectural overview.
-Steps 1 and 2 must be complete.
-This step moves the one helper function that belongs in `config.py` and fixes the one external consumer (`cleanup.py`) that currently imports it from `orchestrator`.
+Steps 1 and 2 must be complete (`session_launch.py` exists, `_get_configured_repos` is in `config.py`).
+This step extracts the five restart-related items from `orchestrator.py` into a new dedicated module.
 
 ---
 
 ## WHERE
 
-**Modify:** `src/mcp_coder/workflows/vscodeclaude/config.py`
-**Modify:** `src/mcp_coder/workflows/vscodeclaude/cleanup.py`
-**Modify:** `src/mcp_coder/workflows/vscodeclaude/session_restart.py` — update the temporary import from Step 2
+**Create:** `src/mcp_coder/workflows/vscodeclaude/session_restart.py`
+
+No test changes in this step — existing tests in `test_orchestrator_sessions.py` and `test_orchestrator_cache.py` still import from `orchestrator` and continue to pass because `orchestrator.py` still exists at this point.
 
 ---
 
 ## WHAT
 
-### `config.py` — add `_get_configured_repos`
+Items to move verbatim from `orchestrator.py`:
 
-Function moved verbatim from `orchestrator.py`:
-
-```python
-def _get_configured_repos() -> set[str]:
-    """Get set of repo full names from config."""
-    ...
-```
-
-Two imports must be added to `config.py` to support it:
-- `from ...utils.user_config import load_config` — already present in `config.py` via `get_config_values`; check if `load_config` specifically needs adding
-- `from .helpers import get_repo_full_name` — new import for `config.py`
-
-### `cleanup.py` — update import
-
-```python
-# Before:
-from .orchestrator import _get_configured_repos
-
-# After:
-from .config import _get_configured_repos
-```
-
-### `session_restart.py` — update temporary import from Step 2
-
-```python
-# Before (temporary from Step 2):
-from .orchestrator import _get_configured_repos
-
-# After:
-from .config import _get_configured_repos
-```
+| Item | Type | Note |
+|---|---|---|
+| `BranchPrepResult` | `NamedTuple` | Only used by the two functions below — kept here, not in `types.py` |
+| `_prepare_restart_branch` | private function | `(folder_path, current_status, branch_manager, issue_number) -> BranchPrepResult` |
+| `_build_cached_issues_by_repo` | private function | `(sessions) -> dict[str, dict[int, IssueData]]` |
+| `restart_closed_sessions` | public function | `(cached_issues_by_repo=None) -> list[VSCodeClaudeSession]` |
+| `handle_pr_created_issues` | public function | `(issues: list[IssueData]) -> None` |
 
 ---
 
 ## HOW
 
-**In `config.py`:** Add the function at the bottom of the file (after `sanitize_folder_name`), with any additional imports it needs at the top. The function uses `load_config` and `get_repo_full_name`.
+**Imports needed in `session_restart.py`** — take from `orchestrator.py`'s import block, keeping only what these items use, plus the new cross-module imports:
 
-Check `config.py` current imports:
-- `load_config` — NOT currently imported (it uses `get_config_values`); must be added
-- `get_repo_full_name` from `.helpers` — NOT currently imported; must be added
+```python
+import logging
+from collections import defaultdict
+from pathlib import Path
+from typing import NamedTuple
+
+from ...utils.github_operations.issues import (
+    IssueBranchManager, IssueData, IssueManager, get_all_cached_issues,
+)
+from ...utils.subprocess_runner import CalledProcessError, CommandOptions, execute_subprocess
+from ...utils.user_config import get_cache_refresh_minutes
+from .config import _get_configured_repos          # ← already in config.py after Step 2
+from .helpers import get_issue_status, get_repo_short_name_from_full, truncate_title
+from .issues import (
+    get_ignore_labels, get_linked_branch_for_issue,
+    get_matching_ignore_label, is_status_eligible_for_session,
+    status_requires_linked_branch,
+)
+from .sessions import (
+    add_session, clear_vscode_process_cache, clear_vscode_window_cache,
+    is_session_active, is_vscode_open_for_folder, load_sessions,
+    update_session_pid, update_session_status,
+)
+from .session_launch import launch_vscode, regenerate_session_files   # ← cross-module import
+from .status import get_folder_git_status
+from .types import VSCodeClaudeSession
+```
+
+**`__all__`** for the new file:
+```python
+__all__ = [
+    "restart_closed_sessions",
+    "handle_pr_created_issues",
+]
+```
+
+Note: `BranchPrepResult` is intentionally excluded from `__all__` — it is a private implementation detail used only within this module, and was never in `orchestrator.py.__all__`.
 
 ---
 
 ## ALGORITHM
 
 ```
-# Changes in this step
-1. In config.py: add `load_config` to user_config imports
-2. In config.py: add `from .helpers import get_repo_full_name`
-3. In config.py: paste _get_configured_repos() verbatim at end of file
-4. In cleanup.py: change `from .orchestrator import` → `from .config import`
-5. In session_restart.py: change `from .orchestrator import` → `from .config import`
+# session_restart.py structure
+1. Copy imports (trimmed to what these 5 items use)
+2. Define BranchPrepResult NamedTuple (verbatim from orchestrator.py)
+3. Define __all__ (restart_closed_sessions, handle_pr_created_issues only)
+4. Paste _prepare_restart_branch() verbatim
+5. Paste _build_cached_issues_by_repo() verbatim
+6. Paste restart_closed_sessions() verbatim
+   - Its inline `from .sessions import remove_session` stays as-is
+7. Paste handle_pr_created_issues() verbatim
 ```
 
 ---
@@ -79,11 +92,13 @@ Check `config.py` current imports:
 ## DATA
 
 ```python
-def _get_configured_repos() -> set[str]:
-    # Returns set of "owner/repo" strings for all repos in [coordinator.repos.*]
-    # Returns empty set if no repos configured
-    ...
+class BranchPrepResult(NamedTuple):
+    should_proceed: bool
+    skip_reason: str | None = None
+    branch_name: str | None = None
 ```
+
+All functions retain their existing signatures and return types.
 
 ---
 
@@ -91,29 +106,33 @@ def _get_configured_repos() -> set[str]:
 
 ```
 Read pr_info/steps/summary.md and pr_info/steps/step_3.md.
-Steps 1 and 2 are complete.
+Steps 1 and 2 are complete: session_launch.py exists, _get_configured_repos is in config.py.
 
-Make these three changes:
+Create the file `src/mcp_coder/workflows/vscodeclaude/session_restart.py`.
 
-1. In `src/mcp_coder/workflows/vscodeclaude/config.py`:
-   - Add `load_config` to the import from `...utils.user_config`
-   - Add `from .helpers import get_repo_full_name`
-   - Paste _get_configured_repos() verbatim from orchestrator.py at the end of the file
+Copy these items verbatim from `src/mcp_coder/workflows/vscodeclaude/orchestrator.py`:
+- BranchPrepResult (NamedTuple)
+- _prepare_restart_branch
+- _build_cached_issues_by_repo
+- restart_closed_sessions
+- handle_pr_created_issues
 
-2. In `src/mcp_coder/workflows/vscodeclaude/cleanup.py`:
-   - Change `from .orchestrator import _get_configured_repos`
-     to `from .config import _get_configured_repos`
+Key imports:
+- from .config import _get_configured_repos   (already there from Step 2 — import directly)
+- from .session_launch import launch_vscode, regenerate_session_files   (cross-module import)
+- Remove: imports only needed by session_launch functions (get_stage_display_name, platform,
+  shutil, get_repo_short_name, get_github_username, load_repo_vscodeclaude_config,
+  build_session, get_working_folder_path, and all workspace.* imports)
 
-3. In `src/mcp_coder/workflows/vscodeclaude/session_restart.py`:
-   - Change `from .orchestrator import _get_configured_repos`
-     to `from .config import _get_configured_repos`
+__all__ must contain only: ["restart_closed_sessions", "handle_pr_created_issues"]
+Do NOT include BranchPrepResult in __all__ — it is a private implementation detail.
 
 Do NOT modify any logic. Do NOT touch orchestrator.py yet.
 
-After making changes, run:
+After creating the file, run:
 - mcp__code-checker__run_pylint_check (categories: error, fatal)
 - mcp__code-checker__run_mypy_check
-- mcp__code-checker__run_pytest_check (extra_args: ["tests/workflows/vscodeclaude/"])
+- mcp__code-checker__run_pytest_check (extra_args: ["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration"])
 
 Fix any import errors found, but make no logic changes.
 ```
