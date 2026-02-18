@@ -663,6 +663,83 @@ class TestClosedIssuePrefixDisplay:
         # Should NOT show (Closed) prefix
         assert "(Closed)" not in captured.out
 
+    def test_stale_session_shows_current_github_status(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Stale session shows current GitHub status (not stored session status).
+
+        Regression test: when issue status changes from status-04:plan-review
+        to status-06:implementing, the display should show
+        '-> status-06:implementing' not '-> status-04:plan-review'.
+        """
+        folder = tmp_path / "test_folder"
+        folder.mkdir()
+
+        # Mock checks: not closed, not running, not dirty, stale
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
+            lambda s, cached_issues=None: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_session_active",
+            lambda session: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
+            lambda path: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
+            lambda s, cached_issues=None: True,
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 458,
+            "status": "status-04:plan-review",  # Stored (old) status
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        # Provide cache with updated (current) status
+        cached_issues_by_repo: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {
+                458: {
+                    "number": 458,
+                    "title": "Test",
+                    "body": "",
+                    "state": "open",
+                    "labels": ["status-06:implementing"],  # Current (new) status
+                    "assignees": [],
+                    "user": None,
+                    "created_at": None,
+                    "updated_at": None,
+                    "url": "...",
+                    "locked": False,
+                }
+            }
+        }
+
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            repo_filter=None,
+            cached_issues_by_repo=cached_issues_by_repo,
+        )
+
+        captured = capsys.readouterr()
+        assert "#458" in captured.out
+        # Should show the CURRENT status (from GitHub), not the stored status
+        assert "status-06:implementing" in captured.out
+        assert "-> status-06:implementing" in captured.out
+        # Should NOT show the old stored status
+        assert "status-04:plan-review" not in captured.out
+
 
 class TestBotStageSessionsDeleteAction:
     """Test bot stage sessions show simple delete action.
