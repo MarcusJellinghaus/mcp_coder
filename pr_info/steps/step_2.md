@@ -63,8 +63,17 @@ started = process_eligible_issues(
 - `repo_config` at this point in the loop is the raw dict from `load_repo_config`, so
   `repo_config.get("repo_url", "")` is the correct accessor (matches the existing pattern in
   `_build_cached_issues_by_repo`).
-- If `repo_full_name` is empty or not in the dict, `.get(..., {}).values()` safely returns an
-  empty list → `process_eligible_issues` falls back to fetching independently (backward-safe).
+- If `repo_full_name` is empty or not in the dict (i.e. cache build failed for this repo),
+  `.get(..., {}).values()` safely returns an empty list. `process_eligible_issues` receives `[]`
+  and skips `get_all_cached_issues` — no sessions are started for that repo this run.
+  Log an error so the silent "no sessions" behaviour is visible:
+  ```python
+  if not repo_full_name or repo_full_name not in cached_issues_by_repo:
+      logger.error(
+          "No cached issues available for repo %s (cache build may have failed) — skipping",
+          repo_name,
+      )
+  ```
 
 ---
 
@@ -92,9 +101,9 @@ process_eligible_issues(..., all_cached_issues=all_cached_issues)
 `all_cached_issues` derived: `list[IssueData]` — `.values()` of the inner dict, converted to list.
 
 Empty-list fallback: if `repo_full_name` is not a key in `cached_issues_by_repo` (e.g. URL parse
-failed earlier), `process_eligible_issues` receives `[]` — that is a valid non-None list so
-`get_all_cached_issues` is still skipped. This is acceptable: if the cache build failed for this
-repo, there is no fresh data to use anyway.
+failed or cache build threw an exception), `process_eligible_issues` receives `[]` — a valid
+non-None list, so `get_all_cached_issues` is still skipped. No sessions are started for that repo.
+An error is logged so the behaviour is visible (see HOW section above).
 
 ---
 
@@ -113,9 +122,14 @@ File to change:
 Instructions:
   1. Read the file in full before making any changes.
   2. Locate the per-repo loop in execute_coordinator_vscodeclaude (labelled "Step 4").
-  3. Immediately before the process_eligible_issues call, add two lines:
+  3. Immediately before the process_eligible_issues call, add:
        repo_full_name = _get_repo_full_name_from_url(repo_config.get("repo_url", ""))
        all_cached_issues = list(cached_issues_by_repo.get(repo_full_name, {}).values())
+       if not repo_full_name or repo_full_name not in cached_issues_by_repo:
+           logger.error(
+               "No cached issues available for repo %s (cache build may have failed) — skipping",
+               repo_name,
+           )
   4. Add all_cached_issues=all_cached_issues as a keyword argument to process_eligible_issues.
   5. Do not change anything else in the file.
   6. Run the full test suite and confirm no tests are broken.
