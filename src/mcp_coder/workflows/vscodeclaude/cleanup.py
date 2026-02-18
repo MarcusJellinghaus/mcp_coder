@@ -11,12 +11,12 @@ from ...utils.folder_deletion import (
 )
 from ...utils.github_operations.issues import IssueData, IssueManager
 from ...utils.github_operations.issues.cache import get_all_cached_issues
+from .config import _get_configured_repos
 from .issues import (
     get_ignore_labels,
     get_matching_ignore_label,
     is_status_eligible_for_session,
 )
-from .orchestrator import _get_configured_repos
 from .sessions import (
     is_session_active,
     load_sessions,

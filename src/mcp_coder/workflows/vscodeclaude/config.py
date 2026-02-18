@@ -9,7 +9,8 @@ from typing import Any, cast
 
 from ...utils.github_operations import get_authenticated_username
 from ...utils.github_operations.label_config import load_labels_config
-from ...utils.user_config import get_config_file_path, get_config_values
+from ...utils.user_config import get_config_file_path, get_config_values, load_config
+from .helpers import get_repo_full_name
 from .types import (
     DEFAULT_MAX_SESSIONS,
     RepoVSCodeClaudeConfig,
@@ -165,3 +166,29 @@ def sanitize_folder_name(name: str) -> str:
     # Strip leading/trailing dashes
     sanitized = sanitized.strip("-")
     return sanitized
+
+
+def _get_configured_repos() -> set[str]:
+    """Get set of repo full names from config.
+
+    Reads config file and extracts repo_url values from
+    [coordinator.repos.*] sections, converting them to "owner/repo" format.
+
+    Returns:
+        Set of repo full names in "owner/repo" format
+    """
+    config_data = load_config()
+    repos_section = config_data.get("coordinator", {}).get("repos", {})
+
+    configured_repos: set[str] = set()
+    for _repo_name, repo_config in repos_section.items():
+        repo_url = repo_config.get("repo_url", "")
+        if repo_url:
+            try:
+                repo_full_name = get_repo_full_name({"repo_url": repo_url})
+                configured_repos.add(repo_full_name)
+            except ValueError:
+                # Skip invalid repo URLs
+                pass
+
+    return configured_repos

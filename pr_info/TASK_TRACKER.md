@@ -31,9 +31,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Move `_get_configured_repos` to `config.py`, Update `cleanup.py`
 
-- [ ] Implement: Add `load_config` and `from .helpers import get_repo_full_name` to `config.py`, paste `_get_configured_repos` verbatim at end of `config.py`, update `cleanup.py` import from `.orchestrator` → `.config` (see [step_2.md](./steps/step_2.md))
-- [ ] Quality checks: run pylint (error/fatal), mypy, pytest (excluding integration markers) — fix any import errors, no logic changes
-- [ ] Git commit message: `refactor: move _get_configured_repos to config.py, update cleanup.py import`
+- [x] Implement: Add `load_config` and `from .helpers import get_repo_full_name` to `config.py`, paste `_get_configured_repos` verbatim at end of `config.py`, update `cleanup.py` import from `.orchestrator` → `.config` (see [step_2.md](./steps/step_2.md))
+- [x] Quality checks: run pylint (error/fatal), mypy, pytest (excluding integration markers) — fix any import errors, no logic changes
+- [x] Git commit message: `refactor: move _get_configured_repos to config.py, update cleanup.py import`
 
 ### Step 3: Create `session_restart.py`
 
