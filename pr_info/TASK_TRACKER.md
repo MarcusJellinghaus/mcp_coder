@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1 — Add regression test for bundled labels.json loading
 
-- [ ] Add `test_load_bundled_labels_config()` to `tests/workflows/test_label_config.py`
-- [ ] Run pylint, pytest, mypy — fix all issues found
-- [ ] Prepare git commit message for Step 1
+- [x] Add `test_load_bundled_labels_config()` to `tests/workflows/test_label_config.py`
+- [x] Run pylint, pytest, mypy — fix all issues found
+- [x] Prepare git commit message for Step 1
 
 ### Step 2 — Fix `label_config.py`: return Traversable + accept it in load_labels_config
 

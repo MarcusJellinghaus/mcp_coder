@@ -5,7 +5,27 @@ from pathlib import Path
 
 import pytest
 
-from mcp_coder.utils.github_operations.label_config import load_labels_config
+from mcp_coder.utils.github_operations.label_config import (
+    get_labels_config_path,
+    load_labels_config,
+)
+
+
+def test_load_bundled_labels_config() -> None:
+    """Regression test: bundled labels.json is loadable via importlib.resources."""
+    bundled_ref = get_labels_config_path(None)
+    config = load_labels_config(bundled_ref)
+
+    assert isinstance(config["workflow_labels"], list)
+    assert len(config["workflow_labels"]) > 0
+
+    required_keys = {"internal_id", "name", "color", "description", "category"}
+    for label in config["workflow_labels"]:
+        assert required_keys.issubset(
+            label.keys()
+        ), f"Label missing required keys: {required_keys - label.keys()}"
+
+    assert isinstance(config["ignore_labels"], list)
 
 
 def test_load_labels_config_valid() -> None:
