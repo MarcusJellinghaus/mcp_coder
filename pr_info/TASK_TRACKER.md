@@ -23,4 +23,13 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 <!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
 
+### Step 1: Add Test and Implement Fix for `status-10:pr-created` Display
+
+- [ ] Implement step — add test method `test_pr_created_eligible_issue_shows_awaiting_merge` to `TestStatusDisplay` in `tests/workflows/vscodeclaude/test_status_display.py`, and add `elif not is_status_eligible_for_session(status)` branch in `display_status_table()` in `src/mcp_coder/workflows/vscodeclaude/status.py` (see [step_1.md](./steps/step_1.md))
+- [ ] Quality checks — run pylint, pytest, mypy; fix all issues found
+- [ ] Prepare git commit message
+
 ## Pull Request
+
+- [ ] Review all changes for correctness, completeness, and adherence to the implementation plan
+- [ ] Write PR summary describing the fix and the test added
