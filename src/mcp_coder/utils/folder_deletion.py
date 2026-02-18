@@ -195,6 +195,7 @@ def _try_delete_empty_directory(path: Path, staging_dir: Path | None) -> bool:
             if attempt < 2:  # sleep only between attempts, not after last
                 time.sleep(1)
 
+    logger.debug("rmdir failed after 3 attempts, trying staging: %s", path)
     # All attempts failed — try moving to staging
     if _move_to_staging(path, staging_dir):
         logger.debug("Moved locked empty directory to staging: %s", path)

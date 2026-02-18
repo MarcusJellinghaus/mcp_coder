@@ -15,7 +15,7 @@ from ...utils.subprocess_runner import (
     execute_subprocess,
 )
 from ...utils.user_config import get_cache_refresh_minutes
-from .config import _get_configured_repos  # ← already in config.py after Step 2
+from .config import _get_configured_repos
 from .helpers import get_issue_status, truncate_title
 from .issues import (
     get_ignore_labels,
@@ -24,7 +24,7 @@ from .issues import (
     is_status_eligible_for_session,
     status_requires_linked_branch,
 )
-from .session_launch import (  # ← cross-module import
+from .session_launch import (
     launch_vscode,
     regenerate_session_files,
 )
@@ -34,6 +34,7 @@ from .sessions import (
     is_session_active,
     is_vscode_open_for_folder,
     load_sessions,
+    remove_session,
     update_session_pid,
     update_session_status,
 )
@@ -226,8 +227,6 @@ def restart_closed_sessions(
     Returns:
         List of restarted sessions
     """
-    from .sessions import remove_session
-
     store = load_sessions()
 
     # Early return if no sessions

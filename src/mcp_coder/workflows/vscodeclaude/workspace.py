@@ -403,7 +403,7 @@ def create_startup_script(
     if is_windows:
         # Escape first so expansion from escaping is counted in the truncation
         title_display = _escape_batch_title(issue_title)
-        title_display = title_display[:58] if len(title_display) > 58 else title_display
+        title_display = title_display[:58].rstrip("^")
         if is_intervention:
             # Intervention mode - plain claude, no automation
             script_content = INTERVENTION_SCRIPT_WINDOWS.format(

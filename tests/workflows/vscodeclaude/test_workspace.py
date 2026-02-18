@@ -580,6 +580,46 @@ class TestCreateStartupScript:
         # The unescaped sequence -> should not appear in the title section
         assert "-> Create" not in content
 
+    def test_batch_title_strips_trailing_caret_after_truncation(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+    ) -> None:
+        """Trailing ^ from escaping is stripped when it lands at the truncation boundary.
+
+        A title of 57 normal chars + '>' becomes 57 + '^>' (59 chars) after escaping.
+        Truncation at 58 chars leaves a lone '^' at the end, which must be stripped
+        to prevent batch treating it as a line-continuation character.
+        """
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: "Windows",
+        )
+
+        # 57 'A's + '>' — after escaping: 57 'A's + '^>' (59 chars)
+        # After [:58]: 57 'A's + '^'  ← lone caret, must be stripped
+        title = "A" * 57 + ">"
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=1,
+            issue_title=title,
+            status="status-07:code-review",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/1",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        # The title section must not contain a lone trailing ^
+        # (a lone ^ at end of a batch echo line causes line-continuation)
+        for line in content.splitlines():
+            if "AAAA" in line:
+                assert not line.rstrip().endswith(
+                    "^"
+                ), f"Lone trailing ^ found in batch line: {line!r}"
+
     def test_includes_discussion_section(
         self,
         tmp_path: Path,

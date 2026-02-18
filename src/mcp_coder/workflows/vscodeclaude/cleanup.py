@@ -259,7 +259,9 @@ def cleanup_stale_sessions(
             if is_directory_empty(folder_path):
                 # Empty folder — safe to delete regardless of git status
                 if dry_run:
-                    print(f"Add --cleanup to delete: {folder}")
+                    print(
+                        f"Add --cleanup to delete (empty, {git_status.lower()}): {folder}"
+                    )
                 else:
                     if delete_session_folder(session):
                         print(f"Deleted: {folder}")
