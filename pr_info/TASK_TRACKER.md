@@ -31,11 +31,11 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2 — Fix `label_config.py`: return Traversable + accept it in load_labels_config
 
-- [ ] Add `from importlib.resources.abc import Traversable` import to `src/mcp_coder/utils/github_operations/label_config.py`
-- [ ] Change `get_labels_config_path` return type to `Path | Traversable` and return Traversable directly in bundled branch
-- [ ] Change `load_labels_config` signature to accept `Path | Traversable` and update body/docstring
-- [ ] Run pylint, pytest, mypy — fix all issues found
-- [ ] Prepare git commit message for Step 2
+- [x] Add `from importlib.resources.abc import Traversable` import to `src/mcp_coder/utils/github_operations/label_config.py`
+- [x] Change `get_labels_config_path` return type to `Path | Traversable` and return Traversable directly in bundled branch
+- [x] Change `load_labels_config` signature to accept `Path | Traversable` and update body/docstring
+- [x] Run pylint, pytest, mypy — fix all issues found
+- [x] Prepare git commit message for Step 2
 
 ### Step 3 — Remove duplicate anti-pattern call sites in three other files
 
