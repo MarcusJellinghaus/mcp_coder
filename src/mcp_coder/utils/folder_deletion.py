@@ -17,6 +17,7 @@ import shutil
 import stat
 import sys
 import tempfile
+import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
@@ -183,16 +184,18 @@ def _try_delete_empty_directory(path: Path, staging_dir: Path | None) -> bool:
     Returns:
         True if the directory was deleted or moved, False otherwise.
     """
-    # First attempt: simple rmdir
-    try:
-        path.rmdir()
-        if not path.exists():
-            logger.debug("Deleted empty directory: %s", path)
-            return True
-    except (PermissionError, OSError):
-        pass  # Expected if locked
+    # Attempt rmdir up to 3 times, sleeping 1 s between failed attempts
+    for attempt in range(3):
+        try:
+            path.rmdir()
+            if not path.exists():
+                logger.debug("Deleted empty directory: %s", path)
+                return True
+        except (PermissionError, OSError):
+            if attempt < 2:  # sleep only between attempts, not after last
+                time.sleep(1)
 
-    # Directory is locked - try moving to staging
+    # All attempts failed — try moving to staging
     if _move_to_staging(path, staging_dir):
         logger.debug("Moved locked empty directory to staging: %s", path)
         return True
