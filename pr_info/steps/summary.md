@@ -69,5 +69,4 @@ None.
 
 | Step | Description |
 |------|-------------|
-| Step 1 | Add failing test for `status-10:pr-created` showing `(awaiting merge)` |
-| Step 2 | Implement the `elif` fix in `display_status_table()` to make test pass |
+| Step 1 | Add test and implement the `elif` fix in `display_status_table()` together |
