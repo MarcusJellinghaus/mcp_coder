@@ -107,7 +107,10 @@ def is_moved_line(raw_line: str) -> bool:
     plain = strip_ansi(raw_line)
     if not plain or plain[0] not in ("+", "-"):
         return False
-    # Look for SGR code 2 (dim) in the ANSI sequences of this line
+    # Look for SGR code 2 (dim) in the ANSI sequences of this line.
+    # Assumption: SGR 2 (dim) reliably identifies moved lines when using
+    # --color-moved=dimmed-zebra. Other uses of SGR 2 in a diff line are
+    # not expected in practice.
     codes_found = set()
     for match in _ANSI_ESCAPE_RE.finditer(raw_line):
         seq = match.group()
@@ -128,8 +131,8 @@ def extract_moved_blocks_ansi(ansi_diff: str) -> set[str]:
     for line in ansi_diff.splitlines():
         if is_moved_line(line):
             plain = strip_ansi(line)
-            # Strip the leading +/- sign and add content
-            content = plain[1:]
+            # Strip the leading +/- sign and trailing whitespace, then add content
+            content = plain[1:].strip()
             moved.add(content)
     return moved
 
@@ -152,11 +155,11 @@ def collect_line_occurrences(files: list[FileDiff]) -> tuple[set[str], set[str]]
         for hunk in file_diff.hunks:
             for line in hunk.lines:
                 if line.startswith("-"):
-                    content = line[1:]
+                    content = line[1:].strip()
                     if is_significant_line(content):
                         removed.add(content)
                 elif line.startswith("+"):
-                    content = line[1:]
+                    content = line[1:].strip()
                     if is_significant_line(content):
                         added.add(content)
     return removed, added
@@ -210,7 +213,9 @@ def render_hunk(hunk: Hunk, moved_lines: set[str]) -> str:
 
         # Count significant moved lines in block
         significant_moved = [
-            bl for bl in block if is_significant_line(bl[1:]) and bl[1:] in moved_lines
+            bl
+            for bl in block
+            if is_significant_line(bl[1:]) and bl[1:].strip() in moved_lines
         ]
         significant_total = [bl for bl in block if is_significant_line(bl[1:])]
 

@@ -337,14 +337,13 @@ class TestRenderHunk:
         result = render_hunk(hunk, moved)
         assert "this is a context line here" in result
 
-    def test_empty_hunk_returns_empty_string(self) -> None:
-        # All lines suppressed → empty string
+    def test_suppressed_hunk_emits_summary(self) -> None:
+        # All lines in a block >= MIN_BLOCK_LINES that are all moved → replaced by summary
         lines = [f"+def function_line_{i}(some_param):" for i in range(MIN_BLOCK_LINES)]
         moved = {f"def function_line_{i}(some_param):" for i in range(MIN_BLOCK_LINES)}
         hunk = Hunk(header="@@ -1,3 +1,3 @@", lines=lines)
         result = render_hunk(hunk, moved)
-        # The summary IS output (not empty), but the hunk itself is replaced
-        assert result != ""
+        assert "# [moved:" in result
 
 
 # ---------------------------------------------------------------------------
@@ -355,14 +354,13 @@ class TestRenderHunk:
 class TestRenderFileDiff:
     """Tests for file-level rendering."""
 
-    def test_file_skipped_when_all_hunks_empty(self) -> None:
-        # A hunk with only context lines is NOT suppressed (render_hunk returns content)
-        # To get an empty render, we need a hunk where all lines are in a moved block
+    def test_file_with_only_moved_hunks_emits_summary(self) -> None:
+        # A hunk where all lines are a moved block → replaced by summary comment,
+        # so file is included in output (not skipped)
         lines = [f"+def function_line_{i}(some_param):" for i in range(MIN_BLOCK_LINES)]
         moved = {f"def function_line_{i}(some_param):" for i in range(MIN_BLOCK_LINES)}
         hunk = Hunk(header="@@ -1,3 +1,3 @@", lines=lines)
         file_diff = FileDiff(headers=["diff --git a.py b.py"], hunks=[hunk])
-        # The hunk outputs a summary comment, so file is NOT empty
         result = render_file_diff(file_diff, moved)
         assert "# [moved:" in result
 
