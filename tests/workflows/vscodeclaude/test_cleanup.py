@@ -74,6 +74,7 @@ class TestCleanup:
         assert len(result) == 1
         assert result[0][0]["folder"] == str(stale_folder)
         assert result[0][1] == "Clean"  # Git status is Clean
+        assert result[0][2] == "stale"  # Reason is stale
 
     def test_get_stale_sessions_skips_unconfigured_repos(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -170,7 +171,7 @@ class TestCleanup:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
             lambda cached_issues_by_repo=None: [
-                (stale_session, "Clean")
+                (stale_session, "Clean", "closed")
             ],  # Clean status
         )
 
@@ -200,7 +201,7 @@ class TestCleanup:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
             lambda cached_issues_by_repo=None: [
-                (dirty_session, "Dirty")
+                (dirty_session, "Dirty", "closed")
             ],  # Dirty status
         )
 
@@ -229,7 +230,7 @@ class TestCleanup:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
             lambda cached_issues_by_repo=None: [
-                (clean_session, "Clean")
+                (clean_session, "Clean", "closed")
             ],  # Clean status
         )
         monkeypatch.setattr(
@@ -372,7 +373,7 @@ class TestCleanup:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [(missing_session, "Missing")],
+            lambda cached_issues_by_repo=None: [(missing_session, "Missing", "closed")],
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.remove_session",
@@ -384,7 +385,10 @@ class TestCleanup:
         assert str(tmp_path / "missing_folder") in result.get("deleted", [])
 
     def test_cleanup_skips_no_git_folder(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Skips folders without git with warning."""
         no_git_session = {
@@ -403,7 +407,7 @@ class TestCleanup:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [(no_git_session, "No Git")],
+            lambda cached_issues_by_repo=None: [(no_git_session, "No Git", "closed")],
         )
 
         result = cleanup_stale_sessions(dry_run=False)
@@ -411,9 +415,13 @@ class TestCleanup:
         # Folder should still exist
         assert (tmp_path / "no_git_folder").exists()
         assert str(tmp_path / "no_git_folder") in result.get("skipped", [])
+        assert "no git, closed" in capsys.readouterr().out
 
     def test_cleanup_skips_error_folder(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Skips folders with git errors with warning."""
         error_session = {
@@ -432,7 +440,7 @@ class TestCleanup:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [(error_session, "Error")],
+            lambda cached_issues_by_repo=None: [(error_session, "Error", "blocked")],
         )
 
         result = cleanup_stale_sessions(dry_run=False)
@@ -440,6 +448,7 @@ class TestCleanup:
         # Folder should still exist
         assert (tmp_path / "error_folder").exists()
         assert str(tmp_path / "error_folder") in result.get("skipped", [])
+        assert "error, blocked" in capsys.readouterr().out
 
     def test_cleanup_deletes_empty_no_git_folder(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -459,7 +468,7 @@ class TestCleanup:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [(no_git_session, "No Git")],
+            lambda cached_issues_by_repo=None: [(no_git_session, "No Git", "closed")],
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.delete_session_folder",
@@ -492,7 +501,7 @@ class TestCleanup:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [(no_git_session, "No Git")],
+            lambda cached_issues_by_repo=None: [(no_git_session, "No Git", "closed")],
         )
 
         result = cleanup_stale_sessions(dry_run=True)
@@ -518,7 +527,7 @@ class TestCleanup:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [(error_session, "Error")],
+            lambda cached_issues_by_repo=None: [(error_session, "Error", "closed")],
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.delete_session_folder",
@@ -551,7 +560,9 @@ class TestCleanup:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [(error_session, "Error")],
+            lambda cached_issues_by_repo=None: [
+                (error_session, "Error", "test-reason")
+            ],
         )
 
         result = cleanup_stale_sessions(dry_run=True)
@@ -630,7 +641,7 @@ class TestGetStaleSessions:
         result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
 
         assert len(result) == 1
-        session, git_status = result[0]
+        session, git_status, reason = result[0]
         assert session["issue_number"] == 123
         assert git_status == "Clean"
 
@@ -895,7 +906,7 @@ class TestGetStaleSessions:
         result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
 
         assert len(result) == 1
-        session, git_status = result[0]
+        session, git_status, reason = result[0]
         assert session["issue_number"] == 100
         assert git_status == "Clean"
 
@@ -968,7 +979,7 @@ class TestGetStaleSessions:
         result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
 
         assert len(result) == 1
-        session, git_status = result[0]
+        session, git_status, reason = result[0]
         assert session["issue_number"] == 200
         assert git_status == "Clean"
 
@@ -1041,7 +1052,7 @@ class TestGetStaleSessions:
         result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
 
         assert len(result) == 1
-        session, git_status = result[0]
+        session, git_status, reason = result[0]
         assert session["issue_number"] == 300
         assert git_status == "Clean"
 
@@ -1114,7 +1125,7 @@ class TestGetStaleSessions:
         result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
 
         assert len(result) == 1
-        session, git_status = result[0]
+        session, git_status, reason = result[0]
         assert session["issue_number"] == 400
         assert git_status == "Clean"
 
@@ -1256,7 +1267,7 @@ class TestGetStaleSessions:
 
         # Zombie session must appear in stale list despite VSCode PID being alive
         assert len(result) == 1
-        session, git_status = result[0]
+        session, git_status, reason = result[0]
         assert session["issue_number"] == 123
         assert git_status == "Missing"
 
@@ -1329,3 +1340,389 @@ class TestGetStaleSessions:
 
         # Session should NOT be included - it's eligible and should restart
         assert len(result) == 0
+
+    # ------------------------------------------------------------------
+    # New reason tests
+    # ------------------------------------------------------------------
+
+    def test_reason_closed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Reason should be 'closed' for closed issues."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        mock_sessions = {
+            "sessions": [
+                {
+                    "folder": str(tmp_path / "repo_closed"),
+                    "repo": "owner/repo",
+                    "issue_number": 101,
+                    "status": "status-07:code-review",
+                    "vscode_pid": None,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                }
+            ],
+            "last_updated": "",
+        }
+        sessions_file.write_text(json.dumps(mock_sessions))
+
+        mock_issue: IssueData = {
+            "number": 101,
+            "title": "Closed Issue",
+            "state": "closed",
+            "labels": ["status-07:code-review"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "body": "",
+            "locked": False,
+        }
+        mock_cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {101: mock_issue}
+        }
+
+        (tmp_path / "repo_closed").mkdir()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
+            lambda session: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_folder_git_status",
+            lambda path: "Clean",
+        )
+
+        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+
+        assert len(result) == 1
+        session, git_status, reason = result[0]
+        assert reason == "closed"
+
+    def test_reason_blocked(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Reason should be 'blocked' for sessions with blocked label."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        mock_sessions = {
+            "sessions": [
+                {
+                    "folder": str(tmp_path / "repo_blocked"),
+                    "repo": "owner/repo",
+                    "issue_number": 102,
+                    "status": "status-01:created",
+                    "vscode_pid": None,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                }
+            ],
+            "last_updated": "",
+        }
+        sessions_file.write_text(json.dumps(mock_sessions))
+
+        mock_issue: IssueData = {
+            "number": 102,
+            "title": "Blocked Issue",
+            "state": "open",
+            "labels": ["status-01:created", "blocked"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "body": "",
+            "locked": False,
+        }
+        mock_cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {102: mock_issue}
+        }
+
+        (tmp_path / "repo_blocked").mkdir()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
+            lambda session: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_folder_git_status",
+            lambda path: "Clean",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_stale",
+            lambda s, cached_issues=None: False,
+        )
+
+        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+
+        assert len(result) == 1
+        session, git_status, reason = result[0]
+        assert reason == "blocked"
+
+    def test_reason_bot_status(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Reason should be 'bot status' for sessions at ineligible bot statuses."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        mock_sessions = {
+            "sessions": [
+                {
+                    "folder": str(tmp_path / "repo_bot"),
+                    "repo": "owner/repo",
+                    "issue_number": 103,
+                    "status": "status-02:awaiting-planning",
+                    "vscode_pid": None,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                }
+            ],
+            "last_updated": "",
+        }
+        sessions_file.write_text(json.dumps(mock_sessions))
+
+        mock_issue: IssueData = {
+            "number": 103,
+            "title": "Bot Status Issue",
+            "state": "open",
+            "labels": ["status-02:awaiting-planning"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "body": "",
+            "locked": False,
+        }
+        mock_cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {103: mock_issue}
+        }
+
+        (tmp_path / "repo_bot").mkdir()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
+            lambda session: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_folder_git_status",
+            lambda path: "Clean",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_stale",
+            lambda s, cached_issues=None: False,
+        )
+
+        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+
+        assert len(result) == 1
+        session, git_status, reason = result[0]
+        assert reason == "bot status"
+
+    def test_reason_stale_with_cache(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Reason should be 'stale → <new_status>' when cache has a different status."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        # Session has status-01:created, but cache shows status-04:plan-review
+        mock_sessions = {
+            "sessions": [
+                {
+                    "folder": str(tmp_path / "repo_stale"),
+                    "repo": "owner/repo",
+                    "issue_number": 104,
+                    "status": "status-01:created",
+                    "vscode_pid": None,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                }
+            ],
+            "last_updated": "",
+        }
+        sessions_file.write_text(json.dumps(mock_sessions))
+
+        mock_issue: IssueData = {
+            "number": 104,
+            "title": "Stale Issue",
+            "state": "open",
+            "labels": ["status-04:plan-review"],  # Different from session status
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "body": "",
+            "locked": False,
+        }
+        mock_cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {104: mock_issue}
+        }
+
+        (tmp_path / "repo_stale").mkdir()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
+            lambda session: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_folder_git_status",
+            lambda path: "Clean",
+        )
+        # Do NOT mock is_session_stale — let it compute from real session/cache data
+
+        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+
+        assert len(result) == 1
+        session, git_status, reason = result[0]
+        assert reason == "stale → status-04:plan-review"
+
+    def test_reason_stale_no_cache(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Reason should be 'stale' when no cache is provided."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        mock_sessions = {
+            "sessions": [
+                {
+                    "folder": str(tmp_path / "repo_stale_no_cache"),
+                    "repo": "owner/repo",
+                    "issue_number": 105,
+                    "status": "status-07:code-review",
+                    "vscode_pid": None,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                }
+            ],
+            "last_updated": "",
+        }
+        sessions_file.write_text(json.dumps(mock_sessions))
+
+        (tmp_path / "repo_stale_no_cache").mkdir()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
+            lambda session: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_folder_git_status",
+            lambda path: "Clean",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_stale",
+            lambda s, cached_issues=None: True,
+        )
+
+        # No cached_issues_by_repo passed
+        result = get_stale_sessions()
+
+        assert len(result) == 1
+        session, git_status, reason = result[0]
+        assert reason == "stale"
+
+    def test_reason_combined_closed_blocked(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Reason should be 'closed, blocked' for closed issues that also have blocked label."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        mock_sessions = {
+            "sessions": [
+                {
+                    "folder": str(tmp_path / "repo_closed_blocked"),
+                    "repo": "owner/repo",
+                    "issue_number": 106,
+                    "status": "status-07:code-review",
+                    "vscode_pid": None,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                }
+            ],
+            "last_updated": "",
+        }
+        sessions_file.write_text(json.dumps(mock_sessions))
+
+        mock_issue: IssueData = {
+            "number": 106,
+            "title": "Closed Blocked Issue",
+            "state": "closed",
+            "labels": ["status-07:code-review", "blocked"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "body": "",
+            "locked": False,
+        }
+        mock_cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {106: mock_issue}
+        }
+
+        (tmp_path / "repo_closed_blocked").mkdir()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
+            lambda session: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_folder_git_status",
+            lambda path: "Clean",
+        )
+
+        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+
+        assert len(result) == 1
+        session, git_status, reason = result[0]
+        assert reason == "closed, blocked"
