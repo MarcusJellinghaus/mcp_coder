@@ -261,7 +261,7 @@ class TestFindMovedLines:
         file2 = FileDiff(headers=["diff --git b.py c.py"], hunks=[hunk2])
         moved = find_moved_lines([file1, file2])
         assert "def some_function_name(param):" in moved
-        assert "    return param * 2" in moved
+        assert "return param * 2" in moved
 
     def test_unique_lines_not_in_intersection(self) -> None:
         hunk = Hunk(

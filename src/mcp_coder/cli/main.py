@@ -203,6 +203,14 @@ def _handle_commit_command(args: argparse.Namespace) -> int:
 
 def main() -> int:
     """Main CLI entry point. Returns exit code."""
+    # Ensure stdout/stderr use UTF-8 on all platforms (e.g. Windows cp1252 default).
+    # Required by git-tool compact-diff, which outputs raw diff text that may contain
+    # Unicode characters (e.g. emoji in commit messages or source files).
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8")
+
     # Parse arguments first to get log level
     parser = create_parser()
     args = parser.parse_args()
