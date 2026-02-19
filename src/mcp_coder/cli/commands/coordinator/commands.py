@@ -550,11 +550,14 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
                 "repo_url": repo_url,
             }
 
-            repo_full_name = _get_repo_full_name_from_url(repo_url)
-            all_cached_issues = list(
-                cached_issues_by_repo.get(repo_full_name, {}).values()
-            )
+            if not repo_url:
+                logger.error(
+                    "No repo_url configured for repo %s — skipping",
+                    repo_name,
+                )
+                continue
 
+            repo_full_name = _get_repo_full_name_from_url(repo_url)
             if not repo_full_name or repo_full_name not in cached_issues_by_repo:
                 logger.error(
                     "No cached issues available for repo %s (cache build may have failed) — skipping",
@@ -562,12 +565,15 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
                 )
                 continue
 
+            all_cached_issues = list(
+                cached_issues_by_repo.get(repo_full_name, {}).values()
+            )
+
             started = process_eligible_issues(
                 repo_name=repo_name,
                 repo_config=validated_config,
                 vscodeclaude_config=vscodeclaude_config,
                 max_sessions=max_sessions,
-                repo_filter=args.repo,
                 all_cached_issues=all_cached_issues,
             )
             total_started.extend(started)

@@ -512,7 +512,6 @@ class TestProcessEligibleIssuesPrefetchedIssues:
         # Mock IssueManager and IssueBranchManager to avoid token validation
         mock_issue_manager = MagicMock()
         mock_branch_manager = MagicMock()
-        mock_branch_manager.get_linked_branches.return_value = []
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.IssueManager",
