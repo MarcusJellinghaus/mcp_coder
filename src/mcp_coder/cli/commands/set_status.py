@@ -9,7 +9,7 @@ import logging
 import sys
 from importlib.resources.abc import Traversable
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
 from ...constants import DEFAULT_IGNORED_BUILD_ARTIFACTS
 from ...utils.git_operations.readers import (
@@ -53,7 +53,7 @@ def build_set_status_epilog() -> str:
         return "Run in a project directory to see available status labels."
 
 
-def get_status_labels_from_config(config_path: Union[Path, Traversable]) -> set[str]:
+def get_status_labels_from_config(config_path: Path | Traversable) -> set[str]:
     """Load status labels from config and return set of label names.
 
     Args:

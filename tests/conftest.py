@@ -6,14 +6,14 @@ import shutil
 import tempfile
 from importlib.resources.abc import Traversable
 from pathlib import Path
-from typing import Generator, Type, TypeVar, Union
+from typing import Generator, Type, TypeVar
 
 import git
 import pytest
 
 
 @pytest.fixture
-def labels_config_path() -> Union[Path, Traversable]:
+def labels_config_path() -> Path | Traversable:
     """Get the path to the labels configuration file."""
     from mcp_coder.utils.github_operations.label_config import get_labels_config_path
 

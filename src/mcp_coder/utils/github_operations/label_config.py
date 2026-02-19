@@ -91,7 +91,7 @@ def build_label_lookups(labels_config: Dict[str, Any]) -> LabelLookups:
     )
 
 
-def get_labels_config_path(project_dir: Optional[Path] = None) -> "Path | Traversable":
+def get_labels_config_path(project_dir: Optional[Path] = None) -> Path | Traversable:
     """Get path to labels.json configuration file.
 
     This function supports two operational modes:
@@ -154,7 +154,7 @@ def get_labels_config_path(project_dir: Optional[Path] = None) -> "Path | Traver
     return resources.files("mcp_coder.config") / "labels.json"
 
 
-def load_labels_config(config_path: "Path | Traversable") -> Dict[str, Any]:
+def load_labels_config(config_path: Path | Traversable) -> Dict[str, Any]:
     """Load label configuration from JSON file.
 
     Args:
@@ -170,14 +170,9 @@ def load_labels_config(config_path: "Path | Traversable") -> Dict[str, Any]:
         json.JSONDecodeError: If file is not valid JSON
         ValueError: If required keys are missing
     """
-    if isinstance(config_path, Path):
-        if not config_path.exists():
-            raise FileNotFoundError(f"Label configuration not found: {config_path}")
-        with open(config_path, "r", encoding="utf-8") as f:
-            config: Dict[str, Any] = json.load(f)
-    else:
-        # Traversable (bundled resource inside wheel or editable install)
-        config = json.loads(config_path.read_text(encoding="utf-8"))
+    if isinstance(config_path, Path) and not config_path.exists():
+        raise FileNotFoundError(f"Label configuration not found: {config_path}")
+    config: Dict[str, Any] = json.loads(config_path.read_text(encoding="utf-8"))
 
     # Validate required keys
     if "workflow_labels" not in config:
