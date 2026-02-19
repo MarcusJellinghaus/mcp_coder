@@ -118,4 +118,3 @@ class TestFormatForCache:
         dt = datetime(2026, 1, 3, 23, 36, 14)
         with pytest.raises(ValueError, match="Datetime must be timezone-aware"):
             format_for_cache(dt)
-

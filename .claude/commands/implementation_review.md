@@ -24,7 +24,7 @@ Confirm and display the current feature branch name.
 
 Run this command to get the changes to review:
 ```bash
-mcp-coder git-tool compact-diff --exclude "pr_info/.conversations/**"
+mcp-coder git-tool compact-diff
 ```
 
 No need to run all checks; do not use pylint warnings. Feel free to further analyse any mentioned files and/or the file structure.

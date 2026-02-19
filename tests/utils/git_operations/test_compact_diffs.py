@@ -3,9 +3,11 @@
 from mcp_coder.utils.git_operations.compact_diffs import (
     MIN_BLOCK_LINES,
     MIN_CONTENT_LENGTH,
+    PREVIEW_LINES,
     FileDiff,
     Hunk,
     collect_line_occurrences,
+    collect_line_sources,
     extract_moved_blocks_ansi,
     find_moved_lines,
     format_moved_summary,
@@ -292,6 +294,14 @@ class TestFormatMovedSummary:
         assert "100" in result
         assert result.startswith("# [moved:")
 
+    def test_format_with_source_file_addition(self) -> None:
+        result = format_moved_summary(10, "src/foo.py", is_addition=True)
+        assert result == "# [moved from src/foo.py: 10 lines not shown]"
+
+    def test_format_with_dest_file_deletion(self) -> None:
+        result = format_moved_summary(10, "src/bar.py", is_addition=False)
+        assert result == "# [moved to src/bar.py: 10 lines not shown]"
+
 
 # ---------------------------------------------------------------------------
 # TestRenderHunk
@@ -302,7 +312,7 @@ class TestRenderHunk:
     """Tests for hunk rendering with moved-block suppression."""
 
     def test_small_block_kept(self) -> None:
-        # Block of 2 lines (< MIN_BLOCK_LINES=3) → kept as-is
+        # Block of 2 lines (< MIN_BLOCK_LINES) → kept as-is
         hunk = Hunk(
             header="@@ -1,2 +1,2 @@",
             lines=[
@@ -316,13 +326,15 @@ class TestRenderHunk:
         assert "moved" not in result
 
     def test_large_moved_block_suppressed(self) -> None:
-        # Block of MIN_BLOCK_LINES+ where all significant lines are moved
+        # Block of MIN_BLOCK_LINES where all significant lines are moved:
+        # first PREVIEW_LINES are shown as preview, rest summarised.
         lines = [f"+def function_line_{i}(some_param):" for i in range(MIN_BLOCK_LINES)]
         moved = {f"def function_line_{i}(some_param):" for i in range(MIN_BLOCK_LINES)}
-        hunk = Hunk(header="@@ -1,3 +1,3 @@", lines=lines)
+        hunk = Hunk(header="@@ -1,5 +1,5 @@", lines=lines)
         result = render_hunk(hunk, moved)
-        assert "# [moved:" in result
-        assert f"{MIN_BLOCK_LINES} lines not shown" in result
+        assert "+def function_line_0(some_param):" in result  # preview shown
+        assert "# [moved" in result  # summary present
+        assert f"{MIN_BLOCK_LINES - PREVIEW_LINES} lines not shown" in result
 
     def test_context_lines_always_kept(self) -> None:
         hunk = Hunk(
@@ -345,6 +357,79 @@ class TestRenderHunk:
         result = render_hunk(hunk, moved)
         assert "# [moved:" in result
 
+    def test_moved_block_after_non_moved_header_suppressed(self) -> None:
+        # New-file hunk: non-moved header line followed by a large moved block.
+        # The non-moved header must be kept; the moved block must show preview + summary.
+        non_moved_header = "+# unique non-moved header line here"
+        moved_lines_content = [
+            f"+def function_line_{i}(some_param):" for i in range(MIN_BLOCK_LINES)
+        ]
+        moved = {f"def function_line_{i}(some_param):" for i in range(MIN_BLOCK_LINES)}
+        hunk = Hunk(
+            header="@@ -0,0 +1,6 @@",
+            lines=[non_moved_header] + moved_lines_content,
+        )
+        result = render_hunk(hunk, moved)
+        assert "unique non-moved header line here" in result
+        assert "+def function_line_0(some_param):" in result  # preview shown
+        assert "lines not shown" in result
+
+    def test_preview_lines_shown_before_summary(self) -> None:
+        # Exactly PREVIEW_LINES preview lines visible; lines beyond are hidden.
+        lines = [
+            f"+def function_line_{i}(some_param_long_name):"
+            for i in range(MIN_BLOCK_LINES)
+        ]
+        moved = {
+            f"def function_line_{i}(some_param_long_name):"
+            for i in range(MIN_BLOCK_LINES)
+        }
+        hunk = Hunk(header="@@ -1,5 +1,5 @@", lines=lines)
+        result = render_hunk(hunk, moved)
+        for i in range(PREVIEW_LINES):
+            assert f"+def function_line_{i}(some_param_long_name):" in result
+        for i in range(PREVIEW_LINES, MIN_BLOCK_LINES):
+            assert f"+def function_line_{i}(some_param_long_name):" not in result
+        assert "lines not shown" in result
+
+
+# ---------------------------------------------------------------------------
+# TestCollectLineSources
+# ---------------------------------------------------------------------------
+
+
+class TestCollectLineSources:
+    """Tests for file-source tracking."""
+
+    def test_removed_line_maps_to_its_file(self) -> None:
+        hunk = Hunk(
+            header="@@ -1,1 +1,1 @@",
+            lines=["-def some_function_name(param):"],
+        )
+        file_diff = FileDiff(
+            headers=["diff --git a/src/foo.py b/src/foo.py"], hunks=[hunk]
+        )
+        removed_to_file, added_to_file = collect_line_sources([file_diff])
+        assert removed_to_file.get("def some_function_name(param):") == "b/src/foo.py"
+        assert "def some_function_name(param):" not in added_to_file
+
+    def test_added_line_maps_to_its_file(self) -> None:
+        hunk = Hunk(
+            header="@@ -1,1 +1,1 @@",
+            lines=["+def some_function_name(param):"],
+        )
+        file_diff = FileDiff(
+            headers=["diff --git a/src/bar.py b/src/bar.py"], hunks=[hunk]
+        )
+        removed_to_file, added_to_file = collect_line_sources([file_diff])
+        assert added_to_file.get("def some_function_name(param):") == "b/src/bar.py"
+        assert "def some_function_name(param):" not in removed_to_file
+
+    def test_empty_files_returns_empty_dicts(self) -> None:
+        removed_to_file, added_to_file = collect_line_sources([])
+        assert removed_to_file == {}
+        assert added_to_file == {}
+
 
 # ---------------------------------------------------------------------------
 # TestRenderFileDiff
@@ -355,14 +440,14 @@ class TestRenderFileDiff:
     """Tests for file-level rendering."""
 
     def test_file_with_only_moved_hunks_emits_summary(self) -> None:
-        # A hunk where all lines are a moved block → replaced by summary comment,
+        # A hunk where all lines are a moved block → preview + summary shown,
         # so file is included in output (not skipped)
         lines = [f"+def function_line_{i}(some_param):" for i in range(MIN_BLOCK_LINES)]
         moved = {f"def function_line_{i}(some_param):" for i in range(MIN_BLOCK_LINES)}
-        hunk = Hunk(header="@@ -1,3 +1,3 @@", lines=lines)
+        hunk = Hunk(header="@@ -1,5 +1,5 @@", lines=lines)
         file_diff = FileDiff(headers=["diff --git a.py b.py"], hunks=[hunk])
         result = render_file_diff(file_diff, moved)
-        assert "# [moved:" in result
+        assert "# [moved" in result
 
     def test_file_with_real_changes_rendered(self) -> None:
         hunk = Hunk(
@@ -405,7 +490,9 @@ class TestRenderCompactDiff:
         moved_content = [
             "def calculate_total_price(items, tax_rate):",
             "    subtotal = sum(item.price for item in items)",
-            "    return subtotal * (1 + tax_rate)",
+            "    tax = subtotal * tax_rate",
+            "    total = subtotal + tax",
+            "    return total",
         ]
         removed_block = "\n".join(f"-{line}" for line in moved_content)
         added_block = "\n".join(f"+{line}" for line in moved_content)
@@ -427,9 +514,9 @@ class TestRenderCompactDiff:
             " context line four here\n"
         )
         result = render_compact_diff(plain_diff, "")
-        # The moved block of 3 lines should be suppressed with a summary
-        assert "# [moved:" in result
-        assert "3 lines not shown" in result
+        # The moved block should be suppressed with preview + summary
+        assert "# [moved" in result
+        assert "lines not shown" in result
 
     def test_unique_changes_preserved(self) -> None:
         plain_diff = (
@@ -445,3 +532,151 @@ class TestRenderCompactDiff:
         assert "completely unique removed line in diff" in result
         assert "completely unique added line in diff" in result
         assert "# [moved:" not in result
+
+
+# Realistic diff: Calculator class moved from old_module.py to calculator.py,
+# with a genuine import change in main.py.
+_REALISTIC_REFACTOR_DIFF = """\
+diff --git old_module.py old_module.py
+--- old_module.py
++++ old_module.py
+@@ -1,25 +1,3 @@
+ \"\"\"Old module — Calculator has moved to calculator.py.\"\"\"
+ 
+-
+-class Calculator:
+-    \"\"\"Simple calculator with basic arithmetic operations.\"\"\"
+-
+-    def __init__(self, precision: int = 2) -> None:
+-        \"\"\"Initialise with decimal precision for results.\"\"\"
+-        self.precision = precision
+-
+-    def add(self, a: float, b: float) -> float:
+-        \"\"\"Return the sum of a and b, rounded to self.precision.\"\"\"
+-        return round(a + b, self.precision)
+-
+-    def subtract(self, a: float, b: float) -> float:
+-        \"\"\"Return a minus b, rounded to self.precision.\"\"\"
+-        return round(a - b, self.precision)
+-
+-    def multiply(self, a: float, b: float) -> float:
+-        \"\"\"Return the product of a and b, rounded to self.precision.\"\"\"
+-        return round(a * b, self.precision)
+-
+ 
+ CONSTANT_VALUE = 42
+ ANOTHER_CONSTANT = \"hello world from old_module\"
+diff --git calculator.py calculator.py
+new file mode 100644
+--- /dev/null
++++ calculator.py
+@@ -0,0 +1,25 @@
++\"\"\"Calculator module — extracted from old_module.py.\"\"\"
++
++
++class Calculator:
++    \"\"\"Simple calculator with basic arithmetic operations.\"\"\"
++
++    def __init__(self, precision: int = 2) -> None:
++        \"\"\"Initialise with decimal precision for results.\"\"\"
++        self.precision = precision
++
++    def add(self, a: float, b: float) -> float:
++        \"\"\"Return the sum of a and b, rounded to self.precision.\"\"\"
++        return round(a + b, self.precision)
++
++    def subtract(self, a: float, b: float) -> float:
++        \"\"\"Return a minus b, rounded to self.precision.\"\"\"
++        return round(a - b, self.precision)
++
++    def multiply(self, a: float, b: float) -> float:
++        \"\"\"Return the product of a and b, rounded to self.precision.\"\"\"
++        return round(a * b, self.precision)
++
++
++CALCULATOR_VERSION = \"1.0.0\"
+diff --git main.py main.py
+--- main.py
++++ main.py
+@@ -1,3 +1,3 @@
+-from old_module import Calculator
++from calculator import Calculator
+ 
+ GREETING = \"Hello from main\"
+"""
+
+
+class TestRenderCompactDiffRealistic:
+    """End-to-end tests using a realistic refactoring diff."""
+
+    def test_output_is_shorter_than_input(self) -> None:
+        """Core property: compacting a moved-class diff produces fewer lines."""
+        result = render_compact_diff(_REALISTIC_REFACTOR_DIFF, "")
+        assert len(result.splitlines()) < len(_REALISTIC_REFACTOR_DIFF.splitlines())
+
+    def test_class_signature_visible_in_preview(self) -> None:
+        """The class name survives in the preview on both sides."""
+        result = render_compact_diff(_REALISTIC_REFACTOR_DIFF, "")
+        assert "class Calculator:" in result
+
+    def test_method_bodies_suppressed(self) -> None:
+        """Method bodies inside the moved class are hidden in the summary."""
+        result = render_compact_diff(_REALISTIC_REFACTOR_DIFF, "")
+        assert "def subtract" not in result
+        assert "def multiply" not in result
+
+    def test_genuine_change_preserved(self) -> None:
+        """Lines that are not moved (the import update in main.py) are always shown."""
+        result = render_compact_diff(_REALISTIC_REFACTOR_DIFF, "")
+        assert "-from old_module import Calculator" in result
+        assert "+from calculator import Calculator" in result
+
+    def test_summary_references_other_file(self) -> None:
+        """Moved-block summaries name the source/destination file."""
+        result = render_compact_diff(_REALISTIC_REFACTOR_DIFF, "")
+        assert "# [moved to calculator.py: 15 lines not shown]" in result
+        assert "# [moved from old_module.py: 16 lines not shown]" in result
+
+    def test_full_output_snapshot(self) -> None:
+        """Snapshot of the complete compact diff output."""
+        result = render_compact_diff(_REALISTIC_REFACTOR_DIFF, "")
+        expected = (
+            "diff --git old_module.py old_module.py\n"
+            "--- old_module.py\n"
+            "+++ old_module.py\n"
+            "@@ -1,25 +1,3 @@\n"
+            ' """Old module \u2014 Calculator has moved to calculator.py."""\n'
+            " \n"
+            "-\n"
+            "-class Calculator:\n"
+            '-    """Simple calculator with basic arithmetic operations."""\n'
+            "-\n"
+            "-    def __init__(self, precision: int = 2) -> None:\n"
+            "# [moved to calculator.py: 15 lines not shown]\n"
+            " \n"
+            " CONSTANT_VALUE = 42\n"
+            ' ANOTHER_CONSTANT = "hello world from old_module"\n'
+            "diff --git calculator.py calculator.py\n"
+            "new file mode 100644\n"
+            "--- /dev/null\n"
+            "+++ calculator.py\n"
+            "@@ -0,0 +1,25 @@\n"
+            '+"""Calculator module \u2014 extracted from old_module.py."""\n'
+            "+\n"
+            "+\n"
+            "+class Calculator:\n"
+            '+    """Simple calculator with basic arithmetic operations."""\n'
+            "+\n"
+            "+    def __init__(self, precision: int = 2) -> None:\n"
+            "# [moved from old_module.py: 16 lines not shown]\n"
+            '+CALCULATOR_VERSION = "1.0.0"\n'
+            "diff --git main.py main.py\n"
+            "--- main.py\n"
+            "+++ main.py\n"
+            "@@ -1,3 +1,3 @@\n"
+            "-from old_module import Calculator\n"
+            "+from calculator import Calculator\n"
+            " \n"
+            ' GREETING = "Hello from main"'
+        )
+        assert result == expected

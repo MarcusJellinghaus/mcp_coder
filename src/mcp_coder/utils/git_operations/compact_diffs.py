@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 MIN_CONTENT_LENGTH: int = 10  # ignore short lines like "pass", "}" when matching moves
-MIN_BLOCK_LINES: int = 3  # consecutive moved lines needed to emit a summary
+MIN_BLOCK_LINES: int = 5  # minimum block size to suppress (3 is too aggressive)
+PREVIEW_LINES: int = 3  # non-blank lines to show before the summary comment
 
 # ---------------------------------------------------------------------------
 # Data structures
@@ -171,13 +172,54 @@ def find_moved_lines(files: list[FileDiff]) -> set[str]:
     return removed & added
 
 
+def collect_line_sources(
+    files: list[FileDiff],
+) -> tuple[dict[str, str], dict[str, str]]:
+    """Return (removed_to_file, added_to_file) mappings of content → filename.
+
+    For each significant line, records the last file that removed or added it.
+    Used to annotate moved-block summaries with source/destination file names:
+    - removed_to_file: look up when rendering a + block to show 'moved from'
+    - added_to_file:   look up when rendering a - block to show 'moved to'
+    """
+    removed_to_file: dict[str, str] = {}
+    added_to_file: dict[str, str] = {}
+    for file_diff in files:
+        filename = file_diff.headers[0].split()[-1] if file_diff.headers else ""
+        if not filename:
+            continue
+        for hunk in file_diff.hunks:
+            for line in hunk.lines:
+                if line.startswith("-"):
+                    content = line[1:].strip()
+                    if is_significant_line(content):
+                        removed_to_file[content] = filename
+                elif line.startswith("+"):
+                    content = line[1:].strip()
+                    if is_significant_line(content):
+                        added_to_file[content] = filename
+    return removed_to_file, added_to_file
+
+
 # ---------------------------------------------------------------------------
 # Layer 4: Block analysis
 # ---------------------------------------------------------------------------
 
 
-def format_moved_summary(count: int) -> str:
-    """Return '# [moved: N lines not shown]' comment string."""
+def format_moved_summary(
+    count: int,
+    ref_file: Optional[str] = None,
+    is_addition: bool = True,
+) -> str:
+    """Return a moved-block summary comment.
+
+    Without ref_file: '# [moved: N lines not shown]'
+    With ref_file and is_addition=True  (+ block): '# [moved from ref_file: N lines not shown]'
+    With ref_file and is_addition=False (- block): '# [moved to ref_file: N lines not shown]'
+    """
+    if ref_file:
+        direction = "from" if is_addition else "to"
+        return f"# [moved {direction} {ref_file}: {count} lines not shown]"
     return f"# [moved: {count} lines not shown]"
 
 
@@ -186,11 +228,107 @@ def format_moved_summary(count: int) -> str:
 # ---------------------------------------------------------------------------
 
 
-def render_hunk(hunk: Hunk, moved_lines: set[str]) -> str:
-    """Render a single hunk, replacing moved blocks >= MIN_BLOCK_LINES.
+def _find_preview_split(lines: list[str], n: int) -> int:
+    """Return the index after the nth non-blank content line, or len(lines) if fewer."""
+    non_blank_count = 0
+    for i, line in enumerate(lines):
+        if line[1:].strip():  # non-blank after the +/- prefix
+            non_blank_count += 1
+            if non_blank_count >= n:
+                return i + 1
+    return len(lines)
 
-    A block is suppressed only when block >= MIN_BLOCK_LINES AND ALL
-    significant lines in the block are moved (100% threshold).
+
+def _flush_sub_block(
+    sub_block: list[str],
+    moved_lines: set[str],
+    removed_to_file: Optional[dict[str, str]] = None,
+    added_to_file: Optional[dict[str, str]] = None,
+) -> list[str]:
+    """Emit sub_block as a moved summary if large enough, otherwise as-is.
+
+    A sub_block qualifies for suppression when it has >= MIN_BLOCK_LINES lines
+    and contains at least one significant moved line. Because _render_block()
+    only accumulates lines that are not non-moved-significant, every significant
+    line in the sub_block is guaranteed to be in moved_lines.
+
+    When removed_to_file / added_to_file are provided, annotates the summary
+    with the source or destination filename.
+    """
+    if not sub_block:
+        return []
+    significant_moved = [
+        bl
+        for bl in sub_block
+        if is_significant_line(bl[1:]) and bl[1:].strip() in moved_lines
+    ]
+    if len(sub_block) >= MIN_BLOCK_LINES and significant_moved:
+        is_addition = sub_block[0].startswith("+")
+        ref_file: Optional[str] = None
+        source_map = removed_to_file if is_addition else added_to_file
+        if source_map is not None:
+            for bl in significant_moved:
+                candidate = source_map.get(bl[1:].strip())
+                if candidate:
+                    ref_file = candidate
+                    break
+        # Show the first PREVIEW_LINES non-blank lines so the reader can see
+        # which function/class was moved, then summarise the rest.
+        split_idx = _find_preview_split(sub_block, PREVIEW_LINES)
+        preview = sub_block[:split_idx]
+        remainder = sub_block[split_idx:]
+        if not remainder:
+            return list(sub_block)  # everything fits in preview
+        return preview + [format_moved_summary(len(remainder), ref_file, is_addition)]
+    return list(sub_block)
+
+
+def _render_block(
+    block: list[str],
+    moved_lines: set[str],
+    removed_to_file: Optional[dict[str, str]] = None,
+    added_to_file: Optional[dict[str, str]] = None,
+) -> list[str]:
+    """Render a consecutive same-sign block, suppressing moved sub-sections.
+
+    Splits the block at non-moved significant lines (which are always emitted).
+    Each segment between splits is passed to _flush_sub_block(), which replaces
+    it with a summary comment if it is long enough and all its significant lines
+    are moved. This allows moved blocks in new files to be suppressed even when
+    the file has a different header or imports above the moved content.
+    """
+    output: list[str] = []
+    sub_block: list[str] = []
+    for line in block:
+        content = line[1:].strip()
+        if is_significant_line(content) and content not in moved_lines:
+            # Non-moved significant line: flush accumulated sub-block, emit this line
+            output.extend(
+                _flush_sub_block(sub_block, moved_lines, removed_to_file, added_to_file)
+            )
+            sub_block = []
+            output.append(line)
+        else:
+            sub_block.append(line)
+    output.extend(
+        _flush_sub_block(sub_block, moved_lines, removed_to_file, added_to_file)
+    )
+    return output
+
+
+def render_hunk(
+    hunk: Hunk,
+    moved_lines: set[str],
+    removed_to_file: Optional[dict[str, str]] = None,
+    added_to_file: Optional[dict[str, str]] = None,
+) -> str:
+    """Render a single hunk, replacing moved sub-blocks >= MIN_BLOCK_LINES.
+
+    Within each same-sign run (+/-), the block is split at non-moved significant
+    lines. Each resulting segment is suppressed if all its significant lines are
+    moved and it meets MIN_BLOCK_LINES. This handles both the removal side
+    (lines deleted from an existing file) and the addition side (lines added to
+    a new file or an existing file).
     """
     output: list[str] = [hunk.header]
     lines = hunk.lines
@@ -211,24 +349,7 @@ def render_hunk(hunk: Hunk, moved_lines: set[str]) -> str:
             block.append(lines[j])
             j += 1
 
-        # Count significant moved lines in block
-        significant_moved = [
-            bl
-            for bl in block
-            if is_significant_line(bl[1:]) and bl[1:].strip() in moved_lines
-        ]
-        significant_total = [bl for bl in block if is_significant_line(bl[1:])]
-
-        # Suppress block if: length >= MIN_BLOCK_LINES AND all significant lines moved
-        if (
-            len(block) >= MIN_BLOCK_LINES
-            and len(significant_total) > 0
-            and len(significant_moved) == len(significant_total)
-        ):
-            output.append(format_moved_summary(len(block)))
-        else:
-            output.extend(block)
-
+        output.extend(_render_block(block, moved_lines, removed_to_file, added_to_file))
         i += len(block)
 
     # Return empty string if only the header remains (hunk is empty after suppression)
@@ -237,14 +358,19 @@ def render_hunk(hunk: Hunk, moved_lines: set[str]) -> str:
     return "\n".join(output)
 
 
-def render_file_diff(file_diff: FileDiff, moved_lines: set[str]) -> str:
+def render_file_diff(
+    file_diff: FileDiff,
+    moved_lines: set[str],
+    removed_to_file: Optional[dict[str, str]] = None,
+    added_to_file: Optional[dict[str, str]] = None,
+) -> str:
     """Render all hunks for one file; skip file entirely if all hunks are empty.
 
     After moved-block suppression.
     """
     rendered_hunks: list[str] = []
     for hunk in file_diff.hunks:
-        rendered = render_hunk(hunk, moved_lines)
+        rendered = render_hunk(hunk, moved_lines, removed_to_file, added_to_file)
         if rendered:
             rendered_hunks.append(rendered)
 
@@ -267,10 +393,15 @@ def render_compact_diff(plain_diff: str, ansi_diff: str) -> str:
     ansi_moved = extract_moved_blocks_ansi(ansi_diff)  # Pass 1
     py_moved = find_moved_lines(plain_files)  # Pass 2
     all_moved = ansi_moved | py_moved
+    removed_to_file, added_to_file = collect_line_sources(
+        plain_files
+    )  # for annotations
 
     output: list[str] = []
     for file_diff in plain_files:
-        rendered = render_file_diff(file_diff, all_moved)
+        rendered = render_file_diff(
+            file_diff, all_moved, removed_to_file, added_to_file
+        )
         if rendered:
             output.append(rendered)
 
