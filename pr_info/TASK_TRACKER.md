@@ -62,10 +62,10 @@ See [step_3.md](./steps/step_3.md) for full details.
 
 See [step_4.md](./steps/step_4.md) for full details.
 
-- [ ] Implement: edit `.claude/commands/implementation_review.md` — replace `Bash(git diff:*)` with `Bash(mcp-coder git-tool compact-diff:*)` in frontmatter, remove `BASE_BRANCH` assignment line, replace `git diff` command with `mcp-coder git-tool compact-diff --exclude "pr_info/.conversations/**"`
-- [ ] Implement: verify `tools/compact_diff.py` and `tools/git-refactor-diff.py` are not imported in `src/` or `tests/`, then delete both files
-- [ ] Quality checks: run pylint, pytest, mypy and resolve all issues found
-- [ ] Prepare git commit message for Step 4 changes
+- [x] Implement: edit `.claude/commands/implementation_review.md` — replace `Bash(git diff:*)` with `Bash(mcp-coder git-tool compact-diff:*)` in frontmatter, remove `BASE_BRANCH` assignment line, replace `git diff` command with `mcp-coder git-tool compact-diff --exclude "pr_info/.conversations/**"`
+- [x] Implement: verify `tools/compact_diff.py` and `tools/git-refactor-diff.py` are not imported in `src/` or `tests/`, then delete both files
+- [x] Quality checks: run pylint, pytest, mypy and resolve all issues found
+- [x] Prepare git commit message for Step 4 changes
 
 ---
 
