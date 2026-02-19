@@ -545,13 +545,12 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
             repo_config = load_repo_config(repo_name)
 
             # Build validated config dict - use empty string fallback for optional repo_url
+            repo_url = repo_config.get("repo_url") or ""
             validated_config: dict[str, str] = {
-                "repo_url": repo_config.get("repo_url") or "",
+                "repo_url": repo_url,
             }
 
-            repo_full_name = _get_repo_full_name_from_url(
-                repo_config.get("repo_url") or ""
-            )
+            repo_full_name = _get_repo_full_name_from_url(repo_url)
             all_cached_issues = list(
                 cached_issues_by_repo.get(repo_full_name, {}).values()
             )
@@ -561,6 +560,7 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
                     "No cached issues available for repo %s (cache build may have failed) — skipping",
                     repo_name,
                 )
+                continue
 
             started = process_eligible_issues(
                 repo_name=repo_name,

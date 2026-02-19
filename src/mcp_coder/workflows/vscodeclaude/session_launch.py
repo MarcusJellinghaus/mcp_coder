@@ -254,20 +254,24 @@ def process_eligible_issues(
     """Process eligible issues for a repository.
 
     Args:
-        repo_name: Repository config name
-        repo_config: Repository config
-        vscodeclaude_config: VSCodeClaude config
-        max_sessions: Maximum concurrent sessions
-        repo_filter: Optional repo filter (skip if doesn't match)
+        repo_name: Repository config name used to load per-repo VSCodeClaude config.
+        repo_config: Repository config dict containing at minimum ``repo_url``.
+        vscodeclaude_config: Global VSCodeClaude config (workspace_base, max_sessions, etc.).
+        max_sessions: Maximum number of concurrent sessions allowed across all repos.
+        repo_filter: If provided, skip this repo unless its name matches exactly.
+        all_cached_issues: Pre-fetched list of all issues for the repo. When provided,
+            ``get_all_cached_issues`` is not called, avoiding a duplicate-protection
+            cache miss. Defaults to ``None``, in which case issues are fetched from
+            cache as before (backward-compatible).
 
     Returns:
-        List of sessions that were started
+        List of sessions that were started during this call.
 
-    Handles:
-    - Checking current session count
-    - Getting eligible issues
-    - Skipping issues with existing sessions
-    - Starting new sessions up to max
+    The function:
+    - Skips immediately if ``repo_filter`` does not match or max sessions are reached.
+    - Fetches issues from cache only when ``all_cached_issues`` is not supplied.
+    - Filters eligible issues, skips those with existing sessions or missing branches.
+    - Starts new sessions up to the remaining available slot count.
     """
     # Apply repo filter if provided
     if repo_filter and repo_name != repo_filter:

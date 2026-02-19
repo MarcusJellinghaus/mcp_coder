@@ -524,11 +524,12 @@ class TestProcessEligibleIssuesPrefetchedIssues:
         )
 
         # get_all_cached_issues must NOT be called — raises AssertionError if invoked
+        def _should_not_be_called(*args: Any, **kwargs: Any) -> list[IssueData]:
+            raise AssertionError("get_all_cached_issues should not be called")
+
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_all_cached_issues",
-            lambda *args, **kwargs: (_ for _ in ()).throw(
-                AssertionError("get_all_cached_issues should not be called")
-            ),
+            _should_not_be_called,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch._filter_eligible_vscodeclaude_issues",
