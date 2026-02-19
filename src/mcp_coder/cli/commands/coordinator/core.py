@@ -189,11 +189,9 @@ def _filter_eligible_issues(issues: List[IssueData]) -> List[IssueData]:
         List of eligible issues sorted by priority
     """
     # Load label configuration
-    from importlib import resources
+    from ....utils.github_operations.label_config import get_labels_config_path
 
-    config_resource = resources.files("mcp_coder.config") / "labels.json"
-    config_path = Path(str(config_resource))
-    labels_config = load_labels_config(config_path)
+    labels_config = load_labels_config(get_labels_config_path(None))
 
     # Extract bot_pickup labels and ignore_labels
     bot_pickup_labels = set()
@@ -260,11 +258,9 @@ def get_eligible_issues(
     """
     # Load label configuration
     # Uses bundled package config (coordinator operates without local project context)
-    from importlib import resources
+    from ....utils.github_operations.label_config import get_labels_config_path
 
-    config_resource = resources.files("mcp_coder.config") / "labels.json"
-    config_path = Path(str(config_resource))
-    labels_config = load_labels_config(config_path)
+    labels_config = load_labels_config(get_labels_config_path(None))
 
     # Extract bot_pickup labels (labels with category="bot_pickup")
     bot_pickup_labels = set()

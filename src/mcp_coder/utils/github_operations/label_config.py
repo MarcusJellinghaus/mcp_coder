@@ -41,6 +41,7 @@ Design rationale:
 """
 
 import json
+from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Any, Dict, Optional, TypedDict
 
@@ -90,7 +91,7 @@ def build_label_lookups(labels_config: Dict[str, Any]) -> LabelLookups:
     )
 
 
-def get_labels_config_path(project_dir: Optional[Path] = None) -> Path:
+def get_labels_config_path(project_dir: Optional[Path] = None) -> Path | Traversable:
     """Get path to labels.json configuration file.
 
     This function supports two operational modes:
@@ -149,34 +150,29 @@ def get_labels_config_path(project_dir: Optional[Path] = None) -> Path:
             return local_config
 
     # Fall back to package's bundled config
-    config_resource = resources.files("mcp_coder.config") / "labels.json"
-    # Convert to Path - resources.files returns Traversable which may not be Path
-    if isinstance(config_resource, Path):
-        return config_resource
-    # For installed packages, we need to handle the resource differently
-    # The path might be inside a zip file, so we return it as-is
-    return Path(str(config_resource))
+    # Return Traversable directly — safe for both editable installs and wheel installs
+    return resources.files("mcp_coder.config") / "labels.json"
 
 
-def load_labels_config(config_path: Path) -> Dict[str, Any]:
+def load_labels_config(config_path: Path | Traversable) -> Dict[str, Any]:
     """Load label configuration from JSON file.
 
     Args:
-        config_path: Path to labels.json
+        config_path: Path or Traversable resource pointing to labels.json.
+                     Use a plain Path for local overrides; use the Traversable
+                     returned by get_labels_config_path() for the bundled config.
 
     Returns:
         Dict with 'workflow_labels' and 'ignore_labels' keys
 
     Raises:
-        FileNotFoundError: If config file doesn't exist
+        FileNotFoundError: If a Path-based config file doesn't exist
         json.JSONDecodeError: If file is not valid JSON
         ValueError: If required keys are missing
     """
-    if not config_path.exists():
+    if isinstance(config_path, Path) and not config_path.exists():
         raise FileNotFoundError(f"Label configuration not found: {config_path}")
-
-    with open(config_path, "r", encoding="utf-8") as f:
-        config: Dict[str, Any] = json.load(f)
+    config: Dict[str, Any] = json.loads(config_path.read_text(encoding="utf-8"))
 
     # Validate required keys
     if "workflow_labels" not in config:

@@ -3,7 +3,6 @@
 import json
 import logging
 import re
-from importlib import resources
 from pathlib import Path
 from typing import Any, cast
 
@@ -25,9 +24,9 @@ def _load_labels_config() -> dict[str, Any]:
     Returns:
         Labels config dict with workflow_labels and ignore_labels
     """
-    config_resource = resources.files("mcp_coder.config") / "labels.json"
-    config_path = Path(str(config_resource))
-    result: dict[str, Any] = load_labels_config(config_path)
+    from ...utils.github_operations.label_config import get_labels_config_path
+
+    result: dict[str, Any] = load_labels_config(get_labels_config_path(None))
     return result
 
 
