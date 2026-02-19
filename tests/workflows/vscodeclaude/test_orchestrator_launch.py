@@ -486,3 +486,89 @@ class TestProcessEligibleIssuesBranchRequirement:
         assert "#456" in caplog.text
         # Empty result
         assert result == []
+
+
+class TestProcessEligibleIssuesPrefetchedIssues:
+    """Tests for pre-fetched issues bypassing get_all_cached_issues."""
+
+    def test_pre_fetched_issues_bypasses_get_all_cached_issues(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When all_cached_issues is passed, get_all_cached_issues is not called."""
+        mock_issue: IssueData = {
+            "number": 101,
+            "title": "Pre-fetched Issue",
+            "labels": ["status-01:created"],
+            "assignees": ["testuser"],
+            "state": "open",
+            "url": "https://github.com/owner/repo/issues/101",
+            "body": "",
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "locked": False,
+        }
+
+        # Mock IssueManager and IssueBranchManager to avoid token validation
+        mock_issue_manager = MagicMock()
+        mock_branch_manager = MagicMock()
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.IssueManager",
+            lambda **kwargs: mock_issue_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
+        )
+
+        # get_all_cached_issues must NOT be called — raises AssertionError if invoked
+        def _should_not_be_called(*args: Any, **kwargs: Any) -> list[IssueData]:
+            raise AssertionError("get_all_cached_issues should not be called")
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_all_cached_issues",
+            _should_not_be_called,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch._filter_eligible_vscodeclaude_issues",
+            lambda *args, **kwargs: [mock_issue],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_linked_branch_for_issue",
+            lambda *args, **kwargs: None,
+        )
+
+        mock_launch = MagicMock()
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.prepare_and_launch_session",
+            mock_launch,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_session_for_issue",
+            lambda *args, **kwargs: None,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_active_session_count",
+            lambda: 0,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_github_username",
+            lambda: "testuser",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.load_repo_vscodeclaude_config",
+            lambda *args, **kwargs: {},
+        )
+
+        # Pass pre-fetched issues directly — get_all_cached_issues must not be called
+        process_eligible_issues(
+            repo_name="test-repo",
+            repo_config={"repo_url": "https://github.com/owner/repo"},
+            vscodeclaude_config={"workspace_base": "/tmp", "max_sessions": 3},
+            max_sessions=3,
+            all_cached_issues=[mock_issue],
+        )
+
+        # The pre-fetched issue was used: session was launched once
+        mock_launch.assert_called_once()

@@ -265,20 +265,6 @@ class TestOrchestration:
 
         assert sessions == []
 
-    def test_process_eligible_issues_applies_repo_filter(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Skips when repo_filter doesn't match."""
-        sessions = process_eligible_issues(
-            repo_name="test",
-            repo_config={"repo_url": "https://github.com/owner/repo.git"},
-            vscodeclaude_config={"workspace_base": "/tmp", "max_sessions": 3},
-            max_sessions=3,
-            repo_filter="other_repo",
-        )
-
-        assert sessions == []
-
     def test_restart_closed_sessions_removes_orphans(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
