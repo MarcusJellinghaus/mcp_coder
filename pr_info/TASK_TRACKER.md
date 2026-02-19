@@ -49,12 +49,12 @@ See [step_2.md](./steps/step_2.md) for full details.
 
 See [step_3.md](./steps/step_3.md) for full details.
 
-- [ ] Implement: create `src/mcp_coder/cli/commands/git_tool.py` with `execute_compact_diff()` function mirroring `gh_tool.py` structure
-- [ ] Implement: add `add_git_tool_parsers()` to `src/mcp_coder/cli/parsers.py`
-- [ ] Implement: wire `_handle_git_tool_command()` and routing in `src/mcp_coder/cli/main.py`
-- [ ] Implement: create `tests/cli/commands/test_git_tool.py` following `test_gh_tool.py` structure
-- [ ] Quality checks: run pylint, pytest, mypy and resolve all issues found
-- [ ] Prepare git commit message for Step 3 changes
+- [x] Implement: create `src/mcp_coder/cli/commands/git_tool.py` with `execute_compact_diff()` function mirroring `gh_tool.py` structure
+- [x] Implement: add `add_git_tool_parsers()` to `src/mcp_coder/cli/parsers.py`
+- [x] Implement: wire `_handle_git_tool_command()` and routing in `src/mcp_coder/cli/main.py`
+- [x] Implement: create `tests/cli/commands/test_git_tool.py` following `test_gh_tool.py` structure
+- [x] Quality checks: run pylint, pytest, mypy and resolve all issues found
+- [x] Prepare git commit message for Step 3 changes
 
 ---
 

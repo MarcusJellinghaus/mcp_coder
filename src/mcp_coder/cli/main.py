@@ -19,6 +19,7 @@ from .commands.create_plan import execute_create_plan
 from .commands.create_pr import execute_create_pr
 from .commands.define_labels import execute_define_labels
 from .commands.gh_tool import execute_get_base_branch
+from .commands.git_tool import execute_compact_diff
 from .commands.help import execute_help, get_help_text
 from .commands.implement import execute_implement
 from .commands.prompt import execute_prompt
@@ -33,6 +34,7 @@ from .parsers import (
     add_create_pr_parser,
     add_define_labels_parser,
     add_gh_tool_parsers,
+    add_git_tool_parsers,
     add_implement_parser,
     add_prompt_parser,
     add_set_status_parser,
@@ -89,6 +91,7 @@ def create_parser() -> argparse.ArgumentParser:
     add_set_status_parser(subparsers)
     add_check_parsers(subparsers)
     add_gh_tool_parsers(subparsers)
+    add_git_tool_parsers(subparsers)
 
     return parser
 
@@ -171,6 +174,21 @@ def _handle_gh_tool_command(args: argparse.Namespace) -> int:
         return 1
 
 
+def _handle_git_tool_command(args: argparse.Namespace) -> int:
+    """Handle git-tool subcommands."""
+    if hasattr(args, "git_tool_subcommand") and args.git_tool_subcommand:
+        if args.git_tool_subcommand == "compact-diff":
+            return execute_compact_diff(args)
+        else:
+            logger.error(f"Unknown git-tool subcommand: {args.git_tool_subcommand}")
+            print(f"Error: Unknown git-tool subcommand '{args.git_tool_subcommand}'")
+            return 1
+    else:
+        logger.error("git-tool subcommand required")
+        print("Error: Please specify a git-tool subcommand (e.g., 'compact-diff')")
+        return 1
+
+
 def _handle_commit_command(args: argparse.Namespace) -> int:
     """Handle commit subcommands."""
     if args.commit_mode == "auto":
@@ -226,6 +244,8 @@ def main() -> int:
             return _handle_check_command(args)
         elif args.command == "gh-tool":
             return _handle_gh_tool_command(args)
+        elif args.command == "git-tool":
+            return _handle_git_tool_command(args)
 
         # Other commands will be implemented in later steps
         logger.error(f"Command '{args.command}' not yet implemented")
