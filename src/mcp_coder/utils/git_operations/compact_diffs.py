@@ -185,7 +185,9 @@ def collect_line_sources(
     removed_to_file: dict[str, str] = {}
     added_to_file: dict[str, str] = {}
     for file_diff in files:
-        filename = file_diff.headers[0].split()[-1] if file_diff.headers else ""
+        filename = (
+            (file_diff.headers[0].split() or [""])[-1] if file_diff.headers else ""
+        )
         if not filename:
             continue
         for hunk in file_diff.hunks:
@@ -279,7 +281,10 @@ def _flush_sub_block(
         remainder = sub_block[split_idx:]
         if not remainder:
             return list(sub_block)  # everything fits in preview
-        return preview + [format_moved_summary(len(remainder), ref_file, is_addition)]
+        sign = "+" if is_addition else "-"
+        return preview + [
+            sign + format_moved_summary(len(remainder), ref_file, is_addition)
+        ]
     return list(sub_block)
 
 

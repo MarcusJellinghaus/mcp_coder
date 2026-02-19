@@ -652,7 +652,7 @@ class TestRenderCompactDiffRealistic:
             '-    """Simple calculator with basic arithmetic operations."""\n'
             "-\n"
             "-    def __init__(self, precision: int = 2) -> None:\n"
-            "# [moved to calculator.py: 15 lines not shown]\n"
+            "-# [moved to calculator.py: 15 lines not shown]\n"
             " \n"
             " CONSTANT_VALUE = 42\n"
             ' ANOTHER_CONSTANT = "hello world from old_module"\n'
@@ -668,7 +668,7 @@ class TestRenderCompactDiffRealistic:
             '+    """Simple calculator with basic arithmetic operations."""\n'
             "+\n"
             "+    def __init__(self, precision: int = 2) -> None:\n"
-            "# [moved from old_module.py: 16 lines not shown]\n"
+            "+# [moved from old_module.py: 16 lines not shown]\n"
             '+CALCULATOR_VERSION = "1.0.0"\n'
             "diff --git main.py main.py\n"
             "--- main.py\n"

@@ -1,7 +1,6 @@
 """Git diff operations for generating change summaries."""
 
 import logging
-import os
 from pathlib import Path
 from typing import Optional
 
@@ -200,32 +199,16 @@ def get_branch_diff(
                     "--color-moved=dimmed-zebra",
                 ] + diff_args
 
-            # Execute git diff with UTF-8 encoding environment
-            # Set environment for this process to handle UTF-8 properly
-            original_env = {}
-            encoding_vars = {
-                "PYTHONIOENCODING": "utf-8",
-                "PYTHONUTF8": "1",
-            }
-            # Only set LC_ALL on non-Windows systems
+            # Execute git diff; on non-Windows set LC_ALL so git outputs UTF-8.
+            # Use custom_environment() to pass the variable only to the git
+            # subprocess, without touching the current process environment.
+            import os
+
             if os.name != "nt":
-                encoding_vars["LC_ALL"] = "C.UTF-8"
-
-            # Store original values and set new ones
-            for key, value in encoding_vars.items():
-                original_env[key] = os.environ.get(key)
-                os.environ[key] = value
-
-            try:
-                # Execute git diff with encoding environment set
+                with repo.git.custom_environment(LC_ALL="C.UTF-8"):
+                    diff_output = repo.git.diff(*diff_args)
+            else:
                 diff_output = repo.git.diff(*diff_args)
-            finally:
-                # Restore original environment
-                for key, original_value in original_env.items():
-                    if original_value is not None:
-                        os.environ[key] = original_value
-                    else:
-                        os.environ.pop(key, None)
 
             logger.debug(
                 "Generated diff between %s and %s (%d bytes)",
