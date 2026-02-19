@@ -30,9 +30,11 @@ def get_branch_diff(
 ```
 
 When `ansi=True`:
-- Insert `"--color=always"` as the first element of `diff_args`
+- Insert `"--color=always"` and `"--color-moved=dimmed-zebra"` as the first
+  elements of `diff_args` (both flags are required for Pass 1 move detection)
 - **Windows note:** follow the existing pattern in this file — no `LC_ALL` on
-  Windows (`os.name != "nt"` guard already present)
+  Windows (`os.name != "nt"` guard already present). ANSI dim codes (`\x1b[2m`)
+  are confirmed to work on Windows with these flags — no extra env setup needed.
 
 No other changes to the function.
 
@@ -50,7 +52,7 @@ Integration points:
 
 ```
 if ansi:
-    prepend "--color=always" to diff_args list
+    prepend "--color=always", "--color-moved=dimmed-zebra" to diff_args list
 else:
     diff_args unchanged (existing behaviour)
 run repo.git.diff(*diff_args) as before
@@ -105,7 +107,8 @@ Files to modify:
 
 Changes required:
 1. Add `ansi: bool = False` parameter to `get_branch_diff()` in diffs.py.
-   When True, prepend "--color=always" to diff_args before calling repo.git.diff().
+   When True, prepend "--color=always" and "--color-moved=dimmed-zebra" to
+   diff_args before calling repo.git.diff(). Both flags are required together.
    Follow the existing Windows guard pattern (no LC_ALL on Windows).
    Do not change any other behaviour.
 

@@ -25,7 +25,8 @@ parse ANSI escape codes to identify which lines git classifies as moved
 
 **Pass 2 (Python):** Collect all removed/added lines across files; find their
 intersection (lines present as both a removal and an addition = moved). Suppress
-consecutive moved blocks of ≥3 lines / ≥10 char content.
+consecutive moved blocks of ≥3 lines / ≥10 char content where **all** significant
+lines are confirmed moved (100% threshold).
 
 Moved blocks are **not silently dropped**; they emit a summary comment:
 ```
@@ -45,8 +46,9 @@ synthetic data only (no large fixture files).
 
 ### Extended function
 `get_branch_diff()` in `src/mcp_coder/utils/git_operations/diffs.py` gains an
-optional `ansi: bool = False` parameter. When `True`, adds `--color=always` to
-the diff args. Backward-compatible (default unchanged).
+optional `ansi: bool = False` parameter. When `True`, adds both `--color=always`
+and `--color-moved=dimmed-zebra` to the diff args (both required for Pass 1 move
+detection). Backward-compatible (default unchanged).
 
 ### New CLI command group
 `mcp-coder git-tool compact-diff` — parallel to the existing `gh-tool` group.
@@ -76,6 +78,9 @@ with `mcp-coder git-tool compact-diff`.
 | **Modify** | `src/mcp_coder/cli/parsers.py` — add `add_git_tool_parsers()` |
 | **Modify** | `src/mcp_coder/cli/main.py` — wire `git-tool` command routing |
 | **Modify** | `.claude/commands/implementation_review.md` — replace `git diff` with CLI call |
+| **Modify** | `docs/cli-reference.md` — document `git-tool compact-diff` command |
+| **Modify** | `docs/architecture/architecture.md` — note new `compact_diffs.py` module |
+| **Modify** | `README.md` — brief mention of compact diff feature |
 | **Delete** | `tools/git-refactor-diff.py` |
 | **Delete** | `tools/compact_diff.py` |
 
@@ -106,3 +111,4 @@ with `mcp-coder git-tool compact-diff`.
 | 2 | Create `compact_diffs.py` core module + unit tests |
 | 3 | Create `git_tool.py` CLI command + parser + main.py wiring + tests |
 | 4 | Update `implementation_review.md` + delete prototype tools |
+| 5 | Update documentation (cli-reference, architecture, README) |

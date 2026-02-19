@@ -64,7 +64,9 @@ def is_moved_line(raw_line: str) -> bool:
 
 def extract_moved_blocks_ansi(ansi_diff: str) -> set[str]:
     """Return the set of stripped line contents that git marked as moved
-    (via --color-moved=dimmed-zebra). Uses is_moved_line() per line."""
+    (via --color-moved=dimmed-zebra). Uses is_moved_line() per line.
+    Note: ANSI dim codes (\x1b[2m) are confirmed to work on Windows —
+    no special environment setup is required."""
 ```
 
 ### Functions — Layer 3: Python cross-file matching (Pass 2)
@@ -83,9 +85,6 @@ def find_moved_lines(files: list[FileDiff]) -> set[str]:
 ### Functions — Layer 4: Block analysis
 
 ```python
-def find_first_nonblank_line(lines: list[str]) -> str:
-    """Return first non-blank content line from a block (strip leading +/-)."""
-
 def format_moved_summary(count: int) -> str:
     """Return '# [moved: N lines not shown]' comment string."""
 ```
@@ -140,7 +139,7 @@ while i < len(hunk.lines):
     if line is context (starts with ' '): append as-is; i++; continue
     gather consecutive lines with same sign (+/-) into block
     count significant moved lines in block
-    if block >= MIN_BLOCK_LINES AND >= 80% are moved:
+    if block >= MIN_BLOCK_LINES AND ALL significant lines are moved:
         append format_moved_summary(len(block))
     else:
         append block lines as-is
@@ -184,11 +183,11 @@ class TestExtractMovedBlocksAnsi:      # set of moved line contents from ANSI di
 class TestIsSignificantLine:           # short lines False, long lines True
 class TestCollectLineOccurrences:      # correct removed/added sets from FileDiff list
 class TestFindMovedLines:              # intersection of removed+added
-class TestFindFirstNonblankLine:       # correct first non-blank line extraction
 class TestFormatMovedSummary:          # "# [moved: 5 lines not shown]"
 class TestRenderHunk:                  # moved blocks suppressed; small blocks kept
 class TestRenderFileDiff:              # file skipped when all hunks empty
 class TestRenderCompactDiff:           # end-to-end: 10-line synthetic diff → compact output
+                                       # + test_render_compact_diff_empty_input: render_compact_diff("", "") == ""
 ```
 
 Each test class has 1–3 focused test methods. No `@pytest.mark.git_integration`
@@ -209,17 +208,23 @@ Files to create:
 
 Implementation rules:
 1. Use the exact function signatures and dataclass definitions from step_2.md.
+   Note: find_first_nonblank_line() is NOT in the spec — do not implement it.
 2. All functions must be pure (no side effects) except get_compact_diff(),
    which calls get_branch_diff() from diffs.py.
-3. Windows compatibility: no LC_ALL env var usage anywhere in this file.
-4. Do not add this module to git_operations/__init__.py — it is internal.
-5. Follow the existing code style in diffs.py (type hints, logging, docstrings).
+3. render_hunk() suppresses a block when block >= MIN_BLOCK_LINES AND ALL
+   significant lines in the block are moved (100% threshold, not 80%).
+4. Windows compatibility: no LC_ALL env var usage anywhere in this file.
+5. Do not add this module to git_operations/__init__.py — it is internal.
+6. Follow the existing code style in diffs.py (type hints, logging, docstrings).
 
 Test rules:
 1. All tests use synthetic string inputs — no git repos, no fixtures.
 2. Organize into the test classes listed in step_2.md.
+   Note: TestFindFirstNonblankLine is NOT in the list — do not create it.
 3. Each test class has 1–3 focused test methods.
-4. No @pytest.mark.git_integration marker needed.
+4. TestRenderCompactDiff must include test_render_compact_diff_empty_input
+   asserting that render_compact_diff("", "") returns "".
+5. No @pytest.mark.git_integration marker needed.
 
 Run the tests after implementing to verify they all pass.
 ```
