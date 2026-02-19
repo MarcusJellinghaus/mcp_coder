@@ -97,6 +97,7 @@ def get_branch_diff(
     project_dir: Path,
     base_branch: Optional[str] = None,
     exclude_paths: Optional[list[str]] = None,
+    ansi: bool = False,
 ) -> str:
     """Generate git diff between current branch and base branch.
 
@@ -106,6 +107,9 @@ def get_branch_diff(
             string with error log. Callers should use detect_base_branch()
             to determine the base branch before calling this function.
         exclude_paths: List of paths to exclude from diff (e.g., ['pr_info/', '*.log'])
+        ansi: If True, prepend --color=always and --color-moved=dimmed-zebra to diff
+            args so that ANSI colour codes are preserved in the output.
+            Default False preserves existing behaviour.
 
     Returns:
         Git diff string between base branch and current HEAD, or empty string on error
@@ -188,6 +192,13 @@ def get_branch_diff(
                     "--unified=5",
                     "--no-prefix",
                 ]
+
+            # Prepend ANSI colour flags when requested
+            if ansi:
+                diff_args = [
+                    "--color=always",
+                    "--color-moved=dimmed-zebra",
+                ] + diff_args
 
             # Execute git diff with UTF-8 encoding environment
             # Set environment for this process to handle UTF-8 properly

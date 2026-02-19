@@ -652,8 +652,8 @@ class TestBackwardCompatibility:
 
     def test_ask_llm_still_works(self, mock_claude_cli: MockClaudeCLI) -> None:
         """Test that ask_llm (simple interface) still works."""
-        with patch("mcp_coder.llm.interface.ask_claude_code") as mock_ask_claude_code:
-            mock_ask_claude_code.return_value = "Simple response"
+        with patch("mcp_coder.llm.interface.ask_claude_code_cli", mock_claude_cli):
+            mock_claude_cli.set_response("Simple response")
 
             response = ask_llm("Simple question")
 
@@ -663,8 +663,8 @@ class TestBackwardCompatibility:
 
     def test_ask_llm_without_session_id(self, mock_claude_cli: MockClaudeCLI) -> None:
         """Test ask_llm works without session_id parameter."""
-        with patch("mcp_coder.llm.interface.ask_claude_code") as mock_ask_claude_code:
-            mock_ask_claude_code.return_value = "No session needed"
+        with patch("mcp_coder.llm.interface.ask_claude_code_cli", mock_claude_cli):
+            mock_claude_cli.set_response("No session needed")
 
             # Old calling pattern should still work
             response = ask_llm("Question", provider="claude", method="cli", timeout=30)

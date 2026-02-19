@@ -27,10 +27,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 See [step_1.md](./steps/step_1.md) for full details.
 
-- [ ] Implement: add `ansi: bool = False` parameter to `get_branch_diff()` in `src/mcp_coder/utils/git_operations/diffs.py`; when `True`, prepend `--color=always` and `--color-moved=dimmed-zebra` to diff args
-- [ ] Implement: add two new test methods to `TestDiffOperations` in `tests/utils/git_operations/test_diffs.py` (marked `@pytest.mark.git_integration`)
-- [ ] Quality checks: run pylint, pytest, mypy and resolve all issues found
-- [ ] Prepare git commit message for Step 1 changes
+- [x] Implement: add `ansi: bool = False` parameter to `get_branch_diff()` in `src/mcp_coder/utils/git_operations/diffs.py`; when `True`, prepend `--color=always` and `--color-moved=dimmed-zebra` to diff args
+- [x] Implement: add two new test methods to `TestDiffOperations` in `tests/utils/git_operations/test_diffs.py` (marked `@pytest.mark.git_integration`)
+- [x] Quality checks: run pylint, pytest, mypy and resolve all issues found
+- [x] Prepare git commit message for Step 1 changes
 
 ---
 
