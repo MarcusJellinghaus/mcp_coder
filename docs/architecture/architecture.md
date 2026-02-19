@@ -200,6 +200,7 @@ mcp-coder implement --project-dir /path/to/project
     - **Added functionality**: `delete_branch()` for complete branch lifecycle management
   - `branches.py` - Branch management (create, delete, checkout, exists, get current/default/parent)
   - `commits.py` - Commit automation
+  - `compact_diffs.py` - Two-pass compact diff pipeline; internal module used by the `git-tool compact-diff` CLI command. Not exported from `__init__.py`.
   - `core.py` - Core types (CommitResult, PushResult) and context utilities
   - `diffs.py` - Diff generation for commits and branches
   - `file_tracking.py` - File status tracking

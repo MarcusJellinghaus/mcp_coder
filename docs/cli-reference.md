@@ -55,6 +55,13 @@ GitHub repository utilities for branch detection and workflow automation.
 |---------|-------------|
 | [`gh-tool get-base-branch`](#gh-tool-get-base-branch) | Detect base branch for current feature branch |
 
+### Git Tools
+Git utility commands.
+
+| Command | Description |
+|---------|-------------|
+| [`git-tool compact-diff`](#git-tool-compact-diff) | Generate compact diff replacing moved code blocks with summary comments |
+
 ### Repository & Issue Setup
 Setup and configuration for GitHub workflow automation.
 
@@ -609,6 +616,51 @@ mcp-coder gh-tool get-base-branch --project-dir /path/to/project
 - Slash commands (`/rebase`, `/implementation_review`) use this to determine correct base branch
 - CI scripts that need to compare against the correct parent branch
 - Workflows involving feature branches based on non-main branches
+
+---
+
+## git-tool
+
+Git utility commands.
+
+### git-tool compact-diff
+
+Generate a compact diff between the current branch and its base branch,
+replacing moved code blocks with summary comments.
+
+```bash
+mcp-coder git-tool compact-diff [OPTIONS]
+```
+
+**Options:**
+- `--project-dir PATH` - Project directory (default: current directory)
+- `--base-branch BRANCH` - Base branch to diff against (default: auto-detected)
+- `--exclude PATTERN` - Exclude paths matching pattern (repeatable)
+
+**Exit Codes:**
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success — compact diff printed to stdout |
+| 1 | Could not detect base branch |
+| 2 | Error (invalid repo, unexpected exception) |
+
+**Examples:**
+```bash
+# Generate compact diff for current branch
+mcp-coder git-tool compact-diff
+
+# Exclude conversation files
+mcp-coder git-tool compact-diff --exclude "pr_info/.conversations/**"
+
+# Specify base branch explicitly
+mcp-coder git-tool compact-diff --base-branch main
+
+# Use in scripts
+mcp-coder git-tool compact-diff --project-dir /path/to/project --exclude "*.lock"
+```
+
+**Description:** Produces a diff between the current branch and its base branch, then applies a two-pass pipeline to replace moved code blocks with concise summary comments. This reduces token usage when reviewing large refactoring changes with an LLM.
 
 ---
 

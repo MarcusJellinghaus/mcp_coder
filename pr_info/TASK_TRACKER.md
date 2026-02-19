@@ -73,11 +73,11 @@ See [step_4.md](./steps/step_4.md) for full details.
 
 See [step_5.md](./steps/step_5.md) for full details.
 
-- [ ] Implement: add `git-tool compact-diff` section to `docs/cli-reference.md` mirroring the existing `gh-tool` section style
-- [ ] Implement: add `compact_diffs.py` note to `docs/architecture/architecture.md` in the `utils/git_operations` section
-- [ ] Implement: add compact diff bullet/sentence to `README.md` under an appropriate existing section
-- [ ] Quality checks: run pylint, pytest, mypy and resolve all issues found
-- [ ] Prepare git commit message for Step 5 changes
+- [x] Implement: add `git-tool compact-diff` section to `docs/cli-reference.md` mirroring the existing `gh-tool` section style
+- [x] Implement: add `compact_diffs.py` note to `docs/architecture/architecture.md` in the `utils/git_operations` section
+- [x] Implement: add compact diff bullet/sentence to `README.md` under an appropriate existing section
+- [x] Quality checks: run pylint, pytest, mypy and resolve all issues found
+- [x] Prepare git commit message for Step 5 changes
 
 ---
 
