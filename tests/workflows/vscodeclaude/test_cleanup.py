@@ -560,7 +560,9 @@ class TestCleanup:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [(error_session, "Error", "closed")],
+            lambda cached_issues_by_repo=None: [
+                (error_session, "Error", "test-reason")
+            ],
         )
 
         result = cleanup_stale_sessions(dry_run=True)
@@ -1466,7 +1468,7 @@ class TestGetStaleSessions:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.is_session_stale",
-            lambda s: False,
+            lambda s, cached_issues=None: False,
         )
 
         result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
@@ -1534,7 +1536,7 @@ class TestGetStaleSessions:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.is_session_stale",
-            lambda s: False,
+            lambda s, cached_issues=None: False,
         )
 
         result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
@@ -1607,7 +1609,7 @@ class TestGetStaleSessions:
 
         assert len(result) == 1
         session, git_status, reason = result[0]
-        assert reason == "stale \u2192 status-04:plan-review"
+        assert reason == "stale → status-04:plan-review"
 
     def test_reason_stale_no_cache(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
