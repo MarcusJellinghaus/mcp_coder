@@ -48,7 +48,8 @@
       "Bash(git status:*)",
       "Bash(mcp-coder check file-size:*)",
       "WebFetch(domain:*)",
-      "Bash(mcp-coder gh-tool get-base-branch)"
+      "Bash(mcp-coder gh-tool get-base-branch)",
+      "Bash(git ls-tree:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
