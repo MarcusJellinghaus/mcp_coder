@@ -38,10 +38,10 @@ See [step_1.md](./steps/step_1.md) for full details.
 
 See [step_2.md](./steps/step_2.md) for full details.
 
-- [ ] Implement: create `src/mcp_coder/utils/git_operations/compact_diffs.py` with all dataclasses, constants, and five-layer pure functions as specified
-- [ ] Implement: create `tests/utils/git_operations/test_compact_diffs.py` with all test classes using synthetic string inputs only (no git repos)
-- [ ] Quality checks: run pylint, pytest, mypy and resolve all issues found
-- [ ] Prepare git commit message for Step 2 changes
+- [x] Implement: create `src/mcp_coder/utils/git_operations/compact_diffs.py` with all dataclasses, constants, and five-layer pure functions as specified
+- [x] Implement: create `tests/utils/git_operations/test_compact_diffs.py` with all test classes using synthetic string inputs only (no git repos)
+- [x] Quality checks: run pylint, pytest, mypy and resolve all issues found
+- [x] Prepare git commit message for Step 2 changes
 
 ---
 
