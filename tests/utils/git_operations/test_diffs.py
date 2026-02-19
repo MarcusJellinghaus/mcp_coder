@@ -136,3 +136,36 @@ class TestDiffOperations:
 
         assert result == ""
         assert "base_branch is required" in caplog.text
+
+    def test_get_branch_diff_ansi_false_returns_plain_text(
+        self, git_repo_with_commit: tuple[Repo, Path]
+    ) -> None:
+        """Default ansi=False returns a string without ANSI escape codes."""
+        _repo, project_dir = git_repo_with_commit
+
+        base_branch = get_current_branch_name(project_dir)
+        create_branch("feature-ansi-false", project_dir)
+
+        feature_file = project_dir / "ansi_test.py"
+        feature_file.write_text("# ansi test")
+        commit_all_changes("Add ansi test file", project_dir)
+
+        diff = get_branch_diff(project_dir, base_branch)
+        assert "\x1b[" not in diff
+
+    def test_get_branch_diff_ansi_parameter_accepted(
+        self, git_repo_with_commit: tuple[Repo, Path]
+    ) -> None:
+        """ansi=True is accepted without error (smoke test — ANSI may or may not
+        appear depending on git/terminal, but the call must not raise)."""
+        _repo, project_dir = git_repo_with_commit
+
+        base_branch = get_current_branch_name(project_dir)
+        create_branch("feature-ansi-true", project_dir)
+
+        feature_file = project_dir / "ansi_test2.py"
+        feature_file.write_text("# ansi test 2")
+        commit_all_changes("Add ansi test 2 file", project_dir)
+
+        diff = get_branch_diff(project_dir, base_branch, ansi=True)
+        assert isinstance(diff, str)

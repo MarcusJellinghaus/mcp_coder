@@ -223,6 +223,12 @@ username = "admin"
         monkeypatch.setattr(
             "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
         )
+        # Ensure env vars don't override config file values in this test
+        monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+        monkeypatch.delenv("JENKINS_SERVER_URL", raising=False)
+        monkeypatch.delenv("JENKINS_URL", raising=False)
+        monkeypatch.delenv("JENKINS_USERNAME", raising=False)
+        monkeypatch.delenv("JENKINS_USER", raising=False)
 
         # Execute
         result = get_config_values(
@@ -266,6 +272,8 @@ username = "admin"
         monkeypatch.setattr(
             "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
         )
+        # Ensure GITHUB_TOKEN env var doesn't override config file value
+        monkeypatch.delenv("GITHUB_TOKEN", raising=False)
 
         # Execute
         result = get_config_values(

@@ -577,3 +577,42 @@ def add_gh_tool_parsers(subparsers: Any) -> None:
         default=None,
         help="Project directory path (default: current directory)",
     )
+
+
+def add_git_tool_parsers(subparsers: Any) -> None:
+    """Add git-tool command parsers."""
+    git_tool_parser = subparsers.add_parser("git-tool", help="Git tool commands")
+    git_tool_subparsers = git_tool_parser.add_subparsers(
+        dest="git_tool_subcommand",
+        help="Available Git tool commands",
+        metavar="SUBCOMMAND",
+    )
+
+    # git-tool compact-diff command
+    compact_diff_parser = git_tool_subparsers.add_parser(
+        "compact-diff",
+        help="Generate compact diff suppressing moved-code blocks",
+        formatter_class=WideHelpFormatter,
+        epilog="""Exit codes:
+  0  Success - compact diff printed to stdout
+  1  Could not detect base branch
+  2  Error (invalid repo, unexpected exception)""",
+    )
+    compact_diff_parser.add_argument(
+        "--base-branch",
+        type=str,
+        default=None,
+        help="Base branch to diff against (default: auto-detected)",
+    )
+    compact_diff_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory path (default: current directory)",
+    )
+    compact_diff_parser.add_argument(
+        "--exclude",
+        action="append",
+        metavar="PATTERN",
+        help="Exclude files matching pattern (repeatable)",
+    )

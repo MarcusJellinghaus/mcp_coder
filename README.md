@@ -115,6 +115,7 @@ flowchart TD
 
 - **GitHub Integration**: Automated issue labeling, status progression, and PR management
 - **Git Operations**: Automated branch creation, staging, committing, pushing, and rebasing
+- **Compact diff** (`mcp-coder git-tool compact-diff`): reduces large refactoring diffs for LLM review by replacing moved code blocks with summary comments
 - **Workflow Orchestration**: Automated coordination using `mcp-coder coordinate`, using issue status tracking and calling Jenkins
 - **Mass Execution**: Jenkins integration enables orchestrated automated software development across issues and repositories
 - **Separation of Concerns**: Distinct automation layer separate from human discussions

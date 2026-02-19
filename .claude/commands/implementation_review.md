@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(git fetch:*), Bash(git status:*), Bash(git diff:*), Read, Glob, Grep
+allowed-tools: Bash(git fetch:*), Bash(git status:*), Bash(mcp-coder git-tool compact-diff:*), Read, Glob, Grep
 workflow-stage: code-review
 suggested-next:
   - discuss -> commit_push -> implementation_approve
@@ -22,14 +22,9 @@ Confirm and display the current feature branch name.
 
 ## Code Review Request
 
-**First, determine the base branch:**
-```bash
-BASE_BRANCH=$(mcp-coder gh-tool get-base-branch)
-```
-
 Run this command to get the changes to review:
 ```bash
-git diff --unified=5 --no-prefix ${BASE_BRANCH}...HEAD -- . ":(exclude)pr_info/.conversations/**"
+mcp-coder git-tool compact-diff
 ```
 
 No need to run all checks; do not use pylint warnings. Feel free to further analyse any mentioned files and/or the file structure.
