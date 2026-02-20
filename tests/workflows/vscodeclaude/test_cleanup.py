@@ -885,6 +885,10 @@ class TestGetStaleSessions:
         (tmp_path / "repo_closed").mkdir()
 
         monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_github_username",
+            lambda: "testuser",
+        )
+        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
             lambda session: False,
         )
@@ -1303,7 +1307,7 @@ class TestGetStaleSessions:
             "title": "Eligible Issue",
             "state": "open",
             "labels": ["status-07:code-review"],
-            "assignees": [],
+            "assignees": ["testuser"],
             "user": None,
             "created_at": None,
             "updated_at": None,
@@ -1318,6 +1322,10 @@ class TestGetStaleSessions:
         # Create folder
         (tmp_path / "repo_eligible").mkdir()
 
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_github_username",
+            lambda: "testuser",
+        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
             lambda session: False,
@@ -1376,7 +1384,7 @@ class TestGetStaleSessions:
             "title": "Closed Issue",
             "state": "closed",
             "labels": ["status-07:code-review"],
-            "assignees": [],
+            "assignees": ["testuser"],
             "user": None,
             "created_at": None,
             "updated_at": None,
@@ -1440,7 +1448,7 @@ class TestGetStaleSessions:
             "title": "Blocked Issue",
             "state": "open",
             "labels": ["status-01:created", "blocked"],
-            "assignees": [],
+            "assignees": ["testuser"],
             "user": None,
             "created_at": None,
             "updated_at": None,
@@ -1454,6 +1462,10 @@ class TestGetStaleSessions:
 
         (tmp_path / "repo_blocked").mkdir()
 
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_github_username",
+            lambda: "testuser",
+        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
             lambda session: False,
@@ -1508,7 +1520,7 @@ class TestGetStaleSessions:
             "title": "Bot Status Issue",
             "state": "open",
             "labels": ["status-02:awaiting-planning"],
-            "assignees": [],
+            "assignees": ["testuser"],
             "user": None,
             "created_at": None,
             "updated_at": None,
@@ -1522,6 +1534,10 @@ class TestGetStaleSessions:
 
         (tmp_path / "repo_bot").mkdir()
 
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_github_username",
+            lambda: "testuser",
+        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
             lambda session: False,
@@ -1577,7 +1593,7 @@ class TestGetStaleSessions:
             "title": "Stale Issue",
             "state": "open",
             "labels": ["status-04:plan-review"],  # Different from session status
-            "assignees": [],
+            "assignees": ["testuser"],
             "user": None,
             "created_at": None,
             "updated_at": None,
@@ -1591,6 +1607,10 @@ class TestGetStaleSessions:
 
         (tmp_path / "repo_stale").mkdir()
 
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_github_username",
+            lambda: "testuser",
+        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
             lambda session: False,
@@ -1694,7 +1714,7 @@ class TestGetStaleSessions:
             "title": "Closed Blocked Issue",
             "state": "closed",
             "labels": ["status-07:code-review", "blocked"],
-            "assignees": [],
+            "assignees": ["testuser"],
             "user": None,
             "created_at": None,
             "updated_at": None,
@@ -1708,6 +1728,10 @@ class TestGetStaleSessions:
 
         (tmp_path / "repo_closed_blocked").mkdir()
 
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_github_username",
+            lambda: "testuser",
+        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
             lambda session: False,
@@ -1726,3 +1750,82 @@ class TestGetStaleSessions:
         assert len(result) == 1
         session, git_status, reason = result[0]
         assert reason == "closed, blocked"
+
+    def test_includes_unassigned_sessions(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should include sessions when user is no longer assigned to the issue."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        mock_sessions = {
+            "sessions": [
+                {
+                    "folder": str(tmp_path / "repo_unassigned"),
+                    "repo": "owner/repo",
+                    "issue_number": 463,
+                    "status": "status-01:created",
+                    "vscode_pid": None,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                }
+            ],
+            "last_updated": "",
+        }
+        sessions_file.write_text(json.dumps(mock_sessions))
+
+        # Issue is OPEN, eligible status, but NOT assigned to configured user
+        mock_issue: IssueData = {
+            "number": 463,
+            "title": "Unassigned Issue",
+            "state": "open",
+            "labels": ["status-01:created"],
+            "assignees": [],  # User removed their assignment!
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "body": "",
+            "locked": False,
+        }
+        mock_cached_issues: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {463: mock_issue}
+        }
+
+        # Create folder
+        (tmp_path / "repo_unassigned").mkdir()
+
+        # Mock github username
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_github_username",
+            lambda: "testuser",
+        )
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
+            lambda session: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_folder_git_status",
+            lambda path: "Clean",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_stale",
+            lambda s, cached_issues=None: False,
+        )
+
+        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+
+        # Session SHOULD be included because user is no longer assigned
+        assert len(result) == 1
+        session, git_status, reason = result[0]
+        assert session["issue_number"] == 463
+        assert git_status == "Clean"
+        assert reason == "unassigned"

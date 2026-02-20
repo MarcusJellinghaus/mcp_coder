@@ -11,7 +11,7 @@ from ...utils.folder_deletion import (
 )
 from ...utils.github_operations.issues import IssueData, IssueManager
 from ...utils.github_operations.issues.cache import get_all_cached_issues
-from .config import _get_configured_repos
+from .config import _get_configured_repos, get_github_username
 from .issues import (
     get_ignore_labels,
     get_matching_ignore_label,
@@ -38,6 +38,7 @@ def get_stale_sessions(
     - Stale (status changed)
     - Blocked (has ignore labels like blocked/wait)
     - Closed (issue state is closed)
+    - Unassigned (user no longer assigned to issue)
     - Ineligible (bot statuses or pr-created - no initial_command)
 
     Args:
@@ -55,6 +56,14 @@ def get_stale_sessions(
 
     # Load ignore labels for blocked detection
     ignore_labels = get_ignore_labels()
+
+    # Get GitHub username for assignment check
+    try:
+        github_username = get_github_username()
+    except ValueError:
+        # If GitHub username is not configured, skip assignment checks
+        logger.debug("GitHub username not configured, skipping assignment checks")
+        github_username = None
 
     for session in store["sessions"]:
         # Skip sessions with running VSCode, but only when session artifacts exist.
@@ -74,10 +83,11 @@ def get_stale_sessions(
             )
             continue
 
-        # Check issue state, blocked label, and eligibility from cache
+        # Check issue state, blocked label, eligibility, and assignment from cache
         is_blocked = False
         is_closed = False
         is_ineligible = False
+        is_unassigned = False
         issue_number = session["issue_number"]
         cached_for_stale_check: dict[int, IssueData] | None = None
         status_labels: list[str] = []
@@ -130,26 +140,40 @@ def get_stale_sessions(
                 if status_labels:
                     current_status = status_labels[0]
                     is_ineligible = not is_status_eligible_for_session(current_status)
+                    # Check if issue is unassigned (user not in assignees)
+                    # Only check for open, eligible statuses - if issue is closed,
+                    # blocked, or ineligible, assignment doesn't matter
+                    if (
+                        github_username is not None
+                        and not is_closed
+                        and not is_blocked
+                        and not is_ineligible
+                        and is_status_eligible_for_session(current_status)
+                    ):
+                        is_unassigned = github_username not in issue["assignees"]
                 # Only pass cache to is_session_stale when issue is in it
                 # (passing cache with a missing issue causes ValueError in fallback)
                 cached_for_stale_check = repo_issues
 
-        # Check if session is stale, blocked, closed, or ineligible
+        # Check if session is stale, blocked, closed, unassigned, or ineligible
         # Check is_closed first to short-circuit and avoid calling is_session_stale
         # on closed issues (which would trigger a spurious warning)
         is_stale = (
             not is_closed
             and not is_blocked
+            and not is_unassigned
             and not is_ineligible
             and is_session_stale(session, cached_issues=cached_for_stale_check)
         )
 
-        if is_closed or is_blocked or is_ineligible or is_stale:
+        if is_closed or is_blocked or is_unassigned or is_ineligible or is_stale:
             reasons: list[str] = []
             if is_closed:
                 reasons.append("closed")
             if is_blocked:
                 reasons.append("blocked")
+            if is_unassigned:
+                reasons.append("unassigned")
             if is_ineligible:
                 reasons.append("bot status")
             if is_stale:
