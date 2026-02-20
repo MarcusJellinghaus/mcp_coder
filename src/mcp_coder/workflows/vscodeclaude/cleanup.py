@@ -62,6 +62,7 @@ def get_stale_sessions(
         github_username = get_github_username()
     except ValueError:
         # If GitHub username is not configured, skip assignment checks
+        logger.debug("GitHub username not configured, skipping assignment checks")
         github_username = None
 
     for session in store["sessions"]:
