@@ -35,9 +35,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Add CI Waiting Logic (TDD) 
 - [x] Write waiting logic tests first (TestCIWaitingLogic class with 8 tests)
-- [ ] Run waiting logic tests to verify they fail (TDD approach)
-- [ ] Implement _wait_for_ci_completion() and _show_progress() helper functions
-- [ ] Implement CI waiting logic in execute_check_branch_status()
+- [x] Run waiting logic tests to verify they fail (TDD approach)
+- [x] Implement _wait_for_ci_completion() and _show_progress() helper functions
+- [x] Implement CI waiting logic in execute_check_branch_status()
 - [ ] Run waiting logic tests to verify they pass
 - [ ] Run pylint check and fix any issues found
 - [ ] Run pytest check and fix any test failures
