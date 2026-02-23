@@ -91,8 +91,12 @@ class TestExecuteCheckBranchStatus:
 
         args = argparse.Namespace(
             project_dir="/test/project",
-            fix=False,
+            ci_timeout=0,
+            fix=0,
             llm_truncate=False,
+            llm_method="claude_code_cli",
+            mcp_config=None,
+            execution_dir=None,
         )
 
         result = execute_check_branch_status(args)
@@ -123,8 +127,12 @@ class TestExecuteCheckBranchStatus:
 
         args = argparse.Namespace(
             project_dir="/test/project",
-            fix=False,
+            ci_timeout=0,
+            fix=0,
             llm_truncate=True,
+            llm_method="claude_code_cli",
+            mcp_config=None,
+            execution_dir=None,
         )
 
         result = execute_check_branch_status(args)
@@ -161,7 +169,8 @@ class TestExecuteCheckBranchStatus:
 
         args = argparse.Namespace(
             project_dir="/test/project",
-            fix=True,
+            ci_timeout=0,
+            fix=1,
             llm_truncate=False,
             llm_method="claude_code_api",
             mcp_config=None,
@@ -174,7 +183,15 @@ class TestExecuteCheckBranchStatus:
         mock_resolve_dir.assert_called_once_with("/test/project")
         mock_collect.assert_called_once_with(project_dir, False)
         mock_run_fixes.assert_called_once_with(
-            project_dir, failed_ci_report, "claude", "api", None, exec_dir
+            project_dir,
+            failed_ci_report,
+            "claude",
+            "api",
+            None,
+            exec_dir,
+            fix_attempts=1,
+            ci_timeout=0,
+            llm_truncate=False,
         )
 
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
@@ -201,7 +218,8 @@ class TestExecuteCheckBranchStatus:
 
         args = argparse.Namespace(
             project_dir="/test/project",
-            fix=True,
+            ci_timeout=0,
+            fix=1,
             llm_truncate=False,
             llm_method="claude_code_api",
             mcp_config=None,
@@ -225,8 +243,12 @@ class TestExecuteCheckBranchStatus:
 
         args = argparse.Namespace(
             project_dir="/invalid/path",
-            fix=False,
+            ci_timeout=0,
+            fix=0,
             llm_truncate=False,
+            llm_method="claude_code_cli",
+            mcp_config=None,
+            execution_dir=None,
         )
 
         with pytest.raises(SystemExit) as exc_info:
@@ -251,8 +273,12 @@ class TestExecuteCheckBranchStatus:
 
         args = argparse.Namespace(
             project_dir="/test/project",
-            fix=False,
+            ci_timeout=0,
+            fix=0,
             llm_truncate=False,
+            llm_method="claude_code_cli",
+            mcp_config=None,
+            execution_dir=None,
         )
 
         result = execute_check_branch_status(args)
@@ -281,8 +307,12 @@ class TestExecuteCheckBranchStatus:
 
         args = argparse.Namespace(
             project_dir=None,
-            fix=False,
+            ci_timeout=0,
+            fix=0,
             llm_truncate=False,
+            llm_method="claude_code_cli",
+            mcp_config=None,
+            execution_dir=None,
         )
 
         result = execute_check_branch_status(args)
@@ -578,6 +608,264 @@ class TestRunAutoFixes:
         assert result is False
 
 
+@pytest.mark.skipif(
+    not CHECK_BRANCH_STATUS_MODULE_AVAILABLE,
+    reason="check_branch_status module not yet implemented",
+)
+class TestFixRetryLogic:
+    """Test fix retry logic with multiple attempts."""
+
+    def test_fix_zero_means_no_fix(self, failed_ci_report: BranchStatusReport) -> None:
+        """With fix_attempts=0, should return True without attempting any fixes."""
+        from mcp_coder.cli.commands.check_branch_status import _run_auto_fixes
+
+        result = _run_auto_fixes(
+            Path("/test"),
+            failed_ci_report,
+            "claude",
+            "api",
+            None,
+            None,
+            fix_attempts=0,  # No fix
+            ci_timeout=180,
+            llm_truncate=False,
+        )
+
+        assert result is True  # Should succeed without doing anything
+
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
+    @patch("mcp_coder.cli.commands.check_branch_status.check_and_fix_ci")
+    @patch("mcp_coder.cli.commands.check_branch_status.CIResultsManager")
+    @patch("mcp_coder.cli.commands.check_branch_status._wait_for_ci_completion")
+    def test_fix_once_does_not_wait_for_recheck(
+        self,
+        mock_wait: Mock,
+        mock_ci_manager: Mock,
+        mock_check_ci: Mock,
+        mock_branch: Mock,
+        failed_ci_report: BranchStatusReport,
+    ) -> None:
+        """With fix_attempts=1, should not wait for recheck (current behavior)."""
+        from mcp_coder.cli.commands.check_branch_status import _run_auto_fixes
+
+        mock_branch.return_value = "feature-branch"
+        mock_check_ci.return_value = True
+
+        result = _run_auto_fixes(
+            Path("/test"),
+            failed_ci_report,
+            "claude",
+            "api",
+            None,
+            None,
+            fix_attempts=1,  # No retry
+            ci_timeout=180,
+            llm_truncate=False,
+        )
+
+        assert result is True
+        mock_check_ci.assert_called_once()
+        mock_wait.assert_not_called()  # No recheck
+
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
+    @patch("mcp_coder.cli.commands.check_branch_status.check_and_fix_ci")
+    @patch("mcp_coder.cli.commands.check_branch_status.CIResultsManager")
+    @patch("mcp_coder.cli.commands.check_branch_status._wait_for_ci_completion")
+    @patch("mcp_coder.cli.commands.check_branch_status.time.sleep")
+    def test_fix_twice_waits_after_first_attempt(
+        self,
+        mock_sleep: Mock,
+        mock_wait: Mock,
+        mock_ci_manager: Mock,
+        mock_check_ci: Mock,
+        mock_branch: Mock,
+        failed_ci_report: BranchStatusReport,
+    ) -> None:
+        """With fix_attempts=2, should wait after first attempt."""
+        from mcp_coder.cli.commands.check_branch_status import _run_auto_fixes
+
+        mock_branch.return_value = "feature-branch"
+        mock_check_ci.return_value = True  # Fix succeeds
+
+        # Setup CI manager to return different statuses
+        mock_manager = Mock()
+        mock_ci_manager.return_value = mock_manager
+        mock_manager.get_latest_ci_status.side_effect = [
+            {"run": {"id": 1}},  # Old run
+            {"run": {"id": 2}},  # New run detected
+            {"run": {"id": 2, "status": "completed", "conclusion": "success"}},
+        ]
+
+        # First wait: still failed, Second wait: passed
+        mock_wait.side_effect = [
+            ({"run": {"conclusion": "failure"}}, False),  # After attempt 1
+            ({"run": {"conclusion": "success"}}, True),  # After attempt 2
+        ]
+
+        result = _run_auto_fixes(
+            Path("/test"),
+            failed_ci_report,
+            "claude",
+            "api",
+            None,
+            None,
+            fix_attempts=2,  # Retry enabled
+            ci_timeout=180,
+            llm_truncate=False,
+        )
+
+        assert result is True
+        assert mock_check_ci.call_count == 2
+        assert mock_wait.call_count == 2
+
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
+    @patch("mcp_coder.cli.commands.check_branch_status.check_and_fix_ci")
+    @patch("mcp_coder.cli.commands.check_branch_status.CIResultsManager")
+    @patch("mcp_coder.cli.commands.check_branch_status._wait_for_ci_completion")
+    @patch("mcp_coder.cli.commands.check_branch_status.time.sleep")
+    def test_fix_stops_early_when_ci_passes(
+        self,
+        mock_sleep: Mock,
+        mock_wait: Mock,
+        mock_ci_manager: Mock,
+        mock_check_ci: Mock,
+        mock_branch: Mock,
+        failed_ci_report: BranchStatusReport,
+    ) -> None:
+        """Should stop early if CI passes before all attempts used."""
+        from mcp_coder.cli.commands.check_branch_status import _run_auto_fixes
+
+        mock_branch.return_value = "feature-branch"
+        mock_check_ci.return_value = True
+
+        mock_manager = Mock()
+        mock_ci_manager.return_value = mock_manager
+        mock_manager.get_latest_ci_status.side_effect = [
+            {"run": {"id": 1}},  # Old run
+            {"run": {"id": 2}},  # New run
+        ]
+
+        # CI passes after first attempt
+        mock_wait.return_value = (
+            {"run": {"conclusion": "success"}},
+            True,
+        )
+
+        result = _run_auto_fixes(
+            Path("/test"),
+            failed_ci_report,
+            "claude",
+            "api",
+            None,
+            None,
+            fix_attempts=3,  # 3 attempts available
+            ci_timeout=180,
+            llm_truncate=False,
+        )
+
+        assert result is True
+        assert mock_check_ci.call_count == 1  # Only 1 attempt used
+        assert mock_wait.call_count == 1
+
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
+    @patch("mcp_coder.cli.commands.check_branch_status.check_and_fix_ci")
+    @patch("mcp_coder.cli.commands.check_branch_status.CIResultsManager")
+    @patch("mcp_coder.cli.commands.check_branch_status._wait_for_ci_completion")
+    @patch("mcp_coder.cli.commands.check_branch_status.time.sleep")
+    def test_fix_exhausts_all_attempts_on_failure(
+        self,
+        mock_sleep: Mock,
+        mock_wait: Mock,
+        mock_ci_manager: Mock,
+        mock_check_ci: Mock,
+        mock_branch: Mock,
+        failed_ci_report: BranchStatusReport,
+    ) -> None:
+        """Should use all attempts if CI keeps failing."""
+        from mcp_coder.cli.commands.check_branch_status import _run_auto_fixes
+
+        mock_branch.return_value = "feature-branch"
+        mock_check_ci.return_value = True
+
+        mock_manager = Mock()
+        mock_ci_manager.return_value = mock_manager
+        # Different run IDs for each attempt
+        mock_manager.get_latest_ci_status.side_effect = [
+            {"run": {"id": 1}},
+            {"run": {"id": 2}},  # Attempt 1
+            {"run": {"id": 2}},
+            {"run": {"id": 3}},  # Attempt 2
+            {"run": {"id": 3}},
+            {"run": {"id": 4}},  # Attempt 3
+        ]
+
+        # CI always fails
+        mock_wait.return_value = (
+            {"run": {"conclusion": "failure"}},
+            False,
+        )
+
+        result = _run_auto_fixes(
+            Path("/test"),
+            failed_ci_report,
+            "claude",
+            "api",
+            None,
+            None,
+            fix_attempts=3,
+            ci_timeout=180,
+            llm_truncate=False,
+        )
+
+        assert result is False  # All attempts exhausted
+        assert mock_check_ci.call_count == 3
+        assert mock_wait.call_count == 3
+
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
+    @patch("mcp_coder.cli.commands.check_branch_status.check_and_fix_ci")
+    @patch("mcp_coder.cli.commands.check_branch_status.CIResultsManager")
+    @patch("mcp_coder.cli.commands.check_branch_status._wait_for_ci_completion")
+    @patch("mcp_coder.cli.commands.check_branch_status.time.sleep")
+    def test_fix_handles_wait_timeout_gracefully(
+        self,
+        mock_sleep: Mock,
+        mock_wait: Mock,
+        mock_ci_manager: Mock,
+        mock_check_ci: Mock,
+        mock_branch: Mock,
+        failed_ci_report: BranchStatusReport,
+    ) -> None:
+        """Should handle CI wait timeout gracefully."""
+        from mcp_coder.cli.commands.check_branch_status import _run_auto_fixes
+
+        mock_branch.return_value = "feature-branch"
+        mock_check_ci.return_value = True
+
+        mock_manager = Mock()
+        mock_ci_manager.return_value = mock_manager
+        mock_manager.get_latest_ci_status.side_effect = [
+            {"run": {"id": 1}},
+            {"run": {"id": 2}},
+        ]
+
+        # Wait times out (ci_status=None, success=False)
+        mock_wait.return_value = (None, False)
+
+        result = _run_auto_fixes(
+            Path("/test"),
+            failed_ci_report,
+            "claude",
+            "api",
+            None,
+            None,
+            fix_attempts=2,
+            ci_timeout=30,
+            llm_truncate=False,
+        )
+
+        assert result is False  # Timeout counts as failure
+
+
 class TestCheckBranchStatusParserEnhancements:
     """Test new parser parameters for CI waiting and fix retry."""
 
@@ -708,7 +996,7 @@ class TestCheckBranchStatusCommandIntegration:
 
         # Check that fix flag was parsed correctly
         call_args = mock_execute.call_args[0][0]
-        assert call_args.fix is True
+        assert call_args.fix == 1
 
     @patch("mcp_coder.cli.commands.check_branch_status.execute_check_branch_status")
     @patch("sys.argv", ["mcp-coder", "check", "branch-status", "--llm-truncate"])
@@ -791,5 +1079,5 @@ class TestCheckBranchStatusCommandIntegration:
         assert hasattr(test_args, "project_dir")
         assert hasattr(test_args, "fix")
         assert hasattr(test_args, "llm_truncate")
-        assert test_args.fix is True
+        assert test_args.fix == 1
         assert test_args.llm_truncate is True

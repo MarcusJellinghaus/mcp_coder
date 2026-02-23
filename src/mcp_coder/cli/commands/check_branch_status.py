@@ -189,9 +189,17 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
             mcp_config = resolve_mcp_config_path(args.mcp_config)
             execution_dir = resolve_execution_dir(args.execution_dir)
 
-            # Attempt fixes
+            # Attempt fixes with retry
             fix_success = _run_auto_fixes(
-                project_dir, report, provider, method, mcp_config, execution_dir
+                project_dir,
+                report,
+                provider,
+                method,
+                mcp_config,
+                execution_dir,
+                fix_attempts=args.fix,  # NEW
+                ci_timeout=args.ci_timeout,  # NEW
+                llm_truncate=args.llm_truncate,  # NEW
             )
 
             if not fix_success:
@@ -199,8 +207,10 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
                 return 1
 
             logger.info("Auto-fix operations completed successfully")
+            # If fixes succeeded, return success regardless of initial CI status
+            return 0
 
-        # NEW: Determine exit code based on CI status
+        # NEW: Determine exit code based on CI status (only when no fixes attempted)
         if report.ci_status == "FAILED":
             return 1  # CI failed
 
@@ -221,6 +231,9 @@ def _run_auto_fixes(
     method: str,
     mcp_config: Optional[str],
     execution_dir: Optional[Path],
+    fix_attempts: int = 1,
+    ci_timeout: int = 180,
+    llm_truncate: bool = False,
 ) -> bool:
     """Attempt automatic fixes based on status report.
 
@@ -231,45 +244,120 @@ def _run_auto_fixes(
         method: LLM method (e.g., 'api')
         mcp_config: Optional MCP configuration path
         execution_dir: Optional execution directory
+        fix_attempts: Number of fix attempts (1 = no retry, N ≥ 2 = retry)
+        ci_timeout: Seconds to wait for CI between attempts
+        llm_truncate: Whether in LLM mode (affects progress display)
 
     Returns:
         True if all applicable fixes succeeded, False if any fix failed
     """
     logger.debug("Analyzing status report for auto-fixable issues")
 
+    # No fix requested
+    if fix_attempts == 0:
+        logger.info("No fix attempts requested (fix_attempts=0)")
+        return True  # Success when no fixes requested
+
     # Only auto-fix CI failures - other issues are informational only
-    if report.ci_status == "FAILED":
-        logger.info("CI failures detected - attempting automatic fixes")
+    if report.ci_status != "FAILED":
+        logger.info(
+            "No auto-fixable issues found - all fixes require manual intervention"
+        )
+        return True  # Success when no fixes needed
 
-        try:
-            # Use existing CI fix logic from implement workflow
-            # Get current branch from project directory
-            current_branch = get_current_branch_name(project_dir)
-            if not current_branch:
-                logger.error("Could not determine current branch name")
-                return False
+    logger.info("CI failures detected - attempting automatic fixes")
 
-            # Call CI fix function
+    try:
+        # Get current branch from project directory
+        current_branch = get_current_branch_name(project_dir)
+        if not current_branch:
+            logger.error("Could not determine current branch name")
+            return False
+
+        # Single fix attempt (current behavior - no retry)
+        if fix_attempts == 1:
+            logger.info("Single fix attempt (no retry)")
             ci_success = check_and_fix_ci(
                 project_dir, current_branch, provider, method, mcp_config, execution_dir
             )
 
             if ci_success:
-                logger.info("CI fixes completed successfully")
+                logger.info("CI fix completed successfully")
                 return True
             else:
-                logger.error("CI fixes failed")
+                logger.error("CI fix failed")
                 return False
 
+        # Multiple fix attempts (retry logic)
+        logger.info(f"Fix retry enabled: {fix_attempts} attempts")
+
+        try:
+            ci_manager = CIResultsManager(project_dir)
         except Exception as e:
-            logger.error(f"Exception during CI fix: {e}")
+            logger.error(f"Failed to create CI manager: {e}")
             return False
 
-    else:
-        logger.info(
-            "No auto-fixable issues found - all fixes require manual intervention"
-        )
-        logger.info(
-            "Rebase operations, task completion, and GitHub label updates must be done manually"
-        )
-        return True  # Success when no fixes needed
+        for attempt in range(fix_attempts):
+            logger.info(f"Fix attempt {attempt + 1}/{fix_attempts}")
+
+            # Attempt fix
+            ci_success = check_and_fix_ci(
+                project_dir, current_branch, provider, method, mcp_config, execution_dir
+            )
+
+            if not ci_success:
+                logger.error(f"Fix attempt {attempt + 1} failed")
+                return False  # Fail fast on git errors or max CI fix attempts
+
+            # Wait for new CI run to start (simple polling for new run ID)
+            logger.info("Waiting for new CI run to start...")
+            try:
+                old_status = ci_manager.get_latest_ci_status(current_branch)
+                old_run_id = old_status.get("run", {}).get("id")
+            except Exception as e:
+                logger.warning(f"Could not get old CI run: {e}")
+                old_run_id = None
+
+            # Poll for new run (max 30 seconds)
+            new_run_detected = False
+            for _ in range(6):  # 6 * 5 = 30 seconds
+                time.sleep(5)
+                try:
+                    new_status = ci_manager.get_latest_ci_status(current_branch)
+                    new_run_id = new_status.get("run", {}).get("id")
+                    if new_run_id and new_run_id != old_run_id:
+                        logger.info(f"New CI run detected: {new_run_id}")
+                        new_run_detected = True
+                        break
+                except Exception as e:
+                    logger.warning(f"Error checking for new CI run: {e}")
+                    continue
+
+            if not new_run_detected:
+                logger.warning("No new CI run detected after 30s")
+                # Continue anyway and wait for completion
+
+            # Wait for CI completion
+            logger.info(f"Waiting for CI completion (timeout: {ci_timeout}s)")
+            ci_status, ci_passed = _wait_for_ci_completion(
+                ci_manager,
+                current_branch,
+                ci_timeout,
+                llm_truncate,
+            )
+
+            if ci_passed:
+                logger.info(f"CI passed after fix attempt {attempt + 1}")
+                return True  # Early exit on success
+
+            # If last attempt and still failing
+            if attempt == fix_attempts - 1:
+                logger.error(f"CI still failing after {fix_attempts} fix attempts")
+                return False
+
+        # Should never reach here
+        return False
+
+    except Exception as e:
+        logger.error(f"Exception during CI fix: {e}")
+        return False
