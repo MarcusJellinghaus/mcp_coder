@@ -54,6 +54,11 @@ mcp = [
     # mcp-server-filesystem moved to main dependencies for check file-size command
 ]
 
+# MLflow integration - for conversation logging and analytics
+mlflow = [
+    "mlflow>=2.10.0",
+]
+
 # Full development setup - combines all groups for local development
 dev = [
     "mcp-coder[types,test,mcp]",
