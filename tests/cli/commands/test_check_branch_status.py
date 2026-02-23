@@ -296,6 +296,197 @@ class TestExecuteCheckBranchStatus:
     not CHECK_BRANCH_STATUS_MODULE_AVAILABLE,
     reason="check_branch_status module not yet implemented",
 )
+class TestCIWaitingLogic:
+    """Test CI waiting and polling functionality."""
+
+    @patch("mcp_coder.cli.commands.check_branch_status.time.sleep")
+    def test_wait_for_ci_timeout_zero_returns_immediately(
+        self, mock_sleep: Mock
+    ) -> None:
+        """With timeout=0, should return immediately without polling."""
+        from mcp_coder.cli.commands.check_branch_status import (
+            _wait_for_ci_completion,
+        )
+
+        mock_manager = Mock()
+
+        # Should not be called with timeout=0
+        result = _wait_for_ci_completion(mock_manager, "branch", 0, False)
+
+        assert result == (None, True)  # Graceful exit
+        mock_sleep.assert_not_called()
+        mock_manager.get_latest_ci_status.assert_not_called()
+
+    @patch("mcp_coder.cli.commands.check_branch_status.time.sleep")
+    def test_wait_for_ci_polls_until_completion(self, mock_sleep: Mock) -> None:
+        """Should poll every 15 seconds until CI completes."""
+        from mcp_coder.cli.commands.check_branch_status import (
+            _wait_for_ci_completion,
+        )
+
+        mock_manager = Mock()
+        # First call: in progress, Second call: completed
+        mock_manager.get_latest_ci_status.side_effect = [
+            {"run": {"status": "in_progress"}, "jobs": []},
+            {
+                "run": {"status": "completed", "conclusion": "success"},
+                "jobs": [],
+            },
+        ]
+
+        ci_status, success = _wait_for_ci_completion(mock_manager, "branch", 60, True)
+
+        assert success is True
+        assert ci_status is not None
+        assert ci_status["run"]["conclusion"] == "success"
+        assert mock_sleep.call_count == 1
+        mock_sleep.assert_called_with(15)
+
+    @patch("mcp_coder.cli.commands.check_branch_status.time.sleep")
+    def test_wait_for_ci_respects_timeout(self, mock_sleep: Mock) -> None:
+        """Should respect timeout and return after max attempts."""
+        from mcp_coder.cli.commands.check_branch_status import (
+            _wait_for_ci_completion,
+        )
+
+        mock_manager = Mock()
+        # Always return in_progress (never completes)
+        mock_manager.get_latest_ci_status.return_value = {
+            "run": {"status": "in_progress"},
+            "jobs": [],
+        }
+
+        # 45 second timeout = 3 attempts (45/15)
+        ci_status, success = _wait_for_ci_completion(mock_manager, "branch", 45, True)
+
+        assert success is False  # Timeout
+        assert mock_sleep.call_count == 3
+
+    @patch("mcp_coder.cli.commands.check_branch_status.time.sleep")
+    def test_wait_for_ci_shows_progress_in_human_mode(
+        self, mock_sleep: Mock, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Should show progress dots in human mode."""
+        from mcp_coder.cli.commands.check_branch_status import (
+            _wait_for_ci_completion,
+        )
+
+        mock_manager = Mock()
+        mock_manager.get_latest_ci_status.side_effect = [
+            {"run": {"status": "in_progress"}, "jobs": []},
+            {
+                "run": {"status": "completed", "conclusion": "success"},
+                "jobs": [],
+            },
+        ]
+
+        _wait_for_ci_completion(mock_manager, "branch", 30, llm_mode=False)
+
+        captured = capsys.readouterr()
+        assert "Waiting for CI" in captured.out
+        assert "." in captured.out  # Progress dots
+
+    @patch("mcp_coder.cli.commands.check_branch_status.time.sleep")
+    def test_wait_for_ci_silent_in_llm_mode(
+        self, mock_sleep: Mock, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Should be silent in LLM mode."""
+        from mcp_coder.cli.commands.check_branch_status import (
+            _wait_for_ci_completion,
+        )
+
+        mock_manager = Mock()
+        mock_manager.get_latest_ci_status.return_value = {
+            "run": {"status": "completed", "conclusion": "success"},
+            "jobs": [],
+        }
+
+        _wait_for_ci_completion(mock_manager, "branch", 30, llm_mode=True)
+
+        captured = capsys.readouterr()
+        assert captured.out == ""  # No output in LLM mode
+
+    @patch("mcp_coder.cli.commands.check_branch_status.time.sleep")
+    def test_wait_for_ci_early_exit_on_completion(self, mock_sleep: Mock) -> None:
+        """Should exit immediately when CI completes."""
+        from mcp_coder.cli.commands.check_branch_status import (
+            _wait_for_ci_completion,
+        )
+
+        mock_manager = Mock()
+        # CI already completed on first check
+        mock_manager.get_latest_ci_status.return_value = {
+            "run": {"status": "completed", "conclusion": "success"},
+            "jobs": [],
+        }
+
+        ci_status, success = _wait_for_ci_completion(mock_manager, "branch", 300, True)
+
+        assert success is True
+        assert mock_sleep.call_count == 0  # No waiting needed
+        assert mock_manager.get_latest_ci_status.call_count == 1
+
+    @patch("mcp_coder.cli.commands.check_branch_status.time.sleep")
+    def test_wait_for_ci_handles_api_errors_gracefully(self, mock_sleep: Mock) -> None:
+        """Should handle API errors gracefully and return success."""
+        from mcp_coder.cli.commands.check_branch_status import (
+            _wait_for_ci_completion,
+        )
+
+        mock_manager = Mock()
+        mock_manager.get_latest_ci_status.side_effect = Exception("API Error")
+
+        ci_status, success = _wait_for_ci_completion(mock_manager, "branch", 30, True)
+
+        assert ci_status is None
+        assert success is False  # Technical error on API error
+
+    @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
+    @patch("mcp_coder.cli.commands.check_branch_status.CIResultsManager")
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
+    @patch("mcp_coder.cli.commands.check_branch_status._wait_for_ci_completion")
+    @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
+    def test_execute_with_ci_timeout_waits_before_display(
+        self,
+        mock_collect: Mock,
+        mock_wait: Mock,
+        mock_branch: Mock,
+        mock_ci_manager: Mock,
+        mock_resolve: Mock,
+        sample_report: BranchStatusReport,
+    ) -> None:
+        """Test execute_check_branch_status calls wait before display."""
+        from mcp_coder.cli.commands.check_branch_status import (
+            execute_check_branch_status,
+        )
+
+        project_dir = Path("/test/project")
+        mock_resolve.return_value = project_dir
+        mock_branch.return_value = "feature-branch"
+        mock_wait.return_value = (
+            {"run": {"status": "completed", "conclusion": "success"}},
+            True,
+        )
+        mock_collect.return_value = sample_report
+
+        args = argparse.Namespace(
+            project_dir="/test/project",
+            ci_timeout=180,
+            fix=0,
+            llm_truncate=False,
+        )
+
+        result = execute_check_branch_status(args)
+
+        assert result == 0
+        mock_wait.assert_called_once()
+        mock_collect.assert_called_once()
+
+
+@pytest.mark.skipif(
+    not CHECK_BRANCH_STATUS_MODULE_AVAILABLE,
+    reason="check_branch_status module not yet implemented",
+)
 class TestRunAutoFixes:
     """Tests for _run_auto_fixes function."""
 

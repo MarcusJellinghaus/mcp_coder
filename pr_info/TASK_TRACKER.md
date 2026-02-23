@@ -34,7 +34,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 1 implementation
 
 ### Step 2: Add CI Waiting Logic (TDD) 
-- [ ] Write waiting logic tests first (TestCIWaitingLogic class with 8 tests)
+- [x] Write waiting logic tests first (TestCIWaitingLogic class with 8 tests)
 - [ ] Run waiting logic tests to verify they fail (TDD approach)
 - [ ] Implement _wait_for_ci_completion() and _show_progress() helper functions
 - [ ] Implement CI waiting logic in execute_check_branch_status()
