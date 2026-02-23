@@ -37,6 +37,7 @@ src/mcp_coder/cli/commands/check_branch_status.py
 class TestFixRetryLogic:
     """Test fix retry logic with multiple attempts."""
     
+    def test_fix_zero_means_no_fix()  # NEW
     def test_fix_once_does_not_wait_for_recheck()
     def test_fix_twice_waits_after_first_attempt()
     def test_fix_stops_early_when_ci_passes()
@@ -115,13 +116,14 @@ _run_auto_fixes(
 
 ### _run_auto_fixes() Enhanced Logic
 ```
-1. If no CI failures: return True (nothing to fix)
-2. Get current branch name
-3. If fix_attempts == 1:
+1. If fix_attempts == 0: return True (no fix requested)  # NEW
+2. If no CI failures: return True (nothing to fix)
+3. Get current branch name
+4. If fix_attempts == 1:
      # Current behavior (no retry)
      a. Call check_and_fix_ci() once
      b. Return result (no recheck)
-4. Else (fix_attempts >= 2, retry enabled):
+5. Else (fix_attempts >= 2, retry enabled):
      Create CI manager
      For attempt in range(fix_attempts):
        a. Log attempt number
@@ -186,6 +188,24 @@ _run_auto_fixes(..., fix_attempts=3, ci_timeout=180)
 ```python
 class TestFixRetryLogic:
     """Test fix retry logic with multiple attempts."""
+
+    def test_fix_zero_means_no_fix(self, failed_ci_report: BranchStatusReport) -> None:
+        """With fix_attempts=0, should return True without attempting any fixes."""
+        from mcp_coder.cli.commands.check_branch_status import _run_auto_fixes
+        
+        result = _run_auto_fixes(
+            Path("/test"),
+            failed_ci_report,
+            "claude",
+            "api",
+            None,
+            None,
+            fix_attempts=0,  # No fix
+            ci_timeout=180,
+            llm_truncate=False,
+        )
+        
+        assert result is True  # Should succeed without doing anything
 
     @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.check_and_fix_ci")
@@ -500,6 +520,11 @@ def _run_auto_fixes(
         True if all applicable fixes succeeded, False if any fix failed
     """
     logger.debug("Analyzing status report for auto-fixable issues")
+    
+    # No fix requested
+    if fix_attempts == 0:
+        logger.info("No fix attempts requested (fix_attempts=0)")
+        return True  # Success when no fixes requested
     
     # Only auto-fix CI failures - other issues are informational only
     if report.ci_status != "FAILED":

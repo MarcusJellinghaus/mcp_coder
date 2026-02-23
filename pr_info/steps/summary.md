@@ -24,9 +24,9 @@ Add CI waiting and fix retry capabilities to `mcp-coder check branch-status` com
    - Trade-off: Command-specific vs. generic retry framework
 
 3. **Exit Code Strategy**
-   - 0: CI passed or graceful exit (no CI, API errors)
+   - 0: CI passed or no CI configured
    - 1: CI failed or timeout
-   - 2: Technical errors (invalid arguments, Git errors)
+   - 2: Technical errors (invalid arguments, Git errors, API errors)
 
 4. **Progress Feedback**
    - Reuse existing `--llm-truncate` flag (no new parameter)
@@ -36,18 +36,19 @@ Add CI waiting and fix retry capabilities to `mcp-coder check branch-status` com
 ## New Parameters
 
 ### `--ci-timeout SECONDS`
-- **Type**: `int`
+- **Type**: `int` (with validation: must be ≥ 0)
 - **Default CLI**: `0` (no wait, current behavior)
-- **Default Slash Command**: `180` (3 minutes)
+- **Default Slash Command**: `180` (3 minutes, but configurable)
 - **Behavior**: Wait up to N seconds for CI completion
   - `0`: Return immediately (backward compatible)
   - `> 0`: Poll every 15 seconds until completion or timeout
+- **Validation**: Rejects negative values with clear error message
 
 ### `--fix [N]`
 - **Type**: `int` (optional argument)
 - **Default**: Not provided = `0` (no fix)
 - **Values**:
-  - Not provided or `0`: No fixing
+  - Not provided or `--fix 0`: No fixing
   - `--fix` or `--fix 1`: Fix once, no recheck (current behavior preserved)
   - `--fix N` (N ≥ 2): Fix up to N times with CI recheck between attempts
 
@@ -56,7 +57,7 @@ Add CI waiting and fix retry capabilities to `mcp-coder check branch-status` com
 ### Core Implementation
 ```
 src/mcp_coder/cli/parsers.py
-  - Modify add_check_parsers() to add --ci-timeout parameter
+  - Modify add_check_parsers() to add --ci-timeout parameter with validation
   - Change --fix from boolean to optional integer
 
 src/mcp_coder/cli/commands/check_branch_status.py
@@ -108,6 +109,7 @@ tests/cli/commands/test_check_branch_status.py
 2. Wait for CI completion
 3. Display status
 4. If CI failed and --fix > 0:
+   Early return if --fix 0 (no fix requested)
    For attempt in range(fix_count):
      a. Run fix (analysis + implementation)
      b. Commit and push

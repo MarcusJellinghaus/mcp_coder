@@ -160,15 +160,15 @@ execute_check_branch_status()
 # Timeout (graceful exit)
 (CIStatusData{...}, False)
 
-# API error (graceful exit)
-(None, True)
+# API error (technical error)
+(None, False)
 ```
 
 ### Exit Codes from execute_check_branch_status()
 ```python
-0  # Success: CI passed or graceful exit (no CI, API errors)
-1  # Failure: CI failed or timeout
-2  # Technical error: Invalid arguments, Git errors
+0  # Success: CI passed or no CI configured
+1  # Failure: CI failed or timeout  
+2  # Technical error: Invalid arguments, Git errors, API errors
 ```
 
 ## Test Implementation Details
@@ -336,7 +336,7 @@ class TestCIWaitingLogic:
         )
         
         assert ci_status is None
-        assert success is True  # Graceful exit on API error
+        assert success is False  # Technical error on API error
 
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.CIResultsManager")
@@ -430,10 +430,10 @@ def _wait_for_ci_completion(
         try:
             ci_status = ci_manager.get_latest_ci_status(branch)
         except Exception as e:
-            logger.info(f"CI API error during polling: {e}")
+            logger.error(f"CI API error during polling: {e}")
             if show_progress:
                 print()  # Newline after dots
-            return None, True  # Graceful exit on API errors
+            return None, False  # Technical error on API errors
         
         run_info = ci_status.get("run", {})
         
@@ -520,8 +520,8 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
                     logger.debug("CI failed after waiting")
             
             except Exception as e:
-                logger.warning(f"CI wait failed: {e}")
-                # Continue to display current status
+                logger.error(f"CI wait failed: {e}")
+                return 2  # Technical error
         
         # Collect branch status (EXISTING)
         logger.debug("Collecting branch status information")

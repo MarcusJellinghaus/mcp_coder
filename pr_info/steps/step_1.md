@@ -34,8 +34,10 @@ class TestCheckBranchStatusParserEnhancements:
     
     def test_ci_timeout_parameter_defaults_to_zero()
     def test_ci_timeout_accepts_integer_value()
+    def test_ci_timeout_rejects_negative_values()  # NEW
     def test_fix_without_argument_defaults_to_one()
     def test_fix_with_integer_argument()
+    def test_fix_zero_means_no_fix()  # NEW
     def test_fix_not_provided_defaults_to_zero()
     def test_all_parameters_together()
 ```
@@ -74,7 +76,7 @@ args.fix: int         # 0 (no fix), 1 (fix once), or N (retry N times)
 ```
 1. Locate branch_status_parser in add_check_parsers()
 2. Add --ci-timeout argument:
-   - type=int
+   - type=custom validation function for >= 0  # NEW
    - default=0
    - help text with default mentioned
 3. Modify --fix argument:
@@ -176,6 +178,24 @@ class TestCheckBranchStatusParserEnhancements:
         
         assert args.fix == 0
 
+    def test_ci_timeout_rejects_negative_values(self) -> None:
+        """Test --ci-timeout rejects negative values."""
+        from mcp_coder.cli.main import create_parser
+        
+        parser = create_parser()
+        
+        with pytest.raises(SystemExit):  # argparse exits on validation error
+            parser.parse_args(["check", "branch-status", "--ci-timeout", "-60"])
+
+    def test_fix_zero_means_no_fix(self) -> None:
+        """Test --fix 0 means no fix (same as not providing --fix)."""
+        from mcp_coder.cli.main import create_parser
+        
+        parser = create_parser()
+        args = parser.parse_args(["check", "branch-status", "--fix", "0"])
+        
+        assert args.fix == 0
+
     def test_all_parameters_together(self) -> None:
         """Test --ci-timeout and --fix together."""
         from mcp_coder.cli.main import create_parser
@@ -210,9 +230,19 @@ branch_status_parser.add_argument(
 
 Replace with:
 ```python
+def _validate_ci_timeout(value: str) -> int:
+    """Validate ci-timeout argument is non-negative integer."""
+    try:
+        ivalue = int(value)
+        if ivalue < 0:
+            raise argparse.ArgumentTypeError("--ci-timeout must be non-negative")
+        return ivalue
+    except ValueError:
+        raise argparse.ArgumentTypeError("--ci-timeout must be an integer")
+
 branch_status_parser.add_argument(
     "--ci-timeout",
-    type=int,
+    type=_validate_ci_timeout,
     default=0,
     metavar="SECONDS",
     help="Wait up to N seconds for CI completion (default: 0 = no wait)",
@@ -231,7 +261,7 @@ branch_status_parser.add_argument(
 ## Validation Criteria
 
 ### Tests Must Pass
-- ✅ All 6 new parser tests pass
+- ✅ All 8 new parser tests pass (including validation tests)
 - ✅ All existing tests continue to pass (backward compatibility)
 
 ### Manual Verification
