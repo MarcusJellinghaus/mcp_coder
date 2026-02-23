@@ -465,9 +465,9 @@ mcp-coder check branch-status [OPTIONS]
 
 | Code | Meaning | Description |
 |------|---------|-------------|
-| 0 | Success | CI passed or graceful exit (no CI configured, API errors) |
-| 1 | Failure | CI failed, timeout, or pending status |
-| 2 | Error | Technical error (invalid arguments, Git errors) |
+| 0 | Success | CI passed, or graceful scenarios (no CI configured, no wait requested) |
+| 1 | Failure | CI failed, timeout, pending status, or fix operations failed |
+| 2 | Technical Error | Invalid arguments, Git errors, API errors, or unexpected exceptions |
 
 #### Behavior
 

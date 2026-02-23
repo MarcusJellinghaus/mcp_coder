@@ -75,7 +75,8 @@ def _wait_for_ci_completion(
             logger.error(f"CI API error during polling: {e}")
             if show_progress:
                 print()  # Newline after dots
-            return None, False  # Technical error on API errors
+            # Return special marker for API errors to be handled as exit code 2
+            raise RuntimeError(f"API error during CI polling: {e}") from e
 
         run_info = ci_status.get("run", {})
 
@@ -221,7 +222,7 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
         logger.error(
             f"Unexpected error in check_branch_status command: {e}", exc_info=True
         )
-        return 1
+        return 2  # Technical error
 
 
 def _run_auto_fixes(
