@@ -24,14 +24,14 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 <!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
 
 ### Step 1: Update CLI Parser for New Parameters (TDD)
-- [ ] Write parser tests first (TestCheckBranchStatusParserEnhancements class with 8 tests)
-- [ ] Run parser tests to verify they fail (TDD approach)
-- [ ] Implement CLI parser changes for --ci-timeout and --fix [N] parameters
-- [ ] Run parser tests to verify they pass
-- [ ] Run pylint check and fix any issues found
-- [ ] Run pytest check and fix any test failures
-- [ ] Run mypy check and fix any type issues
-- [ ] Prepare git commit message for Step 1 implementation
+- [x] Write parser tests first (TestCheckBranchStatusParserEnhancements class with 8 tests)
+- [x] Run parser tests to verify they fail (TDD approach)
+- [x] Implement CLI parser changes for --ci-timeout and --fix [N] parameters
+- [x] Run parser tests to verify they pass
+- [x] Run pylint check and fix any issues found
+- [x] Run pytest check and fix any test failures
+- [x] Run mypy check and fix any type issues
+- [x] Prepare git commit message for Step 1 implementation
 
 ### Step 2: Add CI Waiting Logic (TDD) 
 - [ ] Write waiting logic tests first (TestCIWaitingLogic class with 8 tests)

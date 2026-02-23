@@ -387,6 +387,94 @@ class TestRunAutoFixes:
         assert result is False
 
 
+class TestCheckBranchStatusParserEnhancements:
+    """Test new parser parameters for CI waiting and fix retry."""
+
+    def test_ci_timeout_parameter_defaults_to_zero(self) -> None:
+        """Test --ci-timeout parameter defaults to 0."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+        args = parser.parse_args(["check", "branch-status"])
+
+        assert args.ci_timeout == 0
+
+    def test_ci_timeout_accepts_integer_value(self) -> None:
+        """Test --ci-timeout accepts integer values."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+        args = parser.parse_args(["check", "branch-status", "--ci-timeout", "180"])
+
+        assert args.ci_timeout == 180
+
+    def test_ci_timeout_rejects_negative_values(self) -> None:
+        """Test --ci-timeout rejects negative values."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+
+        with pytest.raises(SystemExit):  # argparse exits on validation error
+            parser.parse_args(["check", "branch-status", "--ci-timeout", "-60"])
+
+    def test_fix_without_argument_defaults_to_one(self) -> None:
+        """Test --fix without argument equals 1 (fix once)."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+        args = parser.parse_args(["check", "branch-status", "--fix"])
+
+        assert args.fix == 1
+
+    def test_fix_with_integer_argument(self) -> None:
+        """Test --fix with integer argument."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+        args = parser.parse_args(["check", "branch-status", "--fix", "3"])
+
+        assert args.fix == 3
+
+    def test_fix_zero_means_no_fix(self) -> None:
+        """Test --fix 0 means no fix (same as not providing --fix)."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+        args = parser.parse_args(["check", "branch-status", "--fix", "0"])
+
+        assert args.fix == 0
+
+    def test_fix_not_provided_defaults_to_zero(self) -> None:
+        """Test --fix not provided defaults to 0 (no fix)."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+        args = parser.parse_args(["check", "branch-status"])
+
+        assert args.fix == 0
+
+    def test_all_parameters_together(self) -> None:
+        """Test --ci-timeout and --fix together."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+        args = parser.parse_args(
+            [
+                "check",
+                "branch-status",
+                "--ci-timeout",
+                "300",
+                "--fix",
+                "2",
+                "--llm-truncate",
+            ]
+        )
+
+        assert args.ci_timeout == 300
+        assert args.fix == 2
+        assert args.llm_truncate is True
+
+
 class TestCheckBranchStatusCommandIntegration:
     """Test check_branch_status command CLI integration."""
 
