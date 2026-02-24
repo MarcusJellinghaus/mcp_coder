@@ -7,11 +7,15 @@ MLflow integration provides enhanced visibility and analytics for your Claude Co
 Install the optional MLflow dependency:
 
 ```bash
-# For development
+# With pip (development)
 pip install -e ".[mlflow]"
 
-# Or from PyPI (when available)
+# With uv (development)
+uv pip install -e ".[mlflow]"
+
+# From PyPI (when available)
 pip install mcp-coder[mlflow]
+uv pip install mcp-coder[mlflow]
 ```
 
 ## Configuration
