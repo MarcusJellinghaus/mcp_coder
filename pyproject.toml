@@ -100,6 +100,7 @@ markers = [
     "formatter_integration: tests for code formatter integration (black, isort)",
     "github_integration: tests requiring GitHub API access (network, auth needed)",
     "jenkins_integration: tests requiring Jenkins server access (network, auth needed)",
+    "mlflow_integration: tests requiring MLflow installation and functionality",
     "integration: general integration tests",
     "execution_dir: tests for --execution-dir feature",
 ]

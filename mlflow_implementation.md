@@ -22,11 +22,11 @@ Add optional MLflow integration to log Claude Code conversations for better visi
 **Goal**: Basic MLflow logging with graceful fallback
 
 #### 1.1 Configuration Module
-- [ ] **File**: `src/mcp_coder/config/mlflow_config.py`
-- [ ] **Purpose**: Load MLflow settings from `config.toml`
-- [ ] **Integration**: Use `get_config_values()` from `utils.user_config`
-- [ ] **Environment Variables**: Support `MLFLOW_TRACKING_URI`, `MLFLOW_EXPERIMENT_NAME`
-- [ ] **Schema**:
+- [x] **File**: `src/mcp_coder/config/mlflow_config.py`
+- [x] **Purpose**: Load MLflow settings from `config.toml`
+- [x] **Integration**: Use `get_config_values()` from `utils.user_config`
+- [x] **Environment Variables**: Support `MLFLOW_TRACKING_URI`, `MLFLOW_EXPERIMENT_NAME`
+- [x] **Schema**:
   ```python
   @dataclass
   class MLflowConfig:
@@ -36,26 +36,26 @@ Add optional MLflow integration to log Claude Code conversations for better visi
   ```
 
 #### 1.2 MLflow Logger Module
-- [ ] **File**: `src/mcp_coder/llm/mlflow_logger.py`
-- [ ] **Purpose**: Optional MLflow logging with graceful fallback
-- [ ] **Key Features**:
-  - [ ] Detect if MLflow is installed
-  - [ ] Log experiment runs with conversation metadata
-  - [ ] Store conversation JSON as artifacts
-  - [ ] Handle all MLflow errors gracefully
+- [x] **File**: `src/mcp_coder/llm/mlflow_logger.py`
+- [x] **Purpose**: Optional MLflow logging with graceful fallback
+- [x] **Key Features**:
+  - [x] Detect if MLflow is installed
+  - [x] Log experiment runs with conversation metadata
+  - [x] Store conversation JSON as artifacts
+  - [x] Handle all MLflow errors gracefully
 
 #### 1.3 Integration Hook
-- [ ] **File**: `src/mcp_coder/llm/providers/claude/logging_utils.py` (extend existing)
-- [ ] **Purpose**: Add MLflow logging calls to existing log functions
-- [ ] **Changes**:
-  - [ ] `log_llm_request()`: Start MLflow run
-  - [ ] `log_llm_response()`: Log metrics and end run
-  - [ ] `log_llm_error()`: Log error and end run
+- [x] **File**: `src/mcp_coder/llm/providers/claude/logging_utils.py` (extend existing)
+- [x] **Purpose**: Add MLflow logging calls to existing log functions
+- [x] **Changes**:
+  - [x] `log_llm_request()`: Start MLflow run
+  - [x] `log_llm_response()`: Log metrics and end run
+  - [x] `log_llm_error()`: Log error and end run
 
 #### 1.4 Session Storage Integration
-- [ ] **File**: `src/mcp_coder/llm/storage/session_storage.py` (extend existing)
-- [ ] **Purpose**: Trigger MLflow logging when sessions are stored
-- [ ] **Changes**: Add optional MLflow logging call in `store_session()`
+- [x] **File**: `src/mcp_coder/llm/storage/session_storage.py` (extend existing)
+- [x] **Purpose**: Trigger MLflow logging when sessions are stored
+- [x] **Changes**: Add optional MLflow logging call in `store_session()`
 
 ### Phase 2: Enhanced Features
 **Goal**: Rich analytics and better user experience
@@ -86,17 +86,18 @@ Add optional MLflow integration to log Claude Code conversations for better visi
 ## File Changes Required
 
 ### New Files
-- [ ] `src/mcp_coder/config/mlflow_config.py` - MLflow configuration
-- [ ] `src/mcp_coder/llm/mlflow_logger.py` - MLflow logging logic
-- [ ] `tests/config/test_mlflow_config.py` - Config tests
-- [ ] `tests/llm/test_mlflow_logger.py` - Logger tests
+- [x] `src/mcp_coder/config/mlflow_config.py` - MLflow configuration
+- [x] `src/mcp_coder/llm/mlflow_logger.py` - MLflow logging logic
+- [x] `tests/config/test_mlflow_config.py` - Config tests
+- [x] `tests/llm/test_mlflow_logger.py` - Logger tests
+- [x] `tests/integration/test_mlflow_integration.py` - Integration tests
 - [x] `docs/configuration/mlflow-integration.md` - User documentation
 
 ### Modified Files
-- [x] `pyproject.toml` - Add MLflow dependency
-- [ ] `src/mcp_coder/llm/providers/claude/logging_utils.py` - Add MLflow hooks
-- [ ] `src/mcp_coder/llm/storage/session_storage.py` - Add MLflow logging
-- [ ] `src/mcp_coder/config/__init__.py` - Export MLflow config
+- [x] `pyproject.toml` - Add MLflow dependency and test marker
+- [x] `src/mcp_coder/llm/providers/claude/logging_utils.py` - Add MLflow hooks
+- [x] `src/mcp_coder/llm/storage/session_storage.py` - Add MLflow logging
+- [x] `src/mcp_coder/config/__init__.py` - Export MLflow config
 
 ## Test Strategy
 
