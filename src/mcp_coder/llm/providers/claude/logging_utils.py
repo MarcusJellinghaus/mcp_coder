@@ -65,7 +65,7 @@ def log_llm_request(
     logger.debug(log_message)
 
     # Start MLflow run if enabled
-    if _mlflow_available and get_mlflow_logger:
+    if _mlflow_available and get_mlflow_logger is not None:
         try:
             mlflow_logger = get_mlflow_logger()
             run_name = f"{method}_{provider}_{session_status.strip('[]')}"
@@ -112,7 +112,7 @@ def log_llm_response(
     logger.debug(log_message)
 
     # Log metrics to MLflow if enabled
-    if _mlflow_available and get_mlflow_logger:
+    if _mlflow_available and get_mlflow_logger is not None:
         try:
             mlflow_logger = get_mlflow_logger()
             metrics = {"duration_ms": float(duration_ms)}
@@ -184,7 +184,7 @@ def log_llm_error(
     logger.debug(log_message)
 
     # Log error to MLflow if enabled
-    if _mlflow_available and get_mlflow_logger:
+    if _mlflow_available and get_mlflow_logger is not None:
         try:
             mlflow_logger = get_mlflow_logger()
             mlflow_logger.log_error_metrics(error, duration_ms)

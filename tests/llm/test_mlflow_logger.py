@@ -2,6 +2,7 @@
 
 import json
 import tempfile
+from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -17,7 +18,7 @@ from mcp_coder.llm.mlflow_logger import (
 class TestIsMLflowAvailable:
     """Test MLflow availability detection."""
 
-    def test_mlflow_available_cached(self):
+    def test_mlflow_available_cached(self) -> None:
         """Test that availability check is cached."""
         # Reset the global cache
         import mcp_coder.llm.mlflow_logger
@@ -39,7 +40,7 @@ class TestIsMLflowAvailable:
             assert result2 is True
             mock_import.assert_not_called()
 
-    def test_mlflow_not_available(self):
+    def test_mlflow_not_available(self) -> None:
         """Test handling when MLflow is not installed."""
         # Reset the global cache
         import mcp_coder.llm.mlflow_logger
@@ -59,13 +60,13 @@ class TestIsMLflowAvailable:
 class TestMLflowLogger:
     """Test MLflowLogger class."""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Setup for each test."""
         self.config = MLflowConfig(
             enabled=True, tracking_uri="file:///tmp/test", experiment_name="test-exp"
         )
 
-    def test_init_disabled_config(self):
+    def test_init_disabled_config(self) -> None:
         """Test initialization with disabled config."""
         config = MLflowConfig(enabled=False)
         logger = MLflowLogger(config)
@@ -73,14 +74,14 @@ class TestMLflowLogger:
         assert logger.active_run_id is None
 
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=False)
-    def test_init_mlflow_unavailable(self, mock_available):
+    def test_init_mlflow_unavailable(self, mock_available: Any) -> None:
         """Test initialization when MLflow is not available."""
         logger = MLflowLogger(self.config)
         assert logger.active_run_id is None
         # Config should remain enabled (availability is checked per operation)
 
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
-    def test_init_mlflow_available(self, mock_available):
+    def test_init_mlflow_available(self, mock_available: Any) -> None:
         """Test initialization when MLflow is available."""
         with patch(
             "mcp_coder.llm.mlflow_logger.MLflowLogger._initialize_mlflow"
@@ -89,7 +90,7 @@ class TestMLflowLogger:
             mock_init.assert_called_once()
 
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
-    def test_init_mlflow_initialization_fails(self, mock_available):
+    def test_init_mlflow_initialization_fails(self, mock_available: Any) -> None:
         """Test handling when MLflow initialization fails."""
         with patch(
             "mcp_coder.llm.mlflow_logger.MLflowLogger._initialize_mlflow"
@@ -104,7 +105,7 @@ class TestMLflowLogger:
                     "Failed to initialize MLflow: MLflow init failed"
                 )
 
-    def test_initialize_mlflow(self):
+    def test_initialize_mlflow(self) -> None:
         """Test MLflow initialization."""
         mock_mlflow = MagicMock()
 
@@ -118,7 +119,7 @@ class TestMLflowLogger:
                 mock_mlflow.set_tracking_uri.assert_called_once_with("file:///tmp/test")
                 mock_mlflow.set_experiment.assert_called_once_with("test-exp")
 
-    def test_initialize_mlflow_experiment_fails(self):
+    def test_initialize_mlflow_experiment_fails(self) -> None:
         """Test handling when experiment creation fails."""
         mock_mlflow = MagicMock()
         mock_mlflow.set_experiment.side_effect = Exception("Experiment error")
@@ -135,13 +136,13 @@ class TestMLflowLogger:
                     )
 
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=False)
-    def test_start_run_mlflow_disabled(self, mock_available):
+    def test_start_run_mlflow_disabled(self, mock_available: Any) -> None:
         """Test start_run when MLflow is disabled."""
         logger = MLflowLogger(self.config)
         result = logger.start_run()
         assert result is None
 
-    def test_start_run_success(self):
+    def test_start_run_success(self) -> None:
         """Test successful run start."""
         mock_mlflow = MagicMock()
         mock_run = Mock()
@@ -170,7 +171,7 @@ class TestMLflowLogger:
                 assert call_args["key"] == "value"
                 assert "conversation.timestamp" in call_args
 
-    def test_start_run_auto_name(self):
+    def test_start_run_auto_name(self) -> None:
         """Test automatic run name generation."""
         mock_mlflow = MagicMock()
         mock_run = Mock()
@@ -189,7 +190,7 @@ class TestMLflowLogger:
                 call_args = mock_mlflow.start_run.call_args
                 assert call_args[1]["run_name"].startswith("conversation_")
 
-    def test_log_params(self):
+    def test_log_params(self) -> None:
         """Test logging parameters."""
         mock_mlflow = MagicMock()
 
@@ -206,7 +207,7 @@ class TestMLflowLogger:
                 expected_params = {"model": "claude-3", "temperature": "0.7"}
                 mock_mlflow.log_params.assert_called_once_with(expected_params)
 
-    def test_log_metrics(self):
+    def test_log_metrics(self) -> None:
         """Test logging metrics."""
         mock_mlflow = MagicMock()
 
@@ -217,7 +218,7 @@ class TestMLflowLogger:
                 logger = MLflowLogger(self.config)
                 logger.active_run_id = "test-run"
 
-                metrics = {
+                metrics: dict[str, Any] = {
                     "duration_ms": 1500,
                     "cost_usd": 0.01,
                     "invalid": "not_numeric",
@@ -227,7 +228,7 @@ class TestMLflowLogger:
                 expected_metrics = {"duration_ms": 1500.0, "cost_usd": 0.01}
                 mock_mlflow.log_metrics.assert_called_once_with(expected_metrics)
 
-    def test_log_artifact(self):
+    def test_log_artifact(self) -> None:
         """Test logging artifacts."""
         mock_mlflow = MagicMock()
 
@@ -246,7 +247,7 @@ class TestMLflowLogger:
                 call_args = mock_mlflow.log_artifact.call_args
                 assert call_args[0][1] == "conversation_data"  # artifact_path
 
-    def test_log_conversation(self):
+    def test_log_conversation(self) -> None:
         """Test logging complete conversation."""
         mock_mlflow = MagicMock()
 
@@ -292,7 +293,7 @@ class TestMLflowLogger:
                                 mock_artifact.call_count == 2
                             )  # Prompt + conversation JSON
 
-    def test_end_run(self):
+    def test_end_run(self) -> None:
         """Test ending a run."""
         mock_mlflow = MagicMock()
 
@@ -308,7 +309,7 @@ class TestMLflowLogger:
                 mock_mlflow.end_run.assert_called_once_with(status="FINISHED")
                 assert logger.active_run_id is None
 
-    def test_error_handling_graceful_fallback(self):
+    def test_error_handling_graceful_fallback(self) -> None:
         """Test that all operations handle errors gracefully."""
         mock_mlflow = MagicMock()
         mock_mlflow.start_run.side_effect = Exception("MLflow error")
@@ -336,7 +337,7 @@ class TestMLflowLogger:
 class TestGlobalLogger:
     """Test global logger functionality."""
 
-    def test_get_mlflow_logger_singleton(self):
+    def test_get_mlflow_logger_singleton(self) -> None:
         """Test that get_mlflow_logger returns same instance."""
         # Reset global logger
         import mcp_coder.llm.mlflow_logger
@@ -348,7 +349,7 @@ class TestGlobalLogger:
         assert logger1 is logger2
 
     @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
-    def test_get_mlflow_logger_loads_config(self, mock_load_config):
+    def test_get_mlflow_logger_loads_config(self, mock_load_config: Any) -> None:
         """Test that global logger loads configuration."""
         # Reset global logger
         import mcp_coder.llm.mlflow_logger

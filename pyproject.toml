@@ -179,6 +179,10 @@ ignore_missing_imports = true
 module = ["win32gui"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = ["mlflow", "mlflow.*"]
+ignore_missing_imports = true
+
 [tool.setuptools_scm]
 # Version is automatically determined from git tags
 # Tag format: v0.1.0 -> version 0.1.0

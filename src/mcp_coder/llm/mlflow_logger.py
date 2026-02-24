@@ -43,7 +43,7 @@ def is_mlflow_available() -> bool:
 
     if _mlflow_available is None:
         try:
-            import mlflow  # noqa: F401
+            import mlflow  # noqa: F401  # type: ignore[import-untyped,import-not-found]  # pylint: disable=import-error
 
             _mlflow_available = True
             logger.debug("MLflow is available")
@@ -82,7 +82,7 @@ class MLflowLogger:
     def _initialize_mlflow(self) -> None:
         """Initialize MLflow tracking and experiment."""
         try:
-            import mlflow
+            import mlflow  # pylint: disable=import-error
 
             self._mlflow_module = mlflow
 
@@ -122,7 +122,7 @@ class MLflowLogger:
             return None
 
         try:
-            import mlflow
+            import mlflow  # pylint: disable=import-error
 
             # Generate run name if not provided
             if not run_name:
@@ -159,7 +159,7 @@ class MLflowLogger:
             return
 
         try:
-            import mlflow
+            import mlflow  # pylint: disable=import-error
 
             # Convert all values to strings for MLflow compatibility
             str_params = {k: str(v) for k, v in params.items() if v is not None}
@@ -179,7 +179,7 @@ class MLflowLogger:
             return
 
         try:
-            import mlflow
+            import mlflow  # pylint: disable=import-error
 
             # Filter to only numeric values
             numeric_metrics = {}
@@ -207,7 +207,7 @@ class MLflowLogger:
             return
 
         try:
-            import mlflow
+            import mlflow  # pylint: disable=import-error
 
             # Create temporary file for the artifact
             with tempfile.NamedTemporaryFile(
@@ -260,7 +260,7 @@ class MLflowLogger:
             }
 
             # Add advanced classification if available
-            if ConversationMetrics:
+            if ConversationMetrics is not None:
                 try:
                     metrics_calculator = ConversationMetrics()
                     topic = metrics_calculator.classify_conversation_topic(prompt)
@@ -290,7 +290,7 @@ class MLflowLogger:
                             usage_metrics[f"usage_{key}"] = float(value)
 
             # Add advanced metrics if available
-            if ConversationMetrics:
+            if ConversationMetrics is not None:
                 try:
                     metrics_calculator = ConversationMetrics()
 
@@ -348,7 +348,7 @@ class MLflowLogger:
                 error_metrics["error_duration_ms"] = float(duration_ms)
 
             # Advanced error metrics if available
-            if ConversationMetrics:
+            if ConversationMetrics is not None:
                 try:
                     metrics_calculator = ConversationMetrics()
                     advanced_error_metrics = metrics_calculator.get_error_metrics(
@@ -373,7 +373,7 @@ class MLflowLogger:
             return
 
         try:
-            import mlflow
+            import mlflow  # pylint: disable=import-error
 
             mlflow.end_run(status=status)
             logger.debug(f"Ended MLflow run: {self.active_run_id}")

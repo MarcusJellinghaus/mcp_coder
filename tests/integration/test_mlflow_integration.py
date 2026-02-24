@@ -2,6 +2,7 @@
 
 import os
 import tempfile
+from typing import Any, Dict
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -9,12 +10,13 @@ import pytest
 from mcp_coder.config.mlflow_config import load_mlflow_config
 from mcp_coder.llm.mlflow_logger import get_mlflow_logger
 from mcp_coder.llm.storage.session_storage import store_session
+from mcp_coder.llm.types import LLMResponseDict
 
 
 class TestMLflowIntegration:
     """Integration tests for complete MLflow workflow."""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Setup for each test."""
         # Reset global state
         import mcp_coder.llm.mlflow_logger
@@ -28,7 +30,9 @@ class TestMLflowIntegration:
 
     @patch("mcp_coder.config.mlflow_config.get_config_values")
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=False)
-    def test_disabled_by_default(self, mock_available, mock_get_config):
+    def test_disabled_by_default(
+        self, mock_available: Any, mock_get_config: Any
+    ) -> None:
         """Test that MLflow integration is disabled when not configured."""
         mock_get_config.return_value = {
             ("mlflow", "enabled"): None,
@@ -49,7 +53,7 @@ class TestMLflowIntegration:
         assert result is None
 
     @patch("mcp_coder.config.mlflow_config.get_config_values")
-    def test_enabled_but_mlflow_unavailable(self, mock_get_config):
+    def test_enabled_but_mlflow_unavailable(self, mock_get_config: Any) -> None:
         """Test behavior when MLflow is enabled but not installed."""
         mock_get_config.return_value = {
             ("mlflow", "enabled"): "true",
@@ -69,7 +73,7 @@ class TestMLflowIntegration:
             assert result is None
 
     @patch("mcp_coder.config.mlflow_config.get_config_values")
-    def test_full_conversation_logging_flow(self, mock_get_config):
+    def test_full_conversation_logging_flow(self, mock_get_config: Any) -> None:
         """Test complete conversation logging workflow."""
         mock_get_config.return_value = {
             ("mlflow", "enabled"): "true",
@@ -96,10 +100,13 @@ class TestMLflowIntegration:
 
                     # Simulate a complete conversation storage workflow
                     prompt = "What is machine learning?"
-                    response_data = {
+                    response_data: Dict[str, Any] = {
                         "provider": "claude",
                         "session_id": "test-session-123",
                         "text": "Machine learning is...",
+                        "version": "1.0",
+                        "timestamp": "2024-01-01T00:00:00Z",
+                        "method": "test",
                         "duration_ms": 2500,
                         "cost_usd": 0.02,
                         "raw_response": {
@@ -112,7 +119,7 @@ class TestMLflowIntegration:
 
                     with tempfile.TemporaryDirectory() as temp_dir:
                         file_path = store_session(
-                            response_data=response_data,
+                            response_data=response_data,  # type: ignore[arg-type]
                             prompt=prompt,
                             store_path=temp_dir,
                             step_name="integration_test",
@@ -145,7 +152,7 @@ class TestMLflowIntegration:
                             assert mock_mlflow.log_metrics.called
                             assert mock_mlflow.log_artifact.called
 
-    def test_config_loading_with_environment_variables(self):
+    def test_config_loading_with_environment_variables(self) -> None:
         """Test configuration loading with environment variable override."""
         # Set environment variables
         with patch.dict(
@@ -173,7 +180,7 @@ class TestMLflowIntegration:
                 assert config.experiment_name == "env-override-test"
 
     @patch("mcp_coder.config.mlflow_config.get_config_values")
-    def test_error_resilience(self, mock_get_config):
+    def test_error_resilience(self, mock_get_config: Any) -> None:
         """Test that MLflow errors don't break main functionality."""
         mock_get_config.return_value = {
             ("mlflow", "enabled"): "true",
@@ -193,15 +200,20 @@ class TestMLflowIntegration:
             ):
                 # Should not raise exceptions even with MLflow errors
                 prompt = "Test prompt"
-                response_data = {
+                response_data: Dict[str, Any] = {
                     "provider": "claude",
+                    "session_id": "test-session-456",
                     "text": "Test response",
+                    "version": "1.0",
+                    "timestamp": "2024-01-01T00:00:00Z",
+                    "method": "test",
+                    "raw_response": {},
                 }
 
                 with tempfile.TemporaryDirectory() as temp_dir:
                     # This should complete successfully despite MLflow errors
                     file_path = store_session(
-                        response_data=response_data,
+                        response_data=response_data,  # type: ignore[arg-type]
                         prompt=prompt,
                         store_path=temp_dir,
                     )
@@ -222,7 +234,7 @@ class TestMLflowIntegration:
 class TestMLflowWithRealInstallation:
     """Tests that run only if MLflow is actually installed."""
 
-    def test_real_mlflow_available(self):
+    def test_real_mlflow_available(self) -> None:
         """Test with real MLflow installation if available."""
         try:
             import mlflow
@@ -239,7 +251,7 @@ class TestMLflowWithRealInstallation:
         except ImportError:
             pytest.skip("MLflow not installed - skipping real installation test")
 
-    def test_real_mlflow_initialization(self):
+    def test_real_mlflow_initialization(self) -> None:
         """Test MLflow logger initialization with real MLflow."""
         try:
             import mlflow

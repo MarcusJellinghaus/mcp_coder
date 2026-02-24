@@ -225,7 +225,7 @@ class ConversationMetrics:
                 "documentation": docs_score,
             }
 
-            primary_topic = max(scores, key=scores.get)
+            primary_topic = max(scores.keys(), key=lambda k: scores[k])
 
             # Additional specific classifications
             if (
@@ -361,7 +361,17 @@ class ConversationMetrics:
         try:
             if error is not None:
                 metrics["has_error"] = 1.0
-                metrics["error_type"] = type(error).__name__
+                # Note: error_type is stored as string but metrics dict typed as float
+                # We'll store a numeric error type code instead
+                error_name = type(error).__name__.lower()
+                if "timeout" in error_name or "connection" in error_name:
+                    metrics["error_type_code"] = 1.0  # Network/timeout errors
+                elif "permission" in error_name or "auth" in error_name:
+                    metrics["error_type_code"] = 2.0  # Permission errors
+                elif "value" in error_name or "type" in error_name:
+                    metrics["error_type_code"] = 3.0  # Data/type errors
+                else:
+                    metrics["error_type_code"] = 0.0  # Unknown/other errors
 
                 # Error severity classification
                 error_name = type(error).__name__.lower()

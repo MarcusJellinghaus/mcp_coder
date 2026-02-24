@@ -100,10 +100,12 @@ def store_session(
         json.dump(session_data, f, indent=2, default=str)
 
     # Log complete conversation to MLflow if enabled
-    if _mlflow_available and get_mlflow_logger:
+    if _mlflow_available and get_mlflow_logger is not None:
         try:
             mlflow_logger = get_mlflow_logger()
-            mlflow_logger.log_conversation(prompt, response_data, metadata)
+            # Convert LLMResponseDict to Dict[str, Any] for MLflow compatibility
+            response_dict: Dict[str, Any] = dict(response_data)
+            mlflow_logger.log_conversation(prompt, response_dict, metadata)
         except Exception as e:
             logger.debug(f"Failed to log conversation to MLflow: {e}")
 
