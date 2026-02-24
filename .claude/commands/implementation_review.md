@@ -1,9 +1,10 @@
 ---
-allowed-tools: Bash(git fetch:*), Bash(git status:*), Bash(mcp-coder git-tool compact-diff:*), Read, Glob, Grep
+allowed-tools: Bash(git fetch:*), Bash(git status:*), Bash(mcp-coder git-tool compact-diff:*), Bash(mcp-coder check branch-status:*), Read, Glob, Grep
 workflow-stage: code-review
 suggested-next:
+  - if incomplete tasks found _> implementation_finalise
   - discuss -> commit_push -> implementation_approve
-  - discuss -> implementation_new_tasks -> commit_push -> implementation_needs_rework
+  - discuss -> implementation_new_tasks -> commit_push -> implementation_needs_rework  
 ---
 
 # Implementation Review (Code Review)
@@ -12,6 +13,7 @@ suggested-next:
 ```bash
 git fetch
 git status
+mcp-coder check branch-status --llm-truncate
 ```
 
 Confirm and display the current feature branch name.

@@ -283,7 +283,7 @@ class TestExecuteCheckBranchStatus:
 
         result = execute_check_branch_status(args)
 
-        assert result == 1
+        assert result == 2
         captured = capsys.readouterr()
         assert "Error collecting branch status: Git error" in captured.err
 
@@ -458,7 +458,7 @@ class TestCIWaitingLogic:
 
     @patch("mcp_coder.cli.commands.check_branch_status.time.sleep")
     def test_wait_for_ci_handles_api_errors_gracefully(self, mock_sleep: Mock) -> None:
-        """Should handle API errors gracefully and return success."""
+        """Should handle API errors gracefully by raising RuntimeError."""
         from mcp_coder.cli.commands.check_branch_status import (
             _wait_for_ci_completion,
         )
@@ -466,10 +466,8 @@ class TestCIWaitingLogic:
         mock_manager = Mock()
         mock_manager.get_latest_ci_status.side_effect = Exception("API Error")
 
-        ci_status, success = _wait_for_ci_completion(mock_manager, "branch", 30, True)
-
-        assert ci_status is None
-        assert success is False  # Technical error on API error
+        with pytest.raises(RuntimeError, match="API error during CI polling"):
+            _wait_for_ci_completion(mock_manager, "branch", 30, True)
 
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.CIResultsManager")
