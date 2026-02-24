@@ -64,16 +64,6 @@ def log_llm_request(
     log_message = "\n".join(log_lines)
     logger.debug(log_message)
 
-    # End MLflow run with error status if enabled
-    if _mlflow_available and get_mlflow_logger:
-        try:
-            mlflow_logger = get_mlflow_logger()
-            if duration_ms is not None:
-                mlflow_logger.log_metrics({"error_duration_ms": float(duration_ms)})
-            mlflow_logger.end_run("FAILED")
-        except Exception as e:
-            logger.debug(f"Failed to log MLflow error: {e}")
-
     # Start MLflow run if enabled
     if _mlflow_available and get_mlflow_logger:
         try:
@@ -192,3 +182,12 @@ def log_llm_error(
 
     log_message = "\n".join(log_lines)
     logger.debug(log_message)
+
+    # Log error to MLflow if enabled
+    if _mlflow_available and get_mlflow_logger:
+        try:
+            mlflow_logger = get_mlflow_logger()
+            mlflow_logger.log_error_metrics(error, duration_ms)
+            mlflow_logger.end_run("FAILED")
+        except Exception as e:
+            logger.debug(f"Failed to log MLflow error: {e}")

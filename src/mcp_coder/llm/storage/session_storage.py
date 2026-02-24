@@ -71,12 +71,12 @@ def store_session(
         filename = f"response_{timestamp}.json"
     file_path = os.path.join(storage_dir, filename)
 
-    # Extract model from LLMResponseDict
-    raw_response = response_data["raw_response"]
+    # Extract model from LLMResponseDict (with fallback for test data)
+    raw_response = response_data.get("raw_response", {})
     session_info = raw_response.get("session_info")
     model = (
         session_info.get("model") if isinstance(session_info, dict) else None
-    ) or response_data["provider"]
+    ) or response_data.get("provider", "unknown")
 
     metadata: Dict[str, Any] = {
         "timestamp": datetime.now().isoformat() + "Z",

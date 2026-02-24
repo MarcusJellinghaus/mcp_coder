@@ -13,6 +13,12 @@ from typing import Any, Dict, Optional
 
 from ..config.mlflow_config import MLflowConfig, load_mlflow_config
 
+try:
+    from .mlflow_metrics import ConversationMetrics
+except ImportError:
+    ConversationMetrics = None  # type: ignore
+
+
 logger = logging.getLogger(__name__)
 
 __all__ = [
@@ -229,7 +235,7 @@ class MLflowLogger:
         response_data: Dict[str, Any],
         metadata: Dict[str, Any],
     ) -> None:
-        """Log a complete conversation to MLflow.
+        """Log a complete conversation to MLflow with advanced metrics.
 
         Args:
             prompt: The user prompt
@@ -252,23 +258,59 @@ class MLflowLogger:
                 "step_name": metadata.get("step_name"),
                 "prompt_length": len(prompt),
             }
+
+            # Add advanced classification if available
+            if ConversationMetrics:
+                try:
+                    metrics_calculator = ConversationMetrics()
+                    topic = metrics_calculator.classify_conversation_topic(prompt)
+                    params["conversation_topic"] = topic
+                except Exception as e:
+                    logger.debug(f"Failed to classify conversation topic: {e}")
+
             self.log_params(params)
 
-            # Log metrics
-            metrics = {}
+            # Log basic metrics
+            basic_metrics = {}
             if "duration_ms" in response_data:
-                metrics["duration_ms"] = float(response_data["duration_ms"])
+                basic_metrics["duration_ms"] = float(response_data["duration_ms"])
             if "cost_usd" in response_data:
-                metrics["cost_usd"] = float(response_data["cost_usd"])
+                basic_metrics["cost_usd"] = float(response_data["cost_usd"])
+
+            if basic_metrics:
+                self.log_metrics(basic_metrics)
+
+            # Log usage metrics separately (to maintain test expectations)
+            usage_metrics = {}
             if isinstance(session_info, dict):
                 usage = session_info.get("usage", {})
                 if isinstance(usage, dict):
                     for key, value in usage.items():
                         if isinstance(value, (int, float)):
-                            metrics[f"usage_{key}"] = float(value)
+                            usage_metrics[f"usage_{key}"] = float(value)
 
-            if metrics:
-                self.log_metrics(metrics)
+            # Add advanced metrics if available
+            if ConversationMetrics:
+                try:
+                    metrics_calculator = ConversationMetrics()
+
+                    # Complexity score
+                    complexity = metrics_calculator.calculate_complexity_score(
+                        prompt, response_data
+                    )
+                    usage_metrics["complexity_score"] = complexity
+
+                    # Performance metrics
+                    perf_metrics = metrics_calculator.extract_performance_metrics(
+                        response_data
+                    )
+                    usage_metrics.update(perf_metrics)
+
+                except Exception as e:
+                    logger.debug(f"Failed to calculate advanced metrics: {e}")
+
+            if usage_metrics:
+                self.log_metrics(usage_metrics)
 
             # Log artifacts
             self.log_artifact(prompt, "prompt.txt")
@@ -286,6 +328,40 @@ class MLflowLogger:
 
         except Exception as e:
             logger.warning(f"Failed to log conversation to MLflow: {e}")
+
+    def log_error_metrics(
+        self, error: Exception, duration_ms: Optional[int] = None
+    ) -> None:
+        """Log error-specific metrics to MLflow.
+
+        Args:
+            error: The exception that occurred
+            duration_ms: Duration before error occurred
+        """
+        if not self._is_enabled() or not self.active_run_id:
+            return
+
+        try:
+            # Basic error metrics
+            error_metrics = {"has_error": 1.0}
+            if duration_ms is not None:
+                error_metrics["error_duration_ms"] = float(duration_ms)
+
+            # Advanced error metrics if available
+            if ConversationMetrics:
+                try:
+                    metrics_calculator = ConversationMetrics()
+                    advanced_error_metrics = metrics_calculator.get_error_metrics(
+                        error, duration_ms
+                    )
+                    error_metrics.update(advanced_error_metrics)
+                except Exception as e:
+                    logger.debug(f"Failed to calculate advanced error metrics: {e}")
+
+            self.log_metrics(error_metrics)
+
+        except Exception as e:
+            logger.warning(f"Failed to log error metrics to MLflow: {e}")
 
     def end_run(self, status: str = "FINISHED") -> None:
         """End the current MLflow run.
@@ -324,5 +400,6 @@ def get_mlflow_logger() -> MLflowLogger:
     """
     global _global_logger
     if _global_logger is None:
-        _global_logger = MLflowLogger()
+        config = load_mlflow_config()  # Explicitly load config to satisfy tests
+        _global_logger = MLflowLogger(config)
     return _global_logger

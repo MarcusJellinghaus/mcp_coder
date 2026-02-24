@@ -347,7 +347,7 @@ class TestGlobalLogger:
         logger2 = get_mlflow_logger()
         assert logger1 is logger2
 
-    @patch("mcp_coder.config.mlflow_config.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
     def test_get_mlflow_logger_loads_config(self, mock_load_config):
         """Test that global logger loads configuration."""
         # Reset global logger
