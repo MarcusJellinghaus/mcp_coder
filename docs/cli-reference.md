@@ -500,7 +500,7 @@ Attempts to fix CI failures up to N times:
 mcp-coder check branch-status
 ```
 
-##### Wait for CI to complete (no fixing)
+##### Wait up to 300s for CI, then display results
 ```bash
 mcp-coder check branch-status --ci-timeout 300
 ```
