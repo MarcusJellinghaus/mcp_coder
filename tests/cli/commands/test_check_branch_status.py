@@ -1,14 +1,17 @@
-"""Tests for check_branch_status command functionality.
+"""Tests for check_branch_status command core functionality.
 
 This follows test-first development approach. Tests that require the check_branch_status module
 are conditionally skipped if the module doesn't exist yet, while tests that can
 run independently (like CLI integration checks) are always executed.
+
+Note: This file focuses on the main execution logic. Related test files:
+- test_check_branch_status_ci_waiting.py: CI waiting and polling functionality
+- test_check_branch_status_auto_fixes.py: Auto-fixes and retry logic
+- test_check_branch_status_cli_integration.py: CLI parser and integration tests
 """
 
 import argparse
-import sys
 from pathlib import Path
-from unittest import mock
 from unittest.mock import Mock, patch
 
 import pytest
@@ -91,8 +94,12 @@ class TestExecuteCheckBranchStatus:
 
         args = argparse.Namespace(
             project_dir="/test/project",
-            fix=False,
+            ci_timeout=0,
+            fix=0,
             llm_truncate=False,
+            llm_method="claude_code_cli",
+            mcp_config=None,
+            execution_dir=None,
         )
 
         result = execute_check_branch_status(args)
@@ -123,8 +130,12 @@ class TestExecuteCheckBranchStatus:
 
         args = argparse.Namespace(
             project_dir="/test/project",
-            fix=False,
+            ci_timeout=0,
+            fix=0,
             llm_truncate=True,
+            llm_method="claude_code_cli",
+            mcp_config=None,
+            execution_dir=None,
         )
 
         result = execute_check_branch_status(args)
@@ -161,7 +172,8 @@ class TestExecuteCheckBranchStatus:
 
         args = argparse.Namespace(
             project_dir="/test/project",
-            fix=True,
+            ci_timeout=0,
+            fix=1,
             llm_truncate=False,
             llm_method="claude_code_api",
             mcp_config=None,
@@ -174,7 +186,15 @@ class TestExecuteCheckBranchStatus:
         mock_resolve_dir.assert_called_once_with("/test/project")
         mock_collect.assert_called_once_with(project_dir, False)
         mock_run_fixes.assert_called_once_with(
-            project_dir, failed_ci_report, "claude", "api", None, exec_dir
+            project_dir,
+            failed_ci_report,
+            "claude",
+            "api",
+            None,
+            exec_dir,
+            fix_attempts=1,
+            ci_timeout=0,
+            llm_truncate=False,
         )
 
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
@@ -201,7 +221,8 @@ class TestExecuteCheckBranchStatus:
 
         args = argparse.Namespace(
             project_dir="/test/project",
-            fix=True,
+            ci_timeout=0,
+            fix=1,
             llm_truncate=False,
             llm_method="claude_code_api",
             mcp_config=None,
@@ -225,8 +246,12 @@ class TestExecuteCheckBranchStatus:
 
         args = argparse.Namespace(
             project_dir="/invalid/path",
-            fix=False,
+            ci_timeout=0,
+            fix=0,
             llm_truncate=False,
+            llm_method="claude_code_cli",
+            mcp_config=None,
+            execution_dir=None,
         )
 
         with pytest.raises(SystemExit) as exc_info:
@@ -251,13 +276,17 @@ class TestExecuteCheckBranchStatus:
 
         args = argparse.Namespace(
             project_dir="/test/project",
-            fix=False,
+            ci_timeout=0,
+            fix=0,
             llm_truncate=False,
+            llm_method="claude_code_cli",
+            mcp_config=None,
+            execution_dir=None,
         )
 
         result = execute_check_branch_status(args)
 
-        assert result == 1
+        assert result == 2
         captured = capsys.readouterr()
         assert "Error collecting branch status: Git error" in captured.err
 
@@ -281,8 +310,12 @@ class TestExecuteCheckBranchStatus:
 
         args = argparse.Namespace(
             project_dir=None,
-            fix=False,
+            ci_timeout=0,
+            fix=0,
             llm_truncate=False,
+            llm_method="claude_code_cli",
+            mcp_config=None,
+            execution_dir=None,
         )
 
         result = execute_check_branch_status(args)
@@ -292,225 +325,13 @@ class TestExecuteCheckBranchStatus:
         mock_collect.assert_called_once_with(project_dir, False)
 
 
-@pytest.mark.skipif(
-    not CHECK_BRANCH_STATUS_MODULE_AVAILABLE,
-    reason="check_branch_status module not yet implemented",
-)
-class TestRunAutoFixes:
-    """Tests for _run_auto_fixes function."""
-
-    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
-    @patch("mcp_coder.cli.commands.check_branch_status.check_and_fix_ci")
-    def test_run_auto_fixes_ci_only_success(
-        self,
-        mock_check_ci: Mock,
-        mock_get_branch: Mock,
-        failed_ci_report: BranchStatusReport,
-    ) -> None:
-        """Test auto-fixes that only handles CI failures."""
-        from mcp_coder.cli.commands.check_branch_status import _run_auto_fixes
-
-        # Setup mocks
-        project_dir = Path("/test/project")
-        exec_dir = Path.cwd()
-        mock_get_branch.return_value = "feature/test-branch"
-        mock_check_ci.return_value = True  # Success
-
-        result = _run_auto_fixes(
-            project_dir, failed_ci_report, "claude", "api", None, exec_dir
-        )
-
-        assert result is True
-        mock_check_ci.assert_called_once_with(
-            project_dir, "feature/test-branch", "claude", "api", None, exec_dir
-        )
-
-    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
-    @patch("mcp_coder.cli.commands.check_branch_status.check_and_fix_ci")
-    def test_run_auto_fixes_ci_failure(
-        self,
-        mock_check_ci: Mock,
-        mock_get_branch: Mock,
-        failed_ci_report: BranchStatusReport,
-    ) -> None:
-        """Test auto-fixes when CI fix fails."""
-        from mcp_coder.cli.commands.check_branch_status import _run_auto_fixes
-
-        # Setup mocks
-        project_dir = Path("/test/project")
-        exec_dir = Path.cwd()
-        mock_get_branch.return_value = "feature/test-branch"
-        mock_check_ci.return_value = False  # Failure
-
-        result = _run_auto_fixes(
-            project_dir, failed_ci_report, "claude", "api", None, exec_dir
-        )
-
-        assert result is False
-        mock_check_ci.assert_called_once()
-
-    def test_run_auto_fixes_no_fixes_needed(
-        self, sample_report: BranchStatusReport
-    ) -> None:
-        """Test auto-fixes when no fixes are needed."""
-        from mcp_coder.cli.commands.check_branch_status import _run_auto_fixes
-
-        project_dir = Path("/test/project")
-
-        result = _run_auto_fixes(
-            project_dir, sample_report, "claude", "api", None, None
-        )
-
-        assert result is True  # Success when no fixes needed
-
-    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
-    @patch("mcp_coder.cli.commands.check_branch_status.check_and_fix_ci")
-    def test_run_auto_fixes_exception_handling(
-        self,
-        mock_check_ci: Mock,
-        mock_get_branch: Mock,
-        failed_ci_report: BranchStatusReport,
-    ) -> None:
-        """Test auto-fixes with exception during CI fix."""
-        from mcp_coder.cli.commands.check_branch_status import _run_auto_fixes
-
-        # Setup mocks
-        project_dir = Path("/test/project")
-        exec_dir = Path.cwd()
-        mock_get_branch.return_value = "feature/test-branch"
-        mock_check_ci.side_effect = Exception("Unexpected CI error")
-
-        result = _run_auto_fixes(
-            project_dir, failed_ci_report, "claude", "api", None, exec_dir
-        )
-
-        assert result is False
+# Note: CI waiting tests moved to test_check_branch_status_ci_waiting.py
 
 
-class TestCheckBranchStatusCommandIntegration:
-    """Test check_branch_status command CLI integration."""
+# Note: Auto-fixes tests moved to test_check_branch_status_auto_fixes.py
 
-    @patch("mcp_coder.cli.commands.check_branch_status.execute_check_branch_status")
-    @patch("sys.argv", ["mcp-coder", "check", "branch-status"])
-    def test_check_branch_status_command_calls_function(
-        self, mock_execute: Mock
-    ) -> None:
-        """Test that the check branch-status CLI command calls the execution function."""
-        from mcp_coder.cli.main import main
 
-        mock_execute.return_value = 0  # Success
+# Note: Fix retry logic tests moved to test_check_branch_status_auto_fixes.py
 
-        result = main()
 
-        assert result == 0
-        mock_execute.assert_called_once()
-
-        # Check that the function was called with proper arguments
-        call_args = mock_execute.call_args[0][0]  # First positional argument (args)
-        assert isinstance(call_args, argparse.Namespace)
-        assert hasattr(call_args, "project_dir")
-        assert hasattr(call_args, "fix")
-        assert hasattr(call_args, "llm_truncate")
-
-    @patch("mcp_coder.cli.commands.check_branch_status.execute_check_branch_status")
-    @patch("sys.argv", ["mcp-coder", "check", "branch-status", "--fix"])
-    def test_check_branch_status_command_with_fix_flag(
-        self, mock_execute: Mock
-    ) -> None:
-        """Test check branch-status command with --fix flag."""
-        from mcp_coder.cli.main import main
-
-        mock_execute.return_value = 0  # Success
-
-        result = main()
-
-        assert result == 0
-        mock_execute.assert_called_once()
-
-        # Check that fix flag was parsed correctly
-        call_args = mock_execute.call_args[0][0]
-        assert call_args.fix is True
-
-    @patch("mcp_coder.cli.commands.check_branch_status.execute_check_branch_status")
-    @patch("sys.argv", ["mcp-coder", "check", "branch-status", "--llm-truncate"])
-    def test_check_branch_status_command_with_llm_truncate_flag(
-        self, mock_execute: Mock
-    ) -> None:
-        """Test check branch-status command with --llm-truncate flag."""
-        from mcp_coder.cli.main import main
-
-        mock_execute.return_value = 0  # Success
-
-        result = main()
-
-        assert result == 0
-        mock_execute.assert_called_once()
-
-        # Check that llm_truncate flag was parsed correctly
-        call_args = mock_execute.call_args[0][0]
-        assert call_args.llm_truncate is True
-
-    @patch("mcp_coder.cli.commands.check_branch_status.execute_check_branch_status")
-    @patch("sys.argv", ["mcp-coder", "check", "branch-status"])
-    def test_check_branch_status_command_propagates_return_code(
-        self, mock_execute: Mock
-    ) -> None:
-        """Test that check branch-status command propagates the return code."""
-        from mcp_coder.cli.main import main
-
-        mock_execute.return_value = 1  # Error
-
-        result = main()
-
-        assert result == 1
-        mock_execute.assert_called_once()
-
-    def test_check_branch_status_command_is_implemented(self) -> None:
-        """Test that check branch-status command is implemented in main CLI.
-
-        This test verifies that the check branch-status command has been successfully
-        added to the CLI.
-        """
-        from mcp_coder.cli.main import create_parser
-
-        parser = create_parser()
-
-        # Check if check command exists in parser
-        subparsers_actions = [
-            action
-            for action in parser._actions
-            if isinstance(action, argparse._SubParsersAction)
-        ]
-
-        assert subparsers_actions, "No subparsers found in CLI parser"
-
-        subparser = subparsers_actions[0]
-        # Check if 'check' is in the choices
-        assert (
-            "check" in subparser.choices
-        ), "check command should be implemented in main.py"
-
-        # Verify the check parser has branch-status subcommand
-        check_parser = subparser.choices["check"]
-
-        # Get the branch-status subparser
-        check_subparsers = [
-            action
-            for action in check_parser._actions
-            if isinstance(action, argparse._SubParsersAction)
-        ]
-        assert check_subparsers, "No subparsers found in check parser"
-
-        branch_status_subparser = check_subparsers[0]
-        assert (
-            "branch-status" in branch_status_subparser.choices
-        ), "branch-status subcommand should be implemented under check"
-
-        # Parse test arguments to verify structure
-        branch_status_parser = branch_status_subparser.choices["branch-status"]
-        test_args = branch_status_parser.parse_args(["--fix", "--llm-truncate"])
-        assert hasattr(test_args, "project_dir")
-        assert hasattr(test_args, "fix")
-        assert hasattr(test_args, "llm_truncate")
-        assert test_args.fix is True
-        assert test_args.llm_truncate is True
+# Note: CLI parser and integration tests moved to test_check_branch_status_cli_integration.py

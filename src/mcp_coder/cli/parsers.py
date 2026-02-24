@@ -469,6 +469,17 @@ def add_set_status_parser(subparsers: Any) -> None:
     )
 
 
+def _validate_ci_timeout(value: str) -> int:
+    """Validate ci-timeout argument is non-negative integer."""
+    try:
+        ivalue = int(value)
+        if ivalue < 0:
+            raise argparse.ArgumentTypeError("--ci-timeout must be non-negative")
+        return ivalue
+    except ValueError:
+        raise argparse.ArgumentTypeError("--ci-timeout must be an integer")
+
+
 def add_check_parsers(subparsers: Any) -> None:
     """Add check command parsers (branch-status, file-size)."""
     check_parser = subparsers.add_parser(
@@ -493,9 +504,20 @@ def add_check_parsers(subparsers: Any) -> None:
         help="Project directory path (default: current directory)",
     )
     branch_status_parser.add_argument(
+        "--ci-timeout",
+        type=_validate_ci_timeout,
+        default=0,
+        metavar="SECONDS",
+        help="Wait up to N seconds for CI completion (default: 0 = no wait)",
+    )
+    branch_status_parser.add_argument(
         "--fix",
-        action="store_true",
-        help="Attempt to automatically fix issues found",
+        nargs="?",
+        type=int,
+        const=1,
+        default=0,
+        metavar="N",
+        help="Fix issues up to N times (default: 0 = no fix, --fix alone = 1)",
     )
     branch_status_parser.add_argument(
         "--llm-truncate",

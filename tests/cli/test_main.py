@@ -565,7 +565,7 @@ class TestCheckBranchStatusCommand:
         assert args.command == "check"
         assert args.check_subcommand == "branch-status"
         assert args.project_dir is None
-        assert args.fix is False
+        assert args.fix == 0
         assert args.llm_truncate is False
         assert args.llm_method == "claude_code_cli"
         assert args.mcp_config is None
@@ -578,7 +578,7 @@ class TestCheckBranchStatusCommand:
 
         assert args.command == "check"
         assert args.check_subcommand == "branch-status"
-        assert args.fix is True
+        assert args.fix == 1
         assert args.llm_truncate is False
 
     def test_check_branch_status_with_llm_truncate(self) -> None:
@@ -589,7 +589,7 @@ class TestCheckBranchStatusCommand:
         assert args.command == "check"
         assert args.check_subcommand == "branch-status"
         assert args.llm_truncate is True
-        assert args.fix is False
+        assert args.fix == 0
 
     def test_check_branch_status_with_project_dir(self) -> None:
         """Test check branch-status command with custom project directory."""
@@ -663,7 +663,7 @@ class TestCheckBranchStatusCommand:
         assert args.command == "check"
         assert args.check_subcommand == "branch-status"
         assert args.project_dir == "/path/to/project"
-        assert args.fix is True
+        assert args.fix == 1
         assert args.llm_truncate is True
         assert args.llm_method == "claude_code_api"
         assert args.mcp_config == ".mcp.test.json"
@@ -687,7 +687,7 @@ class TestCheckBranchStatusCommand:
         call_args = mock_execute.call_args[0][0]
         assert call_args.command == "check"
         assert call_args.check_subcommand == "branch-status"
-        assert call_args.fix is False
+        assert call_args.fix == 0
         assert call_args.llm_truncate is False
 
     @patch("mcp_coder.cli.commands.check_branch_status.execute_check_branch_status")
@@ -719,7 +719,7 @@ class TestCheckBranchStatusCommand:
         call_args = mock_execute.call_args[0][0]
         assert call_args.command == "check"
         assert call_args.check_subcommand == "branch-status"
-        assert call_args.fix is True
+        assert call_args.fix == 1
         assert call_args.llm_truncate is True
         assert call_args.project_dir == "/test/path"
 

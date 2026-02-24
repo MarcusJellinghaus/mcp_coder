@@ -443,48 +443,134 @@ Total: 16 open issues (13 valid, 3 errors)
 
 ### check branch-status
 
-Check branch readiness status and optionally apply fixes.
+Check comprehensive branch readiness including CI status, rebase requirements, task completion, and GitHub labels.
+
+#### Synopsis
 
 ```bash
 mcp-coder check branch-status [OPTIONS]
 ```
 
-**Options:**
+#### Options
+
 - `--project-dir PATH` - Project directory path (default: current directory)
-- `--fix` - Attempt to automatically fix issues found
+- `--ci-timeout SECONDS` - Wait up to N seconds for CI completion (default: 0 = no wait)
+- `--fix [N]` - Fix issues up to N times (default: 0 = no fix, --fix alone = 1)
 - `--llm-truncate` - Truncate output for LLM consumption
-- `--llm-method METHOD` - LLM method: `claude_code_cli` (default) or `claude_code_api`
+- `--llm-method METHOD` - LLM method for --fix (claude_code_cli or claude_code_api)
 - `--mcp-config PATH` - Path to MCP configuration file
 - `--execution-dir PATH` - Working directory for Claude subprocess
 
-**Description:** Comprehensive branch readiness check that verifies:
-- **CI Status** - Analyzes latest workflow run and retrieves error logs
-- **Rebase Detection** - Checks if branch needs rebasing onto base branch
-- **Task Validation** - Verifies all implementation tasks are complete
-- **GitHub Labels** - Reports current workflow status label
+#### Exit Codes
 
-When `--fix` is enabled, attempts to automatically fix CI failures using LLM analysis.
+| Code | Meaning | Description |
+|------|---------|-------------|
+| 0 | Success | CI passed, or graceful scenarios (no CI configured, no wait requested) |
+| 1 | Failure | CI failed, timeout, pending status, or fix operations failed |
+| 2 | Technical Error | Invalid arguments, Git errors, API errors, or unexpected exceptions |
 
-**Examples:**
+#### Behavior
+
+**Without --ci-timeout (Current Behavior)**
+Performs immediate snapshot check of current CI status without waiting.
+
+**With --ci-timeout (New)**
+Polls CI status every 15 seconds until completion or timeout:
+- Early exits when CI completes (success or failure)
+- Shows progress dots in human mode
+- Silent polling in LLM mode (--llm-truncate)
+- Returns current status on timeout
+
+**Without --fix (Read-Only)**
+Only checks and reports status, no automated fixes attempted.
+
+**With --fix (Single Fix, Current Behavior Preserved)**
+Attempts to fix CI failures once, no recheck after fix.
+
+**With --fix N (Retry Fixes, New)**
+Attempts to fix CI failures up to N times:
+- Waits for CI after each fix attempt
+- Stops early if CI passes
+- Shows attempt progress ("Fix attempt 2/3...")
+
+#### Examples
+
+##### Quick status check
 ```bash
-# Basic status check
 mcp-coder check branch-status
-
-# Check and attempt auto-fix
-mcp-coder check branch-status --fix
-
-# LLM-optimized output with auto-fix
-mcp-coder check branch-status --fix --llm-truncate
-
-# Use API method with specific project
-mcp-coder check branch-status --fix --llm-method claude_code_api --project-dir /path/to/project
 ```
 
-**Output includes:**
-- CI status with truncated error logs (when `--llm-truncate`)
-- Rebase requirements and recommendations
-- Task completion status
-- Actionable next steps
+##### Wait up to 300s for CI, then display results
+```bash
+mcp-coder check branch-status --ci-timeout 300
+```
+
+##### Wait and auto-fix once
+```bash
+mcp-coder check branch-status --ci-timeout 180 --fix
+```
+
+##### Wait and retry fixes up to 3 times
+```bash
+mcp-coder check branch-status --ci-timeout 180 --fix 3
+```
+
+##### LLM-optimized with waiting
+```bash
+mcp-coder check branch-status --ci-timeout 300 --llm-truncate
+```
+
+##### Scripting example
+```bash
+#!/bin/bash
+if mcp-coder check branch-status --ci-timeout 300; then
+  echo "CI passed, ready to merge"
+  exit 0
+else
+  echo "CI failed or timed out"
+  exit 1
+fi
+```
+
+#### Workflow Integration
+
+##### Manual Development Flow
+```bash
+# 1. Check status and wait for CI
+mcp-coder check branch-status --ci-timeout 180
+
+# 2. If CI fails, auto-fix with retry
+mcp-coder check branch-status --ci-timeout 180 --fix 3
+
+# 3. If passes, create PR
+mcp-coder create-pr
+```
+
+##### Automated Script Flow
+```bash
+# Wait for CI, fix if needed, exit with appropriate code
+mcp-coder check branch-status --ci-timeout 300 --fix 2
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -eq 0 ]; then
+  echo "✓ Branch ready"
+  # Continue with PR creation or merge
+elif [ $EXIT_CODE -eq 1 ]; then
+  echo "✗ CI failed after fixes"
+  # Notify team or create issue
+else
+  echo "✗ Technical error"
+  # Alert on configuration/Git issues
+fi
+```
+
+#### Notes
+
+- **Polling Strategy**: Fixed 15-second intervals, no maximum timeout limit
+- **Early Exit**: Stops immediately when CI completes (success or failure)
+- **API Errors**: Treated as graceful exit (code 0) to avoid blocking workflows
+- **No CI Configured**: Returns code 0 (graceful exit)
+- **Progress Feedback**: Controlled by --llm-truncate (dots in human mode, silent in LLM mode)
 
 ---
 

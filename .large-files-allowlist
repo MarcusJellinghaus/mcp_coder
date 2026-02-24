@@ -4,6 +4,7 @@
 # sort for better comparability
 
 
+docs/cli-reference.md
 docs/configuration/config.md
 docs/processes-prompts/development-process.md
 src/mcp_coder/cli/commands/coordinator/commands.py
