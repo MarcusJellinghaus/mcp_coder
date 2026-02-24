@@ -11,7 +11,7 @@ if not exist .venv\Scripts\activate.bat (
         exit /b 1
     )
     echo Installing dependencies...
-    uv sync --extra dev
+    uv sync --extra dev --active
     if errorlevel 1 (
         echo ERROR: Failed to install dependencies.
         pause
@@ -49,7 +49,7 @@ echo === Step 1: Automated Analysis ===
 echo Running: {initial_command} {issue_number}
 echo.
 
-for /f "delims=" %%i in ('mcp-coder prompt "{initial_command} {issue_number}" --output-format session-id --mcp-config .mcp.json --timeout {timeout} --active') do set SESSION_ID=%%i
+for /f "delims=" %%i in ('mcp-coder prompt "{initial_command} {issue_number}" --output-format session-id --mcp-config .mcp.json --timeout {timeout}') do set SESSION_ID=%%i
 
 if "%SESSION_ID%"=="" (
     echo.
@@ -70,7 +70,7 @@ echo === Step 2: Automated Discussion ===
 echo Running: /discuss
 echo.
 
-mcp-coder prompt "/discuss" --session-id %SESSION_ID% --mcp-config .mcp.json --timeout {timeout} --active
+mcp-coder prompt "/discuss" --session-id %SESSION_ID% --mcp-config .mcp.json --timeout {timeout}
 
 if errorlevel 1 (
     echo.
