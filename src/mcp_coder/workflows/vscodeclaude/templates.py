@@ -1,4 +1,4 @@
-"""Template strings for VSCode Claude session files.
+r"""Template strings for VSCode Claude session files.
 
 TWO-ENVIRONMENT SETUP:
 ======================

@@ -67,7 +67,7 @@ class TestOrchestration:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.launch_vscode",
-            lambda p: 9999,
+            lambda p, mcp_dir=None: 9999,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.add_session",
