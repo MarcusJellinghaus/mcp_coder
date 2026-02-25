@@ -613,6 +613,7 @@ def launch_process(
     command: list[str] | str,
     cwd: str | Path | None = None,
     shell: bool = False,
+    env: dict[str, str] | None = None,
 ) -> int:
     """Launch a process without waiting for it to complete.
 
@@ -623,6 +624,7 @@ def launch_process(
         command: Command as list or string (string requires shell=True)
         cwd: Working directory for the process
         shell: Whether to execute through shell (required for string commands)
+        env: Environment variables for the process (None = inherit parent env)
 
     Returns:
         Process ID (PID) of the launched process
@@ -633,6 +635,11 @@ def launch_process(
 
         # Launch with shell on Windows
         pid = launch_process('code "my file.txt"', shell=True)
+
+        # Launch with custom environment
+        env = os.environ.copy()
+        env['CUSTOM_VAR'] = 'value'
+        pid = launch_process(["code", "myfile.txt"], env=env)
     """
     cwd_str = str(cwd) if cwd else None
 
@@ -640,6 +647,7 @@ def launch_process(
         command,
         cwd=cwd_str,
         shell=shell,
+        env=env,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )

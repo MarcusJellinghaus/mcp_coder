@@ -1,16 +1,74 @@
-"""Template strings for VSCode Claude session files."""
+r"""Template strings for VSCode Claude session files.
+
+TWO-ENVIRONMENT SETUP:
+======================
+
+This system uses two separate Python virtual environments for proper isolation:
+
+1. MCP-CODER ENVIRONMENT:
+   - Location: {MCP_CODER_PROJECT_DIR}\.venv (where coordinator was run from)
+   - Purpose: Contains mcp-coder executable and dependencies
+   - Source: Set by coordinator before launching VS Code
+   - Access: Added to PATH so mcp-coder commands work in project context
+
+2. PROJECT ENVIRONMENT:
+   - Location: {Current Directory}\.venv (issue-specific workspace)
+   - Purpose: Contains project dependencies (pytest, etc.)
+   - Activated: Direct activation with 'call .venv\Scripts\activate.bat'
+   - Usage: Active Python environment for code execution
+
+WORKFLOW:
+---------
+1. Coordinator sets MCP_CODER_PROJECT_DIR environment variable
+2. VS Code launches in issue-specific directory
+3. Script creates/activates project venv with dependencies
+4. MCP-Coder tools added to PATH from install location
+5. Automation runs using mcp-coder from PATH, project Python from venv
+
+BENEFITS:
+- Isolation: Each project gets its own dependencies
+- Access: mcp-coder always available via PATH
+- Correctness: Project code uses project Python/dependencies
+- No conflicts: mcp-coder and project dependencies separated
+
+"""
 
 # Venv setup section for Windows
-VENV_SECTION_WINDOWS = r"""echo Checking Python environment...
+VENV_SECTION_WINDOWS = r"""echo Setting up environments...
+mcp-coder --version
+echo   MCP-Coder install:    %MCP_CODER_PROJECT_DIR%
+echo   Project directory:    %CD%
+echo.
+
+REM Store the MCP-Coder environment path (where this script is running from)
+if defined MCP_CODER_PROJECT_DIR (
+    set "MCP_CODER_VENV_PATH=%MCP_CODER_PROJECT_DIR%\.venv\Scripts"
+    echo MCP-Coder environment: %MCP_CODER_VENV_PATH%
+) else (
+    echo ERROR: MCP_CODER_PROJECT_DIR not set. This script should be run from mcp-coder coordinator.
+    echo SOLUTION: The coordinator needs to set this environment variable before launching VS Code.
+    pause
+    exit /b 1
+)
+
+REM Set up the project environment (current directory)
+echo Project directory: %CD%
 if not exist .venv\Scripts\activate.bat (
-    echo Creating virtual environment...
+    echo Creating project virtual environment...
     uv venv
     if errorlevel 1 (
         echo ERROR: Failed to create virtual environment.
         pause
         exit /b 1
     )
-    echo Installing dependencies...
+    echo Activating project virtual environment...
+    call .venv\Scripts\activate.bat
+    if errorlevel 1 (
+        echo ERROR: Failed to activate virtual environment.
+        pause
+        exit /b 1
+    )
+    echo Installing project dependencies...
     uv sync --extra dev
     if errorlevel 1 (
         echo ERROR: Failed to install dependencies.
@@ -20,27 +78,22 @@ if not exist .venv\Scripts\activate.bat (
     set VENV_CREATED=1
 ) else (
     set VENV_CREATED=0
-)
-
-echo Activating virtual environment...
-call .venv\Scripts\activate.bat
-if errorlevel 1 (
-    echo ERROR: Failed to activate virtual environment.
-    pause
-    exit /b 1
-)
-
-if defined MCP_CODER_PROJECT_DIR (
-    if not "%MCP_CODER_PROJECT_DIR%"=="%CD%" (
-        echo.
-        echo INFO: MCP_CODER_PROJECT_DIR updated for this session
-        echo   Found:      %MCP_CODER_PROJECT_DIR%
-        echo   Changed to: %CD%
-        echo.
+    echo Activating project virtual environment...
+    call .venv\Scripts\activate.bat
+    if errorlevel 1 (
+        echo ERROR: Failed to activate virtual environment.
+        pause
+        exit /b 1
     )
 )
-set "MCP_CODER_PROJECT_DIR=%CD%"
-set "MCP_CODER_VENV_DIR=%CD%\.venv"
+
+REM Add MCP-Coder tools to PATH so they're available in project context
+set "PATH=%MCP_CODER_VENV_PATH%;%PATH%"
+
+echo Environment setup complete.
+echo - Project Python: %VIRTUAL_ENV%\Scripts\python.exe
+echo - MCP-Coder tools available in PATH
+echo.
 """
 
 # Automated analysis section for Windows (using mcp-coder prompt)
@@ -49,7 +102,7 @@ echo === Step 1: Automated Analysis ===
 echo Running: {initial_command} {issue_number}
 echo.
 
-for /f "delims=" %%i in ('mcp-coder prompt "{initial_command} {issue_number}" --output-format session-id --mcp-config .mcp.json --timeout {timeout} --active') do set SESSION_ID=%%i
+for /f "delims=" %%i in ('mcp-coder prompt "{initial_command} {issue_number}" --output-format session-id --mcp-config .mcp.json --timeout {timeout}') do set SESSION_ID=%%i
 
 if "%SESSION_ID%"=="" (
     echo.
@@ -70,7 +123,7 @@ echo === Step 2: Automated Discussion ===
 echo Running: /discuss
 echo.
 
-mcp-coder prompt "/discuss" --session-id %SESSION_ID% --mcp-config .mcp.json --timeout {timeout} --active
+mcp-coder prompt "/discuss" --session-id %SESSION_ID% --mcp-config .mcp.json --timeout {timeout}
 
 if errorlevel 1 (
     echo.
@@ -93,7 +146,6 @@ claude --resume %SESSION_ID%
 # Main startup script for Windows (with venv and mcp-coder)
 STARTUP_SCRIPT_WINDOWS = r"""@echo off
 chcp 65001 >nul
-setlocal EnableDelayedExpansion
 
 echo.
 echo ==========================================================================
@@ -116,7 +168,6 @@ echo.
 # Intervention mode for Windows (with venv activation)
 INTERVENTION_SCRIPT_WINDOWS = r"""@echo off
 chcp 65001 >nul
-setlocal EnableDelayedExpansion
 
 echo.
 echo ==========================================================================
