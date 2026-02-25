@@ -220,9 +220,9 @@ def prepare_and_launch_session(
         )
 
         # Get mcp-coder installation directory (project root, not src)
-        import mcp_coder
-
-        mcp_coder_install_dir = Path(mcp_coder.__file__).parent.parent.parent
+        # Navigate from this file: src/mcp_coder/workflows/vscodeclaude/session_launch.py
+        # Go up 4 levels: session_launch.py -> vscodeclaude -> workflows -> mcp_coder -> src -> project_root
+        mcp_coder_install_dir = Path(__file__).parent.parent.parent.parent.parent
 
         # Launch VSCode with environment variables
         pid = launch_vscode(workspace_file, mcp_coder_install_dir)
