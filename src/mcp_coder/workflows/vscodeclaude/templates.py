@@ -1,17 +1,70 @@
-"""Template strings for VSCode Claude session files."""
+"""Template strings for VSCode Claude session files.
+
+TWO-ENVIRONMENT SETUP:
+======================
+
+This system uses two separate Python virtual environments to ensure proper isolation
+and functionality:
+
+1. MCP-CODER ENVIRONMENT:
+   - Location: Original mcp-coder project directory (.venv)
+   - Purpose: Contains mcp-coder, claude CLI, and related tools
+   - Usage: Provides the commands needed to run Claude sessions
+   - Activated: Indirectly by adding to PATH
+
+2. PROJECT ENVIRONMENT:
+   - Location: Issue/project directory (.venv)
+   - Purpose: Contains project-specific dependencies for development
+   - Usage: Active Python environment for code execution and testing
+   - Activated: Directly using 'call .venv\Scripts\activate.bat'
+
+WORKFLOW:
+---------
+1. Script starts in issue project directory
+2. MCP_CODER_PROJECT_DIR points to original mcp-coder installation
+3. Project venv is created/activated for the current issue project
+4. MCP-Coder tools are added to PATH (from MCP_CODER_PROJECT_DIR/.venv/Scripts)
+5. Claude runs with project Python but can access mcp-coder commands
+
+This ensures:
+- Project code uses correct dependencies and Python version
+- MCP-Coder tools (claude, mcp-coder) are always available
+- No conflicts between mcp-coder and project dependencies
+- Proper isolation between different projects
+"""
 
 # Venv setup section for Windows
-VENV_SECTION_WINDOWS = r"""echo Checking Python environment...
+VENV_SECTION_WINDOWS = r"""echo Setting up environments...
+
+REM Store the MCP-Coder environment path (where this script is running from)
+if defined MCP_CODER_PROJECT_DIR (
+    set "MCP_CODER_VENV_PATH=%MCP_CODER_PROJECT_DIR%\.venv\Scripts"
+    echo MCP-Coder environment: %MCP_CODER_VENV_PATH%
+) else (
+    echo ERROR: MCP_CODER_PROJECT_DIR not set. This script should be run from mcp-coder coordinator.
+    pause
+    exit /b 1
+)
+
+REM Set up the project environment (current directory)
+echo Project directory: %CD%
 if not exist .venv\Scripts\activate.bat (
-    echo Creating virtual environment...
+    echo Creating project virtual environment...
     uv venv
     if errorlevel 1 (
         echo ERROR: Failed to create virtual environment.
         pause
         exit /b 1
     )
-    echo Installing dependencies...
-    uv sync --extra dev --active
+    echo Activating project virtual environment...
+    call .venv\Scripts\activate.bat
+    if errorlevel 1 (
+        echo ERROR: Failed to activate virtual environment.
+        pause
+        exit /b 1
+    )
+    echo Installing project dependencies...
+    uv sync --extra dev
     if errorlevel 1 (
         echo ERROR: Failed to install dependencies.
         pause
@@ -20,27 +73,22 @@ if not exist .venv\Scripts\activate.bat (
     set VENV_CREATED=1
 ) else (
     set VENV_CREATED=0
-)
-
-echo Activating virtual environment...
-call .venv\Scripts\activate.bat
-if errorlevel 1 (
-    echo ERROR: Failed to activate virtual environment.
-    pause
-    exit /b 1
-)
-
-if defined MCP_CODER_PROJECT_DIR (
-    if not "%MCP_CODER_PROJECT_DIR%"=="%CD%" (
-        echo.
-        echo INFO: MCP_CODER_PROJECT_DIR updated for this session
-        echo   Found:      %MCP_CODER_PROJECT_DIR%
-        echo   Changed to: %CD%
-        echo.
+    echo Activating project virtual environment...
+    call .venv\Scripts\activate.bat
+    if errorlevel 1 (
+        echo ERROR: Failed to activate virtual environment.
+        pause
+        exit /b 1
     )
 )
-set "MCP_CODER_PROJECT_DIR=%CD%"
-set "MCP_CODER_VENV_DIR=%CD%\.venv"
+
+REM Add MCP-Coder tools to PATH so they're available in project context
+set "PATH=%MCP_CODER_VENV_PATH%;%PATH%"
+
+echo Environment setup complete.
+echo - Project Python: %VIRTUAL_ENV%\Scripts\python.exe
+echo - MCP-Coder tools available in PATH
+echo.
 """
 
 # Automated analysis section for Windows (using mcp-coder prompt)
@@ -93,7 +141,6 @@ claude --resume %SESSION_ID%
 # Main startup script for Windows (with venv and mcp-coder)
 STARTUP_SCRIPT_WINDOWS = r"""@echo off
 chcp 65001 >nul
-setlocal EnableDelayedExpansion
 
 echo.
 echo ==========================================================================
@@ -116,7 +163,6 @@ echo.
 # Intervention mode for Windows (with venv activation)
 INTERVENTION_SCRIPT_WINDOWS = r"""@echo off
 chcp 65001 >nul
-setlocal EnableDelayedExpansion
 
 echo.
 echo ==========================================================================
