@@ -670,9 +670,9 @@ class TestCreateStartupScript:
 
         content = script_path.read_text(encoding="utf-8")
         # Test two-environment setup: script should check for MCP_CODER_PROJECT_DIR
-        assert 'if defined MCP_CODER_PROJECT_DIR (' in content
+        assert "if defined MCP_CODER_PROJECT_DIR (" in content
         # Script should set up project environment and add MCP-Coder tools to PATH
-        assert 'MCP_CODER_VENV_PATH=%MCP_CODER_PROJECT_DIR%' in content
-        assert 'PATH=%MCP_CODER_VENV_PATH%;%PATH%' in content
+        assert "MCP_CODER_VENV_PATH=%MCP_CODER_PROJECT_DIR%" in content
+        assert "PATH=%MCP_CODER_VENV_PATH%;%PATH%" in content
         # Should activate project venv for current directory
-        assert 'activate.bat' in content
+        assert "activate.bat" in content

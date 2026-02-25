@@ -3,38 +3,42 @@
 TWO-ENVIRONMENT SETUP:
 ======================
 
-This system uses two separate Python virtual environments to ensure proper isolation
-and functionality:
+This system uses two separate Python virtual environments for proper isolation:
 
 1. MCP-CODER ENVIRONMENT:
-   - Location: Original mcp-coder project directory (.venv)
-   - Purpose: Contains mcp-coder, claude CLI, and related tools
-   - Usage: Provides the commands needed to run Claude sessions
-   - Activated: Indirectly by adding to PATH
+   - Location: {MCP_CODER_PROJECT_DIR}\.venv (where coordinator was run from)
+   - Purpose: Contains mcp-coder executable and dependencies
+   - Source: Set by coordinator before launching VS Code
+   - Access: Added to PATH so mcp-coder commands work in project context
 
 2. PROJECT ENVIRONMENT:
-   - Location: Issue/project directory (.venv)
-   - Purpose: Contains project-specific dependencies for development
-   - Usage: Active Python environment for code execution and testing
-   - Activated: Directly using 'call .venv\Scripts\activate.bat'
+   - Location: {Current Directory}\.venv (issue-specific workspace)
+   - Purpose: Contains project dependencies (pytest, etc.)
+   - Activated: Direct activation with 'call .venv\Scripts\activate.bat'
+   - Usage: Active Python environment for code execution
 
 WORKFLOW:
 ---------
-1. Script starts in issue project directory
-2. MCP_CODER_PROJECT_DIR points to original mcp-coder installation
-3. Project venv is created/activated for the current issue project
-4. MCP-Coder tools are added to PATH (from MCP_CODER_PROJECT_DIR/.venv/Scripts)
-5. Claude runs with project Python but can access mcp-coder commands
+1. Coordinator sets MCP_CODER_PROJECT_DIR environment variable
+2. VS Code launches in issue-specific directory
+3. Script creates/activates project venv with dependencies
+4. MCP-Coder tools added to PATH from install location
+5. Automation runs using mcp-coder from PATH, project Python from venv
 
-This ensures:
-- Project code uses correct dependencies and Python version
-- MCP-Coder tools (claude, mcp-coder) are always available
-- No conflicts between mcp-coder and project dependencies
-- Proper isolation between different projects
+BENEFITS:
+- Isolation: Each project gets its own dependencies
+- Access: mcp-coder always available via PATH
+- Correctness: Project code uses project Python/dependencies
+- No conflicts: mcp-coder and project dependencies separated
+
 """
 
 # Venv setup section for Windows
 VENV_SECTION_WINDOWS = r"""echo Setting up environments...
+mcp-coder --version
+echo   MCP-Coder install:    %MCP_CODER_PROJECT_DIR%
+echo   Project directory:    %CD%
+echo.
 
 REM Store the MCP-Coder environment path (where this script is running from)
 if defined MCP_CODER_PROJECT_DIR (
@@ -42,6 +46,7 @@ if defined MCP_CODER_PROJECT_DIR (
     echo MCP-Coder environment: %MCP_CODER_VENV_PATH%
 ) else (
     echo ERROR: MCP_CODER_PROJECT_DIR not set. This script should be run from mcp-coder coordinator.
+    echo SOLUTION: The coordinator needs to set this environment variable before launching VS Code.
     pause
     exit /b 1
 )

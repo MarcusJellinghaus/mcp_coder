@@ -71,11 +71,14 @@ __all__ = [
 ]
 
 
-def launch_vscode(workspace_file: Path) -> int:
-    """Launch VSCode with workspace file.
+def launch_vscode(
+    workspace_file: Path, mcp_coder_project_dir: Path | None = None
+) -> int:
+    """Launch VSCode with workspace file and environment variables.
 
     Args:
         workspace_file: Path to .code-workspace file
+        mcp_coder_project_dir: Path to mcp-coder installation (for MCP_CODER_PROJECT_DIR)
 
     Returns:
         VSCode process PID
@@ -83,13 +86,22 @@ def launch_vscode(workspace_file: Path) -> int:
     Uses launch_process for non-blocking launch.
     On Windows, uses shell=True to find code.cmd in PATH.
     """
+    import os
+
+    # Set up environment variables if mcp_coder_project_dir is provided
+    env = None
+    if mcp_coder_project_dir:
+        env = os.environ.copy()
+        env["MCP_CODER_PROJECT_DIR"] = str(mcp_coder_project_dir)
+        env["MCP_CODER_VENV_DIR"] = str(mcp_coder_project_dir / ".venv")
+
     is_windows = platform.system() == "Windows"
 
     if is_windows:
         # On Windows, 'code' is a .cmd file which requires shell=True
-        return launch_process(f'code "{workspace_file}"', shell=True)
+        return launch_process(f'code "{workspace_file}"', shell=True, env=env)
     else:
-        return launch_process(["code", str(workspace_file)])
+        return launch_process(["code", str(workspace_file)], env=env)
 
 
 def prepare_and_launch_session(
@@ -207,8 +219,13 @@ def prepare_and_launch_session(
             is_intervention=is_intervention,
         )
 
-        # Launch VSCode
-        pid = launch_vscode(workspace_file)
+        # Get mcp-coder installation directory (project root, not src)
+        import mcp_coder
+
+        mcp_coder_install_dir = Path(mcp_coder.__file__).parent.parent.parent
+
+        # Launch VSCode with environment variables
+        pid = launch_vscode(workspace_file, mcp_coder_install_dir)
 
         # Build and save session
         session = build_session(
