@@ -72,13 +72,13 @@ __all__ = [
 
 
 def launch_vscode(
-    workspace_file: Path, mcp_coder_project_dir: Path | None = None
+    workspace_file: Path, session_folder_path: Path | None = None
 ) -> int:
     """Launch VSCode with workspace file and environment variables.
 
     Args:
         workspace_file: Path to .code-workspace file
-        mcp_coder_project_dir: Path to mcp-coder installation (for MCP_CODER_PROJECT_DIR)
+        session_folder_path: Path to session working directory (for MCP_CODER_PROJECT_DIR)
 
     Returns:
         VSCode process PID
@@ -88,12 +88,12 @@ def launch_vscode(
     """
     import os
 
-    # Set up environment variables if mcp_coder_project_dir is provided
+    # Set up environment variables if session_folder_path is provided
     env = None
-    if mcp_coder_project_dir:
+    if session_folder_path:
         env = os.environ.copy()
-        env["MCP_CODER_PROJECT_DIR"] = str(mcp_coder_project_dir)
-        env["MCP_CODER_VENV_DIR"] = str(mcp_coder_project_dir / ".venv")
+        env["MCP_CODER_PROJECT_DIR"] = str(session_folder_path)
+        env["MCP_CODER_VENV_DIR"] = str(session_folder_path / ".venv")
 
     is_windows = platform.system() == "Windows"
 
@@ -219,13 +219,10 @@ def prepare_and_launch_session(
             is_intervention=is_intervention,
         )
 
-        # Get mcp-coder installation directory (project root, not src)
-        # Navigate from this file: src/mcp_coder/workflows/vscodeclaude/session_launch.py
-        # Go up 4 levels: session_launch.py -> vscodeclaude -> workflows -> mcp_coder -> src -> project_root
-        mcp_coder_install_dir = Path(__file__).parent.parent.parent.parent.parent
-
-        # Launch VSCode with environment variables
-        pid = launch_vscode(workspace_file, mcp_coder_install_dir)
+        # Launch VSCode with environment variables pointing to session folder
+        # This ensures MCP_CODER_PROJECT_DIR and MCP_CODER_VENV_DIR point to the session's
+        # working directory, not the mcp-coder installation directory
+        pid = launch_vscode(workspace_file, folder_path)
 
         # Build and save session
         session = build_session(
