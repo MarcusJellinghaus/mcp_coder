@@ -15,33 +15,30 @@ from mcp_coder.workflows.vscodeclaude.session_launch import (
     launch_vscode,
     prepare_and_launch_session,
 )
+from mcp_coder.workflows.vscodeclaude.types import (
+    VSCodeClaudeConfig,
+    RepoVSCodeClaudeConfig,
+)
+from mcp_coder.utils.github_operations.issues.types import IssueData
 
 
 class TestLaunchVSCodeEnvironmentVariables:
     """Test environment variable handling in launch_vscode function."""
 
-    def test_mcp_env_vars_point_to_session_folder_not_mcp_coder_install(
+    def test_launch_vscode_no_longer_sets_env_vars(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """MCP environment variables should point to session folder, not mcp-coder install.
+        """launch_vscode no longer sets environment variables (fixed approach).
 
-        This test demonstrates the bug where MCP_CODER_PROJECT_DIR and MCP_CODER_VENV_DIR
-        were incorrectly set to the mcp-coder installation directory instead of the
-        session's working directory.
-
-        The bug is in prepare_and_launch_session() which passes mcp_coder_install_dir
-        to launch_vscode() instead of the session's folder_path.
-
-        Expected behavior:
-        - MCP_CODER_PROJECT_DIR should be the session folder (e.g., /workspace/mcp-code-checker_82)
-        - MCP_CODER_VENV_DIR should be session_folder/.venv
-
-        Bug behavior (before fix):
-        - MCP_CODER_PROJECT_DIR was set to mcp-coder installation dir
-        - MCP_CODER_VENV_DIR was set to mcp-coder-install/.venv
+        After the fix, launch_vscode no longer sets MCP environment variables
+        through process inheritance, since this doesn't work reliably on Windows.
+        
+        Instead, environment variables are now set directly in the startup script.
+        This test verifies the new behavior where no environment variables
+        are passed to launch_process.
         """
-        # Capture environment variables passed to launch_process
-        captured_env: dict[str, str] = {}
+        # Capture arguments passed to launch_process
+        captured_args: dict[str, object] = {}
 
         def mock_launch_process(
             cmd: str | list[str],
@@ -49,8 +46,10 @@ class TestLaunchVSCodeEnvironmentVariables:
             shell: bool = False,
             env: dict[str, str] | None = None,
         ) -> int:
-            if env:
-                captured_env.update(env)
+            captured_args["cmd"] = cmd
+            captured_args["cwd"] = cwd
+            captured_args["shell"] = shell
+            captured_args["env"] = env
             return 12345
 
         monkeypatch.setattr(
@@ -61,36 +60,19 @@ class TestLaunchVSCodeEnvironmentVariables:
         # Set up test paths
         workspace_file = tmp_path / "test.code-workspace"
         workspace_file.touch()
-
-        # This represents the session's working directory (e.g., /workspace/mcp-code-checker_82)
         session_folder = tmp_path / "session_working_dir"
         session_folder.mkdir()
 
-        # This represents where mcp-coder is installed (different from session folder)
-        mcp_coder_install_dir = tmp_path / "mcp-coder-installation"
-        mcp_coder_install_dir.mkdir()
-
-        # TEST THE FIX: launch_vscode should now use session_folder_path parameter
-        # This tests the fixed behavior where we pass the session folder
+        # Call launch_vscode
         launch_vscode(workspace_file, session_folder)
 
-        # Verify environment variables point to session folder, not mcp-coder install
-        assert "MCP_CODER_PROJECT_DIR" in captured_env
-        assert "MCP_CODER_VENV_DIR" in captured_env
-
-        # AFTER THE FIX: These should point to the SESSION folder
-        expected_project_dir = str(session_folder)
-        expected_venv_dir = str(session_folder / ".venv")
-
-        # These should now pass with the fixed code
-        assert captured_env["MCP_CODER_PROJECT_DIR"] == expected_project_dir
-        assert captured_env["MCP_CODER_VENV_DIR"] == expected_venv_dir
-
-        # Ensure they do NOT point to mcp-coder installation directory
-        assert captured_env["MCP_CODER_PROJECT_DIR"] != str(mcp_coder_install_dir)
-        assert captured_env["MCP_CODER_VENV_DIR"] != str(
-            mcp_coder_install_dir / ".venv"
-        )
+        # Verify that NO environment variables are passed to launch_process
+        # (the fixed behavior - env vars are now in the startup script)
+        assert captured_args["env"] is None
+        
+        # Verify VS Code is still launched with correct command
+        assert captured_args["cmd"] == f'code "{workspace_file}"'
+        assert captured_args["shell"] is True
 
     def test_no_env_vars_when_session_folder_none(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -118,18 +100,19 @@ class TestLaunchVSCodeEnvironmentVariables:
 
         launch_vscode(workspace_file, None)
 
-        # No environment should be set when session folder is None
+        # Environment variables are no longer set via launch_process
+        # They are now set directly in the startup script
         assert captured_env is None
 
-    def test_env_vars_preserve_existing_environment(
+    def test_env_vars_no_longer_set_via_process_inheritance(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Environment variables should preserve existing env vars when setting MCP vars."""
-        captured_env: dict[str, str] = {}
-        original_env = os.environ.copy()
-
-        # Set a test environment variable that should be preserved
-        os.environ["EXISTING_VAR"] = "should_be_preserved"
+        """Environment variables are no longer set via process inheritance (fixed approach).
+        
+        After the fix, environment variables are written directly into the startup script
+        rather than being passed through process inheritance, which was unreliable on Windows.
+        """
+        captured_env: dict[str, str] | None = None
 
         def mock_launch_process(
             cmd: str | list[str],
@@ -137,37 +120,25 @@ class TestLaunchVSCodeEnvironmentVariables:
             shell: bool = False,
             env: dict[str, str] | None = None,
         ) -> int:
-            if env:
-                captured_env.update(env)
+            nonlocal captured_env
+            captured_env = env
             return 12345
 
-        try:
-            monkeypatch.setattr(
-                "mcp_coder.workflows.vscodeclaude.session_launch.launch_process",
-                mock_launch_process,
-            )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.launch_process",
+            mock_launch_process,
+        )
 
-            workspace_file = tmp_path / "test.code-workspace"
-            workspace_file.touch()
-            session_folder = tmp_path / "session_dir"
-            session_folder.mkdir()
+        workspace_file = tmp_path / "test.code-workspace"
+        workspace_file.touch()
+        session_folder = tmp_path / "session_dir"
+        session_folder.mkdir()
 
-            launch_vscode(workspace_file, session_folder)
+        launch_vscode(workspace_file, session_folder)
 
-            # Existing environment variables should be preserved
-            assert "EXISTING_VAR" in captured_env
-            assert captured_env["EXISTING_VAR"] == "should_be_preserved"
-
-            # New MCP variables should be added
-            assert "MCP_CODER_PROJECT_DIR" in captured_env
-            assert captured_env["MCP_CODER_PROJECT_DIR"] == str(session_folder)
-            assert "MCP_CODER_VENV_DIR" in captured_env
-            assert captured_env["MCP_CODER_VENV_DIR"] == str(session_folder / ".venv")
-
-        finally:
-            # Restore original environment
-            os.environ.clear()
-            os.environ.update(original_env)
+        # Environment variables are no longer set via launch_process
+        # They are now set directly in the startup script
+        assert captured_env is None
 
     def test_prepare_and_launch_session_sets_correct_env_vars_integration(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -185,7 +156,7 @@ class TestLaunchVSCodeEnvironmentVariables:
         from unittest.mock import MagicMock
 
         # Capture the environment variables passed to launch_vscode
-        captured_launch_args: dict[str, any] = {}
+        captured_launch_args: dict[str, Path | None] = {}
         original_launch_vscode = launch_vscode
 
         def mock_launch_vscode_with_capture(
@@ -196,8 +167,8 @@ class TestLaunchVSCodeEnvironmentVariables:
             # Call the real function to test environment variable setting
             return original_launch_vscode(workspace_file, session_folder_path)
 
-        # Mock launch_process to capture the actual environment variables
-        captured_env: dict[str, str] = {}
+        # Mock launch_process - should receive no environment variables in new approach
+        captured_env: dict[str, str] | None = None
 
         def mock_launch_process(
             cmd: str | list[str],
@@ -205,8 +176,8 @@ class TestLaunchVSCodeEnvironmentVariables:
             shell: bool = False,
             env: dict[str, str] | None = None,
         ) -> int:
-            if env:
-                captured_env.update(env)
+            nonlocal captured_env
+            captured_env = env
             return 12345
 
         # Mock all the heavyweight dependencies
@@ -303,7 +274,7 @@ class TestLaunchVSCodeEnvironmentVariables:
         )
 
         # Prepare test data
-        issue_data = {
+        issue_data: IssueData = {
             "number": 123,
             "title": "Test Issue",
             "url": "https://github.com/owner/test-repo/issues/123",
@@ -318,8 +289,11 @@ class TestLaunchVSCodeEnvironmentVariables:
         }
 
         repo_config = {"repo_url": "https://github.com/owner/test-repo"}
-        vscodeclaude_config = {"workspace_base": str(tmp_path / "workspace")}
-        repo_vscodeclaude_config = {}
+        vscodeclaude_config: VSCodeClaudeConfig = {
+            "workspace_base": str(tmp_path / "workspace"),
+            "max_sessions": 3,
+        }
+        repo_vscodeclaude_config: RepoVSCodeClaudeConfig = {}
 
         # Expected session folder path
         expected_session_folder = tmp_path / "test-repo_123"
@@ -341,15 +315,9 @@ class TestLaunchVSCodeEnvironmentVariables:
         # The critical assertion: session folder should be passed to launch_vscode
         assert actual_session_folder == expected_session_folder
 
-        # Verify the environment variables were set correctly
-        assert "MCP_CODER_PROJECT_DIR" in captured_env
-        assert "MCP_CODER_VENV_DIR" in captured_env
-
-        # These should point to the session folder, not mcp-coder installation
-        assert captured_env["MCP_CODER_PROJECT_DIR"] == str(expected_session_folder)
-        assert captured_env["MCP_CODER_VENV_DIR"] == str(
-            expected_session_folder / ".venv"
-        )
+        # In the new approach, no environment variables are passed via launch_process
+        # They are instead written directly into the startup script
+        assert captured_env is None
 
         # Verify session was created
         assert session is not None

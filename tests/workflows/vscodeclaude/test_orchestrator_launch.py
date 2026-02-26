@@ -79,17 +79,11 @@ class TestLaunch:
             assert "code" in cmd
             assert str(workspace) in cmd
 
-    def test_launch_vscode_preserves_existing_env(
+    def test_launch_vscode_no_longer_sets_environment_variables(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Preserves existing environment variables when setting MCP_CODER vars."""
-        import os
-
-        captured_env: dict[str, str] = {}
-        original_env = os.environ.copy()
-
-        # Set a test environment variable
-        os.environ["TEST_EXISTING_VAR"] = "test_value"
+        """Environment variables are no longer passed via process inheritance (fixed approach)."""
+        captured_env: dict[str, str] | None = None
 
         def mock_launch_process(
             cmd: list[str] | str,
@@ -97,49 +91,8 @@ class TestLaunch:
             shell: bool = False,
             env: dict[str, str] | None = None,
         ) -> int:
-            if env:
-                captured_env.update(env)
-            return 12345
-
-        try:
-            monkeypatch.setattr(
-                "mcp_coder.workflows.vscodeclaude.session_launch.launch_process",
-                mock_launch_process,
-            )
-
-            workspace = tmp_path / "test.code-workspace"
-            workspace.touch()
-            mcp_coder_dir = tmp_path / "mcp-coder-install"
-            mcp_coder_dir.mkdir()
-
-            launch_vscode(workspace, mcp_coder_dir)
-
-            # Verify existing env var is preserved
-            assert "TEST_EXISTING_VAR" in captured_env
-            assert captured_env["TEST_EXISTING_VAR"] == "test_value"
-            # Verify new vars are added
-            assert "MCP_CODER_PROJECT_DIR" in captured_env
-            assert captured_env["MCP_CODER_PROJECT_DIR"] == str(mcp_coder_dir)
-
-        finally:
-            # Restore original environment
-            os.environ.clear()
-            os.environ.update(original_env)
-
-    def test_launch_vscode_sets_environment_variables(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Sets MCP_CODER_PROJECT_DIR and MCP_CODER_VENV_DIR when mcp_coder_project_dir is provided."""
-        captured_env: dict[str, str] = {}
-
-        def mock_launch_process(
-            cmd: list[str] | str,
-            cwd: str | Path | None = None,
-            shell: bool = False,
-            env: dict[str, str] | None = None,
-        ) -> int:
-            if env:
-                captured_env.update(env)
+            nonlocal captured_env
+            captured_env = env
             return 12345
 
         monkeypatch.setattr(
@@ -154,11 +107,41 @@ class TestLaunch:
 
         launch_vscode(workspace, mcp_coder_dir)
 
-        # Verify environment variables were set
-        assert "MCP_CODER_PROJECT_DIR" in captured_env
-        assert captured_env["MCP_CODER_PROJECT_DIR"] == str(mcp_coder_dir)
-        assert "MCP_CODER_VENV_DIR" in captured_env
-        assert captured_env["MCP_CODER_VENV_DIR"] == str(mcp_coder_dir / ".venv")
+        # After the fix: no environment variables are passed via launch_process
+        # They are now set directly in the startup script
+        assert captured_env is None
+
+    def test_launch_vscode_no_env_variables_passed_to_process(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """No environment variables are passed to launch_process (fixed approach)."""
+        captured_env: dict[str, str] | None = None
+
+        def mock_launch_process(
+            cmd: list[str] | str,
+            cwd: str | Path | None = None,
+            shell: bool = False,
+            env: dict[str, str] | None = None,
+        ) -> int:
+            nonlocal captured_env
+            captured_env = env
+            return 12345
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.launch_process",
+            mock_launch_process,
+        )
+
+        workspace = tmp_path / "test.code-workspace"
+        workspace.touch()
+        mcp_coder_dir = tmp_path / "mcp-coder-install"
+        mcp_coder_dir.mkdir()
+
+        launch_vscode(workspace, mcp_coder_dir)
+
+        # After the fix: no environment variables are passed via launch_process  
+        # They are now set directly in the startup script
+        assert captured_env is None
 
     def test_launch_vscode_no_env_when_mcp_dir_none(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

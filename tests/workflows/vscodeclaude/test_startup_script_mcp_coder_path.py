@@ -38,7 +38,7 @@ class TestStartupScriptMCPCoderPath:
         }
 
         with patch("os.environ", mock_env):
-            # Create startup script
+            # Create startup script with session_folder_path to test the fix
             script_path = create_startup_script(
                 folder_path=session_folder,
                 issue_number=123,
@@ -48,6 +48,7 @@ class TestStartupScriptMCPCoderPath:
                 issue_url="https://github.com/owner/repo/issues/123",
                 is_intervention=False,
                 timeout=30,
+                session_folder_path=session_folder,
             )
 
             # Read the generated script content
@@ -59,12 +60,16 @@ class TestStartupScriptMCPCoderPath:
             # The script should be able to find mcp-coder executable
             assert "mcp-coder" in script_content
 
-            # The session folder should NOT appear in the script for mcp-coder paths
-            # (MCP environment variables are now set externally by launch_vscode)
-            assert str(session_folder) not in script_content
+            # After the fix: MCP environment variables should now be set directly in the script
+            # pointing to the session folder (this is the correct behavior for MCP server config)
+            assert "MCP_CODER_PROJECT_DIR=" + str(session_folder) in script_content
+            assert "MCP_CODER_VENV_DIR=" + str(session_folder / ".venv") in script_content
 
-            # Verify the script shows the correct install path
+            # Verify the script shows the correct install path for mcp-coder executable
             assert "MCP-Coder install:" in script_content
+            
+            # The mcp-coder executable path should still use the installation directory
+            # (not the session folder) for finding the executable
 
     def test_startup_script_separates_mcp_executable_from_mcp_config_env(
         self, tmp_path: Path
@@ -87,17 +92,19 @@ class TestStartupScriptMCPCoderPath:
             issue_url="https://github.com/owner/repo/issues/123",
             is_intervention=False,
             timeout=30,
+            session_folder_path=session_folder,
         )
 
         script_content = script_path.read_text(encoding="utf-8")
 
-        # With the fix: MCP environment variables are set externally by launch_vscode,
-        # not in the startup script itself. The script should use mcp-coder installation path.
+        # With the fix: MCP environment variables are now set directly in the startup script
+        # pointing to the session folder (correct for MCP server config)
 
-        # Session folder should NOT appear in the script
-        assert str(session_folder) not in script_content
+        # Session folder SHOULD appear in MCP environment variable assignments
+        assert "MCP_CODER_PROJECT_DIR=" + str(session_folder) in script_content
+        assert "MCP_CODER_VENV_DIR=" + str(session_folder / ".venv") in script_content
 
-        # Script should show the mcp-coder installation path
+        # Script should show the mcp-coder installation path (separate from MCP config)
         assert "MCP-Coder install:" in script_content
 
         # mcp-coder command should be available via PATH from installation location

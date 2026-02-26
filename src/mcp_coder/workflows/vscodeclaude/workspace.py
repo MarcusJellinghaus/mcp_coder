@@ -402,6 +402,7 @@ def create_startup_script(
     is_intervention: bool,
     timeout: int = DEFAULT_PROMPT_TIMEOUT,
     mcp_coder_install_path: Path | None = None,
+    session_folder_path: Path | None = None,
 ) -> Path:
     """Create platform-specific startup script.
 
@@ -416,6 +417,8 @@ def create_startup_script(
         timeout: Timeout for mcp-coder prompt calls (default: 300 seconds)
         mcp_coder_install_path: Path to mcp-coder installation directory
             (for finding the executable, separate from session folder)
+        session_folder_path: Path to session folder for MCP environment variables
+            (overrides folder_path if provided, used for MCP_CODER_PROJECT_DIR)
 
     Returns:
         Path to created script (.bat or .sh)
@@ -454,9 +457,13 @@ def create_startup_script(
         if mcp_coder_install_path is None:
             mcp_coder_install_path = get_mcp_coder_install_path()
 
-        # Format VENV section with mcp_coder_install_path
+        # Use session_folder_path if provided, otherwise use folder_path
+        session_path = session_folder_path or folder_path
+
+        # Format VENV section with both paths
         venv_section = VENV_SECTION_WINDOWS.format(
-            mcp_coder_install_path=mcp_coder_install_path or ""
+            mcp_coder_install_path=mcp_coder_install_path or "",
+            session_folder_path=str(session_path),
         )
 
         if is_intervention:

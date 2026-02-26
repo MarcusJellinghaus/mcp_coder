@@ -40,6 +40,10 @@ echo   MCP-Coder install:    {mcp_coder_install_path}
 echo   Project directory:    %CD%
 echo.
 
+REM Set MCP environment variables (for MCP server configuration)
+set "MCP_CODER_PROJECT_DIR={session_folder_path}"
+set "MCP_CODER_VENV_DIR={session_folder_path}\.venv"
+
 REM Store the MCP-Coder environment path (from installation, not session)
 if "{mcp_coder_install_path}" NEQ "" (
     set "MCP_CODER_VENV_PATH={mcp_coder_install_path}\.venv\Scripts"
@@ -98,6 +102,12 @@ echo.
 
 # Automated analysis section for Windows (using mcp-coder prompt)
 AUTOMATED_SECTION_WINDOWS = r"""echo.
+echo === Debug: Environment Variables Before Step 1 ===
+echo MCP_CODER_PROJECT_DIR (session folder): %MCP_CODER_PROJECT_DIR%
+echo MCP_CODER_VENV_DIR (session .venv): %MCP_CODER_VENV_DIR%
+echo MCP_CODER_VENV_PATH (install .venv): %MCP_CODER_VENV_PATH%
+echo Current PATH: %PATH%
+echo.
 echo === Step 1: Automated Analysis ===
 echo Running: {initial_command} {issue_number}
 echo.
