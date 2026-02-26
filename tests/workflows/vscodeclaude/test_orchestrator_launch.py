@@ -139,7 +139,7 @@ class TestLaunch:
 
         launch_vscode(workspace, mcp_coder_dir)
 
-        # After the fix: no environment variables are passed via launch_process  
+        # After the fix: no environment variables are passed via launch_process
         # They are now set directly in the startup script
         assert captured_env is None
 

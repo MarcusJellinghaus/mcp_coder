@@ -4,6 +4,7 @@ This test verifies that the startup script can find the mcp-coder executable
 even when MCP environment variables point to the session directory.
 """
 
+import platform
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -16,6 +17,10 @@ from mcp_coder.workflows.vscodeclaude.workspace import create_startup_script
 class TestStartupScriptMCPCoderPath:
     """Test that startup script uses correct path for mcp-coder executable."""
 
+    @pytest.mark.skipif(
+        platform.system() != "Windows",
+        reason="Startup script functionality is Windows-only",
+    )
     def test_startup_script_mcp_coder_executable_path(self, tmp_path: Path) -> None:
         """Startup script should find mcp-coder executable regardless of MCP env vars.
 
@@ -63,14 +68,20 @@ class TestStartupScriptMCPCoderPath:
             # After the fix: MCP environment variables should now be set directly in the script
             # pointing to the session folder (this is the correct behavior for MCP server config)
             assert "MCP_CODER_PROJECT_DIR=" + str(session_folder) in script_content
-            assert "MCP_CODER_VENV_DIR=" + str(session_folder / ".venv") in script_content
+            assert (
+                "MCP_CODER_VENV_DIR=" + str(session_folder / ".venv") in script_content
+            )
 
             # Verify the script shows the correct install path for mcp-coder executable
             assert "MCP-Coder install:" in script_content
-            
+
             # The mcp-coder executable path should still use the installation directory
             # (not the session folder) for finding the executable
 
+    @pytest.mark.skipif(
+        platform.system() != "Windows",
+        reason="Startup script functionality is Windows-only",
+    )
     def test_startup_script_separates_mcp_executable_from_mcp_config_env(
         self, tmp_path: Path
     ) -> None:

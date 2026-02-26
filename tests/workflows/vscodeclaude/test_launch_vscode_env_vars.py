@@ -11,15 +11,15 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from mcp_coder.utils.github_operations.issues.types import IssueData
 from mcp_coder.workflows.vscodeclaude.session_launch import (
     launch_vscode,
     prepare_and_launch_session,
 )
 from mcp_coder.workflows.vscodeclaude.types import (
-    VSCodeClaudeConfig,
     RepoVSCodeClaudeConfig,
+    VSCodeClaudeConfig,
 )
-from mcp_coder.utils.github_operations.issues.types import IssueData
 
 
 class TestLaunchVSCodeEnvironmentVariables:
@@ -32,7 +32,7 @@ class TestLaunchVSCodeEnvironmentVariables:
 
         After the fix, launch_vscode no longer sets MCP environment variables
         through process inheritance, since this doesn't work reliably on Windows.
-        
+
         Instead, environment variables are now set directly in the startup script.
         This test verifies the new behavior where no environment variables
         are passed to launch_process.
@@ -69,10 +69,20 @@ class TestLaunchVSCodeEnvironmentVariables:
         # Verify that NO environment variables are passed to launch_process
         # (the fixed behavior - env vars are now in the startup script)
         assert captured_args["env"] is None
-        
+
         # Verify VS Code is still launched with correct command
-        assert captured_args["cmd"] == f'code "{workspace_file}"'
-        assert captured_args["shell"] is True
+        # On Windows: shell command string, On Linux: list
+        cmd = captured_args["cmd"]
+        if isinstance(cmd, str):
+            # Windows: shell command string like 'code "path"'
+            assert "code" in cmd
+            assert str(workspace_file) in cmd
+            assert captured_args["shell"] is True
+        else:
+            # Linux: list like ['code', 'path']
+            assert "code" in cmd
+            assert str(workspace_file) in cmd
+            assert captured_args["shell"] is False
 
     def test_no_env_vars_when_session_folder_none(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -108,7 +118,7 @@ class TestLaunchVSCodeEnvironmentVariables:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Environment variables are no longer set via process inheritance (fixed approach).
-        
+
         After the fix, environment variables are written directly into the startup script
         rather than being passed through process inheritance, which was unreliable on Windows.
         """
@@ -205,11 +215,11 @@ class TestLaunchVSCodeEnvironmentVariables:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.validate_setup_commands",
-            lambda cmds: None,
+            lambda _cmds: None,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.run_setup_commands",
-            lambda path, cmds: None,
+            lambda _path, _cmds: None,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.update_gitignore",
@@ -230,7 +240,7 @@ class TestLaunchVSCodeEnvironmentVariables:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.create_vscode_task",
-            lambda path, script: None,
+            lambda _path, _script: None,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.create_status_file",
