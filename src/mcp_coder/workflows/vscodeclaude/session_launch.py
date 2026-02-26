@@ -71,9 +71,7 @@ __all__ = [
 ]
 
 
-def launch_vscode(
-    workspace_file: Path, session_folder_path: Path | None = None
-) -> int:
+def launch_vscode(workspace_file: Path, session_folder_path: Path | None = None) -> int:
     """Launch VSCode with workspace file and environment variables.
 
     Args:

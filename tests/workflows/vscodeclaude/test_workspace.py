@@ -669,10 +669,11 @@ class TestCreateStartupScript:
         )
 
         content = script_path.read_text(encoding="utf-8")
-        # Test two-environment setup: script should check for MCP_CODER_PROJECT_DIR
-        assert "if defined MCP_CODER_PROJECT_DIR (" in content
-        # Script should set up project environment and add MCP-Coder tools to PATH
-        assert "MCP_CODER_VENV_PATH=%MCP_CODER_PROJECT_DIR%" in content
+        # With the fix: script uses mcp-coder installation path instead of env vars
+        # Script should show the install path and set up MCP_CODER_VENV_PATH from it
+        assert "MCP-Coder install:" in content
         assert "PATH=%MCP_CODER_VENV_PATH%;%PATH%" in content
         # Should activate project venv for current directory
         assert "activate.bat" in content
+        # Should contain check for mcp_coder_install_path, not MCP_CODER_PROJECT_DIR
+        assert '" NEQ ""' in content

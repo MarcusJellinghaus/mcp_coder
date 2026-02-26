@@ -7,6 +7,7 @@ import logging
 import platform
 import shutil
 import stat
+import sys
 from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,6 +23,47 @@ from .config import get_vscodeclaude_config, sanitize_folder_name
 from .types import DEFAULT_PROMPT_TIMEOUT
 
 logger = logging.getLogger(__name__)
+
+
+def get_mcp_coder_install_path() -> Path | None:
+    """Get the mcp-coder installation directory path.
+
+    This determines where mcp-coder is installed so the startup script
+    can find the executable, separate from MCP config variables.
+
+    Returns:
+        Path to mcp-coder installation directory, or None if not found
+    """
+    try:
+        # Get the path where mcp_coder package is installed
+        import mcp_coder
+
+        mcp_coder_package_path = Path(mcp_coder.__file__).parent.parent
+
+        # Go up to find the project root (where .venv would be)
+        # mcp_coder package is typically at: /path/to/project/.venv/Lib/site-packages/mcp_coder
+        # or: /path/to/project/src/mcp_coder (development install)
+        current_path = mcp_coder_package_path
+
+        # Look for indicators of the project root
+        for _ in range(5):  # Limit search depth
+            if (current_path / ".venv").exists() or (
+                current_path / "pyproject.toml"
+            ).exists():
+                return current_path
+            current_path = current_path.parent
+
+        # Fallback: try to find venv in sys.executable path
+        if sys.executable:
+            venv_path = Path(
+                sys.executable
+            ).parent.parent  # executable is in venv/Scripts or venv/bin
+            if venv_path.name == ".venv":
+                return venv_path.parent
+
+        return None
+    except Exception:
+        return None
 
 
 def _remove_readonly(
@@ -359,6 +401,7 @@ def create_startup_script(
     issue_url: str,
     is_intervention: bool,
     timeout: int = DEFAULT_PROMPT_TIMEOUT,
+    mcp_coder_install_path: Path | None = None,
 ) -> Path:
     """Create platform-specific startup script.
 
@@ -371,6 +414,8 @@ def create_startup_script(
         issue_url: GitHub issue URL
         is_intervention: If True, use intervention mode (no automation)
         timeout: Timeout for mcp-coder prompt calls (default: 300 seconds)
+        mcp_coder_install_path: Path to mcp-coder installation directory
+            (for finding the executable, separate from session folder)
 
     Returns:
         Path to created script (.bat or .sh)
@@ -404,6 +449,16 @@ def create_startup_script(
         # Escape first so expansion from escaping is counted in the truncation
         title_display = _escape_batch_title(issue_title)
         title_display = title_display[:58].rstrip("^")
+
+        # Get mcp_coder_install_path if not provided
+        if mcp_coder_install_path is None:
+            mcp_coder_install_path = get_mcp_coder_install_path()
+
+        # Format VENV section with mcp_coder_install_path
+        venv_section = VENV_SECTION_WINDOWS.format(
+            mcp_coder_install_path=mcp_coder_install_path or ""
+        )
+
         if is_intervention:
             # Intervention mode - plain claude, no automation
             script_content = INTERVENTION_SCRIPT_WINDOWS.format(
@@ -413,7 +468,7 @@ def create_startup_script(
                 repo=repo_name,
                 status=status,
                 issue_url=issue_url,
-                venv_section=VENV_SECTION_WINDOWS,
+                venv_section=venv_section,
             )
         else:
             # Normal mode - full automation flow
@@ -434,7 +489,7 @@ def create_startup_script(
                 repo=repo_name,
                 status=status,
                 issue_url=issue_url,
-                venv_section=VENV_SECTION_WINDOWS,
+                venv_section=venv_section,
                 automated_section=automated_section,
                 discussion_section=discussion_section,
                 interactive_section=INTERACTIVE_SECTION_WINDOWS,
