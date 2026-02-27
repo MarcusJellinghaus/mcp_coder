@@ -71,37 +71,27 @@ __all__ = [
 ]
 
 
-def launch_vscode(
-    workspace_file: Path, mcp_coder_project_dir: Path | None = None
-) -> int:
-    """Launch VSCode with workspace file and environment variables.
+def launch_vscode(workspace_file: Path, session_working_dir: Path | None = None) -> int:
+    """Launch VSCode with workspace file.
 
     Args:
         workspace_file: Path to .code-workspace file
-        mcp_coder_project_dir: Path to mcp-coder installation (for MCP_CODER_PROJECT_DIR)
+        session_working_dir: Session working directory (passed to startup script for MCP configuration)
 
     Returns:
         VSCode process PID
 
     Uses launch_process for non-blocking launch.
     On Windows, uses shell=True to find code.cmd in PATH.
+    MCP environment variables are now set directly in the startup script.
     """
-    import os
-
-    # Set up environment variables if mcp_coder_project_dir is provided
-    env = None
-    if mcp_coder_project_dir:
-        env = os.environ.copy()
-        env["MCP_CODER_PROJECT_DIR"] = str(mcp_coder_project_dir)
-        env["MCP_CODER_VENV_DIR"] = str(mcp_coder_project_dir / ".venv")
-
     is_windows = platform.system() == "Windows"
 
     if is_windows:
         # On Windows, 'code' is a .cmd file which requires shell=True
-        return launch_process(f'code "{workspace_file}"', shell=True, env=env)
+        return launch_process(f'code "{workspace_file}"', shell=True)
     else:
-        return launch_process(["code", str(workspace_file)], env=env)
+        return launch_process(["code", str(workspace_file)])
 
 
 def prepare_and_launch_session(
@@ -192,7 +182,7 @@ def prepare_and_launch_session(
             repo_name=repo_short_name,
         )
 
-        # Create startup script
+        # Create startup script with session folder path for MCP environment variables
         script_path = create_startup_script(
             folder_path=folder_path,
             issue_number=issue_number,
@@ -202,6 +192,7 @@ def prepare_and_launch_session(
             issue_url=issue_url,
             is_intervention=is_intervention,
             timeout=DEFAULT_PROMPT_TIMEOUT,
+            session_folder_path=folder_path,
         )
 
         # Create VSCode task
@@ -219,13 +210,10 @@ def prepare_and_launch_session(
             is_intervention=is_intervention,
         )
 
-        # Get mcp-coder installation directory (project root, not src)
-        # Navigate from this file: src/mcp_coder/workflows/vscodeclaude/session_launch.py
-        # Go up 4 levels: session_launch.py -> vscodeclaude -> workflows -> mcp_coder -> src -> project_root
-        mcp_coder_install_dir = Path(__file__).parent.parent.parent.parent.parent
-
-        # Launch VSCode with environment variables
-        pid = launch_vscode(workspace_file, mcp_coder_install_dir)
+        # Launch VSCode (MCP environment variables are now set directly in startup script)
+        # This ensures MCP_CODER_PROJECT_DIR and MCP_CODER_VENV_DIR point to the session's
+        # working directory, not the mcp-coder installation directory
+        pid = launch_vscode(workspace_file, folder_path)
 
         # Build and save session
         session = build_session(
@@ -440,7 +428,7 @@ def regenerate_session_files(
     except CalledProcessError:
         branch_name = "main"
 
-    # Regenerate startup script
+    # Regenerate startup script with session folder path for MCP environment variables
     script_path = create_startup_script(
         folder_path=folder_path,
         issue_number=issue_number,
@@ -450,6 +438,7 @@ def regenerate_session_files(
         issue_url=issue_url,
         is_intervention=is_intervention,
         timeout=DEFAULT_PROMPT_TIMEOUT,
+        session_folder_path=folder_path,
     )
 
     # Regenerate VSCode task

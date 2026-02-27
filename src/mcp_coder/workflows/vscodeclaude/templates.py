@@ -36,17 +36,21 @@ BENEFITS:
 # Venv setup section for Windows
 VENV_SECTION_WINDOWS = r"""echo Setting up environments...
 mcp-coder --version
-echo   MCP-Coder install:    %MCP_CODER_PROJECT_DIR%
+echo   MCP-Coder install:    {mcp_coder_install_path}
 echo   Project directory:    %CD%
 echo.
 
-REM Store the MCP-Coder environment path (where this script is running from)
-if defined MCP_CODER_PROJECT_DIR (
-    set "MCP_CODER_VENV_PATH=%MCP_CODER_PROJECT_DIR%\.venv\Scripts"
+REM Set MCP environment variables (for MCP server configuration)
+set "MCP_CODER_PROJECT_DIR={session_folder_path}"
+set "MCP_CODER_VENV_DIR={session_folder_path}\.venv"
+
+REM Store the MCP-Coder environment path (from installation, not session)
+if "{mcp_coder_install_path}" NEQ "" (
+    set "MCP_CODER_VENV_PATH={mcp_coder_install_path}\.venv\Scripts"
     echo MCP-Coder environment: %MCP_CODER_VENV_PATH%
 ) else (
-    echo ERROR: MCP_CODER_PROJECT_DIR not set. This script should be run from mcp-coder coordinator.
-    echo SOLUTION: The coordinator needs to set this environment variable before launching VS Code.
+    echo ERROR: MCP_CODER_INSTALL_PATH not provided. This is a configuration issue.
+    echo SOLUTION: The coordinator needs to determine the mcp-coder installation location.
     pause
     exit /b 1
 )
