@@ -37,30 +37,44 @@ def get_mcp_coder_install_path() -> Path | None:
     try:
         # Get the path where this module is located
         current_file = Path(__file__).resolve()
+        logger.debug(f"Starting mcp-coder install path search from: {current_file}")
 
         # This file is at: /path/to/project/src/mcp_coder/workflows/vscodeclaude/workspace.py
         # Go up to find the project root (where .venv would be)
         # Start from src/mcp_coder level
         current_path = current_file.parent.parent.parent.parent
+        logger.debug(f"Initial search path: {current_path}")
 
         # Look for indicators of the project root
-        for _ in range(5):  # Limit search depth
+        for i in range(5):  # Limit search depth
+            logger.debug(f"Checking path {i+1}/5: {current_path}")
             if (current_path / ".venv").exists() or (
                 current_path / "pyproject.toml"
             ).exists():
+                logger.info(f"Found mcp-coder installation directory: {current_path}")
                 return current_path
             current_path = current_path.parent
 
         # Fallback: try to find venv in sys.executable path
+        logger.debug(
+            f"Primary search failed, trying sys.executable fallback: {sys.executable}"
+        )
         if sys.executable:
             venv_path = Path(
                 sys.executable
             ).parent.parent  # executable is in venv/Scripts or venv/bin
+            logger.debug(f"Checking venv path: {venv_path}")
             if venv_path.name == ".venv":
-                return venv_path.parent
+                install_path = venv_path.parent
+                logger.info(
+                    f"Found mcp-coder installation directory via sys.executable: {install_path}"
+                )
+                return install_path
 
+        logger.warning("Could not determine mcp-coder installation directory")
         return None
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error determining mcp-coder installation path: {e}")
         return None
 
 

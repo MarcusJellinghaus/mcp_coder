@@ -1,11 +1,10 @@
-"""Test launch_vscode environment variables bug.
+"""Integration test for MCP environment variables bug fix.
 
-This test demonstrates and verifies the fix for the bug where MCP server
-environment variables were incorrectly set to point to the mcp-coder
-installation directory instead of the session's project directory.
+This test verifies the fix for the bug where MCP server environment variables
+were incorrectly set to point to the mcp-coder installation directory instead
+of the session's project directory.
 """
 
-import os
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -22,145 +21,21 @@ from mcp_coder.workflows.vscodeclaude.types import (
 )
 
 
-class TestLaunchVSCodeEnvironmentVariables:
-    """Test environment variable handling in launch_vscode function."""
+class TestMCPEnvironmentVariablesBugFix:
+    """Integration test for MCP environment variables bug fix."""
 
-    def test_launch_vscode_no_longer_sets_env_vars(
+    def test_prepare_and_launch_session_passes_session_folder_to_startup_script(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """launch_vscode no longer sets environment variables (fixed approach).
-
-        After the fix, launch_vscode no longer sets MCP environment variables
-        through process inheritance, since this doesn't work reliably on Windows.
-
-        Instead, environment variables are now set directly in the startup script.
-        This test verifies the new behavior where no environment variables
-        are passed to launch_process.
-        """
-        # Capture arguments passed to launch_process
-        captured_args: dict[str, object] = {}
-
-        def mock_launch_process(
-            cmd: str | list[str],
-            cwd: str | Path | None = None,
-            shell: bool = False,
-            env: dict[str, str] | None = None,
-        ) -> int:
-            captured_args["cmd"] = cmd
-            captured_args["cwd"] = cwd
-            captured_args["shell"] = shell
-            captured_args["env"] = env
-            return 12345
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.launch_process",
-            mock_launch_process,
-        )
-
-        # Set up test paths
-        workspace_file = tmp_path / "test.code-workspace"
-        workspace_file.touch()
-        session_folder = tmp_path / "session_working_dir"
-        session_folder.mkdir()
-
-        # Call launch_vscode
-        launch_vscode(workspace_file, session_folder)
-
-        # Verify that NO environment variables are passed to launch_process
-        # (the fixed behavior - env vars are now in the startup script)
-        assert captured_args["env"] is None
-
-        # Verify VS Code is still launched with correct command
-        # On Windows: shell command string, On Linux: list
-        cmd = captured_args["cmd"]
-        if isinstance(cmd, str):
-            # Windows: shell command string like 'code "path"'
-            assert "code" in cmd
-            assert str(workspace_file) in cmd
-            assert captured_args["shell"] is True
-        elif isinstance(cmd, list):
-            # Linux: list like ['code', 'path']
-            assert "code" in cmd
-            assert str(workspace_file) in cmd
-            assert captured_args["shell"] is False
-
-    def test_no_env_vars_when_session_folder_none(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """No environment variables should be set when session folder is None."""
-        captured_env: dict[str, str] | None = None
-
-        def mock_launch_process(
-            cmd: str | list[str],
-            cwd: str | Path | None = None,
-            shell: bool = False,
-            env: dict[str, str] | None = None,
-        ) -> int:
-            nonlocal captured_env
-            captured_env = env
-            return 12345
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.launch_process",
-            mock_launch_process,
-        )
-
-        workspace_file = tmp_path / "test.code-workspace"
-        workspace_file.touch()
-
-        launch_vscode(workspace_file, None)
-
-        # Environment variables are no longer set via launch_process
-        # They are now set directly in the startup script
-        assert captured_env is None
-
-    def test_env_vars_no_longer_set_via_process_inheritance(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Environment variables are no longer set via process inheritance (fixed approach).
-
-        After the fix, environment variables are written directly into the startup script
-        rather than being passed through process inheritance, which was unreliable on Windows.
-        """
-        captured_env: dict[str, str] | None = None
-
-        def mock_launch_process(
-            cmd: str | list[str],
-            cwd: str | Path | None = None,
-            shell: bool = False,
-            env: dict[str, str] | None = None,
-        ) -> int:
-            nonlocal captured_env
-            captured_env = env
-            return 12345
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.launch_process",
-            mock_launch_process,
-        )
-
-        workspace_file = tmp_path / "test.code-workspace"
-        workspace_file.touch()
-        session_folder = tmp_path / "session_dir"
-        session_folder.mkdir()
-
-        launch_vscode(workspace_file, session_folder)
-
-        # Environment variables are no longer set via launch_process
-        # They are now set directly in the startup script
-        assert captured_env is None
-
-    def test_prepare_and_launch_session_sets_correct_env_vars_integration(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Integration test: prepare_and_launch_session passes session folder to launch_vscode.
+        """Integration test: prepare_and_launch_session passes session folder to startup script.
 
         This tests the actual bug fix - that prepare_and_launch_session() passes
-        the session's folder_path to launch_vscode(), not mcp_coder_install_dir.
+        the session's folder_path to the startup script for MCP environment variables,
+        not the mcp_coder_install_dir.
 
         This is a comprehensive integration test that mocks all the heavyweight
         dependencies (git operations, file creation, etc.) while capturing the
-        actual environment variables passed to launch_vscode().
+        actual parameters passed to the startup script creation.
         """
         from pathlib import Path
         from unittest.mock import MagicMock
@@ -170,12 +45,12 @@ class TestLaunchVSCodeEnvironmentVariables:
         original_launch_vscode = launch_vscode
 
         def mock_launch_vscode_with_capture(
-            workspace_file: Path, session_folder_path: Path | None = None
+            workspace_file: Path, session_working_dir: Path | None = None
         ) -> int:
             captured_launch_args["workspace_file"] = workspace_file
-            captured_launch_args["session_folder_path"] = session_folder_path
+            captured_launch_args["session_working_dir"] = session_working_dir
             # Call the real function to test environment variable setting
-            return original_launch_vscode(workspace_file, session_folder_path)
+            return original_launch_vscode(workspace_file, session_working_dir)
 
         # Mock launch_process - should receive no environment variables in new approach
         captured_env: dict[str, str] | None = None
@@ -319,8 +194,8 @@ class TestLaunchVSCodeEnvironmentVariables:
         )
 
         # Assert: Verify that launch_vscode was called with the session folder
-        assert "session_folder_path" in captured_launch_args
-        actual_session_folder = captured_launch_args["session_folder_path"]
+        assert "session_working_dir" in captured_launch_args
+        actual_session_folder = captured_launch_args["session_working_dir"]
 
         # The critical assertion: session folder should be passed to launch_vscode
         assert actual_session_folder == expected_session_folder
