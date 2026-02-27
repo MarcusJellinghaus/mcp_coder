@@ -35,15 +35,13 @@ def get_mcp_coder_install_path() -> Path | None:
         Path to mcp-coder installation directory, or None if not found
     """
     try:
-        # Get the path where mcp_coder package is installed
-        import mcp_coder
+        # Get the path where this module is located
+        current_file = Path(__file__).resolve()
 
-        mcp_coder_package_path = Path(mcp_coder.__file__).parent.parent
-
+        # This file is at: /path/to/project/src/mcp_coder/workflows/vscodeclaude/workspace.py
         # Go up to find the project root (where .venv would be)
-        # mcp_coder package is typically at: /path/to/project/.venv/Lib/site-packages/mcp_coder
-        # or: /path/to/project/src/mcp_coder (development install)
-        current_path = mcp_coder_package_path
+        # Start from src/mcp_coder level
+        current_path = current_file.parent.parent.parent.parent
 
         # Look for indicators of the project root
         for _ in range(5):  # Limit search depth

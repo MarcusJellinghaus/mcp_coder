@@ -78,7 +78,7 @@ class TestLaunchVSCodeEnvironmentVariables:
             assert "code" in cmd
             assert str(workspace_file) in cmd
             assert captured_args["shell"] is True
-        else:
+        elif isinstance(cmd, list):
             # Linux: list like ['code', 'path']
             assert "code" in cmd
             assert str(workspace_file) in cmd
