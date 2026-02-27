@@ -417,38 +417,32 @@ MCP Coder supports platform-specific MCP configuration files:
 
 **File location:** Project root directory
 
-#### Basic MCP Configuration
+#### MCP Configuration Essentials
 
-Create `.mcp.json` (or platform-specific variant) in your project root:
+**Reference Implementation:** See this repository's `.mcp.json` for a complete working configuration.
 
-```json
-{
-  "mcpServers": {
-    "code-checker": {
-      "type": "stdio",
-      "command": "mcp-code-checker",
-      "args": [
-        "--project-dir", "${MCP_CODER_PROJECT_DIR}",
-        "--python-executable", "${MCP_CODER_VENV_DIR}/bin/python",
-        "--venv-path", "${MCP_CODER_VENV_DIR}",
-        "--test-folder", "tests",
-        "--log-level", "INFO"
-      ],
-      "env": {
-        "PYTHONPATH": "${MCP_CODER_PROJECT_DIR}/src"
-      }
-    },
-    "filesystem": {
-      "type": "stdio",
-      "command": "mcp-server-filesystem",
-      "args": [
-        "--project-dir", "${MCP_CODER_PROJECT_DIR}",
-        "--log-level", "INFO"
-      ]
-    }
-  }
-}
-```
+**Key Configuration Aspects:**
+
+1. **Platform-Specific Paths**:
+   - **Windows**: Use double backslashes (`\\`) and `.exe` extensions
+   - **Unix**: Use forward slashes, no extensions needed
+   - **Environment variables**: `${MCP_CODER_PROJECT_DIR}` and `${MCP_CODER_VENV_DIR}` are set by mcp-coder
+
+2. **Essential Arguments**:
+   - `--project-dir`: Points to your project root
+   - `--python-executable`: Specific Python executable in your venv
+   - `--venv-path`: Virtual environment location
+   - `--test-folder`: Test directory (usually "tests")
+   - `--log-level`: For debugging MCP server issues
+
+3. **Reference Projects** (filesystem server):
+   - Enable access to related codebases for comprehensive LLM context
+   - Useful for cross-repository development and learning from examples
+   - Format: `--reference-project "name=${PATH_TO_REPO}"`
+
+4. **Environment Variables**:
+   - `PYTHONPATH`: Ensures Python modules are discoverable
+   - Critical for proper import resolution in MCP servers
 
 #### Using MCP Configuration
 
@@ -464,6 +458,7 @@ mcp-coder create-plan 123 --mcp-config .mcp.linux.json
 - Enables strict mode (only configured servers)
 - Consistent environment across team
 - Platform-specific optimizations
+- Reference projects for filesystem server (access to related codebases)
 
 #### Gitignore MCP Files
 
@@ -493,77 +488,7 @@ These components enhance your development workflow but are not required for MCP 
 
 Enforce module boundaries and prevent architectural drift. These tools are checked by CI but have no explicit mcp-coder integration.
 
-### Import Linter
 
-Enforces architectural contracts for imports between modules.
-
-**Configuration:** Create `.importlinter` in project root:
-
-```ini
-[importlinter]
-root_packages = your_package
-root_package_paths = src
-
-[importlinter:contract:layers]
-name = Layered Architecture
-type = layers
-layers =
-    your_package.cli
-    your_package.services
-    your_package.utils
-```
-
-**Run locally:**
-```bash
-# Linux/macOS
-./tools/lint_imports.sh
-
-# Windows
-tools\lint_imports.bat
-```
-
-**Or directly:**
-```bash
-lint-imports
-```
-
-### Tach
-
-Enforces architectural boundaries with layer definitions.
-
-**Configuration:** Create `tach.toml` in project root:
-
-```toml
-source_roots = ["src"]
-exact = false
-forbid_circular_dependencies = true
-
-[[modules]]
-path = "your_package.cli"
-layer = "presentation"
-depends_on = [
-    { path = "your_package.services" }
-]
-
-[[modules]]
-path = "your_package.services"
-layer = "domain"
-depends_on = []
-```
-
-**Run locally:**
-```bash
-# Linux/macOS
-./tools/tach_check.sh
-
-# Windows
-tools\tach_check.bat
-```
-
-**Or directly:**
-```bash
-tach check
-```
 
 ## Code Quality CI
 
@@ -623,7 +548,105 @@ jobs:
           python-version: "3.11"
       - run: pip install -e ".[dev]"
       - run: ${{ matrix.check.cmd }}
+
+# Monitor CI Results
+
+Use `mcp-coder check branch-status` to monitor CI pipeline results and get comprehensive feedback on code quality checks.
+
+## Architecture Enforcement
+
+Enforce module boundaries and prevent architectural drift with automated tools. These components help maintain code quality and keep files manageable for LLM context windows.
+
+### Why Architecture Enforcement?
+
+**Critical for LLM-assisted development workflows:**
+
+**Context Window Management:**
+- **File size limits**: LLMs have finite context windows - large files reduce available context for reasoning
+- **Architecture enforcement**: LLMs may not grasp the full codebase - rules enforce following a testable architecture plan with clear boundaries, separation of concerns, and clean code that improves LLM comprehension and prevents technical debt
+
+**CI Integration Strategy:**
+- **Matrix execution with fail-fast disabled**: Get complete feedback on all checks simultaneously
+- **PR-only validation**: Expensive architecture checks run only when needed
+- **Comprehensive monitoring**: Use `mcp-coder check branch-status` for complete CI pipeline visibility
+
+### Import Architecture Enforcement
+
+**Tool: import-linter**
+- **Purpose:** Contract-based import validation
+- **Execution:** `./tools/lint_imports.sh` (Linux/macOS) or `tools\lint_imports.bat` (Windows)
+- **Direct:** `lint-imports`
+- **Documentation:** [import-linter docs](https://import-linter.readthedocs.io/)
+- **Example config:** See `.importlinter` in this repository
+
+### Dependency Architecture Validation
+
+**Tool: tach**
+- **Purpose:** Architectural boundary enforcement
+- **Execution:** `./tools/tach_check.sh` (Linux/macOS) or `tools\tach_check.bat` (Windows)
+- **Direct:** `tach check`
+- **Documentation:** [tach docs](https://docs.gauge.so/tach/)
+- **Example config:** See `tach.toml` in this repository
+
+**Tool: pycycle**
+- **Purpose:** Circular dependency detection
+- **Execution:** `./tools/pycycle_check.sh` (Linux/macOS) or `tools\pycycle_check.bat` (Windows)
+- **Direct:** `pycycle --here`
+- **Documentation:** [pycycle PyPI](https://pypi.org/project/pycycle/)
+
+### Dead Code Elimination
+
+**Tool: vulture**
+- **Purpose:** Unused code detection
+- **Execution:** `./tools/vulture_check.sh` (Linux/macOS) or `tools\vulture_check.bat` (Windows)
+- **Direct:** `vulture src tests --min-confidence 60`
+- **Documentation:** [vulture docs](https://github.com/jendrikseipp/vulture)
+- **Example config:** See `vulture_whitelist.py` in this repository
+
+### File Size Management
+
+**Principle:** Keep files within LLM context limits for optimal reasoning.
+
+**Why critical:**
+- Large files consume LLM context budget
+- Smaller files enable more focused analysis
+- Better context utilization for reasoning
+
+**Tool: mcp-coder file size check**
+```bash
+mcp-coder check file-size --max-lines 750
 ```
+- **Example config:** See `.large-files-allowlist` in this repository
+
+### Dependencies
+
+**Principle:** Include architecture tools in development dependencies.
+
+**Reference:** See `pyproject.toml` in this repository for complete dependency setup including version constraints and optional dependency groups.
+
+### Cross-Platform Development Standards
+
+**Principle:** Ensure consistent development experience across platforms.
+
+**1. Line Ending Management**
+- **Why:** Prevents git conflicts and ensures consistent file formats
+- **Reference:** See `.gitattributes` in this repository
+
+**2. Local Development Launchers** 
+- **Purpose:** Use current repo's Python environment for immediate testing
+- **Benefits:** Test code changes immediately, auto-activate venv, set MCP environment variables
+- **Reference:** See `claude_local.bat` in this repository
+
+**3. Enhanced Claude Permissions**
+- **Purpose:** Pre-approve safe tools while maintaining security
+- **Principles:** Only allow tools that change project folder (git-tracked) or read-only commands
+- **Security:** No system-wide edits, no file deletion outside project
+- **Reference:** See `.claude/settings.local.json` in this repository
+
+**4. Automated Dependency Management**
+- **Purpose:** Security updates and dependency monitoring
+- **Documentation:** [Dependabot documentation](https://docs.github.com/en/code-security/dependabot)
+- **Reference:** See `.github/dependabot.yml` in this repository
 
 ## Development Tools
 
