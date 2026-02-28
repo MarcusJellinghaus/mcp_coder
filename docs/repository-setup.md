@@ -570,6 +570,31 @@ Enforce module boundaries and prevent architectural drift with automated tools. 
 - **PR-only validation**: Expensive architecture checks run only when needed
 - **Comprehensive monitoring**: Use `mcp-coder check branch-status` for complete CI pipeline visibility
 
+### Running Architecture Tools
+
+**Recommended Approach: Use Tools Scripts**
+
+All architecture tools have corresponding scripts in the `tools/` directory that provide:
+- **Better UX**: Informative status messages and progress indicators
+- **Error handling**: Check if tools are installed and provide helpful installation guidance
+- **Consistency**: Standardized output format and argument handling
+- **Cross-platform**: Both `.sh` (Linux/macOS) and `.bat` (Windows) versions
+
+**Examples:**
+```bash
+# Use these (recommended)
+./tools/lint_imports.sh
+./tools/tach_check.sh
+./tools/pycycle_check.sh
+./tools/vulture_check.sh
+
+# Instead of direct commands
+lint-imports
+tach check
+pycycle --here
+vulture src tests vulture_whitelist.py --min-confidence 60
+```
+
 ### Import Architecture Enforcement
 
 **Tool: import-linter**
@@ -599,7 +624,7 @@ Enforce module boundaries and prevent architectural drift with automated tools. 
 **Tool: vulture**
 - **Purpose:** Unused code detection
 - **Execution:** `./tools/vulture_check.sh` (Linux/macOS) or `tools\vulture_check.bat` (Windows)
-- **Direct:** `vulture src tests --min-confidence 60`
+- **Direct:** `vulture src tests vulture_whitelist.py --min-confidence 60`
 - **Documentation:** [vulture docs](https://github.com/jendrikseipp/vulture)
 - **Example config:** See `vulture_whitelist.py` in this repository
 
@@ -641,6 +666,7 @@ mcp-coder check file-size --max-lines 750
 - **Purpose:** Pre-approve safe tools while maintaining security
 - **Principles:** Only allow tools that change project folder (git-tracked) or read-only commands
 - **Security:** No system-wide edits, no file deletion outside project
+- **Architecture Tools:** Use `./tools/` scripts for consistent UX and error handling
 - **Reference:** See `.claude/settings.local.json` in this repository
 
 **4. Automated Dependency Management**
