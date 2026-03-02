@@ -9,6 +9,7 @@ import logging
 import os
 import tempfile
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 from ..config.mlflow_config import MLflowConfig, load_mlflow_config
@@ -69,7 +70,7 @@ class MLflowLogger:
         """
         self.config = config or load_mlflow_config()
         self.active_run_id: Optional[str] = None
-        self._mlflow_module = None
+        self._mlflow_module: Any = None
 
         # Only initialize MLflow if it's available and enabled
         if self.config.enabled and is_mlflow_available():
@@ -88,8 +89,24 @@ class MLflowLogger:
 
             # Set tracking URI if specified
             if self.config.tracking_uri:
-                mlflow.set_tracking_uri(self.config.tracking_uri)
-                logger.debug(f"MLflow tracking URI set to: {self.config.tracking_uri}")
+                uri = self.config.tracking_uri
+                # Check if URI already has a scheme (file://, http://, sqlite://, etc.)
+                if "://" in uri:
+                    # Use URI as-is (already properly formatted)
+                    tracking_uri = uri
+                else:
+                    # Plain path - expand ~ and convert to file URI
+                    expanded_path = os.path.expanduser(uri)
+                    abs_path = os.path.abspath(expanded_path)
+                    # Convert to file URI format
+                    if os.name == "nt":  # Windows
+                        tracking_uri = "file:///" + abs_path.replace("\\", "/")
+                    else:
+                        tracking_uri = "file://" + abs_path
+                mlflow.set_tracking_uri(tracking_uri)
+                logger.debug(
+                    f"MLflow tracking URI set to: {tracking_uri} (from {self.config.tracking_uri})"
+                )
 
             # Set or create experiment
             try:

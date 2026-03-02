@@ -29,18 +29,20 @@ Add MLflow settings to your `config.toml` file:
 ```toml
 [mlflow]
 enabled = true
-tracking_uri = "file:///path/to/mlruns"
-experiment_name = "claude-conversations"
+tracking_uri = "~/mlflow_data"
+experiment_name = "mcp-coder-conversations"
 ```
 
 ### Configuration Options
 
 - `enabled` (boolean): Enable/disable MLflow logging
 - `tracking_uri` (string): Where to store MLflow data
-  - `"file:///path/to/mlruns"` - Local file system
+  - `"~/mlflow_data"` - Local file system (recommended default, `~` expands to home directory)
+  - `"/absolute/path/to/mlruns"` - Absolute path
   - `"http://localhost:5000"` - Remote MLflow server
   - `"sqlite:///mlflow.db"` - SQLite database
-- `experiment_name` (string): Name for your experiment group
+  - **Note**: Paths are automatically converted to proper file URIs (Windows: `file:///C:/...`, Unix: `file://...`)
+- `experiment_name` (string): Name for your experiment group (default: "mcp-coder-conversations")
 
 ### Environment Variables (Higher Priority)
 
@@ -52,11 +54,12 @@ experiment_name = "claude-conversations"
 ### Starting the MLflow UI
 
 ```bash
-# In your project directory
-mlflow ui
+# Using default location (~/mlflow_data)
+mlflow ui --backend-store-uri ~/mlflow_data
 
-# Or specify custom tracking URI
-mlflow ui --backend-store-uri file:///path/to/mlruns
+# Or from the mlflow_data directory
+cd ~/mlflow_data
+mlflow ui
 ```
 
 Open http://localhost:5000 in your browser.
