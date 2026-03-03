@@ -392,16 +392,68 @@ class TestMLflowWithRealInstallation:
 
             # Verify prompt_length parameter was logged (indicates prompt was captured)
             assert "prompt_length" in param_dict, "prompt_length parameter not logged"
-            assert (
-                int(param_dict["prompt_length"]) == len(prompt)
+            assert int(param_dict["prompt_length"]) == len(
+                prompt
             ), "prompt_length mismatch"
 
             conn.close()
 
-            # Note: Full conversation data (prompt text, response, tool calls) is stored as
-            # MLflow artifacts in prompt.txt and conversation.json files.
-            # In the MLflow UI: Click run → Artifacts tab → conversation_data folder
-            # These files are stored on disk at the artifact_uri location.
+            # Verify artifact files exist and contain conversation data
+            # Extract artifact path from artifact_uri (format: file:///.../artifacts)
+            import urllib.parse
+
+            artifact_path_str = urllib.parse.urlparse(artifact_uri).path
+            # On Windows, urlparse may include leading slash like /C:/...
+            if artifact_path_str.startswith("/") and ":" in artifact_path_str:
+                artifact_path_str = artifact_path_str[1:]  # Remove leading slash
+            artifact_path = Path(artifact_path_str) / "conversation_data"
+
+            # Verify conversation_data directory exists
+            assert (
+                artifact_path.exists()
+            ), f"Artifact directory not found at {artifact_path}"
+            assert (
+                artifact_path.is_dir()
+            ), f"Artifact path is not a directory: {artifact_path}"
+
+            # Verify prompt.txt exists and contains prompt
+            prompt_file = artifact_path / "prompt.txt"
+            assert prompt_file.exists(), f"prompt.txt not found at {prompt_file}"
+            prompt_content = prompt_file.read_text(encoding="utf-8")
+            assert prompt in prompt_content, "Prompt text not found in prompt.txt"
+
+            # Verify conversation.json exists and contains conversation data
+            conversation_file = artifact_path / "conversation.json"
+            assert (
+                conversation_file.exists()
+            ), f"conversation.json not found at {conversation_file}"
+            conversation_json = json.loads(
+                conversation_file.read_text(encoding="utf-8")
+            )
+
+            # Verify conversation JSON structure and content
+            assert (
+                "prompt" in conversation_json
+            ), "prompt field missing in conversation.json"
+            assert (
+                conversation_json["prompt"] == prompt
+            ), "Prompt mismatch in conversation.json"
+
+            assert "response_data" in conversation_json, "response_data field missing"
+            assert (
+                conversation_json["response_data"]["text"] == response_data["text"]
+            ), "Response text mismatch"
+            assert (
+                conversation_json["response_data"]["provider"] == "claude"
+            ), "Provider mismatch"
+
+            assert "metadata" in conversation_json, "metadata field missing"
+            assert (
+                conversation_json["metadata"]["model"] == "claude-3-sonnet"
+            ), "Model mismatch in metadata"
+            assert (
+                conversation_json["metadata"]["branch_name"] == "test-branch"
+            ), "Branch name mismatch"
 
             # Properly cleanup MLflow to release file locks (critical on Windows)
             try:

@@ -237,20 +237,23 @@ class MLflowLogger:
         try:
             import mlflow  # pylint: disable=import-error
 
-            # Create temporary file for the artifact
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=f"_{filename}", delete=False, encoding="utf-8"
-            ) as f:
-                f.write(content)
-                temp_path = f.name
+            # Create temporary directory and file with the correct name
+            temp_dir = tempfile.mkdtemp()
+            temp_path = os.path.join(temp_dir, filename)
 
             try:
+                # Write content to file with proper name
+                with open(temp_path, "w", encoding="utf-8") as f:
+                    f.write(content)
+
+                # Log the file to MLflow
                 mlflow.log_artifact(temp_path, "conversation_data")
                 logger.debug(f"Logged artifact '{filename}' to MLflow")
             finally:
-                # Clean up temporary file
+                # Clean up temporary file and directory
                 try:
                     os.unlink(temp_path)
+                    os.rmdir(temp_dir)
                 except OSError:
                     pass
 

@@ -132,8 +132,7 @@ def log_llm_response(
                 if usage_metrics:
                     mlflow_logger.log_metrics(usage_metrics)
 
-            # End the run with success status
-            mlflow_logger.end_run("FINISHED")
+            # Note: Run will be ended after full conversation is logged in prompt.py
         except Exception as e:
             logger.debug(f"Failed to log MLflow response metrics: {e}")
 
