@@ -1,5 +1,6 @@
 """Integration tests for MLflow functionality."""
 
+import json
 import os
 import sqlite3
 import tempfile
@@ -380,7 +381,27 @@ class TestMLflowWithRealInstallation:
             assert param_dict.get("provider") == "claude"
             assert param_dict.get("branch_name") == "test-branch"
 
+            # Verify artifacts are referenced in the database
+            cursor.execute(
+                "SELECT run_uuid, artifact_uri FROM runs ORDER BY start_time DESC LIMIT 1"
+            )
+            run_result = cursor.fetchone()
+            assert run_result is not None, "No run found"
+            run_uuid, artifact_uri = run_result
+            assert artifact_uri is not None, "No artifact URI in database"
+
+            # Verify prompt_length parameter was logged (indicates prompt was captured)
+            assert "prompt_length" in param_dict, "prompt_length parameter not logged"
+            assert (
+                int(param_dict["prompt_length"]) == len(prompt)
+            ), "prompt_length mismatch"
+
             conn.close()
+
+            # Note: Full conversation data (prompt text, response, tool calls) is stored as
+            # MLflow artifacts in prompt.txt and conversation.json files.
+            # In the MLflow UI: Click run → Artifacts tab → conversation_data folder
+            # These files are stored on disk at the artifact_uri location.
 
             # Properly cleanup MLflow to release file locks (critical on Windows)
             try:
