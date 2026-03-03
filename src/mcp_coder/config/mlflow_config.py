@@ -68,9 +68,9 @@ def load_mlflow_config() -> MLflowConfig:
         enabled = enabled_str.lower() in ("true", "1", "yes", "on", "enabled")
 
     # Get tracking URI, experiment name, and artifact location
-    tracking_uri = config_values[("mlflow", "tracking_uri")]
-    experiment_name = config_values[("mlflow", "experiment_name")]
-    artifact_location = config_values[("mlflow", "artifact_location")]
+    tracking_uri = config_values.get(("mlflow", "tracking_uri"))
+    experiment_name = config_values.get(("mlflow", "experiment_name"))
+    artifact_location = config_values.get(("mlflow", "artifact_location"))
 
     # Use default experiment name if not configured
     if not experiment_name:

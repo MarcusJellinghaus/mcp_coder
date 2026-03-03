@@ -123,8 +123,15 @@ class MLflowLogger:
             try:
                 # If artifact_location is specified, create/get experiment with that location
                 if self.config.artifact_location:
+                    # Expand ~ and convert to absolute path
                     artifact_root = os.path.expanduser(self.config.artifact_location)
                     artifact_root = os.path.abspath(artifact_root)
+
+                    # Convert to file:// URI format for MLflow
+                    if os.name == "nt":  # Windows
+                        artifact_uri = "file:///" + artifact_root.replace("\\", "/")
+                    else:
+                        artifact_uri = "file://" + artifact_root
 
                     # Get or create experiment with specified artifact location
                     experiment = mlflow.get_experiment_by_name(
@@ -133,11 +140,11 @@ class MLflowLogger:
                     if experiment is None:
                         # Create new experiment with artifact location
                         mlflow.create_experiment(
-                            self.config.experiment_name, artifact_location=artifact_root
+                            self.config.experiment_name, artifact_location=artifact_uri
                         )
                         logger.debug(
                             f"Created MLflow experiment '{self.config.experiment_name}' "
-                            f"with artifact_location: {artifact_root}"
+                            f"with artifact_location: {artifact_uri}"
                         )
                     else:
                         logger.debug(

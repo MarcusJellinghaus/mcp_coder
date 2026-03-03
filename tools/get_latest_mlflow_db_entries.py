@@ -231,6 +231,19 @@ def print_experiments(experiments: List[Dict[str, Any]]) -> None:
         print(f"Status: {exp['lifecycle_stage']}")
 
 
+def safe_print(text: str) -> None:
+    """Print text with Unicode fallback for Windows console.
+    
+    Args:
+        text: Text to print
+    """
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        # Fallback for Windows console with cp1252 encoding
+        print(text.encode('ascii', 'replace').decode('ascii'))
+
+
 def print_runs(runs: List[Dict[str, Any]], show_conversation: bool = True) -> None:
     """Print runs in a formatted table.
     
@@ -263,13 +276,13 @@ def print_runs(runs: List[Dict[str, Any]], show_conversation: bool = True) -> No
                 prompt = analysis['prompt']
                 if len(prompt) > 100:
                     prompt = prompt[:100] + "..."
-                print(f"      Prompt: {prompt}")
+                safe_print(f"      Prompt: {prompt}")
                 
                 # Show response preview (last message)
                 response = analysis['response_text']
                 if len(response) > 150:
                     response = response[:150] + "..."
-                print(f"      Response: {response}")
+                safe_print(f"      Response: {response}")
                 
                 # Show message counts
                 if analysis['total_messages'] > 0:
