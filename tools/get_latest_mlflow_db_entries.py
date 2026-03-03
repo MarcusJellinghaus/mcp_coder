@@ -36,16 +36,16 @@ def get_mlflow_db_path() -> Path:
     
     for config_path in config_paths:
         if config_path.exists():
-        import re
-        
-        config_text = config_path.read_text()
-        match = re.search(r'tracking_uri\s*=\s*"sqlite:///([^"]+)"', config_text)
-        if match:
-            db_path = match.group(1)
-            # Expand ~ if present
-            if db_path.startswith("~/"):
-                db_path = str(Path.home() / db_path[2:])
-            return Path(db_path)
+            import re
+            
+            config_text = config_path.read_text()
+            match = re.search(r'tracking_uri\s*=\s*"sqlite:///([^"]+)"', config_text)
+            if match:
+                db_path = match.group(1)
+                # Expand ~ if present
+                if db_path.startswith("~/"):
+                    db_path = str(Path.home() / db_path[2:])
+                return Path(db_path)
     
     # Default location
     return Path.home() / "mlflow_data" / "mlflow.db"
