@@ -26,11 +26,13 @@ class MLflowConfig:
         enabled: Whether MLflow logging is enabled
         tracking_uri: MLflow tracking URI (file://, http://, sqlite://)
         experiment_name: Name of the MLflow experiment
+        artifact_location: Root directory for storing artifacts (optional)
     """
 
     enabled: bool = False
     tracking_uri: Optional[str] = None
     experiment_name: str = "claude-conversations"
+    artifact_location: Optional[str] = None
 
 
 def load_mlflow_config() -> MLflowConfig:
@@ -54,6 +56,7 @@ def load_mlflow_config() -> MLflowConfig:
             ("mlflow", "enabled", None),
             ("mlflow", "tracking_uri", "MLFLOW_TRACKING_URI"),
             ("mlflow", "experiment_name", "MLFLOW_EXPERIMENT_NAME"),
+            ("mlflow", "artifact_location", "MLFLOW_DEFAULT_ARTIFACT_ROOT"),
         ]
     )
 
@@ -64,9 +67,10 @@ def load_mlflow_config() -> MLflowConfig:
         # Handle various boolean representations
         enabled = enabled_str.lower() in ("true", "1", "yes", "on", "enabled")
 
-    # Get tracking URI and experiment name
+    # Get tracking URI, experiment name, and artifact location
     tracking_uri = config_values[("mlflow", "tracking_uri")]
     experiment_name = config_values[("mlflow", "experiment_name")]
+    artifact_location = config_values[("mlflow", "artifact_location")]
 
     # Use default experiment name if not configured
     if not experiment_name:
@@ -85,4 +89,5 @@ def load_mlflow_config() -> MLflowConfig:
         enabled=enabled,
         tracking_uri=tracking_uri,
         experiment_name=experiment_name,
+        artifact_location=artifact_location,
     )

@@ -119,10 +119,38 @@ class MLflowLogger:
                     f"MLflow tracking URI set to: {tracking_uri} (from {self.config.tracking_uri})"
                 )
 
-            # Set or create experiment
+            # Set or create experiment with optional artifact location
             try:
-                mlflow.set_experiment(self.config.experiment_name)
-                logger.debug(f"MLflow experiment set to: {self.config.experiment_name}")
+                # If artifact_location is specified, create/get experiment with that location
+                if self.config.artifact_location:
+                    artifact_root = os.path.expanduser(self.config.artifact_location)
+                    artifact_root = os.path.abspath(artifact_root)
+
+                    # Get or create experiment with specified artifact location
+                    experiment = mlflow.get_experiment_by_name(
+                        self.config.experiment_name
+                    )
+                    if experiment is None:
+                        # Create new experiment with artifact location
+                        mlflow.create_experiment(
+                            self.config.experiment_name, artifact_location=artifact_root
+                        )
+                        logger.debug(
+                            f"Created MLflow experiment '{self.config.experiment_name}' "
+                            f"with artifact_location: {artifact_root}"
+                        )
+                    else:
+                        logger.debug(
+                            f"Using existing MLflow experiment '{self.config.experiment_name}' "
+                            f"(artifact_location: {experiment.artifact_location})"
+                        )
+                    mlflow.set_experiment(self.config.experiment_name)
+                else:
+                    # Use default artifact location
+                    mlflow.set_experiment(self.config.experiment_name)
+                    logger.debug(
+                        f"MLflow experiment set to: {self.config.experiment_name}"
+                    )
             except Exception as e:
                 logger.warning(
                     f"Failed to set MLflow experiment '{self.config.experiment_name}': {e}"
