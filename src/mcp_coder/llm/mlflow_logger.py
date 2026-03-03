@@ -92,8 +92,19 @@ class MLflowLogger:
                 uri = self.config.tracking_uri
                 # Check if URI already has a scheme (file://, http://, sqlite://, etc.)
                 if "://" in uri:
-                    # Use URI as-is (already properly formatted)
-                    tracking_uri = uri
+                    # For SQLite URIs, expand ~ in the path portion
+                    if uri.startswith("sqlite:///"):
+                        path_part = uri[len("sqlite:///") :]
+                        if "~" in path_part:
+                            expanded_path = os.path.expanduser(path_part)
+                            # Convert Windows backslashes to forward slashes
+                            expanded_path = expanded_path.replace("\\", "/")
+                            tracking_uri = f"sqlite:///{expanded_path}"
+                        else:
+                            tracking_uri = uri
+                    else:
+                        # Other URIs (http://, file://) use as-is
+                        tracking_uri = uri
                 else:
                     # Plain path - expand ~ and convert to file URI
                     expanded_path = os.path.expanduser(uri)
