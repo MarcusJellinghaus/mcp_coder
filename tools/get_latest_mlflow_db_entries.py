@@ -19,8 +19,10 @@ Examples:
 """
 
 import argparse
+import json
 import os
 import sqlite3
+import urllib.parse
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -151,6 +153,71 @@ def get_run_metrics(conn: sqlite3.Connection, run_id: str) -> Dict[str, float]:
     return {row[0]: float(row[1]) for row in cursor.fetchall()}
 
 
+def get_conversation_data(artifact_uri: str) -> Optional[Dict[str, Any]]:
+    """Get conversation data from artifacts.
+    
+    Args:
+        artifact_uri: The artifact URI from the MLflow run
+        
+    Returns:
+        Conversation data dict or None if not found
+    """
+    try:
+        # Parse artifact URI to get local path
+        artifact_path_str = urllib.parse.urlparse(artifact_uri).path
+        # On Windows, urlparse may include leading slash like /C:/...
+        if artifact_path_str.startswith("/") and ":" in artifact_path_str:
+            artifact_path_str = artifact_path_str[1:]  # Remove leading slash
+        
+        conversation_file = Path(artifact_path_str) / "conversation_data" / "conversation.json"
+        
+        if not conversation_file.exists():
+            return None
+        
+        with open(conversation_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    
+    except Exception:
+        return None
+
+
+def analyze_conversation(conversation_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Analyze conversation data and extract key information.
+    
+    Args:
+        conversation_data: The conversation data from conversation.json
+        
+    Returns:
+        Analysis dict with first/last messages, message counts, etc.
+    """
+    analysis = {
+        "prompt": conversation_data.get("prompt", "N/A"),
+        "response_text": "N/A",
+        "message_counts": {},
+        "total_messages": 0,
+    }
+    
+    # Get response text
+    response_data = conversation_data.get("response_data", {})
+    analysis["response_text"] = response_data.get("text", "N/A")
+    
+    # Try to get detailed message breakdown from raw_response
+    raw_response = response_data.get("raw_response", {})
+    messages = raw_response.get("messages", [])
+    
+    if messages:
+        # Count messages by role
+        counts: Dict[str, int] = {}
+        for msg in messages:
+            role = msg.get("role", "unknown")
+            counts[role] = counts.get(role, 0) + 1
+        
+        analysis["message_counts"] = counts
+        analysis["total_messages"] = len(messages)
+    
+    return analysis
+
+
 def print_experiments(experiments: List[Dict[str, Any]]) -> None:
     """Print experiments in a formatted table."""
     print("\n" + "=" * 80)
@@ -164,8 +231,13 @@ def print_experiments(experiments: List[Dict[str, Any]]) -> None:
         print(f"Status: {exp['lifecycle_stage']}")
 
 
-def print_runs(runs: List[Dict[str, Any]]) -> None:
-    """Print runs in a formatted table."""
+def print_runs(runs: List[Dict[str, Any]], show_conversation: bool = True) -> None:
+    """Print runs in a formatted table.
+    
+    Args:
+        runs: List of run data dictionaries
+        show_conversation: Whether to show conversation details
+    """
     print("\n" + "=" * 80)
     print(f"LATEST RUNS ({len(runs)} total)")
     print("=" * 80)
@@ -179,13 +251,41 @@ def print_runs(runs: List[Dict[str, Any]]) -> None:
         print(f"    End: {run['end_time']}")
         print(f"    Artifacts: {run['artifact_uri']}")
         
+        # Show conversation details
+        if show_conversation:
+            conversation_data = get_conversation_data(run['artifact_uri'])
+            if conversation_data:
+                analysis = analyze_conversation(conversation_data)
+                
+                print(f"\n    Conversation:")
+                
+                # Show prompt (first message)
+                prompt = analysis['prompt']
+                if len(prompt) > 100:
+                    prompt = prompt[:100] + "..."
+                print(f"      Prompt: {prompt}")
+                
+                # Show response preview (last message)
+                response = analysis['response_text']
+                if len(response) > 150:
+                    response = response[:150] + "..."
+                print(f"      Response: {response}")
+                
+                # Show message counts
+                if analysis['total_messages'] > 0:
+                    print(f"      Messages: {analysis['total_messages']} total")
+                    for role, count in sorted(analysis['message_counts'].items()):
+                        print(f"        - {role}: {count}")
+            else:
+                print(f"\n    Conversation: [No artifact data available]")
+        
         if run['params']:
-            print(f"    Parameters ({len(run['params'])}):")
+            print(f"\n    Parameters ({len(run['params'])}):")
             for key, value in sorted(run['params'].items()):
                 print(f"      {key}: {value}")
         
         if run['metrics']:
-            print(f"    Metrics ({len(run['metrics'])}):")
+            print(f"\n    Metrics ({len(run['metrics'])}):")
             for key, value in sorted(run['metrics'].items()):
                 print(f"      {key}: {value:.4f}")
 
@@ -218,6 +318,11 @@ def main() -> None:
         action="store_true",
         help="Only show experiments, not runs"
     )
+    parser.add_argument(
+        "--no-conversation",
+        action="store_true",
+        help="Don't show conversation details (faster)"
+    )
     
     args = parser.parse_args()
     
@@ -247,7 +352,7 @@ def main() -> None:
         if not args.experiments_only:
             # Get latest runs
             runs = get_latest_runs(conn, args.limit, args.experiment)
-            print_runs(runs)
+            print_runs(runs, show_conversation=not args.no_conversation)
     
     finally:
         conn.close()
