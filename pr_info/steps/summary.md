@@ -12,6 +12,8 @@ The `check_branch_status` command shows "(logs not available)" instead of displa
 ## Solution Overview
 Apply KISS principle with minimal changes to fix log retrieval and add GitHub URLs for navigation.
 
+**See [decisions.md](./decisions.md)** for implementation decisions from plan review.
+
 ## Architectural Changes
 
 ### Design Changes
@@ -37,10 +39,11 @@ Apply KISS principle with minimal changes to fix log retrieval and add GitHub UR
 
 ### Tests
 - `tests/checks/test_branch_status.py`
-  - Update: Existing test mocks to use real GitHub format
+  - Update: Existing test mocks to use real GitHub format (3 tests)
   - Add: Test for GitHub URL display
   - Add: Test for improved error message
-  - Changes: ~15 lines modified in existing tests
+  - Add: Test for old format fallback (backward compatibility)
+  - Changes: ~15 lines in existing tests + 3 new test functions
 
 ## Files Created
 None - all changes to existing files
@@ -49,11 +52,13 @@ None - all changes to existing files
 
 ### 1. Log File Pattern Matching
 ```
-FOR each log filename in logs:
-    IF filename ends with "_{job_name}.txt":
-        RETURN log content
-        
-IF not found:
+CREATE list of files ending with "_{job_name}.txt"
+
+IF matching files found:
+    USE first match
+    IF multiple matches:
+        LOG warning with all matching files
+ELSE:
     TRY old format as fallback
 ```
 
@@ -83,16 +88,20 @@ IF no log content found:
 ## Success Criteria
 - ✅ CI failure logs display correctly
 - ✅ Logs matched using `*_{job_name}.txt` pattern
-- ✅ Fallback pattern attempted if primary fails
+- ✅ Warning logged if multiple files match pattern
+- ✅ Fallback to old format works (backward compatible)
+- ✅ Warning messages updated to reflect pattern matching
 - ✅ GitHub Actions run URL shown at top
 - ✅ Individual job URLs shown below job names
 - ✅ Clean error message with GitHub URL when logs unavailable
-- ✅ All existing tests pass
-- ✅ New tests cover pattern matching and URL generation
+- ✅ All existing tests pass (3 updated)
+- ✅ New tests cover: URL display, error messages, fallback (3 new)
 
 ## Risk Assessment
 **Low Risk**
 - Changes isolated to error display logic
-- Backward-compatible fallback preserved
+- Backward-compatible fallback preserved and tested
+- Multi-match warning provides visibility
+- Updated warning messages improve debugging
 - No impact on CI execution or git operations
-- Only ~35 total lines changed across 2 files
+- ~40 total lines changed across 2 files (source + tests)

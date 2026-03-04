@@ -12,9 +12,10 @@ See `pr_info/steps/summary.md` for full context. This step implements the core f
 - **Specific location**: Inside the loop where logs are retrieved (around line 472-477)
 
 ## WHAT
-Replace exact filename matching with pattern-based search:
+Replace exact filename matching with pattern-based search and update related warnings:
 
-### Current Code (line ~472-477)
+### Change 1: Pattern-Based Log Matching
+**Current Code (line ~472-477)**
 ```python
 # Get log content for this job and strip timestamps
 log_filename = f"{job_name}/{step_number}_{step_name}.txt"
@@ -23,18 +24,26 @@ if log_content:
     log_content = _strip_timestamps(log_content)
 ```
 
-### New Code
+**New Code**
 ```python
 # Get log content for this job using pattern matching
 # GitHub format: {execution_number}_{job_name}.txt
+# The execution number doesn't match step.number from API, so we pattern match
 log_content = ""
-for filename, content in logs.items():
-    if filename.endswith(f"_{job_name}.txt"):
-        log_content = content
-        break
+matching_files = [f for f in logs.keys() if f.endswith(f"_{job_name}.txt")]
 
-# Fallback to old format if not found
-if not log_content:
+if matching_files:
+    # Take first match
+    log_content = logs[matching_files[0]]
+    
+    # Warn if multiple matches found (shouldn't happen normally)
+    if len(matching_files) > 1:
+        logger.warning(
+            f"Multiple log files found for job '{job_name}': {matching_files}. "
+            f"Using: {matching_files[0]}"
+        )
+else:
+    # Fallback to old format if pattern match fails
     log_filename = f"{job_name}/{step_number}_{step_name}.txt"
     log_content = logs.get(log_filename, "")
 
@@ -43,22 +52,59 @@ if log_content:
     log_content = _strip_timestamps(log_content)
 ```
 
+### Change 2: Update Warning in get_failed_jobs_summary()
+**Location:** `get_failed_jobs_summary()` function (line ~305-310)
+
+**Current Code**
+```python
+if not log_content and step_name:
+    available_files = list(logs.keys())
+    logger.warning(
+        f"No log file found for failed step. Expected: '{log_filename}', "
+        f"Available: {available_files}"
+    )
+```
+
+**New Code**
+```python
+if not log_content and step_name:
+    available_files = list(logs.keys())
+    logger.warning(
+        f"No log file found for job '{job_name}'. "
+        f"Tried pattern: '*_{job_name}.txt', "
+        f"Available: {available_files}"
+    )
+```
+
 ## HOW
-1. Locate the log retrieval section in `_build_ci_error_details()`
+
+### For _build_ci_error_details() (Change 1)
+1. Locate the log retrieval section (line ~472-477)
 2. Find the loop: `for job in failed_jobs:`
 3. Find where `log_filename` is constructed
-4. Replace with pattern matching loop
-5. Add fallback to old format
-6. Keep timestamp stripping logic
+4. Replace with pattern matching using list comprehension
+5. Add multi-match warning (Decision 1)
+6. Add fallback to old format
+7. Keep timestamp stripping logic
+
+### For get_failed_jobs_summary() (Change 2)
+1. Locate the warning message (line ~305-310)
+2. Update warning text to reflect pattern matching
+3. Change "Expected: '{log_filename}'" to "Tried pattern: '*_{job_name}.txt'"
 
 ## ALGORITHM
+
+### Pattern Matching Logic
 ```
-FOR each filename in logs dictionary:
-    IF filename ends with "_{job_name}.txt":
-        SET log_content = content
-        BREAK loop
+CREATE list of matching files where filename ends with "_{job_name}.txt"
+
+IF matching_files is not empty:
+    SET log_content = logs[matching_files[0]]
+    
+    IF len(matching_files) > 1:
+        LOG warning with all matching filenames
         
-IF log_content is empty:
+ELSE (no pattern match):
     TRY old format: "{job_name}/{step_number}_{step_name}.txt"
     
 IF log_content found:
@@ -97,11 +143,10 @@ for filename, content in logs.items():
 - Preserves all existing error handling
 
 ## Code Comments
-Add explanatory comment:
-```python
-# Try pattern matching: GitHub format is {execution_number}_{job_name}.txt
-# The execution number doesn't match step.number from API, so we pattern match
-```
+Comments are included in the new code above:
+- Explains GitHub's actual format
+- Notes the mismatch between execution number and step number
+- Documents the multi-match warning behavior
 
 ## Verification
 ```bash
@@ -115,29 +160,38 @@ Expected: These 3 tests now pass with log content displayed
 
 ## LLM Prompt
 ```
-Review pr_info/steps/summary.md for context on issue #479.
+Review pr_info/steps/summary.md and decisions.md for context on issue #479.
 
-Implement Step 4: Pattern-based log matching.
+Implement Step 4: Pattern-based log matching with warnings.
 
+Make TWO changes:
+
+**Change 1: _build_ci_error_details() function (line ~472-477)**
 File: src/mcp_coder/checks/branch_status.py
-Function: _build_ci_error_details() (around lines 472-477)
 
-Replace the exact filename matching:
-  log_filename = f"{job_name}/{step_number}_{step_name}.txt"
-  log_content = logs.get(log_filename, "")
+Replace exact filename matching with pattern-based search:
+  1. Use list comprehension to find matching files: [f for f in logs.keys() if f.endswith(f"_{job_name}.txt")]
+  2. Take first match if found
+  3. Add warning if multiple matches found (Decision 1)
+  4. Fallback to old format if no match
+  5. Strip timestamps if content found
 
-With pattern-based search (see step_4.md for complete code):
-  1. Loop through logs.items()
-  2. Match files ending with "_{job_name}.txt"
-  3. Fallback to old format if not found
-  4. Strip timestamps if content found
+See step_4.md for complete code.
 
-Add comment explaining GitHub's actual format vs expected format.
+**Change 2: get_failed_jobs_summary() function (line ~305-310)**
+File: src/mcp_coder/checks/branch_status.py
+
+Update warning message:
+  - Change from: "Expected: '{log_filename}'"
+  - To: "Tried pattern: '*_{job_name}.txt'"
+
+This reflects the new pattern-matching approach (Decision 4).
 
 Run tests to verify:
 - test_build_ci_error_details_single_failure
 - test_build_ci_error_details_multiple_failures  
 - test_collect_ci_status_with_truncation
+- test_build_ci_error_details_fallback_to_old_format (NEW - should now PASS)
 
-All should PASS after this change.
+All should PASS after these changes.
 ```

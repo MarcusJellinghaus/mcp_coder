@@ -27,6 +27,7 @@ Expected: All tests pass (green)
 # New tests added in this implementation
 pytest tests/checks/test_branch_status.py::test_build_ci_error_details_includes_github_urls -v
 pytest tests/checks/test_branch_status.py::test_build_ci_error_details_logs_not_available_with_url -v
+pytest tests/checks/test_branch_status.py::test_build_ci_error_details_fallback_to_old_format -v
 
 # Updated tests that now use real format
 pytest tests/checks/test_branch_status.py::test_build_ci_error_details_single_failure -v
@@ -34,7 +35,7 @@ pytest tests/checks/test_branch_status.py::test_build_ci_error_details_multiple_
 pytest tests/checks/test_branch_status.py::test_collect_ci_status_with_truncation -v
 ```
 
-Expected: All 5 tests pass
+Expected: All 6 tests pass
 
 ### 3. Run Related Integration Tests (if any)
 ```bash
@@ -54,9 +55,11 @@ Expected: All pass (no changes needed to CLI layer)
 - [ ] No warnings about deprecated patterns
 
 ### ✅ Functionality Verification
-- [ ] Logs display with real GitHub format
-- [ ] Pattern matching finds `{number}_{job_name}.txt` files
-- [ ] Fallback works for old format (backward compatible)
+- [ ] Logs display with real GitHub format (`{number}_{job_name}.txt`)
+- [ ] Pattern matching finds files ending with `_{job_name}.txt`
+- [ ] Multi-match warning logs when multiple files match (Decision 1)
+- [ ] Fallback works for old format (backward compatible - Decision 2)
+- [ ] Warning messages updated to reflect pattern matching (Decision 4)
 - [ ] Run URL appears at top
 - [ ] Job URLs appear for each job
 - [ ] Enhanced error message shows when logs unavailable
@@ -127,7 +130,7 @@ pytest tests/checks/test_branch_status.py::test_name -vv --tb=long
 
 ## LLM Prompt
 ```
-Review pr_info/steps/summary.md for context on issue #479.
+Review pr_info/steps/summary.md and decisions.md for context on issue #479.
 
 Implement Step 7: Final verification.
 
@@ -136,14 +139,20 @@ Run complete test suite:
 1. All branch_status tests:
    pytest tests/checks/test_branch_status.py -v
 
-2. Verify these specific tests PASS:
-   - test_build_ci_error_details_includes_github_urls
-   - test_build_ci_error_details_logs_not_available_with_url
-   - test_build_ci_error_details_single_failure
-   - test_build_ci_error_details_multiple_failures
-   - test_collect_ci_status_with_truncation
+2. Verify these specific tests PASS (6 total):
+   - test_build_ci_error_details_includes_github_urls (NEW - URLs display)
+   - test_build_ci_error_details_logs_not_available_with_url (NEW - error message)
+   - test_build_ci_error_details_fallback_to_old_format (NEW - backward compatibility)
+   - test_build_ci_error_details_single_failure (UPDATED - real format)
+   - test_build_ci_error_details_multiple_failures (UPDATED - real format)
+   - test_collect_ci_status_with_truncation (UPDATED - real format)
 
 3. Check for any failures or warnings
+
+4. Verify decisions implemented:
+   - Decision 1: Multi-match warning in code
+   - Decision 2: Fallback test passes
+   - Decision 4: Warning messages updated
 
 If all tests pass:
 - Implementation is complete
