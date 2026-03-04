@@ -254,7 +254,7 @@ class TestMLflowWithRealInstallation:
         except ImportError:
             pytest.skip("MLflow not installed - skipping real installation test")
 
-    def test_real_mlflow_initialization(self) -> None:
+    def test_real_mlflow_initialization(self, tmp_path: Path) -> None:
         """Test MLflow logger initialization with real MLflow."""
         try:
             import mlflow
@@ -262,10 +262,15 @@ class TestMLflowWithRealInstallation:
             from mcp_coder.config.mlflow_config import MLflowConfig
             from mcp_coder.llm.mlflow_logger import MLflowLogger
 
+            # Use tmp_path to avoid creating files in project root
+            tracking_uri = f"file:///{tmp_path / 'test_real_mlruns'}"
+            artifact_location = str(tmp_path / "artifacts")
+
             config = MLflowConfig(
                 enabled=True,
-                tracking_uri="file:///tmp/test_real_mlruns",
-                experiment_name="real-test",
+                tracking_uri=tracking_uri,
+                experiment_name="test-real",
+                artifact_location=artifact_location,
             )
 
             # This should work without mocking
@@ -295,10 +300,14 @@ class TestMLflowWithRealInstallation:
             # Test with sqlite:/// URI format (absolute path)
             sqlite_uri = f"sqlite:///{db_path}"
 
+            # Use tmp_path for artifacts to prevent creating mlruns/ in project root
+            artifact_location = str(tmp_path / "artifacts")
+
             config = MLflowConfig(
                 enabled=True,
                 tracking_uri=sqlite_uri,
                 experiment_name="test-sqlite-expansion",
+                artifact_location=artifact_location,
             )
 
             # Initialize logger with SQLite backend

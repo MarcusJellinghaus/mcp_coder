@@ -134,6 +134,7 @@ class TestLoadMLflowConfig:
                 ("mlflow", "enabled", None),
                 ("mlflow", "tracking_uri", "MLFLOW_TRACKING_URI"),
                 ("mlflow", "experiment_name", "MLFLOW_EXPERIMENT_NAME"),
+                ("mlflow", "artifact_location", "MLFLOW_DEFAULT_ARTIFACT_ROOT"),
             ]
         )
 
