@@ -26,10 +26,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Add --committed-only Flag to Parser
 _See [step_1.md](./steps/step_1.md) for full details._
 
-- [ ] Add `--committed-only` argument to `compact_diff_parser` in `src/mcp_coder/cli/parsers.py` (`add_git_tool_parsers()`)
-- [ ] Add test class `TestCompactDiffCommittedOnlyFlag` with 3 test cases to `tests/cli/commands/test_git_tool.py`
-- [ ] Run pylint, pytest, mypy — fix all issues found
-- [ ] Prepare git commit message for Step 1
+- [x] Add `--committed-only` argument to `compact_diff_parser` in `src/mcp_coder/cli/parsers.py` (`add_git_tool_parsers()`)
+- [x] Add test class `TestCompactDiffCommittedOnlyFlag` with 3 test cases to `tests/cli/commands/test_git_tool.py`
+- [x] Run pylint, pytest, mypy — fix all issues found
+- [x] Prepare git commit message for Step 1
 
 ---
 

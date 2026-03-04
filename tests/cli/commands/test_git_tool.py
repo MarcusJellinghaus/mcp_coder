@@ -243,6 +243,54 @@ class TestCompactDiffArguments:
 
 
 # ============================================================================
+# Test Classes for Committed Only Flag
+# ============================================================================
+
+
+class TestCompactDiffCommittedOnlyFlag:
+    """Test --committed-only flag parsing."""
+
+    def test_committed_only_flag_absent_defaults_to_false(self) -> None:
+        """Test that args.committed_only defaults to False when flag is absent."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+        args = parser.parse_args(["git-tool", "compact-diff"])
+
+        assert args.committed_only is False
+
+    def test_committed_only_flag_present_sets_to_true(self) -> None:
+        """Test that args.committed_only is True when --committed-only flag is used."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+        args = parser.parse_args(["git-tool", "compact-diff", "--committed-only"])
+
+        assert args.committed_only is True
+
+    def test_committed_only_flag_with_other_arguments(self) -> None:
+        """Test that --committed-only works alongside --exclude and --base-branch."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+        args = parser.parse_args(
+            [
+                "git-tool",
+                "compact-diff",
+                "--committed-only",
+                "--base-branch",
+                "main",
+                "--exclude",
+                "*.log",
+            ]
+        )
+
+        assert args.committed_only is True
+        assert args.base_branch == "main"
+        assert args.exclude == ["*.log"]
+
+
+# ============================================================================
 # Test Classes for CLI Integration
 # ============================================================================
 
