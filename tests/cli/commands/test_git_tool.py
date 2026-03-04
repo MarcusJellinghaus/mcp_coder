@@ -701,7 +701,7 @@ class TestCompactDiffUncommittedChanges:
     def test_apply_exclude_patterns_to_uncommitted_diff_helper(self) -> None:
         """Test the helper function that filters uncommitted diff by exclude patterns."""
         from mcp_coder.cli.commands.git_tool import (
-            _apply_exclude_patterns_to_uncommitted_diff,  # type: ignore[attr-defined]
+            _apply_exclude_patterns_to_uncommitted_diff,
         )
 
         uncommitted_diff = (

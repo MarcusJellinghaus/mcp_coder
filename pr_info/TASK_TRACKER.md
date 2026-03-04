@@ -66,11 +66,11 @@ _See [step_4.md](./steps/step_4.md) for full details._
 ### Step 5: Implement Exclude Pattern Filtering for Uncommitted Changes
 _See [step_5.md](./steps/step_5.md) for full details._
 
-- [ ] Add `import fnmatch` to top-of-file imports in `src/mcp_coder/cli/commands/git_tool.py`
-- [ ] Add helper function `_apply_exclude_patterns_to_uncommitted_diff()` before `execute_compact_diff()`
-- [ ] Integrate helper into `execute_compact_diff()` to apply exclude patterns to uncommitted diff
-- [ ] Run pylint, pytest, mypy — fix all issues found; all Step 4 tests should now pass
-- [ ] Prepare git commit message for Step 5
+- [x] Add `import fnmatch` to top-of-file imports in `src/mcp_coder/cli/commands/git_tool.py`
+- [x] Add helper function `_apply_exclude_patterns_to_uncommitted_diff()` before `execute_compact_diff()`
+- [x] Integrate helper into `execute_compact_diff()` to apply exclude patterns to uncommitted diff
+- [x] Run pylint, pytest, mypy — fix all issues found; all Step 4 tests should now pass
+- [x] Prepare git commit message for Step 5
 
 ---
 
