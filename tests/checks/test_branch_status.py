@@ -621,11 +621,8 @@ def test_collect_ci_status_with_truncation() -> None:
                 }
             ],
         }
-        # Log file naming matches job name pattern: {job_name}/{step_number}_{step_name}.txt
-        # Step number defaults to 0 when not specified in step data
-        mock_instance.get_run_logs.return_value = {
-            "test-job/0_Run tests.txt": long_logs
-        }
+        # Log file naming: {number}_{job_name}.txt (GitHub Actions format)
+        mock_instance.get_run_logs.return_value = {"2_test-job.txt": long_logs}
 
         status, details = _collect_ci_status(
             project_dir, "main", truncate=True, max_lines=100
@@ -922,11 +919,8 @@ def test_build_ci_error_details_single_failure() -> None:
 
     # Mock get_run_logs directly on the passed-in ci_manager instance
     mock_instance = MagicMock()
-    # Log filename format: {job_name}/{step_number}_{step_name}.txt
-    # Step number defaults to 0 when not specified in step data
-    mock_instance.get_run_logs.return_value = {
-        "test-job/0_Run tests.txt": "Error details here"
-    }
+    # Log filename format: {number}_{job_name}.txt (GitHub Actions format)
+    mock_instance.get_run_logs.return_value = {"2_test-job.txt": "Error details here"}
 
     result = _build_ci_error_details(mock_instance, status_result, False, 300)
 
@@ -963,10 +957,11 @@ def test_build_ci_error_details_multiple_failures() -> None:
 
     # Mock get_run_logs directly on the passed-in ci_manager instance
     mock_instance = MagicMock()
-    # Log filename format: {job_name}/{step_number}_{step_name}.txt
-    # Step number defaults to 0 when not specified in step data
+    # Log filename format: {number}_{job_name}.txt (GitHub Actions format)
     mock_instance.get_run_logs.return_value = {
-        "test-job/0_Run tests.txt": "First job error"
+        "2_test-job.txt": "First job error",
+        "4_lint-job.txt": "Lint error",
+        "9_build-job.txt": "Build error",
     }
 
     result = _build_ci_error_details(mock_instance, status_result, False, 300)

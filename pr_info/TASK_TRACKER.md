@@ -24,11 +24,11 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Update Tests for Real GitHub Log Format
 See [step_1.md](./steps/step_1.md) for details.
 
-- [ ] Update test mocks in `tests/checks/test_branch_status.py` to use GitHub format `{number}_{job_name}.txt`
-- [ ] Verify tests FAIL after updating mocks (expected behavior)
-- [ ] Run pylint, pytest, mypy on modified test file
-- [ ] Fix all issues found by quality checks
-- [ ] Prepare git commit message for Step 1
+- [x] Update test mocks in `tests/checks/test_branch_status.py` to use GitHub format `{number}_{job_name}.txt`
+- [x] Verify tests FAIL after updating mocks (expected behavior)
+- [x] Run pylint, pytest, mypy on modified test file
+- [x] Fix all issues found by quality checks
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Add Test for GitHub URL Display
 See [step_2.md](./steps/step_2.md) for details.
