@@ -253,6 +253,7 @@ pytest tests/ -v
 ## Definition of Done
 - [ ] Import `get_git_diff_for_commit` added to `git_tool.py`
 - [ ] `execute_compact_diff()` modified with uncommitted logic
+- [ ] **Existing tests updated**: all `argparse.Namespace` calls in `test_git_tool.py` that test `execute_compact_diff` updated to include `committed_only=False` (prevents `AttributeError` on the new attribute access)
 - [ ] All 5 tests from Step 2 now PASS
 - [ ] No existing tests broken
 - [ ] Manual testing confirms correct output format

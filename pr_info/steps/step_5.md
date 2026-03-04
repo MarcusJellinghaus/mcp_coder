@@ -33,6 +33,8 @@ def _apply_exclude_patterns_to_uncommitted_diff(
 
 ### WHAT: Helper Function Implementation
 
+**Import note**: Add `import fnmatch` at the **top of `git_tool.py`** (not inside the function).
+
 ```python
 def _apply_exclude_patterns_to_uncommitted_diff(
     uncommitted_diff: str, exclude_patterns: list[str]
@@ -53,9 +55,6 @@ def _apply_exclude_patterns_to_uncommitted_diff(
     """
     if not exclude_patterns or not uncommitted_diff:
         return uncommitted_diff
-    
-    import fnmatch
-    from pathlib import Path
     
     lines = uncommitted_diff.split("\n")
     filtered_lines = []
@@ -84,7 +83,9 @@ def _apply_exclude_patterns_to_uncommitted_diff(
             if len(parts) >= 3:
                 filepath = parts[2]  # Second path (destination)
                 
-                # Check if file matches any exclude pattern
+                # Check if file matches any exclude pattern.
+                # Note: fnmatch's * matches / (unlike shell globbing), so
+                # patterns like "pr_info/**" correctly match "pr_info/notes.md".
                 skip_current_block = any(
                     fnmatch.fnmatch(filepath, pattern) for pattern in exclude_patterns
                 )
