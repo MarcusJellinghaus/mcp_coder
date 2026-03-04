@@ -12,7 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from ..config.mlflow_config import MLflowConfig, load_mlflow_config
+from ..config import MLflowConfig
+from ..utils import load_mlflow_config
 
 try:
     from .mlflow_metrics import ConversationMetrics

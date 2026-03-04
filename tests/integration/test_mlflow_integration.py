@@ -10,10 +10,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.config.mlflow_config import load_mlflow_config
 from mcp_coder.llm.mlflow_logger import get_mlflow_logger
 from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.llm.types import LLMResponseDict
+from mcp_coder.utils import load_mlflow_config
 
 
 class TestMLflowIntegration:
@@ -27,7 +27,7 @@ class TestMLflowIntegration:
         mcp_coder.llm.mlflow_logger._global_logger = None
         mcp_coder.llm.mlflow_logger._mlflow_available = None
 
-    @patch("mcp_coder.config.mlflow_config.get_config_values")
+    @patch("mcp_coder.utils.mlflow_config_loader.get_config_values")
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=False)
     def test_disabled_by_default(
         self, _mock_available: Any, mock_get_config: Any
@@ -51,7 +51,7 @@ class TestMLflowIntegration:
         result = logger.start_run()
         assert result is None
 
-    @patch("mcp_coder.config.mlflow_config.get_config_values")
+    @patch("mcp_coder.utils.mlflow_config_loader.get_config_values")
     def test_enabled_but_mlflow_unavailable(self, mock_get_config: Any) -> None:
         """Test behavior when MLflow is enabled but not installed."""
         mock_get_config.return_value = {
@@ -71,7 +71,7 @@ class TestMLflowIntegration:
             result = logger.start_run()
             assert result is None
 
-    @patch("mcp_coder.config.mlflow_config.get_config_values")
+    @patch("mcp_coder.utils.mlflow_config_loader.get_config_values")
     def test_full_conversation_logging_flow(self, mock_get_config: Any) -> None:
         """Test complete conversation logging workflow.
 
@@ -135,7 +135,7 @@ class TestMLflowIntegration:
             },
         ):
             with patch(
-                "mcp_coder.config.mlflow_config.get_config_values"
+                "mcp_coder.utils.mlflow_config_loader.get_config_values"
             ) as mock_get_config:
                 # Simulate environment variable precedence
                 mock_get_config.return_value = {
@@ -151,7 +151,7 @@ class TestMLflowIntegration:
                 assert config.tracking_uri == "http://localhost:5000"
                 assert config.experiment_name == "env-override-test"
 
-    @patch("mcp_coder.config.mlflow_config.get_config_values")
+    @patch("mcp_coder.utils.mlflow_config_loader.get_config_values")
     def test_error_resilience(self, mock_get_config: Any) -> None:
         """Test that MLflow errors don't break main functionality."""
         mock_get_config.return_value = {

@@ -27,6 +27,7 @@ from .subprocess_runner import (
     execute_subprocess,
 )
 from .user_config import create_default_config, get_config_file_path, get_config_values
+from .mlflow_config_loader import load_mlflow_config
 from .folder_deletion import DeletionFailureReason, DeletionResult, safe_delete_folder
 
 # Layer 2: Operations (depend on Layer 1)
@@ -100,6 +101,8 @@ __all__ = [
     "create_default_config",
     "get_config_file_path",
     "get_config_values",
+    # MLflow configuration loader
+    "load_mlflow_config",
     # Subprocess operations
     "CommandOptions",
     "CommandResult",
