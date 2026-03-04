@@ -291,6 +291,236 @@ class TestCompactDiffCommittedOnlyFlag:
 
 
 # ============================================================================
+# Test Classes for Uncommitted Changes Display
+# ============================================================================
+
+
+class TestCompactDiffUncommittedChanges:
+    """Test uncommitted changes display in compact-diff output."""
+
+    def test_shows_uncommitted_changes_by_default(
+        self,
+        mock_get_compact_diff: MagicMock,
+        mock_detect_base_branch: MagicMock,
+        mock_resolve_project_dir: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test that uncommitted changes are shown by default (without --committed-only)."""
+        project_dir = Path("/test/project")
+        mock_resolve_project_dir.return_value = project_dir
+        mock_detect_base_branch.return_value = "main"
+        mock_get_compact_diff.return_value = "diff --git foo.py\n+committed change"
+
+        with patch(
+            "mcp_coder.cli.commands.git_tool.get_git_diff_for_commit"
+        ) as mock_uncommitted:
+            mock_uncommitted.return_value = (
+                "=== STAGED CHANGES ===\n" "diff --git bar.py\n" "+staged change"
+            )
+
+            args = argparse.Namespace(
+                project_dir=None,
+                base_branch=None,
+                exclude=None,
+                committed_only=False,
+            )
+            result = execute_compact_diff(args)
+
+            assert result == 0
+            captured = capsys.readouterr()
+
+            assert "diff --git foo.py" in captured.out
+            assert "=== UNCOMMITTED CHANGES ===" in captured.out
+            assert "=== STAGED CHANGES ===" in captured.out
+            assert "staged change" in captured.out
+
+    def test_committed_only_flag_suppresses_uncommitted(
+        self,
+        mock_get_compact_diff: MagicMock,
+        mock_detect_base_branch: MagicMock,
+        mock_resolve_project_dir: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test that --committed-only flag suppresses uncommitted changes."""
+        project_dir = Path("/test/project")
+        mock_resolve_project_dir.return_value = project_dir
+        mock_detect_base_branch.return_value = "main"
+        mock_get_compact_diff.return_value = "diff --git foo.py\n+committed change"
+
+        with patch(
+            "mcp_coder.cli.commands.git_tool.get_git_diff_for_commit"
+        ) as mock_uncommitted:
+            mock_uncommitted.return_value = "=== STAGED CHANGES ===\ndiff --git bar.py"
+
+            args = argparse.Namespace(
+                project_dir=None,
+                base_branch=None,
+                exclude=None,
+                committed_only=True,
+            )
+            result = execute_compact_diff(args)
+
+            assert result == 0
+            captured = capsys.readouterr()
+
+            assert "diff --git foo.py" in captured.out
+            assert "UNCOMMITTED CHANGES" not in captured.out
+            mock_uncommitted.assert_not_called()
+
+    def test_clean_working_directory_skips_uncommitted_section(
+        self,
+        mock_get_compact_diff: MagicMock,
+        mock_detect_base_branch: MagicMock,
+        mock_resolve_project_dir: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test that uncommitted section is skipped when working directory is clean."""
+        project_dir = Path("/test/project")
+        mock_resolve_project_dir.return_value = project_dir
+        mock_detect_base_branch.return_value = "main"
+        mock_get_compact_diff.return_value = "diff --git foo.py\n+committed change"
+
+        with patch(
+            "mcp_coder.cli.commands.git_tool.get_git_diff_for_commit"
+        ) as mock_uncommitted:
+            mock_uncommitted.return_value = ""
+
+            args = argparse.Namespace(
+                project_dir=None,
+                base_branch=None,
+                exclude=None,
+                committed_only=False,
+            )
+            result = execute_compact_diff(args)
+
+            assert result == 0
+            captured = capsys.readouterr()
+
+            assert "diff --git foo.py" in captured.out
+            assert "UNCOMMITTED CHANGES" not in captured.out
+
+    def test_no_committed_changes_only_uncommitted(
+        self,
+        mock_get_compact_diff: MagicMock,
+        mock_detect_base_branch: MagicMock,
+        mock_resolve_project_dir: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test 'No committed changes' message when only uncommitted changes exist."""
+        project_dir = Path("/test/project")
+        mock_resolve_project_dir.return_value = project_dir
+        mock_detect_base_branch.return_value = "main"
+        mock_get_compact_diff.return_value = ""
+
+        with patch(
+            "mcp_coder.cli.commands.git_tool.get_git_diff_for_commit"
+        ) as mock_uncommitted:
+            mock_uncommitted.return_value = (
+                "=== STAGED CHANGES ===\n" "diff --git bar.py\n" "+staged change"
+            )
+
+            args = argparse.Namespace(
+                project_dir=None,
+                base_branch=None,
+                exclude=None,
+                committed_only=False,
+            )
+            result = execute_compact_diff(args)
+
+            assert result == 0
+            captured = capsys.readouterr()
+
+            assert "No committed changes" in captured.out
+            assert "=== UNCOMMITTED CHANGES ===" in captured.out
+            assert "staged change" in captured.out
+
+    def test_git_diff_error_none_skips_uncommitted_section(
+        self,
+        mock_get_compact_diff: MagicMock,
+        mock_detect_base_branch: MagicMock,
+        mock_resolve_project_dir: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test that None return from get_git_diff_for_commit (git error) skips uncommitted section."""
+        project_dir = Path("/test/project")
+        mock_resolve_project_dir.return_value = project_dir
+        mock_detect_base_branch.return_value = "main"
+        mock_get_compact_diff.return_value = "diff --git foo.py\n+committed change"
+
+        with patch(
+            "mcp_coder.cli.commands.git_tool.get_git_diff_for_commit"
+        ) as mock_uncommitted:
+            mock_uncommitted.return_value = None
+
+            args = argparse.Namespace(
+                project_dir=None,
+                base_branch=None,
+                exclude=None,
+                committed_only=False,
+            )
+            result = execute_compact_diff(args)
+
+            assert result == 0
+            captured = capsys.readouterr()
+
+            assert "diff --git foo.py" in captured.out
+            assert "UNCOMMITTED CHANGES" not in captured.out
+
+    def test_both_committed_and_uncommitted_present(
+        self,
+        mock_get_compact_diff: MagicMock,
+        mock_detect_base_branch: MagicMock,
+        mock_resolve_project_dir: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test output format when both committed and uncommitted changes exist."""
+        project_dir = Path("/test/project")
+        mock_resolve_project_dir.return_value = project_dir
+        mock_detect_base_branch.return_value = "main"
+        mock_get_compact_diff.return_value = "diff --git committed.py\n+committed"
+
+        with patch(
+            "mcp_coder.cli.commands.git_tool.get_git_diff_for_commit"
+        ) as mock_uncommitted:
+            mock_uncommitted.return_value = (
+                "=== STAGED CHANGES ===\n"
+                "diff --git staged.py\n"
+                "+staged\n"
+                "\n"
+                "=== UNSTAGED CHANGES ===\n"
+                "diff --git modified.py\n"
+                "+modified\n"
+                "\n"
+                "=== UNTRACKED FILES ===\n"
+                "diff --git new.py\n"
+                "+new file"
+            )
+
+            args = argparse.Namespace(
+                project_dir=None,
+                base_branch=None,
+                exclude=None,
+                committed_only=False,
+            )
+            result = execute_compact_diff(args)
+
+            assert result == 0
+            captured = capsys.readouterr()
+
+            output = captured.out
+            committed_idx = output.find("diff --git committed.py")
+            uncommitted_header_idx = output.find("=== UNCOMMITTED CHANGES ===")
+            staged_header_idx = output.find("=== STAGED CHANGES ===")
+
+            assert committed_idx < uncommitted_header_idx
+            assert uncommitted_header_idx < staged_header_idx
+
+            assert "=== STAGED CHANGES ===" in output
+            assert "=== UNSTAGED CHANGES ===" in output
+            assert "=== UNTRACKED FILES ===" in output
+
+
+# ============================================================================
 # Test Classes for CLI Integration
 # ============================================================================
 

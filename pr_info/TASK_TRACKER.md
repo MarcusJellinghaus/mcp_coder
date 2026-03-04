@@ -36,9 +36,9 @@ _See [step_1.md](./steps/step_1.md) for full details._
 ### Step 2: Write Tests for Uncommitted Changes Display (TDD)
 _See [step_2.md](./steps/step_2.md) for full details._
 
-- [ ] Add test class `TestCompactDiffUncommittedChanges` with 6 failing test cases to `tests/cli/commands/test_git_tool.py`
-- [ ] Run pylint and mypy on test file — fix all issues found (tests are expected to fail at this stage)
-- [ ] Prepare git commit message for Step 2
+- [x] Add test class `TestCompactDiffUncommittedChanges` with 6 failing test cases to `tests/cli/commands/test_git_tool.py`
+- [x] Run pylint and mypy on test file — fix all issues found (tests are expected to fail at this stage)
+- [x] Prepare git commit message for Step 2
 
 ---
 
