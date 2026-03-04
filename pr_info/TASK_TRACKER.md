@@ -39,13 +39,13 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Run all prerequisite tests and verify no regressions
 
 ### Step 3: Run Quality Checks (TDD - Refactor Phase)
-- [ ] Read summary.md and step_3.md for context - [step_3.md](./steps/step_3.md)
-- [ ] Run full test suite: pytest tests/workflows/create_pr/ -v
-- [ ] Run pylint on modified file: pylint src/mcp_coder/workflows/create_pr/core.py
-- [ ] Run mypy on modified file: mypy src/mcp_coder/workflows/create_pr/core.py
-- [ ] Fix any issues that arise
-- [ ] Document test results
-- [ ] Verify all acceptance criteria met
+- [x] Read summary.md and step_3.md for context - [step_3.md](./steps/step_3.md)
+- [x] Run full test suite: pytest tests/workflows/create_pr/ -v
+- [x] Run pylint on modified file: pylint src/mcp_coder/workflows/create_pr/core.py
+- [x] Run mypy on modified file: mypy src/mcp_coder/workflows/create_pr/core.py
+- [x] Fix any issues that arise
+- [x] Document test results
+- [x] Verify all acceptance criteria met
 
 ## Pull Request
 
