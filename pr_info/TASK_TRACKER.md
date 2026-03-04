@@ -77,11 +77,11 @@ _See [step_5.md](./steps/step_5.md) for full details._
 ### Step 6: Update Documentation
 _See [step_6.md](./steps/step_6.md) for full details._
 
-- [ ] Update `docs/cli-reference.md` section `### git-tool compact-diff`: add `--committed-only` to Options list
-- [ ] Update description to explain uncommitted changes are shown by default; add Output Structure and Notes subsections
-- [ ] Update Examples section with new use cases showing `--committed-only` and exclude pattern combinations
-- [ ] Run pylint, pytest, mypy — fix all issues found
-- [ ] Prepare git commit message for Step 6
+- [x] Update `docs/cli-reference.md` section `### git-tool compact-diff`: add `--committed-only` to Options list
+- [x] Update description to explain uncommitted changes are shown by default; add Output Structure and Notes subsections
+- [x] Update Examples section with new use cases showing `--committed-only` and exclude pattern combinations
+- [x] Run pylint, pytest, mypy — fix all issues found
+- [x] Prepare git commit message for Step 6
 
 ---
 
