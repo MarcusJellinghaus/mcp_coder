@@ -29,14 +29,14 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Verify test is discoverable by pytest
 
 ### Step 2: Implement Graceful Handling (TDD - Green Phase)
-- [ ] Read summary.md and step_2.md for context - [step_2.md](./steps/step_2.md)
-- [ ] Update import in core.py to include TaskTrackerFileNotFoundError
-- [ ] Add specific exception handler for TaskTrackerFileNotFoundError
-- [ ] Ensure handler logs INFO message and continues
-- [ ] Preserve general Exception handler
-- [ ] Run new test and verify it PASSES
-- [ ] Run existing test_prerequisites_task_tracker_exception and verify it still PASSES
-- [ ] Run all prerequisite tests and verify no regressions
+- [x] Read summary.md and step_2.md for context - [step_2.md](./steps/step_2.md)
+- [x] Update import in core.py to include TaskTrackerFileNotFoundError
+- [x] Add specific exception handler for TaskTrackerFileNotFoundError
+- [x] Ensure handler logs INFO message and continues
+- [x] Preserve general Exception handler
+- [x] Run new test and verify it PASSES
+- [x] Run existing test_prerequisites_task_tracker_exception and verify it still PASSES
+- [x] Run all prerequisite tests and verify no regressions
 
 ### Step 3: Run Quality Checks (TDD - Refactor Phase)
 - [ ] Read summary.md and step_3.md for context - [step_3.md](./steps/step_3.md)

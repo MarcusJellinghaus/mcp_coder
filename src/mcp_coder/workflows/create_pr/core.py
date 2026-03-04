@@ -26,7 +26,10 @@ from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.github_operations.issues import IssueBranchManager
 from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
-from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
+from mcp_coder.workflow_utils.task_tracker import (
+    TaskTrackerFileNotFoundError,
+    get_incomplete_tasks,
+)
 
 # Note: PROMPTS_FILE_PATH imported from constants
 
@@ -219,6 +222,9 @@ def check_prerequisites(project_dir: Path) -> bool:
             logger.error("Please complete all tasks before creating PR.")
             return False
         logger.info("✓ No incomplete tasks found")
+    except TaskTrackerFileNotFoundError:
+        logger.info("TASK_TRACKER.md not found - skipping task completeness check")
+        # Continue with other prerequisites - task tracker is optional
     except Exception as e:
         logger.error(f"Error checking incomplete tasks: {e}")
         return False
