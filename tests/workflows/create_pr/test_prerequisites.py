@@ -156,7 +156,7 @@ class TestCheckPrerequisites:
         mock_incomplete_tasks: MagicMock,
         mock_clean: MagicMock,
     ) -> None:
-        """Test prerequisites check succeeds when TASK_TRACKER.md is missing."""
+        """Test prerequisites check succeeds gracefully when TASK_TRACKER.md is missing (optional file)."""
         # Arrange: Setup mocks for successful prerequisites except missing task tracker
         mock_clean.return_value = True
         mock_incomplete_tasks.side_effect = TaskTrackerFileNotFoundError(
