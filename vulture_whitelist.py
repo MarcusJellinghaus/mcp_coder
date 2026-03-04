@@ -118,6 +118,9 @@ _._mock_git_repo
 # test_workspace.py - Fixture used for side effect (monkeypatching get_vscodeclaude_config)
 _.mock_vscodeclaude_config
 
+# conftest.py - Autouse fixture to isolate MLflow artifacts from project root
+_.isolate_mlflow_artifacts
+
 # =============================================================================
 # API COMPLETENESS - CommandResult Dataclass Fields
 # =============================================================================
