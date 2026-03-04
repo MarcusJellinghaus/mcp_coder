@@ -172,7 +172,43 @@ def test_no_committed_changes_only_uncommitted(
         assert "staged change" in captured.out
 ```
 
-#### Test 5: Both Committed and Uncommitted Present
+#### Test 5: Git Error — `get_git_diff_for_commit` Returns `None`
+```python
+def test_git_diff_error_none_skips_uncommitted_section(
+    self,
+    mock_get_compact_diff: MagicMock,
+    mock_detect_base_branch: MagicMock,
+    mock_resolve_project_dir: MagicMock,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test that None return from get_git_diff_for_commit (git error) skips uncommitted section."""
+    project_dir = Path("/test/project")
+    mock_resolve_project_dir.return_value = project_dir
+    mock_detect_base_branch.return_value = "main"
+    mock_get_compact_diff.return_value = "diff --git foo.py\n+committed change"
+    
+    # Mock get_git_diff_for_commit to return None (git error)
+    with patch("mcp_coder.cli.commands.git_tool.get_git_diff_for_commit") as mock_uncommitted:
+        mock_uncommitted.return_value = None
+        
+        args = argparse.Namespace(
+            project_dir=None,
+            base_branch=None,
+            exclude=None,
+            committed_only=False,
+        )
+        result = execute_compact_diff(args)
+        
+        # Should succeed (git error in uncommitted diff is non-fatal)
+        assert result == 0
+        captured = capsys.readouterr()
+        
+        # Should show committed changes but skip uncommitted section
+        assert "diff --git foo.py" in captured.out
+        assert "UNCOMMITTED CHANGES" not in captured.out
+```
+
+#### Test 6: Both Committed and Uncommitted Present
 ```python
 def test_both_committed_and_uncommitted_present(
     self,
@@ -256,7 +292,7 @@ pytest tests/cli/commands/test_git_tool.py::TestCompactDiffUncommittedChanges -v
 ```
 
 ## Definition of Done
-- [ ] 5 test cases written in new `TestCompactDiffUncommittedChanges` class
+- [ ] 6 test cases written in new `TestCompactDiffUncommittedChanges` class
 - [ ] Tests properly mock `get_git_diff_for_commit()`
 - [ ] Tests verify output format and section ordering
 - [ ] All tests currently FAIL (expected, since feature not implemented)
@@ -274,7 +310,7 @@ Task: Write failing tests for uncommitted changes display BEFORE implementing th
 
 File: tests/cli/commands/test_git_tool.py
 
-Create a new test class TestCompactDiffUncommittedChanges with 5 test methods:
+Create a new test class TestCompactDiffUncommittedChanges with 6 test methods:
 
 1. test_shows_uncommitted_changes_by_default
    - Mock get_compact_diff to return committed changes
@@ -297,7 +333,12 @@ Create a new test class TestCompactDiffUncommittedChanges with 5 test methods:
    - Verify "No committed changes" message present
    - Verify uncommitted section shown
 
-5. test_both_committed_and_uncommitted_present
+5. test_git_diff_error_none_skips_uncommitted_section
+   - Mock get_git_diff_for_commit to return None (git error)
+   - Verify exit code is still 0 (non-fatal)
+   - Verify "UNCOMMITTED CHANGES" NOT in output
+
+6. test_both_committed_and_uncommitted_present
    - Both mocks return non-empty strings
    - Verify output order: committed first, then uncommitted
    - Verify all section headers present

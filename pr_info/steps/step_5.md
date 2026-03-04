@@ -125,7 +125,7 @@ def _apply_exclude_patterns_to_uncommitted_diff(
                         break
                 j += 1
             
-            if has_content or j >= len(filtered_lines):
+            if has_content:
                 result.append(line)
         else:
             result.append(line)

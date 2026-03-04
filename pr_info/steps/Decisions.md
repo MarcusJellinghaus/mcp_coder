@@ -41,3 +41,25 @@ Decisions made during plan review discussion (2026-03-04).
 **Question**: When there are no committed changes but there are uncommitted changes, should the output show "No committed changes" before the uncommitted section, or skip straight to the uncommitted section?
 
 **Decision**: **Keep the "No committed changes" message** — makes it explicit to the user that the committed section is not missing.
+
+## D6: Bug fix — empty section removal condition in Step 5 helper
+
+**Question**: The second-pass condition in `_apply_exclude_patterns_to_uncommitted_diff()` reads `if has_content or j >= len(filtered_lines):`. When all files in a section are excluded, the section header lands at the end of `filtered_lines` with `j >= len(filtered_lines)` evaluating to `True`, incorrectly keeping an empty section header. Fix in the plan now or leave for TDD to catch?
+
+**Decision**: **Fix in the plan now** — change condition to `if has_content:`. Updated in `step_5.md`.
+
+---
+
+## D7: Add test for `None` return from `get_git_diff_for_commit`
+
+**Question**: `get_git_diff_for_commit` returns `Optional[str]` — `None` on git errors, `""` for a clean directory. Only `""` was tested. Should a `None` test be added to Step 2?
+
+**Decision**: **Yes, add it** — added `test_git_diff_error_none_skips_uncommitted_section` as Test 5 in `step_2.md`. Verifies exit code stays 0 and no uncommitted section is shown (git error is non-fatal).
+
+---
+
+## D8: Keep 6-step structure (no merging)
+
+**Question**: Steps 2+3 and 4+5 could be merged into 4 steps (write-tests and implement together per feature slice). Merge or keep separate?
+
+**Decision**: **Keep 6 steps** — the TDD separation (write failing tests first, then implement) is clearer for an LLM implementer to follow one thing at a time.
