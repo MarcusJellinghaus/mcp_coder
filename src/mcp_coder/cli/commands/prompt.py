@@ -3,9 +3,11 @@
 import argparse
 import json
 import logging
+import os
 import sys
+from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from ...llm.env import prepare_llm_environment
 from ...llm.formatting.formatters import (
@@ -14,7 +16,9 @@ from ...llm.formatting.formatters import (
     format_verbose_response,
 )
 from ...llm.interface import prompt_llm
+from ...llm.mlflow_logger import get_mlflow_logger
 from ...llm.storage import extract_session_id, find_latest_session, store_session
+from ...llm.types import LLMResponseDict
 from ...utils.git_utils import get_branch_name_for_logging
 from ..utils import (
     parse_llm_method_from_args,
@@ -23,6 +27,63 @@ from ..utils import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _log_to_mlflow(
+    response_data: LLMResponseDict,
+    prompt: str,
+    project_dir: Path,
+    branch_name: Optional[str] = None,
+    step_name: Optional[str] = None,
+) -> None:
+    """Log conversation to MLflow if enabled.
+
+    Args:
+        response_data: Response dictionary from prompt_llm()
+        prompt: Original user prompt
+        project_dir: Project directory path
+        branch_name: Optional branch name
+        step_name: Optional step name
+    """
+    try:
+        mlflow_logger = get_mlflow_logger()
+        # Skip if MLflow is not enabled or unavailable
+        if not mlflow_logger.config.enabled:
+            return
+
+        # Extract model from response data
+        raw_response = response_data.get("raw_response", {})
+        session_info = raw_response.get("session_info")
+        model = (
+            session_info.get("model") if isinstance(session_info, dict) else None
+        ) or response_data.get("provider", "unknown")
+
+        # Build metadata
+        metadata: Dict[str, Any] = {
+            "timestamp": datetime.now().isoformat() + "Z",
+            "working_directory": str(project_dir),
+            "model": model,
+        }
+        if branch_name is not None:
+            metadata["branch_name"] = branch_name
+        if step_name is not None:
+            metadata["step_name"] = step_name
+
+        # Convert LLMResponseDict to Dict[str, Any] for MLflow compatibility
+        response_dict: Dict[str, Any] = dict(response_data)
+        mlflow_logger.log_conversation(prompt, response_dict, metadata)
+        logger.debug("Logged conversation to MLflow")
+
+        # End the run after logging full conversation
+        mlflow_logger.end_run("FINISHED")
+    except Exception as e:
+        logger.debug(f"Failed to log conversation to MLflow: {e}")
+        # Attempt to end run even if logging failed
+        try:
+            mlflow_logger.end_run("FAILED")
+        except Exception:
+            # Silent failure OK - MLflow is optional and should never break main workflow
+            pass
 
 
 def execute_prompt(
@@ -137,6 +198,9 @@ def execute_prompt(
                 print("Error: No session_id in response", file=sys.stderr)
                 return 1
 
+            # Log to MLflow (even in session-id mode)
+            _log_to_mlflow(response_dict, args.prompt, project_dir)
+
             print(session_id)
             return 0
 
@@ -158,9 +222,14 @@ def execute_prompt(
             # Output complete response as JSON (includes session_id)
             formatted_output = json.dumps(response_dict, indent=2, default=str)
 
-            # Store response if requested
+            # Always log to MLflow if enabled
+            _log_to_mlflow(response_dict, args.prompt, project_dir, branch_name)
+
+            # Store response to file if requested
             if getattr(args, "store_response", False):
-                stored_path = store_session(response_dict, args.prompt)
+                stored_path = store_session(
+                    response_dict, args.prompt, branch_name=branch_name
+                )
                 logger.info("Response stored to: %s", stored_path)
         elif verbosity == "just-text":
             # Use unified prompt_llm interface for simple text output
@@ -181,9 +250,14 @@ def execute_prompt(
             # Simple text output with tool summary
             formatted_output = llm_response["text"].strip()
 
-            # Store simple response if requested
+            # Always log to MLflow if enabled
+            _log_to_mlflow(llm_response, args.prompt, project_dir, branch_name)
+
+            # Store response to file if requested
             if getattr(args, "store_response", False):
-                stored_path = store_session(llm_response, args.prompt)
+                stored_path = store_session(
+                    llm_response, args.prompt, branch_name=branch_name
+                )
                 logger.info("Response stored to: %s", stored_path)
         else:
             # Use prompt_llm for verbose/raw modes that need metadata
@@ -201,9 +275,14 @@ def execute_prompt(
                 branch_name=branch_name,
             )
 
-            # Store response if requested
+            # Always log to MLflow if enabled
+            _log_to_mlflow(llm_response, args.prompt, project_dir, branch_name)
+
+            # Store response to file if requested
             if getattr(args, "store_response", False):
-                stored_path = store_session(llm_response, args.prompt)
+                stored_path = store_session(
+                    llm_response, args.prompt, branch_name=branch_name
+                )
                 logger.info("Response stored to: %s", stored_path)
 
             # Pass raw_response sub-dict to formatters — same shape as before

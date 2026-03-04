@@ -372,6 +372,20 @@ mcp-coder implement --project-dir /path/to/project
 - **File**: `utils/user_config.py` - Configuration access patterns
 - **Security**: Never commit tokens, use environment variables for CI/CD
 
+### MLflow Integration (Optional Feature)
+- **Purpose**: Optional LLM conversation tracking and analytics
+- **Configuration**: `config/mlflow_config.py` - Loads from config.toml with env var overrides
+- **Core Components**:
+  - `llm/mlflow_logger.py` - Main logger with graceful fallback (singleton pattern)
+  - `llm/mlflow_metrics.py` - Complexity scoring, performance metrics, topic classification
+- **Integration Points**: `prompt.py` (full conversations), `logging_utils.py` (LLM metrics)
+- **Logged Data**: Model/provider/branch params, duration/cost/token metrics, prompt/conversation artifacts
+- **Graceful Degradation**: Try/except pattern ensures system works without MLflow (silent fallback, no errors)
+- **Backend Support**: SQLite (recommended), filesystem (deprecated), remote server
+- **Tools**: `start_mlflow.sh/.bat`, `stop_mlflow.py` (836 lines, diagnostic), `get_latest_mlflow_db_entries.py`
+- **Import Cycle Prevention**: import-linter enforces mlflow_logger cannot import logging_utils or prompt
+- **Documentation**: `docs/configuration/mlflow-integration.md`
+
 ### Quality Gates (Mandatory Pattern)
 - **Always run**: pylint, pytest, mypy after code changes
 - **MCP integration**: Use `mcp__code-checker__*` tools exclusively

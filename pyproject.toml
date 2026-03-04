@@ -54,6 +54,11 @@ mcp = [
     # mcp-server-filesystem moved to main dependencies for check file-size command
 ]
 
+# MLflow integration - for conversation logging and analytics
+mlflow = [
+    "mlflow>=2.10.0",
+]
+
 # Full development setup - combines all groups for local development
 dev = [
     "mcp-coder[types,test,mcp]",
@@ -95,6 +100,7 @@ markers = [
     "formatter_integration: tests for code formatter integration (black, isort)",
     "github_integration: tests requiring GitHub API access (network, auth needed)",
     "jenkins_integration: tests requiring Jenkins server access (network, auth needed)",
+    "mlflow_integration: tests requiring MLflow installation and functionality",
     "integration: general integration tests",
     "execution_dir: tests for --execution-dir feature",
 ]
@@ -171,6 +177,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["win32gui"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["mlflow", "mlflow.*"]
 ignore_missing_imports = true
 
 [tool.setuptools_scm]

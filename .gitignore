@@ -66,3 +66,10 @@ temp_integration_test.py
 .vscodeclaude_analysis.json
 .vscodeclaude_start.bat
 .vscodeclaude_start.sh
+
+# MLflow artifacts (optional MLflow integration)
+mlflow.db
+mlflow.db-shm
+mlflow.db-wal
+mlruns/
+mlartifacts/
