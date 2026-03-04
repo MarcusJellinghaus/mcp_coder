@@ -46,7 +46,7 @@ experiment_name = "mcp-coder-conversations"
 
 - `enabled` (boolean): Enable/disable MLflow logging
 - `tracking_uri` (string): Where to store MLflow data
-  - `"sqlite:///~/mlflow_data/mlflow.db"` - **SQLite database (RECOMMENDED)** - Better performance, future-proof
+  - `"sqlite:///~/mlflow_data/mlflow.db"` - **SQLite database (RECOMMENDED)** (~ is automatically expanded by mcp-coder to home directory) - Better performance, future-proof
   - `"sqlite:////absolute/path/to/mlflow.db"` - SQLite with absolute path
   - `"~/mlflow_data"` - ⚠️ **DEPRECATED** Local file system (MLflow warns this is deprecated as of Feb 2026)
   - `"/absolute/path/to/mlruns"` - ⚠️ **DEPRECATED** Absolute path filesystem

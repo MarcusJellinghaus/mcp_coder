@@ -82,6 +82,7 @@ def _log_to_mlflow(
         try:
             mlflow_logger.end_run("FAILED")
         except Exception:
+            # Silent failure OK - MLflow is optional and should never break main workflow
             pass
 
 

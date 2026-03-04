@@ -23,13 +23,9 @@ class TestMLflowIntegration:
         """Setup for each test."""
         # Reset global state
         import mcp_coder.llm.mlflow_logger
-        import mcp_coder.llm.storage.session_storage
 
         mcp_coder.llm.mlflow_logger._global_logger = None
         mcp_coder.llm.mlflow_logger._mlflow_available = None
-
-        # Reset session storage MLflow availability cache too
-        mcp_coder.llm.storage.session_storage._mlflow_available = True
 
     @patch("mcp_coder.config.mlflow_config.get_config_values")
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=False)
@@ -77,83 +73,56 @@ class TestMLflowIntegration:
 
     @patch("mcp_coder.config.mlflow_config.get_config_values")
     def test_full_conversation_logging_flow(self, mock_get_config: Any) -> None:
-        """Test complete conversation logging workflow."""
+        """Test complete conversation logging workflow.
+
+        Note: MLflow logging was moved from session_storage to prompt.py.
+        This test verifies that session storage works correctly without MLflow.
+        """
         mock_get_config.return_value = {
             ("mlflow", "enabled"): "true",
             ("mlflow", "tracking_uri"): "file:///tmp/test_mlruns",
             ("mlflow", "experiment_name"): "integration-test",
         }
 
-        mock_mlflow = MagicMock()
-        mock_run = MagicMock()
-        mock_run.info.run_id = "integration-run-123"
-        mock_mlflow.start_run.return_value = mock_run
+        # Simulate a complete conversation storage workflow
+        prompt = "What is machine learning?"
+        response_data: Dict[str, Any] = {
+            "provider": "claude",
+            "session_id": "test-session-123",
+            "text": "Machine learning is...",
+            "version": "1.0",
+            "timestamp": "2024-01-01T00:00:00Z",
+            "method": "test",
+            "duration_ms": 2500,
+            "cost_usd": 0.02,
+            "raw_response": {
+                "session_info": {
+                    "model": "claude-3-sonnet",
+                    "usage": {"input_tokens": 15, "output_tokens": 100},
+                }
+            },
+        }
 
-        with patch.dict("sys.modules", {"mlflow": mock_mlflow}):
-            with patch(
-                "mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True
-            ):
-                with patch(
-                    "mcp_coder.llm.storage.session_storage.get_mlflow_logger"
-                ) as mock_get_logger:
-                    # Create a mock logger instance
-                    mock_logger_instance = MagicMock()
-                    mock_logger_instance.config.enabled = True
-                    mock_get_logger.return_value = mock_logger_instance
+        with tempfile.TemporaryDirectory() as temp_dir:
+            file_path = store_session(
+                response_data=response_data,  # type: ignore[arg-type]
+                prompt=prompt,
+                store_path=temp_dir,
+                step_name="integration_test",
+                branch_name="test-branch",
+            )
 
-                    # Simulate a complete conversation storage workflow
-                    prompt = "What is machine learning?"
-                    response_data: Dict[str, Any] = {
-                        "provider": "claude",
-                        "session_id": "test-session-123",
-                        "text": "Machine learning is...",
-                        "version": "1.0",
-                        "timestamp": "2024-01-01T00:00:00Z",
-                        "method": "test",
-                        "duration_ms": 2500,
-                        "cost_usd": 0.02,
-                        "raw_response": {
-                            "session_info": {
-                                "model": "claude-3-sonnet",
-                                "usage": {"input_tokens": 15, "output_tokens": 100},
-                            }
-                        },
-                    }
+            # Verify file was created
+            assert os.path.exists(file_path)
 
-                    with tempfile.TemporaryDirectory() as temp_dir:
-                        file_path = store_session(
-                            response_data=response_data,  # type: ignore[arg-type]
-                            prompt=prompt,
-                            store_path=temp_dir,
-                            step_name="integration_test",
-                            branch_name="test-branch",
-                        )
-
-                        # Verify file was created
-                        assert os.path.exists(file_path)
-
-                        # Verify MLflow logger was called
-                        mock_get_logger.assert_called_once()
-
-                        # Verify log_conversation was called with correct arguments
-                        assert mock_logger_instance.log_conversation.called
-                        call_args = mock_logger_instance.log_conversation.call_args
-                        assert call_args[0][0] == prompt  # First arg is prompt
-                        assert (
-                            call_args[0][1] == response_data
-                        )  # Second arg is response_data
-                        # Third arg is metadata dict - check key fields
-                        metadata = call_args[0][2]
-                        assert metadata["model"] == "claude-3-sonnet"
-                        assert metadata["branch_name"] == "test-branch"
-                        assert metadata["step_name"] == "integration_test"
-
-                        # For backward compatibility, also check the mock_mlflow calls if they happen
-                        # (These may or may not be called depending on the implementation)
-                        if mock_mlflow.log_params.called:
-                            assert mock_mlflow.log_params.called
-                            assert mock_mlflow.log_metrics.called
-                            assert mock_mlflow.log_artifact.called
+            # Verify file contains correct data
+            with open(file_path, "r") as f:
+                data = json.load(f)
+                assert data["prompt"] == prompt
+                assert data["response_data"] == response_data
+                assert data["metadata"]["model"] == "claude-3-sonnet"
+                assert data["metadata"]["branch_name"] == "test-branch"
+                assert data["metadata"]["step_name"] == "integration_test"
 
     def test_config_loading_with_environment_variables(self) -> None:
         """Test configuration loading with environment variable override."""
