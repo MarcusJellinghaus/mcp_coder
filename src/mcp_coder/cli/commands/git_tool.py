@@ -64,8 +64,9 @@ def _apply_exclude_patterns_to_uncommitted_diff(
                 filepath = parts[2]  # Second path (destination)
 
                 # Check if file matches any exclude pattern.
-                # Note: fnmatch's * matches / (unlike shell globbing), so
-                # patterns like "pr_info/**" correctly match "pr_info/notes.md".
+                # Note: fnmatch's * matches everything including /, unlike shell
+                # globbing. So "pr_info/*" already matches "pr_info/notes.md"
+                # — ** has no special meaning here, it just works by coincidence.
                 skip_current_block = any(
                     fnmatch.fnmatch(filepath, pattern) for pattern in exclude_patterns
                 )

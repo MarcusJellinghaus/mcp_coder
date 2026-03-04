@@ -39,6 +39,14 @@ def mock_resolve_project_dir() -> Generator[MagicMock, None, None]:
         yield mock
 
 
+@pytest.fixture
+def mock_get_git_diff_for_commit() -> Generator[MagicMock, None, None]:
+    """Mock get_git_diff_for_commit function (returns empty = clean working directory)."""
+    with patch("mcp_coder.cli.commands.git_tool.get_git_diff_for_commit") as mock:
+        mock.return_value = ""
+        yield mock
+
+
 # ============================================================================
 # Test Classes for Exit Codes
 # ============================================================================
@@ -52,6 +60,7 @@ class TestCompactDiffExitCodes:
         mock_get_compact_diff: MagicMock,
         mock_detect_base_branch: MagicMock,
         mock_resolve_project_dir: MagicMock,
+        mock_get_git_diff_for_commit: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test exit code 0 on success."""
@@ -145,6 +154,7 @@ class TestCompactDiffOutputFormat:
         mock_get_compact_diff: MagicMock,
         mock_detect_base_branch: MagicMock,
         mock_resolve_project_dir: MagicMock,
+        mock_get_git_diff_for_commit: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test that compact diff text is written to stdout."""
@@ -169,6 +179,7 @@ class TestCompactDiffOutputFormat:
         mock_get_compact_diff: MagicMock,
         mock_detect_base_branch: MagicMock,
         mock_resolve_project_dir: MagicMock,
+        mock_get_git_diff_for_commit: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test that stdout contains exactly the diff string (plus newline from print)."""
@@ -200,6 +211,7 @@ class TestCompactDiffArguments:
         mock_get_compact_diff: MagicMock,
         mock_detect_base_branch: MagicMock,
         mock_resolve_project_dir: MagicMock,
+        mock_get_git_diff_for_commit: MagicMock,
     ) -> None:
         """Test that args.exclude is forwarded to get_compact_diff."""
         project_dir = Path("/test/project")
@@ -225,6 +237,7 @@ class TestCompactDiffArguments:
         mock_get_compact_diff: MagicMock,
         mock_detect_base_branch: MagicMock,
         mock_resolve_project_dir: MagicMock,
+        mock_get_git_diff_for_commit: MagicMock,
     ) -> None:
         """Test that args.base_branch skips detect_base_branch."""
         project_dir = Path("/test/project")
@@ -248,6 +261,7 @@ class TestCompactDiffArguments:
         mock_get_compact_diff: MagicMock,
         mock_detect_base_branch: MagicMock,
         mock_resolve_project_dir: MagicMock,
+        mock_get_git_diff_for_commit: MagicMock,
     ) -> None:
         """Test that args.exclude=None is normalised to [] before passing."""
         project_dir = Path("/test/project")
