@@ -976,6 +976,40 @@ def test_build_ci_error_details_multiple_failures() -> None:
     assert "First job error" in result
 
 
+def test_build_ci_error_details_includes_github_urls() -> None:
+    """Test _build_ci_error_details includes GitHub Actions URLs."""
+    status_result = {
+        "run": {"id": 12345, "url": "https://github.com/user/repo/actions/runs/12345"},
+        "jobs": [
+            {
+                "id": 67890,
+                "name": "file-size",
+                "conclusion": "failure",
+                "steps": [{"name": "Run file-size", "conclusion": "failure"}],
+            }
+        ],
+    }
+
+    mock_instance = MagicMock()
+    mock_instance.get_run_logs.return_value = {
+        "2_file-size.txt": "File size check failed"
+    }
+
+    result = _build_ci_error_details(mock_instance, status_result, False, 300)
+
+    assert result is not None
+    # Check run URL at top
+    assert "GitHub Actions: https://github.com/user/repo/actions/runs/12345" in result
+    # Check job URL in job section
+    assert (
+        "View job: https://github.com/user/repo/actions/runs/12345/job/67890" in result
+    )
+    # Verify other content still present
+    assert "## Job: file-size" in result
+    assert "Failed step: Run file-size" in result
+    assert "File size check failed" in result
+
+
 def test_build_ci_error_details_no_failed_jobs() -> None:
     """Test _build_ci_error_details with no failed jobs returns None."""
     status_result = {

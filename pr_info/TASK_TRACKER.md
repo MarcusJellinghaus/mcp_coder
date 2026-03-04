@@ -33,11 +33,11 @@ See [step_1.md](./steps/step_1.md) for details.
 ### Step 2: Add Test for GitHub URL Display
 See [step_2.md](./steps/step_2.md) for details.
 
-- [ ] Add `test_build_ci_error_details_includes_github_urls()` function to test file
-- [ ] Verify new test FAILS (expected before implementation)
-- [ ] Run pylint, pytest, mypy on modified test file
-- [ ] Fix all issues found by quality checks
-- [ ] Prepare git commit message for Step 2
+- [x] Add `test_build_ci_error_details_includes_github_urls()` function to test file
+- [x] Verify new test FAILS (expected before implementation)
+- [x] Run pylint, pytest, mypy on modified test file
+- [x] Fix all issues found by quality checks
+- [x] Prepare git commit message for Step 2
 
 ### Step 3: Add Tests for Error Handling and Fallback
 See [step_3.md](./steps/step_3.md) for details.
