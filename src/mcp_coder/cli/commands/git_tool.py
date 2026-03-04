@@ -8,6 +8,7 @@ import logging
 import sys
 
 from ...utils.git_operations.compact_diffs import get_compact_diff
+from ...utils.git_operations.diffs import get_git_diff_for_commit
 from ...workflow_utils.base_branch import detect_base_branch
 from ...workflows.utils import resolve_project_dir
 
@@ -38,7 +39,23 @@ def execute_compact_diff(args: argparse.Namespace) -> int:
             print("Error: Could not detect base branch", file=sys.stderr)
             return 1
 
-        result = get_compact_diff(project_dir, base_branch, args.exclude or [])
+        # Get committed changes
+        committed_diff = get_compact_diff(project_dir, base_branch, args.exclude or [])
+
+        # Get uncommitted changes (unless --committed-only flag set)
+        if not args.committed_only:
+            uncommitted_diff = get_git_diff_for_commit(project_dir)
+
+            if uncommitted_diff:
+                if committed_diff:
+                    result = f"{committed_diff}\n\n=== UNCOMMITTED CHANGES ===\n{uncommitted_diff}"
+                else:
+                    result = f"No committed changes\n\n=== UNCOMMITTED CHANGES ===\n{uncommitted_diff}"
+            else:
+                result = committed_diff
+        else:
+            result = committed_diff
+
         print(result)
         return 0
 

@@ -45,11 +45,11 @@ _See [step_2.md](./steps/step_2.md) for full details._
 ### Step 3: Implement Uncommitted Changes Display Logic
 _See [step_3.md](./steps/step_3.md) for full details._
 
-- [ ] Add import `from ...utils.git_operations.diffs import get_git_diff_for_commit` to `src/mcp_coder/cli/commands/git_tool.py`
-- [ ] Modify `execute_compact_diff()` to append uncommitted changes when `--committed-only` is not set
-- [ ] Update all existing `argparse.Namespace` calls in `test_git_tool.py` that test `execute_compact_diff` to include `committed_only=False` (prevents `AttributeError`)
-- [ ] Run pylint, pytest, mypy — fix all issues found; all Step 2 tests should now pass
-- [ ] Prepare git commit message for Step 3
+- [x] Add import `from ...utils.git_operations.diffs import get_git_diff_for_commit` to `src/mcp_coder/cli/commands/git_tool.py`
+- [x] Modify `execute_compact_diff()` to append uncommitted changes when `--committed-only` is not set
+- [x] Update all existing `argparse.Namespace` calls in `test_git_tool.py` that test `execute_compact_diff` to include `committed_only=False` (prevents `AttributeError`)
+- [x] Run pylint, pytest, mypy — fix all issues found; all Step 2 tests should now pass
+- [x] Prepare git commit message for Step 3
 
 ---
 

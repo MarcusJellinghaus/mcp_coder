@@ -60,7 +60,9 @@ class TestCompactDiffExitCodes:
         mock_detect_base_branch.return_value = "main"
         mock_get_compact_diff.return_value = "diff output here"
 
-        args = argparse.Namespace(project_dir=None, base_branch=None, exclude=None)
+        args = argparse.Namespace(
+            project_dir=None, base_branch=None, exclude=None, committed_only=False
+        )
         result = execute_compact_diff(args)
 
         assert result == 0
@@ -78,7 +80,9 @@ class TestCompactDiffExitCodes:
         mock_resolve_project_dir.return_value = project_dir
         mock_detect_base_branch.return_value = None
 
-        args = argparse.Namespace(project_dir=None, base_branch=None, exclude=None)
+        args = argparse.Namespace(
+            project_dir=None, base_branch=None, exclude=None, committed_only=False
+        )
         result = execute_compact_diff(args)
 
         assert result == 1
@@ -94,7 +98,10 @@ class TestCompactDiffExitCodes:
         mock_resolve_project_dir.side_effect = ValueError("Not a git repository")
 
         args = argparse.Namespace(
-            project_dir="/not/a/repo", base_branch=None, exclude=None
+            project_dir="/not/a/repo",
+            base_branch=None,
+            exclude=None,
+            committed_only=False,
         )
         result = execute_compact_diff(args)
 
@@ -115,7 +122,9 @@ class TestCompactDiffExitCodes:
         mock_detect_base_branch.return_value = "main"
         mock_get_compact_diff.side_effect = Exception("Unexpected error")
 
-        args = argparse.Namespace(project_dir=None, base_branch=None, exclude=None)
+        args = argparse.Namespace(
+            project_dir=None, base_branch=None, exclude=None, committed_only=False
+        )
         result = execute_compact_diff(args)
 
         assert result == 2
@@ -145,7 +154,9 @@ class TestCompactDiffOutputFormat:
         diff_text = "diff --git a/foo.py b/foo.py\n+new line"
         mock_get_compact_diff.return_value = diff_text
 
-        args = argparse.Namespace(project_dir=None, base_branch=None, exclude=None)
+        args = argparse.Namespace(
+            project_dir=None, base_branch=None, exclude=None, committed_only=False
+        )
         result = execute_compact_diff(args)
 
         assert result == 0
@@ -167,7 +178,9 @@ class TestCompactDiffOutputFormat:
         diff_text = "compact diff content"
         mock_get_compact_diff.return_value = diff_text
 
-        args = argparse.Namespace(project_dir=None, base_branch=None, exclude=None)
+        args = argparse.Namespace(
+            project_dir=None, base_branch=None, exclude=None, committed_only=False
+        )
         execute_compact_diff(args)
 
         captured = capsys.readouterr()
@@ -196,7 +209,10 @@ class TestCompactDiffArguments:
 
         exclude_patterns = ["pr_info/**", "*.log"]
         args = argparse.Namespace(
-            project_dir=None, base_branch=None, exclude=exclude_patterns
+            project_dir=None,
+            base_branch=None,
+            exclude=exclude_patterns,
+            committed_only=False,
         )
         execute_compact_diff(args)
 
@@ -216,7 +232,10 @@ class TestCompactDiffArguments:
         mock_get_compact_diff.return_value = ""
 
         args = argparse.Namespace(
-            project_dir=None, base_branch="feature/base", exclude=None
+            project_dir=None,
+            base_branch="feature/base",
+            exclude=None,
+            committed_only=False,
         )
         result = execute_compact_diff(args)
 
@@ -236,7 +255,9 @@ class TestCompactDiffArguments:
         mock_detect_base_branch.return_value = "main"
         mock_get_compact_diff.return_value = ""
 
-        args = argparse.Namespace(project_dir=None, base_branch=None, exclude=None)
+        args = argparse.Namespace(
+            project_dir=None, base_branch=None, exclude=None, committed_only=False
+        )
         execute_compact_diff(args)
 
         mock_get_compact_diff.assert_called_once_with(project_dir, "main", [])
