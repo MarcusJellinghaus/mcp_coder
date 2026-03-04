@@ -3,6 +3,7 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+from mcp_coder.workflow_utils.task_tracker import TaskTrackerFileNotFoundError
 from mcp_coder.workflows.create_pr.core import check_prerequisites
 
 
@@ -143,6 +144,38 @@ class TestCheckPrerequisites:
         assert result is False
         mock_clean.assert_called_once()
         mock_incomplete_tasks.assert_called_once()
+
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
+    @patch("mcp_coder.workflows.create_pr.core.get_incomplete_tasks")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
+    def test_prerequisites_missing_task_tracker(
+        self,
+        mock_base_branch: MagicMock,
+        mock_current_branch: MagicMock,
+        mock_incomplete_tasks: MagicMock,
+        mock_clean: MagicMock,
+    ) -> None:
+        """Test prerequisites check succeeds gracefully when TASK_TRACKER.md is missing (optional file)."""
+        # Arrange: Setup mocks for successful prerequisites except missing task tracker
+        mock_clean.return_value = True
+        mock_incomplete_tasks.side_effect = TaskTrackerFileNotFoundError(
+            "TASK_TRACKER.md not found at /test/path/TASK_TRACKER.md"
+        )
+        mock_current_branch.return_value = "feature-branch"
+        mock_base_branch.return_value = "main"
+
+        # Act: Run prerequisites check
+        result = check_prerequisites(Path("/test/project"))
+
+        # Assert: Should pass despite missing task tracker
+        assert result is True
+
+        # Verify all prerequisite checks were executed
+        mock_clean.assert_called_once()
+        mock_incomplete_tasks.assert_called_once()
+        mock_current_branch.assert_called_once()
+        mock_base_branch.assert_called_once()
 
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.get_incomplete_tasks")
