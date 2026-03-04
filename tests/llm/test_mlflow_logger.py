@@ -74,14 +74,14 @@ class TestMLflowLogger:
         assert logger.active_run_id is None
 
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=False)
-    def test_init_mlflow_unavailable(self, mock_available: Any) -> None:
+    def test_init_mlflow_unavailable(self, _mock_available: Any) -> None:
         """Test initialization when MLflow is not available."""
         logger = MLflowLogger(self.config)
         assert logger.active_run_id is None
         # Config should remain enabled (availability is checked per operation)
 
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
-    def test_init_mlflow_available(self, mock_available: Any) -> None:
+    def test_init_mlflow_available(self, _mock_available: Any) -> None:
         """Test initialization when MLflow is available."""
         with patch(
             "mcp_coder.llm.mlflow_logger.MLflowLogger._initialize_mlflow"
@@ -90,7 +90,7 @@ class TestMLflowLogger:
             mock_init.assert_called_once()
 
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
-    def test_init_mlflow_initialization_fails(self, mock_available: Any) -> None:
+    def test_init_mlflow_initialization_fails(self, _mock_available: Any) -> None:
         """Test handling when MLflow initialization fails."""
         with patch(
             "mcp_coder.llm.mlflow_logger.MLflowLogger._initialize_mlflow"
@@ -136,7 +136,7 @@ class TestMLflowLogger:
                     )
 
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=False)
-    def test_start_run_mlflow_disabled(self, mock_available: Any) -> None:
+    def test_start_run_mlflow_disabled(self, _mock_available: Any) -> None:
         """Test start_run when MLflow is disabled."""
         logger = MLflowLogger(self.config)
         result = logger.start_run()
@@ -161,11 +161,7 @@ class TestMLflowLogger:
                 assert logger.active_run_id == "test-run-123"
                 mock_mlflow.start_run.assert_called_once_with(run_name="test-run")
 
-                expected_tags = {
-                    "mlflow.source.name": "mcp-coder",
-                    "conversation.timestamp": Mock(),  # We'll check this separately
-                    "key": "value",
-                }
+                # Verify tags were set correctly
                 call_args = mock_mlflow.set_tags.call_args[0][0]
                 assert call_args["mlflow.source.name"] == "mcp-coder"
                 assert call_args["key"] == "value"

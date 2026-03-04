@@ -54,7 +54,9 @@ def reset_logging() -> Generator[None, None, None]:
 
 
 @pytest.fixture(autouse=True)
-def isolate_mlflow_artifacts(tmp_path: Path) -> Generator[None, None, None]:
+def isolate_mlflow_artifacts(
+    tmp_path: Path,
+) -> Generator[None, None, None]:  # noqa: F841 (autouse fixture)
     """Isolate MLflow artifacts to prevent pollution of project root.
 
     This fixture automatically sets MLflow's tracking URI to a temporary

@@ -30,7 +30,7 @@ class TestMLflowIntegration:
     @patch("mcp_coder.config.mlflow_config.get_config_values")
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=False)
     def test_disabled_by_default(
-        self, mock_available: Any, mock_get_config: Any
+        self, _mock_available: Any, mock_get_config: Any
     ) -> None:
         """Test that MLflow integration is disabled when not configured."""
         mock_get_config.return_value = {
@@ -365,7 +365,7 @@ class TestMLflowWithRealInstallation:
             )
             run_result = cursor.fetchone()
             assert run_result is not None, "No run found"
-            run_uuid, artifact_uri = run_result
+            _, artifact_uri = run_result
             assert artifact_uri is not None, "No artifact URI in database"
 
             # Verify prompt_length parameter was logged (indicates prompt was captured)
