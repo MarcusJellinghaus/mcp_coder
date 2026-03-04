@@ -56,10 +56,10 @@ _See [step_3.md](./steps/step_3.md) for full details._
 ### Step 4: Write Tests for Exclude Patterns on Uncommitted Changes (TDD)
 _See [step_4.md](./steps/step_4.md) for full details._
 
-- [ ] Add 4 new test methods to `TestCompactDiffUncommittedChanges` for exclude pattern filtering
-- [ ] Add 1 helper function test `test_apply_exclude_patterns_to_uncommitted_diff_helper`
-- [ ] Run pylint and mypy on test file — fix all issues found (tests are expected to fail at this stage)
-- [ ] Prepare git commit message for Step 4
+- [x] Add 4 new test methods to `TestCompactDiffUncommittedChanges` for exclude pattern filtering
+- [x] Add 1 helper function test `test_apply_exclude_patterns_to_uncommitted_diff_helper`
+- [x] Run pylint and mypy on test file — fix all issues found (tests are expected to fail at this stage)
+- [x] Prepare git commit message for Step 4
 
 ---
 

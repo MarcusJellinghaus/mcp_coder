@@ -336,7 +336,7 @@ class TestCompactDiffUncommittedChanges:
             "mcp_coder.cli.commands.git_tool.get_git_diff_for_commit"
         ) as mock_uncommitted:
             mock_uncommitted.return_value = (
-                "=== STAGED CHANGES ===\n" "diff --git bar.py\n" "+staged change"
+                "=== STAGED CHANGES ===\ndiff --git bar.py\n+staged change"
             )
 
             args = argparse.Namespace(
@@ -437,7 +437,7 @@ class TestCompactDiffUncommittedChanges:
             "mcp_coder.cli.commands.git_tool.get_git_diff_for_commit"
         ) as mock_uncommitted:
             mock_uncommitted.return_value = (
-                "=== STAGED CHANGES ===\n" "diff --git bar.py\n" "+staged change"
+                "=== STAGED CHANGES ===\ndiff --git bar.py\n+staged change"
             )
 
             args = argparse.Namespace(
@@ -539,6 +539,190 @@ class TestCompactDiffUncommittedChanges:
             assert "=== STAGED CHANGES ===" in output
             assert "=== UNSTAGED CHANGES ===" in output
             assert "=== UNTRACKED FILES ===" in output
+
+    def test_exclude_patterns_apply_to_uncommitted_changes(
+        self,
+        mock_get_compact_diff: MagicMock,
+        mock_detect_base_branch: MagicMock,
+        mock_resolve_project_dir: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test that --exclude patterns filter uncommitted changes."""
+        project_dir = Path("/test/project")
+        mock_resolve_project_dir.return_value = project_dir
+        mock_detect_base_branch.return_value = "main"
+        mock_get_compact_diff.return_value = "diff --git committed.py\n+committed"
+
+        with patch(
+            "mcp_coder.cli.commands.git_tool.get_git_diff_for_commit"
+        ) as mock_uncommitted:
+            mock_uncommitted.return_value = (
+                "=== STAGED CHANGES ===\n"
+                "diff --git staged.py staged.py\n"
+                "+staged python\n"
+                "diff --git debug.log debug.log\n"
+                "+log file content"
+            )
+
+            args = argparse.Namespace(
+                project_dir=None,
+                base_branch=None,
+                exclude=["*.log"],
+                committed_only=False,
+            )
+            result = execute_compact_diff(args)
+
+            assert result == 0
+            captured = capsys.readouterr()
+
+            assert "staged.py" in captured.out
+            assert "staged python" in captured.out
+            assert "debug.log" not in captured.out
+            assert "log file content" not in captured.out
+
+    def test_multiple_exclude_patterns_on_uncommitted(
+        self,
+        mock_get_compact_diff: MagicMock,
+        mock_detect_base_branch: MagicMock,
+        mock_resolve_project_dir: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test that multiple --exclude patterns filter uncommitted changes."""
+        project_dir = Path("/test/project")
+        mock_resolve_project_dir.return_value = project_dir
+        mock_detect_base_branch.return_value = "main"
+        mock_get_compact_diff.return_value = ""
+
+        with patch(
+            "mcp_coder.cli.commands.git_tool.get_git_diff_for_commit"
+        ) as mock_uncommitted:
+            mock_uncommitted.return_value = (
+                "=== STAGED CHANGES ===\n"
+                "diff --git code.py code.py\n"
+                "+python code\n"
+                "diff --git test.log test.log\n"
+                "+log content\n"
+                "diff --git data.json data.json\n"
+                "+json data"
+            )
+
+            args = argparse.Namespace(
+                project_dir=None,
+                base_branch=None,
+                exclude=["*.log", "*.json"],
+                committed_only=False,
+            )
+            result = execute_compact_diff(args)
+
+            assert result == 0
+            captured = capsys.readouterr()
+
+            assert "code.py" in captured.out
+            assert "python code" in captured.out
+            assert "test.log" not in captured.out
+            assert "data.json" not in captured.out
+
+    def test_exclude_all_uncommitted_changes(
+        self,
+        mock_get_compact_diff: MagicMock,
+        mock_detect_base_branch: MagicMock,
+        mock_resolve_project_dir: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test that excluding all uncommitted files results in no uncommitted section."""
+        project_dir = Path("/test/project")
+        mock_resolve_project_dir.return_value = project_dir
+        mock_detect_base_branch.return_value = "main"
+        mock_get_compact_diff.return_value = "diff --git committed.py\n+committed"
+
+        with patch(
+            "mcp_coder.cli.commands.git_tool.get_git_diff_for_commit"
+        ) as mock_uncommitted:
+            mock_uncommitted.return_value = (
+                "=== STAGED CHANGES ===\n"
+                "diff --git debug.log debug.log\n"
+                "+log content"
+            )
+
+            args = argparse.Namespace(
+                project_dir=None,
+                base_branch=None,
+                exclude=["*.log"],
+                committed_only=False,
+            )
+            result = execute_compact_diff(args)
+
+            assert result == 0
+            captured = capsys.readouterr()
+
+            assert "UNCOMMITTED CHANGES" not in captured.out
+            assert "debug.log" not in captured.out
+
+    def test_exclude_path_prefix_on_uncommitted(
+        self,
+        mock_get_compact_diff: MagicMock,
+        mock_detect_base_branch: MagicMock,
+        mock_resolve_project_dir: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test that path prefix patterns (e.g., pr_info/**) filter uncommitted changes."""
+        project_dir = Path("/test/project")
+        mock_resolve_project_dir.return_value = project_dir
+        mock_detect_base_branch.return_value = "main"
+        mock_get_compact_diff.return_value = ""
+
+        with patch(
+            "mcp_coder.cli.commands.git_tool.get_git_diff_for_commit"
+        ) as mock_uncommitted:
+            mock_uncommitted.return_value = (
+                "=== STAGED CHANGES ===\n"
+                "diff --git src/main.py src/main.py\n"
+                "+source code\n"
+                "diff --git pr_info/notes.md pr_info/notes.md\n"
+                "+notes content"
+            )
+
+            args = argparse.Namespace(
+                project_dir=None,
+                base_branch=None,
+                exclude=["pr_info/**"],
+                committed_only=False,
+            )
+            result = execute_compact_diff(args)
+
+            assert result == 0
+            captured = capsys.readouterr()
+
+            assert "src/main.py" in captured.out
+            assert "source code" in captured.out
+            assert "pr_info/notes.md" not in captured.out
+            assert "notes content" not in captured.out
+
+    def test_apply_exclude_patterns_to_uncommitted_diff_helper(self) -> None:
+        """Test the helper function that filters uncommitted diff by exclude patterns."""
+        from mcp_coder.cli.commands.git_tool import (
+            _apply_exclude_patterns_to_uncommitted_diff,  # type: ignore[attr-defined]
+        )
+
+        uncommitted_diff = (
+            "=== STAGED CHANGES ===\n"
+            "diff --git code.py code.py\n"
+            "+python\n"
+            "diff --git test.log test.log\n"
+            "+log\n"
+            "\n"
+            "=== UNSTAGED CHANGES ===\n"
+            "diff --git data.json data.json\n"
+            "+json"
+        )
+
+        filtered = _apply_exclude_patterns_to_uncommitted_diff(
+            uncommitted_diff, ["*.log"]
+        )
+
+        assert "code.py" in filtered
+        assert "test.log" not in filtered
+        assert "data.json" in filtered
 
 
 # ============================================================================
