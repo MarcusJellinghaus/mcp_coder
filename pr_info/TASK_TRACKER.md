@@ -22,11 +22,11 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Add Test for Missing TASK_TRACKER.md (TDD - Red Phase)
-- [ ] Read summary.md and step_1.md for context - [step_1.md](./steps/step_1.md)
-- [ ] Add import for TaskTrackerFileNotFoundError to test file
-- [ ] Add test_prerequisites_missing_task_tracker method to TestCheckPrerequisites class
-- [ ] Run test and verify it FAILS (Red phase of TDD)
-- [ ] Verify test is discoverable by pytest
+- [x] Read summary.md and step_1.md for context - [step_1.md](./steps/step_1.md)
+- [x] Add import for TaskTrackerFileNotFoundError to test file
+- [x] Add test_prerequisites_missing_task_tracker method to TestCheckPrerequisites class
+- [x] Run test and verify it FAILS (Red phase of TDD)
+- [x] Verify test is discoverable by pytest
 
 ### Step 2: Implement Graceful Handling (TDD - Green Phase)
 - [ ] Read summary.md and step_2.md for context - [step_2.md](./steps/step_2.md)
