@@ -149,37 +149,28 @@ Open http://localhost:5000 in your browser.
 
 ### Stopping the MLflow UI
 
-**Windows:**
-```cmd
-tools\stop_mlflow.bat
-```
-
-**Linux/macOS:**
-```bash
-./tools/stop_mlflow.sh
-```
-
-Or press `Ctrl+C` in the terminal where MLflow is running.
+To stop the MLflow UI server, press `Ctrl+C` in the terminal where MLflow is running.
 
 ### What Gets Logged
 
 **Metrics:**
-- Conversation duration (ms)
-- Token usage (input/output)  
-- Cost (if available)
-- Number of turns
+- Duration: Conversation duration in milliseconds and seconds
+- Tokens: Input tokens, output tokens, total tokens, and cache hit ratio
+- Cost: Cost in USD and cost efficiency (tokens per dollar)
 
 **Parameters:**
-- Model used
-- Provider (Claude)
-- Method (CLI/API)
-- Working directory
-- Branch name
+- Model, provider, and LLM method used
+- Working directory and git branch name
+- Prompt length and step name (if applicable)
 
 **Artifacts:**
-- Full conversation JSON
-- Prompt text
-- Response text
+- Full conversation JSON with complete request/response data
+- Prompt text file
+
+**Learn more about MLflow**:
+- [MLflow Tracking Documentation](https://mlflow.org/docs/latest/tracking.html)
+- [MLflow UI Guide](https://mlflow.org/docs/latest/tracking.html#tracking-ui)
+- [Querying Runs](https://mlflow.org/docs/latest/search-runs.html)
 
 ## Testing the Integration
 

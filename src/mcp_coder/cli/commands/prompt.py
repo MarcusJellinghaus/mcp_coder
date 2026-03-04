@@ -16,6 +16,7 @@ from ...llm.formatting.formatters import (
     format_verbose_response,
 )
 from ...llm.interface import prompt_llm
+from ...llm.mlflow_logger import get_mlflow_logger
 from ...llm.storage import extract_session_id, find_latest_session, store_session
 from ...llm.types import LLMResponseDict
 from ...utils.git_utils import get_branch_name_for_logging
@@ -24,15 +25,6 @@ from ..utils import (
     resolve_execution_dir,
     resolve_mcp_config_path,
 )
-
-# Import MLflow logger with graceful fallback
-try:
-    from ...llm.mlflow_logger import get_mlflow_logger
-
-    _mlflow_available = True
-except ImportError:
-    _mlflow_available = False
-    get_mlflow_logger = None  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -53,11 +45,9 @@ def _log_to_mlflow(
         branch_name: Optional branch name
         step_name: Optional step name
     """
-    if not _mlflow_available or get_mlflow_logger is None:
-        return
-
     try:
         mlflow_logger = get_mlflow_logger()
+        # Skip if MLflow is not enabled or unavailable
         if not mlflow_logger.config.enabled:
             return
 

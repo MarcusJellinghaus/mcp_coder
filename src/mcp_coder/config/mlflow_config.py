@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "MLflowConfig",
     "load_mlflow_config",
+    "validate_tracking_uri",
 ]
 
 
@@ -33,6 +34,60 @@ class MLflowConfig:
     tracking_uri: Optional[str] = None
     experiment_name: str = "claude-conversations"
     artifact_location: Optional[str] = None
+
+
+def validate_tracking_uri(uri: Optional[str]) -> None:
+    """Validate MLflow tracking URI format and provide helpful error messages.
+
+    Args:
+        uri: The tracking URI to validate
+
+    Raises:
+        ValueError: If the URI has a common formatting error
+
+    Common mistakes:
+        - sqlite://~/path (missing third /)
+        - http://localhost:5000/ (trailing slash)
+        - Relative paths without proper expansion
+    """
+    if not uri:
+        return  # None is valid (uses default)
+
+    # SQLite validation
+    if uri.startswith("sqlite://"):
+        if not uri.startswith("sqlite:///"):
+            raise ValueError(
+                f"Invalid SQLite URI format: {uri}\n"
+                "SQLite URIs must have 3 slashes after sqlite:.\n"
+                "Correct format: sqlite:///path/to/mlflow.db (relative) or "
+                "sqlite:////absolute/path/to/mlflow.db (absolute)"
+            )
+
+    # HTTP/HTTPS validation
+    elif uri.startswith(("http://", "https://")):
+        if uri.endswith("/"):
+            raise ValueError(
+                f"Invalid HTTP URI format: {uri}\n"
+                "Remove trailing slash from HTTP URIs.\n"
+                f"Correct format: {uri.rstrip('/')}"
+            )
+
+    # File URI validation
+    elif uri.startswith("file://"):
+        # file:// URIs should have at least 2 slashes after file:
+        if not uri.startswith("file:///"):
+            # file:// without third slash might be a mistake
+            logger.warning(
+                f"File URI '{uri}' has only 2 slashes. "
+                "Consider using file:/// for absolute paths."
+            )
+
+    # Plain path (deprecated for filesystem backend)
+    elif not uri.startswith(("sqlite://", "http://", "https://", "file://")):
+        logger.warning(
+            "Filesystem tracking URI (plain path) is deprecated as of MLflow Feb 2026. "
+            f"Consider migrating to SQLite: sqlite:///{uri}/mlflow.db"
+        )
 
 
 def load_mlflow_config() -> MLflowConfig:
@@ -71,6 +126,14 @@ def load_mlflow_config() -> MLflowConfig:
     tracking_uri = config_values.get(("mlflow", "tracking_uri"))
     experiment_name = config_values.get(("mlflow", "experiment_name"))
     artifact_location = config_values.get(("mlflow", "artifact_location"))
+
+    # Validate tracking URI format
+    if enabled and tracking_uri:
+        try:
+            validate_tracking_uri(tracking_uri)
+        except ValueError as e:
+            logger.error(f"Invalid tracking_uri configuration: {e}")
+            raise
 
     # Use default experiment name if not configured
     if not experiment_name:

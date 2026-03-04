@@ -1,263 +1,23 @@
-"""Advanced metrics and analytics for MLflow conversation logging.
+"""Performance metrics for MLflow conversation logging.
 
-This module provides enhanced metrics beyond basic duration and cost tracking,
-including conversation complexity scoring, topic classification, and trend analysis.
+This module provides objective performance metrics for LLM conversations,
+focusing on measurable, actionable data like duration, cost, and token usage.
 """
 
-import json
 import logging
-import re
-from collections import Counter
-from datetime import datetime
-from typing import Any, Dict, List, Optional, Set, Tuple
-from urllib.parse import urlparse
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
     "ConversationMetrics",
-    "calculate_complexity_score",
-    "classify_conversation_topic",
     "extract_performance_metrics",
     "get_error_metrics",
 ]
 
 
 class ConversationMetrics:
-    """Calculates advanced metrics for conversation analysis."""
-
-    # Common programming keywords for topic classification
-    PROGRAMMING_KEYWORDS = {
-        "code",
-        "function",
-        "class",
-        "variable",
-        "method",
-        "api",
-        "database",
-        "algorithm",
-        "debug",
-        "test",
-        "bug",
-        "error",
-        "exception",
-        "import",
-        "library",
-        "framework",
-        "syntax",
-        "compile",
-        "deploy",
-        "git",
-        "commit",
-        "merge",
-        "branch",
-        "repository",
-        "docker",
-        "kubernetes",
-        "aws",
-        "cloud",
-    }
-
-    # File operation keywords
-    FILE_KEYWORDS = {
-        "file",
-        "directory",
-        "folder",
-        "path",
-        "read",
-        "write",
-        "save",
-        "load",
-        "copy",
-        "move",
-        "delete",
-        "create",
-        "edit",
-        "modify",
-        "search",
-        "find",
-    }
-
-    # Configuration and setup keywords
-    CONFIG_KEYWORDS = {
-        "config",
-        "configuration",
-        "setup",
-        "install",
-        "dependency",
-        "package",
-        "environment",
-        "settings",
-        "properties",
-        "yaml",
-        "json",
-        "toml",
-        "xml",
-    }
-
-    # Documentation and help keywords
-    DOCS_KEYWORDS = {
-        "documentation",
-        "docs",
-        "readme",
-        "guide",
-        "tutorial",
-        "help",
-        "explain",
-        "how to",
-        "what is",
-        "example",
-        "usage",
-        "manual",
-        "reference",
-    }
-
-    def __init__(self) -> None:
-        self.complexity_factors = {
-            "prompt_length": 0.2,
-            "code_blocks": 0.3,
-            "file_operations": 0.2,
-            "tool_calls": 0.15,
-            "error_handling": 0.1,
-            "multi_step": 0.05,
-        }
-
-    def calculate_complexity_score(
-        self, prompt: str, response_data: Dict[str, Any]
-    ) -> float:
-        """Calculate conversation complexity score (0-100).
-
-        Args:
-            prompt: User prompt text
-            response_data: LLM response data
-
-        Returns:
-            Complexity score from 0 (simple) to 100 (very complex)
-        """
-        try:
-            score = 0.0
-
-            # Prompt length factor (0-20 points)
-            prompt_length = len(prompt)
-            if prompt_length > 1000:
-                score += 20
-            elif prompt_length > 500:
-                score += 15
-            elif prompt_length > 200:
-                score += 10
-            elif prompt_length > 100:
-                score += 5
-
-            # Code block detection (0-30 points)
-            code_blocks = self._count_code_blocks(prompt)
-            if code_blocks > 3:
-                score += 30
-            elif code_blocks > 1:
-                score += 20
-            elif code_blocks > 0:
-                score += 10
-
-            # File operation complexity (0-20 points)
-            file_ops = self._count_file_operations(prompt)
-            if file_ops > 5:
-                score += 20
-            elif file_ops > 2:
-                score += 15
-            elif file_ops > 0:
-                score += 10
-
-            # Tool usage complexity (0-15 points)
-            raw_response = response_data.get("raw_response", {})
-            if isinstance(raw_response, dict):
-                session_info = raw_response.get("session_info", {})
-                if isinstance(session_info, dict):
-                    usage = session_info.get("usage", {})
-                    if isinstance(usage, dict):
-                        tool_calls = usage.get(
-                            "cache_read_input_tokens", 0
-                        ) + usage.get("tool_use_tokens", 0)
-                        if tool_calls > 1000:
-                            score += 15
-                        elif tool_calls > 500:
-                            score += 10
-                        elif tool_calls > 100:
-                            score += 5
-
-            # Error handling complexity (0-10 points)
-            if self._has_error_handling(prompt):
-                score += 10
-
-            # Multi-step task detection (0-5 points)
-            if self._is_multi_step_task(prompt):
-                score += 5
-
-            return min(score, 100.0)  # Cap at 100
-
-        except Exception as e:
-            logger.warning(f"Failed to calculate complexity score: {e}")
-            return 50.0  # Default medium complexity
-
-    def classify_conversation_topic(self, prompt: str) -> str:
-        """Classify conversation topic based on content analysis.
-
-        Args:
-            prompt: User prompt text
-
-        Returns:
-            Topic category string
-        """
-        try:
-            prompt_lower = prompt.lower()
-
-            # Count keyword matches for each category
-            programming_score = sum(
-                1 for kw in self.PROGRAMMING_KEYWORDS if kw in prompt_lower
-            )
-            file_score = sum(1 for kw in self.FILE_KEYWORDS if kw in prompt_lower)
-            config_score = sum(1 for kw in self.CONFIG_KEYWORDS if kw in prompt_lower)
-            docs_score = sum(1 for kw in self.DOCS_KEYWORDS if kw in prompt_lower)
-
-            # Determine primary topic
-            scores = {
-                "programming": programming_score,
-                "file_operations": file_score,
-                "configuration": config_score,
-                "documentation": docs_score,
-            }
-
-            primary_topic = max(scores.keys(), key=lambda k: scores[k])
-
-            # Additional specific classifications
-            if (
-                "error" in prompt_lower
-                or "bug" in prompt_lower
-                or "fix" in prompt_lower
-            ):
-                return "debugging"
-            elif "test" in prompt_lower and programming_score > 0:
-                return "testing"
-            elif "deploy" in prompt_lower or "build" in prompt_lower:
-                return "deployment"
-            elif "git" in prompt_lower or "commit" in prompt_lower:
-                return "version_control"
-            elif any(
-                word in prompt_lower for word in ["help", "how", "what", "explain"]
-            ):
-                return "support"
-
-            # Return primary topic if score is significant
-            if scores[primary_topic] >= 2:
-                return primary_topic
-
-            # Default classification
-            if len(prompt) > 200:
-                return "complex_query"
-            else:
-                return "general"
-
-        except Exception as e:
-            logger.warning(f"Failed to classify conversation topic: {e}")
-            return "unknown"
+    """Calculates objective performance metrics for conversation analysis."""
 
     def extract_performance_metrics(
         self, response_data: Dict[str, Any]
@@ -268,7 +28,12 @@ class ConversationMetrics:
             response_data: LLM response data
 
         Returns:
-            Dictionary of performance metrics
+            Dictionary of performance metrics including:
+            - Duration (seconds, minutes)
+            - Cost (USD)
+            - Token usage (input, output, total)
+            - Cost efficiency (tokens per dollar, cost per thousand tokens)
+            - Cache hit ratio
         """
         metrics = {}
 
@@ -278,16 +43,6 @@ class ConversationMetrics:
                 duration = float(response_data["duration_ms"])
                 metrics["duration_seconds"] = duration / 1000
                 metrics["duration_minutes"] = duration / 60000
-
-                # Performance categories
-                if duration < 5000:  # < 5 seconds
-                    metrics["performance_category"] = 1.0  # Fast
-                elif duration < 30000:  # < 30 seconds
-                    metrics["performance_category"] = 2.0  # Medium
-                elif duration < 120000:  # < 2 minutes
-                    metrics["performance_category"] = 3.0  # Slow
-                else:
-                    metrics["performance_category"] = 4.0  # Very slow
 
             # Cost metrics
             if "cost_usd" in response_data:
@@ -346,7 +101,7 @@ class ConversationMetrics:
 
     def get_error_metrics(
         self, error: Optional[Exception], duration_ms: Optional[int]
-    ) -> Dict[str, Any]:
+    ) -> Dict[str, float]:
         """Extract error-related metrics.
 
         Args:
@@ -354,15 +109,20 @@ class ConversationMetrics:
             duration_ms: Duration before error occurred
 
         Returns:
-            Dictionary of error metrics
+            Dictionary of error metrics including:
+            - has_error (0.0 or 1.0)
+            - error_type_code (numeric classification)
+            - error_severity (1.0=low, 2.0=medium, 3.0=high)
+            - time_to_error_ms, time_to_error_seconds
+            - failure_speed (1.0=fast, 2.0=slow)
         """
-        metrics = {}
+        metrics: Dict[str, float] = {}
 
         try:
             if error is not None:
                 metrics["has_error"] = 1.0
-                # Note: error_type is stored as string but metrics dict typed as float
-                # We'll store a numeric error type code instead
+
+                # Numeric error type classification
                 error_name = type(error).__name__.lower()
                 if "timeout" in error_name or "connection" in error_name:
                     metrics["error_type_code"] = 1.0  # Network/timeout errors
@@ -374,7 +134,6 @@ class ConversationMetrics:
                     metrics["error_type_code"] = 0.0  # Unknown/other errors
 
                 # Error severity classification
-                error_name = type(error).__name__.lower()
                 if any(
                     word in error_name for word in ["timeout", "connection", "network"]
                 ):
@@ -409,58 +168,8 @@ class ConversationMetrics:
 
         return metrics
 
-    def _count_code_blocks(self, text: str) -> int:
-        """Count code blocks in text (markdown format)."""
-        return len(re.findall(r"```[\s\S]*?```", text))
-
-    def _count_file_operations(self, text: str) -> int:
-        """Count file operation keywords in text."""
-        text_lower = text.lower()
-        return sum(1 for keyword in self.FILE_KEYWORDS if keyword in text_lower)
-
-    def _has_error_handling(self, text: str) -> bool:
-        """Check if text mentions error handling concepts."""
-        error_keywords = [
-            "try",
-            "catch",
-            "exception",
-            "error",
-            "handle",
-            "fix",
-            "debug",
-        ]
-        text_lower = text.lower()
-        return any(keyword in text_lower for keyword in error_keywords)
-
-    def _is_multi_step_task(self, text: str) -> bool:
-        """Check if text describes a multi-step task."""
-        step_indicators = [
-            "step",
-            "first",
-            "then",
-            "next",
-            "finally",
-            "after",
-            "before",
-        ]
-        text_lower = text.lower()
-        step_count = sum(1 for indicator in step_indicators if indicator in text_lower)
-        return step_count >= 2 or len(text.split(".")) > 3
-
 
 # Convenience functions for direct use
-def calculate_complexity_score(prompt: str, response_data: Dict[str, Any]) -> float:
-    """Calculate conversation complexity score."""
-    metrics = ConversationMetrics()
-    return metrics.calculate_complexity_score(prompt, response_data)
-
-
-def classify_conversation_topic(prompt: str) -> str:
-    """Classify conversation topic."""
-    metrics = ConversationMetrics()
-    return metrics.classify_conversation_topic(prompt)
-
-
 def extract_performance_metrics(response_data: Dict[str, Any]) -> Dict[str, float]:
     """Extract performance metrics."""
     metrics = ConversationMetrics()
@@ -469,7 +178,7 @@ def extract_performance_metrics(response_data: Dict[str, Any]) -> Dict[str, floa
 
 def get_error_metrics(
     error: Optional[Exception], duration_ms: Optional[int]
-) -> Dict[str, Any]:
+) -> Dict[str, float]:
     """Get error metrics."""
     metrics = ConversationMetrics()
     return metrics.get_error_metrics(error, duration_ms)

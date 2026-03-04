@@ -54,6 +54,29 @@ def reset_logging() -> Generator[None, None, None]:
 
 
 @pytest.fixture(autouse=True)
+def isolate_mlflow_artifacts(tmp_path: Path) -> Generator[None, None, None]:
+    """Isolate MLflow artifacts to prevent pollution of project root.
+
+    This fixture automatically sets MLflow's tracking URI to a temporary
+    directory for all tests, ensuring that no MLflow databases or artifacts
+    are created in the project root directory.
+    """
+    # Set MLflow tracking URI to temp directory for all tests
+    original_uri = os.environ.get("MLFLOW_TRACKING_URI")
+    mlflow_temp = tmp_path / ".mlflow_test"
+    mlflow_temp.mkdir(exist_ok=True)
+    os.environ["MLFLOW_TRACKING_URI"] = f"file:///{mlflow_temp}"
+
+    yield  # Run the test
+
+    # Restore original tracking URI
+    if original_uri:
+        os.environ["MLFLOW_TRACKING_URI"] = original_uri
+    else:
+        os.environ.pop("MLFLOW_TRACKING_URI", None)
+
+
+@pytest.fixture(autouse=True)
 def cleanup_test_artifacts() -> Generator[None, None, None]:
     """Clean up any test artifacts created during test execution.
 

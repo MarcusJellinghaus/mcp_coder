@@ -325,15 +325,6 @@ class MLflowLogger:
                 "prompt_length": len(prompt),
             }
 
-            # Add advanced classification if available
-            if ConversationMetrics is not None:
-                try:
-                    metrics_calculator = ConversationMetrics()
-                    topic = metrics_calculator.classify_conversation_topic(prompt)
-                    params["conversation_topic"] = topic
-                except Exception as e:
-                    logger.debug(f"Failed to classify conversation topic: {e}")
-
             self.log_params(params)
 
             # Log basic metrics
@@ -355,16 +346,10 @@ class MLflowLogger:
                         if isinstance(value, (int, float)):
                             usage_metrics[f"usage_{key}"] = float(value)
 
-            # Add advanced metrics if available
+            # Add performance metrics if available
             if ConversationMetrics is not None:
                 try:
                     metrics_calculator = ConversationMetrics()
-
-                    # Complexity score
-                    complexity = metrics_calculator.calculate_complexity_score(
-                        prompt, response_data
-                    )
-                    usage_metrics["complexity_score"] = complexity
 
                     # Performance metrics
                     perf_metrics = metrics_calculator.extract_performance_metrics(
@@ -373,7 +358,7 @@ class MLflowLogger:
                     usage_metrics.update(perf_metrics)
 
                 except Exception as e:
-                    logger.debug(f"Failed to calculate advanced metrics: {e}")
+                    logger.debug(f"Failed to calculate performance metrics: {e}")
 
             if usage_metrics:
                 self.log_metrics(usage_metrics)
