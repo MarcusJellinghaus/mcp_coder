@@ -159,6 +159,21 @@ forbidden_modules =
     mcp_coder.utils.git_operations
     mcp_coder.utils.github_operations
 
+# -----------------------------------------------------------------------------
+# Contract: MLflow Logger No Import Cycles
+# -----------------------------------------------------------------------------
+# Prevents mlflow_logger from importing modules that depend on it.
+# Used by: logging_utils (LLM metrics), prompt (conversations).
+# -----------------------------------------------------------------------------
+[importlinter:contract:mlflow_logger_no_cycles]
+name = MLflow Logger No Import Cycles
+type = forbidden
+source_modules =
+    mcp_coder.llm.mlflow_logger
+forbidden_modules =
+    mcp_coder.llm.providers.claude.logging_utils
+    mcp_coder.cli.commands.prompt
+
 
 # =============================================================================
 # THIRD-PARTY LIBRARY ISOLATION CONTRACTS
