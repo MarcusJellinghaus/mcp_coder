@@ -402,7 +402,7 @@ def test_collect_branch_status_all_good() -> None:
 
         # Verify function calls
         mock_branch.assert_called_once_with(project_dir)
-        mock_ci.assert_called_once_with(project_dir, "main", False, 300)
+        mock_ci.assert_called_once_with(project_dir, "main", 300)
         mock_rebase.assert_called_once_with(project_dir)
         mock_tasks.assert_called_once_with(project_dir)
 
@@ -545,7 +545,7 @@ def test_collect_branch_status_with_truncation() -> None:
 
         # Verify truncation was passed correctly
         mock_branch.assert_called_once_with(project_dir)
-        mock_ci.assert_called_once_with(project_dir, "main", True, 50)
+        mock_ci.assert_called_once_with(project_dir, "main", 50)
         assert (
             result.ci_details == long_ci_error
         )  # Function should return what mock returns
@@ -624,9 +624,7 @@ def test_collect_ci_status_with_truncation() -> None:
         # Log file naming: {number}_{job_name}.txt (GitHub Actions format)
         mock_instance.get_run_logs.return_value = {"2_test-job.txt": long_logs}
 
-        status, details = _collect_ci_status(
-            project_dir, "main", truncate=True, max_lines=100
-        )
+        status, details = _collect_ci_status(project_dir, "main", max_lines=100)
 
         assert status == "FAILED"
         # Should be truncated by the function
@@ -650,9 +648,7 @@ def test_collect_ci_status_no_truncation() -> None:
             "run": {"id": 123, "conclusion": "success", "status": "completed"}
         }
 
-        status, details = _collect_ci_status(
-            project_dir, "main", truncate=False, max_lines=100
-        )
+        status, details = _collect_ci_status(project_dir, "main", max_lines=100)
 
         assert status == "PASSED"
         assert details is None
@@ -667,9 +663,7 @@ def test_collect_ci_status_error_handling() -> None:
         mock_ci_manager.return_value = mock_instance
         mock_instance.get_latest_ci_status.side_effect = Exception("API Error")
 
-        status, details = _collect_ci_status(
-            project_dir, "main", truncate=False, max_lines=100
-        )
+        status, details = _collect_ci_status(project_dir, "main", max_lines=100)
 
         assert status == "NOT_CONFIGURED"
         assert details is None

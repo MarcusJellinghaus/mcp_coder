@@ -362,7 +362,7 @@ def collect_branch_status(
 
         # Collect status from all sources
         ci_status, ci_details = _collect_ci_status(
-            project_dir, branch_name, truncate_logs, max_log_lines
+            project_dir, branch_name, max_log_lines
         )
         rebase_needed, rebase_reason = _collect_rebase_status(project_dir)
         tasks_complete = _collect_task_status(project_dir)
@@ -395,7 +395,7 @@ def collect_branch_status(
 
 
 def _collect_ci_status(
-    project_dir: Path, branch: str, truncate: bool, max_lines: int
+    project_dir: Path, branch: str, max_lines: int
 ) -> Tuple[str, Optional[str]]:
     """Collect CI status and error details.
 
