@@ -42,12 +42,12 @@ See [step_2.md](./steps/step_2.md) for details.
 ### Step 3: Add Tests for Error Handling and Fallback
 See [step_3.md](./steps/step_3.md) for details.
 
-- [ ] Add `test_build_ci_error_details_logs_not_available_with_url()` function
-- [ ] Add `test_build_ci_error_details_fallback_to_old_format()` function
-- [ ] Verify both new tests FAIL (expected before implementation)
-- [ ] Run pylint, pytest, mypy on modified test file
-- [ ] Fix all issues found by quality checks
-- [ ] Prepare git commit message for Step 3
+- [x] Add `test_build_ci_error_details_logs_not_available_with_url()` function
+- [x] Add `test_build_ci_error_details_fallback_to_old_format()` function
+- [x] Verify both new tests FAIL (expected before implementation)
+- [x] Run pylint, pytest, mypy on modified test file
+- [x] Fix all issues found by quality checks
+- [x] Prepare git commit message for Step 3
 
 ### Step 4: Implement Pattern-Based Log Matching
 See [step_4.md](./steps/step_4.md) for details.

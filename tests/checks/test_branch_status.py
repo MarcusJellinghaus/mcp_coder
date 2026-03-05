@@ -1010,6 +1010,69 @@ def test_build_ci_error_details_includes_github_urls() -> None:
     assert "File size check failed" in result
 
 
+def test_build_ci_error_details_logs_not_available_with_url() -> None:
+    """Test _build_ci_error_details shows GitHub URL when logs unavailable."""
+    status_result = {
+        "run": {"id": 12345, "url": "https://github.com/user/repo/actions/runs/12345"},
+        "jobs": [
+            {
+                "id": 67890,
+                "name": "file-size",
+                "conclusion": "failure",
+                "steps": [{"name": "Run file-size", "conclusion": "failure"}],
+            }
+        ],
+    }
+
+    mock_instance = MagicMock()
+    # Empty dict = no logs available
+    mock_instance.get_run_logs.return_value = {}
+
+    result = _build_ci_error_details(mock_instance, status_result, False, 300)
+
+    assert result is not None
+    # Check error message with GitHub URL
+    assert "(logs not available locally)" in result
+    assert (
+        "View on GitHub: https://github.com/user/repo/actions/runs/12345/job/67890"
+        in result
+    )
+    # Check job header still present
+    assert "## Job: file-size" in result
+    assert "Failed step: Run file-size" in result
+
+
+def test_build_ci_error_details_fallback_to_old_format() -> None:
+    """Test _build_ci_error_details falls back to old log format."""
+    status_result = {
+        "run": {"id": 12345, "url": "https://github.com/user/repo/actions/runs/12345"},
+        "jobs": [
+            {
+                "id": 67890,
+                "name": "file-size",
+                "conclusion": "failure",
+                "steps": [
+                    {"name": "Run file-size", "conclusion": "failure", "number": 3}
+                ],
+            }
+        ],
+    }
+
+    mock_instance = MagicMock()
+    # Use OLD format (pattern match will fail, fallback should work)
+    mock_instance.get_run_logs.return_value = {
+        "file-size/3_Run file-size.txt": "File size check failed (old format)"
+    }
+
+    result = _build_ci_error_details(mock_instance, status_result, False, 300)
+
+    assert result is not None
+    # Verify log content from old format is displayed
+    assert "File size check failed (old format)" in result
+    assert "## Job: file-size" in result
+    assert "Failed step: Run file-size" in result
+
+
 def test_build_ci_error_details_no_failed_jobs() -> None:
     """Test _build_ci_error_details with no failed jobs returns None."""
     status_result = {
