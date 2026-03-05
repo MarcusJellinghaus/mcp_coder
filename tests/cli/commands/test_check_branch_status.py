@@ -106,7 +106,7 @@ class TestExecuteCheckBranchStatus:
 
         assert result == 0
         mock_resolve_dir.assert_called_once_with("/test/project")
-        mock_collect.assert_called_once_with(project_dir, False)
+        mock_collect.assert_called_once_with(project_dir)
 
         # Check output contains human-formatted report
         captured = capsys.readouterr()
@@ -142,7 +142,7 @@ class TestExecuteCheckBranchStatus:
 
         assert result == 0
         mock_resolve_dir.assert_called_once_with("/test/project")
-        mock_collect.assert_called_once_with(project_dir, True)
+        mock_collect.assert_called_once_with(project_dir)
 
         # Check output contains LLM-formatted report
         captured = capsys.readouterr()
@@ -184,7 +184,7 @@ class TestExecuteCheckBranchStatus:
 
         assert result == 0
         mock_resolve_dir.assert_called_once_with("/test/project")
-        mock_collect.assert_called_once_with(project_dir, False)
+        mock_collect.assert_called_once_with(project_dir)
         mock_run_fixes.assert_called_once_with(
             project_dir,
             failed_ci_report,
@@ -233,7 +233,7 @@ class TestExecuteCheckBranchStatus:
 
         assert result == 1
         mock_resolve_dir.assert_called_once_with("/test/project")
-        mock_collect.assert_called_once_with(project_dir, False)
+        mock_collect.assert_called_once_with(project_dir)
         mock_run_fixes.assert_called_once()
 
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
@@ -322,7 +322,7 @@ class TestExecuteCheckBranchStatus:
 
         assert result == 0
         mock_resolve_dir.assert_called_once_with(None)
-        mock_collect.assert_called_once_with(project_dir, False)
+        mock_collect.assert_called_once_with(project_dir)
 
 
 # Note: CI waiting tests moved to test_check_branch_status_ci_waiting.py

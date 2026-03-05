@@ -539,9 +539,7 @@ def test_collect_branch_status_with_truncation() -> None:
         mock_tasks.return_value = True
         mock_label.return_value = "status-03:implementing"
 
-        result = collect_branch_status(
-            project_dir, truncate_logs=True, max_log_lines=50
-        )
+        result = collect_branch_status(project_dir, max_log_lines=50)
 
         # Verify truncation was passed correctly
         mock_branch.assert_called_once_with(project_dir)

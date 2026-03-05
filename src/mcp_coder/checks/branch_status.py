@@ -321,14 +321,13 @@ def get_failed_jobs_summary(
 
 
 def collect_branch_status(
-    project_dir: Path, truncate_logs: bool = False, max_log_lines: int = 300
+    project_dir: Path, max_log_lines: int = 300
 ) -> BranchStatusReport:
     """Collect comprehensive branch status from all sources.
 
     Args:
         project_dir: Path to git repository
-        truncate_logs: Whether to truncate CI logs for LLM consumption
-        max_log_lines: Maximum log lines when truncating
+        max_log_lines: Maximum log lines for CI error details
 
     Returns:
         BranchStatusReport with all collected information
