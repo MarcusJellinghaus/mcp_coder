@@ -265,7 +265,8 @@ def get_failed_jobs_summary(
     if not log_content and step_name:
         available_files = list(logs.keys())
         logger.warning(
-            f"No log file found for failed step. Expected: '{log_filename}', "
+            f"No log file found for job '{job_name}'. "
+            f"Tried pattern: '*_{job_name}.txt', "
             f"Available: {available_files}"
         )
 
@@ -415,7 +416,7 @@ def _collect_ci_status(
 def _build_ci_error_details(
     ci_manager: CIResultsManager,
     status_result: Any,
-    truncate: bool,
+    _truncate: bool,
     max_lines: int,
 ) -> Optional[str]:
     """Build structured CI error details with logs for multiple failed jobs.
@@ -476,9 +477,28 @@ def _build_ci_error_details(
                 step_number = step.get("number", 0)
                 break
 
-        # Get log content for this job and strip timestamps
-        log_filename = f"{job_name}/{step_number}_{step_name}.txt"
-        log_content = logs.get(log_filename, "")
+        # Get log content for this job using pattern matching
+        # GitHub format: {execution_number}_{job_name}.txt
+        # The execution number doesn't match step.number from API, so we pattern match
+        log_content = ""
+        matching_files = [f for f in logs.keys() if f.endswith(f"_{job_name}.txt")]
+
+        if matching_files:
+            # Take first match
+            log_content = logs[matching_files[0]]
+
+            # Warn if multiple matches found (shouldn't happen normally)
+            if len(matching_files) > 1:
+                logger.warning(
+                    f"Multiple log files found for job '{job_name}': {matching_files}. "
+                    f"Using: {matching_files[0]}"
+                )
+        else:
+            # Fallback to old format if pattern match fails
+            log_filename = f"{job_name}/{step_number}_{step_name}.txt"
+            log_content = logs.get(log_filename, "")
+
+        # Strip timestamps if content found
         if log_content:
             log_content = _strip_timestamps(log_content)
 
@@ -593,7 +613,7 @@ def _collect_task_status(project_dir: Path) -> bool:
 
 
 def _collect_github_label(
-    project_dir: Path,
+    _project_dir: Path,
     issue_data: Optional[IssueData] = None,
 ) -> str:
     """Collect current GitHub workflow status label.

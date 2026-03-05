@@ -52,14 +52,14 @@ See [step_3.md](./steps/step_3.md) for details.
 ### Step 4: Implement Pattern-Based Log Matching
 See [step_4.md](./steps/step_4.md) for details.
 
-- [ ] Implement pattern-based log matching in `_build_ci_error_details()` function
-- [ ] Add multi-match warning logic (Decision 1)
-- [ ] Add fallback to old format for backward compatibility (Decision 2)
-- [ ] Update warning message in `get_failed_jobs_summary()` function (Decision 4)
-- [ ] Verify updated tests now PASS
-- [ ] Run pylint, pytest, mypy on modified source file
-- [ ] Fix all issues found by quality checks
-- [ ] Prepare git commit message for Step 4
+- [x] Implement pattern-based log matching in `_build_ci_error_details()` function
+- [x] Add multi-match warning logic (Decision 1)
+- [x] Add fallback to old format for backward compatibility (Decision 2)
+- [x] Update warning message in `get_failed_jobs_summary()` function (Decision 4)
+- [x] Verify updated tests now PASS
+- [x] Run pylint, pytest, mypy on modified source file
+- [x] Fix all issues found by quality checks
+- [x] Prepare git commit message for Step 4
 
 ### Step 5: Add GitHub URL Display
 See [step_5.md](./steps/step_5.md) for details.
