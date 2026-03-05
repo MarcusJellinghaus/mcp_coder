@@ -78,14 +78,14 @@ def _log_to_mlflow(
             # Resume closed run; metrics are already logged by log_llm_response()
             mlflow_logger.start_run(session_id=response_sid)
             mlflow_logger.log_conversation_artifacts(prompt, response_dict, metadata)
+            mlflow_logger.end_run("FINISHED", session_id=response_sid)
+        elif mlflow_logger.active_run_id is not None:
+            # Run still open: session_id was None so log_llm_response left it open.
+            # Metrics already logged — just add params + artifacts and close.
+            mlflow_logger.log_conversation_artifacts(prompt, response_dict, metadata)
             mlflow_logger.end_run("FINISHED")
         else:
-            # No mapping found: start a fresh run with full logging.
-            if response_sid:
-                logger.debug(
-                    f"Session {response_sid} not in MLflow map — "
-                    "starting fresh run (metrics may appear in a separate run)"
-                )
+            # Fallback: no active run and no known session mapping.
             mlflow_logger.start_run()
             mlflow_logger.log_conversation(prompt, response_dict, metadata)
             mlflow_logger.end_run("FINISHED")

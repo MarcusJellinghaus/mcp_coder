@@ -134,7 +134,9 @@ def log_llm_response(
                 if usage_metrics:
                     mlflow_logger.log_metrics(usage_metrics)
 
-            mlflow_logger.end_run("FINISHED", session_id=session_id)
+            if session_id is not None:
+                mlflow_logger.end_run("FINISHED", session_id=session_id)
+            # else: leave run open — _log_to_mlflow will close it via active_run_id
         except Exception as e:
             logger.debug(f"Failed to log MLflow response metrics: {e}")
 

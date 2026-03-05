@@ -465,6 +465,7 @@ class MLflowLogger:
 
         params = {
             "model": metadata.get("model", "unknown"),
+            "provider": response_data.get("provider", "unknown"),
             "working_directory": metadata.get("working_directory"),
             "branch_name": metadata.get("branch_name"),
             "step_name": metadata.get("step_name"),

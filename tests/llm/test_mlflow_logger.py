@@ -445,6 +445,7 @@ class TestSessionMapBehavior:
                             mock_params.assert_called_once()
                             params = mock_params.call_args[0][0]
                             assert "model" in params
+                            assert "provider" in params
                             assert "prompt_length" in params
                             assert mock_artifact.call_count == 2
                             mock_metrics.assert_not_called()

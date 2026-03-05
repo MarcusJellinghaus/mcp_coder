@@ -818,17 +818,18 @@ class TestLogToMlflow:
         mock_mlflow.start_run.assert_called_once_with(session_id="sid-1")
         mock_mlflow.log_conversation_artifacts.assert_called_once()
         mock_mlflow.log_conversation.assert_not_called()
-        mock_mlflow.end_run.assert_called_once_with("FINISHED")
+        mock_mlflow.end_run.assert_called_once_with("FINISHED", session_id="sid-1")
 
     @patch("mcp_coder.cli.commands.prompt.get_mlflow_logger")
     def test_unknown_session_starts_fresh_run(
         self,
         mock_get_mlflow: Mock,
     ) -> None:
-        """Unknown session (not in map): fresh run, log full conversation, end FINISHED."""
+        """Unknown session (not in map) and no active run: fresh run, log full conversation."""
         mock_mlflow = Mock()
         mock_mlflow.config.enabled = True
         mock_mlflow.has_session.return_value = False
+        mock_mlflow.active_run_id = None  # no open run from log_llm_response
         mock_get_mlflow.return_value = mock_mlflow
 
         _log_to_mlflow(self._make_response("sid-2"), "test prompt", Path("/proj"))
@@ -839,13 +840,37 @@ class TestLogToMlflow:
         mock_mlflow.end_run.assert_called_once_with("FINISHED")
 
     @patch("mcp_coder.cli.commands.prompt.get_mlflow_logger")
-    def test_none_session_id_skips_has_session_and_starts_fresh(
+    def test_none_session_id_with_active_run_uses_existing_run(
         self,
         mock_get_mlflow: Mock,
     ) -> None:
-        """None session_id: has_session not called, fresh run path taken."""
+        """None session_id but run still open: log artifacts to existing run, close it.
+
+        This is the normal path when session_id=None: log_llm_response leaves
+        the run open, and _log_to_mlflow detects it via active_run_id.
+        """
         mock_mlflow = Mock()
         mock_mlflow.config.enabled = True
+        mock_mlflow.active_run_id = "run-open-xyz"  # run left open by log_llm_response
+        mock_get_mlflow.return_value = mock_mlflow
+
+        _log_to_mlflow(self._make_response(None), "test prompt", Path("/proj"))
+
+        mock_mlflow.has_session.assert_not_called()
+        mock_mlflow.start_run.assert_not_called()
+        mock_mlflow.log_conversation_artifacts.assert_called_once()
+        mock_mlflow.log_conversation.assert_not_called()
+        mock_mlflow.end_run.assert_called_once_with("FINISHED")
+
+    @patch("mcp_coder.cli.commands.prompt.get_mlflow_logger")
+    def test_none_session_id_no_active_run_falls_back_to_fresh(
+        self,
+        mock_get_mlflow: Mock,
+    ) -> None:
+        """None session_id and no active run: fallback to fresh run with full logging."""
+        mock_mlflow = Mock()
+        mock_mlflow.config.enabled = True
+        mock_mlflow.active_run_id = None  # no open run
         mock_get_mlflow.return_value = mock_mlflow
 
         _log_to_mlflow(self._make_response(None), "test prompt", Path("/proj"))
