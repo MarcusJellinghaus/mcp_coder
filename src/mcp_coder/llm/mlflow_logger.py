@@ -214,7 +214,6 @@ class MLflowLogger:
                     )
                     mlflow.end_run()
                     self.active_run_id = None
-                self._session_run_map.move_to_end(session_id)
                 run = mlflow.start_run(run_id=self._session_run_map[session_id])
                 self.active_run_id = run.info.run_id
                 logger.debug(f"Resumed MLflow run: {self.active_run_id}")
