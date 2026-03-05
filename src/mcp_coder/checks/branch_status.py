@@ -436,6 +436,8 @@ def _build_ci_error_details(
     run_data = status_result["run"]
     jobs_data = status_result.get("jobs", [])
     run_id = run_data.get("id")
+    # Extract GitHub Actions run URL for user navigation
+    run_url = run_data.get("url", "")
 
     # Get logs for the run
     logs: Dict[str, str] = {}
@@ -463,6 +465,12 @@ def _build_ci_error_details(
     output_lines.append("")  # Placeholder for summary
     output_lines.append("")
     lines_used += 2
+
+    # Add GitHub Actions run URL if available
+    if run_url:
+        output_lines.append(f"GitHub Actions: {run_url}")
+        output_lines.append("")
+        lines_used += 2
 
     # Section 2: Show logs for each failed job until we hit the limit
     for job in failed_jobs:
@@ -533,6 +541,10 @@ def _build_ci_error_details(
 
         # Add job section
         output_lines.append(f"## Job: {job_name}")
+        # Add job URL if available (helps user navigate to specific job)
+        job_id = job.get("id")
+        if run_url and job_id:
+            output_lines.append(f"View job: {run_url}/job/{job_id}")
         output_lines.append(f"Failed step: {step_name}")
         output_lines.append("")
         output_lines.append(log_content if log_content else "(logs not available)")

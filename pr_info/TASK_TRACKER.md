@@ -64,13 +64,13 @@ See [step_4.md](./steps/step_4.md) for details.
 ### Step 5: Add GitHub URL Display
 See [step_5.md](./steps/step_5.md) for details.
 
-- [ ] Extract run URL from `run_data` parameter
-- [ ] Add run URL display at top of error output
-- [ ] Add job URL display for each failed job
-- [ ] Verify `test_build_ci_error_details_includes_github_urls()` now PASSES
-- [ ] Run pylint, pytest, mypy on modified source file
-- [ ] Fix all issues found by quality checks
-- [ ] Prepare git commit message for Step 5
+- [x] Extract run URL from `run_data` parameter
+- [x] Add run URL display at top of error output
+- [x] Add job URL display for each failed job
+- [x] Verify `test_build_ci_error_details_includes_github_urls()` now PASSES
+- [x] Run pylint, pytest, mypy on modified source file
+- [x] Fix all issues found by quality checks
+- [x] Prepare git commit message for Step 5
 
 ### Step 6: Enhance Error Message When Logs Unavailable
 See [step_6.md](./steps/step_6.md) for details.
