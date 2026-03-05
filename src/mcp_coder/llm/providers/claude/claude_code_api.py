@@ -486,6 +486,7 @@ def ask_claude_code_api(
         log_llm_response(
             method="api",
             duration_ms=duration_ms,
+            session_id=actual_session_id,
             cost_usd=detailed["result_info"].get("cost_usd"),
             usage=detailed["result_info"].get("usage"),
             num_turns=detailed["result_info"].get("num_turns"),
