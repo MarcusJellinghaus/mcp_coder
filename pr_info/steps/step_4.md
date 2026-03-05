@@ -41,9 +41,15 @@ def _log_to_mlflow(response_data, prompt, project_dir, branch_name=None, step_na
             mlflow_logger.log_conversation_artifacts(prompt, response_dict, metadata)
             mlflow_logger.end_run("FINISHED")
         else:                                                          # NEW — edge/fallback path
-            # No mapping found: start a fresh run with full logging
+            # No mapping found: start a fresh run with full logging.
+            # Note: log_llm_response() (Step 2) already closed the previous run,
+            # so the metrics from that run exist separately. This new run will
+            # duplicate those metrics — acceptable for this rare edge case.
             if response_sid:
-                logger.debug(f"Session {response_sid} not in MLflow map, fresh run")
+                logger.debug(
+                    f"Session {response_sid} not in MLflow map — "
+                    "starting fresh run (metrics may appear in a separate run)"
+                )
             mlflow_logger.start_run()
             mlflow_logger.log_conversation(prompt, response_dict, metadata)
             mlflow_logger.end_run("FINISHED")
@@ -217,8 +223,15 @@ calls with a conditional:
         mlflow_logger.log_conversation_artifacts(prompt, response_dict, metadata)
         mlflow_logger.end_run("FINISHED")
     else:
+        # `start_run()` is required in BOTH branches because log_llm_response()
+        # (Step 2) always closes the run before _log_to_mlflow() is called.
+        # In the else-path, the previous run (metrics only) is already closed;
+        # this new run logs everything, which duplicates metrics for rare edge cases.
         if response_sid:
-            logger.debug(f"Session {response_sid} not in MLflow map, starting fresh run")
+            logger.debug(
+                f"Session {response_sid} not in MLflow map — "
+                "starting fresh run (metrics may appear in a separate run)"
+            )
         mlflow_logger.start_run()
         mlflow_logger.log_conversation(prompt, response_dict, metadata)
         mlflow_logger.end_run("FINISHED")

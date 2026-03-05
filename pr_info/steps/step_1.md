@@ -179,35 +179,19 @@ log_metrics.assert_not_called()           # metrics excluded
 
 ### Test 5 — LRU eviction: 101st entry evicts the least recently used
 ```
-logger = MLflowLogger(enabled=False)   # no mlflow needed for map manipulation
-for i in range(100):
-    logger._session_run_map[f"sid-{i}"] = f"run-{i}"
-
-# Add 101st entry by simulating end_run (mock mlflow or directly via map)
-logger._session_run_map.pop("sid-0", None)     # LRU pattern
-logger._session_run_map["sid-100"] = "run-100"
-if len(logger._session_run_map) > 100:
-    logger._session_run_map.popitem(last=False)
-
-assert "sid-0" not in logger._session_run_map    # LRU evicted
-assert "sid-1" in logger._session_run_map        # still present
-assert "sid-100" in logger._session_run_map      # newest present
-assert len(logger._session_run_map) == 100
-```
-
-**Alternative** (test through `end_run` with mocked mlflow, 100 pre-loaded entries,
-then one `end_run` call to trigger eviction — whichever approach is cleaner):
-```
 mock mlflow; logger with enabled=True
 for i in range(100):
     logger._session_run_map[f"sid-{i}"] = f"run-{i}"
 logger.active_run_id = "run-100"
-logger.end_run("FINISHED", session_id="sid-100")  # triggers LRU eviction
+logger.end_run("FINISHED", session_id="sid-100")  # triggers real LRU eviction in end_run()
 
-assert "sid-0" not in logger._session_run_map     # evicted
+assert "sid-0" not in logger._session_run_map     # LRU evicted
 assert logger.has_session("sid-100") is True      # newest kept
 assert len(logger._session_run_map) == 100
 ```
+
+Use `end_run()` to trigger eviction (not direct map manipulation) — this tests the
+real eviction code path and catches bugs in `end_run()` itself.
 
 ### Test 6 — `end_run(session_id=None)` skips mapping (nothing stored)
 ```
