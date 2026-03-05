@@ -358,3 +358,127 @@ class TestGlobalLogger:
         logger = get_mlflow_logger()
         mock_load_config.assert_called_once()
         assert logger.config == mock_config
+
+
+class TestSessionMapBehavior:
+    """Test LRU session map behavior in MLflowLogger."""
+
+    def setup_method(self) -> None:
+        """Setup for each test."""
+        self.config = MLflowConfig(
+            enabled=True, tracking_uri="file:///tmp/test", experiment_name="test-exp"
+        )
+
+    def test_has_session_returns_false_for_unknown_session(self) -> None:
+        """Test that has_session returns False for an unknown session."""
+        mock_mlflow = MagicMock()
+        with patch.dict("sys.modules", {"mlflow": mock_mlflow}):
+            with patch(
+                "mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True
+            ):
+                logger = MLflowLogger(self.config)
+                assert logger.has_session("nonexistent") is False
+
+    def test_end_run_stores_session_mapping(self) -> None:
+        """Test that end_run with session_id stores the session→run mapping."""
+        mock_mlflow = MagicMock()
+        with patch.dict("sys.modules", {"mlflow": mock_mlflow}):
+            with patch(
+                "mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True
+            ):
+                logger = MLflowLogger(self.config)
+                logger.active_run_id = "run-abc"
+
+                logger.end_run("FINISHED", session_id="sid-1")
+
+                assert logger.has_session("sid-1") is True
+                assert "sid-1" in logger._session_run_map
+                assert logger._session_run_map["sid-1"] == "run-abc"
+                assert logger.active_run_id is None
+
+    def test_start_run_resumes_existing_session(self) -> None:
+        """Test that start_run resumes an existing run when session_id is known."""
+        mock_mlflow = MagicMock()
+        mock_run = Mock()
+        mock_run.info.run_id = "run-abc"
+        mock_mlflow.start_run.return_value = mock_run
+
+        with patch.dict("sys.modules", {"mlflow": mock_mlflow}):
+            with patch(
+                "mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True
+            ):
+                logger = MLflowLogger(self.config)
+                logger._session_run_map["sid-1"] = "run-abc"
+
+                result = logger.start_run(session_id="sid-1")
+
+                assert result == "run-abc"
+                mock_mlflow.start_run.assert_called_once_with(run_id="run-abc")
+
+    def test_log_conversation_artifacts_logs_params_and_artifacts_not_metrics(
+        self,
+    ) -> None:
+        """Test log_conversation_artifacts logs params+artifacts but not metrics."""
+        mock_mlflow = MagicMock()
+        with patch.dict("sys.modules", {"mlflow": mock_mlflow}):
+            with patch(
+                "mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True
+            ):
+                logger = MLflowLogger(self.config)
+                logger.active_run_id = "run-x"
+
+                response_data = {"provider": "claude", "duration_ms": 1500}
+                metadata = {
+                    "model": "claude-3",
+                    "working_directory": "/tmp",
+                    "branch_name": "main",
+                    "step_name": "test",
+                }
+
+                with patch.object(logger, "log_params") as mock_params:
+                    with patch.object(logger, "log_metrics") as mock_metrics:
+                        with patch.object(logger, "log_artifact") as mock_artifact:
+                            logger.log_conversation_artifacts(
+                                "prompt text", response_data, metadata
+                            )
+
+                            mock_params.assert_called_once()
+                            params = mock_params.call_args[0][0]
+                            assert "model" in params
+                            assert "provider" in params
+                            assert "prompt_length" in params
+                            assert mock_artifact.call_count == 2
+                            mock_metrics.assert_not_called()
+
+    def test_lru_eviction_on_101st_entry(self) -> None:
+        """Test that the 101st entry evicts the least recently used entry."""
+        mock_mlflow = MagicMock()
+        with patch.dict("sys.modules", {"mlflow": mock_mlflow}):
+            with patch(
+                "mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True
+            ):
+                logger = MLflowLogger(self.config)
+                for i in range(100):
+                    logger._session_run_map[f"sid-{i}"] = f"run-{i}"
+
+                logger.active_run_id = "run-100"
+                logger.end_run("FINISHED", session_id="sid-100")
+
+                assert "sid-0" not in logger._session_run_map
+                assert logger.has_session("sid-100") is True
+                assert len(logger._session_run_map) == 100
+
+    def test_end_run_without_session_id_skips_mapping(self) -> None:
+        """Test that end_run without session_id doesn't store anything in the map."""
+        mock_mlflow = MagicMock()
+        with patch.dict("sys.modules", {"mlflow": mock_mlflow}):
+            with patch(
+                "mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True
+            ):
+                logger = MLflowLogger(self.config)
+                logger.active_run_id = "run-xyz"
+
+                logger.end_run("FINISHED", session_id=None)
+
+                assert len(logger._session_run_map) == 0
+                assert logger.active_run_id is None

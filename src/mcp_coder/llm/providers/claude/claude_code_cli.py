@@ -703,7 +703,11 @@ def ask_claude_code_cli(
             usage = parsed["result_message"].get("usage")
 
         log_llm_response(
-            method="cli", duration_ms=duration_ms, cost_usd=cost_usd, usage=usage
+            method="cli",
+            duration_ms=duration_ms,
+            session_id=parsed["session_id"],
+            cost_usd=cost_usd,
+            usage=usage,
         )
 
         # Create response dict from stream data
