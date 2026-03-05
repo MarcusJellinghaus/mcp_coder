@@ -75,12 +75,12 @@ See [step_5.md](./steps/step_5.md) for details.
 ### Step 6: Enhance Error Message When Logs Unavailable
 See [step_6.md](./steps/step_6.md) for details.
 
-- [ ] Replace simple error message with URL-enhanced version
-- [ ] Add GitHub URL to error message when logs not available locally
-- [ ] Verify `test_build_ci_error_details_logs_not_available_with_url()` now PASSES
-- [ ] Run pylint, pytest, mypy on modified source file
-- [ ] Fix all issues found by quality checks
-- [ ] Prepare git commit message for Step 6
+- [x] Replace simple error message with URL-enhanced version
+- [x] Add GitHub URL to error message when logs not available locally
+- [x] Verify `test_build_ci_error_details_logs_not_available_with_url()` now PASSES
+- [x] Run pylint, pytest, mypy on modified source file
+- [x] Fix all issues found by quality checks
+- [x] Prepare git commit message for Step 6
 
 ### Step 7: Run Full Test Suite and Verify
 See [step_7.md](./steps/step_7.md) for details.

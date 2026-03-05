@@ -547,7 +547,16 @@ def _build_ci_error_details(
             output_lines.append(f"View job: {run_url}/job/{job_id}")
         output_lines.append(f"Failed step: {step_name}")
         output_lines.append("")
-        output_lines.append(log_content if log_content else "(logs not available)")
+        # Display log content or helpful error message
+        if log_content:
+            output_lines.append(log_content)
+        else:
+            # Provide GitHub URL if logs not available locally (helps user navigate to logs)
+            if run_url and job_id:
+                error_msg = f"(logs not available locally)\nView on GitHub: {run_url}/job/{job_id}"
+            else:
+                error_msg = "(logs not available)"
+            output_lines.append(error_msg)
         output_lines.append("")
 
         lines_used += job_header_lines + len(log_lines) + 1
