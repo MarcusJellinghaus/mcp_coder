@@ -402,7 +402,7 @@ def test_collect_branch_status_all_good() -> None:
 
         # Verify function calls
         mock_branch.assert_called_once_with(project_dir)
-        mock_ci.assert_called_once_with(project_dir, "main", False, 300)
+        mock_ci.assert_called_once_with(project_dir, "main", 300)
         mock_rebase.assert_called_once_with(project_dir)
         mock_tasks.assert_called_once_with(project_dir)
 
@@ -539,13 +539,11 @@ def test_collect_branch_status_with_truncation() -> None:
         mock_tasks.return_value = True
         mock_label.return_value = "status-03:implementing"
 
-        result = collect_branch_status(
-            project_dir, truncate_logs=True, max_log_lines=50
-        )
+        result = collect_branch_status(project_dir, max_log_lines=50)
 
         # Verify truncation was passed correctly
         mock_branch.assert_called_once_with(project_dir)
-        mock_ci.assert_called_once_with(project_dir, "main", True, 50)
+        mock_ci.assert_called_once_with(project_dir, "main", 50)
         assert (
             result.ci_details == long_ci_error
         )  # Function should return what mock returns
@@ -621,15 +619,10 @@ def test_collect_ci_status_with_truncation() -> None:
                 }
             ],
         }
-        # Log file naming matches job name pattern: {job_name}/{step_number}_{step_name}.txt
-        # Step number defaults to 0 when not specified in step data
-        mock_instance.get_run_logs.return_value = {
-            "test-job/0_Run tests.txt": long_logs
-        }
+        # Log file naming: {number}_{job_name}.txt (GitHub Actions format)
+        mock_instance.get_run_logs.return_value = {"2_test-job.txt": long_logs}
 
-        status, details = _collect_ci_status(
-            project_dir, "main", truncate=True, max_lines=100
-        )
+        status, details = _collect_ci_status(project_dir, "main", max_lines=100)
 
         assert status == "FAILED"
         # Should be truncated by the function
@@ -653,9 +646,7 @@ def test_collect_ci_status_no_truncation() -> None:
             "run": {"id": 123, "conclusion": "success", "status": "completed"}
         }
 
-        status, details = _collect_ci_status(
-            project_dir, "main", truncate=False, max_lines=100
-        )
+        status, details = _collect_ci_status(project_dir, "main", max_lines=100)
 
         assert status == "PASSED"
         assert details is None
@@ -670,9 +661,7 @@ def test_collect_ci_status_error_handling() -> None:
         mock_ci_manager.return_value = mock_instance
         mock_instance.get_latest_ci_status.side_effect = Exception("API Error")
 
-        status, details = _collect_ci_status(
-            project_dir, "main", truncate=False, max_lines=100
-        )
+        status, details = _collect_ci_status(project_dir, "main", max_lines=100)
 
         assert status == "NOT_CONFIGURED"
         assert details is None
@@ -922,13 +911,10 @@ def test_build_ci_error_details_single_failure() -> None:
 
     # Mock get_run_logs directly on the passed-in ci_manager instance
     mock_instance = MagicMock()
-    # Log filename format: {job_name}/{step_number}_{step_name}.txt
-    # Step number defaults to 0 when not specified in step data
-    mock_instance.get_run_logs.return_value = {
-        "test-job/0_Run tests.txt": "Error details here"
-    }
+    # Log filename format: {number}_{job_name}.txt (GitHub Actions format)
+    mock_instance.get_run_logs.return_value = {"2_test-job.txt": "Error details here"}
 
-    result = _build_ci_error_details(mock_instance, status_result, False, 300)
+    result = _build_ci_error_details(mock_instance, status_result, 300)
 
     assert result is not None
     assert "CI Failure Summary" in result
@@ -963,13 +949,14 @@ def test_build_ci_error_details_multiple_failures() -> None:
 
     # Mock get_run_logs directly on the passed-in ci_manager instance
     mock_instance = MagicMock()
-    # Log filename format: {job_name}/{step_number}_{step_name}.txt
-    # Step number defaults to 0 when not specified in step data
+    # Log filename format: {number}_{job_name}.txt (GitHub Actions format)
     mock_instance.get_run_logs.return_value = {
-        "test-job/0_Run tests.txt": "First job error"
+        "2_test-job.txt": "First job error",
+        "4_lint-job.txt": "Lint error",
+        "9_build-job.txt": "Build error",
     }
 
-    result = _build_ci_error_details(mock_instance, status_result, False, 300)
+    result = _build_ci_error_details(mock_instance, status_result, 300)
 
     assert result is not None
     # Summary should list all failed jobs
@@ -979,6 +966,103 @@ def test_build_ci_error_details_multiple_failures() -> None:
     assert "## Job: lint-job" in result
     assert "## Job: build-job" in result
     assert "First job error" in result
+
+
+def test_build_ci_error_details_includes_github_urls() -> None:
+    """Test _build_ci_error_details includes GitHub Actions URLs."""
+    status_result = {
+        "run": {"id": 12345, "url": "https://github.com/user/repo/actions/runs/12345"},
+        "jobs": [
+            {
+                "id": 67890,
+                "name": "file-size",
+                "conclusion": "failure",
+                "steps": [{"name": "Run file-size", "conclusion": "failure"}],
+            }
+        ],
+    }
+
+    mock_instance = MagicMock()
+    mock_instance.get_run_logs.return_value = {
+        "2_file-size.txt": "File size check failed"
+    }
+
+    result = _build_ci_error_details(mock_instance, status_result, 300)
+
+    assert result is not None
+    # Check run URL at top
+    assert "GitHub Actions: https://github.com/user/repo/actions/runs/12345" in result
+    # Check job URL in job section
+    assert (
+        "View job: https://github.com/user/repo/actions/runs/12345/job/67890" in result
+    )
+    # Verify other content still present
+    assert "## Job: file-size" in result
+    assert "Failed step: Run file-size" in result
+    assert "File size check failed" in result
+
+
+def test_build_ci_error_details_logs_not_available_with_url() -> None:
+    """Test _build_ci_error_details shows GitHub URL when logs unavailable."""
+    status_result = {
+        "run": {"id": 12345, "url": "https://github.com/user/repo/actions/runs/12345"},
+        "jobs": [
+            {
+                "id": 67890,
+                "name": "file-size",
+                "conclusion": "failure",
+                "steps": [{"name": "Run file-size", "conclusion": "failure"}],
+            }
+        ],
+    }
+
+    mock_instance = MagicMock()
+    # Empty dict = no logs available
+    mock_instance.get_run_logs.return_value = {}
+
+    result = _build_ci_error_details(mock_instance, status_result, 300)
+
+    assert result is not None
+    # Check error message with GitHub URL
+    assert "(logs not available locally)" in result
+    assert (
+        "View on GitHub: https://github.com/user/repo/actions/runs/12345/job/67890"
+        in result
+    )
+    # Check job header still present
+    assert "## Job: file-size" in result
+    assert "Failed step: Run file-size" in result
+
+
+def test_build_ci_error_details_fallback_to_old_format() -> None:
+    """Test _build_ci_error_details falls back to old log format."""
+    status_result = {
+        "run": {"id": 12345, "url": "https://github.com/user/repo/actions/runs/12345"},
+        "jobs": [
+            {
+                "id": 67890,
+                "name": "file-size",
+                "conclusion": "failure",
+                "steps": [
+                    {"name": "Run file-size", "conclusion": "failure", "number": 3}
+                ],
+            }
+        ],
+    }
+
+    mock_instance = MagicMock()
+    # Use OLD format (pattern match will fail, fallback should work)
+    mock_instance.get_run_logs.return_value = {
+        "file-size/3_Run file-size.txt": "File size check failed (old format)"
+    }
+
+    result = _build_ci_error_details(mock_instance, status_result, 300)
+
+    assert result is not None
+    # Verify log content from old format is displayed
+    assert "File size check failed (old format)" in result
+    assert "## Job: file-size" in result
+    assert "Failed step: Run file-size" in result
 
 
 def test_build_ci_error_details_no_failed_jobs() -> None:
@@ -998,7 +1082,7 @@ def test_build_ci_error_details_no_failed_jobs() -> None:
         mock_instance = MagicMock()
         mock_ci_manager.return_value = mock_instance
 
-        result = _build_ci_error_details(mock_instance, status_result, False, 300)
+        result = _build_ci_error_details(mock_instance, status_result, 300)
 
         assert result is None
 

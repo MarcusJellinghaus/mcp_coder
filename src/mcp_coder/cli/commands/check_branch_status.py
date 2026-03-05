@@ -166,7 +166,7 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
 
         # Collect branch status
         logger.debug("Collecting branch status information")
-        report = collect_branch_status(project_dir, args.llm_truncate)
+        report = collect_branch_status(project_dir)
 
         # Display status report
         # Use errors='replace' to handle emoji encoding issues on Windows

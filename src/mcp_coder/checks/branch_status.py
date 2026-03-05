@@ -211,6 +211,54 @@ def truncate_ci_details(
     )
 
 
+def _find_log_content(
+    logs: Mapping[str, str],
+    job_name: str,
+    step_number: int,
+    step_name: str,
+) -> str:
+    """Find log content for a job using GitHub format first, falling back to old format.
+
+    GitHub format: {number}_{job_name}.txt (execution number doesn't match step.number)
+    Old format: {job_name}/{step_number}_{step_name}.txt
+
+    Args:
+        logs: Dict mapping log filenames to content
+        job_name: Name of the job
+        step_number: Step number from API (used for old format fallback)
+        step_name: Step name (used for old format fallback)
+
+    Returns:
+        Log content string, or empty string if not found
+    """
+    logger = logging.getLogger(__name__)
+
+    # Try GitHub format first: pattern match on _{job_name}.txt
+    matching_files = [f for f in logs.keys() if f.endswith(f"_{job_name}.txt")]
+
+    if matching_files:
+        if len(matching_files) > 1:
+            logger.warning(
+                f"Multiple log files found for job '{job_name}': {matching_files}. "
+                f"Using: {matching_files[0]}"
+            )
+        return logs[matching_files[0]]
+
+    # Fallback to old format: {job_name}/{step_number}_{step_name}.txt
+    log_filename = f"{job_name}/{step_number}_{step_name}.txt"
+    log_content = logs.get(log_filename, "")
+
+    if not log_content and step_name:
+        available_files = list(logs.keys())
+        logger.warning(
+            f"No log file found for job '{job_name}'. "
+            f"Tried: '*_{job_name}.txt' and '{log_filename}'. "
+            f"Available: {available_files}"
+        )
+
+    return log_content
+
+
 def get_failed_jobs_summary(
     jobs: Sequence[Mapping[str, Any]], logs: Mapping[str, str]
 ) -> Dict[str, Any]:
@@ -255,19 +303,7 @@ def get_failed_jobs_summary(
             step_number = step.get("number", 0)
             break
 
-    # Construct log filename: {job_name}/{step_number}_{step_name}.txt
-    log_filename = f"{job_name}/{step_number}_{step_name}.txt"
-
-    # Look up log content
-    log_content = logs.get(log_filename, "")
-
-    # Log warning if no match found
-    if not log_content and step_name:
-        available_files = list(logs.keys())
-        logger.warning(
-            f"No log file found for failed step. Expected: '{log_filename}', "
-            f"Available: {available_files}"
-        )
+    log_content = _find_log_content(logs, job_name, step_number, step_name)
 
     # Extract log excerpt using shared truncation (50 head + 250 tail = 300 lines)
     log_excerpt = truncate_ci_details(log_content)
@@ -285,14 +321,13 @@ def get_failed_jobs_summary(
 
 
 def collect_branch_status(
-    project_dir: Path, truncate_logs: bool = False, max_log_lines: int = 300
+    project_dir: Path, max_log_lines: int = 300
 ) -> BranchStatusReport:
     """Collect comprehensive branch status from all sources.
 
     Args:
         project_dir: Path to git repository
-        truncate_logs: Whether to truncate CI logs for LLM consumption
-        max_log_lines: Maximum log lines when truncating
+        max_log_lines: Maximum log lines for CI error details
 
     Returns:
         BranchStatusReport with all collected information
@@ -326,7 +361,7 @@ def collect_branch_status(
 
         # Collect status from all sources
         ci_status, ci_details = _collect_ci_status(
-            project_dir, branch_name, truncate_logs, max_log_lines
+            project_dir, branch_name, max_log_lines
         )
         rebase_needed, rebase_reason = _collect_rebase_status(project_dir)
         tasks_complete = _collect_task_status(project_dir)
@@ -359,7 +394,7 @@ def collect_branch_status(
 
 
 def _collect_ci_status(
-    project_dir: Path, branch: str, truncate: bool, max_lines: int
+    project_dir: Path, branch: str, max_lines: int
 ) -> Tuple[str, Optional[str]]:
     """Collect CI status and error details.
 
@@ -397,7 +432,7 @@ def _collect_ci_status(
             # Build structured error details
             try:
                 error_details = _build_ci_error_details(
-                    ci_manager, status_result, truncate, max_lines
+                    ci_manager, status_result, max_lines
                 )
                 return ci_status, error_details
             except Exception as log_error:
@@ -415,7 +450,6 @@ def _collect_ci_status(
 def _build_ci_error_details(
     ci_manager: CIResultsManager,
     status_result: Any,
-    truncate: bool,
     max_lines: int,
 ) -> Optional[str]:
     """Build structured CI error details with logs for multiple failed jobs.
@@ -425,7 +459,6 @@ def _build_ci_error_details(
     Args:
         ci_manager: CIResultsManager instance
         status_result: Result from get_latest_ci_status
-        truncate: Whether to truncate logs
         max_lines: Maximum total lines for output (default 300)
 
     Returns:
@@ -435,6 +468,8 @@ def _build_ci_error_details(
     run_data = status_result["run"]
     jobs_data = status_result.get("jobs", [])
     run_id = run_data.get("id")
+    # Extract GitHub Actions run URL for user navigation
+    run_url = run_data.get("url", "")
 
     # Get logs for the run
     logs: Dict[str, str] = {}
@@ -463,6 +498,12 @@ def _build_ci_error_details(
     output_lines.append("")
     lines_used += 2
 
+    # Add GitHub Actions run URL if available
+    if run_url:
+        output_lines.append(f"GitHub Actions: {run_url}")
+        output_lines.append("")
+        lines_used += 2
+
     # Section 2: Show logs for each failed job until we hit the limit
     for job in failed_jobs:
         job_name = job.get("name", "unknown")
@@ -476,15 +517,27 @@ def _build_ci_error_details(
                 step_number = step.get("number", 0)
                 break
 
-        # Get log content for this job and strip timestamps
-        log_filename = f"{job_name}/{step_number}_{step_name}.txt"
-        log_content = logs.get(log_filename, "")
+        log_content = _find_log_content(logs, job_name, step_number, step_name)
+
+        # Strip timestamps if content found
         if log_content:
             log_content = _strip_timestamps(log_content)
 
         # Calculate how many lines this job's section would take
-        job_header_lines = 3  # "## Job:", "Failed step:", blank line
-        log_lines = log_content.split("\n") if log_content else ["(logs not available)"]
+        # Header lines: "## Job:", optional "View job:" (if URL available), "Failed step:", blank line
+        job_id = job.get("id")
+        has_job_url = bool(run_url and job_id)
+        job_header_lines = 4 if has_job_url else 3
+
+        if log_content:
+            log_lines = log_content.split("\n")
+        elif has_job_url:
+            log_lines = [
+                "(logs not available locally)",
+                f"View on GitHub: {run_url}/job/{job_id}",
+            ]
+        else:
+            log_lines = ["(logs not available)"]
 
         # Calculate remaining budget for this job
         remaining_budget = (
@@ -496,8 +549,8 @@ def _build_ci_error_details(
             jobs_truncated.append(job_name)
             continue
 
-        # Truncate log if needed
-        if len(log_lines) > remaining_budget:
+        # Truncate log if needed (only applies to real log content, not fallback messages)
+        if log_content and len(log_lines) > remaining_budget:
             # Use head + tail truncation
             head_count = min(50, remaining_budget // 3)
             tail_count = remaining_budget - head_count - 1  # -1 for truncation message
@@ -513,9 +566,14 @@ def _build_ci_error_details(
 
         # Add job section
         output_lines.append(f"## Job: {job_name}")
+        if has_job_url:
+            output_lines.append(f"View job: {run_url}/job/{job_id}")
         output_lines.append(f"Failed step: {step_name}")
         output_lines.append("")
-        output_lines.append(log_content if log_content else "(logs not available)")
+        if log_content:
+            output_lines.append(log_content)
+        else:
+            output_lines.append("\n".join(log_lines))
         output_lines.append("")
 
         lines_used += job_header_lines + len(log_lines) + 1
@@ -593,7 +651,7 @@ def _collect_task_status(project_dir: Path) -> bool:
 
 
 def _collect_github_label(
-    project_dir: Path,
+    _project_dir: Path,
     issue_data: Optional[IssueData] = None,
 ) -> str:
     """Collect current GitHub workflow status label.
