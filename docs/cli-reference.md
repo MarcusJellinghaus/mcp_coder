@@ -722,6 +722,7 @@ mcp-coder git-tool compact-diff [OPTIONS]
 - `--project-dir PATH` - Project directory (default: current directory)
 - `--base-branch BRANCH` - Base branch to diff against (default: auto-detected)
 - `--exclude PATTERN` - Exclude paths matching pattern (repeatable)
+- `--committed-only` - Show only committed changes (exclude uncommitted changes from output)
 
 **Exit Codes:**
 
@@ -733,20 +734,44 @@ mcp-coder git-tool compact-diff [OPTIONS]
 
 **Examples:**
 ```bash
-# Generate compact diff for current branch
+# Generate compact diff with uncommitted changes (default)
 mcp-coder git-tool compact-diff
 
-# Exclude conversation files
+# Show only committed changes (exclude uncommitted)
+mcp-coder git-tool compact-diff --committed-only
+
+# Exclude conversation files from both committed and uncommitted
 mcp-coder git-tool compact-diff --exclude "pr_info/.conversations/**"
+
+# Exclude multiple patterns (log files and lock files)
+mcp-coder git-tool compact-diff --exclude "*.log" --exclude "*.lock"
 
 # Specify base branch explicitly
 mcp-coder git-tool compact-diff --base-branch main
 
-# Use in scripts
-mcp-coder git-tool compact-diff --project-dir /path/to/project --exclude "*.lock"
+# Use in scripts (committed only, specific project)
+mcp-coder git-tool compact-diff --committed-only --project-dir /path/to/project
+
+# Exclude temp files from uncommitted changes
+mcp-coder git-tool compact-diff --exclude "*.tmp" --exclude "temp/**"
 ```
 
 **Description:** Produces a diff between the current branch and its base branch, then applies a two-pass pipeline to replace moved code blocks with concise summary comments. This reduces token usage when reviewing large refactoring changes with an LLM.
+
+By default, also shows uncommitted changes (staged, unstaged, and untracked files) in full diff format after the compact diff of committed changes. Use `--committed-only` to suppress uncommitted changes and show only committed changes.
+
+**Output Structure:**
+- **Committed changes** - Shown first in compact format (moved code blocks suppressed)
+- **Uncommitted changes** - Shown after in full format with subsections:
+  - `=== STAGED CHANGES ===` - Files staged for commit
+  - `=== UNSTAGED CHANGES ===` - Modified but not staged
+  - `=== UNTRACKED FILES ===` - New files not tracked by git
+
+**Notes:**
+- Uncommitted changes are shown in full diff format (NOT subject to compact diff suppression)
+- `--exclude` patterns apply to both committed and uncommitted changes
+- Uncommitted section is automatically skipped if working directory is clean
+- When no committed changes exist, shows "No committed changes" message before uncommitted section
 
 ---
 

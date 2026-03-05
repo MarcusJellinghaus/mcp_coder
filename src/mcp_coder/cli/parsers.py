@@ -638,3 +638,8 @@ def add_git_tool_parsers(subparsers: Any) -> None:
         metavar="PATTERN",
         help="Exclude files matching pattern (repeatable)",
     )
+    compact_diff_parser.add_argument(
+        "--committed-only",
+        action="store_true",
+        help="Show only committed changes (exclude uncommitted changes from output)",
+    )

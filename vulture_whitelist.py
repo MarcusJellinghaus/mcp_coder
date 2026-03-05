@@ -118,6 +118,9 @@ _._mock_git_repo
 # test_workspace.py - Fixture used for side effect (monkeypatching get_vscodeclaude_config)
 _.mock_vscodeclaude_config
 
+# test_git_tool.py - Fixture used for side effect (patching get_git_diff_for_commit)
+_.mock_get_git_diff_for_commit
+
 # conftest.py - Autouse fixture to isolate MLflow artifacts from project root
 _.isolate_mlflow_artifacts
 
