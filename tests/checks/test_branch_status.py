@@ -922,7 +922,7 @@ def test_build_ci_error_details_single_failure() -> None:
     # Log filename format: {number}_{job_name}.txt (GitHub Actions format)
     mock_instance.get_run_logs.return_value = {"2_test-job.txt": "Error details here"}
 
-    result = _build_ci_error_details(mock_instance, status_result, False, 300)
+    result = _build_ci_error_details(mock_instance, status_result, 300)
 
     assert result is not None
     assert "CI Failure Summary" in result
@@ -964,7 +964,7 @@ def test_build_ci_error_details_multiple_failures() -> None:
         "9_build-job.txt": "Build error",
     }
 
-    result = _build_ci_error_details(mock_instance, status_result, False, 300)
+    result = _build_ci_error_details(mock_instance, status_result, 300)
 
     assert result is not None
     # Summary should list all failed jobs
@@ -995,7 +995,7 @@ def test_build_ci_error_details_includes_github_urls() -> None:
         "2_file-size.txt": "File size check failed"
     }
 
-    result = _build_ci_error_details(mock_instance, status_result, False, 300)
+    result = _build_ci_error_details(mock_instance, status_result, 300)
 
     assert result is not None
     # Check run URL at top
@@ -1028,7 +1028,7 @@ def test_build_ci_error_details_logs_not_available_with_url() -> None:
     # Empty dict = no logs available
     mock_instance.get_run_logs.return_value = {}
 
-    result = _build_ci_error_details(mock_instance, status_result, False, 300)
+    result = _build_ci_error_details(mock_instance, status_result, 300)
 
     assert result is not None
     # Check error message with GitHub URL
@@ -1064,7 +1064,7 @@ def test_build_ci_error_details_fallback_to_old_format() -> None:
         "file-size/3_Run file-size.txt": "File size check failed (old format)"
     }
 
-    result = _build_ci_error_details(mock_instance, status_result, False, 300)
+    result = _build_ci_error_details(mock_instance, status_result, 300)
 
     assert result is not None
     # Verify log content from old format is displayed
@@ -1090,7 +1090,7 @@ def test_build_ci_error_details_no_failed_jobs() -> None:
         mock_instance = MagicMock()
         mock_ci_manager.return_value = mock_instance
 
-        result = _build_ci_error_details(mock_instance, status_result, False, 300)
+        result = _build_ci_error_details(mock_instance, status_result, 300)
 
         assert result is None
 

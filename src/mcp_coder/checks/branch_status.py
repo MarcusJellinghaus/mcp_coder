@@ -433,7 +433,7 @@ def _collect_ci_status(
             # Build structured error details
             try:
                 error_details = _build_ci_error_details(
-                    ci_manager, status_result, truncate, max_lines
+                    ci_manager, status_result, max_lines
                 )
                 return ci_status, error_details
             except Exception as log_error:
@@ -451,7 +451,6 @@ def _collect_ci_status(
 def _build_ci_error_details(
     ci_manager: CIResultsManager,
     status_result: Any,
-    _truncate: bool,
     max_lines: int,
 ) -> Optional[str]:
     """Build structured CI error details with logs for multiple failed jobs.
@@ -461,7 +460,6 @@ def _build_ci_error_details(
     Args:
         ci_manager: CIResultsManager instance
         status_result: Result from get_latest_ci_status
-        _truncate: Whether to truncate logs (currently unused)
         max_lines: Maximum total lines for output (default 300)
 
     Returns:
@@ -552,8 +550,8 @@ def _build_ci_error_details(
             jobs_truncated.append(job_name)
             continue
 
-        # Truncate log if needed
-        if len(log_lines) > remaining_budget:
+        # Truncate log if needed (only applies to real log content, not fallback messages)
+        if log_content and len(log_lines) > remaining_budget:
             # Use head + tail truncation
             head_count = min(50, remaining_budget // 3)
             tail_count = remaining_budget - head_count - 1  # -1 for truncation message
