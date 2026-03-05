@@ -82,6 +82,7 @@ def log_llm_request(
 def log_llm_response(
     method: str,
     duration_ms: int,
+    session_id: str | None = None,
     cost_usd: float | None = None,
     usage: dict[str, Any] | None = None,
     num_turns: int | None = None,
@@ -91,6 +92,7 @@ def log_llm_response(
     Args:
         method: 'cli' or 'api'
         duration_ms: Duration in milliseconds
+        session_id: Session ID to close the MLflow run under (optional)
         cost_usd: Cost in USD (API only)
         usage: Usage metadata (API only)
         num_turns: Number of turns (API only)
@@ -132,7 +134,7 @@ def log_llm_response(
                 if usage_metrics:
                     mlflow_logger.log_metrics(usage_metrics)
 
-            # Note: Run will be ended after full conversation is logged in prompt.py
+            mlflow_logger.end_run("FINISHED", session_id=session_id)
         except Exception as e:
             logger.debug(f"Failed to log MLflow response metrics: {e}")
 
