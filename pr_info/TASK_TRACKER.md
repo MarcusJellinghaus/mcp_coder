@@ -85,12 +85,12 @@ See [step_6.md](./steps/step_6.md) for details.
 ### Step 7: Run Full Test Suite and Verify
 See [step_7.md](./steps/step_7.md) for details.
 
-- [ ] Run complete test suite for `test_branch_status.py`
-- [ ] Verify all 6 key tests PASS (3 new + 3 updated)
-- [ ] Verify no regressions in existing tests
-- [ ] Run pylint, pytest, mypy on entire codebase
-- [ ] Fix any remaining issues found by quality checks
-- [ ] Prepare git commit message for Step 7 (if needed)
+- [x] Run complete test suite for `test_branch_status.py`
+- [x] Verify all 6 key tests PASS (3 new + 3 updated)
+- [x] Verify no regressions in existing tests
+- [x] Run pylint, pytest, mypy on entire codebase
+- [x] Fix any remaining issues found by quality checks
+- [x] Prepare git commit message for Step 7 (if needed)
 
 ## Pull Request
 
