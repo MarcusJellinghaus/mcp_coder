@@ -174,7 +174,7 @@ class TestCompactDiffOutputFormat:
         assert diff_text in captured.out
         assert captured.err == ""
 
-    def test_no_extra_text_in_output(
+    def test_output_is_only_committed_diff_when_directory_is_clean(
         self,
         mock_get_compact_diff: MagicMock,
         mock_detect_base_branch: MagicMock,
@@ -182,7 +182,7 @@ class TestCompactDiffOutputFormat:
         mock_get_git_diff_for_commit: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """Test that stdout contains exactly the diff string (plus newline from print)."""
+        """Test that stdout contains only the committed diff when working directory is clean."""
         project_dir = Path("/test/project")
         mock_resolve_project_dir.return_value = project_dir
         mock_detect_base_branch.return_value = "develop"

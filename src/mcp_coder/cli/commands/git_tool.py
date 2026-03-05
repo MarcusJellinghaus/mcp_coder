@@ -59,6 +59,8 @@ def _apply_exclude_patterns_to_uncommitted_diff(
 
             # Extract filename from "diff --git a/file.py b/file.py"
             # Format: "diff --git <path> <path>" (no a/ b/ prefix due to --no-prefix)
+            # Note: split() on spaces means paths containing spaces will misparse
+            # (parts[2] would be only the first word). This is a known limitation.
             parts = line.split()
             if len(parts) >= 3:
                 filepath = parts[2]  # First path (identical with --no-prefix)
