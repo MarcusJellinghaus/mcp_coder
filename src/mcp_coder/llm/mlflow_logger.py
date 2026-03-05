@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import tempfile
+from collections import OrderedDict
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -63,6 +64,8 @@ class MLflowLogger:
     ensuring that the main application continues to work even if MLflow fails.
     """
 
+    _MAX_SESSION_MAP_SIZE: int = 100
+
     def __init__(self, config: Optional[MLflowConfig] = None):
         """Initialize MLflow logger.
 
@@ -72,6 +75,7 @@ class MLflowLogger:
         self.config = config or load_mlflow_config()
         self.active_run_id: Optional[str] = None
         self._mlflow_module: Any = None
+        self._session_run_map: OrderedDict[str, str] = OrderedDict()
 
         # Only initialize MLflow if it's available and enabled
         if self.config.enabled and is_mlflow_available():
@@ -168,16 +172,29 @@ class MLflowLogger:
             logger.error(f"Failed to initialize MLflow: {e}")
             raise
 
+    def has_session(self, session_id: str) -> bool:
+        """Check if a session_id is in the session map.
+
+        Args:
+            session_id: The Claude session ID to look up
+
+        Returns:
+            True if the session is known, False otherwise
+        """
+        return session_id in self._session_run_map
+
     def start_run(
         self,
+        session_id: Optional[str] = None,
         run_name: Optional[str] = None,
         tags: Optional[Dict[str, str]] = None,
     ) -> Optional[str]:
         """Start an MLflow run for conversation tracking.
 
         Args:
-            run_name: Optional name for the run
-            tags: Optional tags to add to the run
+            session_id: Optional Claude session ID; if known, resumes the existing run
+            run_name: Optional name for the run (used only when creating a new run)
+            tags: Optional tags to add to the run (used only when creating a new run)
 
         Returns:
             Run ID if successful, None if MLflow unavailable or disabled
@@ -187,6 +204,14 @@ class MLflowLogger:
 
         try:
             import mlflow  # pylint: disable=import-error
+
+            # Resume existing run when session is known
+            if session_id is not None and session_id in self._session_run_map:
+                self._session_run_map.move_to_end(session_id)
+                run = mlflow.start_run(run_id=self._session_run_map[session_id])
+                self.active_run_id = run.info.run_id
+                logger.debug(f"Resumed MLflow run: {self.active_run_id}")
+                return self.active_run_id
 
             # Generate run name if not provided
             if not run_name:
@@ -415,17 +440,62 @@ class MLflowLogger:
         except Exception as e:
             logger.warning(f"Failed to log error metrics to MLflow: {e}")
 
-    def end_run(self, status: str = "FINISHED") -> None:
+    def log_conversation_artifacts(
+        self,
+        prompt: str,
+        response_data: Dict[str, Any],
+        metadata: Dict[str, Any],
+    ) -> None:
+        """Log prompt params and artifacts for a conversation (no metrics).
+
+        Args:
+            prompt: The user prompt
+            response_data: LLM response data
+            metadata: Additional metadata
+        """
+        if not self._is_enabled() or not self.active_run_id:
+            return
+
+        params = {
+            "model": metadata.get("model", "unknown"),
+            "working_directory": metadata.get("working_directory"),
+            "branch_name": metadata.get("branch_name"),
+            "step_name": metadata.get("step_name"),
+            "prompt_length": len(prompt),
+        }
+        self.log_params(params)
+
+        self.log_artifact(prompt, "prompt.txt")
+        conversation_data = {
+            "prompt": prompt,
+            "response_data": response_data,
+            "metadata": metadata,
+        }
+        self.log_artifact(
+            json.dumps(conversation_data, indent=2, default=str), "conversation.json"
+        )
+
+    def end_run(
+        self, status: str = "FINISHED", session_id: Optional[str] = None
+    ) -> None:
         """End the current MLflow run.
 
         Args:
             status: Run status (FINISHED, FAILED, KILLED)
+            session_id: Optional Claude session ID; if provided, stores session→run mapping
         """
         if not self._is_enabled() or not self.active_run_id:
             return
 
         try:
             import mlflow  # pylint: disable=import-error
+
+            # Store session→run mapping with LRU eviction before clearing run_id
+            if session_id is not None:
+                self._session_run_map.pop(session_id, None)  # reset LRU order
+                self._session_run_map[session_id] = self.active_run_id
+                if len(self._session_run_map) > self._MAX_SESSION_MAP_SIZE:
+                    self._session_run_map.popitem(last=False)  # evict LRU
 
             mlflow.end_run(status=status)
             logger.debug(f"Ended MLflow run: {self.active_run_id}")

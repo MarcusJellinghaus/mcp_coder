@@ -25,10 +25,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Extend `MLflowLogger` with LRU Session Map ([step_1.md](./steps/step_1.md))
 
-- [ ] Implement `TestSessionMapBehavior` (6 tests) in `tests/llm/test_mlflow_logger.py` — write tests first (TDD)
-- [ ] Implement LRU session map changes in `src/mcp_coder/llm/mlflow_logger.py`: `OrderedDict` import, `_MAX_SESSION_MAP_SIZE`, `_session_run_map`, `has_session()`, `log_conversation_artifacts()`, extend `start_run()` and `end_run()`
-- [ ] Run quality checks (pylint, pytest, mypy) and resolve all issues found
-- [ ] Prepare git commit message for Step 1 changes
+- [x] Implement `TestSessionMapBehavior` (6 tests) in `tests/llm/test_mlflow_logger.py` — write tests first (TDD)
+- [x] Implement LRU session map changes in `src/mcp_coder/llm/mlflow_logger.py`: `OrderedDict` import, `_MAX_SESSION_MAP_SIZE`, `_session_run_map`, `has_session()`, `log_conversation_artifacts()`, extend `start_run()` and `end_run()`
+- [x] Run quality checks (pylint, pytest, mypy) and resolve all issues found
+- [x] Prepare git commit message for Step 1 changes
 
 ### Step 2: Add `session_id` to `log_llm_response()` and Call `end_run()` ([step_2.md](./steps/step_2.md))
 
