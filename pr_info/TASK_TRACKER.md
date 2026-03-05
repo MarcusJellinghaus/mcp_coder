@@ -32,7 +32,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Add `session_id` to `log_llm_response()` and Call `end_run()` ([step_2.md](./steps/step_2.md))
 
-- [ ] Add 3 new tests to `TestLogLLMResponse` in `tests/llm/providers/claude/test_logging_utils.py` — write tests first (TDD)
+- [x] Add 3 new tests to `TestLogLLMResponse` in `tests/llm/providers/claude/test_logging_utils.py` — write tests first (TDD)
 - [ ] Modify `log_llm_response()` in `src/mcp_coder/llm/providers/claude/logging_utils.py`: add `session_id` parameter and call `mlflow_logger.end_run("FINISHED", session_id=session_id)` at end; remove stale comment
 - [ ] Run quality checks (pylint, pytest, mypy) and resolve all issues found
 - [ ] Prepare git commit message for Step 2 changes
