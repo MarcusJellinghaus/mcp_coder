@@ -45,6 +45,7 @@ def _log_to_mlflow(
         branch_name: Optional branch name
         step_name: Optional step name
     """
+    mlflow_logger = None
     try:
         mlflow_logger = get_mlflow_logger()
         # Skip if MLflow is not enabled or unavailable
@@ -94,7 +95,8 @@ def _log_to_mlflow(
         logger.debug(f"Failed to log conversation to MLflow: {e}")
         # Attempt to end run even if logging failed
         try:
-            mlflow_logger.end_run("FAILED")
+            if mlflow_logger is not None:
+                mlflow_logger.end_run("FAILED")
         except Exception:
             # Silent failure OK - MLflow is optional and should never break main workflow
             pass

@@ -207,6 +207,13 @@ class MLflowLogger:
 
             # Resume existing run when session is known
             if session_id is not None and session_id in self._session_run_map:
+                if self.active_run_id is not None:
+                    logger.warning(
+                        f"start_run called with active run {self.active_run_id}; "
+                        "ending it before resuming session run"
+                    )
+                    mlflow.end_run()
+                    self.active_run_id = None
                 self._session_run_map.move_to_end(session_id)
                 run = mlflow.start_run(run_id=self._session_run_map[session_id])
                 self.active_run_id = run.info.run_id
