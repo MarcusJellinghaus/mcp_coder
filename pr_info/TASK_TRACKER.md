@@ -48,10 +48,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 4: Update `_log_to_mlflow()` in `prompt.py` ([step_4.md](./steps/step_4.md))
 
-- [ ] Add `TestLogToMlflow` class (5 tests) to `tests/cli/commands/test_prompt.py` — write tests first (TDD)
-- [ ] Rewrite `_log_to_mlflow()` in `src/mcp_coder/cli/commands/prompt.py`: extract `response_sid`, add conditional resume-run vs fresh-run branches, remove standalone `end_run()` call
-- [ ] Run quality checks (pylint, pytest, mypy) and resolve all issues found
-- [ ] Prepare git commit message for Step 4 changes
+- [x] Add `TestLogToMlflow` class (5 tests) to `tests/cli/commands/test_prompt.py` — write tests first (TDD)
+- [x] Rewrite `_log_to_mlflow()` in `src/mcp_coder/cli/commands/prompt.py`: extract `response_sid`, add conditional resume-run vs fresh-run branches, remove standalone `end_run()` call
+- [x] Run quality checks (pylint, pytest, mypy) and resolve all issues found
+- [x] Prepare git commit message for Step 4 changes
 
 ---
 

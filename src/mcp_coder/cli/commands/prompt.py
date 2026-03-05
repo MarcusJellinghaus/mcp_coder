@@ -71,11 +71,25 @@ def _log_to_mlflow(
 
         # Convert LLMResponseDict to Dict[str, Any] for MLflow compatibility
         response_dict: Dict[str, Any] = dict(response_data)
-        mlflow_logger.log_conversation(prompt, response_dict, metadata)
-        logger.debug("Logged conversation to MLflow")
+        response_sid = response_data.get("session_id")
 
-        # End the run after logging full conversation
-        mlflow_logger.end_run("FINISHED")
+        if response_sid and mlflow_logger.has_session(response_sid):
+            # Resume closed run; metrics are already logged by log_llm_response()
+            mlflow_logger.start_run(session_id=response_sid)
+            mlflow_logger.log_conversation_artifacts(prompt, response_dict, metadata)
+            mlflow_logger.end_run("FINISHED")
+        else:
+            # No mapping found: start a fresh run with full logging.
+            if response_sid:
+                logger.debug(
+                    f"Session {response_sid} not in MLflow map — "
+                    "starting fresh run (metrics may appear in a separate run)"
+                )
+            mlflow_logger.start_run()
+            mlflow_logger.log_conversation(prompt, response_dict, metadata)
+            mlflow_logger.end_run("FINISHED")
+
+        logger.debug("Logged conversation to MLflow")
     except Exception as e:
         logger.debug(f"Failed to log conversation to MLflow: {e}")
         # Attempt to end run even if logging failed

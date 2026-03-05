@@ -9,7 +9,8 @@ from unittest.mock import Mock, mock_open, patch
 
 import pytest
 
-from mcp_coder.cli.commands.prompt import execute_prompt
+from mcp_coder.cli.commands.prompt import _log_to_mlflow, execute_prompt
+from mcp_coder.llm.types import LLMResponseDict
 
 
 class TestSessionIdOutputFormat:
@@ -784,3 +785,107 @@ class TestPromptExecutionDir:
         assert call_kwargs["session_id"] == "test-session-123"
         captured = capsys.readouterr()
         assert "Response with all args." in captured.out
+
+
+class TestLogToMlflow:
+    """Tests for _log_to_mlflow() MLflow logging path selection."""
+
+    @staticmethod
+    def _make_response(session_id: str | None = None) -> LLMResponseDict:
+        return {
+            "text": "Response text",
+            "session_id": session_id,
+            "version": "1.0",
+            "timestamp": "2024-01-01T00:00:00",
+            "method": "cli",
+            "provider": "claude",
+            "raw_response": {},
+        }
+
+    @patch("mcp_coder.cli.commands.prompt.get_mlflow_logger")
+    def test_known_session_resumes_run_and_logs_artifacts(
+        self,
+        mock_get_mlflow: Mock,
+    ) -> None:
+        """Known session in map: resume run, log artifacts only, end FINISHED."""
+        mock_mlflow = Mock()
+        mock_mlflow.config.enabled = True
+        mock_mlflow.has_session.return_value = True
+        mock_get_mlflow.return_value = mock_mlflow
+
+        _log_to_mlflow(self._make_response("sid-1"), "test prompt", Path("/proj"))
+
+        mock_mlflow.start_run.assert_called_once_with(session_id="sid-1")
+        mock_mlflow.log_conversation_artifacts.assert_called_once()
+        mock_mlflow.log_conversation.assert_not_called()
+        mock_mlflow.end_run.assert_called_once_with("FINISHED")
+
+    @patch("mcp_coder.cli.commands.prompt.get_mlflow_logger")
+    def test_unknown_session_starts_fresh_run(
+        self,
+        mock_get_mlflow: Mock,
+    ) -> None:
+        """Unknown session (not in map): fresh run, log full conversation, end FINISHED."""
+        mock_mlflow = Mock()
+        mock_mlflow.config.enabled = True
+        mock_mlflow.has_session.return_value = False
+        mock_get_mlflow.return_value = mock_mlflow
+
+        _log_to_mlflow(self._make_response("sid-2"), "test prompt", Path("/proj"))
+
+        mock_mlflow.start_run.assert_called_once_with()
+        mock_mlflow.log_conversation.assert_called_once()
+        mock_mlflow.log_conversation_artifacts.assert_not_called()
+        mock_mlflow.end_run.assert_called_once_with("FINISHED")
+
+    @patch("mcp_coder.cli.commands.prompt.get_mlflow_logger")
+    def test_none_session_id_skips_has_session_and_starts_fresh(
+        self,
+        mock_get_mlflow: Mock,
+    ) -> None:
+        """None session_id: has_session not called, fresh run path taken."""
+        mock_mlflow = Mock()
+        mock_mlflow.config.enabled = True
+        mock_get_mlflow.return_value = mock_mlflow
+
+        _log_to_mlflow(self._make_response(None), "test prompt", Path("/proj"))
+
+        mock_mlflow.has_session.assert_not_called()
+        mock_mlflow.start_run.assert_called_once_with()
+        mock_mlflow.log_conversation.assert_called_once()
+        mock_mlflow.log_conversation_artifacts.assert_not_called()
+
+    @patch("mcp_coder.cli.commands.prompt.get_mlflow_logger")
+    def test_mlflow_disabled_no_logging_calls(
+        self,
+        mock_get_mlflow: Mock,
+    ) -> None:
+        """MLflow disabled: start_run, log_conversation, end_run not called."""
+        mock_mlflow = Mock()
+        mock_mlflow.config.enabled = False
+        mock_get_mlflow.return_value = mock_mlflow
+
+        _log_to_mlflow(self._make_response(), "test prompt", Path("/proj"))
+
+        mock_mlflow.start_run.assert_not_called()
+        mock_mlflow.log_conversation.assert_not_called()
+        mock_mlflow.log_conversation_artifacts.assert_not_called()
+        mock_mlflow.end_run.assert_not_called()
+
+    @patch("mcp_coder.cli.commands.prompt.get_mlflow_logger")
+    def test_exception_triggers_end_run_failed(
+        self,
+        mock_get_mlflow: Mock,
+    ) -> None:
+        """Exception in logging: end_run('FAILED') called; _log_to_mlflow does not raise."""
+        mock_mlflow = Mock()
+        mock_mlflow.config.enabled = True
+        mock_mlflow.has_session.return_value = True
+        mock_mlflow.start_run.side_effect = Exception("resume failed")
+        mock_get_mlflow.return_value = mock_mlflow
+
+        _log_to_mlflow(
+            self._make_response("sid-1"), "test prompt", Path("/proj")
+        )  # must not raise
+
+        mock_mlflow.end_run.assert_called_once_with("FAILED")
