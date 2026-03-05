@@ -61,6 +61,9 @@ pr_info/.ci_problem_description.md
 # Test artifacts (cleanup safety net)
 temp_integration_test.py
 
+# Claude auto-memory files (session-local, not for version control)
+memory/
+
 # VSCodeClaude session files (auto-generated)
 .vscodeclaude_status.txt
 .vscodeclaude_analysis.json

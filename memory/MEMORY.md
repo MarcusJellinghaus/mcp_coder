@@ -1,4 +1,0 @@
-# Memory
-
-## Notes
-- Remember: elephant

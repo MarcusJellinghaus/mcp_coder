@@ -61,7 +61,7 @@ def _apply_exclude_patterns_to_uncommitted_diff(
             # Format: "diff --git <path> <path>" (no a/ b/ prefix due to --no-prefix)
             parts = line.split()
             if len(parts) >= 3:
-                filepath = parts[2]  # Second path (destination)
+                filepath = parts[2]  # First path (identical with --no-prefix)
 
                 # Check if file matches any exclude pattern.
                 # Note: fnmatch's * matches everything including /, unlike shell
