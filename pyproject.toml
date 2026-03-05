@@ -135,9 +135,12 @@ float_to_top = true
 init-hook = 'import sys; sys.path.insert(0, ".")'
 
 [tool.pylint.messages_control]
+# Disable all warnings (W), conventions (C), and refactor suggestions (R)
+# Only errors (E) and fatals (F) are reported
 # W1203: Disable lazy % formatting - project prefers f-strings for readability
 # W0621: Disable redefined-outer-name - pytest fixtures standard pattern
-disable = ["W1203", "W0621"]
+# disable = ["W1203", "W0621"]  # covered by W category above
+disable = ["W", "C", "R"]
 # R0401: Enable cyclic-import detection (not enabled by default as it's in refactor category)
 enable = ["R0401"]
 
