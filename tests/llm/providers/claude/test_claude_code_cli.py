@@ -319,6 +319,40 @@ class TestFormatStreamJsonInput:
         assert parsed["message"]["content"] == prompt
 
 
+class TestSessionIdPropagation:
+    """Tests that session_id is threaded through to log_llm_response."""
+
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.log_llm_response")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.get_stream_log_path")
+    def test_session_id_passed_to_log_llm_response(
+        self,
+        mock_get_path: MagicMock,
+        mock_execute: MagicMock,
+        mock_find: MagicMock,
+        mock_log_response: MagicMock,
+        make_stream_json_output: StreamJsonFactory,
+    ) -> None:
+        """Test that session_id from stream response is passed to log_llm_response."""
+        mock_find.return_value = "claude"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_get_path.return_value = Path(tmpdir) / "test.ndjson"
+            mock_result = CommandResult(
+                return_code=0,
+                stdout=make_stream_json_output("Test response", "cli-session-abc"),
+                stderr="",
+                timed_out=False,
+            )
+            mock_execute.return_value = mock_result
+
+            ask_claude_code_cli("test question")
+
+            mock_log_response.assert_called_once()
+            _, kwargs = mock_log_response.call_args
+            assert kwargs.get("session_id") == "cli-session-abc"
+
+
 class TestEnvVarsParameter:
     """Tests for env_vars parameter support."""
 
