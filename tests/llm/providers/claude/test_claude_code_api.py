@@ -504,6 +504,33 @@ class TestAskClaudeCodeApiDetailed:
         mock_create_client.assert_called_once_with(None, env=env_vars, cwd=None)
 
 
+class TestSessionIdPropagation:
+    """Tests that session_id is threaded through to log_llm_response."""
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_api.ask_claude_code_api_detailed_sync"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_api.log_llm_response")
+    def test_session_id_passed_to_log_llm_response(
+        self,
+        mock_log_response: MagicMock,
+        mock_detailed_sync: MagicMock,
+    ) -> None:
+        """Test that actual_session_id from detailed response is passed to log_llm_response."""
+        mock_detailed_sync.return_value = {
+            "text": "answer",
+            "session_info": {"session_id": "api-session-xyz"},
+            "result_info": {"cost_usd": 0.01, "usage": {}, "num_turns": 1},
+            "raw_messages": [],
+        }
+
+        ask_claude_code_api("test question")
+
+        mock_log_response.assert_called_once()
+        _, kwargs = mock_log_response.call_args
+        assert kwargs.get("session_id") == "api-session-xyz"
+
+
 @pytest.mark.claude_api_integration
 class TestClaudeCodeApiIntegration:
     """Integration tests for the Claude Code API implementation."""

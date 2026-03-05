@@ -40,7 +40,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 3: Thread `session_id` Through CLI and API Callers ([step_3.md](./steps/step_3.md))
 
 - [x] Add test to `tests/llm/providers/claude/test_claude_code_cli.py` verifying `session_id` is passed to `log_llm_response()` — write test first (TDD)
-- [ ] Add test to `tests/llm/providers/claude/test_claude_code_api.py` verifying `session_id` is passed to `log_llm_response()` — write test first (TDD)
+- [x] Add test to `tests/llm/providers/claude/test_claude_code_api.py` verifying `session_id` is passed to `log_llm_response()` — write test first (TDD)
 - [ ] Pass `session_id=parsed["session_id"]` to `log_llm_response()` in `src/mcp_coder/llm/providers/claude/claude_code_cli.py`
 - [ ] Pass `session_id=actual_session_id` to `log_llm_response()` in `src/mcp_coder/llm/providers/claude/claude_code_api.py`
 - [ ] Run quality checks (pylint, pytest, mypy) and resolve all issues found
