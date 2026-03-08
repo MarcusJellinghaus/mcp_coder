@@ -61,7 +61,7 @@ def ask_langchain(
 
 def _load_langchain_config() -> dict[str, str | None]:
     """Read [llm] and [llm.langchain] from config.toml via get_config_values().
-    Returns keys: provider, backend, model, api_key, endpoint.
+    Returns keys: provider, backend, model, api_key, endpoint, api_version.
     """
 ```
 
@@ -73,9 +73,12 @@ def ask_openai(
     model: str,
     api_key: str | None,
     endpoint: str | None,
+    api_version: str | None,
     messages: list[dict[str, str]],
+    timeout: int = 30,
 ) -> tuple[str, dict[str, object]]:
-    """Call ChatOpenAI. Returns (response_text, raw_response_dict).
+    """Call ChatOpenAI, or AzureChatOpenAI when api_version is set.
+    Returns (response_text, raw_response_dict).
     Raises ImportError with install instructions if langchain_openai missing.
     """
 ```
@@ -88,6 +91,7 @@ def ask_gemini(
     model: str,
     api_key: str | None,
     messages: list[dict[str, str]],
+    timeout: int = 30,
 ) -> tuple[str, dict[str, object]]:
     """Call ChatGoogleGenerativeAI. Returns (response_text, raw_response_dict).
     Raises ImportError with install instructions if langchain_google_genai missing.
@@ -105,18 +109,20 @@ from mcp_coder.utils.user_config import get_config_values
 
 def _load_langchain_config() -> dict[str, str | None]:
     raw = get_config_values([
-        ("llm",          "provider", None),
-        ("llm.langchain","backend",  None),
-        ("llm.langchain","model",    None),
-        ("llm.langchain","api_key",  None),   # env var checked in backend
-        ("llm.langchain","endpoint", None),
+        ("llm",          "provider",    None),
+        ("llm.langchain","backend",     None),
+        ("llm.langchain","model",       None),
+        ("llm.langchain","api_key",     None),   # env var checked in backend
+        ("llm.langchain","endpoint",    None),
+        ("llm.langchain","api_version", None),   # Azure OpenAI only
     ])
     return {
-        "provider": raw[("llm", "provider")],
-        "backend":  raw[("llm.langchain", "backend")],
-        "model":    raw[("llm.langchain", "model")],
-        "api_key":  raw[("llm.langchain", "api_key")],
-        "endpoint": raw[("llm.langchain", "endpoint")],
+        "provider":    raw[("llm", "provider")],
+        "backend":     raw[("llm.langchain", "backend")],
+        "model":       raw[("llm.langchain", "model")],
+        "api_key":     raw[("llm.langchain", "api_key")],
+        "endpoint":    raw[("llm.langchain", "endpoint")],
+        "api_version": raw[("llm.langchain", "api_version")],
     }
 ```
 
@@ -133,8 +139,9 @@ effective_api_key = os.getenv("GEMINI_API_KEY") or api_key   # gemini.py
 ### Graceful ImportError (each backend module, at top level)
 
 ```python
+# openai.py
 try:
-    from langchain_openai import ChatOpenAI
+    from langchain_openai import AzureChatOpenAI, ChatOpenAI
     from langchain_core.messages import HumanMessage, AIMessage
 except ImportError as exc:
     raise ImportError(
@@ -182,23 +189,44 @@ from mcp_coder.llm.storage.session_storage import (
 ```
 config  = _load_langchain_config()
 backend = config["backend"] or raise ValueError("llm.langchain.backend not set")
+if env_vars:
+    os.environ.update(env_vars)          # applied before any LangChain call
 history = load_langchain_history(session_id) if session_id else []
 sid     = session_id or str(uuid.uuid4())
-text, raw = dispatch to openai.ask_openai or gemini.ask_gemini (pass question, config, history)
+text, raw = dispatch to ask_openai or ask_gemini
+            (question, config, history, timeout)
 updated_history = history + [{"role":"human","content":question}, {"role":"ai","content":text}]
 store_langchain_history(sid, updated_history)
 return LLMResponseDict(version, timestamp, text, session_id=sid,
                        method="api", provider="langchain", raw_response=raw)
 ```
 
-### `ask_openai()` / `ask_gemini()`
+### `ask_openai()` — Azure when `api_version` is set
 
 ```
-api_key = os.getenv("OPENAI_API_KEY" | "GEMINI_API_KEY") or api_key param
+effective_api_key = os.getenv("OPENAI_API_KEY") or api_key
 lc_messages = _to_lc_messages(history) + [HumanMessage(content=question)]
-client  = ChatOpenAI(model=model, api_key=api_key, base_url=endpoint)  # or ChatGoogleGenerativeAI
-ai_msg  = client.invoke(lc_messages)
-raw     = _ai_message_to_dict(ai_msg)
+if api_version:   # Azure OpenAI path
+    client = AzureChatOpenAI(azure_deployment=model, azure_endpoint=endpoint,
+                             api_key=effective_api_key,
+                             openai_api_version=api_version, timeout=timeout)
+else:             # Standard OpenAI / custom endpoint (Ollama, etc.)
+    client = ChatOpenAI(model=model, api_key=effective_api_key,
+                        base_url=endpoint, timeout=timeout)
+ai_msg = client.invoke(lc_messages)
+raw    = _ai_message_to_dict(ai_msg)
+return (str(ai_msg.content), raw)
+```
+
+### `ask_gemini()`
+
+```
+effective_api_key = os.getenv("GEMINI_API_KEY") or api_key
+lc_messages = _to_lc_messages(history) + [HumanMessage(content=question)]
+client = ChatGoogleGenerativeAI(model=model, google_api_key=effective_api_key,
+                                timeout=timeout)
+ai_msg = client.invoke(lc_messages)
+raw    = _ai_message_to_dict(ai_msg)
 return (str(ai_msg.content), raw)
 ```
 
@@ -245,22 +273,23 @@ class TestLoadLangchainConfig:
         """_load_langchain_config returns a dict with all expected keys."""
         with patch("mcp_coder.llm.providers.langchain.get_config_values",
                    return_value={
-                       ("llm", "provider"):          "langchain",
-                       ("llm.langchain", "backend"): "openai",
-                       ("llm.langchain", "model"):   "gpt-4o",
-                       ("llm.langchain", "api_key"): None,
-                       ("llm.langchain", "endpoint"):None,
+                       ("llm", "provider"):              "langchain",
+                       ("llm.langchain", "backend"):     "openai",
+                       ("llm.langchain", "model"):       "gpt-4o",
+                       ("llm.langchain", "api_key"):     None,
+                       ("llm.langchain", "endpoint"):    None,
+                       ("llm.langchain", "api_version"): None,
                    }):
             from mcp_coder.llm.providers.langchain import _load_langchain_config
             cfg = _load_langchain_config()
-        assert set(cfg.keys()) == {"provider", "backend", "model", "api_key", "endpoint"}
+        assert set(cfg.keys()) == {"provider", "backend", "model", "api_key", "endpoint", "api_version"}
 
 # --- ask_langchain ---
 
 class TestAskLangchain:
     def _make_config(self, backend="openai"):
         return {"provider":"langchain","backend":backend,
-                "model":"gpt-4o","api_key":None,"endpoint":None}
+                "model":"gpt-4o","api_key":None,"endpoint":None,"api_version":None}
 
     def test_returns_llm_response_dict(self):
         """ask_langchain returns a complete LLMResponseDict."""
@@ -344,6 +373,39 @@ class TestAskLangchain:
         assert {"role":"human","content":"prev"}   in stored_messages
         assert {"role":"human","content":"new question"} in stored_messages
         assert {"role":"ai",   "content":"answer"} in stored_messages
+
+    def test_env_vars_are_applied_to_environ(self):
+        """Non-empty env_vars are merged into os.environ before the backend call."""
+        updates = []
+        def capture_update(d):
+            updates.append(dict(d))
+
+        with patch("mcp_coder.llm.providers.langchain._load_langchain_config",
+                   return_value=self._make_config()), \
+             patch("mcp_coder.llm.providers.langchain.load_langchain_history",
+                   return_value=[]), \
+             patch("mcp_coder.llm.providers.langchain.store_langchain_history"), \
+             patch("mcp_coder.llm.providers.langchain.openai.ask_openai",
+                   return_value=("ok", {})), \
+             patch("mcp_coder.llm.providers.langchain.os.environ.update",
+                   side_effect=capture_update):
+            from mcp_coder.llm.providers.langchain import ask_langchain
+            ask_langchain("q", env_vars={"INJECTED": "value"})
+        assert updates == [{"INJECTED": "value"}]
+
+    def test_no_env_vars_skips_environ_update(self):
+        """When env_vars is None, os.environ.update is not called."""
+        with patch("mcp_coder.llm.providers.langchain._load_langchain_config",
+                   return_value=self._make_config()), \
+             patch("mcp_coder.llm.providers.langchain.load_langchain_history",
+                   return_value=[]), \
+             patch("mcp_coder.llm.providers.langchain.store_langchain_history"), \
+             patch("mcp_coder.llm.providers.langchain.openai.ask_openai",
+                   return_value=("ok", {})), \
+             patch("mcp_coder.llm.providers.langchain.os.environ.update") as mock_update:
+            from mcp_coder.llm.providers.langchain import ask_langchain
+            ask_langchain("q", env_vars=None)
+        mock_update.assert_not_called()
 ```
 
 ### `test_langchain_openai.py` (tests for `openai.py`)
@@ -372,7 +434,7 @@ class TestAskOpenai:
             MockChat.return_value.invoke.return_value = ai_msg
             from mcp_coder.llm.providers.langchain.openai import ask_openai
             text, raw = ask_openai("Hi", model="gpt-4o", api_key=None,
-                                   endpoint=None, messages=[])
+                                   endpoint=None, api_version=None, messages=[])
         assert text == "Hello!"
         assert isinstance(raw, dict)
         assert raw["content"] == "Hello!"
@@ -387,7 +449,7 @@ class TestAskOpenai:
             MockChat.return_value.invoke.return_value = ai_msg
             from mcp_coder.llm.providers.langchain.openai import ask_openai
             ask_openai("Hi", model="gpt-4o", api_key="config-key",
-                       endpoint=None, messages=[])
+                       endpoint=None, api_version=None, messages=[])
             _, kwargs = MockChat.call_args
             assert kwargs.get("api_key") == "env-key"
 
@@ -401,7 +463,7 @@ class TestAskOpenai:
             MockChat.return_value.invoke.return_value = ai_msg
             from mcp_coder.llm.providers.langchain.openai import ask_openai
             ask_openai("Hi", model="gpt-4o", api_key="config-key",
-                       endpoint=None, messages=[])
+                       endpoint=None, api_version=None, messages=[])
             _, kwargs = MockChat.call_args
             assert kwargs.get("api_key") == "config-key"
 
@@ -414,19 +476,41 @@ class TestAskOpenai:
             MockChat.return_value.invoke.return_value = ai_msg
             from mcp_coder.llm.providers.langchain.openai import ask_openai
             ask_openai("Hi", model="gpt-4o", api_key=None,
-                       endpoint="https://custom.example.com/v1", messages=[])
+                       endpoint="https://custom.example.com/v1",
+                       api_version=None, messages=[])
             _, kwargs = MockChat.call_args
             assert kwargs.get("base_url") == "https://custom.example.com/v1"
 
-    def test_import_error_has_install_instructions(self):
-        """ImportError includes pip install instructions."""
-        with patch.dict("sys.modules", {"langchain_openai": None,
-                                        "langchain_core": None,
-                                        "langchain_core.messages": None}):
-            import importlib
-            import mcp_coder.llm.providers.langchain.openai as mod
-            importlib.reload(mod)  # trigger top-level import check
-            # The import error should have been raised and caught; skip if not available
+    def test_timeout_is_forwarded_to_client(self):
+        """timeout is passed to ChatOpenAI constructor."""
+        ai_msg = self._fake_ai_message()
+        with patch("mcp_coder.llm.providers.langchain.openai.ChatOpenAI") as MockChat, \
+             patch("mcp_coder.llm.providers.langchain.openai.HumanMessage"), \
+             patch("mcp_coder.llm.providers.langchain.openai.AIMessage"):
+            MockChat.return_value.invoke.return_value = ai_msg
+            from mcp_coder.llm.providers.langchain.openai import ask_openai
+            ask_openai("Hi", model="gpt-4o", api_key=None, endpoint=None,
+                       api_version=None, messages=[], timeout=60)
+            _, kwargs = MockChat.call_args
+            assert kwargs.get("timeout") == 60
+
+    def test_api_version_triggers_azure_chat_openai(self):
+        """When api_version is set, AzureChatOpenAI is used instead of ChatOpenAI."""
+        ai_msg = self._fake_ai_message()
+        with patch("mcp_coder.llm.providers.langchain.openai.AzureChatOpenAI") as MockAzure, \
+             patch("mcp_coder.llm.providers.langchain.openai.ChatOpenAI") as MockChat, \
+             patch("mcp_coder.llm.providers.langchain.openai.HumanMessage"), \
+             patch("mcp_coder.llm.providers.langchain.openai.AIMessage"):
+            MockAzure.return_value.invoke.return_value = ai_msg
+            from mcp_coder.llm.providers.langchain.openai import ask_openai
+            ask_openai("Hi", model="gpt-4o", api_key="k",
+                       endpoint="https://my.openai.azure.com/",
+                       api_version="2024-02-01", messages=[])
+            MockAzure.assert_called_once()
+            MockChat.assert_not_called()
+            _, kwargs = MockAzure.call_args
+            assert kwargs.get("azure_deployment") == "gpt-4o"
+            assert kwargs.get("openai_api_version") == "2024-02-01"
 ```
 
 ### `test_langchain_gemini.py` (tests for `gemini.py`)
@@ -435,8 +519,9 @@ class TestAskOpenai:
 # Mirror of test_langchain_openai.py but for gemini backend:
 # - patch ChatGoogleGenerativeAI instead of ChatOpenAI
 # - env var is GEMINI_API_KEY
-# - no endpoint parameter (Gemini does not use base_url)
-# - same pattern: test roundtrip, env var priority, config api_key fallback
+# - no endpoint or api_version parameter (Gemini does not use these)
+# - same pattern: test roundtrip, env var priority, config api_key fallback, timeout forwarding
+# - no test_import_error_has_install_instructions (see Decisions.md D5)
 ```
 
 *(Implement following the exact same structure as `test_langchain_openai.py`.)*

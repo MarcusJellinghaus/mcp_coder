@@ -47,6 +47,9 @@ is preserved.
 One `elif` branch added to `prompt_llm()`. Import is **lazy** (inside the
 branch) so LangChain is never imported at module load time.
 
+- `timeout` is **forwarded** to the LangChain client constructor (e.g. `ChatOpenAI(timeout=timeout)`).
+- `env_vars` are **applied** via `os.environ.update(env_vars)` before the backend call.
+  Priority: `env_vars` param > system env var > config file `api_key`.
 - `method` parameter is **silently ignored** (LangChain always uses direct API).
 - `execution_dir`, `mcp_config`, `branch_name` are also silently ignored
   (Claude-specific parameters).
@@ -61,10 +64,11 @@ Config is read inline in `langchain/__init__.py` via the existing
 provider = "langchain"
 
 [llm.langchain]
-backend   = "openai"
-model     = "gpt-4o"
-api_key   = "sk-..."       # optional — env var takes priority
-endpoint  = "..."          # optional, mapped to LangChain base_url
+backend     = "openai"
+model       = "gpt-4o"
+api_key     = "sk-..."       # optional — env var takes priority
+endpoint    = "..."          # optional; base_url for OpenAI, azure_endpoint for Azure
+api_version = "2024-02-01"   # optional — presence triggers AzureChatOpenAI
 ```
 
 Env var priority (checked before config file):

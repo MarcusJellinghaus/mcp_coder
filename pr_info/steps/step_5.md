@@ -73,9 +73,10 @@ pip install 'mcp-coder[langchain]'
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | `backend` | string | LangChain backend: `"openai"` or `"gemini"` | Yes |
-| `model` | string | Model name (e.g. `"gpt-4o"`, `"gemini-1.5-pro"`) | Yes |
+| `model` | string | Model name (e.g. `"gpt-4o"`, `"gemini-1.5-pro"`). Doubles as `azure_deployment` for Azure | Yes |
 | `api_key` | string | API key (env var takes priority — see below) | No |
-| `endpoint` | string | Custom base URL (e.g. Azure, Ollama). Mapped to LangChain's `base_url` | No |
+| `endpoint` | string | Custom base URL for OpenAI; `azure_endpoint` for Azure; ignored by Gemini | No |
+| `api_version` | string | Azure API version (e.g. `"2024-02-01"`). When set, uses `AzureChatOpenAI` | No |
 
 **Example — OpenAI GPT-4o:**
 ```toml
@@ -99,16 +100,17 @@ model    = "gemini-1.5-pro"
 api_key  = "..."          # or set GEMINI_API_KEY env var
 ```
 
-**Example — Azure OpenAI (custom endpoint):**
+**Example — Azure OpenAI:**
 ```toml
 [llm]
 provider = "langchain"
 
 [llm.langchain]
-backend  = "openai"
-model    = "gpt-4o"
-endpoint = "https://my-resource.openai.azure.com/"
-api_key  = "..."
+backend     = "openai"
+model       = "gpt-4o"                               # also = azure_deployment
+endpoint    = "https://my-resource.openai.azure.com/"
+api_version = "2024-02-01"                           # triggers AzureChatOpenAI
+api_key     = "..."
 ```
 
 **Example — Local Ollama:**

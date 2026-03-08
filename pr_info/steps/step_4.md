@@ -140,12 +140,6 @@ class TestPromptLlmLangchainRouting:
         """prompt_llm with provider='langchain' calls ask_langchain."""
         expected = self._make_langchain_response()
         with patch(
-            "mcp_coder.llm.interface.prompt_llm.__code__",  # patch lazy import
-        ):
-            pass  # adjust to match the project's existing mocking pattern
-
-        # Preferred approach — patch the module path of ask_langchain:
-        with patch(
             "mcp_coder.llm.providers.langchain.ask_langchain",
             return_value=expected,
         ) as mock_ask:
