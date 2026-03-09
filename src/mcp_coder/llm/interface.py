@@ -1,6 +1,7 @@
 """High-level LLM interface for extensible provider support."""
 
 import logging
+import os
 
 from mcp_coder.utils.subprocess_runner import TimeoutExpired
 
@@ -176,36 +177,50 @@ def prompt_llm(  # pylint: disable=too-many-positional-arguments
     if timeout <= 0:
         raise ValueError("Timeout must be a positive number")
 
-    # Route to provider-specific implementation
-    # Call lower-level functions directly to get LLMResponseDict
+    # Allow env var to override the provider parameter (e.g. in CI)
+    provider = os.environ.get("MCP_CODER_LLM_PROVIDER") or provider
+
+    # Non-subprocess providers — placed before the existing try block
+    if provider == "langchain":
+        from .providers.langchain import ask_langchain  # lazy import  # noqa: PLC0415
+
+        return ask_langchain(
+            question,
+            session_id=session_id,
+            timeout=timeout,
+            env_vars=env_vars,
+        )
+
+    # Unsupported provider check — also before the try block
+    if provider != "claude":
+        raise ValueError(
+            f"Unsupported provider: {provider}. Supported: 'claude', 'langchain'"
+        )
+
+    # Claude provider — subprocess-based, TimeoutExpired possible
     try:
-        if provider == "claude":
-            if method == "cli":
-                return ask_claude_code_cli(
-                    question,
-                    session_id=session_id,
-                    timeout=timeout,
-                    env_vars=env_vars,
-                    cwd=execution_dir,
-                    mcp_config=mcp_config,
-                    branch_name=branch_name,
-                )
-            elif method == "api":
-                return ask_claude_code_api(
-                    question,
-                    session_id=session_id,
-                    timeout=timeout,
-                    env_vars=env_vars,
-                    cwd=execution_dir,
-                    mcp_config=mcp_config,
-                )
-            else:
-                raise ValueError(
-                    f"Unsupported method: {method}. Supported methods: 'cli', 'api'"
-                )
+        if method == "cli":
+            return ask_claude_code_cli(
+                question,
+                session_id=session_id,
+                timeout=timeout,
+                env_vars=env_vars,
+                cwd=execution_dir,
+                mcp_config=mcp_config,
+                branch_name=branch_name,
+            )
+        elif method == "api":
+            return ask_claude_code_api(
+                question,
+                session_id=session_id,
+                timeout=timeout,
+                env_vars=env_vars,
+                cwd=execution_dir,
+                mcp_config=mcp_config,
+            )
         else:
             raise ValueError(
-                f"Unsupported provider: {provider}. Currently supported: 'claude'"
+                f"Unsupported method: {method}. Supported methods: 'cli', 'api'"
             )
     except TimeoutExpired:
         logger.error("LLM request timed out after %ds", timeout)

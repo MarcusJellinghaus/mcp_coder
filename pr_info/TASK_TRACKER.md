@@ -57,9 +57,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 4 — Interface Routing ([step_4.md](./steps/step_4.md))
 
-- [ ] Implement Step 4 (TDD): append `TestPromptLlmLangchainRouting` to `tests/llm/test_interface.py`, then add `MCP_CODER_LLM_PROVIDER` env var override and `if provider == "langchain":` branch to `src/mcp_coder/llm/interface.py`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues found
-- [ ] Prepare git commit message
+- [x] Implement Step 4 (TDD): append `TestPromptLlmLangchainRouting` to `tests/llm/test_interface.py`, then add `MCP_CODER_LLM_PROVIDER` env var override and `if provider == "langchain":` branch to `src/mcp_coder/llm/interface.py`
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues found
+- [x] Prepare git commit message
 
 ---
 
