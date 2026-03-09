@@ -152,25 +152,37 @@ except ImportError as exc:
     ) from exc
 ```
 
-### Message conversion (inside backend functions)
+### Message conversion helpers (`_utils.py`)
+
+Defined **once** in `_utils.py`; both `openai.py` and `gemini.py` import from it:
 
 ```python
-# dict → LangChain message objects
+# _utils.py
+from langchain_core.messages import AIMessage, HumanMessage
+
 def _to_lc_messages(messages: list[dict[str, str]]) -> list:
+    """Convert plain role/content dicts to LangChain message objects."""
     return [
         HumanMessage(content=m["content"]) if m["role"] == "human"
         else AIMessage(content=m["content"])
         for m in messages
     ]
 
-# AIMessage → serialisable dict (no pydantic dependency)
 def _ai_message_to_dict(msg: AIMessage) -> dict[str, object]:
+    """Convert AIMessage to a serialisable dict (no pydantic dependency)."""
     return {
         "content": msg.content,
         "response_metadata": getattr(msg, "response_metadata", {}),
         "usage_metadata": getattr(msg, "usage_metadata", None),
         "id": getattr(msg, "id", None),
     }
+```
+
+Backends import from `_utils.py` — **neither `openai.py` nor `gemini.py` imports from `langchain_core.messages` directly**:
+
+```python
+# openai.py / gemini.py
+from ._utils import _ai_message_to_dict, _to_lc_messages
 ```
 
 ### Session storage import in `__init__.py`
@@ -207,7 +219,7 @@ return LLMResponseDict(version, timestamp, text, session_id=sid,
 
 ```
 effective_api_key = os.getenv("OPENAI_API_KEY") or api_key
-lc_messages = _to_lc_messages(history) + [HumanMessage(content=question)]
+lc_messages = _to_lc_messages(history + [{"role": "human", "content": question}])
 if api_version:   # Azure OpenAI path
     client = AzureChatOpenAI(azure_deployment=model, azure_endpoint=endpoint,
                              api_key=effective_api_key,
@@ -224,7 +236,7 @@ return (str(ai_msg.content), raw)
 
 ```
 effective_api_key = os.getenv("GEMINI_API_KEY") or api_key
-lc_messages = _to_lc_messages(history) + [HumanMessage(content=question)]
+lc_messages = _to_lc_messages(history + [{"role": "human", "content": question}])
 client = ChatGoogleGenerativeAI(model=model, google_api_key=effective_api_key,
                                 timeout=timeout)
 ai_msg = client.invoke(lc_messages)
@@ -430,9 +442,8 @@ class TestAskOpenai:
     def test_returns_text_and_raw_dict(self):
         """ask_openai returns (text, dict) on success."""
         ai_msg = self._fake_ai_message("Hello!")
-        with patch("mcp_coder.llm.providers.langchain.openai.ChatOpenAI") as MockChat, \
-             patch("mcp_coder.llm.providers.langchain.openai.HumanMessage"), \
-             patch("mcp_coder.llm.providers.langchain.openai.AIMessage"):
+        # No need to patch HumanMessage/AIMessage — conftest injects sys.modules mocks.
+        with patch("mcp_coder.llm.providers.langchain.openai.ChatOpenAI") as MockChat:
             MockChat.return_value.invoke.return_value = ai_msg
             from mcp_coder.llm.providers.langchain.openai import ask_openai
             text, raw = ask_openai("Hi", model="gpt-4o", api_key=None,
@@ -445,9 +456,7 @@ class TestAskOpenai:
         """OPENAI_API_KEY env var overrides api_key from config."""
         monkeypatch.setenv("OPENAI_API_KEY", "env-key")
         ai_msg = self._fake_ai_message()
-        with patch("mcp_coder.llm.providers.langchain.openai.ChatOpenAI") as MockChat, \
-             patch("mcp_coder.llm.providers.langchain.openai.HumanMessage"), \
-             patch("mcp_coder.llm.providers.langchain.openai.AIMessage"):
+        with patch("mcp_coder.llm.providers.langchain.openai.ChatOpenAI") as MockChat:
             MockChat.return_value.invoke.return_value = ai_msg
             from mcp_coder.llm.providers.langchain.openai import ask_openai
             ask_openai("Hi", model="gpt-4o", api_key="config-key",
@@ -459,9 +468,7 @@ class TestAskOpenai:
         """Config api_key is used when OPENAI_API_KEY is not in the environment."""
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
         ai_msg = self._fake_ai_message()
-        with patch("mcp_coder.llm.providers.langchain.openai.ChatOpenAI") as MockChat, \
-             patch("mcp_coder.llm.providers.langchain.openai.HumanMessage"), \
-             patch("mcp_coder.llm.providers.langchain.openai.AIMessage"):
+        with patch("mcp_coder.llm.providers.langchain.openai.ChatOpenAI") as MockChat:
             MockChat.return_value.invoke.return_value = ai_msg
             from mcp_coder.llm.providers.langchain.openai import ask_openai
             ask_openai("Hi", model="gpt-4o", api_key="config-key",
@@ -472,9 +479,7 @@ class TestAskOpenai:
     def test_passes_endpoint_as_base_url(self):
         """endpoint is passed to ChatOpenAI as base_url."""
         ai_msg = self._fake_ai_message()
-        with patch("mcp_coder.llm.providers.langchain.openai.ChatOpenAI") as MockChat, \
-             patch("mcp_coder.llm.providers.langchain.openai.HumanMessage"), \
-             patch("mcp_coder.llm.providers.langchain.openai.AIMessage"):
+        with patch("mcp_coder.llm.providers.langchain.openai.ChatOpenAI") as MockChat:
             MockChat.return_value.invoke.return_value = ai_msg
             from mcp_coder.llm.providers.langchain.openai import ask_openai
             ask_openai("Hi", model="gpt-4o", api_key=None,
@@ -486,9 +491,7 @@ class TestAskOpenai:
     def test_timeout_is_forwarded_to_client(self):
         """timeout is passed to ChatOpenAI constructor."""
         ai_msg = self._fake_ai_message()
-        with patch("mcp_coder.llm.providers.langchain.openai.ChatOpenAI") as MockChat, \
-             patch("mcp_coder.llm.providers.langchain.openai.HumanMessage"), \
-             patch("mcp_coder.llm.providers.langchain.openai.AIMessage"):
+        with patch("mcp_coder.llm.providers.langchain.openai.ChatOpenAI") as MockChat:
             MockChat.return_value.invoke.return_value = ai_msg
             from mcp_coder.llm.providers.langchain.openai import ask_openai
             ask_openai("Hi", model="gpt-4o", api_key=None, endpoint=None,
@@ -500,9 +503,7 @@ class TestAskOpenai:
         """When api_version is set, AzureChatOpenAI is used instead of ChatOpenAI."""
         ai_msg = self._fake_ai_message()
         with patch("mcp_coder.llm.providers.langchain.openai.AzureChatOpenAI") as MockAzure, \
-             patch("mcp_coder.llm.providers.langchain.openai.ChatOpenAI") as MockChat, \
-             patch("mcp_coder.llm.providers.langchain.openai.HumanMessage"), \
-             patch("mcp_coder.llm.providers.langchain.openai.AIMessage"):
+             patch("mcp_coder.llm.providers.langchain.openai.ChatOpenAI") as MockChat:
             MockAzure.return_value.invoke.return_value = ai_msg
             from mcp_coder.llm.providers.langchain.openai import ask_openai
             ask_openai("Hi", model="gpt-4o", api_key="k",
@@ -517,16 +518,20 @@ class TestAskOpenai:
 
 ### `test_langchain_gemini.py` (tests for `gemini.py`)
 
-```python
-# Mirror of test_langchain_openai.py but for gemini backend:
-# - patch ChatGoogleGenerativeAI instead of ChatOpenAI
-# - env var is GEMINI_API_KEY
-# - no endpoint or api_version parameter (Gemini does not use these)
-# - same pattern: test roundtrip, env var priority, config api_key fallback, timeout forwarding
-# - no test_import_error_has_install_instructions (see Decisions.md D5)
-```
+Four tests — mirror the openai pattern but for the Gemini backend.
+Patch `ChatGoogleGenerativeAI`; env var is `GEMINI_API_KEY`; no `endpoint` or `api_version`.
+No `HumanMessage`/`AIMessage` patches needed (conftest handles `langchain_core.messages`).
 
-*(Implement following the exact same structure as `test_langchain_openai.py`.)*
+```python
+# patch target for all tests:
+# patch("mcp_coder.llm.providers.langchain.gemini.ChatGoogleGenerativeAI")
+
+class TestAskGemini:
+    def test_returns_text_and_raw_dict(self): ...
+    def test_env_var_takes_priority_over_config_api_key(self, monkeypatch): ...
+    def test_uses_config_api_key_when_env_not_set(self, monkeypatch): ...
+    def test_timeout_is_forwarded_to_client(self): ...
+```
 
 ---
 
