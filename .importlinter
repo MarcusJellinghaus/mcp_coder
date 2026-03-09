@@ -257,6 +257,27 @@ ignore_imports =
     mcp_coder.llm.providers.claude.** -> claude_code_sdk
 
 # -----------------------------------------------------------------------------
+# Contract: LangChain Library Isolation
+# -----------------------------------------------------------------------------
+# langchain_core, langchain_openai, langchain_google_genai are optional
+# dependencies. Only the langchain provider package may import them.
+# Same pattern as claude_sdk_isolation.
+# -----------------------------------------------------------------------------
+[importlinter:contract:langchain_library_isolation]
+name = LangChain Library Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    langchain_core
+    langchain_openai
+    langchain_google_genai
+ignore_imports =
+    mcp_coder.llm.providers.langchain.** -> langchain_core
+    mcp_coder.llm.providers.langchain.** -> langchain_openai
+    mcp_coder.llm.providers.langchain.** -> langchain_google_genai
+
+# -----------------------------------------------------------------------------
 # Contract: Pyperclip Library Isolation
 # -----------------------------------------------------------------------------
 # The 'pyperclip' package should only be used by utils.clipboard.

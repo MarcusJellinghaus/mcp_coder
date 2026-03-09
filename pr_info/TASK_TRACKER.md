@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1 — Project Configuration ([step_1.md](./steps/step_1.md))
 
-- [ ] Implement Step 1: add `langchain` optional extra, pytest marker, mypy overrides to `pyproject.toml`; add `langchain_library_isolation` contract to `.importlinter`
-- [ ] Run quality checks (pylint, mypy) and fix all issues found
-- [ ] Prepare git commit message
+- [x] Implement Step 1: add `langchain` optional extra, pytest marker, mypy overrides to `pyproject.toml`; add `langchain_library_isolation` contract to `.importlinter`
+- [x] Run quality checks (pylint, mypy) and fix all issues found
+- [x] Prepare git commit message
 
 ---
 
