@@ -44,8 +44,11 @@ is preserved.
 
 ### 3. Provider routing (minimal change to interface.py)
 
-One `elif` branch added to `prompt_llm()`. Import is **lazy** (inside the
-branch) so LangChain is never imported at module load time.
+One `if` block added to `prompt_llm()`, placed **before** the
+`try/except TimeoutExpired` that wraps Claude's subprocess calls.
+Import is **lazy** so LangChain is never imported at module load time.
+`MCP_CODER_LLM_PROVIDER` env var overrides the `provider` parameter —
+useful for switching providers in CI without changing config.
 
 - `timeout` is **forwarded** to the LangChain client constructor (e.g. `ChatOpenAI(timeout=timeout)`).
 - `env_vars` are **applied** via `os.environ.update(env_vars)` before the backend call.
@@ -100,10 +103,13 @@ the type. `raw_response` holds a serialisable dict built from LangChain's
 | `src/mcp_coder/llm/providers/langchain/__init__.py` | Entry point, config loading, dispatch |
 | `src/mcp_coder/llm/providers/langchain/openai.py` | OpenAI backend |
 | `src/mcp_coder/llm/providers/langchain/gemini.py` | Gemini backend |
+| `src/mcp_coder/llm/providers/langchain/_utils.py` | Shared message conversion helpers |
 | `tests/llm/providers/langchain/__init__.py` | Test package marker |
 | `tests/llm/providers/langchain/test_langchain_provider.py` | Tests for `__init__.py` |
 | `tests/llm/providers/langchain/test_langchain_openai.py` | Tests for `openai.py` |
 | `tests/llm/providers/langchain/test_langchain_gemini.py` | Tests for `gemini.py` |
+| `tests/llm/providers/langchain/conftest.py` | `sys.modules` mocks for unit tests |
+| `tests/llm/providers/langchain/test_langchain_integration.py` | LangChain integration tests (Step 3b) |
 
 ---
 
@@ -129,5 +135,6 @@ the type. `raw_response` holds a serialisable dict built from LangChain's
 | 1 | Project configuration (`pyproject.toml` + `.importlinter`) | No |
 | 2 | Session history storage (extend `session_storage.py`) | Yes (TDD) |
 | 3 | LangChain provider package | Yes (TDD) |
+| 3b | LangChain integration tests | Yes (integration, skipped if unconfigured) |
 | 4 | Interface routing (`interface.py`) | Yes (TDD) |
 | 5 | Documentation | No |

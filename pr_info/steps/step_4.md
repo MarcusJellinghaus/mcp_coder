@@ -1,7 +1,7 @@
 # Step 4: Interface Routing (TDD)
 
-Wire the langchain provider into `prompt_llm()` with a single `elif` branch.
-All previous steps (1–3) must be complete before this step.
+Wire the langchain provider into `prompt_llm()` and add `MCP_CODER_LLM_PROVIDER`
+env var support. All previous steps (1–3b) must be complete before this step.
 
 ---
 
@@ -36,10 +36,21 @@ Implement Step 4 using TDD:
 
 ### Changes to `interface.py`
 
-**A. Add `elif` branch inside `prompt_llm()`, after the `elif method == "api":` block:**
+**A. Add `MCP_CODER_LLM_PROVIDER` env var override** after input validation
+(add `import os` to the top-level imports if not already present):
 
 ```python
-elif provider == "langchain":
+# Allow env var to override the provider parameter (e.g. in CI)
+import os
+provider = os.environ.get("MCP_CODER_LLM_PROVIDER") or provider
+```
+
+**B. Add the langchain block BEFORE the `try/except TimeoutExpired` block.**
+LangChain uses HTTP (not subprocesses), so `TimeoutExpired` never applies.
+
+```python
+# Non-subprocess providers — placed before the existing try block
+if provider == "langchain":
     from .providers.langchain import ask_langchain  # lazy import
     return ask_langchain(
         question,
@@ -47,23 +58,32 @@ elif provider == "langchain":
         timeout=timeout,
         env_vars=env_vars,
     )
+
+# Unsupported provider check — also before the try block
+if provider != "claude":
+    raise ValueError(
+        f"Unsupported provider: {provider}. Supported: 'claude', 'langchain'"
+    )
+
+# Claude provider — subprocess-based, TimeoutExpired possible
+try:
+    if method == "cli":
+        return ask_claude_code_cli(...)
+    elif method == "api":
+        return ask_claude_code_api(...)
+    else:
+        raise ValueError(
+            f"Unsupported method: {method}. Supported methods: 'cli', 'api'"
+        )
+except TimeoutExpired:
+    ...  # existing error logging unchanged
+    raise
 ```
 
-**B. Update the `else` error message** (currently says `'claude'` only):
+**C. Remove the `else: raise ValueError(...)` clause** from inside the `try` block —
+it is superseded by the `if provider != "claude":` check in step B.
 
-```python
-# Before:
-raise ValueError(
-    f"Unsupported provider: {provider}. Currently supported: 'claude'"
-)
-
-# After:
-raise ValueError(
-    f"Unsupported provider: {provider}. Supported: 'claude', 'langchain'"
-)
-```
-
-That is the complete change to `interface.py`.
+Those are all changes to `interface.py`.
 
 ---
 
@@ -71,8 +91,8 @@ That is the complete change to `interface.py`.
 
 ### Why lazy import
 
-The `from .providers.langchain import ask_langchain` is **inside** the `elif`
-branch. This means:
+The `from .providers.langchain import ask_langchain` is **inside** the
+`if provider == "langchain":` block. This means:
 
 - LangChain is never imported when the provider is `"claude"` (the common case).
 - If LangChain is not installed and the user requests it, the `ImportError` from
@@ -93,16 +113,24 @@ This is already handled because `ask_langchain` has no `method` parameter.
 
 ## ALGORITHM
 
-No complex logic — pure dispatch:
+No complex logic — pure dispatch. LangChain handled before the try block:
 
 ```
-if provider == "claude":
-    existing claude routing unchanged
-elif provider == "langchain":
+# After input validation:
+provider = os.environ.get("MCP_CODER_LLM_PROVIDER") or provider
+
+# Before try/except TimeoutExpired:
+if provider == "langchain":
     lazy import ask_langchain
     return ask_langchain(question, session_id, timeout, env_vars)
-else:
+
+if provider != "claude":
     raise ValueError("Unsupported provider: ... Supported: 'claude', 'langchain'")
+
+# Inside try/except TimeoutExpired (Claude only):
+if method == "cli":  return ask_claude_code_cli(...)
+elif method == "api": return ask_claude_code_api(...)
+else: raise ValueError("Unsupported method: ...")
 ```
 
 ---
@@ -196,6 +224,19 @@ class TestPromptLlmLangchainRouting:
             prompt_llm("Hello", provider="unsupported_xyz")
         assert "langchain" in str(exc_info.value)
 
+    def test_env_var_overrides_provider_to_langchain(self, monkeypatch):
+        """MCP_CODER_LLM_PROVIDER env var overrides the provider parameter."""
+        monkeypatch.setenv("MCP_CODER_LLM_PROVIDER", "langchain")
+        expected = self._make_langchain_response()
+        with patch(
+            "mcp_coder.llm.providers.langchain.ask_langchain",
+            return_value=expected,
+        ):
+            from mcp_coder.llm.interface import prompt_llm
+            # provider kwarg says "claude" but env var overrides to "langchain"
+            result = prompt_llm("Hello", provider="claude")
+        assert result["provider"] == "langchain"
+
     def test_ask_llm_delegates_to_prompt_llm_for_langchain(self):
         """ask_llm with provider='langchain' also routes correctly."""
         expected = self._make_langchain_response()
@@ -210,7 +251,7 @@ class TestPromptLlmLangchainRouting:
 
 ### Note on patching the lazy import
 
-Because `ask_langchain` is imported **inside** the `elif` branch at call time,
+Because `ask_langchain` is imported **inside** the `if provider == "langchain":` block,
 patching `mcp_coder.llm.providers.langchain.ask_langchain` (the module attribute)
 works correctly. Check how the existing claude tests mock their providers and
 use the same approach.

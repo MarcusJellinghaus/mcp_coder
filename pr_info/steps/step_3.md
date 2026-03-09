@@ -33,7 +33,9 @@ Do NOT install langchain packages — all tests must run without them (mocked).
 | `src/mcp_coder/llm/providers/langchain/__init__.py` | Entry point, config, dispatch |
 | `src/mcp_coder/llm/providers/langchain/openai.py` | OpenAI backend |
 | `src/mcp_coder/llm/providers/langchain/gemini.py` | Gemini backend |
+| `src/mcp_coder/llm/providers/langchain/_utils.py` | Shared message conversion helpers |
 | `tests/llm/providers/langchain/__init__.py` | Empty — package marker |
+| `tests/llm/providers/langchain/conftest.py` | `sys.modules` mocks — unit tests run without langchain installed |
 | `tests/llm/providers/langchain/test_langchain_provider.py` | Tests for `__init__.py` |
 | `tests/llm/providers/langchain/test_langchain_openai.py` | Tests for `openai.py` |
 | `tests/llm/providers/langchain/test_langchain_gemini.py` | Tests for `gemini.py` |
