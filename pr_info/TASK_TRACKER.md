@@ -41,9 +41,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3 — LangChain Provider Package ([step_3.md](./steps/step_3.md))
 
-- [ ] Implement Step 3 (TDD): create test files under `tests/llm/providers/langchain/`, then create provider source files (`__init__.py`, `openai.py`, `gemini.py`, `_utils.py`); update `tests/llm/providers/test_provider_structure.py`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues found
-- [ ] Prepare git commit message
+- [x] Implement Step 3 (TDD): create test files under `tests/llm/providers/langchain/`, then create provider source files (`__init__.py`, `openai.py`, `gemini.py`, `_utils.py`); update `tests/llm/providers/test_provider_structure.py`
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues found
+- [x] Prepare git commit message
 
 ---
 
