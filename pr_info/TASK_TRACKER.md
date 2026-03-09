@@ -49,9 +49,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3b — LangChain Integration Tests ([step_3b.md](./steps/step_3b.md))
 
-- [ ] Implement Step 3b: create `tests/llm/providers/langchain/test_langchain_integration.py` with skip-helper and two integration tests marked `langchain_integration`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues found
-- [ ] Prepare git commit message
+- [x] Implement Step 3b: create `tests/llm/providers/langchain/test_langchain_integration.py` with skip-helper and two integration tests marked `langchain_integration`
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues found
+- [x] Prepare git commit message
 
 ---
 
