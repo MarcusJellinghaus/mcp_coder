@@ -18,6 +18,7 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 
 ### Key Features
 - **LLM Integration**: Multi-provider interface with Claude Code CLI/API support
+  and optional LangChain backends (OpenAI, Gemini, and others)
 - **GitHub Automation**: Issue-driven workflow automation with status label transitions
 - **Git Operations**: Automated repository management and version control
 - **Code Quality**: Integrated testing with pylint, pytest, mypy via MCP servers
@@ -168,6 +169,10 @@ mcp-coder implement --project-dir /path/to/project
   - `sdk_serialization.py` - SDK message object handling (tests: `llm/formatting/test_sdk_serialization.py`)
 - **Storage**: `llm/storage/` - Session persistence
   - `session_storage.py` - Store/load session data (tests: `llm/storage/test_session_storage.py`)
+  - **LangChain session history**: `store_langchain_history()` / `load_langchain_history()`
+    in `session_storage.py` persist message lists as JSON to
+    `~/.mcp_coder/sessions/langchain/{session_id}.json`.
+    Unlike Claude (server-side history), LangChain history is managed by mcp-coder locally.
   - `session_finder.py` - Find latest session files (tests: `llm/storage/test_session_finder.py`)
 - **Session**: `llm/session/` - Session management
   - `resolver.py` - LLM method parsing and session resolution (tests: `llm/session/test_resolver.py`)
@@ -180,6 +185,12 @@ mcp-coder implement --project-dir /path/to/project
         - **Rationale**: Centralized logging functions for request, response, and error tracking in Claude provider integrations
         - **Benefits**: Consistent logging patterns, easier debugging, structured debug output
         - **Functions**: `log_llm_request()`, `log_llm_response()`, `log_llm_error()`
+  - `langchain/` - LangChain multi-backend integration (tests: `llm/providers/langchain/test_*.py`)
+    - `__init__.py` - Entry point `ask_langchain()`, config loading, backend dispatch
+    - `openai.py` - OpenAI / Azure / Ollama backend via `ChatOpenAI`
+    - `gemini.py` - Google Gemini backend via `ChatGoogleGenerativeAI`
+    - **Optional install**: `pip install 'mcp-coder[langchain]'`
+    - **Session storage**: history persisted to `~/.mcp_coder/sessions/langchain/`
 
 ### CLI System (`src/mcp_coder/cli/`)
 - **CLI entry point**: `cli/main.py` - Command routing and parsing (tests: `cli/test_main.py`)
@@ -328,9 +339,13 @@ mcp-coder implement --project-dir /path/to/project
   - `github_integration`: GitHub API access (network, auth needed) in `utils/github_operations/test_*.py`
     - **When to use**: Testing GitHub operations, PR management, issue workflows
     - **Requirements**: GitHub API tokens, network access
+  - `langchain_integration`: LangChain API tests (network, auth needed)
+    in `llm/providers/langchain/test_*.py`
+    - **When to use**: Testing LangChain provider integrations, real API calls
+    - **Requirements**: LangChain packages installed, API keys configured
 - **Fast development**: Use exclusion pattern to skip slow integration tests
 - **Parallel execution**: Always use `extra_args: ["-n", "auto"]`
-- **Recommended**: `"-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration"`
+- **Recommended**: `"-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"`
 - **Integration testing**: Use specific markers when developing integration features
 - **CI/CD**: Run all tests including integration tests in automated pipelines
 

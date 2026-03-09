@@ -868,7 +868,9 @@ class TestPromptLLMExecutionDir:
 class TestPromptLlmLangchainRouting:
     """Test that prompt_llm correctly routes to the langchain provider."""
 
-    def _make_langchain_response(self, text="langchain reply"):
+    def _make_langchain_response(
+        self, text: str = "langchain reply"
+    ) -> dict[str, object]:
         from datetime import datetime
 
         return {
@@ -881,7 +883,7 @@ class TestPromptLlmLangchainRouting:
             "raw_response": {},
         }
 
-    def test_routes_to_langchain_provider(self):
+    def test_routes_to_langchain_provider(self) -> None:
         """prompt_llm with provider='langchain' calls ask_langchain."""
         expected = self._make_langchain_response()
         with patch(
@@ -896,7 +898,7 @@ class TestPromptLlmLangchainRouting:
         assert result["provider"] == "langchain"
         assert result["text"] == "langchain reply"
 
-    def test_passes_question_session_timeout_env_vars(self):
+    def test_passes_question_session_timeout_env_vars(self) -> None:
         """prompt_llm passes question, session_id, timeout, env_vars to ask_langchain."""
         expected = self._make_langchain_response()
         with patch(
@@ -925,7 +927,7 @@ class TestPromptLlmLangchainRouting:
         assert all_args.get("timeout") == 60
         assert all_args.get("env_vars") == {"K": "V"}
 
-    def test_method_param_is_silently_ignored(self):
+    def test_method_param_is_silently_ignored(self) -> None:
         """prompt_llm with provider='langchain' ignores the method parameter."""
         expected = self._make_langchain_response()
         with patch(
@@ -939,7 +941,7 @@ class TestPromptLlmLangchainRouting:
         assert result["provider"] == "langchain"
         mock_ask.assert_called_once()
 
-    def test_unsupported_provider_error_mentions_langchain(self):
+    def test_unsupported_provider_error_mentions_langchain(self) -> None:
         """The ValueError for unsupported providers lists 'langchain' as supported."""
         from mcp_coder.llm.interface import prompt_llm
 
@@ -947,7 +949,9 @@ class TestPromptLlmLangchainRouting:
             prompt_llm("Hello", provider="unsupported_xyz")
         assert "langchain" in str(exc_info.value)
 
-    def test_env_var_overrides_provider_to_langchain(self, monkeypatch):
+    def test_env_var_overrides_provider_to_langchain(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """MCP_CODER_LLM_PROVIDER env var overrides the provider parameter."""
         monkeypatch.setenv("MCP_CODER_LLM_PROVIDER", "langchain")
         expected = self._make_langchain_response()
@@ -961,7 +965,7 @@ class TestPromptLlmLangchainRouting:
             result = prompt_llm("Hello", provider="claude")
         assert result["provider"] == "langchain"
 
-    def test_ask_llm_delegates_to_prompt_llm_for_langchain(self):
+    def test_ask_llm_delegates_to_prompt_llm_for_langchain(self) -> None:
         """ask_llm with provider='langchain' also routes correctly."""
         expected = self._make_langchain_response()
         with patch(

@@ -65,9 +65,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 5 — Documentation ([step_5.md](./steps/step_5.md))
 
-- [ ] Implement Step 5: add `[llm]` / `[llm.langchain]` section to `docs/configuration/config.md`; update LLM provider section and session storage description in `docs/architecture/architecture.md`
-- [ ] Run quality checks (pylint, mypy) and fix all issues found
-- [ ] Prepare git commit message
+- [x] Implement Step 5: add `[llm]` / `[llm.langchain]` section to `docs/configuration/config.md`; update LLM provider section and session storage description in `docs/architecture/architecture.md`
+- [x] Run quality checks (pylint, mypy) and fix all issues found
+- [x] Prepare git commit message
 
 ---
 
