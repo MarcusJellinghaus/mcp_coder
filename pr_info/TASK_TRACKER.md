@@ -33,9 +33,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2 — Session History Storage ([step_2.md](./steps/step_2.md))
 
-- [ ] Implement Step 2 (TDD): write tests in `tests/llm/storage/test_session_storage.py`, then add `store_langchain_history()`, `load_langchain_history()`, `_langchain_session_path()` to `src/mcp_coder/llm/storage/session_storage.py`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues found
-- [ ] Prepare git commit message
+- [x] Implement Step 2 (TDD): write tests in `tests/llm/storage/test_session_storage.py`, then add `store_langchain_history()`, `load_langchain_history()`, `_langchain_session_path()` to `src/mcp_coder/llm/storage/session_storage.py`
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues found
+- [x] Prepare git commit message
 
 ---
 

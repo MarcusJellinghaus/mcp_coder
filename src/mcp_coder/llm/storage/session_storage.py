@@ -8,7 +8,8 @@ import json
 import logging
 import os
 from datetime import datetime
-from typing import Any, Dict, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from ..types import LLMResponseDict
 
@@ -17,6 +18,8 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "store_session",
     "extract_session_id",
+    "store_langchain_history",
+    "load_langchain_history",
 ]
 
 
@@ -136,3 +139,41 @@ def extract_session_id(file_path: str) -> Optional[str]:
     except Exception as e:
         logger.error("Error reading session file %s: %s", file_path, e)
         return None
+
+
+def _langchain_session_path(
+    session_id: str,
+    base_dir: Optional[str] = None,
+) -> Path:
+    """Return Path for a session's history JSON file.
+    Default: ~/.mcp_coder/sessions/langchain/{session_id}.json
+    """
+    root = (
+        Path(base_dir)
+        if base_dir
+        else Path.home() / ".mcp_coder" / "sessions" / "langchain"
+    )
+    return root / f"{session_id}.json"
+
+
+def store_langchain_history(
+    session_id: str,
+    messages: List[Dict[str, str]],
+    base_dir: Optional[str] = None,
+) -> str:
+    """Persist message history to disk. Returns the file path written."""
+    path = _langchain_session_path(session_id, base_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(messages, indent=2), encoding="utf-8")
+    return str(path)
+
+
+def load_langchain_history(
+    session_id: str,
+    base_dir: Optional[str] = None,
+) -> List[Dict[str, str]]:
+    """Load message history from disk. Returns [] if no file exists."""
+    path = _langchain_session_path(session_id, base_dir)
+    if not path.exists():
+        return []
+    return json.loads(path.read_text(encoding="utf-8"))  # type: ignore[no-any-return]

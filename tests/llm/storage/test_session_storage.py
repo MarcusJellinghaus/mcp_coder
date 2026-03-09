@@ -3,11 +3,17 @@
 import json
 import os
 import tempfile
+from pathlib import Path
 from unittest.mock import Mock, mock_open, patch
 
 import pytest
 
-from mcp_coder.llm.storage.session_storage import extract_session_id, store_session
+from mcp_coder.llm.storage.session_storage import (
+    extract_session_id,
+    load_langchain_history,
+    store_langchain_history,
+    store_session,
+)
 from mcp_coder.llm.types import LLMResponseDict
 
 
@@ -291,3 +297,62 @@ class TestExtractSessionId:
 
             session_id = extract_session_id(str(file_path))
             assert session_id == "llm-dict-session-xyz"
+
+
+class TestLangchainSessionStorage:
+    """Tests for store_langchain_history / load_langchain_history."""
+
+    def test_store_and_load_roundtrip(self, tmp_path):
+        """Stored messages can be loaded back unchanged."""
+        messages = [
+            {"role": "human", "content": "Hello"},
+            {"role": "ai", "content": "Hi there"},
+        ]
+        session_id = "test-session-abc"
+        store_langchain_history(session_id, messages, base_dir=str(tmp_path))
+        loaded = load_langchain_history(session_id, base_dir=str(tmp_path))
+        assert loaded == messages
+
+    def test_load_returns_empty_list_when_no_file(self, tmp_path):
+        """Loading a non-existent session returns an empty list."""
+        result = load_langchain_history("nonexistent-id", base_dir=str(tmp_path))
+        assert result == []
+
+    def test_store_creates_parent_directory(self, tmp_path):
+        """store_langchain_history creates nested directories automatically."""
+        base = tmp_path / "deep" / "nested"
+        store_langchain_history("sid", [], base_dir=str(base))
+        assert (base / "sid.json").exists()
+
+    def test_store_returns_file_path_string(self, tmp_path):
+        """store_langchain_history returns the path it wrote to."""
+        path = store_langchain_history("sid", [], base_dir=str(tmp_path))
+        assert path.endswith("sid.json")
+        assert os.path.isfile(path)
+
+    def test_store_overwrites_existing_session(self, tmp_path):
+        """A second store call replaces the previous history."""
+        session_id = "overwrite-test"
+        store_langchain_history(
+            session_id, [{"role": "human", "content": "v1"}], base_dir=str(tmp_path)
+        )
+        store_langchain_history(
+            session_id, [{"role": "human", "content": "v2"}], base_dir=str(tmp_path)
+        )
+        loaded = load_langchain_history(session_id, base_dir=str(tmp_path))
+        assert loaded == [{"role": "human", "content": "v2"}]
+
+    def test_empty_messages_list_roundtrip(self, tmp_path):
+        """An empty message list is stored and loaded correctly."""
+        store_langchain_history("empty-sid", [], base_dir=str(tmp_path))
+        assert load_langchain_history("empty-sid", base_dir=str(tmp_path)) == []
+
+    def test_default_path_uses_home_directory(self, monkeypatch, tmp_path):
+        """Without base_dir, files go under ~/.mcp_coder/sessions/langchain/."""
+        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+        session_id = "home-test"
+        store_langchain_history(session_id, [])
+        expected = (
+            tmp_path / ".mcp_coder" / "sessions" / "langchain" / f"{session_id}.json"
+        )
+        assert expected.exists()
