@@ -83,10 +83,20 @@ def ask_langchain(
             messages=history,
             timeout=timeout,
         )
+    elif backend == "anthropic":
+        from . import anthropic
+
+        text, raw = anthropic.ask_anthropic(
+            question=question,
+            model=config["model"] or "",
+            api_key=config["api_key"],
+            messages=history,
+            timeout=timeout,
+        )
     else:
         raise ValueError(
             f"Unsupported langchain backend: {backend!r}. "
-            "Supported backends: 'openai', 'gemini'."
+            "Supported backends: 'openai', 'gemini', 'anthropic'."
         )
 
     updated_history = history + [

@@ -6,6 +6,8 @@ is not installed.
 
 import os
 
+from ._models import list_gemini_models  # noqa: E402
+
 # pylint: disable=import-error
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI
@@ -38,6 +40,20 @@ def ask_gemini(
         timeout=timeout,
     )
 
-    ai_msg = client.invoke(lc_messages)
+    try:
+        ai_msg = client.invoke(lc_messages)
+    except Exception as exc:  # pylint: disable=broad-except
+        if "NOT_FOUND" in str(exc):
+            hint = f"Model {model!r} not found for this Gemini API key."
+            try:
+                available = list_gemini_models(effective_api_key)
+                hint += "\n\nAvailable models:\n" + "\n".join(
+                    f"  - {m}" for m in available
+                )
+            except Exception:  # pylint: disable=broad-except
+                pass
+            raise ValueError(hint) from exc
+        raise
+
     raw = _ai_message_to_dict(ai_msg)
     return (str(ai_msg.content), raw)

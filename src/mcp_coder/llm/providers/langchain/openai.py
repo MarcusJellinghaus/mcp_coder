@@ -9,6 +9,7 @@ import os
 # pylint: disable=import-error
 try:
     from langchain_openai import AzureChatOpenAI, ChatOpenAI
+    from pydantic import SecretStr
 
     from ._utils import _ai_message_to_dict, _to_lc_messages
 except ImportError as exc:
@@ -34,19 +35,21 @@ def ask_openai(
     """
     effective_api_key = os.getenv("OPENAI_API_KEY") or api_key
     lc_messages = _to_lc_messages(messages + [{"role": "human", "content": question}])
+    secret_key = SecretStr(effective_api_key) if effective_api_key else None
 
+    client: AzureChatOpenAI | ChatOpenAI
     if api_version:
         client = AzureChatOpenAI(
             azure_deployment=model,
             azure_endpoint=endpoint,
-            api_key=effective_api_key,
-            openai_api_version=api_version,
+            api_key=secret_key,
+            api_version=api_version,
             timeout=timeout,
         )
     else:
         client = ChatOpenAI(
             model=model,
-            api_key=effective_api_key,
+            api_key=secret_key,
             base_url=endpoint,
             timeout=timeout,
         )

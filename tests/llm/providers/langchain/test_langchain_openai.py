@@ -2,6 +2,8 @@
 
 from unittest.mock import MagicMock, patch
 
+from pydantic import SecretStr
+
 
 class TestAskOpenai:
     def _fake_ai_message(self, text: str = "response text") -> MagicMock:
@@ -50,7 +52,7 @@ class TestAskOpenai:
                 messages=[],
             )
             _, kwargs = MockChat.call_args
-            assert kwargs.get("api_key") == "env-key"
+            assert kwargs.get("api_key") == SecretStr("env-key")
 
     def test_uses_config_api_key_when_env_not_set(self, monkeypatch: object) -> None:
         """Config api_key is used when OPENAI_API_KEY is not in the environment."""
@@ -69,7 +71,7 @@ class TestAskOpenai:
                 messages=[],
             )
             _, kwargs = MockChat.call_args
-            assert kwargs.get("api_key") == "config-key"
+            assert kwargs.get("api_key") == SecretStr("config-key")
 
     def test_passes_endpoint_as_base_url(self) -> None:
         """endpoint is passed to ChatOpenAI as base_url."""
@@ -132,4 +134,4 @@ class TestAskOpenai:
             MockChat.assert_not_called()
             _, kwargs = MockAzure.call_args
             assert kwargs.get("azure_deployment") == "gpt-4o"
-            assert kwargs.get("openai_api_version") == "2024-02-01"
+            assert kwargs.get("api_version") == "2024-02-01"

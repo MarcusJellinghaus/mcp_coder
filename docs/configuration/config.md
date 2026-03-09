@@ -221,6 +221,17 @@ api_version = "2024-02-01"                           # triggers AzureChatOpenAI
 api_key     = "..."
 ```
 
+**Example — Anthropic Claude:**
+```toml
+[llm]
+provider = "langchain"
+
+[llm.langchain]
+backend  = "anthropic"
+model    = "claude-opus-4-6"
+api_key  = "sk-ant-..."   # or set ANTHROPIC_API_KEY env var
+```
+
 **Example — Local Ollama:**
 ```toml
 [llm]
@@ -240,6 +251,7 @@ Environment variables take **highest priority** over config file values.
 |---------------------|-----------|---------|
 | `OPENAI_API_KEY` | `[llm.langchain] api_key` | `openai` |
 | `GEMINI_API_KEY` | `[llm.langchain] api_key` | `gemini` |
+| `ANTHROPIC_API_KEY` | `[llm.langchain] api_key` | `anthropic` |
 
 **Usage in CI/CD:**
 ```bash

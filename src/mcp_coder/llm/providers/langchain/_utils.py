@@ -6,10 +6,10 @@ to import from langchain_core directly.
 """
 
 # pylint: disable=import-error
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
 
-def _to_lc_messages(messages: list[dict[str, str]]) -> list[object]:
+def _to_lc_messages(messages: list[dict[str, str]]) -> list[BaseMessage]:
     """Convert plain role/content dicts to LangChain message objects."""
     return [
         (

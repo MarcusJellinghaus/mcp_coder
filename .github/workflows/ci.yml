@@ -123,7 +123,7 @@ jobs:
           python-version: 3.11
           
       - name: Install dependencies
-        run: uv pip install --system ".[dev]"
+        run: uv pip install --system ".[dev,langchain]"
       
       - name: Environment info
         run: |
@@ -161,7 +161,7 @@ jobs:
           python-version: 3.11
           
       - name: Install dependencies
-        run: uv pip install --system ".[dev]"
+        run: uv pip install --system ".[dev,langchain]"
       
       - name: Environment info
         run: |

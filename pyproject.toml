@@ -59,11 +59,12 @@ mlflow = [
     "mlflow>=2.10.0",
 ]
 
-# LangChain integration — alternative LLM providers (OpenAI, Gemini, …)
+# LangChain integration — alternative LLM providers (OpenAI, Gemini, Anthropic, …)
 langchain = [
     "langchain-core>=0.3.0",
     "langchain-openai>=0.2.0",
     "langchain-google-genai>=2.0.0",
+    "langchain-anthropic>=0.3.0",
 ]
 
 # Full development setup - combines all groups for local development
@@ -204,6 +205,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["langchain_google_genai"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["langchain_anthropic"]
 ignore_missing_imports = true
 
 [tool.setuptools_scm]
