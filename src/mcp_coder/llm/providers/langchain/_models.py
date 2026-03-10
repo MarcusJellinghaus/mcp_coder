@@ -1,4 +1,11 @@
-"""Utilities for listing available LLM models per LangChain backend."""
+"""Utilities for listing available LLM models per LangChain backend.
+
+Note: This module imports the underlying SDKs (google.genai, openai, anthropic)
+directly rather than through LangChain wrappers, because the LangChain wrapper
+libraries do not expose model-listing APIs. These imports are deferred inside
+each function so they only trigger when model listing is actually needed
+(e.g. to provide helpful error messages on NOT_FOUND errors).
+"""
 
 from __future__ import annotations
 

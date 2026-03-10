@@ -1,6 +1,6 @@
 """LangChain provider package.
 
-Entry point for the LangChain provider. Supports OpenAI and Gemini backends.
+Entry point for the LangChain provider. Supports OpenAI, Gemini, and Anthropic backends.
 All LangChain library imports are deferred to the backend modules so that
 importing this package does not fail when langchain is not installed.
 """
