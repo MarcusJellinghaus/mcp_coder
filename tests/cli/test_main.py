@@ -567,7 +567,7 @@ class TestCheckBranchStatusCommand:
         assert args.project_dir is None
         assert args.fix == 0
         assert args.llm_truncate is False
-        assert args.llm_method == "claude_code_cli"
+        assert args.llm_method is None  # None = resolve at runtime from config
         assert args.mcp_config is None
         assert args.execution_dir is None
 

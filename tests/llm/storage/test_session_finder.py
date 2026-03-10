@@ -3,6 +3,7 @@
 import json
 import os
 import tempfile
+from pathlib import Path
 from typing import List
 
 import pytest
@@ -203,3 +204,72 @@ class TestFindLatestSession:
                 "Found 3 previous sessions, continuing from: response_2025-09-19T14-30-25.json"
                 in captured_out
             )
+
+
+class TestFindLatestLangchainSession:
+    """Tests for find_latest_session with provider='langchain'."""
+
+    def test_find_latest_langchain_session(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test finding latest langchain session by mtime."""
+        session_dir = tmp_path / ".mcp_coder" / "sessions" / "langchain"
+        session_dir.mkdir(parents=True)
+
+        # Create session files with different mtimes
+        older = session_dir / "aaa-111.json"
+        newer = session_dir / "bbb-222.json"
+        older.write_text(json.dumps([]), encoding="utf-8")
+        newer.write_text(json.dumps([]), encoding="utf-8")
+
+        # Ensure different mtimes (older file gets earlier time)
+        os.utime(older, (1000, 1000))
+        os.utime(newer, (2000, 2000))
+
+        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+
+        result = find_latest_session(provider="langchain")
+        assert result is not None
+        assert result.endswith("bbb-222.json")
+
+    def test_find_latest_langchain_session_no_dir(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test when langchain sessions directory doesn't exist."""
+        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+
+        result = find_latest_session(provider="langchain")
+        assert result is None
+
+    def test_find_latest_langchain_session_empty_dir(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test when langchain sessions directory is empty."""
+        session_dir = tmp_path / ".mcp_coder" / "sessions" / "langchain"
+        session_dir.mkdir(parents=True)
+
+        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+
+        result = find_latest_session(provider="langchain")
+        assert result is None
+
+    def test_find_latest_langchain_session_feedback(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test user feedback message for langchain sessions."""
+        session_dir = tmp_path / ".mcp_coder" / "sessions" / "langchain"
+        session_dir.mkdir(parents=True)
+
+        (session_dir / "sess-1.json").write_text("[]", encoding="utf-8")
+        (session_dir / "sess-2.json").write_text("[]", encoding="utf-8")
+
+        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+
+        result = find_latest_session(provider="langchain")
+        assert result is not None
+
+        captured = capsys.readouterr()
+        assert "Found 2 previous langchain sessions" in captured.out

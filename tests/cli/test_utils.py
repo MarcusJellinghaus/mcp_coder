@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.cli.utils import parse_llm_method_from_args
+from mcp_coder.cli.utils import parse_llm_method_from_args, resolve_llm_method
 
 
 class TestParseLLMMethodFromArgs:
@@ -85,6 +85,34 @@ class TestParseLLMMethodFromArgs:
         """Integration test for invalid method without mocking."""
         with pytest.raises(ValueError, match="Unsupported llm_method: invalid"):
             parse_llm_method_from_args("invalid")
+
+
+class TestResolveLlmMethod:
+    """Test cases for resolve_llm_method function."""
+
+    def test_explicit_cli_arg_returned_as_is(self) -> None:
+        """Test that explicit CLI arg is returned without config lookup."""
+        assert resolve_llm_method("claude_code_api") == "claude_code_api"
+        assert resolve_llm_method("claude_code_cli") == "claude_code_cli"
+        assert resolve_llm_method("langchain") == "langchain"
+
+    @patch("mcp_coder.cli.utils.get_config_values")
+    def test_none_with_langchain_config(self, mock_config: MagicMock) -> None:
+        """Test that None falls back to config [llm] provider."""
+        mock_config.return_value = {("llm", "provider"): "langchain"}
+        assert resolve_llm_method(None) == "langchain"
+
+    @patch("mcp_coder.cli.utils.get_config_values")
+    def test_none_with_no_config(self, mock_config: MagicMock) -> None:
+        """Test that None with no config defaults to claude_code_cli."""
+        mock_config.return_value = {("llm", "provider"): None}
+        assert resolve_llm_method(None) == "claude_code_cli"
+
+    @patch("mcp_coder.cli.utils.get_config_values")
+    def test_none_with_unknown_provider(self, mock_config: MagicMock) -> None:
+        """Test that unknown config provider falls through to default."""
+        mock_config.return_value = {("llm", "provider"): "some_other"}
+        assert resolve_llm_method(None) == "claude_code_cli"
 
 
 class TestResolveExecutionDir:

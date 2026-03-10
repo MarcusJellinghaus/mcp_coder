@@ -13,11 +13,11 @@ def parse_llm_method(llm_method: str) -> tuple[str, str]:
     """Parse llm_method parameter into provider and method.
 
     Args:
-        llm_method: Either 'claude_code_cli' or 'claude_code_api'
+        llm_method: One of 'claude_code_cli', 'claude_code_api', or 'langchain'
 
     Returns:
         Tuple of (provider, method)
-        - provider: "claude"
+        - provider: "claude" or "langchain"
         - method: "cli" or "api"
 
     Raises:
@@ -36,8 +36,10 @@ def parse_llm_method(llm_method: str) -> tuple[str, str]:
         return "claude", "cli"
     elif llm_method == "claude_code_api":
         return "claude", "api"
+    elif llm_method == "langchain":
+        return "langchain", "api"
     else:
         raise ValueError(
             f"Unsupported llm_method: {llm_method}. "
-            f"Supported: 'claude_code_cli', 'claude_code_api'"
+            f"Supported: 'claude_code_cli', 'claude_code_api', 'langchain'"
         )

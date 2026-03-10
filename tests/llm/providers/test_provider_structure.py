@@ -49,3 +49,10 @@ def test_provider_package_init() -> None:
     # Verify they are actually packages (have __path__ attribute)
     assert hasattr(mcp_coder.llm.providers, "__path__")
     assert hasattr(mcp_coder.llm.providers.claude, "__path__")
+
+
+def test_langchain_package_exists() -> None:
+    """Verify the langchain sub-package exists and exposes ask_langchain."""
+    from mcp_coder.llm.providers import langchain  # noqa: F401
+
+    assert hasattr(langchain, "ask_langchain")

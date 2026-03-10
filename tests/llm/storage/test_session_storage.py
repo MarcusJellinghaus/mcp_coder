@@ -3,11 +3,18 @@
 import json
 import os
 import tempfile
+from pathlib import Path
 from unittest.mock import Mock, mock_open, patch
 
 import pytest
 
-from mcp_coder.llm.storage.session_storage import extract_session_id, store_session
+from mcp_coder.llm.storage.session_storage import (
+    extract_langchain_session_id,
+    extract_session_id,
+    load_langchain_history,
+    store_langchain_history,
+    store_session,
+)
 from mcp_coder.llm.types import LLMResponseDict
 
 
@@ -291,3 +298,87 @@ class TestExtractSessionId:
 
             session_id = extract_session_id(str(file_path))
             assert session_id == "llm-dict-session-xyz"
+
+
+class TestLangchainSessionStorage:
+    """Tests for store_langchain_history / load_langchain_history."""
+
+    def test_store_and_load_roundtrip(self, tmp_path: Path) -> None:
+        """Stored messages can be loaded back unchanged."""
+        messages = [
+            {"role": "human", "content": "Hello"},
+            {"role": "ai", "content": "Hi there"},
+        ]
+        session_id = "test-session-abc"
+        store_langchain_history(session_id, messages, base_dir=str(tmp_path))
+        loaded = load_langchain_history(session_id, base_dir=str(tmp_path))
+        assert loaded == messages
+
+    def test_load_returns_empty_list_when_no_file(self, tmp_path: Path) -> None:
+        """Loading a non-existent session returns an empty list."""
+        result = load_langchain_history("nonexistent-id", base_dir=str(tmp_path))
+        assert result == []
+
+    def test_store_creates_parent_directory(self, tmp_path: Path) -> None:
+        """store_langchain_history creates nested directories automatically."""
+        base = tmp_path / "deep" / "nested"
+        store_langchain_history("sid", [], base_dir=str(base))
+        assert (base / "sid.json").exists()
+
+    def test_store_returns_file_path_string(self, tmp_path: Path) -> None:
+        """store_langchain_history returns the path it wrote to."""
+        path = store_langchain_history("sid", [], base_dir=str(tmp_path))
+        assert path.endswith("sid.json")
+        assert os.path.isfile(path)
+
+    def test_store_overwrites_existing_session(self, tmp_path: Path) -> None:
+        """A second store call replaces the previous history."""
+        session_id = "overwrite-test"
+        store_langchain_history(
+            session_id, [{"role": "human", "content": "v1"}], base_dir=str(tmp_path)
+        )
+        store_langchain_history(
+            session_id, [{"role": "human", "content": "v2"}], base_dir=str(tmp_path)
+        )
+        loaded = load_langchain_history(session_id, base_dir=str(tmp_path))
+        assert loaded == [{"role": "human", "content": "v2"}]
+
+    def test_empty_messages_list_roundtrip(self, tmp_path: Path) -> None:
+        """An empty message list is stored and loaded correctly."""
+        store_langchain_history("empty-sid", [], base_dir=str(tmp_path))
+        assert load_langchain_history("empty-sid", base_dir=str(tmp_path)) == []
+
+    def test_default_path_uses_home_directory(
+        self, monkeypatch: object, tmp_path: Path
+    ) -> None:
+        """Without base_dir, files go under ~/.mcp_coder/sessions/langchain/."""
+        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))  # type: ignore[attr-defined]
+        session_id = "home-test"
+        store_langchain_history(session_id, [])
+        expected = (
+            tmp_path / ".mcp_coder" / "sessions" / "langchain" / f"{session_id}.json"
+        )
+        assert expected.exists()
+
+
+class TestExtractLangchainSessionId:
+    """Tests for extract_langchain_session_id function."""
+
+    def test_extracts_uuid_from_path(self) -> None:
+        """Test extracting session ID (UUID) from file path."""
+        result = extract_langchain_session_id(
+            "/home/user/.mcp_coder/sessions/langchain/abc-def-123.json"
+        )
+        assert result == "abc-def-123"
+
+    def test_extracts_from_windows_path(self) -> None:
+        """Test extracting session ID from Windows-style path."""
+        result = extract_langchain_session_id(
+            "C:\\Users\\user\\.mcp_coder\\sessions\\langchain\\my-session.json"
+        )
+        assert result == "my-session"
+
+    def test_extracts_stem_only(self) -> None:
+        """Test that only the filename stem is returned."""
+        result = extract_langchain_session_id("/path/to/550e8400.json")
+        assert result == "550e8400"

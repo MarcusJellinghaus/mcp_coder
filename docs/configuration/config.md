@@ -8,6 +8,7 @@ Complete configuration documentation for MCP Coder, covering user configuration 
 |-------|----------|
 | **User Config** | `~/.config/mcp_coder/config.toml` (Linux/macOS)<br>`%USERPROFILE%\.mcp_coder\config.toml` (Windows) |
 | **Environment Variables** | `JENKINS_URL`, `JENKINS_USER`, `JENKINS_TOKEN` |
+| **LLM Provider** | `[llm]` section in `config.toml` |
 | **Repository Setup** | [Repository Setup Guide](../repository-setup.md) |
 | **CLI Commands** | [CLI Reference](../cli-reference.md) |
 
@@ -147,6 +148,127 @@ cache_refresh_minutes = 360  # 6 hours - balanced approach
 - Respects GitHub API rate limits
 - Enables frequent coordinator runs without API exhaustion
 - Particularly effective for repositories with 100+ issues
+
+### [llm]
+
+Selects the LLM provider. Defaults to `"claude"` when omitted.
+
+| Field | Type | Description | Required | Default |
+|-------|------|-------------|----------|---------|
+| `provider` | string | LLM provider: `"claude"` or `"langchain"` | No | `"claude"` |
+
+**Example — use Claude (default, no change needed):**
+```toml
+[llm]
+provider = "claude"
+```
+
+**Example — use LangChain:**
+```toml
+[llm]
+provider = "langchain"
+```
+
+### [llm.langchain]
+
+LangChain backend configuration. Required when `[llm] provider = "langchain"`.
+
+Install the extra dependency first:
+```bash
+pip install 'mcp-coder[langchain]'
+```
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| `backend` | string | LangChain backend: `"openai"`, `"gemini"`, or `"anthropic"` | Yes |
+| `model` | string | Model name (e.g. `"gpt-4o"`, `"gemini-1.5-pro"`). Doubles as `azure_deployment` for Azure | Yes |
+| `api_key` | string | API key (env var takes priority — see below) | No |
+| `endpoint` | string | Custom base URL for OpenAI; `azure_endpoint` for Azure; ignored by Gemini | No |
+| `api_version` | string | Azure API version (e.g. `"2024-02-01"`). When set, uses `AzureChatOpenAI` | No |
+
+**Example — OpenAI GPT-4o:**
+```toml
+[llm]
+provider = "langchain"
+
+[llm.langchain]
+backend  = "openai"
+model    = "gpt-4o"
+api_key  = "sk-..."       # or set OPENAI_API_KEY env var
+```
+
+**Example — Google Gemini:**
+```toml
+[llm]
+provider = "langchain"
+
+[llm.langchain]
+backend  = "gemini"
+model    = "gemini-1.5-pro"
+api_key  = "..."          # or set GEMINI_API_KEY env var
+```
+
+**Example — Azure OpenAI:**
+```toml
+[llm]
+provider = "langchain"
+
+[llm.langchain]
+backend     = "openai"
+model       = "gpt-4o"                               # also = azure_deployment
+endpoint    = "https://my-resource.openai.azure.com/"
+api_version = "2024-02-01"                           # triggers AzureChatOpenAI
+api_key     = "..."
+```
+
+**Example — Anthropic Claude:**
+```toml
+[llm]
+provider = "langchain"
+
+[llm.langchain]
+backend  = "anthropic"
+model    = "claude-opus-4-6"
+api_key  = "sk-ant-..."   # or set ANTHROPIC_API_KEY env var
+```
+
+**Example — Local Ollama:**
+```toml
+[llm]
+provider = "langchain"
+
+[llm.langchain]
+backend  = "openai"       # Ollama is OpenAI-compatible
+model    = "llama3"
+endpoint = "http://localhost:11434/v1"
+```
+
+#### Environment Variable Overrides
+
+Environment variables take **highest priority** over config file values.
+
+| Environment Variable | Overrides | Backend |
+|---------------------|-----------|---------|
+| `OPENAI_API_KEY` | `[llm.langchain] api_key` | `openai` |
+| `GEMINI_API_KEY` | `[llm.langchain] api_key` | `gemini` |
+| `ANTHROPIC_API_KEY` | `[llm.langchain] api_key` | `anthropic` |
+
+**Usage in CI/CD:**
+```bash
+export OPENAI_API_KEY="sk-prod-key"
+mcp-coder prompt "Summarise this PR"
+```
+
+#### Session Continuity
+
+LangChain conversations are **resumed automatically** using the same
+`session_id` mechanism as Claude. Conversation history is stored locally at:
+
+- **Windows:** `%USERPROFILE%\.mcp_coder\sessions\langchain\{session_id}.json`
+- **Linux/macOS:** `~/.mcp_coder/sessions/langchain/{session_id}.json`
+
+This means sessions survive process restarts, unlike Claude (which stores
+history server-side).
 
 ### [jenkins]
 

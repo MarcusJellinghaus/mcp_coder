@@ -59,6 +59,14 @@ mlflow = [
     "mlflow>=2.10.0",
 ]
 
+# LangChain integration — alternative LLM providers (OpenAI, Gemini, Anthropic, …)
+langchain = [
+    "langchain-core>=0.3.0",
+    "langchain-openai>=0.2.0",
+    "langchain-google-genai>=2.0.0",
+    "langchain-anthropic>=0.3.0",
+]
+
 # Full development setup - combines all groups for local development
 dev = [
     "mcp-coder[types,test,mcp]",
@@ -101,6 +109,7 @@ markers = [
     "github_integration: tests requiring GitHub API access (network, auth needed)",
     "jenkins_integration: tests requiring Jenkins server access (network, auth needed)",
     "mlflow_integration: tests requiring MLflow installation and functionality",
+    "langchain_integration: tests requiring LangChain and provider API access (network, auth needed)",
     "integration: general integration tests",
     "execution_dir: tests for --execution-dir feature",
 ]
@@ -184,6 +193,22 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["mlflow", "mlflow.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["langchain_core", "langchain_core.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["langchain_openai"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["langchain_google_genai"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["langchain_anthropic"]
 ignore_missing_imports = true
 
 [tool.setuptools_scm]

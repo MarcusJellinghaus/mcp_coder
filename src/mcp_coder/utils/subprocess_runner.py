@@ -172,6 +172,11 @@ def _run_subprocess(  # pylint: disable=too-many-statements
         if options.env:
             env.update(options.env)
 
+    # Remove CLAUDECODE to allow nested Claude CLI invocations
+    if "CLAUDECODE" in env:
+        logger.debug("Removing CLAUDECODE env var to allow nested Claude CLI execution")
+        env.pop("CLAUDECODE")
+
     # Handle input data and stdin
     stdin_value = subprocess.DEVNULL if options.input_data is None else None
 

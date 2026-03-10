@@ -8,7 +8,8 @@ import json
 import logging
 import os
 from datetime import datetime
-from typing import Any, Dict, Optional
+from pathlib import Path
+from typing import Any, Optional
 
 from ..types import LLMResponseDict
 
@@ -17,6 +18,9 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "store_session",
     "extract_session_id",
+    "extract_langchain_session_id",
+    "store_langchain_history",
+    "load_langchain_history",
 ]
 
 
@@ -69,7 +73,7 @@ def store_session(
         session_info.get("model") if isinstance(session_info, dict) else None
     ) or response_data.get("provider", "unknown")
 
-    metadata: Dict[str, Any] = {
+    metadata: dict[str, Any] = {
         "timestamp": datetime.now().isoformat() + "Z",
         "working_directory": os.getcwd(),
         "model": model,
@@ -136,3 +140,59 @@ def extract_session_id(file_path: str) -> Optional[str]:
     except Exception as e:
         logger.error("Error reading session file %s: %s", file_path, e)
         return None
+
+
+def _langchain_session_path(
+    session_id: str,
+    base_dir: Optional[str] = None,
+) -> Path:
+    """Return Path for a session's history JSON file.
+    Default: ~/.mcp_coder/sessions/langchain/{session_id}.json
+    """
+    root = (
+        Path(base_dir)
+        if base_dir
+        else Path.home() / ".mcp_coder" / "sessions" / "langchain"
+    )
+    return root / f"{session_id}.json"
+
+
+def extract_langchain_session_id(file_path: str) -> str:
+    """Extract session ID from a langchain session file path.
+
+    Langchain session files are named {uuid}.json, so the stem is the session ID.
+
+    Args:
+        file_path: Path to the langchain session JSON file
+
+    Returns:
+        Session ID string (the filename stem)
+
+    Example:
+        >>> extract_langchain_session_id("/path/to/abc-def-123.json")
+        'abc-def-123'
+    """
+    return Path(file_path.replace("\\", "/")).stem
+
+
+def store_langchain_history(
+    session_id: str,
+    messages: list[dict[str, str]],
+    base_dir: Optional[str] = None,
+) -> str:
+    """Persist message history to disk. Returns the file path written."""
+    path = _langchain_session_path(session_id, base_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(messages, indent=2), encoding="utf-8")
+    return str(path)
+
+
+def load_langchain_history(
+    session_id: str,
+    base_dir: Optional[str] = None,
+) -> list[dict[str, str]]:
+    """Load message history from disk. Returns [] if no file exists."""
+    path = _langchain_session_path(session_id, base_dir)
+    if not path.exists():
+        return []
+    return json.loads(path.read_text(encoding="utf-8"))  # type: ignore[no-any-return]

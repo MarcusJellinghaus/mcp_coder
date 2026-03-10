@@ -17,12 +17,18 @@ from ...llm.formatting.formatters import (
 )
 from ...llm.interface import prompt_llm
 from ...llm.mlflow_logger import get_mlflow_logger
-from ...llm.storage import extract_session_id, find_latest_session, store_session
+from ...llm.storage import (
+    extract_langchain_session_id,
+    extract_session_id,
+    find_latest_session,
+    store_session,
+)
 from ...llm.types import LLMResponseDict
 from ...utils.git_utils import get_branch_name_for_logging
 from ..utils import (
     parse_llm_method_from_args,
     resolve_execution_dir,
+    resolve_llm_method,
     resolve_mcp_config_path,
 )
 
@@ -152,6 +158,11 @@ def execute_prompt(
             logger.warning(f"Could not prepare environment: {e}")
             env_vars = None
 
+        # Resolve LLM method early (CLI arg > config > default)
+        raw_llm_method = getattr(args, "llm_method", None)
+        llm_method = resolve_llm_method(raw_llm_method)
+        provider, method = parse_llm_method_from_args(llm_method)
+
         # Handle continuation from previous session if requested
         # Priority: --session-id > --continue-session-from > --continue-session
         resume_session_id = getattr(args, "session_id", None)
@@ -162,17 +173,21 @@ def execute_prompt(
             if getattr(args, "continue_session_from", None):
                 continue_file_path = args.continue_session_from
             elif getattr(args, "continue_session", False):
-                # Find latest session file
-                continue_file_path = find_latest_session()
+                # Find latest session file (provider-aware)
+                continue_file_path = find_latest_session(provider=provider)
                 if continue_file_path is None:
                     print("No previous response files found, starting new conversation")
                     # Continue execution without session resumption
 
             if continue_file_path:
                 # Extract session_id from the stored response file
-                extracted_session_id = extract_session_id(continue_file_path)
-                if extracted_session_id:
-                    resume_session_id = extracted_session_id
+                if provider == "langchain":
+                    resume_session_id = extract_langchain_session_id(continue_file_path)
+                else:
+                    extracted_session_id = extract_session_id(continue_file_path)
+                    if extracted_session_id:
+                        resume_session_id = extracted_session_id
+                if resume_session_id:
                     print(f"Resuming session: {resume_session_id[:16]}...")
                 else:
                     print(
@@ -185,9 +200,8 @@ def execute_prompt(
             ):
                 print("Using explicit session ID (ignoring file-based continuation)")
 
-        # Get user-specified timeout, llm_method, output_format, and mcp_config
+        # Get user-specified timeout, output_format, and mcp_config
         timeout = getattr(args, "timeout", 30)
-        llm_method = getattr(args, "llm_method", "claude_code_api")
         verbosity = getattr(args, "verbosity", "just-text")
         output_format = getattr(args, "output_format", "text")
         mcp_config = getattr(args, "mcp_config", None)
@@ -197,7 +211,6 @@ def execute_prompt(
         formatted_output = ""
         if output_format == "session-id":
             # Session ID only mode - return only the session_id for shell script capture
-            provider, method = parse_llm_method_from_args(llm_method)
             response_dict = prompt_llm(
                 args.prompt,
                 provider=provider,
@@ -222,7 +235,6 @@ def execute_prompt(
 
         elif output_format == "json":
             # JSON output mode - return full LLMResponseDict
-            provider, method = parse_llm_method_from_args(llm_method)
             branch_name = get_branch_name_for_logging(project_dir)
             response_dict = prompt_llm(
                 args.prompt,
@@ -249,7 +261,6 @@ def execute_prompt(
                 logger.info("Response stored to: %s", stored_path)
         elif verbosity == "just-text":
             # Use unified prompt_llm interface for simple text output
-            provider, method = parse_llm_method_from_args(llm_method)
             branch_name = get_branch_name_for_logging(project_dir)
             llm_response = prompt_llm(
                 args.prompt,
@@ -277,7 +288,6 @@ def execute_prompt(
                 logger.info("Response stored to: %s", stored_path)
         else:
             # Use prompt_llm for verbose/raw modes that need metadata
-            provider, method = parse_llm_method_from_args(llm_method)
             branch_name = get_branch_name_for_logging(project_dir)
             llm_response = prompt_llm(
                 args.prompt,
