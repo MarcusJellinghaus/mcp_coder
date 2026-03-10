@@ -32,6 +32,48 @@ class TestLoadLangchainConfig:
             "api_version",
         }
 
+    def test_env_var_overrides_config_values(self, monkeypatch: object) -> None:
+        """MCP_CODER_LLM_LANGCHAIN_* env vars override config.toml values."""
+        monkeypatch.setenv("MCP_CODER_LLM_LANGCHAIN_BACKEND", "gemini")  # type: ignore[attr-defined]
+        monkeypatch.setenv("MCP_CODER_LLM_LANGCHAIN_MODEL", "gemini-2.0-flash")  # type: ignore[attr-defined]
+        with patch(
+            "mcp_coder.llm.providers.langchain.get_config_values",
+            return_value={
+                ("llm", "provider"): "langchain",
+                ("llm.langchain", "backend"): "openai",
+                ("llm.langchain", "model"): "gpt-4o",
+                ("llm.langchain", "api_key"): None,
+                ("llm.langchain", "endpoint"): None,
+                ("llm.langchain", "api_version"): None,
+            },
+        ):
+            from mcp_coder.llm.providers.langchain import _load_langchain_config
+
+            cfg = _load_langchain_config()
+        assert cfg["backend"] == "gemini"
+        assert cfg["model"] == "gemini-2.0-flash"
+
+    def test_env_var_does_not_override_when_empty(self, monkeypatch: object) -> None:
+        """Empty env vars do not override config.toml values."""
+        monkeypatch.delenv("MCP_CODER_LLM_LANGCHAIN_BACKEND", raising=False)  # type: ignore[attr-defined]
+        monkeypatch.delenv("MCP_CODER_LLM_LANGCHAIN_MODEL", raising=False)  # type: ignore[attr-defined]
+        with patch(
+            "mcp_coder.llm.providers.langchain.get_config_values",
+            return_value={
+                ("llm", "provider"): "langchain",
+                ("llm.langchain", "backend"): "openai",
+                ("llm.langchain", "model"): "gpt-4o",
+                ("llm.langchain", "api_key"): None,
+                ("llm.langchain", "endpoint"): None,
+                ("llm.langchain", "api_version"): None,
+            },
+        ):
+            from mcp_coder.llm.providers.langchain import _load_langchain_config
+
+            cfg = _load_langchain_config()
+        assert cfg["backend"] == "openai"
+        assert cfg["model"] == "gpt-4o"
+
 
 class TestAskLangchain:
     def _make_config(self, backend: str = "openai") -> dict[str, str | None]:

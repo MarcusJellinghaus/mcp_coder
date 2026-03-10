@@ -20,6 +20,13 @@ from mcp_coder.utils.user_config import get_config_values
 def _load_langchain_config() -> dict[str, str | None]:
     """Read [llm] and [llm.langchain] from config.toml via get_config_values().
 
+    Environment variables override config file values:
+        MCP_CODER_LLM_LANGCHAIN_BACKEND   -> backend
+        MCP_CODER_LLM_LANGCHAIN_MODEL     -> model
+        MCP_CODER_LLM_LANGCHAIN_API_KEY   -> api_key
+        MCP_CODER_LLM_LANGCHAIN_ENDPOINT  -> endpoint
+        MCP_CODER_LLM_LANGCHAIN_API_VERSION -> api_version
+
     Returns keys: provider, backend, model, api_key, endpoint, api_version.
     """
     raw = get_config_values(
@@ -32,7 +39,7 @@ def _load_langchain_config() -> dict[str, str | None]:
             ("llm.langchain", "api_version", None),
         ]
     )
-    return {
+    config = {
         "provider": raw[("llm", "provider")],
         "backend": raw[("llm.langchain", "backend")],
         "model": raw[("llm.langchain", "model")],
@@ -40,6 +47,19 @@ def _load_langchain_config() -> dict[str, str | None]:
         "endpoint": raw[("llm.langchain", "endpoint")],
         "api_version": raw[("llm.langchain", "api_version")],
     }
+    # Env vars override config file values
+    env_overrides = {
+        "backend": "MCP_CODER_LLM_LANGCHAIN_BACKEND",
+        "model": "MCP_CODER_LLM_LANGCHAIN_MODEL",
+        "api_key": "MCP_CODER_LLM_LANGCHAIN_API_KEY",
+        "endpoint": "MCP_CODER_LLM_LANGCHAIN_ENDPOINT",
+        "api_version": "MCP_CODER_LLM_LANGCHAIN_API_VERSION",
+    }
+    for key, env_var in env_overrides.items():
+        value = os.environ.get(env_var)
+        if value:
+            config[key] = value
+    return config
 
 
 def ask_langchain(
@@ -53,7 +73,11 @@ def ask_langchain(
     backend = config["backend"]
 
     if not backend:
-        raise ValueError("llm.langchain.backend not configured in config.toml")
+        raise ValueError(
+            "llm.langchain.backend not configured. "
+            "Set [llm.langchain] backend in config.toml "
+            "or MCP_CODER_LLM_LANGCHAIN_BACKEND env var."
+        )
 
     if env_vars:
         os.environ.update(env_vars)

@@ -6,19 +6,19 @@ name: LangChain Integration Tests
 # Required GitHub Actions secrets (configure ONE backend group):
 #
 #   OpenAI:
-#     OPENAI_API_KEY          - OpenAI API key
-#     LLM_LANGCHAIN_BACKEND   - "openai"
-#     LLM_LANGCHAIN_MODEL     - e.g. "gpt-4o-mini"
+#     OPENAI_API_KEY                    - OpenAI API key
+#     MCP_CODER_LLM_LANGCHAIN_BACKEND  - "openai"
+#     MCP_CODER_LLM_LANGCHAIN_MODEL    - e.g. "gpt-4o-mini"
 #
 #   Gemini:
-#     GEMINI_API_KEY           - Google Gemini API key
-#     LLM_LANGCHAIN_BACKEND   - "gemini"
-#     LLM_LANGCHAIN_MODEL     - e.g. "gemini-2.0-flash"
+#     GEMINI_API_KEY                    - Google Gemini API key
+#     MCP_CODER_LLM_LANGCHAIN_BACKEND  - "gemini"
+#     MCP_CODER_LLM_LANGCHAIN_MODEL    - e.g. "gemini-2.0-flash"
 #
 #   Anthropic:
-#     ANTHROPIC_API_KEY        - Anthropic API key
-#     LLM_LANGCHAIN_BACKEND   - "anthropic"
-#     LLM_LANGCHAIN_MODEL     - e.g. "claude-sonnet-4-5-20250929"
+#     ANTHROPIC_API_KEY                 - Anthropic API key
+#     MCP_CODER_LLM_LANGCHAIN_BACKEND  - "anthropic"
+#     MCP_CODER_LLM_LANGCHAIN_MODEL    - e.g. "claude-sonnet-4-5-20250929"
 
 on:
   push:
@@ -34,6 +34,8 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      MCP_CODER_LLM_LANGCHAIN_BACKEND: ${{ secrets.MCP_CODER_LLM_LANGCHAIN_BACKEND }}
+      MCP_CODER_LLM_LANGCHAIN_MODEL: ${{ secrets.MCP_CODER_LLM_LANGCHAIN_MODEL }}
     steps:
       - uses: actions/checkout@v4
 
@@ -47,29 +49,6 @@ jobs:
 
       - name: Install dependencies
         run: uv pip install --system ".[dev,langchain]"
-
-      - name: Write config.toml for LangChain
-        env:
-          LLM_LANGCHAIN_BACKEND: ${{ secrets.LLM_LANGCHAIN_BACKEND }}
-          LLM_LANGCHAIN_MODEL: ${{ secrets.LLM_LANGCHAIN_MODEL }}
-        run: |
-          if [ -z "$LLM_LANGCHAIN_BACKEND" ] || [ -z "$LLM_LANGCHAIN_MODEL" ]; then
-            echo "LLM_LANGCHAIN_BACKEND or LLM_LANGCHAIN_MODEL not set."
-            echo "Tests will skip via _require_langchain_config()."
-            exit 0
-          fi
-          CONFIG_DIR="$HOME/.config/mcp_coder"
-          mkdir -p "$CONFIG_DIR"
-          cat > "$CONFIG_DIR/config.toml" <<EOF
-[llm]
-provider = "langchain"
-
-[llm.langchain]
-backend = "$LLM_LANGCHAIN_BACKEND"
-model   = "$LLM_LANGCHAIN_MODEL"
-EOF
-          echo "Config written to $CONFIG_DIR/config.toml:"
-          cat "$CONFIG_DIR/config.toml"
 
       - name: Run LangChain integration tests
         run: |

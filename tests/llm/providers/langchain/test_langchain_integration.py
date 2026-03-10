@@ -8,6 +8,7 @@ Run with:
            -m langchain_integration -v -s
 
 For CI secrets configuration see .github/workflows/langchain-integration.yml.
+Config can be provided via config.toml or MCP_CODER_LLM_LANGCHAIN_* env vars.
 """
 
 import os
