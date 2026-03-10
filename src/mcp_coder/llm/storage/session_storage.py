@@ -172,7 +172,7 @@ def extract_langchain_session_id(file_path: str) -> str:
         >>> extract_langchain_session_id("/path/to/abc-def-123.json")
         'abc-def-123'
     """
-    return Path(file_path).stem
+    return Path(file_path.replace("\\", "/")).stem
 
 
 def store_langchain_history(
