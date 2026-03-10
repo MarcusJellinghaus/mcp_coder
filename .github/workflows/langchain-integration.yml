@@ -61,13 +61,13 @@ jobs:
           CONFIG_DIR="$HOME/.config/mcp_coder"
           mkdir -p "$CONFIG_DIR"
           cat > "$CONFIG_DIR/config.toml" <<EOF
-          [llm]
-          provider = "langchain"
+[llm]
+provider = "langchain"
 
-          [llm.langchain]
-          backend = "$LLM_LANGCHAIN_BACKEND"
-          model   = "$LLM_LANGCHAIN_MODEL"
-          EOF
+[llm.langchain]
+backend = "$LLM_LANGCHAIN_BACKEND"
+model   = "$LLM_LANGCHAIN_MODEL"
+EOF
           echo "Config written to $CONFIG_DIR/config.toml:"
           cat "$CONFIG_DIR/config.toml"
 
@@ -76,7 +76,6 @@ jobs:
           pytest tests/llm/providers/langchain/test_langchain_integration.py \
             -m langchain_integration \
             -v -s \
-            --timeout=120 \
             --junitxml=langchain-integration-tests.xml
 
       - name: Upload test results
