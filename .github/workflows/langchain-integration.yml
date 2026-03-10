@@ -1,0 +1,87 @@
+name: LangChain Integration Tests
+
+# Runs real API integration tests against configured LangChain backends.
+# Tests skip automatically when no credentials or config are available.
+#
+# Required GitHub Actions secrets (configure ONE backend group):
+#
+#   OpenAI:
+#     OPENAI_API_KEY          - OpenAI API key
+#     LLM_LANGCHAIN_BACKEND   - "openai"
+#     LLM_LANGCHAIN_MODEL     - e.g. "gpt-4o-mini"
+#
+#   Gemini:
+#     GEMINI_API_KEY           - Google Gemini API key
+#     LLM_LANGCHAIN_BACKEND   - "gemini"
+#     LLM_LANGCHAIN_MODEL     - e.g. "gemini-2.0-flash"
+#
+#   Anthropic:
+#     ANTHROPIC_API_KEY        - Anthropic API key
+#     LLM_LANGCHAIN_BACKEND   - "anthropic"
+#     LLM_LANGCHAIN_MODEL     - e.g. "claude-sonnet-4-5-20250929"
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  langchain-integration:
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: uv pip install --system ".[dev,langchain]"
+
+      - name: Write config.toml for LangChain
+        env:
+          LLM_LANGCHAIN_BACKEND: ${{ secrets.LLM_LANGCHAIN_BACKEND }}
+          LLM_LANGCHAIN_MODEL: ${{ secrets.LLM_LANGCHAIN_MODEL }}
+        run: |
+          if [ -z "$LLM_LANGCHAIN_BACKEND" ] || [ -z "$LLM_LANGCHAIN_MODEL" ]; then
+            echo "LLM_LANGCHAIN_BACKEND or LLM_LANGCHAIN_MODEL not set."
+            echo "Tests will skip via _require_langchain_config()."
+            exit 0
+          fi
+          CONFIG_DIR="$HOME/.config/mcp_coder"
+          mkdir -p "$CONFIG_DIR"
+          cat > "$CONFIG_DIR/config.toml" <<EOF
+          [llm]
+          provider = "langchain"
+
+          [llm.langchain]
+          backend = "$LLM_LANGCHAIN_BACKEND"
+          model   = "$LLM_LANGCHAIN_MODEL"
+          EOF
+          echo "Config written to $CONFIG_DIR/config.toml:"
+          cat "$CONFIG_DIR/config.toml"
+
+      - name: Run LangChain integration tests
+        run: |
+          pytest tests/llm/providers/langchain/test_langchain_integration.py \
+            -m langchain_integration \
+            -v -s \
+            --timeout=120 \
+            --junitxml=langchain-integration-tests.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: langchain-integration-results
+          path: langchain-integration-tests.xml

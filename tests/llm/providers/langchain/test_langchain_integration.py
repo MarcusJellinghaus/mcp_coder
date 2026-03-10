@@ -6,6 +6,8 @@ They are skipped automatically when no credentials are configured.
 Run with:
     pytest tests/llm/providers/langchain/test_langchain_integration.py \
            -m langchain_integration -v -s
+
+For CI secrets configuration see .github/workflows/langchain-integration.yml.
 """
 
 import os
@@ -39,6 +41,12 @@ def _require_langchain_config() -> None:
         if not os.getenv("GEMINI_API_KEY") and not cfg.get("api_key"):
             pytest.skip(
                 "No Gemini credentials: set GEMINI_API_KEY or [llm.langchain] api_key"
+            )
+    elif backend == "anthropic":
+        if not os.getenv("ANTHROPIC_API_KEY") and not cfg.get("api_key"):
+            pytest.skip(
+                "No Anthropic credentials: set ANTHROPIC_API_KEY "
+                "or [llm.langchain] api_key"
             )
 
 
