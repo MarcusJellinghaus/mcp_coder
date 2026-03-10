@@ -294,11 +294,9 @@ source_modules =
     mcp_coder
 forbidden_modules =
     openai
-    google.genai
     anthropic
 ignore_imports =
     mcp_coder.llm.providers.langchain.** -> openai
-    mcp_coder.llm.providers.langchain.** -> google.genai
     mcp_coder.llm.providers.langchain.** -> anthropic
 
 # -----------------------------------------------------------------------------
