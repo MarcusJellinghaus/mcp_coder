@@ -24,6 +24,12 @@ class TestParseLlmMethod:
         assert provider == "claude"
         assert method == "api"
 
+    def test_parse_langchain(self) -> None:
+        """Test parsing 'langchain' method."""
+        provider, method = parse_llm_method("langchain")
+        assert provider == "langchain"
+        assert method == "api"
+
     def test_parse_invalid_method(self) -> None:
         """Test error handling for unsupported method."""
         with pytest.raises(ValueError, match="Unsupported llm_method"):

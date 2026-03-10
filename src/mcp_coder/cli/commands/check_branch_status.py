@@ -22,6 +22,7 @@ from ...workflows.utils import resolve_project_dir
 from ..utils import (
     parse_llm_method_from_args,
     resolve_execution_dir,
+    resolve_llm_method,
     resolve_mcp_config_path,
 )
 
@@ -184,7 +185,8 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
             logger.info("Auto-fix mode enabled")
 
             # Parse LLM method for fixes
-            provider, method = parse_llm_method_from_args(args.llm_method)
+            llm_method = resolve_llm_method(args.llm_method)
+            provider, method = parse_llm_method_from_args(llm_method)
 
             # Resolve paths for fix operations
             mcp_config = resolve_mcp_config_path(args.mcp_config)

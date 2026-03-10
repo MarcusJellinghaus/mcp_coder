@@ -9,6 +9,7 @@ from unittest.mock import Mock, mock_open, patch
 import pytest
 
 from mcp_coder.llm.storage.session_storage import (
+    extract_langchain_session_id,
     extract_session_id,
     load_langchain_history,
     store_langchain_history,
@@ -358,3 +359,26 @@ class TestLangchainSessionStorage:
             tmp_path / ".mcp_coder" / "sessions" / "langchain" / f"{session_id}.json"
         )
         assert expected.exists()
+
+
+class TestExtractLangchainSessionId:
+    """Tests for extract_langchain_session_id function."""
+
+    def test_extracts_uuid_from_path(self) -> None:
+        """Test extracting session ID (UUID) from file path."""
+        result = extract_langchain_session_id(
+            "/home/user/.mcp_coder/sessions/langchain/abc-def-123.json"
+        )
+        assert result == "abc-def-123"
+
+    def test_extracts_from_windows_path(self) -> None:
+        """Test extracting session ID from Windows-style path."""
+        result = extract_langchain_session_id(
+            "C:\\Users\\user\\.mcp_coder\\sessions\\langchain\\my-session.json"
+        )
+        assert result == "my-session"
+
+    def test_extracts_stem_only(self) -> None:
+        """Test that only the filename stem is returned."""
+        result = extract_langchain_session_id("/path/to/550e8400.json")
+        assert result == "550e8400"

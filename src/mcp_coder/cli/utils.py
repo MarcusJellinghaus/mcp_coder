@@ -8,21 +8,49 @@ import logging
 from pathlib import Path
 
 from ..llm.session import parse_llm_method
+from ..utils.user_config import get_config_values
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
     "parse_llm_method_from_args",
+    "resolve_llm_method",
     "resolve_mcp_config_path",
     "resolve_execution_dir",
 ]
+
+
+def resolve_llm_method(llm_method: str | None) -> str:
+    """Resolve LLM method from CLI arg, config file, or default.
+
+    Resolution order: CLI argument > config [llm] provider > "claude_code_cli".
+
+    When config [llm] provider is "langchain", the resolved value is "langchain".
+    Other config provider values are not mapped (fall through to default).
+
+    Args:
+        llm_method: CLI --llm-method value, or None if not specified
+
+    Returns:
+        Resolved llm_method string suitable for parse_llm_method()
+    """
+    if llm_method is not None:
+        return llm_method
+
+    # Check config [llm] provider
+    config = get_config_values([("llm", "provider", None)])
+    provider = config[("llm", "provider")]
+    if provider == "langchain":
+        return "langchain"
+
+    return "claude_code_cli"
 
 
 def parse_llm_method_from_args(llm_method: str) -> tuple[str, str]:
     """Parse CLI llm_method into provider, method for internal APIs.
 
     Args:
-        llm_method: CLI parameter ('claude_code_cli' or 'claude_code_api')
+        llm_method: CLI parameter ('claude_code_cli', 'claude_code_api', or 'langchain')
 
     Returns:
         Tuple of (provider, method) for internal API usage

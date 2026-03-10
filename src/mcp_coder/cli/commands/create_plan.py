@@ -12,6 +12,7 @@ from ...workflows.utils import resolve_project_dir
 from ..utils import (
     parse_llm_method_from_args,
     resolve_execution_dir,
+    resolve_llm_method,
     resolve_mcp_config_path,
 )
 
@@ -45,7 +46,8 @@ def execute_create_plan(args: argparse.Namespace) -> int:
         logger.debug(f"Execution directory: {execution_dir}")
 
         # Parse LLM method using shared utility
-        provider, method = parse_llm_method_from_args(args.llm_method)
+        llm_method = resolve_llm_method(args.llm_method)
+        provider, method = parse_llm_method_from_args(llm_method)
 
         # Extract and resolve mcp_config path to absolute path
         mcp_config = getattr(args, "mcp_config", None)

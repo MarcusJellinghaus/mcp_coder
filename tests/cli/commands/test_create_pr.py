@@ -370,7 +370,7 @@ class TestCreatePrCliIntegration:
 
         # Check defaults
         assert args.project_dir is None
-        assert args.llm_method == "claude_code_cli"
+        assert args.llm_method is None  # None = resolve at runtime from config
 
 
 class TestCreatePrExecutionDir:

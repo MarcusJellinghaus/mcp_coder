@@ -9,6 +9,7 @@ import logging
 import os
 import re
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -18,22 +19,70 @@ __all__ = [
 ]
 
 
-def find_latest_session(
-    responses_dir: str = ".mcp-coder/responses",
-) -> Optional[str]:
-    """Find the most recent response file by filename timestamp with strict validation.
+def _find_latest_langchain_session() -> Optional[str]:
+    """Find the most recent langchain session file by modification time.
 
-    Args:
-        responses_dir: Directory containing response files
+    Searches ~/.mcp_coder/sessions/langchain/ for JSON files and returns
+    the most recently modified one. Filenames are UUIDs, so mtime is used
+    for ordering.
 
     Returns:
-        Path to latest response file, or None if none found
+        Path to latest langchain session file, or None if none found
+    """
+    session_dir = Path.home() / ".mcp_coder" / "sessions" / "langchain"
+    logger.debug("Searching for langchain sessions in: %s", session_dir)
+
+    if not session_dir.exists():
+        logger.debug("Langchain sessions directory does not exist: %s", session_dir)
+        return None
+
+    try:
+        json_files = list(session_dir.glob("*.json"))
+        if not json_files:
+            logger.debug("No langchain session files found in: %s", session_dir)
+            return None
+
+        # Sort by modification time, newest first
+        json_files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+        latest = json_files[0]
+
+        num_sessions = len(json_files)
+        print(
+            f"Found {num_sessions} previous langchain sessions, "
+            f"continuing from: {latest.name}"
+        )
+
+        logger.debug("Selected latest langchain session: %s", latest)
+        return str(latest)
+
+    except OSError as e:
+        logger.debug("Error accessing langchain sessions directory: %s", e)
+        return None
+
+
+def find_latest_session(
+    responses_dir: str = ".mcp-coder/responses",
+    provider: str = "claude",
+) -> Optional[str]:
+    """Find the most recent session file.
+
+    For claude provider: searches responses_dir for timestamp-named response files.
+    For langchain provider: searches ~/.mcp_coder/sessions/langchain/ by mtime.
+
+    Args:
+        responses_dir: Directory containing response files (used for claude)
+        provider: LLM provider ("claude" or "langchain")
+
+    Returns:
+        Path to latest session file, or None if none found
 
     Example:
         >>> path = find_latest_session()
         >>> print(path)
         .mcp-coder/responses/response_2025-10-02T14-30-00.json
     """
+    if provider == "langchain":
+        return _find_latest_langchain_session()
     logger.debug("Searching for response files in: %s", responses_dir)
 
     # Check if responses directory exists

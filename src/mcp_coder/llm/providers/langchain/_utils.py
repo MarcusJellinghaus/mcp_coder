@@ -5,6 +5,8 @@ langchain_core.messages is imported here so backend modules never need
 to import from langchain_core directly.
 """
 
+import logging
+
 # pylint: disable=import-error
 try:
     from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
@@ -14,17 +16,22 @@ except ImportError as exc:
         "Install with: pip install 'mcp-coder[langchain]'"
     ) from exc
 
+logger = logging.getLogger(__name__)
+
 
 def _to_lc_messages(messages: list[dict[str, str]]) -> list[BaseMessage]:
     """Convert plain role/content dicts to LangChain message objects."""
-    return [
-        (
-            HumanMessage(content=m["content"])
-            if m["role"] == "human"
-            else AIMessage(content=m["content"])
-        )
-        for m in messages
-    ]
+    result: list[BaseMessage] = []
+    for m in messages:
+        role = m["role"]
+        if role == "human":
+            result.append(HumanMessage(content=m["content"]))
+        elif role == "ai":
+            result.append(AIMessage(content=m["content"]))
+        else:
+            logger.warning("Unexpected message role %r, treating as human", role)
+            result.append(HumanMessage(content=m["content"]))
+    return result
 
 
 def _ai_message_to_dict(msg: AIMessage) -> dict[str, object]:
