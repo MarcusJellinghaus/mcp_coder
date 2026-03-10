@@ -280,6 +280,28 @@ ignore_imports =
     mcp_coder.llm.providers.langchain.** -> langchain_anthropic
 
 # -----------------------------------------------------------------------------
+# Contract: LangChain Vendor SDK Isolation
+# -----------------------------------------------------------------------------
+# The raw vendor SDKs (openai, google.genai, anthropic) are transitive
+# dependencies of the langchain extras. Only the langchain provider package
+# may import them (for model-listing on NOT_FOUND errors in _models.py).
+# Same boundary as the LangChain wrapper libraries above.
+# -----------------------------------------------------------------------------
+[importlinter:contract:langchain_vendor_sdk_isolation]
+name = LangChain Vendor SDK Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    openai
+    google.genai
+    anthropic
+ignore_imports =
+    mcp_coder.llm.providers.langchain.** -> openai
+    mcp_coder.llm.providers.langchain.** -> google.genai
+    mcp_coder.llm.providers.langchain.** -> anthropic
+
+# -----------------------------------------------------------------------------
 # Contract: Pyperclip Library Isolation
 # -----------------------------------------------------------------------------
 # The 'pyperclip' package should only be used by utils.clipboard.

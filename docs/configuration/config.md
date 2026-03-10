@@ -180,7 +180,7 @@ pip install 'mcp-coder[langchain]'
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `backend` | string | LangChain backend: `"openai"` or `"gemini"` | Yes |
+| `backend` | string | LangChain backend: `"openai"`, `"gemini"`, or `"anthropic"` | Yes |
 | `model` | string | Model name (e.g. `"gpt-4o"`, `"gemini-1.5-pro"`). Doubles as `azure_deployment` for Azure | Yes |
 | `api_key` | string | API key (env var takes priority — see below) | No |
 | `endpoint` | string | Custom base URL for OpenAI; `azure_endpoint` for Azure; ignored by Gemini | No |
