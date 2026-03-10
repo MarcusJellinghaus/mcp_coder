@@ -4,7 +4,11 @@ Raises ImportError with installation instructions if langchain_anthropic
 is not installed.
 """
 
+from __future__ import annotations
+
 import os
+
+from ._models import list_anthropic_models  # noqa: E402
 
 # pylint: disable=import-error
 try:
@@ -41,6 +45,21 @@ def ask_anthropic(
 
     client = ChatAnthropic(**kwargs)  # type: ignore[arg-type]
 
-    ai_msg = client.invoke(lc_messages)
+    try:
+        ai_msg = client.invoke(lc_messages)
+    except Exception as exc:  # pylint: disable=broad-except
+        exc_str = str(exc)
+        if "404" in exc_str or "not_found" in exc_str.lower():
+            hint = f"Model {model!r} not found for this Anthropic API key."
+            try:
+                available = list_anthropic_models(effective_api_key)
+                hint += "\n\nAvailable models:\n" + "\n".join(
+                    f"  - {m}" for m in available
+                )
+            except Exception:  # pylint: disable=broad-except
+                pass
+            raise ValueError(hint) from exc
+        raise
+
     raw = _ai_message_to_dict(ai_msg)
     return (str(ai_msg.content), raw)

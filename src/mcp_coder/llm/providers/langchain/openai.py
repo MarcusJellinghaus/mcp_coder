@@ -4,7 +4,11 @@ Raises ImportError with installation instructions if langchain_openai
 is not installed.
 """
 
+from __future__ import annotations
+
 import os
+
+from ._models import list_openai_models  # noqa: E402
 
 # pylint: disable=import-error
 try:
@@ -54,6 +58,21 @@ def ask_openai(
             timeout=timeout,
         )
 
-    ai_msg = client.invoke(lc_messages)
+    try:
+        ai_msg = client.invoke(lc_messages)
+    except Exception as exc:  # pylint: disable=broad-except
+        exc_str = str(exc)
+        if "404" in exc_str or "not_found" in exc_str.lower():
+            hint = f"Model {model!r} not found for this OpenAI API key."
+            try:
+                available = list_openai_models(effective_api_key, endpoint)
+                hint += "\n\nAvailable models:\n" + "\n".join(
+                    f"  - {m}" for m in available
+                )
+            except Exception:  # pylint: disable=broad-except
+                pass
+            raise ValueError(hint) from exc
+        raise
+
     raw = _ai_message_to_dict(ai_msg)
     return (str(ai_msg.content), raw)

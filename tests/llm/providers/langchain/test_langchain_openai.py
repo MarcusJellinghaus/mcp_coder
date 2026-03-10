@@ -2,6 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
 from pydantic import SecretStr
 
 
@@ -135,3 +136,69 @@ class TestAskOpenai:
             _, kwargs = MockAzure.call_args
             assert kwargs.get("azure_deployment") == "gpt-4o"
             assert kwargs.get("api_version") == "2024-02-01"
+
+    def test_not_found_error_raises_value_error_with_model_list(self) -> None:
+        """When API returns 404, ValueError includes available models."""
+        with (
+            patch("mcp_coder.llm.providers.langchain.openai.ChatOpenAI") as MockChat,
+            patch(
+                "mcp_coder.llm.providers.langchain.openai.list_openai_models",
+                return_value=["gpt-3.5-turbo", "gpt-4o"],
+            ),
+        ):
+            MockChat.return_value.invoke.side_effect = Exception(
+                "Error code: 404 - The model 'bad-model' does not exist"
+            )
+            from mcp_coder.llm.providers.langchain.openai import ask_openai
+
+            with pytest.raises(ValueError) as exc_info:
+                ask_openai(
+                    "Hi",
+                    model="bad-model",
+                    api_key=None,
+                    endpoint=None,
+                    api_version=None,
+                    messages=[],
+                )
+        assert "bad-model" in str(exc_info.value)
+        assert "gpt-4o" in str(exc_info.value)
+
+    def test_not_found_error_raised_even_when_model_listing_fails(self) -> None:
+        """404 still raises ValueError even if listing available models fails."""
+        with (
+            patch("mcp_coder.llm.providers.langchain.openai.ChatOpenAI") as MockChat,
+            patch(
+                "mcp_coder.llm.providers.langchain.openai.list_openai_models",
+                side_effect=Exception("network error"),
+            ),
+        ):
+            MockChat.return_value.invoke.side_effect = Exception(
+                "Error code: 404 - not_found"
+            )
+            from mcp_coder.llm.providers.langchain.openai import ask_openai
+
+            with pytest.raises(ValueError, match="not found"):
+                ask_openai(
+                    "Hi",
+                    model="bad-model",
+                    api_key=None,
+                    endpoint=None,
+                    api_version=None,
+                    messages=[],
+                )
+
+    def test_non_not_found_exception_is_reraised_unchanged(self) -> None:
+        """Non-404 exceptions propagate as-is without wrapping."""
+        with patch("mcp_coder.llm.providers.langchain.openai.ChatOpenAI") as MockChat:
+            MockChat.return_value.invoke.side_effect = RuntimeError("network timeout")
+            from mcp_coder.llm.providers.langchain.openai import ask_openai
+
+            with pytest.raises(RuntimeError, match="network timeout"):
+                ask_openai(
+                    "Hi",
+                    model="gpt-4o",
+                    api_key=None,
+                    endpoint=None,
+                    api_version=None,
+                    messages=[],
+                )

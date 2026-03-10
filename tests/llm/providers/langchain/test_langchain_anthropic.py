@@ -2,6 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
 from pydantic import SecretStr
 
 
@@ -105,3 +106,52 @@ class TestAskAnthropic:
             ask_anthropic("Hi", model="claude-opus-4-6", api_key=None, messages=[])
             _, kwargs = MockChat.call_args
             assert kwargs.get("anthropic_api_key") is None
+
+    def test_not_found_error_raises_value_error_with_model_list(self) -> None:
+        """When API returns 404/not_found, ValueError includes available models."""
+        with (
+            patch(
+                "mcp_coder.llm.providers.langchain.anthropic.ChatAnthropic"
+            ) as MockChat,
+            patch(
+                "mcp_coder.llm.providers.langchain.anthropic.list_anthropic_models",
+                return_value=["claude-opus-4-6", "claude-sonnet-4-5-20250929"],
+            ),
+        ):
+            MockChat.return_value.invoke.side_effect = Exception(
+                "Error code: 404 - {'type': 'error', 'error': {'type': 'not_found_error'}}"
+            )
+            from mcp_coder.llm.providers.langchain.anthropic import ask_anthropic
+
+            with pytest.raises(ValueError) as exc_info:
+                ask_anthropic("Hi", model="bad-model", api_key=None, messages=[])
+        assert "bad-model" in str(exc_info.value)
+        assert "claude-opus-4-6" in str(exc_info.value)
+
+    def test_not_found_error_raised_even_when_model_listing_fails(self) -> None:
+        """404 still raises ValueError even if listing available models fails."""
+        with (
+            patch(
+                "mcp_coder.llm.providers.langchain.anthropic.ChatAnthropic"
+            ) as MockChat,
+            patch(
+                "mcp_coder.llm.providers.langchain.anthropic.list_anthropic_models",
+                side_effect=Exception("network error"),
+            ),
+        ):
+            MockChat.return_value.invoke.side_effect = Exception("404 not_found_error")
+            from mcp_coder.llm.providers.langchain.anthropic import ask_anthropic
+
+            with pytest.raises(ValueError, match="not found"):
+                ask_anthropic("Hi", model="bad-model", api_key=None, messages=[])
+
+    def test_non_not_found_exception_is_reraised_unchanged(self) -> None:
+        """Non-404 exceptions propagate as-is without wrapping."""
+        with patch(
+            "mcp_coder.llm.providers.langchain.anthropic.ChatAnthropic"
+        ) as MockChat:
+            MockChat.return_value.invoke.side_effect = RuntimeError("network timeout")
+            from mcp_coder.llm.providers.langchain.anthropic import ask_anthropic
+
+            with pytest.raises(RuntimeError, match="network timeout"):
+                ask_anthropic("Hi", model="claude-opus-4-6", api_key=None, messages=[])
