@@ -898,8 +898,8 @@ class TestPromptLlmLangchainRouting:
         assert result["provider"] == "langchain"
         assert result["text"] == "langchain reply"
 
-    def test_passes_question_session_timeout_env_vars(self) -> None:
-        """prompt_llm passes question, session_id, timeout, env_vars to ask_langchain."""
+    def test_passes_question_session_timeout(self) -> None:
+        """prompt_llm passes question, session_id, timeout to ask_langchain."""
         expected = self._make_langchain_response()
         with patch(
             "mcp_coder.llm.providers.langchain.ask_langchain",
@@ -912,20 +912,17 @@ class TestPromptLlmLangchainRouting:
                 provider="langchain",
                 session_id="my-sid",
                 timeout=60,
-                env_vars={"K": "V"},
             )
 
         call_kwargs = mock_ask.call_args
         assert call_kwargs is not None
-        # question, session_id, timeout, env_vars should be forwarded
         args, kwargs = call_kwargs
         all_args = {
-            **dict(zip(["question", "session_id", "timeout", "env_vars"], args)),
+            **dict(zip(["question", "session_id", "timeout"], args)),
             **kwargs,
         }
         assert all_args.get("session_id") == "my-sid"
         assert all_args.get("timeout") == 60
-        assert all_args.get("env_vars") == {"K": "V"}
 
     def test_method_param_is_silently_ignored(self) -> None:
         """prompt_llm with provider='langchain' ignores the method parameter."""

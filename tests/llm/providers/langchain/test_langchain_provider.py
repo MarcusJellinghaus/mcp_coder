@@ -224,26 +224,3 @@ class TestAskLangchain:
         assert {"role": "human", "content": "prev"} in stored_messages
         assert {"role": "human", "content": "new question"} in stored_messages
         assert {"role": "ai", "content": "answer"} in stored_messages
-
-    def test_env_vars_param_is_accepted_but_ignored(self) -> None:
-        """env_vars parameter is accepted for interface compatibility but not applied."""
-        with (
-            patch(
-                "mcp_coder.llm.providers.langchain._load_langchain_config",
-                return_value=self._make_config(),
-            ),
-            patch(
-                "mcp_coder.llm.providers.langchain.load_langchain_history",
-                return_value=[],
-            ),
-            patch("mcp_coder.llm.providers.langchain.store_langchain_history"),
-            patch(
-                "mcp_coder.llm.providers.langchain.openai_backend.ask_openai",
-                return_value=("ok", {}),
-            ),
-        ):
-            from mcp_coder.llm.providers.langchain import ask_langchain
-
-            # Should not raise — env_vars is accepted but ignored
-            result = ask_langchain("q", env_vars={"INJECTED": "value"})
-        assert result["text"] == "ok"

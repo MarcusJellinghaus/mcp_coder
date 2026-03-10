@@ -23,9 +23,11 @@ def _load_langchain_config() -> dict[str, str | None]:
     Environment variables override config file values:
         MCP_CODER_LLM_LANGCHAIN_BACKEND   -> backend
         MCP_CODER_LLM_LANGCHAIN_MODEL     -> model
-        MCP_CODER_LLM_LANGCHAIN_API_KEY   -> api_key
         MCP_CODER_LLM_LANGCHAIN_ENDPOINT  -> endpoint
         MCP_CODER_LLM_LANGCHAIN_API_VERSION -> api_version
+
+    API keys are resolved by the vendor env var (OPENAI_API_KEY, GEMINI_API_KEY,
+    ANTHROPIC_API_KEY) in each backend module, falling back to config.toml.
 
     Returns keys: provider, backend, model, api_key, endpoint, api_version.
     """
@@ -51,7 +53,6 @@ def _load_langchain_config() -> dict[str, str | None]:
     env_overrides = {
         "backend": "MCP_CODER_LLM_LANGCHAIN_BACKEND",
         "model": "MCP_CODER_LLM_LANGCHAIN_MODEL",
-        "api_key": "MCP_CODER_LLM_LANGCHAIN_API_KEY",
         "endpoint": "MCP_CODER_LLM_LANGCHAIN_ENDPOINT",
         "api_version": "MCP_CODER_LLM_LANGCHAIN_API_VERSION",
     }
@@ -66,7 +67,6 @@ def ask_langchain(
     question: str,
     session_id: str | None = None,
     timeout: int = 30,
-    env_vars: dict[str, str] | None = None,
 ) -> LLMResponseDict:
     """Entry point called by interface.prompt_llm() for provider='langchain'."""
     config = _load_langchain_config()
