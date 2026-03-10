@@ -127,6 +127,9 @@ _.isolate_mlflow_artifacts
 # test_langchain_integration.py - Module-level pytest marker assignment
 _.pytestmark
 
+# langchain/conftest.py - Autouse session fixture for mocking langchain modules
+_._mock_langchain_modules
+
 # =============================================================================
 # API COMPLETENESS - CommandResult Dataclass Fields
 # =============================================================================
