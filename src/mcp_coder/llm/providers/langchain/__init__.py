@@ -79,16 +79,13 @@ def ask_langchain(
             "or MCP_CODER_LLM_LANGCHAIN_BACKEND env var."
         )
 
-    if env_vars:
-        os.environ.update(env_vars)
-
     history = load_langchain_history(session_id) if session_id else []
     sid = session_id or str(uuid.uuid4())
 
     if backend == "openai":
-        from . import openai
+        from . import openai_backend
 
-        text, raw = openai.ask_openai(
+        text, raw = openai_backend.ask_openai(
             question=question,
             model=config["model"] or "",
             api_key=config["api_key"],
@@ -98,9 +95,9 @@ def ask_langchain(
             timeout=timeout,
         )
     elif backend == "gemini":
-        from . import gemini
+        from . import gemini_backend
 
-        text, raw = gemini.ask_gemini(
+        text, raw = gemini_backend.ask_gemini(
             question=question,
             model=config["model"] or "",
             api_key=config["api_key"],
@@ -108,9 +105,9 @@ def ask_langchain(
             timeout=timeout,
         )
     elif backend == "anthropic":
-        from . import anthropic
+        from . import anthropic_backend
 
-        text, raw = anthropic.ask_anthropic(
+        text, raw = anthropic_backend.ask_anthropic(
             question=question,
             model=config["model"] or "",
             api_key=config["api_key"],

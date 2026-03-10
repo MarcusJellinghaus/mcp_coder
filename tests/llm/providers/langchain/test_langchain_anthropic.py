@@ -1,4 +1,4 @@
-"""Tests for mcp_coder.llm.providers.langchain.anthropic."""
+"""Tests for mcp_coder.llm.providers.langchain.anthropic_backend."""
 
 from unittest.mock import MagicMock, patch
 
@@ -19,10 +19,12 @@ class TestAskAnthropic:
         """ask_anthropic returns (text, dict) on success."""
         ai_msg = self._fake_ai_message("Hello from Anthropic!")
         with patch(
-            "mcp_coder.llm.providers.langchain.anthropic.ChatAnthropic"
+            "mcp_coder.llm.providers.langchain.anthropic_backend.ChatAnthropic"
         ) as MockChat:
             MockChat.return_value.invoke.return_value = ai_msg
-            from mcp_coder.llm.providers.langchain.anthropic import ask_anthropic
+            from mcp_coder.llm.providers.langchain.anthropic_backend import (
+                ask_anthropic,
+            )
 
             text, raw = ask_anthropic(
                 "Hi",
@@ -35,16 +37,18 @@ class TestAskAnthropic:
         assert raw["content"] == "Hello from Anthropic!"
 
     def test_env_var_takes_priority_over_config_api_key(
-        self, monkeypatch: object
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """ANTHROPIC_API_KEY env var overrides api_key from config."""
-        monkeypatch.setenv("ANTHROPIC_API_KEY", "env-ant-key")  # type: ignore[attr-defined]
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "env-ant-key")
         ai_msg = self._fake_ai_message()
         with patch(
-            "mcp_coder.llm.providers.langchain.anthropic.ChatAnthropic"
+            "mcp_coder.llm.providers.langchain.anthropic_backend.ChatAnthropic"
         ) as MockChat:
             MockChat.return_value.invoke.return_value = ai_msg
-            from mcp_coder.llm.providers.langchain.anthropic import ask_anthropic
+            from mcp_coder.llm.providers.langchain.anthropic_backend import (
+                ask_anthropic,
+            )
 
             ask_anthropic(
                 "Hi",
@@ -55,15 +59,19 @@ class TestAskAnthropic:
             _, kwargs = MockChat.call_args
             assert kwargs.get("anthropic_api_key") == SecretStr("env-ant-key")
 
-    def test_uses_config_api_key_when_env_not_set(self, monkeypatch: object) -> None:
+    def test_uses_config_api_key_when_env_not_set(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Config api_key is used when ANTHROPIC_API_KEY is not in the environment."""
-        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)  # type: ignore[attr-defined]
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
         ai_msg = self._fake_ai_message()
         with patch(
-            "mcp_coder.llm.providers.langchain.anthropic.ChatAnthropic"
+            "mcp_coder.llm.providers.langchain.anthropic_backend.ChatAnthropic"
         ) as MockChat:
             MockChat.return_value.invoke.return_value = ai_msg
-            from mcp_coder.llm.providers.langchain.anthropic import ask_anthropic
+            from mcp_coder.llm.providers.langchain.anthropic_backend import (
+                ask_anthropic,
+            )
 
             ask_anthropic(
                 "Hi",
@@ -78,10 +86,12 @@ class TestAskAnthropic:
         """timeout is passed to ChatAnthropic constructor as float."""
         ai_msg = self._fake_ai_message()
         with patch(
-            "mcp_coder.llm.providers.langchain.anthropic.ChatAnthropic"
+            "mcp_coder.llm.providers.langchain.anthropic_backend.ChatAnthropic"
         ) as MockChat:
             MockChat.return_value.invoke.return_value = ai_msg
-            from mcp_coder.llm.providers.langchain.anthropic import ask_anthropic
+            from mcp_coder.llm.providers.langchain.anthropic_backend import (
+                ask_anthropic,
+            )
 
             ask_anthropic(
                 "Hi",
@@ -93,15 +103,17 @@ class TestAskAnthropic:
             _, kwargs = MockChat.call_args
             assert kwargs.get("default_request_timeout") == 45.0
 
-    def test_no_api_key_passes_none(self, monkeypatch: object) -> None:
+    def test_no_api_key_passes_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """When no key is set anywhere, api_key=None is passed to ChatAnthropic."""
-        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)  # type: ignore[attr-defined]
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
         ai_msg = self._fake_ai_message()
         with patch(
-            "mcp_coder.llm.providers.langchain.anthropic.ChatAnthropic"
+            "mcp_coder.llm.providers.langchain.anthropic_backend.ChatAnthropic"
         ) as MockChat:
             MockChat.return_value.invoke.return_value = ai_msg
-            from mcp_coder.llm.providers.langchain.anthropic import ask_anthropic
+            from mcp_coder.llm.providers.langchain.anthropic_backend import (
+                ask_anthropic,
+            )
 
             ask_anthropic("Hi", model="claude-opus-4-6", api_key=None, messages=[])
             _, kwargs = MockChat.call_args
@@ -111,17 +123,19 @@ class TestAskAnthropic:
         """When API returns 404/not_found, ValueError includes available models."""
         with (
             patch(
-                "mcp_coder.llm.providers.langchain.anthropic.ChatAnthropic"
+                "mcp_coder.llm.providers.langchain.anthropic_backend.ChatAnthropic"
             ) as MockChat,
             patch(
-                "mcp_coder.llm.providers.langchain.anthropic.list_anthropic_models",
+                "mcp_coder.llm.providers.langchain.anthropic_backend.list_anthropic_models",
                 return_value=["claude-opus-4-6", "claude-sonnet-4-5-20250929"],
             ),
         ):
             MockChat.return_value.invoke.side_effect = Exception(
                 "Error code: 404 - {'type': 'error', 'error': {'type': 'not_found_error'}}"
             )
-            from mcp_coder.llm.providers.langchain.anthropic import ask_anthropic
+            from mcp_coder.llm.providers.langchain.anthropic_backend import (
+                ask_anthropic,
+            )
 
             with pytest.raises(ValueError) as exc_info:
                 ask_anthropic("Hi", model="bad-model", api_key=None, messages=[])
@@ -132,15 +146,17 @@ class TestAskAnthropic:
         """404 still raises ValueError even if listing available models fails."""
         with (
             patch(
-                "mcp_coder.llm.providers.langchain.anthropic.ChatAnthropic"
+                "mcp_coder.llm.providers.langchain.anthropic_backend.ChatAnthropic"
             ) as MockChat,
             patch(
-                "mcp_coder.llm.providers.langchain.anthropic.list_anthropic_models",
+                "mcp_coder.llm.providers.langchain.anthropic_backend.list_anthropic_models",
                 side_effect=Exception("network error"),
             ),
         ):
             MockChat.return_value.invoke.side_effect = Exception("404 not_found_error")
-            from mcp_coder.llm.providers.langchain.anthropic import ask_anthropic
+            from mcp_coder.llm.providers.langchain.anthropic_backend import (
+                ask_anthropic,
+            )
 
             with pytest.raises(ValueError, match="not found"):
                 ask_anthropic("Hi", model="bad-model", api_key=None, messages=[])
@@ -148,10 +164,12 @@ class TestAskAnthropic:
     def test_non_not_found_exception_is_reraised_unchanged(self) -> None:
         """Non-404 exceptions propagate as-is without wrapping."""
         with patch(
-            "mcp_coder.llm.providers.langchain.anthropic.ChatAnthropic"
+            "mcp_coder.llm.providers.langchain.anthropic_backend.ChatAnthropic"
         ) as MockChat:
             MockChat.return_value.invoke.side_effect = RuntimeError("network timeout")
-            from mcp_coder.llm.providers.langchain.anthropic import ask_anthropic
+            from mcp_coder.llm.providers.langchain.anthropic_backend import (
+                ask_anthropic,
+            )
 
             with pytest.raises(RuntimeError, match="network timeout"):
                 ask_anthropic("Hi", model="claude-opus-4-6", api_key=None, messages=[])

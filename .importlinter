@@ -276,6 +276,7 @@ ignore_imports =
     mcp_coder.llm.providers.langchain.** -> langchain_core
     mcp_coder.llm.providers.langchain.** -> langchain_openai
     mcp_coder.llm.providers.langchain.** -> langchain_google_genai
+    mcp_coder.llm.providers.langchain.** -> langchain_anthropic
 
 # -----------------------------------------------------------------------------
 # Contract: Pyperclip Library Isolation

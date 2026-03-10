@@ -32,10 +32,12 @@ class TestLoadLangchainConfig:
             "api_version",
         }
 
-    def test_env_var_overrides_config_values(self, monkeypatch: object) -> None:
+    def test_env_var_overrides_config_values(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """MCP_CODER_LLM_LANGCHAIN_* env vars override config.toml values."""
-        monkeypatch.setenv("MCP_CODER_LLM_LANGCHAIN_BACKEND", "gemini")  # type: ignore[attr-defined]
-        monkeypatch.setenv("MCP_CODER_LLM_LANGCHAIN_MODEL", "gemini-2.0-flash")  # type: ignore[attr-defined]
+        monkeypatch.setenv("MCP_CODER_LLM_LANGCHAIN_BACKEND", "gemini")
+        monkeypatch.setenv("MCP_CODER_LLM_LANGCHAIN_MODEL", "gemini-2.0-flash")
         with patch(
             "mcp_coder.llm.providers.langchain.get_config_values",
             return_value={
@@ -53,10 +55,12 @@ class TestLoadLangchainConfig:
         assert cfg["backend"] == "gemini"
         assert cfg["model"] == "gemini-2.0-flash"
 
-    def test_env_var_does_not_override_when_empty(self, monkeypatch: object) -> None:
+    def test_env_var_does_not_override_when_empty(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Empty env vars do not override config.toml values."""
-        monkeypatch.delenv("MCP_CODER_LLM_LANGCHAIN_BACKEND", raising=False)  # type: ignore[attr-defined]
-        monkeypatch.delenv("MCP_CODER_LLM_LANGCHAIN_MODEL", raising=False)  # type: ignore[attr-defined]
+        monkeypatch.delenv("MCP_CODER_LLM_LANGCHAIN_BACKEND", raising=False)
+        monkeypatch.delenv("MCP_CODER_LLM_LANGCHAIN_MODEL", raising=False)
         with patch(
             "mcp_coder.llm.providers.langchain.get_config_values",
             return_value={
@@ -99,7 +103,7 @@ class TestAskLangchain:
             ),
             patch("mcp_coder.llm.providers.langchain.store_langchain_history"),
             patch(
-                "mcp_coder.llm.providers.langchain.openai.ask_openai",
+                "mcp_coder.llm.providers.langchain.openai_backend.ask_openai",
                 return_value=("Hello!", {"content": "Hello!"}),
             ),
         ):
@@ -124,7 +128,7 @@ class TestAskLangchain:
             ),
             patch("mcp_coder.llm.providers.langchain.store_langchain_history"),
             patch(
-                "mcp_coder.llm.providers.langchain.openai.ask_openai",
+                "mcp_coder.llm.providers.langchain.openai_backend.ask_openai",
                 return_value=("ok", {}),
             ),
         ):
@@ -148,7 +152,7 @@ class TestAskLangchain:
             ),
             patch("mcp_coder.llm.providers.langchain.store_langchain_history"),
             patch(
-                "mcp_coder.llm.providers.langchain.openai.ask_openai",
+                "mcp_coder.llm.providers.langchain.openai_backend.ask_openai",
                 return_value=("ok", {}),
             ),
         ):
@@ -209,7 +213,7 @@ class TestAskLangchain:
                 store_mock,
             ),
             patch(
-                "mcp_coder.llm.providers.langchain.openai.ask_openai",
+                "mcp_coder.llm.providers.langchain.openai_backend.ask_openai",
                 return_value=("answer", {}),
             ),
         ):
@@ -221,13 +225,8 @@ class TestAskLangchain:
         assert {"role": "human", "content": "new question"} in stored_messages
         assert {"role": "ai", "content": "answer"} in stored_messages
 
-    def test_env_vars_are_applied_to_environ(self) -> None:
-        """Non-empty env_vars are merged into os.environ before the backend call."""
-        updates: list[dict[str, str]] = []
-
-        def capture_update(d: dict[str, str]) -> None:
-            updates.append(dict(d))
-
+    def test_env_vars_param_is_accepted_but_ignored(self) -> None:
+        """env_vars parameter is accepted for interface compatibility but not applied."""
         with (
             patch(
                 "mcp_coder.llm.providers.langchain._load_langchain_config",
@@ -239,38 +238,12 @@ class TestAskLangchain:
             ),
             patch("mcp_coder.llm.providers.langchain.store_langchain_history"),
             patch(
-                "mcp_coder.llm.providers.langchain.openai.ask_openai",
+                "mcp_coder.llm.providers.langchain.openai_backend.ask_openai",
                 return_value=("ok", {}),
-            ),
-            patch(
-                "mcp_coder.llm.providers.langchain.os.environ.update",
-                side_effect=capture_update,
             ),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain
 
-            ask_langchain("q", env_vars={"INJECTED": "value"})
-        assert updates == [{"INJECTED": "value"}]
-
-    def test_no_env_vars_skips_environ_update(self) -> None:
-        """When env_vars is None, os.environ.update is not called."""
-        with (
-            patch(
-                "mcp_coder.llm.providers.langchain._load_langchain_config",
-                return_value=self._make_config(),
-            ),
-            patch(
-                "mcp_coder.llm.providers.langchain.load_langchain_history",
-                return_value=[],
-            ),
-            patch("mcp_coder.llm.providers.langchain.store_langchain_history"),
-            patch(
-                "mcp_coder.llm.providers.langchain.openai.ask_openai",
-                return_value=("ok", {}),
-            ),
-            patch("mcp_coder.llm.providers.langchain.os.environ.update") as mock_update,
-        ):
-            from mcp_coder.llm.providers.langchain import ask_langchain
-
-            ask_langchain("q", env_vars=None)
-        mock_update.assert_not_called()
+            # Should not raise — env_vars is accepted but ignored
+            result = ask_langchain("q", env_vars={"INJECTED": "value"})
+        assert result["text"] == "ok"

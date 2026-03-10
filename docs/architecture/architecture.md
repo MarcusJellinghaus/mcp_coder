@@ -187,8 +187,9 @@ mcp-coder implement --project-dir /path/to/project
         - **Functions**: `log_llm_request()`, `log_llm_response()`, `log_llm_error()`
   - `langchain/` - LangChain multi-backend integration (tests: `llm/providers/langchain/test_*.py`)
     - `__init__.py` - Entry point `ask_langchain()`, config loading, backend dispatch
-    - `openai.py` - OpenAI / Azure / Ollama backend via `ChatOpenAI`
-    - `gemini.py` - Google Gemini backend via `ChatGoogleGenerativeAI`
+    - `openai_backend.py` - OpenAI / Azure / Ollama backend via `ChatOpenAI`
+    - `gemini_backend.py` - Google Gemini backend via `ChatGoogleGenerativeAI`
+    - `anthropic_backend.py` - Anthropic backend via `ChatAnthropic`
     - **Optional install**: `pip install 'mcp-coder[langchain]'`
     - **Session storage**: history persisted to `~/.mcp_coder/sessions/langchain/`
 
