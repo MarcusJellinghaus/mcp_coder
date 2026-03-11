@@ -5,24 +5,11 @@ import logging
 import sys
 from typing import Optional
 
+from ....cli.utils import _get_status_symbols
 from .claude_code_api import _verify_claude_before_use
 from .claude_executable_finder import verify_claude_installation
 
 logger = logging.getLogger(__name__)
-
-
-def _get_status_symbols() -> dict[str, str]:
-    """Get platform-appropriate status symbols for terminal display.
-
-    Returns:
-        Dict with 'success', 'failure', and 'warning' status symbols
-    """
-    # Use ASCII characters for Windows CMD and PowerShell compatibility
-    if sys.platform.startswith("win"):
-        return {"success": "[OK]", "failure": "[NO]", "warning": "[!!]"}
-    else:
-        # Unix-like systems generally handle Unicode better
-        return {"success": "✓", "failure": "✗", "warning": "⚠"}
 
 
 def verify_claude_cli_installation(_: argparse.Namespace) -> int:

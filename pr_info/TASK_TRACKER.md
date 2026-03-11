@@ -29,7 +29,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Refactor Claude CLI Verification to Return Dict — [step_2.md](./steps/step_2.md)
 
-- [ ] Move `_get_status_symbols()` to `cli/utils.py` with tests
+- [x] Move `_get_status_symbols()` to `cli/utils.py` with tests
 - [ ] Refactor `verify_claude_cli_installation` → `verify_claude()` returning structured dict (no print calls)
 - [ ] Update `execute_verify()` shim to keep CLI working
 - [ ] Update all test references from old function name to new
