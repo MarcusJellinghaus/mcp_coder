@@ -30,11 +30,11 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 2: Refactor Claude CLI Verification to Return Dict — [step_2.md](./steps/step_2.md)
 
 - [x] Move `_get_status_symbols()` to `cli/utils.py` with tests
-- [ ] Refactor `verify_claude_cli_installation` → `verify_claude()` returning structured dict (no print calls)
-- [ ] Update `execute_verify()` shim to keep CLI working
-- [ ] Update all test references from old function name to new
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message
+- [x] Refactor `verify_claude_cli_installation` → `verify_claude()` returning structured dict (no print calls)
+- [x] Update `execute_verify()` shim to keep CLI working
+- [x] Update all test references from old function name to new
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message
 
 ### Step 3: Add `verify_langchain()` Domain Function — [step_3.md](./steps/step_3.md)
 

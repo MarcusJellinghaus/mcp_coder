@@ -1,93 +1,67 @@
 """Claude CLI verification functionality."""
 
-import argparse
 import logging
-import sys
-from typing import Optional
+from typing import Any
 
-from ....cli.utils import _get_status_symbols
 from .claude_code_api import _verify_claude_before_use
 from .claude_executable_finder import verify_claude_installation
 
 logger = logging.getLogger(__name__)
 
 
-def verify_claude_cli_installation(_: argparse.Namespace) -> int:
-    """Execute verification command to check Claude installation. Returns exit code."""
+def verify_claude() -> dict[str, Any]:
+    """Verify Claude CLI installation and return structured results.
+
+    Returns a dict with verification results (no printing).
+    The CLI layer handles all output formatting.
+
+    Returns:
+        Dict with keys: cli_found, cli_path (if found), cli_version (if available),
+        cli_works, api_integration, overall_ok.
+    """
     logger.info("Executing Claude installation verification")
 
-    print("Verifying Claude Code CLI installation...\n")
-
-    # Get platform-appropriate status symbols
-    symbols = _get_status_symbols()
-
     # Run basic verification
-    verification_result = verify_claude_installation()
+    basic = verify_claude_installation()
 
-    print("=== BASIC VERIFICATION ===")
-    print(
-        f"Claude CLI Found: {symbols['success'] + ' YES' if verification_result['found'] else symbols['failure'] + ' NO'}"
-    )
-    if verification_result["path"]:
-        print(f"Location: {verification_result['path']}")
-    if verification_result["version"]:
-        print(f"Version: {verification_result['version']}")
-    print(
-        f"Executable Works: {symbols['success'] + ' YES' if verification_result['works'] else symbols['failure'] + ' NO'}"
-    )
+    result: dict[str, Any] = {
+        "cli_found": {"ok": basic["found"], "value": "YES" if basic["found"] else "NO"},
+    }
 
-    if verification_result["error"]:
-        print(f"Error: {verification_result['error']}")
+    if basic["path"]:
+        result["cli_path"] = {"ok": True, "value": basic["path"]}
 
-    print("\n=== ADVANCED VERIFICATION ===")
+    if basic["version"]:
+        result["cli_version"] = {"ok": True, "value": basic["version"]}
 
-    # Run advanced verification (same as used by API)
+    result["cli_works"] = {
+        "ok": basic["works"],
+        "value": "YES" if basic["works"] else "NO",
+    }
+
+    # Run advanced verification (API integration)
+    api_ok = False
     try:
         success, claude_path, error_msg = _verify_claude_before_use()
-        print(
-            f"API Integration: {symbols['success'] + ' OK' if success else symbols['failure'] + ' FAILED'}"
-        )
-        if success:
-            print(f"Verified Path: {claude_path}")
-        elif error_msg:
-            print(f"API Error: {error_msg}")
+        api_ok = success
+        result["api_integration"] = {
+            "ok": success,
+            "value": "OK" if success else "FAILED",
+            "error": error_msg if not success else None,
+        }
     except Exception as e:
-        print(f"API Integration: {symbols['failure']} EXCEPTION - {e}")
-        success = False
+        result["api_integration"] = {
+            "ok": False,
+            "value": "FAILED",
+            "error": f"EXCEPTION - {e}",
+        }
 
-    print("\n=== RECOMMENDATIONS ===")
+    # overall_ok = True means everything is working, False means action needed
+    result["overall_ok"] = basic["found"] and basic["works"] and api_ok
 
-    if verification_result["found"] and verification_result["works"] and success:
-        print(
-            f"{symbols['success']} Claude Code CLI is properly installed and configured!"
-        )
-        print(
-            f"{symbols['success']} You can use mcp-coder commands that require LLM integration."
-        )
-        logger.info("Claude verification completed successfully")
-        return 0
-    else:
-        print(
-            f"{symbols['warning']} Issues detected with Claude Code CLI installation:"
-        )
+    logger.info(
+        "Claude verification completed %s",
+        "successfully" if result["overall_ok"] else "with issues",
+    )
 
-        if not verification_result["found"]:
-            print("  1. Install Claude CLI: npm install -g @anthropic-ai/claude-code")
-            print("  2. Restart your terminal")
-            print("  3. Verify installation: claude --version")
-
-        if verification_result["found"] and not verification_result["works"]:
-            print("  1. Check if Claude CLI is executable")
-            print(
-                "  2. Try reinstalling: npm uninstall -g @anthropic-ai/claude-code && npm install -g @anthropic-ai/claude-code"
-            )
-            print("  3. Ensure you have proper permissions")
-
-        if verification_result["works"] and not success:
-            print("  1. Check PATH environment variable includes Claude directory")
-            print("  2. Restart your terminal or IDE")
-            print("  3. Try running from a different directory")
-
-        print("\nFor more help, visit: https://docs.anthropic.com/en/docs/claude-code")
-        logger.warning("Claude verification completed with issues")
-        return 1
+    return result
