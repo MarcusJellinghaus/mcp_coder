@@ -21,6 +21,54 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Add Verify Parser to `parsers.py` — [step_1.md](./steps/step_1.md)
+
+- [ ] Implement `add_verify_parser()` in `parsers.py` with `--check-models` flag, update `main.py` to use it
+- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message
+
+### Step 2: Refactor Claude CLI Verification to Return Dict — [step_2.md](./steps/step_2.md)
+
+- [ ] Move `_get_status_symbols()` to `cli/utils.py` with tests
+- [ ] Refactor `verify_claude_cli_installation` → `verify_claude()` returning structured dict (no print calls)
+- [ ] Update `execute_verify()` shim to keep CLI working
+- [ ] Update all test references from old function name to new
+- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message
+
+### Step 3: Add `verify_langchain()` Domain Function — [step_3.md](./steps/step_3.md)
+
+- [ ] Create `verification.py` with `verify_langchain()`, `_mask_api_key()`, `_resolve_api_key()`, `_check_package_installed()`
+- [ ] Add tests for `verify_langchain()` including config, API key masking, test prompt, and package checks
+- [ ] Add tests for existing `list_*_models()` functions in `_models.py`
+- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message
+
+### Step 4: Add `verify_mlflow()` Domain Function — [step_4.md](./steps/step_4.md)
+
+- [ ] Implement `verify_mlflow()` in `mlflow_logger.py` with URI validation, connectivity, experiment, and artifact checks
+- [ ] Add tests covering: not installed, disabled, SQLite, HTTP, file://, experiment, artifact location
+- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message
+
+### Step 5: Rewrite `verify.py` as Orchestrator + Formatter — [step_5.md](./steps/step_5.md)
+
+- [ ] Implement `execute_verify()` orchestrator calling all 3 domain functions
+- [ ] Implement `_resolve_active_provider()`, `_format_section()`, `_compute_exit_code()`
+- [ ] Add orchestration tests and formatting output tests
+- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message
+
+### Step 6: Integration Tests and Final Validation — [step_6.md](./steps/step_6.md)
+
+- [ ] Add end-to-end integration tests covering full CLI path
+- [ ] Add exit code matrix tests (8 scenarios)
+- [ ] Update existing `test_verify.py` and `test_verify_command.py` for new signatures
+- [ ] Run full test suite and verify no regressions
+- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message
 
 ## Pull Request
+
+- [ ] Review all steps are complete and all checks pass
+- [ ] Prepare PR summary covering all changes
