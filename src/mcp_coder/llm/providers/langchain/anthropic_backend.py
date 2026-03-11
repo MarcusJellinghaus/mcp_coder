@@ -43,7 +43,7 @@ def ask_anthropic(
     if effective_api_key:
         kwargs["anthropic_api_key"] = SecretStr(effective_api_key)
 
-    client = ChatAnthropic(**kwargs)  # type: ignore[arg-type]
+    client = ChatAnthropic(**kwargs)
 
     try:
         ai_msg = client.invoke(lc_messages)
