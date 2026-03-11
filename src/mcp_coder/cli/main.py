@@ -38,6 +38,7 @@ from .parsers import (
     add_implement_parser,
     add_prompt_parser,
     add_set_status_parser,
+    add_verify_parser,
 )
 
 # Logger will be initialized in main()
@@ -76,9 +77,7 @@ def create_parser() -> argparse.ArgumentParser:
 
     # Simple commands without subparsers
     subparsers.add_parser("help", help="Show help information")
-    subparsers.add_parser(
-        "verify", help="Verify Claude CLI installation and configuration"
-    )
+    add_verify_parser(subparsers)
 
     # Add command parsers from parsers module
     add_prompt_parser(subparsers)

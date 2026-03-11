@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Add Verify Parser to `parsers.py` — [step_1.md](./steps/step_1.md)
 
-- [ ] Implement `add_verify_parser()` in `parsers.py` with `--check-models` flag, update `main.py` to use it
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message
+- [x] Implement `add_verify_parser()` in `parsers.py` with `--check-models` flag, update `main.py` to use it
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message
 
 ### Step 2: Refactor Claude CLI Verification to Return Dict — [step_2.md](./steps/step_2.md)
 
