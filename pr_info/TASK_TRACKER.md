@@ -53,11 +53,11 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 5: Rewrite `verify.py` as Orchestrator + Formatter — [step_5.md](./steps/step_5.md)
 
-- [ ] Implement `execute_verify()` orchestrator calling all 3 domain functions
-- [ ] Implement `_resolve_active_provider()`, `_format_section()`, `_compute_exit_code()`
-- [ ] Add orchestration tests and formatting output tests
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message
+- [x] Implement `execute_verify()` orchestrator calling all 3 domain functions
+- [x] Implement `_resolve_active_provider()`, `_format_section()`, `_compute_exit_code()`
+- [x] Add orchestration tests and formatting output tests
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message
 
 ### Step 6: Integration Tests and Final Validation — [step_6.md](./steps/step_6.md)
 
