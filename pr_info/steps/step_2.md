@@ -54,7 +54,7 @@ docs/
 │   └── dependencies/
 │       ├── readme.md
 │       ├── dependency_graph.html          (generated)
-│       ├── pydeps_graph.svg               (generated)
+│       ├── pydeps_graph.html              (generated)
 │       └── pydeps_graph.dot               (generated)
 └── [project-specific docs]
 ```
