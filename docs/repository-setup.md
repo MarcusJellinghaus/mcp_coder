@@ -487,7 +487,7 @@ The `/implementation_review` command checks code against `docs/architecture/arch
 
 ```
 docs/
-├── README.md
+├── README.md                              (optional)
 ├── architecture/
 │   ├── architecture.md                    (mandatory - used by /implementation_review)
 │   ├── architecture-maintenance.md
