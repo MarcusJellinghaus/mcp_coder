@@ -42,20 +42,36 @@ _LABEL_MAP: dict[str, str] = {
 }
 
 
+_VALID_PROVIDERS = {"claude", "langchain"}
+
+
 def _resolve_active_provider() -> tuple[str, str]:
     """Resolve the active LLM provider from env var, config, or default.
 
     Returns (provider_name, source_description).
     Deliberately separate from resolve_llm_method() — different return types,
     different env vars, different purposes (Decision 5).
+
+    Raises:
+        ValueError: If the resolved provider is not a known value.
     """
     env_val = os.environ.get("MCP_CODER_LLM_PROVIDER")
     if env_val:
+        if env_val not in _VALID_PROVIDERS:
+            raise ValueError(
+                f"Unknown LLM provider '{env_val}' from MCP_CODER_LLM_PROVIDER env var. "
+                f"Valid providers: {', '.join(sorted(_VALID_PROVIDERS))}"
+            )
         return env_val, "MCP_CODER_LLM_PROVIDER env var"
 
     config = get_config_values([("llm", "provider", None)])
     provider = config[("llm", "provider")]
     if provider:
+        if provider not in _VALID_PROVIDERS:
+            raise ValueError(
+                f"Unknown LLM provider '{provider}' in config.toml. "
+                f"Valid providers: {', '.join(sorted(_VALID_PROVIDERS))}"
+            )
         return provider, "config.toml"
 
     return "claude", "default"

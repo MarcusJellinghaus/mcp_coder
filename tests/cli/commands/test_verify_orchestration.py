@@ -344,6 +344,19 @@ class TestResolveActiveProvider:
         assert provider == "claude"
         assert "default" in source
 
+    @patch.dict(os.environ, {"MCP_CODER_LLM_PROVIDER": "ollama"})
+    def test_unknown_provider_env_var_raises(self) -> None:
+        """Unknown provider from env var raises ValueError."""
+        with pytest.raises(ValueError, match="Unknown LLM provider 'ollama'"):
+            _resolve_active_provider()
+
+    @patch("mcp_coder.cli.commands.verify.get_config_values")
+    def test_unknown_provider_config_raises(self, mock_config: MagicMock) -> None:
+        """Unknown provider from config.toml raises ValueError."""
+        mock_config.return_value = {("llm", "provider"): "ollama"}
+        with pytest.raises(ValueError, match="Unknown LLM provider 'ollama'"):
+            _resolve_active_provider()
+
 
 class TestComputeExitCode:
     """Tests for _compute_exit_code logic."""
