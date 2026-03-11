@@ -12,9 +12,10 @@ Two modes of operation:
 
 Escalation strategy for --delete:
     1. Try shutil.rmtree
-    2. If file locked, move it to temp
-    3. If move fails and --kill-lockers, find and kill locker, retry move
-    4. Repeat until done or max retries
+    2. If OSError (e.g. reserved name like NUL): delete reserved names, retry
+    3. If file locked, move it to temp
+    4. If move fails and --kill-lockers, find and kill locker, retry move
+    5. Repeat until done or max retries
 
 Usage:
     python tools/safe_delete_folder.py <folder_path>                    # diagnose
@@ -218,6 +219,112 @@ def _kill_detected_lockers(locking_processes: list[str]) -> list[str]:
 
 
 # =============================================================================
+# Windows Reserved Name Handling
+# =============================================================================
+
+# Windows reserved device names that cannot be used as file/folder names
+# via standard Win32 API calls. The \\?\ prefix bypasses this restriction.
+_WINDOWS_RESERVED_NAMES: set[str] = {
+    "CON", "PRN", "AUX", "NUL",
+    *(f"COM{i}" for i in range(1, 10)),
+    *(f"LPT{i}" for i in range(1, 10)),
+}
+
+
+def _is_windows_reserved_name(path: Path) -> bool:
+    """Check if a path's filename is a Windows reserved device name.
+
+    Reserved names (NUL, CON, PRN, AUX, COM1-9, LPT1-9) cannot be
+    accessed through normal Win32 APIs. They require the \\\\?\\ prefix.
+    """
+    # Check stem (name without extension) since e.g. "nul.txt" is also reserved
+    return path.stem.upper() in _WINDOWS_RESERVED_NAMES
+
+
+def _delete_reserved_name(path: Path) -> tuple[bool, str]:
+    """Delete a file/folder with a Windows reserved device name.
+
+    Uses the \\\\?\\ extended-length path prefix to bypass Win32 name
+    validation, allowing operations on reserved names like NUL, CON, etc.
+
+    Falls back to `rd /s /q` for directories if the direct approach fails.
+    """
+    if sys.platform != "win32":
+        return False, "Reserved name handling is Windows-only"
+
+    # Build \\?\C:\...\nul style path
+    resolved = str(path.resolve())
+    if not resolved.startswith("\\\\?\\"):
+        unc_path = f"\\\\?\\{resolved}"
+    else:
+        unc_path = resolved
+
+    try:
+        if path.is_dir():
+            # Use rd /s /q with the \\?\ path for directories
+            result = subprocess.run(
+                ["cmd", "/c", "rd", "/s", "/q", unc_path],
+                capture_output=True, text=True, timeout=30, check=False,
+            )
+            if result.returncode == 0 or not path.exists():
+                return True, f"Deleted reserved-name directory via rd: {path.name}"
+            return False, f"rd failed: {result.stderr.strip()}"
+        else:
+            # Use del with the \\?\ path for files
+            result = subprocess.run(
+                ["cmd", "/c", "del", "/f", "/q", unc_path],
+                capture_output=True, text=True, timeout=30, check=False,
+            )
+            if result.returncode == 0 or not path.exists():
+                return True, f"Deleted reserved-name file via del: {path.name}"
+            return False, f"del failed: {result.stderr.strip()}"
+    except Exception as e:  # noqa: BLE001
+        return False, f"Failed to delete reserved name {path.name}: {e}"
+
+
+def _delete_reserved_names_recursive(root: Path, quiet: bool = False) -> list[str]:
+    """Walk a directory tree and delete any files/folders with reserved names.
+
+    Must be done before shutil.rmtree since rmtree cannot handle these names.
+    Processes deepest paths first (bottom-up) so nested reserved names work.
+
+    Returns list of paths that were successfully deleted.
+    """
+    deleted: list[str] = []
+    if sys.platform != "win32":
+        return deleted
+
+    # Collect all reserved-name entries (bottom-up for safe deletion)
+    reserved_paths: list[Path] = []
+    try:
+        for dirpath, dirnames, filenames in os.walk(root, topdown=False):
+            parent = Path(dirpath)
+            for name in filenames:
+                child = parent / name
+                if _is_windows_reserved_name(child):
+                    reserved_paths.append(child)
+            for name in dirnames:
+                child = parent / name
+                if _is_windows_reserved_name(child):
+                    reserved_paths.append(child)
+    except (PermissionError, OSError):
+        pass
+
+    for rpath in reserved_paths:
+        if not quiet:
+            print(f"  Removing reserved-name entry: {rpath}")
+        success, msg = _delete_reserved_name(rpath)
+        if success:
+            deleted.append(str(rpath))
+            if not quiet:
+                print(f"    -> {msg}")
+        elif not quiet:
+            print(f"    -> FAILED: {msg}")
+
+    return deleted
+
+
+# =============================================================================
 # Folder Deletion
 # =============================================================================
 
@@ -401,9 +508,10 @@ def _delete_folder(
     Strategy (escalates as needed):
         1. For empty directories: try rmdir, then kill lockers, then move
         2. For non-empty: try rmtree
-        3. If file locked, try move to temp
-        4. If move fails AND kill_lockers=True, kill locker, retry move
-        5. Retry delete
+        3. If OSError (e.g. reserved name like NUL): scan & delete reserved names, retry
+        4. If file locked, try move to temp
+        5. If move fails AND kill_lockers=True, kill locker, retry move
+        6. Retry delete
 
     Args:
         path: Folder to delete
@@ -529,6 +637,27 @@ def _delete_folder(
             # Check if folder is actually gone
             if not path.exists():
                 return True, "Folder removed", moved_files, killed_procs
+
+            # [WinError 1] "Incorrect function" typically means a reserved
+            # device name (NUL, CON, etc.) — scan and remove them, then retry
+            if sys.platform == "win32":
+                reserved_deleted = _delete_reserved_names_recursive(
+                    path, quiet=quiet
+                )
+                if reserved_deleted:
+                    log(
+                        f"Deleted {len(reserved_deleted)} reserved-name"
+                        " entry(ies), retrying..."
+                    )
+                    if not path.exists():
+                        return (
+                            True,
+                            "Folder removed (reserved names only)",
+                            moved_files,
+                            killed_procs,
+                        )
+                    continue  # Retry rmtree
+
             return False, f"OS error: {e}", moved_files, killed_procs
 
     return (
