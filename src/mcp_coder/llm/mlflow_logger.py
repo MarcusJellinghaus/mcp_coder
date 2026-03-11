@@ -10,10 +10,13 @@ import os
 import tempfile
 from collections import OrderedDict
 from datetime import datetime
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as pkg_version
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 from ..config import MLflowConfig
+from ..config.mlflow_config import validate_tracking_uri
 from ..utils import load_mlflow_config
 
 try:
@@ -27,6 +30,7 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "MLflowLogger",
     "is_mlflow_available",
+    "verify_mlflow",
 ]
 
 # Global flag to track MLflow availability (cached after first check)
@@ -515,6 +519,157 @@ class MLflowLogger:
     def _is_enabled(self) -> bool:
         """Check if MLflow logging is enabled and available."""
         return self.config.enabled and is_mlflow_available()
+
+
+def _check_tracking_uri(uri: str) -> dict[str, Any]:
+    """Validate tracking URI format and check URI-specific reachability."""
+    try:
+        validate_tracking_uri(uri)
+    except ValueError as e:
+        return {"ok": False, "value": uri, "error": str(e)}
+
+    if uri.startswith("sqlite:///"):
+        path = uri[len("sqlite:///") :]
+        path = os.path.expanduser(path)
+        exists = os.path.exists(path)
+        return {
+            "ok": exists,
+            "value": f"{uri} ({'file exists' if exists else 'file NOT found'})",
+        }
+
+    if uri.startswith(("http://", "https://")):
+        return {"ok": True, "value": uri}  # connectivity checked separately via SDK
+
+    if uri.startswith("file://"):
+        path = uri[len("file://") :]
+        if path.startswith("/") and os.name == "nt":
+            path = path[1:]  # strip leading / on Windows
+        exists = os.path.isdir(path)
+        return {
+            "ok": exists,
+            "value": f"{uri} ({'exists' if exists else 'NOT found'})",
+        }
+
+    return {"ok": True, "value": uri}
+
+
+def _probe_mlflow_connection(
+    uri: str, experiment_name: str
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Probe MLflow server connectivity and experiment existence.
+
+    Returns (connection_entry, experiment_entry).
+    No timeout applied — user can Ctrl+C if the server is unreachable.
+    """
+    import mlflow  # pylint: disable=import-error
+
+    mlflow.set_tracking_uri(uri)
+    try:
+        experiment = mlflow.get_experiment_by_name(experiment_name)
+        conn: dict[str, Any] = {"ok": True, "value": "tracking server reachable"}
+        if experiment:
+            exp: dict[str, Any] = {
+                "ok": True,
+                "value": f'"{experiment_name}" (exists)',
+            }
+        else:
+            exp = {
+                "ok": False,
+                "value": f'"{experiment_name}" (not found)',
+            }
+        return conn, exp
+    except Exception as e:
+        conn = {"ok": False, "value": f"unreachable: {e}"}
+        exp = {"ok": False, "value": f'"{experiment_name}" (could not check)'}
+        return conn, exp
+
+
+def _check_artifact_location(path: str | None) -> dict[str, Any]:
+    """Check if artifact location directory exists and is writable."""
+    if not path:
+        return {"ok": True, "value": "not configured (using default)"}
+    expanded = os.path.expanduser(path)
+    abs_path = os.path.abspath(expanded)
+    if not os.path.isdir(abs_path):
+        return {"ok": False, "value": f"{path} (directory NOT found)"}
+    if os.access(abs_path, os.W_OK):
+        return {"ok": True, "value": f"{path} (writable)"}
+    return {"ok": False, "value": f"{path} (not writable)"}
+
+
+def verify_mlflow() -> dict[str, Any]:
+    """Verify MLflow installation, configuration, and connectivity.
+
+    Returns a structured dict with verification results (no printing).
+    The CLI layer handles all output formatting.
+
+    Returns:
+        Dict with keys: installed, enabled, and optionally tracking_uri,
+        connection, experiment, artifact_location, overall_ok.
+
+    overall_ok semantics:
+        True  = no action needed (not installed, disabled, or all checks pass)
+        False = misconfigured and needs fixing (enabled but broken)
+    """
+    result: dict[str, Any] = {}
+
+    # 1. Check installation
+    if not is_mlflow_available():
+        result["installed"] = {"ok": False, "value": "not installed"}
+        result["overall_ok"] = True  # informational, not a failure
+        return result
+
+    # 2. Get MLflow version
+    try:
+        mlflow_version = pkg_version("mlflow")
+    except PackageNotFoundError:
+        mlflow_version = "unknown"
+    result["installed"] = {"ok": True, "value": f"version {mlflow_version}"}
+
+    # 3. Load config
+    config = load_mlflow_config()
+    if not config.enabled:
+        result["enabled"] = {"ok": False, "value": "disabled"}
+        result["overall_ok"] = True  # informational, not a failure
+        return result
+
+    result["enabled"] = {"ok": True, "value": "(config.toml)"}
+
+    # 4. Validate tracking URI
+    if config.tracking_uri:
+        result["tracking_uri"] = _check_tracking_uri(config.tracking_uri)
+    else:
+        result["tracking_uri"] = {"ok": True, "value": "not configured (using default)"}
+
+    # 5. For HTTP URIs: probe MLflow SDK connection and experiment
+    if config.tracking_uri and config.tracking_uri.startswith(("http://", "https://")):
+        conn, exp = _probe_mlflow_connection(
+            config.tracking_uri, config.experiment_name
+        )
+        result["connection"] = conn
+        result["experiment"] = exp
+    else:
+        # For non-HTTP URIs, connection check is implicit in URI check
+        result["connection"] = {"ok": True, "value": "local backend"}
+        result["experiment"] = {
+            "ok": True,
+            "value": f'"{config.experiment_name}" (will be created on first use)',
+        }
+
+    # 6. Check artifact location
+    result["artifact_location"] = _check_artifact_location(config.artifact_location)
+
+    # overall_ok: True when all checks pass, False when any enabled check fails
+    # overall_ok=True when:
+    #   - mlflow not installed (informational)
+    #   - mlflow installed but not enabled (informational)
+    #   - mlflow enabled and all probes pass
+    # overall_ok=False when:
+    #   - mlflow enabled but: bad URI, unreachable, experiment not found
+    check_keys = ["tracking_uri", "connection", "experiment", "artifact_location"]
+    result["overall_ok"] = all(result.get(k, {}).get("ok", True) for k in check_keys)
+
+    return result
 
 
 # Singleton instance for global use

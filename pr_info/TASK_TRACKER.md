@@ -46,10 +46,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 4: Add `verify_mlflow()` Domain Function — [step_4.md](./steps/step_4.md)
 
-- [ ] Implement `verify_mlflow()` in `mlflow_logger.py` with URI validation, connectivity, experiment, and artifact checks
-- [ ] Add tests covering: not installed, disabled, SQLite, HTTP, file://, experiment, artifact location
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message
+- [x] Implement `verify_mlflow()` in `mlflow_logger.py` with URI validation, connectivity, experiment, and artifact checks
+- [x] Add tests covering: not installed, disabled, SQLite, HTTP, file://, experiment, artifact location
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message
 
 ### Step 5: Rewrite `verify.py` as Orchestrator + Formatter — [step_5.md](./steps/step_5.md)
 
