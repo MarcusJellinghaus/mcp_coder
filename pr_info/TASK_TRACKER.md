@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Fix Case Mismatch in implementation_review.md
-- [ ] Fix `ARCHITECTURE.md` → `architecture.md` case mismatch in `.claude/commands/implementation_review.md` ([step_1.md](./steps/step_1.md))
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 1
+- [x] Fix `ARCHITECTURE.md` → `architecture.md` case mismatch in `.claude/commands/implementation_review.md` ([step_1.md](./steps/step_1.md))
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Add Documentation Structure to repository-setup.md
 - [ ] Add checklist item to Quick Setup Checklist in `docs/repository-setup.md` ([step_2.md](./steps/step_2.md))
