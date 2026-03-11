@@ -27,10 +27,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 1
 
 ### Step 2: Add Documentation Structure to repository-setup.md
-- [ ] Add checklist item to Quick Setup Checklist in `docs/repository-setup.md` ([step_2.md](./steps/step_2.md))
-- [ ] Add "Architecture Documentation" section before Optional Setup in `docs/repository-setup.md`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 2
+- [x] Add checklist item to Quick Setup Checklist in `docs/repository-setup.md` ([step_2.md](./steps/step_2.md))
+- [x] Add "Architecture Documentation" section before Optional Setup in `docs/repository-setup.md`
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message for Step 2
 
 ## Pull Request
 - [ ] Review all changes across steps for consistency
