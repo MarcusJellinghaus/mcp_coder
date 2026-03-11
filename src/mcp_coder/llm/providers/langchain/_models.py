@@ -58,7 +58,7 @@ def list_anthropic_models(api_key: str | None) -> list[str]:
     Raises ImportError if anthropic is not installed (part of mcp-coder[langchain]).
     """
     try:
-        import anthropic  # pylint: disable=import-outside-toplevel
+        import anthropic  # type: ignore[import-not-found]  # pylint: disable=import-outside-toplevel
     except ImportError as exc:
         raise ImportError(
             "anthropic is required to list Anthropic models.\n"

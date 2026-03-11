@@ -28,6 +28,7 @@ This guide covers the **mandatory** and **optional** components for integrating 
 - [ ] Install GitHub Actions workflows
 - [ ] Configure Claude Code files (`.claude/`, `.mcp.json`)
 - [ ] Test workflow with a sample issue
+- [ ] Create `docs/architecture/architecture.md` (required by `/implementation_review`)
 
 ## GitHub Token Configuration
 
@@ -477,6 +478,28 @@ For `mcp-coder coordinator vscodeclaude`, add to `.gitignore`:
 ```
 
 This prevents working folders from appearing "dirty" due to the session status file.
+
+## Architecture Documentation
+
+The `/implementation_review` command checks code against `docs/architecture/architecture.md`. This file must exist for code reviews to work. Architecture documentation also enables LLM-assisted codebase navigation.
+
+### Recommended Structure
+
+```
+docs/
+├── README.md                              (optional)
+├── architecture/
+│   ├── architecture.md                    (mandatory - used by /implementation_review)
+│   ├── architecture-maintenance.md
+│   └── dependencies/
+│       ├── readme.md
+│       ├── dependency_graph.html          (generated)
+│       ├── pydeps_graph.html              (generated)
+│       └── pydeps_graph.dot               (generated)
+└── [project-specific docs]
+```
+
+**Reference:** See this repository's own [`docs/`](.) folder for a working example of this structure.
 
 ---
 
