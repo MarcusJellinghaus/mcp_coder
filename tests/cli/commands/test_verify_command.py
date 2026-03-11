@@ -101,5 +101,5 @@ class TestExecuteVerify:
 
         output = capsys.readouterr().out
         assert "=== BASIC VERIFICATION ===" in output
-        # Check that status entries are printed
-        assert "[OK]" in output
+        # Check that status entries are printed (symbol is platform-dependent)
+        assert "[OK]" in output or "\u2713" in output
