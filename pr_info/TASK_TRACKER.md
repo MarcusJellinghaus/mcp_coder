@@ -61,12 +61,12 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 6: Integration Tests and Final Validation — [step_6.md](./steps/step_6.md)
 
-- [ ] Add end-to-end integration tests covering full CLI path
-- [ ] Add exit code matrix tests (8 scenarios)
-- [ ] Update existing `test_verify.py` and `test_verify_command.py` for new signatures
-- [ ] Run full test suite and verify no regressions
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message
+- [x] Add end-to-end integration tests covering full CLI path
+- [x] Add exit code matrix tests (8 scenarios)
+- [x] Update existing `test_verify.py` and `test_verify_command.py` for new signatures
+- [x] Run full test suite and verify no regressions
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message
 
 ## Pull Request
 
