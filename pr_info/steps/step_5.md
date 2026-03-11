@@ -1,6 +1,7 @@
 # Step 5: Rewrite `verify.py` as Orchestrator + Formatter
 
 > **Context:** Read `pr_info/steps/summary.md` first. Depends on Steps 1–4.
+> See `pr_info/steps/Decisions.md` — Decisions 5, 10.
 
 ## Goal
 
@@ -53,6 +54,23 @@ class TestVerifyOrchestration:
 
     def test_check_models_passed_to_langchain(self, ...) -> None:
         """--check-models flag forwarded to verify_langchain."""
+        ...
+
+
+class TestFormatSection:
+    """Tests for _format_section output formatting (Decision 10)."""
+
+    def test_ok_entry_formatted_with_success_symbol(self) -> None:
+        """Entries with ok=True show [OK] symbol and value."""
+        # e.g. assert 'Claude CLI Found:   [OK] YES' in output
+        ...
+
+    def test_failed_entry_formatted_with_failure_symbol(self) -> None:
+        """Entries with ok=False show [NO] symbol and value."""
+        ...
+
+    def test_skipped_entry_formatted(self) -> None:
+        """Entries with ok=None show appropriate indicator."""
         ...
 
 
@@ -117,7 +135,12 @@ def _compute_exit_code(active_provider: str, claude_result: dict, langchain_resu
 5.   Print formatted line: "Label:  {symbol} {value}"
 ```
 
-**HOW — Provider resolution:**
+**HOW — Provider resolution (Decision 5 — intentionally separate from `resolve_llm_method`):**
+
+This function is deliberately separate from `resolve_llm_method()` in `cli/utils.py`.
+They have different return types, different env vars, and different purposes.
+The only shared logic is one `get_config_values()` call — not worth abstracting.
+
 ```python
 def _resolve_active_provider() -> tuple[str, str]:
     """Returns (provider_name, source_description)."""
@@ -188,4 +211,5 @@ args.check_models: bool  # from --check-models flag (Step 1)
 - [ ] Exit code: MLflow not installed = exit 0
 - [ ] `--check-models` forwarded to `verify_langchain()`
 - [ ] Claude section is informational when `provider=langchain`
+- [ ] Formatting output test asserts specific `[OK]`/`[NO]` line formatting
 - [ ] All tests pass

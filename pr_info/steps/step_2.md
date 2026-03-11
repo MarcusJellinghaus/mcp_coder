@@ -1,13 +1,28 @@
 # Step 2: Refactor Claude CLI Verification to Return Dict
 
 > **Context:** Read `pr_info/steps/summary.md` and Step 1 first.
+> See `pr_info/steps/Decisions.md` — Decisions 1, 2, 7.
 
 ## Goal
 
 Refactor `claude_cli_verification.py` so it returns a structured dict instead
 of printing directly. The CLI layer (Step 5) will handle all formatting.
 
+Also moves `_get_status_symbols()` to `cli/utils.py` (deferred from Step 1).
+
 ## Tests First
+
+### WHERE: `tests/cli/test_utils_status_symbols.py` (new)
+
+```python
+class TestGetStatusSymbols:
+    def test_returns_dict_with_required_keys(self) -> None:
+        ...
+    def test_windows_uses_ascii(self) -> None:
+        ...
+    def test_unix_uses_unicode(self) -> None:
+        ...
+```
 
 ### WHERE: `tests/llm/providers/claude/test_claude_cli_verification.py` (update existing or new)
 
@@ -35,9 +50,27 @@ class TestVerifyClaude:
 
 ## Implementation
 
-### WHERE: `src/mcp_coder/llm/providers/claude/claude_cli_verification.py`
+### 1. `src/mcp_coder/cli/utils.py`
+
+**WHAT:** Add `_get_status_symbols() -> dict[str, str]`
+
+**HOW:** Move the function body from `claude_cli_verification.py`. Add to `__all__`.
+
+```python
+def _get_status_symbols() -> dict[str, str]:
+    if sys.platform.startswith("win"):
+        return {"success": "[OK]", "failure": "[NO]", "warning": "[!!]"}
+    else:
+        return {"success": "✓", "failure": "✗", "warning": "⚠"}
+```
+
+**DATA:** Returns `{"success": str, "failure": str, "warning": str}`
+
+### 2. `src/mcp_coder/llm/providers/claude/claude_cli_verification.py`
 
 **WHAT:** Replace `verify_claude_cli_installation(args) -> int` with `verify_claude() -> dict`
+
+This is a **clean break rename** (Decision 7) — no alias for the old name.
 
 **SIGNATURE:**
 ```python
@@ -67,17 +100,12 @@ def verify_claude() -> dict[str, dict[str, Any]]:
 ```
 
 **HOW — Remove from this file:**
-- Delete `_get_status_symbols()` (moved to `cli/utils.py` in Step 1)
+- Delete `_get_status_symbols()` definition (moved to `cli/utils.py` above)
 - Delete all `print()` calls
 - Delete the `argparse.Namespace` parameter (no longer needed)
 - Remove `import argparse` and `import sys` (no longer needed)
 
-**HOW — Update `__init__.py` or exports:**
-- The function name changes from `verify_claude_cli_installation` to `verify_claude`.
-  Update the import in `cli/commands/verify.py` (Step 5 will rewrite verify.py fully,
-  but we keep it working in this step with a minimal shim).
-
-### WHERE: `src/mcp_coder/cli/commands/verify.py` (temporary shim)
+### 3. `src/mcp_coder/cli/commands/verify.py` (temporary shim)
 
 Keep `execute_verify(args)` working by adapting it to the new return type.
 This will be fully rewritten in Step 5, but we need tests to pass here.
@@ -85,6 +113,7 @@ This will be fully rewritten in Step 5, but we need tests to pass here.
 ```python
 def execute_verify(args: argparse.Namespace) -> int:
     from ...llm.providers.claude.claude_cli_verification import verify_claude
+    from ..utils import _get_status_symbols
     result = verify_claude()
     # Minimal output until Step 5 rewrites this
     symbols = _get_status_symbols()
@@ -98,10 +127,20 @@ def execute_verify(args: argparse.Namespace) -> int:
     return 0 if result.get("overall_ok") else 1
 ```
 
+### 4. Update all test references
+
+**Clean break (Decision 7):** Update all existing test files that reference
+`verify_claude_cli_installation` to use `verify_claude` instead. This includes:
+- `tests/cli/commands/test_verify.py`
+- `tests/cli/commands/test_verify_command.py`
+- Any other files that import or mock the old function name
+
 ## Checklist
 
+- [ ] `_get_status_symbols()` moved to `cli/utils.py` with tests
 - [ ] `verify_claude()` returns structured dict (no print calls)
-- [ ] Old `_get_status_symbols()` removed from `claude_cli_verification.py`
+- [ ] Old `_get_status_symbols()` deleted from `claude_cli_verification.py`
+- [ ] Old `verify_claude_cli_installation` name removed — all references updated
 - [ ] `execute_verify()` shim keeps CLI working
 - [ ] New unit tests for dict return values
-- [ ] Existing verify integration tests still pass
+- [ ] Existing verify tests updated and passing

@@ -1,6 +1,7 @@
 # Step 3: Add `verify_langchain()` Domain Function
 
 > **Context:** Read `pr_info/steps/summary.md` first.
+> See `pr_info/steps/Decisions.md` — Decisions 6, 8.
 
 ## Goal
 
@@ -71,6 +72,37 @@ class TestMaskApiKey:
     ...
 ```
 
+### WHERE: `tests/llm/providers/langchain/test_langchain_list_models.py` (new — coverage for existing functions)
+
+The `list_*_models()` functions already exist in `_models.py` (Decision 8).
+This test file adds coverage for them.
+
+```python
+class TestListModels:
+    """Tests for existing list_*_models() functions in _models.py."""
+
+    @patch("mcp_coder.llm.providers.langchain._models.openai")
+    def test_list_openai_models(self, ...) -> None:
+        ...
+
+    @patch("mcp_coder.llm.providers.langchain._models.genai")
+    def test_list_gemini_models(self, ...) -> None:
+        ...
+
+    @patch("mcp_coder.llm.providers.langchain._models.anthropic")
+    def test_list_anthropic_models(self, ...) -> None:
+        ...
+
+    def test_list_models_returns_list_of_strings(self, ...) -> None:
+        ...
+
+    def test_list_models_handles_api_error(self, ...) -> None:
+        ...
+
+    def test_list_models_import_error(self, ...) -> None:
+        ...  # Raises ImportError when SDK not installed
+```
+
 ## Implementation
 
 ### WHERE: `src/mcp_coder/llm/providers/langchain/verification.py` (new file)
@@ -90,7 +122,7 @@ def _check_package_installed(package_name: str) -> bool:
 3. Check langchain-core installed (importlib.util.find_spec)
 4. Check backend package installed (e.g. langchain-openai)
 5. If API key present: call ask_langchain("Reply with OK", timeout=15), measure time
-6. If check_models: call list_*_models() for the configured backend
+6. If check_models: import and call list_*_models() from _models.py for the configured backend
 7. Return result dict
 ```
 
@@ -178,6 +210,7 @@ except Exception as e:
 - [ ] API key source detection (env var name or config.toml)
 - [ ] Package checks via `importlib.util.find_spec`
 - [ ] Test prompt calls `ask_langchain()` with 15s timeout
-- [ ] `--check-models` calls existing `list_*_models()` functions
+- [ ] `--check-models` imports and calls existing `list_*_models()` from `_models.py`
+- [ ] Tests for existing `list_*_models()` functions (coverage)
 - [ ] Graceful when langchain not installed (import check, not crash)
 - [ ] All tests pass with mocked config and imports

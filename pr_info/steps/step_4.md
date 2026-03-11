@@ -1,6 +1,7 @@
 # Step 4: Add `verify_mlflow()` Domain Function
 
 > **Context:** Read `pr_info/steps/summary.md` first.
+> See `pr_info/steps/Decisions.md` — Decisions 3, 4.
 
 ## Goal
 
@@ -56,9 +57,6 @@ class TestVerifyMlflow:
     def test_mlflow_enabled_http_unreachable(self, ...) -> None:
         ...  # Mock MLflow SDK raises → connection.ok=False
 
-    def test_mlflow_enabled_http_timeout(self, ...) -> None:
-        ...  # 10s timeout scenario
-
     def test_artifact_location_writable(self, tmp_path, ...) -> None:
         ...  # Directory exists and writable → ok=True
 
@@ -93,7 +91,7 @@ __all__ = ["MLflowLogger", "is_mlflow_available", "verify_mlflow"]
 3. Load config via load_mlflow_config() → enabled entry
 4. If not enabled: return early (overall_ok=True, informational)
 5. Validate tracking_uri format, check URI-specific reachability
-6. For HTTP URIs: MLflow SDK probe with 10s timeout
+6. For HTTP URIs: MLflow SDK probe (no timeout — user can Ctrl+C)
 7. Check experiment_name exists, check artifact_location writable
 8. Return dict
 ```
@@ -146,12 +144,15 @@ def _check_tracking_uri(uri: str) -> dict:
     return {"ok": True, "value": uri}
 ```
 
-**HOW — MLflow SDK probe for HTTP URIs (10s timeout):**
+**HOW — MLflow SDK probe for HTTP URIs (no timeout — Decision 4):**
+
+No timeout is applied. This is a user-facing verify command; the user can
+Ctrl+C if the server is unreachable and the call hangs.
+
 ```python
 def _probe_mlflow_connection(uri: str, experiment_name: str) -> tuple[dict, dict]:
     """Returns (connection_entry, experiment_entry)."""
     import mlflow
-    import signal  # or threading.Timer on Windows
 
     mlflow.set_tracking_uri(uri)
     try:
@@ -168,9 +169,6 @@ def _probe_mlflow_connection(uri: str, experiment_name: str) -> tuple[dict, dict
         return conn, exp
 ```
 
-> **Timeout:** Use `threading.Timer` to interrupt the SDK call after 10 seconds
-> (cross-platform, works on Windows unlike `signal.alarm`).
-
 **HOW — Artifact location check:**
 ```python
 def _check_artifact_location(path: str | None) -> dict:
@@ -185,8 +183,12 @@ def _check_artifact_location(path: str | None) -> dict:
     return {"ok": False, "value": f"{path} (not writable)"}
 ```
 
-**HOW — `overall_ok` logic:**
+**HOW — `overall_ok` logic (Decision 3 — add code comment):**
 ```python
+# overall_ok semantics (add this comment in the code):
+# True  = no action needed (not installed, disabled, or all checks pass)
+# False = misconfigured and needs fixing (enabled but broken)
+#
 # overall_ok=True when:
 #   - mlflow not installed (informational)
 #   - mlflow installed but not enabled (informational)
@@ -202,7 +204,7 @@ def _check_artifact_location(path: str | None) -> dict:
 - [ ] Works when MLflow disabled (informational, `overall_ok=True`)
 - [ ] Validates tracking URI format
 - [ ] Checks SQLite file existence
-- [ ] Checks HTTP connectivity via MLflow SDK with 10s timeout
+- [ ] Checks HTTP connectivity via MLflow SDK (no timeout — user can Ctrl+C)
 - [ ] Checks file:// directory existence
 - [ ] Checks experiment existence
 - [ ] Checks artifact location writable
