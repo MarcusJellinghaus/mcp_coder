@@ -38,11 +38,11 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: Add `verify_langchain()` Domain Function — [step_3.md](./steps/step_3.md)
 
-- [ ] Create `verification.py` with `verify_langchain()`, `_mask_api_key()`, `_resolve_api_key()`, `_check_package_installed()`
-- [ ] Add tests for `verify_langchain()` including config, API key masking, test prompt, and package checks
-- [ ] Add tests for existing `list_*_models()` functions in `_models.py`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message
+- [x] Create `verification.py` with `verify_langchain()`, `_mask_api_key()`, `_resolve_api_key()`, `_check_package_installed()`
+- [x] Add tests for `verify_langchain()` including config, API key masking, test prompt, and package checks
+- [x] Add tests for existing `list_*_models()` functions in `_models.py`
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message
 
 ### Step 4: Add `verify_mlflow()` Domain Function — [step_4.md](./steps/step_4.md)
 

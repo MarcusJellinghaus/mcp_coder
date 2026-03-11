@@ -2,6 +2,8 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from mcp_coder.llm.providers.langchain._models import (
     list_anthropic_models,
     list_gemini_models,
@@ -135,3 +137,74 @@ class TestListAnthropicModels:
             MockAnthropic.return_value.models.list.return_value = []
             result = list_anthropic_models(api_key=None)
         assert result == []
+
+
+class TestListModelsCommon:
+    """Cross-cutting tests for all list_*_models() functions."""
+
+    def _make_model(self, model_id: str) -> MagicMock:
+        m = MagicMock()
+        m.id = model_id
+        m.name = f"models/{model_id}"
+        m.supported_actions = ["generateContent"]
+        return m
+
+    def test_list_openai_models_returns_list_of_strings(self) -> None:
+        """list_openai_models returns a list of strings."""
+        models = [self._make_model("gpt-4o")]
+        with patch("openai.OpenAI") as MockOpenAI:
+            MockOpenAI.return_value.models.list.return_value = models
+            result = list_openai_models(api_key="test")
+        assert isinstance(result, list)
+        assert all(isinstance(m, str) for m in result)
+
+    def test_list_gemini_models_returns_list_of_strings(self) -> None:
+        """list_gemini_models returns a list of strings."""
+        models = [self._make_model("gemini-2.0-flash")]
+        with patch("google.genai.Client") as MockClient:
+            MockClient.return_value.models.list.return_value = models
+            result = list_gemini_models(api_key="test")
+        assert isinstance(result, list)
+        assert all(isinstance(m, str) for m in result)
+
+    def test_list_anthropic_models_returns_list_of_strings(self) -> None:
+        """list_anthropic_models returns a list of strings."""
+        models = [self._make_model("claude-opus-4-6")]
+        with patch("anthropic.Anthropic") as MockAnthropic:
+            MockAnthropic.return_value.models.list.return_value = models
+            result = list_anthropic_models(api_key="test")
+        assert isinstance(result, list)
+        assert all(isinstance(m, str) for m in result)
+
+    def test_list_openai_models_handles_api_error(self) -> None:
+        """list_openai_models propagates API errors."""
+        with patch("openai.OpenAI") as MockOpenAI:
+            MockOpenAI.return_value.models.list.side_effect = Exception("API error")
+            with pytest.raises(Exception, match="API error"):
+                list_openai_models(api_key="test")
+
+    def test_list_gemini_models_handles_api_error(self) -> None:
+        """list_gemini_models propagates API errors."""
+        with patch("google.genai.Client") as MockClient:
+            MockClient.return_value.models.list.side_effect = Exception("API error")
+            with pytest.raises(Exception, match="API error"):
+                list_gemini_models(api_key="test")
+
+    def test_list_anthropic_models_handles_api_error(self) -> None:
+        """list_anthropic_models propagates API errors."""
+        with patch("anthropic.Anthropic") as MockAnthropic:
+            MockAnthropic.return_value.models.list.side_effect = Exception("API error")
+            with pytest.raises(Exception, match="API error"):
+                list_anthropic_models(api_key="test")
+
+    def test_list_openai_models_import_error(self) -> None:
+        """list_openai_models raises ImportError when SDK not installed."""
+        with patch.dict("sys.modules", {"openai": None}):
+            with pytest.raises(ImportError):
+                list_openai_models(api_key="test")
+
+    def test_list_anthropic_models_import_error(self) -> None:
+        """list_anthropic_models raises ImportError when SDK not installed."""
+        with patch.dict("sys.modules", {"anthropic": None}):
+            with pytest.raises(ImportError):
+                list_anthropic_models(api_key="test")
