@@ -467,20 +467,26 @@ def _build_ci_error_details(
     logger = logging.getLogger(__name__)
     run_data = status_result["run"]
     jobs_data = status_result.get("jobs", [])
-    run_id = run_data.get("id")
     # Extract GitHub Actions run URL for user navigation
     run_url = run_data.get("url", "")
 
-    # Get logs for the run
-    logs: Dict[str, str] = {}
-    if run_id:
-        try:
-            logs = ci_manager.get_run_logs(run_id)
-        except Exception as e:
-            logger.warning(f"Failed to get CI logs: {e}")
-
     # Get all failed jobs
     failed_jobs = [job for job in jobs_data if job.get("conclusion") == "failure"]
+
+    # Collect distinct run_ids from failed jobs, preserving order
+    failed_run_ids: List[int] = list(
+        dict.fromkeys(j["run_id"] for j in failed_jobs if j.get("run_id"))
+    )
+
+    # Fetch logs for up to 3 failed run_ids
+    logs: Dict[str, str] = {}
+    fetched_run_ids = failed_run_ids[:3]
+    for rid in fetched_run_ids:
+        try:
+            run_logs = ci_manager.get_run_logs(rid)
+            logs.update(run_logs)
+        except Exception as e:
+            logger.warning(f"Failed to get logs for run {rid}: {e}")
 
     if not failed_jobs:
         logger.info("No failed jobs found in CI results")
@@ -491,6 +497,13 @@ def _build_ci_error_details(
     lines_used = 0
     jobs_shown: List[str] = []
     jobs_truncated: List[str] = []
+
+    # Prepend jobs_fetch_warning if present (Decision 7)
+    jobs_fetch_warning = run_data.get("jobs_fetch_warning")
+    if jobs_fetch_warning:
+        output_lines.append(f"WARNING: {jobs_fetch_warning}")
+        output_lines.append("")
+        lines_used += 2
 
     # Section 1: Summary header (will be updated at end)
     summary_placeholder_idx = len(output_lines)

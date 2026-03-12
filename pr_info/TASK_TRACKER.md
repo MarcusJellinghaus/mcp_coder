@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message
 
 ### Step 3 — Update `branch_status.py` — multi-run log fetching (TDD) ([step_3.md](./steps/step_3.md))
-- [ ] Update `_build_ci_error_details()` test fixtures and add multi-run log fetching tests, implement per-`run_id` log fetching (up to 3 runs) and jobs_fetch_warning display
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message
+- [x] Update `_build_ci_error_details()` test fixtures and add multi-run log fetching tests, implement per-`run_id` log fetching (up to 3 runs) and jobs_fetch_warning display
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message
 
 ### Step 4 — Update polling logic in `core.py` and `check_branch_status.py` ([step_4.md](./steps/step_4.md))
 - [ ] Update polling logic: `run["id"]` → `run["run_ids"]` set comparison in `_wait_for_new_ci_run()`, `check_and_fix_ci()`, `_run_ci_analysis_and_fix()`, `_poll_for_ci_completion()`, and `_run_auto_fixes()`

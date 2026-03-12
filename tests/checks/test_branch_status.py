@@ -610,10 +610,11 @@ def test_collect_ci_status_with_truncation() -> None:
         mock_ci_manager.return_value = mock_instance
         # Return dict structure matching actual API with jobs data
         mock_instance.get_latest_ci_status.return_value = {
-            "run": {"id": 123, "conclusion": "failure", "status": "completed"},
+            "run": {"run_ids": [123], "conclusion": "failure", "status": "completed"},
             "jobs": [
                 {
                     "name": "test-job",
+                    "run_id": 123,
                     "conclusion": "failure",
                     "steps": [{"name": "Run tests", "conclusion": "failure"}],
                 }
@@ -899,10 +900,11 @@ def test_generate_recommendations_logic() -> None:
 def test_build_ci_error_details_single_failure() -> None:
     """Test _build_ci_error_details with single failed job."""
     status_result = {
-        "run": {"id": 123},
+        "run": {"run_ids": [123]},
         "jobs": [
             {
                 "name": "test-job",
+                "run_id": 123,
                 "conclusion": "failure",
                 "steps": [{"name": "Run tests", "conclusion": "failure"}],
             }
@@ -927,20 +929,23 @@ def test_build_ci_error_details_single_failure() -> None:
 def test_build_ci_error_details_multiple_failures() -> None:
     """Test _build_ci_error_details shows multiple failed jobs that fit in limit."""
     status_result = {
-        "run": {"id": 123},
+        "run": {"run_ids": [123]},
         "jobs": [
             {
                 "name": "test-job",
+                "run_id": 123,
                 "conclusion": "failure",
                 "steps": [{"name": "Run tests", "conclusion": "failure"}],
             },
             {
                 "name": "lint-job",
+                "run_id": 123,
                 "conclusion": "failure",
                 "steps": [{"name": "Run lint", "conclusion": "failure"}],
             },
             {
                 "name": "build-job",
+                "run_id": 123,
                 "conclusion": "failure",
                 "steps": [{"name": "Build", "conclusion": "failure"}],
             },
@@ -971,10 +976,14 @@ def test_build_ci_error_details_multiple_failures() -> None:
 def test_build_ci_error_details_includes_github_urls() -> None:
     """Test _build_ci_error_details includes GitHub Actions URLs."""
     status_result = {
-        "run": {"id": 12345, "url": "https://github.com/user/repo/actions/runs/12345"},
+        "run": {
+            "run_ids": [12345],
+            "url": "https://github.com/user/repo/actions/runs/12345",
+        },
         "jobs": [
             {
                 "id": 67890,
+                "run_id": 12345,
                 "name": "file-size",
                 "conclusion": "failure",
                 "steps": [{"name": "Run file-size", "conclusion": "failure"}],
@@ -1005,10 +1014,14 @@ def test_build_ci_error_details_includes_github_urls() -> None:
 def test_build_ci_error_details_logs_not_available_with_url() -> None:
     """Test _build_ci_error_details shows GitHub URL when logs unavailable."""
     status_result = {
-        "run": {"id": 12345, "url": "https://github.com/user/repo/actions/runs/12345"},
+        "run": {
+            "run_ids": [12345],
+            "url": "https://github.com/user/repo/actions/runs/12345",
+        },
         "jobs": [
             {
                 "id": 67890,
+                "run_id": 12345,
                 "name": "file-size",
                 "conclusion": "failure",
                 "steps": [{"name": "Run file-size", "conclusion": "failure"}],
@@ -1037,10 +1050,14 @@ def test_build_ci_error_details_logs_not_available_with_url() -> None:
 def test_build_ci_error_details_fallback_to_old_format() -> None:
     """Test _build_ci_error_details falls back to old log format."""
     status_result = {
-        "run": {"id": 12345, "url": "https://github.com/user/repo/actions/runs/12345"},
+        "run": {
+            "run_ids": [12345],
+            "url": "https://github.com/user/repo/actions/runs/12345",
+        },
         "jobs": [
             {
                 "id": 67890,
+                "run_id": 12345,
                 "name": "file-size",
                 "conclusion": "failure",
                 "steps": [
@@ -1068,10 +1085,11 @@ def test_build_ci_error_details_fallback_to_old_format() -> None:
 def test_build_ci_error_details_no_failed_jobs() -> None:
     """Test _build_ci_error_details with no failed jobs returns None."""
     status_result = {
-        "run": {"id": 123},
+        "run": {"run_ids": [123]},
         "jobs": [
             {
                 "name": "test-job",
+                "run_id": 123,
                 "conclusion": "success",
                 "steps": [{"name": "Run tests", "conclusion": "success"}],
             }
@@ -1085,6 +1103,125 @@ def test_build_ci_error_details_no_failed_jobs() -> None:
         result = _build_ci_error_details(mock_instance, status_result, 300)
 
         assert result is None
+
+
+def test_build_ci_error_details_fetches_logs_from_multiple_runs() -> None:
+    """Logs should be fetched per distinct run_id among failed jobs (up to 3)."""
+    status_result = {
+        "run": {
+            "run_ids": [100, 200],
+            "url": "https://github.com/user/repo/actions/runs/100",
+        },
+        "jobs": [
+            {
+                "id": 1001,
+                "run_id": 100,
+                "name": "test-job",
+                "conclusion": "failure",
+                "steps": [{"name": "Run tests", "conclusion": "failure"}],
+            },
+            {
+                "id": 2001,
+                "run_id": 200,
+                "name": "lint-job",
+                "conclusion": "failure",
+                "steps": [{"name": "Run lint", "conclusion": "failure"}],
+            },
+        ],
+    }
+
+    mock_instance = MagicMock()
+    mock_instance.get_run_logs.side_effect = [
+        {"2_test-job.txt": "Test error from run 100"},
+        {"3_lint-job.txt": "Lint error from run 200"},
+    ]
+
+    result = _build_ci_error_details(mock_instance, status_result, 300)
+
+    assert result is not None
+    # get_run_logs called once per distinct run_id
+    assert mock_instance.get_run_logs.call_count == 2
+    mock_instance.get_run_logs.assert_any_call(100)
+    mock_instance.get_run_logs.assert_any_call(200)
+    # Output contains logs from both runs
+    assert "Test error from run 100" in result
+    assert "Lint error from run 200" in result
+    assert "test-job" in result
+    assert "lint-job" in result
+
+
+def test_build_ci_error_details_caps_at_3_failed_runs() -> None:
+    """Only fetch logs from first 3 distinct failed run_ids."""
+    status_result = {
+        "run": {"run_ids": [100, 200, 300, 400]},
+        "jobs": [
+            {
+                "name": "job-a",
+                "run_id": 100,
+                "conclusion": "failure",
+                "steps": [{"name": "Step A", "conclusion": "failure"}],
+            },
+            {
+                "name": "job-b",
+                "run_id": 200,
+                "conclusion": "failure",
+                "steps": [{"name": "Step B", "conclusion": "failure"}],
+            },
+            {
+                "name": "job-c",
+                "run_id": 300,
+                "conclusion": "failure",
+                "steps": [{"name": "Step C", "conclusion": "failure"}],
+            },
+            {
+                "name": "job-d",
+                "run_id": 400,
+                "conclusion": "failure",
+                "steps": [{"name": "Step D", "conclusion": "failure"}],
+            },
+        ],
+    }
+
+    mock_instance = MagicMock()
+    mock_instance.get_run_logs.side_effect = [
+        {"2_job-a.txt": "Error A"},
+        {"3_job-b.txt": "Error B"},
+        {"4_job-c.txt": "Error C"},
+    ]
+
+    result = _build_ci_error_details(mock_instance, status_result, 300)
+
+    assert result is not None
+    # Only 3 calls, not 4
+    assert mock_instance.get_run_logs.call_count == 3
+    # 4th run's job should be listed by name only (in truncated section or main section)
+    assert "job-d" in result
+
+
+def test_build_ci_error_details_shows_jobs_fetch_warning() -> None:
+    """If run_data has jobs_fetch_warning, it should appear in output."""
+    status_result = {
+        "run": {
+            "run_ids": [123],
+            "jobs_fetch_warning": "Could not fetch jobs for run(s): [456]",
+        },
+        "jobs": [
+            {
+                "name": "test-job",
+                "run_id": 123,
+                "conclusion": "failure",
+                "steps": [{"name": "Run tests", "conclusion": "failure"}],
+            }
+        ],
+    }
+
+    mock_instance = MagicMock()
+    mock_instance.get_run_logs.return_value = {"2_test-job.txt": "Error details"}
+
+    result = _build_ci_error_details(mock_instance, status_result, 300)
+
+    assert result is not None
+    assert "Could not fetch jobs for run(s): [456]" in result
 
 
 def test_truncate_ci_details_custom_head_lines() -> None:
