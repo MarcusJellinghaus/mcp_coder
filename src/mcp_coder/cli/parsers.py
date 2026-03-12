@@ -613,6 +613,12 @@ def add_verify_parser(subparsers: Any) -> None:
         action="store_true",
         help="List available models for the configured LangChain backend (requires network)",
     )
+    verify_parser.add_argument(
+        "--mcp-config",
+        type=str,
+        default=None,
+        help="Path to .mcp.json for MCP agent smoke test",
+    )
 
 
 def add_git_tool_parsers(subparsers: Any) -> None:

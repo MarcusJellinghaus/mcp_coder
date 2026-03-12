@@ -166,7 +166,7 @@ class TestVerifyEndToEnd:
         exit_code = main()
 
         assert exit_code == 0
-        mock_lc.assert_called_once_with(check_models=True)
+        mock_lc.assert_called_once_with(check_models=True, mcp_config_path=None)
 
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")

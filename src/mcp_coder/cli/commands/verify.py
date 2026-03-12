@@ -13,7 +13,7 @@ from ...llm.mlflow_logger import verify_mlflow
 from ...llm.providers.claude.claude_cli_verification import verify_claude
 from ...llm.providers.langchain.verification import verify_langchain
 from ...utils.user_config import get_config_values
-from ..utils import _get_status_symbols
+from ..utils import _get_status_symbols, resolve_mcp_config_path
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +32,10 @@ _LABEL_MAP: dict[str, str] = {
     "backend_package": "Backend package",
     "test_prompt": "Test prompt",
     "available_models": "Available models",
+    # MCP adapter section
+    "mcp_adapters": "MCP adapters",
+    "langgraph": "LangGraph",
+    "mcp_agent_test": "MCP agent test",
     # MLflow section
     "installed": "MLflow installed",
     "enabled": "MLflow enabled",
@@ -164,7 +168,12 @@ def execute_verify(args: argparse.Namespace) -> int:
     )
     if active_provider == "langchain":
         check_models = getattr(args, "check_models", False)
-        langchain_result = verify_langchain(check_models=check_models)
+        mcp_config_raw = getattr(args, "mcp_config", None)
+        mcp_config_resolved = resolve_mcp_config_path(mcp_config_raw)
+        langchain_result = verify_langchain(
+            check_models=check_models,
+            mcp_config_path=mcp_config_resolved,
+        )
         print(_format_section("LLM PROVIDER DETAILS", langchain_result, symbols))
     else:
         print("  (uses Claude CLI — see Basic Verification above)")

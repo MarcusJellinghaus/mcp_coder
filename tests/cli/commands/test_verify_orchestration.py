@@ -17,7 +17,7 @@ from mcp_coder.cli.commands.verify import (  # pylint: disable=no-name-in-module
 
 def _make_args(**kwargs: Any) -> argparse.Namespace:
     """Create a Namespace with defaults for execute_verify."""
-    defaults = {"check_models": False}
+    defaults: dict[str, Any] = {"check_models": False, "mcp_config": None}
     defaults.update(kwargs)
     return argparse.Namespace(**defaults)
 
@@ -241,7 +241,7 @@ class TestVerifyOrchestration:
 
         execute_verify(_make_args(check_models=True))
 
-        mock_lc.assert_called_once_with(check_models=True)
+        mock_lc.assert_called_once_with(check_models=True, mcp_config_path=None)
 
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
