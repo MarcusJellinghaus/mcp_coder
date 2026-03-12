@@ -133,7 +133,7 @@ class TestCIResultsManagerFoundation:
         # Create a test instance to verify structure
         test_data: CIStatusData = {
             "run": {
-                "id": 123,
+                "run_ids": [123],
                 "status": "completed",
                 "conclusion": "failure",
                 "workflow_name": "CI",
@@ -147,6 +147,7 @@ class TestCIResultsManagerFoundation:
             "jobs": [
                 {
                     "id": 456,
+                    "run_id": 123,
                     "name": "test",
                     "status": "completed",
                     "conclusion": "failure",
@@ -158,7 +159,7 @@ class TestCIResultsManagerFoundation:
         }
 
         # Verify the structure is accessible
-        assert test_data["run"]["id"] == 123
+        assert test_data["run"]["run_ids"] == [123]
         assert test_data["jobs"][0]["name"] == "test"
         assert len(test_data["jobs"]) == 1
 

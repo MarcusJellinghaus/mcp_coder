@@ -42,9 +42,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message
 
 ### Step 5 — Final validation — all tests pass, type checks clean ([step_5.md](./steps/step_5.md))
-- [ ] Run full test suite across all touched files, fix any remaining test fixtures referencing `run["id"]` or missing `run_id` on `JobData`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message
+- [x] Run full test suite across all touched files, fix any remaining test fixtures referencing `run["id"]` or missing `run_id` on `JobData`
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message
 
 ## Pull Request
 - [ ] Review all changes for consistency and completeness across all 4 source files and 2 test files

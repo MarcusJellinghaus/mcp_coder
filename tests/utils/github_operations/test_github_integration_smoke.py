@@ -282,7 +282,7 @@ class TestCIResultsManagerSmoke:
         status = ci_manager.get_latest_ci_status(default_branch)
 
         if status["run"]:  # If there are CI runs
-            run_id = status["run"]["id"]
+            run_id = status["run"]["run_ids"][0]
 
             # Test log retrieval (returns all logs - Decision 15)
             logs = ci_manager.get_run_logs(run_id)
