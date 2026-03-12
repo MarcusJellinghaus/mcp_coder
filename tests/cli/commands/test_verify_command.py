@@ -7,12 +7,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.cli.commands.verify import execute_verify
+from mcp_coder.cli.commands.verify import _LABEL_MAP, execute_verify
 
 
 def _make_args(**kwargs: Any) -> argparse.Namespace:
     """Create a Namespace with defaults for execute_verify."""
-    defaults = {"check_models": False}
+    defaults: dict[str, Any] = {"check_models": False, "mcp_config": None}
     defaults.update(kwargs)
     return argparse.Namespace(**defaults)
 
@@ -103,3 +103,13 @@ class TestExecuteVerify:
         assert "=== BASIC VERIFICATION ===" in output
         # Check that status entries are printed (symbol is platform-dependent)
         assert "[OK]" in output or "\u2713" in output
+
+
+class TestVerifyLabelMap:
+    """Tests for label map coverage."""
+
+    def test_mcp_adapter_labels_in_map(self) -> None:
+        """Label map contains entries for MCP adapter checks."""
+        assert "mcp_adapters" in _LABEL_MAP
+        assert "langgraph" in _LABEL_MAP
+        assert "mcp_agent_test" in _LABEL_MAP

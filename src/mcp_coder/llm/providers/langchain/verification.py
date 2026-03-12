@@ -63,7 +63,34 @@ def _check_package_installed(package_name: str) -> bool:
         return False
 
 
-def verify_langchain(check_models: bool = False) -> dict[str, Any]:
+def _check_mcp_adapter_packages() -> dict[str, dict[str, Any]]:
+    """Check if langchain-mcp-adapters and langgraph are importable.
+
+    Returns dict with 'mcp_adapters' and 'langgraph' entries.
+    """
+    mcp_ok = _check_package_installed("langchain_mcp_adapters")
+    lg_ok = _check_package_installed("langgraph")
+    return {
+        "mcp_adapters": {
+            "ok": mcp_ok,
+            "value": (
+                "langchain-mcp-adapters installed"
+                if mcp_ok
+                else "langchain-mcp-adapters not installed"
+            ),
+        },
+        "langgraph": {
+            "ok": lg_ok,
+            "value": "langgraph installed" if lg_ok else "langgraph not installed",
+        },
+    }
+
+
+def verify_langchain(
+    check_models: bool = False,
+    mcp_config_path: str | None = None,
+    env_vars: dict[str, str] | None = None,
+) -> dict[str, Any]:
     """Verify LangChain provider configuration and connectivity.
 
     Returns a structured dict with verification results (no printing).
@@ -71,10 +98,13 @@ def verify_langchain(check_models: bool = False) -> dict[str, Any]:
 
     Args:
         check_models: If True, also list available models for the backend.
+        mcp_config_path: Path to .mcp.json for MCP agent smoke test.
+        env_vars: Optional environment variables for var substitution.
 
     Returns:
         Dict with keys: backend, model, api_key, langchain_core,
-        backend_package, test_prompt, overall_ok.
+        backend_package, mcp_adapters, langgraph, test_prompt, overall_ok.
+        If mcp_config_path is provided, also includes mcp_agent_test.
         If check_models=True, also includes available_models.
     """
     config = _load_langchain_config()
@@ -131,6 +161,11 @@ def verify_langchain(check_models: bool = False) -> dict[str, Any]:
             "value": "no backend configured",
         }
 
+    # MCP adapter packages check (always run)
+    mcp_pkg_results = _check_mcp_adapter_packages()
+    result["mcp_adapters"] = mcp_pkg_results["mcp_adapters"]
+    result["langgraph"] = mcp_pkg_results["langgraph"]
+
     # Test prompt
     if api_key and backend:
         start = time.monotonic()
@@ -161,13 +196,55 @@ def verify_langchain(check_models: bool = False) -> dict[str, Any]:
             backend, api_key, config.get("endpoint")
         )
 
+    # End-to-end MCP agent test (only when mcp_config_path provided)
+    if mcp_config_path:
+        try:
+            from ...interface import ask_llm  # lazy to avoid circular import
+
+            ask_llm(
+                "Reply with OK",
+                provider="langchain",
+                mcp_config=mcp_config_path,
+                timeout=30,
+            )
+            result["mcp_agent_test"] = {"ok": True, "value": "agent responded"}
+        except FileNotFoundError as exc:
+            result["mcp_agent_test"] = {
+                "ok": False,
+                "value": None,
+                "error": f"MCP config not found: {exc}",
+            }
+        except ImportError as exc:
+            result["mcp_agent_test"] = {
+                "ok": False,
+                "value": None,
+                "error": f"Missing dependency: {exc}",
+            }
+        except ConnectionError as exc:
+            result["mcp_agent_test"] = {
+                "ok": False,
+                "value": None,
+                "error": f"MCP server failed to start: {exc}",
+            }
+        except Exception as exc:  # pylint: disable=broad-except
+            result["mcp_agent_test"] = {
+                "ok": False,
+                "value": None,
+                "error": f"Agent test failed: {type(exc).__name__}: {exc}",
+            }
+
     # overall_ok: True when backend configured AND backend package installed AND
+    # MCP adapter packages installed AND
     # (test_prompt succeeded OR test_prompt was skipped due to no API key)
     test_prompt_ok = (
         result["test_prompt"]["ok"] is True or result["test_prompt"]["ok"] is None
     )
     result["overall_ok"] = bool(
-        backend and result["backend_package"]["ok"] and test_prompt_ok
+        backend
+        and result["backend_package"]["ok"]
+        and result["mcp_adapters"]["ok"]
+        and result["langgraph"]["ok"]
+        and test_prompt_ok
     )
 
     return result

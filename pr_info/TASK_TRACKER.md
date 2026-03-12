@@ -48,9 +48,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 4
 
 ### Step 5 — Verification Extensions ([step_5.md](./steps/step_5.md))
-- [ ] Implement Step 5: add `_check_mcp_adapter_packages()` to verification.py, extend `verify_langchain()` with MCP checks and end-to-end agent test, add `--mcp-config` to parsers.py, update label map in verify.py, write tests
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 5
+- [x] Implement Step 5: add `_check_mcp_adapter_packages()` to verification.py, extend `verify_langchain()` with MCP checks and end-to-end agent test, add `--mcp-config` to parsers.py, update label map in verify.py, write tests
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 5
 
 ## Pull Request
 - [ ] Review all changes across steps for consistency and completeness
