@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1 — Dependencies + Agent Utilities ([step_1.md](./steps/step_1.md))
-- [ ] Implement Step 1: add dependencies to pyproject.toml, create agent.py with `_resolve_env_vars` and `_load_mcp_server_config`, update conftest.py mocks, write tests
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 1
+- [x] Implement Step 1: add dependencies to pyproject.toml, create agent.py with `_resolve_env_vars` and `_load_mcp_server_config`, update conftest.py mocks, write tests
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 1
 
 ### Step 2 — Agent Execution Core ([step_2.md](./steps/step_2.md))
 - [ ] Implement Step 2: add `run_agent()` async function to agent.py with MultiServerMCPClient + create_react_agent, write tests
