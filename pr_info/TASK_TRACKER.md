@@ -43,9 +43,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 3b
 
 ### Step 4 — Update interface.py Routing ([step_4.md](./steps/step_4.md))
-- [ ] Implement Step 4: pass mcp_config, execution_dir, env_vars through to `ask_langchain()` in `prompt_llm()`, write tests
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 4
+- [x] Implement Step 4: pass mcp_config, execution_dir, env_vars through to `ask_langchain()` in `prompt_llm()`, write tests
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 4
 
 ### Step 5 — Verification Extensions ([step_5.md](./steps/step_5.md))
 - [ ] Implement Step 5: add `_check_mcp_adapter_packages()` to verification.py, extend `verify_langchain()` with MCP checks and end-to-end agent test, add `--mcp-config` to parsers.py, update label map in verify.py, write tests

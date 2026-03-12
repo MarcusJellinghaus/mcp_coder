@@ -188,6 +188,9 @@ def prompt_llm(  # pylint: disable=too-many-positional-arguments
             question,
             session_id=session_id,
             timeout=timeout,
+            mcp_config=mcp_config,
+            execution_dir=execution_dir,
+            env_vars=env_vars,
         )
 
     # Unsupported provider check — also before the try block
