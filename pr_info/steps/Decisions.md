@@ -11,4 +11,10 @@ Decisions made during plan review discussion.
 | 5 | Async strategy in Step 5 smoke tests | Dropped from plan — implementation detail, not plan-level concern. | |
 | 6 | `.mcp.json` discovery + verify DRY | Verify calls `ask_llm()` with `mcp_config` for end-to-end testing (same code path as real flow). Reuse `resolve_mcp_config_path()` and `resolve_execution_dir()` from `cli/utils.py` everywhere. Remove `_smoke_test_mcp_server()` and `_verify_mcp_connectivity()` from Step 5. | DRY — verify must follow exactly the same logic as prompt to avoid misleading results. |
 | 7 | MLflow logging in Step 3 | Split into a separate sub-step within Step 3 — implement agent routing first, then add MLflow logging as a follow-up commit. | Keeps the largest step manageable. |
-| 8 | Tool-error recovery test | Skip — LangGraph handles this internally, not our code to test. | |
+| 8 | Tool-error recovery test | Skip — LangGraph handles this internally, not our code to test. |
+| 9 | `_create_chat_model()` — backend refactor | Refactor existing backend modules to extract model creation. Update summary.md to allow backend changes. | Enables DRY shared helper properly; trivial model constructors make the refactor low-risk. |
+| 10 | Agent history deserialization | Extend `_to_lc_messages()` in `_utils.py` to handle `ToolMessage` and `AIMessage` with `tool_calls`. Single deserialization path, backward compatible. | Avoids silent data loss when reloading agent sessions. |
+| 11 | Drop mode marker | Remove Decision 2's mode marker (`"mode": "agent"/"text"`). Extended `_to_lc_messages()` handles all message types — no marker needed. | Simplifies storage; one deserialization path for both modes. |
+| 12 | `pytest-asyncio` config | Add `asyncio_mode = "auto"` to `[tool.pytest.ini_options]` in pyproject.toml, in Step 1. | Step 2 uses `@pytest.mark.asyncio` — needs this config to collect async tests. |
+| 13 | Verify CLI flags | Just `--mcp-config <path>`. Package checks always run for langchain. Smoke test runs only when path provided. Add `cli/parsers.py` to Step 5 file list. | One flag, simple. No flag = packages only. |
+| 14 | Conftest sub-module mocking | Explicitly mock `langchain_mcp_adapters.client` and `langgraph.prebuilt` sub-modules in Step 1's conftest changes. | `agent.py` imports from sub-modules; top-level mocks alone are insufficient. | |

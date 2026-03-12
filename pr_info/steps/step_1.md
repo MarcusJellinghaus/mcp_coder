@@ -54,6 +54,13 @@ module = ["langgraph", "langgraph.*"]
 ignore_missing_imports = true
 ```
 
+### pyproject.toml pytest config (Decision 12)
+
+Add to `[tool.pytest.ini_options]`:
+```toml
+asyncio_mode = "auto"
+```
+
 ### agent.py — constants and utility functions
 
 ```python
@@ -73,7 +80,7 @@ def _load_mcp_server_config(
 
 ### conftest.py changes
 
-Add `langchain_mcp_adapters` and `langgraph` to the mock injection block.
+Add `langchain_mcp_adapters`, `langchain_mcp_adapters.client`, `langgraph`, and `langgraph.prebuilt` to the mock injection block (Decision 14 — sub-modules must be explicitly mocked).
 
 ## HOW
 
