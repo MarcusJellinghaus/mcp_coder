@@ -34,8 +34,9 @@ def test_jobs_merged_across_workflows(self, mock_repo, ci_manager) -> None:
 def test_jobs_carry_run_id(self, mock_repo, ci_manager) -> None:
     """Each job's run_id should match its parent workflow run."""
 
-def test_jobs_call_failure_aborts_entirely(self, mock_repo, ci_manager) -> None:
-    """If .jobs() raises on any run, decorator returns empty default."""
+def test_jobs_call_failure_partial_results(self, mock_repo, ci_manager) -> None:
+    """If .jobs() raises on one run, return partial results from other runs + warning."""
+    # Decision 7: try/except per-run .jobs(), skip failures, return partial data
 ```
 
 Each test sets up multiple mock runs with the same `head_sha`, each returning different jobs from `.jobs()`.
@@ -57,11 +58,16 @@ same_sha_runs = filter_runs_by_head_sha(all_runs)
 # Aggregate conclusion across all runs
 agg_conclusion, agg_status = aggregate_conclusion(same_sha_runs)
 
-# Fetch and merge jobs from all runs (inline, ~5 lines)
+# Fetch and merge jobs from all runs (Decision 7: partial results on failure)
 all_jobs = []
+failed_to_fetch_runs: List[int] = []
 for run in same_sha_runs:
-    for job in run.jobs():
-        all_jobs.append(JobData with run_id=run.id, ...)
+    try:
+        for job in run.jobs():
+            all_jobs.append(JobData with run_id=run.id, ...)
+    except Exception as e:
+        logger.warning(f"Failed to fetch jobs for run {run.id}: {e}")
+        failed_to_fetch_runs.append(run.id)
 
 # Build aggregate run_data dict
 run_data = {
@@ -73,10 +79,17 @@ run_data = {
     ... other fields from first_run ...
 }
 
+# If any runs failed to fetch jobs, add warning to run_data (Decision 7)
+if failed_to_fetch_runs:
+    run_data["jobs_fetch_warning"] = f"Could not fetch jobs for run(s): {failed_to_fetch_runs}"
+
 return CIStatusData(run=run_data, jobs=all_jobs)
 ```
 
-**Key detail:** The `run` dict no longer has `"id"` (int). It has `"run_ids"` (List[int]). The `"url"` field uses the first run's URL. `"workflow_name"` uses the first run's name (display-only).
+**Key details:**
+- The `run` dict now conforms to `RunData` TypedDict (Decision 4). No longer has `"id"` (int) — has `"run_ids"` (List[int]).
+- The `"url"` field uses the first run's URL. `"workflow_name"` uses the first run's name (display-only).
+- On `.jobs()` failure for any run: log warning, skip that run's jobs, continue (Decision 7).
 
 ## HOW — Integration
 - Uses `filter_runs_by_head_sha()` and `aggregate_conclusion()` from step 1

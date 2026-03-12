@@ -25,13 +25,31 @@ def test_all_success_returns_success() -> None
 def test_one_failure_among_successes_returns_failure() -> None
 def test_no_failures_one_in_progress_returns_pending() -> None
 def test_cancelled_treated_as_failure() -> None
+def test_timed_out_treated_as_failure() -> None  # Decision 6
 ```
 
-Each test calls the pure function directly with plain dicts (no mocks needed).
+Each test calls the pure function directly with `SimpleNamespace` objects (Decision 8) for attribute access (e.g. `SimpleNamespace(head_sha="abc", conclusion="success", status="completed")`).
 
 ## WHAT — Source changes
 
-### 1. Update `JobData` TypedDict
+### 1. Add `RunData` TypedDict (Decision 4)
+New TypedDict for the `run` dict in `CIStatusData`:
+```python
+class RunData(TypedDict):
+    run_ids: List[int]
+    status: str
+    conclusion: Optional[str]
+    workflow_name: str
+    event: str
+    workflow_path: str
+    branch: str
+    commit_sha: str
+    created_at: str
+    url: str
+    jobs_fetch_warning: NotRequired[str]  # Decision 9: present when .jobs() fails for a run
+```
+
+### 2. Update `JobData` TypedDict
 Add one field:
 ```python
 class JobData(TypedDict):
@@ -41,7 +59,14 @@ class JobData(TypedDict):
     # ... rest unchanged
 ```
 
-### 2. Add `filter_runs_by_head_sha` (module-level function)
+### 3. Update `CIStatusData` TypedDict
+```python
+class CIStatusData(TypedDict):
+    run: RunData  # was Dict[str, Any]
+    jobs: List[JobData]
+```
+
+### 4. Add `filter_runs_by_head_sha` (module-level function)
 ```python
 def filter_runs_by_head_sha(
     runs: List[Any], max_runs: int = 25
@@ -55,7 +80,7 @@ filtered = [r for r in runs if r.head_sha == target_sha]
 return filtered[:max_runs]
 ```
 
-### 3. Add `aggregate_conclusion` (module-level function)
+### 5. Add `aggregate_conclusion` (module-level function)
 ```python
 def aggregate_conclusion(
     runs: List[Any],
@@ -67,7 +92,7 @@ def aggregate_conclusion(
 if not runs: return (None, "not_configured")
 conclusions = [r.conclusion for r in runs]
 statuses = [r.status for r in runs]
-if any(c == "failure" or c == "cancelled" for c in conclusions):
+if any(c in ("failure", "cancelled", "timed_out") for c in conclusions):  # Decision 6
     return ("failure", "completed")
 if any(s in ("in_progress", "queued", "pending") for s in statuses):
     return (None, "in_progress")
@@ -76,8 +101,8 @@ if all(c == "success" for c in conclusions):
 return (None, "in_progress")  # defensive fallback
 ```
 
-### 4. Update `__all__` exports
-Add `filter_runs_by_head_sha` and `aggregate_conclusion`.
+### 6. Update `__all__` exports
+Add `RunData`, `filter_runs_by_head_sha` and `aggregate_conclusion`.
 
 ## HOW — Integration
 - Both functions are pure (no API calls, no class methods)
@@ -95,6 +120,8 @@ Read pr_info/steps/summary.md for context, then implement Step 1 from pr_info/st
 Write tests FIRST in tests/utils/github_operations/test_ci_results_manager_status.py,
 then implement the source changes in src/mcp_coder/utils/github_operations/ci_results_manager.py.
 
+Add `RunData` TypedDict (Decision 4). Update `CIStatusData` to use it.
 Add `run_id: int` to `JobData`. Add `filter_runs_by_head_sha()` and `aggregate_conclusion()`
-as module-level pure functions. Update `__all__`. Run tests to verify.
+as module-level pure functions. Include `timed_out` in failure conditions (Decision 6).
+Update `__all__`. Run tests to verify.
 ```

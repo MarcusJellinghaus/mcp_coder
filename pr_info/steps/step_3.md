@@ -29,10 +29,11 @@ def test_build_ci_error_details_caps_at_3_failed_runs() -> None:
     # Assert: get_run_logs called exactly 3 times
     # Assert: 4th run's jobs listed by name only
 
-def test_build_ci_error_details_multiple_runs_github_urls() -> None:
-    """Each job section should link to its own run's URL."""
-    # Setup: 2 runs with different IDs, run URL template
-    # Assert: job URLs point to correct run_id
+def test_build_ci_error_details_shows_jobs_fetch_warning() -> None:
+    """If run_data has jobs_fetch_warning, it should appear in output."""
+    # Decision 7: partial results warning display
+    # Setup: run_data with jobs_fetch_warning key
+    # Assert: warning text appears in output
 ```
 
 ### Update `test_collect_ci_status_with_truncation`
@@ -69,24 +70,9 @@ for rid in fetched_run_ids:
 # Use all_logs (merged) for the rest of the function (unchanged logic)
 ```
 
-Also update the URL construction: each job's section should use its own `run_id` for the URL, not the single `run_data["id"]`. The `run_data.get("url")` gives the base URL pattern — for per-job URLs, construct from `run_data.get("url")` base or from the job's `run_id`.
+**URL construction:** No changes needed (Decision 2). The existing `f"{run_url}/job/{job_id}"` pattern works correctly because GitHub job IDs are globally unique within a repo.
 
-**Specific change for job URL:** Replace `run_url` references with per-job URL construction:
-```python
-# For each job in the loop:
-job_run_id = job.get("run_id")
-# Base URL pattern: https://github.com/user/repo/actions/runs/{run_id}
-# Use run_ids[0]'s URL as template, replace the run ID portion
-```
-
-Simpler approach: store first run's URL as before. For `View job:` links, use the job's own `run_id`:
-```python
-# Existing: f"{run_url}/job/{job_id}"
-# If run_url is for run 123 but job belongs to run 456, 
-# replace run ID in URL or just use: no change needed if URL is just for navigation hint
-```
-
-Actually, the simplest correct approach: since `run_url` is just used for display/navigation, keep using first run's URL for the top-level `GitHub Actions:` link. For per-job `View job:` links, construct from the repo URL base.
+**Jobs fetch warning (Decision 7):** If `run_data` contains a `"jobs_fetch_warning"` key, prepend a warning line to the error details output so the user knows some jobs could not be fetched and need manual inspection.
 
 ## HOW — Integration
 - `_build_ci_error_details` already receives `ci_manager` and `status_result`

@@ -16,6 +16,9 @@ Instead of exposing a `runs` list to all consumers (breaking change), we keep `C
 
 This minimises consumer-side changes: code reading `run["conclusion"]` or `run["status"]` works unchanged. Only code comparing `run["id"]` (polling logic) needs updating to use `run["run_ids"]`.
 
+### New `RunData` TypedDict (Decision 4)
+Typed dict for the `run` field in `CIStatusData`, replacing `Dict[str, Any]` for stronger type safety.
+
 ### New `run_id` field on `JobData`
 Each job carries `run_id: int` so consumers can trace which workflow run a job belongs to. Required for per-run log fetching.
 
@@ -27,13 +30,16 @@ Each job carries `run_id: int` so consumers can trace which workflow run a job b
 
 | Scenario | Aggregate conclusion |
 |----------|---------------------|
-| Any run `conclusion == "failure"` | `"failure"` |
+| Any run `conclusion` in `failure`, `cancelled`, `timed_out` | `"failure"` |
 | No failures, any run in_progress/queued/pending | `None` (with status `"in_progress"`) |
 | All runs `conclusion == "success"` | `"success"` |
 | No runs found | empty dict (existing behaviour) |
 
 ### Multi-run log fetching
 `_build_ci_error_details()` fetches logs from up to 3 distinct failed `run_id`s (not just one), distributing the line budget across them.
+
+### Partial results on `.jobs()` failure (Decision 7)
+If `.jobs()` fails for one run, log a warning, skip that run's jobs, and return partial results. Downstream display prepends a visible warning about unfetched jobs.
 
 ### Polling logic
 Run ID comparison in `core.py` and `check_branch_status.py` changes from single `id` comparison to set comparison on `run_ids`.
@@ -43,7 +49,7 @@ Run ID comparison in `core.py` and `check_branch_status.py` changes from single 
 ### Source files (4):
 | File | Changes |
 |------|---------|
-| `src/mcp_coder/utils/github_operations/ci_results_manager.py` | Add `run_id` to `JobData`, add 2 pure functions, rewrite `get_latest_ci_status()` |
+| `src/mcp_coder/utils/github_operations/ci_results_manager.py` | Add `RunData` TypedDict, add `run_id` to `JobData`, add 2 pure functions, rewrite `get_latest_ci_status()` |
 | `src/mcp_coder/checks/branch_status.py` | `_build_ci_error_details()` fetches logs per distinct `run_id` (up to 3 runs) |
 | `src/mcp_coder/workflows/implement/core.py` | Polling: compare `set(run_ids)` instead of single `id` |
 | `src/mcp_coder/cli/commands/check_branch_status.py` | Polling: compare `set(run_ids)` instead of single `id` |

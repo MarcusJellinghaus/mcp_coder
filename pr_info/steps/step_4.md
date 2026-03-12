@@ -68,14 +68,22 @@ failed_run_ids = set(ci_status.get("run", {}).get("run_ids", []))
 Currently: `run_id = ci_status.get("run", {}).get("id")`
 Used for: `ci_manager.get_run_logs(run_id)`
 
-**Change:** Get first run_id from list for log fetching:
+**Change (Decision 3):** Fetch logs from failed jobs' run_ids, not blindly from first run:
 ```python
 # Before:
 run_id = ci_status.get("run", {}).get("id")
+logs = ci_manager.get_run_logs(run_id) if run_id else {}
 
 # After:
-run_ids = ci_status.get("run", {}).get("run_ids", [])
-run_id = run_ids[0] if run_ids else None
+jobs_data = ci_status.get("jobs", [])
+failed_jobs = [j for j in jobs_data if j.get("conclusion") == "failure"]
+failed_run_ids = list(dict.fromkeys(j["run_id"] for j in failed_jobs))
+logs: Dict[str, str] = {}
+for rid in failed_run_ids[:3]:
+    try:
+        logs.update(ci_manager.get_run_logs(rid))
+    except Exception as e:
+        logger.warning(f"Failed to get logs for run {rid}: {e}")
 ```
 
 ## WHAT — Changes in `check_branch_status.py`
