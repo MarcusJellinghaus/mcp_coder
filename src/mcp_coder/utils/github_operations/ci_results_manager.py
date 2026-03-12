@@ -215,63 +215,82 @@ class CIResultsManager(BaseGitHubManager):
         try:
             # Get workflow runs filtered by branch (server-side for performance)
             # Note: PyGithub accepts string branch names despite type stubs expecting Branch
-            runs = repo.get_workflow_runs(branch=branch)  # type: ignore[arg-type]
+            runs_paged = repo.get_workflow_runs(branch=branch)  # type: ignore[arg-type]
 
             # Get the first run (latest)
             try:
-                latest_run = runs[0]
+                first_run = runs_paged[0]
             except IndexError:
                 logger.info(f"No workflow runs found for branch: {branch}")
                 return CIStatusData(run={}, jobs=[])  # type: ignore[typeddict-item]
 
-            # Get all jobs for the latest run
-            jobs = list(latest_run.jobs())
+            # Filter to latest commit SHA
+            all_runs: List[Any] = list(runs_paged[:25])  # cap iteration
+            same_sha_runs = filter_runs_by_head_sha(all_runs)
 
-            # Transform run data
-            run_data = {
-                "id": latest_run.id,
-                "status": latest_run.status,
-                "conclusion": latest_run.conclusion,
-                "workflow_name": latest_run.name,
-                "event": latest_run.event,
-                "workflow_path": latest_run.path,
+            # Aggregate conclusion across all runs
+            agg_conclusion, agg_status = aggregate_conclusion(same_sha_runs)
+
+            # Fetch and merge jobs from all runs (Decision 7: partial results)
+            all_jobs: List[JobData] = []
+            failed_to_fetch_runs: List[int] = []
+            for run in same_sha_runs:
+                try:
+                    for job in run.jobs():
+                        job_data: JobData = {
+                            "id": job.id,
+                            "run_id": run.id,
+                            "name": job.name,
+                            "status": job.status,
+                            "conclusion": job.conclusion,
+                            "started_at": (
+                                job.started_at.isoformat() if job.started_at else None
+                            ),
+                            "completed_at": (
+                                job.completed_at.isoformat()
+                                if job.completed_at
+                                else None
+                            ),
+                            "steps": cast(
+                                List[StepData],
+                                [
+                                    {
+                                        "number": step.number,
+                                        "name": step.name,
+                                        "conclusion": step.conclusion,
+                                    }
+                                    for step in job.steps
+                                ],
+                            ),
+                        }
+                        all_jobs.append(job_data)
+                except Exception as e:
+                    logger.warning(f"Failed to fetch jobs for run {run.id}: {e}")
+                    failed_to_fetch_runs.append(run.id)
+
+            # Build aggregate run_data dict
+            run_data: RunData = {
+                "run_ids": [r.id for r in same_sha_runs],
+                "status": agg_status,
+                "conclusion": agg_conclusion,
+                "workflow_name": first_run.name,
+                "event": first_run.event,
+                "workflow_path": first_run.path,
                 "branch": branch,
-                "commit_sha": latest_run.head_sha,
+                "commit_sha": first_run.head_sha,
                 "created_at": (
-                    latest_run.created_at.isoformat() if latest_run.created_at else None
+                    first_run.created_at.isoformat() if first_run.created_at else ""
                 ),
-                "url": latest_run.html_url,
+                "url": first_run.html_url,
             }
 
-            # Transform job data
-            jobs_data: List[JobData] = []
-            for job in jobs:
-                job_data: JobData = {  # type: ignore[typeddict-item]
-                    "id": job.id,
-                    "name": job.name,
-                    "status": job.status,
-                    "conclusion": job.conclusion,
-                    "started_at": (
-                        job.started_at.isoformat() if job.started_at else None
-                    ),
-                    "completed_at": (
-                        job.completed_at.isoformat() if job.completed_at else None
-                    ),
-                    "steps": cast(
-                        List[StepData],
-                        [
-                            {
-                                "number": step.number,
-                                "name": step.name,
-                                "conclusion": step.conclusion,
-                            }
-                            for step in job.steps
-                        ],
-                    ),
-                }
-                jobs_data.append(job_data)
+            # If any runs failed to fetch jobs, add warning (Decision 7)
+            if failed_to_fetch_runs:
+                run_data["jobs_fetch_warning"] = (
+                    f"Could not fetch jobs for run(s): {failed_to_fetch_runs}"
+                )
 
-            return CIStatusData(run=run_data, jobs=jobs_data)  # type: ignore[typeddict-item]
+            return CIStatusData(run=run_data, jobs=all_jobs)
 
         except Exception as e:
             logger.error(f"Error retrieving CI status for branch {branch}: {e}")

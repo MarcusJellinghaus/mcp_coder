@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message
 
 ### Step 2 — Rewrite `get_latest_ci_status()` for multi-workflow support (TDD) ([step_2.md](./steps/step_2.md))
-- [ ] Update existing tests (`run["id"]` → `run["run_ids"]`, add `run_id` to jobs), add `TestGetLatestCIStatusMultiWorkflow` class, rewrite `get_latest_ci_status()` method
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message
+- [x] Update existing tests (`run["id"]` → `run["run_ids"]`, add `run_id` to jobs), add `TestGetLatestCIStatusMultiWorkflow` class, rewrite `get_latest_ci_status()` method
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message
 
 ### Step 3 — Update `branch_status.py` — multi-run log fetching (TDD) ([step_3.md](./steps/step_3.md))
 - [ ] Update `_build_ci_error_details()` test fixtures and add multi-run log fetching tests, implement per-`run_id` log fetching (up to 3 runs) and jobs_fetch_warning display
