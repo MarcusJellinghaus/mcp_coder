@@ -63,7 +63,7 @@ from langgraph.prebuilt import create_react_agent
 
 ### Message history
 - Convert `messages` (list of dicts) to LangChain message objects using existing `_to_lc_messages()` for human/ai messages
-- For agent mode history (includes tool_calls and ToolMessage), use LangChain's message deserialization
+- For agent mode history (includes tool_calls and ToolMessage), use extended `_to_lc_messages()` which handles all message types (Decision 10)
 - After agent run, serialize full history back to dicts via `.dict()` / `.model_dump()`
 
 ## ALGORITHM

@@ -20,6 +20,7 @@ Do not modify any other files beyond what this step specifies.
 ### Files to modify
 - `src/mcp_coder/llm/providers/langchain/verification.py` — add MCP adapter package checks + end-to-end agent test
 - `src/mcp_coder/cli/commands/verify.py` — wire new check entries into label map, pass `mcp_config` using shared utils
+- `src/mcp_coder/cli/parsers.py` — add `--mcp-config` argument to verify subparser (Decision 13)
 
 ### Files to modify (tests)
 - `tests/llm/providers/langchain/test_langchain_verification.py` — add verification tests
@@ -47,8 +48,7 @@ Add two new sections to the result dict:
 ```python
 def verify_langchain(
     check_models: bool = False,
-    check_mcp: bool = False,         # NEW — triggers smoke test
-    mcp_config_path: str | None = None,  # NEW — path to .mcp.json
+    mcp_config_path: str | None = None,  # NEW — path to .mcp.json (Decision 13: presence triggers smoke test)
     env_vars: dict[str, str] | None = None,  # NEW — for var substitution
 ) -> dict[str, Any]:
 ```
@@ -63,11 +63,24 @@ _LABEL_MAP.update({
 })
 ```
 
-### verify.py — pass `check_mcp=True` from verify command (Decision 6)
+### verify.py — pass `mcp_config_path` from verify command (Decision 13)
 
-When provider is langchain, also pass `check_mcp=True` and resolve the
-`.mcp.json` path using `resolve_mcp_config_path()` from `cli/utils.py` (DRY —
-same resolution logic as the main prompt flow).
+When provider is langchain and `--mcp-config` is provided, pass
+`mcp_config_path` to `verify_langchain()`. Resolve the path using
+`resolve_mcp_config_path()` from `cli/utils.py` (DRY — same resolution logic
+as the main prompt flow).
+
+### parsers.py — add `--mcp-config` argument (Decision 13)
+
+Add `--mcp-config` optional argument to the verify subparser:
+```python
+verify_parser.add_argument(
+    "--mcp-config",
+    type=str,
+    default=None,
+    help="Path to .mcp.json for MCP agent smoke test",
+)
+```
 
 ## HOW
 
@@ -75,8 +88,8 @@ same resolution logic as the main prompt flow).
 - Uses existing `_check_package_installed()` helper
 - Checks `langchain_mcp_adapters` and `langgraph` module names
 
-### End-to-end MCP agent test (Decision 6)
-- When `check_mcp=True` and `mcp_config_path` is provided:
+### End-to-end MCP agent test (Decision 6 + Decision 13)
+- When `mcp_config_path` is provided (triggered by `--mcp-config` CLI flag):
   - Call `ask_llm("Reply with OK", provider="langchain", mcp_config=mcp_config_path)` — same code path as real usage
   - This exercises the full agent pipeline: config loading, MCP server startup, tool discovery, agent execution
 - Uses `resolve_mcp_config_path()` from `cli/utils.py` for path resolution (DRY)
@@ -92,7 +105,7 @@ return {"mcp_adapters": {"ok": mcp_ok, ...}, "langgraph": {"ok": lg_ok, ...}}
 
 ### End-to-end MCP agent test
 ```
-if check_mcp and mcp_config_path:
+if mcp_config_path:
     try:
         from mcp_coder.llm.interface import ask_llm
         ask_llm("Reply with OK", provider="langchain", mcp_config=mcp_config_path, timeout=30)

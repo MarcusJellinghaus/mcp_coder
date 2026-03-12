@@ -20,6 +20,10 @@ Do not modify any other files beyond what this step specifies.
 
 ### Files to modify
 - `src/mcp_coder/llm/providers/langchain/__init__.py` — extend `ask_langchain()` signature and logic
+- `src/mcp_coder/llm/providers/langchain/openai_backend.py` — extract model creation (Decision 9)
+- `src/mcp_coder/llm/providers/langchain/gemini_backend.py` — extract model creation (Decision 9)
+- `src/mcp_coder/llm/providers/langchain/anthropic_backend.py` — extract model creation (Decision 9)
+- `src/mcp_coder/llm/providers/langchain/_utils.py` — extend `_to_lc_messages()` (Decision 10)
 
 ### Files to modify (tests)
 - `tests/llm/providers/langchain/test_langchain_provider.py` — add agent mode routing tests
@@ -68,11 +72,11 @@ else:
 6. Populate `raw_response` with agent data for MLflow
 7. Log to MLflow via `get_mlflow_logger()`
 
-### Chat model creation (Decision 3)
-- Extract into `_create_chat_model(config)` shared helper that returns the LangChain chat model instance
+### Chat model creation (Decision 3 + Decision 9)
+- Extract model creation from each backend module into a reusable function (e.g. `create_model()` in each backend)
+- Create `_create_chat_model(config)` shared helper in `__init__.py` that dispatches to the correct backend's `create_model()`
 - Refactor existing text-only path to also use this helper (DRY)
-- Reuse existing backend logic but return the model object instead of invoking it
-- This avoids duplicating model creation across text-only and agent paths
+- This requires modifying `openai_backend.py`, `gemini_backend.py`, `anthropic_backend.py`
 
 ### MLflow logging (Decision 7 — separate sub-step / commit)
 
@@ -83,11 +87,17 @@ Implement agent routing first, then add MLflow logging as a follow-up commit wit
 - `log_metrics`: `agent_steps`, `total_tool_calls`
 - `log_artifact`: `tool_trace.json` with tool call details
 
-### Session history in agent mode (Decision 2)
+### Session history in agent mode (Decision 11 — no mode marker)
 - Load: `load_langchain_history(session_id)` — returns `list[dict]`
 - Agent mode messages include tool_calls and ToolMessage (richer than text-only)
 - Store: `store_langchain_history(sid, serialized_messages)` — serialized via `.dict()`
-- **Mode marker**: store `"mode": "agent"` or `"mode": "text"` in session metadata so deserialization knows which format to expect
+- No mode marker needed — extended `_to_lc_messages()` (Decision 10) handles all message types in a single deserialization path
+
+### Extend `_to_lc_messages()` (Decision 10)
+- Add handling for `"type": "tool"` → `ToolMessage`
+- Add handling for `AIMessage` with `tool_calls` list
+- Backward compatible — existing `"human"`/`"ai"` messages continue to work
+- File: `src/mcp_coder/llm/providers/langchain/_utils.py`
 
 ## ALGORITHM
 
