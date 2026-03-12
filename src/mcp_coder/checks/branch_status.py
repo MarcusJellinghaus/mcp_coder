@@ -9,6 +9,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
+from mcp_coder.checks.ci_log_parser import (
+    _extract_failed_step_log as _extract_failed_step_log,
+)
+from mcp_coder.checks.ci_log_parser import _find_log_content as _find_log_content
+from mcp_coder.checks.ci_log_parser import _strip_timestamps as _strip_timestamps
+from mcp_coder.checks.ci_log_parser import truncate_ci_details as truncate_ci_details
 from mcp_coder.utils.git_operations import needs_rebase
 from mcp_coder.utils.git_operations.readers import (
     extract_issue_number_from_branch,
@@ -153,112 +159,6 @@ def create_empty_report() -> BranchStatusReport:
     )
 
 
-def _strip_timestamps(log_content: str) -> str:
-    """Strip GitHub Actions timestamps from log lines.
-
-    Removes timestamps like '2026-01-28T12:58:02.8274205Z ' from lines.
-    Handles timestamps at line start or after ANSI escape sequences.
-
-    Args:
-        log_content: Raw log content with timestamps
-
-    Returns:
-        Log content with timestamps removed
-    """
-    import re
-
-    # Pattern: YYYY-MM-DDTHH:MM:SS.NNNNNNNZ followed by optional space
-    # Match anywhere in the first part of the line (may follow ANSI codes)
-    timestamp_pattern = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s?"
-
-    lines = log_content.split("\n")
-    cleaned_lines = [re.sub(timestamp_pattern, "", line) for line in lines]
-    return "\n".join(cleaned_lines)
-
-
-def truncate_ci_details(
-    details: str, max_lines: int = 300, head_lines: int = 50
-) -> str:
-    """Truncate CI details with head + tail preservation.
-
-    Extract log excerpt: first head_lines + last (max_lines - head_lines) lines
-    if log exceeds max_lines.
-
-    Args:
-        details: Full CI details content as string
-        max_lines: Maximum lines before truncation (default 300)
-        head_lines: Number of lines to keep from the start (default 50)
-
-    Returns:
-        Original details if under max_lines, otherwise truncated with marker
-    """
-    if not details:
-        return ""
-
-    lines = details.split("\n")
-
-    if len(lines) <= max_lines:
-        return details
-
-    # Take first head_lines and last (max_lines - head_lines) lines
-    tail_lines = max_lines - head_lines
-    first_lines = lines[:head_lines]
-    last_lines = lines[-tail_lines:]
-    truncated_count = len(lines) - max_lines
-
-    return "\n".join(
-        first_lines + [f"[... truncated {truncated_count} lines ...]"] + last_lines
-    )
-
-
-def _find_log_content(
-    logs: Mapping[str, str],
-    job_name: str,
-    step_number: int,
-    step_name: str,
-) -> str:
-    """Find log content for a job using GitHub format first, falling back to old format.
-
-    GitHub format: {number}_{job_name}.txt (execution number doesn't match step.number)
-    Old format: {job_name}/{step_number}_{step_name}.txt
-
-    Args:
-        logs: Dict mapping log filenames to content
-        job_name: Name of the job
-        step_number: Step number from API (used for old format fallback)
-        step_name: Step name (used for old format fallback)
-
-    Returns:
-        Log content string, or empty string if not found
-    """
-    logger = logging.getLogger(__name__)
-
-    # Try GitHub format first: pattern match on _{job_name}.txt
-    matching_files = [f for f in logs.keys() if f.endswith(f"_{job_name}.txt")]
-
-    if matching_files:
-        if len(matching_files) > 1:
-            logger.warning(
-                f"Multiple log files found for job '{job_name}': {matching_files}. "
-                f"Using: {matching_files[0]}"
-            )
-        return logs[matching_files[0]]
-
-    # Fallback to old format: {job_name}/{step_number}_{step_name}.txt
-    log_filename = f"{job_name}/{step_number}_{step_name}.txt"
-    log_content = logs.get(log_filename, "")
-
-    if not log_content and step_name:
-        available_files = list(logs.keys())
-        logger.warning(
-            f"No log file found for job '{job_name}'. "
-            f"Tried: '*_{job_name}.txt' and '{log_filename}'. "
-            f"Available: {available_files}"
-        )
-
-    return log_content
-
-
 def get_failed_jobs_summary(
     jobs: Sequence[Mapping[str, Any]], logs: Mapping[str, str]
 ) -> Dict[str, Any]:
@@ -305,7 +205,16 @@ def get_failed_jobs_summary(
 
     log_content = _find_log_content(logs, job_name, step_number, step_name)
 
-    # Extract log excerpt using shared truncation (50 head + 250 tail = 300 lines)
+    # Strip timestamps first so ##[group] markers are parseable
+    if log_content:
+        log_content = _strip_timestamps(log_content)
+
+    # Extract just the failed step's section from the full job log
+    if log_content:
+        extracted = _extract_failed_step_log(log_content, step_name)
+        if extracted:
+            log_content = extracted
+
     log_excerpt = truncate_ci_details(log_content)
 
     # Other failed jobs
@@ -410,7 +319,7 @@ def _collect_ci_status(
         status_result = ci_manager.get_latest_ci_status(branch)
 
         # Check if CI data is empty (no runs found)
-        if not status_result["run"]:
+        if len(status_result["run"]) == 0:
             logger.info("CI not configured")
             return CI_NOT_CONFIGURED, None
 
@@ -467,20 +376,26 @@ def _build_ci_error_details(
     logger = logging.getLogger(__name__)
     run_data = status_result["run"]
     jobs_data = status_result.get("jobs", [])
-    run_id = run_data.get("id")
     # Extract GitHub Actions run URL for user navigation
     run_url = run_data.get("url", "")
 
-    # Get logs for the run
-    logs: Dict[str, str] = {}
-    if run_id:
-        try:
-            logs = ci_manager.get_run_logs(run_id)
-        except Exception as e:
-            logger.warning(f"Failed to get CI logs: {e}")
-
     # Get all failed jobs
     failed_jobs = [job for job in jobs_data if job.get("conclusion") == "failure"]
+
+    # Collect distinct run_ids from failed jobs, preserving order
+    failed_run_ids: List[int] = list(
+        dict.fromkeys(j["run_id"] for j in failed_jobs if j.get("run_id"))
+    )
+
+    # Fetch logs for up to 3 failed run_ids
+    logs: Dict[str, str] = {}
+    fetched_run_ids = failed_run_ids[:3]
+    for rid in fetched_run_ids:
+        try:
+            run_logs = ci_manager.get_run_logs(rid)
+            logs.update(run_logs)
+        except Exception as e:
+            logger.warning(f"Failed to get logs for run {rid}: {e}")
 
     if not failed_jobs:
         logger.info("No failed jobs found in CI results")
@@ -491,6 +406,13 @@ def _build_ci_error_details(
     lines_used = 0
     jobs_shown: List[str] = []
     jobs_truncated: List[str] = []
+
+    # Prepend jobs_fetch_warning if present (Decision 7)
+    jobs_fetch_warning = run_data.get("jobs_fetch_warning")
+    if jobs_fetch_warning:
+        output_lines.append(f"WARNING: {jobs_fetch_warning}")
+        output_lines.append("")
+        lines_used += 2
 
     # Section 1: Summary header (will be updated at end)
     summary_placeholder_idx = len(output_lines)
@@ -519,9 +441,15 @@ def _build_ci_error_details(
 
         log_content = _find_log_content(logs, job_name, step_number, step_name)
 
-        # Strip timestamps if content found
+        # Strip timestamps first so ##[group] markers are parseable
         if log_content:
             log_content = _strip_timestamps(log_content)
+
+        # Extract just the failed step's section from the full job log
+        if log_content:
+            extracted = _extract_failed_step_log(log_content, step_name)
+            if extracted:
+                log_content = extracted
 
         # Calculate how many lines this job's section would take
         # Header lines: "## Job:", optional "View job:" (if URL available), "Failed step:", blank line
@@ -552,7 +480,7 @@ def _build_ci_error_details(
         # Truncate log if needed (only applies to real log content, not fallback messages)
         if log_content and len(log_lines) > remaining_budget:
             # Use head + tail truncation
-            head_count = min(50, remaining_budget // 3)
+            head_count = min(10, remaining_budget // 6)
             tail_count = remaining_budget - head_count - 1  # -1 for truncation message
             truncated_log = (
                 log_lines[:head_count]

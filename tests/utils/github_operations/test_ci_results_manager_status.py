@@ -1,16 +1,11 @@
 """Tests for CIResultsManager get_latest_ci_status method."""
 
-import io
-import zipfile
-from pathlib import Path
-from typing import Dict
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
-import requests
 from github import GithubException
 
-from mcp_coder.utils.github_operations import CIResultsManager, CIStatusData
+from mcp_coder.utils.github_operations import CIResultsManager
 
 
 class TestGetLatestCIStatus:
@@ -71,7 +66,7 @@ class TestGetLatestCIStatus:
 
         # Verify run data
         run_data = result["run"]
-        assert run_data["id"] == 123456789
+        assert run_data["run_ids"] == [123456789]
         assert run_data["status"] == "completed"
         assert run_data["conclusion"] == "failure"
         assert run_data["workflow_name"] == "CI"
@@ -88,6 +83,7 @@ class TestGetLatestCIStatus:
 
         job1_data = jobs_data[0]
         assert job1_data["id"] == 987654321
+        assert job1_data["run_id"] == 123456789
         assert job1_data["name"] == "test"
         assert job1_data["status"] == "completed"
         assert job1_data["conclusion"] == "failure"
@@ -96,6 +92,7 @@ class TestGetLatestCIStatus:
 
         job2_data = jobs_data[1]
         assert job2_data["id"] == 987654322
+        assert job2_data["run_id"] == 123456789
         assert job2_data["name"] == "build"
         assert job2_data["status"] == "completed"
         assert job2_data["conclusion"] == "success"
@@ -375,7 +372,7 @@ class TestGetLatestCIStatusSteps:
         result = ci_manager.get_latest_ci_status("feature/no-runs")
 
         # Should return empty data
-        assert result["run"] == {}
+        assert result["run"] == {}  # type: ignore[comparison-overlap]
         assert result["jobs"] == []
 
         mock_repo.get_workflow_runs.assert_called_once()
@@ -445,7 +442,7 @@ class TestGetLatestCIStatusSteps:
 
         # Verify run data
         run_data = result["run"]
-        assert run_data["id"] == 999888777
+        assert run_data["run_ids"] == [999888777]
         assert run_data["status"] == "in_progress"
         assert run_data["conclusion"] is None
         assert run_data["workflow_name"] == "Build and Test"
@@ -463,16 +460,19 @@ class TestGetLatestCIStatusSteps:
 
         # Find and check specific jobs
         lint_job = next(job for job in jobs_data if job["name"] == "lint")
+        assert lint_job["run_id"] == 999888777
         assert lint_job["status"] == "completed"
         assert lint_job["conclusion"] == "success"
         assert lint_job["completed_at"] == "2024-01-15T11:05:00Z"
 
         test_job = next(job for job in jobs_data if job["name"] == "test")
+        assert test_job["run_id"] == 999888777
         assert test_job["status"] == "in_progress"
         assert test_job["conclusion"] is None
         assert test_job["completed_at"] is None
 
         build_job = next(job for job in jobs_data if job["name"] == "build")
+        assert build_job["run_id"] == 999888777
         assert build_job["status"] == "queued"
         assert build_job["conclusion"] is None
         assert build_job["started_at"] is None
@@ -523,8 +523,9 @@ class TestGetLatestCIStatusSteps:
         result = ci_manager.get_latest_ci_status("feature/empty-jobs")
 
         # Should have run data but no jobs
-        assert result["run"]["id"] == 555444333
-        assert result["run"]["conclusion"] == "cancelled"
+        assert result["run"]["run_ids"] == [555444333]
+        # "cancelled" is aggregated as "failure" by aggregate_conclusion()
+        assert result["run"]["conclusion"] == "failure"
         assert result["jobs"] == []
 
         mock_run.jobs.assert_called_once()

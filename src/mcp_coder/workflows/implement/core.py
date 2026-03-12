@@ -297,7 +297,7 @@ def _poll_for_ci_completion(
 
         run_info = ci_status.get("run", {})
 
-        if not run_info:
+        if len(run_info) == 0:
             if poll_attempt < CI_MAX_POLL_ATTEMPTS - 1:
                 logger.debug(
                     f"No CI run found yet (attempt {poll_attempt + 1}/{CI_MAX_POLL_ATTEMPTS})"
@@ -311,9 +311,9 @@ def _poll_for_ci_completion(
         run_conclusion = run_info.get("conclusion")
 
         if run_status == "completed":
-            run_id = run_info.get("id")
+            run_ids = run_info.get("run_ids", [])
             run_sha = run_info.get("commit_sha") or "unknown"
-            logger.debug(f"CI run {run_id} completed (sha: {_short_sha(run_sha)})")
+            logger.debug(f"CI run {run_ids} completed (sha: {_short_sha(run_sha)})")
 
             if run_conclusion == "success":
                 logger.info(
@@ -336,14 +336,14 @@ def _poll_for_ci_completion(
 
 
 def _wait_for_new_ci_run(
-    ci_manager: CIResultsManager, branch: str, previous_run_id: Any
+    ci_manager: CIResultsManager, branch: str, previous_run_ids: set[int]
 ) -> tuple[Optional[CIStatusData], bool]:
     """Wait for a new CI run to start after pushing changes.
 
     Args:
         ci_manager: CIResultsManager instance
         branch: Branch name to check
-        previous_run_id: Run ID to compare against
+        previous_run_ids: Set of run IDs to compare against
 
     Returns:
         Tuple of (new ci_status or None, new_run_detected bool)
@@ -359,12 +359,12 @@ def _wait_for_new_ci_run(
             logger.warning(f"API error checking for new CI run: {e}")
             continue
 
-        new_run_id = new_status.get("run", {}).get("id")
+        new_run_ids = set(new_status.get("run", {}).get("run_ids", []))
 
-        if new_run_id and new_run_id != previous_run_id:
+        if new_run_ids and not new_run_ids.issubset(previous_run_ids):
             new_sha = new_status.get("run", {}).get("commit_sha") or "unknown"
             logger.info(
-                f"New CI run detected: {new_run_id} (sha: {_short_sha(new_sha)})"
+                f"New CI run detected: {new_run_ids} (sha: {_short_sha(new_sha)})"
             )
             return new_status, True
 
@@ -396,13 +396,17 @@ def _run_ci_analysis_and_fix(
         - return_value: None to continue loop, True for success (exit 0), False for failure (exit 1)
     """
     jobs = ci_status.get("jobs", [])
-    run_id = ci_status.get("run", {}).get("id")
 
-    try:
-        logs = ci_manager.get_run_logs(run_id) if run_id else {}
-    except Exception as e:
-        logger.warning(f"Failed to get CI logs: {e}")
-        logs = {}
+    failed_jobs = [j for j in jobs if j.get("conclusion") == "failure"]
+    failed_run_ids = list(
+        dict.fromkeys(j["run_id"] for j in failed_jobs if j.get("run_id"))
+    )
+    logs: dict[str, str] = {}
+    for rid in failed_run_ids[:3]:
+        try:
+            logs.update(ci_manager.get_run_logs(rid))
+        except Exception as e:
+            logger.warning(f"Failed to get logs for run {rid}: {e}")
 
     failed_summary = get_failed_jobs_summary(jobs, logs)
 
@@ -506,8 +510,8 @@ def check_and_fix_ci(
     if ci_status is None or ci_passed:
         return True  # Graceful exit or CI passed
 
-    # Store failed run ID for comparison after fixes
-    failed_run_id = ci_status.get("run", {}).get("id")
+    # Store failed run IDs for comparison after fixes
+    failed_run_ids = set(ci_status.get("run", {}).get("run_ids", []))
 
     # Phase 2: Fix loop (max 3 attempts)
     env_vars = prepare_llm_environment(project_dir)
@@ -543,7 +547,7 @@ def check_and_fix_ci(
 
         # Successfully pushed, wait for new CI run
         new_status, new_run_detected = _wait_for_new_ci_run(
-            ci_manager, branch, failed_run_id
+            ci_manager, branch, failed_run_ids
         )
 
         if not new_run_detected:
@@ -558,7 +562,7 @@ def check_and_fix_ci(
 
         # CI still failing, update for next attempt
         ci_status = new_status
-        failed_run_id = ci_status.get("run", {}).get("id")
+        failed_run_ids = set(ci_status.get("run", {}).get("run_ids", []))
 
     # Max fix attempts exhausted
     final_sha = ci_status.get("run", {}).get("commit_sha") or "unknown"

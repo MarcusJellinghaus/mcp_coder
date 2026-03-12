@@ -23,6 +23,7 @@ from mcp_coder.checks.branch_status import (
     _collect_github_label,
     _collect_rebase_status,
     _collect_task_status,
+    _extract_failed_step_log,
     _generate_recommendations,
     collect_branch_status,
     create_empty_report,
@@ -234,10 +235,10 @@ def test_format_for_llm_truncation() -> None:
 
     # Should contain truncation message
     assert "[... truncated" in formatted
-    # Should have first 50 and last 250 lines logic applied
+    # Should have first 10 and last 290 lines logic applied
     assert "Error line 1" in formatted  # First line
-    assert "Error line 50" in formatted  # 50th line (last of head)
-    assert "Error line 151" in formatted  # First line of last 250
+    assert "Error line 10" in formatted  # 10th line (last of head)
+    assert "Error line 111" in formatted  # First line of last 290
     assert "Error line 400" in formatted  # Last line
 
 
@@ -299,13 +300,14 @@ def test_truncate_ci_details_with_truncation() -> None:
 
     # Should contain truncation marker
     assert "[... truncated 100 lines ...]" in result
-    # Should have first 50 lines (head_lines default)
+    # Should have first 10 lines (head_lines default)
     assert "Line 1" in result
-    assert "Line 50" in result
-    # Should have last 250 lines (starting from line 151)
-    assert "Line 151" in result
+    assert "Line 10" in result
+    # Should have last 290 lines (starting from line 111)
+    assert "Line 111" in result
     assert "Line 400" in result
-    # Should not have middle lines
+    # Should not have middle lines (between head and tail)
+    assert "Line 50" not in result
     assert "Line 100" not in result
 
 
@@ -328,6 +330,256 @@ def test_truncate_ci_details_custom_max_lines() -> None:
     # Should have appropriate first and last lines based on truncation logic
     assert "Line 1" in result
     assert "Line 100" in result
+
+
+class TestExtractFailedStepLog:
+    """Tests for _extract_failed_step_log function."""
+
+    def test_exact_name_match(self) -> None:
+        """Should extract the section matching step_name exactly."""
+        log = (
+            "##[group]Set up job\n"
+            "Setting up runner...\n"
+            "##[endgroup]\n"
+            "##[group]Run tests\n"
+            "pytest output line 1\n"
+            "FAILED test_foo.py\n"
+            "##[endgroup]\n"
+            "##[group]Post actions\n"
+            "Cleaning up...\n"
+            "##[endgroup]"
+        )
+        result = _extract_failed_step_log(log, "Run tests")
+        assert "pytest output line 1" in result
+        assert "FAILED test_foo.py" in result
+        assert "Setting up runner" not in result
+        assert "Cleaning up" not in result
+
+    def test_prefix_match(self) -> None:
+        """Should match when step_name is a prefix of the group label."""
+        log = (
+            "##[group]Run vulture --version && ./tools/vulture_check.sh\n"
+            "vulture output here\n"
+            "##[endgroup]"
+        )
+        result = _extract_failed_step_log(log, "Run vulture")
+        assert "vulture output here" in result
+
+    def test_contains_match(self) -> None:
+        """Should match when step_name is contained in the group label."""
+        log = (
+            "##[group]Step 3: Run vulture check\n"
+            "vulture found issues\n"
+            "##[endgroup]"
+        )
+        result = _extract_failed_step_log(log, "vulture check")
+        assert "vulture found issues" in result
+
+    def test_captures_error_lines_after_endgroup(self) -> None:
+        """Should include ##[error] lines after ##[endgroup]."""
+        log = (
+            "##[group]Run tests\n"
+            "test output\n"
+            "##[endgroup]\n"
+            "##[error]Process completed with exit code 1."
+        )
+        result = _extract_failed_step_log(log, "Run tests")
+        assert "test output" in result
+        assert "##[error]Process completed with exit code 1." in result
+
+    def test_returns_empty_when_no_markers(self) -> None:
+        """Should return empty string when no ##[group] markers are present."""
+        log = "Just plain log output\nNo markers here"
+        result = _extract_failed_step_log(log, "Run tests")
+        assert result == ""
+
+    def test_returns_empty_when_step_name_empty(self) -> None:
+        """Should return empty string when step_name is empty."""
+        log = "##[group]Run tests\noutput\n##[endgroup]"
+        result = _extract_failed_step_log(log, "")
+        assert result == ""
+
+    def test_returns_empty_when_no_match(self) -> None:
+        """Should return empty string when no group matches step_name."""
+        log = (
+            "##[group]Set up job\n"
+            "setup output\n"
+            "##[endgroup]\n"
+            "##[group]Checkout\n"
+            "checkout output\n"
+            "##[endgroup]"
+        )
+        result = _extract_failed_step_log(log, "Run tests")
+        assert result == ""
+
+    def test_case_insensitive_matching(self) -> None:
+        """Should match case-insensitively."""
+        log = "##[group]run tests\n" "test output\n" "##[endgroup]"
+        result = _extract_failed_step_log(log, "Run Tests")
+        assert "test output" in result
+
+    def test_multiple_groups_extracts_only_matching(self) -> None:
+        """Should extract only the matching group from multiple groups."""
+        log = (
+            "##[group]Set up job\n"
+            "setup line 1\n"
+            "setup line 2\n"
+            "##[endgroup]\n"
+            "##[group]Install dependencies\n"
+            "pip install...\n"
+            "##[endgroup]\n"
+            "##[group]Run tests\n"
+            "FAILED: test_foo\n"
+            "AssertionError\n"
+            "##[endgroup]\n"
+            "##[error]Process completed with exit code 1.\n"
+            "##[group]Post checkout\n"
+            "post cleanup\n"
+            "##[endgroup]"
+        )
+        result = _extract_failed_step_log(log, "Run tests")
+        assert "FAILED: test_foo" in result
+        assert "AssertionError" in result
+        assert "##[error]Process completed with exit code 1." in result
+        assert "setup line" not in result
+        assert "pip install" not in result
+        assert "post cleanup" not in result
+
+    def test_realistic_github_actions_log(self) -> None:
+        """Should work with a realistic GitHub Actions log format."""
+        log = (
+            "##[group]Set up job\n"
+            "Current runner version: '2.321.0'\n"
+            "Runner name: 'GitHub Actions 2'\n"
+            "##[endgroup]\n"
+            "##[group]Run actions/checkout@v4\n"
+            "Syncing repository: user/repo\n"
+            "##[endgroup]\n"
+            "##[group]Set up Python\n"
+            "Successfully set up Python 3.12\n"
+            "##[endgroup]\n"
+            "##[group]Install dependencies\n"
+            "Collecting pytest\n"
+            "Successfully installed pytest-8.0.0\n"
+            "##[endgroup]\n"
+            "##[group]Run pytest --tb=short\n"
+            "============================= test session starts ============================\n"
+            "collected 150 items\n"
+            "tests/test_auth.py::test_login FAILED\n"
+            "FAILED tests/test_auth.py::test_login - AssertionError: 401 != 200\n"
+            "============================= 1 failed, 149 passed ============================\n"
+            "##[endgroup]\n"
+            "##[error]Process completed with exit code 1."
+        )
+        result = _extract_failed_step_log(log, "Run pytest")
+        assert "test session starts" in result
+        assert "FAILED tests/test_auth.py" in result
+        assert "1 failed, 149 passed" in result
+        assert "##[error]Process completed with exit code 1." in result
+        assert "Successfully set up Python" not in result
+        assert "Collecting pytest" not in result
+
+    def test_unknown_step_returns_error_groups(self) -> None:
+        """When step_name is 'unknown', should return groups with ##[error] lines."""
+        log = (
+            "##[group]Set up job\n"
+            "Setting up runner...\n"
+            "##[endgroup]\n"
+            "##[group]Run tests\n"
+            "FAILED test_foo.py\n"
+            "##[endgroup]\n"
+            "##[error]Process completed with exit code 1.\n"
+            "##[group]Post actions\n"
+            "Cleaning up...\n"
+            "##[endgroup]"
+        )
+        result = _extract_failed_step_log(log, "unknown")
+        assert "FAILED test_foo.py" in result
+        assert "##[error]Process completed with exit code 1." in result
+        assert "Setting up runner" not in result
+        assert "Cleaning up" not in result
+
+    def test_empty_step_name_returns_error_groups(self) -> None:
+        """When step_name is empty, should return groups with ##[error] lines."""
+        log = (
+            "##[group]Set up job\n"
+            "Setting up runner...\n"
+            "##[endgroup]\n"
+            "##[group]Run tests\n"
+            "test output\n"
+            "##[endgroup]\n"
+            "##[error]Process completed with exit code 1.\n"
+            "##[group]Post actions\n"
+            "Cleaning up...\n"
+            "##[endgroup]"
+        )
+        result = _extract_failed_step_log(log, "")
+        assert "test output" in result
+        assert "##[error]Process completed with exit code 1." in result
+        assert "Setting up runner" not in result
+
+    def test_no_match_no_errors_returns_empty(self) -> None:
+        """When no match and no ##[error] lines, should return empty string."""
+        log = (
+            "##[group]Set up job\n"
+            "setup output\n"
+            "##[endgroup]\n"
+            "##[group]Checkout\n"
+            "checkout output\n"
+            "##[endgroup]"
+        )
+        result = _extract_failed_step_log(log, "unknown")
+        assert result == ""
+
+    def test_multiple_error_groups_returned(self) -> None:
+        """When multiple groups have ##[error] lines, all should be returned."""
+        log = (
+            "##[group]Set up job\n"
+            "setup output\n"
+            "##[endgroup]\n"
+            "##[group]Lint check\n"
+            "lint output\n"
+            "##[endgroup]\n"
+            "##[error]Lint failed\n"
+            "##[group]Run tests\n"
+            "test output\n"
+            "##[endgroup]\n"
+            "##[error]Tests failed"
+        )
+        result = _extract_failed_step_log(log, "unknown")
+        assert "--- Lint check ---" in result
+        assert "lint output" in result
+        assert "##[error]Lint failed" in result
+        assert "--- Run tests ---" in result
+        assert "test output" in result
+        assert "##[error]Tests failed" in result
+        assert "setup output" not in result
+
+    def test_fallback_excludes_clean_groups(self) -> None:
+        """Setup groups without ##[error] should be excluded from fallback."""
+        log = (
+            "##[group]Set up job\n"
+            "Runner version: 2.321.0\n"
+            "##[endgroup]\n"
+            "##[group]Install dependencies\n"
+            "pip install pytest\n"
+            "##[endgroup]\n"
+            "##[group]Run file-size check\n"
+            "Checking file sizes...\n"
+            "src/big_file.py: 900 lines (over 750)\n"
+            "##[endgroup]\n"
+            "##[error]Process completed with exit code 1.\n"
+            "##[group]Post checkout\n"
+            "Cleaning up...\n"
+            "##[endgroup]"
+        )
+        result = _extract_failed_step_log(log, "unknown")
+        assert "Checking file sizes" in result
+        assert "900 lines" in result
+        assert "##[error]Process completed with exit code 1." in result
+        assert "Runner version" not in result
+        assert "pip install" not in result
+        assert "Cleaning up" not in result
 
 
 def test_branch_status_constants() -> None:
@@ -610,10 +862,11 @@ def test_collect_ci_status_with_truncation() -> None:
         mock_ci_manager.return_value = mock_instance
         # Return dict structure matching actual API with jobs data
         mock_instance.get_latest_ci_status.return_value = {
-            "run": {"id": 123, "conclusion": "failure", "status": "completed"},
+            "run": {"run_ids": [123], "conclusion": "failure", "status": "completed"},
             "jobs": [
                 {
                     "name": "test-job",
+                    "run_id": 123,
                     "conclusion": "failure",
                     "steps": [{"name": "Run tests", "conclusion": "failure"}],
                 }
@@ -899,10 +1152,11 @@ def test_generate_recommendations_logic() -> None:
 def test_build_ci_error_details_single_failure() -> None:
     """Test _build_ci_error_details with single failed job."""
     status_result = {
-        "run": {"id": 123},
+        "run": {"run_ids": [123]},
         "jobs": [
             {
                 "name": "test-job",
+                "run_id": 123,
                 "conclusion": "failure",
                 "steps": [{"name": "Run tests", "conclusion": "failure"}],
             }
@@ -927,20 +1181,23 @@ def test_build_ci_error_details_single_failure() -> None:
 def test_build_ci_error_details_multiple_failures() -> None:
     """Test _build_ci_error_details shows multiple failed jobs that fit in limit."""
     status_result = {
-        "run": {"id": 123},
+        "run": {"run_ids": [123]},
         "jobs": [
             {
                 "name": "test-job",
+                "run_id": 123,
                 "conclusion": "failure",
                 "steps": [{"name": "Run tests", "conclusion": "failure"}],
             },
             {
                 "name": "lint-job",
+                "run_id": 123,
                 "conclusion": "failure",
                 "steps": [{"name": "Run lint", "conclusion": "failure"}],
             },
             {
                 "name": "build-job",
+                "run_id": 123,
                 "conclusion": "failure",
                 "steps": [{"name": "Build", "conclusion": "failure"}],
             },
@@ -971,10 +1228,14 @@ def test_build_ci_error_details_multiple_failures() -> None:
 def test_build_ci_error_details_includes_github_urls() -> None:
     """Test _build_ci_error_details includes GitHub Actions URLs."""
     status_result = {
-        "run": {"id": 12345, "url": "https://github.com/user/repo/actions/runs/12345"},
+        "run": {
+            "run_ids": [12345],
+            "url": "https://github.com/user/repo/actions/runs/12345",
+        },
         "jobs": [
             {
                 "id": 67890,
+                "run_id": 12345,
                 "name": "file-size",
                 "conclusion": "failure",
                 "steps": [{"name": "Run file-size", "conclusion": "failure"}],
@@ -1005,10 +1266,14 @@ def test_build_ci_error_details_includes_github_urls() -> None:
 def test_build_ci_error_details_logs_not_available_with_url() -> None:
     """Test _build_ci_error_details shows GitHub URL when logs unavailable."""
     status_result = {
-        "run": {"id": 12345, "url": "https://github.com/user/repo/actions/runs/12345"},
+        "run": {
+            "run_ids": [12345],
+            "url": "https://github.com/user/repo/actions/runs/12345",
+        },
         "jobs": [
             {
                 "id": 67890,
+                "run_id": 12345,
                 "name": "file-size",
                 "conclusion": "failure",
                 "steps": [{"name": "Run file-size", "conclusion": "failure"}],
@@ -1037,10 +1302,14 @@ def test_build_ci_error_details_logs_not_available_with_url() -> None:
 def test_build_ci_error_details_fallback_to_old_format() -> None:
     """Test _build_ci_error_details falls back to old log format."""
     status_result = {
-        "run": {"id": 12345, "url": "https://github.com/user/repo/actions/runs/12345"},
+        "run": {
+            "run_ids": [12345],
+            "url": "https://github.com/user/repo/actions/runs/12345",
+        },
         "jobs": [
             {
                 "id": 67890,
+                "run_id": 12345,
                 "name": "file-size",
                 "conclusion": "failure",
                 "steps": [
@@ -1068,10 +1337,11 @@ def test_build_ci_error_details_fallback_to_old_format() -> None:
 def test_build_ci_error_details_no_failed_jobs() -> None:
     """Test _build_ci_error_details with no failed jobs returns None."""
     status_result = {
-        "run": {"id": 123},
+        "run": {"run_ids": [123]},
         "jobs": [
             {
                 "name": "test-job",
+                "run_id": 123,
                 "conclusion": "success",
                 "steps": [{"name": "Run tests", "conclusion": "success"}],
             }
@@ -1085,6 +1355,174 @@ def test_build_ci_error_details_no_failed_jobs() -> None:
         result = _build_ci_error_details(mock_instance, status_result, 300)
 
         assert result is None
+
+
+def test_build_ci_error_details_fetches_logs_from_multiple_runs() -> None:
+    """Logs should be fetched per distinct run_id among failed jobs (up to 3)."""
+    status_result = {
+        "run": {
+            "run_ids": [100, 200],
+            "url": "https://github.com/user/repo/actions/runs/100",
+        },
+        "jobs": [
+            {
+                "id": 1001,
+                "run_id": 100,
+                "name": "test-job",
+                "conclusion": "failure",
+                "steps": [{"name": "Run tests", "conclusion": "failure"}],
+            },
+            {
+                "id": 2001,
+                "run_id": 200,
+                "name": "lint-job",
+                "conclusion": "failure",
+                "steps": [{"name": "Run lint", "conclusion": "failure"}],
+            },
+        ],
+    }
+
+    mock_instance = MagicMock()
+    mock_instance.get_run_logs.side_effect = [
+        {"2_test-job.txt": "Test error from run 100"},
+        {"3_lint-job.txt": "Lint error from run 200"},
+    ]
+
+    result = _build_ci_error_details(mock_instance, status_result, 300)
+
+    assert result is not None
+    # get_run_logs called once per distinct run_id
+    assert mock_instance.get_run_logs.call_count == 2
+    mock_instance.get_run_logs.assert_any_call(100)
+    mock_instance.get_run_logs.assert_any_call(200)
+    # Output contains logs from both runs
+    assert "Test error from run 100" in result
+    assert "Lint error from run 200" in result
+    assert "test-job" in result
+    assert "lint-job" in result
+
+
+def test_build_ci_error_details_caps_at_3_failed_runs() -> None:
+    """Only fetch logs from first 3 distinct failed run_ids."""
+    status_result = {
+        "run": {"run_ids": [100, 200, 300, 400]},
+        "jobs": [
+            {
+                "name": "job-a",
+                "run_id": 100,
+                "conclusion": "failure",
+                "steps": [{"name": "Step A", "conclusion": "failure"}],
+            },
+            {
+                "name": "job-b",
+                "run_id": 200,
+                "conclusion": "failure",
+                "steps": [{"name": "Step B", "conclusion": "failure"}],
+            },
+            {
+                "name": "job-c",
+                "run_id": 300,
+                "conclusion": "failure",
+                "steps": [{"name": "Step C", "conclusion": "failure"}],
+            },
+            {
+                "name": "job-d",
+                "run_id": 400,
+                "conclusion": "failure",
+                "steps": [{"name": "Step D", "conclusion": "failure"}],
+            },
+        ],
+    }
+
+    mock_instance = MagicMock()
+    mock_instance.get_run_logs.side_effect = [
+        {"2_job-a.txt": "Error A"},
+        {"3_job-b.txt": "Error B"},
+        {"4_job-c.txt": "Error C"},
+    ]
+
+    result = _build_ci_error_details(mock_instance, status_result, 300)
+
+    assert result is not None
+    # Only 3 calls, not 4
+    assert mock_instance.get_run_logs.call_count == 3
+    # 4th run's job should be listed by name only (in truncated section or main section)
+    assert "job-d" in result
+
+
+def test_build_ci_error_details_shows_jobs_fetch_warning() -> None:
+    """If run_data has jobs_fetch_warning, it should appear in output."""
+    status_result = {
+        "run": {
+            "run_ids": [123],
+            "jobs_fetch_warning": "Could not fetch jobs for run(s): [456]",
+        },
+        "jobs": [
+            {
+                "name": "test-job",
+                "run_id": 123,
+                "conclusion": "failure",
+                "steps": [{"name": "Run tests", "conclusion": "failure"}],
+            }
+        ],
+    }
+
+    mock_instance = MagicMock()
+    mock_instance.get_run_logs.return_value = {"2_test-job.txt": "Error details"}
+
+    result = _build_ci_error_details(mock_instance, status_result, 300)
+
+    assert result is not None
+    assert "Could not fetch jobs for run(s): [456]" in result
+
+
+def test_build_ci_error_details_strips_timestamps_before_extraction() -> None:
+    """Test that timestamps are stripped before step extraction.
+
+    GitHub Actions raw logs have timestamps prefixed to every line.
+    If _extract_failed_step_log runs before _strip_timestamps, the
+    ##[group] markers won't be found and the entire raw log is returned
+    instead of just the failed step's output.
+    """
+    # Raw log with timestamps - mimics real GitHub Actions format
+    raw_log = (
+        "2026-01-28T12:58:00.0000000Z ##[group]Set up job\n"
+        "2026-01-28T12:58:00.1000000Z Runner info here\n"
+        "2026-01-28T12:58:00.2000000Z ##[endgroup]\n"
+        "2026-01-28T12:58:01.0000000Z ##[group]Run mypy\n"
+        "2026-01-28T12:58:01.1000000Z mypy 1.19.1\n"
+        "2026-01-28T12:58:01.2000000Z src/foo.py:10: error: Missing type\n"
+        "2026-01-28T12:58:01.3000000Z Found 1 error in 1 file\n"
+        "2026-01-28T12:58:01.4000000Z ##[error]Process completed with exit code 1.\n"
+        "2026-01-28T12:58:01.5000000Z ##[endgroup]\n"
+        "2026-01-28T12:58:02.0000000Z ##[group]Post job cleanup\n"
+        "2026-01-28T12:58:02.1000000Z Cleaning up\n"
+        "2026-01-28T12:58:02.2000000Z ##[endgroup]"
+    )
+
+    status_result = {
+        "run": {"run_ids": [123]},
+        "jobs": [
+            {
+                "name": "mypy",
+                "run_id": 123,
+                "conclusion": "failure",
+                "steps": [{"name": "Run mypy", "number": 4, "conclusion": "failure"}],
+            }
+        ],
+    }
+
+    mock_instance = MagicMock()
+    mock_instance.get_run_logs.return_value = {"2_mypy.txt": raw_log}
+
+    result = _build_ci_error_details(mock_instance, status_result, 300)
+
+    assert result is not None
+    # The extracted log should contain the mypy error, not setup/cleanup noise
+    assert "Missing type" in result
+    # Key assertion: setup and cleanup steps should NOT appear
+    assert "Runner info here" not in result
+    assert "Cleaning up" not in result
 
 
 def test_truncate_ci_details_custom_head_lines() -> None:
