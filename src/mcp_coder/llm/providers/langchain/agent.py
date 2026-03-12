@@ -1,7 +1,7 @@
 """Agent utilities for MCP tool-use support in the LangChain provider.
 
-Provides environment variable substitution and MCP server configuration loading
-for the LangChain agent mode (issue #517).
+Provides environment variable substitution, MCP server configuration loading,
+and the core agent execution function for the LangChain agent mode (issue #517).
 """
 
 import json
@@ -118,3 +118,111 @@ def _load_mcp_server_config(
         result[server_name] = resolved
 
     return result
+
+
+async def run_agent(
+    question: str,
+    chat_model: object,
+    messages: list[dict[str, object]],
+    mcp_config_path: str,
+    execution_dir: str | None = None,
+    env_vars: dict[str, str] | None = None,
+) -> tuple[str, list[dict[str, object]], dict[str, object]]:
+    """Run a LangGraph ReAct agent with MCP tools.
+
+    Parameters
+    ----------
+    question:
+        The user question / prompt to send to the agent.
+    chat_model:
+        A LangChain ``BaseChatModel`` instance (e.g. from a backend).
+    messages:
+        Prior conversation history as a list of dicts (LangChain native
+        serialization via ``.dict()`` / ``messages_from_dict()``).
+    mcp_config_path:
+        Absolute path to the ``.mcp.json`` configuration file.
+    execution_dir:
+        Optional working directory (currently unused, reserved for future).
+    env_vars:
+        Optional extra environment variables for MCP server resolution.
+
+    Returns
+    -------
+    tuple
+        ``(final_text, full_message_history, stats_dict)``.
+        *stats_dict* contains: ``agent_steps``, ``total_tool_calls``,
+        ``tool_trace``.
+    """
+    # Deferred imports — only needed when agent mode is active
+    from langchain_core.messages import (
+        AIMessage,
+        HumanMessage,
+        ToolMessage,
+        messages_from_dict,
+    )
+    from langchain_mcp_adapters.client import MultiServerMCPClient
+    from langgraph.prebuilt import create_react_agent
+
+    server_config = _load_mcp_server_config(mcp_config_path, env_vars)
+
+    async with MultiServerMCPClient(server_config) as client:
+        tools = client.get_tools()
+        agent = create_react_agent(chat_model, tools)
+
+        # Build input: prior history + new question
+        input_messages = messages_from_dict(messages) + [HumanMessage(content=question)]
+
+        result = await agent.ainvoke(
+            {"messages": input_messages},
+            config={"recursion_limit": AGENT_MAX_STEPS},
+        )
+
+        output_messages = result["messages"]
+
+        # Extract final text from the last AIMessage
+        final_text = ""
+        for msg in reversed(output_messages):
+            if isinstance(msg, AIMessage):
+                final_text = msg.content if isinstance(msg.content, str) else ""
+                break
+
+        # Compute stats
+        agent_steps = 0
+        total_tool_calls = 0
+        tool_trace: list[dict[str, object]] = []
+
+        for msg in output_messages:
+            if isinstance(msg, AIMessage) and getattr(msg, "tool_calls", None):
+                agent_steps += 1
+                for tc in msg.tool_calls:
+                    total_tool_calls += 1
+                    tool_trace.append(
+                        {
+                            "name": tc.get("name", ""),
+                            "args": tc.get("args", {}),
+                            "result": "",  # placeholder, filled below
+                        }
+                    )
+
+        # Fill tool results from ToolMessages
+        trace_idx = 0
+        for msg in output_messages:
+            if isinstance(msg, ToolMessage) and trace_idx < len(tool_trace):
+                tool_trace[trace_idx]["result"] = msg.content
+                trace_idx += 1
+
+        stats: dict[str, object] = {
+            "agent_steps": agent_steps,
+            "total_tool_calls": total_tool_calls,
+            "tool_trace": tool_trace,
+        }
+
+        # Serialize full history
+        serialized: list[dict[str, object]] = []
+        for msg in output_messages:
+            if hasattr(msg, "model_dump"):
+                serialized.append(msg.model_dump())
+            else:
+                serialized.append(msg.dict())
+
+        return (final_text, serialized, stats)
