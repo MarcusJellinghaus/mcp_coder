@@ -267,11 +267,12 @@ class TestCheckAndFixCI:
         # First call: CI failed, Second call (after fix): CI passed
         mock_manager.get_latest_ci_status.side_effect = [
             {
-                "run": {"id": 1, "status": "completed", "conclusion": "failure"},
+                "run": {"run_ids": [1], "status": "completed", "conclusion": "failure"},
                 "jobs": [
                     {
                         "name": "test",
                         "conclusion": "failure",
+                        "run_id": 1,
                         "steps": [
                             {"number": 1, "name": "Run tests", "conclusion": "failure"}
                         ],
@@ -280,12 +281,12 @@ class TestCheckAndFixCI:
             },
             # After fix - new CI run (different id) started but in progress
             {
-                "run": {"id": 2, "status": "in_progress", "conclusion": None},
+                "run": {"run_ids": [2], "status": "in_progress", "conclusion": None},
                 "jobs": [],
             },
             # New CI run completed with success
             {
-                "run": {"id": 2, "status": "completed", "conclusion": "success"},
+                "run": {"run_ids": [2], "status": "completed", "conclusion": "success"},
                 "jobs": [{"name": "test", "conclusion": "success", "steps": []}],
             },
         ]
@@ -341,11 +342,16 @@ class TestCheckAndFixCI:
         # Helper to create failed CI status with given run ID
         def make_failed_status(run_id: int) -> dict[str, Any]:
             return {
-                "run": {"id": run_id, "status": "completed", "conclusion": "failure"},
+                "run": {
+                    "run_ids": [run_id],
+                    "status": "completed",
+                    "conclusion": "failure",
+                },
                 "jobs": [
                     {
                         "name": "test",
                         "conclusion": "failure",
+                        "run_id": run_id,
                         "steps": [
                             {"number": 1, "name": "Run tests", "conclusion": "failure"}
                         ],
@@ -431,11 +437,12 @@ class TestCheckAndFixCI:
         mock_manager = MagicMock()
         mock_ci_manager.return_value = mock_manager
         mock_manager.get_latest_ci_status.return_value = {
-            "run": {"id": 1, "status": "completed", "conclusion": "failure"},
+            "run": {"run_ids": [1], "status": "completed", "conclusion": "failure"},
             "jobs": [
                 {
                     "name": "test",
                     "conclusion": "failure",
+                    "run_id": 1,
                     "steps": [
                         {"number": 1, "name": "Run tests", "conclusion": "failure"}
                     ],
@@ -482,11 +489,11 @@ class TestCheckAndFixCI:
         # First call: in progress, Second call: completed with success
         mock_manager.get_latest_ci_status.side_effect = [
             {
-                "run": {"id": 1, "status": "in_progress", "conclusion": None},
+                "run": {"run_ids": [1], "status": "in_progress", "conclusion": None},
                 "jobs": [],
             },
             {
-                "run": {"id": 1, "status": "completed", "conclusion": "success"},
+                "run": {"run_ids": [1], "status": "completed", "conclusion": "success"},
                 "jobs": [{"name": "test", "conclusion": "success", "steps": []}],
             },
         ]

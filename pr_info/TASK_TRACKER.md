@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message
 
 ### Step 4 — Update polling logic in `core.py` and `check_branch_status.py` ([step_4.md](./steps/step_4.md))
-- [ ] Update polling logic: `run["id"]` → `run["run_ids"]` set comparison in `_wait_for_new_ci_run()`, `check_and_fix_ci()`, `_run_ci_analysis_and_fix()`, `_poll_for_ci_completion()`, and `_run_auto_fixes()`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message
+- [x] Update polling logic: `run["id"]` → `run["run_ids"]` set comparison in `_wait_for_new_ci_run()`, `check_and_fix_ci()`, `_run_ci_analysis_and_fix()`, `_poll_for_ci_completion()`, and `_run_auto_fixes()`
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message
 
 ### Step 5 — Final validation — all tests pass, type checks clean ([step_5.md](./steps/step_5.md))
 - [ ] Run full test suite across all touched files, fix any remaining test fixtures referencing `run["id"]` or missing `run_id` on `JobData`

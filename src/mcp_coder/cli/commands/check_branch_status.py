@@ -314,12 +314,12 @@ def _run_auto_fixes(
 
             # Wait for new CI run to start (simple polling for new run ID)
             logger.info("Waiting for new CI run to start...")
+            old_run_ids: set[int] = set()
             try:
                 old_status = ci_manager.get_latest_ci_status(current_branch)
-                old_run_id = old_status.get("run", {}).get("id")
+                old_run_ids = set(old_status.get("run", {}).get("run_ids", []))
             except Exception as e:
                 logger.warning(f"Could not get old CI run: {e}")
-                old_run_id = None
 
             # Poll for new run (max 30 seconds)
             new_run_detected = False
@@ -327,9 +327,9 @@ def _run_auto_fixes(
                 time.sleep(5)
                 try:
                     new_status = ci_manager.get_latest_ci_status(current_branch)
-                    new_run_id = new_status.get("run", {}).get("id")
-                    if new_run_id and new_run_id != old_run_id:
-                        logger.info(f"New CI run detected: {new_run_id}")
+                    new_run_ids = set(new_status.get("run", {}).get("run_ids", []))
+                    if new_run_ids and not new_run_ids.issubset(old_run_ids):
+                        logger.info(f"New CI run detected: {new_run_ids}")
                         new_run_detected = True
                         break
                 except Exception as e:
