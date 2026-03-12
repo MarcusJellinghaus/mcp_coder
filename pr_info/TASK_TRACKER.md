@@ -37,10 +37,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 3a
 
 ### Step 3b — Agent Mode Routing + Session + MLflow ([step_3b.md](./steps/step_3b.md))
-- [ ] Implement Step 3b: extend `ask_langchain()` with mcp_config/execution_dir/env_vars params, add agent mode routing via asyncio.run, widen session type hints, write tests
-- [ ] Implement MLflow logging sub-commit for agent mode (params, metrics, tool_trace.json artifact)
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 3b
+- [x] Implement Step 3b: extend `ask_langchain()` with mcp_config/execution_dir/env_vars params, add agent mode routing via asyncio.run, widen session type hints, write tests
+- [x] Implement MLflow logging sub-commit for agent mode (params, metrics, tool_trace.json artifact)
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 3b
 
 ### Step 4 — Update interface.py Routing ([step_4.md](./steps/step_4.md))
 - [ ] Implement Step 4: pass mcp_config, execution_dir, env_vars through to `ask_langchain()` in `prompt_llm()`, write tests
