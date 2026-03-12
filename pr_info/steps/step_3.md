@@ -20,10 +20,10 @@ Do not modify any other files beyond what this step specifies.
 
 ### Files to modify
 - `src/mcp_coder/llm/providers/langchain/__init__.py` — extend `ask_langchain()` signature and logic
+- `src/mcp_coder/llm/providers/langchain/agent.py` — add `_check_agent_dependencies()` (Decision 18)
 - `src/mcp_coder/llm/providers/langchain/openai_backend.py` — extract model creation (Decision 9)
 - `src/mcp_coder/llm/providers/langchain/gemini_backend.py` — extract model creation (Decision 9)
 - `src/mcp_coder/llm/providers/langchain/anthropic_backend.py` — extract model creation (Decision 9)
-- `src/mcp_coder/llm/providers/langchain/_utils.py` — extend `_to_lc_messages()` (Decision 10)
 
 ### Files to modify (tests)
 - `tests/llm/providers/langchain/test_langchain_provider.py` — add agent mode routing tests
@@ -43,13 +43,16 @@ def ask_langchain(
 ) -> LLMResponseDict:
 ```
 
-### New private function
+### `_check_agent_dependencies()` in `agent.py` (Decision 18)
 
 ```python
+# In agent.py:
 def _check_agent_dependencies() -> None:
     """Runtime import check for langchain-mcp-adapters and langgraph.
     Raises ImportError with clear install instructions if missing."""
 ```
+
+Called from `__init__.py` at the start of the agent mode branch.
 
 ## HOW
 
@@ -72,11 +75,39 @@ else:
 6. Populate `raw_response` with agent data for MLflow
 7. Log to MLflow via `get_mlflow_logger()`
 
-### Chat model creation (Decision 3 + Decision 9)
-- Extract model creation from each backend module into a reusable function (e.g. `create_model()` in each backend)
-- Create `_create_chat_model(config)` shared helper in `__init__.py` that dispatches to the correct backend's `create_model()`
-- Refactor existing text-only path to also use this helper (DRY)
-- This requires modifying `openai_backend.py`, `gemini_backend.py`, `anthropic_backend.py`
+### Chat model creation (Decision 3 + Decision 9 + Decision 16)
+
+Extract model creation from each backend into a reusable function. Signatures:
+
+```python
+# openai_backend.py:
+def create_openai_model(
+    model: str,
+    api_key: str | None,
+    endpoint: str | None = None,
+    api_version: str | None = None,
+    timeout: int = 30,
+) -> ChatOpenAI | AzureChatOpenAI:
+    """Create an OpenAI/Azure chat model without invoking it."""
+
+# gemini_backend.py:
+def create_gemini_model(
+    model: str,
+    api_key: str | None,
+    timeout: int = 30,
+) -> ChatGoogleGenerativeAI:
+    """Create a Gemini chat model without invoking it."""
+
+# anthropic_backend.py:
+def create_anthropic_model(
+    model: str,
+    api_key: str | None,
+    timeout: int = 30,
+) -> ChatAnthropic:
+    """Create an Anthropic chat model without invoking it."""
+```
+
+Then create `_create_chat_model(config)` shared helper in `__init__.py` that dispatches to the correct backend's `create_*_model()`. Refactor existing `ask_*()` functions to call their `create_*_model()` internally (no behavior change for text-only path).
 
 ### MLflow logging (Decision 7 — separate sub-step / commit)
 
@@ -87,17 +118,12 @@ Implement agent routing first, then add MLflow logging as a follow-up commit wit
 - `log_metrics`: `agent_steps`, `total_tool_calls`
 - `log_artifact`: `tool_trace.json` with tool call details
 
-### Session history in agent mode (Decision 11 — no mode marker)
+### Session history in agent mode (Decision 15 — LangChain native serialization)
 - Load: `load_langchain_history(session_id)` — returns `list[dict]`
-- Agent mode messages include tool_calls and ToolMessage (richer than text-only)
+- Deserialize via `messages_from_dict()` from `langchain_core.messages` (handles all message types natively)
 - Store: `store_langchain_history(sid, serialized_messages)` — serialized via `.dict()`
-- No mode marker needed — extended `_to_lc_messages()` (Decision 10) handles all message types in a single deserialization path
-
-### Extend `_to_lc_messages()` (Decision 10)
-- Add handling for `"type": "tool"` → `ToolMessage`
-- Add handling for `AIMessage` with `tool_calls` list
-- Backward compatible — existing `"human"`/`"ai"` messages continue to work
-- File: `src/mcp_coder/llm/providers/langchain/_utils.py`
+- No custom `_to_lc_messages()` extension needed
+- Old text-only sessions won't load in agent mode (accepted trade-off — they start fresh)
 
 ## ALGORITHM
 

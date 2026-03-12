@@ -49,7 +49,7 @@ interface.py → ask_langchain(question, session_id, timeout,
 | Async | `asyncio.run()` wrapper | Matches Claude API provider pattern |
 | Max iterations | `AGENT_MAX_STEPS = 50`, partial output on limit | Prevents runaway loops |
 | Transport | `stdio` only | Only transport used by the project |
-| Session | LangChain native `.dict()` serialization for all message types. No mode marker needed (Decision 11) — `_to_lc_messages()` handles all types | Single deserialization path for both modes |
+| Session | LangChain native `.dict()` / `messages_from_dict()` for all serialization (Decision 15). No migration of old sessions. | LangChain handles all message types natively; no custom parsing needed |
 | Verify | Runtime: package check. Verify cmd: also stdio smoke test | Two levels |
 
 ### What is NOT changing
@@ -84,7 +84,7 @@ interface.py → ask_langchain(question, session_id, timeout,
 | `src/mcp_coder/llm/providers/langchain/verification.py` | Add MCP adapter package checks + stdio smoke test |
 | `src/mcp_coder/cli/commands/verify.py` | Wire new verification entries into label map and formatting |
 | `src/mcp_coder/cli/parsers.py` | Add `--mcp-config` argument to verify subparser (Decision 13) |
-| `src/mcp_coder/llm/providers/langchain/_utils.py` | Extend `_to_lc_messages()` with ToolMessage + tool_calls support (Decision 10) |
+
 | `tests/llm/providers/langchain/conftest.py` | Add `langchain_mcp_adapters` and `langgraph` mock modules |
 | `tests/llm/providers/langchain/test_langchain_provider.py` | Add tests for agent mode routing in `ask_langchain()` |
 
