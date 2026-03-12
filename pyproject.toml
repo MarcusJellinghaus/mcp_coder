@@ -115,7 +115,7 @@ markers = [
 ]
 # RECOMMENDED usage patterns:
 # pytest (no markers) - All unit tests (fast, mocked, default for CI)
-# -m "not claude_cli_integration and not claude_api_integration and not git_integration and not formatter_integration and not github_integration" - All unit tests (explicit)
+# -m "not claude_cli_integration and not claude_api_integration and not git_integration and not formatter_integration and not github_integration and not langchain_integration" - All unit tests (explicit)
 # -m "claude_cli_integration"
 # -m "claude_api_integration"
 # -m "git_integration"
@@ -142,6 +142,8 @@ float_to_top = true
 [tool.pylint.main]
 # Add project root to Python path so pylint can find workflows module
 init-hook = 'import sys; sys.path.insert(0, ".")'
+# Allow pylint to analyse C-extension modules (win32gui, win32process)
+extension-pkg-allow-list = ["win32gui", "win32process"]
 
 [tool.pylint.messages_control]
 # Disable all warnings (W), conventions (C), and refactor suggestions (R)
@@ -213,6 +215,14 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["anthropic", "anthropic.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["google", "google.genai", "google.genai.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["openai", "openai.*"]
 ignore_missing_imports = true
 
 [tool.setuptools_scm]
