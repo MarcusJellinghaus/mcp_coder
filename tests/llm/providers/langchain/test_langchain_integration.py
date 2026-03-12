@@ -11,6 +11,7 @@ For CI secrets configuration see .github/workflows/langchain-integration.yml.
 Config can be provided via config.toml or MCP_CODER_LLM_LANGCHAIN_* env vars.
 """
 
+import importlib.util
 import os
 
 import pytest
@@ -22,6 +23,12 @@ pytestmark = pytest.mark.langchain_integration
 
 def _require_langchain_config() -> None:
     """Skip the test if LangChain is not configured with valid credentials."""
+    try:
+        spec = importlib.util.find_spec("langchain_core")
+    except (ValueError, ModuleNotFoundError):
+        spec = None
+    if spec is None:
+        pytest.skip("langchain-core not installed")
     try:
         cfg = _load_langchain_config()
     except Exception as exc:  # pylint: disable=broad-except
