@@ -64,10 +64,10 @@ def _resolve_env_vars(value: str, env: dict[str, str]) -> str
 
 def _load_mcp_server_config(
     mcp_config_path: str,
-    execution_dir: str | None,
-    env_vars: dict[str, str] | None,
+    env_vars: dict[str, str] | None = None,
 ) -> dict[str, dict[str, object]]
     """Load .mcp.json and resolve env var placeholders.
+    Expects an absolute path (use resolve_mcp_config_path() from cli/utils.py).
     Returns dict suitable for MultiServerMCPClient."""
 ```
 
@@ -84,8 +84,9 @@ Add `langchain_mcp_adapters` and `langgraph` to the mock injection block.
 
 ### `_load_mcp_server_config` — integration points
 - Reads `.mcp.json` via `json.load()`
-- Resolves path relative to `execution_dir` (or cwd if None)
-- Walks all string values in the config dict and applies `_resolve_env_vars`
+- Expects an already-resolved absolute path (caller uses `resolve_mcp_config_path()` from `cli/utils.py`)
+- **Targeted resolution only** (Decision 1): resolves `${VAR}` placeholders in `command`, `args` (list items), and `env` (dict values) only
+- **Unknown fields**: logs a warning with key + value, then ignores them
 - Returns dict in format expected by `MultiServerMCPClient`:
   ```python
   {
@@ -112,11 +113,16 @@ return value
 
 ### `_load_mcp_server_config`
 ```
-config_path = resolve mcp_config_path relative to execution_dir
-config = json.load(config_path)
+config = json.load(mcp_config_path)  # expects absolute path from caller
 env = merge os.environ + env_vars (env_vars wins)
+KNOWN_FIELDS = {"command", "args", "env", "transport"}
 for server_name, server_config in config["mcpServers"].items():
-    recursively resolve all string values via _resolve_env_vars(value, env)
+    for key in server_config:
+        if key not in KNOWN_FIELDS:
+            log warning with key + value, skip resolution
+    resolve command string via _resolve_env_vars
+    resolve each item in args list via _resolve_env_vars
+    resolve each value in env dict via _resolve_env_vars
     set transport = "stdio"
 return resolved config
 ```
@@ -152,8 +158,8 @@ class TestResolveEnvVars:
 
 class TestLoadMcpServerConfig:
     def test_loads_and_resolves_config(self, tmp_path)
-    def test_resolves_relative_to_execution_dir(self, tmp_path)
     def test_env_vars_override_os_environ(self, tmp_path, monkeypatch)
     def test_raises_on_missing_file(self)
     def test_sets_stdio_transport(self, tmp_path)
+    def test_warns_on_unknown_fields(self, tmp_path, caplog)
 ```
