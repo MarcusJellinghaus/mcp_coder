@@ -7,6 +7,7 @@ is not installed.
 from __future__ import annotations
 
 import os
+from typing import Any
 
 from ._models import list_anthropic_models  # noqa: E402
 
@@ -36,7 +37,7 @@ def ask_anthropic(
     """
     effective_api_key = os.getenv("ANTHROPIC_API_KEY") or api_key
     lc_messages = _to_lc_messages(messages + [{"role": "human", "content": question}])
-    kwargs: dict[str, object] = {
+    kwargs: dict[str, Any] = {
         "model_name": model,
         "default_request_timeout": float(timeout),
     }

@@ -601,6 +601,20 @@ def add_gh_tool_parsers(subparsers: Any) -> None:
     )
 
 
+def add_verify_parser(subparsers: Any) -> None:
+    """Add the verify command parser."""
+    verify_parser = subparsers.add_parser(
+        "verify",
+        help="Verify CLI installation, LLM provider, and MLflow configuration",
+        formatter_class=WideHelpFormatter,
+    )
+    verify_parser.add_argument(
+        "--check-models",
+        action="store_true",
+        help="List available models for the configured LangChain backend (requires network)",
+    )
+
+
 def add_git_tool_parsers(subparsers: Any) -> None:
     """Add git-tool command parsers."""
     git_tool_parser = subparsers.add_parser("git-tool", help="Git tool commands")

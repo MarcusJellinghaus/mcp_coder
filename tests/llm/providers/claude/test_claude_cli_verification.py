@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
-"""Tests for the verify command."""
+"""Tests for the verify_claude function."""
 
-import argparse
-from io import StringIO
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from mcp_coder.llm.providers.claude.claude_cli_verification import (
-    verify_claude_cli_installation,
+    verify_claude,
 )
 
 
-class TestVerifyClaudeCliInstallation:
-    """Test the verify_claude_cli_installation function."""
+class TestVerifyClaude:
+    """Test the verify_claude function."""
 
     @patch(
         "mcp_coder.llm.providers.claude.claude_cli_verification.verify_claude_installation"
@@ -21,38 +19,35 @@ class TestVerifyClaudeCliInstallation:
     @patch(
         "mcp_coder.llm.providers.claude.claude_cli_verification._verify_claude_before_use"
     )
-    @patch("builtins.print")
-    def test_successful_verification(
+    def test_returns_structured_dict(
         self,
-        mock_print: MagicMock,
         mock_api_verify: MagicMock,
         mock_basic_verify: MagicMock,
     ) -> None:
-        """Test successful Claude verification."""
-        # Setup successful verification results
+        """Test that verify_claude returns a structured dict."""
         mock_basic_verify.return_value = {
             "found": True,
-            "path": "/usr/local/bin/claude",
-            "version": "1.0.0",
+            "path": "/usr/bin/claude",
+            "version": "2.1.40",
             "works": True,
             "error": None,
         }
-        mock_api_verify.return_value = (True, "/usr/local/bin/claude", None)
+        mock_api_verify.return_value = (True, "/usr/bin/claude", None)
 
-        args = argparse.Namespace()
+        result = verify_claude()
 
-        result = verify_claude_cli_installation(args)
-
-        assert result == 0  # Success exit code
-
-        # Check that verification functions were called
-        mock_basic_verify.assert_called_once()
-        mock_api_verify.assert_called_once()
-
-        # Check that success messages were printed
-        print_calls = [call[0][0] for call in mock_print.call_args_list]
-        success_messages = [msg for msg in print_calls if "YES" in msg or "OK" in msg]
-        assert len(success_messages) >= 2  # Should have multiple success indicators
+        assert result["cli_found"]["ok"] is True
+        assert result["cli_found"]["value"] == "YES"
+        assert result["cli_path"]["ok"] is True
+        assert result["cli_path"]["value"] == "/usr/bin/claude"
+        assert result["cli_version"]["ok"] is True
+        assert result["cli_version"]["value"] == "2.1.40"
+        assert result["cli_works"]["ok"] is True
+        assert result["cli_works"]["value"] == "YES"
+        assert result["api_integration"]["ok"] is True
+        assert result["api_integration"]["value"] == "OK"
+        assert result["api_integration"]["error"] is None
+        assert result["overall_ok"] is True
 
     @patch(
         "mcp_coder.llm.providers.claude.claude_cli_verification.verify_claude_installation"
@@ -60,15 +55,12 @@ class TestVerifyClaudeCliInstallation:
     @patch(
         "mcp_coder.llm.providers.claude.claude_cli_verification._verify_claude_before_use"
     )
-    @patch("builtins.print")
-    def test_failed_basic_verification(
+    def test_cli_not_found(
         self,
-        mock_print: MagicMock,
         mock_api_verify: MagicMock,
         mock_basic_verify: MagicMock,
     ) -> None:
-        """Test failed basic Claude verification."""
-        # Setup failed verification results
+        """Test when CLI is not found."""
         mock_basic_verify.return_value = {
             "found": False,
             "path": None,
@@ -78,24 +70,15 @@ class TestVerifyClaudeCliInstallation:
         }
         mock_api_verify.return_value = (False, None, "Claude CLI not accessible")
 
-        args = argparse.Namespace()
+        result = verify_claude()
 
-        result = verify_claude_cli_installation(args)
-
-        assert result == 1  # Error exit code
-
-        # Check that failure messages were printed
-        print_calls = [call[0][0] for call in mock_print.call_args_list]
-        failure_messages = [
-            msg
-            for msg in print_calls
-            if "NO" in msg or "FAILED" in msg or "Issues detected" in msg
-        ]
-        assert len(failure_messages) >= 2  # Should have multiple failure indicators
-
-        # Check that recommendations were provided
-        recommendation_messages = [msg for msg in print_calls if "npm install" in msg]
-        assert len(recommendation_messages) >= 1
+        assert result["cli_found"]["ok"] is False
+        assert result["cli_found"]["value"] == "NO"
+        assert "cli_path" not in result
+        assert "cli_version" not in result
+        assert result["cli_works"]["ok"] is False
+        assert result["api_integration"]["ok"] is False
+        assert result["overall_ok"] is False
 
     @patch(
         "mcp_coder.llm.providers.claude.claude_cli_verification.verify_claude_installation"
@@ -103,15 +86,12 @@ class TestVerifyClaudeCliInstallation:
     @patch(
         "mcp_coder.llm.providers.claude.claude_cli_verification._verify_claude_before_use"
     )
-    @patch("builtins.print")
-    def test_basic_success_api_failure(
+    def test_api_integration_fails(
         self,
-        mock_print: MagicMock,
         mock_api_verify: MagicMock,
         mock_basic_verify: MagicMock,
     ) -> None:
-        """Test case where basic verification succeeds but API verification fails."""
-        # Setup mixed verification results
+        """Test when basic verification succeeds but API integration fails."""
         mock_basic_verify.return_value = {
             "found": True,
             "path": "/usr/local/bin/claude",
@@ -121,19 +101,14 @@ class TestVerifyClaudeCliInstallation:
         }
         mock_api_verify.return_value = (False, None, "PATH configuration issue")
 
-        args = argparse.Namespace()
+        result = verify_claude()
 
-        result = verify_claude_cli_installation(args)
-
-        assert result == 1  # Error exit code
-
-        # Check that both success and failure messages were printed
-        print_calls = [call[0][0] for call in mock_print.call_args_list]
-        success_messages = [msg for msg in print_calls if "YES" in msg]
-        failure_messages = [msg for msg in print_calls if "FAILED" in msg]
-
-        assert len(success_messages) >= 2  # Basic verification successes
-        assert len(failure_messages) >= 1  # API verification failure
+        assert result["cli_found"]["ok"] is True
+        assert result["cli_works"]["ok"] is True
+        assert result["api_integration"]["ok"] is False
+        assert result["api_integration"]["value"] == "FAILED"
+        assert result["api_integration"]["error"] == "PATH configuration issue"
+        assert result["overall_ok"] is False
 
     @patch(
         "mcp_coder.llm.providers.claude.claude_cli_verification.verify_claude_installation"
@@ -141,15 +116,12 @@ class TestVerifyClaudeCliInstallation:
     @patch(
         "mcp_coder.llm.providers.claude.claude_cli_verification._verify_claude_before_use"
     )
-    @patch("builtins.print")
-    def test_api_verification_exception(
+    def test_api_integration_exception(
         self,
-        mock_print: MagicMock,
         mock_api_verify: MagicMock,
         mock_basic_verify: MagicMock,
     ) -> None:
-        """Test case where API verification throws an exception."""
-        # Setup basic verification success but API exception
+        """Test when API verification throws an exception."""
         mock_basic_verify.return_value = {
             "found": True,
             "path": "/usr/local/bin/claude",
@@ -159,16 +131,12 @@ class TestVerifyClaudeCliInstallation:
         }
         mock_api_verify.side_effect = RuntimeError("Unexpected API error")
 
-        args = argparse.Namespace()
+        result = verify_claude()
 
-        result = verify_claude_cli_installation(args)
-
-        assert result == 1  # Error exit code
-
-        # Check that exception was handled gracefully
-        print_calls = [call[0][0] for call in mock_print.call_args_list]
-        exception_messages = [msg for msg in print_calls if "EXCEPTION" in msg]
-        assert len(exception_messages) >= 1
+        assert result["api_integration"]["ok"] is False
+        assert result["api_integration"]["value"] == "FAILED"
+        assert "EXCEPTION" in result["api_integration"]["error"]
+        assert result["overall_ok"] is False
 
     @patch(
         "mcp_coder.llm.providers.claude.claude_cli_verification.verify_claude_installation"
@@ -176,20 +144,17 @@ class TestVerifyClaudeCliInstallation:
     @patch(
         "mcp_coder.llm.providers.claude.claude_cli_verification._verify_claude_before_use"
     )
-    @patch("builtins.print")
     def test_partial_basic_verification_info(
         self,
-        mock_print: MagicMock,
         mock_api_verify: MagicMock,
         mock_basic_verify: MagicMock,
     ) -> None:
-        """Test case with partial basic verification information."""
-        # Setup verification with some missing info
+        """Test with partial basic verification information (found but doesn't work)."""
         mock_basic_verify.return_value = {
             "found": True,
             "path": "/usr/local/bin/claude",
-            "version": None,  # Missing version
-            "works": False,  # Doesn't work
+            "version": None,
+            "works": False,
             "error": "Permission denied",
         }
         mock_api_verify.return_value = (
@@ -198,18 +163,10 @@ class TestVerifyClaudeCliInstallation:
             "Cannot execute",
         )
 
-        args = argparse.Namespace()
+        result = verify_claude()
 
-        result = verify_claude_cli_installation(args)
-
-        assert result == 1  # Error exit code
-
-        print_calls = [call[0][0] for call in mock_print.call_args_list]
-
-        # Should show path but not version
-        path_messages = [msg for msg in print_calls if "/usr/local/bin/claude" in msg]
-        assert len(path_messages) >= 1
-
-        # Should show error information
-        error_messages = [msg for msg in print_calls if "Permission denied" in msg]
-        assert len(error_messages) >= 1
+        assert result["cli_found"]["ok"] is True
+        assert result["cli_path"]["value"] == "/usr/local/bin/claude"
+        assert "cli_version" not in result  # No version when None
+        assert result["cli_works"]["ok"] is False
+        assert result["overall_ok"] is False

@@ -5,6 +5,7 @@ for parameter parsing and conversion.
 """
 
 import logging
+import sys
 from pathlib import Path
 
 from ..llm.session import parse_llm_method
@@ -13,11 +14,24 @@ from ..utils.user_config import get_config_values
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "_get_status_symbols",
     "parse_llm_method_from_args",
     "resolve_llm_method",
     "resolve_mcp_config_path",
     "resolve_execution_dir",
 ]
+
+
+def _get_status_symbols() -> dict[str, str]:
+    """Get platform-appropriate status symbols for terminal display.
+
+    Returns:
+        Dict with 'success', 'failure', and 'warning' status symbols
+    """
+    if sys.platform.startswith("win"):
+        return {"success": "[OK]", "failure": "[NO]", "warning": "[!!]"}
+    else:
+        return {"success": "\u2713", "failure": "\u2717", "warning": "\u26a0"}
 
 
 def resolve_llm_method(llm_method: str | None) -> str:

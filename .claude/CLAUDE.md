@@ -59,7 +59,7 @@ This runs:
 **Examples:**
 ```python
 # RECOMMENDED: Fast unit tests (excludes all integration tests)
-mcp__code-checker__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration"])
+mcp__code-checker__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"])
 
 # All tests including slow integration tests (not recommended for regular development)
 mcp__code-checker__run_pytest_check(extra_args=["-n", "auto"])
