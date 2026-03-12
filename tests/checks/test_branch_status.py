@@ -1476,6 +1476,55 @@ def test_build_ci_error_details_shows_jobs_fetch_warning() -> None:
     assert "Could not fetch jobs for run(s): [456]" in result
 
 
+def test_build_ci_error_details_strips_timestamps_before_extraction() -> None:
+    """Test that timestamps are stripped before step extraction.
+
+    GitHub Actions raw logs have timestamps prefixed to every line.
+    If _extract_failed_step_log runs before _strip_timestamps, the
+    ##[group] markers won't be found and the entire raw log is returned
+    instead of just the failed step's output.
+    """
+    # Raw log with timestamps - mimics real GitHub Actions format
+    raw_log = (
+        "2026-01-28T12:58:00.0000000Z ##[group]Set up job\n"
+        "2026-01-28T12:58:00.1000000Z Runner info here\n"
+        "2026-01-28T12:58:00.2000000Z ##[endgroup]\n"
+        "2026-01-28T12:58:01.0000000Z ##[group]Run mypy\n"
+        "2026-01-28T12:58:01.1000000Z mypy 1.19.1\n"
+        "2026-01-28T12:58:01.2000000Z src/foo.py:10: error: Missing type\n"
+        "2026-01-28T12:58:01.3000000Z Found 1 error in 1 file\n"
+        "2026-01-28T12:58:01.4000000Z ##[error]Process completed with exit code 1.\n"
+        "2026-01-28T12:58:01.5000000Z ##[endgroup]\n"
+        "2026-01-28T12:58:02.0000000Z ##[group]Post job cleanup\n"
+        "2026-01-28T12:58:02.1000000Z Cleaning up\n"
+        "2026-01-28T12:58:02.2000000Z ##[endgroup]"
+    )
+
+    status_result = {
+        "run": {"run_ids": [123]},
+        "jobs": [
+            {
+                "name": "mypy",
+                "run_id": 123,
+                "conclusion": "failure",
+                "steps": [{"name": "Run mypy", "number": 4, "conclusion": "failure"}],
+            }
+        ],
+    }
+
+    mock_instance = MagicMock()
+    mock_instance.get_run_logs.return_value = {"2_mypy.txt": raw_log}
+
+    result = _build_ci_error_details(mock_instance, status_result, 300)
+
+    assert result is not None
+    # The extracted log should contain the mypy error, not setup/cleanup noise
+    assert "Missing type" in result
+    # Key assertion: setup and cleanup steps should NOT appear
+    assert "Runner info here" not in result
+    assert "Cleaning up" not in result
+
+
 def test_truncate_ci_details_custom_head_lines() -> None:
     """Test truncate_ci_details with custom head_lines parameter."""
     # Create content with 200 lines

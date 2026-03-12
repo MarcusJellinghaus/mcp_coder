@@ -10,11 +10,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from mcp_coder.checks.ci_log_parser import (
-    _extract_failed_step_log,
-    _find_log_content,
-    _strip_timestamps,
-    truncate_ci_details,
+    _extract_failed_step_log as _extract_failed_step_log,
 )
+from mcp_coder.checks.ci_log_parser import _find_log_content as _find_log_content
+from mcp_coder.checks.ci_log_parser import _strip_timestamps as _strip_timestamps
+from mcp_coder.checks.ci_log_parser import truncate_ci_details as truncate_ci_details
 from mcp_coder.utils.git_operations import needs_rebase
 from mcp_coder.utils.git_operations.readers import (
     extract_issue_number_from_branch,
@@ -205,15 +205,16 @@ def get_failed_jobs_summary(
 
     log_content = _find_log_content(logs, job_name, step_number, step_name)
 
+    # Strip timestamps first so ##[group] markers are parseable
+    if log_content:
+        log_content = _strip_timestamps(log_content)
+
     # Extract just the failed step's section from the full job log
     if log_content:
         extracted = _extract_failed_step_log(log_content, step_name)
         if extracted:
             log_content = extracted
 
-    # Strip timestamps and truncate
-    if log_content:
-        log_content = _strip_timestamps(log_content)
     log_excerpt = truncate_ci_details(log_content)
 
     # Other failed jobs
@@ -440,15 +441,15 @@ def _build_ci_error_details(
 
         log_content = _find_log_content(logs, job_name, step_number, step_name)
 
+        # Strip timestamps first so ##[group] markers are parseable
+        if log_content:
+            log_content = _strip_timestamps(log_content)
+
         # Extract just the failed step's section from the full job log
         if log_content:
             extracted = _extract_failed_step_log(log_content, step_name)
             if extracted:
                 log_content = extracted
-
-        # Strip timestamps if content found
-        if log_content:
-            log_content = _strip_timestamps(log_content)
 
         # Calculate how many lines this job's section would take
         # Header lines: "## Job:", optional "View job:" (if URL available), "Failed step:", blank line
