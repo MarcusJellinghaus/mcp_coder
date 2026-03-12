@@ -61,10 +61,11 @@ from langgraph.prebuilt import create_react_agent
 - **Tool call errors**: handled by the agent itself (LangGraph passes errors back as ToolMessage)
 - **Max iterations**: use `recursion_limit=AGENT_MAX_STEPS` in agent invoke config; on limit, return whatever partial output exists
 
-### Message history
-- Convert `messages` (list of dicts) to LangChain message objects using existing `_to_lc_messages()` for human/ai messages
-- For agent mode history (includes tool_calls and ToolMessage), use extended `_to_lc_messages()` which handles all message types (Decision 10)
+### Message history (Decision 15 — LangChain native serialization)
+- Deserialize `messages` (list of dicts) to LangChain message objects using `messages_from_dict()` from `langchain_core.messages`
+- This handles all message types natively: HumanMessage, AIMessage (with tool_calls), ToolMessage
 - After agent run, serialize full history back to dicts via `.dict()` / `.model_dump()`
+- No custom `_to_lc_messages()` extension needed
 
 ## ALGORITHM
 
@@ -73,7 +74,7 @@ server_config = _load_mcp_server_config(mcp_config_path, env_vars)
 async with MultiServerMCPClient(server_config) as client:
     tools = client.get_tools()
     agent = create_react_agent(chat_model, tools)
-    input_messages = deserialize(messages) + [HumanMessage(question)]
+    input_messages = messages_from_dict(messages) + [HumanMessage(question)]
     result = await agent.ainvoke(
         {"messages": input_messages},
         config={"recursion_limit": AGENT_MAX_STEPS},
