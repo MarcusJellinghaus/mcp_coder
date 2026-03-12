@@ -35,3 +35,7 @@
 ## Decision 9: Add `jobs_fetch_warning` to `RunData` TypedDict
 **Context:** Step 2 adds a `jobs_fetch_warning` key to the run dict when `.jobs()` fails (Decision 7), but the `RunData` TypedDict from Step 1 didn't include it, which would cause mypy errors.
 **Decision:** Add `jobs_fetch_warning: NotRequired[str]` to `RunData` in Step 1.
+
+## Decision 10: Keep all `RunData` fields even if unused in source
+**Context:** Analysis showed only 5 of 10 `RunData` fields are consumed by source code (`run_ids`, `status`, `conclusion`, `commit_sha`, `url`). The other 5 (`workflow_name`, `event`, `workflow_path`, `branch`, `created_at`) are only asserted in tests.
+**Decision:** Keep all fields. They're cheap to populate and could be useful for future debugging/display.
