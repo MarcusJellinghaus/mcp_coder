@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 2
 
 ### Step 3a — Backend Refactor + Chat Model Helper ([step_3a.md](./steps/step_3a.md))
-- [ ] Implement Step 3a: extract `create_*_model()` from each backend, add `_create_chat_model()` dispatcher in __init__.py, add `_check_agent_dependencies()` to agent.py, write tests
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 3a
+- [x] Implement Step 3a: extract `create_*_model()` from each backend, add `_create_chat_model()` dispatcher in __init__.py, add `_check_agent_dependencies()` to agent.py, write tests
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 3a
 
 ### Step 3b — Agent Mode Routing + Session + MLflow ([step_3b.md](./steps/step_3b.md))
 - [ ] Implement Step 3b: extend `ask_langchain()` with mcp_config/execution_dir/env_vars params, add agent mode routing via asyncio.run, widen session type hints, write tests

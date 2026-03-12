@@ -224,3 +224,120 @@ class TestAskLangchain:
         assert {"role": "human", "content": "prev"} in stored_messages
         assert {"role": "human", "content": "new question"} in stored_messages
         assert {"role": "ai", "content": "answer"} in stored_messages
+
+
+class TestCreateChatModel:
+    """Tests for _create_chat_model() dispatcher."""
+
+    def test_dispatches_to_openai_backend(self) -> None:
+        """Config with backend=openai calls create_openai_model."""
+        mock_model = MagicMock()
+        with patch(
+            "mcp_coder.llm.providers.langchain.openai_backend.create_openai_model",
+            return_value=mock_model,
+        ) as mock_create:
+            from mcp_coder.llm.providers.langchain import _create_chat_model
+
+            result = _create_chat_model(
+                {"backend": "openai", "model": "gpt-4o", "api_key": "k"}
+            )
+        assert result is mock_model
+        mock_create.assert_called_once_with(
+            model="gpt-4o", api_key="k", endpoint=None, api_version=None
+        )
+
+    def test_dispatches_to_gemini_backend(self) -> None:
+        """Config with backend=gemini calls create_gemini_model."""
+        mock_model = MagicMock()
+        with patch(
+            "mcp_coder.llm.providers.langchain.gemini_backend.create_gemini_model",
+            return_value=mock_model,
+        ) as mock_create:
+            from mcp_coder.llm.providers.langchain import _create_chat_model
+
+            result = _create_chat_model(
+                {"backend": "gemini", "model": "gemini-2.0-flash", "api_key": "k"}
+            )
+        assert result is mock_model
+        mock_create.assert_called_once_with(model="gemini-2.0-flash", api_key="k")
+
+    def test_dispatches_to_anthropic_backend(self) -> None:
+        """Config with backend=anthropic calls create_anthropic_model."""
+        mock_model = MagicMock()
+        with patch(
+            "mcp_coder.llm.providers.langchain.anthropic_backend.create_anthropic_model",
+            return_value=mock_model,
+        ) as mock_create:
+            from mcp_coder.llm.providers.langchain import _create_chat_model
+
+            result = _create_chat_model(
+                {
+                    "backend": "anthropic",
+                    "model": "claude-sonnet-4-20250514",
+                    "api_key": "k",
+                }
+            )
+        assert result is mock_model
+        mock_create.assert_called_once_with(
+            model="claude-sonnet-4-20250514", api_key="k"
+        )
+
+    def test_raises_on_unknown_backend(self) -> None:
+        """Unknown backend raises ValueError."""
+        from mcp_coder.llm.providers.langchain import _create_chat_model
+
+        with pytest.raises(ValueError, match="unknown_llm"):
+            _create_chat_model({"backend": "unknown_llm", "model": "x"})
+
+
+class TestCheckAgentDependencies:
+    """Tests for _check_agent_dependencies()."""
+
+    def test_passes_when_both_installed(self) -> None:
+        """No error when both packages importable."""
+        from mcp_coder.llm.providers.langchain.agent import (
+            _check_agent_dependencies,
+        )
+
+        # Both are mocked in conftest, so this should not raise
+        _check_agent_dependencies()
+
+    def test_raises_clear_error_when_mcp_adapters_missing(self) -> None:
+        """ImportError with install instructions for langchain-mcp-adapters."""
+        import importlib
+        import sys
+
+        from mcp_coder.llm.providers.langchain import agent as agent_module
+
+        saved = sys.modules.get("langchain_mcp_adapters")
+        sys.modules["langchain_mcp_adapters"] = None  # type: ignore[assignment]
+        try:
+            importlib.reload(agent_module)
+            with pytest.raises(ImportError, match="langchain-mcp-adapters"):
+                agent_module._check_agent_dependencies()
+        finally:
+            if saved is not None:
+                sys.modules["langchain_mcp_adapters"] = saved
+            else:
+                sys.modules.pop("langchain_mcp_adapters", None)
+            importlib.reload(agent_module)
+
+    def test_raises_clear_error_when_langgraph_missing(self) -> None:
+        """ImportError with install instructions for langgraph."""
+        import importlib
+        import sys
+
+        from mcp_coder.llm.providers.langchain import agent as agent_module
+
+        saved = sys.modules.get("langgraph")
+        sys.modules["langgraph"] = None  # type: ignore[assignment]
+        try:
+            importlib.reload(agent_module)
+            with pytest.raises(ImportError, match="langgraph"):
+                agent_module._check_agent_dependencies()
+        finally:
+            if saved is not None:
+                sys.modules["langgraph"] = saved
+            else:
+                sys.modules.pop("langgraph", None)
+            importlib.reload(agent_module)

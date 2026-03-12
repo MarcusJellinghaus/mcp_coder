@@ -63,6 +63,39 @@ def _load_langchain_config() -> dict[str, str | None]:
     return config
 
 
+def _create_chat_model(config: dict[str, str]) -> object:
+    """Dispatch to correct backend's create_*_model() based on config."""
+    backend = config.get("backend")
+
+    if backend == "openai":
+        from .openai_backend import create_openai_model
+
+        return create_openai_model(
+            model=config.get("model") or "",
+            api_key=config.get("api_key"),
+            endpoint=config.get("endpoint"),
+            api_version=config.get("api_version"),
+        )
+    if backend == "gemini":
+        from .gemini_backend import create_gemini_model
+
+        return create_gemini_model(
+            model=config.get("model") or "",
+            api_key=config.get("api_key"),
+        )
+    if backend == "anthropic":
+        from .anthropic_backend import create_anthropic_model
+
+        return create_anthropic_model(
+            model=config.get("model") or "",
+            api_key=config.get("api_key"),
+        )
+    raise ValueError(
+        f"Unsupported langchain backend: {backend!r}. "
+        "Supported backends: 'openai', 'gemini', 'anthropic'."
+    )
+
+
 def ask_langchain(
     question: str,
     session_id: str | None = None,

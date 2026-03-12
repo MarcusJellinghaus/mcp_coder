@@ -23,6 +23,33 @@ except ImportError as exc:
     ) from exc
 
 
+def create_openai_model(
+    model: str,
+    api_key: str | None,
+    endpoint: str | None = None,
+    api_version: str | None = None,
+    timeout: int = 30,
+) -> ChatOpenAI | AzureChatOpenAI:
+    """Create an OpenAI/Azure chat model without invoking it."""
+    effective_api_key = os.getenv("OPENAI_API_KEY") or api_key
+    secret_key = SecretStr(effective_api_key) if effective_api_key else None
+
+    if api_version:
+        return AzureChatOpenAI(
+            azure_deployment=model,
+            azure_endpoint=endpoint,
+            api_key=secret_key,
+            api_version=api_version,
+            timeout=timeout,
+        )
+    return ChatOpenAI(
+        model=model,
+        api_key=secret_key,
+        base_url=endpoint,
+        timeout=timeout,
+    )
+
+
 def ask_openai(
     question: str,
     model: str,
@@ -37,26 +64,14 @@ def ask_openai(
     Returns (response_text, raw_response_dict).
     Raises ImportError with install instructions if langchain_openai missing.
     """
-    effective_api_key = os.getenv("OPENAI_API_KEY") or api_key
     lc_messages = _to_lc_messages(messages + [{"role": "human", "content": question}])
-    secret_key = SecretStr(effective_api_key) if effective_api_key else None
-
-    client: AzureChatOpenAI | ChatOpenAI
-    if api_version:
-        client = AzureChatOpenAI(
-            azure_deployment=model,
-            azure_endpoint=endpoint,
-            api_key=secret_key,
-            api_version=api_version,
-            timeout=timeout,
-        )
-    else:
-        client = ChatOpenAI(
-            model=model,
-            api_key=secret_key,
-            base_url=endpoint,
-            timeout=timeout,
-        )
+    client = create_openai_model(
+        model=model,
+        api_key=api_key,
+        endpoint=endpoint,
+        api_version=api_version,
+        timeout=timeout,
+    )
 
     try:
         ai_msg = client.invoke(lc_messages)
@@ -65,7 +80,9 @@ def ask_openai(
         if "404" in exc_str or "not_found" in exc_str.lower():
             hint = f"Model {model!r} not found for this OpenAI API key."
             try:
-                available = list_openai_models(effective_api_key, endpoint)
+                available = list_openai_models(
+                    os.getenv("OPENAI_API_KEY") or api_key, endpoint
+                )
                 hint += "\n\nAvailable models:\n" + "\n".join(
                     f"  - {m}" for m in available
                 )

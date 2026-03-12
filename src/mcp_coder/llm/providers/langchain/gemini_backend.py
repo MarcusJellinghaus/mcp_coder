@@ -20,6 +20,20 @@ except ImportError as exc:
     ) from exc
 
 
+def create_gemini_model(
+    model: str,
+    api_key: str | None,
+    timeout: int = 30,
+) -> ChatGoogleGenerativeAI:
+    """Create a Gemini chat model without invoking it."""
+    effective_api_key = os.getenv("GEMINI_API_KEY") or api_key
+    return ChatGoogleGenerativeAI(
+        model=model,
+        google_api_key=effective_api_key,
+        timeout=timeout,
+    )
+
+
 def ask_gemini(
     question: str,
     model: str,
@@ -31,14 +45,8 @@ def ask_gemini(
 
     Raises ImportError with install instructions if langchain_google_genai missing.
     """
-    effective_api_key = os.getenv("GEMINI_API_KEY") or api_key
     lc_messages = _to_lc_messages(messages + [{"role": "human", "content": question}])
-
-    client = ChatGoogleGenerativeAI(
-        model=model,
-        google_api_key=effective_api_key,
-        timeout=timeout,
-    )
+    client = create_gemini_model(model=model, api_key=api_key, timeout=timeout)
 
     try:
         ai_msg = client.invoke(lc_messages)
@@ -46,7 +54,7 @@ def ask_gemini(
         if "NOT_FOUND" in str(exc):
             hint = f"Model {model!r} not found for this Gemini API key."
             try:
-                available = list_gemini_models(effective_api_key)
+                available = list_gemini_models(os.getenv("GEMINI_API_KEY") or api_key)
                 hint += "\n\nAvailable models:\n" + "\n".join(
                     f"  - {m}" for m in available
                 )
