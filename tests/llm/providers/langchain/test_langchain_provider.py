@@ -480,7 +480,7 @@ class TestAskLangchainAgentMode:
             from mcp_coder.llm.providers.langchain import ask_langchain
 
             ask_langchain("question", session_id="sid", mcp_config="/path/.mcp.json")
-        stored = store_mock.call_args[0][1]
+        stored: list[dict[str, object]] = store_mock.call_args[0][1]
         assert len(stored) == 4
         assert stored[1].get("tool_calls") is not None
 
@@ -524,7 +524,9 @@ class TestAskLangchainAgentMode:
         assert raw["model"] == "gpt-4o"
         assert raw["agent_steps"] == 2
         assert raw["total_tool_calls"] == 3
-        assert len(raw["tool_trace"]) == 1
+        tool_trace = raw["tool_trace"]
+        assert isinstance(tool_trace, list)
+        assert len(tool_trace) == 1
         assert "messages" in raw
 
     def test_backward_compatible_text_only(self) -> None:

@@ -142,7 +142,7 @@ def _make_ai_message(
     from langchain_core.messages import AIMessage
 
     msg = AIMessage(content=content, tool_calls=tool_calls or [])
-    msg.model_dump = lambda: {  # type: ignore[attr-defined]
+    msg.model_dump = lambda: {  # type: ignore[method-assign, misc, assignment]
         "type": "ai",
         "content": content,
         "tool_calls": tool_calls or [],
@@ -155,7 +155,7 @@ def _make_human_message(content: str) -> object:
     from langchain_core.messages import HumanMessage
 
     msg = HumanMessage(content=content)
-    msg.model_dump = lambda: {"type": "human", "content": content}  # type: ignore[attr-defined]
+    msg.model_dump = lambda: {"type": "human", "content": content}  # type: ignore[method-assign, misc, assignment]
     return msg
 
 
@@ -164,7 +164,7 @@ def _make_tool_message(content: str, name: str = "tool") -> object:
     from langchain_core.messages import ToolMessage
 
     msg = ToolMessage(content=content, name=name)
-    msg.model_dump = lambda: {  # type: ignore[attr-defined]
+    msg.model_dump = lambda: {  # type: ignore[method-assign, misc, assignment]
         "type": "tool",
         "name": name,
         "content": content,
