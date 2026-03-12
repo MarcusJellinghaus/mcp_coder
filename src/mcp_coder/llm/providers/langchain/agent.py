@@ -9,6 +9,7 @@ import logging
 import os
 import re
 from pathlib import Path
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +146,7 @@ def _load_mcp_server_config(
 
 async def run_agent(
     question: str,
-    chat_model: object,
+    chat_model: Any,
     messages: list[dict[str, object]],
     mcp_config_path: str,
     execution_dir: str | None = None,
@@ -188,8 +189,8 @@ async def run_agent(
 
     server_config = _load_mcp_server_config(mcp_config_path, env_vars)
 
-    async with MultiServerMCPClient(server_config) as client:
-        tools = client.get_tools()
+    async with MultiServerMCPClient(cast(Any, server_config)) as client:
+        tools = await client.get_tools()
         agent = create_react_agent(chat_model, tools)
 
         # Build input: prior history + new question
