@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -32,7 +31,7 @@ class TestVerifyMlflowDisabled:
     @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
     def test_mlflow_installed_but_disabled(
-        self, mock_avail: MagicMock, mock_config: MagicMock
+        self, _mock_avail: MagicMock, mock_config: MagicMock
     ) -> None:
         mock_config.return_value = MLflowConfig(enabled=False)
         result = verify_mlflow()
@@ -49,7 +48,7 @@ class TestVerifyMlflowSqlite:
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
     def test_mlflow_enabled_sqlite_valid(
         self,
-        mock_avail: MagicMock,
+        _mock_avail: MagicMock,
         mock_config: MagicMock,
         tmp_path: Path,
     ) -> None:
@@ -68,7 +67,7 @@ class TestVerifyMlflowSqlite:
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
     def test_mlflow_enabled_sqlite_missing_db(
         self,
-        mock_avail: MagicMock,
+        _mock_avail: MagicMock,
         mock_config: MagicMock,
         tmp_path: Path,
     ) -> None:
@@ -90,7 +89,7 @@ class TestVerifyMlflowInvalidUri:
     @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
     def test_mlflow_enabled_invalid_uri(
-        self, mock_avail: MagicMock, mock_config: MagicMock
+        self, _mock_avail: MagicMock, mock_config: MagicMock
     ) -> None:
         """validate_tracking_uri raises ValueError for sqlite:// (missing third /)."""
         mock_config.return_value = MLflowConfig(
@@ -112,7 +111,7 @@ class TestVerifyMlflowHttp:
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
     def test_mlflow_enabled_http_reachable(
         self,
-        mock_avail: MagicMock,
+        _mock_avail: MagicMock,
         mock_config: MagicMock,
         mock_probe: MagicMock,
     ) -> None:
@@ -136,7 +135,7 @@ class TestVerifyMlflowHttp:
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
     def test_mlflow_enabled_http_unreachable(
         self,
-        mock_avail: MagicMock,
+        _mock_avail: MagicMock,
         mock_config: MagicMock,
         mock_probe: MagicMock,
     ) -> None:
@@ -161,7 +160,7 @@ class TestVerifyMlflowFileUri:
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
     def test_file_uri_exists(
         self,
-        mock_avail: MagicMock,
+        _mock_avail: MagicMock,
         mock_config: MagicMock,
         tmp_path: Path,
     ) -> None:
@@ -178,7 +177,7 @@ class TestVerifyMlflowFileUri:
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
     def test_file_uri_not_exists(
         self,
-        mock_avail: MagicMock,
+        _mock_avail: MagicMock,
         mock_config: MagicMock,
     ) -> None:
         mock_config.return_value = MLflowConfig(
@@ -199,7 +198,7 @@ class TestVerifyMlflowExperiment:
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
     def test_experiment_exists(
         self,
-        mock_avail: MagicMock,
+        _mock_avail: MagicMock,
         mock_config: MagicMock,
         mock_probe: MagicMock,
     ) -> None:
@@ -221,7 +220,7 @@ class TestVerifyMlflowExperiment:
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
     def test_experiment_not_found(
         self,
-        mock_avail: MagicMock,
+        _mock_avail: MagicMock,
         mock_config: MagicMock,
         mock_probe: MagicMock,
     ) -> None:
@@ -246,7 +245,7 @@ class TestVerifyMlflowArtifactLocation:
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
     def test_artifact_location_writable(
         self,
-        mock_avail: MagicMock,
+        _mock_avail: MagicMock,
         mock_config: MagicMock,
         tmp_path: Path,
     ) -> None:
@@ -264,7 +263,7 @@ class TestVerifyMlflowArtifactLocation:
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
     def test_artifact_location_not_exists(
         self,
-        mock_avail: MagicMock,
+        _mock_avail: MagicMock,
         mock_config: MagicMock,
     ) -> None:
         mock_config.return_value = MLflowConfig(
@@ -281,7 +280,7 @@ class TestVerifyMlflowArtifactLocation:
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
     def test_artifact_location_not_configured(
         self,
-        mock_avail: MagicMock,
+        _mock_avail: MagicMock,
         mock_config: MagicMock,
         tmp_path: Path,
     ) -> None:
