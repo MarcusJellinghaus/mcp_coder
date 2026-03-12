@@ -399,7 +399,7 @@ def _run_ci_analysis_and_fix(
 
     failed_jobs = [j for j in jobs if j.get("conclusion") == "failure"]
     failed_run_ids = list(
-        dict.fromkeys(j["run_id"] for j in failed_jobs if "run_id" in j)
+        dict.fromkeys(j["run_id"] for j in failed_jobs if j.get("run_id"))
     )
     logs: dict[str, str] = {}
     for rid in failed_run_ids[:3]:
