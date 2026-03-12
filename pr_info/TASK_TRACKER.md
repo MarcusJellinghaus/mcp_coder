@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1 — Pure functions + updated types (TDD) ([step_1.md](./steps/step_1.md))
-- [ ] Implement `RunData` TypedDict, update `JobData` with `run_id`, update `CIStatusData`, add `filter_runs_by_head_sha()` and `aggregate_conclusion()` pure functions — tests first
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message
+- [x] Implement `RunData` TypedDict, update `JobData` with `run_id`, update `CIStatusData`, add `filter_runs_by_head_sha()` and `aggregate_conclusion()` pure functions — tests first
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message
 
 ### Step 2 — Rewrite `get_latest_ci_status()` for multi-workflow support (TDD) ([step_2.md](./steps/step_2.md))
 - [ ] Update existing tests (`run["id"]` → `run["run_ids"]`, add `run_id` to jobs), add `TestGetLatestCIStatusMultiWorkflow` class, rewrite `get_latest_ci_status()` method

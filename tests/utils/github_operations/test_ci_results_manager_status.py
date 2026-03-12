@@ -3,6 +3,7 @@
 import io
 import zipfile
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Dict
 from unittest.mock import Mock, patch
 
@@ -11,6 +12,10 @@ import requests
 from github import GithubException
 
 from mcp_coder.utils.github_operations import CIResultsManager, CIStatusData
+from mcp_coder.utils.github_operations.ci_results_manager import (
+    aggregate_conclusion,
+    filter_runs_by_head_sha,
+)
 
 
 class TestGetLatestCIStatus:
@@ -528,3 +533,85 @@ class TestGetLatestCIStatusSteps:
         assert result["jobs"] == []
 
         mock_run.jobs.assert_called_once()
+
+
+class TestFilterRunsByHeadSha:
+    """Tests for filter_runs_by_head_sha pure function."""
+
+    def test_empty_input_returns_empty_list(self) -> None:
+        result = filter_runs_by_head_sha([])
+        assert result == []
+
+    def test_all_runs_same_sha_returns_all(self) -> None:
+        runs = [
+            SimpleNamespace(head_sha="abc123"),
+            SimpleNamespace(head_sha="abc123"),
+            SimpleNamespace(head_sha="abc123"),
+        ]
+        result = filter_runs_by_head_sha(runs)
+        assert len(result) == 3
+
+    def test_mixed_shas_returns_only_latest(self) -> None:
+        runs = [
+            SimpleNamespace(head_sha="abc123"),
+            SimpleNamespace(head_sha="abc123"),
+            SimpleNamespace(head_sha="old_sha"),
+            SimpleNamespace(head_sha="abc123"),
+        ]
+        result = filter_runs_by_head_sha(runs)
+        assert len(result) == 3
+        assert all(r.head_sha == "abc123" for r in result)
+
+    def test_caps_at_max_runs(self) -> None:
+        runs = [SimpleNamespace(head_sha="abc123") for _ in range(30)]
+        result = filter_runs_by_head_sha(runs, max_runs=5)
+        assert len(result) == 5
+
+
+class TestAggregateConclusion:
+    """Tests for aggregate_conclusion pure function."""
+
+    def test_empty_input_returns_not_configured(self) -> None:
+        result = aggregate_conclusion([])
+        assert result == (None, "not_configured")
+
+    def test_all_success_returns_success(self) -> None:
+        runs = [
+            SimpleNamespace(conclusion="success", status="completed"),
+            SimpleNamespace(conclusion="success", status="completed"),
+        ]
+        result = aggregate_conclusion(runs)
+        assert result == ("success", "completed")
+
+    def test_one_failure_among_successes_returns_failure(self) -> None:
+        runs = [
+            SimpleNamespace(conclusion="success", status="completed"),
+            SimpleNamespace(conclusion="failure", status="completed"),
+            SimpleNamespace(conclusion="success", status="completed"),
+        ]
+        result = aggregate_conclusion(runs)
+        assert result == ("failure", "completed")
+
+    def test_no_failures_one_in_progress_returns_pending(self) -> None:
+        runs = [
+            SimpleNamespace(conclusion="success", status="completed"),
+            SimpleNamespace(conclusion=None, status="in_progress"),
+        ]
+        result = aggregate_conclusion(runs)
+        assert result == (None, "in_progress")
+
+    def test_cancelled_treated_as_failure(self) -> None:
+        runs = [
+            SimpleNamespace(conclusion="cancelled", status="completed"),
+            SimpleNamespace(conclusion="success", status="completed"),
+        ]
+        result = aggregate_conclusion(runs)
+        assert result == ("failure", "completed")
+
+    def test_timed_out_treated_as_failure(self) -> None:
+        runs = [
+            SimpleNamespace(conclusion="timed_out", status="completed"),
+            SimpleNamespace(conclusion="success", status="completed"),
+        ]
+        result = aggregate_conclusion(runs)
+        assert result == ("failure", "completed")

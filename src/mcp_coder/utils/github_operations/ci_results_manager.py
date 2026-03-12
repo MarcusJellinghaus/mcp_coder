@@ -8,9 +8,10 @@ import io
 import logging
 import zipfile
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TypedDict, cast
+from typing import Any, Dict, List, Optional, Tuple, TypedDict, cast
 
 import requests
+from typing_extensions import NotRequired
 
 from mcp_coder.utils.git_operations.readers import validate_branch_name
 from mcp_coder.utils.log_utils import log_function_call
@@ -22,8 +23,11 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "StepData",
     "JobData",
+    "RunData",
     "CIStatusData",
     "CIResultsManager",
+    "filter_runs_by_head_sha",
+    "aggregate_conclusion",
 ]
 
 
@@ -39,6 +43,7 @@ class JobData(TypedDict):
     """TypedDict for workflow job data."""
 
     id: int
+    run_id: int
     name: str
     status: str
     conclusion: Optional[str]
@@ -47,16 +52,73 @@ class JobData(TypedDict):
     steps: List[StepData]
 
 
+class RunData(TypedDict):
+    """TypedDict for workflow run data."""
+
+    run_ids: List[int]
+    status: str
+    conclusion: Optional[str]
+    workflow_name: str
+    event: str
+    workflow_path: str
+    branch: str
+    commit_sha: str
+    created_at: str
+    url: str
+    jobs_fetch_warning: NotRequired[str]
+
+
 class CIStatusData(TypedDict):
     """TypedDict for CI status data structure.
 
     Represents a GitHub workflow run with its associated jobs.
     """
 
-    run: Dict[
-        str, Any
-    ]  # {id, status, conclusion, workflow_name, event, workflow_path, branch, commit_sha, created_at, url}
+    run: RunData
     jobs: List[JobData]
+
+
+def filter_runs_by_head_sha(runs: List[Any], max_runs: int = 25) -> List[Any]:
+    """Filter workflow runs to only those matching the latest commit SHA.
+
+    Args:
+        runs: List of PyGithub WorkflowRun objects (or duck-typed equivalents).
+        max_runs: Maximum number of runs to return.
+
+    Returns:
+        Filtered list of runs matching the first run's head_sha, capped at max_runs.
+    """
+    if not runs:
+        return []
+    target_sha = runs[0].head_sha
+    filtered = [r for r in runs if r.head_sha == target_sha]
+    return filtered[:max_runs]
+
+
+def aggregate_conclusion(
+    runs: List[Any],
+) -> Tuple[Optional[str], str]:
+    """Aggregate conclusion and status across multiple workflow runs.
+
+    Priority: failure/cancelled/timed_out > in_progress > success.
+
+    Args:
+        runs: List of objects with .conclusion and .status attributes.
+
+    Returns:
+        Tuple of (conclusion, status).
+    """
+    if not runs:
+        return (None, "not_configured")
+    conclusions = [r.conclusion for r in runs]
+    statuses = [r.status for r in runs]
+    if any(c in ("failure", "cancelled", "timed_out") for c in conclusions):
+        return ("failure", "completed")
+    if any(s in ("in_progress", "queued", "pending") for s in statuses):
+        return (None, "in_progress")
+    if all(c == "success" for c in conclusions):
+        return ("success", "completed")
+    return (None, "in_progress")
 
 
 class CIResultsManager(BaseGitHubManager):
@@ -120,7 +182,7 @@ class CIResultsManager(BaseGitHubManager):
         return True
 
     @log_function_call
-    @_handle_github_errors(default_return=CIStatusData(run={}, jobs=[]))
+    @_handle_github_errors(default_return=CIStatusData(run={}, jobs=[]))  # type: ignore[typeddict-item]
     def get_latest_ci_status(self, branch: str) -> CIStatusData:
         """Get latest CI run status and job results for a branch.
 
@@ -147,7 +209,7 @@ class CIResultsManager(BaseGitHubManager):
         repo = self._get_repository()
         if not repo:
             logger.error("Could not access GitHub repository")
-            return CIStatusData(run={}, jobs=[])
+            return CIStatusData(run={}, jobs=[])  # type: ignore[typeddict-item]
 
         # Get workflow runs for the branch
         try:
@@ -160,7 +222,7 @@ class CIResultsManager(BaseGitHubManager):
                 latest_run = runs[0]
             except IndexError:
                 logger.info(f"No workflow runs found for branch: {branch}")
-                return CIStatusData(run={}, jobs=[])
+                return CIStatusData(run={}, jobs=[])  # type: ignore[typeddict-item]
 
             # Get all jobs for the latest run
             jobs = list(latest_run.jobs())
@@ -184,7 +246,7 @@ class CIResultsManager(BaseGitHubManager):
             # Transform job data
             jobs_data: List[JobData] = []
             for job in jobs:
-                job_data: JobData = {
+                job_data: JobData = {  # type: ignore[typeddict-item]
                     "id": job.id,
                     "name": job.name,
                     "status": job.status,
@@ -209,7 +271,7 @@ class CIResultsManager(BaseGitHubManager):
                 }
                 jobs_data.append(job_data)
 
-            return CIStatusData(run=run_data, jobs=jobs_data)
+            return CIStatusData(run=run_data, jobs=jobs_data)  # type: ignore[typeddict-item]
 
         except Exception as e:
             logger.error(f"Error retrieving CI status for branch {branch}: {e}")
