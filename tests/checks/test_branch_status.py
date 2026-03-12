@@ -479,6 +479,108 @@ class TestExtractFailedStepLog:
         assert "Successfully set up Python" not in result
         assert "Collecting pytest" not in result
 
+    def test_unknown_step_returns_error_groups(self) -> None:
+        """When step_name is 'unknown', should return groups with ##[error] lines."""
+        log = (
+            "##[group]Set up job\n"
+            "Setting up runner...\n"
+            "##[endgroup]\n"
+            "##[group]Run tests\n"
+            "FAILED test_foo.py\n"
+            "##[endgroup]\n"
+            "##[error]Process completed with exit code 1.\n"
+            "##[group]Post actions\n"
+            "Cleaning up...\n"
+            "##[endgroup]"
+        )
+        result = _extract_failed_step_log(log, "unknown")
+        assert "FAILED test_foo.py" in result
+        assert "##[error]Process completed with exit code 1." in result
+        assert "Setting up runner" not in result
+        assert "Cleaning up" not in result
+
+    def test_empty_step_name_returns_error_groups(self) -> None:
+        """When step_name is empty, should return groups with ##[error] lines."""
+        log = (
+            "##[group]Set up job\n"
+            "Setting up runner...\n"
+            "##[endgroup]\n"
+            "##[group]Run tests\n"
+            "test output\n"
+            "##[endgroup]\n"
+            "##[error]Process completed with exit code 1.\n"
+            "##[group]Post actions\n"
+            "Cleaning up...\n"
+            "##[endgroup]"
+        )
+        result = _extract_failed_step_log(log, "")
+        assert "test output" in result
+        assert "##[error]Process completed with exit code 1." in result
+        assert "Setting up runner" not in result
+
+    def test_no_match_no_errors_returns_empty(self) -> None:
+        """When no match and no ##[error] lines, should return empty string."""
+        log = (
+            "##[group]Set up job\n"
+            "setup output\n"
+            "##[endgroup]\n"
+            "##[group]Checkout\n"
+            "checkout output\n"
+            "##[endgroup]"
+        )
+        result = _extract_failed_step_log(log, "unknown")
+        assert result == ""
+
+    def test_multiple_error_groups_returned(self) -> None:
+        """When multiple groups have ##[error] lines, all should be returned."""
+        log = (
+            "##[group]Set up job\n"
+            "setup output\n"
+            "##[endgroup]\n"
+            "##[group]Lint check\n"
+            "lint output\n"
+            "##[endgroup]\n"
+            "##[error]Lint failed\n"
+            "##[group]Run tests\n"
+            "test output\n"
+            "##[endgroup]\n"
+            "##[error]Tests failed"
+        )
+        result = _extract_failed_step_log(log, "unknown")
+        assert "--- Lint check ---" in result
+        assert "lint output" in result
+        assert "##[error]Lint failed" in result
+        assert "--- Run tests ---" in result
+        assert "test output" in result
+        assert "##[error]Tests failed" in result
+        assert "setup output" not in result
+
+    def test_fallback_excludes_clean_groups(self) -> None:
+        """Setup groups without ##[error] should be excluded from fallback."""
+        log = (
+            "##[group]Set up job\n"
+            "Runner version: 2.321.0\n"
+            "##[endgroup]\n"
+            "##[group]Install dependencies\n"
+            "pip install pytest\n"
+            "##[endgroup]\n"
+            "##[group]Run file-size check\n"
+            "Checking file sizes...\n"
+            "src/big_file.py: 900 lines (over 750)\n"
+            "##[endgroup]\n"
+            "##[error]Process completed with exit code 1.\n"
+            "##[group]Post checkout\n"
+            "Cleaning up...\n"
+            "##[endgroup]"
+        )
+        result = _extract_failed_step_log(log, "unknown")
+        assert "Checking file sizes" in result
+        assert "900 lines" in result
+        assert "##[error]Process completed with exit code 1." in result
+        assert "Runner version" not in result
+        assert "pip install" not in result
+        assert "Cleaning up" not in result
+
 
 def test_branch_status_constants() -> None:
     """Test that required constants are defined."""
