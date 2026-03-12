@@ -80,6 +80,7 @@ interface.py → ask_langchain(question, session_id, timeout,
 |------|--------|
 | `pyproject.toml` | Add `langchain-mcp-adapters`, `langgraph` to `[langchain]` extras |
 | `src/mcp_coder/llm/providers/langchain/__init__.py` | Extend `ask_langchain()` with `mcp_config`, `execution_dir`, `env_vars` params; add agent mode branch + MLflow logging |
+| `src/mcp_coder/llm/providers/langchain/_session.py` (or session storage location) | Widen `store_langchain_history` / `load_langchain_history` type hints to `list[dict[str, Any]]` (Decision 27) |
 | `src/mcp_coder/llm/interface.py` | Pass `mcp_config`, `execution_dir`, `env_vars` through to `ask_langchain()` |
 | `src/mcp_coder/llm/providers/langchain/verification.py` | Add MCP adapter package checks + stdio smoke test |
 | `src/mcp_coder/cli/commands/verify.py` | Wire new verification entries into label map and formatting |
@@ -92,9 +93,10 @@ interface.py → ask_langchain(question, session_id, timeout,
 
 1. **Step 1** — Dependencies + agent utilities (env var substitution, MCP config loading)
 2. **Step 2** — Agent execution core (`run_agent` with `create_react_agent`)
-3. **Step 3** — Extend `ask_langchain()` with agent mode routing + MLflow logging
-4. **Step 4** — Update `interface.py` to pass parameters through
-5. **Step 5** — Verification extensions (package checks + stdio smoke test)
+3. **Step 3a** — Backend refactor: extract `create_*_model()` + `_create_chat_model()` dispatcher + `_check_agent_dependencies()` (Decision 26)
+4. **Step 3b** — Agent mode routing in `ask_langchain()` + session handling + MLflow logging (Decision 26)
+5. **Step 4** — Update `interface.py` to pass parameters through
+6. **Step 5** — Verification extensions (package checks + stdio smoke test)
 
 Each step follows TDD: tests first, then implementation.
 

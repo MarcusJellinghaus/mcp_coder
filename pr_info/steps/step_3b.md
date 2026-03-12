@@ -1,29 +1,28 @@
-# Step 3: Extend ask_langchain() with Agent Mode + MLflow
+# Step 3b: Agent Mode Routing + Session + MLflow
 
 > **Context**: See `pr_info/steps/summary.md` for full issue context (#517).
-> **Depends on**: Steps 1–2 (agent.py must be complete).
+> **Depends on**: Step 3a (`_create_chat_model()` and `_check_agent_dependencies()` must exist).
+> **Split from**: Step 3 (Decision 26).
 
 ## LLM Prompt
 
 ```
-Implement Step 3 of issue #517 (MCP tool-use support for LangChain provider).
+Implement Step 3b of issue #517 (MCP tool-use support for LangChain provider).
 Read pr_info/steps/summary.md for context, then implement this step.
 
 This step: extend ask_langchain() in __init__.py to accept mcp_config,
 execution_dir, env_vars parameters. When mcp_config is provided, route to
-agent mode via asyncio.run(run_agent(...)). Add MLflow logging for agent
-interactions. Follow TDD — write tests first, then implement.
+agent mode via asyncio.run(run_agent(...)). Also widen session storage type
+hints (Decision 27) and add MLflow logging as a sub-commit (Decision 7).
+Follow TDD — write tests first, then implement.
 Do not modify any other files beyond what this step specifies.
 ```
 
 ## WHERE
 
 ### Files to modify
-- `src/mcp_coder/llm/providers/langchain/__init__.py` — extend `ask_langchain()` signature and logic
-- `src/mcp_coder/llm/providers/langchain/agent.py` — add `_check_agent_dependencies()` (Decision 18)
-- `src/mcp_coder/llm/providers/langchain/openai_backend.py` — extract model creation (Decision 9)
-- `src/mcp_coder/llm/providers/langchain/gemini_backend.py` — extract model creation (Decision 9)
-- `src/mcp_coder/llm/providers/langchain/anthropic_backend.py` — extract model creation (Decision 9)
+- `src/mcp_coder/llm/providers/langchain/__init__.py` — extend `ask_langchain()` signature + agent routing + MLflow logging
+- `src/mcp_coder/llm/providers/langchain/_session.py` (or wherever `store_langchain_history` / `load_langchain_history` live) — widen type hints from `list[dict[str, str]]` to `list[dict[str, Any]]` (Decision 27)
 
 ### Files to modify (tests)
 - `tests/llm/providers/langchain/test_langchain_provider.py` — add agent mode routing tests
@@ -43,16 +42,9 @@ def ask_langchain(
 ) -> LLMResponseDict:
 ```
 
-### `_check_agent_dependencies()` in `agent.py` (Decision 18)
+### Session type hint widening (Decision 27)
 
-```python
-# In agent.py:
-def _check_agent_dependencies() -> None:
-    """Runtime import check for langchain-mcp-adapters and langgraph.
-    Raises ImportError with clear install instructions if missing."""
-```
-
-Called from `__init__.py` at the start of the agent mode branch.
+Change `store_langchain_history` and `load_langchain_history` signatures from `list[dict[str, str]]` to `list[dict[str, Any]]`. Agent mode stores nested dicts (tool_calls, etc.) that don't fit `str` values.
 
 ## HOW
 
@@ -68,48 +60,14 @@ else:
 
 ### Agent mode branch
 1. Runtime import check via `_check_agent_dependencies()`
-2. Load config, create chat model (reuse existing backend dispatch to get the model object)
+2. Load config, create chat model via `_create_chat_model(config)` (from Step 3a)
 3. Load session history (reuse existing `load_langchain_history()`)
 4. Call `asyncio.run(run_agent(question, chat_model, history, mcp_config, execution_dir, env_vars))`
 5. Store full message history via `store_langchain_history()` using LangChain native serialization
 6. Populate `raw_response` with agent data for MLflow
 7. Log to MLflow via `get_mlflow_logger()`
 
-### Chat model creation (Decision 3 + Decision 9 + Decision 16)
-
-Extract model creation from each backend into a reusable function. Signatures:
-
-```python
-# openai_backend.py:
-def create_openai_model(
-    model: str,
-    api_key: str | None,
-    endpoint: str | None = None,
-    api_version: str | None = None,
-    timeout: int = 30,
-) -> ChatOpenAI | AzureChatOpenAI:
-    """Create an OpenAI/Azure chat model without invoking it."""
-
-# gemini_backend.py:
-def create_gemini_model(
-    model: str,
-    api_key: str | None,
-    timeout: int = 30,
-) -> ChatGoogleGenerativeAI:
-    """Create a Gemini chat model without invoking it."""
-
-# anthropic_backend.py:
-def create_anthropic_model(
-    model: str,
-    api_key: str | None,
-    timeout: int = 30,
-) -> ChatAnthropic:
-    """Create an Anthropic chat model without invoking it."""
-```
-
-Then create `_create_chat_model(config)` shared helper in `__init__.py` that dispatches to the correct backend's `create_*_model()`. Refactor existing `ask_*()` functions to call their `create_*_model()` internally (no behavior change for text-only path).
-
-### MLflow logging (Decision 7 — separate sub-step / commit)
+### MLflow logging (Decision 7 — separate sub-commit)
 
 Implement agent routing first, then add MLflow logging as a follow-up commit within this step.
 
@@ -205,7 +163,4 @@ class TestAskLangchainAgentMode:
 
     def test_backward_compatible_text_only(self)
         """Existing text-only tests still pass (regression check)."""
-
-    def test_check_agent_dependencies_raises_clear_error(self)
-        """_check_agent_dependencies gives install instructions."""
 ```

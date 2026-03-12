@@ -2,6 +2,7 @@
 
 > **Context**: See `pr_info/steps/summary.md` for full issue context (#517).
 > **Depends on**: Steps 1–2 (agent.py must exist for MCP config loading).
+> **Note**: Decision 28 — MCP adapter failures fail `overall_ok`. Decision 29 — reuse `langchain_integration` marker.
 
 ## LLM Prompt
 
@@ -102,6 +103,10 @@ mcp_ok = _check_package_installed("langchain_mcp_adapters")
 lg_ok = _check_package_installed("langgraph")
 return {"mcp_adapters": {"ok": mcp_ok, ...}, "langgraph": {"ok": lg_ok, ...}}
 ```
+
+### `overall_ok` computation (Decision 28)
+- Update `overall_ok` in `verify_langchain()` to include `mcp_adapters` and `langgraph` check results
+- If either package is missing, `overall_ok = False`
 
 ### End-to-end MCP agent test (Decision 25 — error categorization)
 ```
