@@ -18,8 +18,8 @@ Do not modify any other files beyond what this step specifies.
 ## WHERE
 
 ### Files to modify
-- `src/mcp_coder/llm/providers/langchain/verification.py` — add MCP adapter checks + smoke test
-- `src/mcp_coder/cli/commands/verify.py` — wire new check entries into label map and formatting
+- `src/mcp_coder/llm/providers/langchain/verification.py` — add MCP adapter package checks + end-to-end agent test
+- `src/mcp_coder/cli/commands/verify.py` — wire new check entries into label map, pass `mcp_config` using shared utils
 
 ### Files to modify (tests)
 - `tests/llm/providers/langchain/test_langchain_verification.py` — add verification tests
@@ -33,27 +33,16 @@ Do not modify any other files beyond what this step specifies.
 def _check_mcp_adapter_packages() -> dict[str, dict[str, object]]:
     """Check if langchain-mcp-adapters and langgraph are importable.
     Returns dict with 'mcp_adapters' and 'langgraph' entries."""
-
-async def _smoke_test_mcp_server(
-    server_name: str,
-    server_config: dict[str, object],
-) -> dict[str, object]:
-    """Start an MCP server via stdio, list tools, shut down.
-    Returns dict with ok, value, tool_count, error."""
-
-def _verify_mcp_connectivity(
-    mcp_config_path: str | None,
-    env_vars: dict[str, str] | None = None,
-) -> dict[str, dict[str, object]]:
-    """Verify each MCP server in .mcp.json can start and respond.
-    Returns dict keyed by server name with smoke test results."""
 ```
+
+**Note (Decision 6):** No separate `_smoke_test_mcp_server()` or `_verify_mcp_connectivity()`.
+The end-to-end MCP test calls `ask_llm()` with `mcp_config` — same code path as real usage.
 
 ### verification.py — extend `verify_langchain()`
 
 Add two new sections to the result dict:
 - `mcp_adapters`: package installation check (always run)
-- `mcp_servers`: per-server connectivity check (only in verify command, when .mcp.json exists)
+- `mcp_agent_test`: end-to-end agent test via `ask_llm()` with `mcp_config` (Decision 6)
 
 ```python
 def verify_langchain(
@@ -70,14 +59,15 @@ def verify_langchain(
 _LABEL_MAP.update({
     "mcp_adapters": "MCP adapters",
     "langgraph": "LangGraph",
-    "mcp_servers": "MCP servers",
+    "mcp_agent_test": "MCP agent test",
 })
 ```
 
-### verify.py — pass `check_mcp=True` from verify command
+### verify.py — pass `check_mcp=True` from verify command (Decision 6)
 
 When provider is langchain, also pass `check_mcp=True` and resolve the
-`.mcp.json` path from the current working directory.
+`.mcp.json` path using `resolve_mcp_config_path()` from `cli/utils.py` (DRY —
+same resolution logic as the main prompt flow).
 
 ## HOW
 
@@ -85,17 +75,11 @@ When provider is langchain, also pass `check_mcp=True` and resolve the
 - Uses existing `_check_package_installed()` helper
 - Checks `langchain_mcp_adapters` and `langgraph` module names
 
-### `_smoke_test_mcp_server()`
-- Async function using `MultiServerMCPClient` with a single server
-- Opens connection, calls `client.get_tools()`, counts tools, closes
-- Wrapped in try/except for clean error reporting
-- Timeout: 10 seconds (reasonable for local stdio servers)
-
-### `_verify_mcp_connectivity()`
-- Loads MCP config via `_load_mcp_server_config()` from agent.py
-- Runs `_smoke_test_mcp_server()` for each server sequentially
-- Uses `asyncio.run()` wrapper
-- Only called when `check_mcp=True`
+### End-to-end MCP agent test (Decision 6)
+- When `check_mcp=True` and `mcp_config_path` is provided:
+  - Call `ask_llm("Reply with OK", provider="langchain", mcp_config=mcp_config_path)` — same code path as real usage
+  - This exercises the full agent pipeline: config loading, MCP server startup, tool discovery, agent execution
+- Uses `resolve_mcp_config_path()` from `cli/utils.py` for path resolution (DRY)
 
 ## ALGORITHM
 
@@ -106,23 +90,15 @@ lg_ok = _check_package_installed("langgraph")
 return {"mcp_adapters": {"ok": mcp_ok, ...}, "langgraph": {"ok": lg_ok, ...}}
 ```
 
-### `_smoke_test_mcp_server`
+### End-to-end MCP agent test
 ```
-try:
-    async with MultiServerMCPClient({name: config}) as client:
-        tools = client.get_tools()
-        return {"ok": True, "value": f"{len(tools)} tools", "tool_count": len(tools)}
-except Exception as exc:
-    return {"ok": False, "value": None, "error": str(exc)}
-```
-
-### `_verify_mcp_connectivity`
-```
-server_config = _load_mcp_server_config(mcp_config_path, None, env_vars)
-results = {}
-for name, config in server_config.items():
-    results[name] = asyncio.run(_smoke_test_mcp_server(name, config))
-return results
+if check_mcp and mcp_config_path:
+    try:
+        from mcp_coder.llm.interface import ask_llm
+        ask_llm("Reply with OK", provider="langchain", mcp_config=mcp_config_path, timeout=30)
+        result["mcp_agent_test"] = {"ok": True, "value": "agent responded"}
+    except Exception as exc:
+        result["mcp_agent_test"] = {"ok": False, "value": None, "error": str(exc)}
 ```
 
 ## DATA
@@ -134,14 +110,7 @@ return results
     # ... existing fields ...
     "mcp_adapters": {"ok": True, "value": "langchain-mcp-adapters installed"},
     "langgraph": {"ok": True, "value": "langgraph installed"},
-    "mcp_servers": {
-        "ok": True,
-        "value": "all servers responding",
-        "details": {
-            "code-checker": {"ok": True, "value": "12 tools", "tool_count": 12},
-            "filesystem": {"ok": True, "value": "8 tools", "tool_count": 8},
-        }
-    },
+    "mcp_agent_test": {"ok": True, "value": "agent responded"},
 }
 ```
 
@@ -159,11 +128,11 @@ class TestVerifyLangchainMcpSection:
     def test_includes_mcp_adapter_check(self)
         """verify_langchain() result includes mcp_adapters entry."""
 
-    def test_mcp_servers_skipped_when_check_mcp_false(self)
-        """No mcp_servers entry when check_mcp=False."""
+    def test_mcp_agent_test_skipped_when_check_mcp_false(self)
+        """No mcp_agent_test entry when check_mcp=False."""
 
-    def test_mcp_servers_included_when_check_mcp_true(self)
-        """mcp_servers entry present when check_mcp=True."""
+    def test_mcp_agent_test_calls_ask_llm_end_to_end(self)
+        """check_mcp=True calls ask_llm() with mcp_config (Decision 6)."""
 ```
 
 ### `test_verify.py` or `test_verify_command.py` — additions
@@ -176,6 +145,5 @@ class TestVerifyLabelMap:
 
 ### Mock strategy
 - Mock `_check_package_installed` for package checks
-- Mock `MultiServerMCPClient` for smoke test (async context manager)
-- Mock `_load_mcp_server_config` for connectivity test
-- No real MCP servers needed
+- Mock `ask_llm` for end-to-end agent test (verify it's called with correct `mcp_config`)
+- No real MCP servers or LLM calls needed

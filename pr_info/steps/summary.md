@@ -88,3 +88,5 @@ interface.py → ask_langchain(question, session_id, timeout,
 5. **Step 5** — Verification extensions (package checks + stdio smoke test)
 
 Each step follows TDD: tests first, then implementation.
+
+See [Decisions.md](Decisions.md) for design decisions from plan review.

@@ -69,7 +69,7 @@ from langgraph.prebuilt import create_react_agent
 ## ALGORITHM
 
 ```
-server_config = _load_mcp_server_config(mcp_config_path, execution_dir, env_vars)
+server_config = _load_mcp_server_config(mcp_config_path, env_vars)
 async with MultiServerMCPClient(server_config) as client:
     tools = client.get_tools()
     agent = create_react_agent(chat_model, tools)

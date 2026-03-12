@@ -68,21 +68,26 @@ else:
 6. Populate `raw_response` with agent data for MLflow
 7. Log to MLflow via `get_mlflow_logger()`
 
-### Chat model creation
-- Extract into `_create_chat_model(config)` helper that returns the LangChain chat model instance
+### Chat model creation (Decision 3)
+- Extract into `_create_chat_model(config)` shared helper that returns the LangChain chat model instance
+- Refactor existing text-only path to also use this helper (DRY)
 - Reuse existing backend logic but return the model object instead of invoking it
 - This avoids duplicating model creation across text-only and agent paths
 
-### MLflow logging
+### MLflow logging (Decision 7 — separate sub-step / commit)
+
+Implement agent routing first, then add MLflow logging as a follow-up commit within this step.
+
 - Use existing `get_mlflow_logger()` singleton
 - `log_params`: `backend`, `model`, `tool_call_count`
 - `log_metrics`: `agent_steps`, `total_tool_calls`
 - `log_artifact`: `tool_trace.json` with tool call details
 
-### Session history in agent mode
+### Session history in agent mode (Decision 2)
 - Load: `load_langchain_history(session_id)` — returns `list[dict]`
 - Agent mode messages include tool_calls and ToolMessage (richer than text-only)
 - Store: `store_langchain_history(sid, serialized_messages)` — serialized via `.dict()`
+- **Mode marker**: store `"mode": "agent"` or `"mode": "text"` in session metadata so deserialization knows which format to expect
 
 ## ALGORITHM
 
