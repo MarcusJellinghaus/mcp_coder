@@ -111,11 +111,14 @@ Add `langchain_mcp_adapters`, `langchain_mcp_adapters.client`, `langgraph`, and 
 ### `_resolve_env_vars`
 ```
 pattern = r'\$\{([^}]+)\}'
-for each match in value:
+Use re.sub with a callback for single-pass replacement (avoids re-substitution
+if a replacement value itself contains ${...} patterns):
+
+def replacer(match):
     var_name = match.group(1)
-    replacement = env.get(var_name, match.group(0))  # keep original if not found
-    value = value.replace(match, replacement)
-return value
+    return env.get(var_name, match.group(0))  # keep original if not found
+
+return re.sub(pattern, replacer, value)
 ```
 
 ### `_load_mcp_server_config`

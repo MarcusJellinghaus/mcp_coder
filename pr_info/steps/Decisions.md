@@ -23,3 +23,8 @@ Decisions made during plan review discussion.
 | 17 | No round-trip serialization test | Don't add tests for LangChain's native serialization round-trip. | Trust LangChain's own library tests; less custom code = less custom tests. |
 | 18 | `_check_agent_dependencies()` location | Move `_check_agent_dependencies()` to `agent.py` instead of `__init__.py`. | Keeps all agent-related code together; `__init__.py` just calls it. |
 | 19 | Full tool results in `tool_trace` | Keep full tool results in `tool_trace` — no truncation. | More useful for debugging. |
+| 20 | Session format cross-compatibility | Accept as known limitation — switching modes on same session_id may lose history. No code changes. Users can use different session IDs. | Avoids unnecessary complexity; both directions (text→agent, agent→text) may not round-trip. |
+| 21 | Backend refactor (Decision 9) | Keep refactor as planned — extract `create_*_model()` in each backend. | Proper DRY; low-risk given trivial constructors. |
+| 22 | Verify end-to-end smoke test | Keep full `ask_llm()` call (Decision 6). Opt-in via `--mcp-config` flag. | Tests real code path; only runs when explicitly requested. |
+| 23 | `asyncio.run()` nesting | Accept limitation — consistent with Claude provider pattern. | CLI-only usage; not a concern for primary use case. |
+| 24 | `_resolve_env_vars` implementation | Use `re.sub()` with callback for single-pass replacement. Updated Step 1 pseudocode. | Prevents edge-case bugs from re-substitution of replacement values containing `${...}`. |
