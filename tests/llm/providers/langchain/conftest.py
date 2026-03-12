@@ -54,6 +54,16 @@ def _mock_langchain_modules() -> Generator[None, None, None]:
     if "langchain_anthropic" not in sys.modules:
         mocks["langchain_anthropic"] = MagicMock()
 
+    if "langchain_mcp_adapters" not in sys.modules:
+        _lc_mcp = MagicMock()
+        mocks["langchain_mcp_adapters"] = _lc_mcp
+        mocks["langchain_mcp_adapters.client"] = MagicMock()
+
+    if "langgraph" not in sys.modules:
+        _langgraph = MagicMock()
+        mocks["langgraph"] = _langgraph
+        mocks["langgraph.prebuilt"] = MagicMock()
+
     if "google.genai" not in sys.modules:
         if "google" not in sys.modules:
             mocks["google"] = MagicMock()
