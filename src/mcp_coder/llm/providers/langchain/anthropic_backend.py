@@ -24,6 +24,22 @@ except ImportError as exc:
     ) from exc
 
 
+def create_anthropic_model(
+    model: str,
+    api_key: str | None,
+    timeout: int = 30,
+) -> ChatAnthropic:
+    """Create an Anthropic chat model without invoking it."""
+    effective_api_key = os.getenv("ANTHROPIC_API_KEY") or api_key
+    kwargs: dict[str, Any] = {
+        "model_name": model,
+        "default_request_timeout": float(timeout),
+    }
+    if effective_api_key:
+        kwargs["anthropic_api_key"] = SecretStr(effective_api_key)
+    return ChatAnthropic(**kwargs)
+
+
 def ask_anthropic(
     question: str,
     model: str,
@@ -35,16 +51,8 @@ def ask_anthropic(
 
     Raises ImportError with install instructions if langchain_anthropic missing.
     """
-    effective_api_key = os.getenv("ANTHROPIC_API_KEY") or api_key
     lc_messages = _to_lc_messages(messages + [{"role": "human", "content": question}])
-    kwargs: dict[str, Any] = {
-        "model_name": model,
-        "default_request_timeout": float(timeout),
-    }
-    if effective_api_key:
-        kwargs["anthropic_api_key"] = SecretStr(effective_api_key)
-
-    client = ChatAnthropic(**kwargs)
+    client = create_anthropic_model(model=model, api_key=api_key, timeout=timeout)
 
     try:
         ai_msg = client.invoke(lc_messages)
@@ -53,7 +61,9 @@ def ask_anthropic(
         if "404" in exc_str or "not_found" in exc_str.lower():
             hint = f"Model {model!r} not found for this Anthropic API key."
             try:
-                available = list_anthropic_models(effective_api_key)
+                available = list_anthropic_models(
+                    os.getenv("ANTHROPIC_API_KEY") or api_key
+                )
                 hint += "\n\nAvailable models:\n" + "\n".join(
                     f"  - {m}" for m in available
                 )

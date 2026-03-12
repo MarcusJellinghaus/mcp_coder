@@ -14,6 +14,29 @@ logger = logging.getLogger(__name__)
 
 AGENT_MAX_STEPS: int = 50
 
+
+def _check_agent_dependencies() -> None:
+    """Runtime import check for langchain-mcp-adapters and langgraph.
+
+    Raises ImportError with clear install instructions if missing.
+    """
+    missing: list[str] = []
+    try:
+        import langchain_mcp_adapters  # noqa: F401
+    except ImportError:
+        missing.append("langchain-mcp-adapters")
+    try:
+        import langgraph  # noqa: F401
+    except ImportError:
+        missing.append("langgraph")
+    if missing:
+        packages = " ".join(missing)
+        raise ImportError(
+            f"Agent mode requires additional packages: {', '.join(missing)}.\n"
+            f"Install with: pip install {packages}"
+        )
+
+
 _KNOWN_FIELDS = {"command", "args", "env", "transport"}
 
 
