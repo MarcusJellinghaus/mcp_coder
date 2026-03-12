@@ -189,7 +189,7 @@ async def run_agent(
 
     server_config = _load_mcp_server_config(mcp_config_path, env_vars)
 
-    async with MultiServerMCPClient(cast(Any, server_config)) as client:
+    async with MultiServerMCPClient(cast(Any, server_config)) as client:  # type: ignore[misc]  # upstream __aexit__ returns None
         tools = await client.get_tools()
         agent = create_react_agent(chat_model, tools)
 
