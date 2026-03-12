@@ -103,15 +103,21 @@ lg_ok = _check_package_installed("langgraph")
 return {"mcp_adapters": {"ok": mcp_ok, ...}, "langgraph": {"ok": lg_ok, ...}}
 ```
 
-### End-to-end MCP agent test
+### End-to-end MCP agent test (Decision 25 — error categorization)
 ```
 if mcp_config_path:
     try:
         from mcp_coder.llm.interface import ask_llm
         ask_llm("Reply with OK", provider="langchain", mcp_config=mcp_config_path, timeout=30)
         result["mcp_agent_test"] = {"ok": True, "value": "agent responded"}
+    except FileNotFoundError as exc:
+        result["mcp_agent_test"] = {"ok": False, "value": None, "error": f"MCP config not found: {exc}"}
+    except ImportError as exc:
+        result["mcp_agent_test"] = {"ok": False, "value": None, "error": f"Missing dependency: {exc}"}
+    except ConnectionError as exc:
+        result["mcp_agent_test"] = {"ok": False, "value": None, "error": f"MCP server failed to start: {exc}"}
     except Exception as exc:
-        result["mcp_agent_test"] = {"ok": False, "value": None, "error": str(exc)}
+        result["mcp_agent_test"] = {"ok": False, "value": None, "error": f"Agent test failed: {type(exc).__name__}: {exc}"}
 ```
 
 ## DATA
