@@ -410,7 +410,7 @@ def _collect_ci_status(
         status_result = ci_manager.get_latest_ci_status(branch)
 
         # Check if CI data is empty (no runs found)
-        if not status_result["run"]:
+        if len(status_result["run"]) == 0:
             logger.info("CI not configured")
             return CI_NOT_CONFIGURED, None
 

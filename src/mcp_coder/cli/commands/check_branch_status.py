@@ -82,7 +82,7 @@ def _wait_for_ci_completion(
         run_info = ci_status.get("run", {})
 
         # No CI run found yet
-        if not run_info:
+        if len(run_info) == 0:
             if attempt == max_attempts - 1:
                 if show_progress:
                     print()

@@ -297,7 +297,7 @@ def _poll_for_ci_completion(
 
         run_info = ci_status.get("run", {})
 
-        if not run_info:
+        if len(run_info) == 0:
             if poll_attempt < CI_MAX_POLL_ATTEMPTS - 1:
                 logger.debug(
                     f"No CI run found yet (attempt {poll_attempt + 1}/{CI_MAX_POLL_ATTEMPTS})"
