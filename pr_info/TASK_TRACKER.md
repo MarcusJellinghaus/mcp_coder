@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 1
 
 ### Step 2 — Agent Execution Core ([step_2.md](./steps/step_2.md))
-- [ ] Implement Step 2: add `run_agent()` async function to agent.py with MultiServerMCPClient + create_react_agent, write tests
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 2
+- [x] Implement Step 2: add `run_agent()` async function to agent.py with MultiServerMCPClient + create_react_agent, write tests
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 2
 
 ### Step 3a — Backend Refactor + Chat Model Helper ([step_3a.md](./steps/step_3a.md))
 - [ ] Implement Step 3a: extract `create_*_model()` from each backend, add `_create_chat_model()` dispatcher in __init__.py, add `_check_agent_dependencies()` to agent.py, write tests
