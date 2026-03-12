@@ -21,6 +21,38 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1 — Dependencies + Agent Utilities ([step_1.md](./steps/step_1.md))
+- [ ] Implement Step 1: add dependencies to pyproject.toml, create agent.py with `_resolve_env_vars` and `_load_mcp_server_config`, update conftest.py mocks, write tests
+- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message for Step 1
+
+### Step 2 — Agent Execution Core ([step_2.md](./steps/step_2.md))
+- [ ] Implement Step 2: add `run_agent()` async function to agent.py with MultiServerMCPClient + create_react_agent, write tests
+- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message for Step 2
+
+### Step 3a — Backend Refactor + Chat Model Helper ([step_3a.md](./steps/step_3a.md))
+- [ ] Implement Step 3a: extract `create_*_model()` from each backend, add `_create_chat_model()` dispatcher in __init__.py, add `_check_agent_dependencies()` to agent.py, write tests
+- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message for Step 3a
+
+### Step 3b — Agent Mode Routing + Session + MLflow ([step_3b.md](./steps/step_3b.md))
+- [ ] Implement Step 3b: extend `ask_langchain()` with mcp_config/execution_dir/env_vars params, add agent mode routing via asyncio.run, widen session type hints, write tests
+- [ ] Implement MLflow logging sub-commit for agent mode (params, metrics, tool_trace.json artifact)
+- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message for Step 3b
+
+### Step 4 — Update interface.py Routing ([step_4.md](./steps/step_4.md))
+- [ ] Implement Step 4: pass mcp_config, execution_dir, env_vars through to `ask_langchain()` in `prompt_llm()`, write tests
+- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message for Step 4
+
+### Step 5 — Verification Extensions ([step_5.md](./steps/step_5.md))
+- [ ] Implement Step 5: add `_check_mcp_adapter_packages()` to verification.py, extend `verify_langchain()` with MCP checks and end-to-end agent test, add `--mcp-config` to parsers.py, update label map in verify.py, write tests
+- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message for Step 5
 
 ## Pull Request
+- [ ] Review all changes across steps for consistency and completeness
+- [ ] Run full quality checks suite (pylint, pytest, mypy) on entire changeset
+- [ ] Prepare PR title and summary describing the MCP tool-use support feature
