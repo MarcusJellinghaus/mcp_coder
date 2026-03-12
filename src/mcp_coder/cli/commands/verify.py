@@ -103,7 +103,7 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
             symbol = symbols["failure"]
         else:
             symbol = symbols["warning"]
-        line = f"  {label}:   {symbol} {value}"
+        line = f"  {label:<20s} {symbol} {value}"
         error = entry.get("error")
         if error and ok is False:
             line += f" ({error})"
@@ -160,7 +160,7 @@ def execute_verify(args: argparse.Namespace) -> int:
     langchain_result: dict[str, Any] | None = None
     print(f"\n=== LLM PROVIDER ===")
     print(
-        f"  Active provider:   {symbols['success']} {active_provider} (from {source})"
+        f"  {'Active provider':<20s} {symbols['success']} {active_provider} (from {source})"
     )
     if active_provider == "langchain":
         check_models = getattr(args, "check_models", False)

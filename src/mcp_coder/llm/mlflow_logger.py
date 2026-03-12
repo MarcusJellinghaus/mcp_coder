@@ -543,7 +543,9 @@ def _check_tracking_uri(uri: str) -> dict[str, Any]:
     if uri.startswith("file://"):
         path = uri[len("file://") :]
         if path.startswith("/") and os.name == "nt":
-            path = path[1:]  # strip leading / on Windows
+            # file:///C:/path → /C:/path after prefix strip; remove leading /
+            # so os.path.isdir sees "C:/path" instead of "/C:/path"
+            path = path[1:]
         exists = os.path.isdir(path)
         return {
             "ok": exists,

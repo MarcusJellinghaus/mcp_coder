@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -50,9 +51,9 @@ class TestVerifyMlflowSqlite:
         self,
         mock_avail: MagicMock,
         mock_config: MagicMock,
-        tmp_path: pytest.TempPathFactory,
+        tmp_path: Path,
     ) -> None:
-        db_path = tmp_path / "mlflow.db"  # type: ignore[operator]
+        db_path = tmp_path / "mlflow.db"
         db_path.touch()
         mock_config.return_value = MLflowConfig(
             enabled=True,
@@ -69,9 +70,9 @@ class TestVerifyMlflowSqlite:
         self,
         mock_avail: MagicMock,
         mock_config: MagicMock,
-        tmp_path: pytest.TempPathFactory,
+        tmp_path: Path,
     ) -> None:
-        db_path = tmp_path / "nonexistent.db"  # type: ignore[operator]
+        db_path = tmp_path / "nonexistent.db"
         mock_config.return_value = MLflowConfig(
             enabled=True,
             tracking_uri=f"sqlite:///{db_path}",
@@ -162,7 +163,7 @@ class TestVerifyMlflowFileUri:
         self,
         mock_avail: MagicMock,
         mock_config: MagicMock,
-        tmp_path: pytest.TempPathFactory,
+        tmp_path: Path,
     ) -> None:
         mock_config.return_value = MLflowConfig(
             enabled=True,
@@ -247,7 +248,7 @@ class TestVerifyMlflowArtifactLocation:
         self,
         mock_avail: MagicMock,
         mock_config: MagicMock,
-        tmp_path: pytest.TempPathFactory,
+        tmp_path: Path,
     ) -> None:
         mock_config.return_value = MLflowConfig(
             enabled=True,
@@ -282,7 +283,7 @@ class TestVerifyMlflowArtifactLocation:
         self,
         mock_avail: MagicMock,
         mock_config: MagicMock,
-        tmp_path: pytest.TempPathFactory,
+        tmp_path: Path,
     ) -> None:
         mock_config.return_value = MLflowConfig(
             enabled=True,

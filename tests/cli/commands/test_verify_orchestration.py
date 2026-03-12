@@ -279,7 +279,7 @@ class TestFormatSection:
             "overall_ok": True,
         }
         output = _format_section("BASIC VERIFICATION", result, self._symbols())
-        assert "Claude CLI Found:   [OK] YES" in output
+        assert "Claude CLI Found     [OK] YES" in output
 
     def test_failed_entry_formatted_with_failure_symbol(self) -> None:
         """Entries with ok=False show [NO] symbol and value."""
@@ -288,7 +288,7 @@ class TestFormatSection:
             "overall_ok": False,
         }
         output = _format_section("BASIC VERIFICATION", result, self._symbols())
-        assert "Claude CLI Found:   [NO] NO" in output
+        assert "Claude CLI Found     [NO] NO" in output
 
     def test_skipped_entry_formatted(self) -> None:
         """Entries with ok=None show warning indicator."""
