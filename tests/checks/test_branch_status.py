@@ -23,6 +23,7 @@ from mcp_coder.checks.branch_status import (
     _collect_github_label,
     _collect_rebase_status,
     _collect_task_status,
+    _extract_failed_step_log,
     _generate_recommendations,
     collect_branch_status,
     create_empty_report,
@@ -234,10 +235,10 @@ def test_format_for_llm_truncation() -> None:
 
     # Should contain truncation message
     assert "[... truncated" in formatted
-    # Should have first 50 and last 250 lines logic applied
+    # Should have first 10 and last 290 lines logic applied
     assert "Error line 1" in formatted  # First line
-    assert "Error line 50" in formatted  # 50th line (last of head)
-    assert "Error line 151" in formatted  # First line of last 250
+    assert "Error line 10" in formatted  # 10th line (last of head)
+    assert "Error line 111" in formatted  # First line of last 290
     assert "Error line 400" in formatted  # Last line
 
 
@@ -299,13 +300,14 @@ def test_truncate_ci_details_with_truncation() -> None:
 
     # Should contain truncation marker
     assert "[... truncated 100 lines ...]" in result
-    # Should have first 50 lines (head_lines default)
+    # Should have first 10 lines (head_lines default)
     assert "Line 1" in result
-    assert "Line 50" in result
-    # Should have last 250 lines (starting from line 151)
-    assert "Line 151" in result
+    assert "Line 10" in result
+    # Should have last 290 lines (starting from line 111)
+    assert "Line 111" in result
     assert "Line 400" in result
-    # Should not have middle lines
+    # Should not have middle lines (between head and tail)
+    assert "Line 50" not in result
     assert "Line 100" not in result
 
 
@@ -328,6 +330,154 @@ def test_truncate_ci_details_custom_max_lines() -> None:
     # Should have appropriate first and last lines based on truncation logic
     assert "Line 1" in result
     assert "Line 100" in result
+
+
+class TestExtractFailedStepLog:
+    """Tests for _extract_failed_step_log function."""
+
+    def test_exact_name_match(self) -> None:
+        """Should extract the section matching step_name exactly."""
+        log = (
+            "##[group]Set up job\n"
+            "Setting up runner...\n"
+            "##[endgroup]\n"
+            "##[group]Run tests\n"
+            "pytest output line 1\n"
+            "FAILED test_foo.py\n"
+            "##[endgroup]\n"
+            "##[group]Post actions\n"
+            "Cleaning up...\n"
+            "##[endgroup]"
+        )
+        result = _extract_failed_step_log(log, "Run tests")
+        assert "pytest output line 1" in result
+        assert "FAILED test_foo.py" in result
+        assert "Setting up runner" not in result
+        assert "Cleaning up" not in result
+
+    def test_prefix_match(self) -> None:
+        """Should match when step_name is a prefix of the group label."""
+        log = (
+            "##[group]Run vulture --version && ./tools/vulture_check.sh\n"
+            "vulture output here\n"
+            "##[endgroup]"
+        )
+        result = _extract_failed_step_log(log, "Run vulture")
+        assert "vulture output here" in result
+
+    def test_contains_match(self) -> None:
+        """Should match when step_name is contained in the group label."""
+        log = (
+            "##[group]Step 3: Run vulture check\n"
+            "vulture found issues\n"
+            "##[endgroup]"
+        )
+        result = _extract_failed_step_log(log, "vulture check")
+        assert "vulture found issues" in result
+
+    def test_captures_error_lines_after_endgroup(self) -> None:
+        """Should include ##[error] lines after ##[endgroup]."""
+        log = (
+            "##[group]Run tests\n"
+            "test output\n"
+            "##[endgroup]\n"
+            "##[error]Process completed with exit code 1."
+        )
+        result = _extract_failed_step_log(log, "Run tests")
+        assert "test output" in result
+        assert "##[error]Process completed with exit code 1." in result
+
+    def test_returns_empty_when_no_markers(self) -> None:
+        """Should return empty string when no ##[group] markers are present."""
+        log = "Just plain log output\nNo markers here"
+        result = _extract_failed_step_log(log, "Run tests")
+        assert result == ""
+
+    def test_returns_empty_when_step_name_empty(self) -> None:
+        """Should return empty string when step_name is empty."""
+        log = "##[group]Run tests\noutput\n##[endgroup]"
+        result = _extract_failed_step_log(log, "")
+        assert result == ""
+
+    def test_returns_empty_when_no_match(self) -> None:
+        """Should return empty string when no group matches step_name."""
+        log = (
+            "##[group]Set up job\n"
+            "setup output\n"
+            "##[endgroup]\n"
+            "##[group]Checkout\n"
+            "checkout output\n"
+            "##[endgroup]"
+        )
+        result = _extract_failed_step_log(log, "Run tests")
+        assert result == ""
+
+    def test_case_insensitive_matching(self) -> None:
+        """Should match case-insensitively."""
+        log = "##[group]run tests\n" "test output\n" "##[endgroup]"
+        result = _extract_failed_step_log(log, "Run Tests")
+        assert "test output" in result
+
+    def test_multiple_groups_extracts_only_matching(self) -> None:
+        """Should extract only the matching group from multiple groups."""
+        log = (
+            "##[group]Set up job\n"
+            "setup line 1\n"
+            "setup line 2\n"
+            "##[endgroup]\n"
+            "##[group]Install dependencies\n"
+            "pip install...\n"
+            "##[endgroup]\n"
+            "##[group]Run tests\n"
+            "FAILED: test_foo\n"
+            "AssertionError\n"
+            "##[endgroup]\n"
+            "##[error]Process completed with exit code 1.\n"
+            "##[group]Post checkout\n"
+            "post cleanup\n"
+            "##[endgroup]"
+        )
+        result = _extract_failed_step_log(log, "Run tests")
+        assert "FAILED: test_foo" in result
+        assert "AssertionError" in result
+        assert "##[error]Process completed with exit code 1." in result
+        assert "setup line" not in result
+        assert "pip install" not in result
+        assert "post cleanup" not in result
+
+    def test_realistic_github_actions_log(self) -> None:
+        """Should work with a realistic GitHub Actions log format."""
+        log = (
+            "##[group]Set up job\n"
+            "Current runner version: '2.321.0'\n"
+            "Runner name: 'GitHub Actions 2'\n"
+            "##[endgroup]\n"
+            "##[group]Run actions/checkout@v4\n"
+            "Syncing repository: user/repo\n"
+            "##[endgroup]\n"
+            "##[group]Set up Python\n"
+            "Successfully set up Python 3.12\n"
+            "##[endgroup]\n"
+            "##[group]Install dependencies\n"
+            "Collecting pytest\n"
+            "Successfully installed pytest-8.0.0\n"
+            "##[endgroup]\n"
+            "##[group]Run pytest --tb=short\n"
+            "============================= test session starts ============================\n"
+            "collected 150 items\n"
+            "tests/test_auth.py::test_login FAILED\n"
+            "FAILED tests/test_auth.py::test_login - AssertionError: 401 != 200\n"
+            "============================= 1 failed, 149 passed ============================\n"
+            "##[endgroup]\n"
+            "##[error]Process completed with exit code 1."
+        )
+        result = _extract_failed_step_log(log, "Run pytest")
+        assert "test session starts" in result
+        assert "FAILED tests/test_auth.py" in result
+        assert "1 failed, 149 passed" in result
+        assert "##[error]Process completed with exit code 1." in result
+        assert "Successfully set up Python" not in result
+        assert "Collecting pytest" not in result
 
 
 def test_branch_status_constants() -> None:

@@ -30,19 +30,19 @@ class TestTruncateCiDetails:
 
         assert result == log
 
-    def test_long_log_truncated_to_first_50_last_250(self) -> None:
-        """Logs over 300 lines should have first 50 + last 250 lines."""
+    def test_long_log_truncated_to_first_10_last_290(self) -> None:
+        """Logs over 300 lines should have first 10 + last 290 lines."""
         log = "\n".join([f"Line {i}" for i in range(400)])
 
         result = truncate_ci_details(log)
 
         # Should have 300 lines + truncation marker
         assert "Line 0" in result  # First line preserved
-        assert "Line 49" in result  # Line 50 preserved (0-indexed)
+        assert "Line 9" in result  # Line 10 preserved (0-indexed)
         assert "Line 399" in result  # Last line preserved
-        assert "Line 150" in result  # From last 250 (400-250=150)
-        assert "Line 50" not in result  # Should be truncated
-        assert "Line 149" not in result  # Should be truncated
+        assert "Line 110" in result  # From last 290 (400-290=110)
+        assert "Line 10" not in result  # Should be truncated
+        assert "Line 109" not in result  # Should be truncated
         assert "..." in result or "[truncated]" in result.lower()
 
     def test_empty_log_returns_empty(self) -> None:

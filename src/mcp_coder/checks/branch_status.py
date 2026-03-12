@@ -176,18 +176,99 @@ def _strip_timestamps(log_content: str) -> str:
     return "\n".join(cleaned_lines)
 
 
+def _extract_failed_step_log(log_content: str, step_name: str) -> str:
+    """Extract only the failed step's section from a GitHub Actions job log.
+
+    GitHub Actions logs in the newer format concatenate all steps into a single
+    file, delimited by ``##[group]``/``##[endgroup]`` markers. This function
+    finds the section matching *step_name* and returns just that content,
+    stripping the marker lines themselves.
+
+    Matching strategy (case-insensitive, in priority order):
+      1. Exact match: group label == step_name
+      2. Prefix match: group label starts with step_name
+      3. Contains match: step_name is a substring of group label
+
+    Lines starting with ``##[error]`` immediately after ``##[endgroup]`` are
+    included (they typically contain the exit-code information).
+
+    Args:
+        log_content: Full job log content (all steps concatenated).
+        step_name: The failed step name from the GitHub Actions API.
+
+    Returns:
+        Extracted section content, or empty string if extraction fails.
+    """
+    if not log_content or not step_name:
+        return ""
+
+    # Parse groups from the log
+    groups: list[tuple[str, list[str]]] = []  # (label, content_lines)
+    current_label: Optional[str] = None
+    current_lines: list[str] = []
+
+    for line in log_content.split("\n"):
+        if line.startswith("##[group]"):
+            # Start a new group – save any previous one
+            if current_label is not None:
+                groups.append((current_label, current_lines))
+            current_label = line[len("##[group]") :]
+            current_lines = []
+        elif line.startswith("##[endgroup]"):
+            if current_label is not None:
+                groups.append((current_label, current_lines))
+                current_label = None
+                current_lines = []
+        else:
+            if current_label is not None:
+                current_lines.append(line)
+            elif groups:
+                # Lines after ##[endgroup] – capture ##[error] lines
+                if line.startswith("##[error]"):
+                    label, lines_so_far = groups[-1]
+                    groups[-1] = (label, lines_so_far + [line])
+
+    # Save any unclosed group
+    if current_label is not None:
+        groups.append((current_label, current_lines))
+
+    if not groups:
+        return ""
+
+    # Try matching in priority order (case-insensitive)
+    step_lower = step_name.lower()
+
+    # 1. Exact match
+    for label, lines in groups:
+        if label.lower() == step_lower:
+            return "\n".join(lines)
+
+    # 2. Prefix match (label starts with step_name)
+    for label, lines in groups:
+        if label.lower().startswith(step_lower):
+            return "\n".join(lines)
+
+    # 3. Contains match (step_name in label)
+    for label, lines in groups:
+        if step_lower in label.lower():
+            return "\n".join(lines)
+
+    return ""
+
+
 def truncate_ci_details(
-    details: str, max_lines: int = 300, head_lines: int = 50
+    details: str, max_lines: int = 300, head_lines: int = 10
 ) -> str:
     """Truncate CI details with head + tail preservation.
 
     Extract log excerpt: first head_lines + last (max_lines - head_lines) lines
-    if log exceeds max_lines.
+    if log exceeds max_lines. The default is tail-biased (10 head, 290 tail)
+    because errors typically appear at the end of CI logs.
 
     Args:
         details: Full CI details content as string
         max_lines: Maximum lines before truncation (default 300)
-        head_lines: Number of lines to keep from the start (default 50)
+        head_lines: Number of lines to keep from the start (default 10)
 
     Returns:
         Original details if under max_lines, otherwise truncated with marker
@@ -305,7 +386,15 @@ def get_failed_jobs_summary(
 
     log_content = _find_log_content(logs, job_name, step_number, step_name)
 
-    # Extract log excerpt using shared truncation (50 head + 250 tail = 300 lines)
+    # Extract just the failed step's section from the full job log
+    if log_content and step_name:
+        extracted = _extract_failed_step_log(log_content, step_name)
+        if extracted:
+            log_content = extracted
+
+    # Strip timestamps and truncate
+    if log_content:
+        log_content = _strip_timestamps(log_content)
     log_excerpt = truncate_ci_details(log_content)
 
     # Other failed jobs
@@ -532,6 +621,12 @@ def _build_ci_error_details(
 
         log_content = _find_log_content(logs, job_name, step_number, step_name)
 
+        # Extract just the failed step's section from the full job log
+        if log_content and step_name:
+            extracted = _extract_failed_step_log(log_content, step_name)
+            if extracted:
+                log_content = extracted
+
         # Strip timestamps if content found
         if log_content:
             log_content = _strip_timestamps(log_content)
@@ -565,7 +660,7 @@ def _build_ci_error_details(
         # Truncate log if needed (only applies to real log content, not fallback messages)
         if log_content and len(log_lines) > remaining_budget:
             # Use head + tail truncation
-            head_count = min(50, remaining_budget // 3)
+            head_count = min(10, remaining_budget // 6)
             tail_count = remaining_budget - head_count - 1  # -1 for truncation message
             truncated_log = (
                 log_lines[:head_count]

@@ -92,6 +92,10 @@ _.workflow
 _.branch_strategy
 _.next_label
 
+# ci_results_manager.py - RunData TypedDict fields
+_.workflow_path
+_.commit_sha
+
 # workflows/vscodeclaude/types.py - VSCodeClaudeSessionStore field
 _.last_updated
 
