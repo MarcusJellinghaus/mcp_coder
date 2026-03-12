@@ -5,16 +5,23 @@ All LangChain library imports are deferred to the backend modules so that
 importing this package does not fail when langchain is not installed.
 """
 
+import asyncio
+import json
+import logging
 import os
 import uuid
 from datetime import datetime
+from typing import Any
 
+from mcp_coder.llm.mlflow_logger import get_mlflow_logger
 from mcp_coder.llm.storage.session_storage import (
     load_langchain_history,
     store_langchain_history,
 )
 from mcp_coder.llm.types import LLM_RESPONSE_VERSION, LLMResponseDict
 from mcp_coder.utils.user_config import get_config_values
+
+logger = logging.getLogger(__name__)
 
 
 def _load_langchain_config() -> dict[str, str | None]:
@@ -63,7 +70,7 @@ def _load_langchain_config() -> dict[str, str | None]:
     return config
 
 
-def _create_chat_model(config: dict[str, str]) -> object:
+def _create_chat_model(config: dict[str, str | None]) -> object:
     """Dispatch to correct backend's create_*_model() based on config."""
     backend = config.get("backend")
 
@@ -100,8 +107,16 @@ def ask_langchain(
     question: str,
     session_id: str | None = None,
     timeout: int = 30,
+    mcp_config: str | None = None,
+    execution_dir: str | None = None,
+    env_vars: dict[str, str] | None = None,
 ) -> LLMResponseDict:
-    """Entry point called by interface.prompt_llm() for provider='langchain'."""
+    """Entry point called by interface.prompt_llm() for provider='langchain'.
+
+    When *mcp_config* is provided the request is routed through the LangGraph
+    ReAct agent (agent mode).  Otherwise the existing text-only backend
+    dispatch is used.
+    """
     config = _load_langchain_config()
     backend = config["backend"]
 
@@ -112,8 +127,36 @@ def ask_langchain(
             "or MCP_CODER_LLM_LANGCHAIN_BACKEND env var."
         )
 
-    history = load_langchain_history(session_id) if session_id else []
     sid = session_id or str(uuid.uuid4())
+
+    if mcp_config:
+        return _ask_agent(
+            question=question,
+            config=config,
+            session_id=sid,
+            mcp_config=mcp_config,
+            execution_dir=execution_dir,
+            env_vars=env_vars,
+        )
+
+    return _ask_text(
+        question=question,
+        config=config,
+        backend=backend,
+        session_id=sid,
+        timeout=timeout,
+    )
+
+
+def _ask_text(
+    question: str,
+    config: dict[str, str | None],
+    backend: str | None,
+    session_id: str,
+    timeout: int,
+) -> LLMResponseDict:
+    """Text-only backend dispatch (existing behaviour)."""
+    history = load_langchain_history(session_id)
 
     if backend == "openai":
         from . import openai_backend
@@ -157,14 +200,101 @@ def ask_langchain(
         {"role": "human", "content": question},
         {"role": "ai", "content": text},
     ]
-    store_langchain_history(sid, updated_history)
+    store_langchain_history(session_id, updated_history)
 
     return LLMResponseDict(
         version=LLM_RESPONSE_VERSION,
         timestamp=datetime.now().isoformat(),
         text=text,
-        session_id=sid,
+        session_id=session_id,
         method="api",
         provider="langchain",
         raw_response=raw,
     )
+
+
+def _ask_agent(
+    question: str,
+    config: dict[str, str | None],
+    session_id: str,
+    mcp_config: str,
+    execution_dir: str | None = None,
+    env_vars: dict[str, str] | None = None,
+) -> LLMResponseDict:
+    """Agent mode: route through LangGraph ReAct agent with MCP tools."""
+    from .agent import _check_agent_dependencies, run_agent
+
+    _check_agent_dependencies()
+
+    chat_model = _create_chat_model(config)
+    history: list[dict[str, Any]] = load_langchain_history(session_id)
+
+    text, messages, stats = asyncio.run(
+        run_agent(
+            question=question,
+            chat_model=chat_model,
+            messages=history,
+            mcp_config_path=mcp_config,
+            execution_dir=execution_dir,
+            env_vars=env_vars,
+        )
+    )
+
+    store_langchain_history(session_id, messages)
+
+    raw_response: dict[str, Any] = {
+        "messages": messages,
+        "backend": config.get("backend", ""),
+        "model": config.get("model", ""),
+        **stats,
+    }
+
+    # MLflow logging for agent mode
+    _log_agent_mlflow(config, stats, session_id)
+
+    return LLMResponseDict(
+        version=LLM_RESPONSE_VERSION,
+        timestamp=datetime.now().isoformat(),
+        text=text,
+        session_id=session_id,
+        method="api",
+        provider="langchain",
+        raw_response=raw_response,
+    )
+
+
+def _log_agent_mlflow(
+    config: dict[str, str | None],
+    stats: dict[str, object],
+    session_id: str,
+) -> None:
+    """Log agent mode params, metrics, and tool_trace artifact to MLflow."""
+    try:
+        mlflow_logger = get_mlflow_logger()
+        mlflow_logger.start_run(session_id=session_id)
+
+        mlflow_logger.log_params(
+            {
+                "backend": config.get("backend", ""),
+                "model": config.get("model", ""),
+                "tool_call_count": stats.get("total_tool_calls", 0),
+            }
+        )
+
+        mlflow_logger.log_metrics(
+            {
+                "agent_steps": float(stats.get("agent_steps", 0)),  # type: ignore[arg-type]
+                "total_tool_calls": float(stats.get("total_tool_calls", 0)),  # type: ignore[arg-type]
+            }
+        )
+
+        tool_trace = stats.get("tool_trace", [])
+        if tool_trace:
+            mlflow_logger.log_artifact(
+                json.dumps(tool_trace, indent=2, default=str),
+                "tool_trace.json",
+            )
+
+        mlflow_logger.end_run(session_id=session_id)
+    except Exception:
+        logger.debug("MLflow logging failed for agent mode", exc_info=True)
