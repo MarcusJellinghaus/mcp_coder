@@ -159,11 +159,13 @@ def _make_human_message(content: str) -> object:
     return msg
 
 
-def _make_tool_message(content: str, name: str = "tool") -> object:
+def _make_tool_message(
+    content: str, name: str = "tool", tool_call_id: str = "test-tool-call-id"
+) -> object:
     """Create a ToolMessage instance (uses conftest mock class)."""
     from langchain_core.messages import ToolMessage
 
-    msg = ToolMessage(content=content, name=name)
+    msg = ToolMessage(content=content, name=name, tool_call_id=tool_call_id)
     msg.model_dump = lambda: {  # type: ignore[method-assign, misc, assignment]
         "type": "tool",
         "name": name,
@@ -253,7 +255,9 @@ class TestRunAgent:
                 {"name": "read_file", "args": {"path": "src/main.py"}, "id": "1"},
             ],
         )
-        tool_result = _make_tool_message("file contents here", name="read_file")
+        tool_result = _make_tool_message(
+            "file contents here", name="read_file", tool_call_id="1"
+        )
         ai_final = _make_ai_message("Here is the file content.")
 
         mock_client = AsyncMock()
@@ -387,8 +391,12 @@ class TestRunAgent:
                 {"name": "read_file", "args": {"path": "b.py"}, "id": "2"},
             ],
         )
-        tool_result_1 = _make_tool_message("content of a.py", name="read_file")
-        tool_result_2 = _make_tool_message("content of b.py", name="read_file")
+        tool_result_1 = _make_tool_message(
+            "content of a.py", name="read_file", tool_call_id="1"
+        )
+        tool_result_2 = _make_tool_message(
+            "content of b.py", name="read_file", tool_call_id="2"
+        )
         ai_final = _make_ai_message("Done reading files.")
 
         mock_client = AsyncMock()
