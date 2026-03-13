@@ -131,8 +131,6 @@ def _load_mcp_server_config(
                     k: _resolve_env_vars(v, merged_env) if isinstance(v, str) else v
                     for k, v in value.items()
                 }
-            elif key == "transport":
-                resolved["transport"] = value
             else:
                 resolved[key] = value
 
@@ -189,7 +187,7 @@ async def run_agent(
 
     server_config = _load_mcp_server_config(mcp_config_path, env_vars)
 
-    async with MultiServerMCPClient(cast(Any, server_config)) as client:  # type: ignore[misc]  # upstream __aexit__ returns None
+    async with MultiServerMCPClient(cast(Any, server_config)) as client:
         tools = await client.get_tools()
         agent = create_react_agent(chat_model, tools)
 

@@ -422,6 +422,7 @@ class TestVerifyLangchainMcpSection:
             "Reply with OK",
             provider="langchain",
             mcp_config="/tmp/mcp.json",
+            env_vars=None,
             timeout=30,
         )
 

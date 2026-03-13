@@ -53,9 +53,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 5
 
 ### Step 6 — Code Review Fixes: Small Cleanups ([step_6.md](./steps/step_6.md))
-- [ ] Implement Step 6: remove dead transport branch in agent.py, add TYPE_CHECKING guard for BaseChatModel in __init__.py, wire env_vars through in verification.py, add _check_agent_dependencies tests
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 6
+- [x] Implement Step 6: remove dead transport branch in agent.py, add TYPE_CHECKING guard for BaseChatModel in __init__.py, wire env_vars through in verification.py, add _check_agent_dependencies tests
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 6
 
 ### Step 7 — Unify Text Backend via `_create_chat_model` ([step_7.md](./steps/step_7.md))
 - [ ] Implement Step 7: rewrite _ask_text() to use _create_chat_model() + generic .invoke(), delete old ask_openai/ask_gemini/ask_anthropic functions, update all affected tests

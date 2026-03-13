@@ -1,5 +1,6 @@
 """Tests for agent utility functions and run_agent execution."""
 
+import builtins
 import json
 import logging
 from pathlib import Path
@@ -9,10 +10,52 @@ import pytest
 
 from mcp_coder.llm.providers.langchain.agent import (
     AGENT_MAX_STEPS,
+    _check_agent_dependencies,
     _load_mcp_server_config,
     _resolve_env_vars,
     run_agent,
 )
+
+
+class TestCheckAgentDependencies:
+    """Tests for _check_agent_dependencies."""
+
+    @staticmethod
+    def _import_blocker(*blocked_packages: str):
+        """Return a side_effect for builtins.__import__ that blocks given packages."""
+        _real_import = builtins.__import__
+
+        def _fake_import(name, *args, **kwargs):
+            for pkg in blocked_packages:
+                if name == pkg or name.startswith(pkg + "."):
+                    raise ImportError(f"No module named {name!r}")
+            return _real_import(name, *args, **kwargs)
+
+        return _fake_import
+
+    def test_raises_when_both_missing(self) -> None:
+        """Both packages missing -> ImportError listing both."""
+        with patch(
+            "builtins.__import__",
+            side_effect=self._import_blocker("langchain_mcp_adapters", "langgraph"),
+        ):
+            with pytest.raises(ImportError, match="langchain-mcp-adapters") as exc_info:
+                _check_agent_dependencies()
+            assert "langgraph" in str(exc_info.value)
+
+    def test_raises_when_one_missing(self) -> None:
+        """Single package missing -> ImportError listing that package."""
+        with patch(
+            "builtins.__import__",
+            side_effect=self._import_blocker("langgraph"),
+        ):
+            with pytest.raises(ImportError, match="langgraph"):
+                _check_agent_dependencies()
+
+    def test_passes_when_installed(self) -> None:
+        """No error when packages are importable (conftest mocks provide them)."""
+        # conftest auto-mocks both packages, so this should just pass
+        _check_agent_dependencies()
 
 
 class TestResolveEnvVars:

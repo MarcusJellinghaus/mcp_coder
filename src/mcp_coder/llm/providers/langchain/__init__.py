@@ -5,13 +5,15 @@ All LangChain library imports are deferred to the backend modules so that
 importing this package does not fail when langchain is not installed.
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
 import os
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from mcp_coder.llm.mlflow_logger import get_mlflow_logger
 from mcp_coder.llm.storage.session_storage import (
@@ -20,6 +22,10 @@ from mcp_coder.llm.storage.session_storage import (
 )
 from mcp_coder.llm.types import LLM_RESPONSE_VERSION, LLMResponseDict
 from mcp_coder.utils.user_config import get_config_values
+
+if TYPE_CHECKING:
+    from langchain_core.language_models import BaseChatModel
+
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +76,7 @@ def _load_langchain_config() -> dict[str, str | None]:
     return config
 
 
-def _create_chat_model(config: dict[str, str | None]) -> object:
+def _create_chat_model(config: dict[str, str | None]) -> BaseChatModel:
     """Dispatch to correct backend's create_*_model() based on config."""
     backend = config.get("backend")
 
