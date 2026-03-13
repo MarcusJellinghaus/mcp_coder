@@ -7,6 +7,7 @@ is not installed.
 from __future__ import annotations
 
 import os
+from typing import Any
 
 from ._models import list_openai_models  # noqa: E402
 
@@ -56,7 +57,7 @@ def ask_openai(
     api_key: str | None,
     endpoint: str | None,
     api_version: str | None,
-    messages: list[dict[str, str]],
+    messages: list[dict[str, Any]],
     timeout: int = 30,
 ) -> tuple[str, dict[str, object]]:
     """Call ChatOpenAI, or AzureChatOpenAI when api_version is set.

@@ -138,7 +138,12 @@ _PATCH_FROM_DICT = "langchain_core.messages.messages_from_dict"
 def _make_ai_message(
     content: str, tool_calls: list[dict[str, object]] | None = None
 ) -> object:
-    """Create an AIMessage instance (uses conftest mock class)."""
+    """Create an AIMessage instance (uses conftest mock class).
+
+    model_dump is assigned via lambda because in the test environment
+    real LangChain may not be installed — conftest provides lightweight
+    stub classes that don't have Pydantic's model_dump.
+    """
     from langchain_core.messages import AIMessage
 
     msg = AIMessage(content=content, tool_calls=tool_calls or [])
