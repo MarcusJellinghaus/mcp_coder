@@ -204,26 +204,32 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = ["langchain_core", "langchain_core.*"]
 ignore_missing_imports = true
+follow_imports = "skip"
 
 [[tool.mypy.overrides]]
 module = ["langchain_openai"]
 ignore_missing_imports = true
+follow_imports = "skip"
 
 [[tool.mypy.overrides]]
 module = ["langchain_google_genai"]
 ignore_missing_imports = true
+follow_imports = "skip"
 
 [[tool.mypy.overrides]]
 module = ["langchain_anthropic"]
 ignore_missing_imports = true
+follow_imports = "skip"
 
 [[tool.mypy.overrides]]
 module = ["langchain_mcp_adapters", "langchain_mcp_adapters.*"]
 ignore_missing_imports = true
+follow_imports = "skip"
 
 [[tool.mypy.overrides]]
 module = ["langgraph", "langgraph.*"]
 ignore_missing_imports = true
+follow_imports = "skip"
 
 [[tool.mypy.overrides]]
 module = ["anthropic", "anthropic.*"]
