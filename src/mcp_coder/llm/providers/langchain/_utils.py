@@ -6,6 +6,7 @@ to import from langchain_core directly.
 """
 
 import logging
+from typing import Any
 
 # pylint: disable=import-error
 try:
@@ -19,7 +20,7 @@ except ImportError as exc:
 logger = logging.getLogger(__name__)
 
 
-def _to_lc_messages(messages: list[dict[str, str]]) -> list[BaseMessage]:
+def _to_lc_messages(messages: list[dict[str, Any]]) -> list[BaseMessage]:
     """Convert plain role/content dicts to LangChain message objects."""
     result: list[BaseMessage] = []
     for m in messages:

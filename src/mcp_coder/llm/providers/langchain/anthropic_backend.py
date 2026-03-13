@@ -44,7 +44,7 @@ def ask_anthropic(
     question: str,
     model: str,
     api_key: str | None,
-    messages: list[dict[str, str]],
+    messages: list[dict[str, Any]],
     timeout: int = 30,
 ) -> tuple[str, dict[str, object]]:
     """Call ChatAnthropic. Returns (response_text, raw_response_dict).

@@ -5,6 +5,7 @@ is not installed.
 """
 
 import os
+from typing import Any
 
 from ._models import list_gemini_models  # noqa: E402
 
@@ -38,7 +39,7 @@ def ask_gemini(
     question: str,
     model: str,
     api_key: str | None,
-    messages: list[dict[str, str]],
+    messages: list[dict[str, Any]],
     timeout: int = 30,
 ) -> tuple[str, dict[str, object]]:
     """Call ChatGoogleGenerativeAI. Returns (response_text, raw_response_dict).
