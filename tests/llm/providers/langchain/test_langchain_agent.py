@@ -4,6 +4,8 @@ import builtins
 import json
 import logging
 from pathlib import Path
+from types import ModuleType
+from typing import Any, Callable
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -21,11 +23,11 @@ class TestCheckAgentDependencies:
     """Tests for _check_agent_dependencies."""
 
     @staticmethod
-    def _import_blocker(*blocked_packages: str):
+    def _import_blocker(*blocked_packages: str) -> Callable[..., ModuleType]:
         """Return a side_effect for builtins.__import__ that blocks given packages."""
         _real_import = builtins.__import__
 
-        def _fake_import(name, *args, **kwargs):
+        def _fake_import(name: str, *args: Any, **kwargs: Any) -> ModuleType:
             for pkg in blocked_packages:
                 if name == pkg or name.startswith(pkg + "."):
                     raise ImportError(f"No module named {name!r}")
@@ -190,7 +192,7 @@ def _make_ai_message(
     from langchain_core.messages import AIMessage
 
     msg = AIMessage(content=content, tool_calls=tool_calls or [])
-    msg.model_dump = lambda: {  # type: ignore[method-assign, misc, assignment]
+    msg.model_dump = lambda: {
         "type": "ai",
         "content": content,
         "tool_calls": tool_calls or [],
@@ -203,7 +205,7 @@ def _make_human_message(content: str) -> object:
     from langchain_core.messages import HumanMessage
 
     msg = HumanMessage(content=content)
-    msg.model_dump = lambda: {"type": "human", "content": content}  # type: ignore[method-assign, misc, assignment]
+    msg.model_dump = lambda: {"type": "human", "content": content}
     return msg
 
 
@@ -214,7 +216,7 @@ def _make_tool_message(
     from langchain_core.messages import ToolMessage
 
     msg = ToolMessage(content=content, name=name, tool_call_id=tool_call_id)
-    msg.model_dump = lambda: {  # type: ignore[method-assign, misc, assignment]
+    msg.model_dump = lambda: {
         "type": "tool",
         "name": name,
         "content": content,
