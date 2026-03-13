@@ -1,6 +1,5 @@
 """Tests for mcp_coder.llm.providers.langchain.__init__."""
 
-import asyncio
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 

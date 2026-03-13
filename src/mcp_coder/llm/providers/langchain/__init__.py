@@ -273,28 +273,29 @@ def _log_agent_mlflow(
         mlflow_logger = get_mlflow_logger()
         mlflow_logger.start_run(session_id=session_id)
 
-        mlflow_logger.log_params(
-            {
-                "backend": config.get("backend", ""),
-                "model": config.get("model", ""),
-                "tool_call_count": stats.get("total_tool_calls", 0),
-            }
-        )
-
-        mlflow_logger.log_metrics(
-            {
-                "agent_steps": float(stats.get("agent_steps", 0)),  # type: ignore[arg-type]
-                "total_tool_calls": float(stats.get("total_tool_calls", 0)),  # type: ignore[arg-type]
-            }
-        )
-
-        tool_trace = stats.get("tool_trace", [])
-        if tool_trace:
-            mlflow_logger.log_artifact(
-                json.dumps(tool_trace, indent=2, default=str),
-                "tool_trace.json",
+        try:
+            mlflow_logger.log_params(
+                {
+                    "backend": config.get("backend", ""),
+                    "model": config.get("model", ""),
+                    "tool_call_count": stats.get("total_tool_calls", 0),
+                }
             )
 
-        mlflow_logger.end_run(session_id=session_id)
+            mlflow_logger.log_metrics(
+                {
+                    "agent_steps": float(stats.get("agent_steps", 0)),  # type: ignore[arg-type]
+                    "total_tool_calls": float(stats.get("total_tool_calls", 0)),  # type: ignore[arg-type]
+                }
+            )
+
+            tool_trace = stats.get("tool_trace", [])
+            if tool_trace:
+                mlflow_logger.log_artifact(
+                    json.dumps(tool_trace, indent=2, default=str),
+                    "tool_trace.json",
+                )
+        finally:
+            mlflow_logger.end_run(session_id=session_id)
     except Exception:
         logger.debug("MLflow logging failed for agent mode", exc_info=True)
