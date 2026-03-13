@@ -97,6 +97,8 @@ interface.py → ask_langchain(question, session_id, timeout,
 4. **Step 3b** — Agent mode routing in `ask_langchain()` + session handling + MLflow logging (Decision 26)
 5. **Step 4** — Update `interface.py` to pass parameters through
 6. **Step 5** — Verification extensions (package checks + stdio smoke test)
+7. **Step 6** — Code review fixes: remove dead transport branch (Decision 30), `TYPE_CHECKING` guard for `BaseChatModel` (Decision 31), wire `env_vars` in verify (Decision 32), add `_check_agent_dependencies` test (Decision 34)
+8. **Step 7** — Unify text backend: rewrite `_ask_text()` to use `_create_chat_model()`, delete old `ask_*` functions, update tests (Decision 33)
 
 Each step follows TDD: tests first, then implementation.
 
