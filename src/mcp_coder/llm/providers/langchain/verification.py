@@ -205,6 +205,7 @@ def verify_langchain(
                 "Reply with OK",
                 provider="langchain",
                 mcp_config=mcp_config_path,
+                env_vars=env_vars,
                 timeout=30,
             )
             result["mcp_agent_test"] = {"ok": True, "value": "agent responded"}
