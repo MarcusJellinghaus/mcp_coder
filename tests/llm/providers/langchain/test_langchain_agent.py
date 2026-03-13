@@ -304,8 +304,8 @@ class TestRunAgent:
             )
 
     @pytest.mark.asyncio
-    async def test_max_iterations_returns_partial_output(self, tmp_path: Path) -> None:
-        """When recursion limit reached, returns partial output (no crash)."""
+    async def test_handles_agent_response_gracefully(self, tmp_path: Path) -> None:
+        """Agent returns partial output without crashing."""
         cfg_path = _write_mcp_config(tmp_path)
 
         human_msg = _make_human_message("Do something complex")

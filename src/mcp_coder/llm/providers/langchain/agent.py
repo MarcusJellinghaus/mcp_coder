@@ -214,26 +214,29 @@ async def run_agent(
         agent_steps = 0
         total_tool_calls = 0
         tool_trace: list[dict[str, object]] = []
+        trace_by_id: dict[str, dict[str, object]] = {}
 
         for msg in output_messages:
             if isinstance(msg, AIMessage) and getattr(msg, "tool_calls", None):
                 agent_steps += 1
                 for tc in msg.tool_calls:
                     total_tool_calls += 1
-                    tool_trace.append(
-                        {
-                            "name": tc.get("name", ""),
-                            "args": tc.get("args", {}),
-                            "result": "",  # placeholder, filled below
-                        }
-                    )
+                    entry: dict[str, object] = {
+                        "name": tc.get("name", ""),
+                        "args": tc.get("args", {}),
+                        "result": "",
+                    }
+                    tool_trace.append(entry)
+                    tc_id = tc.get("id", "")
+                    if tc_id:
+                        trace_by_id[tc_id] = entry
 
-        # Fill tool results from ToolMessages
-        trace_idx = 0
+        # Fill tool results from ToolMessages, matched by tool_call_id
         for msg in output_messages:
-            if isinstance(msg, ToolMessage) and trace_idx < len(tool_trace):
-                tool_trace[trace_idx]["result"] = msg.content
-                trace_idx += 1
+            if isinstance(msg, ToolMessage):
+                tc_id = getattr(msg, "tool_call_id", "")
+                if tc_id and tc_id in trace_by_id:
+                    trace_by_id[tc_id]["result"] = msg.content
 
         stats: dict[str, object] = {
             "agent_steps": agent_steps,
