@@ -90,6 +90,13 @@ class TestAskLangchain:
             "api_version": None,
         }
 
+    def _mock_chat_model(self, text: str = "Hello!") -> MagicMock:
+        mock_model = MagicMock()
+        mock_ai_msg = MagicMock()
+        mock_ai_msg.content = text
+        mock_model.invoke.return_value = mock_ai_msg
+        return mock_model
+
     def test_returns_llm_response_dict(self) -> None:
         """ask_langchain returns a complete LLMResponseDict."""
         with (
@@ -103,8 +110,8 @@ class TestAskLangchain:
             ),
             patch("mcp_coder.llm.providers.langchain.store_langchain_history"),
             patch(
-                "mcp_coder.llm.providers.langchain.openai_backend.ask_openai",
-                return_value=("Hello!", {"content": "Hello!"}),
+                "mcp_coder.llm.providers.langchain._create_chat_model",
+                return_value=self._mock_chat_model("Hello!"),
             ),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain
@@ -128,8 +135,8 @@ class TestAskLangchain:
             ),
             patch("mcp_coder.llm.providers.langchain.store_langchain_history"),
             patch(
-                "mcp_coder.llm.providers.langchain.openai_backend.ask_openai",
-                return_value=("ok", {}),
+                "mcp_coder.llm.providers.langchain._create_chat_model",
+                return_value=self._mock_chat_model("ok"),
             ),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain
@@ -152,8 +159,8 @@ class TestAskLangchain:
             ),
             patch("mcp_coder.llm.providers.langchain.store_langchain_history"),
             patch(
-                "mcp_coder.llm.providers.langchain.openai_backend.ask_openai",
-                return_value=("ok", {}),
+                "mcp_coder.llm.providers.langchain._create_chat_model",
+                return_value=self._mock_chat_model("ok"),
             ),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain
@@ -172,7 +179,6 @@ class TestAskLangchain:
                 "mcp_coder.llm.providers.langchain.load_langchain_history",
                 return_value=[],
             ),
-            patch("mcp_coder.llm.providers.langchain.store_langchain_history"),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain
 
@@ -213,8 +219,8 @@ class TestAskLangchain:
                 store_mock,
             ),
             patch(
-                "mcp_coder.llm.providers.langchain.openai_backend.ask_openai",
-                return_value=("answer", {}),
+                "mcp_coder.llm.providers.langchain._create_chat_model",
+                return_value=self._mock_chat_model("answer"),
             ),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain
@@ -224,6 +230,101 @@ class TestAskLangchain:
         assert {"role": "human", "content": "prev"} in stored_messages
         assert {"role": "human", "content": "new question"} in stored_messages
         assert {"role": "ai", "content": "answer"} in stored_messages
+
+
+class TestAskTextModelNotFound:
+    """Tests for model-not-found error handling in _ask_text."""
+
+    def _make_config(self, backend: str = "openai") -> dict[str, str | None]:
+        return {
+            "provider": "langchain",
+            "backend": backend,
+            "model": "bad-model",
+            "api_key": None,
+            "endpoint": None,
+            "api_version": None,
+        }
+
+    def test_404_error_raises_value_error_with_model_hint(self) -> None:
+        """404 from model invoke raises ValueError with model name."""
+        mock_model = MagicMock()
+        mock_model.invoke.side_effect = Exception(
+            "Error code: 404 - The model 'bad-model' does not exist"
+        )
+        with (
+            patch(
+                "mcp_coder.llm.providers.langchain._load_langchain_config",
+                return_value=self._make_config(),
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain.load_langchain_history",
+                return_value=[],
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain._create_chat_model",
+                return_value=mock_model,
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain._get_model_suggestions",
+                return_value="\n\nAvailable models:\n  - gpt-4o",
+            ),
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain
+
+            with pytest.raises(ValueError) as exc_info:
+                ask_langchain("question")
+        assert "bad-model" in str(exc_info.value)
+        assert "gpt-4o" in str(exc_info.value)
+
+    def test_not_found_error_raised_even_when_suggestions_fail(self) -> None:
+        """404 still raises ValueError even if model listing fails."""
+        mock_model = MagicMock()
+        mock_model.invoke.side_effect = Exception("404 not_found_error")
+        with (
+            patch(
+                "mcp_coder.llm.providers.langchain._load_langchain_config",
+                return_value=self._make_config(),
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain.load_langchain_history",
+                return_value=[],
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain._create_chat_model",
+                return_value=mock_model,
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain._get_model_suggestions",
+                side_effect=Exception("network error"),
+            ),
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain
+
+            with pytest.raises(ValueError, match="not found"):
+                ask_langchain("question")
+
+    def test_non_404_exception_is_reraised_unchanged(self) -> None:
+        """Non-404 exceptions propagate as-is without wrapping."""
+        mock_model = MagicMock()
+        mock_model.invoke.side_effect = RuntimeError("network timeout")
+        with (
+            patch(
+                "mcp_coder.llm.providers.langchain._load_langchain_config",
+                return_value=self._make_config(),
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain.load_langchain_history",
+                return_value=[],
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain._create_chat_model",
+                return_value=mock_model,
+            ),
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain
+
+            with pytest.raises(RuntimeError, match="network timeout"):
+                ask_langchain("question")
 
 
 class TestCreateChatModel:
@@ -394,7 +495,11 @@ class TestAskLangchainAgentMode:
         mock_run_agent.assert_called_once()
 
     def test_routes_to_text_mode_when_mcp_config_none(self) -> None:
-        """When mcp_config is None, existing backend dispatch used."""
+        """When mcp_config is None, _create_chat_model dispatch used."""
+        mock_model = MagicMock()
+        mock_ai_msg = MagicMock()
+        mock_ai_msg.content = "text answer"
+        mock_model.invoke.return_value = mock_ai_msg
         with (
             patch(
                 "mcp_coder.llm.providers.langchain._load_langchain_config",
@@ -406,8 +511,8 @@ class TestAskLangchainAgentMode:
             ),
             patch("mcp_coder.llm.providers.langchain.store_langchain_history"),
             patch(
-                "mcp_coder.llm.providers.langchain.openai_backend.ask_openai",
-                return_value=("text answer", {}),
+                "mcp_coder.llm.providers.langchain._create_chat_model",
+                return_value=mock_model,
             ),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain
@@ -531,6 +636,10 @@ class TestAskLangchainAgentMode:
 
     def test_backward_compatible_text_only(self) -> None:
         """Existing text-only call still works (regression check)."""
+        mock_model = MagicMock()
+        mock_ai_msg = MagicMock()
+        mock_ai_msg.content = "gemini reply"
+        mock_model.invoke.return_value = mock_ai_msg
         with (
             patch(
                 "mcp_coder.llm.providers.langchain._load_langchain_config",
@@ -542,8 +651,8 @@ class TestAskLangchainAgentMode:
             ),
             patch("mcp_coder.llm.providers.langchain.store_langchain_history"),
             patch(
-                "mcp_coder.llm.providers.langchain.gemini_backend.ask_gemini",
-                return_value=("gemini reply", {"content": "gemini reply"}),
+                "mcp_coder.llm.providers.langchain._create_chat_model",
+                return_value=mock_model,
             ),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain

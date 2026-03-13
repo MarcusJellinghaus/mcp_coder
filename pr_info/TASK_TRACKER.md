@@ -58,9 +58,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 6
 
 ### Step 7 — Unify Text Backend via `_create_chat_model` ([step_7.md](./steps/step_7.md))
-- [ ] Implement Step 7: rewrite _ask_text() to use _create_chat_model() + generic .invoke(), delete old ask_openai/ask_gemini/ask_anthropic functions, update all affected tests
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 7
+- [x] Implement Step 7: rewrite _ask_text() to use _create_chat_model() + generic .invoke(), delete old ask_openai/ask_gemini/ask_anthropic functions, update all affected tests
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 7
 
 ## Pull Request
 - [ ] Review all changes across steps for consistency and completeness

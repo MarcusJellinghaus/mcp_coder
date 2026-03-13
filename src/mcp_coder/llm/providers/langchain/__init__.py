@@ -161,46 +161,35 @@ def _ask_text(
     session_id: str,
     timeout: int,
 ) -> LLMResponseDict:
-    """Text-only backend dispatch (existing behaviour)."""
+    """Text-only backend dispatch using unified chat model factory."""
+    from ._utils import _to_lc_messages
+
     history = load_langchain_history(session_id)
+    lc_messages = _to_lc_messages(history + [{"role": "human", "content": question}])
 
-    if backend == "openai":
-        from . import openai_backend
+    chat_model = _create_chat_model(config)
 
-        text, raw = openai_backend.ask_openai(
-            question=question,
-            model=config["model"] or "",
-            api_key=config["api_key"],
-            endpoint=config["endpoint"],
-            api_version=config["api_version"],
-            messages=history,
-            timeout=timeout,
-        )
-    elif backend == "gemini":
-        from . import gemini_backend
+    try:
+        ai_msg = chat_model.invoke(lc_messages)
+    except Exception as exc:
+        exc_str = str(exc)
+        if "404" in exc_str or "not_found" in exc_str.lower() or "NOT_FOUND" in exc_str:
+            model = config.get("model", "")
+            hint = f"Model {model!r} not found."
+            try:
+                hint += _get_model_suggestions(config)
+            except Exception:  # pylint: disable=broad-except
+                pass
+            raise ValueError(hint) from exc
+        raise
 
-        text, raw = gemini_backend.ask_gemini(
-            question=question,
-            model=config["model"] or "",
-            api_key=config["api_key"],
-            messages=history,
-            timeout=timeout,
-        )
-    elif backend == "anthropic":
-        from . import anthropic_backend
+    text = ai_msg.content if isinstance(ai_msg.content, str) else str(ai_msg.content)
 
-        text, raw = anthropic_backend.ask_anthropic(
-            question=question,
-            model=config["model"] or "",
-            api_key=config["api_key"],
-            messages=history,
-            timeout=timeout,
-        )
-    else:
-        raise ValueError(
-            f"Unsupported langchain backend: {backend!r}. "
-            "Supported backends: 'openai', 'gemini', 'anthropic'."
-        )
+    raw: dict[str, object] = {
+        "backend": backend,
+        "model": config.get("model", ""),
+        "response_content": text,
+    }
 
     updated_history = history + [
         {"role": "human", "content": question},
@@ -217,6 +206,33 @@ def _ask_text(
         provider="langchain",
         raw_response=raw,
     )
+
+
+def _get_model_suggestions(config: dict[str, str | None]) -> str:
+    """Try to list available models for the configured backend."""
+    backend = config.get("backend")
+    api_key = config.get("api_key")
+    endpoint = config.get("endpoint")
+
+    from ._models import list_anthropic_models, list_gemini_models, list_openai_models
+
+    models: list[str] = []
+    if backend == "openai":
+        import os
+
+        models = list_openai_models(os.getenv("OPENAI_API_KEY") or api_key, endpoint)
+    elif backend == "gemini":
+        import os
+
+        models = list_gemini_models(os.getenv("GEMINI_API_KEY") or api_key)
+    elif backend == "anthropic":
+        import os
+
+        models = list_anthropic_models(os.getenv("ANTHROPIC_API_KEY") or api_key)
+
+    if models:
+        return "\n\nAvailable models:\n" + "\n".join(f"  - {m}" for m in models)
+    return ""
 
 
 def _ask_agent(
