@@ -145,11 +145,11 @@ def _load_mcp_server_config(
 async def run_agent(
     question: str,
     chat_model: Any,
-    messages: list[dict[str, object]],
+    messages: list[dict[str, Any]],
     mcp_config_path: str,
     execution_dir: str | None = None,
     env_vars: dict[str, str] | None = None,
-) -> tuple[str, list[dict[str, object]], dict[str, object]]:
+) -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
     """Run a LangGraph ReAct agent with MCP tools.
 
     Parameters
@@ -211,21 +211,21 @@ async def run_agent(
         # Compute stats
         agent_steps = 0
         total_tool_calls = 0
-        tool_trace: list[dict[str, object]] = []
-        trace_by_id: dict[str, dict[str, object]] = {}
+        tool_trace: list[dict[str, Any]] = []
+        trace_by_id: dict[str, dict[str, Any]] = {}
 
         for msg in output_messages:
             if isinstance(msg, AIMessage) and getattr(msg, "tool_calls", None):
                 agent_steps += 1
                 for tc in msg.tool_calls:
                     total_tool_calls += 1
-                    entry: dict[str, object] = {
-                        "name": tc.get("name", ""),
-                        "args": tc.get("args", {}),
+                    entry: dict[str, Any] = {
+                        "name": tc["name"],
+                        "args": tc["args"],
                         "result": "",
                     }
                     tool_trace.append(entry)
-                    tc_id = tc.get("id", "")
+                    tc_id: str = tc.get("id") or ""
                     if tc_id:
                         trace_by_id[tc_id] = entry
 
@@ -236,18 +236,18 @@ async def run_agent(
                 if tc_id and tc_id in trace_by_id:
                     trace_by_id[tc_id]["result"] = msg.content
 
-        stats: dict[str, object] = {
+        stats: dict[str, Any] = {
             "agent_steps": agent_steps,
             "total_tool_calls": total_tool_calls,
             "tool_trace": tool_trace,
         }
 
         # Serialize full history
-        serialized: list[dict[str, object]] = []
+        serialized: list[dict[str, Any]] = []
         for msg in output_messages:
             if hasattr(msg, "model_dump"):
-                serialized.append(msg.model_dump())
+                serialized.append(cast(dict[str, Any], msg.model_dump()))
             else:
-                serialized.append(msg.dict())
+                serialized.append(cast(dict[str, Any], msg.dict()))
 
         return (final_text, serialized, stats)

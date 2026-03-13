@@ -287,7 +287,7 @@ def _ask_agent(
 
 def _log_agent_mlflow(
     config: dict[str, str | None],
-    stats: dict[str, object],
+    stats: dict[str, Any],
     session_id: str,
 ) -> None:
     """Log agent mode params, metrics, and tool_trace artifact to MLflow."""
@@ -306,8 +306,8 @@ def _log_agent_mlflow(
 
             mlflow_logger.log_metrics(
                 {
-                    "agent_steps": float(stats.get("agent_steps", 0)),  # type: ignore[arg-type]
-                    "total_tool_calls": float(stats.get("total_tool_calls", 0)),  # type: ignore[arg-type]
+                    "agent_steps": float(stats.get("agent_steps", 0)),
+                    "total_tool_calls": float(stats.get("total_tool_calls", 0)),
                 }
             )
 
