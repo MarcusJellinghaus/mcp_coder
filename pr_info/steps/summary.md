@@ -49,7 +49,7 @@ interface.py → ask_langchain(question, session_id, timeout,
 | Async | `asyncio.run()` wrapper | Matches Claude API provider pattern |
 | Max iterations | `AGENT_MAX_STEPS = 50`, partial output on limit | Prevents runaway loops |
 | Transport | `stdio` only | Only transport used by the project |
-| Session | LangChain native `.dict()` / `messages_from_dict()` for all serialization (Decision 15). No migration of old sessions. | LangChain handles all message types natively; no custom parsing needed |
+| Session | LangChain native `.dict()` / `messages_from_dict()` for all serialization (Decision 15, unified in Decision 43). No migration of old sessions. | LangChain handles all message types natively; no custom parsing needed |
 | Verify | Runtime: package check. Verify cmd: also stdio smoke test | Two levels |
 
 ### What is NOT changing
@@ -101,5 +101,13 @@ interface.py → ask_langchain(question, session_id, timeout,
 8. **Step 7** — Unify text backend: rewrite `_ask_text()` to use `_create_chat_model()`, delete old `ask_*` functions, update tests (Decision 33)
 
 Each step follows TDD: tests first, then implementation.
+
+### Code Review Round 2 Steps (Decisions 35–49)
+
+8. **Step 8** — Quick fixes: add `from __future__ import annotations` to `gemini_backend.py` and `_utils.py`, fix stale `_utils.py` docstring, remove unused `_ai_message_to_dict`, wrap Gemini API key in `SecretStr`, add `TYPE_CHECKING` guard for `BaseChatModel` in `agent.py`, convert `agent.py` docstrings to Google-style
+9. **Step 9** — Timeout propagation: pass `timeout` through `_create_chat_model()` to backend factories; add `asyncio.TimeoutError` handler in `prompt_llm()`
+10. **Step 10** — Unify session history format: change `_ask_text()` to use `model_dump()` / `messages_from_dict()` (same as agent mode); remove `_to_lc_messages()` if no longer needed
+11. **Step 11** — Config robustness: wrap `json.JSONDecodeError` in `_load_mcp_server_config()`; log warning when overriding non-stdio transport
+12. **Step 12** — Test coverage gaps: empty message list, non-dict server entry, `execution_dir`/`env_vars` forwarding, `ImportError` tests for all three backends
 
 See [Decisions.md](Decisions.md) for design decisions from plan review.

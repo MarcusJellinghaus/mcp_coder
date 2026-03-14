@@ -38,3 +38,32 @@ Decisions made during plan review discussion.
 | 32 | `env_vars` in `verify_langchain` | Wire `env_vars` parameter through to the `ask_llm()` call in the MCP agent smoke test. | Parameter was accepted but unused; needed for MCP server env var resolution. |
 | 33 | Duplicate backend dispatch in `_ask_text` | Full refactor: rewrite `_ask_text()` to use `_create_chat_model()` + generic `.invoke()`. Delete old `ask_openai`/`ask_gemini`/`ask_anthropic` functions. Update all affected tests. | DRY — eliminates duplicated dispatch logic between text and agent modes. |
 | 34 | Missing `_check_agent_dependencies` test | Add unit test that verifies `ImportError` with install instructions when packages are missing. | Test coverage for error path. |
+
+## Code Review Round 2 — Decisions 35–49
+
+| # | Topic | Decision | Rationale |
+|---|-------|----------|-----------|
+| 35 | `asyncio.TimeoutError` not handled in `prompt_llm()` | Add `except asyncio.TimeoutError` block in `prompt_llm()` alongside existing `TimeoutExpired` handler. Log prompt length + method. | Consistent timeout handling across providers; helpful diagnostics. |
+| 36 | Unused `_ai_message_to_dict` in `_utils.py` | Remove it — dead code. | No callers found; agent mode uses `model_dump()` directly. |
+| 37 | Stale `_utils.py` module docstring | Fix it — update to reflect reality (imported by `__init__.py`). | Accuracy. |
+| 38 | Gemini API key not wrapped in `SecretStr` | Wrap it in `SecretStr` for consistency with OpenAI and Anthropic backends. | Prevents accidental logging of secrets. |
+| 39 | `from __future__ import annotations` missing in `gemini_backend.py` and `_utils.py` | Add it to both files. | Consistency with `openai_backend.py` and `anthropic_backend.py`. |
+| 40 | `chat_model: Any` in `run_agent()` | Add `TYPE_CHECKING` guard with `BaseChatModel` type. | Type safety; follows pattern in `__init__.py`. |
+| 41 | Docstring style inconsistency in `agent.py` | Convert from NumPy-style to Google-style. | Consistency with rest of codebase. |
+| 42 | `timeout` not propagated to chat model | Pass `timeout` through `_create_chat_model()` as separate parameter to each backend factory. | Caller's timeout should reach HTTP request layer. |
+| 43 | Session history format divergence (text vs agent) | Unify: change text mode to use `model_dump()` / `messages_from_dict()` — same as agent mode. | Interoperability; both modes produce compatible history. |
+| 44 | Missing `json.JSONDecodeError` handling | Wrap in `_load_mcp_server_config()` with user-friendly `ValueError` including file path. | Better diagnostics for malformed config files. |
+| 45 | Transport silently overridden to `"stdio"` | Log a warning when overriding user-specified non-stdio transport. | Users should know their transport config is being ignored. |
+| 46 | No test for empty message list from agent | Add test — verify `final_text == ""` and zero stats. | Edge case coverage. |
+| 47 | No test for non-dict server entry skipping | Add test — verify warning logged and entry skipped. | Config robustness coverage. |
+| 48 | `execution_dir` and `env_vars` forwarding untested | Add tests verifying both params reach `run_agent()`. | Parameter forwarding coverage. |
+| 49 | No `ImportError` tests for backend modules | Add one test per backend verifying `ImportError` with install hint. | Error path coverage. |
+
+### Decisions left as-is (no action)
+
+| Topic | Reason |
+|-------|--------|
+| `overall_ok` includes MCP packages | Part of `langchain` extras group — correct behavior. |
+| `msg.content` non-string handling in `run_agent()` | LLM always returns text for MCP agents; no real risk of data loss. |
+| f-strings in logger calls (`cli/utils.py`) | Negligible performance impact for debug logging. |
+| `ConnectionError`/`ImportError` test paths in verification | Pattern proven by existing `FileNotFoundError` test. |
