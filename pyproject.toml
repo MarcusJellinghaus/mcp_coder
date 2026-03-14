@@ -204,7 +204,7 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = ["langchain_core", "langchain_core.*"]
 ignore_missing_imports = true
-follow_imports = "skip"
+follow_imports = "skip"  # modules are optional, skip to avoid errors when not installed
 
 [[tool.mypy.overrides]]
 module = ["langchain_openai"]

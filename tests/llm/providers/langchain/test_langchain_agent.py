@@ -1,5 +1,6 @@
 """Tests for agent utility functions and run_agent execution."""
 
+import asyncio
 import builtins
 import json
 import logging
@@ -484,3 +485,32 @@ class TestRunAgent:
         assert trace[1]["name"] == "read_file"
         assert trace[1]["args"] == {"path": "b.py"}
         assert trace[1]["result"] == "content of b.py"
+
+    @pytest.mark.asyncio
+    async def test_timeout_raises_on_slow_agent(self, tmp_path: Path) -> None:
+        """asyncio.TimeoutError is raised when agent exceeds timeout."""
+        cfg_path = _write_mcp_config(tmp_path)
+
+        async def _slow_invoke(*args: Any, **kwargs: Any) -> dict[str, Any]:
+            await asyncio.sleep(10)
+            return {"messages": []}  # pragma: no cover
+
+        mock_client = AsyncMock()
+        mock_client.get_tools.return_value = []
+
+        mock_agent = MagicMock()
+        mock_agent.ainvoke = _slow_invoke
+
+        with (
+            patch(_PATCH_MCP_CLIENT, return_value=mock_client),
+            patch(_PATCH_CREATE_AGENT, return_value=mock_agent),
+            patch(_PATCH_FROM_DICT, return_value=[]),
+            pytest.raises(asyncio.TimeoutError),
+        ):
+            await run_agent(
+                question="test",
+                chat_model=MagicMock(),
+                messages=[],
+                mcp_config_path=cfg_path,
+                timeout=1,
+            )

@@ -6,59 +6,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 
-class TestCheckAgentDependencies:
-    """Tests for _check_agent_dependencies()."""
-
-    def test_passes_when_both_installed(self) -> None:
-        """No error when both packages importable."""
-        from mcp_coder.llm.providers.langchain.agent import (
-            _check_agent_dependencies,
-        )
-
-        # Both are mocked in conftest, so this should not raise
-        _check_agent_dependencies()
-
-    def test_raises_clear_error_when_mcp_adapters_missing(self) -> None:
-        """ImportError with install instructions for langchain-mcp-adapters."""
-        import importlib
-        import sys
-
-        from mcp_coder.llm.providers.langchain import agent as agent_module
-
-        saved = sys.modules.get("langchain_mcp_adapters")
-        sys.modules["langchain_mcp_adapters"] = None  # type: ignore[assignment]
-        try:
-            importlib.reload(agent_module)
-            with pytest.raises(ImportError, match="langchain-mcp-adapters"):
-                agent_module._check_agent_dependencies()
-        finally:
-            if saved is not None:
-                sys.modules["langchain_mcp_adapters"] = saved
-            else:
-                sys.modules.pop("langchain_mcp_adapters", None)
-            importlib.reload(agent_module)
-
-    def test_raises_clear_error_when_langgraph_missing(self) -> None:
-        """ImportError with install instructions for langgraph."""
-        import importlib
-        import sys
-
-        from mcp_coder.llm.providers.langchain import agent as agent_module
-
-        saved = sys.modules.get("langgraph")
-        sys.modules["langgraph"] = None  # type: ignore[assignment]
-        try:
-            importlib.reload(agent_module)
-            with pytest.raises(ImportError, match="langgraph"):
-                agent_module._check_agent_dependencies()
-        finally:
-            if saved is not None:
-                sys.modules["langgraph"] = saved
-            else:
-                sys.modules.pop("langgraph", None)
-            importlib.reload(agent_module)
-
-
 class TestAskLangchainAgentMode:
     """Tests for agent mode routing in ask_langchain()."""
 

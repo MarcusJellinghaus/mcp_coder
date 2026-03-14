@@ -143,6 +143,7 @@ def ask_langchain(
             mcp_config=mcp_config,
             execution_dir=execution_dir,
             env_vars=env_vars,
+            timeout=timeout,
         )
 
     return _ask_text(
@@ -218,16 +219,10 @@ def _get_model_suggestions(config: dict[str, str | None]) -> str:
 
     models: list[str] = []
     if backend == "openai":
-        import os
-
         models = list_openai_models(os.getenv("OPENAI_API_KEY") or api_key, endpoint)
     elif backend == "gemini":
-        import os
-
         models = list_gemini_models(os.getenv("GEMINI_API_KEY") or api_key)
     elif backend == "anthropic":
-        import os
-
         models = list_anthropic_models(os.getenv("ANTHROPIC_API_KEY") or api_key)
 
     if models:
@@ -242,6 +237,7 @@ def _ask_agent(
     mcp_config: str,
     execution_dir: str | None = None,
     env_vars: dict[str, str] | None = None,
+    timeout: int = 30,
 ) -> LLMResponseDict:
     """Agent mode: route through LangGraph ReAct agent with MCP tools."""
     from .agent import _check_agent_dependencies, run_agent
@@ -259,6 +255,7 @@ def _ask_agent(
             mcp_config_path=mcp_config,
             execution_dir=execution_dir,
             env_vars=env_vars,
+            timeout=timeout,
         )
     )
 
