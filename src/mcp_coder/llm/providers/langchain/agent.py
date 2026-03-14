@@ -4,6 +4,7 @@ Provides environment variable substitution, MCP server configuration loading,
 and the core agent execution function for the LangChain agent mode (issue #517).
 """
 
+import asyncio
 import json
 import logging
 import os
@@ -149,6 +150,7 @@ async def run_agent(
     mcp_config_path: str,
     execution_dir: str | None = None,
     env_vars: dict[str, str] | None = None,
+    timeout: int = 30,
 ) -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
     """Run a LangGraph ReAct agent with MCP tools.
 
@@ -167,6 +169,8 @@ async def run_agent(
         Optional working directory (currently unused, reserved for future).
     env_vars:
         Optional extra environment variables for MCP server resolution.
+    timeout:
+        Maximum time in seconds for the agent invocation.
 
     Returns
     -------
@@ -194,9 +198,12 @@ async def run_agent(
         # Build input: prior history + new question
         input_messages = messages_from_dict(messages) + [HumanMessage(content=question)]
 
-        result = await agent.ainvoke(
-            {"messages": input_messages},
-            config={"recursion_limit": AGENT_MAX_STEPS},
+        result = await asyncio.wait_for(
+            agent.ainvoke(
+                {"messages": input_messages},
+                config={"recursion_limit": AGENT_MAX_STEPS},
+            ),
+            timeout=float(timeout),
         )
 
         output_messages = result["messages"]
