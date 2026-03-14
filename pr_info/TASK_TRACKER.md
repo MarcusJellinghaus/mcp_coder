@@ -62,6 +62,31 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Run quality checks (pylint, pytest, mypy) and fix all issues
 - [x] Prepare git commit message for Step 7
 
+### Step 8 — Quick Fixes: Imports, Docstrings, Dead Code, SecretStr ([step_8.md](./steps/step_8.md))
+- [ ] Implement Step 8: add `from __future__ import annotations` to gemini_backend.py and _utils.py, fix stale _utils.py docstring, remove unused `_ai_message_to_dict`, wrap Gemini API key in SecretStr, add TYPE_CHECKING guard for BaseChatModel in agent.py, convert agent.py docstrings to Google-style
+- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message for Step 8
+
+### Step 9 — Timeout Propagation + asyncio.TimeoutError Handling ([step_9.md](./steps/step_9.md))
+- [ ] Implement Step 9: pass timeout through _create_chat_model() to backend factories, add asyncio.TimeoutError handler in prompt_llm(), write tests
+- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message for Step 9
+
+### Step 10 — Unify Session History Format ([step_10.md](./steps/step_10.md))
+- [ ] Implement Step 10: change _ask_text() to use model_dump() / messages_from_dict() for history serialization, remove _to_lc_messages() if unused, update tests
+- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message for Step 10
+
+### Step 11 — Config Robustness + Transport Warning ([step_11.md](./steps/step_11.md))
+- [ ] Implement Step 11: wrap json.JSONDecodeError in _load_mcp_server_config() with user-friendly message, log warning when overriding non-stdio transport, write tests
+- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message for Step 11
+
+### Step 12 — Test Coverage Gaps ([step_12.md](./steps/step_12.md))
+- [ ] Implement Step 12: add tests for empty message list, non-dict server entry skipping, execution_dir/env_vars forwarding, ImportError for all three backends
+- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [ ] Prepare git commit message for Step 12
+
 ## Pull Request
 - [ ] Review all changes across steps for consistency and completeness
 - [ ] Run full quality checks suite (pylint, pytest, mypy) on entire changeset
