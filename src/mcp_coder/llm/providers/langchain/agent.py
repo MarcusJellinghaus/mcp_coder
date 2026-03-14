@@ -4,13 +4,18 @@ Provides environment variable substitution, MCP server configuration loading,
 and the core agent execution function for the LangChain agent mode (issue #517).
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
 import os
 import re
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from langchain_core.language_models import BaseChatModel
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +25,9 @@ AGENT_MAX_STEPS: int = 50
 def _check_agent_dependencies() -> None:
     """Runtime import check for langchain-mcp-adapters and langgraph.
 
-    Raises ImportError with clear install instructions if missing.
+    Raises:
+        ImportError: If required packages are missing, with clear install
+            instructions.
     """
     missing: list[str] = []
     try:
@@ -64,18 +71,13 @@ def _load_mcp_server_config(
 ) -> dict[str, dict[str, object]]:
     """Load an ``.mcp.json`` file and resolve ``${VAR}`` placeholders.
 
-    Parameters
-    ----------
-    mcp_config_path:
-        Absolute path to the ``.mcp.json`` configuration file.
-        (Callers should use ``resolve_mcp_config_path()`` from ``cli/utils.py``.)
-    env_vars:
-        Optional extra environment variables.  These are merged on top of
-        ``os.environ`` (i.e. *env_vars* wins on conflicts).
+    Args:
+        mcp_config_path: Absolute path to the ``.mcp.json`` configuration file.
+            Callers should use ``resolve_mcp_config_path()`` from ``cli/utils.py``.
+        env_vars: Optional extra environment variables. These are merged on top
+            of ``os.environ`` (i.e. *env_vars* wins on conflicts).
 
-    Returns
-    -------
-    dict
+    Returns:
         Mapping of server names to their resolved configuration, suitable for
         ``MultiServerMCPClient``.
     """
@@ -145,7 +147,7 @@ def _load_mcp_server_config(
 
 async def run_agent(
     question: str,
-    chat_model: Any,
+    chat_model: BaseChatModel,
     messages: list[dict[str, Any]],
     mcp_config_path: str,
     execution_dir: str | None = None,
@@ -154,27 +156,18 @@ async def run_agent(
 ) -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
     """Run a LangGraph ReAct agent with MCP tools.
 
-    Parameters
-    ----------
-    question:
-        The user question / prompt to send to the agent.
-    chat_model:
-        A LangChain ``BaseChatModel`` instance (e.g. from a backend).
-    messages:
-        Prior conversation history as a list of dicts (LangChain native
-        serialization via ``.dict()`` / ``messages_from_dict()``).
-    mcp_config_path:
-        Absolute path to the ``.mcp.json`` configuration file.
-    execution_dir:
-        Optional working directory (currently unused, reserved for future).
-    env_vars:
-        Optional extra environment variables for MCP server resolution.
-    timeout:
-        Maximum time in seconds for the agent invocation.
+    Args:
+        question: The user question / prompt to send to the agent.
+        chat_model: A LangChain ``BaseChatModel`` instance (e.g. from a backend).
+        messages: Prior conversation history as a list of dicts (LangChain native
+            serialization via ``.dict()`` / ``messages_from_dict()``).
+        mcp_config_path: Absolute path to the ``.mcp.json`` configuration file.
+        execution_dir: Optional working directory (currently unused, reserved
+            for future).
+        env_vars: Optional extra environment variables for MCP server resolution.
+        timeout: Maximum time in seconds for the agent invocation.
 
-    Returns
-    -------
-    tuple
+    Returns:
         ``(final_text, full_message_history, stats_dict)``.
         *stats_dict* contains: ``agent_steps``, ``total_tool_calls``,
         ``tool_trace``.
