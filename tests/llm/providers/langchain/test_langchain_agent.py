@@ -164,6 +164,28 @@ class TestLoadMcpServerConfig:
         # Unknown field should not appear in output
         assert "unknownField" not in result["s"]
 
+    def test_accepts_type_field(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Config with 'type': 'stdio' should not warn; output has transport=stdio."""
+        path = self._write_config(
+            tmp_path,
+            {
+                "mcpServers": {
+                    "s": {
+                        "command": "cmd",
+                        "type": "stdio",
+                    }
+                }
+            },
+        )
+        with caplog.at_level(logging.WARNING):
+            result = _load_mcp_server_config(path)
+        # No warning for "type" field
+        assert "type" not in caplog.text
+        # Output should have transport=stdio (forced)
+        assert result["s"]["transport"] == "stdio"
+
 
 class TestAgentConstants:
     """Verify module-level constants."""
@@ -336,11 +358,11 @@ class TestRunAgent:
 
     @pytest.mark.asyncio
     async def test_hard_fails_on_mcp_server_error(self, tmp_path: Path) -> None:
-        """If MultiServerMCPClient fails to start, exception propagates."""
+        """If MultiServerMCPClient.get_tools() fails, exception propagates."""
         cfg_path = _write_mcp_config(tmp_path)
 
         mock_client = AsyncMock()
-        mock_client.__aenter__.side_effect = ConnectionError("MCP server failed")
+        mock_client.get_tools.side_effect = ConnectionError("MCP server failed")
 
         with (
             patch(_PATCH_MCP_CLIENT, return_value=mock_client),

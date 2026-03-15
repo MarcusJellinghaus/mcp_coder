@@ -46,7 +46,7 @@ def _check_agent_dependencies() -> None:
         )
 
 
-_KNOWN_FIELDS = {"command", "args", "env", "transport"}
+_KNOWN_FIELDS = {"command", "args", "env", "transport", "type"}
 
 
 def _resolve_env_vars(value: str, env: dict[str, str]) -> str:
@@ -184,70 +184,70 @@ async def run_agent(
 
     server_config = _load_mcp_server_config(mcp_config_path, env_vars)
 
-    async with MultiServerMCPClient(cast(Any, server_config)) as client:
-        tools = await client.get_tools()
-        agent = create_react_agent(chat_model, tools)
+    client = MultiServerMCPClient(cast(Any, server_config))
+    tools = await client.get_tools()
+    agent = create_react_agent(chat_model, tools)
 
-        # Build input: prior history + new question
-        input_messages = messages_from_dict(messages) + [HumanMessage(content=question)]
+    # Build input: prior history + new question
+    input_messages = messages_from_dict(messages) + [HumanMessage(content=question)]
 
-        result = await asyncio.wait_for(
-            agent.ainvoke(
-                {"messages": input_messages},
-                config={"recursion_limit": AGENT_MAX_STEPS},
-            ),
-            timeout=float(timeout),
-        )
+    result = await asyncio.wait_for(
+        agent.ainvoke(
+            {"messages": input_messages},
+            config={"recursion_limit": AGENT_MAX_STEPS},
+        ),
+        timeout=float(timeout),
+    )
 
-        output_messages = result["messages"]
+    output_messages = result["messages"]
 
-        # Extract final text from the last AIMessage
-        final_text = ""
-        for msg in reversed(output_messages):
-            if isinstance(msg, AIMessage):
-                final_text = msg.content if isinstance(msg.content, str) else ""
-                break
+    # Extract final text from the last AIMessage
+    final_text = ""
+    for msg in reversed(output_messages):
+        if isinstance(msg, AIMessage):
+            final_text = msg.content if isinstance(msg.content, str) else ""
+            break
 
-        # Compute stats
-        agent_steps = 0
-        total_tool_calls = 0
-        tool_trace: list[dict[str, Any]] = []
-        trace_by_id: dict[str, dict[str, Any]] = {}
+    # Compute stats
+    agent_steps = 0
+    total_tool_calls = 0
+    tool_trace: list[dict[str, Any]] = []
+    trace_by_id: dict[str, dict[str, Any]] = {}
 
-        for msg in output_messages:
-            if isinstance(msg, AIMessage) and getattr(msg, "tool_calls", None):
-                agent_steps += 1
-                for tc in msg.tool_calls:
-                    total_tool_calls += 1
-                    entry: dict[str, Any] = {
-                        "name": tc["name"],
-                        "args": tc["args"],
-                        "result": "",
-                    }
-                    tool_trace.append(entry)
-                    tc_id: str = tc.get("id") or ""
-                    if tc_id:
-                        trace_by_id[tc_id] = entry
+    for msg in output_messages:
+        if isinstance(msg, AIMessage) and getattr(msg, "tool_calls", None):
+            agent_steps += 1
+            for tc in msg.tool_calls:
+                total_tool_calls += 1
+                entry: dict[str, Any] = {
+                    "name": tc["name"],
+                    "args": tc["args"],
+                    "result": "",
+                }
+                tool_trace.append(entry)
+                tc_id: str = tc.get("id") or ""
+                if tc_id:
+                    trace_by_id[tc_id] = entry
 
-        # Fill tool results from ToolMessages, matched by tool_call_id
-        for msg in output_messages:
-            if isinstance(msg, ToolMessage):
-                tc_id = getattr(msg, "tool_call_id", "")
-                if tc_id and tc_id in trace_by_id:
-                    trace_by_id[tc_id]["result"] = msg.content
+    # Fill tool results from ToolMessages, matched by tool_call_id
+    for msg in output_messages:
+        if isinstance(msg, ToolMessage):
+            tc_id = getattr(msg, "tool_call_id", "")
+            if tc_id and tc_id in trace_by_id:
+                trace_by_id[tc_id]["result"] = msg.content
 
-        stats: dict[str, Any] = {
-            "agent_steps": agent_steps,
-            "total_tool_calls": total_tool_calls,
-            "tool_trace": tool_trace,
-        }
+    stats: dict[str, Any] = {
+        "agent_steps": agent_steps,
+        "total_tool_calls": total_tool_calls,
+        "tool_trace": tool_trace,
+    }
 
-        # Serialize full history
-        serialized: list[dict[str, Any]] = []
-        for msg in output_messages:
-            if hasattr(msg, "model_dump"):
-                serialized.append(cast(dict[str, Any], msg.model_dump()))
-            else:
-                serialized.append(cast(dict[str, Any], msg.dict()))
+    # Serialize full history
+    serialized: list[dict[str, Any]] = []
+    for msg in output_messages:
+        if hasattr(msg, "model_dump"):
+            serialized.append(cast(dict[str, Any], msg.model_dump()))
+        else:
+            serialized.append(cast(dict[str, Any], msg.dict()))
 
-        return (final_text, serialized, stats)
+    return (final_text, serialized, stats)
