@@ -292,12 +292,15 @@ async def run_agent(
         "tool_trace": tool_trace,
     }
 
-    # Serialize full history
+    # Serialize full history in the format expected by messages_from_dict:
+    # {"type": "human", "data": {"content": "...", ...}}
     serialized: list[dict[str, Any]] = []
     for msg in output_messages:
         if hasattr(msg, "model_dump"):
-            serialized.append(cast(dict[str, Any], msg.model_dump()))
+            dump = cast(dict[str, Any], msg.model_dump())
         else:
-            serialized.append(cast(dict[str, Any], msg.dict()))
+            dump = cast(dict[str, Any], msg.dict())
+        msg_type = dump.pop("type", "unknown")
+        serialized.append({"type": msg_type, "data": dump})
 
     return (final_text, serialized, stats)
