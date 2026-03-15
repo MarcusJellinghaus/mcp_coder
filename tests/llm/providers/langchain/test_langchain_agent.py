@@ -16,6 +16,7 @@ from mcp_coder.llm.providers.langchain.agent import (
     _check_agent_dependencies,
     _load_mcp_server_config,
     _resolve_env_vars,
+    _sanitize_tool_schema,
     run_agent,
 )
 
@@ -185,6 +186,113 @@ class TestLoadMcpServerConfig:
         assert "type" not in caplog.text
         # Output should have transport=stdio (forced)
         assert result["s"]["transport"] == "stdio"
+        # 'type' must NOT appear in output — MultiServerMCPClient rejects it
+        assert "type" not in result["s"]
+
+    def test_type_field_excluded_from_output(self, tmp_path: Path) -> None:
+        """'type' field from .mcp.json must not leak into server config dict.
+
+        Regression test: MultiServerMCPClient passes all config keys to
+        _create_stdio_session(), which raises TypeError on unknown kwargs.
+        """
+        path = self._write_config(
+            tmp_path,
+            {
+                "mcpServers": {
+                    "server-a": {
+                        "type": "stdio",
+                        "command": "echo",
+                        "args": ["hello"],
+                        "env": {"FOO": "bar"},
+                    },
+                    "server-b": {
+                        "type": "stdio",
+                        "command": "cat",
+                    },
+                }
+            },
+        )
+        result = _load_mcp_server_config(path)
+        for name in ("server-a", "server-b"):
+            assert "type" not in result[name], f"'type' leaked into config for {name}"
+            assert result[name]["transport"] == "stdio"
+
+
+class TestSanitizeToolSchema:
+    """Tests for _sanitize_tool_schema."""
+
+    def test_adds_type_to_untyped_property(self) -> None:
+        """Property with only 'title' gets 'type': 'string' added."""
+        schema: dict[str, Any] = {
+            "properties": {"content": {"title": "Content"}},
+            "type": "object",
+        }
+        result = _sanitize_tool_schema(schema)
+        assert result["properties"]["content"]["type"] == "string"
+
+    def test_preserves_existing_type(self) -> None:
+        """Property with an existing 'type' is not modified."""
+        schema: dict[str, Any] = {
+            "properties": {"name": {"title": "Name", "type": "string"}},
+            "type": "object",
+        }
+        result = _sanitize_tool_schema(schema)
+        assert result["properties"]["name"]["type"] == "string"
+
+    def test_preserves_anyof(self) -> None:
+        """Property using 'anyOf' is not modified."""
+        schema: dict[str, Any] = {
+            "properties": {
+                "opts": {
+                    "anyOf": [{"type": "string"}, {"type": "null"}],
+                    "default": None,
+                }
+            },
+            "type": "object",
+        }
+        result = _sanitize_tool_schema(schema)
+        assert "type" not in result["properties"]["opts"]
+        assert "anyOf" in result["properties"]["opts"]
+
+    def test_preserves_ref(self) -> None:
+        """Property using '$ref' is not modified."""
+        schema: dict[str, Any] = {
+            "properties": {"item": {"$ref": "#/definitions/Item"}},
+            "type": "object",
+        }
+        result = _sanitize_tool_schema(schema)
+        assert "type" not in result["properties"]["item"]
+
+    def test_no_properties_returns_unchanged(self) -> None:
+        """Schema without 'properties' is returned unchanged."""
+        schema: dict[str, Any] = {"type": "object"}
+        result = _sanitize_tool_schema(schema)
+        assert result == {"type": "object"}
+
+    def test_multiple_untyped_properties(self) -> None:
+        """All untyped properties get default type."""
+        schema: dict[str, Any] = {
+            "properties": {
+                "content": {"title": "Content"},
+                "data": {"title": "Data"},
+                "name": {"title": "Name", "type": "string"},
+            },
+            "type": "object",
+        }
+        result = _sanitize_tool_schema(schema)
+        assert result["properties"]["content"]["type"] == "string"
+        assert result["properties"]["data"]["type"] == "string"
+        assert result["properties"]["name"]["type"] == "string"
+
+    def test_mutates_in_place(self) -> None:
+        """Schema is modified in-place and also returned."""
+        schema: dict[str, Any] = {
+            "properties": {"x": {"title": "X"}},
+            "type": "object",
+        }
+        result = _sanitize_tool_schema(schema)
+        assert result is schema
+        assert schema["properties"]["x"]["type"] == "string"
 
 
 class TestAgentConstants:
@@ -199,6 +307,7 @@ class TestAgentConstants:
 # ---------------------------------------------------------------------------
 
 _PATCH_MCP_CLIENT = "langchain_mcp_adapters.client.MultiServerMCPClient"
+_PATCH_CONVERT_TOOL = "langchain_mcp_adapters.tools.convert_mcp_tool_to_langchain_tool"
 _PATCH_CREATE_AGENT = "langgraph.prebuilt.create_react_agent"
 _PATCH_FROM_DICT = "langchain_core.messages.messages_from_dict"
 
@@ -255,6 +364,20 @@ def _write_mcp_config(tmp_path: Path) -> str:
     return str(cfg_file)
 
 
+def _make_mock_client() -> MagicMock:
+    """Build a mock MultiServerMCPClient that works with the session-based tool loading."""
+    mock_session = AsyncMock()
+    mock_list_result = MagicMock()
+    mock_list_result.tools = []  # no raw MCP tools by default
+    mock_session.list_tools.return_value = mock_list_result
+
+    mock_client = MagicMock()
+    mock_client.connections = {"test": {"transport": "stdio", "command": "echo"}}
+    mock_client.session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_client.session.return_value.__aexit__ = AsyncMock(return_value=False)
+    return mock_client
+
+
 class TestRunAgent:
     """Tests for run_agent() async function."""
 
@@ -266,14 +389,14 @@ class TestRunAgent:
         human_msg = _make_human_message("What is 2+2?")
         ai_msg = _make_ai_message("The answer is 4.")
 
-        mock_client = AsyncMock()
-        mock_client.get_tools.return_value = [MagicMock()]
+        mock_client = _make_mock_client()
 
         mock_agent = AsyncMock()
         mock_agent.ainvoke.return_value = {"messages": [human_msg, ai_msg]}
 
         with (
             patch(_PATCH_MCP_CLIENT, return_value=mock_client),
+            patch(_PATCH_CONVERT_TOOL, return_value=MagicMock()),
             patch(_PATCH_CREATE_AGENT, return_value=mock_agent),
             patch(_PATCH_FROM_DICT, return_value=[]),
         ):
@@ -294,14 +417,14 @@ class TestRunAgent:
         human_msg = _make_human_message("Hello")
         ai_msg = _make_ai_message("Hi there!")
 
-        mock_client = AsyncMock()
-        mock_client.get_tools.return_value = []
+        mock_client = _make_mock_client()
 
         mock_agent = AsyncMock()
         mock_agent.ainvoke.return_value = {"messages": [human_msg, ai_msg]}
 
         with (
             patch(_PATCH_MCP_CLIENT, return_value=mock_client),
+            patch(_PATCH_CONVERT_TOOL, return_value=MagicMock()),
             patch(_PATCH_CREATE_AGENT, return_value=mock_agent),
             patch(_PATCH_FROM_DICT, return_value=[]),
         ):
@@ -333,8 +456,7 @@ class TestRunAgent:
         )
         ai_final = _make_ai_message("Here is the file content.")
 
-        mock_client = AsyncMock()
-        mock_client.get_tools.return_value = [MagicMock()]
+        mock_client = _make_mock_client()
 
         mock_agent = AsyncMock()
         mock_agent.ainvoke.return_value = {
@@ -343,6 +465,7 @@ class TestRunAgent:
 
         with (
             patch(_PATCH_MCP_CLIENT, return_value=mock_client),
+            patch(_PATCH_CONVERT_TOOL, return_value=MagicMock()),
             patch(_PATCH_CREATE_AGENT, return_value=mock_agent),
             patch(_PATCH_FROM_DICT, return_value=[]),
         ):
@@ -358,14 +481,22 @@ class TestRunAgent:
 
     @pytest.mark.asyncio
     async def test_hard_fails_on_mcp_server_error(self, tmp_path: Path) -> None:
-        """If MultiServerMCPClient.get_tools() fails, exception propagates."""
+        """If session.list_tools() fails, exception propagates."""
         cfg_path = _write_mcp_config(tmp_path)
 
-        mock_client = AsyncMock()
-        mock_client.get_tools.side_effect = ConnectionError("MCP server failed")
+        mock_session = AsyncMock()
+        mock_session.list_tools.side_effect = ConnectionError("MCP server failed")
+
+        mock_client = MagicMock()
+        mock_client.connections = {"test": {"transport": "stdio", "command": "echo"}}
+        mock_client.session.return_value.__aenter__ = AsyncMock(
+            return_value=mock_session
+        )
+        mock_client.session.return_value.__aexit__ = AsyncMock(return_value=False)
 
         with (
             patch(_PATCH_MCP_CLIENT, return_value=mock_client),
+            patch(_PATCH_CONVERT_TOOL, return_value=MagicMock()),
             patch(_PATCH_FROM_DICT, return_value=[]),
             pytest.raises(ConnectionError, match="MCP server failed"),
         ):
@@ -384,14 +515,14 @@ class TestRunAgent:
         human_msg = _make_human_message("Do something complex")
         partial_ai = _make_ai_message("Partial response so far...")
 
-        mock_client = AsyncMock()
-        mock_client.get_tools.return_value = []
+        mock_client = _make_mock_client()
 
         mock_agent = AsyncMock()
         mock_agent.ainvoke.return_value = {"messages": [human_msg, partial_ai]}
 
         with (
             patch(_PATCH_MCP_CLIENT, return_value=mock_client),
+            patch(_PATCH_CONVERT_TOOL, return_value=MagicMock()),
             patch(_PATCH_CREATE_AGENT, return_value=mock_agent),
             patch(_PATCH_FROM_DICT, return_value=[]),
         ):
@@ -414,8 +545,7 @@ class TestRunAgent:
         prior_ai = _make_ai_message("Earlier answer")
         new_ai = _make_ai_message("New answer")
 
-        mock_client = AsyncMock()
-        mock_client.get_tools.return_value = []
+        mock_client = _make_mock_client()
 
         mock_agent = AsyncMock()
         mock_agent.ainvoke.return_value = {
@@ -431,6 +561,7 @@ class TestRunAgent:
 
         with (
             patch(_PATCH_MCP_CLIENT, return_value=mock_client),
+            patch(_PATCH_CONVERT_TOOL, return_value=MagicMock()),
             patch(_PATCH_CREATE_AGENT, return_value=mock_agent),
             patch(_PATCH_FROM_DICT, mock_messages_from_dict),
         ):
@@ -472,8 +603,7 @@ class TestRunAgent:
         )
         ai_final = _make_ai_message("Done reading files.")
 
-        mock_client = AsyncMock()
-        mock_client.get_tools.return_value = [MagicMock()]
+        mock_client = _make_mock_client()
 
         mock_agent = AsyncMock()
         mock_agent.ainvoke.return_value = {
@@ -488,6 +618,7 @@ class TestRunAgent:
 
         with (
             patch(_PATCH_MCP_CLIENT, return_value=mock_client),
+            patch(_PATCH_CONVERT_TOOL, return_value=MagicMock()),
             patch(_PATCH_CREATE_AGENT, return_value=mock_agent),
             patch(_PATCH_FROM_DICT, return_value=[]),
         ):
@@ -517,14 +648,14 @@ class TestRunAgent:
             await asyncio.sleep(10)
             return {"messages": []}  # pragma: no cover
 
-        mock_client = AsyncMock()
-        mock_client.get_tools.return_value = []
+        mock_client = _make_mock_client()
 
         mock_agent = MagicMock()
         mock_agent.ainvoke = _slow_invoke
 
         with (
             patch(_PATCH_MCP_CLIENT, return_value=mock_client),
+            patch(_PATCH_CONVERT_TOOL, return_value=MagicMock()),
             patch(_PATCH_CREATE_AGENT, return_value=mock_agent),
             patch(_PATCH_FROM_DICT, return_value=[]),
             pytest.raises(asyncio.TimeoutError),

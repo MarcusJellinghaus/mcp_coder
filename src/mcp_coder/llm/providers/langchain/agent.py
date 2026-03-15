@@ -134,6 +134,10 @@ def _load_mcp_server_config(
                     k: _resolve_env_vars(v, merged_env) if isinstance(v, str) else v
                     for k, v in value.items()
                 }
+            elif key == "type":
+                # 'type' is a VS Code / Claude Desktop convention;
+                # MultiServerMCPClient uses 'transport' instead.
+                pass
             else:
                 resolved[key] = value
 
@@ -143,6 +147,34 @@ def _load_mcp_server_config(
         result[server_name] = resolved
 
     return result
+
+
+def _sanitize_tool_schema(schema: dict[str, Any]) -> dict[str, Any]:
+    """Ensure every property in a JSON Schema ``properties`` dict has a ``type``.
+
+    Some MCP servers (e.g. FastMCP with ``Any``-typed parameters) emit
+    property definitions like ``{"title": "Content"}`` without a ``type``
+    field.  ``langchain-mcp-adapters`` passes these schemas to Pydantic's
+    ``StructuredTool`` which rejects them.
+
+    This function adds ``"type": "string"`` as a safe default for any
+    property that is missing both ``type`` and ``anyOf``/``allOf``/``oneOf``.
+    """
+    props = schema.get("properties")
+    if not isinstance(props, dict):
+        return schema
+
+    for prop_name, prop_def in props.items():
+        if not isinstance(prop_def, dict):
+            continue
+        has_type_info = any(
+            k in prop_def for k in ("type", "anyOf", "allOf", "oneOf", "$ref")
+        )
+        if not has_type_info:
+            prop_def["type"] = "string"
+            logger.debug("Added default type 'string' to schema property %r", prop_name)
+
+    return schema
 
 
 async def run_agent(
@@ -180,13 +212,31 @@ async def run_agent(
         messages_from_dict,
     )
     from langchain_mcp_adapters.client import MultiServerMCPClient
+    from langchain_mcp_adapters.tools import convert_mcp_tool_to_langchain_tool
     from langgraph.prebuilt import create_react_agent
 
     server_config = _load_mcp_server_config(mcp_config_path, env_vars)
 
+    # Load tools with schema sanitization.
+    # We cannot use MultiServerMCPClient.get_tools() directly because it
+    # passes raw MCP schemas to StructuredTool, which fails on properties
+    # without a 'type' field (e.g. FastMCP Any-typed params).
     client = MultiServerMCPClient(cast(Any, server_config))
-    tools = await client.get_tools()
-    agent = create_react_agent(chat_model, tools)
+    all_tools = []
+    for server_name, connection in client.connections.items():
+        async with client.session(server_name) as session:
+            raw_tools = await session.list_tools()
+            for tool in raw_tools.tools:
+                _sanitize_tool_schema(tool.inputSchema)
+                lc_tool = convert_mcp_tool_to_langchain_tool(
+                    None,
+                    tool,
+                    connection=connection,
+                    server_name=server_name,
+                )
+                all_tools.append(lc_tool)
+
+    agent = create_react_agent(chat_model, all_tools)
 
     # Build input: prior history + new question
     input_messages = messages_from_dict(messages) + [HumanMessage(content=question)]
