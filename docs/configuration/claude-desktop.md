@@ -7,8 +7,8 @@ Setup guide for Claude Desktop to work with MCP Coder development workflows.
 Claude Desktop provides an interactive LLM interface. With MCP servers, it allows software development:
 
 **Required MCP Servers:**
-- **[mcp-server-filesystem](https://github.com/MarcusJellinghaus/mcp_server_filesystem)** - Secure file access for project analysis
-- **[mcp-code-checker](https://github.com/MarcusJellinghaus/mcp-code-checker)** - Code quality analysis (optional)
+- **[mcp-workspace](https://github.com/MarcusJellinghaus/mcp-workspace)** - Secure file access for project analysis
+- **[mcp-tools-py](https://github.com/MarcusJellinghaus/mcp-tools-py)** - Code quality analysis (optional)
 
 **Configuration tool:** Use [mcp-config](https://github.com/MarcusJellinghaus/mcp-config) to manage MCP server configurations.
 

@@ -37,7 +37,7 @@ layers =
     mcp_coder.checks
     mcp_coder.workflow_utils
     mcp_coder.llm | mcp_coder.formatters | mcp_coder.prompt_manager
-    mcp_coder.utils | mcp_coder.mcp_code_checker
+    mcp_coder.utils | mcp_coder.mcp_tools_py
     mcp_coder.config | mcp_coder.constants
 
 # -----------------------------------------------------------------------------
@@ -315,19 +315,19 @@ ignore_imports =
     mcp_coder.utils.clipboard -> pyperclip
 
 # -----------------------------------------------------------------------------
-# Contract: MCP Code Checker Isolation
+# Contract: MCP Tools Py Isolation
 # -----------------------------------------------------------------------------
-# The 'mcp_code_checker' external package should only be used by mcp_code_checker module.
+# The 'mcp_tools_py' external package should only be used by mcp_tools_py module.
 # -----------------------------------------------------------------------------
 [importlinter:contract:mcp_checker_isolation]
-name = MCP Code Checker Isolation
+name = MCP Tools Py Isolation
 type = forbidden
 source_modules =
     mcp_coder
 forbidden_modules =
-    mcp_code_checker
+    mcp_tools_py
 ignore_imports =
-    mcp_coder.mcp_code_checker -> mcp_code_checker
+    mcp_coder.mcp_tools_py -> mcp_tools_py
 
 # -----------------------------------------------------------------------------
 # Contract: Requests Library Isolation

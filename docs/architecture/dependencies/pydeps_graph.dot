@@ -9,7 +9,7 @@ digraph G {
     git [fillcolor="blue",fontcolor="white",shape="folder"];
     github [fillcolor="blue",fontcolor="white",shape="folder"];
     jenkins [fillcolor="#56b83d",shape="folder"];
-    mcp_code_checker [fillcolor="#47c278",shape="folder"];
+    mcp_tools_py [fillcolor="#47c278",shape="folder"];
     mcp_coder [fillcolor="blue",fontcolor="white",shape="box"];
     mcp_coder_cli [fillcolor="blue",fontcolor="white",label="mcp_coder.cli",shape="box"];
     mcp_coder_cli_commands [fillcolor="blue",fontcolor="white",label="mcp_coder\.\ncli\.\ncommands",shape="box"];
@@ -56,7 +56,7 @@ digraph G {
     mcp_coder_llm_storage_session_finder [fillcolor="#47c2c2",label="mcp_coder\.\nllm\.\nstorage\.\nsession_finder"];
     mcp_coder_llm_storage_session_storage [fillcolor="#3bcece",label="mcp_coder\.\nllm\.\nstorage\.\nsession_storage"];
     mcp_coder_llm_types [fillcolor="#10f9f9",label="mcp_coder\.\nllm\.\ntypes"];
-    mcp_coder_mcp_code_checker [fillcolor="#3db8b8",label="mcp_coder\.\nmcp_code_checker"];
+    mcp_coder_mcp_tools_py [fillcolor="#3db8b8",label="mcp_coder\.\nmcp_tools_py"];
     mcp_coder_prompt_manager [fillcolor="blue",fontcolor="white",label="mcp_coder\.\nprompt_manager",shape="box"];
     mcp_coder_utils [fillcolor="blue",fontcolor="white",label="mcp_coder\.\nutils",shape="box"];
     mcp_coder_utils_clipboard [fillcolor="#33cccc",label="mcp_coder\.\nutils\.\nclipboard"];
@@ -116,7 +116,7 @@ digraph G {
     github -> mcp_coder_utils_github_operations_issue_manager [fillcolor="blue",minlen="4"];
     github -> mcp_coder_utils_github_operations_pr_manager [fillcolor="blue",minlen="4"];
     jenkins -> mcp_coder_utils_jenkins_operations_client [fillcolor="#56b83d",minlen="4"];
-    mcp_code_checker -> mcp_coder_mcp_code_checker [fillcolor="#47c278",minlen="2"];
+    mcp_tools_py -> mcp_coder_mcp_tools_py [fillcolor="#47c278",minlen="2"];
     mcp_coder_cli_commands -> mcp_coder_cli_main [fillcolor="blue",weight="2"];
     mcp_coder_cli_commands_commit -> mcp_coder_cli_commands [fillcolor="#2bacac",weight="3"];
     mcp_coder_cli_commands_commit -> mcp_coder_cli_main [fillcolor="#2bacac",minlen="2",weight="2"];
@@ -241,7 +241,7 @@ digraph G {
     mcp_coder_llm_types -> mcp_coder_llm_providers_claude_claude_code_api [fillcolor="#10f9f9",minlen="2",weight="2"];
     mcp_coder_llm_types -> mcp_coder_llm_providers_claude_claude_code_cli [fillcolor="#10f9f9",minlen="2",weight="2"];
     mcp_coder_llm_types -> mcp_coder_llm_serialization [fillcolor="#10f9f9",weight="2"];
-    mcp_coder_mcp_code_checker -> mcp_coder_workflows_implement_task_processing [fillcolor="#3db8b8",minlen="3"];
+    mcp_coder_mcp_tools_py -> mcp_coder_workflows_implement_task_processing [fillcolor="#3db8b8",minlen="3"];
     mcp_coder_prompt_manager -> mcp_coder [fillcolor="blue"];
     mcp_coder_prompt_manager -> mcp_coder_utils_commit_operations [fillcolor="blue",minlen="2"];
     mcp_coder_prompt_manager -> mcp_coder_workflows_create_plan [fillcolor="blue",minlen="2"];

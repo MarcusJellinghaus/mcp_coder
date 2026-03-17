@@ -67,7 +67,7 @@
 
 ### ✅ Issue #011: MyPy Convenience Function Test (RESOLVED Oct 14)
 **Status**: ✅ RESOLVED - Below warning threshold  
-**Test**: `tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_has_mypy_errors_convenience_function`
+**Test**: `tests/test_mcp_tools_py_integration.py::TestMypyIntegration::test_has_mypy_errors_convenience_function`
 
 **Performance History**: 
 - Oct 7 AM: 9.57s
@@ -154,7 +154,7 @@
 
 ### ✅ Issue #008: MyPy Full Check Regression (MASSIVELY IMPROVED Oct 9)
 **Status**: 🎉 MASSIVELY IMPROVED - Best performance ever recorded  
-**Test**: `tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_mypy_check_on_actual_codebase`
+**Test**: `tests/test_mcp_tools_py_integration.py::TestMypyIntegration::test_mypy_check_on_actual_codebase`
 
 **Performance Recovery**:
 - Baseline (Oct 5): 7.47s

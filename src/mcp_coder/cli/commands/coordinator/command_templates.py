@@ -14,8 +14,8 @@ All templates support format string placeholders:
 # This comprehensive script verifies the complete environment setup
 DEFAULT_TEST_COMMAND: str = """# Tool verification
 which mcp-coder && mcp-coder --version
-which mcp-code-checker && mcp-code-checker --help
-which mcp-server-filesystem && mcp-server-filesystem --help
+which mcp-tools-py && mcp-tools-py --help
+which mcp-workspace && mcp-workspace --help
 mcp-coder verify
 export DISABLE_AUTOUPDATER=1
 # Environment setup
@@ -69,10 +69,10 @@ echo Tools in current environment ===================
 claude --version
 where mcp-coder
 mcp-coder --version
-where mcp-code-checker
-mcp-code-checker --version
-where mcp-server-filesystem
-mcp-server-filesystem --version
+where mcp-tools-py
+mcp-tools-py --version
+where mcp-workspace
+mcp-workspace --version
 where mcp-config
 mcp-config --version
 

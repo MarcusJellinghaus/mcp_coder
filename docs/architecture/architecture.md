@@ -42,7 +42,7 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 - **Python 3.11+**: Minimum required Python version
 - **Claude Code CLI**: External dependency for AI functionality
 - **MCP Server Dependencies**:
-  - `mcp-code-checker`: Quality checks (pylint, pytest, mypy)
+  - `mcp-tools-py`: Quality checks (pylint, pytest, mypy)
   - `mcp-file-server`: File operations and management
   - `mcp-config`: Configuration management helper
   - `mcp-shared-utils`: Common components (future)
@@ -69,7 +69,7 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 ┌─────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────────────┐
 │ GitHub  │◄──►│  mcp_coder  │◄──►│ Claude Code │◄──►│   MCP Servers       │
 │         │    │             │    │             │    │                     │
-│ Issues  │    │ (orchestr.) │    │ (AI worker) │    │ • mcp-code-checker  │
+│ Issues  │    │ (orchestr.) │    │ (AI worker) │    │ • mcp-tools-py  │
 │ Labels  │    │             │    │             │    │ • mcp-file-server   │
 │ PRs     │    │             │    │             │    │                     │
 │ Comments│    │             │    │             │    │                     │
@@ -154,7 +154,7 @@ mcp-coder implement --project-dir /path/to/project
 
 ### Core System (`src/mcp_coder/`)
 - **Prompt management**: `prompt_manager.py` - Template and validation system (tests: `test_prompt_manager.py`)
-- **Code quality**: `mcp_code_checker.py` - Quality check integration (tests: `test_mcp_code_checker_integration.py`)
+- **Code quality**: `mcp_tools_py.py` - Quality check integration (tests: `test_mcp_tools_py_integration.py`)
 - **Constants**: `constants.py` - Project-wide constants and paths (tests: ❌ missing)
 
 ### LLM System (`src/mcp_coder/llm/`)
@@ -405,7 +405,7 @@ mcp-coder implement --project-dir /path/to/project
 ### Quality Gates (Mandatory Pattern)
 - **Always run**: pylint, pytest, mypy after code changes
 - **MCP integration**: Use `mcp__code-checker__*` tools exclusively
-- **Architecture access**: `mcp_code_checker.py` - Quality check orchestration with direct API access for mcp_coder workflows
+- **Architecture access**: `mcp_tools_py.py` - Quality check orchestration with direct API access for mcp_coder workflows
 - **Enforcement**: Documented in `CLAUDE.md` as mandatory requirements
 
 ### Architectural Boundary Enforcement

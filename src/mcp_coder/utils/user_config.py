@@ -300,8 +300,8 @@ github_credentials_id = "github-general-pat"
 # Use "windows" for Windows Jenkins executors, "linux" for Linux/container executors
 executor_os = "linux"
 
-[coordinator.repos.mcp_server_filesystem]
-repo_url = "https://github.com/your-org/mcp_server_filesystem.git"
+[coordinator.repos.mcp_workspace]
+repo_url = "https://github.com/your-org/mcp-workspace.git"
 executor_job_path = "Tests/mcp-filesystem-coordinator-test"
 github_credentials_id = "github-general-pat"
 executor_os = "linux"

@@ -75,7 +75,7 @@ _.READY_FOR_REVIEW
 _._repo_owner
 _._repo_name
 
-# mcp_code_checker.py - Convenience function for simple pass/fail checks
+# mcp_tools_py.py - Convenience function for simple pass/fail checks
 _.has_mypy_errors
 
 # claude_code_api.py - Retry utility for future API retry logic

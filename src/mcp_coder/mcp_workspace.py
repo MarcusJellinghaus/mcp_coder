@@ -1,12 +1,12 @@
-"""Wrapper for mcp-server-filesystem file listing functionality."""
+"""Wrapper for mcp-workspace file listing functionality."""
 
 import logging
 from pathlib import Path
 
-from mcp_server_filesystem.file_tools.directory_utils import list_files as _list_files
+from mcp_workspace.file_tools.directory_utils import list_files as _list_files
 
 # Logger for the external library (verbose at INFO level)
-_external_logger = logging.getLogger("mcp_server_filesystem.file_tools.directory_utils")
+_external_logger = logging.getLogger("mcp_workspace.file_tools.directory_utils")
 
 
 def list_files(
@@ -23,7 +23,7 @@ def list_files(
         List of relative file paths
     """
     # Temporarily suppress verbose logging from external library
-    # See: https://github.com/MarcusJellinghaus/mcp_server_filesystem/issues/48
+    # See: https://github.com/MarcusJellinghaus/mcp-workspace/issues/48
     original_level = _external_logger.level
     _external_logger.setLevel(logging.WARNING)
     try:

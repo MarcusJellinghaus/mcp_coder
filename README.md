@@ -151,8 +151,8 @@ pip install -e ".[dev]"
 
 ## 🔗 Related Projects
 
-- [mcp-code-checker](https://github.com/MarcusJellinghaus/mcp-code-checker) - Code quality MCP server
-- [mcp_server_filesystem](https://github.com/MarcusJellinghaus/mcp_server_filesystem) - File system MCP server
+- [mcp-tools-py](https://github.com/MarcusJellinghaus/mcp-tools-py) - Code quality MCP server
+- [mcp-workspace](https://github.com/MarcusJellinghaus/mcp-workspace) - File system MCP server
 
 ---
 

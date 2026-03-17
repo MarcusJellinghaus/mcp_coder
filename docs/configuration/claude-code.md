@@ -199,7 +199,7 @@ These are used in `.mcp.json` to configure MCP servers with correct paths:
   "mcpServers": {
     "code-checker": {
       "type": "stdio",
-      "command": "${MCP_CODER_VENV_DIR}\\Scripts\\mcp-code-checker.exe",
+      "command": "${MCP_CODER_VENV_DIR}\\Scripts\\mcp-tools-py.exe",
       "args": [
         "--project-dir", "${MCP_CODER_PROJECT_DIR}",
         "--python-executable", "${MCP_CODER_VENV_DIR}\\Scripts\\python.exe",
@@ -213,7 +213,7 @@ These are used in `.mcp.json` to configure MCP servers with correct paths:
     },
     "filesystem": {
       "type": "stdio",
-      "command": "${MCP_CODER_VENV_DIR}/Scripts/mcp-server-filesystem.exe",
+      "command": "${MCP_CODER_VENV_DIR}/Scripts/mcp-workspace.exe",
       "args": [
         "--project-dir", "${MCP_CODER_PROJECT_DIR}",
         "--log-level", "INFO"

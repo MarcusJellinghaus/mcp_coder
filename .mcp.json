@@ -2,7 +2,7 @@
   "mcpServers": {
     "code-checker": {
       "type": "stdio",
-      "command": "${MCP_CODER_VENV_DIR}\\Scripts\\mcp-code-checker.exe",
+      "command": "${MCP_CODER_VENV_DIR}\\Scripts\\mcp-tools-py.exe",
       "args": [
         "--project-dir",
         "${MCP_CODER_PROJECT_DIR}",
@@ -19,24 +19,24 @@
         "PYTHONPATH": "${MCP_CODER_PROJECT_DIR}/src"
       }
     },
-    "filesystem": {
+    "workspace": {
       "type": "stdio",
-      "command": "${MCP_CODER_VENV_DIR}/Scripts/mcp-server-filesystem.exe",
+      "command": "${MCP_CODER_VENV_DIR}/Scripts/mcp-workspace.exe",
       "args": [
         "--project-dir",
         "${MCP_CODER_PROJECT_DIR}",
         "--log-level",
         "INFO",
         "--reference-project",
-        "p_fs=${USERPROFILE}\\Documents\\GitHub\\mcp_server_filesystem",
+        "p_workspace=${USERPROFILE}\\Documents\\GitHub\\mcp-workspace",
         "--reference-project",
         "p_config=${USERPROFILE}\\Documents\\GitHub\\mcp-config",
         "--reference-project",
-        "p_checker=${USERPROFILE}\\Documents\\GitHub\\mcp-code-checker"
+        "p_tools=${USERPROFILE}\\Documents\\GitHub\\mcp-tools-py"
       ],
       "env": {
         "PYTHONPATH": "${MCP_CODER_VENV_DIR}\\Lib\\"
       }
     }
   }
-}
+} 

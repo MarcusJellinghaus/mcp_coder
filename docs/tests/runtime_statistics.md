@@ -59,7 +59,7 @@ This document tracks test performance baselines, known slow tests, and performan
 ✅ **NO VIOLATIONS** - MyPy test approved (see Approved Slow Tests section)
 
 #### Formatter Integration Tests (Exceeding 3.0s WARNING threshold)
-- `tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_has_mypy_errors_convenience_function` - **3.38s** ⚠️ WARNING (improved from 4.61s on Oct 8, -27%)
+- `tests/test_mcp_tools_py_integration.py::TestMypyIntegration::test_has_mypy_errors_convenience_function` - **3.38s** ⚠️ WARNING (improved from 4.61s on Oct 8, -27%)
 
 #### GitHub Integration Tests (Exceeding 30.0s threshold)
 ✅ **NO VIOLATIONS** - All GitHub integration tests approved (see Approved Slow Tests section)
@@ -172,7 +172,7 @@ This document tracks test performance baselines, known slow tests, and performan
 - Oct 9 07:09: 3.38s (-27%) ⚠️
 - **Oct 14 07:12**: **<3.0s** (not in top 20) ✅
 
-**Test**: `tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_has_mypy_errors_convenience_function`
+**Test**: `tests/test_mcp_tools_py_integration.py::TestMypyIntegration::test_has_mypy_errors_convenience_function`
 
 **Status**: ✅ **RESOLVED** - Below warning threshold (3.0s)
 
@@ -268,7 +268,7 @@ This document tracks test performance baselines, known slow tests, and performan
 - Oct 8 17:40: 4.61s (+34%)
 - **Oct 9 07:09**: **3.38s** (-27%)
 
-**Test**: `tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_has_mypy_errors_convenience_function`
+**Test**: `tests/test_mcp_tools_py_integration.py::TestMypyIntegration::test_has_mypy_errors_convenience_function`
 
 **Status**: ✅ **IMPROVING** - Still above 3.0s warning threshold but trending down
 
@@ -575,7 +575,7 @@ These tests are legitimately slow due to real network calls to Claude API:
 
 These tests are legitimately slow due to running mypy on actual codebase:
 
-- `tests/test_mcp_code_checker_integration.py::TestMypyIntegration::test_mypy_check_on_actual_codebase` - **17.62s** ✅
+- `tests/test_mcp_tools_py_integration.py::TestMypyIntegration::test_mypy_check_on_actual_codebase` - **17.62s** ✅
   - **Justification**: Full mypy analysis of entire src/ codebase
   - **Reference time**: 7-20s acceptable (varies with cache state)
   - **Status**: ✅ **STABLE** - Performance varies 13-18s between runs

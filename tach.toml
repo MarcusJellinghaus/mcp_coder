@@ -63,7 +63,7 @@ depends_on = [
     { path = "mcp_coder.utils" },         # General utilities
     { path = "mcp_coder.config" },        # Configuration management
     { path = "mcp_coder.constants" },     # Shared constants
-    { path = "mcp_coder.mcp_code_checker" }, # MCP code checking tools
+    { path = "mcp_coder.mcp_tools_py" }, # MCP code checking tools
 ]
 
 # =============================================================================
@@ -109,7 +109,7 @@ path = "mcp_coder.checks"
 layer = "application"
 # High-level check modules backing CLI subcommands. Reusable by cli and workflows.
 depends_on = [
-    { path = "mcp_coder" },              # Root module (mcp_server_filesystem)
+    { path = "mcp_coder" },              # Root module (mcp_workspace)
     { path = "mcp_coder.workflow_utils" },
     { path = "mcp_coder.utils" },
     { path = "mcp_coder.config" },
@@ -183,7 +183,7 @@ depends_on = [
 # Tach's depends_on model doesn't work well with __init__.py re-exports.
 
 [[modules]]
-path = "mcp_coder.mcp_code_checker"
+path = "mcp_coder.mcp_tools_py"
 layer = "infrastructure"
 # MCP code checking tool implementation.
 # Infrastructure service for running code quality checks.
@@ -382,7 +382,7 @@ depends_on = [
     { path = "mcp_coder.utils" },
     { path = "mcp_coder.config" },
     { path = "mcp_coder.constants" },
-    { path = "mcp_coder.mcp_code_checker" },
+    { path = "mcp_coder.mcp_tools_py" },
 ]
 
 # -----------------------------------------------------------------------------

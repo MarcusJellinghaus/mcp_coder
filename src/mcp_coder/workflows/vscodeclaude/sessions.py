@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 # Exact process names for VSCode on each platform.
 # Using exact match prevents false positives from processes whose names
-# contain "code" as a substring (e.g. "mcp-code-checker.exe").
+# contain "code" as a substring (e.g. "mcp-tools-py.exe").
 VSCODE_PROCESS_NAMES = {"code.exe", "code"}  # Windows / Linux+macOS
 
 
