@@ -582,8 +582,8 @@ When using mcp-coder in automated Jenkins workflows, there are two separate Pyth
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Execution Environment (VENV_BASE_DIR/.venv)                │
-│  Pre-provisioned: mcp-coder, mcp-tools-py,              │
-│  mcp-workspace, claude CLI, pytest, mypy, pylint    │
+│  Pre-provisioned: mcp-coder, mcp-tools-py,                  │
+│  mcp-workspace, claude CLI, pytest, mypy, pylint            │
 └─────────────────────────────────────────────────────────────┘
                            │
                            │ 1. uv sync --extra types (in repo/)

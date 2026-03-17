@@ -1,6 +1,6 @@
 @echo off
 echo ============================================
-echo   Environment Check - mcp-tools-py
+echo   Environment Check - mcp-coder
 echo ============================================
 echo.
 echo --- Version Control ---
