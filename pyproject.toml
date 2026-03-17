@@ -69,7 +69,7 @@ langchain = [
 
 # Full development setup - combines all groups for local development
 dev = [
-    "mcp-coder[types,test,mcp,langchain]",
+    "mcp-coder[types,test,mcp,langchain,mlflow]",
     "import-linter>=2.0",
     "pycycle>=0.0.8",
     "pydeps>=3.0.0",
