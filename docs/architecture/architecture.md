@@ -43,7 +43,7 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 - **Claude Code CLI**: External dependency for AI functionality
 - **MCP Server Dependencies**:
   - `mcp-tools-py`: Quality checks (pylint, pytest, mypy)
-  - `mcp-file-server`: File operations and management
+  - `mcp-workspace`: File operations and management
   - `mcp-config`: Configuration management helper
   - `mcp-shared-utils`: Common components (future)
 - **Python Library Dependencies**:
@@ -70,7 +70,7 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 │ GitHub  │◄──►│  mcp_coder  │◄──►│ Claude Code │◄──►│   MCP Servers       │
 │         │    │             │    │             │    │                     │
 │ Issues  │    │ (orchestr.) │    │ (AI worker) │    │ • mcp-tools-py  │
-│ Labels  │    │             │    │             │    │ • mcp-file-server   │
+│ Labels  │    │             │    │             │    │ • mcp-workspace     │
 │ PRs     │    │             │    │             │    │                     │
 │ Comments│    │             │    │             │    │                     │
 └─────────┘    └─────────────┘    └─────────────┘    └─────────────────────┘
