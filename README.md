@@ -43,7 +43,7 @@ MCP Coder implements a structured 3-layer development approach that separates hu
 │ Claude Code interactively               │     │                ▼                       │
 │                                         │     │         ┌─────────────────┐             │
 │                                         │     │         │  MCP Servers    │             │
-│                                         │     │         │ • code-checker  │             │
+│                                         │     │         │ • tools-py      │             │
 │                                         │     │         │ • filesystem    │             │
 │                                         │     │         └─────────────────┘             │
 └─────────────────────────────────────────┘     └─────────────────────────────────────────┘
@@ -66,7 +66,7 @@ flowchart TD
     
     LW["🤖 LLM Work<br/>(MCP-supported)<br/><br/>• Implementation planning<br/>• Implementation (code writing &<br/>  automated testing)<br/> (multiple steps & sessions)<br/>• Pull request generation"]
     
-    MCP["MCP Servers<br/>• code-checker<br/>• filesystem"]
+    MCP["MCP Servers<br/>• tools-py<br/>• filesystem"]
     
     GH["📂 GitHub Foundation<br/>Source code repositories<br/>Issue tracking with status labels"]
     

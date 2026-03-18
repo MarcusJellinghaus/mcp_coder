@@ -597,7 +597,7 @@ When using mcp-coder in automated Jenkins workflows, there are two separate Pyth
 
 ### Why Type Stubs Need Separate Installation
 
-The MCP code-checker runs mypy against **project code** using the **project's virtual environment**. For mypy to resolve types correctly, type stub packages (e.g., `types-requests`, `types-pyperclip`) must be installed in the project's `.venv`, not the execution environment.
+The MCP tools-py server runs mypy against **project code** using the **project's virtual environment**. For mypy to resolve types correctly, type stub packages (e.g., `types-requests`, `types-pyperclip`) must be installed in the project's `.venv`, not the execution environment.
 
 The coordinator command templates automatically run `uv sync --extra types` in the project directory before executing mcp-coder commands.
 

@@ -1,9 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "mcp__code-checker__run_pylint_check",
-      "mcp__code-checker__run_pytest_check",
-      "mcp__code-checker__run_mypy_check",
+      "mcp__tools-py__run_pylint_check",
+      "mcp__tools-py__run_pytest_check",
+      "mcp__tools-py__run_mypy_check",
       "mcp__workspace__get_reference_projects",
       "mcp__workspace__list_reference_directory",
       "mcp__workspace__read_reference_file",
@@ -50,7 +50,7 @@
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
-    "code-checker",
+    "tools-py",
     "workspace"
   ]
 }
