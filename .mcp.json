@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "code-checker": {
+    "tools-py": {
       "type": "stdio",
       "command": "${MCP_CODER_VENV_DIR}\\Scripts\\mcp-tools-py.exe",
       "args": [

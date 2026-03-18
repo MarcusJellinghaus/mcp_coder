@@ -401,7 +401,7 @@ Slash commands provide structured workflows for common tasks. Copy the commands 
 
 **Model Context Protocol (MCP)** enables Claude Code to use specialized servers for enhanced functionality:
 
-- **code-checker**: Pylint, pytest, mypy integration
+- **tools-py**: Pylint, pytest, mypy integration
 - **filesystem**: Enhanced file operations
 - **Custom servers**: Project-specific tools
 

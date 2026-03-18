@@ -7,8 +7,10 @@ echo --- Version Control ---
 git --version
 gh --version
 echo.
-echo --- Python ---
-python --version
+echo --- Python Environment ---
+python -c "import sys; print('Python:', sys.version)"
+python -c "import sys; print('Executable:', sys.executable)"
+python -c "import sys, os; print('Environment:', os.path.dirname(sys.executable))"
 pip --version
 echo.
 echo --- Formatting ---

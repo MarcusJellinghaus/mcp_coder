@@ -17,9 +17,9 @@
 | Read file | `Read()` | `mcp__workspace__read_file()` |
 | Edit file | `Edit()` | `mcp__workspace__edit_file()` |
 | Write file | `Write()` | `mcp__workspace__save_file()` |
-| Run pytest | `Bash("pytest ...")` | `mcp__code-checker__run_pytest_check()` |
-| Run pylint | `Bash("pylint ...")` | `mcp__code-checker__run_pylint_check()` |
-| Run mypy | `Bash("mypy ...")` | `mcp__code-checker__run_mypy_check()` |
+| Run pytest | `Bash("pytest ...")` | `mcp__tools-py__run_pytest_check()` |
+| Run pylint | `Bash("pylint ...")` | `mcp__tools-py__run_pylint_check()` |
+| Run mypy | `Bash("mypy ...")` | `mcp__tools-py__run_mypy_check()` |
 | Git operations | ✅ `Bash("git ...")` | ✅ `Bash("git ...")` (allowed) |
 
 ## 🔴 CRITICAL: Code Quality Requirements
@@ -27,9 +27,9 @@
 **MANDATORY**: After making ANY code changes (after EACH edit), you MUST run ALL THREE code quality checks using the EXACT MCP tool names below:
 
 ```
-mcp__code-checker__run_pylint_check
-mcp__code-checker__run_pytest_check
-mcp__code-checker__run_mypy_check
+mcp__tools-py__run_pylint_check
+mcp__tools-py__run_pytest_check
+mcp__tools-py__run_mypy_check
 ```
 
 This runs:
@@ -64,14 +64,14 @@ This runs:
 
 ```python
 # RECOMMENDED: Fast unit tests (excludes all integration tests)
-mcp__code-checker__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"])
+mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"])
 
 # All tests including slow integration tests (not recommended for regular development)
-mcp__code-checker__run_pytest_check(extra_args=["-n", "auto"])
+mcp__tools-py__run_pytest_check(extra_args=["-n", "auto"])
 
 # Specific integration tests (only when needed)
-mcp__code-checker__run_pytest_check(extra_args=["-n", "auto"], markers=["git_integration"])
-mcp__code-checker__run_pytest_check(extra_args=["-n", "auto"], markers=["github_integration"])
+mcp__tools-py__run_pytest_check(extra_args=["-n", "auto"], markers=["git_integration"])
+mcp__tools-py__run_pytest_check(extra_args=["-n", "auto"], markers=["github_integration"])
 ```
 
 **Important:** Without the `-m "not ..."` exclusions, pytest runs ALL tests including slow integration tests that require external resources (git repos, network access, API tokens). For regular development, always use the exclusion pattern as shown in the first example above.
@@ -108,7 +108,7 @@ Bash("pytest tests/")
 mcp__workspace__read_file(file_path="src/example.py")
 mcp__workspace__edit_file(file_path="src/example.py", edits=[...])
 mcp__workspace__save_file(file_path="src/new.py", content="...")
-mcp__code-checker__run_pytest_check(extra_args=["-n", "auto"])
+mcp__tools-py__run_pytest_check(extra_args=["-n", "auto"])
 ```
 
 **WHY MCP TOOLS ARE MANDATORY:**

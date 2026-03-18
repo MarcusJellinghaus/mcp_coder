@@ -90,9 +90,9 @@ Run all checks after each move:
 ./tools/tach_check.sh
 
 # Functionality (Claude Code MCP tools)
-mcp__code-checker__run_pytest_check
-mcp__code-checker__run_pylint_check
-mcp__code-checker__run_mypy_check
+mcp__tools-py__run_pytest_check
+mcp__tools-py__run_pylint_check
+mcp__tools-py__run_mypy_check
 ```
 
 ## Common Patterns

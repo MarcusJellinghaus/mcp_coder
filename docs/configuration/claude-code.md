@@ -124,7 +124,7 @@ This file configures Claude Code permissions and MCP server settings for your lo
 {
   "permissions": {
     "allow": [
-      "mcp__code-checker__*",
+      "mcp__tools-py__*",
       "mcp__workspace__*",
       "Bash(git diff:*)",
       "Bash(git status:*)",
@@ -135,7 +135,7 @@ This file configures Claude Code permissions and MCP server settings for your lo
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
-    "code-checker",
+    "tools-py",
     "workspace"
   ]
 }
@@ -151,7 +151,7 @@ This file configures Claude Code permissions and MCP server settings for your lo
 
 **Security considerations:**
 
-- **Allow MCP servers**: Enable `mcp__code-checker__*` and `mcp__workspace__*` for development workflows
+- **Allow MCP servers**: Enable `mcp__tools-py__*` and `mcp__workspace__*` for development workflows
 - **Allow read-only commands**: `Bash(git diff:*)`, `Bash(git status:*)` are safe
 - **Allow formatting tools**: `Bash(./tools/format_all.sh:*)` for code formatting
 - **Restrict dangerous commands**: Do NOT allow unrestricted `Bash(*)` - this could modify files outside the project or execute arbitrary commands
@@ -197,7 +197,7 @@ These are used in `.mcp.json` to configure MCP servers with correct paths:
 ```json
 {
   "mcpServers": {
-    "code-checker": {
+    "tools-py": {
       "type": "stdio",
       "command": "${MCP_CODER_VENV_DIR}\\Scripts\\mcp-tools-py.exe",
       "args": [
