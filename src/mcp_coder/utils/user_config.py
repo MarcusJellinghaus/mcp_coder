@@ -302,7 +302,7 @@ executor_os = "linux"
 
 [coordinator.repos.mcp_workspace]
 repo_url = "https://github.com/your-org/mcp-workspace.git"
-executor_job_path = "Tests/mcp-filesystem-coordinator-test"
+executor_job_path = "Tests/mcp-workspace-coordinator-test"
 github_credentials_id = "github-general-pat"
 executor_os = "linux"
 
