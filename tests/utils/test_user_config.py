@@ -529,7 +529,7 @@ class TestCreateDefaultConfig:
         assert "coordinator" in config
         assert "repos" in config["coordinator"]
         assert "mcp_coder" in config["coordinator"]["repos"]
-        assert "mcp_server_filesystem" in config["coordinator"]["repos"]
+        assert "mcp_workspace" in config["coordinator"]["repos"]
 
     def test_create_default_config_content_has_example_repos(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -556,8 +556,8 @@ class TestCreateDefaultConfig:
         assert "executor_job_path" in mcp_coder_repo
         assert "github_credentials_id" in mcp_coder_repo
 
-        # Check mcp_server_filesystem repo config
-        filesystem_repo = config["coordinator"]["repos"]["mcp_server_filesystem"]
+        # Check mcp_workspace repo config
+        filesystem_repo = config["coordinator"]["repos"]["mcp_workspace"]
         assert "repo_url" in filesystem_repo
         assert "executor_job_path" in filesystem_repo
         assert "github_credentials_id" in filesystem_repo

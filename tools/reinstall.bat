@@ -47,10 +47,10 @@ echo Uninstalling mcp-coder...
 uv pip uninstall mcp-coder 2>nul
 echo Uninstalling mcp-config...
 uv pip uninstall mcp-config 2>nul
-echo Uninstalling mcp-code-checker...
-uv pip uninstall mcp-code-checker 2>nul
-echo Uninstalling mcp-server-filesystem...
-uv pip uninstall mcp-server-filesystem 2>nul
+echo Uninstalling mcp-tools-py...
+uv pip uninstall mcp-tools-py 2>nul
+echo Uninstalling mcp-workspace...
+uv pip uninstall mcp-workspace 2>nul
 if %ERRORLEVEL% NEQ 0 (
     echo Warning: Some packages may not have been installed
 ) else (
@@ -114,17 +114,17 @@ if %CLI_EXIT_CODE% EQU 1 (
 echo.
 
 echo [7/7] Verifying MCP servers are installed...
-python -c "import mcp_code_checker; print('mcp-code-checker installed successfully')"
+python -c "import mcp_tools_py; print('mcp-tools-py installed successfully')"
 if %ERRORLEVEL% NEQ 0 (
-    echo Warning: mcp-code-checker not available
+    echo Warning: mcp-tools-py not available
 ) else (
-    echo [OK] MCP code checker verified
+    echo [OK] MCP tools py verified
 )
-python -c "import mcp_server_filesystem; print('mcp-server-filesystem installed successfully')"
+python -c "import mcp_workspace; print('mcp-workspace installed successfully')"
 if %ERRORLEVEL% NEQ 0 (
-    echo Warning: mcp-server-filesystem not available
+    echo Warning: mcp-workspace not available
 ) else (
-    echo [OK] MCP server filesystem verified
+    echo [OK] MCP workspace verified
 )
 echo.
 

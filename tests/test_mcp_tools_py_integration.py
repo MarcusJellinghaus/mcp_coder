@@ -1,15 +1,15 @@
 """
-Integration tests for mcp_code_checker wrapper module.
+Integration tests for mcp_tools_py wrapper module.
 
 These tests verify that our wrapper correctly interfaces with the external
-mcp_code_checker library and handles various result scenarios.
+mcp_tools_py library and handles various result scenarios.
 """
 
 from pathlib import Path
 
 import pytest
 
-from mcp_coder.mcp_code_checker import run_mypy_check
+from mcp_coder.mcp_tools_py import run_mypy_check
 
 
 @pytest.mark.formatter_integration

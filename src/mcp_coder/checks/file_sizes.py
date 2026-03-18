@@ -4,7 +4,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from mcp_coder.mcp_server_filesystem import list_files
+from mcp_coder.mcp_workspace import list_files
 
 
 @dataclass

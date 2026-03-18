@@ -1,14 +1,15 @@
 """
-Thin wrapper for mcp_code_checker library.
+Thin wrapper for mcp_tools_py library.
 
-Provides a simplified interface to mcp_code_checker's mypy functionality.
+Provides a simplified interface to mcp_tools_py's mypy functionality.
 """
 
+import sys
 from pathlib import Path
 from typing import Union
 
-from mcp_code_checker.code_checker_mypy import MypyResult
-from mcp_code_checker.code_checker_mypy import run_mypy_check as _run_mypy_check
+from mcp_tools_py.code_checker_mypy import MypyResult
+from mcp_tools_py.code_checker_mypy import run_mypy_check as _run_mypy_check
 
 
 def run_mypy_check(
@@ -24,10 +25,11 @@ def run_mypy_check(
                           Defaults to ["src"] and conditionally "tests" if it exists.
 
     Returns:
-        MypyResult from mcp_code_checker with return_code, messages, errors_found, etc.
+        MypyResult from mcp_tools_py with return_code, messages, errors_found, etc.
     """
     return _run_mypy_check(
         project_dir=str(project_dir),
+        python_executable=sys.executable,
         strict=True,
         disable_error_codes=None,
         target_directories=target_directories,

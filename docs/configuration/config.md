@@ -509,7 +509,7 @@ mcp-coder coordinator test mcp_coder --branch-name main
 ### Testing Different Repository
 
 ```bash
-mcp-coder coordinator test mcp_server_filesystem --branch-name develop
+mcp-coder coordinator test mcp-workspace --branch-name develop
 ```
 
 ## Test Command
@@ -522,8 +522,8 @@ The default test command performs the following checks:
 
 #### 1. Tool Verification
 - Verifies `mcp-coder` is installed and displays version
-- Verifies `mcp-code-checker` is installed
-- Verifies `mcp-server-filesystem` is installed
+- Verifies `mcp-tools-py` is installed
+- Verifies `mcp-workspace` is installed
 - Runs `mcp-coder verify` to check environment
 
 #### 2. Environment Setup
@@ -551,8 +551,8 @@ The full test script executed by Jenkins:
 ```bash
 # Tool verification
 which mcp-coder && mcp-coder --version
-which mcp-code-checker && mcp-code-checker --help
-which mcp-server-filesystem && mcp-server-filesystem --help
+which mcp-tools-py && mcp-tools-py --help
+which mcp-workspace && mcp-workspace --help
 mcp-coder verify
 # Environment setup
 export MCP_CODER_PROJECT_DIR='/workspace/repo'
@@ -582,8 +582,8 @@ When using mcp-coder in automated Jenkins workflows, there are two separate Pyth
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Execution Environment (VENV_BASE_DIR/.venv)                │
-│  Pre-provisioned: mcp-coder, mcp-code-checker,              │
-│  mcp-server-filesystem, claude CLI, pytest, mypy, pylint    │
+│  Pre-provisioned: mcp-coder, mcp-tools-py,                  │
+│  mcp-workspace, claude CLI, pytest, mypy, pylint            │
 └─────────────────────────────────────────────────────────────┘
                            │
                            │ 1. uv sync --extra types (in repo/)

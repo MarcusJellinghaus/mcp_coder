@@ -45,10 +45,10 @@ Is this already enough to create a "virtuous cycle"?
 LLMs sometimes make mistakes and/or hallucinate.
 One option would be to hope for "perfect code" after the first attempt.
 However, given the LLM feedback about the code allows the LLM to improve the code. 
-Eg the [MCP-code-checker](https://github.com/MarcusJellinghaus/mcp-code-checker) checks python code using standard python packages like pylint, pytest and mypy and provides feedback on the code quality.
+Eg the [MCP-tools-py](https://github.com/MarcusJellinghaus/mcp-tools-py) checks python code using standard python packages like pylint, pytest and mypy and provides feedback on the code quality.
 
 ### Better interfaces and/or some autonomy for LLms: MCP Server
-[Model Context Protocol](https://modelcontextprotocol.io/docs/getting-started/intro) (MCP) servers allow an LLM to call extra functionality, like the above mentioned MCP-code-checker.
+[Model Context Protocol](https://modelcontextprotocol.io/docs/getting-started/intro) (MCP) servers allow an LLM to call extra functionality, like the above mentioned MCP-tools-py.
 While first versions of ChatGpt just had a chat interface, newer LLMs are accessible via MCP clients.
 Claude Desktop, GtHub Copilot (in VSCode or Pycharm) or Claude Code allow to interact with an LLM, and allow the LLM to call MCP servers.
 For the LLM, the calling to MCP servers is often restricted, eg requires specific approval by the users and/or a special mode (eg "Agent" mode).
@@ -128,7 +128,7 @@ Sub functions
     - by default, all files (could be enhanced later)
     - based on a specified `commit message`
     - within specified project directory 
-      - probably checking `is_git_repository(project_dir: Path)` from [git_operations` in mcp_server_filesystem](https://github.com/MarcusJellinghaus/mcp_server_filesystem/blob/main/src/mcp_server_filesystem/file_tools/git_operations.py)
+      - probably checking `is_git_repository(project_dir: Path)` from [git_operations` in mcp-workspace](https://github.com/MarcusJellinghaus/mcp-workspace/blob/main/src/mcp_workspace/file_tools/git_operations.py)
     - with specified check for `files to commit?` (subfunction)
     - others
 - `Get diff` - similar to `tools\commit_summary.bat`, all changes should be identified and put into a git diff (??) style string
@@ -164,9 +164,9 @@ Sub functions
 #### Automation of commit preparation
 
 - check for valid code
-  - check with `mcp-code-checker` whether all checks pass
+  - check with `mcp-tools-py` whether all checks pass
 - format code with black and isort
-  - maybe additional functions within mcp-code-checker 
+  - maybe additional functions within mcp-tools-py 
 
 - (later) get commit message from chat, or ask chat for commit message
 
@@ -185,7 +185,7 @@ Sub functions
 ## Architecture \ design
 - 
 - use GitPython for git interaction
-- use `mcp-code-checker` whether all checks pass
+- use `mcp-tools-py` whether all checks pass
 - dedicated sub-module `git_operations`
 - Folder structure like other related relates repos, with src and tests, tools, pr_info folder
 - code for mcp-coder in src, submodules within that folder

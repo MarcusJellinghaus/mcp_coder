@@ -512,7 +512,7 @@ class TestVSCodeProcessNameMatching:
     """Tests that VSCode process detection uses exact name matching.
 
     Regression tests for the bug where VSCODE_PROCESS_NAME was a substring
-    ("code"), causing processes like mcp-code-checker.exe to be mistakenly
+    ("code"), causing processes like my-code-tool.exe to be mistakenly
     identified as VSCode and stored as session PIDs.
     """
 
@@ -521,16 +521,16 @@ class TestVSCodeProcessNameMatching:
         assert "code.exe" in VSCODE_PROCESS_NAMES
         assert "code" in VSCODE_PROCESS_NAMES
 
-    def test_vscode_process_names_excludes_code_checker(self) -> None:
-        """mcp-code-checker.exe is not in VSCODE_PROCESS_NAMES (substring trap)."""
-        assert "mcp-code-checker.exe" not in VSCODE_PROCESS_NAMES
+    def test_vscode_process_names_excludes_code_substring(self) -> None:
+        """Process names containing 'code' as substring are not in VSCODE_PROCESS_NAMES."""
+        assert "my-code-tool.exe" not in VSCODE_PROCESS_NAMES
 
-    def test_check_vscode_running_rejects_mcp_code_checker(
+    def test_check_vscode_running_rejects_code_substring(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """check_vscode_running returns False for mcp-code-checker.exe PIDs."""
+        """check_vscode_running returns False for processes with 'code' substring."""
         mock_process = MagicMock()
-        mock_process.name.return_value = "mcp-code-checker.exe"
+        mock_process.name.return_value = "my-code-tool.exe"
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.psutil.pid_exists",
@@ -579,9 +579,9 @@ class TestVSCodeProcessNameMatching:
 
         assert check_vscode_running(12345) is True
 
-    def test_get_vscode_processes_excludes_mcp_code_checker(self) -> None:
-        """_get_vscode_processes does not include mcp-code-checker.exe processes."""
-        # Build mock process entries: one real VSCode, one mcp-code-checker
+    def test_get_vscode_processes_excludes_code_substring(self) -> None:
+        """_get_vscode_processes does not include processes with 'code' substring."""
+        # Build mock process entries: one real VSCode, one with 'code' substring
         mock_vscode = MagicMock()
         mock_vscode.info = {
             "pid": 1001,
@@ -594,8 +594,8 @@ class TestVSCodeProcessNameMatching:
         mock_checker = MagicMock()
         mock_checker.info = {
             "pid": 2002,
-            "name": "mcp-code-checker.exe",
-            "cmdline": [r"C:\tools\mcp-code-checker.exe", "--project", "my_repo_42"],
+            "name": "my-code-tool.exe",
+            "cmdline": [r"C:\tools\my-code-tool.exe", "--project", "my_repo_42"],
         }
 
         clear_vscode_process_cache()
@@ -607,7 +607,7 @@ class TestVSCodeProcessNameMatching:
 
         pids = [p["pid"] for p in processes]
         assert 1001 in pids  # real VSCode included
-        assert 2002 not in pids  # mcp-code-checker excluded
+        assert 2002 not in pids  # 'code' substring process excluded
 
     def test_get_vscode_processes_excludes_code_insiders(
         self,

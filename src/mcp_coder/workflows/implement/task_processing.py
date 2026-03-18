@@ -177,7 +177,7 @@ def push_changes(project_dir: Path, force_with_lease: bool = False) -> bool:
 
 def _run_mypy_check(project_dir: Path) -> Optional[str]:
     """Run mypy check using our wrapper and return error output or None if clean."""
-    from mcp_coder.mcp_code_checker import run_mypy_check
+    from mcp_coder.mcp_tools_py import run_mypy_check
 
     try:
         result = run_mypy_check(project_dir)

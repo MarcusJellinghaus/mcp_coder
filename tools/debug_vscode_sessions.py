@@ -74,7 +74,7 @@ def match_session_to_window(session: dict, windows: list[dict]) -> dict | None:
     
     VSCode window titles look like:
     - '[#323 review] Add coordinator... - mcp_coder'
-    - '[#42 new] pytest - adjust... - mcp-code-checker'
+    - '[#42 new] pytest - adjust... - mcp-tools-py'
     
     We match on:
     1. Issue number pattern '#N' must be in title

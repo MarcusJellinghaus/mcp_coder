@@ -125,7 +125,7 @@ This file configures Claude Code permissions and MCP server settings for your lo
   "permissions": {
     "allow": [
       "mcp__code-checker__*",
-      "mcp__filesystem__*",
+      "mcp__workspace__*",
       "Bash(git diff:*)",
       "Bash(git status:*)",
       "Bash(./tools/format_all.sh:*)",
@@ -136,7 +136,7 @@ This file configures Claude Code permissions and MCP server settings for your lo
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "code-checker",
-    "filesystem"
+    "workspace"
   ]
 }
 ```
@@ -151,7 +151,7 @@ This file configures Claude Code permissions and MCP server settings for your lo
 
 **Security considerations:**
 
-- **Allow MCP servers**: Enable `mcp__code-checker__*` and `mcp__filesystem__*` for development workflows
+- **Allow MCP servers**: Enable `mcp__code-checker__*` and `mcp__workspace__*` for development workflows
 - **Allow read-only commands**: `Bash(git diff:*)`, `Bash(git status:*)` are safe
 - **Allow formatting tools**: `Bash(./tools/format_all.sh:*)` for code formatting
 - **Restrict dangerous commands**: Do NOT allow unrestricted `Bash(*)` - this could modify files outside the project or execute arbitrary commands
@@ -199,7 +199,7 @@ These are used in `.mcp.json` to configure MCP servers with correct paths:
   "mcpServers": {
     "code-checker": {
       "type": "stdio",
-      "command": "${MCP_CODER_VENV_DIR}\\Scripts\\mcp-code-checker.exe",
+      "command": "${MCP_CODER_VENV_DIR}\\Scripts\\mcp-tools-py.exe",
       "args": [
         "--project-dir", "${MCP_CODER_PROJECT_DIR}",
         "--python-executable", "${MCP_CODER_VENV_DIR}\\Scripts\\python.exe",
@@ -211,9 +211,9 @@ These are used in `.mcp.json` to configure MCP servers with correct paths:
         "PYTHONPATH": "${MCP_CODER_PROJECT_DIR}/src"
       }
     },
-    "filesystem": {
+    "workspace": {
       "type": "stdio",
-      "command": "${MCP_CODER_VENV_DIR}/Scripts/mcp-server-filesystem.exe",
+      "command": "${MCP_CODER_VENV_DIR}/Scripts/mcp-workspace.exe",
       "args": [
         "--project-dir", "${MCP_CODER_PROJECT_DIR}",
         "--log-level", "INFO"
