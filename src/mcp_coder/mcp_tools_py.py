@@ -4,6 +4,7 @@ Thin wrapper for mcp_tools_py library.
 Provides a simplified interface to mcp_tools_py's mypy functionality.
 """
 
+import sys
 from pathlib import Path
 from typing import Union
 
@@ -28,6 +29,7 @@ def run_mypy_check(
     """
     return _run_mypy_check(
         project_dir=str(project_dir),
+        python_executable=sys.executable,
         strict=True,
         disable_error_codes=None,
         target_directories=target_directories,
