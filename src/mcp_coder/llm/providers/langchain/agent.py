@@ -138,6 +138,13 @@ def _load_mcp_server_config(
                 # 'type' is a VS Code / Claude Desktop convention;
                 # MultiServerMCPClient uses 'transport' instead.
                 pass
+            elif key == "transport" and isinstance(value, str) and value != "stdio":
+                logger.warning(
+                    "Server %r specifies transport %r — only 'stdio' is "
+                    "supported; falling back to 'stdio'",
+                    server_name,
+                    value,
+                )
             else:
                 resolved[key] = value
 
@@ -150,7 +157,7 @@ def _load_mcp_server_config(
 
 
 def _sanitize_tool_schema(schema: dict[str, Any]) -> dict[str, Any]:
-    """Ensure every property in a JSON Schema ``properties`` dict has a ``type``.
+    """Return a copy of *schema* with a ``type`` for every property.
 
     Some MCP servers (e.g. FastMCP with ``Any``-typed parameters) emit
     property definitions like ``{"title": "Content"}`` without a ``type``
@@ -159,7 +166,13 @@ def _sanitize_tool_schema(schema: dict[str, Any]) -> dict[str, Any]:
 
     This function adds ``"type": "string"`` as a safe default for any
     property that is missing both ``type`` and ``anyOf``/``allOf``/``oneOf``.
+
+    A deep copy is made so the original MCP tool schema is never mutated.
     """
+    import copy
+
+    schema = copy.deepcopy(schema)
+
     props = schema.get("properties")
     if not isinstance(props, dict):
         return schema
@@ -221,35 +234,36 @@ async def run_agent(
     # We cannot use MultiServerMCPClient.get_tools() directly because it
     # passes raw MCP schemas to StructuredTool, which fails on properties
     # without a 'type' field (e.g. FastMCP Any-typed params).
-    client = MultiServerMCPClient(cast(Any, server_config))
-    all_tools = []
-    for server_name, connection in client.connections.items():
-        async with client.session(server_name) as session:
-            raw_tools = await session.list_tools()
-            for tool in raw_tools.tools:
-                _sanitize_tool_schema(tool.inputSchema)
-                lc_tool = convert_mcp_tool_to_langchain_tool(
-                    None,
-                    tool,
-                    connection=connection,
-                    server_name=server_name,
-                )
-                all_tools.append(lc_tool)
+    async with MultiServerMCPClient(cast(Any, server_config)) as client:
+        all_tools = []
+        for server_name, connection in client.connections.items():
+            async with client.session(server_name) as session:
+                raw_tools = await session.list_tools()
+                for tool in raw_tools.tools:
+                    sanitized = _sanitize_tool_schema(tool.inputSchema)
+                    tool.inputSchema = sanitized
+                    lc_tool = convert_mcp_tool_to_langchain_tool(
+                        None,
+                        tool,
+                        connection=connection,
+                        server_name=server_name,
+                    )
+                    all_tools.append(lc_tool)
 
-    agent = create_react_agent(chat_model, all_tools)
+        agent = create_react_agent(chat_model, all_tools)
 
-    # Build input: prior history + new question
-    input_messages = messages_from_dict(messages) + [HumanMessage(content=question)]
+        # Build input: prior history + new question
+        input_messages = messages_from_dict(messages) + [HumanMessage(content=question)]
 
-    result = await asyncio.wait_for(
-        agent.ainvoke(
-            {"messages": input_messages},
-            config={"recursion_limit": AGENT_MAX_STEPS},
-        ),
-        timeout=float(timeout),
-    )
+        result = await asyncio.wait_for(
+            agent.ainvoke(
+                {"messages": input_messages},
+                config={"recursion_limit": AGENT_MAX_STEPS},
+            ),
+            timeout=float(timeout),
+        )
 
-    output_messages = result["messages"]
+        output_messages = result["messages"]
 
     # Extract final text from the last AIMessage
     final_text = ""

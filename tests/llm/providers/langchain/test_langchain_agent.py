@@ -284,15 +284,17 @@ class TestSanitizeToolSchema:
         assert result["properties"]["data"]["type"] == "string"
         assert result["properties"]["name"]["type"] == "string"
 
-    def test_mutates_in_place(self) -> None:
-        """Schema is modified in-place and also returned."""
+    def test_does_not_mutate_original(self) -> None:
+        """Original schema is not modified; a new copy is returned."""
         schema: dict[str, Any] = {
             "properties": {"x": {"title": "X"}},
             "type": "object",
         }
         result = _sanitize_tool_schema(schema)
-        assert result is schema
-        assert schema["properties"]["x"]["type"] == "string"
+        assert result is not schema
+        assert result["properties"]["x"]["type"] == "string"
+        # Original must be untouched
+        assert "type" not in schema["properties"]["x"]
 
 
 class TestAgentConstants:
@@ -365,7 +367,12 @@ def _write_mcp_config(tmp_path: Path) -> str:
 
 
 def _make_mock_client() -> MagicMock:
-    """Build a mock MultiServerMCPClient that works with the session-based tool loading."""
+    """Build a mock MultiServerMCPClient that works as an async context manager.
+
+    The mock supports ``async with MultiServerMCPClient(cfg) as client:``
+    by implementing ``__aenter__`` to return itself, so ``client.connections``
+    and ``client.session()`` work inside the ``async with`` block.
+    """
     mock_session = AsyncMock()
     mock_list_result = MagicMock()
     mock_list_result.tools = []  # no raw MCP tools by default
@@ -375,6 +382,9 @@ def _make_mock_client() -> MagicMock:
     mock_client.connections = {"test": {"transport": "stdio", "command": "echo"}}
     mock_client.session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
     mock_client.session.return_value.__aexit__ = AsyncMock(return_value=False)
+    # Support ``async with MultiServerMCPClient(...) as client:``
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
     return mock_client
 
 
@@ -493,6 +503,8 @@ class TestRunAgent:
             return_value=mock_session
         )
         mock_client.session.return_value.__aexit__ = AsyncMock(return_value=False)
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
 
         with (
             patch(_PATCH_MCP_CLIENT, return_value=mock_client),

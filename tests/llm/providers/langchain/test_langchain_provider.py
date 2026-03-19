@@ -343,7 +343,7 @@ class TestCreateChatModel:
             )
         assert result is mock_model
         mock_create.assert_called_once_with(
-            model="gpt-4o", api_key="k", endpoint=None, api_version=None
+            model="gpt-4o", api_key="k", endpoint=None, api_version=None, timeout=30
         )
 
     def test_dispatches_to_gemini_backend(self) -> None:
@@ -359,7 +359,9 @@ class TestCreateChatModel:
                 {"backend": "gemini", "model": "gemini-2.0-flash", "api_key": "k"}
             )
         assert result is mock_model
-        mock_create.assert_called_once_with(model="gemini-2.0-flash", api_key="k")
+        mock_create.assert_called_once_with(
+            model="gemini-2.0-flash", api_key="k", timeout=30
+        )
 
     def test_dispatches_to_anthropic_backend(self) -> None:
         """Config with backend=anthropic calls create_anthropic_model."""
@@ -379,7 +381,7 @@ class TestCreateChatModel:
             )
         assert result is mock_model
         mock_create.assert_called_once_with(
-            model="claude-sonnet-4-20250514", api_key="k"
+            model="claude-sonnet-4-20250514", api_key="k", timeout=30
         )
 
     def test_raises_on_unknown_backend(self) -> None:

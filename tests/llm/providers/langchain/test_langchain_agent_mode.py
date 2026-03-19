@@ -6,18 +6,20 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 
+def _make_config(backend: str = "openai") -> dict[str, str | None]:
+    """Build a minimal langchain config dict for testing."""
+    return {
+        "provider": "langchain",
+        "backend": backend,
+        "model": "gpt-4o",
+        "api_key": None,
+        "endpoint": None,
+        "api_version": None,
+    }
+
+
 class TestAskLangchainAgentMode:
     """Tests for agent mode routing in ask_langchain()."""
-
-    def _make_config(self, backend: str = "openai") -> dict[str, str | None]:
-        return {
-            "provider": "langchain",
-            "backend": backend,
-            "model": "gpt-4o",
-            "api_key": None,
-            "endpoint": None,
-            "api_version": None,
-        }
 
     def test_routes_to_agent_when_mcp_config_provided(self) -> None:
         """When mcp_config is set, run_agent is called."""
@@ -31,7 +33,7 @@ class TestAskLangchainAgentMode:
         with (
             patch(
                 "mcp_coder.llm.providers.langchain._load_langchain_config",
-                return_value=self._make_config(),
+                return_value=_make_config(),
             ),
             patch(
                 "mcp_coder.llm.providers.langchain.agent._check_agent_dependencies",
@@ -65,7 +67,7 @@ class TestAskLangchainAgentMode:
         with (
             patch(
                 "mcp_coder.llm.providers.langchain._load_langchain_config",
-                return_value=self._make_config(),
+                return_value=_make_config(),
             ),
             patch(
                 "mcp_coder.llm.providers.langchain.load_langchain_history",
@@ -87,7 +89,7 @@ class TestAskLangchainAgentMode:
         with (
             patch(
                 "mcp_coder.llm.providers.langchain._load_langchain_config",
-                return_value=self._make_config(),
+                return_value=_make_config(),
             ),
             patch(
                 "mcp_coder.llm.providers.langchain.agent._check_agent_dependencies",
@@ -122,7 +124,7 @@ class TestAskLangchainAgentMode:
         with (
             patch(
                 "mcp_coder.llm.providers.langchain._load_langchain_config",
-                return_value=self._make_config(),
+                return_value=_make_config(),
             ),
             patch(
                 "mcp_coder.llm.providers.langchain.agent._check_agent_dependencies",
@@ -164,7 +166,7 @@ class TestAskLangchainAgentMode:
         with (
             patch(
                 "mcp_coder.llm.providers.langchain._load_langchain_config",
-                return_value=self._make_config(),
+                return_value=_make_config(),
             ),
             patch(
                 "mcp_coder.llm.providers.langchain.agent._check_agent_dependencies",
@@ -205,7 +207,7 @@ class TestAskLangchainAgentMode:
         with (
             patch(
                 "mcp_coder.llm.providers.langchain._load_langchain_config",
-                return_value=self._make_config("gemini"),
+                return_value=_make_config("gemini"),
             ),
             patch(
                 "mcp_coder.llm.providers.langchain.load_langchain_history",
@@ -227,16 +229,6 @@ class TestAskLangchainAgentMode:
 class TestAgentModeMLflowLogging:
     """Tests for MLflow logging in agent mode."""
 
-    def _make_config(self, backend: str = "openai") -> dict[str, str | None]:
-        return {
-            "provider": "langchain",
-            "backend": backend,
-            "model": "gpt-4o",
-            "api_key": None,
-            "endpoint": None,
-            "api_version": None,
-        }
-
     def test_agent_mode_logs_to_mlflow(self) -> None:
         """MLflow logger receives params, metrics, and tool_trace artifact."""
         stats = {
@@ -253,7 +245,7 @@ class TestAgentModeMLflowLogging:
         with (
             patch(
                 "mcp_coder.llm.providers.langchain._load_langchain_config",
-                return_value=self._make_config(),
+                return_value=_make_config(),
             ),
             patch(
                 "mcp_coder.llm.providers.langchain.agent._check_agent_dependencies",
@@ -311,7 +303,7 @@ class TestAgentModeMLflowLogging:
         with (
             patch(
                 "mcp_coder.llm.providers.langchain._load_langchain_config",
-                return_value=self._make_config(),
+                return_value=_make_config(),
             ),
             patch(
                 "mcp_coder.llm.providers.langchain.agent._check_agent_dependencies",
@@ -354,7 +346,7 @@ class TestAgentModeMLflowLogging:
         with (
             patch(
                 "mcp_coder.llm.providers.langchain._load_langchain_config",
-                return_value=self._make_config(),
+                return_value=_make_config(),
             ),
             patch(
                 "mcp_coder.llm.providers.langchain.agent._check_agent_dependencies",

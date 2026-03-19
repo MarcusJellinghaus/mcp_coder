@@ -76,7 +76,10 @@ def _load_langchain_config() -> dict[str, str | None]:
     return config
 
 
-def _create_chat_model(config: dict[str, str | None]) -> BaseChatModel:
+def _create_chat_model(
+    config: dict[str, str | None],
+    timeout: int = 30,
+) -> BaseChatModel:
     """Dispatch to correct backend's create_*_model() based on config."""
     backend = config.get("backend")
 
@@ -88,6 +91,7 @@ def _create_chat_model(config: dict[str, str | None]) -> BaseChatModel:
             api_key=config.get("api_key"),
             endpoint=config.get("endpoint"),
             api_version=config.get("api_version"),
+            timeout=timeout,
         )
     if backend == "gemini":
         from .gemini_backend import create_gemini_model
@@ -95,6 +99,7 @@ def _create_chat_model(config: dict[str, str | None]) -> BaseChatModel:
         return create_gemini_model(
             model=config.get("model") or "",
             api_key=config.get("api_key"),
+            timeout=timeout,
         )
     if backend == "anthropic":
         from .anthropic_backend import create_anthropic_model
@@ -102,6 +107,7 @@ def _create_chat_model(config: dict[str, str | None]) -> BaseChatModel:
         return create_anthropic_model(
             model=config.get("model") or "",
             api_key=config.get("api_key"),
+            timeout=timeout,
         )
     raise ValueError(
         f"Unsupported langchain backend: {backend!r}. "
@@ -168,7 +174,7 @@ def _ask_text(
     history = load_langchain_history(session_id)
     lc_messages = _to_lc_messages(history + [{"role": "human", "content": question}])
 
-    chat_model = _create_chat_model(config)
+    chat_model = _create_chat_model(config, timeout=timeout)
 
     try:
         ai_msg = chat_model.invoke(lc_messages)
@@ -244,7 +250,7 @@ def _ask_agent(
 
     _check_agent_dependencies()
 
-    chat_model = _create_chat_model(config)
+    chat_model = _create_chat_model(config, timeout=timeout)
     history: list[dict[str, Any]] = load_langchain_history(session_id)
 
     text, messages, stats = asyncio.run(

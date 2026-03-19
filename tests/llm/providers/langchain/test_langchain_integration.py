@@ -97,14 +97,14 @@ class TestLangchainIntegration:
 # ---------------------------------------------------------------------------
 
 
-def _find_mcp_server_filesystem() -> str:
-    """Return the path to mcp-server-filesystem, or skip if not installed."""
+def _find_mcp_workspace() -> str:
+    """Return the path to mcp-workspace, or skip if not installed."""
     venv_scripts = Path(sys.executable).parent
-    for name in ("mcp-server-filesystem.exe", "mcp-server-filesystem"):
+    for name in ("mcp-workspace.exe", "mcp-workspace"):
         candidate = venv_scripts / name
         if candidate.exists():
             return str(candidate)
-    pytest.skip("mcp-server-filesystem not installed in venv")
+    pytest.skip("mcp-workspace not installed in venv")
     return ""  # unreachable, keeps mypy happy
 
 
@@ -114,7 +114,7 @@ def _create_agent_mcp_config(tmp_path: Path) -> tuple[str, Path]:
     Returns ``(config_path, project_dir)`` where *project_dir* is the
     directory the filesystem server manages (for file-write assertions).
     """
-    fs_server = _find_mcp_server_filesystem()
+    fs_server = _find_mcp_workspace()
     project_dir = tmp_path / "project"
     project_dir.mkdir()
 
