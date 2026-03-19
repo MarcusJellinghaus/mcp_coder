@@ -16,7 +16,6 @@ except ImportError:
 
 
 def log_llm_request(
-    method: str,
     provider: str,
     session_id: str | None,
     prompt: str,
@@ -29,8 +28,7 @@ def log_llm_request(
     """Log LLM request details at DEBUG level.
 
     Args:
-        method: 'cli' or 'api'
-        provider: 'claude'
+        provider: 'claude' or 'langchain'
         session_id: Session ID or None for new session
         prompt: The prompt being sent
         timeout: Timeout in seconds
@@ -47,7 +45,7 @@ def log_llm_request(
         prompt_preview += f" - {prompt}"
 
     log_lines = [
-        f"LLM Request (method={method}, provider={provider}, session={session_status})",
+        f"LLM Request (provider={provider}, session={session_status})",
         f"  prompt: {prompt_preview}",
         f"  timeout: {timeout}s",
         f"  cwd: {cwd}",
@@ -68,9 +66,8 @@ def log_llm_request(
     if _mlflow_available and get_mlflow_logger is not None:
         try:
             mlflow_logger = get_mlflow_logger()
-            run_name = f"{method}_{provider}_{session_status.strip('[]')}"
+            run_name = f"{provider}_{session_status.strip('[]')}"
             tags = {
-                "conversation.method": method,
                 "conversation.provider": provider,
                 "conversation.session_type": session_status.strip("[]"),
             }
@@ -80,7 +77,6 @@ def log_llm_request(
 
 
 def log_llm_response(
-    method: str,
     duration_ms: int,
     session_id: str | None = None,
     cost_usd: float | None = None,
@@ -90,14 +86,13 @@ def log_llm_response(
     """Log LLM response metadata at DEBUG level.
 
     Args:
-        method: 'cli' or 'api'
         duration_ms: Duration in milliseconds
         session_id: Session ID to close the MLflow run under (optional)
-        cost_usd: Cost in USD (API only)
-        usage: Usage metadata (API only)
-        num_turns: Number of turns (API only)
+        cost_usd: Cost in USD (optional)
+        usage: Usage metadata (optional)
+        num_turns: Number of turns (optional)
     """
-    log_lines = [f"LLM Response (method={method})"]
+    log_lines = ["LLM Response"]
     log_lines.append(f"  duration: {duration_ms}ms")
 
     if cost_usd is not None:
@@ -146,7 +141,6 @@ _MAX_OUTPUT_CHARS = 1000
 
 
 def log_llm_error(
-    method: str,
     error: Exception,
     duration_ms: int | None = None,
 ) -> None:
@@ -156,14 +150,13 @@ def log_llm_error(
     CLI failures (e.g., authentication errors, MCP server issues).
 
     Args:
-        method: 'cli' or 'api'
         error: The exception that occurred
         duration_ms: Duration before error (optional)
     """
     error_type = type(error).__name__
     error_msg = str(error)
 
-    log_lines = [f"LLM Error (method={method})"]
+    log_lines = ["LLM Error"]
     log_lines.append(f"  error_type: {error_type}")
     log_lines.append(f"  error_message: {error_msg}")
 

@@ -15,7 +15,6 @@ from typing import Optional
 from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS, PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import prompt_llm
-from mcp_coder.llm.session import parse_llm_method
 from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_operations.branches import checkout_branch
@@ -257,7 +256,7 @@ def format_initial_prompt(prompt_template: str, issue_data: IssueData) -> str:
 def run_planning_prompts(
     project_dir: Path,
     issue_data: IssueData,
-    llm_method: str,
+    provider: str,
     mcp_config: Optional[str] = None,
     execution_dir: Optional[Path] = None,
 ) -> bool:
@@ -266,7 +265,7 @@ def run_planning_prompts(
     Args:
         project_dir: Path to the project directory
         issue_data: IssueData object with issue details
-        llm_method: LLM method string (e.g., "claude_code_cli")
+        provider: LLM provider name (e.g., "claude" or "langchain")
         mcp_config: Optional path to MCP configuration file
         execution_dir: Optional working directory for Claude subprocess
 
@@ -309,13 +308,7 @@ def run_planning_prompts(
         f"Formatted prompt 1: {len(formatted_prompt_1)} chars (includes issue data)"
     )
 
-    # Parse llm_method
-    try:
-        provider, method = parse_llm_method(llm_method)
-        logger.debug(f"LLM method: provider={provider}, method={method}")
-    except ValueError as e:
-        logger.error(f"Invalid LLM method: {e}")
-        return False
+    logger.debug(f"LLM provider: {provider}")
 
     # Execute first prompt
     logger.info("Executing prompt 1: Initial Analysis...")
@@ -324,7 +317,6 @@ def run_planning_prompts(
         response_1 = prompt_llm(
             formatted_prompt_1,
             provider=provider,
-            method=method,
             session_id=None,
             timeout=600,
             env_vars=env_vars,
@@ -367,7 +359,6 @@ def run_planning_prompts(
         response_2 = prompt_llm(
             prompt_2,
             provider=provider,
-            method=method,
             session_id=session_id,
             timeout=600,
             env_vars=env_vars,
@@ -405,7 +396,6 @@ def run_planning_prompts(
         response_3 = prompt_llm(
             prompt_3,
             provider=provider,
-            method=method,
             session_id=session_id,
             timeout=PROMPT_3_TIMEOUT,
             env_vars=env_vars,
@@ -514,7 +504,6 @@ def run_create_plan_workflow(
     issue_number: int,
     project_dir: Path,
     provider: str,
-    method: str,
     mcp_config: Optional[str] = None,
     execution_dir: Optional[Path] = None,
     update_labels: bool = False,
@@ -525,7 +514,6 @@ def run_create_plan_workflow(
         issue_number: GitHub issue number to create plan for
         project_dir: Path to the project directory
         provider: LLM provider (e.g., 'claude')
-        method: LLM method (e.g., 'cli' or 'api')
         mcp_config: Optional path to MCP configuration file
         execution_dir: Optional working directory for Claude subprocess
         update_labels: If True, update GitHub issue labels on success
@@ -536,12 +524,9 @@ def run_create_plan_workflow(
     # Note: Logging already setup by CLI layer
     # Note: project_dir already resolved and validated by CLI layer
 
-    # Combine provider and method for legacy function compatibility
-    llm_method = f"{provider}_code_{method}"
-
     logger.info(f"Starting create plan workflow for project: {project_dir}")
     logger.info(f"GitHub issue number: {issue_number}")
-    logger.info(f"LLM method: {llm_method}")
+    logger.info(f"LLM provider: {provider}")
 
     # Step 1: Validate prerequisites
     logger.info("Step 1/7: Validating prerequisites...")
@@ -588,7 +573,7 @@ def run_create_plan_workflow(
     # Step 6: Generate implementation plan
     logger.info("Step 6/7: Generating implementation plan...")
     if not run_planning_prompts(
-        project_dir, issue_data, llm_method, mcp_config, execution_dir
+        project_dir, issue_data, provider, mcp_config, execution_dir
     ):
         logger.error("Planning prompts execution failed")
         return 1

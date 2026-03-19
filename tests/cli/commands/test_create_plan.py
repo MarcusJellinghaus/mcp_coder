@@ -44,7 +44,7 @@ class TestExecuteCreatePlan:
                         # Configure mocks
                         mock_resolve.return_value = test_project_dir
                         mock_resolve_exec.return_value = test_execution_dir
-                        mock_parse.return_value = ("claude", "cli")
+                        mock_parse.return_value = "claude"
                         mock_workflow.return_value = 0
 
                         # Execute
@@ -59,7 +59,6 @@ class TestExecuteCreatePlan:
                             123,
                             test_project_dir,
                             "claude",
-                            "cli",
                             mock_args.mcp_config,
                             test_execution_dir,
                             False,
@@ -110,7 +109,7 @@ class TestCreatePlanExecutionDir:
         execution_dir = Path.cwd()
         mock_resolve_project.return_value = project_dir
         mock_resolve_exec.return_value = str(execution_dir)
-        mock_parse_llm.return_value = ("claude", "cli")
+        mock_parse_llm.return_value = "claude"
         mock_run_workflow.return_value = 0
 
         args = MagicMock()
@@ -126,7 +125,7 @@ class TestCreatePlanExecutionDir:
         assert result == 0
         mock_resolve_exec.assert_called_once_with(None)
         mock_run_workflow.assert_called_once_with(
-            123, project_dir, "claude", "cli", None, str(execution_dir), False
+            123, project_dir, "claude", None, str(execution_dir), False
         )
 
     @patch("mcp_coder.cli.commands.create_plan.resolve_execution_dir")
@@ -148,7 +147,7 @@ class TestCreatePlanExecutionDir:
 
         mock_resolve_project.return_value = project_dir
         mock_resolve_exec.return_value = str(execution_dir)
-        mock_parse_llm.return_value = ("claude", "cli")
+        mock_parse_llm.return_value = "claude"
         mock_run_workflow.return_value = 0
 
         args = MagicMock()
@@ -164,7 +163,7 @@ class TestCreatePlanExecutionDir:
         assert result == 0
         mock_resolve_exec.assert_called_once_with(str(execution_dir))
         mock_run_workflow.assert_called_once_with(
-            123, project_dir, "claude", "cli", None, str(execution_dir), False
+            123, project_dir, "claude", None, str(execution_dir), False
         )
 
     @patch("mcp_coder.cli.commands.create_plan.resolve_execution_dir")

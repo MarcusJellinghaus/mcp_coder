@@ -376,7 +376,6 @@ class TestCreateApiResponseDict:
 
         assert result["text"] == "API response"
         assert result["session_id"] == "api-123"
-        assert result["method"] == "api"
         assert result["provider"] == "claude"
         assert "version" in result
         assert "timestamp" in result
@@ -424,7 +423,6 @@ class TestAskClaudeCodeApiTypedDict:
             "timestamp",
             "text",
             "session_id",
-            "method",
             "provider",
             "raw_response",
         ]
@@ -433,7 +431,6 @@ class TestAskClaudeCodeApiTypedDict:
 
         # Verify content
         assert result["text"] == "Test response"
-        assert result["method"] == "api"
         assert result["provider"] == "claude"
 
     @patch(
@@ -576,7 +573,6 @@ class TestAskClaudeCodeApiLogging:
         # Verify request logging was called
         mock_log_request.assert_called_once()
         call_kwargs = mock_log_request.call_args[1]
-        assert call_kwargs["method"] == "api"
         assert call_kwargs["provider"] == "claude"
         assert call_kwargs["prompt"] == "test question"
         assert call_kwargs["session_id"] == "existing-session"
@@ -612,7 +608,6 @@ class TestAskClaudeCodeApiLogging:
         # Verify response logging was called with correct metadata
         mock_log_response.assert_called_once()
         call_kwargs = mock_log_response.call_args[1]
-        assert call_kwargs["method"] == "api"
         assert call_kwargs["cost_usd"] == 0.05678
         assert call_kwargs["usage"] == {"input_tokens": 10, "output_tokens": 5}
         assert call_kwargs["num_turns"] == 2
@@ -642,7 +637,6 @@ class TestAskClaudeCodeApiLogging:
         # Verify error logging was called
         mock_log_error.assert_called_once()
         call_kwargs = mock_log_error.call_args[1]
-        assert call_kwargs["method"] == "api"
         assert call_kwargs["error"] == test_error
         assert "duration_ms" in call_kwargs
 
@@ -669,5 +663,4 @@ class TestAskClaudeCodeApiLogging:
         # Verify error logging was called
         mock_log_error.assert_called_once()
         call_kwargs = mock_log_error.call_args[1]
-        assert call_kwargs["method"] == "api"
         assert call_kwargs["error"] == timeout_error

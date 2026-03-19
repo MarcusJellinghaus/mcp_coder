@@ -23,7 +23,6 @@ def _make_llm_response(text: str = "LLM response") -> dict[str, object]:
         "timestamp": "2025-10-01T10:30:00",
         "text": text,
         "session_id": "test-session-id",
-        "method": "api",
         "provider": "claude",
         "raw_response": {},
     }
@@ -239,9 +238,7 @@ class TestCommitChanges:
         result = commit_changes(Path("/test/project"))
 
         assert result is True
-        mock_generate_message.assert_called_once_with(
-            Path("/test/project"), "claude", "api"
-        )
+        mock_generate_message.assert_called_once_with(Path("/test/project"), "claude")
         mock_commit.assert_called_once_with(
             "feat: add new feature", Path("/test/project")
         )
@@ -258,9 +255,7 @@ class TestCommitChanges:
         result = commit_changes(Path("/test/project"))
 
         assert result is False
-        mock_generate_message.assert_called_once_with(
-            Path("/test/project"), "claude", "api"
-        )
+        mock_generate_message.assert_called_once_with(Path("/test/project"), "claude")
 
     @patch("mcp_coder.workflows.implement.task_processing.commit_all_changes")
     @patch(
@@ -390,7 +385,7 @@ class TestCheckAndFixMypy:
         """Test mypy check when no errors found."""
         mock_mypy_check.return_value = None  # No errors
 
-        result = check_and_fix_mypy(Path("/test/project"), 1, "claude", "cli")
+        result = check_and_fix_mypy(Path("/test/project"), 1, "claude")
 
         assert result is True
         mock_mypy_check.assert_called_once_with(Path("/test/project"))
@@ -412,7 +407,7 @@ class TestCheckAndFixMypy:
         mock_get_prompt.return_value = "Fix mypy errors: [mypy_output]"
         mock_prompt_llm.return_value = _make_llm_response("Fixed the errors")
 
-        result = check_and_fix_mypy(Path("/test/project"), 1, "claude", "api")
+        result = check_and_fix_mypy(Path("/test/project"), 1, "claude")
 
         assert result is True
         assert mock_mypy_check.call_count == 2
@@ -446,7 +441,7 @@ class TestCheckAndFixMypy:
         mock_get_prompt.return_value = "Fix mypy errors: [mypy_output]"
         mock_prompt_llm.return_value = _make_llm_response("Attempted fix")
 
-        result = check_and_fix_mypy(Path("/test/project"), 1, "claude", "cli")
+        result = check_and_fix_mypy(Path("/test/project"), 1, "claude")
 
         assert result is False
         # Should attempt fixes until max identical attempts reached
@@ -459,7 +454,7 @@ class TestCheckAndFixMypy:
         """Test mypy check handles exceptions."""
         mock_mypy_check.side_effect = Exception("Mypy error")
 
-        result = check_and_fix_mypy(Path("/test/project"), 1, "claude", "cli")
+        result = check_and_fix_mypy(Path("/test/project"), 1, "claude")
 
         assert result is False
 
@@ -506,7 +501,7 @@ class TestProcessSingleTask:
         mock_commit.return_value = True
         mock_push.return_value = True
 
-        success, reason = process_single_task(Path("/test/project"), "claude", "api")
+        success, reason = process_single_task(Path("/test/project"), "claude")
 
         assert success is True
         assert reason == "completed"
@@ -537,7 +532,7 @@ class TestProcessSingleTask:
         """Test processing single task when no tasks available."""
         mock_get_next_task.return_value = None
 
-        success, reason = process_single_task(Path("/test/project"), "claude", "cli")
+        success, reason = process_single_task(Path("/test/project"), "claude")
 
         assert success is False
         assert reason == "no_tasks"
@@ -551,7 +546,7 @@ class TestProcessSingleTask:
         mock_get_next_task.return_value = "Step 1: Test task"
         mock_get_prompt.side_effect = Exception("Prompt error")
 
-        success, reason = process_single_task(Path("/test/project"), "claude", "cli")
+        success, reason = process_single_task(Path("/test/project"), "claude")
 
         assert success is False
         assert reason == "error"
@@ -570,7 +565,7 @@ class TestProcessSingleTask:
         mock_get_prompt.return_value = "Template"
         mock_prompt_llm.side_effect = Exception("LLM error")
 
-        success, reason = process_single_task(Path("/test/project"), "claude", "cli")
+        success, reason = process_single_task(Path("/test/project"), "claude")
 
         assert success is False
         assert reason == "error"
@@ -594,7 +589,7 @@ class TestProcessSingleTask:
         mock_prompt_llm.return_value = _make_llm_response("Response")
         mock_get_status.return_value = {"staged": [], "modified": [], "untracked": []}
 
-        success, reason = process_single_task(Path("/test/project"), "claude", "cli")
+        success, reason = process_single_task(Path("/test/project"), "claude")
 
         assert success is True
         assert reason == "completed"
@@ -634,7 +629,7 @@ class TestProcessSingleTask:
         mock_check_mypy.return_value = True
         mock_run_formatters.return_value = False
 
-        success, reason = process_single_task(Path("/test/project"), "claude", "cli")
+        success, reason = process_single_task(Path("/test/project"), "claude")
 
         assert success is False
         assert reason == "error"
@@ -691,7 +686,7 @@ class TestIntegration:
         mock_push.return_value = True
 
         # Execute workflow
-        success, reason = process_single_task(project_dir, "claude", "api")
+        success, reason = process_single_task(project_dir, "claude")
 
         # Verify success
         assert success is True
@@ -710,7 +705,6 @@ Please implement this task step by step."""
         mock_prompt_llm.assert_called_once_with(
             expected_prompt,
             provider="claude",
-            method="api",
             timeout=3600,
             env_vars=ANY,
             execution_dir=ANY,
@@ -732,10 +726,10 @@ Please implement this task step by step."""
         # Verify processing steps
         mock_get_status.assert_called_once_with(project_dir)
         mock_check_mypy.assert_called_once_with(
-            project_dir, 2, "claude", "api", ANY, None, None
+            project_dir, 2, "claude", ANY, None, None
         )
         mock_run_formatters.assert_called_once_with(project_dir)
-        mock_commit.assert_called_once_with(project_dir, "claude", "api")
+        mock_commit.assert_called_once_with(project_dir, "claude")
         mock_push.assert_called_once_with(project_dir)
 
     def test_error_recovery_patterns(self) -> None:

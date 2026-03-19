@@ -143,9 +143,7 @@ class TestCreatePRWorkflowIntegration:
 
             from mcp_coder.workflows.create_pr.core import generate_pr_summary
 
-            title, body = generate_pr_summary(
-                project_dir, provider="claude", method="cli"
-            )
+            title, body = generate_pr_summary(project_dir, provider="claude")
 
             assert title == "feat: Add new feature"
             assert "This PR adds a new feature function." in body
@@ -374,9 +372,7 @@ class TestWorkflowMainFunction:
         from mcp_coder.workflows.create_pr.core import run_create_pr_workflow
 
         # Should return 1 due to failed prerequisites
-        result = run_create_pr_workflow(
-            Path("/test/project"), provider="claude", method="cli"
-        )
+        result = run_create_pr_workflow(Path("/test/project"), provider="claude")
         assert result == 1
 
         # Verify prerequisite check was called
@@ -403,14 +399,12 @@ class TestWorkflowMainFunction:
         from mcp_coder.workflows.create_pr.core import run_create_pr_workflow
 
         # Should return 1 due to failed PR creation
-        result = run_create_pr_workflow(
-            Path("/test/project"), provider="claude", method="cli"
-        )
+        result = run_create_pr_workflow(Path("/test/project"), provider="claude")
         assert result == 1
 
         # Verify the workflow got to PR creation step
         mock_generate_summary.assert_called_once_with(
-            Path("/test/project"), "claude", "cli", None, None
+            Path("/test/project"), "claude", None, None
         )
         mock_create_pr.assert_called_once_with(
             Path("/test/project"), "Test PR", "Test body"

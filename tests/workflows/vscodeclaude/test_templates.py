@@ -1,6 +1,10 @@
 """Tests for vscodeclaude template strings."""
 
-from mcp_coder.workflows.vscodeclaude.templates import VENV_SECTION_WINDOWS
+from mcp_coder.workflows.vscodeclaude.templates import (
+    AUTOMATED_SECTION_WINDOWS,
+    DISCUSSION_SECTION_WINDOWS,
+    VENV_SECTION_WINDOWS,
+)
 
 
 def test_venv_section_installs_dev_dependencies() -> None:
@@ -23,3 +27,25 @@ def test_venv_section_installs_dev_dependencies() -> None:
     assert (
         "uv sync --extra types" not in VENV_SECTION_WINDOWS
     ), "VENV_SECTION_WINDOWS should not use '--extra types' (incomplete dependencies)"
+
+
+def test_automated_section_windows_has_llm_method_flag() -> None:
+    """Test that AUTOMATED_SECTION_WINDOWS includes --llm-method claude_code_cli.
+
+    Without this flag, the template breaks when the LLM provider is not
+    claude_code_cli (regression test for issue #524).
+    """
+    assert (
+        "--llm-method claude_code_cli" in AUTOMATED_SECTION_WINDOWS
+    ), "AUTOMATED_SECTION_WINDOWS must include '--llm-method claude_code_cli'"
+
+
+def test_discussion_section_windows_has_llm_method_flag() -> None:
+    """Test that DISCUSSION_SECTION_WINDOWS includes --llm-method claude_code_cli.
+
+    Without this flag, the template breaks when the LLM provider is not
+    claude_code_cli (regression test for issue #524).
+    """
+    assert (
+        "--llm-method claude_code_cli" in DISCUSSION_SECTION_WINDOWS
+    ), "DISCUSSION_SECTION_WINDOWS must include '--llm-method claude_code_cli'"

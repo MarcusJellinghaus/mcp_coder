@@ -131,7 +131,6 @@ def ask_langchain(
         timestamp=datetime.now().isoformat(),
         text=text,
         session_id=sid,
-        method="api",
         provider="langchain",
         raw_response=raw,
     )

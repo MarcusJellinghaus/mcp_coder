@@ -27,7 +27,7 @@ def execute_create_plan(args: argparse.Namespace) -> int:
             - issue_number: GitHub issue number (int)
             - project_dir: Optional project directory path
             - execution_dir: Optional execution directory (NEW)
-            - llm_method: LLM method to use ('claude_code_cli' or 'claude_code_api')
+            - llm_method: LLM method to use ('claude_code_cli' or 'langchain')
 
     Returns:
         int: Exit code (0 for success, 1 for error)
@@ -47,7 +47,7 @@ def execute_create_plan(args: argparse.Namespace) -> int:
 
         # Parse LLM method using shared utility
         llm_method = resolve_llm_method(args.llm_method)
-        provider, method = parse_llm_method_from_args(llm_method)
+        provider = parse_llm_method_from_args(llm_method)
 
         # Extract and resolve mcp_config path to absolute path
         mcp_config = getattr(args, "mcp_config", None)
@@ -64,7 +64,6 @@ def execute_create_plan(args: argparse.Namespace) -> int:
             args.issue_number,
             project_dir,
             provider,
-            method,
             mcp_config,
             execution_dir,
             update_labels,

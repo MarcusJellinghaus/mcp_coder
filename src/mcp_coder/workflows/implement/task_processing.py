@@ -83,15 +83,12 @@ def run_formatters(project_dir: Path) -> bool:
         return False
 
 
-def commit_changes(
-    project_dir: Path, provider: str = "claude", method: str = "api"
-) -> bool:
+def commit_changes(project_dir: Path, provider: str = "claude") -> bool:
     """Commit changes using existing git operations and return success status.
 
     Args:
         project_dir: Path to the project directory
         provider: LLM provider (e.g., 'claude')
-        method: LLM method (e.g., 'cli' or 'api')
     """
     logger.info("Committing changes...")
     commit_message = ""
@@ -111,7 +108,7 @@ def commit_changes(
         # Fall back to LLM generation if no prepared message
         if not commit_message:
             success, commit_message, error = generate_commit_message_with_llm(
-                project_dir, provider, method
+                project_dir, provider
             )
 
             if not success:
@@ -197,7 +194,6 @@ def check_and_fix_mypy(
     project_dir: Path,
     step_num: int,
     provider: str,
-    method: str,
     env_vars: dict[str, str] | None = None,
     mcp_config: str | None = None,
     execution_dir: Optional[Path] = None,
@@ -208,7 +204,6 @@ def check_and_fix_mypy(
         project_dir: Path to the project directory
         step_num: Step number for conversation naming
         provider: LLM provider (e.g., 'claude')
-        method: LLM method (e.g., 'cli' or 'api')
         env_vars: Optional environment variables for the subprocess
         mcp_config: Optional path to MCP configuration file
         execution_dir: Optional working directory for Claude subprocess
@@ -271,7 +266,6 @@ def check_and_fix_mypy(
                 llm_response = prompt_llm(
                     mypy_prompt,
                     provider=provider,
-                    method=method,
                     timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
                     env_vars=env_vars,
                     execution_dir=(
@@ -343,7 +337,6 @@ def _cleanup_commit_message_file(project_dir: Path) -> None:
 def process_single_task(
     project_dir: Path,
     provider: str,
-    method: str,
     mcp_config: str | None = None,
     execution_dir: Optional[Path] = None,
 ) -> tuple[bool, str]:
@@ -352,7 +345,6 @@ def process_single_task(
     Args:
         project_dir: Path to the project directory
         provider: LLM provider (e.g., 'claude')
-        method: LLM method (e.g., 'cli' or 'api')
         mcp_config: Optional path to MCP configuration file
         execution_dir: Optional working directory for Claude subprocess
 
@@ -404,7 +396,6 @@ Please implement this task step by step."""
         llm_response = prompt_llm(
             full_prompt,
             provider=provider,
-            method=method,
             timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
             env_vars=env_vars,
             execution_dir=cwd,
@@ -454,7 +445,7 @@ Please implement this task step by step."""
     # Step 7: Run mypy check and fixes (each fix will be saved separately)
     if RUN_MYPY_AFTER_EACH_TASK:
         if not check_and_fix_mypy(
-            project_dir, step_num, provider, method, env_vars, mcp_config, execution_dir
+            project_dir, step_num, provider, env_vars, mcp_config, execution_dir
         ):
             logger.warning(
                 "Mypy check failed or found unresolved issues - continuing anyway"
@@ -467,7 +458,7 @@ Please implement this task step by step."""
         return False, "error"
 
     # Step 9: Commit changes
-    if not commit_changes(project_dir, provider, method):
+    if not commit_changes(project_dir, provider):
         return False, "error"
 
     # Step 10: Push changes to remote

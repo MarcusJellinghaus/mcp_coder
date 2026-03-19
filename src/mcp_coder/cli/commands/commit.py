@@ -51,9 +51,9 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
 
     # 2. Parse LLM method and generate commit message
     llm_method = resolve_llm_method(args.llm_method)
-    provider, method = parse_llm_method_from_args(llm_method)
+    provider = parse_llm_method_from_args(llm_method)
     success, commit_message, error = generate_commit_message_with_llm(
-        project_dir, provider, method, execution_dir=str(execution_dir)
+        project_dir, provider, execution_dir=str(execution_dir)
     )
     # Note: mcp_config support for commit message generation will be added in future update
     if not success:

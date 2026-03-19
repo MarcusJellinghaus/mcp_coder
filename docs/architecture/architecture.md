@@ -17,7 +17,7 @@
 AI-powered software development automation toolkit that orchestrates end-to-end GitHub issue workflows from planning through implementation to pull request creation.
 
 ### Key Features
-- **LLM Integration**: Multi-provider interface with Claude Code CLI/API support
+- **LLM Integration**: Multi-provider interface with Claude Code CLI support
   and optional LangChain backends (OpenAI, Gemini, and others)
 - **GitHub Automation**: Issue-driven workflow automation with status label transitions
 - **Git Operations**: Automated repository management and version control
@@ -177,9 +177,9 @@ mcp-coder implement --project-dir /path/to/project
 - **Session**: `llm/session/` - Session management
   - `resolver.py` - LLM method parsing and session resolution (tests: `llm/session/test_resolver.py`)
 - **Providers**: `llm/providers/` - Provider implementations
-  - `claude/` - Claude Code CLI/API integration (tests: `llm/providers/claude/test_*.py`)
+  - `claude/` - Claude Code CLI integration (tests: `llm/providers/claude/test_*.py`)
     - `claude_code_cli.py` - Claude Code CLI integration with stream-json session logging
-    - `claude_code_api.py` - Claude Code API integration
+    - `claude_code_api.py` - Claude Code API integration (legacy, not used by interface)
     - `logging_utils.py` - Logging utilities for LLM requests/responses/errors (tests: `test_logging_utils.py`)
       - **Design Decision**: Added structured logging for LLM operations (Nov 2025)
         - **Rationale**: Centralized logging functions for request, response, and error tracking in Claude provider integrations

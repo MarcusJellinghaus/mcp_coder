@@ -58,7 +58,7 @@ class TestExecuteCreatePr:
         execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
         mock_resolve_exec.return_value = str(execution_dir)
-        mock_parse_llm.return_value = ("claude", "cli")
+        mock_parse_llm.return_value = "claude"
         mock_run_workflow.return_value = 0
 
         args = argparse.Namespace(
@@ -75,7 +75,7 @@ class TestExecuteCreatePr:
         mock_resolve_exec.assert_called_once_with(None)
         mock_parse_llm.assert_called_once_with("claude_code_cli")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", "cli", None, str(execution_dir), False
+            project_dir, "claude", None, str(execution_dir), False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
@@ -96,12 +96,12 @@ class TestExecuteCreatePr:
         execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
         mock_resolve_exec.return_value = str(execution_dir)
-        mock_parse_llm.return_value = ("claude", "api")
+        mock_parse_llm.return_value = "claude"
         mock_run_workflow.return_value = 0
 
         args = argparse.Namespace(
             project_dir="/test/project",
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
             execution_dir=None,
             mcp_config=None,
         )
@@ -109,9 +109,9 @@ class TestExecuteCreatePr:
         result = execute_create_pr(args)
 
         assert result == 0
-        mock_parse_llm.assert_called_once_with("claude_code_api")
+        mock_parse_llm.assert_called_once_with("claude_code_cli")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", "api", None, str(execution_dir), False
+            project_dir, "claude", None, str(execution_dir), False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
@@ -132,7 +132,7 @@ class TestExecuteCreatePr:
         execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
         mock_resolve_exec.return_value = str(execution_dir)
-        mock_parse_llm.return_value = ("claude", "cli")
+        mock_parse_llm.return_value = "claude"
         mock_run_workflow.return_value = 1  # Workflow failure
 
         args = argparse.Namespace(
@@ -149,7 +149,7 @@ class TestExecuteCreatePr:
         mock_resolve_exec.assert_called_once_with(None)
         mock_parse_llm.assert_called_once_with("claude_code_cli")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", "cli", None, str(execution_dir), False
+            project_dir, "claude", None, str(execution_dir), False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
@@ -190,7 +190,7 @@ class TestExecuteCreatePr:
         execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
         mock_resolve_exec.return_value = str(execution_dir)
-        mock_parse_llm.return_value = ("claude", "cli")
+        mock_parse_llm.return_value = "claude"
         mock_run_workflow.return_value = 0
 
         args = argparse.Namespace(
@@ -207,7 +207,7 @@ class TestExecuteCreatePr:
         mock_resolve_exec.assert_called_once_with(None)
         mock_parse_llm.assert_called_once_with("claude_code_cli")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", "cli", None, str(execution_dir), False
+            project_dir, "claude", None, str(execution_dir), False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
@@ -231,7 +231,7 @@ class TestExecuteCreatePr:
         mock_run_workflow.return_value = 0
 
         # Test with claude_code_cli
-        mock_parse_llm.return_value = ("claude", "cli")
+        mock_parse_llm.return_value = "claude"
         args_cli = argparse.Namespace(
             project_dir="/test/project",
             llm_method="claude_code_cli",
@@ -242,7 +242,7 @@ class TestExecuteCreatePr:
         assert result == 0
         mock_parse_llm.assert_called_with("claude_code_cli")
         mock_run_workflow.assert_called_with(
-            project_dir, "claude", "cli", None, str(execution_dir), False
+            project_dir, "claude", None, str(execution_dir), False
         )
 
         # Reset mocks
@@ -251,19 +251,19 @@ class TestExecuteCreatePr:
         mock_parse_llm.reset_mock()
         mock_resolve_exec.reset_mock()
 
-        # Test with claude_code_api
-        mock_parse_llm.return_value = ("claude", "api")
-        args_api = argparse.Namespace(
+        # Test with langchain
+        mock_parse_llm.return_value = "langchain"
+        args_lc = argparse.Namespace(
             project_dir="/test/project",
-            llm_method="claude_code_api",
+            llm_method="langchain",
             execution_dir=None,
             mcp_config=None,
         )
-        result = execute_create_pr(args_api)
+        result = execute_create_pr(args_lc)
         assert result == 0
-        mock_parse_llm.assert_called_with("claude_code_api")
+        mock_parse_llm.assert_called_with("langchain")
         mock_run_workflow.assert_called_with(
-            project_dir, "claude", "api", None, str(execution_dir), False
+            project_dir, "langchain", None, str(execution_dir), False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
@@ -284,7 +284,7 @@ class TestExecuteCreatePr:
         execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
         mock_resolve_exec.return_value = str(execution_dir)
-        mock_parse_llm.return_value = ("claude", "cli")
+        mock_parse_llm.return_value = "claude"
         mock_run_workflow.side_effect = KeyboardInterrupt()
 
         args = argparse.Namespace(
@@ -319,7 +319,7 @@ class TestExecuteCreatePr:
         execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
         mock_resolve_exec.return_value = str(execution_dir)
-        mock_parse_llm.return_value = ("claude", "cli")
+        mock_parse_llm.return_value = "claude"
         mock_run_workflow.side_effect = RuntimeError("Unexpected error")
 
         args = argparse.Namespace(
@@ -392,7 +392,7 @@ class TestCreatePrExecutionDir:
         execution_dir = Path.cwd()
         mock_resolve_project.return_value = project_dir
         mock_resolve_exec.return_value = str(execution_dir)
-        mock_parse_llm.return_value = ("claude", "cli")
+        mock_parse_llm.return_value = "claude"
         mock_run_workflow.return_value = 0
 
         args = argparse.Namespace(
@@ -407,7 +407,7 @@ class TestCreatePrExecutionDir:
         assert result == 0
         mock_resolve_exec.assert_called_once_with(None)
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", "cli", None, str(execution_dir), False
+            project_dir, "claude", None, str(execution_dir), False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
@@ -429,7 +429,7 @@ class TestCreatePrExecutionDir:
 
         mock_resolve_project.return_value = project_dir
         mock_resolve_exec.return_value = str(execution_dir)
-        mock_parse_llm.return_value = ("claude", "cli")
+        mock_parse_llm.return_value = "claude"
         mock_run_workflow.return_value = 0
 
         args = argparse.Namespace(
@@ -444,7 +444,7 @@ class TestCreatePrExecutionDir:
         assert result == 0
         mock_resolve_exec.assert_called_once_with(str(execution_dir))
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", "cli", None, str(execution_dir), False
+            project_dir, "claude", None, str(execution_dir), False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")

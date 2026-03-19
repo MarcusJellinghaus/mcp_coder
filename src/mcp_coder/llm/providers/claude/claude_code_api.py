@@ -288,7 +288,6 @@ def create_api_response_dict(
         "timestamp": datetime.now().isoformat(),
         "text": text,
         "session_id": session_id,
-        "method": "api",
         "provider": "claude",
         "raw_response": {
             "session_info": detailed_response["session_info"],
@@ -455,7 +454,6 @@ def ask_claude_code_api(
 
     # Log request
     log_llm_request(
-        method="api",
         provider="claude",
         session_id=session_id,
         prompt=question,
@@ -484,7 +482,6 @@ def ask_claude_code_api(
         # Log response with cost and usage metadata
         duration_ms = int((time.time() - start_time) * 1000)
         log_llm_response(
-            method="api",
             duration_ms=duration_ms,
             session_id=actual_session_id,
             cost_usd=detailed["result_info"].get("cost_usd"),
@@ -498,19 +495,19 @@ def ask_claude_code_api(
     except TimeoutExpired as e:
         # Log error before re-raising
         duration_ms = int((time.time() - start_time) * 1000)
-        log_llm_error(method="api", error=e, duration_ms=duration_ms)
+        log_llm_error(error=e, duration_ms=duration_ms)
         raise
 
     except ValueError as e:
         # Log error before re-raising
         duration_ms = int((time.time() - start_time) * 1000)
-        log_llm_error(method="api", error=e, duration_ms=duration_ms)
+        log_llm_error(error=e, duration_ms=duration_ms)
         raise
 
     except Exception as e:
         # Log error before converting
         duration_ms = int((time.time() - start_time) * 1000)
-        log_llm_error(method="api", error=e, duration_ms=duration_ms)
+        log_llm_error(error=e, duration_ms=duration_ms)
         # Convert to ClaudeAPIError for consistency
         real_error = _extract_real_error_message(e)
         error_msg = f"Claude API Error: {real_error}"

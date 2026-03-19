@@ -5,7 +5,6 @@ import os
 
 from mcp_coder.utils.subprocess_runner import TimeoutExpired
 
-from .providers.claude.claude_code_api import ask_claude_code_api
 from .providers.claude.claude_code_cli import ask_claude_code_cli
 
 # Serialization functions are now in .serialization module
@@ -25,7 +24,6 @@ __all__ = [
 def ask_llm(
     question: str,
     provider: str = "claude",
-    method: str = "cli",
     session_id: str | None = None,
     timeout: int = LLM_DEFAULT_TIMEOUT_SECONDS,
     env_vars: dict[str, str] | None = None,
@@ -34,7 +32,7 @@ def ask_llm(
     branch_name: str | None = None,
 ) -> str:
     """
-    Ask a question to an LLM provider using the specified method.
+    Ask a question to an LLM provider.
 
     This is the main entry point for simple LLM interactions. It returns only
     the text response. For full session management with metadata, use prompt_llm()
@@ -42,10 +40,7 @@ def ask_llm(
 
     Args:
         question: The question to ask the LLM
-        provider: The LLM provider to use (currently only "claude" is supported)
-        method: The implementation method to use ("cli" or "api")
-                - "cli": Uses Claude Code CLI executable (requires installation)
-                - "api": Uses Claude Code Python SDK (automatic authentication)
+        provider: The LLM provider to use ("claude" or "langchain")
         session_id: Optional session ID to resume previous conversation
                    Note: This function doesn't return session_id. Use prompt_llm()
                    for full session management capabilities.
@@ -63,16 +58,12 @@ def ask_llm(
         The LLM's response text as a string
 
     Raises:
-        ValueError: If the provider or method is not supported, or if input validation fails
+        ValueError: If the provider is not supported, or if input validation fails
         Various exceptions from underlying implementations (e.g., subprocess errors)
 
     Examples:
-        >>> # Simple usage (backward compatible)
+        >>> # Simple usage
         >>> response = ask_llm("What is Python?")
-        >>> print(response)
-
-        >>> # With API method
-        >>> response = ask_llm("Explain recursion", method="api")
         >>> print(response)
 
         >>> # With session (managed externally - see prompt_llm for better approach)
@@ -82,12 +73,11 @@ def ask_llm(
     Note:
         For session management with access to session_id and metadata, use:
         - prompt_llm() for high-level session-aware interface
-        - ask_claude_code_cli() or ask_claude_code_api() directly for provider-specific control
+        - ask_claude_code_cli() directly for provider-specific control
     """
     return prompt_llm(
         question,
         provider=provider,
-        method=method,
         session_id=session_id,
         timeout=timeout,
         env_vars=env_vars,
@@ -97,10 +87,9 @@ def ask_llm(
     )["text"]
 
 
-def prompt_llm(  # pylint: disable=too-many-positional-arguments
+def prompt_llm(
     question: str,
     provider: str = "claude",
-    method: str = "cli",
     session_id: str | None = None,
     timeout: int = LLM_DEFAULT_TIMEOUT_SECONDS,
     env_vars: dict[str, str] | None = None,
@@ -116,10 +105,7 @@ def prompt_llm(  # pylint: disable=too-many-positional-arguments
 
     Args:
         question: The question to ask the LLM
-        provider: The LLM provider to use (currently only "claude" is supported)
-        method: The implementation method to use ("cli" or "api")
-                - "cli": Uses Claude Code CLI executable (requires installation)
-                - "api": Uses Claude Code Python SDK (automatic authentication)
+        provider: The LLM provider to use ("claude" or "langchain")
         session_id: Optional session ID to resume previous conversation
         timeout: Timeout in seconds for the request (default: 30)
         env_vars: Optional environment variables to pass to the LLM subprocess.
@@ -137,12 +123,11 @@ def prompt_llm(  # pylint: disable=too-many-positional-arguments
         - timestamp: ISO format timestamp
         - text: The response text
         - session_id: Session ID for conversation continuity
-        - method: Communication method used ("cli" or "api")
-        - provider: LLM provider name ("claude")
+        - provider: LLM provider name ("claude" or "langchain")
         - raw_response: Complete metadata (duration, cost, usage, etc.)
 
     Raises:
-        ValueError: If the provider or method is not supported, or if input validation fails
+        ValueError: If the provider is not supported, or if input validation fails
         Various exceptions from underlying implementations (e.g., subprocess errors)
 
     Examples:
@@ -154,9 +139,6 @@ def prompt_llm(  # pylint: disable=too-many-positional-arguments
         >>> # Continue conversation
         >>> result2 = prompt_llm("What's my favorite color?", session_id=session_id)
         >>> print(result2["text"])  # "Your favorite color is blue"
-
-        >>> # Save conversation for later analysis
-        >>> serialize_llm_response(result2, f"logs/{session_id}.json")
 
         >>> # Access metadata
         >>> print(f"Cost: ${result2['raw_response'].get('cost_usd', 0)}")
@@ -196,31 +178,17 @@ def prompt_llm(  # pylint: disable=too-many-positional-arguments
             f"Unsupported provider: {provider}. Supported: 'claude', 'langchain'"
         )
 
-    # Claude provider — subprocess-based, TimeoutExpired possible
+    # Claude provider — always uses CLI
     try:
-        if method == "cli":
-            return ask_claude_code_cli(
-                question,
-                session_id=session_id,
-                timeout=timeout,
-                env_vars=env_vars,
-                cwd=execution_dir,
-                mcp_config=mcp_config,
-                branch_name=branch_name,
-            )
-        elif method == "api":
-            return ask_claude_code_api(
-                question,
-                session_id=session_id,
-                timeout=timeout,
-                env_vars=env_vars,
-                cwd=execution_dir,
-                mcp_config=mcp_config,
-            )
-        else:
-            raise ValueError(
-                f"Unsupported method: {method}. Supported methods: 'cli', 'api'"
-            )
+        return ask_claude_code_cli(
+            question,
+            session_id=session_id,
+            timeout=timeout,
+            env_vars=env_vars,
+            cwd=execution_dir,
+            mcp_config=mcp_config,
+            branch_name=branch_name,
+        )
     except TimeoutExpired:
         logger.error("LLM request timed out after %ds", timeout)
         logger.error(
@@ -228,7 +196,7 @@ def prompt_llm(  # pylint: disable=too-many-positional-arguments
             len(question),
             len(question.split()),
         )
-        logger.error("LLM method: %s/%s", provider, method)
+        logger.error("LLM provider: %s", provider)
         logger.error(
             "Consider: checking network, simplifying prompt, increasing timeout"
         )

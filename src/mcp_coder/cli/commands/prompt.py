@@ -161,7 +161,7 @@ def execute_prompt(
         # Resolve LLM method early (CLI arg > config > default)
         raw_llm_method = getattr(args, "llm_method", None)
         llm_method = resolve_llm_method(raw_llm_method)
-        provider, method = parse_llm_method_from_args(llm_method)
+        provider = parse_llm_method_from_args(llm_method)
 
         # Handle continuation from previous session if requested
         # Priority: --session-id > --continue-session-from > --continue-session
@@ -214,7 +214,6 @@ def execute_prompt(
             response_dict = prompt_llm(
                 args.prompt,
                 provider=provider,
-                method=method,
                 timeout=timeout,
                 session_id=resume_session_id,
                 env_vars=env_vars,
@@ -239,7 +238,6 @@ def execute_prompt(
             response_dict = prompt_llm(
                 args.prompt,
                 provider=provider,
-                method=method,
                 timeout=timeout,
                 session_id=resume_session_id,
                 env_vars=env_vars,
@@ -265,7 +263,6 @@ def execute_prompt(
             llm_response = prompt_llm(
                 args.prompt,
                 provider=provider,
-                method=method,
                 timeout=timeout,
                 session_id=resume_session_id,
                 env_vars=env_vars,
@@ -292,7 +289,6 @@ def execute_prompt(
             llm_response = prompt_llm(
                 args.prompt,
                 provider=provider,
-                method=method,
                 timeout=timeout,
                 session_id=resume_session_id,
                 env_vars=env_vars,

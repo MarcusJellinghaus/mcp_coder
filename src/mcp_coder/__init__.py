@@ -1,15 +1,15 @@
 """MCP Coder - An AI-powered software development automation toolkit.
 
 This package provides extensible LLM interfaces for code analysis, testing, and implementation
-workflows. It supports multiple LLM providers and implementation methods.
+workflows. It supports multiple LLM providers.
 
 Main Interfaces:
-    ask_llm: High-level interface supporting multiple LLM providers and methods
+    ask_llm: High-level interface supporting multiple LLM providers
     prompt_llm: High-level interface returning full LLMResponseDict with session management
 
 Example:
     >>> from mcp_coder import ask_llm
-    >>> response = ask_llm("Explain recursion", provider="claude", method="api")
+    >>> response = ask_llm("Explain recursion", provider="claude")
     >>> print(response)
 """
 

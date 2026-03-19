@@ -175,7 +175,7 @@ class TestExecuteCheckBranchStatus:
             ci_timeout=0,
             fix=1,
             llm_truncate=False,
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
             mcp_config=None,
             execution_dir=None,
         )
@@ -189,7 +189,6 @@ class TestExecuteCheckBranchStatus:
             project_dir,
             failed_ci_report,
             "claude",
-            "api",
             None,
             exec_dir,
             fix_attempts=1,
@@ -224,7 +223,7 @@ class TestExecuteCheckBranchStatus:
             ci_timeout=0,
             fix=1,
             llm_truncate=False,
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
             mcp_config=None,
             execution_dir=None,
         )
@@ -306,7 +305,7 @@ class TestExecuteCheckBranchStatus:
         project_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
         mock_collect.return_value = sample_report
-        mock_parse_llm.return_value = ("claude", "cli")
+        mock_parse_llm.return_value = "claude"
 
         args = argparse.Namespace(
             project_dir=None,

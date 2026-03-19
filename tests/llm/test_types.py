@@ -22,14 +22,12 @@ def test_llm_response_dict_structure() -> None:
         "timestamp": "2025-10-01T10:30:00.123456",
         "text": "Test response",
         "session_id": "550e8400-e29b-41d4-a716-446655440000",
-        "method": "cli",
         "provider": "claude",
         "raw_response": {"test": "data"},
     }
 
     assert response["version"] == "1.0"
     assert response["text"] == "Test response"
-    assert response["method"] in ["cli", "api"]
     assert response["provider"] == "claude"
     assert isinstance(response["raw_response"], dict)
 
@@ -44,7 +42,6 @@ def test_llm_response_dict_required_fields() -> None:
         "timestamp",
         "text",
         "session_id",
-        "method",
         "provider",
         "raw_response",
     }
@@ -67,7 +64,6 @@ def test_llm_response_dict_field_types() -> None:
         hints["session_id"] == str | None
         or hints["session_id"] == typing.Union[str, None]
     )
-    assert hints["method"] == str
     assert hints["provider"] == str
     assert hints["raw_response"] == dict[str, object]
 
@@ -79,7 +75,6 @@ def test_llm_response_dict_none_session_id() -> None:
         "timestamp": "2025-10-01T10:30:00.123456",
         "text": "Test response without session",
         "session_id": None,
-        "method": "api",
         "provider": "claude",
         "raw_response": {"usage": {"tokens": 100}},
     }

@@ -213,7 +213,6 @@ class TestCheckAndFixCI:
             project_dir=Path("/fake/path"),
             branch="feature-branch",
             provider="claude",
-            method="api",
         )
 
         assert result is True
@@ -236,7 +235,6 @@ class TestCheckAndFixCI:
             project_dir=Path("/fake/path"),
             branch="feature-branch",
             provider="claude",
-            method="api",
         )
 
         assert result is True  # Graceful exit
@@ -299,7 +297,6 @@ class TestCheckAndFixCI:
             "session_id": "test-session",
             "version": "1.0",
             "timestamp": "2025-01-01T00:00:00",
-            "method": "api",
             "provider": "claude",
             "raw_response": {},
         }
@@ -311,7 +308,6 @@ class TestCheckAndFixCI:
             project_dir=Path("/fake/path"),
             branch="feature-branch",
             provider="claude",
-            method="api",
         )
 
         assert result is True
@@ -377,7 +373,6 @@ class TestCheckAndFixCI:
             "session_id": "test-session",
             "version": "1.0",
             "timestamp": "2025-01-01T00:00:00",
-            "method": "api",
             "provider": "claude",
             "raw_response": {},
         }
@@ -389,7 +384,6 @@ class TestCheckAndFixCI:
             project_dir=Path("/fake/path"),
             branch="feature-branch",
             provider="claude",
-            method="api",
         )
 
         assert result is False  # Max attempts exhausted
@@ -409,7 +403,6 @@ class TestCheckAndFixCI:
             project_dir=Path("/fake/path"),
             branch="feature-branch",
             provider="claude",
-            method="api",
         )
 
         assert result is True  # Graceful handling
@@ -458,7 +451,6 @@ class TestCheckAndFixCI:
             "session_id": "test-session",
             "version": "1.0",
             "timestamp": "2025-01-01T00:00:00",
-            "method": "api",
             "provider": "claude",
             "raw_response": {},
         }
@@ -470,7 +462,6 @@ class TestCheckAndFixCI:
             project_dir=Path("/fake/path"),
             branch="feature-branch",
             provider="claude",
-            method="api",
         )
 
         assert result is False  # Fail fast on git errors
@@ -502,7 +493,6 @@ class TestCheckAndFixCI:
             project_dir=Path("/fake/path"),
             branch="feature-branch",
             provider="claude",
-            method="api",
         )
 
         assert result is True

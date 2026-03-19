@@ -4,13 +4,12 @@ These tests validate end-to-end functionality including:
 - Session continuity across multiple turns
 - Serialization and deserialization
 - Parallel session safety
-- Cross-method compatibility (CLI and API)
 """
 
 import json
 from pathlib import Path
-from typing import Any, Dict, Optional
-from unittest.mock import MagicMock, patch
+from typing import Dict, Optional
+from unittest.mock import patch
 
 import pytest
 
@@ -76,53 +75,6 @@ class MockClaudeCLI:
             "timestamp": "2025-10-01T10:30:00",
             "text": self.response_text,
             "session_id": session_id or "mock-session",
-            "method": "cli",
-            "provider": "claude",
-            "raw_response": {},
-        }
-
-
-class MockClaudeAPI:
-    """Mock for Claude API that simulates real behavior."""
-
-    def __init__(self) -> None:
-        """Initialize mock with default response."""
-        self.response_dict: Optional[LLMResponseDict] = None
-        self.response_text: str = "Mock API response"
-        self.received_session_id: Optional[str] = None
-        self.call_count: int = 0
-
-    def set_response_dict(self, response: LLMResponseDict) -> None:
-        """Set the mock to return a specific response dict."""
-        self.response_dict = response
-
-    def set_response(self, text: str) -> None:
-        """Set the mock to return a simple text response."""
-        self.response_text = text
-
-    def __call__(
-        self,
-        question: str,
-        session_id: Optional[str] = None,
-        timeout: int = 30,
-        env_vars: Optional[Dict[str, str]] = None,
-        cwd: Optional[str] = None,
-        mcp_config: Optional[str] = None,
-    ) -> LLMResponseDict:
-        """Simulate API call."""
-        self.call_count += 1
-        self.received_session_id = session_id
-
-        if self.response_dict:
-            return self.response_dict
-
-        # Default response
-        return {
-            "version": "1.0",
-            "timestamp": "2025-10-01T10:30:00",
-            "text": self.response_text,
-            "session_id": session_id or "mock-api-session",
-            "method": "api",
             "provider": "claude",
             "raw_response": {},
         }
@@ -132,12 +84,6 @@ class MockClaudeAPI:
 def mock_claude_cli() -> MockClaudeCLI:
     """Fixture providing mock for Claude CLI."""
     return MockClaudeCLI()
-
-
-@pytest.fixture
-def mock_claude_api() -> MockClaudeAPI:
-    """Fixture providing mock for Claude API."""
-    return MockClaudeAPI()
 
 
 @pytest.mark.claude_cli_integration
@@ -157,13 +103,12 @@ class TestSessionContinuity:
                     "timestamp": "2025-10-01T10:30:00",
                     "text": "Your favorite color is blue.",
                     "session_id": "session-123",
-                    "method": "cli",
                     "provider": "claude",
                     "raw_response": {},
                 }
             )
 
-            result1 = prompt_llm("My favorite color is blue", method="cli")
+            result1 = prompt_llm("My favorite color is blue")
             session_id = result1["session_id"]
             assert session_id == "session-123"
 
@@ -174,63 +119,17 @@ class TestSessionContinuity:
                     "timestamp": "2025-10-01T10:31:00",
                     "text": "You told me your favorite color is blue.",
                     "session_id": "session-123",
-                    "method": "cli",
                     "provider": "claude",
                     "raw_response": {},
                 }
             )
 
-            result2 = prompt_llm(
-                "What's my favorite color?", method="cli", session_id=session_id
-            )
+            result2 = prompt_llm("What's my favorite color?", session_id=session_id)
 
             # Validate session continuity
             assert result2["session_id"] == session_id
             assert mock_claude_cli.received_session_id == session_id
             assert "blue" in result2["text"].lower()
-
-    def test_session_continuity_api(self, mock_claude_api: MockClaudeAPI) -> None:
-        """Test multi-turn conversation with API method."""
-        with patch(
-            "mcp_coder.llm.interface.ask_claude_code_api",
-            mock_claude_api,
-        ):
-            # First turn
-            mock_claude_api.set_response_dict(
-                {
-                    "version": "1.0",
-                    "timestamp": "2025-10-01T10:30:00",
-                    "text": "Your favorite color is red.",
-                    "session_id": "api-session-456",
-                    "method": "api",
-                    "provider": "claude",
-                    "raw_response": {},
-                }
-            )
-
-            result1 = prompt_llm("My favorite color is red", method="api")
-            session_id = result1["session_id"]
-            assert session_id == "api-session-456"
-
-            # Second turn
-            mock_claude_api.set_response_dict(
-                {
-                    "version": "1.0",
-                    "timestamp": "2025-10-01T10:31:00",
-                    "text": "You said your favorite color is red.",
-                    "session_id": "api-session-456",
-                    "method": "api",
-                    "provider": "claude",
-                    "raw_response": {},
-                }
-            )
-
-            result2 = prompt_llm(
-                "What's my color?", method="api", session_id=session_id
-            )
-
-            assert result2["session_id"] == session_id
-            assert mock_claude_api.received_session_id == session_id
 
     def test_multi_turn_conversation(self, mock_claude_cli: MockClaudeCLI) -> None:
         """Test conversation with 3+ turns."""
@@ -247,12 +146,11 @@ class TestSessionContinuity:
                     "timestamp": "2025-10-01T10:30:00",
                     "text": "Got it, your name is Alice.",
                     "session_id": session_id,
-                    "method": "cli",
                     "provider": "claude",
                     "raw_response": {},
                 }
             )
-            result1 = prompt_llm("My name is Alice", method="cli")
+            result1 = prompt_llm("My name is Alice")
 
             # Turn 2
             mock_claude_cli.set_response_dict(
@@ -261,14 +159,11 @@ class TestSessionContinuity:
                     "timestamp": "2025-10-01T10:31:00",
                     "text": "Your favorite color is green.",
                     "session_id": session_id,
-                    "method": "cli",
                     "provider": "claude",
                     "raw_response": {},
                 }
             )
-            result2 = prompt_llm(
-                "My favorite color is green", method="cli", session_id=session_id
-            )
+            result2 = prompt_llm("My favorite color is green", session_id=session_id)
 
             # Turn 3
             mock_claude_cli.set_response_dict(
@@ -277,14 +172,11 @@ class TestSessionContinuity:
                     "timestamp": "2025-10-01T10:32:00",
                     "text": "Your name is Alice and your favorite color is green.",
                     "session_id": session_id,
-                    "method": "cli",
                     "provider": "claude",
                     "raw_response": {},
                 }
             )
-            result3 = prompt_llm(
-                "What's my name and color?", method="cli", session_id=session_id
-            )
+            result3 = prompt_llm("What's my name and color?", session_id=session_id)
 
             # All should have same session_id
             assert result1["session_id"] == session_id
@@ -310,7 +202,6 @@ class TestSerialization:
                     "timestamp": "2025-10-01T10:30:00",
                     "text": "Test response",
                     "session_id": "serialize-test",
-                    "method": "cli",
                     "provider": "claude",
                     "raw_response": {
                         "duration_ms": 2801,
@@ -320,7 +211,7 @@ class TestSerialization:
                 }
             )
 
-            result = prompt_llm("Test question", method="cli")
+            result = prompt_llm("Test question")
 
             # Save to file
             filepath = tmp_path / "conversation.json"
@@ -351,12 +242,11 @@ class TestSerialization:
                     "timestamp": "2025-10-01T10:30:00",
                     "text": "Conversation started",
                     "session_id": "saved-session",
-                    "method": "cli",
                     "provider": "claude",
                     "raw_response": {},
                 }
             )
-            result1 = prompt_llm("Start conversation", method="cli")
+            result1 = prompt_llm("Start conversation")
 
             # Save session
             filepath = tmp_path / f"{result1['session_id']}.json"
@@ -372,12 +262,11 @@ class TestSerialization:
                     "timestamp": "2025-10-01T10:35:00",
                     "text": "Continuing from saved session",
                     "session_id": session_id,
-                    "method": "cli",
                     "provider": "claude",
                     "raw_response": {},
                 }
             )
-            result2 = prompt_llm("Continue", method="cli", session_id=session_id)
+            result2 = prompt_llm("Continue", session_id=session_id)
 
             assert result2["session_id"] == session_id
 
@@ -399,12 +288,11 @@ class TestParallelSafety:
                     "timestamp": "2025-10-01T10:30:00",
                     "text": "Your color is blue",
                     "session_id": "session-1",
-                    "method": "cli",
                     "provider": "claude",
                     "raw_response": {},
                 }
             )
-            result1a = prompt_llm("My color is blue", method="cli")
+            result1a = prompt_llm("My color is blue")
             session1_id = result1a["session_id"]
 
             # Session 2: Color is red
@@ -414,12 +302,11 @@ class TestParallelSafety:
                     "timestamp": "2025-10-01T10:30:00",
                     "text": "Your color is red",
                     "session_id": "session-2",
-                    "method": "cli",
                     "provider": "claude",
                     "raw_response": {},
                 }
             )
-            result2a = prompt_llm("My color is red", method="cli")
+            result2a = prompt_llm("My color is red")
             session2_id = result2a["session_id"]
 
             # Sessions should have different IDs
@@ -432,14 +319,11 @@ class TestParallelSafety:
                     "timestamp": "2025-10-01T10:31:00",
                     "text": "You said blue",
                     "session_id": "session-1",
-                    "method": "cli",
                     "provider": "claude",
                     "raw_response": {},
                 }
             )
-            result1b = prompt_llm(
-                "What was my color?", method="cli", session_id=session1_id
-            )
+            result1b = prompt_llm("What was my color?", session_id=session1_id)
 
             # Continue session 2
             mock_claude_cli.set_response_dict(
@@ -448,67 +332,17 @@ class TestParallelSafety:
                     "timestamp": "2025-10-01T10:31:00",
                     "text": "You said red",
                     "session_id": "session-2",
-                    "method": "cli",
                     "provider": "claude",
                     "raw_response": {},
                 }
             )
-            result2b = prompt_llm(
-                "What was my color?", method="cli", session_id=session2_id
-            )
+            result2b = prompt_llm("What was my color?", session_id=session2_id)
 
             # Each session maintains its own context
             assert result1b["session_id"] == session1_id
             assert result2b["session_id"] == session2_id
             assert "blue" in result1b["text"].lower()
             assert "red" in result2b["text"].lower()
-
-    def test_parallel_sessions_different_methods(
-        self, mock_claude_cli: MockClaudeCLI, mock_claude_api: MockClaudeAPI
-    ) -> None:
-        """Test CLI and API sessions can run independently."""
-        with (
-            patch(
-                "mcp_coder.llm.interface.ask_claude_code_cli",
-                mock_claude_cli,
-            ),
-            patch(
-                "mcp_coder.llm.interface.ask_claude_code_api",
-                mock_claude_api,
-            ),
-        ):
-            # CLI session
-            mock_claude_cli.set_response_dict(
-                {
-                    "version": "1.0",
-                    "timestamp": "2025-10-01T10:30:00",
-                    "text": "CLI session",
-                    "session_id": "cli-session",
-                    "method": "cli",
-                    "provider": "claude",
-                    "raw_response": {},
-                }
-            )
-            cli_result = prompt_llm("CLI test", method="cli")
-
-            # API session
-            mock_claude_api.set_response_dict(
-                {
-                    "version": "1.0",
-                    "timestamp": "2025-10-01T10:30:00",
-                    "text": "API session",
-                    "session_id": "api-session",
-                    "method": "api",
-                    "provider": "claude",
-                    "raw_response": {},
-                }
-            )
-            api_result = prompt_llm("API test", method="api")
-
-            # Different sessions
-            assert cli_result["session_id"] != api_result["session_id"]
-            assert cli_result["method"] == "cli"
-            assert api_result["method"] == "api"
 
 
 @pytest.mark.claude_cli_integration
@@ -529,7 +363,6 @@ class TestMetadataTracking:
                     "timestamp": "2025-10-01T10:30:00",
                     "text": "Response with metadata",
                     "session_id": "meta-session",
-                    "method": "cli",
                     "provider": "claude",
                     "raw_response": {
                         "duration_ms": 2801,
@@ -545,7 +378,7 @@ class TestMetadataTracking:
             )
 
             # Get response
-            result = prompt_llm("Test with metadata", method="cli")
+            result = prompt_llm("Test with metadata")
 
             # Verify metadata present
             assert result["raw_response"]["duration_ms"] == 2801
@@ -581,12 +414,11 @@ class TestMetadataTracking:
                     "timestamp": "2025-10-01T10:30:00",
                     "text": "Turn 1",
                     "session_id": session_id,
-                    "method": "cli",
                     "provider": "claude",
                     "raw_response": {"cost_usd": 0.025},
                 }
             )
-            result1 = prompt_llm("Question 1", method="cli")
+            result1 = prompt_llm("Question 1")
             cost1 = result1["raw_response"].get("cost_usd", 0)
             assert isinstance(cost1, (int, float))
             total_cost += float(cost1)
@@ -598,12 +430,11 @@ class TestMetadataTracking:
                     "timestamp": "2025-10-01T10:31:00",
                     "text": "Turn 2",
                     "session_id": session_id,
-                    "method": "cli",
                     "provider": "claude",
                     "raw_response": {"cost_usd": 0.033},
                 }
             )
-            result2 = prompt_llm("Question 2", method="cli", session_id=session_id)
+            result2 = prompt_llm("Question 2", session_id=session_id)
             cost2 = result2["raw_response"].get("cost_usd", 0)
             assert isinstance(cost2, (int, float))
             total_cost += float(cost2)
@@ -626,7 +457,7 @@ class TestErrorHandling:
 
             # Attempting to use non-existent session
             with pytest.raises(ValueError, match="Invalid session_id"):
-                prompt_llm("Test", method="cli", session_id="nonexistent-session")
+                prompt_llm("Test", session_id="nonexistent-session")
 
     def test_missing_fields_in_serialized_data(self, tmp_path: Path) -> None:
         """Test handling of incomplete serialized data."""
@@ -667,6 +498,6 @@ class TestBackwardCompatibility:
             mock_claude_cli.set_response("No session needed")
 
             # Old calling pattern should still work
-            response = ask_llm("Question", provider="claude", method="cli", timeout=30)
+            response = ask_llm("Question", provider="claude", timeout=30)
 
             assert response == "No session needed"

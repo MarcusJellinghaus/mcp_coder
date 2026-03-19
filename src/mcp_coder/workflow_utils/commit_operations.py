@@ -60,7 +60,6 @@ def strip_claude_footers(message: str) -> str:
 def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
     project_dir: Path,
     provider: str = "claude",
-    method: str = "api",
     execution_dir: Optional[str] = None,
 ) -> Tuple[bool, str, Optional[str]]:
     """Generate commit message using LLM. Returns (success, message, error).
@@ -68,7 +67,6 @@ def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
     Args:
         project_dir: Path to the project directory
         provider: LLM provider (e.g., 'claude')
-        method: LLM method (e.g., 'cli' or 'api')
         execution_dir: Optional execution directory for Claude subprocess
 
     Returns:
@@ -152,7 +150,6 @@ def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
         response = ask_llm(
             full_prompt,
             provider=provider,
-            method=method,
             timeout=LLM_COMMIT_TIMEOUT_SECONDS,
             env_vars=env_vars,
             execution_dir=execution_dir,

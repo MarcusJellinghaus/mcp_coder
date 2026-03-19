@@ -31,7 +31,6 @@ class TestLogLLMRequest:
         command = ["claude", "-p", "", "--output-format", "json"]
 
         log_llm_request(
-            method="cli",
             provider="claude",
             session_id=None,
             prompt="What is the answer?",
@@ -43,7 +42,7 @@ class TestLogLLMRequest:
         )
 
         log_output = caplog_debug.text
-        assert "method=cli" in log_output
+        assert "provider=claude" in log_output
         assert "[new]" in log_output
         assert "What is the answer?" in log_output
         assert "command:" in log_output
@@ -54,7 +53,6 @@ class TestLogLLMRequest:
     ) -> None:
         """Test logging API request with resuming session."""
         log_llm_request(
-            method="api",
             provider="claude",
             session_id="abc123",
             prompt="Remember this",
@@ -65,7 +63,7 @@ class TestLogLLMRequest:
         )
 
         log_output = caplog_debug.text
-        assert "method=api" in log_output
+        assert "provider=claude" in log_output
         assert "[resuming]" in log_output
         assert "Remember this" in log_output
         assert ".mcp.json" in log_output
@@ -75,7 +73,6 @@ class TestLogLLMRequest:
     ) -> None:
         """Test prompt preview for short prompts."""
         log_llm_request(
-            method="cli",
             provider="claude",
             session_id=None,
             prompt="Short",
@@ -94,7 +91,6 @@ class TestLogLLMRequest:
         long_prompt = "x" * 500
 
         log_llm_request(
-            method="cli",
             provider="claude",
             session_id=None,
             prompt=long_prompt,
@@ -114,12 +110,10 @@ class TestLogLLMResponse:
     def test_log_llm_response_cli(self, caplog_debug: pytest.LogCaptureFixture) -> None:
         """Test logging CLI response."""
         log_llm_response(
-            method="cli",
             duration_ms=1500,
         )
 
         log_output = caplog_debug.text
-        assert "method=cli" in log_output
         assert "1500ms" in log_output
 
     def test_log_llm_response_api_with_cost(
@@ -129,7 +123,6 @@ class TestLogLLMResponse:
         usage = {"input_tokens": 100, "output_tokens": 50}
 
         log_llm_response(
-            method="api",
             duration_ms=2000,
             cost_usd=0.0015,
             usage=usage,
@@ -137,7 +130,6 @@ class TestLogLLMResponse:
         )
 
         log_output = caplog_debug.text
-        assert "method=api" in log_output
         assert "2000ms" in log_output
         assert "0.0015" in log_output
         assert "input_tokens" in log_output
@@ -149,7 +141,6 @@ class TestLogLLMResponse:
     ) -> None:
         """Test logging response with only required fields."""
         log_llm_response(
-            method="cli",
             duration_ms=500,
         )
 
@@ -171,7 +162,7 @@ class TestLogLLMResponse:
                 return_value=mock_logger,
             ),
         ):
-            log_llm_response(method="cli", duration_ms=1000, session_id="sid-1")
+            log_llm_response(duration_ms=1000, session_id="sid-1")
 
         mock_logger.end_run.assert_called_once_with("FINISHED", session_id="sid-1")
 
@@ -191,7 +182,7 @@ class TestLogLLMResponse:
                 return_value=mock_logger,
             ),
         ):
-            log_llm_response(method="cli", duration_ms=1000, session_id=None)
+            log_llm_response(duration_ms=1000, session_id=None)
 
         mock_logger.end_run.assert_not_called()
 
@@ -207,7 +198,7 @@ class TestLogLLMResponse:
                 return_value=mock_logger,
             ),
         ):
-            log_llm_response(method="cli", duration_ms=500)
+            log_llm_response(duration_ms=500)
 
         mock_logger.end_run.assert_not_called()
 
@@ -220,12 +211,10 @@ class TestLogLLMError:
         error = ValueError("Test error message")
 
         log_llm_error(
-            method="cli",
             error=error,
         )
 
         log_output = caplog_debug.text
-        assert "method=cli" in log_output
         assert "ValueError" in log_output
         assert "Test error message" in log_output
 
@@ -236,13 +225,11 @@ class TestLogLLMError:
         error = RuntimeError("Request failed")
 
         log_llm_error(
-            method="api",
             error=error,
             duration_ms=1000,
         )
 
         log_output = caplog_debug.text
-        assert "method=api" in log_output
         assert "RuntimeError" in log_output
         assert "Request failed" in log_output
         assert "1000ms" in log_output
@@ -258,7 +245,6 @@ class TestLogLLMError:
         error = CustomError("Custom message")
 
         log_llm_error(
-            method="cli",
             error=error,
         )
 
@@ -278,7 +264,6 @@ class TestLogLLMError:
         )
 
         log_llm_error(
-            method="cli",
             error=error,
             duration_ms=5000,
         )
@@ -301,7 +286,6 @@ class TestLogLLMError:
         )
 
         log_llm_error(
-            method="cli",
             error=error,
         )
 
@@ -323,7 +307,6 @@ class TestLogLLMError:
         )
 
         log_llm_error(
-            method="cli",
             error=error,
         )
 

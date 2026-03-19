@@ -14,26 +14,23 @@ class TestParseLlmMethod:
 
     def test_parse_claude_code_cli(self) -> None:
         """Test parsing 'claude_code_cli' method."""
-        provider, method = parse_llm_method("claude_code_cli")
+        provider = parse_llm_method("claude_code_cli")
         assert provider == "claude"
-        assert method == "cli"
-
-    def test_parse_claude_code_api(self) -> None:
-        """Test parsing 'claude_code_api' method."""
-        provider, method = parse_llm_method("claude_code_api")
-        assert provider == "claude"
-        assert method == "api"
 
     def test_parse_langchain(self) -> None:
         """Test parsing 'langchain' method."""
-        provider, method = parse_llm_method("langchain")
+        provider = parse_llm_method("langchain")
         assert provider == "langchain"
-        assert method == "api"
 
     def test_parse_invalid_method(self) -> None:
         """Test error handling for unsupported method."""
         with pytest.raises(ValueError, match="Unsupported llm_method"):
             parse_llm_method("invalid_method")
+
+    def test_parse_claude_code_api_raises_error(self) -> None:
+        """Test that claude_code_api is no longer supported."""
+        with pytest.raises(ValueError, match="Unsupported llm_method"):
+            parse_llm_method("claude_code_api")
 
 
 class TestSessionResolution:
