@@ -2,10 +2,10 @@
 
 ## Step 1: Add `--llm-method claude_code_cli` to Windows templates
 
-- [ ] 1a. Add `--llm-method claude_code_cli` to `AUTOMATED_SECTION_WINDOWS` in `src/mcp_coder/workflows/vscodeclaude/templates.py`
-- [ ] 1b. Add `--llm-method claude_code_cli` to `DISCUSSION_SECTION_WINDOWS` in `src/mcp_coder/workflows/vscodeclaude/templates.py`
-- [ ] Run pylint, pytest, mypy — fix all issues
-- [ ] Prepare git commit message for Step 1
+- [x] 1a. Add `--llm-method claude_code_cli` to `AUTOMATED_SECTION_WINDOWS` in `src/mcp_coder/workflows/vscodeclaude/templates.py`
+- [x] 1b. Add `--llm-method claude_code_cli` to `DISCUSSION_SECTION_WINDOWS` in `src/mcp_coder/workflows/vscodeclaude/templates.py`
+- [x] Run pylint, pytest, mypy — fix all issues
+- [x] Prepare git commit message for Step 1
 
 ## Step 2: Remove `claude_code_api` support and the `method` parameter
 
