@@ -42,14 +42,12 @@ class TestRunCreatePrWorkflow:
         mock_commit.return_value = {"success": True, "commit_hash": "abc123"}
 
         # Execute
-        result = run_create_pr_workflow(Path("/test"), "claude", "cli")
+        result = run_create_pr_workflow(Path("/test"), "claude")
 
         # Verify
         assert result == 0
         mock_prereqs.assert_called_once_with(Path("/test"))
-        mock_generate.assert_called_once_with(
-            Path("/test"), "claude", "cli", None, None
-        )
+        mock_generate.assert_called_once_with(Path("/test"), "claude", None, None)
         mock_create_pr.assert_called_once_with(Path("/test"), "Test Title", "Test Body")
         mock_cleanup.assert_called_once_with(Path("/test"))
         mock_commit.assert_called_once()
@@ -61,7 +59,7 @@ class TestRunCreatePrWorkflow:
         """Test workflow exits when prerequisites fail."""
         mock_prereqs.return_value = False
 
-        result = run_create_pr_workflow(Path("/test"), "claude", "cli")
+        result = run_create_pr_workflow(Path("/test"), "claude")
 
         assert result == 1
         mock_prereqs.assert_called_once_with(Path("/test"))
@@ -83,7 +81,7 @@ class TestRunCreatePrWorkflow:
         mock_push.return_value = {"success": True}
         mock_create_pr.return_value = False  # PR creation fails
 
-        result = run_create_pr_workflow(Path("/test"), "claude", "cli")
+        result = run_create_pr_workflow(Path("/test"), "claude")
 
         assert result == 1
         mock_create_pr.assert_called_once_with(Path("/test"), "Title", "Body")
@@ -97,12 +95,10 @@ class TestRunCreatePrWorkflow:
         mock_prereqs.return_value = True
         mock_generate.side_effect = ValueError("LLM failed")
 
-        result = run_create_pr_workflow(Path("/test"), "claude", "cli")
+        result = run_create_pr_workflow(Path("/test"), "claude")
 
         assert result == 1
-        mock_generate.assert_called_once_with(
-            Path("/test"), "claude", "cli", None, None
-        )
+        mock_generate.assert_called_once_with(Path("/test"), "claude", None, None)
 
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
     @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
@@ -136,12 +132,12 @@ class TestRunCreatePrWorkflow:
         mock_clean.return_value = True  # Clean directory, no commit needed
 
         # Execute with execution_dir
-        result = run_create_pr_workflow(tmp_path, "claude", "cli", None, exec_dir)
+        result = run_create_pr_workflow(tmp_path, "claude", None, exec_dir)
 
         # Verify
         assert result == 0
         # Verify execution_dir was passed to generate_pr_summary
-        mock_generate.assert_called_once_with(tmp_path, "claude", "cli", None, exec_dir)
+        mock_generate.assert_called_once_with(tmp_path, "claude", None, exec_dir)
 
     @patch("mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
@@ -180,9 +176,7 @@ class TestRunCreatePrWorkflow:
         mock_issue_manager.update_workflow_label.return_value = True
 
         # Call: run_create_pr_workflow(..., update_labels=True)
-        result = run_create_pr_workflow(
-            Path("/test"), "claude", "cli", update_labels=True
-        )
+        result = run_create_pr_workflow(Path("/test"), "claude", update_labels=True)
 
         # Assert: update_workflow_label called with validated_issue_number=123
         assert result == 0
@@ -229,9 +223,7 @@ class TestRunCreatePrWorkflow:
         mock_issue_manager_class.return_value = mock_issue_manager
 
         # Call: run_create_pr_workflow(..., update_labels=True)
-        result = run_create_pr_workflow(
-            Path("/test"), "claude", "cli", update_labels=True
-        )
+        result = run_create_pr_workflow(Path("/test"), "claude", update_labels=True)
 
         # Assert: update_workflow_label NOT called
         assert result == 0

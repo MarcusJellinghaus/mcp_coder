@@ -276,7 +276,6 @@ class TestPureFunctions:
 
         assert result["text"] == "Hello"
         assert result["session_id"] == "abc-123"
-        assert result["method"] == "cli"
         assert result["provider"] == "claude"
         assert "version" in result
         assert "timestamp" in result

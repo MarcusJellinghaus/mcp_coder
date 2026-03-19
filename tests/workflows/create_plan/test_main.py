@@ -72,7 +72,7 @@ class TestMain:
                                         return_value={"success": True},
                                     ):
                                         result = run_create_plan_workflow(
-                                            123, tmp_path, "claude", "cli"
+                                            123, tmp_path, "claude"
                                         )
 
         assert result == 0
@@ -127,7 +127,6 @@ class TestMain:
                                             123,
                                             tmp_path,
                                             "claude",
-                                            "cli",
                                             None,
                                             exec_dir,
                                         )
@@ -135,7 +134,7 @@ class TestMain:
         assert result == 0
         # Verify execution_dir was passed to run_planning_prompts
         mock_prompts.assert_called_once_with(
-            tmp_path, mock_issue_data, "claude_code_cli", None, exec_dir
+            tmp_path, mock_issue_data, "claude", None, exec_dir
         )
 
     def test_main_prerequisites_fail(self, tmp_path: Path) -> None:
@@ -161,7 +160,7 @@ class TestMain:
             "mcp_coder.workflows.create_plan.check_prerequisites",
             return_value=(False, empty_issue_data),
         ):
-            result = run_create_plan_workflow(123, tmp_path, "claude", "cli")
+            result = run_create_plan_workflow(123, tmp_path, "claude")
 
         assert result == 1
 
@@ -179,7 +178,7 @@ class TestMain:
             with patch(
                 "mcp_coder.workflows.create_plan.manage_branch", return_value=None
             ):
-                result = run_create_plan_workflow(123, tmp_path, "claude", "cli")
+                result = run_create_plan_workflow(123, tmp_path, "claude")
 
         assert result == 1
 
@@ -202,7 +201,7 @@ class TestMain:
                     "mcp_coder.workflows.create_plan.check_pr_info_not_exists",
                     return_value=False,
                 ):
-                    result = run_create_plan_workflow(123, tmp_path, "claude", "cli")
+                    result = run_create_plan_workflow(123, tmp_path, "claude")
 
         assert result == 1
 
@@ -229,9 +228,7 @@ class TestMain:
                         "mcp_coder.workflows.create_plan.create_pr_info_structure",
                         return_value=False,
                     ):
-                        result = run_create_plan_workflow(
-                            123, tmp_path, "claude", "cli"
-                        )
+                        result = run_create_plan_workflow(123, tmp_path, "claude")
 
         assert result == 1
 
@@ -262,9 +259,7 @@ class TestMain:
                             "mcp_coder.workflows.create_plan.run_planning_prompts",
                             return_value=False,
                         ):
-                            result = run_create_plan_workflow(
-                                123, tmp_path, "claude", "cli"
-                            )
+                            result = run_create_plan_workflow(123, tmp_path, "claude")
 
         assert result == 1
 
@@ -300,7 +295,7 @@ class TestMain:
                                 return_value=False,
                             ):
                                 result = run_create_plan_workflow(
-                                    123, tmp_path, "claude", "cli"
+                                    123, tmp_path, "claude"
                                 )
 
         assert result == 1
@@ -348,7 +343,7 @@ class TestMain:
                                         return_value={"success": True},
                                     ):
                                         result = run_create_plan_workflow(
-                                            123, tmp_path, "claude", "cli"
+                                            123, tmp_path, "claude"
                                         )
 
         # Verify commit message format
@@ -400,7 +395,7 @@ class TestMain:
                                     ) as mock_push:
                                         mock_push.return_value = {"success": True}
                                         result = run_create_plan_workflow(
-                                            123, tmp_path, "claude", "cli"
+                                            123, tmp_path, "claude"
                                         )
 
         # Should still exit with success even if commit failed
@@ -454,7 +449,7 @@ class TestMain:
                                         },
                                     ):
                                         result = run_create_plan_workflow(
-                                            123, tmp_path, "claude", "cli"
+                                            123, tmp_path, "claude"
                                         )
 
         # Should still exit with success even if push failed
@@ -553,7 +548,7 @@ class TestMain:
                                         return_value={"success": True},
                                     ):
                                         result = run_create_plan_workflow(
-                                            123, tmp_path, "claude", "cli"
+                                            123, tmp_path, "claude"
                                         )
 
         # Verify functions were called with correct parameters
@@ -562,6 +557,6 @@ class TestMain:
             tmp_path, 123, "Test Issue", base_branch=None
         )
         mock_prompts.assert_called_once_with(
-            tmp_path, mock_issue_data, "claude_code_cli", None, None
+            tmp_path, mock_issue_data, "claude", None, None
         )
         assert result == 0

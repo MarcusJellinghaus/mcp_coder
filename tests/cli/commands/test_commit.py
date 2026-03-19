@@ -35,7 +35,7 @@ class TestExecuteCommitAuto:
         """Test successful commit auto execution."""
         # Setup mocks
         mock_validate.return_value = (True, None)
-        mock_parse_llm.return_value = ("claude", "api")
+        mock_parse_llm.return_value = "claude"
         mock_generate.return_value = (True, "feat: add new feature", None)
         mock_commit.return_value = {
             "success": True,
@@ -44,7 +44,7 @@ class TestExecuteCommitAuto:
         }
 
         args = argparse.Namespace(
-            preview=False, llm_method="claude_code_api", project_dir=None
+            preview=False, llm_method="claude_code_cli", project_dir=None
         )
 
         result = execute_commit_auto(args)
@@ -56,9 +56,9 @@ class TestExecuteCommitAuto:
 
         # Verify function calls
         mock_validate.assert_called_once()
-        mock_parse_llm.assert_called_once_with("claude_code_api")
+        mock_parse_llm.assert_called_once_with("claude_code_cli")
         mock_generate.assert_called_once_with(
-            Path.cwd(), "claude", "api", execution_dir=mock.ANY
+            Path.cwd(), "claude", execution_dir=mock.ANY
         )
         mock_commit.assert_called_once_with("feat: add new feature", Path.cwd())
 
@@ -79,7 +79,7 @@ class TestExecuteCommitAuto:
         """Test commit auto with preview mode - user confirms."""
         # Setup mocks
         mock_validate.return_value = (True, None)
-        mock_parse_llm.return_value = ("claude", "api")
+        mock_parse_llm.return_value = "claude"
         mock_generate.return_value = (True, "feat: add new feature", None)
         mock_commit.return_value = {
             "success": True,
@@ -89,7 +89,7 @@ class TestExecuteCommitAuto:
         mock_input.return_value = "y"
 
         args = argparse.Namespace(
-            preview=True, llm_method="claude_code_api", project_dir=None
+            preview=True, llm_method="claude_code_cli", project_dir=None
         )
 
         result = execute_commit_auto(args)
@@ -121,7 +121,7 @@ class TestExecuteCommitAuto:
         """Test commit auto with preview mode - empty input proceeds as default."""
         # Setup mocks
         mock_validate.return_value = (True, None)
-        mock_parse_llm.return_value = ("claude", "api")
+        mock_parse_llm.return_value = "claude"
         mock_generate.return_value = (True, "feat: add new feature", None)
         mock_commit.return_value = {
             "success": True,
@@ -131,7 +131,7 @@ class TestExecuteCommitAuto:
         mock_input.return_value = ""  # Empty input (just pressed Enter)
 
         args = argparse.Namespace(
-            preview=True, llm_method="claude_code_api", project_dir=None
+            preview=True, llm_method="claude_code_cli", project_dir=None
         )
 
         result = execute_commit_auto(args)
@@ -159,12 +159,12 @@ class TestExecuteCommitAuto:
         """Test commit auto with preview mode - user cancels."""
         # Setup mocks
         mock_validate.return_value = (True, None)
-        mock_parse_llm.return_value = ("claude", "api")
+        mock_parse_llm.return_value = "claude"
         mock_generate.return_value = (True, "feat: add new feature", None)
         mock_input.return_value = "n"
 
         args = argparse.Namespace(
-            preview=True, llm_method="claude_code_api", project_dir=None
+            preview=True, llm_method="claude_code_cli", project_dir=None
         )
 
         result = execute_commit_auto(args)
@@ -192,7 +192,7 @@ class TestExecuteCommitAuto:
         """Test commit auto with preview mode - various cancel inputs."""
         # Setup mocks
         mock_validate.return_value = (True, None)
-        mock_parse_llm.return_value = ("claude", "api")
+        mock_parse_llm.return_value = "claude"
         mock_generate.return_value = (True, "feat: add new feature", None)
         mock_commit.return_value = {
             "success": True,
@@ -201,7 +201,7 @@ class TestExecuteCommitAuto:
         }
 
         args = argparse.Namespace(
-            preview=True, llm_method="claude_code_api", project_dir=None
+            preview=True, llm_method="claude_code_cli", project_dir=None
         )
 
         # Test various ways to cancel
@@ -246,7 +246,7 @@ class TestExecuteCommitAuto:
         mock_validate.return_value = (False, "Not a git repository")
 
         args = argparse.Namespace(
-            preview=False, llm_method="claude_code_api", project_dir=None
+            preview=False, llm_method="claude_code_cli", project_dir=None
         )
 
         result = execute_commit_auto(args)
@@ -268,7 +268,7 @@ class TestExecuteCommitAuto:
     ) -> None:
         """Test commit auto with no staged changes."""
         mock_validate.return_value = (True, None)
-        mock_parse_llm.return_value = ("claude", "api")
+        mock_parse_llm.return_value = "claude"
         mock_generate.return_value = (
             False,
             "",
@@ -276,7 +276,7 @@ class TestExecuteCommitAuto:
         )
 
         args = argparse.Namespace(
-            preview=False, llm_method="claude_code_api", project_dir=None
+            preview=False, llm_method="claude_code_cli", project_dir=None
         )
 
         result = execute_commit_auto(args)
@@ -305,10 +305,10 @@ class TestPreviewModeLogic:
     ) -> None:
         """Test various ways to cancel in preview mode."""
         mock_validate.return_value = (True, None)
-        mock_parse_llm.return_value = ("claude", "api")
+        mock_parse_llm.return_value = "claude"
         mock_generate.return_value = (True, "feat: test", None)
         args = argparse.Namespace(
-            preview=True, llm_method="claude_code_api", project_dir=None
+            preview=True, llm_method="claude_code_cli", project_dir=None
         )
 
         cancel_inputs = ["n", "N", "no", "No", "NO", "nope", "never", "nah"]
@@ -335,7 +335,7 @@ class TestPreviewModeLogic:
     ) -> None:
         """Test various ways to proceed in preview mode."""
         mock_validate.return_value = (True, None)
-        mock_parse_llm.return_value = ("claude", "api")
+        mock_parse_llm.return_value = "claude"
         mock_generate.return_value = (True, "feat: test", None)
         mock_commit.return_value = {
             "success": True,
@@ -343,7 +343,7 @@ class TestPreviewModeLogic:
             "error": None,
         }
         args = argparse.Namespace(
-            preview=True, llm_method="claude_code_api", project_dir=None
+            preview=True, llm_method="claude_code_cli", project_dir=None
         )
 
         proceed_inputs = [
@@ -727,7 +727,7 @@ class TestCommitAutoExecutionDir:
         """Test default execution_dir should use current working directory."""
         # Setup mocks
         mock_validate.return_value = (True, None)
-        mock_parse_llm.return_value = ("claude", "api")
+        mock_parse_llm.return_value = "claude"
         mock_generate.return_value = (True, "feat: add new feature", None)
         mock_commit.return_value = {
             "success": True,
@@ -737,7 +737,7 @@ class TestCommitAutoExecutionDir:
 
         args = argparse.Namespace(
             preview=False,
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
             project_dir=None,
             execution_dir=None,  # No explicit execution_dir
         )
@@ -765,7 +765,7 @@ class TestCommitAutoExecutionDir:
         """Test explicit execution_dir should be validated and used."""
         # Setup mocks
         mock_validate.return_value = (True, None)
-        mock_parse_llm.return_value = ("claude", "api")
+        mock_parse_llm.return_value = "claude"
         mock_generate.return_value = (True, "feat: add new feature", None)
         mock_commit.return_value = {
             "success": True,
@@ -779,7 +779,7 @@ class TestCommitAutoExecutionDir:
 
         args = argparse.Namespace(
             preview=False,
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
             project_dir=None,
             execution_dir=str(execution_dir),
         )
@@ -802,7 +802,7 @@ class TestCommitAutoExecutionDir:
 
         args = argparse.Namespace(
             preview=False,
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
             project_dir=None,
             execution_dir="/nonexistent/invalid/path",
         )
@@ -832,7 +832,7 @@ class TestCommitAutoExecutionDir:
         """Test execution_dir works with preview mode (no conflicts)."""
         # Setup mocks
         mock_validate.return_value = (True, None)
-        mock_parse_llm.return_value = ("claude", "api")
+        mock_parse_llm.return_value = "claude"
         mock_generate.return_value = (True, "feat: add new feature", None)
         mock_commit.return_value = {
             "success": True,
@@ -847,7 +847,7 @@ class TestCommitAutoExecutionDir:
 
         args = argparse.Namespace(
             preview=True,
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
             project_dir=None,
             execution_dir=str(execution_dir),
         )

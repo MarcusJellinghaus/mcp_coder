@@ -9,17 +9,17 @@
 
 ## Step 2: Remove `claude_code_api` support and the `method` parameter
 
-- [ ] 2a. Simplify `parse_llm_method()` in `src/mcp_coder/llm/session/resolver.py` — return `str` not tuple, remove `claude_code_api`
-- [ ] 2b. Update `parse_llm_method_from_args()` in `src/mcp_coder/cli/utils.py` — return just `provider: str`
-- [ ] 2c. Remove `method` param from `ask_llm()` and `prompt_llm()` in `src/mcp_coder/llm/interface.py`, remove `claude_code_api` import and branching
-- [ ] 2d. Update CLI commands to pass just `provider` (commit, create_plan, implement, create_pr, prompt, check_branch_status)
-- [ ] 2e. Remove `method` from workflow function signatures (create_plan, implement/core, create_pr/core, commit_operations, task_processing)
-- [ ] 2e-ii. Remove `method` field from `LLMResponseDict` in `src/mcp_coder/llm/types.py` and all response construction sites
-- [ ] 2f. Remove `method` param from logging utils in `src/mcp_coder/llm/providers/claude/logging_utils.py` and update all callers
-- [ ] 2g. Update `claude_code_api.py` — remove import from `interface.py`, update logging calls
-- [ ] 2h. Update `docs/cli-reference.md` — remove `claude_code_api` references
-- [ ] Run pylint, pytest, mypy — fix all issues
-- [ ] Prepare git commit message for Step 2
+- [x] 2a. Simplify `parse_llm_method()` in `src/mcp_coder/llm/session/resolver.py` — return `str` not tuple, remove `claude_code_api`
+- [x] 2b. Update `parse_llm_method_from_args()` in `src/mcp_coder/cli/utils.py` — return just `provider: str`
+- [x] 2c. Remove `method` param from `ask_llm()` and `prompt_llm()` in `src/mcp_coder/llm/interface.py`, remove `claude_code_api` import and branching
+- [x] 2d. Update CLI commands to pass just `provider` (commit, create_plan, implement, create_pr, prompt, check_branch_status)
+- [x] 2e. Remove `method` from workflow function signatures (create_plan, implement/core, create_pr/core, commit_operations, task_processing)
+- [x] 2e-ii. Remove `method` field from `LLMResponseDict` in `src/mcp_coder/llm/types.py` and all response construction sites
+- [x] 2f. Remove `method` param from logging utils in `src/mcp_coder/llm/providers/claude/logging_utils.py` and update all callers
+- [x] 2g. Update `claude_code_api.py` — remove import from `interface.py`, update logging calls
+- [x] 2h. Update `docs/cli-reference.md` — remove `claude_code_api` references
+- [x] Run pylint, pytest, mypy — fix all issues
+- [x] Prepare git commit message for Step 2
 
 ## Step 3: Update and add tests
 

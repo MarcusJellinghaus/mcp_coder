@@ -25,7 +25,6 @@ def _make_llm_response(text: str = "LLM response text") -> Dict[str, Any]:
         "session_id": "test-session",
         "version": "1.0",
         "timestamp": "2025-01-01T00:00:00",
-        "method": "cli",
         "provider": "claude",
         "raw_response": {},
     }
@@ -104,7 +103,7 @@ class TestPrepareTaskTracker:
 
     def test_prepare_task_tracker_no_steps_dir(self, tmp_path: Path) -> None:
         """Test prepare_task_tracker when steps directory doesn't exist."""
-        result = prepare_task_tracker(tmp_path, "claude", "cli")
+        result = prepare_task_tracker(tmp_path, "claude")
         assert result is False
 
     @patch("mcp_coder.workflows.implement.core.has_implementation_tasks")
@@ -118,7 +117,7 @@ class TestPrepareTaskTracker:
 
         mock_has_tasks.return_value = True
 
-        result = prepare_task_tracker(tmp_path, "claude", "cli")
+        result = prepare_task_tracker(tmp_path, "claude")
 
         assert result is True
         mock_has_tasks.assert_called_once_with(tmp_path)
@@ -166,7 +165,7 @@ class TestPrepareTaskTracker:
         }
         mock_commit.return_value = {"success": True, "commit_hash": "abc123"}
 
-        result = prepare_task_tracker(tmp_path, "claude", "cli")
+        result = prepare_task_tracker(tmp_path, "claude")
 
         assert result is True
         assert mock_has_tasks.call_count == 2
@@ -212,7 +211,7 @@ class TestPrepareTaskTracker:
         mock_get_prompt.return_value = "Task tracker update prompt"
         mock_prompt_llm.return_value = _make_llm_response("")  # Empty text response
 
-        result = prepare_task_tracker(tmp_path, "claude", "cli")
+        result = prepare_task_tracker(tmp_path, "claude")
 
         assert result is False
 
@@ -250,7 +249,7 @@ class TestPrepareTaskTracker:
             "untracked": [],
         }
 
-        result = prepare_task_tracker(tmp_path, "claude", "cli")
+        result = prepare_task_tracker(tmp_path, "claude")
 
         assert result is False
 
@@ -290,7 +289,7 @@ class TestPrepareTaskTracker:
             "untracked": [],
         }
 
-        result = prepare_task_tracker(tmp_path, "claude", "cli")
+        result = prepare_task_tracker(tmp_path, "claude")
 
         assert result is False
 
@@ -331,7 +330,7 @@ class TestPrepareTaskTracker:
         }
         mock_commit.return_value = {"success": False, "error": "Commit failed"}
 
-        result = prepare_task_tracker(tmp_path, "claude", "cli")
+        result = prepare_task_tracker(tmp_path, "claude")
 
         assert result is False
 
@@ -346,7 +345,7 @@ class TestPrepareTaskTracker:
 
         mock_get_prompt.side_effect = Exception("Prompt loading error")
 
-        result = prepare_task_tracker(tmp_path, "claude", "cli")
+        result = prepare_task_tracker(tmp_path, "claude")
 
         assert result is False
 
@@ -395,7 +394,7 @@ class TestPrepareTaskTracker:
         }
         mock_commit.return_value = {"success": True, "commit_hash": "abc123"}
 
-        result = prepare_task_tracker(tmp_path, "claude", "cli")
+        result = prepare_task_tracker(tmp_path, "claude")
 
         # Should succeed - uv.lock should be filtered out
         assert result is True
@@ -442,7 +441,7 @@ class TestPrepareTaskTracker:
         mock_commit.return_value = {"success": True, "commit_hash": "abc123"}
 
         # Should still succeed even though store_session raises
-        result = prepare_task_tracker(tmp_path, "claude", "cli")
+        result = prepare_task_tracker(tmp_path, "claude")
 
         assert result is True
         mock_commit.assert_called_once()
@@ -541,7 +540,7 @@ class TestRebaseIntegration:
         mock_rebase.return_value = True  # Rebase succeeds
         mock_push.return_value = True  # Push succeeds
 
-        run_implement_workflow(Path("/test"), "claude", "cli")
+        run_implement_workflow(Path("/test"), "claude")
 
         mock_get_target.assert_called_once()
         mock_rebase.assert_called_once_with(Path("/test"), "main")
@@ -572,7 +571,7 @@ class TestRebaseIntegration:
         mock_rebase.return_value = True  # Rebase succeeds
         mock_push.return_value = True  # Push succeeds
 
-        run_implement_workflow(Path("/test"), "claude", "cli")
+        run_implement_workflow(Path("/test"), "claude")
 
         # Verify push was called with force_with_lease=True
         mock_push.assert_called_once_with(Path("/test"), force_with_lease=True)
@@ -631,7 +630,7 @@ class TestRebaseIntegration:
         mock_prereq.return_value = False  # Stop here
         mock_get_target.return_value = None  # No target detected
 
-        run_implement_workflow(Path("/test"), "claude", "cli")
+        run_implement_workflow(Path("/test"), "claude")
 
         mock_rebase.assert_not_called()
 
@@ -718,7 +717,7 @@ class TestPrepareTaskTrackerExecutionDir:
         exec_dir.mkdir()
 
         # Call with execution_dir
-        result = prepare_task_tracker(tmp_path, "claude", "cli", execution_dir=exec_dir)
+        result = prepare_task_tracker(tmp_path, "claude", execution_dir=exec_dir)
 
         assert result is True
         # Verify execution_dir was passed to prompt_llm
@@ -766,7 +765,7 @@ class TestPrepareTaskTrackerExecutionDir:
         mock_commit.return_value = {"success": True, "commit_hash": "abc123"}
 
         # Call with execution_dir=None (default)
-        result = prepare_task_tracker(tmp_path, "claude", "cli", execution_dir=None)
+        result = prepare_task_tracker(tmp_path, "claude", execution_dir=None)
 
         assert result is True
         # Verify execution_dir was passed as None
@@ -784,7 +783,7 @@ class TestRunFinalisation:
         """Test run_finalisation skips LLM call when no incomplete tasks."""
         mock_has_incomplete.return_value = False
 
-        result = run_finalisation(tmp_path, "claude", "cli")
+        result = run_finalisation(tmp_path, "claude")
 
         assert result is True
         mock_has_incomplete.assert_called_once_with(str(tmp_path / "pr_info"))
@@ -814,7 +813,7 @@ class TestRunFinalisation:
             "untracked": [],
         }
 
-        result = run_finalisation(tmp_path, "claude", "cli")
+        result = run_finalisation(tmp_path, "claude")
 
         assert result is True
         mock_prompt_llm.assert_called_once()
@@ -864,7 +863,7 @@ class TestRunFinalisation:
         commit_msg_file = pr_info_dir / ".commit_message.txt"
         commit_msg_file.write_text("Test commit message")
 
-        result = run_finalisation(tmp_path, "claude", "cli")
+        result = run_finalisation(tmp_path, "claude")
 
         assert result is True
         mock_commit.assert_called_once_with("Test commit message", tmp_path)
@@ -912,7 +911,7 @@ class TestRunFinalisation:
 
         # Don't create commit message file - should fall back to LLM
 
-        result = run_finalisation(tmp_path, "claude", "cli")
+        result = run_finalisation(tmp_path, "claude")
 
         assert result is True
         mock_generate_commit_msg.assert_called_once()
@@ -955,7 +954,7 @@ class TestRunFinalisation:
 
         # Don't create commit message file - LLM also fails - should use default
 
-        result = run_finalisation(tmp_path, "claude", "cli")
+        result = run_finalisation(tmp_path, "claude")
 
         assert result is True
         mock_generate_commit_msg.assert_called_once()
@@ -988,7 +987,7 @@ class TestRunFinalisation:
             "untracked": [],
         }
 
-        result = run_finalisation(tmp_path, "claude", "cli")
+        result = run_finalisation(tmp_path, "claude")
 
         assert result is True
         # No commit or push should be called
@@ -1002,7 +1001,7 @@ class TestRunFinalisation:
             "TASK_TRACKER.md not found"
         )
 
-        result = run_finalisation(tmp_path, "claude", "cli")
+        result = run_finalisation(tmp_path, "claude")
 
         assert result is False
 
@@ -1023,7 +1022,7 @@ class TestRunFinalisation:
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
         mock_prompt_llm.return_value = _make_llm_response("")  # Empty text
 
-        result = run_finalisation(tmp_path, "claude", "cli")
+        result = run_finalisation(tmp_path, "claude")
 
         assert result is False
 
@@ -1054,7 +1053,7 @@ class TestRunFinalisation:
         }
         mock_commit.return_value = {"success": False, "error": "Commit failed"}
 
-        result = run_finalisation(tmp_path, "claude", "cli")
+        result = run_finalisation(tmp_path, "claude")
 
         assert result is False
 
@@ -1088,7 +1087,7 @@ class TestRunFinalisation:
         mock_commit.return_value = {"success": True, "commit_hash": "abc123"}
         mock_push.return_value = False
 
-        result = run_finalisation(tmp_path, "claude", "cli")
+        result = run_finalisation(tmp_path, "claude")
 
         assert result is False
 
@@ -1118,7 +1117,7 @@ class TestRunFinalisation:
         }
 
         # Should still succeed even though store_session raises
-        result = run_finalisation(tmp_path, "claude", "cli")
+        result = run_finalisation(tmp_path, "claude")
 
         assert result is True
 
@@ -1150,7 +1149,7 @@ class TestRunImplementWorkflow:
         # First call: success, second call: no tasks (completion)
         mock_process_task.side_effect = [(True, "completed"), (False, "no_tasks")]
 
-        result = run_implement_workflow(Path("/test/project"), "claude", "cli")
+        result = run_implement_workflow(Path("/test/project"), "claude")
 
         assert result == 0
         mock_check_git.assert_called_once()
@@ -1158,12 +1157,12 @@ class TestRunImplementWorkflow:
         mock_check_prereq.assert_called_once()
         # Verify prepare_task_tracker was called with None for execution_dir
         mock_prepare_tracker.assert_called_once_with(
-            Path("/test/project"), "claude", "cli", None, None
+            Path("/test/project"), "claude", None, None
         )
         assert mock_process_task.call_count == 2
         # Verify process_task was called with None for execution_dir
         first_call_args = mock_process_task.call_args_list[0][0]
-        assert first_call_args == (Path("/test/project"), "claude", "cli", None, None)
+        assert first_call_args == (Path("/test/project"), "claude", None, None)
         assert mock_log_progress.call_count >= 2  # Initial + final progress
 
     @patch("mcp_coder.workflows.implement.core.check_git_clean")
@@ -1173,7 +1172,7 @@ class TestRunImplementWorkflow:
         """Test run_implement_workflow when git is not clean."""
         mock_check_git.return_value = False
 
-        result = run_implement_workflow(Path("/test/project"), "claude", "cli")
+        result = run_implement_workflow(Path("/test/project"), "claude")
 
         assert result == 1
         mock_check_git.assert_called_once()
@@ -1187,7 +1186,7 @@ class TestRunImplementWorkflow:
         mock_check_git.return_value = True
         mock_check_branch.return_value = False
 
-        result = run_implement_workflow(Path("/test/project"), "claude", "cli")
+        result = run_implement_workflow(Path("/test/project"), "claude")
 
         assert result == 1
         mock_check_git.assert_called_once()
@@ -1207,7 +1206,7 @@ class TestRunImplementWorkflow:
         mock_check_branch.return_value = True
         mock_check_prereq.return_value = False
 
-        result = run_implement_workflow(Path("/test/project"), "claude", "cli")
+        result = run_implement_workflow(Path("/test/project"), "claude")
 
         assert result == 1
         mock_check_git.assert_called_once()
@@ -1231,7 +1230,7 @@ class TestRunImplementWorkflow:
         mock_check_prereq.return_value = True
         mock_prepare_tracker.return_value = False
 
-        result = run_implement_workflow(Path("/test/project"), "claude", "cli")
+        result = run_implement_workflow(Path("/test/project"), "claude")
 
         assert result == 1
         mock_prepare_tracker.assert_called_once()
@@ -1258,7 +1257,7 @@ class TestRunImplementWorkflow:
         mock_prepare_tracker.return_value = True
         mock_process_task.return_value = (False, "error")
 
-        result = run_implement_workflow(Path("/test/project"), "claude", "cli")
+        result = run_implement_workflow(Path("/test/project"), "claude")
 
         assert result == 1
         mock_process_task.assert_called_once()
@@ -1285,7 +1284,7 @@ class TestRunImplementWorkflow:
         mock_prepare_tracker.return_value = True
         mock_process_task.return_value = (False, "no_tasks")
 
-        result = run_implement_workflow(Path("/test/project"), "claude", "cli")
+        result = run_implement_workflow(Path("/test/project"), "claude")
 
         assert result == 0  # Should succeed with no tasks
         mock_process_task.assert_called_once()
@@ -1365,7 +1364,7 @@ class TestIntegration:
         # Setup task processing - complete one task then finish
         mock_process_task.side_effect = [(True, "completed"), (False, "no_tasks")]
 
-        result = run_implement_workflow(tmp_path, "claude", "cli")
+        result = run_implement_workflow(tmp_path, "claude")
 
         # Verify successful completion
         assert result == 0
@@ -1404,7 +1403,7 @@ class TestIntegration:
         git_dir = tmp_path / ".git"
         git_dir.mkdir()
 
-        result = prepare_task_tracker(tmp_path, "claude", "cli")
+        result = prepare_task_tracker(tmp_path, "claude")
         assert result is False
 
         # Test progress logging without data

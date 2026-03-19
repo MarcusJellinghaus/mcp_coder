@@ -60,22 +60,22 @@ def resolve_llm_method(llm_method: str | None) -> str:
     return "claude_code_cli"
 
 
-def parse_llm_method_from_args(llm_method: str) -> tuple[str, str]:
-    """Parse CLI llm_method into provider, method for internal APIs.
+def parse_llm_method_from_args(llm_method: str) -> str:
+    """Parse CLI llm_method into provider name for internal APIs.
 
     Args:
-        llm_method: CLI parameter ('claude_code_cli', 'claude_code_api', or 'langchain')
+        llm_method: CLI parameter ('claude_code_cli' or 'langchain')
 
     Returns:
-        Tuple of (provider, method) for internal API usage
+        Provider name (e.g., "claude" or "langchain")
 
     Raises:
         ValueError: If llm_method is not supported
 
     Example:
-        >>> provider, method = parse_llm_method_from_args("claude_code_api")
-        >>> print(provider, method)
-        claude api
+        >>> provider = parse_llm_method_from_args("claude_code_cli")
+        >>> print(provider)
+        claude
     """
     return parse_llm_method(llm_method)
 

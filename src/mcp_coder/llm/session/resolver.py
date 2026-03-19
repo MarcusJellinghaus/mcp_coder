@@ -1,7 +1,7 @@
 """Session management and LLM method resolution utilities.
 
 This module provides utilities for resolving session parameters and
-parsing LLM method strings into provider/method tuples.
+parsing LLM method strings into provider names.
 """
 
 __all__ = [
@@ -9,37 +9,33 @@ __all__ = [
 ]
 
 
-def parse_llm_method(llm_method: str) -> tuple[str, str]:
-    """Parse llm_method parameter into provider and method.
+def parse_llm_method(llm_method: str) -> str:
+    """Parse llm_method parameter into a provider name.
 
     Args:
-        llm_method: One of 'claude_code_cli', 'claude_code_api', or 'langchain'
+        llm_method: One of 'claude_code_cli' or 'langchain'
 
     Returns:
-        Tuple of (provider, method)
-        - provider: "claude" or "langchain"
-        - method: "cli" or "api"
+        Provider name: "claude" or "langchain"
 
     Raises:
         ValueError: If llm_method is not supported
 
     Example:
-        >>> provider, method = parse_llm_method("claude_code_api")
-        >>> print(provider, method)
-        claude api
+        >>> provider = parse_llm_method("claude_code_cli")
+        >>> print(provider)
+        claude
 
-        >>> provider, method = parse_llm_method("claude_code_cli")
-        >>> print(provider, method)
-        claude cli
+        >>> provider = parse_llm_method("langchain")
+        >>> print(provider)
+        langchain
     """
     if llm_method == "claude_code_cli":
-        return "claude", "cli"
-    elif llm_method == "claude_code_api":
-        return "claude", "api"
+        return "claude"
     elif llm_method == "langchain":
-        return "langchain", "api"
+        return "langchain"
     else:
         raise ValueError(
             f"Unsupported llm_method: {llm_method}. "
-            f"Supported: 'claude_code_cli', 'claude_code_api', 'langchain'"
+            f"Supported: 'claude_code_cli', 'langchain'"
         )

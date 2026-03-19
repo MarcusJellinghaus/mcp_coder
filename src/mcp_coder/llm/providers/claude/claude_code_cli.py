@@ -452,14 +452,13 @@ def create_response_dict(
     Example:
         >>> result = create_response_dict("Hello", "abc", {"result": "Hello"})
         >>> assert result["text"] == "Hello"
-        >>> assert result["method"] == "cli"
+        >>> assert result["provider"] == "claude"
     """
     return {
         "version": LLM_RESPONSE_VERSION,
         "timestamp": datetime.now().isoformat(),
         "text": text,
         "session_id": session_id,
-        "method": "cli",
         "provider": "claude",
         "raw_response": raw_response,
     }
@@ -502,7 +501,6 @@ def create_response_dict_from_stream(
         "timestamp": datetime.now().isoformat(),
         "text": parsed["text"],
         "session_id": parsed["session_id"],
-        "method": "cli",
         "provider": "claude",
         "raw_response": raw_response,
     }
@@ -609,7 +607,6 @@ def ask_claude_code_cli(
 
     # Log request
     log_llm_request(
-        method="cli",
         provider="claude",
         session_id=session_id,
         prompt=question,
@@ -661,7 +658,7 @@ def ask_claude_code_cli(
             logger.error(f"CLI timed out after {timeout}s")
             duration_ms = int((time.time() - start_time) * 1000)
             timeout_error: Exception = TimeoutExpired(command, timeout)
-            log_llm_error(method="cli", error=timeout_error, duration_ms=duration_ms)
+            log_llm_error(error=timeout_error, duration_ms=duration_ms)
             raise timeout_error
 
         if result.return_code != 0:
@@ -683,9 +680,7 @@ def ask_claude_code_cli(
                 output=result.stdout,
                 stderr=f"{result.stderr}\nStream file: {stream_file_path}",
             )
-            log_llm_error(
-                method="cli", error=called_process_error, duration_ms=duration_ms
-            )
+            log_llm_error(error=called_process_error, duration_ms=duration_ms)
             raise called_process_error
 
         logger.debug(
@@ -703,7 +698,6 @@ def ask_claude_code_cli(
             usage = parsed["result_message"].get("usage")
 
         log_llm_response(
-            method="cli",
             duration_ms=duration_ms,
             session_id=parsed["session_id"],
             cost_usd=cost_usd,
@@ -719,7 +713,7 @@ def ask_claude_code_cli(
     except Exception as e:
         # Log any other unexpected errors (e.g., ValueError from JSON parsing)
         duration_ms = int((time.time() - start_time) * 1000)
-        log_llm_error(method="cli", error=e, duration_ms=duration_ms)
+        log_llm_error(error=e, duration_ms=duration_ms)
 
         # Try to save whatever output we have
         if parsed is None:

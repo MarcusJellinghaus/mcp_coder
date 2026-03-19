@@ -52,7 +52,6 @@ class TestIOWrappers:
                 "timestamp",
                 "text",
                 "session_id",
-                "method",
                 "provider",
                 "raw_response",
             ]:
@@ -129,7 +128,6 @@ class TestCliLogging:
             # Verify log_llm_request was called with correct parameters
             mock_log_request.assert_called_once()
             call_kwargs = mock_log_request.call_args[1]
-            assert call_kwargs["method"] == "cli"
             assert call_kwargs["provider"] == "claude"
             assert call_kwargs["session_id"] == "abc-123"
             assert call_kwargs["prompt"] == "Test question"
@@ -165,7 +163,6 @@ class TestCliLogging:
             # Verify log_llm_response was called with duration and cost
             mock_log_response.assert_called_once()
             call_kwargs = mock_log_response.call_args[1]
-            assert call_kwargs["method"] == "cli"
             assert "duration_ms" in call_kwargs
             assert isinstance(call_kwargs["duration_ms"], int)
             assert call_kwargs["duration_ms"] >= 0
@@ -202,7 +199,6 @@ class TestCliLogging:
             # Verify log_llm_error was called with error and duration
             mock_log_error.assert_called_once()
             call_kwargs = mock_log_error.call_args[1]
-            assert call_kwargs["method"] == "cli"
             assert isinstance(call_kwargs["error"], TimeoutExpired)
             assert "duration_ms" in call_kwargs
             assert isinstance(call_kwargs["duration_ms"], int)
@@ -236,6 +232,5 @@ class TestCliLogging:
             # Verify log_llm_error was called with CalledProcessError
             mock_log_error.assert_called_once()
             call_kwargs = mock_log_error.call_args[1]
-            assert call_kwargs["method"] == "cli"
             assert isinstance(call_kwargs["error"], CalledProcessError)
             assert "duration_ms" in call_kwargs

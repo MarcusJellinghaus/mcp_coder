@@ -95,7 +95,6 @@ class CIFixConfig:
 
     project_dir: Path
     provider: str
-    method: str
     env_vars: dict[str, str]
     cwd: str
     mcp_config: Optional[str]
@@ -156,7 +155,6 @@ def _run_ci_analysis(
         llm_response = prompt_llm(
             analysis_prompt,
             provider=config.provider,
-            method=config.method,
             timeout=LLM_CI_ANALYSIS_TIMEOUT_SECONDS,
             env_vars=config.env_vars,
             execution_dir=config.cwd,
@@ -228,7 +226,6 @@ def _run_ci_fix(
         llm_response = prompt_llm(
             fix_prompt,
             provider=config.provider,
-            method=config.method,
             timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
             env_vars=config.env_vars,
             execution_dir=config.cwd,
@@ -260,7 +257,7 @@ def _run_ci_fix(
     run_formatters(config.project_dir)
 
     # Commit changes
-    if not commit_changes(config.project_dir, config.provider, config.method):
+    if not commit_changes(config.project_dir, config.provider):
         logger.warning("Failed to commit CI fix changes")
         return False
 
@@ -466,7 +463,6 @@ def check_and_fix_ci(
     project_dir: Path,
     branch: str,
     provider: str,
-    method: str,
     mcp_config: Optional[str] = None,
     execution_dir: Optional[Path] = None,
 ) -> bool:
@@ -476,7 +472,6 @@ def check_and_fix_ci(
         project_dir: Path to the project directory
         branch: Branch name to check CI for
         provider: LLM provider (e.g., 'claude')
-        method: LLM method (e.g., 'api')
         mcp_config: Optional path to MCP configuration file
         execution_dir: Optional working directory for Claude subprocess
 
@@ -521,7 +516,6 @@ def check_and_fix_ci(
     config = CIFixConfig(
         project_dir=project_dir,
         provider=provider,
-        method=method,
         env_vars=env_vars,
         cwd=cwd,
         mcp_config=mcp_config,
@@ -618,7 +612,6 @@ def _attempt_rebase_and_push(project_dir: Path) -> bool:
 def prepare_task_tracker(
     project_dir: Path,
     provider: str,
-    method: str,
     mcp_config: Optional[str] = None,
     execution_dir: Optional[Path] = None,
 ) -> bool:
@@ -627,7 +620,6 @@ def prepare_task_tracker(
     Args:
         project_dir: Path to the project directory
         provider: LLM provider (e.g., 'claude')
-        method: LLM method (e.g., 'cli' or 'api')
         mcp_config: Optional path to MCP configuration file
         execution_dir: Optional working directory for Claude subprocess.
             Default: None (uses caller's working directory)
@@ -670,7 +662,6 @@ def prepare_task_tracker(
         llm_response = prompt_llm(
             prompt_template,
             provider=provider,
-            method=method,
             timeout=LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS,
             env_vars=env_vars,
             execution_dir=str(execution_dir) if execution_dir else None,
@@ -815,7 +806,6 @@ def log_progress_summary(project_dir: Path) -> None:
 def run_finalisation(
     project_dir: Path,
     provider: str,
-    method: str,
     mcp_config: Optional[str] = None,
     execution_dir: Optional[Path] = None,
 ) -> bool:
@@ -824,7 +814,6 @@ def run_finalisation(
     Args:
         project_dir: Path to the project directory
         provider: LLM provider (e.g., 'claude')
-        method: LLM method (e.g., 'cli' or 'api')
         mcp_config: Optional path to MCP configuration file
         execution_dir: Optional working directory for Claude subprocess
 
@@ -852,7 +841,6 @@ def run_finalisation(
     llm_response = prompt_llm(
         FINALISATION_PROMPT,
         provider=provider,
-        method=method,
         timeout=LLM_FINALISATION_TIMEOUT_SECONDS,
         env_vars=env_vars,
         execution_dir=str(execution_dir) if execution_dir else None,
@@ -904,7 +892,6 @@ def run_finalisation(
         success, llm_message, error = generate_commit_message_with_llm(
             project_dir,
             provider=provider,
-            method=method,
             execution_dir=str(execution_dir) if execution_dir else None,
         )
         if success and llm_message:
@@ -937,7 +924,6 @@ def run_finalisation(
 def run_implement_workflow(
     project_dir: Path,
     provider: str,
-    method: str,
     mcp_config: Optional[str] = None,
     execution_dir: Optional[Path] = None,
     update_labels: bool = False,
@@ -947,7 +933,6 @@ def run_implement_workflow(
     Args:
         project_dir: Path to the project directory
         provider: LLM provider (e.g., 'claude')
-        method: LLM method (e.g., 'cli' or 'api')
         mcp_config: Optional path to MCP configuration file
         execution_dir: Optional working directory for Claude subprocess
         update_labels: If True, update GitHub issue labels on success
@@ -975,9 +960,7 @@ def run_implement_workflow(
     _attempt_rebase_and_push(project_dir)
 
     # Step 2: Prepare task tracker if needed
-    if not prepare_task_tracker(
-        project_dir, provider, method, mcp_config, execution_dir
-    ):
+    if not prepare_task_tracker(project_dir, provider, mcp_config, execution_dir):
         return 1
 
     # Step 3: Show initial progress summary
@@ -989,7 +972,7 @@ def run_implement_workflow(
 
     while True:
         success, reason = process_single_task(
-            project_dir, provider, method, mcp_config, execution_dir
+            project_dir, provider, mcp_config, execution_dir
         )
 
         if not success:
@@ -1018,7 +1001,6 @@ def run_implement_workflow(
             project_dir,
             0,
             provider,
-            method,
             env_vars,
             mcp_config,
             execution_dir=execution_dir,
@@ -1038,7 +1020,7 @@ def run_implement_workflow(
 
         if all_changes:
             logger.info("Committing final mypy fixes...")
-            if not commit_changes(project_dir, provider, method):
+            if not commit_changes(project_dir, provider):
                 logger.error("Failed to commit final mypy fixes")
                 return 1
 
@@ -1053,7 +1035,6 @@ def run_implement_workflow(
         finalisation_success = run_finalisation(
             project_dir,
             provider,
-            method,
             mcp_config,
             execution_dir,
         )
@@ -1069,7 +1050,6 @@ def run_implement_workflow(
                 project_dir=project_dir,
                 branch=current_branch,
                 provider=provider,
-                method=method,
                 mcp_config=mcp_config,
                 execution_dir=execution_dir,
             )

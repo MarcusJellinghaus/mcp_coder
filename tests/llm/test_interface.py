@@ -21,12 +21,11 @@ class TestAskLLM:
             "session_id": "test-session",
             "version": "1.0",
             "timestamp": "2025-10-01T10:30:00",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
 
-        result = ask_llm("Test question", provider="claude", method="cli", timeout=30)
+        result = ask_llm("Test question", provider="claude", timeout=30)
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Test question",
@@ -49,7 +48,6 @@ class TestAskLLM:
             "session_id": "test-session",
             "version": "1.0",
             "timestamp": "2025-10-01T10:30:00",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
@@ -90,7 +88,6 @@ class TestAskLLM:
             "session_id": "test-session",
             "version": "1.0",
             "timestamp": "2025-10-01T10:30:00",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
@@ -108,31 +105,6 @@ class TestAskLLM:
         )
         assert result == "Timeout response"
 
-    @patch("mcp_coder.llm.interface.ask_claude_code_api")
-    def test_ask_llm_custom_method(self, mock_ask_claude_code_api: MagicMock) -> None:
-        """Test that ask_llm passes through custom method."""
-        mock_ask_claude_code_api.return_value = {
-            "text": "Method response",
-            "session_id": "test-session",
-            "version": "1.0",
-            "timestamp": "2025-10-01T10:30:00",
-            "method": "api",
-            "provider": "claude",
-            "raw_response": {},
-        }
-
-        result = ask_llm("Test question", method="api")
-
-        mock_ask_claude_code_api.assert_called_once_with(
-            "Test question",
-            session_id=None,
-            timeout=30,
-            env_vars=None,
-            cwd=None,
-            mcp_config=None,
-        )
-        assert result == "Method response"
-
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_ask_llm_with_session_id(self, mock_ask_claude_code_cli: MagicMock) -> None:
         """Test that session_id is passed through to ask_claude_code_cli."""
@@ -141,7 +113,6 @@ class TestAskLLM:
             "session_id": "test-session-123",
             "version": "1.0",
             "timestamp": "2025-10-01T10:30:00",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
@@ -149,7 +120,6 @@ class TestAskLLM:
         result = ask_llm(
             "Test question",
             provider="claude",
-            method="cli",
             session_id="test-session-123",
         )
 
@@ -174,7 +144,6 @@ class TestAskLLM:
             "session_id": "auto-session",
             "version": "1.0",
             "timestamp": "2025-10-01T10:30:00",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
@@ -193,33 +162,6 @@ class TestAskLLM:
         )
         assert result == "Response without session"
 
-    @patch("mcp_coder.llm.interface.ask_claude_code_api")
-    def test_ask_llm_session_id_with_api_method(
-        self, mock_ask_claude_code_api: MagicMock
-    ) -> None:
-        """Test that session_id works with API method."""
-        mock_ask_claude_code_api.return_value = {
-            "text": "API response with session",
-            "session_id": "api-session-456",
-            "version": "1.0",
-            "timestamp": "2025-10-01T10:30:00",
-            "method": "api",
-            "provider": "claude",
-            "raw_response": {},
-        }
-
-        result = ask_llm("Test question", method="api", session_id="api-session-456")
-
-        mock_ask_claude_code_api.assert_called_once_with(
-            "Test question",
-            session_id="api-session-456",
-            timeout=30,
-            env_vars=None,
-            cwd=None,
-            mcp_config=None,
-        )
-        assert result == "API response with session"
-
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_ask_llm_returns_string_only(
         self, mock_ask_claude_code_cli: MagicMock
@@ -230,7 +172,6 @@ class TestAskLLM:
             "session_id": "some-session",
             "version": "1.0",
             "timestamp": "2025-10-01T10:30:00",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
@@ -249,7 +190,6 @@ class TestAskLLM:
             "session_id": "test-session",
             "version": "1.0",
             "timestamp": "2025-10-01T10:30:00",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
@@ -258,7 +198,6 @@ class TestAskLLM:
         result = ask_llm(
             "Test question",
             provider="claude",
-            method="cli",
             env_vars=test_env_vars,
         )
 
@@ -281,7 +220,7 @@ class TestAskLLM:
         mock_ask_claude_code_cli.side_effect = TimeoutExpired(cmd="claude", timeout=30)
 
         with pytest.raises(TimeoutExpired):
-            ask_llm("Test question", provider="claude", method="cli", timeout=30)
+            ask_llm("Test question", provider="claude", timeout=30)
 
 
 class TestAskLLMExecutionDir:
@@ -297,7 +236,6 @@ class TestAskLLMExecutionDir:
             "session_id": "test-session",
             "version": "1.0",
             "timestamp": "2025-10-01T10:30:00",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
@@ -328,7 +266,6 @@ class TestAskLLMExecutionDir:
             "session_id": "test-session",
             "version": "1.0",
             "timestamp": "2025-10-01T10:30:00",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
@@ -356,7 +293,6 @@ class TestAskLLMExecutionDir:
             "session_id": "test-session",
             "version": "1.0",
             "timestamp": "2025-10-01T10:30:00",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
@@ -389,14 +325,11 @@ class TestIntegration:
             "session_id": "chain-session",
             "version": "1.0",
             "timestamp": "2025-10-01T10:30:00",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
 
-        result = ask_llm(
-            "Integration test question", provider="claude", method="cli", timeout=25
-        )
+        result = ask_llm("Integration test question", provider="claude", timeout=25)
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Integration test question",
@@ -415,10 +348,6 @@ class TestIntegration:
         with pytest.raises(ValueError, match="Unsupported provider"):
             ask_llm("Test", provider="invalid")
 
-        # Test invalid method (will be caught at prompt_llm level)
-        with pytest.raises(ValueError, match="Unsupported method"):
-            ask_llm("Test", provider="claude", method="invalid")
-
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_full_routing_chain_with_session_id(
         self, mock_ask_claude_code_cli: MagicMock
@@ -429,7 +358,6 @@ class TestIntegration:
             "session_id": "integration-session-789",
             "version": "1.0",
             "timestamp": "2025-10-01T10:30:00",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
@@ -437,7 +365,6 @@ class TestIntegration:
         result = ask_llm(
             "Integration test with session",
             provider="claude",
-            method="cli",
             session_id="integration-session-789",
             timeout=25,
         )
@@ -472,13 +399,12 @@ class TestPromptLLM:
             "timestamp": "2025-10-01T10:30:00",
             "text": "CLI response",
             "session_id": "cli-123",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
         mock_ask_claude_code_cli.return_value = mock_response
 
-        result = prompt_llm("Test question", method="cli")
+        result = prompt_llm("Test question")
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Test question",
@@ -493,38 +419,7 @@ class TestPromptLLM:
         assert result["version"] == "1.0"
         assert result["text"] == "CLI response"
         assert result["session_id"] == "cli-123"
-        assert result["method"] == "cli"
         assert result["provider"] == "claude"
-
-    @patch("mcp_coder.llm.interface.ask_claude_code_api")
-    def test_prompt_llm_returns_typed_dict_api(
-        self, mock_ask_claude_code_api: MagicMock
-    ) -> None:
-        """Test that prompt_llm returns LLMResponseDict with API."""
-        mock_response = {
-            "version": "1.0",
-            "timestamp": "2025-10-01T10:30:00",
-            "text": "API response",
-            "session_id": "api-456",
-            "method": "api",
-            "provider": "claude",
-            "raw_response": {},
-        }
-        mock_ask_claude_code_api.return_value = mock_response
-
-        result = prompt_llm("Test question", method="api")
-
-        mock_ask_claude_code_api.assert_called_once_with(
-            "Test question",
-            session_id=None,
-            timeout=30,
-            env_vars=None,
-            cwd=None,
-            mcp_config=None,
-        )
-        assert isinstance(result, dict)
-        assert result["method"] == "api"
-        assert result["session_id"] == "api-456"
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_prompt_llm_with_session_id_cli(
@@ -536,13 +431,12 @@ class TestPromptLLM:
             "timestamp": "2025-10-01T10:30:00",
             "text": "Continued response",
             "session_id": "existing-session",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
         mock_ask_claude_code_cli.return_value = mock_response
 
-        result = prompt_llm("Follow up", method="cli", session_id="existing-session")
+        result = prompt_llm("Follow up", session_id="existing-session")
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Follow up",
@@ -555,34 +449,6 @@ class TestPromptLLM:
         )
         assert result["session_id"] == "existing-session"
 
-    @patch("mcp_coder.llm.interface.ask_claude_code_api")
-    def test_prompt_llm_with_session_id_api(
-        self, mock_ask_claude_code_api: MagicMock
-    ) -> None:
-        """Test session continuity with API."""
-        mock_response = {
-            "version": "1.0",
-            "timestamp": "2025-10-01T10:30:00",
-            "text": "Continued API response",
-            "session_id": "api-session",
-            "method": "api",
-            "provider": "claude",
-            "raw_response": {},
-        }
-        mock_ask_claude_code_api.return_value = mock_response
-
-        result = prompt_llm("Follow up", method="api", session_id="api-session")
-
-        mock_ask_claude_code_api.assert_called_once_with(
-            "Follow up",
-            session_id="api-session",
-            timeout=30,
-            env_vars=None,
-            cwd=None,
-            mcp_config=None,
-        )
-        assert result["session_id"] == "api-session"
-
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_prompt_llm_preserves_metadata(
         self, mock_ask_claude_code_cli: MagicMock
@@ -593,7 +459,6 @@ class TestPromptLLM:
             "timestamp": "2025-10-01T10:30:00",
             "text": "Response with metadata",
             "session_id": "meta-test",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {
                 "duration_ms": 2801,
@@ -612,11 +477,6 @@ class TestPromptLLM:
         """Test error for unsupported provider."""
         with pytest.raises(ValueError, match="Unsupported provider"):
             prompt_llm("Test", provider="gpt")
-
-    def test_prompt_llm_unsupported_method(self) -> None:
-        """Test error for unsupported method."""
-        with pytest.raises(ValueError, match="Unsupported method"):
-            prompt_llm("Test", method="unknown")
 
     def test_prompt_llm_empty_question(self) -> None:
         """Test validation for empty question."""
@@ -648,7 +508,6 @@ class TestPromptLLM:
             "timestamp": "2025-10-01T10:30:00",
             "text": "Response with custom timeout",
             "session_id": "timeout-test",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
@@ -677,7 +536,6 @@ class TestPromptLLM:
             "timestamp": "2025-10-01T10:30:00",
             "text": "Response with defaults",
             "session_id": "defaults-test",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
@@ -695,7 +553,6 @@ class TestPromptLLM:
             branch_name=None,
         )
         assert result["provider"] == "claude"
-        assert result["method"] == "cli"
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_prompt_llm_with_env_vars(
@@ -708,13 +565,12 @@ class TestPromptLLM:
             "timestamp": "2025-10-01T10:30:00",
             "text": "CLI response with env vars",
             "session_id": "env-test",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
         mock_ask_claude_code_cli.return_value = mock_response
 
-        result = prompt_llm("Test question", method="cli", env_vars=test_env_vars)
+        result = prompt_llm("Test question", env_vars=test_env_vars)
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Test question",
@@ -727,35 +583,6 @@ class TestPromptLLM:
         )
         assert result["text"] == "CLI response with env vars"
 
-    @patch("mcp_coder.llm.interface.ask_claude_code_api")
-    def test_prompt_llm_with_env_vars_api(
-        self, mock_ask_claude_code_api: MagicMock
-    ) -> None:
-        """Test that prompt_llm passes env_vars to API provider."""
-        test_env_vars = {"VAR1": "value1", "VAR2": "value2"}
-        mock_response = {
-            "version": "1.0",
-            "timestamp": "2025-10-01T10:30:00",
-            "text": "API response with env vars",
-            "session_id": "api-env-test",
-            "method": "api",
-            "provider": "claude",
-            "raw_response": {},
-        }
-        mock_ask_claude_code_api.return_value = mock_response
-
-        result = prompt_llm("Test question", method="api", env_vars=test_env_vars)
-
-        mock_ask_claude_code_api.assert_called_once_with(
-            "Test question",
-            session_id=None,
-            timeout=30,
-            env_vars=test_env_vars,
-            cwd=None,
-            mcp_config=None,
-        )
-        assert result["text"] == "API response with env vars"
-
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_prompt_llm_timeout_expired_logged_and_reraised(
         self, mock_ask_claude_code_cli: MagicMock
@@ -764,23 +591,20 @@ class TestPromptLLM:
         mock_ask_claude_code_cli.side_effect = TimeoutExpired(cmd="claude", timeout=30)
 
         with pytest.raises(TimeoutExpired):
-            prompt_llm("Test question", provider="claude", method="cli", timeout=30)
+            prompt_llm("Test question", provider="claude", timeout=30)
 
 
 class TestPromptLLMExecutionDir:
     """Tests for execution_dir parameter in prompt_llm."""
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
-    def test_execution_dir_with_cli_method(
-        self, mock_ask_claude_code_cli: MagicMock
-    ) -> None:
+    def test_execution_dir_with_cli(self, mock_ask_claude_code_cli: MagicMock) -> None:
         """execution_dir should be passed to CLI provider."""
         mock_response = {
             "version": "1.0",
             "timestamp": "2025-10-01T10:30:00",
             "text": "CLI response with execution_dir",
             "session_id": "cli-exec-123",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
@@ -788,7 +612,6 @@ class TestPromptLLMExecutionDir:
 
         result = prompt_llm(
             "Test question",
-            method="cli",
             execution_dir="/custom/execution/path",
         )
 
@@ -803,38 +626,6 @@ class TestPromptLLMExecutionDir:
         )
         assert result["text"] == "CLI response with execution_dir"
 
-    @patch("mcp_coder.llm.interface.ask_claude_code_api")
-    def test_execution_dir_with_api_method(
-        self, mock_ask_claude_code_api: MagicMock
-    ) -> None:
-        """execution_dir should be passed to API provider."""
-        mock_response = {
-            "version": "1.0",
-            "timestamp": "2025-10-01T10:30:00",
-            "text": "API response with execution_dir",
-            "session_id": "api-exec-456",
-            "method": "api",
-            "provider": "claude",
-            "raw_response": {},
-        }
-        mock_ask_claude_code_api.return_value = mock_response
-
-        result = prompt_llm(
-            "Test question",
-            method="api",
-            execution_dir="/custom/execution/path",
-        )
-
-        mock_ask_claude_code_api.assert_called_once_with(
-            "Test question",
-            session_id=None,
-            timeout=30,
-            env_vars=None,
-            cwd="/custom/execution/path",
-            mcp_config=None,
-        )
-        assert result["text"] == "API response with execution_dir"
-
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_execution_dir_none_defaults_to_cwd(
         self, mock_ask_claude_code_cli: MagicMock
@@ -845,13 +636,12 @@ class TestPromptLLMExecutionDir:
             "timestamp": "2025-10-01T10:30:00",
             "text": "Response with default execution dir",
             "session_id": "default-exec-123",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
         mock_ask_claude_code_cli.return_value = mock_response
 
-        result = prompt_llm("Test question", method="cli", execution_dir=None)
+        result = prompt_llm("Test question", execution_dir=None)
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Test question",
@@ -878,7 +668,6 @@ class TestPromptLlmLangchainRouting:
             "timestamp": datetime.now().isoformat(),
             "text": text,
             "session_id": "uuid-langchain-session",
-            "method": "api",
             "provider": "langchain",
             "raw_response": {},
         }
@@ -923,20 +712,6 @@ class TestPromptLlmLangchainRouting:
         }
         assert all_args.get("session_id") == "my-sid"
         assert all_args.get("timeout") == 60
-
-    def test_method_param_is_silently_ignored(self) -> None:
-        """prompt_llm with provider='langchain' ignores the method parameter."""
-        expected = self._make_langchain_response()
-        with patch(
-            "mcp_coder.llm.providers.langchain.ask_langchain",
-            return_value=expected,
-        ) as mock_ask:
-            from mcp_coder.llm.interface import prompt_llm
-
-            # method="cli" should not cause an error
-            result = prompt_llm("Hello", provider="langchain", method="cli")
-        assert result["provider"] == "langchain"
-        mock_ask.assert_called_once()
 
     def test_unsupported_provider_error_mentions_langchain(self) -> None:
         """The ValueError for unsupported providers lists 'langchain' as supported."""

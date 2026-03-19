@@ -112,7 +112,6 @@ class TestAskLangchain:
             result = ask_langchain("Hi")
         assert result["text"] == "Hello!"
         assert result["provider"] == "langchain"
-        assert result["method"] == "api"
         assert result["session_id"] is not None
 
     def test_generates_session_id_when_none_given(self) -> None:

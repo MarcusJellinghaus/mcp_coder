@@ -186,7 +186,7 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
 
             # Parse LLM method for fixes
             llm_method = resolve_llm_method(args.llm_method)
-            provider, method = parse_llm_method_from_args(llm_method)
+            provider = parse_llm_method_from_args(llm_method)
 
             # Resolve paths for fix operations
             mcp_config = resolve_mcp_config_path(args.mcp_config)
@@ -197,7 +197,6 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
                 project_dir,
                 report,
                 provider,
-                method,
                 mcp_config,
                 execution_dir,
                 fix_attempts=args.fix,  # NEW
@@ -231,7 +230,6 @@ def _run_auto_fixes(
     project_dir: Path,
     report: BranchStatusReport,
     provider: str,
-    method: str,
     mcp_config: Optional[str],
     execution_dir: Optional[Path],
     fix_attempts: int = 1,
@@ -244,7 +242,6 @@ def _run_auto_fixes(
         project_dir: Project directory path
         report: Branch status report
         provider: LLM provider (e.g., 'claude')
-        method: LLM method (e.g., 'api')
         mcp_config: Optional MCP configuration path
         execution_dir: Optional execution directory
         fix_attempts: Number of fix attempts (1 = no retry, N ≥ 2 = retry)
@@ -281,7 +278,7 @@ def _run_auto_fixes(
         if fix_attempts == 1:
             logger.info("Single fix attempt (no retry)")
             ci_success = check_and_fix_ci(
-                project_dir, current_branch, provider, method, mcp_config, execution_dir
+                project_dir, current_branch, provider, mcp_config, execution_dir
             )
 
             if ci_success:
@@ -305,7 +302,7 @@ def _run_auto_fixes(
 
             # Attempt fix
             ci_success = check_and_fix_ci(
-                project_dir, current_branch, provider, method, mcp_config, execution_dir
+                project_dir, current_branch, provider, mcp_config, execution_dir
             )
 
             if not ci_success:

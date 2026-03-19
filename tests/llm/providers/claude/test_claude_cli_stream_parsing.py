@@ -182,7 +182,6 @@ class TestCreateResponseDictFromStream:
 
         assert result["text"] == "Hello"
         assert result["session_id"] == "abc-123"
-        assert result["method"] == "cli"
         assert result["provider"] == "claude"
         assert result["raw_response"]["stream_file"] == "/path/to/file.ndjson"
         assert result["raw_response"]["duration_ms"] == 1000

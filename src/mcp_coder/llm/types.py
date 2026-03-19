@@ -24,8 +24,7 @@ class LLMResponseDict(TypedDict):
         text: The actual text response from the LLM
         session_id: Unique session identifier for conversation continuity.
                    None if session ID is not available or not provided by LLM.
-        method: LLM communication method ("cli" or "api")
-        provider: LLM provider name (e.g., "claude")
+        provider: LLM provider name (e.g., "claude", "langchain")
         raw_response: Complete unmodified response data from CLI JSON or API
                      This preserves all metadata, usage stats, and provider-specific
                      information for future analysis and parsing
@@ -36,7 +35,6 @@ class LLMResponseDict(TypedDict):
             "timestamp": "2025-10-01T10:30:00.123456",
             "text": "Python is a programming language...",
             "session_id": "550e8400-e29b-41d4-a716-446655440000",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {
                 "duration_ms": 2801,
@@ -50,7 +48,6 @@ class LLMResponseDict(TypedDict):
     timestamp: str
     text: str
     session_id: str | None
-    method: str
     provider: str
     raw_response: dict[str, object]
 

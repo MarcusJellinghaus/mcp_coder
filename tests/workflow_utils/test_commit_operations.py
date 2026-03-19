@@ -63,7 +63,7 @@ class TestGenerateCommitMessageWithLLM:
     @patch("mcp_coder.workflow_utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.prompt_manager.get_prompt")
     @patch("mcp_coder.workflow_utils.commit_operations.ask_llm")
-    def test_generate_commit_message_with_custom_provider_method(
+    def test_generate_commit_message_with_custom_provider(
         self,
         mock_ask_llm: Mock,
         mock_get_prompt: Mock,
@@ -71,7 +71,7 @@ class TestGenerateCommitMessageWithLLM:
         mock_stage: Mock,
         mock_prepare_env: Mock,
     ) -> None:
-        """Test LLM commit message generation with custom provider and method."""
+        """Test LLM commit message generation with custom provider."""
         # Setup mocks
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test/repo"}
         mock_stage.return_value = True
@@ -82,18 +82,17 @@ class TestGenerateCommitMessageWithLLM:
         project_dir = Path("/test/repo")
 
         success, message, error = generate_commit_message_with_llm(
-            project_dir, provider="claude", method="cli"
+            project_dir, provider="claude"
         )
 
         assert success is True
         assert message == "feat: add new feature"
         assert error is None
 
-        # Verify ask_llm was called with correct provider and method
+        # Verify ask_llm was called with correct provider
         mock_ask_llm.assert_called_once()
         call_args = mock_ask_llm.call_args
         assert call_args[1]["provider"] == "claude"
-        assert call_args[1]["method"] == "cli"
 
     @patch("mcp_coder.workflow_utils.commit_operations.prepare_llm_environment")
     @patch("mcp_coder.workflow_utils.commit_operations.stage_all_changes")

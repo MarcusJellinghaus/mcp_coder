@@ -1,7 +1,7 @@
 """Tests for create_plan workflow prompt execution functionality."""
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -171,26 +171,18 @@ class TestRunPlanningPrompts:
         with patch("mcp_coder.workflows.create_plan.get_prompt") as mock_get_prompt:
             mock_get_prompt.side_effect = lambda _, header: mock_prompts[header]
 
-            with patch(
-                "mcp_coder.workflows.create_plan.parse_llm_method",
-                return_value=("claude", "cli"),
-            ):
+            with patch("mcp_coder.workflows.create_plan.prompt_llm") as mock_prompt_llm:
                 with patch(
-                    "mcp_coder.workflows.create_plan.prompt_llm"
-                ) as mock_prompt_llm:
-                    with patch(
-                        "mcp_coder.workflows.create_plan.store_session",
-                        return_value="/fake/path.json",
-                    ):
-                        mock_prompt_llm.side_effect = [
-                            mock_response_1,
-                            mock_response_2,
-                            mock_response_3,
-                        ]
+                    "mcp_coder.workflows.create_plan.store_session",
+                    return_value="/fake/path.json",
+                ):
+                    mock_prompt_llm.side_effect = [
+                        mock_response_1,
+                        mock_response_2,
+                        mock_response_3,
+                    ]
 
-                        result = run_planning_prompts(
-                            tmp_path, issue_data, "claude_code_cli"
-                        )
+                    result = run_planning_prompts(tmp_path, issue_data, "claude")
 
         assert result is True
         assert mock_prompt_llm.call_count == 3
@@ -227,16 +219,10 @@ class TestRunPlanningPrompts:
             "mcp_coder.workflows.create_plan.get_prompt", return_value="Test prompt"
         ):
             with patch(
-                "mcp_coder.workflows.create_plan.parse_llm_method",
-                return_value=("claude", "cli"),
+                "mcp_coder.workflows.create_plan.prompt_llm",
+                side_effect=Exception("LLM error"),
             ):
-                with patch(
-                    "mcp_coder.workflows.create_plan.prompt_llm",
-                    side_effect=Exception("LLM error"),
-                ):
-                    result = run_planning_prompts(
-                        tmp_path, issue_data, "claude_code_cli"
-                    )
+                result = run_planning_prompts(tmp_path, issue_data, "claude")
 
         assert result is False
 
@@ -264,26 +250,18 @@ class TestRunPlanningPrompts:
         with patch(
             "mcp_coder.workflows.create_plan.get_prompt", return_value="Test prompt"
         ):
-            with patch(
-                "mcp_coder.workflows.create_plan.parse_llm_method",
-                return_value=("claude", "cli"),
-            ):
+            with patch("mcp_coder.workflows.create_plan.prompt_llm") as mock_prompt_llm:
                 with patch(
-                    "mcp_coder.workflows.create_plan.prompt_llm"
-                ) as mock_prompt_llm:
-                    with patch(
-                        "mcp_coder.workflows.create_plan.store_session",
-                        return_value="/fake/path.json",
-                    ):
-                        mock_prompt_llm.side_effect = [
-                            mock_response_1,
-                            mock_response_2,
-                            mock_response_3,
-                        ]
+                    "mcp_coder.workflows.create_plan.store_session",
+                    return_value="/fake/path.json",
+                ):
+                    mock_prompt_llm.side_effect = [
+                        mock_response_1,
+                        mock_response_2,
+                        mock_response_3,
+                    ]
 
-                        result = run_planning_prompts(
-                            tmp_path, issue_data, "claude_code_cli"
-                        )
+                    result = run_planning_prompts(tmp_path, issue_data, "claude")
 
         assert result is True
 
@@ -315,16 +293,10 @@ class TestRunPlanningPrompts:
             "mcp_coder.workflows.create_plan.get_prompt", return_value="Test prompt"
         ):
             with patch(
-                "mcp_coder.workflows.create_plan.parse_llm_method",
-                return_value=("claude", "cli"),
+                "mcp_coder.workflows.create_plan.prompt_llm",
+                return_value=mock_response,
             ):
-                with patch(
-                    "mcp_coder.workflows.create_plan.prompt_llm",
-                    return_value=mock_response,
-                ):
-                    result = run_planning_prompts(
-                        tmp_path, issue_data, "claude_code_cli"
-                    )
+                result = run_planning_prompts(tmp_path, issue_data, "claude")
 
         assert result is False
 
@@ -350,16 +322,10 @@ class TestRunPlanningPrompts:
             "mcp_coder.workflows.create_plan.get_prompt", return_value="Test prompt"
         ):
             with patch(
-                "mcp_coder.workflows.create_plan.parse_llm_method",
-                return_value=("claude", "cli"),
+                "mcp_coder.workflows.create_plan.prompt_llm",
+                return_value=mock_response,
             ):
-                with patch(
-                    "mcp_coder.workflows.create_plan.prompt_llm",
-                    return_value=mock_response,
-                ):
-                    result = run_planning_prompts(
-                        tmp_path, issue_data, "claude_code_cli"
-                    )
+                result = run_planning_prompts(tmp_path, issue_data, "claude")
 
         assert result is False
 
@@ -383,8 +349,8 @@ class TestRunPlanningPrompts:
             "mcp_coder.workflows.create_plan.get_prompt", return_value="Test prompt"
         ):
             with patch(
-                "mcp_coder.workflows.create_plan.parse_llm_method",
-                side_effect=ValueError("Invalid method"),
+                "mcp_coder.workflows.create_plan.prompt_llm",
+                side_effect=ValueError("Unsupported provider: invalid_method"),
             ):
                 result = run_planning_prompts(tmp_path, issue_data, "invalid_method")
 
@@ -411,25 +377,17 @@ class TestRunPlanningPrompts:
         with patch(
             "mcp_coder.workflows.create_plan.get_prompt", return_value="Test prompt"
         ):
-            with patch(
-                "mcp_coder.workflows.create_plan.parse_llm_method",
-                return_value=("claude", "cli"),
-            ):
+            with patch("mcp_coder.workflows.create_plan.prompt_llm") as mock_prompt_llm:
                 with patch(
-                    "mcp_coder.workflows.create_plan.prompt_llm"
-                ) as mock_prompt_llm:
-                    with patch(
-                        "mcp_coder.workflows.create_plan.store_session",
-                        return_value="/fake/path.json",
-                    ):
-                        mock_prompt_llm.side_effect = [
-                            mock_response_1,
-                            Exception("Second prompt failed"),
-                        ]
+                    "mcp_coder.workflows.create_plan.store_session",
+                    return_value="/fake/path.json",
+                ):
+                    mock_prompt_llm.side_effect = [
+                        mock_response_1,
+                        Exception("Second prompt failed"),
+                    ]
 
-                        result = run_planning_prompts(
-                            tmp_path, issue_data, "claude_code_cli"
-                        )
+                    result = run_planning_prompts(tmp_path, issue_data, "claude")
 
         assert result is False
 
@@ -455,26 +413,18 @@ class TestRunPlanningPrompts:
         with patch(
             "mcp_coder.workflows.create_plan.get_prompt", return_value="Test prompt"
         ):
-            with patch(
-                "mcp_coder.workflows.create_plan.parse_llm_method",
-                return_value=("claude", "cli"),
-            ):
+            with patch("mcp_coder.workflows.create_plan.prompt_llm") as mock_prompt_llm:
                 with patch(
-                    "mcp_coder.workflows.create_plan.prompt_llm"
-                ) as mock_prompt_llm:
-                    with patch(
-                        "mcp_coder.workflows.create_plan.store_session",
-                        return_value="/fake/path.json",
-                    ):
-                        mock_prompt_llm.side_effect = [
-                            mock_response_1,
-                            mock_response_2,
-                            Exception("Third prompt failed"),
-                        ]
+                    "mcp_coder.workflows.create_plan.store_session",
+                    return_value="/fake/path.json",
+                ):
+                    mock_prompt_llm.side_effect = [
+                        mock_response_1,
+                        mock_response_2,
+                        Exception("Third prompt failed"),
+                    ]
 
-                        result = run_planning_prompts(
-                            tmp_path, issue_data, "claude_code_cli"
-                        )
+                    result = run_planning_prompts(tmp_path, issue_data, "claude")
 
         assert result is False
 

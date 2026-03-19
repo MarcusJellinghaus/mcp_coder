@@ -81,10 +81,10 @@ def add_prompt_parser(subparsers: Any) -> None:
     )
     prompt_parser.add_argument(
         "--llm-method",
-        choices=["claude_code_cli", "claude_code_api", "langchain"],
+        choices=["claude_code_cli", "langchain"],
         default=None,
         metavar="METHOD",
-        help="LLM method: claude_code_cli (default), claude_code_api, or langchain",
+        help="LLM method: claude_code_cli (default) or langchain",
     )
     prompt_parser.add_argument(
         "--output-format",
@@ -127,7 +127,7 @@ def add_commit_parsers(subparsers: Any) -> None:
     )
     auto_parser.add_argument(
         "--llm-method",
-        choices=["claude_code_cli", "claude_code_api", "langchain"],
+        choices=["claude_code_cli", "langchain"],
         default=None,
         help="LLM method to use (default: claude_code_cli)",
     )
@@ -179,7 +179,7 @@ def add_implement_parser(subparsers: Any) -> None:
     )
     implement_parser.add_argument(
         "--llm-method",
-        choices=["claude_code_cli", "claude_code_api", "langchain"],
+        choices=["claude_code_cli", "langchain"],
         default=None,
         help="LLM method to use (default: claude_code_cli)",
     )
@@ -220,7 +220,7 @@ def add_create_plan_parser(subparsers: Any) -> None:
     )
     create_plan_parser.add_argument(
         "--llm-method",
-        choices=["claude_code_cli", "claude_code_api", "langchain"],
+        choices=["claude_code_cli", "langchain"],
         default=None,
         help="LLM method to use (default: claude_code_cli)",
     )
@@ -258,7 +258,7 @@ def add_create_pr_parser(subparsers: Any) -> None:
     )
     create_pr_parser.add_argument(
         "--llm-method",
-        choices=["claude_code_cli", "claude_code_api", "langchain"],
+        choices=["claude_code_cli", "langchain"],
         default=None,
         help="LLM method to use (default: claude_code_cli)",
     )
@@ -526,7 +526,7 @@ def add_check_parsers(subparsers: Any) -> None:
     )
     branch_status_parser.add_argument(
         "--llm-method",
-        choices=["claude_code_cli", "claude_code_api", "langchain"],
+        choices=["claude_code_cli", "langchain"],
         default=None,
         help="LLM method to use for --fix (default: claude_code_cli)",
     )

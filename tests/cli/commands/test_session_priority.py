@@ -16,7 +16,6 @@ def _llm_response(session_id: str = "test-session") -> Dict[str, Any]:
         "session_id": session_id,
         "version": "1.0",
         "timestamp": "2024-01-01T00:00:00",
-        "method": "api",
         "provider": "claude",
         "raw_response": {},
     }
@@ -35,7 +34,7 @@ class TestSessionPriority:
             session_id="explicit-123",
             continue_session_from=None,
             continue_session=False,
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
         )
 
         execute_prompt(args)
@@ -63,7 +62,7 @@ class TestSessionPriority:
             session_id="explicit-123",
             continue_session_from="file.json",
             continue_session=False,
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
         )
 
         execute_prompt(args)
@@ -97,7 +96,7 @@ class TestSessionPriority:
             session_id="explicit-123",
             continue_session_from=None,
             continue_session=True,
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
         )
 
         execute_prompt(args)
@@ -128,7 +127,7 @@ class TestSessionPriority:
             session_id=None,
             continue_session_from="file.json",
             continue_session=False,
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
         )
 
         execute_prompt(args)
@@ -164,7 +163,7 @@ class TestSessionPriority:
             session_id=None,
             continue_session_from=None,
             continue_session=True,
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
         )
 
         execute_prompt(args)

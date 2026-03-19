@@ -76,12 +76,12 @@ class TestRunAutoFixes:
         mock_check_ci.return_value = True  # Success
 
         result = _run_auto_fixes(
-            project_dir, failed_ci_report, "claude", "api", None, exec_dir
+            project_dir, failed_ci_report, "claude", None, exec_dir
         )
 
         assert result is True
         mock_check_ci.assert_called_once_with(
-            project_dir, "feature/test-branch", "claude", "api", None, exec_dir
+            project_dir, "feature/test-branch", "claude", None, exec_dir
         )
 
     @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
@@ -102,7 +102,7 @@ class TestRunAutoFixes:
         mock_check_ci.return_value = False  # Failure
 
         result = _run_auto_fixes(
-            project_dir, failed_ci_report, "claude", "api", None, exec_dir
+            project_dir, failed_ci_report, "claude", None, exec_dir
         )
 
         assert result is False
@@ -116,9 +116,7 @@ class TestRunAutoFixes:
 
         project_dir = Path("/test/project")
 
-        result = _run_auto_fixes(
-            project_dir, sample_report, "claude", "api", None, None
-        )
+        result = _run_auto_fixes(project_dir, sample_report, "claude", None, None)
 
         assert result is True  # Success when no fixes needed
 
@@ -140,7 +138,7 @@ class TestRunAutoFixes:
         mock_check_ci.side_effect = Exception("Unexpected CI error")
 
         result = _run_auto_fixes(
-            project_dir, failed_ci_report, "claude", "api", None, exec_dir
+            project_dir, failed_ci_report, "claude", None, exec_dir
         )
 
         assert result is False
@@ -161,7 +159,6 @@ class TestFixRetryLogic:
             Path("/test"),
             failed_ci_report,
             "claude",
-            "api",
             None,
             None,
             fix_attempts=0,  # No fix
@@ -193,7 +190,6 @@ class TestFixRetryLogic:
             Path("/test"),
             failed_ci_report,
             "claude",
-            "api",
             None,
             None,
             fix_attempts=1,  # No retry
@@ -244,7 +240,6 @@ class TestFixRetryLogic:
             Path("/test"),
             failed_ci_report,
             "claude",
-            "api",
             None,
             None,
             fix_attempts=2,  # Retry enabled
@@ -293,7 +288,6 @@ class TestFixRetryLogic:
             Path("/test"),
             failed_ci_report,
             "claude",
-            "api",
             None,
             None,
             fix_attempts=3,  # 3 attempts available
@@ -347,7 +341,6 @@ class TestFixRetryLogic:
             Path("/test"),
             failed_ci_report,
             "claude",
-            "api",
             None,
             None,
             fix_attempts=3,
@@ -393,7 +386,6 @@ class TestFixRetryLogic:
             Path("/test"),
             failed_ci_report,
             "claude",
-            "api",
             None,
             None,
             fix_attempts=2,

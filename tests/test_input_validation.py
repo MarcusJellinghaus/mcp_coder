@@ -88,8 +88,3 @@ class TestInputValidation:
         """Test that invalid provider raises ValueError."""
         with pytest.raises(ValueError, match="Unsupported provider: invalid"):
             ask_llm("test question", provider="invalid")
-
-    def test_ask_llm_invalid_method_raises_error(self) -> None:
-        """Test that invalid method in ask_llm raises ValueError."""
-        with pytest.raises(ValueError, match="Unsupported method: invalid"):
-            ask_llm("test question", method="invalid")

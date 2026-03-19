@@ -31,7 +31,6 @@ class TestSessionIdOutputFormat:
             "session_id": "abc123-session-id",
             "version": "1.0",
             "timestamp": "2024-01-01T00:00:00",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
@@ -41,7 +40,7 @@ class TestSessionIdOutputFormat:
             prompt="test prompt",
             output_format="session-id",
             timeout=30,
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
             session_id=None,
             continue_session_from=None,
             continue_session=False,
@@ -71,7 +70,6 @@ class TestSessionIdOutputFormat:
             "session_id": None,  # No session_id
             "version": "1.0",
             "timestamp": "2024-01-01T00:00:00",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
@@ -81,7 +79,7 @@ class TestSessionIdOutputFormat:
             prompt="test prompt",
             output_format="session-id",
             timeout=30,
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
             session_id=None,
             continue_session_from=None,
             continue_session=False,
@@ -111,7 +109,6 @@ class TestSessionIdOutputFormat:
             "session_id": "",  # Empty session_id
             "version": "1.0",
             "timestamp": "2024-01-01T00:00:00",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
@@ -121,7 +118,7 @@ class TestSessionIdOutputFormat:
             prompt="test prompt",
             output_format="session-id",
             timeout=30,
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
             session_id=None,
             continue_session_from=None,
             continue_session=False,
@@ -151,7 +148,6 @@ class TestSessionIdOutputFormat:
             "session_id": "existing-session-456",
             "version": "1.0",
             "timestamp": "2024-01-01T00:00:00",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
@@ -161,7 +157,7 @@ class TestSessionIdOutputFormat:
             prompt="/discuss",
             output_format="session-id",
             timeout=30,
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
             session_id="existing-session-456",
             continue_session_from=None,
             continue_session=False,
@@ -198,13 +194,12 @@ class TestExecutePrompt:
             "session_id": None,
             "version": "1.0",
             "timestamp": "2024-01-01T00:00:00",
-            "method": "api",
             "provider": "claude",
             "raw_response": {},
         }
         args = argparse.Namespace(
             prompt="What is the capital of France?",
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
         )
 
         result = execute_prompt(args)
@@ -213,7 +208,6 @@ class TestExecutePrompt:
         mock_prompt_llm.assert_called_once_with(
             "What is the capital of France?",
             provider="claude",
-            method="api",
             timeout=30,
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
@@ -235,7 +229,7 @@ class TestExecutePrompt:
         """Test API error handling when Claude API fails."""
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
         mock_prompt_llm.side_effect = Exception("Claude API connection failed")
-        args = argparse.Namespace(prompt="Test question", llm_method="claude_code_api")
+        args = argparse.Namespace(prompt="Test question", llm_method="claude_code_cli")
 
         result = execute_prompt(args)
 
@@ -267,7 +261,6 @@ class TestExecutePrompt:
             "session_id": None,
             "version": "1.0",
             "timestamp": "2024-01-01T00:00:00",
-            "method": "api",
             "provider": "claude",
             "raw_response": {},
         }
@@ -275,7 +268,7 @@ class TestExecutePrompt:
         args = argparse.Namespace(
             prompt="Add error handling",
             continue_session_from="path/to/previous_response.json",
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
         )
 
         result = execute_prompt(args)
@@ -284,7 +277,6 @@ class TestExecutePrompt:
         mock_prompt_llm.assert_called_once_with(
             "Add error handling",
             provider="claude",
-            method="api",
             timeout=30,
             session_id="previous-session-456",
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
@@ -314,7 +306,6 @@ class TestExecutePrompt:
             "session_id": None,
             "version": "1.0",
             "timestamp": "2024-01-01T00:00:00",
-            "method": "api",
             "provider": "claude",
             "raw_response": {},
         }
@@ -322,7 +313,7 @@ class TestExecutePrompt:
         args = argparse.Namespace(
             prompt="Continue conversation",
             continue_session_from="path/to/nonexistent_file.json",
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
         )
 
         result = execute_prompt(args)
@@ -331,7 +322,6 @@ class TestExecutePrompt:
         mock_prompt_llm.assert_called_once_with(
             "Continue conversation",
             provider="claude",
-            method="api",
             timeout=30,
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
@@ -366,7 +356,6 @@ class TestExecutePrompt:
             "session_id": None,
             "version": "1.0",
             "timestamp": "2024-01-01T00:00:00",
-            "method": "api",
             "provider": "claude",
             "raw_response": {},
         }
@@ -374,7 +363,7 @@ class TestExecutePrompt:
         args = argparse.Namespace(
             prompt="Continue conversation",
             continue_session_from="path/to/invalid.json",
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
         )
 
         result = execute_prompt(args)
@@ -383,7 +372,6 @@ class TestExecutePrompt:
         mock_prompt_llm.assert_called_once_with(
             "Continue conversation",
             provider="claude",
-            method="api",
             timeout=30,
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
@@ -420,7 +408,6 @@ class TestExecutePrompt:
             "session_id": None,
             "version": "1.0",
             "timestamp": "2024-01-01T00:00:00",
-            "method": "api",
             "provider": "claude",
             "raw_response": {},
         }
@@ -428,7 +415,7 @@ class TestExecutePrompt:
         args = argparse.Namespace(
             prompt="Continue conversation",
             continue_session_from="path/to/incomplete.json",
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
         )
 
         result = execute_prompt(args)
@@ -437,7 +424,6 @@ class TestExecutePrompt:
         mock_prompt_llm.assert_called_once_with(
             "Continue conversation",
             provider="claude",
-            method="api",
             timeout=30,
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
@@ -472,7 +458,6 @@ class TestExecutePrompt:
             "session_id": "verbose-continuation-new-456",
             "version": "1.0",
             "timestamp": "2024-01-01T00:00:00",
-            "method": "api",
             "provider": "claude",
             "raw_response": {
                 "session_info": {"session_id": "verbose-continuation-new-456"},
@@ -486,7 +471,7 @@ class TestExecutePrompt:
             prompt="Tell me about advanced features",
             continue_session_from="path/to/previous.json",
             verbosity="verbose",
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
         )
 
         result = execute_prompt(args)
@@ -495,7 +480,6 @@ class TestExecutePrompt:
         mock_prompt_llm.assert_called_once_with(
             "Tell me about advanced features",
             provider=mock.ANY,
-            method=mock.ANY,
             timeout=30,
             session_id="verbose-continuation-123",
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
@@ -525,12 +509,11 @@ class TestExecutePrompt:
             "session_id": None,
             "version": "1.0",
             "timestamp": "2024-01-01T00:00:00",
-            "method": "api",
             "provider": "claude",
             "raw_response": {},
         }
 
-        args = argparse.Namespace(prompt="Test prompt", llm_method="claude_code_api")
+        args = argparse.Namespace(prompt="Test prompt", llm_method="claude_code_cli")
 
         result = execute_prompt(args)
 
@@ -544,7 +527,6 @@ class TestExecutePrompt:
         mock_prompt_llm.assert_called_once_with(
             "Test prompt",
             provider="claude",
-            method="api",
             timeout=30,
             session_id=None,
             env_vars=mock_env_vars,
@@ -571,13 +553,12 @@ class TestExecutePrompt:
             "session_id": None,
             "version": "1.0",
             "timestamp": "2024-01-01T00:00:00",
-            "method": "api",
             "provider": "claude",
             "raw_response": {},
         }
 
         args = argparse.Namespace(
-            prompt="Test prompt without venv", llm_method="claude_code_api"
+            prompt="Test prompt without venv", llm_method="claude_code_cli"
         )
 
         result = execute_prompt(args)
@@ -590,7 +571,6 @@ class TestExecutePrompt:
         mock_prompt_llm.assert_called_once_with(
             "Test prompt without venv",
             provider="claude",
-            method="api",
             timeout=30,
             session_id=None,
             env_vars=None,
@@ -620,7 +600,6 @@ class TestPromptExecutionDir:
             "session_id": None,
             "version": "1.0",
             "timestamp": "2024-01-01T00:00:00",
-            "method": "api",
             "provider": "claude",
             "raw_response": {},
         }
@@ -628,7 +607,7 @@ class TestPromptExecutionDir:
         args = argparse.Namespace(
             prompt="Test prompt",
             execution_dir=None,  # No explicit execution_dir
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
         )
 
         result = execute_prompt(args)
@@ -657,7 +636,6 @@ class TestPromptExecutionDir:
             "session_id": None,
             "version": "1.0",
             "timestamp": "2024-01-01T00:00:00",
-            "method": "api",
             "provider": "claude",
             "raw_response": {},
         }
@@ -669,7 +647,7 @@ class TestPromptExecutionDir:
         args = argparse.Namespace(
             prompt="Test prompt",
             execution_dir=str(execution_dir),
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
         )
 
         result = execute_prompt(args)
@@ -699,7 +677,6 @@ class TestPromptExecutionDir:
             "session_id": None,
             "version": "1.0",
             "timestamp": "2024-01-01T00:00:00",
-            "method": "api",
             "provider": "claude",
             "raw_response": {},
         }
@@ -716,7 +693,7 @@ class TestPromptExecutionDir:
         args = argparse.Namespace(
             prompt="Test prompt",
             execution_dir="relative",  # Relative path
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
         )
 
         result = execute_prompt(args)
@@ -741,7 +718,7 @@ class TestPromptExecutionDir:
         args = argparse.Namespace(
             prompt="Test prompt",
             execution_dir="/nonexistent/invalid/path",
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
         )
 
         result = execute_prompt(args)
@@ -767,7 +744,6 @@ class TestPromptExecutionDir:
             "session_id": None,
             "version": "1.0",
             "timestamp": "2024-01-01T00:00:00",
-            "method": "api",
             "provider": "claude",
             "raw_response": {},
         }
@@ -783,7 +759,7 @@ class TestPromptExecutionDir:
             execution_dir=str(execution_dir),
             project_dir=str(project_dir),
             timeout=60,
-            llm_method="claude_code_api",
+            llm_method="claude_code_cli",
             verbosity="just-text",
             session_id="test-session-123",
             mcp_config=None,
@@ -811,7 +787,6 @@ class TestLogToMlflow:
             "session_id": session_id,
             "version": "1.0",
             "timestamp": "2024-01-01T00:00:00",
-            "method": "cli",
             "provider": "claude",
             "raw_response": {},
         }
