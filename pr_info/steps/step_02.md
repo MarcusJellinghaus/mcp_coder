@@ -35,18 +35,29 @@ Each CLI command parses `parse_llm_method_from_args()` and passes `provider, met
 Remove `method` from function signatures, pass only `provider` to LLM interface:
 - `src/mcp_coder/workflows/create_plan.py` — `run_create_plan_workflow()`, `run_planning_prompts()`
   - **Also removes the buggy `llm_method = f"{provider}_code_{method}"` reconstruction (line 540)**
-- `src/mcp_coder/workflows/implement/core.py` — `ImplementConfig`, `run_implement_workflow()`, and internal functions
+- `src/mcp_coder/workflows/implement/core.py` — `ImplementConfig`, `CIFixConfig`, `run_implement_workflow()`, and internal functions
+  - **Remove `method: str` field from `CIFixConfig` dataclass (line 98) and all its usages**
 - `src/mcp_coder/workflows/create_pr/core.py` — `run_create_pr_workflow()`, `_generate_pr_summary()`
 - `src/mcp_coder/workflow_utils/commit_operations.py` — `generate_commit_message_with_llm()`
 - `src/mcp_coder/workflows/implement/task_processing.py` — all functions with `method` param
 
+### 2e-ii. Remove `method` from `LLMResponseDict`
+- `src/mcp_coder/llm/types.py` — remove the `method: str` field from `LLMResponseDict`
+- Update all places that set `method` in response dicts:
+  - `src/mcp_coder/llm/providers/claude/claude_code_cli.py` — remove `"method": "cli"` from response construction
+  - `src/mcp_coder/llm/providers/claude/claude_code_api.py` — remove `"method": "api"` from response construction
+  - `src/mcp_coder/llm/providers/langchain/__init__.py` — remove `method="api"` from response construction
+
 ### 2f. Logging utilities — remove `method` parameter
-- `src/mcp_coder/llm/providers/claude/logging_utils.py` — `log_llm_request()`, `log_llm_response()`, `log_llm_error()`
+- `src/mcp_coder/llm/providers/claude/logging_utils.py` — remove `method` parameter from `log_llm_request()`, `log_llm_response()`, `log_llm_error()`
 - Update log messages/tags to use `provider` instead of `method`
+- Update callers in `src/mcp_coder/llm/providers/claude/claude_code_cli.py` — remove `method="cli"` from all logging calls
+- Update callers in `src/mcp_coder/llm/providers/claude/claude_code_api.py` — remove `method="api"` from all logging calls
 
 ### 2g. `src/mcp_coder/llm/providers/claude/claude_code_api.py`
 - Do NOT delete the file in this PR (may have other consumers)
 - Remove the import from `interface.py`
+- Update logging calls to match new signatures (as part of 2f above)
 
 ### 2h. Documentation
 - `docs/cli-reference.md` — update `--llm-method` descriptions to remove `claude_code_api` references
