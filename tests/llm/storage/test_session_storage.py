@@ -29,7 +29,6 @@ class TestStoreSession:
                 "timestamp": "2025-10-02T14:30:00",
                 "text": "Hello",
                 "session_id": "test-123",
-                "method": "cli",
                 "provider": "claude",
                 "raw_response": {"session_info": {"model": "claude"}},
             }
@@ -56,7 +55,6 @@ class TestStoreSession:
                 "timestamp": "2025-10-02T14:30:00.000000",
                 "text": "Hello from LLM",
                 "session_id": "llm-session-abc",
-                "method": "cli",
                 "provider": "claude",
                 "raw_response": {"session_info": {"model": "claude-sonnet-4"}},
             }
@@ -77,7 +75,6 @@ class TestStoreSession:
                 "timestamp": "2025-10-02T14:30:00",
                 "text": "",
                 "session_id": None,
-                "method": "cli",
                 "provider": "claude",
                 "raw_response": {},
             }
@@ -98,7 +95,6 @@ class TestStoreSession:
                 "timestamp": "2025-10-02T14:30:00",
                 "text": "",
                 "session_id": None,
-                "method": "cli",
                 "provider": "claude",
                 "raw_response": {},
             }
@@ -117,7 +113,6 @@ class TestStoreSession:
                 "timestamp": "2025-10-02T14:30:00",
                 "text": "",
                 "session_id": None,
-                "method": "cli",
                 "provider": "claude",
                 "raw_response": {},
             }
@@ -138,7 +133,6 @@ class TestStoreSession:
                 "timestamp": "2025-10-02T14:30:00",
                 "text": "",
                 "session_id": None,
-                "method": "cli",
                 "provider": "claude",
                 "raw_response": {},
             }
@@ -159,7 +153,6 @@ class TestStoreSession:
                 "timestamp": "2025-10-02T14:30:00",
                 "text": "response",
                 "session_id": "abc",
-                "method": "cli",
                 "provider": "claude",
                 "raw_response": {"session_info": {"model": "claude-sonnet-4-new"}},
             }
@@ -178,7 +171,6 @@ class TestStoreSession:
                 "timestamp": "2025-10-02T14:30:00",
                 "text": "response",
                 "session_id": "abc",
-                "method": "cli",
                 "provider": "claude-fallback",
                 "raw_response": {},
             }
@@ -197,7 +189,6 @@ class TestStoreSession:
                 "timestamp": "2025-10-02T14:30:00",
                 "text": "",
                 "session_id": None,
-                "method": "cli",
                 "provider": "claude",
                 "raw_response": {},
             }
@@ -216,7 +207,6 @@ class TestStoreSession:
                 "timestamp": "2025-10-02T14:30:00",
                 "text": "",
                 "session_id": None,
-                "method": "cli",
                 "provider": "claude",
                 "raw_response": {},
             }
@@ -286,7 +276,6 @@ class TestExtractSessionId:
                     "timestamp": "2025-10-02T14:30:00",
                     "text": "response text",
                     "session_id": "llm-dict-session-xyz",
-                    "method": "cli",
                     "provider": "claude",
                     "raw_response": {},
                 },

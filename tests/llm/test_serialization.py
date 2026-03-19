@@ -22,7 +22,6 @@ def sample_response() -> LLMResponseDict:
         "timestamp": "2025-10-01T10:30:00.123456",
         "text": "Test response",
         "session_id": "550e8400-e29b-41d4-a716-446655440000",
-        "method": "cli",
         "provider": "claude",
         "raw_response": {"duration_ms": 2801, "cost_usd": 0.058},
     }
@@ -50,7 +49,6 @@ def test_to_json_string_handles_unicode() -> None:
         "timestamp": "2025-10-01T10:30:00",
         "text": "Unicode: 你好 🎉 café",
         "session_id": "abc",
-        "method": "cli",
         "provider": "claude",
         "raw_response": {},
     }
