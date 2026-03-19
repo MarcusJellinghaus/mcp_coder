@@ -73,7 +73,6 @@ class TestResolveLlmMethod:
 
     def test_explicit_cli_arg_returned_as_is(self) -> None:
         """Test that explicit CLI arg is returned without config lookup."""
-        assert resolve_llm_method("claude_code_api") == "claude_code_api"
         assert resolve_llm_method("claude_code_cli") == "claude_code_cli"
         assert resolve_llm_method("langchain") == "langchain"
 

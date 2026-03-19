@@ -23,14 +23,14 @@
 
 ## Step 3: Update and add tests
 
-- [ ] 3a. Add template regression tests in `tests/workflows/vscodeclaude/test_templates.py`
-- [ ] 3b. Update `parse_llm_method` tests in `tests/llm/session/test_resolver.py`
-- [ ] 3c. Update CLI utils tests in `tests/cli/test_utils.py`
-- [ ] 3d. Update workflow tests (create_plan, prompt_execution, execution_dir_integration, etc.)
-- [ ] 3e. Update interface tests for `ask_llm()` / `prompt_llm()` signatures
-- [ ] 3f. Add langchain routing unit test (mock-based, verify `prompt_llm(provider="langchain")` routes to `ask_langchain()`)
-- [ ] Run pylint, pytest, mypy — fix all issues
-- [ ] Prepare git commit message for Step 3
+- [x] 3a. Add template regression tests in `tests/workflows/vscodeclaude/test_templates.py`
+- [x] 3b. Update `parse_llm_method` tests in `tests/llm/session/test_resolver.py`
+- [x] 3c. Update CLI utils tests in `tests/cli/test_utils.py`
+- [x] 3d. Update workflow tests (create_plan, prompt_execution, execution_dir_integration, etc.)
+- [x] 3e. Update interface tests for `ask_llm()` / `prompt_llm()` signatures
+- [x] 3f. Add langchain routing unit test (mock-based, verify `prompt_llm(provider="langchain")` routes to `ask_langchain()`)
+- [x] Run pylint, pytest, mypy — fix all issues
+- [x] Prepare git commit message for Step 3
 
 ## Pull Request
 

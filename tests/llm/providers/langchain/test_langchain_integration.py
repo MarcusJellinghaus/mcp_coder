@@ -62,7 +62,6 @@ class TestLangchainIntegration:
         result = ask_langchain("Reply with exactly the word: hello")
 
         assert result["provider"] == "langchain"
-        assert result["method"] == "api"
         assert isinstance(result["text"], str)
         assert len(result["text"].strip()) > 0
         assert result["session_id"] is not None

@@ -27,6 +27,11 @@ class TestParseLlmMethod:
         with pytest.raises(ValueError, match="Unsupported llm_method"):
             parse_llm_method("invalid_method")
 
+    def test_parse_claude_code_api_raises_error(self) -> None:
+        """Test that claude_code_api is no longer supported."""
+        with pytest.raises(ValueError, match="Unsupported llm_method"):
+            parse_llm_method("claude_code_api")
+
 
 class TestSessionResolution:
     """Tests for session continuation and resolution functionality."""

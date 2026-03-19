@@ -37,7 +37,6 @@ class TestClaudeCliStreamIntegration:
             # Verify response structure
             assert result["text"], "Expected non-empty response text"
             assert result["session_id"], "Expected session_id in response"
-            assert result["method"] == "cli"
             assert result["provider"] == "claude"
 
             # Verify stream file was created

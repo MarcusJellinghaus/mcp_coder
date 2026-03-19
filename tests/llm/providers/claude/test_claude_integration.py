@@ -56,7 +56,6 @@ class TestCriticalPathIntegration:
         cli_result = ask_llm(
             "Yes or no: Is 1+1=2?",
             provider="claude",
-            method="cli",
             timeout=60,  # Increased for real API calls
             env_vars=env_vars,
         )
@@ -89,9 +88,7 @@ class TestCriticalPathIntegration:
         env_vars = prepare_llm_environment(Path.cwd())
 
         # Use prompt_llm to test full response structure
-        result1 = prompt_llm(
-            "Remember this: elephant", method="cli", timeout=60, env_vars=env_vars
-        )
+        result1 = prompt_llm("Remember this: elephant", timeout=60, env_vars=env_vars)
         assert "session_id" in result1
         assert result1["session_id"] is not None
         assert "text" in result1
@@ -100,7 +97,6 @@ class TestCriticalPathIntegration:
         # Test session continuity
         result2 = prompt_llm(
             "What did I tell you to remember?",
-            method="cli",
             session_id=session_id,
             timeout=60,
             env_vars=env_vars,
@@ -171,7 +167,6 @@ class TestEnvironmentVariablePropagation:
         result_cli = ask_llm(
             "Say hello",
             provider="claude",
-            method="cli",
             timeout=60,  # Increased for real API calls
             env_vars=env_vars,
         )
