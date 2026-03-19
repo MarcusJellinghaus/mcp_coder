@@ -92,7 +92,6 @@ class TestMLflowIntegration:
             "text": "Machine learning is...",
             "version": "1.0",
             "timestamp": "2024-01-01T00:00:00Z",
-            "method": "test",
             "duration_ms": 2500,
             "cost_usd": 0.02,
             "raw_response": {
@@ -178,7 +177,6 @@ class TestMLflowIntegration:
                     "text": "Test response",
                     "version": "1.0",
                     "timestamp": "2024-01-01T00:00:00Z",
-                    "method": "test",
                     "raw_response": {},
                 }
 
@@ -292,7 +290,6 @@ class TestMLflowWithRealInstallation:
                 "session_id": "sqlite-test-session-789",
                 "version": "1.0",
                 "timestamp": "2024-01-01T00:00:00Z",
-                "method": "test",
                 "provider": "claude",
                 "raw_response": {
                     "session_info": {

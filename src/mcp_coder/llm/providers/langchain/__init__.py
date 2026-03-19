@@ -208,8 +208,7 @@ def _ask_text(
         version=LLM_RESPONSE_VERSION,
         timestamp=datetime.now().isoformat(),
         text=text,
-        session_id=sid,
-        method="api",
+        session_id=session_id,
         provider="langchain",
         raw_response=raw,
     )
@@ -282,7 +281,6 @@ def _ask_agent(
         timestamp=datetime.now().isoformat(),
         text=text,
         session_id=session_id,
-        method="api",
         provider="langchain",
         raw_response=raw_response,
     )

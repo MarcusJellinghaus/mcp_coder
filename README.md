@@ -44,7 +44,7 @@ MCP Coder implements a structured 3-layer development approach that separates hu
 │                                         │     │         ┌─────────────────┐             │
 │                                         │     │         │  MCP Servers    │             │
 │                                         │     │         │ • tools-py      │             │
-│                                         │     │         │ • filesystem    │             │
+│                                         │     │         │ • workspace     │             │
 │                                         │     │         └─────────────────┘             │
 └─────────────────────────────────────────┘     └─────────────────────────────────────────┘
               │                                       │               

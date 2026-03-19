@@ -18,7 +18,6 @@ def _make_llm_response(
         "session_id": raw_response.get("session_info", {}).get("session_id"),
         "version": "1.0",
         "timestamp": "2024-01-01T00:00:00",
-        "method": "api",
         "provider": "claude",
         "raw_response": raw_response,
     }
