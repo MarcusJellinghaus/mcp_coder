@@ -30,22 +30,22 @@ def test_venv_section_installs_dev_dependencies() -> None:
 
 
 def test_automated_section_windows_has_llm_method_flag() -> None:
-    """Test that AUTOMATED_SECTION_WINDOWS includes --llm-method claude_code_cli.
+    """Test that AUTOMATED_SECTION_WINDOWS includes --llm-method claude.
 
     Without this flag, the template breaks when the LLM provider is not
-    claude_code_cli (regression test for issue #524).
+    claude (regression test for issue #524).
     """
     assert (
-        "--llm-method claude_code_cli" in AUTOMATED_SECTION_WINDOWS
-    ), "AUTOMATED_SECTION_WINDOWS must include '--llm-method claude_code_cli'"
+        "--llm-method claude" in AUTOMATED_SECTION_WINDOWS
+    ), "AUTOMATED_SECTION_WINDOWS must include '--llm-method claude'"
 
 
 def test_discussion_section_windows_has_llm_method_flag() -> None:
-    """Test that DISCUSSION_SECTION_WINDOWS includes --llm-method claude_code_cli.
+    """Test that DISCUSSION_SECTION_WINDOWS includes --llm-method claude.
 
     Without this flag, the template breaks when the LLM provider is not
-    claude_code_cli (regression test for issue #524).
+    claude (regression test for issue #524).
     """
     assert (
-        "--llm-method claude_code_cli" in DISCUSSION_SECTION_WINDOWS
-    ), "DISCUSSION_SECTION_WINDOWS must include '--llm-method claude_code_cli'"
+        "--llm-method claude" in DISCUSSION_SECTION_WINDOWS
+    ), "DISCUSSION_SECTION_WINDOWS must include '--llm-method claude'"
