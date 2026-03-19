@@ -29,3 +29,6 @@ After:
 
 ## Rationale
 Step 3 uses `claude --resume %SESSION_ID%` which requires a Claude Code conversation ID. By forcing `--llm-method claude_code_cli`, we ensure the session ID is always compatible, regardless of the user's default LLM provider config.
+
+## Note
+Linux templates are not affected — they use `claude -p` directly (not `mcp-coder prompt`), so the `--llm-method` issue doesn't apply. This will be noted in the PR description.
