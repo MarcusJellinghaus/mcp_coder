@@ -200,3 +200,5 @@ _.__iter__
 _.__getitem__
 _.__enter__
 _.__exit__
+_.__aenter__
+_.__aexit__

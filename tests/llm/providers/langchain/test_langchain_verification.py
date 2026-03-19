@@ -398,7 +398,7 @@ class TestVerifyLangchainMcpSection:
         self,
         mock_config: MagicMock,
         mock_pkg: MagicMock,
-        mock_ask_langchain: MagicMock,
+        _mock_ask_langchain: MagicMock,
     ) -> None:
         """mcp_config_path triggers ask_llm() call with mcp_config."""
         mock_config.return_value = {
@@ -433,7 +433,7 @@ class TestVerifyLangchainMcpSection:
         self,
         mock_config: MagicMock,
         mock_pkg: MagicMock,
-        mock_ask_langchain: MagicMock,
+        _mock_ask_langchain: MagicMock,
     ) -> None:
         """FileNotFoundError is caught and reported."""
         mock_config.return_value = {
