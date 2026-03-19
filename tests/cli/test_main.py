@@ -607,10 +607,8 @@ class TestCheckBranchStatusCommand:
         parser = create_parser()
 
         # Test claude_code_cli
-        args = parser.parse_args(
-            ["check", "branch-status", "--llm-method", "claude_code_cli"]
-        )
-        assert args.llm_method == "claude_code_cli"
+        args = parser.parse_args(["check", "branch-status", "--llm-method", "claude"])
+        assert args.llm_method == "claude"
 
     def test_check_branch_status_with_mcp_config(self) -> None:
         """Test check branch-status command with MCP config path."""
@@ -646,7 +644,7 @@ class TestCheckBranchStatusCommand:
                 "--fix",
                 "--llm-truncate",
                 "--llm-method",
-                "claude_code_cli",
+                "claude",
                 "--mcp-config",
                 ".mcp.test.json",
                 "--execution-dir",
@@ -659,7 +657,7 @@ class TestCheckBranchStatusCommand:
         assert args.project_dir == "/path/to/project"
         assert args.fix == 1
         assert args.llm_truncate is True
-        assert args.llm_method == "claude_code_cli"
+        assert args.llm_method == "claude"
         assert args.mcp_config == ".mcp.test.json"
         assert args.execution_dir == "/tmp/workspace"
 

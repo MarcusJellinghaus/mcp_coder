@@ -96,7 +96,7 @@ class TestMcpConfigIntegration:
             # Use tmp_path directly (we don't need a real git repo for this test)
             args = argparse.Namespace(
                 project_dir=str(tmp_path),
-                llm_method="claude_code_cli",
+                llm_method="claude",
                 mcp_config=temp_mcp_config,
                 execution_dir=None,
             )
@@ -142,7 +142,7 @@ class TestMcpConfigIntegration:
             args = argparse.Namespace(
                 prompt="Test question",
                 project_dir=None,
-                llm_method="claude_code_cli",
+                llm_method="claude",
                 verbosity="just-text",
                 output_format="text",
                 store_response=False,
@@ -196,7 +196,7 @@ class TestMcpConfigIntegration:
             args = argparse.Namespace(
                 prompt="Test question",
                 project_dir=None,
-                llm_method="claude_code_cli",
+                llm_method="claude",
                 verbosity="just-text",
                 output_format="text",
                 store_response=False,
@@ -262,7 +262,7 @@ class TestMcpConfigIntegration:
                 args = argparse.Namespace(
                     prompt="Test question",
                     project_dir=None,
-                    llm_method="claude_code_cli",
+                    llm_method="claude",
                     verbosity="just-text",
                     output_format="text",
                     store_response=False,
@@ -316,7 +316,7 @@ class TestMcpConfigCLIParser:
                 "--mcp-config",
                 ".mcp.linux.json",
                 "--llm-method",
-                "claude_code_cli",
+                "claude",
             ]
         )
 

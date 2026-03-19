@@ -46,7 +46,7 @@ class TestExecutionDirCLIParser:
                 "--execution-dir",
                 "/tmp/workspace",
                 "--llm-method",
-                "claude_code_cli",
+                "claude",
             ]
         )
 
@@ -244,7 +244,7 @@ class TestSubprocessCwdParameter:
             execution_dir=str(execution_dir),
             project_dir=None,
             timeout=30,
-            llm_method="claude_code_cli",
+            llm_method="claude",
             verbosity="just-text",
             session_id=None,
             mcp_config=None,
@@ -297,7 +297,7 @@ class TestSubprocessCwdParameter:
             execution_dir=None,  # No explicit execution_dir
             project_dir=None,
             timeout=30,
-            llm_method="claude_code_cli",
+            llm_method="claude",
             verbosity="just-text",
             session_id=None,
             mcp_config=None,
@@ -496,7 +496,7 @@ class TestSubprocessCwdParameter:
 
         args = argparse.Namespace(
             preview=False,
-            llm_method="claude_code_cli",
+            llm_method="claude",
             project_dir=None,
             execution_dir=str(execution_dir),
         )

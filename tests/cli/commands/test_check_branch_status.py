@@ -97,7 +97,7 @@ class TestExecuteCheckBranchStatus:
             ci_timeout=0,
             fix=0,
             llm_truncate=False,
-            llm_method="claude_code_cli",
+            llm_method="claude",
             mcp_config=None,
             execution_dir=None,
         )
@@ -133,7 +133,7 @@ class TestExecuteCheckBranchStatus:
             ci_timeout=0,
             fix=0,
             llm_truncate=True,
-            llm_method="claude_code_cli",
+            llm_method="claude",
             mcp_config=None,
             execution_dir=None,
         )
@@ -175,7 +175,7 @@ class TestExecuteCheckBranchStatus:
             ci_timeout=0,
             fix=1,
             llm_truncate=False,
-            llm_method="claude_code_cli",
+            llm_method="claude",
             mcp_config=None,
             execution_dir=None,
         )
@@ -223,7 +223,7 @@ class TestExecuteCheckBranchStatus:
             ci_timeout=0,
             fix=1,
             llm_truncate=False,
-            llm_method="claude_code_cli",
+            llm_method="claude",
             mcp_config=None,
             execution_dir=None,
         )
@@ -248,7 +248,7 @@ class TestExecuteCheckBranchStatus:
             ci_timeout=0,
             fix=0,
             llm_truncate=False,
-            llm_method="claude_code_cli",
+            llm_method="claude",
             mcp_config=None,
             execution_dir=None,
         )
@@ -278,7 +278,7 @@ class TestExecuteCheckBranchStatus:
             ci_timeout=0,
             fix=0,
             llm_truncate=False,
-            llm_method="claude_code_cli",
+            llm_method="claude",
             mcp_config=None,
             execution_dir=None,
         )
@@ -312,7 +312,7 @@ class TestExecuteCheckBranchStatus:
             ci_timeout=0,
             fix=0,
             llm_truncate=False,
-            llm_method="claude_code_cli",
+            llm_method="claude",
             mcp_config=None,
             execution_dir=None,
         )

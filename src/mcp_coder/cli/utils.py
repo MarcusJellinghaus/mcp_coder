@@ -37,7 +37,7 @@ def _get_status_symbols() -> dict[str, str]:
 def resolve_llm_method(llm_method: str | None) -> str:
     """Resolve LLM method from CLI arg, config file, or default.
 
-    Resolution order: CLI argument > config [llm] provider > "claude_code_cli".
+    Resolution order: CLI argument > config [llm] provider > "claude".
 
     When config [llm] provider is "langchain", the resolved value is "langchain".
     Other config provider values are not mapped (fall through to default).
@@ -57,14 +57,14 @@ def resolve_llm_method(llm_method: str | None) -> str:
     if provider == "langchain":
         return "langchain"
 
-    return "claude_code_cli"
+    return "claude"
 
 
 def parse_llm_method_from_args(llm_method: str) -> str:
     """Parse CLI llm_method into provider name for internal APIs.
 
     Args:
-        llm_method: CLI parameter ('claude_code_cli' or 'langchain')
+        llm_method: CLI parameter ('claude' or 'langchain')
 
     Returns:
         Provider name (e.g., "claude" or "langchain")
@@ -73,7 +73,7 @@ def parse_llm_method_from_args(llm_method: str) -> str:
         ValueError: If llm_method is not supported
 
     Example:
-        >>> provider = parse_llm_method_from_args("claude_code_cli")
+        >>> provider = parse_llm_method_from_args("claude")
         >>> print(provider)
         claude
     """

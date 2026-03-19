@@ -63,7 +63,7 @@ class TestExecuteCreatePr:
 
         args = argparse.Namespace(
             project_dir="/test/project",
-            llm_method="claude_code_cli",
+            llm_method="claude",
             execution_dir=None,
             mcp_config=None,
         )
@@ -73,7 +73,7 @@ class TestExecuteCreatePr:
         assert result == 0
         mock_resolve_dir.assert_called_once_with("/test/project")
         mock_resolve_exec.assert_called_once_with(None)
-        mock_parse_llm.assert_called_once_with("claude_code_cli")
+        mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
             project_dir, "claude", None, str(execution_dir), False
         )
@@ -101,7 +101,7 @@ class TestExecuteCreatePr:
 
         args = argparse.Namespace(
             project_dir="/test/project",
-            llm_method="claude_code_cli",
+            llm_method="claude",
             execution_dir=None,
             mcp_config=None,
         )
@@ -109,7 +109,7 @@ class TestExecuteCreatePr:
         result = execute_create_pr(args)
 
         assert result == 0
-        mock_parse_llm.assert_called_once_with("claude_code_cli")
+        mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
             project_dir, "claude", None, str(execution_dir), False
         )
@@ -137,7 +137,7 @@ class TestExecuteCreatePr:
 
         args = argparse.Namespace(
             project_dir="/test/project",
-            llm_method="claude_code_cli",
+            llm_method="claude",
             execution_dir=None,
             mcp_config=None,
         )
@@ -147,7 +147,7 @@ class TestExecuteCreatePr:
         assert result == 1
         mock_resolve_dir.assert_called_once_with("/test/project")
         mock_resolve_exec.assert_called_once_with(None)
-        mock_parse_llm.assert_called_once_with("claude_code_cli")
+        mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
             project_dir, "claude", None, str(execution_dir), False
         )
@@ -162,7 +162,7 @@ class TestExecuteCreatePr:
 
         args = argparse.Namespace(
             project_dir="/invalid/path",
-            llm_method="claude_code_cli",
+            llm_method="claude",
             execution_dir=None,
         )
 
@@ -195,7 +195,7 @@ class TestExecuteCreatePr:
 
         args = argparse.Namespace(
             project_dir=None,  # Should use current directory
-            llm_method="claude_code_cli",
+            llm_method="claude",
             execution_dir=None,
             mcp_config=None,
         )
@@ -205,7 +205,7 @@ class TestExecuteCreatePr:
         assert result == 0
         mock_resolve_dir.assert_called_once_with(None)
         mock_resolve_exec.assert_called_once_with(None)
-        mock_parse_llm.assert_called_once_with("claude_code_cli")
+        mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
             project_dir, "claude", None, str(execution_dir), False
         )
@@ -230,17 +230,17 @@ class TestExecuteCreatePr:
         mock_resolve_exec.return_value = str(execution_dir)
         mock_run_workflow.return_value = 0
 
-        # Test with claude_code_cli
+        # Test with claude
         mock_parse_llm.return_value = "claude"
         args_cli = argparse.Namespace(
             project_dir="/test/project",
-            llm_method="claude_code_cli",
+            llm_method="claude",
             execution_dir=None,
             mcp_config=None,
         )
         result = execute_create_pr(args_cli)
         assert result == 0
-        mock_parse_llm.assert_called_with("claude_code_cli")
+        mock_parse_llm.assert_called_with("claude")
         mock_run_workflow.assert_called_with(
             project_dir, "claude", None, str(execution_dir), False
         )
@@ -289,7 +289,7 @@ class TestExecuteCreatePr:
 
         args = argparse.Namespace(
             project_dir="/test/project",
-            llm_method="claude_code_cli",
+            llm_method="claude",
             execution_dir=None,
             mcp_config=None,
         )
@@ -324,7 +324,7 @@ class TestExecuteCreatePr:
 
         args = argparse.Namespace(
             project_dir="/test/project",
-            llm_method="claude_code_cli",
+            llm_method="claude",
             execution_dir=None,
             mcp_config=None,
         )
@@ -398,7 +398,7 @@ class TestCreatePrExecutionDir:
         args = argparse.Namespace(
             project_dir="/test/project",
             execution_dir=None,  # No explicit execution_dir
-            llm_method="claude_code_cli",
+            llm_method="claude",
             mcp_config=None,
         )
 
@@ -435,7 +435,7 @@ class TestCreatePrExecutionDir:
         args = argparse.Namespace(
             project_dir="/test/project",
             execution_dir=str(execution_dir),
-            llm_method="claude_code_cli",
+            llm_method="claude",
             mcp_config=None,
         )
 
@@ -463,7 +463,7 @@ class TestCreatePrExecutionDir:
         args = argparse.Namespace(
             project_dir="/test/project",
             execution_dir="/nonexistent/invalid/path",
-            llm_method="claude_code_cli",
+            llm_method="claude",
             mcp_config=None,
         )
 

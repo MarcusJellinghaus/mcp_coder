@@ -12,9 +12,9 @@ from mcp_coder.llm.session.resolver import parse_llm_method
 class TestParseLlmMethod:
     """Tests for parse_llm_method function."""
 
-    def test_parse_claude_code_cli(self) -> None:
-        """Test parsing 'claude_code_cli' method."""
-        provider = parse_llm_method("claude_code_cli")
+    def test_parse_claude(self) -> None:
+        """Test parsing 'claude' method."""
+        provider = parse_llm_method("claude")
         assert provider == "claude"
 
     def test_parse_langchain(self) -> None:
@@ -27,8 +27,15 @@ class TestParseLlmMethod:
         with pytest.raises(ValueError, match="Unsupported llm_method"):
             parse_llm_method("invalid_method")
 
+    def test_parse_langchain_code_api_raises_error(self) -> None:
+        """Test that 'langchain_code_api' is not a valid method."""
+        with pytest.raises(
+            ValueError, match="Unsupported llm_method: langchain_code_api"
+        ):
+            parse_llm_method("langchain_code_api")
+
     def test_parse_claude_code_api_raises_error(self) -> None:
-        """Test that claude_code_api is no longer supported."""
+        """Test that 'claude_code_api' is not a valid method."""
         with pytest.raises(ValueError, match="Unsupported llm_method"):
             parse_llm_method("claude_code_api")
 

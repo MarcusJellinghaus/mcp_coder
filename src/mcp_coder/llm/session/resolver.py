@@ -13,7 +13,7 @@ def parse_llm_method(llm_method: str) -> str:
     """Parse llm_method parameter into a provider name.
 
     Args:
-        llm_method: One of 'claude_code_cli' or 'langchain'
+        llm_method: One of 'claude' or 'langchain'
 
     Returns:
         Provider name: "claude" or "langchain"
@@ -22,7 +22,7 @@ def parse_llm_method(llm_method: str) -> str:
         ValueError: If llm_method is not supported
 
     Example:
-        >>> provider = parse_llm_method("claude_code_cli")
+        >>> provider = parse_llm_method("claude")
         >>> print(provider)
         claude
 
@@ -30,12 +30,12 @@ def parse_llm_method(llm_method: str) -> str:
         >>> print(provider)
         langchain
     """
-    if llm_method == "claude_code_cli":
+    if llm_method == "claude":
         return "claude"
     elif llm_method == "langchain":
         return "langchain"
     else:
         raise ValueError(
             f"Unsupported llm_method: {llm_method}. "
-            f"Supported: 'claude_code_cli', 'langchain'"
+            f"Supported: 'claude', 'langchain'"
         )

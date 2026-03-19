@@ -16,10 +16,10 @@ class TestParseLLMMethodFromArgs:
         """Test parsing CLI method parameter."""
         mock_parse.return_value = "claude"
 
-        result = parse_llm_method_from_args("claude_code_cli")
+        result = parse_llm_method_from_args("claude")
 
         assert result == "claude"
-        mock_parse.assert_called_once_with("claude_code_cli")
+        mock_parse.assert_called_once_with("claude")
 
     @patch("mcp_coder.cli.utils.parse_llm_method")
     def test_parse_llm_method_from_args_invalid(self, mock_parse: MagicMock) -> None:
@@ -56,9 +56,9 @@ class TestParseLLMMethodFromArgs:
         assert result == expected_result
         mock_parse.assert_called_once_with("test_input")
 
-    def test_parse_llm_method_from_args_integration_cli(self) -> None:
-        """Integration test for CLI method without mocking."""
-        provider = parse_llm_method_from_args("claude_code_cli")
+    def test_parse_llm_method_from_args_integration_claude(self) -> None:
+        """Integration test for claude method without mocking."""
+        provider = parse_llm_method_from_args("claude")
 
         assert provider == "claude"
 
@@ -73,7 +73,7 @@ class TestResolveLlmMethod:
 
     def test_explicit_cli_arg_returned_as_is(self) -> None:
         """Test that explicit CLI arg is returned without config lookup."""
-        assert resolve_llm_method("claude_code_cli") == "claude_code_cli"
+        assert resolve_llm_method("claude") == "claude"
         assert resolve_llm_method("langchain") == "langchain"
 
     @patch("mcp_coder.cli.utils.get_config_values")
@@ -84,15 +84,15 @@ class TestResolveLlmMethod:
 
     @patch("mcp_coder.cli.utils.get_config_values")
     def test_none_with_no_config(self, mock_config: MagicMock) -> None:
-        """Test that None with no config defaults to claude_code_cli."""
+        """Test that None with no config defaults to claude."""
         mock_config.return_value = {("llm", "provider"): None}
-        assert resolve_llm_method(None) == "claude_code_cli"
+        assert resolve_llm_method(None) == "claude"
 
     @patch("mcp_coder.cli.utils.get_config_values")
     def test_none_with_unknown_provider(self, mock_config: MagicMock) -> None:
         """Test that unknown config provider falls through to default."""
         mock_config.return_value = {("llm", "provider"): "some_other"}
-        assert resolve_llm_method(None) == "claude_code_cli"
+        assert resolve_llm_method(None) == "claude"
 
 
 class TestResolveExecutionDir:

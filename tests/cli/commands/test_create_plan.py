@@ -18,7 +18,7 @@ class TestExecuteCreatePlan:
         args = MagicMock()
         args.issue_number = 123
         args.project_dir = "/test/project"
-        args.llm_method = "claude_code_cli"
+        args.llm_method = "claude"
         args.mcp_config = None  # Set to None instead of leaving as MagicMock
         args.execution_dir = None  # Add execution_dir attribute
         args.update_labels = False  # Add update_labels attribute
@@ -54,7 +54,7 @@ class TestExecuteCreatePlan:
                         assert result == 0
                         mock_resolve.assert_called_once_with("/test/project")
                         mock_resolve_exec.assert_called_once_with(None)
-                        mock_parse.assert_called_once_with("claude_code_cli")
+                        mock_parse.assert_called_once_with("claude")
                         mock_workflow.assert_called_once_with(
                             123,
                             test_project_dir,
@@ -116,7 +116,7 @@ class TestCreatePlanExecutionDir:
         args.issue_number = 123
         args.project_dir = "/test/project"
         args.execution_dir = None  # No explicit execution_dir
-        args.llm_method = "claude_code_cli"
+        args.llm_method = "claude"
         args.mcp_config = None
         args.update_labels = False
 
@@ -154,7 +154,7 @@ class TestCreatePlanExecutionDir:
         args.issue_number = 123
         args.project_dir = "/test/project"
         args.execution_dir = str(execution_dir)
-        args.llm_method = "claude_code_cli"
+        args.llm_method = "claude"
         args.mcp_config = None
         args.update_labels = False
 
@@ -183,7 +183,7 @@ class TestCreatePlanExecutionDir:
         args.issue_number = 123
         args.project_dir = "/test/project"
         args.execution_dir = "/nonexistent/invalid/path"
-        args.llm_method = "claude_code_cli"
+        args.llm_method = "claude"
         args.mcp_config = None
 
         result = execute_create_plan(args)

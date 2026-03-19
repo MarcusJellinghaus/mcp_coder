@@ -34,7 +34,7 @@ class TestSessionPriority:
             session_id="explicit-123",
             continue_session_from=None,
             continue_session=False,
-            llm_method="claude_code_cli",
+            llm_method="claude",
         )
 
         execute_prompt(args)
@@ -62,7 +62,7 @@ class TestSessionPriority:
             session_id="explicit-123",
             continue_session_from="file.json",
             continue_session=False,
-            llm_method="claude_code_cli",
+            llm_method="claude",
         )
 
         execute_prompt(args)
@@ -96,7 +96,7 @@ class TestSessionPriority:
             session_id="explicit-123",
             continue_session_from=None,
             continue_session=True,
-            llm_method="claude_code_cli",
+            llm_method="claude",
         )
 
         execute_prompt(args)
@@ -127,7 +127,7 @@ class TestSessionPriority:
             session_id=None,
             continue_session_from="file.json",
             continue_session=False,
-            llm_method="claude_code_cli",
+            llm_method="claude",
         )
 
         execute_prompt(args)
@@ -163,7 +163,7 @@ class TestSessionPriority:
             session_id=None,
             continue_session_from=None,
             continue_session=True,
-            llm_method="claude_code_cli",
+            llm_method="claude",
         )
 
         execute_prompt(args)
