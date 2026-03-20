@@ -83,9 +83,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 11
 
 ### Step 12 — Test Coverage Gaps ([step_12.md](./steps/step_12.md))
-- [ ] Implement Step 12: add tests for empty message list, non-dict server entry skipping, execution_dir/env_vars forwarding, ImportError for all three backends
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 12
+- [x] Implement Step 12: add tests for empty message list, non-dict server entry skipping, execution_dir/env_vars forwarding, ImportError for all three backends
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 12
 
 ## Pull Request
 - [ ] Review all changes across steps for consistency and completeness
