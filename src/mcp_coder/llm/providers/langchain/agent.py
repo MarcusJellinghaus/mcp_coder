@@ -245,7 +245,8 @@ async def run_agent(
                 raw_tools = await session.list_tools()
                 for tool in raw_tools.tools:
                     sanitized = _sanitize_tool_schema(tool.inputSchema)
-                    tool.inputSchema = sanitized
+                    # Shallow copy to avoid mutating the original MCP tool
+                    tool = tool.model_copy(update={"inputSchema": sanitized})
                     lc_tool = convert_mcp_tool_to_langchain_tool(
                         None,
                         tool,

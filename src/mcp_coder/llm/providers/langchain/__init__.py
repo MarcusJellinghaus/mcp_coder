@@ -142,6 +142,9 @@ def ask_langchain(
     sid = session_id or str(uuid.uuid4())
 
     if mcp_config:
+        # Agent mode needs a longer timeout than text mode — MCP tool calls
+        # involve multiple subprocess round-trips.
+        agent_timeout = max(timeout, 300)
         return _ask_agent(
             question=question,
             config=config,
@@ -149,7 +152,7 @@ def ask_langchain(
             mcp_config=mcp_config,
             execution_dir=execution_dir,
             env_vars=env_vars,
-            timeout=timeout,
+            timeout=agent_timeout,
         )
 
     return _ask_text(
