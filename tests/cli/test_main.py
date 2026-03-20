@@ -606,7 +606,7 @@ class TestCheckBranchStatusCommand:
         """Test check branch-status command with different LLM methods."""
         parser = create_parser()
 
-        # Test claude_code_cli
+        # Test claude
         args = parser.parse_args(["check", "branch-status", "--llm-method", "claude"])
         assert args.llm_method == "claude"
 

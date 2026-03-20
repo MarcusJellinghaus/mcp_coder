@@ -7,6 +7,7 @@ and the core agent execution function for the LangChain agent mode (issue #517).
 from __future__ import annotations
 
 import asyncio
+import copy
 import json
 import logging
 import os
@@ -174,8 +175,6 @@ def _sanitize_tool_schema(schema: dict[str, Any]) -> dict[str, Any]:
 
     A deep copy is made so the original MCP tool schema is never mutated.
     """
-    import copy
-
     schema = copy.deepcopy(schema)
 
     props = schema.get("properties")

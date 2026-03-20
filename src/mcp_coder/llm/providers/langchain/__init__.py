@@ -172,7 +172,8 @@ def _ask_text(
     from langchain_core.messages import HumanMessage, messages_from_dict
 
     history = load_langchain_history(session_id)
-    lc_messages = messages_from_dict(history) + [HumanMessage(content=question)]
+    history_messages = messages_from_dict(history)
+    lc_messages = history_messages + [HumanMessage(content=question)]
 
     chat_model = _create_chat_model(config, timeout=timeout)
 
@@ -199,10 +200,8 @@ def _ask_text(
     }
 
     # Serialize history using model_dump() for messages_from_dict() compatibility
-    new_human = HumanMessage(content=question)
-    new_ai = ai_msg
     serialized: list[dict[str, Any]] = []
-    for msg in list(messages_from_dict(history)) + [new_human, new_ai]:
+    for msg in list(history_messages) + [HumanMessage(content=question), ai_msg]:
         if hasattr(msg, "model_dump"):
             dump = msg.model_dump()
         else:
