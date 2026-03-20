@@ -42,13 +42,13 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: Templates and Help Text Updates — [step_3.md](./steps/step_3.md)
 
-- [ ] Update tests for template changes (TDD)
-- [ ] Remove `--llm-method claude` from Windows templates in `templates.py`
-- [ ] Add `# TODO` comment to Linux templates
-- [ ] Update `--llm-method` help text in `parsers.py` (5 commands)
-- [ ] Update `--project-dir` and `--execution-dir` help text in `parsers.py`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message
+- [x] Update tests for template changes (TDD)
+- [x] Remove `--llm-method claude` from Windows templates in `templates.py`
+- [x] Add `# TODO` comment to Linux templates
+- [x] Update `--llm-method` help text in `parsers.py` (5 commands)
+- [x] Update `--project-dir` and `--execution-dir` help text in `parsers.py`
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message
 
 ### Step 4: Update All Command Handler Callers — [step_4.md](./steps/step_4.md)
 

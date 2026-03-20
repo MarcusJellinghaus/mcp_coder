@@ -38,7 +38,7 @@ def add_prompt_parser(subparsers: Any) -> None:
         "--project-dir",
         type=str,
         default=None,
-        help="Project directory path (default: current directory)",
+        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
     )
     prompt_parser.add_argument(
         "--verbosity",
@@ -84,7 +84,7 @@ def add_prompt_parser(subparsers: Any) -> None:
         choices=["claude", "langchain"],
         default=None,
         metavar="METHOD",
-        help="LLM method: claude (default) or langchain",
+        help="LLM method override. If omitted, uses config default_provider or claude",
     )
     prompt_parser.add_argument(
         "--output-format",
@@ -103,7 +103,7 @@ def add_prompt_parser(subparsers: Any) -> None:
         "--execution-dir",
         type=str,
         default=None,
-        help="Working directory for Claude subprocess (default: current directory)",
+        help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
     )
 
 
@@ -129,13 +129,13 @@ def add_commit_parsers(subparsers: Any) -> None:
         "--llm-method",
         choices=["claude", "langchain"],
         default=None,
-        help="LLM method to use (default: claude)",
+        help="LLM method override. If omitted, uses config default_provider or claude",
     )
     auto_parser.add_argument(
         "--project-dir",
         type=str,
         default=None,
-        help="Project directory path (default: current directory)",
+        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
     )
     auto_parser.add_argument(
         "--mcp-config",
@@ -147,7 +147,7 @@ def add_commit_parsers(subparsers: Any) -> None:
         "--execution-dir",
         type=str,
         default=None,
-        help="Working directory for Claude subprocess (default: current directory)",
+        help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
     )
 
     # commit clipboard command
@@ -160,7 +160,7 @@ def add_commit_parsers(subparsers: Any) -> None:
         "--project-dir",
         type=str,
         default=None,
-        help="Project directory path (default: current directory)",
+        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
     )
 
 
@@ -175,13 +175,13 @@ def add_implement_parser(subparsers: Any) -> None:
         "--project-dir",
         type=str,
         default=None,
-        help="Project directory path (default: current directory)",
+        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
     )
     implement_parser.add_argument(
         "--llm-method",
         choices=["claude", "langchain"],
         default=None,
-        help="LLM method to use (default: claude)",
+        help="LLM method override. If omitted, uses config default_provider or claude",
     )
     implement_parser.add_argument(
         "--mcp-config",
@@ -193,7 +193,7 @@ def add_implement_parser(subparsers: Any) -> None:
         "--execution-dir",
         type=str,
         default=None,
-        help="Working directory for Claude subprocess (default: current directory)",
+        help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
     )
     implement_parser.add_argument(
         "--update-labels",
@@ -216,13 +216,13 @@ def add_create_plan_parser(subparsers: Any) -> None:
         "--project-dir",
         type=str,
         default=None,
-        help="Project directory path (default: current directory)",
+        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
     )
     create_plan_parser.add_argument(
         "--llm-method",
         choices=["claude", "langchain"],
         default=None,
-        help="LLM method to use (default: claude)",
+        help="LLM method override. If omitted, uses config default_provider or claude",
     )
     create_plan_parser.add_argument(
         "--mcp-config",
@@ -234,7 +234,7 @@ def add_create_plan_parser(subparsers: Any) -> None:
         "--execution-dir",
         type=str,
         default=None,
-        help="Working directory for Claude subprocess (default: current directory)",
+        help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
     )
     create_plan_parser.add_argument(
         "--update-labels",
@@ -254,13 +254,13 @@ def add_create_pr_parser(subparsers: Any) -> None:
         "--project-dir",
         type=str,
         default=None,
-        help="Project directory path (default: current directory)",
+        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
     )
     create_pr_parser.add_argument(
         "--llm-method",
         choices=["claude", "langchain"],
         default=None,
-        help="LLM method to use (default: claude)",
+        help="LLM method override. If omitted, uses config default_provider or claude",
     )
     create_pr_parser.add_argument(
         "--mcp-config",
@@ -272,7 +272,7 @@ def add_create_pr_parser(subparsers: Any) -> None:
         "--execution-dir",
         type=str,
         default=None,
-        help="Working directory for Claude subprocess (default: current directory)",
+        help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
     )
     create_pr_parser.add_argument(
         "--update-labels",
@@ -414,7 +414,7 @@ def add_coordinator_parsers(subparsers: Any) -> None:
     issue_stats_parser.add_argument(
         "--project-dir",
         metavar="PATH",
-        help="Project directory path (default: current directory)",
+        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
     )
 
 
@@ -429,7 +429,7 @@ def add_define_labels_parser(subparsers: Any) -> None:
         "--project-dir",
         type=str,
         default=None,
-        help="Project directory path (default: current directory)",
+        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
     )
     define_labels_parser.add_argument(
         "--dry-run",
@@ -460,7 +460,7 @@ def add_set_status_parser(subparsers: Any) -> None:
         "--project-dir",
         type=str,
         default=None,
-        help="Project directory path (default: current directory)",
+        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
     )
     set_status_parser.add_argument(
         "--force",
@@ -501,7 +501,7 @@ def add_check_parsers(subparsers: Any) -> None:
         "--project-dir",
         type=str,
         default=None,
-        help="Project directory path (default: current directory)",
+        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
     )
     branch_status_parser.add_argument(
         "--ci-timeout",
@@ -528,7 +528,7 @@ def add_check_parsers(subparsers: Any) -> None:
         "--llm-method",
         choices=["claude", "langchain"],
         default=None,
-        help="LLM method to use for --fix (default: claude)",
+        help="LLM method override. If omitted, uses config default_provider or claude",
     )
     branch_status_parser.add_argument(
         "--mcp-config",
@@ -540,7 +540,7 @@ def add_check_parsers(subparsers: Any) -> None:
         "--execution-dir",
         type=str,
         default=None,
-        help="Working directory for Claude subprocess (default: current directory)",
+        help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
     )
 
     # check file-size command
@@ -570,7 +570,7 @@ def add_check_parsers(subparsers: Any) -> None:
         "--project-dir",
         type=str,
         default=None,
-        help="Project directory path (default: current directory)",
+        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
     )
 
 
@@ -597,7 +597,7 @@ def add_gh_tool_parsers(subparsers: Any) -> None:
         "--project-dir",
         type=str,
         default=None,
-        help="Project directory path (default: current directory)",
+        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
     )
 
 
@@ -650,7 +650,7 @@ def add_git_tool_parsers(subparsers: Any) -> None:
         "--project-dir",
         type=str,
         default=None,
-        help="Project directory path (default: current directory)",
+        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
     )
     compact_diff_parser.add_argument(
         "--exclude",

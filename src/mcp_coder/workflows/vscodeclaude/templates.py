@@ -106,7 +106,7 @@ echo === Step 1: Automated Analysis ===
 echo Running: {initial_command} {issue_number}
 echo.
 
-for /f "delims=" %%i in ('mcp-coder prompt "{initial_command} {issue_number}" --llm-method claude --output-format session-id --mcp-config .mcp.json --timeout {timeout}') do set SESSION_ID=%%i
+for /f "delims=" %%i in ('mcp-coder prompt "{initial_command} {issue_number}" --output-format session-id --mcp-config .mcp.json --timeout {timeout}') do set SESSION_ID=%%i
 
 if "%SESSION_ID%"=="" (
     echo.
@@ -127,7 +127,7 @@ echo === Step 2: Automated Discussion ===
 echo Running: /discuss
 echo.
 
-mcp-coder prompt "/discuss" --llm-method claude --session-id %SESSION_ID% --mcp-config .mcp.json --timeout {timeout}
+mcp-coder prompt "/discuss" --session-id %SESSION_ID% --mcp-config .mcp.json --timeout {timeout}
 
 if errorlevel 1 (
     echo.
@@ -217,7 +217,8 @@ echo ""
 """
 
 # Automated analysis section for Linux
-AUTOMATED_SECTION_LINUX = r"""echo "Running automated analysis..."
+AUTOMATED_SECTION_LINUX = r"""# TODO - to be reviewed: Linux templates use raw `claude` CLI directly, not mcp-coder prompt
+echo "Running automated analysis..."
 claude -p "{initial_command} {issue_number}" --output-format json --mcp-config .mcp.json > .vscodeclaude_analysis.json 2>&1
 
 SESSION_ID=$(python3 -c "import json; d=json.load(open('.vscodeclaude_analysis.json')); print(d.get('session_id',''))")
