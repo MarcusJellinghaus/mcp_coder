@@ -75,11 +75,11 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 6: API Parity — Export Missing Python APIs — [step_6.md](./steps/step_6.md)
 
-- [ ] Update tests for new exports in `test_module_exports.py` (TDD)
-- [ ] Add exports to `src/mcp_coder/__init__.py` (`verify_claude`, `verify_langchain`, `verify_mlflow`, `generate_commit_message_with_llm`, `collect_branch_status`)
-- [ ] Add `collect_branch_status` export to `src/mcp_coder/checks/__init__.py`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message
+- [x] Update tests for new exports in `test_module_exports.py` (TDD)
+- [x] Add exports to `src/mcp_coder/__init__.py` (`verify_claude`, `verify_langchain`, `verify_mlflow`, `generate_commit_message_with_llm`, `collect_branch_status`)
+- [x] Add `collect_branch_status` export to `src/mcp_coder/checks/__init__.py`
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message
 
 ---
 

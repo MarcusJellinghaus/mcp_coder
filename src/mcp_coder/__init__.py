@@ -13,11 +13,15 @@ Example:
     >>> print(response)
 """
 
+from .checks.branch_status import collect_branch_status
 from .llm.interface import ask_llm, prompt_llm
+from .llm.mlflow_logger import verify_mlflow
+from .llm.providers.claude.claude_cli_verification import verify_claude
 from .llm.providers.claude.claude_executable_finder import (
     find_claude_executable,
     verify_claude_installation,
 )
+from .llm.providers.langchain.verification import verify_langchain
 from .llm.serialization import deserialize_llm_response, serialize_llm_response
 from .llm.types import LLM_RESPONSE_VERSION, LLMResponseDict
 from .prompt_manager import (
@@ -41,6 +45,7 @@ from .utils.subprocess_runner import (
     execute_command,
     execute_subprocess,
 )
+from .workflow_utils.commit_operations import generate_commit_message_with_llm
 
 # Version is automatically determined from git tags via setuptools-scm
 try:
@@ -84,4 +89,12 @@ __all__ = [
     "get_prompt",
     "validate_prompt_markdown",
     "validate_prompt_directory",
+    # Verification functions
+    "verify_claude",
+    "verify_langchain",
+    "verify_mlflow",
+    # Commit operations
+    "generate_commit_message_with_llm",
+    # Branch status
+    "collect_branch_status",
 ]
