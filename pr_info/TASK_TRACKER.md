@@ -52,14 +52,14 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 4: Update All Command Handler Callers — [step_4.md](./steps/step_4.md)
 
-- [ ] Update tests for all 5 command handlers to mock tuple return (TDD)
-- [ ] Update `prompt.py` — destructure tuple, pass `project_dir`
-- [ ] Update `implement.py` — destructure tuple, pass `project_dir`
-- [ ] Update `create_plan.py` — destructure tuple, pass `project_dir`
-- [ ] Update `create_pr.py` — destructure tuple, pass `project_dir`
-- [ ] Update `check_branch_status.py` — destructure tuple, pass `project_dir`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message
+- [x] Update tests for all 5 command handlers to mock tuple return (TDD)
+- [x] Update `prompt.py` — destructure tuple, pass `project_dir`
+- [x] Update `implement.py` — destructure tuple, pass `project_dir`
+- [x] Update `create_plan.py` — destructure tuple, pass `project_dir`
+- [x] Update `create_pr.py` — destructure tuple, pass `project_dir`
+- [x] Update `check_branch_status.py` — destructure tuple, pass `project_dir`
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message
 
 ### Step 5: CLI Command Consistency — Verify and Commit Auto — [step_5.md](./steps/step_5.md)
 

@@ -46,12 +46,12 @@ def execute_create_plan(args: argparse.Namespace) -> int:
         logger.debug(f"Execution directory: {execution_dir}")
 
         # Parse LLM method using shared utility
-        llm_method = resolve_llm_method(args.llm_method)
+        llm_method, _ = resolve_llm_method(args.llm_method)
         provider = parse_llm_method_from_args(llm_method)
 
         # Extract and resolve mcp_config path to absolute path
         mcp_config = getattr(args, "mcp_config", None)
-        mcp_config = resolve_mcp_config_path(mcp_config)
+        mcp_config = resolve_mcp_config_path(mcp_config, project_dir=args.project_dir)
 
         # Extract update_labels flag from args
         update_labels = getattr(args, "update_labels", False)

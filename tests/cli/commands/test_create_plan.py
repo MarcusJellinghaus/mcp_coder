@@ -36,33 +36,37 @@ class TestExecuteCreatePlan:
                 "mcp_coder.cli.commands.create_plan.resolve_execution_dir"
             ) as mock_resolve_exec:
                 with patch(
-                    "mcp_coder.cli.commands.create_plan.parse_llm_method_from_args"
-                ) as mock_parse:
+                    "mcp_coder.cli.commands.create_plan.resolve_llm_method"
+                ) as mock_resolve_llm:
                     with patch(
-                        "mcp_coder.workflows.create_plan.run_create_plan_workflow"
-                    ) as mock_workflow:
-                        # Configure mocks
-                        mock_resolve.return_value = test_project_dir
-                        mock_resolve_exec.return_value = test_execution_dir
-                        mock_parse.return_value = "claude"
-                        mock_workflow.return_value = 0
+                        "mcp_coder.cli.commands.create_plan.parse_llm_method_from_args"
+                    ) as mock_parse:
+                        with patch(
+                            "mcp_coder.workflows.create_plan.run_create_plan_workflow"
+                        ) as mock_workflow:
+                            # Configure mocks
+                            mock_resolve.return_value = test_project_dir
+                            mock_resolve_exec.return_value = test_execution_dir
+                            mock_resolve_llm.return_value = ("claude", "cli argument")
+                            mock_parse.return_value = "claude"
+                            mock_workflow.return_value = 0
 
-                        # Execute
-                        result = execute_create_plan(mock_args)
+                            # Execute
+                            result = execute_create_plan(mock_args)
 
-                        # Assert
-                        assert result == 0
-                        mock_resolve.assert_called_once_with("/test/project")
-                        mock_resolve_exec.assert_called_once_with(None)
-                        mock_parse.assert_called_once_with("claude")
-                        mock_workflow.assert_called_once_with(
-                            123,
-                            test_project_dir,
-                            "claude",
-                            mock_args.mcp_config,
-                            test_execution_dir,
-                            False,
-                        )
+                            # Assert
+                            assert result == 0
+                            mock_resolve.assert_called_once_with("/test/project")
+                            mock_resolve_exec.assert_called_once_with(None)
+                            mock_parse.assert_called_once_with("claude")
+                            mock_workflow.assert_called_once_with(
+                                123,
+                                test_project_dir,
+                                "claude",
+                                mock_args.mcp_config,
+                                test_execution_dir,
+                                False,
+                            )
 
     def test_execute_create_plan_error_handling(self, mock_args: MagicMock) -> None:
         """Test error handling for workflow failures and exceptions."""
@@ -79,15 +83,19 @@ class TestExecuteCreatePlan:
                 return_value=test_execution_dir,
             ):
                 with patch(
-                    "mcp_coder.cli.commands.create_plan.parse_llm_method_from_args",
-                    return_value=("claude", "cli"),
+                    "mcp_coder.cli.commands.create_plan.resolve_llm_method",
+                    return_value=("claude", "cli argument"),
                 ):
                     with patch(
-                        "mcp_coder.workflows.create_plan.run_create_plan_workflow",
-                        return_value=1,
+                        "mcp_coder.cli.commands.create_plan.parse_llm_method_from_args",
+                        return_value="claude",
                     ):
-                        result = execute_create_plan(mock_args)
-                        assert result == 1
+                        with patch(
+                            "mcp_coder.workflows.create_plan.run_create_plan_workflow",
+                            return_value=1,
+                        ):
+                            result = execute_create_plan(mock_args)
+                            assert result == 1
 
 
 class TestCreatePlanExecutionDir:
@@ -96,10 +104,12 @@ class TestCreatePlanExecutionDir:
     @patch("mcp_coder.cli.commands.create_plan.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.create_plan.resolve_project_dir")
     @patch("mcp_coder.workflows.create_plan.run_create_plan_workflow")
+    @patch("mcp_coder.cli.commands.create_plan.resolve_llm_method")
     @patch("mcp_coder.cli.commands.create_plan.parse_llm_method_from_args")
     def test_default_execution_dir_uses_cwd(
         self,
         mock_parse_llm: MagicMock,
+        mock_resolve_llm: MagicMock,
         mock_run_workflow: MagicMock,
         mock_resolve_project: MagicMock,
         mock_resolve_exec: MagicMock,
@@ -109,6 +119,7 @@ class TestCreatePlanExecutionDir:
         execution_dir = Path.cwd()
         mock_resolve_project.return_value = project_dir
         mock_resolve_exec.return_value = str(execution_dir)
+        mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_run_workflow.return_value = 0
 
@@ -131,10 +142,12 @@ class TestCreatePlanExecutionDir:
     @patch("mcp_coder.cli.commands.create_plan.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.create_plan.resolve_project_dir")
     @patch("mcp_coder.workflows.create_plan.run_create_plan_workflow")
+    @patch("mcp_coder.cli.commands.create_plan.resolve_llm_method")
     @patch("mcp_coder.cli.commands.create_plan.parse_llm_method_from_args")
     def test_explicit_execution_dir_absolute(
         self,
         mock_parse_llm: MagicMock,
+        mock_resolve_llm: MagicMock,
         mock_run_workflow: MagicMock,
         mock_resolve_project: MagicMock,
         mock_resolve_exec: MagicMock,
@@ -147,6 +160,7 @@ class TestCreatePlanExecutionDir:
 
         mock_resolve_project.return_value = project_dir
         mock_resolve_exec.return_value = str(execution_dir)
+        mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_run_workflow.return_value = 0
 

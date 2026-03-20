@@ -152,8 +152,12 @@ class TestExecuteCheckBranchStatus:
     @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
     @patch("mcp_coder.cli.commands.check_branch_status._run_auto_fixes")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_execution_dir")
+    @patch("mcp_coder.cli.commands.check_branch_status.resolve_llm_method")
+    @patch("mcp_coder.cli.commands.check_branch_status.parse_llm_method_from_args")
     def test_execute_check_branch_status_with_fixes_success(
         self,
+        mock_parse_llm: Mock,
+        mock_resolve_llm: Mock,
         mock_resolve_exec: Mock,
         mock_run_fixes: Mock,
         mock_collect: Mock,
@@ -167,6 +171,8 @@ class TestExecuteCheckBranchStatus:
         exec_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
         mock_resolve_exec.return_value = exec_dir
+        mock_resolve_llm.return_value = ("claude", "cli argument")
+        mock_parse_llm.return_value = "claude"
         mock_collect.return_value = failed_ci_report
         mock_run_fixes.return_value = True  # Fixes succeeded
 
@@ -200,8 +206,12 @@ class TestExecuteCheckBranchStatus:
     @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
     @patch("mcp_coder.cli.commands.check_branch_status._run_auto_fixes")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_execution_dir")
+    @patch("mcp_coder.cli.commands.check_branch_status.resolve_llm_method")
+    @patch("mcp_coder.cli.commands.check_branch_status.parse_llm_method_from_args")
     def test_execute_check_branch_status_with_fixes_failure(
         self,
+        mock_parse_llm: Mock,
+        mock_resolve_llm: Mock,
         mock_resolve_exec: Mock,
         mock_run_fixes: Mock,
         mock_collect: Mock,
@@ -215,6 +225,8 @@ class TestExecuteCheckBranchStatus:
         exec_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
         mock_resolve_exec.return_value = exec_dir
+        mock_resolve_llm.return_value = ("claude", "cli argument")
+        mock_parse_llm.return_value = "claude"
         mock_collect.return_value = failed_ci_report
         mock_run_fixes.return_value = False  # Fixes failed
 
@@ -291,10 +303,12 @@ class TestExecuteCheckBranchStatus:
 
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
+    @patch("mcp_coder.cli.commands.check_branch_status.resolve_llm_method")
     @patch("mcp_coder.cli.commands.check_branch_status.parse_llm_method_from_args")
     def test_execute_check_branch_status_with_none_project_dir(
         self,
         mock_parse_llm: Mock,
+        mock_resolve_llm: Mock,
         mock_collect: Mock,
         mock_resolve_dir: Mock,
         sample_report: BranchStatusReport,
@@ -305,6 +319,7 @@ class TestExecuteCheckBranchStatus:
         project_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
         mock_collect.return_value = sample_report
+        mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
 
         args = argparse.Namespace(

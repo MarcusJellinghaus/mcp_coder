@@ -185,11 +185,13 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
             logger.info("Auto-fix mode enabled")
 
             # Parse LLM method for fixes
-            llm_method = resolve_llm_method(args.llm_method)
+            llm_method, _ = resolve_llm_method(args.llm_method)
             provider = parse_llm_method_from_args(llm_method)
 
             # Resolve paths for fix operations
-            mcp_config = resolve_mcp_config_path(args.mcp_config)
+            mcp_config = resolve_mcp_config_path(
+                args.mcp_config, project_dir=args.project_dir
+            )
             execution_dir = resolve_execution_dir(args.execution_dir)
 
             # Attempt fixes with retry

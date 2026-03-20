@@ -43,10 +43,12 @@ class TestExecuteCreatePr:
     @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
+    @patch("mcp_coder.cli.commands.create_pr.resolve_llm_method")
     @patch("mcp_coder.cli.commands.create_pr.parse_llm_method_from_args")
     def test_execute_create_pr_success(
         self,
         mock_parse_llm: Mock,
+        mock_resolve_llm: Mock,
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
         mock_resolve_exec: Mock,
@@ -58,6 +60,7 @@ class TestExecuteCreatePr:
         execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
         mock_resolve_exec.return_value = str(execution_dir)
+        mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_run_workflow.return_value = 0
 
@@ -81,10 +84,12 @@ class TestExecuteCreatePr:
     @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
+    @patch("mcp_coder.cli.commands.create_pr.resolve_llm_method")
     @patch("mcp_coder.cli.commands.create_pr.parse_llm_method_from_args")
     def test_execute_create_pr_with_custom_llm_method(
         self,
         mock_parse_llm: Mock,
+        mock_resolve_llm: Mock,
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
         mock_resolve_exec: Mock,
@@ -96,6 +101,7 @@ class TestExecuteCreatePr:
         execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
         mock_resolve_exec.return_value = str(execution_dir)
+        mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_run_workflow.return_value = 0
 
@@ -117,10 +123,12 @@ class TestExecuteCreatePr:
     @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
+    @patch("mcp_coder.cli.commands.create_pr.resolve_llm_method")
     @patch("mcp_coder.cli.commands.create_pr.parse_llm_method_from_args")
     def test_execute_create_pr_workflow_failure(
         self,
         mock_parse_llm: Mock,
+        mock_resolve_llm: Mock,
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
         mock_resolve_exec: Mock,
@@ -132,6 +140,7 @@ class TestExecuteCreatePr:
         execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
         mock_resolve_exec.return_value = str(execution_dir)
+        mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_run_workflow.return_value = 1  # Workflow failure
 
@@ -175,10 +184,12 @@ class TestExecuteCreatePr:
     @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
+    @patch("mcp_coder.cli.commands.create_pr.resolve_llm_method")
     @patch("mcp_coder.cli.commands.create_pr.parse_llm_method_from_args")
     def test_execute_create_pr_none_project_dir(
         self,
         mock_parse_llm: Mock,
+        mock_resolve_llm: Mock,
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
         mock_resolve_exec: Mock,
@@ -190,6 +201,7 @@ class TestExecuteCreatePr:
         execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
         mock_resolve_exec.return_value = str(execution_dir)
+        mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_run_workflow.return_value = 0
 
@@ -207,16 +219,18 @@ class TestExecuteCreatePr:
         mock_resolve_exec.assert_called_once_with(None)
         mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, str(execution_dir), False
+            project_dir, "claude", mock.ANY, str(execution_dir), False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
+    @patch("mcp_coder.cli.commands.create_pr.resolve_llm_method")
     @patch("mcp_coder.cli.commands.create_pr.parse_llm_method_from_args")
     def test_execute_create_pr_with_different_llm_methods(
         self,
         mock_parse_llm: Mock,
+        mock_resolve_llm: Mock,
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
         mock_resolve_exec: Mock,
@@ -231,6 +245,7 @@ class TestExecuteCreatePr:
         mock_run_workflow.return_value = 0
 
         # Test with claude
+        mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         args_cli = argparse.Namespace(
             project_dir="/test/project",
@@ -249,9 +264,11 @@ class TestExecuteCreatePr:
         mock_resolve_dir.reset_mock()
         mock_run_workflow.reset_mock()
         mock_parse_llm.reset_mock()
+        mock_resolve_llm.reset_mock()
         mock_resolve_exec.reset_mock()
 
         # Test with langchain
+        mock_resolve_llm.return_value = ("langchain", "cli argument")
         mock_parse_llm.return_value = "langchain"
         args_lc = argparse.Namespace(
             project_dir="/test/project",
@@ -269,10 +286,12 @@ class TestExecuteCreatePr:
     @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
+    @patch("mcp_coder.cli.commands.create_pr.resolve_llm_method")
     @patch("mcp_coder.cli.commands.create_pr.parse_llm_method_from_args")
     def test_execute_create_pr_keyboard_interrupt(
         self,
         mock_parse_llm: Mock,
+        mock_resolve_llm: Mock,
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
         mock_resolve_exec: Mock,
@@ -284,6 +303,7 @@ class TestExecuteCreatePr:
         execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
         mock_resolve_exec.return_value = str(execution_dir)
+        mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_run_workflow.side_effect = KeyboardInterrupt()
 
@@ -304,10 +324,12 @@ class TestExecuteCreatePr:
     @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
+    @patch("mcp_coder.cli.commands.create_pr.resolve_llm_method")
     @patch("mcp_coder.cli.commands.create_pr.parse_llm_method_from_args")
     def test_execute_create_pr_unexpected_error(
         self,
         mock_parse_llm: Mock,
+        mock_resolve_llm: Mock,
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
         mock_resolve_exec: Mock,
@@ -319,6 +341,7 @@ class TestExecuteCreatePr:
         execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
         mock_resolve_exec.return_value = str(execution_dir)
+        mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_run_workflow.side_effect = RuntimeError("Unexpected error")
 
@@ -379,10 +402,12 @@ class TestCreatePrExecutionDir:
     @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
+    @patch("mcp_coder.cli.commands.create_pr.resolve_llm_method")
     @patch("mcp_coder.cli.commands.create_pr.parse_llm_method_from_args")
     def test_default_execution_dir_uses_cwd(
         self,
         mock_parse_llm: Mock,
+        mock_resolve_llm: Mock,
         mock_run_workflow: Mock,
         mock_resolve_project: Mock,
         mock_resolve_exec: Mock,
@@ -392,6 +417,7 @@ class TestCreatePrExecutionDir:
         execution_dir = Path.cwd()
         mock_resolve_project.return_value = project_dir
         mock_resolve_exec.return_value = str(execution_dir)
+        mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_run_workflow.return_value = 0
 
@@ -413,10 +439,12 @@ class TestCreatePrExecutionDir:
     @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
+    @patch("mcp_coder.cli.commands.create_pr.resolve_llm_method")
     @patch("mcp_coder.cli.commands.create_pr.parse_llm_method_from_args")
     def test_explicit_execution_dir_absolute(
         self,
         mock_parse_llm: Mock,
+        mock_resolve_llm: Mock,
         mock_run_workflow: Mock,
         mock_resolve_project: Mock,
         mock_resolve_exec: Mock,
@@ -429,6 +457,7 @@ class TestCreatePrExecutionDir:
 
         mock_resolve_project.return_value = project_dir
         mock_resolve_exec.return_value = str(execution_dir)
+        mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_run_workflow.return_value = 0
 

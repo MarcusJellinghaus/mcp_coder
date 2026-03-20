@@ -160,7 +160,7 @@ def execute_prompt(
 
         # Resolve LLM method early (CLI arg > config > default)
         raw_llm_method = getattr(args, "llm_method", None)
-        llm_method = resolve_llm_method(raw_llm_method)
+        llm_method, _ = resolve_llm_method(raw_llm_method)
         provider = parse_llm_method_from_args(llm_method)
 
         # Handle continuation from previous session if requested
@@ -205,7 +205,9 @@ def execute_prompt(
         verbosity = getattr(args, "verbosity", "just-text")
         output_format = getattr(args, "output_format", "text")
         mcp_config = getattr(args, "mcp_config", None)
-        mcp_config = resolve_mcp_config_path(mcp_config)
+        mcp_config = resolve_mcp_config_path(
+            mcp_config, project_dir=getattr(args, "project_dir", None)
+        )
 
         # Route to appropriate method based on output_format and verbosity
         formatted_output = ""
