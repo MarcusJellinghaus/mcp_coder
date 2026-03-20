@@ -78,9 +78,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 10
 
 ### Step 11 — Config Robustness + Transport Warning ([step_11.md](./steps/step_11.md))
-- [ ] Implement Step 11: wrap json.JSONDecodeError in _load_mcp_server_config() with user-friendly message, log warning when overriding non-stdio transport, write tests
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 11
+- [x] Implement Step 11: wrap json.JSONDecodeError in _load_mcp_server_config() with user-friendly message, log warning when overriding non-stdio transport, write tests
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 11
 
 ### Step 12 — Test Coverage Gaps ([step_12.md](./steps/step_12.md))
 - [ ] Implement Step 12: add tests for empty message list, non-dict server entry skipping, execution_dir/env_vars forwarding, ImportError for all three backends

@@ -83,7 +83,12 @@ def _load_mcp_server_config(
     """
     path = Path(mcp_config_path)
     with open(path, encoding="utf-8") as fh:
-        raw_config: dict[str, object] = json.load(fh)
+        try:
+            raw_config: dict[str, object] = json.load(fh)
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                f"Failed to parse MCP config file {mcp_config_path}: {exc}"
+            ) from exc
 
     # Build merged environment: os.environ as base, env_vars overrides
     merged_env: dict[str, str] = {**os.environ, **(env_vars or {})}

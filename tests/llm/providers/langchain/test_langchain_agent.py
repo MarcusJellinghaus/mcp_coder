@@ -165,6 +165,27 @@ class TestLoadMcpServerConfig:
         # Unknown field should not appear in output
         assert "unknownField" not in result["s"]
 
+    def test_raises_on_invalid_json(self, tmp_path: Path) -> None:
+        """Malformed JSON raises ValueError with user-friendly message."""
+        cfg_file = tmp_path / ".mcp.json"
+        cfg_file.write_text("{invalid json", encoding="utf-8")
+        with pytest.raises(ValueError, match="Failed to parse MCP config file"):
+            _load_mcp_server_config(str(cfg_file))
+
+    def test_warns_on_non_stdio_transport(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Non-stdio transport logs a warning and falls back to stdio."""
+        path = self._write_config(
+            tmp_path,
+            {"mcpServers": {"s": {"command": "cmd", "transport": "sse"}}},
+        )
+        with caplog.at_level(logging.WARNING):
+            result = _load_mcp_server_config(path)
+        assert "only 'stdio' is supported" in caplog.text
+        assert "sse" in caplog.text
+        assert result["s"]["transport"] == "stdio"
+
     def test_accepts_type_field(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
