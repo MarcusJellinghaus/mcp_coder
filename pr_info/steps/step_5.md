@@ -44,6 +44,8 @@ from ..utils import resolve_llm_method
 active_provider, source = resolve_llm_method(getattr(args, "llm_method", None))
 ```
 
+The shared `resolve_llm_method()` now includes env var `MCP_CODER_LLM_PROVIDER` support (Decision 1), so verify retains its existing env var behavior through the shared function.
+
 **Remove import**: `os` (no longer needed after deleting `_resolve_active_provider()`)
 **Remove import**: `get_config_values` (no longer needed)
 
@@ -59,8 +61,12 @@ llm_method = resolve_llm_method(args.llm_method)
 
 # AFTER:
 llm_method, _ = resolve_llm_method(args.llm_method)
-# Commit message generation is text-in/text-out — no MCP tools needed.
+# Commit message generation is text-in/text-out: it takes diff text as input
+# and produces a commit message as output. No MCP tool use is involved,
+# so --mcp-config is not applicable here.
 ```
+
+> **Decision 2**: `--mcp-config` removed from commit auto. See [Decisions.md](Decisions.md).
 
 ### parsers.py changes (commit auto)
 

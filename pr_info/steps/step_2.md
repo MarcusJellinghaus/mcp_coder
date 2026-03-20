@@ -78,10 +78,14 @@ No new imports needed. Changes are internal to existing functions.
 
 ```
 1. If llm_method is not None → return (llm_method, "cli argument")
-2. Read config key ("llm", "default_provider")
-3. If config value == "langchain" → return ("langchain", "config default_provider")
-4. Return ("claude", "default")
+2. Check env var MCP_CODER_LLM_PROVIDER
+3. If env var is set and valid → return (env_value, "env MCP_CODER_LLM_PROVIDER")
+4. Read config key ("llm", "default_provider")
+5. If config value == "langchain" → return ("langchain", "config default_provider")
+6. Return ("claude", "default")
 ```
+
+> **Decision 1**: Env var support added to shared function so verify's `_resolve_active_provider()` can be deleted and all commands gain env var support. See [Decisions.md](Decisions.md).
 
 ## ALGORITHM — `resolve_mcp_config_path()`
 
@@ -98,6 +102,7 @@ No new imports needed. Changes are internal to existing functions.
 ```python
 # resolve_llm_method return examples:
 ("claude", "cli argument")
+("langchain", "env MCP_CODER_LLM_PROVIDER")
 ("langchain", "config default_provider")
 ("claude", "default")
 
@@ -120,7 +125,9 @@ Add to `create_default_config()` template, before the `[github]` section:
 
 1. `test_resolve_llm_method_cli_arg` — returns `("claude", "cli argument")`
 2. `test_resolve_llm_method_config_default_provider` — mock config with `default_provider = "langchain"`, returns `("langchain", "config default_provider")`
-3. `test_resolve_llm_method_default` — no CLI arg, no config → `("claude", "default")`
+3. `test_resolve_llm_method_env_var` — env var `MCP_CODER_LLM_PROVIDER=langchain`, returns `("langchain", "env MCP_CODER_LLM_PROVIDER")`
+4. `test_resolve_llm_method_cli_overrides_env` — CLI arg takes precedence over env var
+5. `test_resolve_llm_method_default` — no CLI arg, no env var, no config → `("claude", "default")`
 4. `test_resolve_mcp_config_auto_detect_project_dir` — `.mcp.json` exists in project_dir → returns path
 5. `test_resolve_mcp_config_auto_detect_cwd` — `.mcp.json` exists in CWD → returns path
 6. `test_resolve_mcp_config_auto_detect_missing` — no `.mcp.json` → returns `None`

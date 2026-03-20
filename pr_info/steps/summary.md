@@ -11,7 +11,9 @@ This implementation finetunes the dual LLM provider support (Claude / LangChain)
 **Before:** Returns a plain string (`"claude"` or `"langchain"`).
 **After:** Returns `(provider, source)` tuple, e.g. `("langchain", "config default_provider")`.
 
-This unifies with `verify.py`'s existing `_resolve_active_provider()` which already returns the same shape. After the change, `_resolve_active_provider()` is deleted and all commands use the shared function.
+Resolution order: CLI arg → env var (`MCP_CODER_LLM_PROVIDER`) → config `default_provider` → default `"claude"`.
+
+This unifies with `verify.py`'s existing `_resolve_active_provider()` which already returns the same shape. After the change, `_resolve_active_provider()` is deleted and all commands use the shared function — including env var support (Decision 1).
 
 **Impact:** Every caller of `resolve_llm_method()` must destructure the tuple. Most callers only need the provider: `provider, _ = resolve_llm_method(...)`. The `source` is used only by `verify`.
 
@@ -40,7 +42,7 @@ The `async with` pattern is replaced with plain instantiation. The client in `la
 
 ### 6. CLI command consistency
 
-- `commit auto`: Remove `--mcp-config` (text-in/text-out, no MCP needed)
+- `commit auto`: Remove `--mcp-config` (text-in/text-out — takes diff, produces commit message, no MCP tool use involved)
 - `verify`: Add `--llm-method`, use shared `resolve_llm_method()`
 
 ### 7. API parity exports
