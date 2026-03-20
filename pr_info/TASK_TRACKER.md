@@ -68,9 +68,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 8
 
 ### Step 9 — Timeout Propagation + asyncio.TimeoutError Handling ([step_9.md](./steps/step_9.md))
-- [ ] Implement Step 9: pass timeout through _create_chat_model() to backend factories, add asyncio.TimeoutError handler in prompt_llm(), write tests
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 9
+- [x] Implement Step 9: pass timeout through _create_chat_model() to backend factories, add asyncio.TimeoutError handler in prompt_llm(), write tests
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 9
 
 ### Step 10 — Unify Session History Format ([step_10.md](./steps/step_10.md))
 - [ ] Implement Step 10: change _ask_text() to use model_dump() / messages_from_dict() for history serialization, remove _to_lc_messages() if unused, update tests

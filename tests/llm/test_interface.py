@@ -1,5 +1,6 @@
 """Tests for the high-level LLM interface."""
 
+import asyncio
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -221,6 +222,16 @@ class TestAskLLM:
 
         with pytest.raises(TimeoutExpired):
             ask_llm("Test question", provider="claude", timeout=30)
+
+    @patch("mcp_coder.llm.providers.langchain.ask_langchain")
+    def test_ask_llm_asyncio_timeout_reraised_for_langchain(
+        self, mock_ask_langchain: MagicMock
+    ) -> None:
+        """asyncio.TimeoutError from langchain provider is re-raised."""
+        mock_ask_langchain.side_effect = asyncio.TimeoutError()
+
+        with pytest.raises(asyncio.TimeoutError):
+            ask_llm("Test question", provider="langchain", timeout=30)
 
 
 class TestAskLLMExecutionDir:
@@ -592,6 +603,16 @@ class TestPromptLLM:
 
         with pytest.raises(TimeoutExpired):
             prompt_llm("Test question", provider="claude", timeout=30)
+
+    @patch("mcp_coder.llm.providers.langchain.ask_langchain")
+    def test_prompt_llm_asyncio_timeout_logged_and_reraised(
+        self, mock_ask_langchain: MagicMock
+    ) -> None:
+        """asyncio.TimeoutError from langchain is re-raised with logging."""
+        mock_ask_langchain.side_effect = asyncio.TimeoutError()
+
+        with pytest.raises(asyncio.TimeoutError):
+            prompt_llm("Test question", provider="langchain", timeout=30)
 
 
 class TestPromptLLMExecutionDir:
