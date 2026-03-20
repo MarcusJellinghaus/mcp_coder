@@ -27,7 +27,7 @@ def execute_create_plan(args: argparse.Namespace) -> int:
             - issue_number: GitHub issue number (int)
             - project_dir: Optional project directory path
             - execution_dir: Optional execution directory (NEW)
-            - llm_method: LLM method to use ('claude_code_cli' or 'langchain')
+            - llm_method: LLM method to use ('claude' or 'langchain')
 
     Returns:
         int: Exit code (0 for success, 1 for error)

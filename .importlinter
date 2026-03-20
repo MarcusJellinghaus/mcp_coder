@@ -274,6 +274,7 @@ forbidden_modules =
     langchain_google_genai
     langchain_anthropic
 ignore_imports =
+    mcp_coder.llm.providers.langchain -> langchain_core
     mcp_coder.llm.providers.langchain.** -> langchain_core
     mcp_coder.llm.providers.langchain.** -> langchain_openai
     mcp_coder.llm.providers.langchain.** -> langchain_google_genai

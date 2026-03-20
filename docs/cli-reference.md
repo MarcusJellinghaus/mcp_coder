@@ -127,7 +127,7 @@ mcp-coder prompt "Your prompt here" [OPTIONS]
 - `--continue-session` - Resume from most recent session (auto-discovers latest file)
 - `--session-id ID` - Direct session ID for continuation (overrides file-based options)
 - `--timeout SECONDS` - API request timeout in seconds (default: 60)
-- `--llm-method METHOD` - LLM provider method: `claude_code_cli` (default) or `langchain`
+- `--llm-method METHOD` - LLM provider method: `claude` (default) or `langchain`
 - `--output-format FORMAT` - Output format: `text` (default) or `json` (includes session_id)
 - `--mcp-config PATH` - Path to MCP configuration file (e.g., `.mcp.linux.json`)
 - `--execution-dir PATH` - Working directory for Claude subprocess (default: current directory)
@@ -162,7 +162,7 @@ mcp-coder commit auto [OPTIONS]
 
 **Options:**
 - `--preview` - Show generated message and ask for confirmation before committing
-- `--llm-method METHOD` - LLM provider method: `claude_code_cli` (default) or `langchain`
+- `--llm-method METHOD` - LLM provider method: `claude` (default) or `langchain`
 - `--project-dir PATH` - Project directory path (default: current directory)
 - `--mcp-config PATH` - Path to MCP configuration file
 - `--execution-dir PATH` - Working directory for Claude subprocess
@@ -213,7 +213,7 @@ mcp-coder implement [OPTIONS]
 
 **Options:**
 - `--project-dir PATH` - Project directory path (default: current directory)
-- `--llm-method METHOD` - LLM provider method: `claude_code_cli` (default) or `langchain`
+- `--llm-method METHOD` - LLM provider method: `claude` (default) or `langchain`
 - `--mcp-config PATH` - Path to MCP configuration file
 - `--execution-dir PATH` - Working directory for Claude subprocess
 - `--update-labels` - Automatically update GitHub issue labels on successful completion
@@ -247,7 +247,7 @@ mcp-coder create-plan ISSUE_NUMBER [OPTIONS]
 
 **Options:**
 - `--project-dir PATH` - Project directory path (default: current directory)
-- `--llm-method METHOD` - LLM provider method: `claude_code_cli` (default) or `langchain`
+- `--llm-method METHOD` - LLM provider method: `claude` (default) or `langchain`
 - `--mcp-config PATH` - Path to MCP configuration file
 - `--execution-dir PATH` - Working directory for Claude subprocess
 - `--update-labels` - Automatically update GitHub issue labels on successful completion
@@ -278,7 +278,7 @@ mcp-coder create-pr [OPTIONS]
 
 **Options:**
 - `--project-dir PATH` - Project directory path (default: current directory)
-- `--llm-method METHOD` - LLM provider method: `claude_code_cli` (default) or `langchain`
+- `--llm-method METHOD` - LLM provider method: `claude` (default) or `langchain`
 - `--mcp-config PATH` - Path to MCP configuration file
 - `--execution-dir PATH` - Working directory for Claude subprocess
 - `--update-labels` - Automatically update GitHub issue labels on successful completion
@@ -457,7 +457,7 @@ mcp-coder check branch-status [OPTIONS]
 - `--ci-timeout SECONDS` - Wait up to N seconds for CI completion (default: 0 = no wait)
 - `--fix [N]` - Fix issues up to N times (default: 0 = no fix, --fix alone = 1)
 - `--llm-truncate` - Truncate output for LLM consumption
-- `--llm-method METHOD` - LLM provider method for --fix (claude_code_cli or langchain)
+- `--llm-method METHOD` - LLM provider method for --fix (claude or langchain)
 - `--mcp-config PATH` - Path to MCP configuration file
 - `--execution-dir PATH` - Working directory for Claude subprocess
 

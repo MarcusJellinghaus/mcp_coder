@@ -47,11 +47,11 @@ COMMANDS:
 
                            Configuration:
                            --timeout SECONDS      API timeout in seconds (default: 60)
-                           --llm-method METHOD    claude_code_cli (default) | langchain
+                           --llm-method METHOD    claude (default) | langchain
 
     commit auto             Auto-generate commit message using LLM
     commit auto --preview   Show generated message and ask for confirmation
-    commit auto --llm-method METHOD   LLM provider (default: claude_code_cli)
+    commit auto --llm-method METHOD   LLM provider (default: claude)
     commit clipboard        Use commit message from clipboard
 
     define-labels           Sync workflow status labels to GitHub repository

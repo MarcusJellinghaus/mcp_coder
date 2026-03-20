@@ -5,16 +5,29 @@ All LangChain library imports are deferred to the backend modules so that
 importing this package does not fail when langchain is not installed.
 """
 
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
 import os
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING, Any
 
+from mcp_coder.llm.mlflow_logger import get_mlflow_logger
 from mcp_coder.llm.storage.session_storage import (
     load_langchain_history,
     store_langchain_history,
 )
 from mcp_coder.llm.types import LLM_RESPONSE_VERSION, LLMResponseDict
 from mcp_coder.utils.user_config import get_config_values
+
+if TYPE_CHECKING:
+    from langchain_core.language_models import BaseChatModel
+
+
+logger = logging.getLogger(__name__)
 
 
 def _load_langchain_config() -> dict[str, str | None]:
@@ -63,12 +76,59 @@ def _load_langchain_config() -> dict[str, str | None]:
     return config
 
 
+def _create_chat_model(
+    config: dict[str, str | None],
+    timeout: int = 30,
+) -> BaseChatModel:
+    """Dispatch to correct backend's create_*_model() based on config."""
+    backend = config.get("backend")
+
+    if backend == "openai":
+        from .openai_backend import create_openai_model
+
+        return create_openai_model(
+            model=config.get("model") or "",
+            api_key=config.get("api_key"),
+            endpoint=config.get("endpoint"),
+            api_version=config.get("api_version"),
+            timeout=timeout,
+        )
+    if backend == "gemini":
+        from .gemini_backend import create_gemini_model
+
+        return create_gemini_model(
+            model=config.get("model") or "",
+            api_key=config.get("api_key"),
+            timeout=timeout,
+        )
+    if backend == "anthropic":
+        from .anthropic_backend import create_anthropic_model
+
+        return create_anthropic_model(
+            model=config.get("model") or "",
+            api_key=config.get("api_key"),
+            timeout=timeout,
+        )
+    raise ValueError(
+        f"Unsupported langchain backend: {backend!r}. "
+        "Supported backends: 'openai', 'gemini', 'anthropic'."
+    )
+
+
 def ask_langchain(
     question: str,
     session_id: str | None = None,
     timeout: int = 30,
+    mcp_config: str | None = None,
+    execution_dir: str | None = None,
+    env_vars: dict[str, str] | None = None,
 ) -> LLMResponseDict:
-    """Entry point called by interface.prompt_llm() for provider='langchain'."""
+    """Entry point called by interface.prompt_llm() for provider='langchain'.
+
+    When *mcp_config* is provided the request is routed through the LangGraph
+    ReAct agent (agent mode).  Otherwise the existing text-only backend
+    dispatch is used.
+    """
     config = _load_langchain_config()
     backend = config["backend"]
 
@@ -79,58 +139,195 @@ def ask_langchain(
             "or MCP_CODER_LLM_LANGCHAIN_BACKEND env var."
         )
 
-    history = load_langchain_history(session_id) if session_id else []
     sid = session_id or str(uuid.uuid4())
 
-    if backend == "openai":
-        from . import openai_backend
-
-        text, raw = openai_backend.ask_openai(
+    if mcp_config:
+        # Agent mode needs a longer timeout than text mode — MCP tool calls
+        # involve multiple subprocess round-trips.
+        agent_timeout = max(timeout, 300)
+        return _ask_agent(
             question=question,
-            model=config["model"] or "",
-            api_key=config["api_key"],
-            endpoint=config["endpoint"],
-            api_version=config["api_version"],
-            messages=history,
-            timeout=timeout,
-        )
-    elif backend == "gemini":
-        from . import gemini_backend
-
-        text, raw = gemini_backend.ask_gemini(
-            question=question,
-            model=config["model"] or "",
-            api_key=config["api_key"],
-            messages=history,
-            timeout=timeout,
-        )
-    elif backend == "anthropic":
-        from . import anthropic_backend
-
-        text, raw = anthropic_backend.ask_anthropic(
-            question=question,
-            model=config["model"] or "",
-            api_key=config["api_key"],
-            messages=history,
-            timeout=timeout,
-        )
-    else:
-        raise ValueError(
-            f"Unsupported langchain backend: {backend!r}. "
-            "Supported backends: 'openai', 'gemini', 'anthropic'."
+            config=config,
+            session_id=sid,
+            mcp_config=mcp_config,
+            execution_dir=execution_dir,
+            env_vars=env_vars,
+            timeout=agent_timeout,
         )
 
-    updated_history = history + [
-        {"role": "human", "content": question},
-        {"role": "ai", "content": text},
-    ]
-    store_langchain_history(sid, updated_history)
+    return _ask_text(
+        question=question,
+        config=config,
+        backend=backend,
+        session_id=sid,
+        timeout=timeout,
+    )
+
+
+def _ask_text(
+    question: str,
+    config: dict[str, str | None],
+    backend: str | None,
+    session_id: str,
+    timeout: int,
+) -> LLMResponseDict:
+    """Text-only backend dispatch using unified chat model factory."""
+    from langchain_core.messages import HumanMessage, messages_from_dict
+
+    history = load_langchain_history(session_id)
+    history_messages = messages_from_dict(history)
+    lc_messages = history_messages + [HumanMessage(content=question)]
+
+    chat_model = _create_chat_model(config, timeout=timeout)
+
+    try:
+        ai_msg = chat_model.invoke(lc_messages)
+    except Exception as exc:
+        exc_str = str(exc)
+        if "404" in exc_str or "not_found" in exc_str.lower() or "NOT_FOUND" in exc_str:
+            model = config.get("model", "")
+            hint = f"Model {model!r} not found."
+            try:
+                hint += _get_model_suggestions(config)
+            except Exception:  # pylint: disable=broad-except
+                pass
+            raise ValueError(hint) from exc
+        raise
+
+    text = ai_msg.content if isinstance(ai_msg.content, str) else str(ai_msg.content)
+
+    raw: dict[str, object] = {
+        "backend": backend,
+        "model": config.get("model", ""),
+        "response_content": text,
+    }
+
+    # Serialize history using model_dump() for messages_from_dict() compatibility
+    serialized: list[dict[str, Any]] = []
+    for msg in list(history_messages) + [HumanMessage(content=question), ai_msg]:
+        if hasattr(msg, "model_dump"):
+            dump = msg.model_dump()
+        else:
+            dump = msg.dict()
+        msg_type = dump.pop("type", "unknown")
+        serialized.append({"type": msg_type, "data": dump})
+    store_langchain_history(session_id, serialized)
 
     return LLMResponseDict(
         version=LLM_RESPONSE_VERSION,
         timestamp=datetime.now().isoformat(),
         text=text,
-        session_id=sid,
+        session_id=session_id,
         provider="langchain",
         raw_response=raw,
     )
+
+
+def _get_model_suggestions(config: dict[str, str | None]) -> str:
+    """Try to list available models for the configured backend."""
+    backend = config.get("backend")
+    api_key = config.get("api_key")
+    endpoint = config.get("endpoint")
+
+    from ._models import list_anthropic_models, list_gemini_models, list_openai_models
+
+    models: list[str] = []
+    if backend == "openai":
+        models = list_openai_models(os.getenv("OPENAI_API_KEY") or api_key, endpoint)
+    elif backend == "gemini":
+        models = list_gemini_models(os.getenv("GEMINI_API_KEY") or api_key)
+    elif backend == "anthropic":
+        models = list_anthropic_models(os.getenv("ANTHROPIC_API_KEY") or api_key)
+
+    if models:
+        return "\n\nAvailable models:\n" + "\n".join(f"  - {m}" for m in models)
+    return ""
+
+
+def _ask_agent(
+    question: str,
+    config: dict[str, str | None],
+    session_id: str,
+    mcp_config: str,
+    execution_dir: str | None = None,
+    env_vars: dict[str, str] | None = None,
+    timeout: int = 30,
+) -> LLMResponseDict:
+    """Agent mode: route through LangGraph ReAct agent with MCP tools."""
+    from .agent import _check_agent_dependencies, run_agent
+
+    _check_agent_dependencies()
+
+    chat_model = _create_chat_model(config, timeout=timeout)
+    history: list[dict[str, Any]] = load_langchain_history(session_id)
+
+    text, messages, stats = asyncio.run(
+        run_agent(
+            question=question,
+            chat_model=chat_model,
+            messages=history,
+            mcp_config_path=mcp_config,
+            execution_dir=execution_dir,
+            env_vars=env_vars,
+            timeout=timeout,
+        )
+    )
+
+    store_langchain_history(session_id, messages)
+
+    raw_response: dict[str, Any] = {
+        "messages": messages,
+        "backend": config.get("backend", ""),
+        "model": config.get("model", ""),
+        **stats,
+    }
+
+    # MLflow logging for agent mode
+    _log_agent_mlflow(config, stats, session_id)
+
+    return LLMResponseDict(
+        version=LLM_RESPONSE_VERSION,
+        timestamp=datetime.now().isoformat(),
+        text=text,
+        session_id=session_id,
+        provider="langchain",
+        raw_response=raw_response,
+    )
+
+
+def _log_agent_mlflow(
+    config: dict[str, str | None],
+    stats: dict[str, Any],
+    session_id: str,
+) -> None:
+    """Log agent mode params, metrics, and tool_trace artifact to MLflow."""
+    try:
+        mlflow_logger = get_mlflow_logger()
+        mlflow_logger.start_run(session_id=session_id)
+
+        try:
+            mlflow_logger.log_params(
+                {
+                    "backend": config.get("backend", ""),
+                    "model": config.get("model", ""),
+                    "tool_call_count": stats.get("total_tool_calls", 0),
+                }
+            )
+
+            mlflow_logger.log_metrics(
+                {
+                    "agent_steps": float(stats.get("agent_steps", 0)),
+                    "total_tool_calls": float(stats.get("total_tool_calls", 0)),
+                }
+            )
+
+            tool_trace = stats.get("tool_trace", [])
+            if tool_trace:
+                mlflow_logger.log_artifact(
+                    json.dumps(tool_trace, indent=2, default=str),
+                    "tool_trace.json",
+                )
+        finally:
+            mlflow_logger.end_run(session_id=session_id)
+    except Exception:
+        logger.debug("MLflow logging failed for agent mode", exc_info=True)

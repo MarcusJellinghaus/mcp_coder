@@ -164,10 +164,12 @@ def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
         logger = logging.getLogger(name)
         logger.setLevel(numeric_level)
 
-    # Suppress verbose DEBUG logs from third-party libraries
-    # These logs obscure meaningful debug output from project loggers
+    # Suppress verbose logs from third-party libraries
+    # These logs obscure meaningful output from project loggers
     logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
     logging.getLogger("github.Requester").setLevel(logging.INFO)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
 
     # Set up logging based on whether log_file is specified
     if log_file:
@@ -262,7 +264,7 @@ def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
         stdlogger.debug("Logging initialized: console=%s", log_level)
 
     stdlogger.debug(
-        "Suppressing DEBUG logs from: urllib3.connectionpool, github.Requester"
+        "Suppressing verbose logs from: urllib3.connectionpool, github.Requester, httpx, httpcore"
     )
 
 

@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.llm.providers.langchain.verification import (
+    _check_mcp_adapter_packages,
     _check_package_installed,
     _mask_api_key,
     _resolve_api_key,
@@ -225,8 +226,8 @@ class TestVerifyLangchain:
             "endpoint": None,
             "api_version": None,
         }
-        # First call is langchain_core, second is backend package
-        mock_pkg.side_effect = [False, True]
+        # langchain_core missing, backend_package ok, mcp_adapters ok, langgraph ok
+        mock_pkg.side_effect = [False, True, True, True]
         with patch.dict("os.environ", {}, clear=True):
             result = verify_langchain()
         assert result["langchain_core"]["ok"] is False
@@ -287,8 +288,8 @@ class TestVerifyLangchain:
             "endpoint": None,
             "api_version": None,
         }
-        # langchain_core installed, backend package not installed
-        mock_pkg.side_effect = [True, False]
+        # langchain_core ok, backend_package missing, mcp_adapters ok, langgraph ok
+        mock_pkg.side_effect = [True, False, True, True]
         with patch.dict("os.environ", {}, clear=True):
             result = verify_langchain()
         assert result["backend_package"]["ok"] is False
@@ -313,3 +314,165 @@ class TestVerifyLangchain:
         assert result["api_key"]["ok"] is True
         assert result["api_key"]["source"] == "OPENAI_API_KEY env var"
         assert result["api_key"]["value"] == "sk-f...5678"
+
+
+class TestCheckMcpAdapterPackages:
+    """Tests for _check_mcp_adapter_packages helper."""
+
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    def test_both_installed(self, mock_pkg: MagicMock) -> None:
+        mock_pkg.return_value = True
+        result = _check_mcp_adapter_packages()
+        assert result["mcp_adapters"]["ok"] is True
+        assert "installed" in result["mcp_adapters"]["value"]
+        assert result["langgraph"]["ok"] is True
+        assert "installed" in result["langgraph"]["value"]
+
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    def test_mcp_adapters_missing(self, mock_pkg: MagicMock) -> None:
+        # langchain_mcp_adapters missing, langgraph installed
+        mock_pkg.side_effect = [False, True]
+        result = _check_mcp_adapter_packages()
+        assert result["mcp_adapters"]["ok"] is False
+        assert "not installed" in result["mcp_adapters"]["value"]
+        assert result["langgraph"]["ok"] is True
+
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    def test_langgraph_missing(self, mock_pkg: MagicMock) -> None:
+        # langchain_mcp_adapters installed, langgraph missing
+        mock_pkg.side_effect = [True, False]
+        result = _check_mcp_adapter_packages()
+        assert result["mcp_adapters"]["ok"] is True
+        assert result["langgraph"]["ok"] is False
+        assert "not installed" in result["langgraph"]["value"]
+
+
+class TestVerifyLangchainMcpSection:
+    """Tests for MCP-related sections in verify_langchain()."""
+
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
+    def test_includes_mcp_adapter_check(
+        self, mock_config: MagicMock, mock_pkg: MagicMock
+    ) -> None:
+        """verify_langchain() result includes mcp_adapters entry."""
+        mock_config.return_value = {
+            "provider": "langchain",
+            "backend": "openai",
+            "model": "gpt-4o",
+            "api_key": None,
+            "endpoint": None,
+            "api_version": None,
+        }
+        mock_pkg.return_value = True
+        with patch.dict("os.environ", {}, clear=True):
+            result = verify_langchain()
+        assert "mcp_adapters" in result
+        assert "langgraph" in result
+        assert result["mcp_adapters"]["ok"] is True
+        assert result["langgraph"]["ok"] is True
+
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
+    def test_mcp_agent_test_skipped_when_no_config(
+        self, mock_config: MagicMock, mock_pkg: MagicMock
+    ) -> None:
+        """No mcp_agent_test entry when mcp_config_path is None."""
+        mock_config.return_value = {
+            "provider": "langchain",
+            "backend": "openai",
+            "model": "gpt-4o",
+            "api_key": None,
+            "endpoint": None,
+            "api_version": None,
+        }
+        mock_pkg.return_value = True
+        with patch.dict("os.environ", {}, clear=True):
+            result = verify_langchain(mcp_config_path=None)
+        assert "mcp_agent_test" not in result
+
+    @patch("mcp_coder.llm.providers.langchain.verification.ask_langchain")
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
+    def test_mcp_agent_test_calls_ask_llm_end_to_end(
+        self,
+        mock_config: MagicMock,
+        mock_pkg: MagicMock,
+        _mock_ask_langchain: MagicMock,
+    ) -> None:
+        """mcp_config_path triggers ask_llm() call with mcp_config."""
+        mock_config.return_value = {
+            "provider": "langchain",
+            "backend": "openai",
+            "model": "gpt-4o",
+            "api_key": None,
+            "endpoint": None,
+            "api_version": None,
+        }
+        mock_pkg.return_value = True
+        with (
+            patch.dict("os.environ", {}, clear=True),
+            patch("mcp_coder.llm.interface.ask_llm") as mock_ask_llm,
+        ):
+            mock_ask_llm.return_value = "OK"
+            result = verify_langchain(mcp_config_path="/tmp/mcp.json")
+        assert result["mcp_agent_test"]["ok"] is True
+        assert result["mcp_agent_test"]["value"] == "agent responded"
+        mock_ask_llm.assert_called_once_with(
+            "Reply with OK",
+            provider="langchain",
+            mcp_config="/tmp/mcp.json",
+            env_vars=None,
+            timeout=30,
+        )
+
+    @patch("mcp_coder.llm.providers.langchain.verification.ask_langchain")
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
+    def test_mcp_agent_test_handles_file_not_found(
+        self,
+        mock_config: MagicMock,
+        mock_pkg: MagicMock,
+        _mock_ask_langchain: MagicMock,
+    ) -> None:
+        """FileNotFoundError is caught and reported."""
+        mock_config.return_value = {
+            "provider": "langchain",
+            "backend": "openai",
+            "model": "gpt-4o",
+            "api_key": None,
+            "endpoint": None,
+            "api_version": None,
+        }
+        mock_pkg.return_value = True
+        with (
+            patch.dict("os.environ", {}, clear=True),
+            patch(
+                "mcp_coder.llm.interface.ask_llm",
+                side_effect=FileNotFoundError("mcp.json missing"),
+            ),
+        ):
+            result = verify_langchain(mcp_config_path="/tmp/mcp.json")
+        assert result["mcp_agent_test"]["ok"] is False
+        assert "MCP config not found" in result["mcp_agent_test"]["error"]
+
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
+    def test_mcp_adapters_missing_fails_overall(
+        self, mock_config: MagicMock, mock_pkg: MagicMock
+    ) -> None:
+        """overall_ok is False when MCP adapter packages are missing."""
+        mock_config.return_value = {
+            "provider": "langchain",
+            "backend": "openai",
+            "model": "gpt-4o",
+            "api_key": None,
+            "endpoint": None,
+            "api_version": None,
+        }
+        # langchain_core ok, backend_package ok, mcp_adapters fail, langgraph ok
+        mock_pkg.side_effect = [True, True, False, True]
+        with patch.dict("os.environ", {}, clear=True):
+            result = verify_langchain()
+        assert result["mcp_adapters"]["ok"] is False
+        assert result["overall_ok"] is False

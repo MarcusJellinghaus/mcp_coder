@@ -1,5 +1,6 @@
 """High-level LLM interface for extensible provider support."""
 
+import asyncio
 import logging
 import os
 
@@ -166,11 +167,27 @@ def prompt_llm(
     if provider == "langchain":
         from .providers.langchain import ask_langchain  # lazy import  # noqa: PLC0415
 
-        return ask_langchain(
-            question,
-            session_id=session_id,
-            timeout=timeout,
-        )
+        try:
+            return ask_langchain(
+                question,
+                session_id=session_id,
+                timeout=timeout,
+                mcp_config=mcp_config,
+                execution_dir=execution_dir,
+                env_vars=env_vars,
+            )
+        except asyncio.TimeoutError:
+            logger.error("LLM request timed out after %ds", timeout)
+            logger.error(
+                "Prompt length: %d characters (%d words)",
+                len(question),
+                len(question.split()),
+            )
+            logger.error("LLM provider: %s", provider)
+            logger.error(
+                "Consider: checking network, simplifying prompt, increasing timeout"
+            )
+            raise
 
     # Unsupported provider check — also before the try block
     if provider != "claude":

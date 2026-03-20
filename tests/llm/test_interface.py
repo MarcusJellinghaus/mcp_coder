@@ -1,5 +1,6 @@
 """Tests for the high-level LLM interface."""
 
+import asyncio
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -221,6 +222,16 @@ class TestAskLLM:
 
         with pytest.raises(TimeoutExpired):
             ask_llm("Test question", provider="claude", timeout=30)
+
+    @patch("mcp_coder.llm.providers.langchain.ask_langchain")
+    def test_ask_llm_asyncio_timeout_reraised_for_langchain(
+        self, mock_ask_langchain: MagicMock
+    ) -> None:
+        """asyncio.TimeoutError from langchain provider is re-raised."""
+        mock_ask_langchain.side_effect = asyncio.TimeoutError()
+
+        with pytest.raises(asyncio.TimeoutError):
+            ask_llm("Test question", provider="langchain", timeout=30)
 
 
 class TestAskLLMExecutionDir:
@@ -593,6 +604,16 @@ class TestPromptLLM:
         with pytest.raises(TimeoutExpired):
             prompt_llm("Test question", provider="claude", timeout=30)
 
+    @patch("mcp_coder.llm.providers.langchain.ask_langchain")
+    def test_prompt_llm_asyncio_timeout_logged_and_reraised(
+        self, mock_ask_langchain: MagicMock
+    ) -> None:
+        """asyncio.TimeoutError from langchain is re-raised with logging."""
+        mock_ask_langchain.side_effect = asyncio.TimeoutError()
+
+        with pytest.raises(asyncio.TimeoutError):
+            prompt_llm("Test question", provider="langchain", timeout=30)
+
 
 class TestPromptLLMExecutionDir:
     """Tests for execution_dir parameter in prompt_llm."""
@@ -736,6 +757,86 @@ class TestPromptLlmLangchainRouting:
             # provider kwarg says "claude" but env var overrides to "langchain"
             result = prompt_llm("Hello", provider="claude")
         assert result["provider"] == "langchain"
+
+    def test_passes_mcp_config_to_langchain(self) -> None:
+        """mcp_config parameter is forwarded to ask_langchain()."""
+        expected = self._make_langchain_response()
+        with patch(
+            "mcp_coder.llm.providers.langchain.ask_langchain",
+            return_value=expected,
+        ) as mock_ask:
+            from mcp_coder.llm.interface import prompt_llm
+
+            prompt_llm(
+                "Hello",
+                provider="langchain",
+                mcp_config="/path/to/mcp.json",
+            )
+
+        call_kwargs = mock_ask.call_args
+        assert call_kwargs is not None
+        _, kwargs = call_kwargs
+        assert kwargs.get("mcp_config") == "/path/to/mcp.json"
+
+    def test_passes_execution_dir_to_langchain(self) -> None:
+        """execution_dir parameter is forwarded to ask_langchain()."""
+        expected = self._make_langchain_response()
+        with patch(
+            "mcp_coder.llm.providers.langchain.ask_langchain",
+            return_value=expected,
+        ) as mock_ask:
+            from mcp_coder.llm.interface import prompt_llm
+
+            prompt_llm(
+                "Hello",
+                provider="langchain",
+                execution_dir="/custom/dir",
+            )
+
+        call_kwargs = mock_ask.call_args
+        assert call_kwargs is not None
+        _, kwargs = call_kwargs
+        assert kwargs.get("execution_dir") == "/custom/dir"
+
+    def test_passes_env_vars_to_langchain(self) -> None:
+        """env_vars parameter is forwarded to ask_langchain()."""
+        expected = self._make_langchain_response()
+        test_env = {"KEY": "value"}
+        with patch(
+            "mcp_coder.llm.providers.langchain.ask_langchain",
+            return_value=expected,
+        ) as mock_ask:
+            from mcp_coder.llm.interface import prompt_llm
+
+            prompt_llm(
+                "Hello",
+                provider="langchain",
+                env_vars=test_env,
+            )
+
+        call_kwargs = mock_ask.call_args
+        assert call_kwargs is not None
+        _, kwargs = call_kwargs
+        assert kwargs.get("env_vars") == {"KEY": "value"}
+
+    def test_langchain_without_mcp_params_still_works(self) -> None:
+        """Calling with provider=langchain and no MCP params works (backward compat)."""
+        expected = self._make_langchain_response()
+        with patch(
+            "mcp_coder.llm.providers.langchain.ask_langchain",
+            return_value=expected,
+        ) as mock_ask:
+            from mcp_coder.llm.interface import prompt_llm
+
+            result = prompt_llm("Hello", provider="langchain")
+
+        call_kwargs = mock_ask.call_args
+        assert call_kwargs is not None
+        _, kwargs = call_kwargs
+        assert kwargs.get("mcp_config") is None
+        assert kwargs.get("execution_dir") is None
+        assert kwargs.get("env_vars") is None
+        assert result["text"] == "langchain reply"
 
     def test_ask_llm_delegates_to_prompt_llm_for_langchain(self) -> None:
         """ask_llm with provider='langchain' also routes correctly."""

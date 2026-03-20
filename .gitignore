@@ -36,6 +36,7 @@ dist/
 .mcp.macos.json
 checks_output.txt
 bash.exe.stackdump
+nul
 /.mcp-coder-tmp/
 *.isorted
 

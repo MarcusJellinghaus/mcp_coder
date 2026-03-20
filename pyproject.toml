@@ -65,6 +65,8 @@ langchain = [
     "langchain-openai>=0.2.0",
     "langchain-google-genai>=2.0.0",
     "langchain-anthropic>=0.3.0",
+    "langchain-mcp-adapters>=0.1.0",
+    "langgraph>=0.2.0",
 ]
 
 # Full development setup - combines all groups for local development
@@ -130,6 +132,7 @@ markers = [
 # -n auto: Run tests in parallel using all available CPUs
 # -p no:tach: Disable tach plugin (noisy output about unaffected tests)
 addopts = ["--strict-markers", "--tb=short", "-n", "auto", "-p", "no:tach"]
+asyncio_mode = "auto"
 
 [tool.black]
 line-length = 88
@@ -201,18 +204,32 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = ["langchain_core", "langchain_core.*"]
 ignore_missing_imports = true
+follow_imports = "skip"  # modules are optional, skip to avoid errors when not installed
 
 [[tool.mypy.overrides]]
 module = ["langchain_openai"]
 ignore_missing_imports = true
+follow_imports = "skip"
 
 [[tool.mypy.overrides]]
 module = ["langchain_google_genai"]
 ignore_missing_imports = true
+follow_imports = "skip"
 
 [[tool.mypy.overrides]]
 module = ["langchain_anthropic"]
 ignore_missing_imports = true
+follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = ["langchain_mcp_adapters", "langchain_mcp_adapters.*"]
+ignore_missing_imports = true
+follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = ["langgraph", "langgraph.*"]
+ignore_missing_imports = true
+follow_imports = "skip"
 
 [[tool.mypy.overrides]]
 module = ["anthropic", "anthropic.*"]

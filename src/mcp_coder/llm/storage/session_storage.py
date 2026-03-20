@@ -177,7 +177,7 @@ def extract_langchain_session_id(file_path: str) -> str:
 
 def store_langchain_history(
     session_id: str,
-    messages: list[dict[str, str]],
+    messages: list[dict[str, Any]],
     base_dir: Optional[str] = None,
 ) -> str:
     """Persist message history to disk. Returns the file path written."""
@@ -190,7 +190,7 @@ def store_langchain_history(
 def load_langchain_history(
     session_id: str,
     base_dir: Optional[str] = None,
-) -> list[dict[str, str]]:
+) -> list[dict[str, Any]]:
     """Load message history from disk. Returns [] if no file exists."""
     path = _langchain_session_path(session_id, base_dir)
     if not path.exists():

@@ -28,7 +28,7 @@ def execute_implement(args: argparse.Namespace) -> int:
         args: Parsed command line arguments with:
             - project_dir: Optional project directory path
             - execution_dir: Optional execution directory (NEW)
-            - llm_method: LLM method to use ('claude_code_cli' or 'langchain')
+            - llm_method: LLM method to use ('claude' or 'langchain')
 
     Returns:
         int: Exit code (0 for success, 1 for error)
