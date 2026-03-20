@@ -23,10 +23,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Fix `MultiServerMCPClient` Breaking Change — [step_1.md](./steps/step_1.md)
 
-- [ ] Update tests for `MultiServerMCPClient` plain instantiation (TDD)
-- [ ] Remove `async with` context manager from `run_agent()` in `agent.py`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message
+- [x] Update tests for `MultiServerMCPClient` plain instantiation (TDD)
+- [x] Remove `async with` context manager from `run_agent()` in `agent.py`
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message
 
 ### Step 2: Core Resolution Logic — Config Key Rename, Return Type, MCP Auto-detect — [step_2.md](./steps/step_2.md)
 

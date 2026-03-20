@@ -238,37 +238,37 @@ async def run_agent(
     # We cannot use MultiServerMCPClient.get_tools() directly because it
     # passes raw MCP schemas to StructuredTool, which fails on properties
     # without a 'type' field (e.g. FastMCP Any-typed params).
-    async with MultiServerMCPClient(cast(Any, server_config)) as client:
-        all_tools = []
-        for server_name, connection in client.connections.items():
-            async with client.session(server_name) as session:
-                raw_tools = await session.list_tools()
-                for tool in raw_tools.tools:
-                    sanitized = _sanitize_tool_schema(tool.inputSchema)
-                    # Shallow copy to avoid mutating the original MCP tool
-                    tool = tool.model_copy(update={"inputSchema": sanitized})
-                    lc_tool = convert_mcp_tool_to_langchain_tool(
-                        None,
-                        tool,
-                        connection=connection,
-                        server_name=server_name,
-                    )
-                    all_tools.append(lc_tool)
+    client = MultiServerMCPClient(cast(Any, server_config))
+    all_tools = []
+    for server_name, connection in client.connections.items():
+        async with client.session(server_name) as session:
+            raw_tools = await session.list_tools()
+            for tool in raw_tools.tools:
+                sanitized = _sanitize_tool_schema(tool.inputSchema)
+                # Shallow copy to avoid mutating the original MCP tool
+                tool = tool.model_copy(update={"inputSchema": sanitized})
+                lc_tool = convert_mcp_tool_to_langchain_tool(
+                    None,
+                    tool,
+                    connection=connection,
+                    server_name=server_name,
+                )
+                all_tools.append(lc_tool)
 
-        agent = create_react_agent(chat_model, all_tools)
+    agent = create_react_agent(chat_model, all_tools)
 
-        # Build input: prior history + new question
-        input_messages = messages_from_dict(messages) + [HumanMessage(content=question)]
+    # Build input: prior history + new question
+    input_messages = messages_from_dict(messages) + [HumanMessage(content=question)]
 
-        result = await asyncio.wait_for(
-            agent.ainvoke(
-                {"messages": input_messages},
-                config={"recursion_limit": AGENT_MAX_STEPS},
-            ),
-            timeout=float(timeout),
-        )
+    result = await asyncio.wait_for(
+        agent.ainvoke(
+            {"messages": input_messages},
+            config={"recursion_limit": AGENT_MAX_STEPS},
+        ),
+        timeout=float(timeout),
+    )
 
-        output_messages = result["messages"]
+    output_messages = result["messages"]
 
     # Extract final text from the last AIMessage
     final_text = ""

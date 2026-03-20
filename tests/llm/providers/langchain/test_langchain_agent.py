@@ -388,11 +388,11 @@ def _write_mcp_config(tmp_path: Path) -> str:
 
 
 def _make_mock_client() -> MagicMock:
-    """Build a mock MultiServerMCPClient that works as an async context manager.
+    """Build a mock MultiServerMCPClient for plain instantiation.
 
-    The mock supports ``async with MultiServerMCPClient(cfg) as client:``
-    by implementing ``__aenter__`` to return itself, so ``client.connections``
-    and ``client.session()`` work inside the ``async with`` block.
+    Since ``langchain-mcp-adapters>=0.1.0``, ``MultiServerMCPClient`` is
+    stateless — plain ``client = MultiServerMCPClient(cfg)`` with no async
+    context manager.  ``client.session()`` still uses ``async with``.
     """
     mock_session = AsyncMock()
     mock_list_result = MagicMock()
@@ -403,9 +403,6 @@ def _make_mock_client() -> MagicMock:
     mock_client.connections = {"test": {"transport": "stdio", "command": "echo"}}
     mock_client.session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
     mock_client.session.return_value.__aexit__ = AsyncMock(return_value=False)
-    # Support ``async with MultiServerMCPClient(...) as client:``
-    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-    mock_client.__aexit__ = AsyncMock(return_value=False)
     return mock_client
 
 
@@ -524,8 +521,6 @@ class TestRunAgent:
             return_value=mock_session
         )
         mock_client.session.return_value.__aexit__ = AsyncMock(return_value=False)
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=False)
 
         with (
             patch(_PATCH_MCP_CLIENT, return_value=mock_client),
