@@ -63,15 +63,15 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 5: CLI Command Consistency — Verify and Commit Auto — [step_5.md](./steps/step_5.md)
 
-- [ ] Update tests for `verify.py` to use shared `resolve_llm_method()` (TDD)
-- [ ] Update tests for `commit.py` to remove `--mcp-config` (TDD)
-- [ ] Delete `_resolve_active_provider()` and `_VALID_PROVIDERS` from `verify.py`
-- [ ] Add `--llm-method` to verify parser in `parsers.py`
-- [ ] Remove `--mcp-config` from commit auto parser in `parsers.py`
-- [ ] Update `verify.py` to import and use shared `resolve_llm_method()`
-- [ ] Update `commit.py` — destructure tuple, remove `mcp_config` handling, add comment
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message
+- [x] Update tests for `verify.py` to use shared `resolve_llm_method()` (TDD)
+- [x] Update tests for `commit.py` to remove `--mcp-config` (TDD)
+- [x] Delete `_resolve_active_provider()` and `_VALID_PROVIDERS` from `verify.py`
+- [x] Add `--llm-method` to verify parser in `parsers.py`
+- [x] Remove `--mcp-config` from commit auto parser in `parsers.py`
+- [x] Update `verify.py` to import and use shared `resolve_llm_method()`
+- [x] Update `commit.py` — destructure tuple, remove `mcp_config` handling, add comment
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message
 
 ### Step 6: API Parity — Export Missing Python APIs — [step_6.md](./steps/step_6.md)
 

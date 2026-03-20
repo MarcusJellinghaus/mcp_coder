@@ -12,7 +12,11 @@ from mcp_coder.cli.commands.verify import _LABEL_MAP, execute_verify
 
 def _make_args(**kwargs: Any) -> argparse.Namespace:
     """Create a Namespace with defaults for execute_verify."""
-    defaults: dict[str, Any] = {"check_models": False, "mcp_config": None}
+    defaults: dict[str, Any] = {
+        "check_models": False,
+        "mcp_config": None,
+        "llm_method": None,
+    }
     defaults.update(kwargs)
     return argparse.Namespace(**defaults)
 
@@ -22,7 +26,7 @@ class TestExecuteVerify:
 
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
-    @patch("mcp_coder.cli.commands.verify._resolve_active_provider")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     def test_execute_verify_returns_zero_on_success(
         self,
         mock_provider: MagicMock,
@@ -49,7 +53,7 @@ class TestExecuteVerify:
 
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
-    @patch("mcp_coder.cli.commands.verify._resolve_active_provider")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     def test_execute_verify_returns_one_on_failure(
         self,
         mock_provider: MagicMock,
@@ -76,7 +80,7 @@ class TestExecuteVerify:
 
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
-    @patch("mcp_coder.cli.commands.verify._resolve_active_provider")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     def test_execute_verify_prints_status_lines(
         self,
         mock_provider: MagicMock,

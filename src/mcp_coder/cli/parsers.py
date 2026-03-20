@@ -138,12 +138,6 @@ def add_commit_parsers(subparsers: Any) -> None:
         help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
     )
     auto_parser.add_argument(
-        "--mcp-config",
-        type=str,
-        default=None,
-        help="Path to MCP configuration file (e.g., .mcp.linux.json)",
-    )
-    auto_parser.add_argument(
         "--execution-dir",
         type=str,
         default=None,
@@ -612,6 +606,13 @@ def add_verify_parser(subparsers: Any) -> None:
         "--check-models",
         action="store_true",
         help="List available models for the configured LangChain backend (requires network)",
+    )
+    verify_parser.add_argument(
+        "--llm-method",
+        choices=["claude", "langchain"],
+        default=None,
+        metavar="METHOD",
+        help="LLM method override. If omitted, uses config default_provider or claude",
     )
     verify_parser.add_argument(
         "--mcp-config",

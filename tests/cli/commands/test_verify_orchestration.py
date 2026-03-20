@@ -1,23 +1,26 @@
 """Tests for the verify CLI orchestrator (Step 5)."""
 
 import argparse
-import os
 from typing import Any
+from unittest import mock
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.cli.commands.verify import (  # pylint: disable=no-name-in-module
+from mcp_coder.cli.commands.verify import (
     _compute_exit_code,
     _format_section,
-    _resolve_active_provider,
     execute_verify,
 )
 
 
 def _make_args(**kwargs: Any) -> argparse.Namespace:
     """Create a Namespace with defaults for execute_verify."""
-    defaults: dict[str, Any] = {"check_models": False, "mcp_config": None}
+    defaults: dict[str, Any] = {
+        "check_models": False,
+        "mcp_config": None,
+        "llm_method": None,
+    }
     defaults.update(kwargs)
     return argparse.Namespace(**defaults)
 
@@ -101,7 +104,7 @@ class TestVerifyOrchestration:
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_langchain")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
-    @patch("mcp_coder.cli.commands.verify._resolve_active_provider")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     def test_all_sections_printed(
         self,
         mock_provider: MagicMock,
@@ -125,7 +128,7 @@ class TestVerifyOrchestration:
 
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
-    @patch("mcp_coder.cli.commands.verify._resolve_active_provider")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     def test_exit_0_when_active_provider_works(
         self,
         mock_provider: MagicMock,
@@ -144,7 +147,7 @@ class TestVerifyOrchestration:
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_langchain")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
-    @patch("mcp_coder.cli.commands.verify._resolve_active_provider")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     def test_exit_1_when_active_provider_fails(
         self,
         mock_provider: MagicMock,
@@ -164,7 +167,7 @@ class TestVerifyOrchestration:
 
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
-    @patch("mcp_coder.cli.commands.verify._resolve_active_provider")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     def test_exit_1_when_mlflow_enabled_but_misconfigured(
         self,
         mock_provider: MagicMock,
@@ -182,7 +185,7 @@ class TestVerifyOrchestration:
 
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
-    @patch("mcp_coder.cli.commands.verify._resolve_active_provider")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     def test_exit_0_when_mlflow_not_installed(
         self,
         mock_provider: MagicMock,
@@ -200,7 +203,7 @@ class TestVerifyOrchestration:
 
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
-    @patch("mcp_coder.cli.commands.verify._resolve_active_provider")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     def test_claude_informational_when_langchain_active(
         self,
         mock_provider: MagicMock,
@@ -225,7 +228,7 @@ class TestVerifyOrchestration:
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_langchain")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
-    @patch("mcp_coder.cli.commands.verify._resolve_active_provider")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     def test_check_models_passed_to_langchain(
         self,
         mock_provider: MagicMock,
@@ -241,11 +244,11 @@ class TestVerifyOrchestration:
 
         execute_verify(_make_args(check_models=True))
 
-        mock_lc.assert_called_once_with(check_models=True, mcp_config_path=None)
+        mock_lc.assert_called_once_with(check_models=True, mcp_config_path=mock.ANY)
 
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
-    @patch("mcp_coder.cli.commands.verify._resolve_active_provider")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     def test_langchain_not_called_when_claude_active(
         self,
         mock_provider: MagicMock,
@@ -316,46 +319,81 @@ class TestFormatSection:
         assert "=== MY SECTION ===" in output
 
 
-class TestResolveActiveProvider:
-    """Tests for _resolve_active_provider helper."""
+class TestVerifyUsesSharedResolveLlmMethod:
+    """Tests that verify.py uses the shared resolve_llm_method()."""
 
-    @patch("mcp_coder.cli.commands.verify.get_config_values")
-    def test_config_langchain(self, mock_config: MagicMock) -> None:
-        """Provider from config.toml is returned."""
-        mock_config.return_value = {("llm", "provider"): "langchain"}
-        provider, source = _resolve_active_provider()
-        assert provider == "langchain"
-        assert source == "config.toml"
+    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
+    @patch("mcp_coder.cli.commands.verify.verify_claude")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    def test_verify_uses_llm_method_arg(
+        self,
+        mock_resolve: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """--llm-method langchain is passed to resolve_llm_method and used."""
+        mock_resolve.return_value = ("langchain", "cli argument")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
 
-    @patch("mcp_coder.cli.commands.verify.get_config_values")
-    @patch.dict(os.environ, {"MCP_CODER_LLM_PROVIDER": "langchain"})
-    def test_env_var_override(self, mock_config: MagicMock) -> None:
-        """Environment variable takes precedence over config."""
-        mock_config.return_value = {("llm", "provider"): "claude"}
-        provider, source = _resolve_active_provider()
-        assert provider == "langchain"
-        assert "env var" in source
+        with patch("mcp_coder.cli.commands.verify.verify_langchain") as mock_lc:
+            mock_lc.return_value = _langchain_ok()
+            result = execute_verify(_make_args(llm_method="langchain"))
 
-    @patch("mcp_coder.cli.commands.verify.get_config_values")
-    def test_default_is_claude(self, mock_config: MagicMock) -> None:
-        """Default provider is claude when nothing configured."""
-        mock_config.return_value = {("llm", "provider"): None}
-        provider, source = _resolve_active_provider()
-        assert provider == "claude"
-        assert "default" in source
+        mock_resolve.assert_called_once_with("langchain")
+        assert result == 0
+        output = capsys.readouterr().out
+        assert "langchain" in output
+        assert "cli argument" in output
 
-    @patch.dict(os.environ, {"MCP_CODER_LLM_PROVIDER": "ollama"})
-    def test_unknown_provider_env_var_raises(self) -> None:
-        """Unknown provider from env var raises ValueError."""
-        with pytest.raises(ValueError, match="Unknown LLM provider 'ollama'"):
-            _resolve_active_provider()
+    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
+    @patch("mcp_coder.cli.commands.verify.verify_claude")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    def test_verify_defaults_to_config(
+        self,
+        mock_resolve: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """No --llm-method: resolve_llm_method returns config default_provider."""
+        mock_resolve.return_value = ("langchain", "config default_provider")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
 
-    @patch("mcp_coder.cli.commands.verify.get_config_values")
-    def test_unknown_provider_config_raises(self, mock_config: MagicMock) -> None:
-        """Unknown provider from config.toml raises ValueError."""
-        mock_config.return_value = {("llm", "provider"): "ollama"}
-        with pytest.raises(ValueError, match="Unknown LLM provider 'ollama'"):
-            _resolve_active_provider()
+        with patch("mcp_coder.cli.commands.verify.verify_langchain") as mock_lc:
+            mock_lc.return_value = _langchain_ok()
+            result = execute_verify(_make_args())
+
+        mock_resolve.assert_called_once_with(None)
+        assert result == 0
+        output = capsys.readouterr().out
+        assert "langchain" in output
+        assert "config default_provider" in output
+
+    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
+    @patch("mcp_coder.cli.commands.verify.verify_claude")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    def test_verify_defaults_to_claude(
+        self,
+        mock_resolve: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """No arg, no config: resolve_llm_method returns claude default."""
+        mock_resolve.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+
+        result = execute_verify(_make_args())
+
+        mock_resolve.assert_called_once_with(None)
+        assert result == 0
+        output = capsys.readouterr().out
+        assert "claude" in output
+        assert "default" in output
 
 
 class TestComputeExitCode:

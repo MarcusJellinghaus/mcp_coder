@@ -6,14 +6,12 @@ MLflow) and formats their output for the terminal.
 
 import argparse
 import logging
-import os
 from typing import Any
 
 from ...llm.mlflow_logger import verify_mlflow
 from ...llm.providers.claude.claude_cli_verification import verify_claude
 from ...llm.providers.langchain.verification import verify_langchain
-from ...utils.user_config import get_config_values
-from ..utils import _get_status_symbols, resolve_mcp_config_path
+from ..utils import _get_status_symbols, resolve_llm_method, resolve_mcp_config_path
 
 logger = logging.getLogger(__name__)
 
@@ -44,41 +42,6 @@ _LABEL_MAP: dict[str, str] = {
     "experiment": "Experiment",
     "artifact_location": "Artifact location",
 }
-
-
-_VALID_PROVIDERS = {"claude", "langchain"}
-
-
-def _resolve_active_provider() -> tuple[str, str]:
-    """Resolve the active LLM provider from env var, config, or default.
-
-    Returns (provider_name, source_description).
-    Deliberately separate from resolve_llm_method() — different return types,
-    different env vars, different purposes (Decision 5).
-
-    Raises:
-        ValueError: If the resolved provider is not a known value.
-    """
-    env_val = os.environ.get("MCP_CODER_LLM_PROVIDER")
-    if env_val:
-        if env_val not in _VALID_PROVIDERS:
-            raise ValueError(
-                f"Unknown LLM provider '{env_val}' from MCP_CODER_LLM_PROVIDER env var. "
-                f"Valid providers: {', '.join(sorted(_VALID_PROVIDERS))}"
-            )
-        return env_val, "MCP_CODER_LLM_PROVIDER env var"
-
-    config = get_config_values([("llm", "provider", None)])
-    provider = config[("llm", "provider")]
-    if provider:
-        if provider not in _VALID_PROVIDERS:
-            raise ValueError(
-                f"Unknown LLM provider '{provider}' in config.toml. "
-                f"Valid providers: {', '.join(sorted(_VALID_PROVIDERS))}"
-            )
-        return provider, "config.toml"
-
-    return "claude", "default"
 
 
 def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str]) -> str:
@@ -154,7 +117,7 @@ def execute_verify(args: argparse.Namespace) -> int:
     symbols = _get_status_symbols()
 
     # 1. Resolve active provider
-    active_provider, source = _resolve_active_provider()
+    active_provider, source = resolve_llm_method(getattr(args, "llm_method", None))
 
     # 2. Claude CLI verification
     claude_result = verify_claude()

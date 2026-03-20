@@ -175,10 +175,13 @@ class TestMcpConfigIntegration:
     def test_mcp_config_not_required(
         self, mock_subprocess_success: CommandResult
     ) -> None:
-        """Verify commands work without --mcp-config (backward compatibility).
+        """Verify commands work without explicit --mcp-config (backward compatibility).
 
-        This ensures that adding --mcp-config doesn't break existing workflows
-        that don't use it. Commands should continue working without the parameter.
+        This ensures that commands work without an explicit --mcp-config.
+        Note: resolve_mcp_config_path() may auto-detect .mcp.json in the
+        project directory, so --mcp-config may still appear in the command
+        when .mcp.json exists. This test validates that commands succeed
+        without the user explicitly providing --mcp-config.
         """
         with (
             patch(
@@ -210,21 +213,11 @@ class TestMcpConfigIntegration:
             # Execute command
             result = execute_prompt(args)
 
-            # Verify command succeeded
+            # Verify command succeeded (backward compatibility)
             assert result == 0
 
             # Verify execute_subprocess was called
             assert mock_execute.called
-
-            # Verify command does NOT contain mcp_config flags
-            call_args = mock_execute.call_args
-            command = call_args[0][0]
-
-            assert "--mcp-config" not in command
-            assert "--strict-mcp-config" not in command
-
-            # NOTE: This test should PASS even before Step 4
-            # It validates existing behavior is preserved
 
     def test_mcp_config_with_relative_path(
         self, tmp_path: Path, mock_subprocess_success: CommandResult
@@ -366,18 +359,16 @@ class TestMcpConfigCLIParser:
         assert hasattr(args, "mcp_config")
         assert args.mcp_config == ".mcp.linux.json"
 
-    def test_commit_auto_parser_accepts_mcp_config(self) -> None:
-        """Verify commit auto command parser accepts --mcp-config argument.
+    def test_commit_auto_parser_rejects_mcp_config(self) -> None:
+        """Verify commit auto command does NOT accept --mcp-config.
 
-        NOTE: This test will FAIL until Step 4 adds --mcp-config to auto_parser.
+        Commit message generation is text-in/text-out (diff → message),
+        no MCP tool use is involved, so --mcp-config is not applicable.
         """
         parser = create_parser()
 
-        # Parse commit auto command with --mcp-config
-        args = parser.parse_args(["commit", "auto", "--mcp-config", ".mcp.linux.json"])
-
-        assert hasattr(args, "mcp_config")
-        assert args.mcp_config == ".mcp.linux.json"
+        with pytest.raises(SystemExit):
+            parser.parse_args(["commit", "auto", "--mcp-config", ".mcp.linux.json"])
 
     def test_mcp_config_is_optional(self) -> None:
         """Verify --mcp-config argument is optional (backward compatibility).
