@@ -77,9 +77,13 @@ No new imports needed. Changes are internal to existing functions.
 ## ALGORITHM — `resolve_llm_method()`
 
 ```
+_VALID_PROVIDERS = {"claude", "langchain"}
+
 1. If llm_method is not None → return (llm_method, "cli argument")
 2. Check env var MCP_CODER_LLM_PROVIDER
-3. If env var is set and valid → return (env_value, "env MCP_CODER_LLM_PROVIDER")
+3. If env var is set:
+   a. Validate against _VALID_PROVIDERS → raise ValueError if invalid
+   b. Return (env_value, "env MCP_CODER_LLM_PROVIDER")
 4. Read config key ("llm", "default_provider")
 5. If config value == "langchain" → return ("langchain", "config default_provider")
 6. Return ("claude", "default")

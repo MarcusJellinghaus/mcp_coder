@@ -18,7 +18,13 @@ This way verify's `_resolve_active_provider()` can be deleted, and all commands 
 
 **Decision:** Remove `--mcp-config` from commit auto parser and delete the TODO. Add a comment explaining why MCP doesn't apply: commit message generation is text-in/text-out — it takes diff text and produces a commit message, no tool use needed.
 
-## Decision 3: No negative test for old config key
+## Decision 3: Validate env var in shared `resolve_llm_method()`
+
+**Context:** The shared `resolve_llm_method()` gains env var `MCP_CODER_LLM_PROVIDER` support (Decision 1). Question: what happens if the env var value is invalid (e.g., `openai`)?
+
+**Decision:** Validate against `_VALID_PROVIDERS = {"claude", "langchain"}` and raise `ValueError` if invalid. This matches verify's current `_resolve_active_provider()` behavior.
+
+## Decision 4: No negative test for old config key
 
 **Context:** Config key renamed from `[llm] provider` to `[llm] default_provider` with a clean break.
 
