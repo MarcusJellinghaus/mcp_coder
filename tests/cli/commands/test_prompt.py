@@ -191,6 +191,7 @@ class TestSessionIdOutputFormat:
 class TestExecutePrompt:
     """Tests for execute_prompt function."""
 
+    @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
     @patch("mcp_coder.cli.commands.prompt.prompt_llm")
@@ -199,10 +200,12 @@ class TestExecutePrompt:
         mock_prompt_llm: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
+        mock_resolve_mcp: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test successful prompt execution with mocked prompt_llm function."""
         mock_resolve_llm.return_value = ("claude", "cli argument")
+        mock_resolve_mcp.return_value = None
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
         mock_prompt_llm.return_value = {
             "text": "The capital of France is Paris.",
@@ -227,12 +230,13 @@ class TestExecutePrompt:
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
             execution_dir=mock.ANY,
-            mcp_config=mock.ANY,
+            mcp_config=None,
             branch_name=mock.ANY,
         )
         captured = capsys.readouterr()
         assert "The capital of France is Paris." in captured.out
 
+    @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
     @patch("mcp_coder.cli.commands.prompt.prompt_llm")
@@ -241,10 +245,12 @@ class TestExecutePrompt:
         mock_prompt_llm: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
+        mock_resolve_mcp: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test API error handling when Claude API fails."""
         mock_resolve_llm.return_value = ("claude", "cli argument")
+        mock_resolve_mcp.return_value = None
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
         mock_prompt_llm.side_effect = Exception("Claude API connection failed")
         args = argparse.Namespace(prompt="Test question", llm_method="claude")
@@ -256,6 +262,7 @@ class TestExecutePrompt:
         assert "Error" in captured.err
         assert "Claude API connection failed" in captured.err
 
+    @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
     @patch("mcp_coder.cli.commands.prompt.prompt_llm")
@@ -268,10 +275,12 @@ class TestExecutePrompt:
         mock_prompt_llm: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
+        mock_resolve_mcp: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test successful continuation from stored response file using session_id."""
         mock_resolve_llm.return_value = ("claude", "cli argument")
+        mock_resolve_mcp.return_value = None
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
         stored_response = {"response_data": {"session_id": "previous-session-456"}}
 
@@ -302,13 +311,14 @@ class TestExecutePrompt:
             session_id="previous-session-456",
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
             execution_dir=mock.ANY,
-            mcp_config=mock.ANY,
+            mcp_config=None,
             branch_name=mock.ANY,
         )
         captured = capsys.readouterr()
         assert "Adding error handling." in captured.out
         assert "Resuming session: previous-session" in captured.out
 
+    @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
     @patch("mcp_coder.cli.commands.prompt.prompt_llm")
@@ -319,10 +329,12 @@ class TestExecutePrompt:
         mock_prompt_llm: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
+        mock_resolve_mcp: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test graceful handling when continue_from file doesn't exist."""
         mock_resolve_llm.return_value = ("claude", "cli argument")
+        mock_resolve_mcp.return_value = None
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
         mock_exists.return_value = False
         mock_prompt_llm.return_value = {
@@ -350,7 +362,7 @@ class TestExecutePrompt:
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
             execution_dir=mock.ANY,
-            mcp_config=mock.ANY,
+            mcp_config=None,
             branch_name=mock.ANY,
         )
         captured = capsys.readouterr()
@@ -359,6 +371,7 @@ class TestExecutePrompt:
             or "starting new conversation" in captured.out.lower()
         )
 
+    @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
     @patch("mcp_coder.cli.commands.prompt.prompt_llm")
@@ -371,10 +384,12 @@ class TestExecutePrompt:
         mock_prompt_llm: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
+        mock_resolve_mcp: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test graceful handling when continue_from file contains invalid JSON."""
         mock_resolve_llm.return_value = ("claude", "cli argument")
+        mock_resolve_mcp.return_value = None
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
         mock_exists.return_value = True
         mock_file_open.return_value.read.return_value = "{ invalid json content }"
@@ -403,7 +418,7 @@ class TestExecutePrompt:
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
             execution_dir=mock.ANY,
-            mcp_config=mock.ANY,
+            mcp_config=None,
             branch_name=mock.ANY,
         )
         captured = capsys.readouterr()
@@ -412,6 +427,7 @@ class TestExecutePrompt:
             or "starting new conversation" in captured.out.lower()
         )
 
+    @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
     @patch("mcp_coder.cli.commands.prompt.prompt_llm")
@@ -424,10 +440,12 @@ class TestExecutePrompt:
         mock_prompt_llm: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
+        mock_resolve_mcp: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test graceful handling when continue_from file has missing session_id."""
         mock_resolve_llm.return_value = ("claude", "cli argument")
+        mock_resolve_mcp.return_value = None
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
         incomplete_response = {"metadata": {"timestamp": "2025-09-19T10:30:00Z"}}
 
@@ -458,12 +476,13 @@ class TestExecutePrompt:
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
             execution_dir=mock.ANY,
-            mcp_config=mock.ANY,
+            mcp_config=None,
             branch_name=mock.ANY,
         )
         captured = capsys.readouterr()
         assert "Warning: No session_id found" in captured.out
 
+    @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
     @patch("mcp_coder.cli.commands.prompt.prompt_llm")
@@ -476,10 +495,12 @@ class TestExecutePrompt:
         mock_prompt_llm: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
+        mock_resolve_mcp: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test continuation functionality works with verbose verbosity."""
         mock_resolve_llm.return_value = ("claude", "cli argument")
+        mock_resolve_mcp.return_value = None
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
         stored_response = {"response_data": {"session_id": "verbose-continuation-123"}}
 
@@ -517,12 +538,13 @@ class TestExecutePrompt:
             session_id="verbose-continuation-123",
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
             execution_dir=mock.ANY,
-            mcp_config=mock.ANY,
+            mcp_config=None,
             branch_name=mock.ANY,
         )
         captured = capsys.readouterr()
         assert "verbose-continuation-new-456" in captured.out
 
+    @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
     @patch("mcp_coder.cli.commands.prompt.prompt_llm")
@@ -531,10 +553,12 @@ class TestExecutePrompt:
         mock_prompt_llm: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
+        mock_resolve_mcp: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test that env_vars are prepared and passed to prompt_llm."""
         mock_resolve_llm.return_value = ("claude", "cli argument")
+        mock_resolve_mcp.return_value = None
         mock_env_vars = {
             "MCP_CODER_PROJECT_DIR": "/test/project",
             "MCP_CODER_VENV_DIR": "/test/project/.venv",
@@ -567,12 +591,13 @@ class TestExecutePrompt:
             session_id=None,
             env_vars=mock_env_vars,
             execution_dir=mock.ANY,
-            mcp_config=mock.ANY,
+            mcp_config=None,
             branch_name=mock.ANY,
         )
         captured = capsys.readouterr()
         assert "Response with env vars." in captured.out
 
+    @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
     @patch("mcp_coder.cli.commands.prompt.prompt_llm")
@@ -581,10 +606,12 @@ class TestExecutePrompt:
         mock_prompt_llm: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
+        mock_resolve_mcp: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test graceful handling when no venv is found."""
         mock_resolve_llm.return_value = ("claude", "cli argument")
+        mock_resolve_mcp.return_value = None
         # Simulate RuntimeError when no venv found
         mock_prepare_env.side_effect = RuntimeError("No virtual environment found")
         mock_prompt_llm.return_value = {
@@ -614,7 +641,7 @@ class TestExecutePrompt:
             session_id=None,
             env_vars=None,
             execution_dir=mock.ANY,
-            mcp_config=mock.ANY,
+            mcp_config=None,
             branch_name=mock.ANY,
         )
         captured = capsys.readouterr()

@@ -56,7 +56,8 @@ def resolve_llm_method(llm_method: str | None) -> tuple[str, str]:
         "config default_provider", "default".
 
     Raises:
-        ValueError: If env var MCP_CODER_LLM_PROVIDER has an invalid value.
+        ValueError: If env var MCP_CODER_LLM_PROVIDER or config default_provider
+            has an invalid value.
     """
     if llm_method is not None:
         return (llm_method, "cli argument")
@@ -74,8 +75,13 @@ def resolve_llm_method(llm_method: str | None) -> tuple[str, str]:
     # Check config [llm] default_provider
     config = get_config_values([("llm", "default_provider", None)])
     provider = config[("llm", "default_provider")]
-    if provider == "langchain":
-        return ("langchain", "config default_provider")
+    if provider is not None:
+        if provider not in _VALID_PROVIDERS:
+            raise ValueError(
+                f"Invalid config [llm] default_provider value: {provider!r}. "
+                f"Valid values: {sorted(_VALID_PROVIDERS)}"
+            )
+        return (provider, "config default_provider")
 
     return ("claude", "default")
 

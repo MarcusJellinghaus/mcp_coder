@@ -123,12 +123,19 @@ class TestResolveLlmMethod:
         assert resolve_llm_method(None) == ("claude", "default")
 
     @patch("mcp_coder.cli.utils.get_config_values")
-    def test_resolve_llm_method_unknown_config_provider(
+    def test_resolve_llm_method_invalid_config_provider(
         self, mock_config: MagicMock
     ) -> None:
-        """Test that unknown config provider falls through to default."""
+        """Test that invalid config provider raises ValueError."""
         mock_config.return_value = {("llm", "default_provider"): "some_other"}
-        assert resolve_llm_method(None) == ("claude", "default")
+        with pytest.raises(ValueError, match="some_other"):
+            resolve_llm_method(None)
+
+    @patch("mcp_coder.cli.utils.get_config_values")
+    def test_resolve_llm_method_config_claude(self, mock_config: MagicMock) -> None:
+        """Test that config default_provider=claude returns tuple with config source."""
+        mock_config.return_value = {("llm", "default_provider"): "claude"}
+        assert resolve_llm_method(None) == ("claude", "config default_provider")
 
 
 class TestResolveMcpConfigPath:
