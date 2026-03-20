@@ -30,15 +30,15 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Core Resolution Logic — Config Key Rename, Return Type, MCP Auto-detect — [step_2.md](./steps/step_2.md)
 
-- [ ] Update tests for `resolve_llm_method()` return type and env var support (TDD)
-- [ ] Update tests for `resolve_mcp_config_path()` with `project_dir` param (TDD)
-- [ ] Update tests for `_load_langchain_config()` config key rename (TDD)
-- [ ] Implement `resolve_llm_method()` → return `tuple[str, str]` with env var support
-- [ ] Implement `resolve_mcp_config_path()` → add `project_dir` param, auto-detect `.mcp.json`
-- [ ] Rename config key `provider` → `default_provider` in `langchain/__init__.py`
-- [ ] Add commented-out `[llm]` section to `create_default_config()` in `user_config.py`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message
+- [x] Update tests for `resolve_llm_method()` return type and env var support (TDD)
+- [x] Update tests for `resolve_mcp_config_path()` with `project_dir` param (TDD)
+- [x] Update tests for `_load_langchain_config()` config key rename (TDD)
+- [x] Implement `resolve_llm_method()` → return `tuple[str, str]` with env var support
+- [x] Implement `resolve_mcp_config_path()` → add `project_dir` param, auto-detect `.mcp.json`
+- [x] Rename config key `provider` → `default_provider` in `langchain/__init__.py`
+- [x] Add commented-out `[llm]` section to `create_default_config()` in `user_config.py`
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message
 
 ### Step 3: Templates and Help Text Updates — [step_3.md](./steps/step_3.md)
 

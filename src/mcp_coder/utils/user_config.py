@@ -275,6 +275,10 @@ def create_default_config() -> bool:
     template = """# MCP Coder Configuration
 # Update with your actual credentials and repository information
 
+# [llm]
+# Default LLM provider: "claude" (default) or "langchain"
+# default_provider = "langchain"
+
 [github]
 # GitHub authentication
 # Environment variable (higher priority): GITHUB_TOKEN

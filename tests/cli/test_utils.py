@@ -5,7 +5,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.cli.utils import parse_llm_method_from_args, resolve_llm_method
+from mcp_coder.cli.utils import (
+    parse_llm_method_from_args,
+    resolve_llm_method,
+    resolve_mcp_config_path,
+)
 
 
 class TestParseLLMMethodFromArgs:
@@ -71,28 +75,105 @@ class TestParseLLMMethodFromArgs:
 class TestResolveLlmMethod:
     """Test cases for resolve_llm_method function."""
 
-    def test_explicit_cli_arg_returned_as_is(self) -> None:
-        """Test that explicit CLI arg is returned without config lookup."""
-        assert resolve_llm_method("claude") == "claude"
-        assert resolve_llm_method("langchain") == "langchain"
+    def test_resolve_llm_method_cli_arg(self) -> None:
+        """Test that explicit CLI arg returns (provider, 'cli argument') tuple."""
+        assert resolve_llm_method("claude") == ("claude", "cli argument")
+        assert resolve_llm_method("langchain") == ("langchain", "cli argument")
 
     @patch("mcp_coder.cli.utils.get_config_values")
-    def test_none_with_langchain_config(self, mock_config: MagicMock) -> None:
-        """Test that None falls back to config [llm] provider."""
-        mock_config.return_value = {("llm", "provider"): "langchain"}
-        assert resolve_llm_method(None) == "langchain"
+    def test_resolve_llm_method_config_default_provider(
+        self, mock_config: MagicMock
+    ) -> None:
+        """Test that config default_provider=langchain returns tuple with config source."""
+        mock_config.return_value = {("llm", "default_provider"): "langchain"}
+        assert resolve_llm_method(None) == ("langchain", "config default_provider")
 
     @patch("mcp_coder.cli.utils.get_config_values")
-    def test_none_with_no_config(self, mock_config: MagicMock) -> None:
-        """Test that None with no config defaults to claude."""
-        mock_config.return_value = {("llm", "provider"): None}
-        assert resolve_llm_method(None) == "claude"
+    def test_resolve_llm_method_env_var(
+        self, mock_config: MagicMock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that env var MCP_CODER_LLM_PROVIDER is checked before config."""
+        monkeypatch.setenv("MCP_CODER_LLM_PROVIDER", "langchain")
+        assert resolve_llm_method(None) == (
+            "langchain",
+            "env MCP_CODER_LLM_PROVIDER",
+        )
 
     @patch("mcp_coder.cli.utils.get_config_values")
-    def test_none_with_unknown_provider(self, mock_config: MagicMock) -> None:
+    def test_resolve_llm_method_cli_overrides_env(
+        self, mock_config: MagicMock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that CLI arg takes precedence over env var."""
+        monkeypatch.setenv("MCP_CODER_LLM_PROVIDER", "langchain")
+        assert resolve_llm_method("claude") == ("claude", "cli argument")
+
+    @patch("mcp_coder.cli.utils.get_config_values")
+    def test_resolve_llm_method_env_var_invalid(
+        self, mock_config: MagicMock, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that invalid env var value raises ValueError."""
+        monkeypatch.setenv("MCP_CODER_LLM_PROVIDER", "invalid_provider")
+        with pytest.raises(ValueError, match="invalid_provider"):
+            resolve_llm_method(None)
+
+    @patch("mcp_coder.cli.utils.get_config_values")
+    def test_resolve_llm_method_default(self, mock_config: MagicMock) -> None:
+        """Test that no CLI arg, no env var, no config returns ('claude', 'default')."""
+        mock_config.return_value = {("llm", "default_provider"): None}
+        assert resolve_llm_method(None) == ("claude", "default")
+
+    @patch("mcp_coder.cli.utils.get_config_values")
+    def test_resolve_llm_method_unknown_config_provider(
+        self, mock_config: MagicMock
+    ) -> None:
         """Test that unknown config provider falls through to default."""
-        mock_config.return_value = {("llm", "provider"): "some_other"}
-        assert resolve_llm_method(None) == "claude"
+        mock_config.return_value = {("llm", "default_provider"): "some_other"}
+        assert resolve_llm_method(None) == ("claude", "default")
+
+
+class TestResolveMcpConfigPath:
+    """Test cases for resolve_mcp_config_path function."""
+
+    def test_resolve_mcp_config_auto_detect_project_dir(self, tmp_path: Path) -> None:
+        """Test that .mcp.json in project_dir is auto-detected when mcp_config is None."""
+        mcp_json = tmp_path / ".mcp.json"
+        mcp_json.write_text("{}")
+
+        result = resolve_mcp_config_path(None, project_dir=str(tmp_path))
+        assert result == str(mcp_json.resolve())
+
+    def test_resolve_mcp_config_auto_detect_cwd(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that .mcp.json in CWD is auto-detected when no project_dir given."""
+        mcp_json = tmp_path / ".mcp.json"
+        mcp_json.write_text("{}")
+        monkeypatch.chdir(tmp_path)
+
+        result = resolve_mcp_config_path(None)
+        assert result == str(mcp_json.resolve())
+
+    def test_resolve_mcp_config_auto_detect_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that None is returned when no .mcp.json exists."""
+        monkeypatch.chdir(tmp_path)
+
+        result = resolve_mcp_config_path(None)
+        assert result is None
+
+    def test_resolve_mcp_config_explicit_still_works(self, tmp_path: Path) -> None:
+        """Test that explicit mcp_config path still resolves as before."""
+        mcp_json = tmp_path / "custom.json"
+        mcp_json.write_text("{}")
+
+        result = resolve_mcp_config_path(str(mcp_json))
+        assert result == str(mcp_json.resolve())
+
+    def test_resolve_mcp_config_explicit_not_found(self) -> None:
+        """Test that explicit path to non-existent file raises FileNotFoundError."""
+        with pytest.raises(FileNotFoundError):
+            resolve_mcp_config_path("/nonexistent/path/config.json")
 
 
 class TestResolveExecutionDir:
