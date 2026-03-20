@@ -73,9 +73,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Prepare git commit message for Step 9
 
 ### Step 10 — Unify Session History Format ([step_10.md](./steps/step_10.md))
-- [ ] Implement Step 10: change _ask_text() to use model_dump() / messages_from_dict() for history serialization, remove _to_lc_messages() if unused, update tests
-- [ ] Run quality checks (pylint, pytest, mypy) and fix all issues
-- [ ] Prepare git commit message for Step 10
+- [x] Implement Step 10: change _ask_text() to use model_dump() / messages_from_dict() for history serialization, remove _to_lc_messages() if unused, update tests
+- [x] Run quality checks (pylint, pytest, mypy) and fix all issues
+- [x] Prepare git commit message for Step 10
 
 ### Step 11 — Config Robustness + Transport Warning ([step_11.md](./steps/step_11.md))
 - [ ] Implement Step 11: wrap json.JSONDecodeError in _load_mcp_server_config() with user-friendly message, log warning when overriding non-stdio transport, write tests

@@ -28,24 +28,53 @@ def _mock_langchain_modules() -> Generator[None, None, None]:
 
     # Create real classes for message types so isinstance() works in tests
     class _AIMessage:
+        type = "ai"
+
         def __init__(self, **kwargs: object) -> None:
             for k, v in kwargs.items():
                 setattr(self, k, v)
+
+        def model_dump(self) -> dict[str, object]:
+            return {"type": self.type, "content": getattr(self, "content", "")}
 
     class _HumanMessage:
+        type = "human"
+
         def __init__(self, **kwargs: object) -> None:
             for k, v in kwargs.items():
                 setattr(self, k, v)
 
+        def model_dump(self) -> dict[str, object]:
+            return {"type": self.type, "content": getattr(self, "content", "")}
+
     class _ToolMessage:
+        type = "tool"
+
         def __init__(self, **kwargs: object) -> None:
             for k, v in kwargs.items():
                 setattr(self, k, v)
+
+        def model_dump(self) -> dict[str, object]:
+            return {"type": self.type, "content": getattr(self, "content", "")}
+
+    def _messages_from_dict(
+        messages: list[dict[str, object]],
+    ) -> list[object]:
+        """Stub for langchain_core.messages.messages_from_dict."""
+        _type_map = {"human": _HumanMessage, "ai": _AIMessage, "tool": _ToolMessage}
+        result = []
+        for m in messages:
+            msg_type = str(m.get("type", "human"))
+            data = m.get("data", {})
+            cls = _type_map.get(msg_type, _HumanMessage)
+            result.append(cls(**(data if isinstance(data, dict) else {})))
+        return result
 
     _lc_messages = MagicMock()
     _lc_messages.AIMessage = _AIMessage
     _lc_messages.HumanMessage = _HumanMessage
     _lc_messages.ToolMessage = _ToolMessage
+    _lc_messages.messages_from_dict = _messages_from_dict
 
     mocks: dict[str, MagicMock] = {}
 

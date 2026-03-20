@@ -169,10 +169,10 @@ def _ask_text(
     timeout: int,
 ) -> LLMResponseDict:
     """Text-only backend dispatch using unified chat model factory."""
-    from ._utils import _to_lc_messages
+    from langchain_core.messages import HumanMessage, messages_from_dict
 
     history = load_langchain_history(session_id)
-    lc_messages = _to_lc_messages(history + [{"role": "human", "content": question}])
+    lc_messages = messages_from_dict(history) + [HumanMessage(content=question)]
 
     chat_model = _create_chat_model(config, timeout=timeout)
 
@@ -198,11 +198,18 @@ def _ask_text(
         "response_content": text,
     }
 
-    updated_history = history + [
-        {"role": "human", "content": question},
-        {"role": "ai", "content": text},
-    ]
-    store_langchain_history(session_id, updated_history)
+    # Serialize history using model_dump() for messages_from_dict() compatibility
+    new_human = HumanMessage(content=question)
+    new_ai = ai_msg
+    serialized: list[dict[str, Any]] = []
+    for msg in list(messages_from_dict(history)) + [new_human, new_ai]:
+        if hasattr(msg, "model_dump"):
+            dump = msg.model_dump()
+        else:
+            dump = msg.dict()
+        msg_type = dump.pop("type", "unknown")
+        serialized.append({"type": msg_type, "data": dump})
+    store_langchain_history(session_id, serialized)
 
     return LLMResponseDict(
         version=LLM_RESPONSE_VERSION,

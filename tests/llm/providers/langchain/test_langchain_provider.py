@@ -94,6 +94,7 @@ class TestAskLangchain:
         mock_model = MagicMock()
         mock_ai_msg = MagicMock()
         mock_ai_msg.content = text
+        mock_ai_msg.model_dump.return_value = {"type": "ai", "content": text}
         mock_model.invoke.return_value = mock_ai_msg
         return mock_model
 
@@ -202,8 +203,12 @@ class TestAskLangchain:
                 ask_langchain("question")
 
     def test_history_is_updated_and_stored(self) -> None:
-        """After a call, both human and AI messages are appended to history."""
+        """After a call, history is stored in messages_from_dict format."""
         store_mock = MagicMock()
+        # Provide prior history in the new serialized format
+        prior_history = [
+            {"type": "human", "data": {"content": "prev"}},
+        ]
         with (
             patch(
                 "mcp_coder.llm.providers.langchain._load_langchain_config",
@@ -211,7 +216,7 @@ class TestAskLangchain:
             ),
             patch(
                 "mcp_coder.llm.providers.langchain.load_langchain_history",
-                return_value=[{"role": "human", "content": "prev"}],
+                return_value=prior_history,
             ),
             patch(
                 "mcp_coder.llm.providers.langchain.store_langchain_history",
@@ -226,9 +231,11 @@ class TestAskLangchain:
 
             ask_langchain("new question", session_id="sid")
         stored_messages = store_mock.call_args[0][1]  # second positional arg
-        assert {"role": "human", "content": "prev"} in stored_messages
-        assert {"role": "human", "content": "new question"} in stored_messages
-        assert {"role": "ai", "content": "answer"} in stored_messages
+        # All entries should use {"type": ..., "data": {...}} format
+        types = [m["type"] for m in stored_messages]
+        assert types == ["human", "human", "ai"]
+        contents = [m["data"]["content"] for m in stored_messages]
+        assert contents == ["prev", "new question", "answer"]
 
 
 class TestAskTextModelNotFound:
