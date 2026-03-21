@@ -39,10 +39,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: Fix HTML Matrix Label Names ([step_3.md](./steps/step_3.md))
 
-- [ ] Update 5 failure label names in `docs/processes-prompts/github_Issue_Workflow_Matrix.html` to match `labels.json` convention
-- [ ] Update step-number badges (`6f`, `6f-ci`, `6f-t`) for implementation-cycle failure labels
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 3
+- [x] Update 5 failure label names in `docs/processes-prompts/github_Issue_Workflow_Matrix.html` to match `labels.json` convention
+- [x] Update step-number badges (`6f`, `6f-ci`, `6f-t`) for implementation-cycle failure labels
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message for Step 3
 
 ## Pull Request
 
