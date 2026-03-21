@@ -24,8 +24,10 @@ Add 5 failure status labels to `labels.json` so automated workflows can distingu
 |------|--------|
 | `src/mcp_coder/config/labels.json` | Add 5 failure label entries |
 | `tests/cli/commands/test_set_status.py` | Update hardcoded count `10` → `15` and add failure labels to `VALID_STATUS_LABELS` |
+| `tests/cli/commands/test_define_labels.py` | Update hardcoded count `10` → `15` |
+| `tests/cli/commands/test_define_labels_label_changes.py` | Update `created` count `9` → `14` and `call_count` `9` → `14` (two tests) |
 | `docs/processes-prompts/development-process.md` | Add failure handling section |
-| `docs/processes-prompts/github_Issue_Workflow_Matrix.html` | Fix label names to match `labels.json` naming convention |
+| `docs/processes-prompts/github_Issue_Workflow_Matrix.html` | Fix label names to match `labels.json` naming convention; differentiate step-number badges (`6f`, `6f-ci`, `6f-t`) |
 
 ## New Labels
 

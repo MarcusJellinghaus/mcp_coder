@@ -22,7 +22,7 @@ Add a concise "8. Failure Handling" section containing:
 
 ## HOW
 
-- Insert new section `### 8. Failure Handling` after the "7. PR Review & Merge Workflow" section
+- Append new section `### 8. Failure Handling` at the end of the document (after section 7)
 - Keep it concise — one table, two short paragraphs
 - Reference the existing `set-status` command for recovery
 

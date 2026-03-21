@@ -12,6 +12,8 @@
 
 - `src/mcp_coder/config/labels.json` — add 5 entries to `workflow_labels` array
 - `tests/cli/commands/test_set_status.py` — update `VALID_STATUS_LABELS` list and count assertion
+- `tests/cli/commands/test_define_labels.py` — update count assertion `10` → `15`
+- `tests/cli/commands/test_define_labels_label_changes.py` — update `created` count `9` → `14` and `call_count` `9` → `14` (two tests)
 
 ## WHAT
 
@@ -50,6 +52,15 @@ Each label follows this structure:
 - Add the 5 new label names to `VALID_STATUS_LABELS` list
 - Update `test_get_status_labels_from_config`: change `len(labels) == 10` → `len(labels) == 15`
 
+### test_define_labels.py changes
+
+- Update `test_define_labels_loads_config`: change `len(labels_config["workflow_labels"]) == 10` → `== 15`
+
+### test_define_labels_label_changes.py changes
+
+- `test_apply_labels_success_flow`: change `len(result["created"]) == 9` → `== 14` and `create_label.call_count == 9` → `== 14`
+- `test_apply_labels_dry_run_mode`: change `len(result["created"]) == 9` → `== 14`
+
 ## HOW
 
 - Edit `labels.json`: append 5 objects to the `workflow_labels` array (before the closing `]`)
@@ -67,5 +78,7 @@ No new data structures. Existing label schema is reused exactly.
 3. Open test_set_status.py
 4. Add 5 failure label names to VALID_STATUS_LABELS
 5. Change assertion from == 10 to == 15
-6. Run all quality checks
+6. Open test_define_labels.py, change count == 10 to == 15
+7. Open test_define_labels_label_changes.py, change created count == 9 to == 14 and call_count == 9 to == 14 (two tests)
+8. Run all quality checks
 ```

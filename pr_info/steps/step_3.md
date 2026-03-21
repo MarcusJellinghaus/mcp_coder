@@ -28,6 +28,7 @@ Fix the `.label-name` text content in 5 failure label cards:
 
 - Find each `<div class="label-name">status:...-failed</div>` in the Failed column
 - Replace the text content with the correct `status-{N}f[-subtype]:` prefixed name
+- Differentiate step-number badge text: `6f` for implementing-failed, `6f-ci` for ci-fix-needed, `6f-t` for llm-timeout
 - No CSS or structural changes needed — the styling already works
 
 ## ALGORITHM
@@ -36,8 +37,9 @@ Fix the `.label-name` text content in 5 failure label cards:
 1. Read the HTML file
 2. Find the 5 failure label-name divs
 3. Replace text content with correct label names
-4. Save file
-5. Run quality checks (no Python changes expected)
+4. Update step-number badge text for ci-fix-needed (`6f-ci`) and llm-timeout (`6f-t`)
+5. Save file
+6. Run quality checks (no Python changes expected)
 ```
 
 ## DATA
