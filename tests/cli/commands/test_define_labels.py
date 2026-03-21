@@ -43,7 +43,7 @@ class TestWorkflowLabelsFromConfig:
         # Load the actual config to test against
         labels_config = load_labels_config(labels_config_path)
 
-        # Verify we have exactly 10 labels
+        # Verify we have exactly 15 labels
         assert (
             len(labels_config["workflow_labels"]) == 15
         ), "Config should contain exactly 15 workflow labels"
