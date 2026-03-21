@@ -168,11 +168,10 @@ git diff  # Should show formatting changes if any
 ```
 git status
 git diff
-git add
 git commit
 git log
 git fetch
-git push
+git ls-tree
 ```
 
 **⚠️ Bash discipline (applies to subagents too):**
