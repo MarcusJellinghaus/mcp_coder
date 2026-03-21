@@ -12,7 +12,7 @@ class TestLoadLangchainConfig:
         with patch(
             "mcp_coder.llm.providers.langchain.get_config_values",
             return_value={
-                ("llm", "provider"): "langchain",
+                ("llm", "default_provider"): "langchain",
                 ("llm.langchain", "backend"): "openai",
                 ("llm.langchain", "model"): "gpt-4o",
                 ("llm.langchain", "api_key"): None,
@@ -24,7 +24,7 @@ class TestLoadLangchainConfig:
 
             cfg = _load_langchain_config()
         assert set(cfg.keys()) == {
-            "provider",
+            "default_provider",
             "backend",
             "model",
             "api_key",
@@ -41,7 +41,7 @@ class TestLoadLangchainConfig:
         with patch(
             "mcp_coder.llm.providers.langchain.get_config_values",
             return_value={
-                ("llm", "provider"): "langchain",
+                ("llm", "default_provider"): "langchain",
                 ("llm.langchain", "backend"): "openai",
                 ("llm.langchain", "model"): "gpt-4o",
                 ("llm.langchain", "api_key"): None,
@@ -64,7 +64,7 @@ class TestLoadLangchainConfig:
         with patch(
             "mcp_coder.llm.providers.langchain.get_config_values",
             return_value={
-                ("llm", "provider"): "langchain",
+                ("llm", "default_provider"): "langchain",
                 ("llm.langchain", "backend"): "openai",
                 ("llm.langchain", "model"): "gpt-4o",
                 ("llm.langchain", "api_key"): None,

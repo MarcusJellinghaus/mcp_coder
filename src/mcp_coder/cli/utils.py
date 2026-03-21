@@ -5,6 +5,7 @@ for parameter parsing and conversion.
 """
 
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -34,30 +35,47 @@ def _get_status_symbols() -> dict[str, str]:
         return {"success": "\u2713", "failure": "\u2717", "warning": "\u26a0"}
 
 
-def resolve_llm_method(llm_method: str | None) -> str:
-    """Resolve LLM method from CLI arg, config file, or default.
+_VALID_PROVIDERS = {"claude", "langchain"}
 
-    Resolution order: CLI argument > config [llm] provider > "claude".
 
-    When config [llm] provider is "langchain", the resolved value is "langchain".
-    Other config provider values are not mapped (fall through to default).
+def resolve_llm_method(llm_method: str | None) -> tuple[str, str]:
+    """Resolve LLM method from CLI arg, env var, config file, or default.
+
+    Resolution order:
+        1. CLI argument
+        2. Environment variable MCP_CODER_LLM_PROVIDER
+        3. Config [llm] default_provider
+        4. Default "claude"
 
     Args:
         llm_method: CLI --llm-method value, or None if not specified
 
     Returns:
-        Resolved llm_method string suitable for parse_llm_method()
+        Tuple of (provider, source) where source describes where the value came from.
+        Source is one of: "cli argument", "env MCP_CODER_LLM_PROVIDER",
+        "config default_provider", "default".
+
+    Raises:
+        ValueError: If the resolved provider is not a valid value.
     """
     if llm_method is not None:
-        return llm_method
+        provider, source = llm_method, "cli argument"
+    elif (env_value := os.environ.get("MCP_CODER_LLM_PROVIDER")) is not None:
+        provider, source = env_value, "env MCP_CODER_LLM_PROVIDER"
+    else:
+        config = get_config_values([("llm", "default_provider", None)])
+        cfg_provider = config[("llm", "default_provider")]
+        if cfg_provider is not None:
+            provider, source = cfg_provider, "config default_provider"
+        else:
+            return ("claude", "default")
 
-    # Check config [llm] provider
-    config = get_config_values([("llm", "provider", None)])
-    provider = config[("llm", "provider")]
-    if provider == "langchain":
-        return "langchain"
-
-    return "claude"
+    if provider not in _VALID_PROVIDERS:
+        raise ValueError(
+            f"Invalid LLM provider {provider!r} from {source}. "
+            f"Valid values: {', '.join(sorted(_VALID_PROVIDERS))}"
+        )
+    return (provider, source)
 
 
 def parse_llm_method_from_args(llm_method: str) -> str:
@@ -80,54 +98,47 @@ def parse_llm_method_from_args(llm_method: str) -> str:
     return parse_llm_method(llm_method)
 
 
-def resolve_mcp_config_path(mcp_config: str | None) -> str | None:
+def resolve_mcp_config_path(
+    mcp_config: str | None,
+    project_dir: str | None = None,
+) -> str | None:
     """Resolve MCP config path to absolute path.
 
-    Converts relative paths to absolute paths based on current working directory.
-    This ensures the MCP config file can be found regardless of where subprocesses
-    set their working directory.
+    When mcp_config is explicitly provided, converts to absolute path and validates.
+    When mcp_config is None, auto-detects .mcp.json in project_dir (or CWD).
 
     Args:
         mcp_config: MCP config path (relative or absolute) or None
+        project_dir: Project directory to search for .mcp.json (defaults to CWD)
 
     Returns:
-        Absolute path as string, or None if input is None
+        Absolute path as string, or None if no config found
 
     Raises:
-        FileNotFoundError: If the MCP config file does not exist
-
-    Examples:
-        >>> # Relative path gets resolved
-        >>> path = resolve_mcp_config_path(".mcp.json")
-        >>> print(path)
-        /absolute/path/to/.mcp.json
-
-        >>> # Absolute path is validated but unchanged
-        >>> path = resolve_mcp_config_path("/etc/mcp.json")
-        >>> print(path)
-        /etc/mcp.json
-
-        >>> # None returns None
-        >>> path = resolve_mcp_config_path(None)
-        >>> print(path)
-        None
+        FileNotFoundError: If an explicitly provided MCP config file does not exist
     """
-    if mcp_config is None:
-        return None
+    if mcp_config is not None:
+        # Explicit path: resolve and validate
+        mcp_config_path = Path(mcp_config).resolve()
+        if not mcp_config_path.exists():
+            raise FileNotFoundError(
+                f"MCP config file not found: {mcp_config_path}\n"
+                f"  Original path: {mcp_config}\n"
+                f"  Current directory: {Path.cwd()}"
+            )
+        logger.debug(f"Resolved MCP config path: {mcp_config} -> {mcp_config_path}")
+        return str(mcp_config_path)
 
-    # Resolve to absolute path
-    mcp_config_path = Path(mcp_config).resolve()
+    # Auto-detect .mcp.json
+    base = Path(project_dir) if project_dir else Path.cwd()
+    candidate = base / ".mcp.json"
+    if candidate.exists():
+        resolved = str(candidate.resolve())
+        logger.debug(f"Auto-detected MCP config: {resolved}")
+        return resolved
 
-    # Validate that the file exists
-    if not mcp_config_path.exists():
-        raise FileNotFoundError(
-            f"MCP config file not found: {mcp_config_path}\n"
-            f"  Original path: {mcp_config}\n"
-            f"  Current directory: {Path.cwd()}"
-        )
-
-    logger.debug(f"Resolved MCP config path: {mcp_config} -> {mcp_config_path}")
-    return str(mcp_config_path)
+    logger.debug(f"No .mcp.json found in {base}")
+    return None
 
 
 def resolve_execution_dir(execution_dir: str | None) -> Path:

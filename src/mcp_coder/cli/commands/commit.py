@@ -22,7 +22,6 @@ from ..utils import (
     parse_llm_method_from_args,
     resolve_execution_dir,
     resolve_llm_method,
-    resolve_mcp_config_path,
 )
 
 logger = logging.getLogger(__name__)
@@ -50,12 +49,14 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
         return 1
 
     # 2. Parse LLM method and generate commit message
-    llm_method = resolve_llm_method(args.llm_method)
+    llm_method, _ = resolve_llm_method(args.llm_method)
     provider = parse_llm_method_from_args(llm_method)
     success, commit_message, error = generate_commit_message_with_llm(
         project_dir, provider, execution_dir=str(execution_dir)
     )
-    # Note: mcp_config support for commit message generation will be added in future update
+    # Commit message generation is text-in/text-out: it takes diff text as input
+    # and produces a commit message as output. No MCP tool use is involved,
+    # so --mcp-config is not applicable here.
     if not success:
         print(f"Error: {error}", file=sys.stderr)
         return 2

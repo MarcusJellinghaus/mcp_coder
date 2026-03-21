@@ -21,3 +21,33 @@ class TestVerifyParser:
         parser = create_parser()
         args = parser.parse_args(["verify", "--check-models"])
         assert args.check_models is True
+
+    def test_llm_method_default_none(self) -> None:
+        """--llm-method defaults to None when not provided."""
+        parser = create_parser()
+        args = parser.parse_args(["verify"])
+        assert args.llm_method is None
+
+    def test_llm_method_claude(self) -> None:
+        """--llm-method claude is accepted."""
+        parser = create_parser()
+        args = parser.parse_args(["verify", "--llm-method", "claude"])
+        assert args.llm_method == "claude"
+
+    def test_llm_method_langchain(self) -> None:
+        """--llm-method langchain is accepted."""
+        parser = create_parser()
+        args = parser.parse_args(["verify", "--llm-method", "langchain"])
+        assert args.llm_method == "langchain"
+
+    def test_project_dir_default_none(self) -> None:
+        """--project-dir defaults to None when not provided."""
+        parser = create_parser()
+        args = parser.parse_args(["verify"])
+        assert args.project_dir is None
+
+    def test_project_dir_accepted(self) -> None:
+        """--project-dir is accepted with a value."""
+        parser = create_parser()
+        args = parser.parse_args(["verify", "--project-dir", "/some/path"])
+        assert args.project_dir == "/some/path"

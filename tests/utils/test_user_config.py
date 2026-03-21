@@ -562,6 +562,24 @@ class TestCreateDefaultConfig:
         assert "executor_job_path" in filesystem_repo
         assert "github_credentials_id" in filesystem_repo
 
+    def test_create_default_config_has_llm_section(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that config template contains commented-out [llm] section."""
+        # Setup
+        config_file = tmp_path / ".mcp_coder" / "config.toml"
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute
+        create_default_config()
+
+        # Verify
+        content = config_file.read_text(encoding="utf-8")
+        assert "# [llm]" in content
+        assert "# default_provider" in content
+
     def test_create_default_config_handles_permission_error(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

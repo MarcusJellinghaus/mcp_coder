@@ -123,7 +123,7 @@ class TestVerifyEndToEnd:
 
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
-    @patch("mcp_coder.cli.commands.verify._resolve_active_provider")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     @patch("sys.argv", ["mcp-coder", "verify"])
     def test_full_verify_output_format(
         self,
@@ -145,10 +145,11 @@ class TestVerifyEndToEnd:
         assert "=== MLFLOW ===" in output
         assert exit_code == 0
 
+    @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_langchain")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
-    @patch("mcp_coder.cli.commands.verify._resolve_active_provider")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     @patch("sys.argv", ["mcp-coder", "verify", "--check-models"])
     def test_check_models_flag_parsed(
         self,
@@ -156,6 +157,7 @@ class TestVerifyEndToEnd:
         mock_claude: MagicMock,
         mock_lc: MagicMock,
         mock_mlflow: MagicMock,
+        mock_resolve_mcp: MagicMock,
     ) -> None:
         """--check-models flag reaches verify_langchain via full CLI path."""
         mock_provider.return_value = ("langchain", "config.toml")
@@ -170,7 +172,7 @@ class TestVerifyEndToEnd:
 
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
-    @patch("mcp_coder.cli.commands.verify._resolve_active_provider")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     @patch("sys.argv", ["mcp-coder", "verify"])
     def test_check_models_defaults_false(
         self,
@@ -193,7 +195,7 @@ class TestVerifyEndToEnd:
 
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
-    @patch("mcp_coder.cli.commands.verify._resolve_active_provider")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     @patch("sys.argv", ["mcp-coder", "verify"])
     def test_output_contains_status_symbols(
         self,
@@ -215,7 +217,7 @@ class TestVerifyEndToEnd:
 
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
-    @patch("mcp_coder.cli.commands.verify._resolve_active_provider")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     @patch("sys.argv", ["mcp-coder", "verify"])
     def test_active_provider_shown_in_output(
         self,
@@ -238,7 +240,7 @@ class TestVerifyEndToEnd:
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_langchain")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
-    @patch("mcp_coder.cli.commands.verify._resolve_active_provider")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     @patch("sys.argv", ["mcp-coder", "verify"])
     def test_langchain_details_shown_when_active(
         self,
@@ -262,7 +264,7 @@ class TestVerifyEndToEnd:
 
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
-    @patch("mcp_coder.cli.commands.verify._resolve_active_provider")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     @patch("sys.argv", ["mcp-coder", "verify"])
     def test_claude_fallback_note_when_claude_active(
         self,
@@ -306,7 +308,7 @@ class TestExitCodeMatrix:
         with (
             patch("sys.argv", ["mcp-coder", "verify"]),
             patch(
-                "mcp_coder.cli.commands.verify._resolve_active_provider",
+                "mcp_coder.cli.commands.verify.resolve_llm_method",
                 return_value=provider,
             ),
             patch(

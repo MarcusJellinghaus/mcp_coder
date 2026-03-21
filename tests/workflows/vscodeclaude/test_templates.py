@@ -1,6 +1,7 @@
 """Tests for vscodeclaude template strings."""
 
 from mcp_coder.workflows.vscodeclaude.templates import (
+    AUTOMATED_SECTION_LINUX,
     AUTOMATED_SECTION_WINDOWS,
     DISCUSSION_SECTION_WINDOWS,
     VENV_SECTION_WINDOWS,
@@ -29,23 +30,34 @@ def test_venv_section_installs_dev_dependencies() -> None:
     ), "VENV_SECTION_WINDOWS should not use '--extra types' (incomplete dependencies)"
 
 
-def test_automated_section_windows_has_llm_method_flag() -> None:
-    """Test that AUTOMATED_SECTION_WINDOWS includes --llm-method claude.
+def test_automated_section_no_hardcoded_llm_method() -> None:
+    """Test that AUTOMATED_SECTION_WINDOWS does not hardcode --llm-method.
 
-    Without this flag, the template breaks when the LLM provider is not
-    claude (regression test for issue #524).
+    The LLM method should be resolved at runtime via config/env var,
+    not hardcoded in templates (issue #528).
     """
     assert (
-        "--llm-method claude" in AUTOMATED_SECTION_WINDOWS
-    ), "AUTOMATED_SECTION_WINDOWS must include '--llm-method claude'"
+        "--llm-method" not in AUTOMATED_SECTION_WINDOWS
+    ), "AUTOMATED_SECTION_WINDOWS must not hardcode '--llm-method'"
 
 
-def test_discussion_section_windows_has_llm_method_flag() -> None:
-    """Test that DISCUSSION_SECTION_WINDOWS includes --llm-method claude.
+def test_discussion_section_no_hardcoded_llm_method() -> None:
+    """Test that DISCUSSION_SECTION_WINDOWS does not hardcode --llm-method.
 
-    Without this flag, the template breaks when the LLM provider is not
-    claude (regression test for issue #524).
+    The LLM method should be resolved at runtime via config/env var,
+    not hardcoded in templates (issue #528).
     """
     assert (
-        "--llm-method claude" in DISCUSSION_SECTION_WINDOWS
-    ), "DISCUSSION_SECTION_WINDOWS must include '--llm-method claude'"
+        "--llm-method" not in DISCUSSION_SECTION_WINDOWS
+    ), "DISCUSSION_SECTION_WINDOWS must not hardcode '--llm-method'"
+
+
+def test_linux_section_has_todo_comment() -> None:
+    """Test that AUTOMATED_SECTION_LINUX has a TODO comment for review.
+
+    Linux templates use raw `claude` CLI directly instead of mcp-coder prompt.
+    A TODO comment flags this for future review (issue #528).
+    """
+    assert (
+        "# TODO" in AUTOMATED_SECTION_LINUX
+    ), "AUTOMATED_SECTION_LINUX must include a '# TODO' comment for review"

@@ -35,6 +35,8 @@ class TestSessionPriority:
             continue_session_from=None,
             continue_session=False,
             llm_method="claude",
+            mcp_config=None,
+            project_dir=None,
         )
 
         execute_prompt(args)
@@ -63,6 +65,8 @@ class TestSessionPriority:
             continue_session_from="file.json",
             continue_session=False,
             llm_method="claude",
+            mcp_config=None,
+            project_dir=None,
         )
 
         execute_prompt(args)
@@ -97,6 +101,8 @@ class TestSessionPriority:
             continue_session_from=None,
             continue_session=True,
             llm_method="claude",
+            mcp_config=None,
+            project_dir=None,
         )
 
         execute_prompt(args)
@@ -128,6 +134,8 @@ class TestSessionPriority:
             continue_session_from="file.json",
             continue_session=False,
             llm_method="claude",
+            mcp_config=None,
+            project_dir=None,
         )
 
         execute_prompt(args)
@@ -164,6 +172,8 @@ class TestSessionPriority:
             continue_session_from=None,
             continue_session=True,
             llm_method="claude",
+            mcp_config=None,
+            project_dir=None,
         )
 
         execute_prompt(args)

@@ -33,6 +33,48 @@ def test_llm_types_exported() -> None:
     assert isinstance(LLM_RESPONSE_VERSION, str)
 
 
+def test_verify_claude_exported() -> None:
+    """Test that verify_claude can be imported from main module."""
+    from mcp_coder import verify_claude
+
+    assert callable(verify_claude)
+
+
+def test_verify_langchain_exported() -> None:
+    """Test that verify_langchain can be imported from main module."""
+    from mcp_coder import verify_langchain
+
+    assert callable(verify_langchain)
+
+
+def test_verify_mlflow_exported() -> None:
+    """Test that verify_mlflow can be imported from main module."""
+    from mcp_coder import verify_mlflow
+
+    assert callable(verify_mlflow)
+
+
+def test_generate_commit_message_exported() -> None:
+    """Test that generate_commit_message_with_llm can be imported from main module."""
+    from mcp_coder import generate_commit_message_with_llm
+
+    assert callable(generate_commit_message_with_llm)
+
+
+def test_collect_branch_status_exported() -> None:
+    """Test that collect_branch_status can be imported from main module."""
+    from mcp_coder import collect_branch_status
+
+    assert callable(collect_branch_status)
+
+
+def test_collect_branch_status_in_checks() -> None:
+    """Test that collect_branch_status can be imported from checks package."""
+    from mcp_coder.checks import collect_branch_status
+
+    assert callable(collect_branch_status)
+
+
 def test_all_contains_new_exports() -> None:
     """Test that __all__ includes new exports."""
     import mcp_coder
@@ -44,6 +86,11 @@ def test_all_contains_new_exports() -> None:
         "deserialize_llm_response",
         "LLMResponseDict",
         "LLM_RESPONSE_VERSION",
+        "verify_claude",
+        "verify_langchain",
+        "verify_mlflow",
+        "generate_commit_message_with_llm",
+        "collect_branch_status",
     ]
 
     for export in required_exports:
@@ -107,9 +154,14 @@ def test_no_import_errors() -> None:
             LLM_RESPONSE_VERSION,
             LLMResponseDict,
             ask_llm,
+            collect_branch_status,
             deserialize_llm_response,
+            generate_commit_message_with_llm,
             prompt_llm,
             serialize_llm_response,
+            verify_claude,
+            verify_langchain,
+            verify_mlflow,
         )
     except ImportError as e:
         pytest.fail(f"Import failed: {e}")

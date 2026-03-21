@@ -173,58 +173,65 @@ class TestMcpConfigIntegration:
             # NOTE: This test will FAIL until Step 4 implements CLI argument
 
     def test_mcp_config_not_required(
-        self, mock_subprocess_success: CommandResult
+        self, mock_subprocess_success: CommandResult, tmp_path: Path
     ) -> None:
-        """Verify commands work without --mcp-config (backward compatibility).
+        """Verify commands work without explicit --mcp-config (backward compatibility).
 
-        This ensures that adding --mcp-config doesn't break existing workflows
-        that don't use it. Commands should continue working without the parameter.
+        This ensures that commands work without an explicit --mcp-config.
+        Uses a tmp_path with no .mcp.json to verify auto-detection does not
+        inject --mcp-config when no config file exists.
         """
-        with (
-            patch(
-                "mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess"
-            ) as mock_execute,
-            patch(
-                "mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable"
-            ) as mock_find,
-        ):
-            # Setup mocks
-            mock_find.return_value = "claude"
-            mock_execute.return_value = mock_subprocess_success
+        import os
 
-            # Create args WITHOUT mcp_config parameter
-            args = argparse.Namespace(
-                prompt="Test question",
-                project_dir=None,
-                llm_method="claude",
-                verbosity="just-text",
-                output_format="text",
-                store_response=False,
-                timeout=60,
-                session_id=None,
-                continue_session=False,
-                continue_session_from=None,
-                # NOTE: No mcp_config parameter - testing backward compatibility
-            )
+        original_cwd = os.getcwd()
+        try:
+            # Change to tmp_path which has no .mcp.json
+            os.chdir(tmp_path)
 
-            # Execute command
-            result = execute_prompt(args)
+            with (
+                patch(
+                    "mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess"
+                ) as mock_execute,
+                patch(
+                    "mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable"
+                ) as mock_find,
+            ):
+                # Setup mocks
+                mock_find.return_value = "claude"
+                mock_execute.return_value = mock_subprocess_success
 
-            # Verify command succeeded
-            assert result == 0
+                # Create args with mcp_config=None and no project_dir
+                args = argparse.Namespace(
+                    prompt="Test question",
+                    project_dir=None,
+                    llm_method="claude",
+                    verbosity="just-text",
+                    output_format="text",
+                    store_response=False,
+                    timeout=60,
+                    session_id=None,
+                    continue_session=False,
+                    continue_session_from=None,
+                    mcp_config=None,
+                )
 
-            # Verify execute_subprocess was called
-            assert mock_execute.called
+                # Execute command
+                result = execute_prompt(args)
 
-            # Verify command does NOT contain mcp_config flags
-            call_args = mock_execute.call_args
-            command = call_args[0][0]
+                # Verify command succeeded (backward compatibility)
+                assert result == 0
 
-            assert "--mcp-config" not in command
-            assert "--strict-mcp-config" not in command
+                # Verify execute_subprocess was called
+                assert mock_execute.called
 
-            # NOTE: This test should PASS even before Step 4
-            # It validates existing behavior is preserved
+                # Verify command does NOT contain --mcp-config flags
+                # (no .mcp.json exists in tmp_path, so auto-detection finds nothing)
+                call_args = mock_execute.call_args
+                command = call_args[0][0]
+                assert "--mcp-config" not in command
+                assert "--strict-mcp-config" not in command
+        finally:
+            os.chdir(original_cwd)
 
     def test_mcp_config_with_relative_path(
         self, tmp_path: Path, mock_subprocess_success: CommandResult
@@ -366,18 +373,16 @@ class TestMcpConfigCLIParser:
         assert hasattr(args, "mcp_config")
         assert args.mcp_config == ".mcp.linux.json"
 
-    def test_commit_auto_parser_accepts_mcp_config(self) -> None:
-        """Verify commit auto command parser accepts --mcp-config argument.
+    def test_commit_auto_parser_rejects_mcp_config(self) -> None:
+        """Verify commit auto command does NOT accept --mcp-config.
 
-        NOTE: This test will FAIL until Step 4 adds --mcp-config to auto_parser.
+        Commit message generation is text-in/text-out (diff → message),
+        no MCP tool use is involved, so --mcp-config is not applicable.
         """
         parser = create_parser()
 
-        # Parse commit auto command with --mcp-config
-        args = parser.parse_args(["commit", "auto", "--mcp-config", ".mcp.linux.json"])
-
-        assert hasattr(args, "mcp_config")
-        assert args.mcp_config == ".mcp.linux.json"
+        with pytest.raises(SystemExit):
+            parser.parse_args(["commit", "auto", "--mcp-config", ".mcp.linux.json"])
 
     def test_mcp_config_is_optional(self) -> None:
         """Verify --mcp-config argument is optional (backward compatibility).

@@ -42,11 +42,11 @@ def _load_langchain_config() -> dict[str, str | None]:
     API keys are resolved by the vendor env var (OPENAI_API_KEY, GEMINI_API_KEY,
     ANTHROPIC_API_KEY) in each backend module, falling back to config.toml.
 
-    Returns keys: provider, backend, model, api_key, endpoint, api_version.
+    Returns keys: default_provider, backend, model, api_key, endpoint, api_version.
     """
     raw = get_config_values(
         [
-            ("llm", "provider", None),
+            ("llm", "default_provider", None),
             ("llm.langchain", "backend", None),
             ("llm.langchain", "model", None),
             ("llm.langchain", "api_key", None),
@@ -55,7 +55,7 @@ def _load_langchain_config() -> dict[str, str | None]:
         ]
     )
     config = {
-        "provider": raw[("llm", "provider")],
+        "default_provider": raw[("llm", "default_provider")],
         "backend": raw[("llm.langchain", "backend")],
         "model": raw[("llm.langchain", "model")],
         "api_key": raw[("llm.langchain", "api_key")],

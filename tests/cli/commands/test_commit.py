@@ -11,10 +11,64 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from mcp_coder.cli.commands.commit import execute_commit_auto, validate_git_repository
+from mcp_coder.cli.main import create_parser
 from mcp_coder.workflow_utils.commit_operations import (
     generate_commit_message_with_llm,
     parse_llm_commit_response,
 )
+
+
+class TestCommitAutoParserNoMcpConfig:
+    """Tests that --mcp-config is NOT accepted by commit auto."""
+
+    def test_commit_auto_no_mcp_config_arg(self) -> None:
+        """--mcp-config should not be accepted by commit auto parser."""
+        parser = create_parser()
+        with pytest.raises(SystemExit):
+            parser.parse_args(["commit", "auto", "--mcp-config", "some_config.json"])
+
+    def test_commit_auto_accepts_llm_method(self) -> None:
+        """--llm-method should still be accepted by commit auto."""
+        parser = create_parser()
+        args = parser.parse_args(["commit", "auto", "--llm-method", "langchain"])
+        assert args.llm_method == "langchain"
+
+
+class TestExecuteCommitAutoResolveTuple:
+    """Tests that commit auto properly destructures resolve_llm_method tuple."""
+
+    @patch("mcp_coder.cli.commands.commit.validate_git_repository")
+    @patch("mcp_coder.cli.commands.commit.resolve_llm_method")
+    @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
+    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
+    @patch("mcp_coder.cli.commands.commit.commit_staged_files")
+    def test_resolve_llm_method_tuple_destructured(
+        self,
+        mock_commit: Mock,
+        mock_generate: Mock,
+        mock_parse_llm: Mock,
+        mock_resolve: Mock,
+        mock_validate: Mock,
+    ) -> None:
+        """resolve_llm_method returns (provider, source) tuple; only provider is used."""
+        mock_validate.return_value = (True, None)
+        mock_resolve.return_value = ("langchain", "config default_provider")
+        mock_parse_llm.return_value = "langchain"
+        mock_generate.return_value = (True, "feat: test", None)
+        mock_commit.return_value = {
+            "success": True,
+            "commit_hash": "abc1234",
+            "error": None,
+        }
+
+        args = argparse.Namespace(preview=False, llm_method=None, project_dir=None)
+
+        result = execute_commit_auto(args)
+
+        assert result == 0
+        mock_resolve.assert_called_once_with(None)
+        # parse_llm_method_from_args should receive the provider string, not the tuple
+        mock_parse_llm.assert_called_once_with("langchain")
 
 
 class TestExecuteCommitAuto:
