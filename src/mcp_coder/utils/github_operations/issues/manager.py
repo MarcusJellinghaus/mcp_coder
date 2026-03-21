@@ -80,7 +80,6 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
 
         Raises:
             ValueError: If title is empty
-            GithubException: For authentication or permission errors
 
         Example:
             >>> issue = manager.create_issue(
@@ -140,7 +139,6 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
 
         Raises:
             ValueError: If issue number is invalid
-            GithubException: For authentication or permission errors
 
         Example:
             >>> issue = manager.get_issue(123)
@@ -204,9 +202,6 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
 
         Returns:
             List of IssueData dictionaries with issue information, or empty list on error
-
-        Raises:
-            GithubException: For authentication or permission errors
 
         Example:
             >>> issues = manager.list_issues(state='open', include_pull_requests=False)
@@ -277,7 +272,6 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
 
         Raises:
             ValueError: If issue number is invalid
-            GithubException: For authentication or permission errors
 
         Example:
             >>> closed_issue = manager.close_issue(123)
@@ -331,7 +325,6 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
 
         Raises:
             ValueError: If issue number is invalid
-            GithubException: For authentication or permission errors
 
         Example:
             >>> reopened_issue = manager.reopen_issue(123)

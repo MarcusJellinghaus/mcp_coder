@@ -57,10 +57,6 @@ def ask_llm(
     Returns:
         The LLM's response text as a string
 
-    Raises:
-        ValueError: If the provider is not supported, or if input validation fails
-        Various exceptions from underlying implementations (e.g., subprocess errors)
-
     Examples:
         >>> # Simple usage
         >>> response = ask_llm("What is Python?")

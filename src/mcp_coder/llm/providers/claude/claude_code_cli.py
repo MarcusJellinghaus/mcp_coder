@@ -387,6 +387,9 @@ def build_cli_command(
     Returns:
         Command list ready for subprocess execution with stdin
 
+    Raises:
+        ValueError: If required parameters are missing or invalid.
+
     Example:
         >>> cmd = build_cli_command(None, "claude")
         >>> assert "--output-format" in cmd

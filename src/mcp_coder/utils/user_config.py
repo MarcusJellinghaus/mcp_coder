@@ -206,9 +206,6 @@ def get_config_values(
 
     Priority: Environment variable > Config file > None
 
-    Raises:
-        ValueError: If config file exists but has invalid TOML syntax.
-
     Examples:
         # Basic usage with auto-detected env vars
         config = get_config_values([
@@ -258,9 +255,6 @@ def create_default_config() -> bool:
 
     Returns:
         True if config was created, False if it already exists
-
-    Raises:
-        OSError: If directory/file creation fails due to permissions
     """
     config_path = get_config_file_path()
 

@@ -194,7 +194,6 @@ class CIResultsManager(BaseGitHubManager):
 
         Raises:
             ValueError: For invalid branch names
-            GithubException: For authentication or permission errors
         """
         # Validate branch parameter
         if not branch or not branch.strip():
@@ -363,7 +362,6 @@ class CIResultsManager(BaseGitHubManager):
 
         Raises:
             ValueError: For invalid run IDs
-            GithubException: For authentication or permission errors
         """
         # Validate run_id parameter
         if not self._validate_run_id(run_id):
@@ -411,7 +409,6 @@ class CIResultsManager(BaseGitHubManager):
 
         Raises:
             ValueError: For invalid run IDs
-            GithubException: For authentication or permission errors
         """
         # Validate run_id parameter
         if not self._validate_run_id(run_id):

@@ -277,6 +277,9 @@ def generate_pr_summary(
 
     Returns:
         Tuple of (title, body) strings
+
+    Raises:
+        ValueError: If LLM returns an empty response.
     """
     logger.info("Generating PR summary...")
 

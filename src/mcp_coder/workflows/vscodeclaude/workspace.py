@@ -187,6 +187,7 @@ def setup_git_repo(
 
     Raises:
         CalledProcessError: If git command fails
+        ValueError: If folder exists with content but is not a git repository.
     """
     # Check if folder is empty or doesn't have .git
     is_empty = not any(folder_path.iterdir()) if folder_path.exists() else True
@@ -307,9 +308,6 @@ def run_setup_commands(
     Args:
         folder_path: Working directory for commands
         commands: List of shell commands to run
-
-    Raises:
-        CalledProcessError: If any command fails
 
     Logs progress for each command using logger.info().
     """
@@ -434,6 +432,9 @@ def create_startup_script(
 
     Returns:
         Path to created script (.bat or .sh)
+
+    Raises:
+        NotImplementedError: If platform is not Windows.
 
     Execution strategy depends on the number of commands in the config:
     - Single command: interactive-only via ``claude "{cmd} {issue_number}"``.

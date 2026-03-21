@@ -51,7 +51,6 @@ class CommentsMixin:
 
         Raises:
             ValueError: If issue number is invalid or body is empty
-            GithubException: For authentication or permission errors
 
         Example:
             >>> comment = manager.add_comment(123, "This is a test comment")
@@ -112,7 +111,6 @@ class CommentsMixin:
 
         Raises:
             ValueError: If issue number is invalid
-            GithubException: For authentication or permission errors
 
         Example:
             >>> comments = manager.get_comments(123)
@@ -178,7 +176,6 @@ class CommentsMixin:
 
         Raises:
             ValueError: If issue number is invalid, comment ID is invalid, or body is empty
-            GithubException: For authentication or permission errors
 
         Example:
             >>> comment = manager.edit_comment(123, 456789, "Updated comment text")
@@ -253,7 +250,6 @@ class CommentsMixin:
 
         Raises:
             ValueError: If issue number is invalid or comment ID is invalid
-            GithubException: For authentication or permission errors
 
         Example:
             >>> success = manager.delete_comment(123, 456789)

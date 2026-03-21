@@ -116,10 +116,6 @@ def prepare_and_launch_session(
     Returns:
         Created session data
 
-    Raises:
-        FileNotFoundError: If .mcp.json missing
-        CalledProcessError: If git or setup fails
-
     Steps:
     1. Create working folder
     2. Setup git repo

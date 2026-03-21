@@ -169,7 +169,7 @@ def _retry_with_backoff(
         Result of the successful function call
 
     Raises:
-        The last exception if all retries fail
+        RuntimeError: If all retry attempts fail with no exception recorded
     """
     last_exception: Optional[Exception] = None
 
@@ -330,8 +330,7 @@ async def _ask_claude_code_api_async(
 
     Raises:
         ValueError: If input validation fails
-        asyncio.TimeoutError: If the request times out
-        Exception: Various exceptions from the SDK
+        TimeoutExpired: If the request times out
     """
     # Input validation
     if not question or not question.strip():
@@ -434,7 +433,7 @@ def ask_claude_code_api(
     Raises:
         ValueError: If input validation fails
         TimeoutExpired: If the request times out
-        CalledProcessError: If the SDK request fails
+        ClaudeAPIError: If the SDK request fails
 
     Examples:
         >>> # First call - get session_id from Claude
@@ -559,8 +558,7 @@ async def ask_claude_code_api_detailed(
 
     Raises:
         ValueError: If input validation fails
-        asyncio.TimeoutError: If the request times out
-        Exception: Various exceptions from the SDK
+        TimeoutExpired: If the request times out
     """
     # Input validation
     if not question or not question.strip():

@@ -468,6 +468,9 @@ def _validate_ci_timeout(value: str) -> int:
 
     Returns:
         Validated non-negative integer value.
+
+    Raises:
+        ArgumentTypeError: If value is not a positive integer.
     """
     try:
         ivalue = int(value)

@@ -204,10 +204,6 @@ def get_prompt_with_substitutions(
     Returns:
         str: The prompt content with all [placeholder] values replaced
 
-    Raises:
-        ValueError: If header not found or no code block after header
-        FileNotFoundError: If file path doesn't exist
-
     Example:
         # Load CI analysis prompt with substitutions
         prompt = get_prompt_with_substitutions(

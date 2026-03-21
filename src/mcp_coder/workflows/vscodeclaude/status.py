@@ -36,6 +36,9 @@ def get_issue_current_status(
         Tuple of (status_label, is_open) where:
         - status_label: Current status label or None if no status found
         - is_open: True if issue is open, False if closed
+
+    Raises:
+        ValueError: If neither cached_issues nor issue_manager is provided.
     """
     # Try cache first
     if cached_issues is not None and issue_number in cached_issues:

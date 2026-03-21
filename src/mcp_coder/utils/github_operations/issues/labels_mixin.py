@@ -37,9 +37,6 @@ class LabelsMixin:
         Returns:
             List of LabelData dictionaries with label information, or empty list on error
 
-        Raises:
-            GithubException: For authentication or permission errors
-
         Example:
             >>> labels = manager.get_available_labels()
             >>> for label in labels:
@@ -84,7 +81,6 @@ class LabelsMixin:
 
         Raises:
             ValueError: If issue number is invalid or no labels provided
-            GithubException: For authentication or permission errors
 
         Example:
             >>> updated_issue = manager.add_labels(123, "bug", "high-priority")
@@ -145,7 +141,6 @@ class LabelsMixin:
 
         Raises:
             ValueError: If issue number is invalid or no labels provided
-            GithubException: For authentication or permission errors
 
         Example:
             >>> updated_issue = manager.remove_labels(123, "bug", "high-priority")
@@ -206,7 +201,6 @@ class LabelsMixin:
 
         Raises:
             ValueError: If issue number is invalid
-            GithubException: For authentication or permission errors
 
         Example:
             >>> updated_issue = manager.set_labels(123, "bug", "high-priority")

@@ -102,7 +102,7 @@ def _format_black_directory(target_path: Path, config: Dict[str, Any]) -> List[s
         List of file paths that were reformatted
 
     Raises:
-        Exception: If Black command fails with syntax errors or other issues
+        CalledProcessError: If Black command fails with syntax errors or other issues
     """
     # Build Black format command for directory
     command = ["black", str(target_path)]

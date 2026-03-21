@@ -504,6 +504,9 @@ def execute_subprocess(
 
     Returns:
         CommandResult with execution details
+
+    Raises:
+        TypeError: If command is None.
     """
     if command is None:
         raise TypeError("Command cannot be None")

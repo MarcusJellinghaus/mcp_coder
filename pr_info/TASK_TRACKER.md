@@ -25,6 +25,6 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] [Step 2: Small manual fixes](./steps/step_2.md) — D100, D101, D103, D403, D415, D417, DOC102, DOC202 (~35)
 - ~~[Step 3: Removed](./steps/step_3.md) — tests/ excluded from scope~~
 - [x] [Step 4: Missing Returns/Yields](./steps/step_4.md) — DOC201, DOC402, `src/` only (~101)
-- [ ] [Step 5: Fix Raises sections](./steps/step_5.md) — DOC501, DOC502, `src/` only (~86)
+- [x] [Step 5: Fix Raises sections](./steps/step_5.md) — DOC501, DOC502, `src/` only (~86)
 
 ## Pull Request

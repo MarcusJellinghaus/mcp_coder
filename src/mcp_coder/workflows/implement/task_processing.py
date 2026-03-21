@@ -197,6 +197,9 @@ def _run_mypy_check(project_dir: Path) -> Optional[str]:
 
     Returns:
         String containing mypy error output if errors were found, or None if no errors.
+
+    Raises:
+        Exception: If mypy check fails to run.
     """
     from mcp_coder.mcp_tools_py import run_mypy_check
 

@@ -102,7 +102,7 @@ def _format_isort_directory(target_path: Path, config: Dict[str, Any]) -> List[s
         List of file paths that were reformatted
 
     Raises:
-        Exception: If isort command fails with syntax errors or other issues
+        CalledProcessError: If isort command fails with syntax errors or other issues
     """
     # Build isort format command for directory
     command = ["isort", str(target_path)]

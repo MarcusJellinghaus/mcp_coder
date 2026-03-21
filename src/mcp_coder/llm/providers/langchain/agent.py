@@ -85,6 +85,9 @@ def _load_mcp_server_config(
     Returns:
         Mapping of server names to their resolved configuration, suitable for
         ``MultiServerMCPClient``.
+
+    Raises:
+        ValueError: If MCP config file is not found or invalid.
     """
     path = Path(mcp_config_path)
     with open(path, encoding="utf-8") as fh:

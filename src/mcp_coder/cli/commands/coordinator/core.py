@@ -253,8 +253,6 @@ def get_eligible_issues(
         2. status-05:plan-ready
         3. status-02:awaiting-planning (lowest priority)
 
-    Raises:
-        GithubException: If GitHub API errors occur
     """
     # Load label configuration
     # Uses bundled package config (coordinator operates without local project context)
@@ -371,7 +369,6 @@ def dispatch_workflow(
 
     Raises:
         ValueError: If linked branch missing for implement/create-pr
-        JenkinsError: If job trigger or status check fails
     """
     # Step 1: Find current workflow label from issue
     current_label = None

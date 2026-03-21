@@ -141,7 +141,11 @@ def _is_testing_environment() -> bool:
 
 
 def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
-    """Configure logging - if log_file specified, logs only to file; otherwise to console."""
+    """Configure logging - if log_file specified, logs only to file; otherwise to console.
+
+    Raises:
+        ValueError: If log_level is not a valid logging level.
+    """
     # Set log level
     numeric_level = getattr(logging, log_level.upper(), None)
     if not isinstance(numeric_level, int):

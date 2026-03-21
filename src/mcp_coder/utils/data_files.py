@@ -159,9 +159,6 @@ def find_package_data_files(
     Returns:
         List of Path objects for found files
 
-    Raises:
-        FileNotFoundError: If any file cannot be found
-
     Example:
         >>> paths = find_package_data_files(
         ...     "mcp_coder",
