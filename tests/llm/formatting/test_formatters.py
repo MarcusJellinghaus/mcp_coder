@@ -73,7 +73,10 @@ class TestFormatVerboseResponse:
         )
 
         args = argparse.Namespace(
-            prompt="How do I create a file?", verbosity="verbose", mcp_config=None
+            prompt="How do I create a file?",
+            verbosity="verbose",
+            mcp_config=None,
+            project_dir=None,
         )
 
         result = execute_prompt(args)
@@ -153,7 +156,10 @@ class TestFormatRawResponse:
         )
 
         args = argparse.Namespace(
-            prompt="Debug this system", verbosity="raw", mcp_config=None
+            prompt="Debug this system",
+            verbosity="raw",
+            mcp_config=None,
+            project_dir=None,
         )
 
         result = execute_prompt(args)
@@ -216,7 +222,9 @@ class TestFormatterComparison:
         )
 
         # Test just-text output
-        args_just_text = argparse.Namespace(prompt="Test prompt", mcp_config=None)
+        args_just_text = argparse.Namespace(
+            prompt="Test prompt", mcp_config=None, project_dir=None
+        )
         execute_prompt(args_just_text)
         just_text_output = capsys.readouterr().out or ""
 
@@ -227,7 +235,10 @@ class TestFormatterComparison:
 
         # Test verbose output
         args_verbose = argparse.Namespace(
-            prompt="Test prompt", verbosity="verbose", mcp_config=None
+            prompt="Test prompt",
+            verbosity="verbose",
+            mcp_config=None,
+            project_dir=None,
         )
         execute_prompt(args_verbose)
         verbose_output = capsys.readouterr().out or ""
@@ -285,7 +296,10 @@ class TestFormatterComparison:
         )
 
         args_verbose = argparse.Namespace(
-            prompt="Compare verbosity levels", verbosity="verbose", mcp_config=None
+            prompt="Compare verbosity levels",
+            verbosity="verbose",
+            mcp_config=None,
+            project_dir=None,
         )
         execute_prompt(args_verbose)
         verbose_output = capsys.readouterr().out or ""
@@ -296,7 +310,10 @@ class TestFormatterComparison:
         )
 
         args_raw = argparse.Namespace(
-            prompt="Compare verbosity levels", verbosity="raw", mcp_config=None
+            prompt="Compare verbosity levels",
+            verbosity="raw",
+            mcp_config=None,
+            project_dir=None,
         )
         execute_prompt(args_raw)
         raw_output = capsys.readouterr().out or ""

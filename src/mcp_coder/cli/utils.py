@@ -73,7 +73,7 @@ def resolve_llm_method(llm_method: str | None) -> tuple[str, str]:
     if provider not in _VALID_PROVIDERS:
         raise ValueError(
             f"Invalid LLM provider {provider!r} from {source}. "
-            f"Valid values: {sorted(_VALID_PROVIDERS)}"
+            f"Valid values: {', '.join(sorted(_VALID_PROVIDERS))}"
         )
     return (provider, source)
 

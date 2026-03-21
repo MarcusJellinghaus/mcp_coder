@@ -219,6 +219,7 @@ class TestExecutePrompt:
             prompt="What is the capital of France?",
             llm_method="claude",
             mcp_config=None,
+            project_dir=None,
         )
 
         result = execute_prompt(args)
@@ -255,7 +256,10 @@ class TestExecutePrompt:
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
         mock_prompt_llm.side_effect = Exception("Claude API connection failed")
         args = argparse.Namespace(
-            prompt="Test question", llm_method="claude", mcp_config=None
+            prompt="Test question",
+            llm_method="claude",
+            mcp_config=None,
+            project_dir=None,
         )
 
         result = execute_prompt(args)
@@ -303,6 +307,7 @@ class TestExecutePrompt:
             continue_session_from="path/to/previous_response.json",
             llm_method="claude",
             mcp_config=None,
+            project_dir=None,
         )
 
         result = execute_prompt(args)
@@ -355,6 +360,7 @@ class TestExecutePrompt:
             continue_session_from="path/to/nonexistent_file.json",
             llm_method="claude",
             mcp_config=None,
+            project_dir=None,
         )
 
         result = execute_prompt(args)
@@ -412,6 +418,7 @@ class TestExecutePrompt:
             continue_session_from="path/to/invalid.json",
             llm_method="claude",
             mcp_config=None,
+            project_dir=None,
         )
 
         result = execute_prompt(args)
@@ -471,6 +478,7 @@ class TestExecutePrompt:
             continue_session_from="path/to/incomplete.json",
             llm_method="claude",
             mcp_config=None,
+            project_dir=None,
         )
 
         result = execute_prompt(args)
@@ -534,6 +542,7 @@ class TestExecutePrompt:
             verbosity="verbose",
             llm_method="claude",
             mcp_config=None,
+            project_dir=None,
         )
 
         result = execute_prompt(args)
@@ -582,7 +591,10 @@ class TestExecutePrompt:
         }
 
         args = argparse.Namespace(
-            prompt="Test prompt", llm_method="claude", mcp_config=None
+            prompt="Test prompt",
+            llm_method="claude",
+            mcp_config=None,
+            project_dir=None,
         )
 
         result = execute_prompt(args)
@@ -634,7 +646,10 @@ class TestExecutePrompt:
         }
 
         args = argparse.Namespace(
-            prompt="Test prompt without venv", llm_method="claude", mcp_config=None
+            prompt="Test prompt without venv",
+            llm_method="claude",
+            mcp_config=None,
+            project_dir=None,
         )
 
         result = execute_prompt(args)
@@ -688,6 +703,7 @@ class TestPromptExecutionDir:
             execution_dir=None,  # No explicit execution_dir
             llm_method="claude",
             mcp_config=None,
+            project_dir=None,
         )
 
         result = execute_prompt(args)
@@ -732,6 +748,7 @@ class TestPromptExecutionDir:
             execution_dir=str(execution_dir),
             llm_method="claude",
             mcp_config=None,
+            project_dir=None,
         )
 
         result = execute_prompt(args)
@@ -782,6 +799,7 @@ class TestPromptExecutionDir:
             execution_dir="relative",  # Relative path
             llm_method="claude",
             mcp_config=None,
+            project_dir=None,
         )
 
         result = execute_prompt(args)
@@ -811,6 +829,7 @@ class TestPromptExecutionDir:
             execution_dir="/nonexistent/invalid/path",
             llm_method="claude",
             mcp_config=None,
+            project_dir=None,
         )
 
         result = execute_prompt(args)
