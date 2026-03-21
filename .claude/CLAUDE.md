@@ -118,6 +118,10 @@ mcp__tools-py__run_pytest_check(extra_args=["-n", "auto"])
 - Better integration with the development environment
 - Required for this project's architecture
 
+## ✍️ Writing Style
+
+**Be concise.** Keep code comments, commit messages, documentation changes, and prompt additions short and direct. If one line works, don't use three.
+
 ## 🚨 COMPLIANCE VERIFICATION
 
 **Before completing ANY task, you MUST:**
@@ -166,7 +170,16 @@ git status
 git diff
 git add
 git commit
+git log
+git fetch
+git push
 ```
+
+**⚠️ Bash discipline (applies to subagents too):**
+
+- No `cd` prefix — the working directory is already correct.
+- Stick to approved commands above. Avoid unapproved bash commands — they trigger user authorization prompts and interrupt the workflow.
+- Do not chain approved commands with unapproved ones (e.g. `git status && echo "---" && git diff`). The `echo` makes the whole command unapproved. Run approved commands separately instead.
 
 **Git commit message format:**
 
