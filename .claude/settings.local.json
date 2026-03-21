@@ -53,7 +53,8 @@
       "Bash(mcp-coder gh-tool get-base-branch)",
       "Bash(git ls-tree:*)",
       "Bash(mcp-coder git-tool:*)",
-      "Bash(ruff rule:*)"
+      "Bash(ruff rule:*)",
+      "Bash(ruff check:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
