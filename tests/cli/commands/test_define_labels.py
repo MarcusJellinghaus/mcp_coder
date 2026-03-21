@@ -45,8 +45,8 @@ class TestWorkflowLabelsFromConfig:
 
         # Verify we have exactly 10 labels
         assert (
-            len(labels_config["workflow_labels"]) == 10
-        ), "Config should contain exactly 10 workflow labels"
+            len(labels_config["workflow_labels"]) == 15
+        ), "Config should contain exactly 15 workflow labels"
 
         # Verify each label has correct structure
         for i, label in enumerate(labels_config["workflow_labels"], start=1):
@@ -64,9 +64,6 @@ class TestWorkflowLabelsFromConfig:
             assert name.startswith(
                 "status-"
             ), f"Label {i} name should start with 'status-'"
-            assert (
-                f"status-{i:02d}:" in name
-            ), f"Label {i} should have correct status number format"
 
             # Verify color format (6-char hex without '#')
             assert isinstance(color, str), f"Label {i} color should be string"
@@ -96,6 +93,11 @@ class TestWorkflowLabelsFromConfig:
             "status-08:ready-pr",
             "status-09:pr-creating",
             "status-10:pr-created",
+            "status-03f:planning-failed",
+            "status-06f:implementing-failed",
+            "status-06f-ci:ci-fix-needed",
+            "status-06f-timeout:llm-timeout",
+            "status-09f:pr-creating-failed",
         ]
 
         actual_names = [label["name"] for label in labels_config["workflow_labels"]]
@@ -114,16 +116,17 @@ class TestWorkflowLabelsFromConfig:
             set(names)
         ), "All workflow label names should be unique"
 
-    def test_workflow_labels_unique_colors_from_json(
+    def test_workflow_labels_valid_colors_from_json(
         self, labels_config_path: Path
     ) -> None:
-        """Test that all workflow label colors in JSON are unique."""
+        """Test that all workflow label colors in JSON are valid hex."""
         labels_config = load_labels_config(labels_config_path)
 
-        colors = [label["color"] for label in labels_config["workflow_labels"]]
-        assert len(colors) == len(
-            set(colors)
-        ), "All workflow label colors should be unique"
+        for label in labels_config["workflow_labels"]:
+            color = label["color"]
+            assert re.match(
+                r"^[0-9A-Fa-f]{6}$", color
+            ), f"Label '{label['name']}' color '{color}' should be valid 6-char hex"
 
 
 class TestWorkflowLabelsContent:

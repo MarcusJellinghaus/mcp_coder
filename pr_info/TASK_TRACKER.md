@@ -23,12 +23,12 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Add Failure Labels to labels.json + Update Tests ([step_1.md](./steps/step_1.md))
 
-- [ ] Add 5 failure status labels to `src/mcp_coder/config/labels.json`
-- [ ] Update `tests/cli/commands/test_set_status.py` — add labels to `VALID_STATUS_LABELS` and count `10` → `15`
-- [ ] Update `tests/cli/commands/test_define_labels.py` — count `10` → `15`
-- [ ] Update `tests/cli/commands/test_define_labels_label_changes.py` — `created` count `9` → `14` and `call_count` `9` → `14`
-- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
-- [ ] Prepare git commit message for Step 1
+- [x] Add 5 failure status labels to `src/mcp_coder/config/labels.json`
+- [x] Update `tests/cli/commands/test_set_status.py` — add labels to `VALID_STATUS_LABELS` and count `10` → `15`
+- [x] Update `tests/cli/commands/test_define_labels.py` — count `10` → `15`
+- [x] Update `tests/cli/commands/test_define_labels_label_changes.py` — `created` count `9` → `14` and `call_count` `9` → `14`
+- [x] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [x] Prepare git commit message for Step 1
 
 ### Step 2: Update Development Process Documentation ([step_2.md](./steps/step_2.md))
 
