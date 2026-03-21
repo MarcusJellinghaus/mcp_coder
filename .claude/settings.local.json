@@ -45,6 +45,7 @@
       "Bash(git log:*)",
       "Bash(git fetch:*)",
       "Bash(mcp-coder check file-size:*)",
+      "Bash(mcp-coder check branch-status:*)",
       "WebFetch(domain:*)",
       "Bash(mcp-coder gh-tool get-base-branch)",
       "Bash(git ls-tree:*)"

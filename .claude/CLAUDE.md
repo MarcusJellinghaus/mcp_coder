@@ -192,6 +192,7 @@ Check for large files (>750 lines) that may impact LLM context:
 
 ```bash
 mcp-coder check file-size --max-lines 750
+mcp-coder check branch-status --llm-truncate
 ```
 
 For guidance on splitting large files, see [Safe Refactoring Guide](../docs/processes-prompts/refactoring-guide.md).
