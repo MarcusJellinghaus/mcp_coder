@@ -21,6 +21,31 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Add Failure Labels to labels.json + Update Tests ([step_1.md](./steps/step_1.md))
+
+- [ ] Add 5 failure status labels to `src/mcp_coder/config/labels.json`
+- [ ] Update `tests/cli/commands/test_set_status.py` — add labels to `VALID_STATUS_LABELS` and count `10` → `15`
+- [ ] Update `tests/cli/commands/test_define_labels.py` — count `10` → `15`
+- [ ] Update `tests/cli/commands/test_define_labels_label_changes.py` — `created` count `9` → `14` and `call_count` `9` → `14`
+- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [ ] Prepare git commit message for Step 1
+
+### Step 2: Update Development Process Documentation ([step_2.md](./steps/step_2.md))
+
+- [ ] Add "8. Failure Handling" section to `docs/processes-prompts/development-process.md`
+- [ ] Include failure label table with trigger conditions and recovery actions
+- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [ ] Prepare git commit message for Step 2
+
+### Step 3: Fix HTML Matrix Label Names ([step_3.md](./steps/step_3.md))
+
+- [ ] Update 5 failure label names in `docs/processes-prompts/github_Issue_Workflow_Matrix.html` to match `labels.json` convention
+- [ ] Update step-number badges (`6f`, `6f-ci`, `6f-t`) for implementation-cycle failure labels
+- [ ] Run quality checks (pylint, pytest, mypy) and fix any issues
+- [ ] Prepare git commit message for Step 3
 
 ## Pull Request
+
+- [ ] Review all changes across steps for consistency
+- [ ] Verify all failure label names match between `labels.json`, docs, and HTML matrix
+- [ ] Prepare PR summary covering all 3 steps
