@@ -40,8 +40,8 @@ MOCK_VSCODECLAUDE_CONFIGS: dict[str, dict[str, Any]] = {
         "emoji": "🔍",
         "display_name": "CODE REVIEW",
         "stage_short": "review",
-        "initial_command": "/implementation_review",
-        "followup_command": "/discuss",
+        "initial_command": "/implementation_review_supervisor",
+        "followup_command": None,
     },
     "status-10:pr-created": {
         "emoji": "🎉",
@@ -280,7 +280,7 @@ class TestWorkspaceSetup:
         assert script_path.exists()
         content = script_path.read_text(encoding="utf-8")
         assert "claude" in content
-        assert "/implementation_review" in content
+        assert "/implementation_review_supervisor" in content
 
     def test_create_startup_script_linux_raises_not_implemented(
         self,
@@ -329,7 +329,7 @@ class TestWorkspaceSetup:
 
         content = script_path.read_text(encoding="utf-8")
         assert "INTERVENTION" in content
-        assert "/implementation_review" not in content
+        assert "/implementation_review_supervisor" not in content
 
     def test_create_vscode_task(self, tmp_path: Path) -> None:
         """Creates tasks.json with two tasks that run on folderOpen."""
@@ -433,11 +433,12 @@ class TestCreateStartupScript:
             lambda: "Windows",
         )
 
+        # Use status-01:created which has followup_command="/discuss"
         script_path = create_startup_script(
             folder_path=tmp_path,
             issue_number=123,
             issue_title="Test issue",
-            status="status-07:code-review",
+            status="status-01:created",
             repo_name="test-repo",
             issue_url="https://github.com/test/repo/issues/123",
             is_intervention=False,
@@ -620,18 +621,46 @@ class TestCreateStartupScript:
                     "^"
                 ), f"Lone trailing ^ found in batch line: {line!r}"
 
-    def test_includes_discussion_section(
+    def test_includes_discussion_section_when_followup_command_set(
         self,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         mock_vscodeclaude_config: None,
     ) -> None:
-        """Generated script includes discussion section."""
+        """Generated script includes discussion section when followup_command is set."""
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: "Windows",
         )
 
+        # Use status-01:created which has followup_command="/discuss"
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=123,
+            issue_title="Test issue",
+            status="status-01:created",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/123",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        assert "/discuss" in content
+        assert "Step 2: Automated Discussion" in content
+
+    def test_omits_discussion_section_when_followup_command_null(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+    ) -> None:
+        """Generated script omits discussion section when followup_command is None."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: "Windows",
+        )
+
+        # Use status-07:code-review which has followup_command=None
         script_path = create_startup_script(
             folder_path=tmp_path,
             issue_number=123,
@@ -643,8 +672,10 @@ class TestCreateStartupScript:
         )
 
         content = script_path.read_text(encoding="utf-8")
-        assert "/discuss" in content
-        assert "Step 2: Automated Discussion" in content
+        assert "/discuss" not in content
+        assert "Step 2: Automated Discussion" not in content
+        # Should still have the interactive session
+        assert "claude --resume %SESSION_ID%" in content
 
     def test_creates_script_with_env_var_setup(
         self,

@@ -699,7 +699,7 @@ mcp-coder gh-tool get-base-branch --project-dir /path/to/project
 ```
 
 **Use Cases:**
-- Slash commands (`/rebase`, `/implementation_review`) use this to determine correct base branch
+- Slash commands (`/rebase`, `/implementation_review`, `/implementation_review_supervisor`) use this to determine correct base branch
 - CI scripts that need to compare against the correct parent branch
 - Workflows involving feature branches based on non-main branches
 

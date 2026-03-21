@@ -137,7 +137,7 @@ flowchart TD
 | **Issue Discussion** | `/issue_analyse`, `/discuss`, `/issue_update`, `/issue_create`, `/issue_approve` |
 | **Plan Review** | `/plan_review`, `/discuss`, `/plan_update`, `/commit_push`, `/plan_approve` |
 | **Implementation** | `/implementation_finalise` |
-| **Code Review** | `/implementation_review`, `/discuss`, `/implementation_new_tasks`, `/commit_push`, `/implementation_approve`, `/implementation_needs_rework` |
+| **Code Review** | `/implementation_review`, `/implementation_review_supervisor`, `/discuss`, `/implementation_new_tasks`, `/commit_push`, `/implementation_approve`, `/implementation_needs_rework` |
 | **Utility** | `/check_branch_status`, `/commit_push`, `/discuss`, `/rebase` |
 
 **Quick Reference:** See [Claude Code Cheat Sheet](claude_cheat_sheet.md) for a compact command overview.
@@ -795,7 +795,16 @@ flowchart TD
 ```
 
 **Tools:** `pr_review.bat`, checks2clipboard.bat  
-or alternatively the following prompt:
+
+**Two review modes:**
+- `/implementation_review` — human-supervised: Claude presents findings, you review and decide what to act on.
+- `/implementation_review_supervisor` — autonomous: Claude acts as a technical lead (supervisor) that delegates all work to subagents. It runs `/implementation_review`, triages each finding against the knowledge base (`.claude/knowledge_base/`), skips cosmetic or speculative items, and instructs the engineer subagent to fix accepted findings. This repeats in rounds until no new actionable findings emerge. A review log is written to `pr_info/implementation_review_log_*.md`. The supervisor escalates to the user only when unsure or a major refactoring is needed.
+
+**When to use which:**
+- Use `/implementation_review` when you want full control over every finding.
+- Use `/implementation_review_supervisor` for the automated vscodeclaude coordinator flow or when you trust the knowledge base to triage most findings autonomously.
+
+Or use the code review prompt directly:
 <details>
 <summary>📋 Code Review Prompt (click to expand and copy)</summary>
 

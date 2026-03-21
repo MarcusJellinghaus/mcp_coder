@@ -18,7 +18,8 @@ For a complete overview of the process, see [DEVELOPMENT_PROCESS.md](DEVELOPMENT
 | `/plan_update` | Update plan files with discussed changes |
 | `/plan_approve` | Approve plan to start implementation |
 | `/implementation_finalise` | Complete remaining tasks if bot failed<br>to complete implementation plan |
-| `/implementation_review` | Review implemented code for issues |
+| `/implementation_review` | Review implemented code (human-supervised) |
+| `/implementation_review_supervisor` | Review implemented code (autonomous agent-driven, uses knowledge base) |
 | `/implementation_approve` | Approve code to create PR |
 | `/implementation_needs_rework` | Return to implementation for fixes |
 | `/implementation_new_tasks` | Add new implementation steps |
@@ -37,7 +38,7 @@ The happy path workflow:
    > 🤖 *bot: mcp-coder coordinate → `create_plan`*
 2. **Review the plan:** `/plan_review` → `/discuss` → `/plan_update` → `/commit_push` → `/plan_approve`
    > 🤖 *bot: mcp-coder coordinate → `implement`*
-3. **Review code:** `/implementation_review` → `/discuss` → `/commit_push` → `/implementation_approve`
+3. **Review code:** `/implementation_review` or `/implementation_review_supervisor` → `/discuss` → `/commit_push` → `/implementation_approve`
    > 🤖 *bot: mcp-coder coordinate → `create_pr`*
 4. **Merge PR:** Review and merge in GitHub
 
@@ -73,7 +74,10 @@ Review and refine the implementation plan.
 
 Review code and either approve or request rework.
 
-`/implementation_review` → `/discuss`
+- `/implementation_review` — human-supervised: Claude presents findings, you review and decide what to act on
+- `/implementation_review_supervisor` — autonomous: Claude acts as a supervisor, delegating to subagents and deciding based on the knowledge base; escalates to you only when unsure or a major refactoring is needed
+
+`/implementation_review` or `/implementation_review_supervisor` → `/discuss`
 
 Then either:
 

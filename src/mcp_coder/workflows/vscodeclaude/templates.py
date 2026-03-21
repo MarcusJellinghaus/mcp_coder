@@ -232,6 +232,8 @@ echo "Session ID: $SESSION_ID"
 """
 
 # Interactive section for Linux
+# Note: {followup_command} may be empty when config has followup_command=null.
+# Callers must pass followup_command="" (not None) to avoid rendering "None".
 INTERACTIVE_SECTION_LINUX = r"""claude --resume "$SESSION_ID" {followup_command}
 """
 

@@ -28,7 +28,7 @@ This guide covers the **mandatory** and **optional** components for integrating 
 - [ ] Install GitHub Actions workflows
 - [ ] Configure Claude Code files (`.claude/`, `.mcp.json`)
 - [ ] Test workflow with a sample issue
-- [ ] Create `docs/architecture/architecture.md` (required by `/implementation_review`)
+- [ ] Create `docs/architecture/architecture.md` (required by `/implementation_review` and `/implementation_review_supervisor`)
 
 ## GitHub Token Configuration
 
@@ -393,7 +393,8 @@ Slash commands provide structured workflows for common tasks. Copy the commands 
 | `/issue_analyse` | Analyze GitHub issue requirements |
 | `/plan_review` | Review implementation plan |
 | `/plan_approve` | Approve plan for implementation |
-| `/implementation_review` | Code review |
+| `/implementation_review` | Code review (human-supervised) |
+| `/implementation_review_supervisor` | Code review (autonomous agent-driven) |
 | `/commit_push` | Format, commit, and push changes |
 | `/rebase` | Rebase branch onto main |
 
@@ -481,7 +482,7 @@ This prevents working folders from appearing "dirty" due to the session status f
 
 ## Architecture Documentation
 
-The `/implementation_review` command checks code against `docs/architecture/architecture.md`. This file must exist for code reviews to work. Architecture documentation also enables LLM-assisted codebase navigation.
+The `/implementation_review` and `/implementation_review_supervisor` commands check code against `docs/architecture/architecture.md`. This file must exist for code reviews to work. Architecture documentation also enables LLM-assisted codebase navigation.
 
 ### Recommended Structure
 

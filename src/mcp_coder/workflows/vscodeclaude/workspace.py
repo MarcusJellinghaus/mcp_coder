@@ -455,6 +455,7 @@ def create_startup_script(
     # Get config for this status
     config = get_vscodeclaude_config(status)
     initial_cmd = config["initial_command"] if config else None
+    followup_cmd = config["followup_command"] if config else None
     emoji = config["emoji"] if config else "📋"
 
     # Default: use raw title (for non-Windows platforms when implemented)
@@ -497,9 +498,12 @@ def create_startup_script(
                 timeout=timeout,
             )
 
-            discussion_section = DISCUSSION_SECTION_WINDOWS.format(
-                timeout=timeout,
-            )
+            if followup_cmd is not None:
+                discussion_section = DISCUSSION_SECTION_WINDOWS.format(
+                    timeout=timeout,
+                )
+            else:
+                discussion_section = ""
 
             script_content = STARTUP_SCRIPT_WINDOWS.format(
                 emoji=emoji,

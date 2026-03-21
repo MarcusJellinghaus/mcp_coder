@@ -68,8 +68,8 @@
         "emoji": "🔍",
         "display_name": "CODE REVIEW",
         "stage_short": "review",
-        "initial_command": "/implementation_review",
-        "followup_command": "/discuss"
+        "initial_command": "/implementation_review_supervisor",
+        "followup_command": null
       }
     },
     {

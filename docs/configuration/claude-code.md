@@ -177,7 +177,8 @@ For the MCP Coder and its processes, a number of slash commands have been define
 | `/issue_analyse` | Analyze GitHub issue requirements |
 | `/plan_review` | Review implementation plan |
 | `/plan_approve` | Approve plan for implementation |
-| `/implementation_review` | Code review |
+| `/implementation_review` | Code review (human-supervised: Claude presents findings, you decide) |
+| `/implementation_review_supervisor` | Code review (autonomous: Claude supervisor delegates to subagents, decides based on knowledge base, escalates only when unsure) |
 | `/commit_push` | Format, commit, and push changes |
 | `/rebase` | Rebase branch onto base branch |
 
