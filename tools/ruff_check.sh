@@ -9,4 +9,4 @@ if ! command -v ruff &> /dev/null; then
 fi
 
 echo "Checking docstrings with ruff..."
-ruff check --select D,DOC src tests "$@"
+ruff check src tests "$@"

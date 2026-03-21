@@ -262,6 +262,10 @@ line-length = 88
 # preview needed for DOC rules (pydoclint)
 preview = true
 select = ["D", "DOC"]
+ignore = [
+    "D104",  # missing docstring in __init__.py (low value)
+    "D107",  # missing docstring in __init__ method (redundant with class docstring)
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
