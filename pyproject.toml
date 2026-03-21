@@ -158,8 +158,8 @@ extension-pkg-allow-list = ["win32gui", "win32process"]
 # disable = ["W1203", "W0621"]  # covered by W category above
 disable = ["W", "C", "R"]
 # R0401: Enable cyclic-import detection (not enabled by default as it's in refactor category)
-# C0114-C0116: Enable missing docstring checks (module, class, function)
-enable = ["R0401", "C0114", "C0115", "C0116"]
+# C0114-C0116: Docstring checks handled by ruff (D rules) with per-file-ignores for tests
+enable = ["R0401"]
 
 
 [tool.mypy]
@@ -266,6 +266,9 @@ ignore = [
     "D104",  # missing docstring in __init__.py (low value)
     "D107",  # missing docstring in __init__ method (redundant with class docstring)
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D", "DOC"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
