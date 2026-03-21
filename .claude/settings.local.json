@@ -25,6 +25,7 @@
       "Bash(./tools/pycycle_check.sh:*)",
       "Bash(python -m pytest:*)",
       "Bash(./tools/vulture_check.sh:*)",
+      "Bash(./tools/ruff_check.sh:*)",
       "Skill(commit_push)",
       "Skill(discuss)",
       "Skill(implementation_approve)",
