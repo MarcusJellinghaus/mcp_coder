@@ -608,6 +608,12 @@ def add_verify_parser(subparsers: Any) -> None:
         help="List available models for the configured LangChain backend (requires network)",
     )
     verify_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
+    )
+    verify_parser.add_argument(
         "--llm-method",
         choices=["claude", "langchain"],
         default=None,

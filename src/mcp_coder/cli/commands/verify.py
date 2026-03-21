@@ -117,7 +117,7 @@ def execute_verify(args: argparse.Namespace) -> int:
     symbols = _get_status_symbols()
 
     # 1. Resolve active provider
-    active_provider, source = resolve_llm_method(getattr(args, "llm_method", None))
+    active_provider, source = resolve_llm_method(args.llm_method)
 
     # 2. Claude CLI verification
     claude_result = verify_claude()
@@ -131,8 +131,9 @@ def execute_verify(args: argparse.Namespace) -> int:
     )
     if active_provider == "langchain":
         check_models = getattr(args, "check_models", False)
-        mcp_config_raw = getattr(args, "mcp_config", None)
-        mcp_config_resolved = resolve_mcp_config_path(mcp_config_raw)
+        mcp_config_resolved = resolve_mcp_config_path(
+            args.mcp_config, project_dir=args.project_dir
+        )
         langchain_result = verify_langchain(
             check_models=check_models,
             mcp_config_path=mcp_config_resolved,

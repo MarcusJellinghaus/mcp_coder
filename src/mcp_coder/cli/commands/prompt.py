@@ -204,9 +204,8 @@ def execute_prompt(
         timeout = getattr(args, "timeout", 30)
         verbosity = getattr(args, "verbosity", "just-text")
         output_format = getattr(args, "output_format", "text")
-        mcp_config = getattr(args, "mcp_config", None)
         mcp_config = resolve_mcp_config_path(
-            mcp_config, project_dir=getattr(args, "project_dir", None)
+            args.mcp_config, project_dir=getattr(args, "project_dir", None)
         )
 
         # Route to appropriate method based on output_format and verbosity

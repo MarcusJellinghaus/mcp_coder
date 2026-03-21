@@ -80,6 +80,11 @@ class TestResolveLlmMethod:
         assert resolve_llm_method("claude") == ("claude", "cli argument")
         assert resolve_llm_method("langchain") == ("langchain", "cli argument")
 
+    def test_resolve_llm_method_cli_arg_invalid(self) -> None:
+        """Test that invalid CLI arg raises ValueError via shared validation."""
+        with pytest.raises(ValueError, match="invalid_method"):
+            resolve_llm_method("invalid_method")
+
     @patch("mcp_coder.cli.utils.get_config_values")
     def test_resolve_llm_method_config_default_provider(
         self, mock_config: MagicMock

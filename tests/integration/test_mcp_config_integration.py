@@ -195,7 +195,7 @@ class TestMcpConfigIntegration:
             mock_find.return_value = "claude"
             mock_execute.return_value = mock_subprocess_success
 
-            # Create args WITHOUT mcp_config parameter
+            # Create args with mcp_config=None (backward compatibility)
             args = argparse.Namespace(
                 prompt="Test question",
                 project_dir=None,
@@ -207,7 +207,7 @@ class TestMcpConfigIntegration:
                 session_id=None,
                 continue_session=False,
                 continue_session_from=None,
-                # NOTE: No mcp_config parameter - testing backward compatibility
+                mcp_config=None,
             )
 
             # Execute command

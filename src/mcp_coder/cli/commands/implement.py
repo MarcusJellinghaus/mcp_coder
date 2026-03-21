@@ -51,8 +51,9 @@ def execute_implement(args: argparse.Namespace) -> int:
         provider = parse_llm_method_from_args(llm_method)
 
         # Extract and resolve mcp_config path to absolute path
-        mcp_config = getattr(args, "mcp_config", None)
-        mcp_config = resolve_mcp_config_path(mcp_config, project_dir=args.project_dir)
+        mcp_config = resolve_mcp_config_path(
+            args.mcp_config, project_dir=args.project_dir
+        )
 
         # Extract update_labels flag from args
         update_labels = getattr(args, "update_labels", False)

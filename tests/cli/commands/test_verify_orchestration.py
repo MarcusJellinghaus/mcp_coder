@@ -2,7 +2,6 @@
 
 import argparse
 from typing import Any
-from unittest import mock
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -20,6 +19,7 @@ def _make_args(**kwargs: Any) -> argparse.Namespace:
         "check_models": False,
         "mcp_config": None,
         "llm_method": None,
+        "project_dir": None,
     }
     defaults.update(kwargs)
     return argparse.Namespace(**defaults)
@@ -225,6 +225,7 @@ class TestVerifyOrchestration:
         # Claude failing should not cause exit 1 when langchain is active
         assert result == 0
 
+    @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_langchain")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
@@ -235,6 +236,7 @@ class TestVerifyOrchestration:
         mock_claude: MagicMock,
         mock_lc: MagicMock,
         mock_mlflow: MagicMock,
+        mock_resolve_mcp: MagicMock,
     ) -> None:
         """--check-models flag forwarded to verify_langchain."""
         mock_provider.return_value = ("langchain", "config.toml")
@@ -244,7 +246,7 @@ class TestVerifyOrchestration:
 
         execute_verify(_make_args(check_models=True))
 
-        mock_lc.assert_called_once_with(check_models=True, mcp_config_path=mock.ANY)
+        mock_lc.assert_called_once_with(check_models=True, mcp_config_path=None)
 
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")

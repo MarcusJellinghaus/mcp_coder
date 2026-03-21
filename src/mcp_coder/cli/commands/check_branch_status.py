@@ -190,7 +190,7 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
 
             # Resolve paths for fix operations
             mcp_config = resolve_mcp_config_path(
-                getattr(args, "mcp_config", None), project_dir=args.project_dir
+                args.mcp_config, project_dir=args.project_dir
             )
             execution_dir = resolve_execution_dir(args.execution_dir)
 

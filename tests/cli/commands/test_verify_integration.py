@@ -6,7 +6,6 @@ validating output format, --check-models flag parsing, and exit code matrix.
 
 import argparse
 from typing import Any
-from unittest import mock
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -146,6 +145,7 @@ class TestVerifyEndToEnd:
         assert "=== MLFLOW ===" in output
         assert exit_code == 0
 
+    @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_langchain")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
@@ -157,6 +157,7 @@ class TestVerifyEndToEnd:
         mock_claude: MagicMock,
         mock_lc: MagicMock,
         mock_mlflow: MagicMock,
+        mock_resolve_mcp: MagicMock,
     ) -> None:
         """--check-models flag reaches verify_langchain via full CLI path."""
         mock_provider.return_value = ("langchain", "config.toml")
@@ -167,7 +168,7 @@ class TestVerifyEndToEnd:
         exit_code = main()
 
         assert exit_code == 0
-        mock_lc.assert_called_once_with(check_models=True, mcp_config_path=mock.ANY)
+        mock_lc.assert_called_once_with(check_models=True, mcp_config_path=None)
 
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")

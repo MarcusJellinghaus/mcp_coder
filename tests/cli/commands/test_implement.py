@@ -130,6 +130,7 @@ class TestExecuteImplement:
             project_dir="/invalid/path",
             llm_method="claude",
             execution_dir=None,
+            mcp_config=None,
         )
 
         with pytest.raises(SystemExit) as exc_info:
@@ -266,6 +267,7 @@ class TestExecuteImplement:
             project_dir="/test/project",
             llm_method="claude",
             execution_dir=None,
+            mcp_config=None,
         )
 
         result = execute_implement(args)
@@ -299,6 +301,7 @@ class TestExecuteImplement:
             project_dir="/test/project",
             llm_method="claude",
             execution_dir=None,
+            mcp_config=None,
         )
 
         result = execute_implement(args)

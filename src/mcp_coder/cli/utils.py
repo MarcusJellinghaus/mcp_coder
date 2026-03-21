@@ -56,34 +56,26 @@ def resolve_llm_method(llm_method: str | None) -> tuple[str, str]:
         "config default_provider", "default".
 
     Raises:
-        ValueError: If env var MCP_CODER_LLM_PROVIDER or config default_provider
-            has an invalid value.
+        ValueError: If the resolved provider is not a valid value.
     """
     if llm_method is not None:
-        return (llm_method, "cli argument")
+        provider, source = llm_method, "cli argument"
+    elif (env_value := os.environ.get("MCP_CODER_LLM_PROVIDER")) is not None:
+        provider, source = env_value, "env MCP_CODER_LLM_PROVIDER"
+    else:
+        config = get_config_values([("llm", "default_provider", None)])
+        cfg_provider = config[("llm", "default_provider")]
+        if cfg_provider is not None:
+            provider, source = cfg_provider, "config default_provider"
+        else:
+            return ("claude", "default")
 
-    # Check env var
-    env_value = os.environ.get("MCP_CODER_LLM_PROVIDER")
-    if env_value is not None:
-        if env_value not in _VALID_PROVIDERS:
-            raise ValueError(
-                f"Invalid MCP_CODER_LLM_PROVIDER value: {env_value!r}. "
-                f"Valid values: {sorted(_VALID_PROVIDERS)}"
-            )
-        return (env_value, "env MCP_CODER_LLM_PROVIDER")
-
-    # Check config [llm] default_provider
-    config = get_config_values([("llm", "default_provider", None)])
-    provider = config[("llm", "default_provider")]
-    if provider is not None:
-        if provider not in _VALID_PROVIDERS:
-            raise ValueError(
-                f"Invalid config [llm] default_provider value: {provider!r}. "
-                f"Valid values: {sorted(_VALID_PROVIDERS)}"
-            )
-        return (provider, "config default_provider")
-
-    return ("claude", "default")
+    if provider not in _VALID_PROVIDERS:
+        raise ValueError(
+            f"Invalid LLM provider {provider!r} from {source}. "
+            f"Valid values: {sorted(_VALID_PROVIDERS)}"
+        )
+    return (provider, source)
 
 
 def parse_llm_method_from_args(llm_method: str) -> str:

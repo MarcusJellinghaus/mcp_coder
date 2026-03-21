@@ -16,6 +16,7 @@ def _make_args(**kwargs: Any) -> argparse.Namespace:
         "check_models": False,
         "mcp_config": None,
         "llm_method": None,
+        "project_dir": None,
     }
     defaults.update(kwargs)
     return argparse.Namespace(**defaults)
