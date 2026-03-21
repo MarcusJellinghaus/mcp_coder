@@ -87,6 +87,9 @@ def _compute_exit_code(
     """Compute CLI exit code from verification results.
 
     Exit 1 when the active provider fails or when MLflow is enabled but broken.
+
+    Returns:
+        Exit code (0 if active provider and enabled services pass, 1 if any critical check failed).
     """
     # Active provider determines primary pass/fail
     if active_provider == "claude" and not claude_result.get("overall_ok"):

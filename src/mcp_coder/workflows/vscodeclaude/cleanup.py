@@ -196,7 +196,7 @@ def delete_session_folder(session: VSCodeClaudeSession) -> bool:
         session: Session to delete
 
     Returns:
-        True if successfully deleted
+        True if folder was successfully deleted and session removed, False on error.
 
     Uses safe_delete_folder for robust folder deletion.
     """

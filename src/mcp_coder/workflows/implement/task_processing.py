@@ -35,7 +35,14 @@ logger = logging.getLogger(__name__)
 
 
 def get_next_task(project_dir: Path) -> Optional[str]:
-    """Get next incomplete task from task tracker (excluding meta-tasks)."""
+    """Get next incomplete task from task tracker (excluding meta-tasks).
+
+    Args:
+        project_dir: Path to the project directory
+
+    Returns:
+        Next incomplete task name string, or None if no tasks remain.
+    """
     logger.info("Checking for incomplete tasks...")
 
     try:
@@ -60,7 +67,14 @@ def get_next_task(project_dir: Path) -> Optional[str]:
 
 
 def run_formatters(project_dir: Path) -> bool:
-    """Run code formatters (black, isort) and return success status."""
+    """Run code formatters (black, isort) and return success status.
+
+    Args:
+        project_dir: Path to the project directory
+
+    Returns:
+        True if all formatters completed successfully, False if any formatter failed.
+    """
     logger.info("Running code formatters...")
 
     try:
@@ -89,6 +103,9 @@ def commit_changes(project_dir: Path, provider: str = "claude") -> bool:
     Args:
         project_dir: Path to the project directory
         provider: LLM provider (e.g., 'claude')
+
+    Returns:
+        True if changes were committed successfully, False on error.
     """
     logger.info("Committing changes...")
     commit_message = ""
@@ -173,7 +190,14 @@ def push_changes(project_dir: Path, force_with_lease: bool = False) -> bool:
 
 
 def _run_mypy_check(project_dir: Path) -> Optional[str]:
-    """Run mypy check using our wrapper and return error output or None if clean."""
+    """Run mypy check using our wrapper and return error output or None if clean.
+
+    Args:
+        project_dir: Path to the project directory
+
+    Returns:
+        String containing mypy error output if errors were found, or None if no errors.
+    """
     from mcp_coder.mcp_tools_py import run_mypy_check
 
     try:
@@ -207,6 +231,9 @@ def check_and_fix_mypy(
         env_vars: Optional environment variables for the subprocess
         mcp_config: Optional path to MCP configuration file
         execution_dir: Optional working directory for Claude subprocess
+
+    Returns:
+        True if mypy check passes (no type errors), False if errors remain after fix attempts.
     """
     logger.info("Running mypy type checking...")
 

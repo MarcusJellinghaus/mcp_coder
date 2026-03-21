@@ -464,7 +464,11 @@ def add_set_status_parser(subparsers: Any) -> None:
 
 
 def _validate_ci_timeout(value: str) -> int:
-    """Validate ci-timeout argument is non-negative integer."""
+    """Validate ci-timeout argument is non-negative integer.
+
+    Returns:
+        Validated non-negative integer value.
+    """
     try:
         ivalue = int(value)
         if ivalue < 0:

@@ -147,7 +147,8 @@ def _is_issue_eligible(
         github_username: Username that must be assigned
 
     Returns:
-        True if issue is eligible
+        True if issue has exactly one human_action label, no ignore labels,
+        and is assigned to github_username. False otherwise.
     """
     issue_labels = set(issue["labels"])
 

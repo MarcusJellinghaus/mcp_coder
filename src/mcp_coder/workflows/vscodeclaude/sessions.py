@@ -91,7 +91,7 @@ def check_vscode_running(pid: int | None) -> bool:
         pid: Process ID to check (None returns False)
 
     Returns:
-        True if process exists and is running
+        True if process exists and is a running VSCode process, False otherwise.
 
     Uses psutil for cross-platform compatibility.
     Note: On Windows, the PID from launch may be a launcher that exits.

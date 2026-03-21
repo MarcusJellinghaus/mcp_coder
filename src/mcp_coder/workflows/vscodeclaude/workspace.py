@@ -159,7 +159,7 @@ def create_working_folder(folder_path: Path) -> bool:
         folder_path: Full path to create
 
     Returns:
-        True if created, False if already existed
+        True if folder was newly created, False if it already existed.
     """
     if folder_path.exists():
         return False

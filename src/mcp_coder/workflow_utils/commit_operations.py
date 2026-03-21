@@ -212,7 +212,15 @@ def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
 
 
 def parse_llm_commit_response(response: Optional[str]) -> Tuple[str, Optional[str]]:
-    """Parse LLM response into commit summary and body."""
+    """Parse LLM response into commit summary and body.
+
+    Args:
+        response: Raw LLM response text, or None
+
+    Returns:
+        Tuple of (commit_message, body) where commit_message is the full formatted
+        message (summary + body) and body is the body text alone, or None if no body.
+    """
     if not response or not response.strip():
         return "", None
 

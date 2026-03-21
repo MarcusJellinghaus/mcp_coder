@@ -47,7 +47,14 @@ class FileDiff:
 
 
 def parse_diff(text: str) -> list[FileDiff]:
-    """Parse a plain unified diff string into FileDiff/Hunk objects."""
+    """Parse a plain unified diff string into FileDiff/Hunk objects.
+
+    Args:
+        text: Raw unified diff string
+
+    Returns:
+        List of FileDiff objects, one per file in the diff. Empty list if input is blank.
+    """
     files: list[FileDiff] = []
     if not text.strip():
         return files
@@ -92,7 +99,14 @@ _ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*m")
 
 
 def strip_ansi(text: str) -> str:
-    """Remove all ANSI escape sequences from a string."""
+    """Remove all ANSI escape sequences from a string.
+
+    Args:
+        text: String potentially containing ANSI escape codes
+
+    Returns:
+        String with all ANSI escape sequences removed.
+    """
     return _ANSI_ESCAPE_RE.sub("", text)
 
 
@@ -101,6 +115,10 @@ def is_moved_line(raw_line: str) -> bool:
 
     Looks for the 'dim' SGR attribute (code 2) in the ANSI codes.
     Only +/- lines can be moved; context lines and headers return False.
+
+    Returns:
+        True if the line has ANSI dim attribute (SGR code 2) indicating a moved line,
+        False for context lines, headers, or non-moved +/- lines.
 
     Note: ANSI dim codes (\\x1b[2m) are confirmed to work on Windows —
     no special environment setup is required.
@@ -127,6 +145,12 @@ def extract_moved_blocks_ansi(ansi_diff: str) -> set[str]:
 
     Uses is_moved_line() per line to identify lines coloured with ANSI dim
     by --color-moved=dimmed-zebra.
+
+    Args:
+        ansi_diff: Diff output with ANSI colour codes
+
+    Returns:
+        Set of stripped content strings (without +/- prefix) for lines marked as moved.
     """
     moved: set[str] = set()
     for line in ansi_diff.splitlines():
@@ -144,12 +168,28 @@ def extract_moved_blocks_ansi(ansi_diff: str) -> set[str]:
 
 
 def is_significant_line(content: str) -> bool:
-    """True if stripped content length >= MIN_CONTENT_LENGTH."""
+    """True if stripped content length >= MIN_CONTENT_LENGTH.
+
+    Args:
+        content: Line content to check
+
+    Returns:
+        True if the stripped content is at least MIN_CONTENT_LENGTH characters,
+        False for short lines like "pass" or "}".
+    """
     return len(content.strip()) >= MIN_CONTENT_LENGTH
 
 
 def collect_line_occurrences(files: list[FileDiff]) -> tuple[set[str], set[str]]:
-    """Return (removed_lines, added_lines) sets of significant stripped content."""
+    """Return (removed_lines, added_lines) sets of significant stripped content.
+
+    Args:
+        files: List of parsed FileDiff objects
+
+    Returns:
+        Tuple of (removed_lines, added_lines) where each is a set of stripped
+        content strings from significant - and + lines respectively.
+    """
     removed: set[str] = set()
     added: set[str] = set()
     for file_diff in files:
@@ -167,7 +207,15 @@ def collect_line_occurrences(files: list[FileDiff]) -> tuple[set[str], set[str]]
 
 
 def find_moved_lines(files: list[FileDiff]) -> set[str]:
-    """Return intersection of removed and added significant lines = moved."""
+    """Return intersection of removed and added significant lines = moved.
+
+    Args:
+        files: List of parsed FileDiff objects
+
+    Returns:
+        Set of stripped content strings that appear in both removed and added lines,
+        indicating code that was moved rather than truly added or deleted.
+    """
     removed, added = collect_line_occurrences(files)
     return removed & added
 
@@ -181,6 +229,13 @@ def collect_line_sources(
     Used to annotate moved-block summaries with source/destination file names:
     - removed_to_file: look up when rendering a + block to show 'moved from'
     - added_to_file:   look up when rendering a - block to show 'moved to'
+
+    Args:
+        files: List of parsed FileDiff objects
+
+    Returns:
+        Tuple of (removed_to_file, added_to_file) dictionaries mapping stripped
+        content strings to the filename where they were last removed or added.
     """
     removed_to_file: dict[str, str] = {}
     added_to_file: dict[str, str] = {}
@@ -218,6 +273,14 @@ def format_moved_summary(
     Without ref_file: '# [moved: N lines not shown]'
     With ref_file and is_addition=True  (+ block): '# [moved from ref_file: N lines not shown]'
     With ref_file and is_addition=False (- block): '# [moved to ref_file: N lines not shown]'
+
+    Args:
+        count: Number of suppressed lines
+        ref_file: Optional source/destination filename for annotation
+        is_addition: True for + blocks (moved from), False for - blocks (moved to)
+
+    Returns:
+        Formatted summary comment string describing the moved block.
     """
     if ref_file:
         direction = "from" if is_addition else "to"
@@ -231,7 +294,15 @@ def format_moved_summary(
 
 
 def _find_preview_split(lines: list[str], n: int) -> int:
-    """Return the index after the nth non-blank content line, or len(lines) if fewer."""
+    """Return the index after the nth non-blank content line, or len(lines) if fewer.
+
+    Args:
+        lines: List of diff lines (with +/- prefix)
+        n: Number of non-blank content lines to find
+
+    Returns:
+        Index after the nth non-blank content line, or len(lines) if fewer exist.
+    """
     non_blank_count = 0
     for i, line in enumerate(lines):
         if line[1:].strip():  # non-blank after the +/- prefix
@@ -256,6 +327,16 @@ def _flush_sub_block(
 
     When removed_to_file / added_to_file are provided, annotates the summary
     with the source or destination filename.
+
+    Args:
+        sub_block: Consecutive same-sign diff lines to evaluate
+        moved_lines: Set of content strings identified as moved
+        removed_to_file: Mapping of removed content to source filename
+        added_to_file: Mapping of added content to destination filename
+
+    Returns:
+        List of output lines, either the original sub_block lines or a
+        preview plus summary comment if the block qualifies for suppression.
     """
     if not sub_block:
         return []
@@ -301,6 +382,16 @@ def _render_block(
     it with a summary comment if it is long enough and all its significant lines
     are moved. This allows moved blocks in new files to be suppressed even when
     the file has a different header or imports above the moved content.
+
+    Args:
+        block: Consecutive same-sign (+/-) diff lines
+        moved_lines: Set of content strings identified as moved
+        removed_to_file: Mapping of removed content to source filename
+        added_to_file: Mapping of added content to destination filename
+
+    Returns:
+        List of rendered output lines with moved sub-sections replaced by
+        summary comments where applicable.
     """
     output: list[str] = []
     sub_block: list[str] = []
@@ -334,6 +425,16 @@ def render_hunk(
     moved and it meets MIN_BLOCK_LINES. This handles both the removal side
     (lines deleted from an existing file) and the addition side (lines added to
     a new file or an existing file).
+
+    Args:
+        hunk: Parsed Hunk object to render
+        moved_lines: Set of content strings identified as moved
+        removed_to_file: Mapping of removed content to source filename
+        added_to_file: Mapping of added content to destination filename
+
+    Returns:
+        Rendered hunk string with moved blocks suppressed, or empty string
+        if the hunk is empty after suppression.
     """
     output: list[str] = [hunk.header]
     lines = hunk.lines
@@ -372,6 +473,16 @@ def render_file_diff(
     """Render all hunks for one file; skip file entirely if all hunks are empty.
 
     After moved-block suppression.
+
+    Args:
+        file_diff: Parsed FileDiff object containing headers and hunks
+        moved_lines: Set of content strings identified as moved
+        removed_to_file: Mapping of removed content to source filename
+        added_to_file: Mapping of added content to destination filename
+
+    Returns:
+        Rendered file diff string with headers and non-empty hunks, or empty
+        string if all hunks were suppressed.
     """
     rendered_hunks: list[str] = []
     for hunk in file_diff.hunks:
@@ -390,6 +501,14 @@ def render_compact_diff(plain_diff: str, ansi_diff: str) -> str:
     """Top-level entry point.
 
     Combine Pass 1 (ANSI) and Pass 2 (Python) moved-line sets, then render.
+
+    Args:
+        plain_diff: Plain unified diff string (no ANSI codes)
+        ansi_diff: Same diff with ANSI colour codes from git --color-moved
+
+    Returns:
+        Compact diff string with moved blocks suppressed, or empty string
+        if the input is blank.
     """
     if not plain_diff.strip():
         return ""
@@ -425,7 +544,14 @@ def get_compact_diff(
 ) -> str:
     """Obtain a compact diff by running get_branch_diff() twice and rendering.
 
-    Returns compact diff string (may be empty if no changes).
+    Args:
+        project_dir: Path to the project directory containing git repository
+        base_branch: Branch to compare against
+        exclude_paths: Optional list of paths to exclude from the diff
+
+    Returns:
+        Compact diff string with moved blocks suppressed, or empty string
+        if there are no changes.
     """
     logger.debug(
         "Getting compact diff for %s (base: %s, excludes: %s)",

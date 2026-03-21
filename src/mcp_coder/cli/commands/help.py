@@ -22,6 +22,9 @@ def get_help_text(include_examples: bool = False) -> str:
 
     Args:
         include_examples: If True, include usage examples section
+
+    Returns:
+        Formatted help text string containing all command descriptions.
     """
     examples = get_usage_examples() if include_examples else ""
     help_content = f"""MCP Coder - AI-powered software development automation toolkit
@@ -66,7 +69,11 @@ For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder"""
 
 
 def get_usage_examples() -> str:
-    """Get usage examples for common workflows."""
+    """Get usage examples for common workflows.
+
+    Returns:
+        Formatted string containing example CLI commands and usage patterns.
+    """
     return """EXAMPLES:
     mcp-coder help                    # Show this help
     mcp-coder verify                  # Check Claude CLI installation

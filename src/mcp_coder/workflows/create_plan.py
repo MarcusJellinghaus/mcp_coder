@@ -459,7 +459,14 @@ def validate_output_files(project_dir: Path) -> bool:
 
 
 def resolve_project_dir(project_dir_arg: Optional[str]) -> Path:
-    """Convert project directory argument to absolute Path, with validation."""
+    """Convert project directory argument to absolute Path, with validation.
+
+    Args:
+        project_dir_arg: Optional project directory path string, uses current directory if None
+
+    Returns:
+        Validated absolute Path to the project directory. Calls sys.exit(1) on validation failure.
+    """
     # Use current directory if no argument provided
     if project_dir_arg is None:
         project_path = Path.cwd()
