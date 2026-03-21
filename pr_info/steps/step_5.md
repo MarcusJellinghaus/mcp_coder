@@ -1,6 +1,6 @@
 # Step 5: Fix Raises Sections
 
-> **Context:** See [summary.md](summary.md) for overall plan. This is step 5 of 5.
+> **Context:** See [summary.md](summary.md) for overall plan. This is step 5 of 4 active steps (Step 3 removed).
 
 ## Goal
 
@@ -17,12 +17,12 @@ Add missing `Raises` sections and remove extraneous ones so docstrings accuratel
 
 ## WHERE
 
-- `src/` — ~53 DOC502 (extraneous) + portion of DOC501
-- `tests/` — ~9 DOC502 + portion of DOC501
+`src/` only (tests excluded from scope — see [decisions.md](decisions.md)):
+- ~53 DOC502 (extraneous) + ~33 DOC501 (missing)
 
 Identify exact files:
 ```bash
-ruff check src tests --select DOC501,DOC502
+ruff check src --select DOC501,DOC502
 ```
 
 ## WHAT
@@ -80,9 +80,9 @@ No data structures. Output: modified `.py` files with corrected Raises docstring
 
 ## Verification
 
-- `ruff check src tests --select DOC501,DOC502` — should report 0
-- **Final full check:** `ruff check src tests` — should report 0 total violations
-- `pylint ./src ./tests` — should pass with no C0114/C0115/C0116 violations
+- `ruff check src --select DOC501,DOC502` — should report 0
+- **Final full check:** `ruff check src` — should report 0 total violations
+- `pylint ./src` — should pass with no C0114/C0115/C0116 violations
 - `pytest` — all pass
 - `mypy` — no regressions
 
@@ -93,7 +93,7 @@ Read pr_info/steps/summary.md and pr_info/steps/step_5.md for context.
 
 Execute step 5: Fix Raises sections (final step).
 
-1. Run `ruff check src tests --select DOC501,DOC502` to get the full violation list
+1. Run `ruff check src --select DOC501,DOC502` to get the full violation list
 2. For DOC501 (missing Raises):
    - Read the function to identify which exceptions it raises
    - Add a `Raises:` section in Google-style format

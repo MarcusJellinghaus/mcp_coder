@@ -1,6 +1,6 @@
 # Step 1: Autofix Formatting
 
-> **Context:** See [summary.md](summary.md) for overall plan. This is step 1 of 5.
+> **Context:** See [summary.md](summary.md) for overall plan. This is step 1 of 4 (Step 3 removed).
 
 ## Goal
 

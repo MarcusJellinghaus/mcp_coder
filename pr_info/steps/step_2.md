@@ -1,6 +1,6 @@
 # Step 2: Small Manual Fixes
 
-> **Context:** See [summary.md](summary.md) for overall plan. This is step 2 of 5.
+> **Context:** See [summary.md](summary.md) for overall plan. This is step 2 of 4 (Step 3 removed).
 
 ## Goal
 

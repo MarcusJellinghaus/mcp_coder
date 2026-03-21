@@ -1,6 +1,6 @@
 # Step 4: Add Missing Returns and Yields Sections
 
-> **Context:** See [summary.md](summary.md) for overall plan. This is step 4 of 5.
+> **Context:** See [summary.md](summary.md) for overall plan. This is step 4 of 4 (Step 3 removed).
 
 ## Goal
 
@@ -17,14 +17,13 @@ Add `Returns` and `Yields` sections to docstrings of functions/methods that retu
 
 ## WHERE
 
-Across both `src/` and `tests/`:
-- `src/` — functions with return values (~77 DOC201)
-- `tests/` — test helpers/fixtures with return values (~74 DOC201)
-- Generators across both (~24 DOC402)
+`src/` only (tests excluded from scope — see [decisions.md](decisions.md)):
+- Functions with return values (~77 DOC201)
+- Generators (~24 DOC402)
 
 Identify exact files:
 ```bash
-ruff check src tests --select DOC201,DOC402
+ruff check src --select DOC201,DOC402
 ```
 
 ## WHAT
@@ -81,7 +80,7 @@ No data structures. Output: modified `.py` files with added Returns/Yields docst
 
 ## Verification
 
-- `ruff check src tests --select DOC201,DOC402` — should report 0
+- `ruff check src --select DOC201,DOC402` — should report 0
 - `pytest` — all pass
 - `mypy` — no regressions
 
@@ -92,7 +91,7 @@ Read pr_info/steps/summary.md and pr_info/steps/step_4.md for context.
 
 Execute step 4: Add missing Returns and Yields sections.
 
-1. Run `ruff check src tests --select DOC201,DOC402` to get the full violation list
+1. Run `ruff check src --select DOC201,DOC402` to get the full violation list
 2. For each function/method:
    - Read the implementation to understand the return/yield value
    - Add a `Returns:` or `Yields:` section in Google-style format
@@ -103,6 +102,5 @@ Execute step 4: Add missing Returns and Yields sections.
 4. Verify with ruff check, pylint, pytest, mypy — all must pass
 5. Commit the changes
 
-Note: This is the highest-count step (~175 fixes). Work through files systematically.
-Process src/ files first, then tests/.
+Note: ~101 fixes in `src/` only. Work through files systematically by directory.
 ```

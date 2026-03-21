@@ -24,11 +24,11 @@ The only "design" consideration is **docstring style**: the project uses **Googl
 |---|---|---|---|
 | Formatting (auto-fixable) | D200, D202, D205, D209, D212, D301 | ~75 | `ruff check --fix` |
 | Small manual fixes | D100, D101, D103, D403, D415, D417, DOC102, DOC202 | ~35 | Manual |
-| Missing test method docstrings | D102 | ~109 | Manual |
-| Missing Returns/Yields | DOC201, DOC402 | ~175 | Manual |
-| Raises review | DOC501, DOC502 | ~95 | Manual |
+| ~~Missing test method docstrings~~ | ~~D102~~ | ~~~109~~ | ~~Excluded — tests/ out of scope~~ |
+| Missing Returns/Yields (`src/` only) | DOC201, DOC402 | ~101 | Manual |
+| Raises review (`src/` only) | DOC501, DOC502 | ~86 | Manual |
 
-**Total:** ~489 ruff violations + ~134 pylint violations (largely overlapping with ruff D1xx)
+**Total:** ~297 fixes in `src/` (tests/ excluded from scope — see [decisions.md](decisions.md))
 
 ## Implementation Plan (5 Steps)
 
@@ -36,9 +36,9 @@ The only "design" consideration is **docstring style**: the project uses **Googl
 |---|---|---|
 | 1 | Autofix formatting with `ruff check --fix` | [step_1.md](step_1.md) |
 | 2 | Small manual fixes (missing module/class/function docstrings, accuracy, punctuation) | [step_2.md](step_2.md) |
-| 3 | Add missing test method docstrings (D102) | [step_3.md](step_3.md) |
-| 4 | Add missing Returns and Yields sections (DOC201, DOC402) | [step_4.md](step_4.md) |
-| 5 | Fix Raises sections (DOC501, DOC502) | [step_5.md](step_5.md) |
+| ~~3~~ | ~~Add missing test method docstrings (D102)~~ | ~~Removed — tests/ out of scope~~ |
+| 4 | Add missing Returns and Yields sections — `src/` only (DOC201, DOC402) | [step_4.md](step_4.md) |
+| 5 | Fix Raises sections — `src/` only (DOC501, DOC502) | [step_5.md](step_5.md) |
 
 ## Files Modified
 
@@ -56,12 +56,7 @@ Modules across all packages — every `.py` file with missing or malformed docst
 
 ### Test files (`tests/`)
 
-Test modules across all test packages:
-- `tests/cli/commands/` — CLI command tests
-- `tests/llm/` — LLM tests
-- `tests/utils/` — utility tests
-- `tests/workflows/` — workflow tests
-- `tests/formatters/` — formatter tests
+**Excluded from scope** — see [decisions.md](decisions.md). Ruff config updated to ignore docstring rules for tests.
 
 ## Verification
 

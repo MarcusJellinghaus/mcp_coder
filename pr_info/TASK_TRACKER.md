@@ -23,8 +23,8 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 - [ ] [Step 1: Autofix formatting](./steps/step_1.md) — `ruff check --fix` (~75 fixes)
 - [ ] [Step 2: Small manual fixes](./steps/step_2.md) — D100, D101, D103, D403, D415, D417, DOC102, DOC202 (~35)
-- [ ] [Step 3: Missing test method docstrings](./steps/step_3.md) — D102 (~109)
-- [ ] [Step 4: Missing Returns/Yields](./steps/step_4.md) — DOC201, DOC402 (~175)
-- [ ] [Step 5: Fix Raises sections](./steps/step_5.md) — DOC501, DOC502 (~95)
+- ~~[Step 3: Removed](./steps/step_3.md) — tests/ excluded from scope~~
+- [ ] [Step 4: Missing Returns/Yields](./steps/step_4.md) — DOC201, DOC402, `src/` only (~101)
+- [ ] [Step 5: Fix Raises sections](./steps/step_5.md) — DOC501, DOC502, `src/` only (~86)
 
 ## Pull Request
