@@ -1,5 +1,4 @@
-"""
-Utilities for finding data files in both development and installed environments.
+"""Utilities for finding data files in both development and installed environments.
 
 This module provides functions to locate data files that are included with the package
 using importlib.resources (Python 3.9+ standard library).

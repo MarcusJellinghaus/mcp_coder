@@ -1,5 +1,4 @@
-"""
-Stress tests for git operations with Unicode and special characters.
+"""Stress tests for git operations with Unicode and special characters.
 
 Tests subprocess encoding handling with large amounts of special characters
 to ensure the git diff operation doesn't hang or fail on Windows.

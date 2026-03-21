@@ -1,6 +1,4 @@
-"""
-Tests for the data_files utility module.
-"""
+"""Tests for the data_files utility module."""
 
 import logging
 import sys

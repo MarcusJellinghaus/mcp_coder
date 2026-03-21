@@ -304,8 +304,7 @@ async def _ask_claude_code_api_async(
     env_vars: dict[str, str] | None = None,
     cwd: str | None = None,
 ) -> str:
-    """
-    Ask Claude a question via Python SDK asynchronously.
+    """Ask Claude a question via Python SDK asynchronously.
 
     The Claude Code SDK returns a stream of different message types:
     - SystemMessage: Session metadata and configuration info
@@ -414,8 +413,7 @@ def ask_claude_code_api(
     cwd: str | None = None,
     mcp_config: str | None = None,
 ) -> LLMResponseDict:
-    """
-    Ask Claude a question via Python SDK with native session support.
+    """Ask Claude a question via Python SDK with native session support.
 
     Uses Claude's native session resumption via the resume parameter.
     Session continuity is handled by Claude Code SDK - no manual history management needed.
@@ -521,8 +519,7 @@ async def ask_claude_code_api_detailed(
     env_vars: dict[str, str] | None = None,
     cwd: str | None = None,
 ) -> dict[str, Any]:
-    """
-    Ask Claude a question via Python SDK and return detailed response information.
+    """Ask Claude a question via Python SDK and return detailed response information.
 
     This function returns comprehensive information about the Claude Code SDK response,
     including session metadata, response text, and cost/usage statistics.

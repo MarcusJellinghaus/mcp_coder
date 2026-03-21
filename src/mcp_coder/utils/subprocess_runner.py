@@ -1,5 +1,4 @@
-"""
-Subprocess execution utilities with MCP STDIO isolation support.
+"""Subprocess execution utilities with MCP STDIO isolation support.
 
 This module provides functions for executing command-line tools with proper
 timeout handling and STDIO isolation for Python commands in MCP server contexts.
@@ -148,8 +147,7 @@ def get_utf8_env() -> dict[str, str]:
 def _run_subprocess(  # pylint: disable=too-many-statements
     command: list[str], options: CommandOptions, use_stdio_isolation: bool = False
 ) -> subprocess.CompletedProcess[str]:
-    """
-    Internal function to run subprocess with or without STDIO isolation.
+    """Run subprocess with or without STDIO isolation.
 
     Args:
         command: Command to execute
@@ -498,8 +496,7 @@ def _run_subprocess(  # pylint: disable=too-many-statements
 def execute_subprocess(
     command: list[str], options: CommandOptions | None = None
 ) -> CommandResult:
-    """
-    Execute a command with automatic STDIO isolation for Python commands.
+    """Execute a command with automatic STDIO isolation for Python commands.
 
     Args:
         command: Command and arguments as a list
@@ -594,8 +591,7 @@ def execute_command(
     timeout_seconds: int = 120,
     env: dict[str, str] | None = None,
 ) -> CommandResult:
-    """
-    Execute a command with automatic STDIO isolation for Python commands.
+    """Execute a command with automatic STDIO isolation for Python commands.
 
     Args:
         command: Complete command as list (e.g., ["python", "-m", "pylint", "src"])

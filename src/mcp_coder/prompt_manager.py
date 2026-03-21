@@ -1,5 +1,4 @@
-"""
-Prompt manager for mcp-coder project.
+"""Prompt manager for mcp-coder project.
 
 This module provides functionality to retrieve and validate prompts from markdown files.
 Supports file paths, directories/wildcards, and string content with auto-detection.
@@ -83,8 +82,7 @@ from .utils.data_files import find_data_file
 
 
 def get_prompt(source: str, header: str) -> str:
-    """
-    Get prompt from markdown source (file path, directory/wildcard, or string content).
+    """Get prompt from markdown source (file path, directory/wildcard, or string content).
 
     This function supports multiple input types and automatically detects whether the
     source is a file path, directory, wildcard pattern, or string content. For
@@ -230,8 +228,7 @@ def get_prompt_with_substitutions(
 
 
 def validate_prompt_markdown(source: str) -> Dict[str, Any]:
-    """
-    Validate prompt markdown structure and return detailed results.
+    """Validate prompt markdown structure and return detailed results.
 
     This function checks that the markdown follows the expected format:
     each header followed by exactly one code block, no duplicate headers,
@@ -323,8 +320,7 @@ def validate_prompt_markdown(source: str) -> Dict[str, Any]:
 
 
 def validate_prompt_directory(directory: str) -> Dict[str, Any]:
-    """
-    Validate all markdown files in directory including cross-file duplicate detection.
+    """Validate all markdown files in directory including cross-file duplicate detection.
 
     This function performs comprehensive validation across multiple files:
     - Validates each individual .md file
@@ -454,11 +450,10 @@ def validate_prompt_directory(directory: str) -> Dict[str, Any]:
 
 
 def _is_package_relative_path(source: str) -> bool:
-    """
-    Detect if source is a package-relative path that should use find_data_file.
+    """Detect if source is a package-relative path that should use find_data_file.
 
     Package-relative paths typically start with a package name (like 'mcp_coder/prompts/...')
-    and don't contain '..' or start with '/' or '\' (which would indicate absolute paths
+    and don't contain '..' or start with '/' or '\\' (which would indicate absolute paths
     or relative paths from current directory).
 
     Args:
@@ -491,8 +486,7 @@ def _is_package_relative_path(source: str) -> bool:
 
 
 def _resolve_package_path(source: str) -> Optional[Path]:
-    """
-    Resolve a package-relative path using find_data_file.
+    """Resolve a package-relative path using find_data_file.
 
     This function attempts to parse the source as 'package_name/relative_path'
     and use find_data_file to locate it robustly.
@@ -547,8 +541,8 @@ def _resolve_package_path(source: str) -> Optional[Path]:
 
 
 def _load_content(source: str) -> str:
-    """
-    Load content from source (auto-detect file path vs string content).
+    """Load content from source (auto-detect file path vs string content).
+
     For directories/wildcards, concatenate all .md files.
 
     This is an internal function that handles the complexity of determining
@@ -630,8 +624,7 @@ def _load_content(source: str) -> str:
 
 
 def _is_file_path(source: str) -> bool:
-    """
-    Detect if source is a file path vs string content using simple heuristics.
+    """Detect if source is a file path vs string content using simple heuristics.
 
     This function uses several heuristics to distinguish between file paths
     and markdown content strings:
@@ -664,8 +657,7 @@ def _is_file_path(source: str) -> bool:
 
 
 def _extract_headers(content: str) -> List[Dict[str, Any]]:
-    """
-    Extract all headers from markdown content.
+    """Extract all headers from markdown content.
 
     This function finds all markdown headers (levels 1-5) and returns
     detailed information about each one including position data.
@@ -705,8 +697,7 @@ def _extract_headers(content: str) -> List[Dict[str, Any]]:
 def _extract_code_block_after_header(
     content: str, header: Dict[str, Any]
 ) -> Union[str, None]:
-    """
-    Extract the first code block after a header.
+    """Extract the first code block after a header.
 
     This function looks for the first ``` fenced code block that appears
     after the given header, stopping if it encounters another header first.

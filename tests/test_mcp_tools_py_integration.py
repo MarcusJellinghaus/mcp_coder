@@ -1,5 +1,4 @@
-"""
-Integration tests for mcp_tools_py wrapper module.
+"""Integration tests for mcp_tools_py wrapper module.
 
 These tests verify that our wrapper correctly interfaces with the external
 mcp_tools_py library and handles various result scenarios.
