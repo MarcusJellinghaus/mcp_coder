@@ -1119,3 +1119,19 @@ flowchart LR
 - Check CI/CD passes
 - Approve and merge PR
 - Close related issue (automatically done by GitHub)
+
+---
+
+### 8. Failure Handling
+
+Automated workflows can fail at several points. When a failure occurs, the issue is tagged with a failure label so the human orchestrator can investigate and retry.
+
+| Label | Triggered When | Recovery |
+|-------|---------------|----------|
+| `status-03f:planning-failed` | Plan generation fails | `mcp-coder set-status status-02:awaiting-planning` |
+| `status-06f:implementing-failed` | General implementation failure | `mcp-coder set-status status-05:plan-ready` |
+| `status-06f-ci:ci-fix-needed` | CI exhausted 3 fix attempts | `mcp-coder set-status status-05:plan-ready` |
+| `status-06f-timeout:llm-timeout` | LLM API timeout during implementation | `mcp-coder set-status status-05:plan-ready` |
+| `status-09f:pr-creating-failed` | PR creation fails | `mcp-coder set-status status-08:ready-pr` |
+
+To recover from a failure, investigate the root cause (logs, CI output, API errors), resolve the underlying issue, then use `mcp-coder set-status` to transition the issue back to a retry-ready state as shown in the table above. The bot will automatically pick up the issue again from the recovery status.
