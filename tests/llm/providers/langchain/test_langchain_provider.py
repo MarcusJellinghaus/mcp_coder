@@ -7,6 +7,8 @@ import pytest
 
 
 class TestLoadLangchainConfig:
+    """Tests for _load_langchain_config function."""
+
     def test_returns_expected_keys(self) -> None:
         """_load_langchain_config returns a dict with all expected keys."""
         with patch(
@@ -80,6 +82,8 @@ class TestLoadLangchainConfig:
 
 
 class TestAskLangchain:
+    """Tests for ask_langchain function."""
+
     def _make_config(self, backend: str = "openai") -> dict[str, str | None]:
         return {
             "provider": "langchain",

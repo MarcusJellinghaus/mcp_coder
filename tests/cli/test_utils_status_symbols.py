@@ -7,6 +7,8 @@ from mcp_coder.cli.utils import _get_status_symbols
 
 
 class TestGetStatusSymbols:
+    """Tests for _get_status_symbols platform-dependent output."""
+
     def test_returns_dict_with_required_keys(self) -> None:
         result = _get_status_symbols()
         assert "success" in result

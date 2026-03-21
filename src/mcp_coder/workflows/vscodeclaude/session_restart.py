@@ -1,3 +1,5 @@
+"""Session restart and recovery operations for VSCodeClaude workflow."""
+
 import logging
 from collections import defaultdict
 from pathlib import Path

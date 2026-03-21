@@ -1,3 +1,5 @@
+"""Session launch operations for VSCodeClaude workflow."""
+
 import logging
 import platform
 import shutil

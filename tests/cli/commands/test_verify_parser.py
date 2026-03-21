@@ -4,8 +4,10 @@ from mcp_coder.cli.main import create_parser
 
 
 class TestVerifyParser:
+    """Tests for the verify subparser registration and arguments."""
+
     def test_verify_parser_exists(self) -> None:
-        """verify subcommand is registered."""
+        """Verify subcommand is registered."""
         parser = create_parser()
         args = parser.parse_args(["verify"])
         assert args.command == "verify"

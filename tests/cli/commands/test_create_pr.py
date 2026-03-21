@@ -27,6 +27,7 @@ except Exception as e:
 
     # Create a mock for type checking in tests
     def execute_create_pr(*args, **kwargs):  # type: ignore
+        """Stub for when create_pr module is unavailable."""
         pass
 
 
