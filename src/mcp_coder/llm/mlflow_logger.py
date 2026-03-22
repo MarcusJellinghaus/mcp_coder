@@ -644,7 +644,15 @@ def _format_tracking_data(
     stats: TrackingStats,
     since: datetime | None,
 ) -> dict[str, Any]:
-    """Format TrackingStats into a verify result entry."""
+    """Format TrackingStats into a verify result entry.
+
+    Args:
+        stats: Tracking statistics from SQLite query.
+        since: UTC cutoff for confirming test prompt was logged.
+
+    Returns:
+        Dict with 'ok' and 'value' keys for the verify result.
+    """
     if stats.last_run_time is not None:
         last_str = stats.last_run_time.strftime("%Y-%m-%d %H:%M")
     else:
