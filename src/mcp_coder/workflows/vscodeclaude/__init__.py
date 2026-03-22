@@ -3,7 +3,7 @@
 Main functions for preparing, launching, and managing sessions.
 
 Session Lifecycle Rules:
-- Sessions are created for issues at human_action statuses with initial_command
+- Sessions are created for issues at human_action statuses with commands
 - Eligible statuses: status-01:created, status-04:plan-review, status-07:code-review
 - Ineligible: bot_pickup (02, 05, 08), bot_busy (03, 06, 09), pr-created (10)
 

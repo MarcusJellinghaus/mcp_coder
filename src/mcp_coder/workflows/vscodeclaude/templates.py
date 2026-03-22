@@ -102,11 +102,11 @@ echo.
 
 # Automated analysis section for Windows (using mcp-coder prompt)
 AUTOMATED_SECTION_WINDOWS = r"""echo.
-echo === Step 1: Automated Analysis ===
-echo Running: {initial_command} {issue_number}
+echo === Step {step_number}: Automated Analysis ===
+echo Running: {command} {issue_number}
 echo.
 
-for /f "delims=" %%i in ('mcp-coder prompt "{initial_command} {issue_number}" --output-format session-id --mcp-config .mcp.json --timeout {timeout}') do set SESSION_ID=%%i
+for /f "delims=" %%i in ('mcp-coder prompt "{command} {issue_number}" --output-format session-id --mcp-config .mcp.json --timeout {timeout}') do set SESSION_ID=%%i
 
 if "%SESSION_ID%"=="" (
     echo.
@@ -121,30 +121,38 @@ if "%SESSION_ID%"=="" (
 echo Session ID: %SESSION_ID%
 """
 
-# Discussion section for Windows (using mcp-coder prompt with session resume)
-DISCUSSION_SECTION_WINDOWS = r"""echo.
-echo === Step 2: Automated Discussion ===
-echo Running: /discuss
+# Single-command flow for Windows (no step labels, no session ID)
+INTERACTIVE_ONLY_SECTION_WINDOWS = r"""echo.
+echo Running: {command} {issue_number}
 echo.
 
-mcp-coder prompt "/discuss" --session-id %SESSION_ID% --mcp-config .mcp.json --timeout {timeout}
+claude "{command} {issue_number}"
+"""
+
+# Middle commands in multi-command flow for Windows (automated session resume)
+AUTOMATED_RESUME_SECTION_WINDOWS = r"""echo.
+echo === Step {step_number}: Automated Session ===
+echo Running: {command}
+echo.
+
+mcp-coder prompt "{command}" --session-id %SESSION_ID% --mcp-config .mcp.json --timeout {timeout}
 
 if errorlevel 1 (
     echo.
-    echo WARNING: Discussion step encountered an error.
-    echo Continuing to interactive session...
+    echo WARNING: Step {step_number} encountered an error.
+    echo Continuing to next step...
     echo.
 )
 """
 
-# Interactive section for Windows (raw claude CLI with resume)
-INTERACTIVE_SECTION_WINDOWS = r"""echo.
-echo === Step 3: Interactive Session ===
+# Last command in multi-command flow for Windows (interactive session resume)
+INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS = r"""echo.
+echo === Step {step_number}: Interactive Session ===
 echo You can now interact with Claude directly.
 echo The conversation context from previous steps is preserved.
 echo.
 
-claude --resume %SESSION_ID%
+claude --resume %SESSION_ID% "{command}"
 """
 
 # Main startup script for Windows (with venv and mcp-coder)
@@ -162,11 +170,7 @@ echo.
 
 {venv_section}
 
-{automated_section}
-
-{discussion_section}
-
-{interactive_section}
+{command_sections}
 """
 
 # Intervention mode for Windows (with venv activation)
@@ -191,58 +195,6 @@ echo !! Investigate manually. No automated analysis will run.
 echo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 echo.
 
-claude
-"""
-
-# Startup script for Linux (.sh)
-STARTUP_SCRIPT_LINUX = r"""#!/bin/bash
-set -e
-
-echo ""
-echo "=========================================================================="
-echo "{emoji} Issue #{issue_number} - {title}"
-echo "Repo:   {repo}"
-echo "Status: {status}"
-echo "URL:    {issue_url}"
-echo "=========================================================================="
-echo ""
-
-{automated_section}
-
-echo ""
-echo "=== Ready for interactive discussion ==="
-echo ""
-
-{interactive_section}
-"""
-
-# Automated analysis section for Linux
-AUTOMATED_SECTION_LINUX = r"""# TODO - to be reviewed: Linux templates use raw `claude` CLI directly, not mcp-coder prompt
-echo "Running automated analysis..."
-claude -p "{initial_command} {issue_number}" --output-format json --mcp-config .mcp.json > .vscodeclaude_analysis.json 2>&1
-
-SESSION_ID=$(python3 -c "import json; d=json.load(open('.vscodeclaude_analysis.json')); print(d.get('session_id',''))")
-
-if [ -z "$SESSION_ID" ]; then
-    echo "ERROR: Could not extract session ID from analysis output."
-    echo "Please run Claude manually."
-    exit 1
-fi
-
-echo "Session ID: $SESSION_ID"
-"""
-
-# Interactive section for Linux
-# Note: {followup_command} may be empty when config has followup_command=null.
-# Callers must pass followup_command="" (not None) to avoid rendering "None".
-INTERACTIVE_SECTION_LINUX = r"""claude --resume "$SESSION_ID" {followup_command}
-"""
-
-# Intervention mode for Linux
-INTERVENTION_SECTION_LINUX = r"""echo ""
-echo "⚠️  INTERVENTION MODE - Automation may be running elsewhere"
-echo "   Investigate manually. No automated analysis will run."
-echo ""
 claude
 """
 

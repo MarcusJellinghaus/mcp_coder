@@ -1086,7 +1086,7 @@ class TestGetStaleSessions:
         }
         sessions_file.write_text(json.dumps(mock_sessions))
 
-        # Issue is OPEN but at pr-created status (no initial_command)
+        # Issue is OPEN but at pr-created status (no commands)
         mock_issue: IssueData = {
             "number": 400,
             "title": "PR Created Issue",

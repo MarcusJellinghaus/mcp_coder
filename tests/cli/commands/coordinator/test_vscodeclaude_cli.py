@@ -10,49 +10,36 @@ import pytest
 class TestTemplates:
     """Test template strings."""
 
-    def test_startup_script_linux_has_placeholders(self) -> None:
-        """Linux script has required placeholders."""
+    def test_interactive_only_section_has_placeholders(self) -> None:
+        """Interactive-only section has required placeholders."""
         from mcp_coder.workflows.vscodeclaude.templates import (
-            STARTUP_SCRIPT_LINUX,
+            INTERACTIVE_ONLY_SECTION_WINDOWS,
         )
 
-        assert "{emoji}" in STARTUP_SCRIPT_LINUX
-        assert "{issue_number}" in STARTUP_SCRIPT_LINUX
-        assert "{title}" in STARTUP_SCRIPT_LINUX
-        assert "{repo}" in STARTUP_SCRIPT_LINUX
-        assert "{status}" in STARTUP_SCRIPT_LINUX
-        assert "{issue_url}" in STARTUP_SCRIPT_LINUX
-        assert "{automated_section}" in STARTUP_SCRIPT_LINUX
-        assert "{interactive_section}" in STARTUP_SCRIPT_LINUX
+        assert "{command}" in INTERACTIVE_ONLY_SECTION_WINDOWS
+        assert "{issue_number}" in INTERACTIVE_ONLY_SECTION_WINDOWS
+        assert "claude" in INTERACTIVE_ONLY_SECTION_WINDOWS
 
-    def test_automated_section_linux_has_placeholders(self) -> None:
-        """Linux automated section has required placeholders."""
+    def test_automated_resume_section_has_placeholders(self) -> None:
+        """Automated resume section has required placeholders."""
         from mcp_coder.workflows.vscodeclaude.templates import (
-            AUTOMATED_SECTION_LINUX,
+            AUTOMATED_RESUME_SECTION_WINDOWS,
         )
 
-        assert "{initial_command}" in AUTOMATED_SECTION_LINUX
-        assert "claude -p" in AUTOMATED_SECTION_LINUX
-        assert ".vscodeclaude_analysis.json" in AUTOMATED_SECTION_LINUX
+        assert "{command}" in AUTOMATED_RESUME_SECTION_WINDOWS
+        assert "{step_number}" in AUTOMATED_RESUME_SECTION_WINDOWS
+        assert "{timeout}" in AUTOMATED_RESUME_SECTION_WINDOWS
+        assert "--session-id %SESSION_ID%" in AUTOMATED_RESUME_SECTION_WINDOWS
 
-    def test_interactive_section_linux_has_placeholders(self) -> None:
-        """Linux interactive section has required placeholders."""
+    def test_interactive_resume_section_has_placeholders(self) -> None:
+        """Interactive resume with command section has required placeholders."""
         from mcp_coder.workflows.vscodeclaude.templates import (
-            INTERACTIVE_SECTION_LINUX,
+            INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS,
         )
 
-        assert "{followup_command}" in INTERACTIVE_SECTION_LINUX
-        assert "claude --resume" in INTERACTIVE_SECTION_LINUX
-
-    def test_intervention_section_linux_content(self) -> None:
-        """Linux intervention section has intervention warning."""
-        from mcp_coder.workflows.vscodeclaude.templates import (
-            INTERVENTION_SECTION_LINUX,
-        )
-
-        assert "INTERVENTION MODE" in INTERVENTION_SECTION_LINUX
-        assert "No automated analysis will run" in INTERVENTION_SECTION_LINUX
-        assert "claude" in INTERVENTION_SECTION_LINUX
+        assert "{command}" in INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS
+        assert "{step_number}" in INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS
+        assert "claude --resume %SESSION_ID%" in INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS
 
     def test_workspace_file_is_valid_json_template(self) -> None:
         """Workspace template produces valid JSON when formatted."""
@@ -228,22 +215,22 @@ class TestWindowsTemplates:
         assert "set SESSION_ID=" in AUTOMATED_SECTION_WINDOWS
         assert 'if "%SESSION_ID%"==""' in AUTOMATED_SECTION_WINDOWS
 
-    def test_discussion_section_uses_session_id(self) -> None:
-        """DISCUSSION_SECTION_WINDOWS passes session-id."""
+    def test_automated_resume_uses_session_id(self) -> None:
+        """AUTOMATED_RESUME_SECTION_WINDOWS passes session-id."""
         from mcp_coder.workflows.vscodeclaude.templates import (
-            DISCUSSION_SECTION_WINDOWS,
+            AUTOMATED_RESUME_SECTION_WINDOWS,
         )
 
-        assert "mcp-coder prompt" in DISCUSSION_SECTION_WINDOWS
-        assert "--session-id %SESSION_ID%" in DISCUSSION_SECTION_WINDOWS
+        assert "mcp-coder prompt" in AUTOMATED_RESUME_SECTION_WINDOWS
+        assert "--session-id %SESSION_ID%" in AUTOMATED_RESUME_SECTION_WINDOWS
 
-    def test_interactive_section_uses_claude_resume(self) -> None:
-        """INTERACTIVE_SECTION_WINDOWS uses claude --resume."""
+    def test_interactive_resume_uses_claude_resume(self) -> None:
+        """INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS uses claude --resume."""
         from mcp_coder.workflows.vscodeclaude.templates import (
-            INTERACTIVE_SECTION_WINDOWS,
+            INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS,
         )
 
-        assert "claude --resume %SESSION_ID%" in INTERACTIVE_SECTION_WINDOWS
+        assert "claude --resume %SESSION_ID%" in INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS
 
     def test_startup_script_has_all_sections(self) -> None:
         """STARTUP_SCRIPT_WINDOWS includes all section placeholders."""
@@ -252,9 +239,7 @@ class TestWindowsTemplates:
         )
 
         assert "{venv_section}" in STARTUP_SCRIPT_WINDOWS
-        assert "{automated_section}" in STARTUP_SCRIPT_WINDOWS
-        assert "{discussion_section}" in STARTUP_SCRIPT_WINDOWS
-        assert "{interactive_section}" in STARTUP_SCRIPT_WINDOWS
+        assert "{command_sections}" in STARTUP_SCRIPT_WINDOWS
 
     def test_intervention_script_has_warning(self) -> None:
         """INTERVENTION_SCRIPT_WINDOWS shows intervention warning."""
@@ -269,12 +254,12 @@ class TestWindowsTemplates:
     def test_templates_include_timeout_placeholder(self) -> None:
         """Templates include {timeout} placeholder."""
         from mcp_coder.workflows.vscodeclaude.templates import (
+            AUTOMATED_RESUME_SECTION_WINDOWS,
             AUTOMATED_SECTION_WINDOWS,
-            DISCUSSION_SECTION_WINDOWS,
         )
 
         assert "{timeout}" in AUTOMATED_SECTION_WINDOWS
-        assert "{timeout}" in DISCUSSION_SECTION_WINDOWS
+        assert "{timeout}" in AUTOMATED_RESUME_SECTION_WINDOWS
 
 
 class TestCLI:

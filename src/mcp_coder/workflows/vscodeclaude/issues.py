@@ -96,7 +96,7 @@ def _get_status_priority(label: str) -> int:
 def is_status_eligible_for_session(status: str) -> bool:
     """Check if status should have a VSCodeClaude session.
 
-    Returns True only for human_action statuses with non-null initial_command:
+    Returns True only for human_action statuses with commands:
     - status-01:created
     - status-04:plan-review
     - status-07:code-review
@@ -104,7 +104,7 @@ def is_status_eligible_for_session(status: str) -> bool:
     Returns False for:
     - bot_pickup statuses (02, 05, 08)
     - bot_busy statuses (03, 06, 09)
-    - status-10:pr-created (null initial_command)
+    - status-10:pr-created (no commands)
     - Unknown/invalid status strings
 
     Args:
@@ -116,8 +116,7 @@ def is_status_eligible_for_session(status: str) -> bool:
     config = get_vscodeclaude_config(status)
     if config is None:
         return False
-    initial_command = config.get("initial_command")
-    return initial_command is not None
+    return len(config.get("commands", [])) > 0
 
 
 def status_requires_linked_branch(status: str) -> bool:

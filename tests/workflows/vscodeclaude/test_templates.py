@@ -1,9 +1,10 @@
 """Tests for vscodeclaude template strings."""
 
 from mcp_coder.workflows.vscodeclaude.templates import (
-    AUTOMATED_SECTION_LINUX,
+    AUTOMATED_RESUME_SECTION_WINDOWS,
     AUTOMATED_SECTION_WINDOWS,
-    DISCUSSION_SECTION_WINDOWS,
+    INTERACTIVE_ONLY_SECTION_WINDOWS,
+    INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS,
     VENV_SECTION_WINDOWS,
 )
 
@@ -41,23 +42,26 @@ def test_automated_section_no_hardcoded_llm_method() -> None:
     ), "AUTOMATED_SECTION_WINDOWS must not hardcode '--llm-method'"
 
 
-def test_discussion_section_no_hardcoded_llm_method() -> None:
-    """Test that DISCUSSION_SECTION_WINDOWS does not hardcode --llm-method.
+def test_automated_resume_section_no_hardcoded_llm_method() -> None:
+    """Test that AUTOMATED_RESUME_SECTION_WINDOWS does not hardcode --llm-method.
 
     The LLM method should be resolved at runtime via config/env var,
     not hardcoded in templates (issue #528).
     """
     assert (
-        "--llm-method" not in DISCUSSION_SECTION_WINDOWS
-    ), "DISCUSSION_SECTION_WINDOWS must not hardcode '--llm-method'"
+        "--llm-method" not in AUTOMATED_RESUME_SECTION_WINDOWS
+    ), "AUTOMATED_RESUME_SECTION_WINDOWS must not hardcode '--llm-method'"
 
 
-def test_linux_section_has_todo_comment() -> None:
-    """Test that AUTOMATED_SECTION_LINUX has a TODO comment for review.
-
-    Linux templates use raw `claude` CLI directly instead of mcp-coder prompt.
-    A TODO comment flags this for future review (issue #528).
-    """
+def test_interactive_only_section_no_hardcoded_llm_method() -> None:
+    """Test that INTERACTIVE_ONLY_SECTION_WINDOWS does not hardcode --llm-method."""
     assert (
-        "# TODO" in AUTOMATED_SECTION_LINUX
-    ), "AUTOMATED_SECTION_LINUX must include a '# TODO' comment for review"
+        "--llm-method" not in INTERACTIVE_ONLY_SECTION_WINDOWS
+    ), "INTERACTIVE_ONLY_SECTION_WINDOWS must not hardcode '--llm-method'"
+
+
+def test_interactive_resume_section_no_hardcoded_llm_method() -> None:
+    """Test that INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS does not hardcode --llm-method."""
+    assert (
+        "--llm-method" not in INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS
+    ), "INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS must not hardcode '--llm-method'"

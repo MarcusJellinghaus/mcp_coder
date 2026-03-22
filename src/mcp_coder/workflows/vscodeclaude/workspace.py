@@ -435,16 +435,22 @@ def create_startup_script(
     Returns:
         Path to created script (.bat or .sh)
 
-    The templates include:
-    - Venv creation/activation
-    - mcp-coder prompt for automated analysis
-    - mcp-coder prompt for /discuss
-    - claude --resume for interactive session
+    Execution strategy depends on the number of commands in the config:
+    - Single command: interactive-only via ``claude "{cmd} {issue_number}"``.
+      No timeout, no session ID capture, no step labels.
+    - Multiple commands: first command automated via ``mcp-coder prompt``,
+      middle commands via ``mcp-coder prompt --session-id``,
+      last command interactive via ``claude --resume``.
+      Step labels are shown for each command.
+    - No commands: bare script with venv setup only.
+
+    The ``timeout`` parameter is only used for multi-command flows.
     """
     from .templates import (
+        AUTOMATED_RESUME_SECTION_WINDOWS,
         AUTOMATED_SECTION_WINDOWS,
-        DISCUSSION_SECTION_WINDOWS,
-        INTERACTIVE_SECTION_WINDOWS,
+        INTERACTIVE_ONLY_SECTION_WINDOWS,
+        INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS,
         INTERVENTION_SCRIPT_WINDOWS,
         STARTUP_SCRIPT_WINDOWS,
         VENV_SECTION_WINDOWS,
@@ -454,8 +460,7 @@ def create_startup_script(
 
     # Get config for this status
     config = get_vscodeclaude_config(status)
-    initial_cmd = config["initial_command"] if config else None
-    followup_cmd = config["followup_command"] if config else None
+    commands = config.get("commands", []) if config else []
     emoji = config["emoji"] if config else "📋"
 
     # Default: use raw title (for non-Windows platforms when implemented)
@@ -491,19 +496,55 @@ def create_startup_script(
                 venv_section=venv_section,
             )
         else:
-            # Normal mode - full automation flow
-            automated_section = AUTOMATED_SECTION_WINDOWS.format(
-                initial_command=initial_cmd or "/issue_analyse",
-                issue_number=issue_number,
-                timeout=timeout,
-            )
-
-            if followup_cmd is not None:
-                discussion_section = DISCUSSION_SECTION_WINDOWS.format(
-                    timeout=timeout,
+            # Validate commands config
+            if commands and (
+                not isinstance(commands, list)
+                or not all(isinstance(c, str) for c in commands)
+            ):
+                raise ValueError(
+                    f"Invalid commands config for status '{status}': "
+                    f"expected list of strings, got {commands!r}"
                 )
+
+            # Build command sections based on commands list
+            if len(commands) == 1:
+                # Single command: interactive only, no step labels
+                command_sections = INTERACTIVE_ONLY_SECTION_WINDOWS.format(
+                    command=commands[0],
+                    issue_number=issue_number,
+                )
+            elif len(commands) > 1:
+                sections = []
+                for i, cmd in enumerate(commands):
+                    step_number = i + 1
+                    is_last = i == len(commands) - 1
+                    if i == 0:
+                        sections.append(
+                            AUTOMATED_SECTION_WINDOWS.format(
+                                command=cmd,
+                                issue_number=issue_number,
+                                timeout=timeout,
+                                step_number=step_number,
+                            )
+                        )
+                    elif not is_last:
+                        sections.append(
+                            AUTOMATED_RESUME_SECTION_WINDOWS.format(
+                                command=cmd,
+                                timeout=timeout,
+                                step_number=step_number,
+                            )
+                        )
+                    if is_last:
+                        sections.append(
+                            INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS.format(
+                                command=cmd,
+                                step_number=step_number,
+                            )
+                        )
+                command_sections = "\n".join(sections)
             else:
-                discussion_section = ""
+                command_sections = ""
 
             script_content = STARTUP_SCRIPT_WINDOWS.format(
                 emoji=emoji,
@@ -513,9 +554,7 @@ def create_startup_script(
                 status=status,
                 issue_url=issue_url,
                 venv_section=venv_section,
-                automated_section=automated_section,
-                discussion_section=discussion_section,
-                interactive_section=INTERACTIVE_SECTION_WINDOWS,
+                command_sections=command_sections,
             )
 
         script_path = folder_path / ".vscodeclaude_start.bat"
@@ -527,9 +566,7 @@ def create_startup_script(
     else:
         # Linux - TODO: Implement in Step 17
         # For now, raise NotImplementedError
-        raise NotImplementedError(
-            "Linux templates not yet implemented. " "See Step 17 for Linux support."
-        )
+        raise NotImplementedError("Linux startup scripts are not yet supported.")
 
 
 def create_vscode_task(folder_path: Path, script_path: Path) -> None:

@@ -10,8 +10,7 @@
         "emoji": "📝",
         "display_name": "ISSUE ANALYSIS",
         "stage_short": "new",
-        "initial_command": "/issue_analyse",
-        "followup_command": "/discuss"
+        "commands": ["/issue_analyse", "/discuss"]
       }
     },
     {
@@ -39,8 +38,7 @@
         "emoji": "📋",
         "display_name": "PLAN REVIEW",
         "stage_short": "plan",
-        "initial_command": "/plan_review",
-        "followup_command": "/discuss"
+        "commands": ["/plan_review", "/discuss"]
       }
     },
     {
@@ -68,8 +66,7 @@
         "emoji": "🔍",
         "display_name": "CODE REVIEW",
         "stage_short": "review",
-        "initial_command": "/implementation_review_supervisor",
-        "followup_command": null
+        "commands": ["/implementation_review_supervisor"]
       }
     },
     {
@@ -96,9 +93,7 @@
       "vscodeclaude": {
         "emoji": "🎉",
         "display_name": "PR CREATED",
-        "stage_short": "pr",
-        "initial_command": null,
-        "followup_command": null
+        "stage_short": "pr"
       }
     },
     {

@@ -664,7 +664,7 @@ class TestIsStatusEligibleForSession:
     @pytest.mark.parametrize(
         "status,expected",
         [
-            # Eligible statuses (have initial_command)
+            # Eligible statuses (have commands)
             ("status-01:created", True),
             ("status-04:plan-review", True),
             ("status-07:code-review", True),
@@ -676,7 +676,7 @@ class TestIsStatusEligibleForSession:
             ("status-03:planning", False),
             ("status-06:implementing", False),
             ("status-09:pr-creating", False),
-            # Ineligible - pr-created (has config but null initial_command)
+            # Ineligible - pr-created (has config but no commands)
             ("status-10:pr-created", False),
             # Edge cases
             ("", False),
