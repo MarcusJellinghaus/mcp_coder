@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(gh issue edit:*), Bash(gh issue view:*), Read, Glob, Grep, mcp__workspace__save_file, mcp__workspace__delete_this_file
+allowed-tools: Bash(gh issue edit *), Bash(gh issue view *), Read, Glob, Grep, mcp__workspace__save_file, mcp__workspace__delete_this_file
 workflow-stage: issue-discussion
 suggested-next: issue_approve
 ---
