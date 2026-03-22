@@ -19,3 +19,11 @@ The following imports must be verified before removal — they may be intentiona
 - `import mlflow` in `mlflow_logger.py`'s `is_mlflow_available()`
 
 If intentional, use `# pylint: disable=unused-import` instead of removing them.
+
+## D5: Append `per-file-ignores` to existing `[tool.pylint.main]` — no duplicate header
+
+Step 14 must append `per-file-ignores` to the existing `[tool.pylint.main]` section in pyproject.toml. TOML does not allow duplicate section headers, so creating a second `[tool.pylint.main]` would cause a parse error.
+
+## D6: `launch_vscode` — pure underscore rename, no default value change
+
+Step 3's rename of `session_working_dir` to `_session_working_dir` in `launch_vscode` must keep the original signature. No `=None` default should be added — it is a pure parameter rename only.

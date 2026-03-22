@@ -12,7 +12,7 @@ Rename unused function arguments to `_name` and remove bare f-prefix. Both trivi
 - `src/mcp_coder/llm/providers/langchain/agent.py` — `run_agent(..., execution_dir)` to `..., _execution_dir`
 - `src/mcp_coder/utils/folder_deletion.py` — `_rmtree_remove_readonly(..., exc)` to `..., _exc`
 - `src/mcp_coder/workflows/create_plan.py` — `manage_branch(..., issue_title)` to `..., _issue_title`
-- `src/mcp_coder/workflows/vscodeclaude/session_launch.py` — `launch_vscode(workspace_file, session_working_dir)` to `launch_vscode(workspace_file, _session_working_dir=None)`
+- `src/mcp_coder/workflows/vscodeclaude/session_launch.py` — `launch_vscode(workspace_file, session_working_dir)` to `launch_vscode(workspace_file, _session_working_dir)`
 
 **W1309 — Remove bare f-prefix (1 total):**
 - `src/mcp_coder/cli/commands/verify.py` line 131 — change `f"some literal string"` to `"some literal string"`
