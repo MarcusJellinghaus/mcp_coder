@@ -234,7 +234,9 @@ def prepare_and_launch_session(
         # Cleanup working folder on failure
         if folder_path.exists():
             try:
-                shutil.rmtree(folder_path, onerror=_remove_readonly)
+                shutil.rmtree(
+                    folder_path, onerror=_remove_readonly
+                )  # pylint: disable=deprecated-argument  # onexc requires Python 3.12+
             except Exception as cleanup_error:
                 logger.warning(
                     "Failed to cleanup folder %s: %s",

@@ -212,7 +212,9 @@ def setup_git_repo(
                 "Corrupted git repository at %s, deleting and re-cloning",
                 folder_path,
             )
-            shutil.rmtree(folder_path, onerror=_remove_readonly)
+            shutil.rmtree(
+                folder_path, onerror=_remove_readonly
+            )  # pylint: disable=deprecated-argument  # onexc requires Python 3.12+
             folder_path.mkdir(parents=True, exist_ok=True)
             is_empty = True
             has_git = False
