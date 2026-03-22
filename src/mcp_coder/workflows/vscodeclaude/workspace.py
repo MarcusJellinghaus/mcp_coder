@@ -438,6 +438,7 @@ def create_startup_script(
 
     Raises:
         NotImplementedError: If platform is not Windows.
+        ValueError: If commands config is not a list of strings.
 
     Execution strategy depends on the number of commands in the config:
     - Single command: interactive-only via ``claude "{cmd} {issue_number}"``.
