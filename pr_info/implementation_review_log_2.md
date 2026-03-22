@@ -27,3 +27,35 @@ Date: 2026-03-22
 - Updated 4 test call sites to pass now-required params (test_orchestrator_sessions.py)
 
 **Status:** Committed
+
+## Round 2 — 2026-03-22
+
+**Findings:**
+- S1: Incomplete labels.json schema migration — 5 failure labels still use old initial_command/followup_command fields
+- S2: mock_prepare test callbacks retain `=""` defaults, inconsistent with Round 1 production fix
+
+**Decisions:**
+- S1: Accept — Boy Scout fix, keeps data consistent with new schema docs
+- S2: Accept — consistency with production signature
+
+**Changes:**
+- Removed deprecated initial_command/followup_command null fields from 5 failure labels in labels.json
+- Removed default empty strings from mock_prepare callbacks in test_orchestrator_sessions.py
+
+**Status:** Committed
+
+## Round 3 — 2026-03-22
+
+**Findings:**
+- No new critical or actionable issues found
+- S1-S3 repeated from prior rounds, all previously triaged and skipped/deferred
+
+**Decisions:** No action needed
+
+**Changes:** None
+
+**Status:** No changes needed
+
+## Final Status
+
+Review complete after 3 rounds. All critical and Boy Scout issues resolved. Code is ready to merge.
