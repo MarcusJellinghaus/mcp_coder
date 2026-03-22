@@ -26,29 +26,24 @@ MOCK_VSCODECLAUDE_CONFIGS: dict[str, dict[str, Any]] = {
         "emoji": "📝",
         "display_name": "ISSUE ANALYSIS",
         "stage_short": "new",
-        "initial_command": "/issue_analyse",
-        "followup_command": "/discuss",
+        "commands": ["/issue_analyse", "/discuss"],
     },
     "status-04:plan-review": {
         "emoji": "📋",
         "display_name": "PLAN REVIEW",
         "stage_short": "plan",
-        "initial_command": "/plan_review",
-        "followup_command": "/discuss",
+        "commands": ["/plan_review", "/discuss"],
     },
     "status-07:code-review": {
         "emoji": "🔍",
         "display_name": "CODE REVIEW",
         "stage_short": "review",
-        "initial_command": "/implementation_review_supervisor",
-        "followup_command": None,
+        "commands": ["/implementation_review_supervisor"],
     },
     "status-10:pr-created": {
         "emoji": "🎉",
         "display_name": "PR CREATED",
         "stage_short": "pr",
-        "initial_command": None,
-        "followup_command": None,
     },
 }
 
@@ -427,13 +422,13 @@ class TestCreateStartupScript:
         monkeypatch: pytest.MonkeyPatch,
         mock_vscodeclaude_config: None,
     ) -> None:
-        """Generated script uses mcp-coder prompt."""
+        """Generated script uses mcp-coder prompt for multi-command flow."""
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: "Windows",
         )
 
-        # Use status-01:created which has followup_command="/discuss"
+        # Use status-01:created which has commands=["/issue_analyse", "/discuss"]
         script_path = create_startup_script(
             folder_path=tmp_path,
             issue_number=123,
@@ -447,7 +442,11 @@ class TestCreateStartupScript:
         content = script_path.read_text(encoding="utf-8")
         assert "mcp-coder prompt" in content
         assert "--output-format session-id" in content
-        assert "--session-id %SESSION_ID%" in content
+        # 2-command flow: no middle commands, so no --session-id automated resume
+        assert "--session-id %SESSION_ID%" not in content
+        # Last command is interactive resume
+        assert "claude --resume %SESSION_ID%" in content
+        assert "/discuss" in content
 
     def test_creates_script_with_claude_resume(
         self,
@@ -455,7 +454,7 @@ class TestCreateStartupScript:
         monkeypatch: pytest.MonkeyPatch,
         mock_vscodeclaude_config: None,
     ) -> None:
-        """Generated script ends with claude --resume."""
+        """Single-command flow uses interactive-only (no resume)."""
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: "Windows",
@@ -472,7 +471,12 @@ class TestCreateStartupScript:
         )
 
         content = script_path.read_text(encoding="utf-8")
-        assert "claude --resume %SESSION_ID%" in content
+        # Single command: interactive-only with issue number, no resume
+        assert 'claude "/implementation_review_supervisor 123"' in content
+        # No automated step for single command
+        assert "mcp-coder prompt" not in content
+        # No step labels for single command
+        assert "Step 1" not in content
 
     def test_uses_custom_timeout(
         self,
@@ -621,19 +625,19 @@ class TestCreateStartupScript:
                     "^"
                 ), f"Lone trailing ^ found in batch line: {line!r}"
 
-    def test_includes_discussion_section_when_followup_command_set(
+    def test_multi_command_has_automated_and_interactive_sections(
         self,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         mock_vscodeclaude_config: None,
     ) -> None:
-        """Generated script includes discussion section when followup_command is set."""
+        """Multi-command flow has automated first step and interactive last step."""
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: "Windows",
         )
 
-        # Use status-01:created which has followup_command="/discuss"
+        # Use status-01:created which has commands=["/issue_analyse", "/discuss"]
         script_path = create_startup_script(
             folder_path=tmp_path,
             issue_number=123,
@@ -645,22 +649,27 @@ class TestCreateStartupScript:
         )
 
         content = script_path.read_text(encoding="utf-8")
+        # First command is automated
+        assert "mcp-coder prompt" in content
+        # Last command is interactive resume
+        assert "claude --resume %SESSION_ID%" in content
         assert "/discuss" in content
-        assert "Step 2: Automated Discussion" in content
+        # Multi-command has step labels
+        assert "Step 1" in content
 
-    def test_omits_discussion_section_when_followup_command_null(
+    def test_single_command_uses_interactive_only(
         self,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         mock_vscodeclaude_config: None,
     ) -> None:
-        """Generated script omits discussion section when followup_command is None."""
+        """Single-command flow uses interactive-only, no automated step."""
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: "Windows",
         )
 
-        # Use status-07:code-review which has followup_command=None
+        # Use status-07:code-review which has commands=["/implementation_review_supervisor"]
         script_path = create_startup_script(
             folder_path=tmp_path,
             issue_number=123,
@@ -672,10 +681,15 @@ class TestCreateStartupScript:
         )
 
         content = script_path.read_text(encoding="utf-8")
-        assert "/discuss" not in content
-        assert "Step 2: Automated Discussion" not in content
-        # Should still have the interactive session
-        assert "claude --resume %SESSION_ID%" in content
+        # No automated step for single command
+        assert "mcp-coder prompt" not in content
+        # Interactive-only with issue number
+        assert 'claude "/implementation_review_supervisor 123"' in content
+        # No step labels
+        assert "Step 1" not in content
+        assert "Step 2" not in content
+        # No resume (no session ID captured)
+        assert "claude --resume %SESSION_ID%" not in content
 
     def test_creates_script_with_env_var_setup(
         self,
@@ -708,3 +722,163 @@ class TestCreateStartupScript:
         assert "activate.bat" in content
         # Should contain check for mcp_coder_install_path, not MCP_CODER_PROJECT_DIR
         assert '" NEQ ""' in content
+
+    def test_three_command_flow_has_automated_resume_middle(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Three-command flow uses automated resume for middle command."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: "Windows",
+        )
+
+        # Custom 3-command mock config
+        three_cmd_configs: dict[str, dict[str, Any]] = {
+            "status-triple": {
+                "emoji": "🔧",
+                "display_name": "TRIPLE",
+                "stage_short": "tri",
+                "commands": ["/step_one", "/step_two", "/step_three"],
+            },
+        }
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.get_vscodeclaude_config",
+            lambda s: three_cmd_configs.get(s),
+        )
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=99,
+            issue_title="Triple test",
+            status="status-triple",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/99",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        # First command is automated
+        assert "mcp-coder prompt" in content
+        assert "--output-format session-id" in content
+        # Middle command uses automated resume
+        assert "--session-id %SESSION_ID%" in content
+        # Last command is interactive resume
+        assert "claude --resume %SESSION_ID%" in content
+        assert "/step_three" in content
+        # All steps have labels
+        assert "Step 1" in content
+        assert "Step 2" in content
+        assert "Step 3" in content
+
+    def test_empty_commands_generates_bare_script(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Config with empty commands list generates script with no command sections."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: "Windows",
+        )
+
+        empty_cmd_configs: dict[str, dict[str, Any]] = {
+            "status-empty": {
+                "emoji": "📋",
+                "display_name": "EMPTY",
+                "stage_short": "emp",
+                "commands": [],
+            },
+        }
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.get_vscodeclaude_config",
+            lambda s: empty_cmd_configs.get(s),
+        )
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=1,
+            issue_title="Empty test",
+            status="status-empty",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/1",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        # Has venv section but no command sections
+        assert "uv venv" in content
+        assert "mcp-coder prompt" not in content
+        assert "claude --resume" not in content
+        assert "Step 1" not in content
+
+    def test_invalid_commands_type_raises_error(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Config with non-list commands raises ValueError."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: "Windows",
+        )
+
+        bad_configs: dict[str, dict[str, Any]] = {
+            "status-bad": {
+                "emoji": "📋",
+                "display_name": "BAD",
+                "stage_short": "bad",
+                "commands": "/single_string",
+            },
+        }
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.get_vscodeclaude_config",
+            lambda s: bad_configs.get(s),
+        )
+
+        with pytest.raises(ValueError, match="Invalid commands config"):
+            create_startup_script(
+                folder_path=tmp_path,
+                issue_number=1,
+                issue_title="Bad test",
+                status="status-bad",
+                repo_name="test-repo",
+                issue_url="https://github.com/test/repo/issues/1",
+                is_intervention=False,
+            )
+
+    def test_invalid_commands_element_raises_error(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Config with non-string elements in commands raises ValueError."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: "Windows",
+        )
+
+        bad_configs: dict[str, dict[str, Any]] = {
+            "status-bad": {
+                "emoji": "📋",
+                "display_name": "BAD",
+                "stage_short": "bad",
+                "commands": ["/valid", 123],
+            },
+        }
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.get_vscodeclaude_config",
+            lambda s: bad_configs.get(s),
+        )
+
+        with pytest.raises(ValueError, match="Invalid commands config"):
+            create_startup_script(
+                folder_path=tmp_path,
+                issue_number=1,
+                issue_title="Bad test",
+                status="status-bad",
+                repo_name="test-repo",
+                issue_url="https://github.com/test/repo/issues/1",
+                is_intervention=False,
+            )
