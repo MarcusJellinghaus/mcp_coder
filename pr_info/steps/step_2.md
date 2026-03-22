@@ -58,9 +58,9 @@ echo.
 claude --resume %SESSION_ID% "{command}"
 ```
 
-### Also update Linux template comment
+### Delete unused Linux templates
 
-- `INTERACTIVE_SECTION_LINUX`: Update comment to remove reference to `followup_command`. This template is TODO/not-in-scope for actual changes.
+Remove `STARTUP_SCRIPT_LINUX`, `AUTOMATED_SECTION_LINUX`, `INTERACTIVE_SECTION_LINUX`, and `INTERVENTION_SECTION_LINUX`. They are dead code (Linux raises `NotImplementedError` in `workspace.py`). Can be recreated when Linux support is implemented.
 
 **DATA**: All templates are raw string constants. No functions or return values.
 

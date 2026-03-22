@@ -51,3 +51,5 @@ Run `test_types.py` to confirm schema validation passes:
 ```
 mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-k", "test_types"])
 ```
+
+**Note:** After this step, `test_issues.py::TestIsStatusEligibleForSession` will fail because `is_status_eligible_for_session()` still reads `initial_command` from the updated `labels.json`. This is expected — Step 2 fixes it by updating `issues.py`.

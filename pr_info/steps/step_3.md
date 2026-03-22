@@ -47,7 +47,7 @@ MOCK_VSCODECLAUDE_CONFIGS: dict[str, dict[str, Any]] = {
 1. **`test_creates_script_with_mcp_coder_prompt`** (uses status-01:created, multi-command):
    - Keep assertion `"mcp-coder prompt" in content`
    - Keep assertion `"--output-format session-id" in content`
-   - Keep assertion `"--session-id %SESSION_ID%" not in content` (status-01 has no middle commands — the /discuss is now interactive resume, not automated resume)
+   - Change assertion `"--session-id %SESSION_ID%" in content` → `not in content` (status-01 has no middle commands — the /discuss is now interactive resume, not automated resume)
    - Add assertion `"claude --resume %SESSION_ID%" in content` (last command interactive)
    - Add assertion `"/discuss" in content`
 
@@ -73,6 +73,13 @@ MOCK_VSCODECLAUDE_CONFIGS: dict[str, dict[str, Any]] = {
    - Assert: `"claude \"/implementation_review_supervisor 123\"" in content` (interactive-only with issue number)
    - Assert: `"Step 1" not in content` and `"Step 2" not in content` (no step labels)
    - Remove old `"claude --resume %SESSION_ID%" in content` assertion
+
+6. **`test_three_command_flow_has_automated_resume_middle`** (new test, uses custom 3-command mock config):
+   - Mock a config with `"commands": ["/step_one", "/step_two", "/step_three"]`
+   - Assert: `"mcp-coder prompt" in content` and `"--output-format session-id" in content` (first command automated)
+   - Assert: `"--session-id %SESSION_ID%" in content` (middle command uses automated resume)
+   - Assert: `"claude --resume %SESSION_ID%" in content` and `"/step_three" in content` (last command interactive)
+   - Assert: `"Step 1" in content` and `"Step 2" in content` and `"Step 3" in content`
 
 **DATA**: `MOCK_VSCODECLAUDE_CONFIGS` dict shape changes. No new test classes needed.
 
