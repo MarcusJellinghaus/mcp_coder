@@ -28,8 +28,10 @@ disable = [
     "W0511",   # fixme/TODO — informational only, not a quality gate
 ]
 enable = ["R0401"]
+```
 
-[tool.pylint.main]
+**Append to the existing `[tool.pylint.main]` section** (do NOT create a new `[tool.pylint.main]` header — TOML forbids duplicate section headers):
+```toml
 # Disable test-specific W warnings that are standard pytest patterns
 per-file-ignores = [
     "tests/**/*.py:W0212",   # protected-access — legitimate test inspection
@@ -39,7 +41,7 @@ per-file-ignores = [
 ]
 ```
 
-NOTE: Use `[tool.pylint.main]` (not `[tool.pylint.MASTER]`) to match existing pyproject.toml conventions.
+**IMPORTANT:** `pyproject.toml` already has a `[tool.pylint.main]` section. Append `per-file-ignores` there. Do NOT add a second `[tool.pylint.main]` header — TOML does not allow duplicate section headers and it will cause a parse error.
 
 ## Verification Checklist
 
@@ -59,7 +61,7 @@ See pr_info/steps/step_14.md.
 
 Change ONLY pyproject.toml:
 - In [tool.pylint.messages_control]: replace disable = ["W", "C", "R"] with selective list
-- Add per-file-ignores under [tool.pylint.main] (NOT [tool.pylint.MASTER])
+- Append per-file-ignores to the EXISTING [tool.pylint.main] section (do NOT create a duplicate header)
 - Keep enable = ["R0401"]
 
 After making the change, run pylint src/ tests/ with NO extra flags — must show 0 warnings.

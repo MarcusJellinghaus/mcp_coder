@@ -21,3 +21,20 @@
 **User decisions**: None needed — all straightforward improvements
 **Changes**: Restructured plan from 5 to 14 steps, fixed W4903 approach, fixed TOML section, added import verification notes, updated task tracker and summary
 **Status**: Pending commit
+
+## Round 2 — 2026-03-22
+**Findings**:
+- Step 14 may create duplicate `[tool.pylint.main]` TOML section header
+- Steps 10-13 lack specific file lists (less detailed than src/ steps)
+- Step 3 adds `=None` default to `launch_vscode` parameter — unintended behavioral change
+- Step 12 groups 4 warning types (acceptable — all tiny)
+- Step 13 groups 2 warning types (acceptable — 6 total occurrences)
+
+**Decisions**:
+- Accept: Step 14 TOML section — clarify append to existing section
+- Skip: Steps 10-13 file lists — implementer discovers via pylint, not a blocker
+- Accept: Step 3 `=None` — keep as pure rename, no signature change
+
+**User decisions**: None needed
+**Changes**: Updated step_14.md (clarify TOML append), step_3.md (remove =None), Decisions.md (added D5, D6)
+**Status**: Pending commit
