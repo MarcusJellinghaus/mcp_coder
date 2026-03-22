@@ -167,7 +167,6 @@ def load_labels_config(config_path: Path | Traversable) -> Dict[str, Any]:
 
     Raises:
         FileNotFoundError: If a Path-based config file doesn't exist
-        json.JSONDecodeError: If file is not valid JSON
         ValueError: If required keys are missing
     """
     if isinstance(config_path, Path) and not config_path.exists():

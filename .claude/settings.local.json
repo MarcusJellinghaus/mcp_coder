@@ -25,6 +25,7 @@
       "Bash(./tools/pycycle_check.sh:*)",
       "Bash(python -m pytest:*)",
       "Bash(./tools/vulture_check.sh:*)",
+      "Bash(./tools/ruff_check.sh:*)",
       "Skill(commit_push)",
       "Skill(discuss)",
       "Skill(implementation_approve)",
@@ -51,7 +52,9 @@
       "WebFetch(domain:*)",
       "Bash(mcp-coder gh-tool get-base-branch)",
       "Bash(git ls-tree:*)",
-      "Bash(mcp-coder git-tool:*)"
+      "Bash(mcp-coder git-tool:*)",
+      "Bash(ruff rule:*)",
+      "Bash(ruff check:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

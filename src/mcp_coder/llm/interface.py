@@ -32,8 +32,7 @@ def ask_llm(
     mcp_config: str | None = None,
     branch_name: str | None = None,
 ) -> str:
-    """
-    Ask a question to an LLM provider.
+    """Ask a question to an LLM provider.
 
     This is the main entry point for simple LLM interactions. It returns only
     the text response. For full session management with metadata, use prompt_llm()
@@ -57,10 +56,6 @@ def ask_llm(
 
     Returns:
         The LLM's response text as a string
-
-    Raises:
-        ValueError: If the provider is not supported, or if input validation fails
-        Various exceptions from underlying implementations (e.g., subprocess errors)
 
     Examples:
         >>> # Simple usage
@@ -98,8 +93,7 @@ def prompt_llm(
     mcp_config: str | None = None,
     branch_name: str | None = None,
 ) -> LLMResponseDict:
-    """
-    Ask a question to an LLM provider with full session management.
+    """Ask a question to an LLM provider with full session management.
 
     This function returns complete response data including session_id and metadata,
     enabling conversation continuity and comprehensive logging.
@@ -129,7 +123,8 @@ def prompt_llm(
 
     Raises:
         ValueError: If the provider is not supported, or if input validation fails
-        Various exceptions from underlying implementations (e.g., subprocess errors)
+        TimeoutExpired: If the Claude CLI subprocess times out
+        TimeoutError: If the LangChain provider times out (asyncio.TimeoutError)
 
     Examples:
         >>> # Start new conversation

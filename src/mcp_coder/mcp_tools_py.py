@@ -1,5 +1,4 @@
-"""
-Thin wrapper for mcp_tools_py library.
+"""Thin wrapper for mcp_tools_py library.
 
 Provides a simplified interface to mcp_tools_py's mypy functionality.
 """
@@ -16,8 +15,7 @@ def run_mypy_check(
     project_dir: Union[str, Path],
     target_directories: list[str] | None = None,
 ) -> MypyResult:
-    """
-    Run mypy type checking on the project.
+    """Run mypy type checking on the project.
 
     Args:
         project_dir: Path to the project directory
@@ -39,8 +37,7 @@ def run_mypy_check(
 
 
 def has_mypy_errors(project_dir: Union[str, Path]) -> bool:
-    """
-    Quick check if project has mypy type errors.
+    """Quick check if project has mypy type errors.
 
     Args:
         project_dir: Path to the project directory

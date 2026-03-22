@@ -56,6 +56,10 @@ def _resolve_env_vars(value: str, env: dict[str, str]) -> str:
     Unknown variables are left as-is (``${UNKNOWN}`` stays unchanged).
     Uses a single-pass ``re.sub`` so replacement values that themselves
     contain ``${…}`` patterns are **not** re-substituted.
+
+    Returns:
+        The input string with all known ``${VAR}`` placeholders replaced by
+        their corresponding values from *env*.
     """
     pattern = r"\$\{([^}]+)\}"
 
@@ -81,6 +85,9 @@ def _load_mcp_server_config(
     Returns:
         Mapping of server names to their resolved configuration, suitable for
         ``MultiServerMCPClient``.
+
+    Raises:
+        ValueError: If MCP config file is not found or invalid.
     """
     path = Path(mcp_config_path)
     with open(path, encoding="utf-8") as fh:
@@ -174,6 +181,10 @@ def _sanitize_tool_schema(schema: dict[str, Any]) -> dict[str, Any]:
     property that is missing both ``type`` and ``anyOf``/``allOf``/``oneOf``.
 
     A deep copy is made so the original MCP tool schema is never mutated.
+
+    Returns:
+        A deep copy of the schema dict with ``"type": "string"`` added to any
+        property that was missing type information.
     """
     schema = copy.deepcopy(schema)
 

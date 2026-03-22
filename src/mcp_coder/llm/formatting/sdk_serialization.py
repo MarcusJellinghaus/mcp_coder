@@ -117,7 +117,9 @@ def get_message_tool_calls(message: Any) -> List[Dict[str, Any]]:
         message: Message object (SDK object or dictionary)
 
     Returns:
-        List of tool call dictionaries
+        List of tool call dicts, each with ``"name"`` and ``"parameters"`` keys.
+        Returns an empty list if the message is None, has no tool calls, or is
+        not an AssistantMessage.
     """
     # Handle None values gracefully
     if message is None:
@@ -302,7 +304,10 @@ def extract_tool_interactions(raw_messages: List[Any]) -> List[str]:
         raw_messages: List of message objects (SDK objects or dictionaries)
 
     Returns:
-        List of tool interaction summary strings
+        List of formatted tool interaction strings, each prefixed with
+        ``"  - "`` followed by the tool name and parameters (e.g.
+        ``"  - read_file: {'path': 'foo.py'}"``).  Returns an empty list
+        if no assistant messages contain tool calls.
     """
     tool_interactions: List[str] = []
 

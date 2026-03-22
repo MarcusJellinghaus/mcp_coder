@@ -91,7 +91,7 @@ def check_vscode_running(pid: int | None) -> bool:
         pid: Process ID to check (None returns False)
 
     Returns:
-        True if process exists and is running
+        True if process exists and is a running VSCode process, False otherwise.
 
     Uses psutil for cross-platform compatibility.
     Note: On Windows, the PID from launch may be a launcher that exits.
@@ -237,7 +237,11 @@ def _get_vscode_window_titles(refresh: bool = False) -> list[str]:
     titles: list[str] = []
 
     def enum_callback(hwnd: int, _: Any) -> bool:
-        """Callback for EnumWindows."""
+        """Callback for EnumWindows.
+
+        Returns:
+            Always True to continue enumeration.
+        """
         try:
             if win32gui.IsWindowVisible(hwnd):
                 title = win32gui.GetWindowText(hwnd)

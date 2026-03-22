@@ -50,7 +50,14 @@ __all__ = [
 
 
 def __getattr__(name: str) -> Any:
-    """Lazy import for commit_operations to avoid circular imports."""
+    """Lazy import for commit_operations to avoid circular imports.
+
+    Returns:
+        The requested attribute from commit_operations.
+
+    Raises:
+        AttributeError: If the attribute is not found in this module.
+    """
     if name in (
         "generate_commit_message_with_llm",
         "parse_llm_commit_response",

@@ -1,5 +1,4 @@
-"""
-Create pull request workflow script for repository cleanup operations.
+"""Create pull request workflow script for repository cleanup operations.
 
 This module provides utility functions for cleaning up repository state
 after feature implementation is complete and orchestrates the complete
@@ -68,8 +67,7 @@ def delete_pr_info_directory(project_dir: Path) -> bool:
 
 
 def clean_profiler_output(project_dir: Path) -> bool:
-    """
-    Clean up profiler output files from docs/tests/performance_data/prof/ directory.
+    """Clean up profiler output files from docs/tests/performance_data/prof/ directory.
 
     Removes all files from the profiler output directory while keeping the directory itself.
     This prevents temporary profiler output from being included in pull requests.
@@ -110,8 +108,7 @@ def clean_profiler_output(project_dir: Path) -> bool:
 
 
 def parse_pr_summary(llm_response: str) -> Tuple[str, str]:
-    """
-    Parse LLM response into PR title and body.
+    """Parse LLM response into PR title and body.
 
     Expected format:
     TITLE: feat: some title
@@ -180,8 +177,7 @@ def parse_pr_summary(llm_response: str) -> Tuple[str, str]:
 
 
 def check_prerequisites(project_dir: Path) -> bool:
-    """
-    Validate prerequisites for PR creation workflow.
+    """Validate prerequisites for PR creation workflow.
 
     Checks:
     1. Git working directory is clean
@@ -277,6 +273,10 @@ def generate_pr_summary(
 
     Returns:
         Tuple of (title, body) strings
+
+    Raises:
+        ValueError: If LLM returns an empty response.
+        FileNotFoundError: If the prompt template file cannot be found.
     """
     logger.info("Generating PR summary...")
 
@@ -376,8 +376,7 @@ def cleanup_repository(project_dir: Path) -> bool:
 
 
 def create_pull_request(project_dir: Path, title: str, body: str) -> bool:
-    """
-    Create GitHub pull request using PullRequestManager.
+    """Create GitHub pull request using PullRequestManager.
 
     Args:
         project_dir: Path to project directory

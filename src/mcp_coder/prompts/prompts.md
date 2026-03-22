@@ -8,6 +8,7 @@ Add your prompts below using the format shown in `prompt_instructions.md`.
 You can mix documentation and prompts in this file. Only headers followed by code blocks will be treated as prompts.
 
 ### Example
+
 ```
 My lengthy explanation of what this prompt does and when to use it.
 
@@ -22,11 +23,12 @@ Expected output format: [describe the expected response]
 
 ### Commit
 
-Context: A git commit message should be generated. A `git diff` will be added. 
+Context: A git commit message should be generated. A `git diff` will be added.
 The respoonse will be used for committing the diff.  
 If the response contains seeral lines, the second line is expected to be empty to separate header and commit message details.
 
 #### Git Commit Message Generation
+
 ```
 Analyze the provided git diff and status information to generate a concise, professional commit message following conventional commit format.
 
@@ -67,7 +69,6 @@ Expected output: A properly formatted conventional commit message ready to use w
 Do NOT PROVIDE ANYTHING - just the commit message! NO WORDS BEFORE OR AFTER! 
 ```
 
-
 ## Prompts for task tracker based workflows
 
 ### Task Tracker Update
@@ -75,6 +76,7 @@ Do NOT PROVIDE ANYTHING - just the commit message! NO WORDS BEFORE OR AFTER!
 This prompt is used to populate or update the TASK_TRACKER.md file with implementation steps from the plan.
 
 #### Task Tracker Update Prompt
+
 ```
 Read implementation steps in `pr_info/steps/` and update/create `pr_info/TASK_TRACKER.md`:
 
@@ -100,6 +102,7 @@ Follow existing format in TASK_TRACKER.md or standard checkbox format.
 This is the actual step where could should be written or modified. The actual task comes from task tracker and its links to the task description.
 
 #### Implementation Prompt Template using task tracker
+
 ```
 Implement ONE step from the task tracker.
 
@@ -132,6 +135,7 @@ Implement ONE step from the task tracker.
 This prompt is used to fix mypy type errors when they are detected during code quality checks.
 
 #### Mypy Fix Prompt
+
 ```
 Fix the mypy type errors shown in the output below.
 
@@ -156,6 +160,7 @@ Expected output: Code changes that resolve all type errors while maintaining fun
 This prompt is used to generate pull request titles and descriptions from git diff output.
 
 #### PR Summary Generation
+
 ```
 Generate a PR title and body from the git diff. Follow this EXACT format:
 
@@ -191,6 +196,7 @@ Git diff to analyze:
 [git_diff_content]
 
 OUTPUT THE TITLE AND BODY EXACTLY AS SHOWN ABOVE - NO OTHER TEXT!
+DO NOT PROVIDE A FOOTER. DO NOT COME UP WITH ANY TESTS!
 ```
 
 ## Plan Generation Workflow
@@ -247,6 +253,7 @@ This prompt analyzes CI pipeline failures to produce a problem description for f
 Placeholders: `[job_name]`, `[step_name]`, `[other_failed_jobs]`, `[log_excerpt]`
 
 #### CI Failure Analysis Prompt
+
 ```
 Analyze the CI pipeline failure and write a problem description.
 
@@ -279,6 +286,7 @@ This prompt fixes CI issues based on the problem description from analysis.
 Placeholders: `[problem_description]`
 
 #### CI Fix Prompt
+
 ```
 Fix the CI pipeline failure based on the problem description below.
 

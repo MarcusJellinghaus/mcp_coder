@@ -215,10 +215,6 @@ def _try_rmtree(path: Path) -> bool:
 
     Returns:
         True if deletion succeeded, False otherwise.
-
-    Raises:
-        PermissionError: If a file is locked.
-        OSError: If another OS error occurs.
     """
     # Use kwargs to avoid pylint E1123 on Python <3.12 (onexc was added in 3.12)
     if sys.version_info >= (3, 12):

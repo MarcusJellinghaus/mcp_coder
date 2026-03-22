@@ -126,6 +126,7 @@ def _run_ci_analysis(
         config: CI fix configuration
         failed_summary: Summary of failed jobs from _get_failed_jobs_summary()
         fix_attempt: Current fix attempt number (0-indexed)
+        branch_name: Optional git branch name for session logging
 
     Returns:
         Problem description string, or None on failure
@@ -205,6 +206,7 @@ def _run_ci_fix(
         config: CI fix configuration
         problem_description: Description of the problem from analysis phase
         fix_attempt: Current fix attempt number (0-indexed)
+        branch_name: Optional git branch name for session logging
 
     Returns:
         True if fix was successfully committed and pushed, False otherwise

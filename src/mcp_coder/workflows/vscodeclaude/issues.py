@@ -147,7 +147,8 @@ def _is_issue_eligible(
         github_username: Username that must be assigned
 
     Returns:
-        True if issue is eligible
+        True if issue has exactly one human_action label, no ignore labels,
+        and is assigned to github_username. False otherwise.
     """
     issue_labels = set(issue["labels"])
 
@@ -209,7 +210,11 @@ def _filter_eligible_vscodeclaude_issues(
 
     # Sort by numeric prefix descending (higher number = higher priority)
     def get_issue_priority(issue: IssueData) -> int:
-        """Get max priority from issue's status labels."""
+        """Get max priority from issue's status labels.
+
+        Returns:
+            Maximum numeric priority from status labels.
+        """
         return max(
             (_get_status_priority(label) for label in issue["labels"]), default=0
         )

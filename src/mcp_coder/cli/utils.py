@@ -87,9 +87,6 @@ def parse_llm_method_from_args(llm_method: str) -> str:
     Returns:
         Provider name (e.g., "claude" or "langchain")
 
-    Raises:
-        ValueError: If llm_method is not supported
-
     Example:
         >>> provider = parse_llm_method_from_args("claude")
         >>> print(provider)

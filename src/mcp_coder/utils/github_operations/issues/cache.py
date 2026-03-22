@@ -406,11 +406,6 @@ def get_all_cached_issues(  # pylint: disable=too-many-locals
         List of ALL cached issues (unfiltered). Caller is responsible for filtering.
         Returns empty list if duplicate protection triggers.
 
-    Raises:
-        ValueError: If repo_full_name format is invalid
-        KeyError: If cache structure is invalid
-        TypeError: If cache data types are incorrect
-
     Note:
         Caller (thin wrapper) should handle fallback to direct API fetch.
     """

@@ -42,7 +42,8 @@ def _load_langchain_config() -> dict[str, str | None]:
     API keys are resolved by the vendor env var (OPENAI_API_KEY, GEMINI_API_KEY,
     ANTHROPIC_API_KEY) in each backend module, falling back to config.toml.
 
-    Returns keys: default_provider, backend, model, api_key, endpoint, api_version.
+    Returns:
+        Dict with keys: default_provider, backend, model, api_key, endpoint, api_version.
     """
     raw = get_config_values(
         [
@@ -80,7 +81,14 @@ def _create_chat_model(
     config: dict[str, str | None],
     timeout: int = 30,
 ) -> BaseChatModel:
-    """Dispatch to correct backend's create_*_model() based on config."""
+    """Dispatch to correct backend's create_*_model() based on config.
+
+    Returns:
+        Configured BaseChatModel instance for the selected backend.
+
+    Raises:
+        ValueError: If the configured backend is not supported.
+    """
     backend = config.get("backend")
 
     if backend == "openai":
@@ -128,6 +136,12 @@ def ask_langchain(
     When *mcp_config* is provided the request is routed through the LangGraph
     ReAct agent (agent mode).  Otherwise the existing text-only backend
     dispatch is used.
+
+    Returns:
+        LLMResponseDict with the model's response.
+
+    Raises:
+        ValueError: If the langchain backend is not configured.
     """
     config = _load_langchain_config()
     backend = config["backend"]
@@ -171,7 +185,14 @@ def _ask_text(
     session_id: str,
     timeout: int,
 ) -> LLMResponseDict:
-    """Text-only backend dispatch using unified chat model factory."""
+    """Text-only backend dispatch using unified chat model factory.
+
+    Returns:
+        LLMResponseDict with the model's text response.
+
+    Raises:
+        ValueError: If the model is not found on the configured backend.
+    """
     from langchain_core.messages import HumanMessage, messages_from_dict
 
     history = load_langchain_history(session_id)
@@ -224,7 +245,11 @@ def _ask_text(
 
 
 def _get_model_suggestions(config: dict[str, str | None]) -> str:
-    """Try to list available models for the configured backend."""
+    """Try to list available models for the configured backend.
+
+    Returns:
+        Formatted string of available models, or empty string if none found.
+    """
     backend = config.get("backend")
     api_key = config.get("api_key")
     endpoint = config.get("endpoint")
@@ -253,7 +278,11 @@ def _ask_agent(
     env_vars: dict[str, str] | None = None,
     timeout: int = 30,
 ) -> LLMResponseDict:
-    """Agent mode: route through LangGraph ReAct agent with MCP tools."""
+    """Agent mode: route through LangGraph ReAct agent with MCP tools.
+
+    Returns:
+        LLMResponseDict with the agent's text response and tool usage stats.
+    """
     from .agent import _check_agent_dependencies, run_agent
 
     _check_agent_dependencies()

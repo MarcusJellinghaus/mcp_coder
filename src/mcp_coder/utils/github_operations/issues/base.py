@@ -52,7 +52,7 @@ def validate_comment_id(comment_id: int) -> bool:
 
 
 def parse_base_branch(body: str) -> Optional[str]:
-    """Parse base branch from issue body.
+    r"""Parse base branch from issue body.
 
     Looks for a markdown heading (any level) containing "Base Branch" (case-insensitive)
     and extracts the content until the next heading.

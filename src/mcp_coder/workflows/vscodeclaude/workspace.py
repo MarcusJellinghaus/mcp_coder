@@ -159,7 +159,7 @@ def create_working_folder(folder_path: Path) -> bool:
         folder_path: Full path to create
 
     Returns:
-        True if created, False if already existed
+        True if folder was newly created, False if it already existed.
     """
     if folder_path.exists():
         return False
@@ -187,6 +187,7 @@ def setup_git_repo(
 
     Raises:
         CalledProcessError: If git command fails
+        ValueError: If folder exists with content but is not a git repository.
     """
     # Check if folder is empty or doesn't have .git
     is_empty = not any(folder_path.iterdir()) if folder_path.exists() else True
@@ -308,9 +309,6 @@ def run_setup_commands(
         folder_path: Working directory for commands
         commands: List of shell commands to run
 
-    Raises:
-        CalledProcessError: If any command fails
-
     Logs progress for each command using logger.info().
     """
     for command in commands:
@@ -398,6 +396,9 @@ def _escape_batch_title(text: str) -> str:
     Prevents shell injection when issue titles contain characters like >
     that cmd.exe would otherwise interpret as redirection operators.
     Order matters: ^ must be escaped first to avoid double-escaping.
+
+    Returns:
+        Text with special batch characters escaped.
     """
     for char in ("^", "&", "|", "<", ">"):
         text = text.replace(char, f"^{char}")
@@ -434,6 +435,10 @@ def create_startup_script(
 
     Returns:
         Path to created script (.bat or .sh)
+
+    Raises:
+        NotImplementedError: If platform is not Windows.
+        ValueError: If commands config is not a list of strings.
 
     Execution strategy depends on the number of commands in the config:
     - Single command: interactive-only via ``claude "{cmd} {issue_number}"``.

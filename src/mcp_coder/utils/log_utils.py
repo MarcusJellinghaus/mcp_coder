@@ -128,7 +128,11 @@ stdlogger = logging.getLogger(__name__)
 
 
 def _is_testing_environment() -> bool:
-    """Check if we're currently running in a testing environment (pytest)."""
+    """Check if we're currently running in a testing environment (pytest).
+
+    Returns:
+        True if pytest is detected in the current process.
+    """
     import sys
 
     # Check if pytest is running
@@ -141,7 +145,11 @@ def _is_testing_environment() -> bool:
 
 
 def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
-    """Configure logging - if log_file specified, logs only to file; otherwise to console."""
+    """Configure logging - if log_file specified, logs only to file; otherwise to console.
+
+    Raises:
+        ValueError: If log_level is not a valid logging level.
+    """
     # Set log level
     numeric_level = getattr(logging, log_level.upper(), None)
     if not isinstance(numeric_level, int):

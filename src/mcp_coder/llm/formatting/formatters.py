@@ -131,7 +131,6 @@ def format_raw_response(response_data: Dict[str, Any]) -> str:
     Returns:
         Formatted string with complete debugging information including JSON structures
     """
-
     # Start with everything from verbose format
     verbose_output = format_verbose_response(response_data)
 

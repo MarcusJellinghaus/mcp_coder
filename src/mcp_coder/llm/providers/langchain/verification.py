@@ -29,7 +29,9 @@ _BACKEND_PACKAGES: dict[str, str] = {
 def _mask_api_key(key: str | None) -> str | None:
     """Mask an API key, showing first 4 and last 4 characters.
 
-    Returns None if key is None or empty, '****' if key is 8 chars or fewer.
+    Returns:
+        Masked key string (e.g. ``"sk-1...xyz9"``), ``"****"`` if the key is
+        8 characters or fewer, or None if the key is None or empty.
     """
     if not key:
         return None
@@ -43,7 +45,10 @@ def _resolve_api_key(
 ) -> tuple[str | None, str | None]:
     """Resolve API key from environment variable or config.
 
-    Returns (key, source) where source describes where the key was found.
+    Returns:
+        Tuple of ``(key, source)`` where *key* is the resolved API key string
+        and *source* describes where it was found (e.g. ``"OPENAI_API_KEY env var"``
+        or ``"config.toml"``).  Both elements are None if no key is available.
     """
     env_var = _BACKEND_ENV_VARS.get(backend or "")
     if env_var:
@@ -56,7 +61,11 @@ def _resolve_api_key(
 
 
 def _check_package_installed(package_name: str) -> bool:
-    """Check if a Python package is installed using importlib."""
+    """Check if a Python package is installed using importlib.
+
+    Returns:
+        True if the package is installed and importable, False otherwise.
+    """
     try:
         return importlib.util.find_spec(package_name) is not None
     except (ValueError, ModuleNotFoundError):
@@ -66,7 +75,9 @@ def _check_package_installed(package_name: str) -> bool:
 def _check_mcp_adapter_packages() -> dict[str, dict[str, Any]]:
     """Check if langchain-mcp-adapters and langgraph are importable.
 
-    Returns dict with 'mcp_adapters' and 'langgraph' entries.
+    Returns:
+        Dict with ``"mcp_adapters"`` and ``"langgraph"`` keys, each mapping
+        to a dict containing ``"ok"`` (bool) and ``"value"`` (status message).
     """
     mcp_ok = _check_package_installed("langchain_mcp_adapters")
     lg_ok = _check_package_installed("langgraph")
@@ -254,7 +265,11 @@ def verify_langchain(
 def _list_models_for_backend(
     backend: str, api_key: str | None, endpoint: str | None
 ) -> dict[str, Any]:
-    """List models for the given backend using existing _models.py functions."""
+    """List models for the given backend using existing _models.py functions.
+
+    Returns:
+        Dict with 'ok' (bool), 'value' (list of model names), and optionally 'error'.
+    """
     try:
         from . import _models
 

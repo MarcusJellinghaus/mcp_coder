@@ -190,8 +190,6 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
     Returns:
         int: Exit code (0 for success, 1 for error)
 
-    Raises:
-        Exception: Any unexpected errors (not caught, let bubble up)
     """
     try:
         # Step 1: Auto-create config on first run

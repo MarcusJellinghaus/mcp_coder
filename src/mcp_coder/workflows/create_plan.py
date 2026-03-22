@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Create plan workflow script for GitHub issue planning.
+"""Create plan workflow script for GitHub issue planning.
 
 This module orchestrates the complete plan generation workflow including
 argument parsing, prerequisite validation, branch management, prompt execution,
@@ -217,7 +216,11 @@ def create_pr_info_structure(project_dir: Path) -> bool:
 
 
 def _load_prompt_or_exit(header: str) -> str:
-    """Load prompt template or exit with clear error message."""
+    """Load prompt template or exit with clear error message.
+
+    Returns:
+        The loaded prompt template string.
+    """
     try:
         return get_prompt(str(PROMPTS_FILE_PATH), header)
     except (FileNotFoundError, ValueError) as e:
@@ -459,7 +462,14 @@ def validate_output_files(project_dir: Path) -> bool:
 
 
 def resolve_project_dir(project_dir_arg: Optional[str]) -> Path:
-    """Convert project directory argument to absolute Path, with validation."""
+    """Convert project directory argument to absolute Path, with validation.
+
+    Args:
+        project_dir_arg: Optional project directory path string, uses current directory if None
+
+    Returns:
+        Validated absolute Path to the project directory. Calls sys.exit(1) on validation failure.
+    """
     # Use current directory if no argument provided
     if project_dir_arg is None:
         project_path = Path.cwd()

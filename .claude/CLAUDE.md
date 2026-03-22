@@ -20,6 +20,7 @@
 | Run pytest | `Bash("pytest ...")` | `mcp__tools-py__run_pytest_check()` |
 | Run pylint | `Bash("pylint ...")` | `mcp__tools-py__run_pylint_check()` |
 | Run mypy | `Bash("mypy ...")` | `mcp__tools-py__run_mypy_check()` |
+| Run ruff | `Bash("ruff ...")` | ✅ `Bash("./tools/ruff_check.sh")` |
 | Git operations | ✅ `Bash("git ...")` | ✅ `Bash("git ...")` (allowed) |
 
 ## 🔴 CRITICAL: Code Quality Requirements
@@ -39,6 +40,16 @@ This runs:
 - **Mypy** - Static type checking
 
 **⚠️ ALL CHECKS MUST PASS** - If ANY issues are found, you MUST fix them immediately before proceeding.
+
+### 📋 Ruff Docstring Checks
+
+**MANDATORY**: Use the project's ruff script to check docstring linting:
+
+```bash
+./tools/ruff_check.sh
+```
+
+Do NOT call `ruff` directly — always use the script in `tools/`.
 
 ### 📋 Pytest Execution Requirements
 
@@ -172,6 +183,7 @@ git commit
 git log
 git fetch
 git ls-tree
+./tools/ruff_check.sh
 ```
 
 **⚠️ Bash discipline (applies to subagents too):**

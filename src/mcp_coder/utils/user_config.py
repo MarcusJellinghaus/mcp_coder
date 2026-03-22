@@ -258,9 +258,6 @@ def create_default_config() -> bool:
 
     Returns:
         True if config was created, False if it already exists
-
-    Raises:
-        OSError: If directory/file creation fails due to permissions
     """
     config_path = get_config_file_path()
 

@@ -69,9 +69,6 @@ def _safe_repo_context(project_dir: Path) -> Iterator[Repo]:
 
     Yields:
         Repo: GitPython repository object
-
-    Raises:
-        InvalidGitRepositoryError: If directory is not a git repository
     """
     repo = None
     try:
@@ -91,9 +88,6 @@ def _normalize_git_path(path: Path, base_dir: Path) -> str:
 
     Returns:
         Git-compatible path string using forward slashes
-
-    Raises:
-        ValueError: If path is not relative to base_dir
     """
     relative_path = path.relative_to(base_dir)
     return str(relative_path).replace("\\", "/")

@@ -1,3 +1,5 @@
+"""Session launch operations for VSCodeClaude workflow."""
+
 import logging
 import platform
 import shutil
@@ -113,10 +115,6 @@ def prepare_and_launch_session(
 
     Returns:
         Created session data
-
-    Raises:
-        FileNotFoundError: If .mcp.json missing
-        CalledProcessError: If git or setup fails
 
     Steps:
     1. Create working folder

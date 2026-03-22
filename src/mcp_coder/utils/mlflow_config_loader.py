@@ -30,6 +30,9 @@ def load_mlflow_config() -> MLflowConfig:
     Returns:
         MLflowConfig with loaded settings
 
+    Raises:
+        ValueError: If tracking URI format is invalid when MLflow is enabled.
+
     Example:
         >>> config = load_mlflow_config()
         >>> if config.enabled:

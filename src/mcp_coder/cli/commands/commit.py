@@ -28,7 +28,11 @@ logger = logging.getLogger(__name__)
 
 
 def execute_commit_auto(args: argparse.Namespace) -> int:
-    """Execute commit auto command with optional preview. Returns exit code."""
+    """Execute commit auto command with optional preview.
+
+    Returns:
+        Exit code (0 for success, 1 for validation error, 2 for commit/LLM error).
+    """
     logger.info("Starting commit auto with preview=%s", args.preview)
 
     # Extract and validate execution_dir
@@ -95,7 +99,13 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
 
 
 def validate_git_repository(project_dir: Path) -> Tuple[bool, Optional[str]]:
-    """Validate current directory is git repo with changes."""
+    """Validate current directory is git repo with changes.
+
+    Returns:
+        Tuple of (success, error_message):
+        - (True, None) if directory is a valid git repo with changes to commit
+        - (False, error_message) if validation failed
+    """
     if not is_git_repository(project_dir):
         return False, "Not a git repository"
 
@@ -124,7 +134,11 @@ def validate_git_repository(project_dir: Path) -> Tuple[bool, Optional[str]]:
 
 
 def execute_commit_clipboard(args: argparse.Namespace) -> int:
-    """Execute commit clipboard command. Returns exit code."""
+    """Execute commit clipboard command.
+
+    Returns:
+        Exit code (0 for success, 1 for validation error, 2 for commit error).
+    """
     logger.info("Starting commit clipboard")
 
     project_dir = Path(args.project_dir) if args.project_dir else Path.cwd()

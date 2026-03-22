@@ -51,7 +51,11 @@ class BranchStatusReport:
     recommendations: List[str]  # List of suggested actions
 
     def format_for_human(self) -> str:
-        """Format report for human consumption."""
+        """Format report for human consumption.
+
+        Returns:
+            Formatted string with status icons and recommendations.
+        """
         # Determine status icons
         ci_icon = {
             CI_PASSED: "✅",
@@ -107,7 +111,14 @@ class BranchStatusReport:
         return "\n".join(lines)
 
     def format_for_llm(self, max_lines: int = 300) -> str:
-        """Format report for LLM consumption with truncation."""
+        """Format report for LLM consumption with truncation.
+
+        Args:
+            max_lines: Maximum number of lines for CI error details.
+
+        Returns:
+            Compact formatted string optimized for LLM context windows.
+        """
         # Convert rebase_needed to status string
         rebase_status = "BEHIND" if self.rebase_needed else "UP_TO_DATE"
         tasks_status = "COMPLETE" if self.tasks_complete else "INCOMPLETE"
@@ -145,7 +156,11 @@ class BranchStatusReport:
 
 
 def create_empty_report() -> BranchStatusReport:
-    """Create empty report with default values."""
+    """Create empty report with default values.
+
+    Returns:
+        BranchStatusReport with unknown/default values for all fields.
+    """
     return BranchStatusReport(
         branch_name="unknown",
         base_branch="unknown",
@@ -311,6 +326,9 @@ def _collect_ci_status(
     1. Summary of all failed jobs and their failed steps
     2. Detailed logs for the first failed job only (up to max_lines)
     3. List of other failed jobs (names only, no logs)
+
+    Returns:
+        Tuple of (ci_status_string, error_details_or_none).
     """
     logger = logging.getLogger(__name__)
 
@@ -533,7 +551,11 @@ def _build_ci_error_details(
 
 
 def _collect_rebase_status(project_dir: Path) -> Tuple[bool, str]:
-    """Collect rebase requirements."""
+    """Collect rebase requirements.
+
+    Returns:
+        Tuple of (rebase_needed, reason_string).
+    """
     logger = logging.getLogger(__name__)
 
     try:
@@ -552,7 +574,11 @@ def _collect_rebase_status(project_dir: Path) -> Tuple[bool, str]:
 
 
 def _collect_task_status(project_dir: Path) -> bool:
-    """Collect task tracker completion status."""
+    """Collect task tracker completion status.
+
+    Returns:
+        True if all tasks are complete, False otherwise.
+    """
     logger = logging.getLogger(__name__)
 
     try:
@@ -585,8 +611,11 @@ def _collect_github_label(
     """Collect current GitHub workflow status label.
 
     Args:
-        project_dir: Path to the git repository
+        _project_dir: Path to the git repository
         issue_data: Optional pre-fetched issue data (contains labels directly)
+
+    Returns:
+        Status label string, or DEFAULT_LABEL if not found.
 
     Note:
         If issue_data is None, returns DEFAULT_LABEL.
@@ -611,7 +640,11 @@ def _collect_github_label(
 
 
 def _generate_recommendations(report_data: Dict[str, Any]) -> List[str]:
-    """Generate actionable recommendations based on status."""
+    """Generate actionable recommendations based on status.
+
+    Returns:
+        List of recommendation strings prioritized by importance.
+    """
     recommendations = []
 
     # Priority order for recommendations:

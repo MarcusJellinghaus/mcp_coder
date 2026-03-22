@@ -46,7 +46,11 @@ logger = logging.getLogger(__name__)
 
 
 def create_parser() -> argparse.ArgumentParser:
-    """Create and configure argument parser."""
+    """Create and configure argument parser.
+
+    Returns:
+        Configured ArgumentParser for the mcp-coder CLI.
+    """
     parser = argparse.ArgumentParser(
         prog="mcp-coder",
         description="AI-powered software development automation toolkit",
@@ -96,7 +100,11 @@ def create_parser() -> argparse.ArgumentParser:
 
 
 def handle_no_command(args: argparse.Namespace) -> int:
-    """Handle case when no command is provided."""
+    """Handle case when no command is provided.
+
+    Returns:
+        Exit code (1 for error since no command was provided).
+    """
     logger.info("No command provided, showing help")
 
     help_text = get_help_text(include_examples=False)
@@ -106,7 +114,11 @@ def handle_no_command(args: argparse.Namespace) -> int:
 
 
 def _handle_coordinator_command(args: argparse.Namespace) -> int:
-    """Handle coordinator subcommands."""
+    """Handle coordinator subcommands.
+
+    Returns:
+        Exit code from the executed coordinator subcommand.
+    """
     if hasattr(args, "coordinator_subcommand") and args.coordinator_subcommand:
         if args.coordinator_subcommand == "test":
             return execute_coordinator_test(args)
@@ -138,7 +150,11 @@ def _handle_coordinator_command(args: argparse.Namespace) -> int:
 
 
 def _handle_check_command(args: argparse.Namespace) -> int:
-    """Handle check subcommands."""
+    """Handle check subcommands.
+
+    Returns:
+        Exit code from the executed check subcommand.
+    """
     if hasattr(args, "check_subcommand") and args.check_subcommand:
         if args.check_subcommand == "branch-status":
             from .commands.check_branch_status import execute_check_branch_status
@@ -159,7 +175,11 @@ def _handle_check_command(args: argparse.Namespace) -> int:
 
 
 def _handle_gh_tool_command(args: argparse.Namespace) -> int:
-    """Handle gh-tool subcommands."""
+    """Handle gh-tool subcommands.
+
+    Returns:
+        Exit code from the executed gh-tool subcommand.
+    """
     if hasattr(args, "gh_tool_subcommand") and args.gh_tool_subcommand:
         if args.gh_tool_subcommand == "get-base-branch":
             return execute_get_base_branch(args)
@@ -174,7 +194,11 @@ def _handle_gh_tool_command(args: argparse.Namespace) -> int:
 
 
 def _handle_git_tool_command(args: argparse.Namespace) -> int:
-    """Handle git-tool subcommands."""
+    """Handle git-tool subcommands.
+
+    Returns:
+        Exit code from the executed git-tool subcommand.
+    """
     if hasattr(args, "git_tool_subcommand") and args.git_tool_subcommand:
         if args.git_tool_subcommand == "compact-diff":
             return execute_compact_diff(args)
@@ -189,7 +213,11 @@ def _handle_git_tool_command(args: argparse.Namespace) -> int:
 
 
 def _handle_commit_command(args: argparse.Namespace) -> int:
-    """Handle commit subcommands."""
+    """Handle commit subcommands.
+
+    Returns:
+        Exit code from the executed commit subcommand.
+    """
     if args.commit_mode == "auto":
         return execute_commit_auto(args)
     elif args.commit_mode == "clipboard":
@@ -201,7 +229,11 @@ def _handle_commit_command(args: argparse.Namespace) -> int:
 
 
 def main() -> int:
-    """Main CLI entry point. Returns exit code."""
+    """Main CLI entry point.
+
+    Returns:
+        Exit code (0 for success, 1 for user error, 2 for unexpected error).
+    """
     # Ensure stdout/stderr use UTF-8 on all platforms (e.g. Windows cp1252 default).
     # Required by git-tool compact-diff, which outputs raw diff text that may contain
     # Unicode characters (e.g. emoji in commit messages or source files).

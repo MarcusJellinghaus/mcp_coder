@@ -48,6 +48,8 @@ def _anthropic_mock() -> MagicMock:
 
 
 class TestListGeminiModels:
+    """Tests for list_gemini_models function."""
+
     def test_returns_model_names_without_prefix(self) -> None:
         """list_gemini_models strips 'models/' prefix from model names."""
         models = [
@@ -90,6 +92,8 @@ class TestListGeminiModels:
 
 
 class TestListOpenaiModels:
+    """Tests for list_openai_models function."""
+
     def test_returns_sorted_model_ids(self) -> None:
         """list_openai_models returns sorted model IDs."""
         models = [_make_model("gpt-4o"), _make_model("gpt-3.5-turbo")]
@@ -127,6 +131,8 @@ class TestListOpenaiModels:
 
 
 class TestListAnthropicModels:
+    """Tests for list_anthropic_models function."""
+
     def test_returns_sorted_model_ids(self) -> None:
         """list_anthropic_models returns sorted model IDs."""
         models = [

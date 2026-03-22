@@ -59,7 +59,7 @@ def from_json_string(json_str: str) -> LLMResponseDict:
 
     Raises:
         ValueError: If version is incompatible or missing
-        json.JSONDecodeError: If JSON is invalid
+        json.JSONDecodeError: If the string is not valid JSON.
 
     Example:
         >>> json_str = '{"version": "1.0", "text": "Hello", ...}'
@@ -95,9 +95,6 @@ def serialize_llm_response(response: LLMResponseDict, filepath: Path | str) -> N
         response: LLMResponseDict to serialize
         filepath: Path to save JSON file (will be created or overwritten)
 
-    Raises:
-        OSError: If file cannot be written (permissions, disk space, etc.)
-
     Example:
         >>> response = {"version": "1.0", "text": "Hello", ...}
         >>> serialize_llm_response(response, "logs/abc-123.json")
@@ -127,9 +124,9 @@ def deserialize_llm_response(filepath: Path | str) -> LLMResponseDict:
         LLMResponseDict with available fields
 
     Raises:
-        ValueError: If version is incompatible or missing
-        FileNotFoundError: If file doesn't exist
-        json.JSONDecodeError: If file contains invalid JSON
+        FileNotFoundError: If the file does not exist.
+        json.JSONDecodeError: If the file content is not valid JSON.
+        ValueError: If version is incompatible or missing.
 
     Example:
         >>> response = deserialize_llm_response("logs/abc-123.json")

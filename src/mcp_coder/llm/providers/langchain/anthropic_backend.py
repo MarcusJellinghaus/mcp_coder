@@ -25,7 +25,11 @@ def create_anthropic_model(
     api_key: str | None,
     timeout: int = 30,
 ) -> ChatAnthropic:
-    """Create an Anthropic chat model without invoking it."""
+    """Create an Anthropic chat model without invoking it.
+
+    Returns:
+        Configured ChatAnthropic instance.
+    """
     effective_api_key = os.getenv("ANTHROPIC_API_KEY") or api_key
     kwargs: dict[str, Any] = {
         "model_name": model,

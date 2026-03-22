@@ -147,9 +147,6 @@ class CIResultsManager(BaseGitHubManager):
             project_dir: Path to the project directory containing git repository
             repo_url: GitHub repository URL (e.g., "https://github.com/user/repo.git")
 
-        Raises:
-            ValueError: If neither or both parameters provided, directory doesn't exist,
-                       is not a git repository, or GitHub token is not configured
         """
         super().__init__(project_dir=project_dir, repo_url=repo_url)
 
@@ -194,7 +191,6 @@ class CIResultsManager(BaseGitHubManager):
 
         Raises:
             ValueError: For invalid branch names
-            GithubException: For authentication or permission errors
         """
         # Validate branch parameter
         if not branch or not branch.strip():
@@ -363,7 +359,6 @@ class CIResultsManager(BaseGitHubManager):
 
         Raises:
             ValueError: For invalid run IDs
-            GithubException: For authentication or permission errors
         """
         # Validate run_id parameter
         if not self._validate_run_id(run_id):
@@ -411,7 +406,6 @@ class CIResultsManager(BaseGitHubManager):
 
         Raises:
             ValueError: For invalid run IDs
-            GithubException: For authentication or permission errors
         """
         # Validate run_id parameter
         if not self._validate_run_id(run_id):

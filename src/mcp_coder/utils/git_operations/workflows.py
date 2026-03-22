@@ -32,8 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 def commit_all_changes(message: str, project_dir: Path) -> CommitResult:
-    """
-    Orchestrate workflow: stage all unstaged changes and commit them in one operation.
+    """Orchestrate workflow: stage all unstaged changes and commit them in one operation.
 
     This is a git workflow orchestration function that combines stage_all_changes()
     and commit_staged_files() workflows into a single operation.

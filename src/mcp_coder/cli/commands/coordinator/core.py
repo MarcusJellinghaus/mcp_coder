@@ -228,7 +228,11 @@ def _filter_eligible_issues(issues: List[IssueData]) -> List[IssueData]:
     priority_map = {label: i for i, label in enumerate(PRIORITY_ORDER)}
 
     def get_priority(issue: IssueData) -> int:
-        """Get priority index for an issue (lower = higher priority)."""
+        """Get priority index for an issue (lower = higher priority).
+
+        Returns:
+            Priority index, where lower means higher priority.
+        """
         for label in issue["labels"]:
             if label in priority_map:
                 return priority_map[label]
@@ -253,8 +257,6 @@ def get_eligible_issues(
         2. status-05:plan-ready
         3. status-02:awaiting-planning (lowest priority)
 
-    Raises:
-        GithubException: If GitHub API errors occur
     """
     # Load label configuration
     # Uses bundled package config (coordinator operates without local project context)
@@ -300,7 +302,11 @@ def get_eligible_issues(
     priority_map = {label: i for i, label in enumerate(PRIORITY_ORDER)}
 
     def get_priority(issue: IssueData) -> int:
-        """Get priority index for an issue (lower = higher priority)."""
+        """Get priority index for an issue (lower = higher priority).
+
+        Returns:
+            Priority index, where lower means higher priority.
+        """
         for label in issue["labels"]:
             if label in priority_map:
                 return priority_map[label]
@@ -371,7 +377,6 @@ def dispatch_workflow(
 
     Raises:
         ValueError: If linked branch missing for implement/create-pr
-        JenkinsError: If job trigger or status check fails
     """
     # Step 1: Find current workflow label from issue
     current_label = None

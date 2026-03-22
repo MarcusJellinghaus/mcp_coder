@@ -1,5 +1,4 @@
-"""
-Comprehensive test suite for prompt_manager module.
+"""Comprehensive test suite for prompt_manager module.
 
 Tests cover:
 - Basic prompt retrieval from string content and file paths

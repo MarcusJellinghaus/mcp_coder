@@ -169,7 +169,7 @@ def _retry_with_backoff(
         Result of the successful function call
 
     Raises:
-        The last exception if all retries fail
+        RuntimeError: If all retry attempts fail with no exception recorded
     """
     last_exception: Optional[Exception] = None
 
@@ -304,8 +304,7 @@ async def _ask_claude_code_api_async(
     env_vars: dict[str, str] | None = None,
     cwd: str | None = None,
 ) -> str:
-    """
-    Ask Claude a question via Python SDK asynchronously.
+    """Ask Claude a question via Python SDK asynchronously.
 
     The Claude Code SDK returns a stream of different message types:
     - SystemMessage: Session metadata and configuration info
@@ -331,8 +330,7 @@ async def _ask_claude_code_api_async(
 
     Raises:
         ValueError: If input validation fails
-        asyncio.TimeoutError: If the request times out
-        Exception: Various exceptions from the SDK
+        TimeoutExpired: If the request times out
     """
     # Input validation
     if not question or not question.strip():
@@ -414,8 +412,7 @@ def ask_claude_code_api(
     cwd: str | None = None,
     mcp_config: str | None = None,
 ) -> LLMResponseDict:
-    """
-    Ask Claude a question via Python SDK with native session support.
+    """Ask Claude a question via Python SDK with native session support.
 
     Uses Claude's native session resumption via the resume parameter.
     Session continuity is handled by Claude Code SDK - no manual history management needed.
@@ -436,7 +433,7 @@ def ask_claude_code_api(
     Raises:
         ValueError: If input validation fails
         TimeoutExpired: If the request times out
-        CalledProcessError: If the SDK request fails
+        ClaudeAPIError: If the SDK request fails
 
     Examples:
         >>> # First call - get session_id from Claude
@@ -521,8 +518,7 @@ async def ask_claude_code_api_detailed(
     env_vars: dict[str, str] | None = None,
     cwd: str | None = None,
 ) -> dict[str, Any]:
-    """
-    Ask Claude a question via Python SDK and return detailed response information.
+    """Ask Claude a question via Python SDK and return detailed response information.
 
     This function returns comprehensive information about the Claude Code SDK response,
     including session metadata, response text, and cost/usage statistics.
@@ -562,8 +558,7 @@ async def ask_claude_code_api_detailed(
 
     Raises:
         ValueError: If input validation fails
-        asyncio.TimeoutError: If the request times out
-        Exception: Various exceptions from the SDK
+        TimeoutExpired: If the request times out
     """
     # Input validation
     if not question or not question.strip():
@@ -667,8 +662,7 @@ def ask_claude_code_api_detailed_sync(
     env_vars: dict[str, str] | None = None,
     cwd: str | None = None,
 ) -> dict[str, Any]:
-    """
-    Synchronous wrapper for ask_claude_code_api_detailed.
+    """Synchronous wrapper for ask_claude_code_api_detailed.
 
     See ask_claude_code_api_detailed for complete documentation.
 

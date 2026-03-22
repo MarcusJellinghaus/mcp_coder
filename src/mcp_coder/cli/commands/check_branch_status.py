@@ -58,6 +58,9 @@ def _wait_for_ci_completion(
         Tuple of (ci_status, success):
         - ci_status: Latest CI status dict or None
         - success: True if CI passed, False if failed/timeout
+
+    Raises:
+        RuntimeError: If API error occurs during CI polling.
     """
     if timeout_seconds <= 0:
         return None, True  # Graceful exit, no wait requested

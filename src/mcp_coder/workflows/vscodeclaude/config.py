@@ -214,7 +214,7 @@ def _get_configured_repos() -> set[str]:
     [coordinator.repos.*] sections, converting them to "owner/repo" format.
 
     Returns:
-        Set of repo full names in "owner/repo" format
+        Set of repo full names in "owner/repo" format. Invalid URLs are skipped.
     """
     config_data = load_config()
     repos_section = config_data.get("coordinator", {}).get("repos", {})

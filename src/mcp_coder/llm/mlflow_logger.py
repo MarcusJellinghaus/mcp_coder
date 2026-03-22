@@ -517,12 +517,20 @@ class MLflowLogger:
             self.active_run_id = None  # Clear anyway to prevent stuck state
 
     def _is_enabled(self) -> bool:
-        """Check if MLflow logging is enabled and available."""
+        """Check if MLflow logging is enabled and available.
+
+        Returns:
+            True if MLflow is enabled in config and available for import.
+        """
         return self.config.enabled and is_mlflow_available()
 
 
 def _check_tracking_uri(uri: str) -> dict[str, Any]:
-    """Validate tracking URI format and check URI-specific reachability."""
+    """Validate tracking URI format and check URI-specific reachability.
+
+    Returns:
+        Dict with 'ok' (bool) and 'value' (str) keys indicating validation result.
+    """
     try:
         validate_tracking_uri(uri)
     except ValueError as e:
@@ -560,8 +568,11 @@ def _probe_mlflow_connection(
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Probe MLflow server connectivity and experiment existence.
 
-    Returns (connection_entry, experiment_entry).
     No timeout applied — user can Ctrl+C if the server is unreachable.
+
+    Returns:
+        Tuple of (connection_entry, experiment_entry) dicts, each with
+        'ok' (bool) and 'value' (str) keys.
     """
     import mlflow  # pylint: disable=import-error
 
@@ -587,7 +598,11 @@ def _probe_mlflow_connection(
 
 
 def _check_artifact_location(path: str | None) -> dict[str, Any]:
-    """Check if artifact location directory exists and is writable."""
+    """Check if artifact location directory exists and is writable.
+
+    Returns:
+        Dict with 'ok' (bool) and 'value' (str) keys indicating check result.
+    """
     if not path:
         return {"ok": True, "value": "not configured (using default)"}
     expanded = os.path.expanduser(path)

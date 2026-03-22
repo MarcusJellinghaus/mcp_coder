@@ -23,8 +23,7 @@ from .core import _safe_repo_context, logger
 
 
 def is_git_repository(project_dir: Path) -> bool:
-    """
-    Check if the project directory is a git repository.
+    """Check if the project directory is a git repository.
 
     Args:
         project_dir: Path to check for git repository
@@ -47,8 +46,7 @@ def is_git_repository(project_dir: Path) -> bool:
 
 
 def get_staged_changes(project_dir: Path) -> list[str]:
-    """
-    Get list of files currently staged for commit.
+    """Get list of files currently staged for commit.
 
     Args:
         project_dir: Path to the project directory
@@ -84,8 +82,7 @@ def get_staged_changes(project_dir: Path) -> list[str]:
 
 
 def get_unstaged_changes(project_dir: Path) -> dict[str, list[str]]:
-    """
-    Get list of files with unstaged changes (modified and untracked).
+    """Get list of files with unstaged changes (modified and untracked).
 
     Args:
         project_dir: Path to the project directory
@@ -149,8 +146,7 @@ def get_unstaged_changes(project_dir: Path) -> dict[str, list[str]]:
 
 
 def get_full_status(project_dir: Path) -> dict[str, list[str]]:
-    """
-    Get comprehensive status of all changes: staged, modified, and untracked files.
+    """Get comprehensive status of all changes: staged, modified, and untracked files.
 
     Args:
         project_dir: Path to the project directory
@@ -201,8 +197,7 @@ def get_full_status(project_dir: Path) -> dict[str, list[str]]:
 def is_working_directory_clean(
     project_dir: Path, ignore_files: list[str] | None = None
 ) -> bool:
-    """
-    Check if working directory has no uncommitted changes.
+    """Check if working directory has no uncommitted changes.
 
     Args:
         project_dir: Path to the project directory containing git repository
@@ -276,8 +271,7 @@ def validate_branch_name(branch_name: str) -> bool:
 
 
 def get_current_branch_name(project_dir: Path) -> Optional[str]:
-    """
-    Get the name of the current active branch.
+    """Get the name of the current active branch.
 
     Args:
         project_dir: Path to the project directory containing git repository
@@ -319,8 +313,7 @@ def get_current_branch_name(project_dir: Path) -> Optional[str]:
 
 
 def get_default_branch_name(project_dir: Path) -> Optional[str]:
-    """
-    Get the name of the default branch from git remote HEAD reference.
+    """Get the name of the default branch from git remote HEAD reference.
 
     This checks what git considers the default branch by looking at
     refs/remotes/origin/HEAD, which is the authoritative source for
@@ -389,8 +382,7 @@ def get_default_branch_name(project_dir: Path) -> Optional[str]:
 
 
 def _check_local_default_branches(repo: Repo) -> Optional[str]:
-    """
-    Check for common default branch names in local repository.
+    """Check for common default branch names in local repository.
 
     Args:
         repo: GitPython repository object

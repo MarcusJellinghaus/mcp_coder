@@ -16,7 +16,8 @@ def list_gemini_models(api_key: str | None) -> list[str]:
     Returns short names without the 'models/' prefix, matching the format
     expected by ``[llm.langchain] model = "..."`` in config.toml.
 
-    Raises ImportError if google-genai is not installed (part of mcp-coder[langchain]).
+    Raises:
+        ImportError: If google-genai is not installed (part of mcp-coder[langchain]).
     """
     try:
         import google.genai as genai  # pylint: disable=import-error
@@ -36,7 +37,8 @@ def list_gemini_models(api_key: str | None) -> list[str]:
 def list_openai_models(api_key: str | None, endpoint: str | None = None) -> list[str]:
     """Return model IDs available for the given OpenAI API key.
 
-    Raises ImportError if openai is not installed (part of mcp-coder[langchain]).
+    Raises:
+        ImportError: If openai is not installed (part of mcp-coder[langchain]).
     """
     try:
         import openai  # pylint: disable=import-outside-toplevel
@@ -55,7 +57,8 @@ def list_openai_models(api_key: str | None, endpoint: str | None = None) -> list
 def list_anthropic_models(api_key: str | None) -> list[str]:
     """Return model IDs available for the given Anthropic API key.
 
-    Raises ImportError if anthropic is not installed (part of mcp-coder[langchain]).
+    Raises:
+        ImportError: If anthropic is not installed (part of mcp-coder[langchain]).
     """
     try:
         import anthropic  # pylint: disable=import-outside-toplevel

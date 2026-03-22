@@ -10,8 +10,7 @@ from .readers import get_unstaged_changes, is_git_repository
 
 
 def stage_specific_files(files: list[Path], project_dir: Path) -> bool:
-    """
-    Stage specific files for commit.
+    """Stage specific files for commit.
 
     Args:
         files: List of file paths to stage
@@ -77,8 +76,7 @@ def stage_specific_files(files: list[Path], project_dir: Path) -> bool:
 
 
 def stage_all_changes(project_dir: Path) -> bool:
-    """
-    Stage all unstaged changes (both modified and untracked files) for commit.
+    """Stage all unstaged changes (both modified and untracked files) for commit.
 
     Args:
         project_dir: Path to the project directory containing the git repository

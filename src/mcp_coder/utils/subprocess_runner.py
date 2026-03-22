@@ -1,5 +1,4 @@
-"""
-Subprocess execution utilities with MCP STDIO isolation support.
+"""Subprocess execution utilities with MCP STDIO isolation support.
 
 This module provides functions for executing command-line tools with proper
 timeout handling and STDIO isolation for Python commands in MCP server contexts.
@@ -81,7 +80,11 @@ class CommandOptions:
 
 
 def is_python_command(command: list[str]) -> bool:
-    """Check if a command is a Python execution command."""
+    """Check if a command is a Python execution command.
+
+    Returns:
+        True if the command runs a Python interpreter.
+    """
     if not command:
         return False
 
@@ -93,7 +96,11 @@ def is_python_command(command: list[str]) -> bool:
 
 
 def get_python_isolation_env() -> dict[str, str]:
-    """Get environment variables for Python subprocess isolation."""
+    """Get environment variables for Python subprocess isolation.
+
+    Returns:
+        Dict of environment variables with MCP isolation settings.
+    """
     env = os.environ.copy()
 
     # Python-specific settings to prevent MCP STDIO conflicts
@@ -116,7 +123,11 @@ def get_python_isolation_env() -> dict[str, str]:
 
 
 def get_utf8_env() -> dict[str, str]:
-    """Get environment variables for UTF-8 encoding support on all subprocess types."""
+    """Get environment variables for UTF-8 encoding support on all subprocess types.
+
+    Returns:
+        Dict of environment variables with UTF-8 encoding settings.
+    """
     env = os.environ.copy()
 
     # Set UTF-8 encoding for all subprocess types
@@ -148,8 +159,7 @@ def get_utf8_env() -> dict[str, str]:
 def _run_subprocess(  # pylint: disable=too-many-statements
     command: list[str], options: CommandOptions, use_stdio_isolation: bool = False
 ) -> subprocess.CompletedProcess[str]:
-    """
-    Internal function to run subprocess with or without STDIO isolation.
+    """Run subprocess with or without STDIO isolation.
 
     Args:
         command: Command to execute
@@ -158,6 +168,9 @@ def _run_subprocess(  # pylint: disable=too-many-statements
 
     Returns:
         CompletedProcess with execution results
+
+    Raises:
+        TimeoutExpired: If the subprocess exceeds the configured timeout.
     """
     # Track start time for timeout logging
     subprocess_start_time = time.time()
@@ -498,8 +511,7 @@ def _run_subprocess(  # pylint: disable=too-many-statements
 def execute_subprocess(
     command: list[str], options: CommandOptions | None = None
 ) -> CommandResult:
-    """
-    Execute a command with automatic STDIO isolation for Python commands.
+    """Execute a command with automatic STDIO isolation for Python commands.
 
     Args:
         command: Command and arguments as a list
@@ -507,6 +519,10 @@ def execute_subprocess(
 
     Returns:
         CommandResult with execution details
+
+    Raises:
+        TypeError: If command is None.
+        CalledProcessError: If check is True and the process returns non-zero exit code.
     """
     if command is None:
         raise TypeError("Command cannot be None")
@@ -594,8 +610,7 @@ def execute_command(
     timeout_seconds: int = 120,
     env: dict[str, str] | None = None,
 ) -> CommandResult:
-    """
-    Execute a command with automatic STDIO isolation for Python commands.
+    """Execute a command with automatic STDIO isolation for Python commands.
 
     Args:
         command: Complete command as list (e.g., ["python", "-m", "pylint", "src"])
