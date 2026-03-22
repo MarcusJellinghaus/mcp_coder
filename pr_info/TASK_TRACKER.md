@@ -50,13 +50,13 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: Verify and Fix Remaining Tests Across All Suites ([step_3.md](./steps/step_3.md))
 
-- [ ] Part A: Run full unit test suite (excluding integration tests)
-- [ ] Part B: Fix any remaining test failures (stale mocks, imports, ValueError assertions, missing params)
-- [ ] Part B: Run pylint, pytest, mypy — fix all issues
-- [ ] Part B: Prepare git commit message
-- [ ] Part C: Re-run full test suite — verify all tests pass
-- [ ] Part D: Run pylint and mypy final checks — fix any issues
-- [ ] Part D: Prepare git commit message
+- [x] Part A: Run full unit test suite (excluding integration tests)
+- [x] Part B: Fix any remaining test failures (stale mocks, imports, ValueError assertions, missing params)
+- [x] Part B: Run pylint, pytest, mypy — fix all issues
+- [x] Part B: Prepare git commit message
+- [x] Part C: Re-run full test suite — verify all tests pass
+- [x] Part D: Run pylint and mypy final checks — fix any issues
+- [x] Part D: Prepare git commit message
 
 ## Pull Request
 
