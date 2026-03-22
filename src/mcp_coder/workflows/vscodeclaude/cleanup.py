@@ -39,7 +39,7 @@ def get_stale_sessions(
     - Blocked (has ignore labels like blocked/wait)
     - Closed (issue state is closed)
     - Unassigned (user no longer assigned to issue)
-    - Ineligible (bot statuses or pr-created - no initial_command)
+    - Ineligible (bot statuses or pr-created - no commands)
 
     Args:
         cached_issues_by_repo: Optional cache of issues for state/blocked/eligibility detection
