@@ -26,4 +26,25 @@
 - Reverted caller updates in 2 source files and 3 test files
 - Updated docstrings to match reverted parameter names
 
-**Status:** Ready to commit
+**Status:** Committed (342a76a)
+
+## Round 2 — 2026-03-22
+
+**Findings:**
+- Re-verified all round 1 skipped items — still correctly skipped
+- Round 1 fix (revert `_` prefix, add inline disable) is clean, no new issues
+- All mechanical changes (exception chaining, unused imports, lambda simplification, etc.) are correct
+- pyproject.toml configuration is well-structured with appropriate comments
+
+**Decisions:**
+- All findings confirmed as correct, no further changes needed
+
+**Changes:** None
+
+**Status:** No changes needed
+
+## Final Status
+
+- **Rounds:** 2
+- **Commits:** 1 (342a76a — revert underscore-prefixed public API params)
+- **Remaining issues:** None — clean, ready to merge
