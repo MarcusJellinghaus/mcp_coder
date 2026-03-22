@@ -24,6 +24,6 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] [Step 1](./steps/step_1.md): `labels.json` schema + `test_types.py` + `labels_schema.md`
 - [x] [Step 2](./steps/step_2.md): `templates.py` + `issues.py` + docstrings + Linux template cleanup
 - [x] [Step 3](./steps/step_3.md): `workspace.py` + `test_workspace.py` + input validation + edge-case tests
-- [ ] [Step 4](./steps/step_4.md): Remaining test comments + full quality checks
+- [x] [Step 4](./steps/step_4.md): Remaining test comments + full quality checks
 
 ## Pull Request
