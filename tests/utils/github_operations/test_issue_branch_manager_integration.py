@@ -48,7 +48,7 @@ def issue_branch_manager(
     try:
         manager = create_github_manager(IssueBranchManager, github_test_setup)
         yield manager
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         pytest.skip(f"Failed to create IssueBranchManager: {e}")
 
 
@@ -74,7 +74,7 @@ def issue_manager(
     try:
         manager = create_github_manager(IssueManager, github_test_setup)
         yield manager
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         pytest.skip(f"Failed to create IssueManager: {e}")
 
 
@@ -264,7 +264,7 @@ class TestIssueBranchManagerIntegration:
                     ref = repo.get_git_ref(f"heads/{branch_name}")
                     ref.delete()
                     print(f"✓ Deleted Git branch: {branch_name}")
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-exception-caught
                     print(f"⚠ Failed to delete Git branch {branch_name}: {e}")
 
             # ============================================================
@@ -303,7 +303,7 @@ class TestIssueBranchManagerIntegration:
                     print(
                         f"\n✓ Final cleanup: Ensured issue #{created_issue['number']} is closed"
                     )
-                except Exception:
+                except Exception:  # pylint: disable=broad-exception-caught
                     pass  # Ignore cleanup failures
 
             # Attempt to delete any remaining branches
@@ -316,9 +316,9 @@ class TestIssueBranchManagerIntegration:
                                 ref = repo.get_git_ref(f"heads/{branch_name}")
                                 ref.delete()
                                 print(f"✓ Final cleanup: Deleted branch {branch_name}")
-                            except Exception:
+                            except Exception:  # pylint: disable=broad-exception-caught
                                 pass  # Branch may already be deleted
-                except Exception:
+                except Exception:  # pylint: disable=broad-exception-caught
                     pass  # Ignore cleanup failures
 
     def test_error_handling_without_creating_issues(

@@ -17,7 +17,7 @@ try:
     from mcp_coder.cli.commands.create_pr import execute_create_pr
 
     CREATE_PR_MODULE_AVAILABLE = True
-except Exception as e:
+except Exception as e:  # pylint: disable=broad-exception-caught
     import traceback
 
     print(f"\n\n*** IMPORT FAILED: {type(e).__name__}: {e} ***")

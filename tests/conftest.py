@@ -310,7 +310,7 @@ def github_test_setup(tmp_path: Path) -> Generator[GitHubTestSetup, None, None]:
                 repo.git.checkout("master")
             except:
                 pass  # Use current branch
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         pytest.skip(f"Could not clone test repository {test_repo_url}: {e}")
 
     setup: GitHubTestSetup = {

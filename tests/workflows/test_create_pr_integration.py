@@ -74,7 +74,7 @@ class TestCreatePRWorkflowIntegration:
         # Test task tracker
         try:
             incomplete_tasks = get_incomplete_tasks(str(project_dir / "pr_info"))
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             pytest.fail(f"Task tracker check failed: {e}")
 
         # Individual assertions for better error messages
