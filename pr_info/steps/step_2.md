@@ -135,6 +135,7 @@ This keeps `verify_mlflow()` readable and the formatting logic unit-testable ind
 
 ```
 # Inside verify_mlflow(), after tracking_uri check for SQLite:
+# Guard: Only query the SQLite DB when tracking_uri["ok"] is True.
 db_path = expand_user(strip_sqlite_prefix(config.tracking_uri))
 stats = query_sqlite_tracking(db_path, config.experiment_name, since)
 

@@ -217,6 +217,8 @@ The `llm_integration` marker means this test is **excluded from the default CI f
 not ... and not llm_integration
 ```
 
+Also add `and not llm_integration` to the CLAUDE.md recommended pytest exclusion pattern (the fast unit tests example in the `Pytest Execution Requirements` section).
+
 Check `docs/architecture/architecture.md` Section 8 (Testing Strategy) and `.github/workflows/ci.yml` for the current exclusion pattern string. Add `llm_integration` to it — but only if there is already a marker exclusion list. If the CI runs all tests without marker filtering, no CI change is needed.
 
 ### Unit test run (default, no real LLM)

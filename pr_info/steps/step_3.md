@@ -130,9 +130,11 @@ mlflow_result = verify_mlflow(since=timestamp)
 - `cli` → `llm` is allowed by both tach and import-linter (CLI is the presentation layer)
 - `ask_llm` is already the public interface used throughout the codebase
 
-### `_LABEL_MAP` — no change needed for the inline print
+### `_LABEL_MAP` — clean up orphan entry
 
 The test prompt result is printed via a direct `print()` call (same pattern as `Active provider`), not via `_format_section()`. Therefore no new `_LABEL_MAP` entry is needed for the test prompt line itself.
+
+Remove `"test_prompt": "Test prompt"` from `_LABEL_MAP` in `verify.py` — it is an orphan entry after the test prompt removal from `verify_langchain()`.
 
 ### `verify_mlflow()` call site
 
@@ -159,7 +161,11 @@ except any exception:
 mlflow_result = verify_mlflow(since=timestamp)
 ```
 
-The test prompt failure is **informational within the LLM PROVIDER section** — it does not directly set `overall_ok`. The MLflow DB check (`tracking_data`) is what propagates failure to `overall_ok` when the run was not logged. This matches the issue's semantics: the test prompt failure is visible, and the MLflow tracking check confirms end-to-end.
+The test prompt result should be captured and should gate `overall_ok` **only when MLflow is enabled**. When MLflow is disabled, the test prompt failure is informational only (printed but no exit code impact). Show MLflow enabled/disabled status in the verify output.
+
+This means `execute_verify()` needs to check MLflow config, and if enabled, factor the test prompt result into `_compute_exit_code`. When MLflow is disabled, the test prompt failure is visible but does not affect the exit code.
+
+The MLflow DB check (`tracking_data`) additionally confirms end-to-end logging when enabled.
 
 ---
 
