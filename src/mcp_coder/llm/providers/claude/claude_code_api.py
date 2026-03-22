@@ -2,9 +2,7 @@
 """Claude Code Python SDK implementation for programmatic interaction."""
 
 import asyncio
-import json
 import logging
-import os
 import time
 from datetime import datetime
 from typing import Any, Callable, Optional, Tuple
@@ -24,7 +22,6 @@ from mcp_coder.utils.subprocess_runner import CalledProcessError, TimeoutExpired
 
 from ...types import LLM_RESPONSE_VERSION, LLMResponseDict
 from .claude_executable_finder import (
-    find_claude_executable,
     setup_claude_path,
     verify_claude_installation,
 )

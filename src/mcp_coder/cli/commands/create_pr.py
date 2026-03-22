@@ -7,7 +7,6 @@ which generates PR summaries and cleans up repository state.
 import argparse
 import logging
 import sys
-from pathlib import Path
 
 from ...workflows.create_pr.core import run_create_pr_workflow
 from ...workflows.utils import resolve_project_dir

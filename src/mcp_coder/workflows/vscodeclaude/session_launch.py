@@ -28,12 +28,9 @@ from .helpers import (
     build_session,
     get_issue_status,
     get_repo_short_name_from_full,
-    get_stage_display_name,
-    truncate_title,
 )
 from .issues import (
     _filter_eligible_vscodeclaude_issues,
-    is_status_eligible_for_session,
     status_requires_linked_branch,
 )
 from .sessions import (

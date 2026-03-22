@@ -22,7 +22,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### src/ (Steps 1-8)
-- [ ] [Step 1: src/ W0611 — unused imports (36)](./steps/step_1.md)
+- [x] [Step 1: src/ W0611 — unused imports (36)](./steps/step_1.md)
 - [ ] [Step 2: src/ W0612 — unused variables (5)](./steps/step_2.md)
 - [ ] [Step 3: src/ W0613 + W1309 — unused args + bare f-string (9)](./steps/step_3.md)
 - [ ] [Step 4: src/ W0707 + W0719 — raise-missing-from + broad-exception-raised (8)](./steps/step_4.md)

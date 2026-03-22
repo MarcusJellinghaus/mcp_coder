@@ -5,7 +5,6 @@ from pathlib import Path
 
 from ...utils.folder_deletion import (
     DeletionFailureReason,
-    DeletionResult,
     is_directory_empty,
     safe_delete_folder,
 )

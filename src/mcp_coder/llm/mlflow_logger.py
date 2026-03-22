@@ -12,7 +12,6 @@ from collections import OrderedDict
 from datetime import datetime
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as pkg_version
-from pathlib import Path
 from typing import Any, Dict, Optional
 
 from ..config import MLflowConfig
@@ -50,7 +49,7 @@ def is_mlflow_available() -> bool:
 
     if _mlflow_available is None:
         try:
-            import mlflow  # noqa: F401  # type: ignore[import-untyped,import-not-found]  # pylint: disable=import-error
+            import mlflow  # noqa: F401  # type: ignore[import-untyped,import-not-found]  # pylint: disable=import-error,unused-import
 
             _mlflow_available = True
             logger.debug("MLflow is available")

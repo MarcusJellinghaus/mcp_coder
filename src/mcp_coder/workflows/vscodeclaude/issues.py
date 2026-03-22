@@ -16,7 +16,6 @@ from ...utils.user_config import get_cache_refresh_minutes, load_config
 from .config import (
     get_github_username,
     get_vscodeclaude_config,
-    load_vscodeclaude_config,
 )
 from .helpers import get_issue_status
 

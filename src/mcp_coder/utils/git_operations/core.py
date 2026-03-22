@@ -3,10 +3,9 @@
 import logging
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator, Optional, TypedDict
+from typing import Iterator, Optional, TypedDict
 
 from git import Repo
-from git.exc import GitCommandError, InvalidGitRepositoryError
 
 # Use same logging pattern as existing modules (see file_operations.py)
 logger = logging.getLogger(__name__)

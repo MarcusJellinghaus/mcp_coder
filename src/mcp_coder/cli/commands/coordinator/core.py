@@ -7,13 +7,11 @@ This module contains:
 """
 
 import logging
-from pathlib import Path
 from typing import List, Optional
 from urllib.parse import quote
 
 from ....utils.github_operations.github_utils import parse_github_url
 from ....utils.github_operations.issues import (
-    CacheData,
     IssueBranchManager,
     IssueData,
     IssueManager,

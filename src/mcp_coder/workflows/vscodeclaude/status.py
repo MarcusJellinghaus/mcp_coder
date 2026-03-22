@@ -13,7 +13,6 @@ from .sessions import (
     clear_vscode_process_cache,
     clear_vscode_window_cache,
     is_session_active,
-    load_sessions,
 )
 from .types import VSCodeClaudeSession
 

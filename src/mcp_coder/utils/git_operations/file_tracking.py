@@ -1,6 +1,5 @@
 """File tracking operations for git repositories."""
 
-import logging
 from pathlib import Path
 
 from git.exc import GitCommandError, InvalidGitRepositoryError

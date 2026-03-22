@@ -35,7 +35,6 @@ from ....workflows.vscodeclaude import (
     VSCodeClaudeSession,
     cleanup_stale_sessions,
     get_active_session_count,
-    get_folder_git_status,
     load_repo_vscodeclaude_config,
     load_sessions,
     load_vscodeclaude_config,

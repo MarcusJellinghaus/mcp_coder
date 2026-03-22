@@ -1,6 +1,5 @@
 """Git staging operations for managing staged changes."""
 
-import logging
 from pathlib import Path
 
 from git.exc import GitCommandError, InvalidGitRepositoryError

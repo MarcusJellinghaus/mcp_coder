@@ -1,13 +1,12 @@
 """Git diff operations for generating change summaries."""
 
-import logging
 from pathlib import Path
 from typing import Optional
 
 from git import Repo
 from git.exc import GitCommandError, InvalidGitRepositoryError
 
-from .core import GIT_SHORT_HASH_LENGTH, PLACEHOLDER_HASH, _safe_repo_context, logger
+from .core import PLACEHOLDER_HASH, _safe_repo_context, logger
 from .readers import (
     branch_exists,
     get_current_branch_name,

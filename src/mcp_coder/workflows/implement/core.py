@@ -10,10 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
-from mcp_coder.checks.branch_status import (
-    get_failed_jobs_summary,
-    truncate_ci_details,
-)
+from mcp_coder.checks.branch_status import get_failed_jobs_summary
 from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS, PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import prompt_llm
@@ -29,7 +26,6 @@ from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.github_operations.ci_results_manager import (
     CIResultsManager,
     CIStatusData,
-    JobData,
 )
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.commit_operations import generate_commit_message_with_llm

@@ -6,10 +6,9 @@ through the PyGithub library.
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TypedDict, cast
+from typing import List, Optional, TypedDict, cast
 
 from github.GithubException import GithubException
-from github.Repository import Repository
 
 from mcp_coder.utils.git_operations import (
     get_default_branch_name,
@@ -18,7 +17,6 @@ from mcp_coder.utils.git_operations import (
 from mcp_coder.utils.log_utils import log_function_call
 
 from .base_manager import BaseGitHubManager, _handle_github_errors
-from .github_utils import parse_github_url
 
 # Configure logger for GitHub operations
 logger = logging.getLogger(__name__)

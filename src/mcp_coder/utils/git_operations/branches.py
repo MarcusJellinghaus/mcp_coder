@@ -7,8 +7,6 @@ from git.exc import GitCommandError, InvalidGitRepositoryError
 
 from .core import _safe_repo_context, logger
 from .readers import (
-    get_current_branch_name,
-    get_default_branch_name,
     is_git_repository,
     validate_branch_name,
 )

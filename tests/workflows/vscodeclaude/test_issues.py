@@ -734,12 +734,6 @@ class TestBuildEligibleIssuesWithBranchCheck:
             lambda: mock_config,
         )
 
-        # Mock vscodeclaude config
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
-            lambda: {"github_username": "testuser"},
-        )
-
         # Mock get_github_username to avoid needing GitHub token
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.get_github_username",
@@ -808,12 +802,6 @@ class TestBuildEligibleIssuesWithBranchCheck:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.load_config",
             lambda: mock_config,
-        )
-
-        # Mock vscodeclaude config
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
-            lambda: {"github_username": "testuser"},
         )
 
         # Mock get_github_username to avoid needing GitHub token
@@ -885,12 +873,6 @@ class TestBuildEligibleIssuesWithBranchCheck:
             lambda: mock_config,
         )
 
-        # Mock vscodeclaude config
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
-            lambda: {"github_username": "testuser"},
-        )
-
         # Mock get_github_username to avoid needing GitHub token
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.get_github_username",
@@ -956,12 +938,6 @@ class TestBuildEligibleIssuesWithBranchCheck:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.load_config",
             lambda: mock_config,
-        )
-
-        # Mock vscodeclaude config
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
-            lambda: {"github_username": "testuser"},
         )
 
         # Mock get_github_username to avoid needing GitHub token
@@ -1033,12 +1009,6 @@ class TestBuildEligibleIssuesWithBranchCheck:
             lambda: mock_config,
         )
 
-        # Mock vscodeclaude config
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
-            lambda: {"github_username": "testuser"},
-        )
-
         # Mock get_github_username to avoid needing GitHub token
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.get_github_username",
@@ -1105,12 +1075,6 @@ class TestBuildEligibleIssuesWithBranchCheck:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.load_config",
             lambda: mock_config,
-        )
-
-        # Mock vscodeclaude config
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
-            lambda: {"github_username": "testuser"},
         )
 
         # Mock get_github_username to avoid needing GitHub token
