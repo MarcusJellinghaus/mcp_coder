@@ -265,7 +265,11 @@ def verify_langchain(
 def _list_models_for_backend(
     backend: str, api_key: str | None, endpoint: str | None
 ) -> dict[str, Any]:
-    """List models for the given backend using existing _models.py functions."""
+    """List models for the given backend using existing _models.py functions.
+
+    Returns:
+        Dict with 'ok' (bool), 'value' (list of model names), and optionally 'error'.
+    """
     try:
         from . import _models
 

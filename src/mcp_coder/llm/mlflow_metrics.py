@@ -171,7 +171,11 @@ class ConversationMetrics:
 
 # Convenience functions for direct use
 def extract_performance_metrics(response_data: Dict[str, Any]) -> Dict[str, float]:
-    """Extract performance metrics."""
+    """Extract performance metrics.
+
+    Returns:
+        Dictionary of performance metrics.
+    """
     metrics = ConversationMetrics()
     return metrics.extract_performance_metrics(response_data)
 
@@ -179,6 +183,10 @@ def extract_performance_metrics(response_data: Dict[str, Any]) -> Dict[str, floa
 def get_error_metrics(
     error: Optional[Exception], duration_ms: Optional[int]
 ) -> Dict[str, float]:
-    """Get error metrics."""
+    """Get error metrics.
+
+    Returns:
+        Dictionary of error metrics.
+    """
     metrics = ConversationMetrics()
     return metrics.get_error_metrics(error, duration_ms)

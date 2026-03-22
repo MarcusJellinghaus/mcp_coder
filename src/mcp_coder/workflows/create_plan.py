@@ -217,7 +217,11 @@ def create_pr_info_structure(project_dir: Path) -> bool:
 
 
 def _load_prompt_or_exit(header: str) -> str:
-    """Load prompt template or exit with clear error message."""
+    """Load prompt template or exit with clear error message.
+
+    Returns:
+        The loaded prompt template string.
+    """
     try:
         return get_prompt(str(PROMPTS_FILE_PATH), header)
     except (FileNotFoundError, ValueError) as e:

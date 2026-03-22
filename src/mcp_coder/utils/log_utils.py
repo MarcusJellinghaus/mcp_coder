@@ -128,7 +128,11 @@ stdlogger = logging.getLogger(__name__)
 
 
 def _is_testing_environment() -> bool:
-    """Check if we're currently running in a testing environment (pytest)."""
+    """Check if we're currently running in a testing environment (pytest).
+
+    Returns:
+        True if pytest is detected in the current process.
+    """
     import sys
 
     # Check if pytest is running
