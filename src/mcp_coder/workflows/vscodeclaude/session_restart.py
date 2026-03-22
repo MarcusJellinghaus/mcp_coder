@@ -76,6 +76,8 @@ def _prepare_restart_branch(
         current_status: Current issue status label
         branch_manager: IssueBranchManager for GitHub API calls
         issue_number: GitHub issue number
+        repo_owner: GitHub repository owner
+        repo_name: GitHub repository name
 
     Returns:
         BranchPrepResult with:
