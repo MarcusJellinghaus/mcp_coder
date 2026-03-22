@@ -45,7 +45,7 @@ def is_mlflow_available() -> bool:
     Note:
         Result is cached after first call for performance.
     """
-    global _mlflow_available
+    global _mlflow_available  # pylint: disable=global-statement  # module-level singleton
 
     if _mlflow_available is None:
         try:
@@ -698,7 +698,7 @@ def get_mlflow_logger() -> MLflowLogger:
     Returns:
         Global MLflowLogger instance (created on first call)
     """
-    global _global_logger
+    global _global_logger  # pylint: disable=global-statement  # module-level singleton
     if _global_logger is None:
         config = load_mlflow_config()  # Explicitly load config to satisfy tests
         _global_logger = MLflowLogger(config)
