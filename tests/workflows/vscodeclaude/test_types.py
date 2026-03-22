@@ -124,7 +124,7 @@ class TestLabelsJsonVscodeclaudeMetadata:
             if label["category"] == "human_action"
         ]
 
-        assert len(human_action_labels) == 4
+        assert len(human_action_labels) == 9
 
         required_fields = {
             "emoji",

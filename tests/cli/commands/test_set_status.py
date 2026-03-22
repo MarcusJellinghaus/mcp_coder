@@ -35,6 +35,11 @@ VALID_STATUS_LABELS = [
     "status-08:ready-pr",
     "status-09:pr-creating",
     "status-10:pr-created",
+    "status-03f:planning-failed",
+    "status-06f:implementing-failed",
+    "status-06f-ci:ci-fix-needed",
+    "status-06f-timeout:llm-timeout",
+    "status-09f:pr-creating-failed",
 ]
 
 
@@ -105,7 +110,7 @@ class TestSetStatusHelpers:
 
         # Verify we get a set of label names
         assert isinstance(labels, set)
-        assert len(labels) == 10  # 10 workflow labels
+        assert len(labels) == 15  # 15 workflow labels
 
         # Verify all labels start with 'status-'
         for label in labels:

@@ -100,6 +100,76 @@
         "initial_command": null,
         "followup_command": null
       }
+    },
+    {
+      "internal_id": "planning_failed",
+      "name": "status-03f:planning-failed",
+      "color": "b60205",
+      "description": "Plan generation failed",
+      "category": "human_action",
+      "vscodeclaude": {
+        "emoji": "❌",
+        "display_name": "PLANNING FAILED",
+        "stage_short": "plan-fail",
+        "initial_command": null,
+        "followup_command": null
+      }
+    },
+    {
+      "internal_id": "implementing_failed",
+      "name": "status-06f:implementing-failed",
+      "color": "b60205",
+      "description": "General implementation failure",
+      "category": "human_action",
+      "vscodeclaude": {
+        "emoji": "❌",
+        "display_name": "IMPLEMENTING FAILED",
+        "stage_short": "impl-fail",
+        "initial_command": null,
+        "followup_command": null
+      }
+    },
+    {
+      "internal_id": "ci_fix_needed",
+      "name": "status-06f-ci:ci-fix-needed",
+      "color": "d93f0b",
+      "description": "CI exhausted fix attempts, needs manual intervention",
+      "category": "human_action",
+      "vscodeclaude": {
+        "emoji": "🔧",
+        "display_name": "CI FIX NEEDED",
+        "stage_short": "ci-fail",
+        "initial_command": null,
+        "followup_command": null
+      }
+    },
+    {
+      "internal_id": "llm_timeout",
+      "name": "status-06f-timeout:llm-timeout",
+      "color": "e99695",
+      "description": "LLM API timeout during implementation",
+      "category": "human_action",
+      "vscodeclaude": {
+        "emoji": "⏱️",
+        "display_name": "LLM TIMEOUT",
+        "stage_short": "timeout",
+        "initial_command": null,
+        "followup_command": null
+      }
+    },
+    {
+      "internal_id": "pr_creating_failed",
+      "name": "status-09f:pr-creating-failed",
+      "color": "b60205",
+      "description": "Pull request creation failed",
+      "category": "human_action",
+      "vscodeclaude": {
+        "emoji": "❌",
+        "display_name": "PR CREATION FAILED",
+        "stage_short": "pr-fail",
+        "initial_command": null,
+        "followup_command": null
+      }
     }
   ],
   "ignore_labels": ["Overview", "blocked", "wait"]

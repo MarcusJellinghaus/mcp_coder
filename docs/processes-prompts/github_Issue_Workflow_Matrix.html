@@ -37,48 +37,77 @@
             font-size: 1.1rem;
         }
         
-        .workflow-matrix {
+        /* Column headers row */
+        .matrix-headers {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 40px;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 10px;
         }
         
-        .column {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-        
-        .column-header {
+        .col-header {
             text-align: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #e9ecef;
-        }
-        
-        .column-title {
-            font-size: 1.3rem;
+            padding: 12px;
+            border-radius: 10px 10px 0 0;
             font-weight: 700;
-            margin-bottom: 5px;
+            font-size: 1.1rem;
         }
         
-        .column-subtitle {
-            font-size: 0.9rem;
-            color: #6c757d;
+        .col-header .col-subtitle {
+            font-size: 0.8rem;
+            font-weight: 400;
             font-style: italic;
+            opacity: 0.8;
         }
         
-        .bot-busy .column-title { color: #6c757d; }
-        .waiting-user .column-title { color: #2563eb; }
-        .bot-pickup .column-title { color: #6c757d; }
+        .col-header-human { background: #dbeafe; color: #2563eb; }
+        .col-header-pickup { background: #e9ecef; color: #495057; }
+        .col-header-busy { background: #e9ecef; color: #6c757d; }
+        .col-header-failed { background: #fee2e2; color: #b60205; }
         
+        /* Workflow rows */
+        .workflow-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+            align-items: start;
+        }
+        
+        .workflow-row-final {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        /* Arrow between rows */
+        .row-arrow {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .arrow-down {
+            text-align: center;
+            font-size: 1.5rem;
+            color: #cbd5e0;
+        }
+        
+        .arrow-right {
+            color: #cbd5e0;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Label cards */
         .label-card {
             background: white;
             border-radius: 10px;
-            padding: 18px;
-            margin-bottom: 15px;
+            padding: 16px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             border-left: 4px solid var(--label-color);
             transition: transform 0.2s ease;
@@ -88,83 +117,120 @@
             transform: translateY(-2px);
         }
         
-        /* Muted styles for bot busy/pickup */
-        .bot-busy .label-card,
-        .bot-pickup .label-card {
+        .label-card.muted {
             background: #f8f9fa;
             opacity: 0.8;
         }
         
-        /* Attention-grabbing styles for waiting-user */
-        .waiting-user .label-card {
+        .label-card.highlight-blue {
             background: white;
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
         }
         
-        .waiting-user .label-card:hover {
+        .label-card.highlight-blue:hover {
             transform: translateY(-3px);
             box-shadow: 0 6px 20px rgba(37, 99, 235, 0.25);
         }
         
+        .label-card.highlight-red {
+            background: #fff5f5;
+            box-shadow: 0 4px 12px rgba(182, 2, 5, 0.15);
+        }
+        
+        .label-card.highlight-red:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(182, 2, 5, 0.25);
+        }
+        
+        .cell-empty {
+            /* empty grid cell */
+        }
+        
+        .failed-stack .label-card {
+            margin-bottom: 10px;
+        }
+        
+        .failed-stack .label-card:last-child {
+            margin-bottom: 0;
+        }
+        
         .step-number {
             display: inline-block;
-            width: 24px;
+            min-width: 24px;
             height: 24px;
+            padding: 0 4px;
             background: var(--label-color);
             color: white;
-            border-radius: 50%;
+            border-radius: 12px;
             text-align: center;
             line-height: 24px;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: 600;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
         
         .label-name {
-            font-size: 1rem;
+            font-size: 0.9rem;
             font-weight: 600;
             color: #2d3748;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
             font-family: 'Monaco', 'Consolas', monospace;
         }
         
         .label-description {
             color: #4a5568;
-            font-size: 0.9rem;
-            line-height: 1.4;
-            margin-bottom: 10px;
+            font-size: 0.85rem;
+            line-height: 1.3;
+            margin-bottom: 8px;
         }
         
         .status-badge {
             display: inline-block;
-            padding: 3px 10px;
-            border-radius: 12px;
-            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
         
-        .bot-busy .status-badge { background: #e9ecef; color: #495057; }
-        .waiting-user .status-badge { background: #dbeafe; color: #1e40af; }
-        .bot-pickup .status-badge { background: #e9ecef; color: #495057; }
+        .badge-human { background: #dbeafe; color: #1e40af; }
+        .badge-pickup { background: #e9ecef; color: #495057; }
+        .badge-busy { background: #e9ecef; color: #495057; }
+        .badge-failed { background: #fee2e2; color: #991b1b; }
         
-        /* Waiting for User - Progressive colors (low to high priority) */
-        .status-created { --label-color: #10b981; }        /* Emerald - lowest priority */
-        .status-plan-review { --label-color: #3b82f6; }   /* Blue - medium */
-        .status-code-review { --label-color: #f59e0b; }   /* Amber - high */
-        .status-pr-created { --label-color: #8b5cf6; }    /* Violet - highest priority */
+        /* Label colors */
+        .status-created { --label-color: #10b981; }
+        .status-plan-review { --label-color: #3b82f6; }
+        .status-code-review { --label-color: #f59e0b; }
+        .status-pr-created { --label-color: #8b5cf6; }
         
-        /* Bot Busy - Light versions of waiting-user colors */
-        .status-planning { --label-color: #a7f3d0; }       /* Light emerald (relates to plan-review) */
-        .status-implementing { --label-color: #bfdbfe; }   /* Light blue (relates to code-review) */
-        .status-pr-creating { --label-color: #fed7aa; }    /* Light amber (relates to pr-created) */
+        .status-planning { --label-color: #a7f3d0; }
+        .status-implementing { --label-color: #bfdbfe; }
+        .status-pr-creating { --label-color: #fed7aa; }
         
-        /* Bot Pickup - Light versions of waiting-user colors */
-        .status-awaiting-planning { --label-color: #6ee7b7; }  /* Medium emerald (relates to created) */
-        .status-plan-ready { --label-color: #93c5fd; }         /* Medium blue (relates to implementing) */
-        .status-ready-pr { --label-color: #fbbf24; }           /* Medium amber (relates to pr-creating) */
+        .status-awaiting-planning { --label-color: #6ee7b7; }
+        .status-plan-ready { --label-color: #93c5fd; }
+        .status-ready-pr { --label-color: #fbbf24; }
         
+        .status-planning-failed { --label-color: #b60205; }
+        .status-implementing-failed { --label-color: #b60205; }
+        .status-ci-fix-needed { --label-color: #d93f0b; }
+        .status-llm-timeout { --label-color: #e99695; }
+        .status-pr-creating-failed { --label-color: #b60205; }
+        
+        /* Flow arrows inline */
+        .flow-cell {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .flow-cell .label-card {
+            flex: 1;
+        }
+        
+        /* Color reference */
         .color-reference {
             background: #f8f9fa;
             border-radius: 15px;
@@ -174,145 +240,237 @@
         
         .color-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
         }
         
         .color-item {
             display: flex;
             align-items: center;
             background: white;
-            padding: 12px;
+            padding: 10px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
         
         .color-swatch {
-            width: 24px;
-            height: 24px;
+            width: 20px;
+            height: 20px;
             border-radius: 4px;
-            margin-right: 12px;
+            margin-right: 10px;
             border: 1px solid rgba(0,0,0,0.1);
-        }
-        
-        .color-info {
-            flex: 1;
         }
         
         .color-name {
             font-weight: 600;
             color: #2d3748;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
         
         .color-hex {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: #6c757d;
             font-family: monospace;
+        }
+        
+        /* Row labels */
+        .row-label {
+            grid-column: 1 / -1;
+            text-align: left;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #a0aec0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 8px 0 4px 4px;
+            border-top: 1px solid #edf2f7;
+            margin-top: 5px;
+        }
+        
+        .row-label:first-of-type {
+            border-top: none;
+            margin-top: 0;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>GitHub Issue Workflow Matrix</h1>
-        <p class="subtitle">Status Labels Organized by Bot State</p>
+        <p class="subtitle">Issue lifecycle: left to right per row, top to bottom between rows</p>
         
-        <div class="workflow-matrix">
-            <!-- Waiting for User Column -->
-            <div class="column waiting-user">
-                <div class="column-header">
-                    <div class="column-title">👤 Waiting for User</div>
-                    <div class="column-subtitle">Human action required</div>
-                </div>
-                
-                <div class="label-card status-created">
-                    <div class="step-number">1</div>
-                    <div class="label-name">status:created</div>
-                    <div class="label-description">Fresh issue, may need refinement</div>
-                    <div class="status-badge">Ready</div>
-                </div>
-                
-                <div class="label-card status-plan-review">
-                    <div class="step-number">4</div>
-                    <div class="label-name">status:plan-review</div>
-                    <div class="label-description">Implementation plan available for review</div>
-                    <div class="status-badge">Ready</div>
-                </div>
-                
-                <div class="label-card status-code-review">
-                    <div class="step-number">7</div>
-                    <div class="label-name">status:code-review</div>
-                    <div class="label-description">Implementation complete, needs review</div>
-                    <div class="status-badge">Ready</div>
-                </div>
-                
-                <div class="label-card status-pr-created">
-                    <div class="step-number">10</div>
-                    <div class="label-name">status:pr-created</div>
-                    <div class="label-description">Pull request created, ready to merge</div>
-                    <div class="status-badge">Ready</div>
-                </div>
+        <!-- Column headers -->
+        <div class="matrix-headers">
+            <div class="col-header col-header-human">
+                &#x1f464; Human Action
+                <div class="col-subtitle">User decision required</div>
+            </div>
+            <div class="col-header col-header-pickup">
+                &#x23f3; Bot Pickup
+                <div class="col-subtitle">Waiting for bot</div>
+            </div>
+            <div class="col-header col-header-busy">
+                &#x26a1; Bot Busy
+                <div class="col-subtitle">Bot working</div>
+            </div>
+            <div class="col-header col-header-failed">
+                &#x1f6a8; Failed
+                <div class="col-subtitle">Manual intervention</div>
+            </div>
+        </div>
+        
+        <!-- Row 1: Planning cycle (1 → 2 → 3 → 3f) -->
+        <div class="row-label">Planning Cycle</div>
+        <div class="workflow-row">
+            <div class="label-card highlight-blue status-created">
+                <div class="step-number">1</div>
+                <div class="label-name">status:created</div>
+                <div class="label-description">Fresh issue, may need refinement</div>
+                <div class="status-badge badge-human">Ready</div>
             </div>
             
-            <!-- Bot Needs Pickup Column -->
-            <div class="column bot-pickup">
-                <div class="column-header">
-                    <div class="column-title">⏳ Bot Needs Pickup</div>
-                    <div class="column-subtitle">Waiting for bot to start</div>
-                </div>
-                
-                <div class="label-card status-awaiting-planning">
-                    <div class="step-number">2</div>
-                    <div class="label-name">status:awaiting-planning</div>
-                    <div class="label-description">Issue refined, ready for planning</div>
-                    <div class="status-badge">Waiting</div>
-                </div>
-                
-                <div class="label-card status-plan-ready">
-                    <div class="step-number">5</div>
-                    <div class="label-name">status:plan-ready</div>
-                    <div class="label-description">Plan approved, ready to implement</div>
-                    <div class="status-badge">Waiting</div>
-                </div>
-                
-                <div class="label-card status-ready-pr">
-                    <div class="step-number">8</div>
-                    <div class="label-name">status:ready-pr</div>
-                    <div class="label-description">Code approved, ready for PR creation</div>
-                    <div class="status-badge">Waiting</div>
-                </div>
+            <div class="label-card muted status-awaiting-planning">
+                <div class="step-number">2</div>
+                <div class="label-name">status:awaiting-planning</div>
+                <div class="label-description">Issue refined, ready for planning</div>
+                <div class="status-badge badge-pickup">Waiting</div>
             </div>
             
-            <!-- Bot Busy Column -->
-            <div class="column bot-busy">
-                <div class="column-header">
-                    <div class="column-title">⚡ Bot Busy</div>
-                    <div class="column-subtitle">Bot is actively working</div>
-                </div>
-                
-                <div class="label-card status-planning">
-                    <div class="step-number">3</div>
-                    <div class="label-name">status:planning</div>
-                    <div class="label-description">Implementation plan being drafted</div>
-                    <div class="status-badge">Working</div>
-                </div>
-                
-                <div class="label-card status-implementing">
-                    <div class="step-number">6</div>
-                    <div class="label-name">status:implementing</div>
-                    <div class="label-description">Code being written</div>
-                    <div class="status-badge">Working</div>
-                </div>
-                
-                <div class="label-card status-pr-creating">
-                    <div class="step-number">9</div>
-                    <div class="label-name">status:pr-creating</div>
-                    <div class="label-description">Pull request being created</div>
-                    <div class="status-badge">Working</div>
+            <div class="label-card muted status-planning">
+                <div class="step-number">3</div>
+                <div class="label-name">status:planning</div>
+                <div class="label-description">Plan being drafted</div>
+                <div class="status-badge badge-busy">Working</div>
+            </div>
+            
+            <div class="failed-stack">
+                <div class="label-card highlight-red status-planning-failed">
+                    <div class="step-number">3f</div>
+                    <div class="label-name">status-03f:planning-failed</div>
+                    <div class="label-description">Plan generation failed</div>
+                    <div class="status-badge badge-failed">Failed</div>
                 </div>
             </div>
         </div>
         
+        <!-- Arrow row -->
+        <div class="row-arrow">
+            <div class="arrow-down">&#x2193;</div>
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+        
+        <!-- Row 2: Implementation cycle (4 → 5 → 6 → 6f/6f-ci/6f-timeout) -->
+        <div class="row-label">Implementation Cycle</div>
+        <div class="workflow-row">
+            <div class="label-card highlight-blue status-plan-review">
+                <div class="step-number">4</div>
+                <div class="label-name">status:plan-review</div>
+                <div class="label-description">Plan available for review</div>
+                <div class="status-badge badge-human">Ready</div>
+            </div>
+            
+            <div class="label-card muted status-plan-ready">
+                <div class="step-number">5</div>
+                <div class="label-name">status:plan-ready</div>
+                <div class="label-description">Plan approved, ready to code</div>
+                <div class="status-badge badge-pickup">Waiting</div>
+            </div>
+            
+            <div class="label-card muted status-implementing">
+                <div class="step-number">6</div>
+                <div class="label-name">status:implementing</div>
+                <div class="label-description">Code being written</div>
+                <div class="status-badge badge-busy">Working</div>
+            </div>
+            
+            <div class="failed-stack">
+                <div class="label-card highlight-red status-implementing-failed">
+                    <div class="step-number">6f</div>
+                    <div class="label-name">status-06f:implementing-failed</div>
+                    <div class="label-description">General implementation failure</div>
+                    <div class="status-badge badge-failed">Failed</div>
+                </div>
+                <div class="label-card highlight-red status-ci-fix-needed">
+                    <div class="step-number">6f-ci</div>
+                    <div class="label-name">status-06f-ci:ci-fix-needed</div>
+                    <div class="label-description">CI exhausted 3 fix attempts</div>
+                    <div class="status-badge badge-failed">CI Failed</div>
+                </div>
+                <div class="label-card highlight-red status-llm-timeout">
+                    <div class="step-number">6f-t</div>
+                    <div class="label-name">status-06f-timeout:llm-timeout</div>
+                    <div class="label-description">LLM API timeout</div>
+                    <div class="status-badge badge-failed">Timeout</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Arrow row -->
+        <div class="row-arrow">
+            <div class="arrow-down">&#x2193;</div>
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+        
+        <!-- Row 3: PR cycle (7 → 8 → 9 → 9f) -->
+        <div class="row-label">PR Creation Cycle</div>
+        <div class="workflow-row">
+            <div class="label-card highlight-blue status-code-review">
+                <div class="step-number">7</div>
+                <div class="label-name">status:code-review</div>
+                <div class="label-description">Implementation complete, needs review</div>
+                <div class="status-badge badge-human">Ready</div>
+            </div>
+            
+            <div class="label-card muted status-ready-pr">
+                <div class="step-number">8</div>
+                <div class="label-name">status:ready-pr</div>
+                <div class="label-description">Code approved, ready for PR</div>
+                <div class="status-badge badge-pickup">Waiting</div>
+            </div>
+            
+            <div class="label-card muted status-pr-creating">
+                <div class="step-number">9</div>
+                <div class="label-name">status:pr-creating</div>
+                <div class="label-description">Pull request being created</div>
+                <div class="status-badge badge-busy">Working</div>
+            </div>
+            
+            <div class="failed-stack">
+                <div class="label-card highlight-red status-pr-creating-failed">
+                    <div class="step-number">9f</div>
+                    <div class="label-name">status-09f:pr-creating-failed</div>
+                    <div class="label-description">PR creation failed</div>
+                    <div class="status-badge badge-failed">Failed</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Arrow row -->
+        <div class="row-arrow">
+            <div class="arrow-down">&#x2193;</div>
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+        
+        <!-- Row 4: Done (10) -->
+        <div class="row-label">Complete</div>
+        <div class="workflow-row-final">
+            <div class="label-card highlight-blue status-pr-created">
+                <div class="step-number">10</div>
+                <div class="label-name">status:pr-created</div>
+                <div class="label-description">Pull request created, ready to merge</div>
+                <div class="status-badge badge-human">Ready</div>
+            </div>
+            <div class="cell-empty"></div>
+            <div class="cell-empty"></div>
+            <div class="cell-empty"></div>
+        </div>
+        
+        <!-- Color Reference -->
         <div class="color-reference">
             <h3 style="text-align: center; margin-bottom: 20px; color: #2d3748;">Color Reference</h3>
             <div class="color-grid">
@@ -384,6 +542,27 @@
                     <div class="color-info">
                         <div class="color-name">PR Created</div>
                         <div class="color-hex">#8b5cf6</div>
+                    </div>
+                </div>
+                <div class="color-item">
+                    <div class="color-swatch" style="background-color: #b60205;"></div>
+                    <div class="color-info">
+                        <div class="color-name">Failed (general)</div>
+                        <div class="color-hex">#b60205</div>
+                    </div>
+                </div>
+                <div class="color-item">
+                    <div class="color-swatch" style="background-color: #d93f0b;"></div>
+                    <div class="color-info">
+                        <div class="color-name">CI Fix Needed</div>
+                        <div class="color-hex">#d93f0b</div>
+                    </div>
+                </div>
+                <div class="color-item">
+                    <div class="color-swatch" style="background-color: #e99695;"></div>
+                    <div class="color-info">
+                        <div class="color-name">LLM Timeout</div>
+                        <div class="color-hex">#e99695</div>
                     </div>
                 </div>
             </div>
