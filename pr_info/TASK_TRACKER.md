@@ -35,7 +35,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] [Step 7: Small manual fixes](./steps/step_7.md) — D301, D417, D205, D415, DOC102 (~11)
 - [x] [Step 8: Missing Returns batch 1](./steps/step_8.md) — DOC201 in cli, config, formatters, checks (~16)
 - [x] [Step 9: Missing Returns batch 2](./steps/step_9.md) — DOC201 in llm, utils, workflows (~16)
-- [ ] [Step 10: Remove extraneous Raises](./steps/step_10.md) — DOC502 (~20)
+- [x] [Step 10: Remove extraneous Raises](./steps/step_10.md) — DOC502 (~20)
 - [ ] [Step 11: Add missing Raises](./steps/step_11.md) — DOC501 (~11), final step
 
 ## Pull Request

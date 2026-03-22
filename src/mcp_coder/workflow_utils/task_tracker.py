@@ -281,9 +281,6 @@ def _get_incomplete_tasks(content: str, exclude_meta_tasks: bool = False) -> lis
     Returns:
         List of incomplete task names
 
-    Raises:
-        TaskTrackerSectionNotFoundError: If Implementation Steps section not found
-
     Examples:
         >>> content = '''## Tasks
         ... - [ ] Setup database
@@ -336,10 +333,6 @@ def get_incomplete_tasks(
     Returns:
         List of incomplete task names
 
-    Raises:
-        TaskTrackerFileNotFoundError: If TASK_TRACKER.md not found
-        TaskTrackerSectionNotFoundError: If Implementation Steps section not found
-
     Examples:
         >>> get_incomplete_tasks("my_project")
         ["Setup database", "Add authentication", "Write documentation"]
@@ -370,10 +363,6 @@ def has_incomplete_work(folder_path: str = "pr_info") -> bool:
 
     Returns:
         True if there are any incomplete tasks, False otherwise
-
-    Raises:
-        TaskTrackerFileNotFoundError: If TASK_TRACKER.md not found
-        TaskTrackerSectionNotFoundError: If Implementation Steps section not found
 
     Examples:
         >>> has_incomplete_work("my_project")
@@ -407,10 +396,6 @@ def get_step_progress(
             },
             ...
         }
-
-    Raises:
-        TaskTrackerFileNotFoundError: If TASK_TRACKER.md not found
-        TaskTrackerSectionNotFoundError: If Implementation Steps section not found
 
     Examples:
         >>> progress = get_step_progress("my_project")
@@ -483,10 +468,6 @@ def validate_task_tracker(folder_path: str = "pr_info") -> None:
 
     Args:
         folder_path: Path to folder containing TASK_TRACKER.md
-
-    Raises:
-        TaskTrackerFileNotFoundError: If file doesn't exist
-        TaskTrackerSectionNotFoundError: If required headers missing
     """
     # Read the tracker file (raises TaskTrackerFileNotFoundError if missing)
     content = _read_task_tracker(folder_path)
@@ -504,10 +485,6 @@ def is_task_done(task_name: str, folder_path: str = "pr_info") -> bool:
 
     Returns:
         True if task is complete ([x] or [X]), False if incomplete or not found
-
-    Raises:
-        TaskTrackerFileNotFoundError: If TASK_TRACKER.md not found
-        TaskTrackerSectionNotFoundError: If Implementation Steps section not found
 
     Examples:
         >>> is_task_done("Setup database", "my_project")

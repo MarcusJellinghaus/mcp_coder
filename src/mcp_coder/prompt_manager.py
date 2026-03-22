@@ -108,8 +108,6 @@ def get_prompt(source: str, header: str) -> str:
             - Includes available headers in error message when header not found
             - Shows line numbers and locations for duplicate headers
             - Indicates specific line where code block is missing
-        FileNotFoundError: If file path doesn't exist or cannot be read
-            - Includes specific file path and underlying error details
 
     Examples:
         # From string content with inline markdown
