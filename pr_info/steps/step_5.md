@@ -1,125 +1,52 @@
-# Step 5: Update `pyproject.toml` — enable warnings in CI (final commit)
+# Step 5: src/ W0706 + W4903 — try-except-raise + deprecated arg (4 occurrences)
 
 ## Goal
-Replace the blanket `disable = ["W", "C", "R"]` with selective disables that expose
-all W-category warnings while permanently suppressing the ones that are intentional
-project patterns. This is the **last commit** — all warnings must already be zero
-or inline-disabled before this lands.
+Add inline pylint disables for intentional try-except-raise patterns and deprecated `onerror=` argument.
+Both are inline-disable fixes — no code logic changes.
 
 ## WHERE — Files Modified
 
-- `pyproject.toml` — one section change only
+**W0706 — try-except-raise inline-disable (2 total):**
+- `src/mcp_coder/utils/subprocess_runner.py` line 355:
+  ```python
+  raise  # pylint: disable=try-except-raise  # intentional re-raise for subprocess isolation
+  ```
+- `src/mcp_coder/utils/subprocess_runner.py` line 506: same pattern
+
+**W4903 — deprecated `onerror=` inline-disable (2 total):**
+
+NOTE: Do NOT replace `onerror=` with `onexc=` — `onexc` was added in Python 3.12 and the project's minimum version is Python 3.11. Use inline disable instead.
+
+- `src/mcp_coder/workflows/vscodeclaude/session_launch.py` line 238:
+  ```python
+  shutil.rmtree(folder_path, onerror=_remove_readonly)  # pylint: disable=deprecated-argument  # onexc requires Python 3.12+
+  ```
+- `src/mcp_coder/workflows/vscodeclaude/workspace.py` line 215:
+  ```python
+  shutil.rmtree(..., onerror=_remove_readonly)  # pylint: disable=deprecated-argument  # onexc requires Python 3.12+
+  ```
 
 ## WHAT
 
-**Current config (`[tool.pylint.messages_control]`):**
-```toml
-disable = ["W", "C", "R"]
-enable = ["R0401"]
-```
-
-**New config:**
-```toml
-[tool.pylint.messages_control]
-disable = [
-    "C",       # conventions — not enabled in this project
-    "R",       # refactor suggestions — not enabled in this project
-    "W1203",   # logging-fstring-interpolation — project uses f-strings for readability
-    "W0621",   # redefined-outer-name — standard pytest fixture pattern
-    "W0511",   # fixme/TODO — informational only, not a quality gate
-]
-enable = ["R0401"]
-
-[tool.pylint.MASTER]
-# Disable test-specific W warnings that are standard pytest patterns
-per-file-ignores = [
-    "tests/**/*.py:W0212",   # protected-access — legitimate test inspection
-    "tests/**/*.py:W0613",   # unused-argument — pytest fixtures (injected by name)
-    "tests/**/*.py:W0611",   # unused-import — fixture imports, conftest re-exports
-    "tests/**/*.py:W0404",   # reimported — reimports across test functions
-]
-```
-
-## HOW
-
-The `per-file-ignores` entry under `[tool.pylint.MASTER]` uses pylint's native
-glob-based per-file suppress feature (supported in pylint 3.x via pyproject.toml).
-
-After this change, `pylint src/ tests/` with no extra flags will:
-- Report E and F (errors/fatals) — always
-- Report W — but suppress W1203, W0621, W0511 globally and W0212/W0613/W0611/W0404 for tests/
-- Suppress C and R — unchanged
-
-The CI pipeline already calls pylint — this config change makes warnings visible there.
-
-## ALGORITHM
-
-```
-Open pyproject.toml
-Find [tool.pylint.messages_control]
-Replace disable = ["W", "C", "R"] with the new selective disable list
-Add per-file-ignores under [tool.pylint.MASTER]
-Verify syntax: run pylint src/ tests/ and confirm zero warnings reported
-Run pytest fast unit tests — confirm no regressions
-Run mypy — confirm clean
-```
+All changes are inline pylint disable comments — no code logic changes.
 
 ## DATA
 
-No code changes. Config-only change.
-This commit is the acceptance-criteria gate:
-> `pylint src/ tests/` with new config reports **zero warnings** (all fixed or inline-disabled)
+Pylint count reduced by: **4 warnings** (2 W0706 + 2 W4903).
 
-## Verification Checklist
+## TDD Note
 
-Before committing this step:
-1. Run `pylint src/ tests/` (no extra flags) → must show 0 warnings
-2. Run pytest fast unit tests → must pass
-3. Run mypy → must be clean
-4. Run `./tools/ruff_check.sh` → must pass
+Run existing tests after changes to confirm nothing broken.
 
 ---
 
 ## LLM Prompt
 
 ```
-Please implement Step 5 of the pylint warning cleanup described in
-`pr_info/steps/summary.md` and `pr_info/steps/step_5.md`.
-
-This is the FINAL commit. All previous steps (1–4) must already be committed
-and CI-green before this step is applied.
-
-Change ONLY `pyproject.toml`:
-
-In `[tool.pylint.messages_control]`:
-  Replace:
-    disable = ["W", "C", "R"]
-  With:
-    disable = [
-        "C",
-        "R",
-        "W1203",
-        "W0621",
-        "W0511",
-    ]
-  Keep:
-    enable = ["R0401"]
-
-Add under `[tool.pylint.MASTER]` (create the section if it doesn't exist,
-but preserve the existing init-hook and extension-pkg-allow-list entries):
-    per-file-ignores = [
-        "tests/**/*.py:W0212",
-        "tests/**/*.py:W0613",
-        "tests/**/*.py:W0611",
-        "tests/**/*.py:W0404",
-    ]
-
-After making the change:
-- Run `pylint src/ tests/` with NO extra --disable flags
-- The result must show zero warnings (W-category)
-- Run pytest (fast unit tests) — must pass
-- Run mypy — must be clean
-- Run ./tools/ruff_check.sh — must pass
-
-If any warnings appear, DO NOT commit — go back and fix them first.
+Please implement Step 5: fix W0706 (try-except-raise) and W4903 (deprecated-argument) in src/.
+See pr_info/steps/step_5.md for exact locations.
+IMPORTANT: Do NOT replace onerror= with onexc= — use inline pylint disable instead
+(onexc requires Python 3.12+, project minimum is 3.11).
+Rules: add inline disable comments only. No code changes.
+Run pylint, pytest (fast unit tests), and mypy to verify.
 ```
