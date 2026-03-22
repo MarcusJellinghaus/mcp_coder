@@ -163,7 +163,14 @@ mlflow_result = verify_mlflow(since=timestamp)
 
 The test prompt result should be captured and should gate `overall_ok` **only when MLflow is enabled**. When MLflow is disabled, the test prompt failure is informational only (printed but no exit code impact). Show MLflow enabled/disabled status in the verify output.
 
-This means `execute_verify()` needs to check MLflow config, and if enabled, factor the test prompt result into `_compute_exit_code`. When MLflow is disabled, the test prompt failure is visible but does not affect the exit code.
+**How the test prompt gates `overall_ok`:** Compute the gate inline in `execute_verify()` *after* calling `_compute_exit_code` — i.e., if MLflow is enabled and the test prompt failed, override `overall_ok = False`. This avoids changing `_compute_exit_code`'s signature or adding parameters to it. Concretely:
+
+```python
+exit_code = _compute_exit_code(langchain_result, claude_result, mlflow_result)
+# Override if MLflow is enabled and test prompt failed
+if mlflow_enabled and not test_prompt_ok:
+    exit_code = 1
+```
 
 The MLflow DB check (`tracking_data`) additionally confirms end-to-end logging when enabled.
 

@@ -37,3 +37,29 @@
 - `pr_info/steps/summary.md`: Updated to reflect all changes
 
 **Status**: committed
+
+## Round 2 — 2026-03-22
+
+**Findings**:
+- (Accept) Step 3: `_compute_exit_code` has no mechanism to receive test prompt result — need to specify inline gate approach
+- (Accept) Step 2: "unit-testable independently" claim for `_format_tracking_data` misleading — tested indirectly
+- (Accept) Step 2: `datetime` already imported, only `timezone` needs adding — clarify to avoid duplicate
+- (Skip) Step 3: Claude provider test prompt handled by broad except — no change needed
+- (Skip) Step 1: SQLite read-only URI mode is implementation detail
+- (Skip) Step 4: E2E test patching complexity adequately documented
+- (Skip) Step 4: CI exclusion pattern conditionally addressed
+
+**Decisions**:
+- Finding 1: Accept — compute gate inline in `execute_verify()` after `_compute_exit_code`, no signature change
+- Finding 2: Accept — drop claim, note indirect testing is sufficient
+- Finding 3: Accept — clarify import addition
+- Findings 4-7: Skip
+
+**User decisions**: None needed this round
+
+**Changes**:
+- `pr_info/steps/step_3.md`: Added concrete inline gate approach with code snippet
+- `pr_info/steps/step_2.md`: Fixed testability claim and import clarification
+- `pr_info/steps/summary.md`: Updated to reflect inline override approach
+
+**Status**: committed

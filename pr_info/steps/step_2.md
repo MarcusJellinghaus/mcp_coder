@@ -83,7 +83,9 @@ No `tracking_data` key added (existing behaviour preserved).
 
 ### Import added to `mlflow_logger.py`
 ```python
-from datetime import datetime, timezone
+# mlflow_logger.py already has: from datetime import datetime
+# Only add timezone to the existing import:
+from datetime import datetime, timezone  # ← add timezone to existing import
 from .mlflow_db_utils import query_sqlite_tracking
 ```
 
@@ -127,7 +129,7 @@ def _format_tracking_data(
     """Format TrackingStats into a verify result entry."""
 ```
 
-This keeps `verify_mlflow()` readable and the formatting logic unit-testable independently.
+This keeps `verify_mlflow()` readable. The helper is tested indirectly through `verify_mlflow()` tests, which is sufficient.
 
 ---
 

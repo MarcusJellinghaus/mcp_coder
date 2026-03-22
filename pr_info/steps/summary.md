@@ -44,7 +44,7 @@ execute_verify()
 | SQLite query approach | Raw `sqlite3`, new `mlflow_db_utils.py` | No MLflow import cycle; `mlflow_logger.py` already imports mlflow |
 | DB result type | `TrackingStats` dataclass | Typed, simple, stdlib-only |
 | Timestamp filtering | `datetime` passed as `since=` | Confirms *this* run was logged, not just any historical run |
-| Failure semantics | `overall_ok = False` if enabled + SQLite + `since` provided + not logged; test prompt gates `overall_ok` only when MLflow is enabled | Verify command must be trustworthy |
+| Failure semantics | `overall_ok = False` if enabled + SQLite + `since` provided + not logged; test prompt gates `overall_ok` only when MLflow is enabled (inline override in `execute_verify()` after `_compute_exit_code`, no signature change) | Verify command must be trustworthy |
 | MLflow disabled output | `tracking_data` key with `ok=None`, value `"skipped (MLflow disabled)"` | Shows status without false failure |
 | HTTP backends | No DB-level checks | HTTP backends don't expose a local file path |
 | Test prompt display | Inline `print` in `=== LLM PROVIDER ===` block | Consistent with existing `Active provider` line; no new section needed |
@@ -66,7 +66,7 @@ execute_verify()
 | File | What Changes |
 |------|-------------|
 | `src/mcp_coder/llm/mlflow_logger.py` | `verify_mlflow(since=)` signature; add `tracking_data` result key; call `query_sqlite_tracking()` for SQLite backends |
-| `src/mcp_coder/cli/commands/verify.py` | `execute_verify()`: capture timestamp, call `ask_llm()`, print result, pass `since=` to `verify_mlflow()`; add `"tracking_data"` to `_LABEL_MAP`; remove orphan `"test_prompt"` from `_LABEL_MAP`; show MLflow enabled/disabled status; gate test prompt on MLflow config in `_compute_exit_code` |
+| `src/mcp_coder/cli/commands/verify.py` | `execute_verify()`: capture timestamp, call `ask_llm()`, print result, pass `since=` to `verify_mlflow()`; add `"tracking_data"` to `_LABEL_MAP`; remove orphan `"test_prompt"` from `_LABEL_MAP`; show MLflow enabled/disabled status; gate test prompt on MLflow config inline after `_compute_exit_code` (no signature change) |
 | `src/mcp_coder/llm/providers/langchain/verification.py` | Remove test prompt block from `verify_langchain()`; remove `test_prompt` key from returned dict; update `overall_ok` logic |
 | `pyproject.toml` | Register `llm_integration` pytest marker |
 | `.claude/CLAUDE.md` | Add `and not llm_integration` to recommended pytest exclusion pattern |
