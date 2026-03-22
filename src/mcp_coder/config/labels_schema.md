@@ -33,8 +33,8 @@
 ### `commands` field behavior
 
 - **Absent** — label is display-only, no VSCode Claude session is started (e.g. `pr-created`).
-- **1 command** — single-command flow: `["commands": ["/implementation_review_supervisor"]]`
-- **2 commands** — initial + followup flow: `["commands": ["/issue_analyse", "/discuss"]]`
+- **1 command** — single-command flow: `"commands": ["/implementation_review_supervisor"]`
+- **2 commands** — initial + followup flow: `"commands": ["/issue_analyse", "/discuss"]`
 
 ### Example
 

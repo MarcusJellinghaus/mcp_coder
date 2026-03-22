@@ -248,7 +248,7 @@ class TestWorkspaceSetup:
             lambda: "Linux",
         )
 
-        with pytest.raises(NotImplementedError, match="Linux templates"):
+        with pytest.raises(NotImplementedError, match="Linux startup scripts"):
             create_startup_script(
                 folder_path=tmp_path,
                 issue_number=123,
