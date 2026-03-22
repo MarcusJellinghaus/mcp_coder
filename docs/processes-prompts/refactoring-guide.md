@@ -125,5 +125,6 @@ Before merging a refactoring PR:
 
 ## Related
 
+- [Refactoring Principles](../../.claude/knowledge_base/refactoring_principles.md) — quick-reference rules
 - [Architecture Documentation](../architecture/architecture.md)
 - [Dependency Management](../architecture/dependencies/readme.md)
