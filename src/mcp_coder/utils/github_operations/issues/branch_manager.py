@@ -500,11 +500,16 @@ class IssueBranchManager(BaseGitHubManager):
     def get_branch_with_pr_fallback(
         self, issue_number: int, repo_owner: str, repo_name: str
     ) -> Optional[str]:
-        """Get branch for issue using linkedBranches with PR timeline fallback.
+        """Get branch for issue using a 4-step resolution strategy.
 
-        This method implements a two-step resolution strategy:
-        1. Query linkedBranches (primary path, fast)
-        2. Query issue timeline for draft/open PRs (fallback)
+        Resolution order:
+        1. Linked branches via GitHub's linked-branch API (fast)
+        2. Open PRs mentioning the issue in the timeline
+        3. Closed PRs whose branch still exists (most recent first)
+        4. Pattern-matching branch names by issue number
+
+        Returns the first unambiguous match. At each step, multiple
+        matches are treated as ambiguous and the method returns None.
 
         Args:
             issue_number: Issue number to find branch for
@@ -513,27 +518,6 @@ class IssueBranchManager(BaseGitHubManager):
 
         Returns:
             Branch name if found, None otherwise
-
-        Examples:
-            >>> manager = IssueBranchManager(Path.cwd())
-            >>> # Case 1: linkedBranches returns branch (primary path)
-            >>> branch = manager.get_branch_with_pr_fallback(123, "owner", "repo")
-            >>> print(branch)  # "123-feature-branch"
-            >>>
-            >>> # Case 2: No linkedBranches, but draft PR exists (fallback)
-            >>> branch = manager.get_branch_with_pr_fallback(456, "owner", "repo")
-            >>> print(branch)  # "456-draft-pr-branch"
-            >>>
-            >>> # Case 3: Multiple PRs found (ambiguous)
-            >>> branch = manager.get_branch_with_pr_fallback(789, "owner", "repo")
-            >>> print(branch)  # None (logs warning with PR numbers)
-
-        Notes:
-            - Returns immediately if linkedBranches found (short-circuit)
-            - Only considers OPEN PRs (includes both draft and non-draft)
-            - Filters out CLOSED/MERGED PRs
-            - Returns None if multiple PRs found (logs warning)
-            - Comprehensive logging for debugging
         """
         # Step 1: Validate issue number
         if not self._validate_issue_number(issue_number):
