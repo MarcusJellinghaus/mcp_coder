@@ -508,8 +508,9 @@ class IssueBranchManager(BaseGitHubManager):
         3. Closed PRs whose branch still exists (most recent first)
         4. Pattern-matching branch names by issue number
 
-        Returns the first unambiguous match. At each step, multiple
-        matches are treated as ambiguous and the method returns None.
+        Returns the first unambiguous match. Steps 1, 2, and 4 treat
+        multiple matches as ambiguous (returns None). Step 3 returns
+        the most recent closed PR whose branch still exists.
 
         Args:
             issue_number: Issue number to find branch for

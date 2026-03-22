@@ -28,4 +28,18 @@ Branch: `264-coordinator-detect-unlinked-branches-by-issue-number-pattern`
 - #10 Skip — correct for type safety given `Any` types
 
 **Changes**: Updated `get_branch_with_pr_fallback()` docstring to accurately describe the 4-step resolution strategy.
+**Status**: Committed (8218f4e)
+
+## Round 2 — 2026-03-22
+**Findings**:
+- #1 Redundant `repo_owner`/`repo_name` parameters create inconsistency risk
+- #2 Closed-PR fallback returns first surviving branch without ambiguity check, contradicting docstring
+- #3 No test for multiple matches in full-scan pass of `_search_branches_by_pattern`
+
+**Decisions**:
+- #1 Skip — speculative, single caller passes matching values
+- #2 Accept — docstring updated in Round 1 still claims "at each step, multiple matches → None" but closed-PR step intentionally returns most recent
+- #3 Skip — same logic as prefix pass, already tested there
+
+**Changes**: Refined docstring to clarify that steps 1/2/4 treat multiple matches as ambiguous, while step 3 returns the most recent closed PR.
 **Status**: Committing
