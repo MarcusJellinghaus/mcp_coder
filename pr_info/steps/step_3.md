@@ -52,7 +52,7 @@ MOCK_VSCODECLAUDE_CONFIGS: dict[str, dict[str, Any]] = {
    - Add assertion `"/discuss" in content`
 
 2. **`test_creates_script_with_claude_resume`** (uses status-07:code-review, single-command):
-   - Change from asserting `"claude --resume %SESSION_ID%" in content` to asserting `"claude \"/implementation_review_supervisor" in content` (now interactive-only, no resume)
+   - Change from asserting `"claude --resume %SESSION_ID%" in content` to asserting `"claude \"/implementation_review_supervisor 123\"" in content` (now interactive-only with issue number, no resume) (Decision #9)
    - Add assertion `"mcp-coder prompt" not in content` (single command = no automated step)
    - Add assertion `"Step 1" not in content` (no step labels for single-command)
 

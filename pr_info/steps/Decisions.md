@@ -11,3 +11,5 @@ Decisions from plan review discussion.
 | 5 | `timeout` parameter for single-command flows | Keep parameter, note in docstring it's unused for single-command | API compatibility |
 | 6 | Edge cases for `commands` field | Three cases: (a) `commands` absent → no session created, (b) `commands: []` → bare environment with no command sections, (c) invalid JSON (e.g. commands is string, contains non-strings) → raise error. All three tested and documented. | Fail fast on bad config, permissive on valid-but-empty |
 | 7 | Schema docs for `labels.json` | Add concise `labels_schema.md` next to `labels.json` in Step 1 | No existing docs for the `vscodeclaude` block |
+| 8 | `if is_last` vs `else` in multi-command loop | Keep `if is_last:` (explicit) over `else:` | Self-documenting intent, even though `else` would be logically equivalent |
+| 9 | `test_creates_script_with_claude_resume` overlap | Keep both tests, fix assertion to include issue number | `test_single_command_uses_interactive_only` covers the renamed intent; keeping the original test with corrected assertion adds coverage depth |
