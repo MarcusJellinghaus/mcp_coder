@@ -414,7 +414,7 @@ class TestExtractFailedStepLog:
 
     def test_case_insensitive_matching(self) -> None:
         """Should match case-insensitively."""
-        log = "##[group]run tests\n" "test output\n" "##[endgroup]"
+        log = "##[group]run tests\ntest output\n##[endgroup]"
         result = _extract_failed_step_log(log, "Run Tests")
         assert "test output" in result
 

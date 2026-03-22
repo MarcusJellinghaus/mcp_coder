@@ -60,6 +60,8 @@ class TestIsMLflowAvailable:
 class TestMLflowLogger:
     """Test MLflowLogger class."""
 
+    config: MLflowConfig
+
     def setup_method(self) -> None:
         """Setup for each test."""
         self.config = MLflowConfig(
@@ -362,6 +364,8 @@ class TestGlobalLogger:
 
 class TestSessionMapBehavior:
     """Test LRU session map behavior in MLflowLogger."""
+
+    config: MLflowConfig
 
     def setup_method(self) -> None:
         """Setup for each test."""

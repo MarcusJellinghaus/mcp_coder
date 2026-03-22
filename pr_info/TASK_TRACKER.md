@@ -36,7 +36,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] [Step 10: tests/ W1514 — unspecified encoding (23)](./steps/step_10.md)
 - [x] [Step 11: tests/ W0718 — broad-exception-caught (31)](./steps/step_11.md)
 - [x] [Step 12: tests/ W0107 + W0108 + W0702 + W0719 — small mechanical fixes (10)](./steps/step_12.md)
-- [ ] [Step 13: tests/ W1404 + W0201 — string concat + attribute-outside-init (6)](./steps/step_13.md)
+- [x] [Step 13: tests/ W1404 + W0201 — string concat + attribute-outside-init (6)](./steps/step_13.md)
 
 ### Config (Step 14 — LAST)
 - [ ] [Step 14: pyproject.toml config change](./steps/step_14.md)
