@@ -196,7 +196,9 @@ def get_package_directory(package_name: str) -> Path:
         spec = importlib.util.find_spec(package_name)
         if spec and spec.origin:
             return Path(spec.origin).parent
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.debug(
             "Error finding package directory via importlib.util.find_spec",
             extra={"error": str(e), "package_name": package_name},
@@ -207,7 +209,9 @@ def get_package_directory(package_name: str) -> Path:
         package_module = importlib.import_module(package_name)
         if hasattr(package_module, "__file__") and package_module.__file__:
             return Path(package_module.__file__).parent
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.debug(
             "Error finding package directory via __file__",
             extra={"error": str(e), "package_name": package_name},

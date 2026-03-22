@@ -137,7 +137,9 @@ def extract_session_id(file_path: str) -> Optional[str]:
     except json.JSONDecodeError as e:
         logger.error("Invalid JSON in file %s: %s", file_path, e)
         return None
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error("Error reading session file %s: %s", file_path, e)
         return None
 

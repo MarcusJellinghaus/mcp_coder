@@ -272,7 +272,9 @@ def collect_branch_status(
             try:
                 issue_manager = IssueManager(project_dir)
                 issue_data = issue_manager.get_issue(issue_number)
-            except Exception as e:
+            except (
+                Exception
+            ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow when GitHub/CI exception types are stable
                 logger.debug(f"Could not fetch issue data: {e}")
 
         # Use shared issue_data and branch_name
@@ -310,7 +312,9 @@ def collect_branch_status(
             recommendations=recommendations,
         )
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow when GitHub/CI exception types are stable
         logger.error(f"Error collecting branch status: {e}")
         return create_empty_report()
 
@@ -360,14 +364,18 @@ def _collect_ci_status(
                     ci_manager, status_result, max_lines
                 )
                 return ci_status, error_details
-            except Exception as log_error:
+            except (
+                Exception
+            ) as log_error:  # pylint: disable=broad-exception-caught  # TODO: narrow when GitHub/CI exception types are stable
                 logger.warning(f"Failed to get CI logs: {log_error}")
             return ci_status, None
 
         logger.info(f"CI status: {ci_status}")
         return ci_status, None
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow when GitHub/CI exception types are stable
         logger.warning(f"Failed to collect CI status: {e}")
         return CI_NOT_CONFIGURED, None
 
@@ -410,7 +418,9 @@ def _build_ci_error_details(
         try:
             run_logs = ci_manager.get_run_logs(rid)
             logs.update(run_logs)
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow when GitHub/CI exception types are stable
             logger.warning(f"Failed to get logs for run {rid}: {e}")
 
     if not failed_jobs:
@@ -566,7 +576,9 @@ def _collect_rebase_status(project_dir: Path) -> Tuple[bool, str]:
 
         return rebase_needed, reason
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow when GitHub/CI exception types are stable
         logger.warning(f"Failed to collect rebase status: {e}")
         return False, f"Error checking rebase status: {e}"
 
@@ -597,7 +609,9 @@ def _collect_task_status(project_dir: Path) -> bool:
 
         return tasks_complete
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow when GitHub/CI exception types are stable
         logger.warning(f"Failed to collect task status: {e}")
         return False
 

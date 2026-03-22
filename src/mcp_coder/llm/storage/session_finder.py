@@ -139,6 +139,8 @@ def find_latest_session(
     except (OSError, IOError) as e:
         logger.debug("Error accessing response directory %s: %s", responses_dir, e)
         return None
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.debug("Unexpected error finding response files: %s", e)
         return None

@@ -61,7 +61,9 @@ def delete_pr_info_directory(project_dir: Path) -> bool:
     except PermissionError as e:
         logger.error(f"Permission error deleting {pr_info_dir}: {e}")
         return False
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error deleting {pr_info_dir}: {e}")
         return False
 
@@ -102,7 +104,9 @@ def clean_profiler_output(project_dir: Path) -> bool:
     except PermissionError as e:
         logger.error(f"Permission error cleaning {prof_dir}: {e}")
         return False
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error cleaning {prof_dir}: {e}")
         return False
 
@@ -203,7 +207,9 @@ def check_prerequisites(project_dir: Path) -> bool:
             )
             return False
         logger.info("✓ Git working directory is clean")
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error checking git status: {e}")
         return False
 
@@ -221,7 +227,9 @@ def check_prerequisites(project_dir: Path) -> bool:
     except TaskTrackerFileNotFoundError:
         logger.info("TASK_TRACKER.md not found - skipping task completeness check")
         # Continue with other prerequisites - task tracker is optional
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error checking incomplete tasks: {e}")
         return False
 
@@ -249,7 +257,9 @@ def check_prerequisites(project_dir: Path) -> bool:
         logger.info(
             f"✓ Current branch '{current_branch}' is not base branch '{base_branch}'"
         )
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error checking branch status: {e}")
         return False
 
@@ -306,7 +316,9 @@ def generate_pr_summary(
             f"Critical error: Cannot load prompt 'PR Summary Generation' from {PROMPTS_FILE_PATH}: {e}"
         )
         raise
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Unexpected error loading prompt 'PR Summary Generation': {e}")
         raise
 
@@ -336,7 +348,9 @@ def generate_pr_summary(
         logger.info("PR summary generated successfully")
         return title, body
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Critical error: LLM API failed: {e}")
         logger.error("Cannot generate PR summary without working LLM connection.")
         logger.error("Please fix LLM configuration before creating PR.")
@@ -425,7 +439,9 @@ def create_pull_request(project_dir: Path, title: str, body: str) -> bool:
 
         return True
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error creating pull request: {e}")
         return False
 
@@ -468,7 +484,9 @@ def validate_branch_issue_linkage(project_dir: Path) -> Optional[int]:
             )
             return None
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error validating branch-issue linkage: {e}")
         return None
 
@@ -605,7 +623,9 @@ def run_create_pr_workflow(
                 else:
                     logger.warning("✗ Failed to update issue label (non-blocking)")
 
-            except Exception as e:
+            except (
+                Exception
+            ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                 logger.error(f"Error updating issue label (non-blocking): {e}")
 
     log_step("Create PR workflow completed successfully!")

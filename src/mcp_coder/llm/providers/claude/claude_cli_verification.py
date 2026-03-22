@@ -49,7 +49,9 @@ def verify_claude() -> dict[str, Any]:
             "value": "OK" if success else "FAILED",
             "error": error_msg if not success else None,
         }
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         result["api_integration"] = {
             "ok": False,
             "value": "FAILED",

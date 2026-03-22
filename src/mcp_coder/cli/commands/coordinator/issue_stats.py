@@ -346,7 +346,9 @@ def execute_coordinator_issue_stats(args: argparse.Namespace) -> int:
         print(f"Error: {e}", file=sys.stderr)
         return 1
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         logger.error(f"Unexpected error: {e}", exc_info=True)
         print(f"Error: {e}", file=sys.stderr)
         return 1

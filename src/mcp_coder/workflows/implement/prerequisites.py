@@ -57,7 +57,9 @@ def check_git_clean(project_dir: Path) -> bool:
                 for category, files in status.items():
                     if files:
                         logger.error(f"{category.capitalize()} files: {files}")
-            except Exception as e:
+            except (
+                Exception
+            ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                 logger.debug(f"Could not get detailed status: {e}")
             return False
 
@@ -111,7 +113,9 @@ def check_main_branch(project_dir: Path) -> bool:
         )
         return True
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error checking current branch: {e}")
         return False
 
@@ -187,7 +191,9 @@ def has_implementation_tasks(project_dir: Path) -> bool:
 
         # Return True if there are any tasks at all (complete or incomplete)
         return len(all_tasks) > 0
-    except Exception:
+    except (
+        Exception
+    ):  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         # If any exception occurs (file not found, section not found, etc.),
         # it means there are no proper implementation tasks
         return False

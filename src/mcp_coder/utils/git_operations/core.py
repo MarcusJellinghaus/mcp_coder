@@ -54,7 +54,11 @@ def _close_repo_safely(repo: Repo) -> None:
         if hasattr(repo, "close"):
             repo.close()
 
-    except (AttributeError, OSError, Exception) as e:
+    except (
+        AttributeError,
+        OSError,
+        Exception,
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to GitCommandError
         # Log but don't raise - cleanup should be best effort
         logger.debug("Error during repository cleanup (non-critical): %s", e)
 

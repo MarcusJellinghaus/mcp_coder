@@ -40,7 +40,9 @@ def is_git_repository(project_dir: Path) -> bool:
     except InvalidGitRepositoryError:
         logger.debug("Not a git repository: %s", project_dir)
         return False
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to GitCommandError
         logger.warning("Error checking if directory is git repository: %s", e)
         return False
 
@@ -76,7 +78,9 @@ def get_staged_changes(project_dir: Path) -> list[str]:
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.debug("Git error getting staged changes: %s", e)
         return []
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to GitCommandError
         logger.warning("Unexpected error getting staged changes: %s", e)
         return []
 
@@ -140,7 +144,9 @@ def get_unstaged_changes(project_dir: Path) -> dict[str, list[str]]:
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.debug("Git error getting unstaged changes: %s", e)
         return {"modified": [], "untracked": []}
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to GitCommandError
         logger.warning("Unexpected error getting unstaged changes: %s", e)
         return {"modified": [], "untracked": []}
 
@@ -189,7 +195,9 @@ def get_full_status(project_dir: Path) -> dict[str, list[str]]:
 
         return result
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to GitCommandError
         logger.warning("Unexpected error getting full git status: %s", e)
         return {"staged": [], "modified": [], "untracked": []}
 
@@ -307,7 +315,9 @@ def get_current_branch_name(project_dir: Path) -> Optional[str]:
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.debug("Git error getting current branch name: %s", e)
         return None
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to GitCommandError
         logger.warning("Unexpected error getting current branch name: %s", e)
         return None
 
@@ -376,7 +386,9 @@ def get_default_branch_name(project_dir: Path) -> Optional[str]:
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.debug("Git error getting default branch name: %s", e)
         return None
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to GitCommandError
         logger.warning("Unexpected error getting default branch name: %s", e)
         return None
 
@@ -454,7 +466,9 @@ def branch_exists(project_dir: Path, branch_name: str) -> bool:
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.debug("Git error checking branch existence: %s", e)
         return False
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to GitCommandError
         logger.warning("Unexpected error checking branch existence: %s", e)
         return False
 
@@ -504,7 +518,9 @@ def remote_branch_exists(project_dir: Path, branch_name: str) -> bool:
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.debug("Git error checking remote branch existence: %s", e)
         return False
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to GitCommandError
         logger.warning("Unexpected error checking remote branch existence: %s", e)
         return False
 
@@ -695,7 +711,9 @@ def detect_parent_branch_via_merge_base(
                                 e,
                             )
                             continue
-            except Exception as e:
+            except (
+                Exception
+            ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to GitCommandError
                 logger.debug("Error checking remote branches: %s", e)
 
             # Return smallest distance candidate
@@ -715,6 +733,8 @@ def detect_parent_branch_via_merge_base(
     except InvalidGitRepositoryError:
         logger.debug("Invalid git repository: %s", project_dir)
         return None
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to GitCommandError
         logger.debug("Failed to detect parent branch: %s", e)
         return None

@@ -230,14 +230,18 @@ def prepare_and_launch_session(
 
         return session
 
-    except Exception:
+    except (
+        Exception
+    ):  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         # Cleanup working folder on failure
         if folder_path.exists():
             try:
                 shutil.rmtree(
                     folder_path, onerror=_remove_readonly
                 )  # pylint: disable=deprecated-argument  # onexc requires Python 3.12+
-            except Exception as cleanup_error:
+            except (
+                Exception
+            ) as cleanup_error:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                 logger.warning(
                     "Failed to cleanup folder %s: %s",
                     folder_path,
@@ -369,7 +373,9 @@ def process_eligible_issues(
             started_sessions.append(session)
             current_count += 1
 
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.error(
                 "Failed to start session for issue #%d: %s",
                 issue["number"],

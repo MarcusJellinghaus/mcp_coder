@@ -73,7 +73,9 @@ def get_mcp_coder_install_path() -> Path | None:
 
         logger.warning("Could not determine mcp-coder installation directory")
         return None
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error determining mcp-coder installation path: {e}")
         return None
 

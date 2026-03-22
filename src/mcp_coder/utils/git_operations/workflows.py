@@ -102,7 +102,9 @@ def commit_all_changes(message: str, project_dir: Path) -> CommitResult:
         # Return the commit result directly (success or failure)
         return commit_result
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to GitCommandError
         error_msg = f"Unexpected error during commit all changes workflow: {e}"
         logger.error(error_msg)
         return {"success": False, "commit_hash": None, "error": error_msg}
@@ -197,7 +199,9 @@ def needs_rebase(
         error_msg = f"git error: {e}"
         logger.error("Git error during rebase check: %s", e)
         return False, f"error: {error_msg}"
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to GitCommandError
         error_msg = f"unexpected error: {e}"
         logger.error("Unexpected error during rebase check: %s", e)
         return False, f"error: {error_msg}"

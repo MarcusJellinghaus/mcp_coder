@@ -250,13 +250,17 @@ def _get_vscode_window_titles(refresh: bool = False) -> list[str]:
                     _, pid = win32process.GetWindowThreadProcessId(hwnd)
                     if pid in vscode_pids:
                         titles.append(title)
-        except Exception:  # pylint: disable=broad-exception-caught
+        except (
+            Exception
+        ):  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             pass  # Ignore errors for individual windows
         return True
 
     try:
         win32gui.EnumWindows(enum_callback, None)
-    except Exception as e:  # pylint: disable=broad-exception-caught
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.warning("Failed to enumerate windows: %s", e)
         return []
 

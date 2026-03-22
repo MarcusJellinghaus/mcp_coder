@@ -297,7 +297,9 @@ def main() -> int:
         print("\nOperation cancelled by user.")
         return 1
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         logger.error(f"Unexpected error in CLI: {e}", exc_info=True)
         print(f"Error: {e}")
         return 2

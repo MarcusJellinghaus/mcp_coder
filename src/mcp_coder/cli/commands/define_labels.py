@@ -413,13 +413,18 @@ def apply_labels(
     try:
         # Initialize LabelsManager (validates token and repo connection)
         labels_manager = LabelsManager(project_dir)
-    except (ValueError, Exception) as e:
+    except (
+        ValueError,
+        Exception,
+    ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         raise RuntimeError(f"Failed to initialize LabelsManager: {e}") from e
 
     # Fetch existing labels from GitHub
     try:
         existing_labels_data = labels_manager.get_labels()
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         raise RuntimeError(f"Failed to fetch existing labels: {e}") from e
 
     # Convert LabelData list to tuple format for calculate_label_changes
@@ -447,7 +452,9 @@ def apply_labels(
         try:
             labels_manager.create_label(label_name, color, description)
             logger.info(f"Created: {label_name}")
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
             raise RuntimeError(f"Failed to create label '{label_name}': {e}") from e
 
     # Apply changes - UPDATE existing labels
@@ -458,7 +465,9 @@ def apply_labels(
                 label_name, color=color, description=description
             )
             logger.info(f"Updated: {label_name}")
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
             raise RuntimeError(f"Failed to update label '{label_name}': {e}") from e
 
     # Apply changes - DELETE obsolete status-* labels
@@ -466,7 +475,9 @@ def apply_labels(
         try:
             labels_manager.delete_label(label_name)
             logger.info(f"Deleted: {label_name}")
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
             raise RuntimeError(f"Failed to delete label '{label_name}': {e}") from e
 
     # Unchanged labels - skip API calls (idempotent)
@@ -581,7 +592,9 @@ def execute_define_labels(args: argparse.Namespace) -> int:
         print(f"Error: {e}", file=sys.stderr)
         return 1
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         logger.error(f"Unexpected error: {e}", exc_info=True)
         print(f"Error: {e}", file=sys.stderr)
         return 1

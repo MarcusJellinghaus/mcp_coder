@@ -290,7 +290,9 @@ def _fetch_additional_issues(
                     logger.debug(
                         f"Fetched additional issue #{issue_num} for {repo_name}"
                     )
-        except Exception as e:  # pylint: disable=broad-exception-caught
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             # Generic exception handling - catches all API failures (404, rate limits, etc.)
             # On fetch failure, use cached version if available as fallback
             if issue_key in cache_data["issues"]:

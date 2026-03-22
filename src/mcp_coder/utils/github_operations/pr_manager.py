@@ -404,7 +404,9 @@ class PullRequestManager(BaseGitHubManager):
                 return ""
             repo_name = get_repo_full_name(self.repository_url)
             return repo_name or ""
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.debug(f"Error getting repository name: {e}")
             return ""
 
@@ -420,6 +422,8 @@ class PullRequestManager(BaseGitHubManager):
             assert self.project_dir is not None, "project_dir must be set"
             default_branch = get_default_branch_name(self.project_dir)
             return default_branch or ""
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.debug(f"Error getting default branch: {e}")
             return ""

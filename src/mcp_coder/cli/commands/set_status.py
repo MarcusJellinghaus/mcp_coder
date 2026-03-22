@@ -47,7 +47,9 @@ def build_set_status_epilog() -> str:
         lines.append("  mcp-coder set-status status-05:plan-ready")
         lines.append("  mcp-coder set-status status-08:ready-pr --issue 123")
         return "\n".join(lines)
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         # Log at debug level to aid troubleshooting (Decision #9)
         logger.debug(f"Failed to build set-status epilog: {e}")
         return "Run in a project directory to see available status labels."
@@ -258,7 +260,9 @@ def execute_set_status(args: argparse.Namespace) -> int:
         print(f"Error: {e}", file=sys.stderr)
         return 1
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         logger.error(f"Unexpected error: {e}", exc_info=True)
         print(f"Error: {e}", file=sys.stderr)
         return 1

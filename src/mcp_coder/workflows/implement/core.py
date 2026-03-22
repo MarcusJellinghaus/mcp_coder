@@ -450,7 +450,9 @@ def _read_problem_description(temp_file: Path, fallback_response: str) -> str:
                 logger.debug(f"Problem description:\n{content}")
                 return content
             logger.debug("Temp file was empty, using fallback")
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.warning(f"Failed to read problem description file: {e}")
 
     logger.debug("Using analysis response as problem description")

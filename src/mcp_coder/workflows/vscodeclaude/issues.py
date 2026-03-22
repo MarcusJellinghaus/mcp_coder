@@ -378,7 +378,9 @@ def build_eligible_issues_with_branch_check(
                     if branch is None:
                         issues_without_branch.add((repo_full_name, issue["number"]))
 
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.warning(f"Failed to process repo {repo_name}: {e}")
             continue
 

@@ -52,7 +52,9 @@ try:
     from importlib.metadata import version
 
     __version__ = version("mcp-coder")
-except Exception:
+except (
+    Exception
+):  # pylint: disable=broad-exception-caught  # optional import fallback — broad catch intentional
     # Fallback for development/editable installs without proper metadata
     __version__ = "0.0.0.dev0+unknown"
 

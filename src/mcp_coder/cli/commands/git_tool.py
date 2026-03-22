@@ -173,7 +173,9 @@ def execute_compact_diff(args: argparse.Namespace) -> int:
         logger.error(f"Error: {e}")
         print(f"Error: {e}", file=sys.stderr)
         return 2
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         logger.error(f"Error generating compact diff: {e}")
         logger.debug("Exception details:", exc_info=True)
         print(f"Error: {e}", file=sys.stderr)

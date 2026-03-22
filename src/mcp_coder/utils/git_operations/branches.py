@@ -71,7 +71,9 @@ def create_branch(
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.error("Git error creating branch: %s", e)
         return False
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to GitCommandError
         logger.error("Unexpected error creating branch: %s", e)
         return False
 
@@ -171,7 +173,9 @@ def checkout_branch(branch_name: str, project_dir: Path) -> bool:
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.error("Git error checking out branch: %s", e)
         return False
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to GitCommandError
         logger.error("Unexpected error checking out branch: %s", e)
         return False
 
@@ -266,6 +270,8 @@ def delete_branch(
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.error("Git error deleting branch: %s", e)
         return False
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to GitCommandError
         logger.error("Unexpected error deleting branch: %s", e)
         return False

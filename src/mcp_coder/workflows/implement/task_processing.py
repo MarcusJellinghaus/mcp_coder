@@ -61,7 +61,9 @@ def get_next_task(project_dir: Path) -> Optional[str]:
         logger.info(f"Found next task: {next_task}")
         return next_task
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error getting incomplete tasks: {e}")
         return None
 
@@ -92,7 +94,9 @@ def run_formatters(project_dir: Path) -> bool:
         logger.info("All formatters completed successfully")
         return True
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error running formatters: {e}")
         return False
 
@@ -149,7 +153,9 @@ def commit_changes(project_dir: Path, provider: str = "claude") -> bool:
         )
         return True
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error committing changes: {e}")
         if commit_message:
             logger.error(f"Commit message was: {commit_message}")
@@ -184,7 +190,9 @@ def push_changes(project_dir: Path, force_with_lease: bool = False) -> bool:
             logger.info("Changes pushed successfully to remote")
         return True
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error pushing changes: {e}")
         return False
 
@@ -284,7 +292,9 @@ def check_and_fix_mypy(
                 )
                 # Replace placeholder with actual mypy output
                 mypy_prompt = mypy_prompt_template.replace("[mypy_output]", mypy_result)
-            except Exception as e:
+            except (
+                Exception
+            ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                 logger.error(f"Error loading mypy fix prompt: {e}")
                 return False
 
@@ -320,14 +330,18 @@ def check_and_fix_mypy(
                         step_name=f"step_{step_num}_mypy_{mypy_attempt_counter}",
                         branch_name=branch_name,
                     )
-                except Exception as store_err:
+                except (
+                    Exception
+                ) as store_err:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                     logger.warning("Failed to store implement session: %s", store_err)
 
                 logger.info(
                     f"Applied mypy fixes from LLM (attempt {mypy_attempt_counter})"
                 )
 
-            except Exception as e:
+            except (
+                Exception
+            ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                 logger.error(
                     f"Error getting mypy fixes from LLM on attempt {mypy_attempt_counter}: {e}"
                 )
@@ -341,7 +355,9 @@ def check_and_fix_mypy(
                     logger.info("Mypy check passed after fixes")
                     return True
 
-            except Exception as e:
+            except (
+                Exception
+            ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                 logger.error(
                     f"Error re-running mypy check on attempt {mypy_attempt_counter}: {e}"
                 )
@@ -351,7 +367,9 @@ def check_and_fix_mypy(
         logger.info("Could not resolve all mypy type errors")
         return False
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error during mypy check and fix: {e}")
         return False
 
@@ -404,7 +422,9 @@ def process_single_task(
         prompt_template = get_prompt(
             str(PROMPTS_FILE_PATH), "Implementation Prompt Template using task tracker"
         )
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error loading prompt template: {e}")
         return False, "error"
 
@@ -449,10 +469,14 @@ Please implement this task step by step."""
                 step_name=f"step_{step_num}",
                 branch_name=branch_name,
             )
-        except Exception as store_err:
+        except (
+            Exception
+        ) as store_err:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.warning("Failed to store implement session: %s", store_err)
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error calling LLM: {e}")
         return False, "error"
 
@@ -468,7 +492,9 @@ Please implement this task step by step."""
             )
             logger.warning("Skipping commit/push for this task")
             return True, "completed"  # Consider it successful but skip commit
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error checking file changes: {e}")
         return False, "error"
 

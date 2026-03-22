@@ -80,7 +80,9 @@ def execute_create_plan(args: argparse.Namespace) -> int:
         print("\nOperation cancelled by user.")
         return 1
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         print(f"Error during workflow execution: {e}", file=sys.stderr)
         logger.error(f"Unexpected error in create-plan command: {e}", exc_info=True)
         return 1

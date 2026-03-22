@@ -72,7 +72,9 @@ def commit_staged_files(message: str, project_dir: Path) -> CommitResult:
         error_msg = f"Git error creating commit: {e}"
         logger.error(error_msg)
         return {"success": False, "commit_hash": None, "error": error_msg}
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to GitCommandError
         error_msg = f"Unexpected error creating commit: {e}"
         logger.error(error_msg)
         return {"success": False, "commit_hash": None, "error": error_msg}

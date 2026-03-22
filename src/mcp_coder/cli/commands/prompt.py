@@ -96,13 +96,17 @@ def _log_to_mlflow(
             mlflow_logger.end_run("FINISHED")
 
         logger.debug("Logged conversation to MLflow")
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation
         logger.debug(f"Failed to log conversation to MLflow: {e}")
         # Attempt to end run even if logging failed
         try:
             if mlflow_logger is not None:
                 mlflow_logger.end_run("FAILED")
-        except Exception:
+        except (
+            Exception
+        ):  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation
             # Silent failure OK - MLflow is optional and should never break main workflow
             pass
 
@@ -324,7 +328,9 @@ def execute_prompt(
         logger.info("Prompt command completed successfully")
         return 0
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         # Handle API errors
         logger.error("Prompt command failed: %s", str(e))
         print(f"Error: {str(e)}", file=sys.stderr)

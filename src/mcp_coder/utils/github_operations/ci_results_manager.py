@@ -260,7 +260,9 @@ class CIResultsManager(BaseGitHubManager):
                             ),
                         }
                         all_jobs.append(job_data)
-                except Exception as e:
+                except (
+                    Exception
+                ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                     logger.warning(f"Failed to fetch jobs for run {run.id}: {e}")
                     failed_to_fetch_runs.append(run.id)
 
@@ -288,7 +290,9 @@ class CIResultsManager(BaseGitHubManager):
 
             return CIStatusData(run=run_data, jobs=all_jobs)
 
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.error(f"Error retrieving CI status for branch {branch}: {e}")
             # Re-raise to let the decorator handle it
             raise
@@ -334,13 +338,17 @@ class CIResultsManager(BaseGitHubManager):
                             f"Skipping binary file '{file_name}' - only text files are supported"
                         )
                         continue
-                    except Exception as e:
+                    except (
+                        Exception
+                    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                         logger.warning(f"Failed to extract file {file_name}: {e}")
                         continue
 
             return extracted_files
 
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.error(f"Failed to download and extract ZIP from {url}: {e}")
             return {}
 
@@ -379,7 +387,9 @@ class CIResultsManager(BaseGitHubManager):
             logs_url = workflow_run.logs_url
             return self._download_and_extract_zip(logs_url)
 
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.error(f"Error retrieving logs for run ID {run_id}: {e}")
             # Re-raise to let the decorator handle it
             raise
@@ -452,14 +462,18 @@ class CIResultsManager(BaseGitHubManager):
                     # Merge contents from this artifact
                     all_artifact_contents.update(artifact_contents)
 
-                except Exception as e:
+                except (
+                    Exception
+                ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                     logger.error(f"Failed to download artifact '{artifact.name}': {e}")
                     # Continue with other artifacts
                     continue
 
             return all_artifact_contents
 
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.error(f"Error retrieving artifacts for run ID {run_id}: {e}")
             # Re-raise to let the decorator handle it
             raise

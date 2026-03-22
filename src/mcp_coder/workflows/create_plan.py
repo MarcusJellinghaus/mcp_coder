@@ -83,7 +83,9 @@ def check_prerequisites(project_dir: Path, issue_number: int) -> tuple[bool, Iss
     except ValueError as e:
         logger.error(f"✗ Error checking git status: {e}")
         return (False, empty_issue_data)
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"✗ Unexpected error checking git status: {e}")
         return (False, empty_issue_data)
 
@@ -99,7 +101,9 @@ def check_prerequisites(project_dir: Path, issue_number: int) -> tuple[bool, Iss
 
         logger.info(f"✓ Issue #{issue_data['number']} exists: '{issue_data['title']}'")
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"✗ Error fetching issue #{issue_number}: {e}")
         return (False, empty_issue_data)
 
@@ -159,7 +163,9 @@ def manage_branch(
         logger.info("Switched to branch: %s", branch_name)
         return branch_name
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error("Error managing branch: %s", e)
         return None
 
@@ -210,7 +216,9 @@ def create_pr_info_structure(project_dir: Path) -> bool:
         logger.info("Created pr_info/ directory structure successfully")
         return True
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Failed to create pr_info/ directory structure: {e}")
         return False
 
@@ -227,7 +235,9 @@ def _load_prompt_or_exit(header: str) -> str:
         logger.error(f"Critical error: Cannot load prompt '{header}': {e}")
         logger.error(f"Expected prompt file: {PROMPTS_FILE_PATH}")
         sys.exit(1)
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Unexpected error loading prompt '{header}': {e}")
         sys.exit(1)
 
@@ -346,10 +356,14 @@ def run_planning_prompts(
             )
             logger.info(f"Prompt 1 conversation logged to file: {stored_path}")
             logger.debug(f"  Response length: {len(response_1['text'])} chars")
-        except Exception as storage_error:
+        except (
+            Exception
+        ) as storage_error:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.warning(f"Failed to store prompt 1 conversation: {storage_error}")
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error executing prompt 1: {e}")
         return False
 
@@ -383,10 +397,14 @@ def run_planning_prompts(
             )
             logger.info(f"Prompt 2 conversation logged to file: {stored_path}")
             logger.debug(f"  Response length: {len(response_2['text'])} chars")
-        except Exception as storage_error:
+        except (
+            Exception
+        ) as storage_error:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.warning(f"Failed to store prompt 2 conversation: {storage_error}")
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error executing prompt 2: {e}")
         return False
 
@@ -422,10 +440,14 @@ def run_planning_prompts(
             )
             logger.info(f"Prompt 3 conversation logged to file: {stored_path}")
             logger.debug(f"  Response length: {len(response_3['text'])} chars")
-        except Exception as storage_error:
+        except (
+            Exception
+        ) as storage_error:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.warning(f"Failed to store prompt 3 conversation: {storage_error}")
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error executing prompt 3: {e}")
         return False
 
@@ -626,7 +648,9 @@ def run_create_plan_workflow(
             else:
                 logger.warning("✗ Failed to update issue label (non-blocking)")
 
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.error(f"Error updating issue label (non-blocking): {e}")
 
     logger.info("Create plan workflow completed successfully!")

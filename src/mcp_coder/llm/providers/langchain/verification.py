@@ -238,7 +238,9 @@ def verify_langchain(
                 "value": None,
                 "error": f"MCP server failed to start: {exc}",
             }
-        except Exception as exc:  # pylint: disable=broad-except
+        except (
+            Exception
+        ) as exc:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             result["mcp_agent_test"] = {
                 "ok": False,
                 "value": None,
@@ -282,5 +284,7 @@ def _list_models_for_backend(
         else:
             return {"ok": False, "value": [], "error": f"Unknown backend: {backend}"}
         return {"ok": True, "value": models}
-    except Exception as exc:
+    except (
+        Exception
+    ) as exc:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         return {"ok": False, "value": [], "error": str(exc)}
