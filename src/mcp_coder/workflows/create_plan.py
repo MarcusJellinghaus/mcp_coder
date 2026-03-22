@@ -110,7 +110,7 @@ def check_prerequisites(project_dir: Path, issue_number: int) -> tuple[bool, Iss
 def manage_branch(
     project_dir: Path,
     issue_number: int,
-    issue_title: str,
+    _issue_title: str,
     base_branch: Optional[str] = None,
 ) -> Optional[str]:
     """Get existing linked branch or create new one.

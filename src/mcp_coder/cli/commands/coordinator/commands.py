@@ -305,7 +305,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                 try:
                     dispatch_workflow(
                         issue=issue,
-                        workflow_name=workflow_name,
+                        _workflow_name=workflow_name,
                         repo_config=validated_config,
                         jenkins_client=jenkins_client,
                         issue_manager=issue_manager,

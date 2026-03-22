@@ -128,7 +128,7 @@ def execute_verify(args: argparse.Namespace) -> int:
 
     # 3. LangChain verification (only when provider is langchain)
     langchain_result: dict[str, Any] | None = None
-    print(f"\n=== LLM PROVIDER ===")
+    print("\n=== LLM PROVIDER ===")
     print(
         f"  {'Active provider':<20s} {symbols['success']} {active_provider} (from {source})"
     )

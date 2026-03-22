@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def execute_help(args: argparse.Namespace) -> int:
+def execute_help(_args: argparse.Namespace) -> int:
     """Execute help command.
 
     Returns:

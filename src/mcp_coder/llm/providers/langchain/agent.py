@@ -210,7 +210,7 @@ async def run_agent(
     chat_model: BaseChatModel,
     messages: list[dict[str, Any]],
     mcp_config_path: str,
-    execution_dir: str | None = None,
+    _execution_dir: str | None = None,
     env_vars: dict[str, str] | None = None,
     timeout: int = 30,
 ) -> tuple[str, list[dict[str, Any]], dict[str, Any]]:

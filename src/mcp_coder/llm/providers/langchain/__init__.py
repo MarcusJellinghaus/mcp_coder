@@ -296,7 +296,7 @@ def _ask_agent(
             chat_model=chat_model,
             messages=history,
             mcp_config_path=mcp_config,
-            execution_dir=execution_dir,
+            _execution_dir=execution_dir,
             env_vars=env_vars,
             timeout=timeout,
         )

@@ -241,7 +241,7 @@ def _filter_eligible_issues(issues: List[IssueData]) -> List[IssueData]:
 
 
 def get_eligible_issues(
-    issue_manager: IssueManager, log_level: str = "INFO"
+    issue_manager: IssueManager, _log_level: str = "INFO"
 ) -> list[IssueData]:
     """Get issues ready for automation, sorted by priority.
 
@@ -355,7 +355,7 @@ def get_cached_eligible_issues(
 
 def dispatch_workflow(
     issue: IssueData,
-    workflow_name: str,
+    _workflow_name: str,
     repo_config: dict[str, str],
     jenkins_client: JenkinsClient,
     issue_manager: IssueManager,

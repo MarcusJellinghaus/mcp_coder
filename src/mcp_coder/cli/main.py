@@ -99,7 +99,7 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def handle_no_command(args: argparse.Namespace) -> int:
+def handle_no_command(_args: argparse.Namespace) -> int:
     """Handle case when no command is provided.
 
     Returns:

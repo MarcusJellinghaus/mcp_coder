@@ -213,7 +213,7 @@ class TestManageBranchBaseBranch:
         result = manage_branch(
             project_dir=tmp_path,
             issue_number=123,
-            issue_title="Test Issue",
+            _issue_title="Test Issue",
             base_branch="feature/v2",
         )
 
@@ -244,7 +244,7 @@ class TestManageBranchBaseBranch:
         result = manage_branch(
             project_dir=tmp_path,
             issue_number=123,
-            issue_title="Test Issue",
+            _issue_title="Test Issue",
             # No base_branch provided
         )
 
@@ -269,7 +269,7 @@ class TestManageBranchBaseBranch:
         result = manage_branch(
             project_dir=tmp_path,
             issue_number=123,
-            issue_title="Test Issue",
+            _issue_title="Test Issue",
             base_branch="feature/v2",  # Should be ignored
         )
 
