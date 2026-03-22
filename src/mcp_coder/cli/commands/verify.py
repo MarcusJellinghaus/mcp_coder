@@ -5,9 +5,11 @@ MLflow) and formats their output for the terminal.
 """
 
 import argparse
+import datetime
 import logging
 from typing import Any
 
+from ...llm.interface import ask_llm
 from ...llm.mlflow_logger import verify_mlflow
 from ...llm.providers.claude.claude_cli_verification import verify_claude
 from ...llm.providers.langchain.verification import verify_langchain
@@ -28,7 +30,6 @@ _LABEL_MAP: dict[str, str] = {
     "api_key": "API key",
     "langchain_core": "LangChain core",
     "backend_package": "Backend package",
-    "test_prompt": "Test prompt",
     "available_models": "Available models",
     # MCP adapter section
     "mcp_adapters": "MCP adapters",
@@ -146,13 +147,31 @@ def execute_verify(args: argparse.Namespace) -> int:
     else:
         print("  (uses Claude CLI — see Basic Verification above)")
 
+    # 3b. Unified test prompt (both providers)
+    test_prompt_ok = True
+    timestamp = datetime.datetime.now(datetime.timezone.utc)
+    try:
+        ask_llm("Reply with OK", provider=active_provider, timeout=30)
+        print(f"  {'Test prompt':<20s} {symbols['success']} responded OK")
+    except Exception as exc:  # pylint: disable=broad-except
+        test_prompt_ok = False
+        print(f"  {'Test prompt':<20s} {symbols['failure']} FAILED ({exc})")
+
     # 4. MLflow verification
-    mlflow_result = verify_mlflow()
+    mlflow_result = verify_mlflow(since=timestamp)
     print(_format_section("MLFLOW", mlflow_result, symbols))
 
     # 5. Compute and return exit code
     exit_code = _compute_exit_code(
         active_provider, claude_result, langchain_result, mlflow_result
     )
+    # Override if MLflow is enabled and test prompt failed
+    mlflow_enabled = mlflow_result.get("enabled", {})
+    if (
+        isinstance(mlflow_enabled, dict)
+        and mlflow_enabled.get("ok") is True
+        and not test_prompt_ok
+    ):
+        exit_code = 1
     logger.info("Verify command completed with exit code %d", exit_code)
     return exit_code

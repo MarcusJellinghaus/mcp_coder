@@ -1,17 +1,16 @@
 """LangChain provider verification functionality.
 
 Provides verify_langchain() which checks configuration, packages, API key,
-and optionally sends a test prompt. Returns a structured dict (no printing).
+and reports readiness. Returns a structured dict (no printing).
 """
 
 from __future__ import annotations
 
 import importlib.util
 import os
-import time
 from typing import Any
 
-from . import _load_langchain_config, ask_langchain
+from . import _load_langchain_config
 
 _BACKEND_ENV_VARS: dict[str, str] = {
     "openai": "OPENAI_API_KEY",
@@ -114,7 +113,7 @@ def verify_langchain(
 
     Returns:
         Dict with keys: backend, model, api_key, langchain_core,
-        backend_package, mcp_adapters, langgraph, test_prompt, overall_ok.
+        backend_package, mcp_adapters, langgraph, overall_ok.
         If mcp_config_path is provided, also includes mcp_agent_test.
         If check_models=True, also includes available_models.
     """
@@ -177,30 +176,6 @@ def verify_langchain(
     result["mcp_adapters"] = mcp_pkg_results["mcp_adapters"]
     result["langgraph"] = mcp_pkg_results["langgraph"]
 
-    # Test prompt
-    if api_key and backend:
-        start = time.monotonic()
-        try:
-            ask_langchain("Reply with OK", timeout=15)
-            elapsed = time.monotonic() - start
-            result["test_prompt"] = {
-                "ok": True,
-                "value": f"responded in {elapsed:.1f}s",
-                "error": None,
-            }
-        except Exception as exc:
-            result["test_prompt"] = {
-                "ok": False,
-                "value": None,
-                "error": str(exc),
-            }
-    else:
-        result["test_prompt"] = {
-            "ok": None,
-            "value": "skipped (no API key)" if not api_key else "skipped (no backend)",
-            "error": None,
-        }
-
     # Check models (optional)
     if check_models and backend:
         result["available_models"] = _list_models_for_backend(
@@ -247,18 +222,12 @@ def verify_langchain(
                 "error": f"Agent test failed: {type(exc).__name__}: {exc}",
             }
 
-    # overall_ok: True when backend configured AND backend package installed AND
-    # MCP adapter packages installed AND
-    # (test_prompt succeeded OR test_prompt was skipped due to no API key)
-    test_prompt_ok = (
-        result["test_prompt"]["ok"] is True or result["test_prompt"]["ok"] is None
-    )
+    # overall_ok: True when backend configured AND all required packages installed
     result["overall_ok"] = bool(
         backend
         and result["backend_package"]["ok"]
         and result["mcp_adapters"]["ok"]
         and result["langgraph"]["ok"]
-        and test_prompt_ok
     )
 
     return result
