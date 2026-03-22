@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     
     - name: Check for forbidden folders in PR
       run: |
@@ -113,13 +113,13 @@ jobs:
           - {name: "file-size", cmd: "mcp-coder check file-size --max-lines 750 --allowlist-file .large-files-allowlist"}
     name: ${{ matrix.check.name }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - name: Install uv
         uses: astral-sh/setup-uv@v5
       
       - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.11
           
@@ -151,13 +151,13 @@ jobs:
           - {name: "vulture", cmd: "vulture --version && ./tools/vulture_check.sh"}
     name: ${{ matrix.check.name }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - name: Install uv
         uses: astral-sh/setup-uv@v5
       
       - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.11
           
