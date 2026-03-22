@@ -89,7 +89,7 @@ class TestGetLatestCommitSha:
         self, git_repo_with_commit: tuple[Repo, Path]
     ) -> None:
         """Should return SHA string in a valid git repo."""
-        repo, project_dir = git_repo_with_commit
+        _, project_dir = git_repo_with_commit
 
         sha = get_latest_commit_sha(project_dir)
 

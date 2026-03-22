@@ -83,7 +83,7 @@ class TestCIWaitingLogic:
         }
 
         # 45 second timeout = 3 attempts (45/15)
-        ci_status, success = _wait_for_ci_completion(mock_manager, "branch", 45, True)
+        _, success = _wait_for_ci_completion(mock_manager, "branch", 45, True)
 
         assert success is False  # Timeout
         assert mock_sleep.call_count == 3
@@ -146,7 +146,7 @@ class TestCIWaitingLogic:
             "jobs": [],
         }
 
-        ci_status, success = _wait_for_ci_completion(mock_manager, "branch", 300, True)
+        _, success = _wait_for_ci_completion(mock_manager, "branch", 300, True)
 
         assert success is True
         assert mock_sleep.call_count == 0  # No waiting needed

@@ -1126,8 +1126,8 @@ class TestBuildEligibleIssuesWithBranchCheck:
             lambda issue: "status-01:created",
         )
 
-        eligible_issues, issues_without_branch = (
-            build_eligible_issues_with_branch_check(["bad-repo", "good-repo"])
+        eligible_issues, _ = build_eligible_issues_with_branch_check(
+            ["bad-repo", "good-repo"]
         )
 
         # Should have issue from good-repo only

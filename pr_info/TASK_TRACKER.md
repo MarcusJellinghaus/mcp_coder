@@ -32,7 +32,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] [Step 8: src/ W0718 — broad-exception-caught (181)](./steps/step_8.md)
 
 ### tests/ (Steps 9-13)
-- [ ] [Step 9: tests/ W0612 — unused variables (43)](./steps/step_9.md)
+- [x] [Step 9: tests/ W0612 — unused variables (43)](./steps/step_9.md)
 - [ ] [Step 10: tests/ W1514 — unspecified encoding (23)](./steps/step_10.md)
 - [ ] [Step 11: tests/ W0718 — broad-exception-caught (31)](./steps/step_11.md)
 - [ ] [Step 12: tests/ W0107 + W0108 + W0702 + W0719 — small mechanical fixes (10)](./steps/step_12.md)

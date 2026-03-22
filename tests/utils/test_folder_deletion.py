@@ -223,17 +223,7 @@ class TestSafeDeleteFolder:
 
         monkeypatch.setattr(Path, "rmdir", mock_rmdir)
 
-        # Mock move to succeed and remove the folder
-        def mock_move(src: str, dst: str) -> str:
-            Path(src).mkdir(parents=True, exist_ok=True)  # Ensure it exists
-            # Create staging and pretend to move
-            Path(dst).parent.mkdir(parents=True, exist_ok=True)
-            # Actually delete source to simulate successful move
-            Path(src).rmdir = lambda: None  # type: ignore[method-assign]
-            shutil._rmtree_unsafe(Path(src), lambda *_: None)  # type: ignore[attr-defined]
-            return dst
-
-        # Simpler approach - just mark folder as moved
+        # Mock move - just mark folder as moved
         def mock_move_simple(src: str, dst: str) -> str:
             # Mark folder as non-existent after move
             return dst

@@ -86,7 +86,7 @@ class TestMLflowLogger:
         with patch(
             "mcp_coder.llm.mlflow_logger.MLflowLogger._initialize_mlflow"
         ) as mock_init:
-            logger = MLflowLogger(self.config)
+            _ = MLflowLogger(self.config)
             mock_init.assert_called_once()
 
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
@@ -113,7 +113,7 @@ class TestMLflowLogger:
             with patch(
                 "mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True
             ):
-                logger = MLflowLogger(self.config)
+                _ = MLflowLogger(self.config)
 
                 # Verify MLflow setup calls
                 mock_mlflow.set_tracking_uri.assert_called_once_with("file:///tmp/test")
@@ -129,7 +129,7 @@ class TestMLflowLogger:
                 "mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True
             ):
                 with patch("mcp_coder.llm.mlflow_logger.logger") as mock_logger:
-                    logger = MLflowLogger(self.config)
+                    _ = MLflowLogger(self.config)
 
                     mock_logger.warning.assert_called_with(
                         "Failed to set MLflow experiment 'test-exp': Experiment error"
@@ -180,7 +180,7 @@ class TestMLflowLogger:
             ):
                 logger = MLflowLogger(self.config)
 
-                result = logger.start_run()
+                _ = logger.start_run()
 
                 # Check that a name was generated
                 call_args = mock_mlflow.start_run.call_args

@@ -274,7 +274,7 @@ class TestExecuteCommitAuto:
             assert result == 0, f"Failed to proceed with input: '{proceed_input}'"
             # Should have proceeded to commit
             captured = capsys.readouterr()
-            captured_out: str = captured.out or ""
+            _ = captured.out or ""
             if proceed_input != "":  # Empty string test might not show success message
                 continue
             # For empty string (default), should proceed
