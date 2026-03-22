@@ -1,4 +1,4 @@
-"""Prompt manager for mcp-coder project.
+r"""Prompt manager for mcp-coder project.
 
 This module provides functionality to retrieve and validate prompts from markdown files.
 Supports file paths, directories/wildcards, and string content with auto-detection.
@@ -24,7 +24,7 @@ Markdown Format Requirements:
 
 Usage Examples:
     # From string content
-    prompt = get_prompt('# Test\\n```\\nHello World\\n```', 'Test')
+    prompt = get_prompt('# Test\n```\nHello World\n```', 'Test')
 
     # From file
     prompt = get_prompt('prompts/prompts.md', 'Short Commit')
@@ -82,7 +82,7 @@ from .utils.data_files import find_data_file
 
 
 def get_prompt(source: str, header: str) -> str:
-    """Get prompt from markdown source (file path, directory/wildcard, or string content).
+    r"""Get prompt from markdown source (file path, directory/wildcard, or string content).
 
     This function supports multiple input types and automatically detects whether the
     source is a file path, directory, wildcard pattern, or string content. For
@@ -93,7 +93,7 @@ def get_prompt(source: str, header: str) -> str:
             - File path: 'prompts/prompts.md'
             - Directory: 'prompts/' (searches all .md files)
             - Wildcard: 'prompts/*.md' or 'docs/section*.md'
-            - String content: '# Header\\n```\\ncode\\n```'
+            - String content: '# Header\n```\ncode\n```'
         header: Header name to search for (any level: #, ##, ###, ####, #####)
             - Case-sensitive exact match
             - Should not include the # symbols
@@ -224,7 +224,7 @@ def get_prompt_with_substitutions(
 
 
 def validate_prompt_markdown(source: str) -> Dict[str, Any]:
-    """Validate prompt markdown structure and return detailed results.
+    r"""Validate prompt markdown structure and return detailed results.
 
     This function checks that the markdown follows the expected format:
     each header followed by exactly one code block, no duplicate headers,
@@ -233,7 +233,7 @@ def validate_prompt_markdown(source: str) -> Dict[str, Any]:
     Args:
         source: File path or string content to validate
             - File path: 'prompts/prompts.md'
-            - String content: '# Header\\n```\\ncode\\n```'
+            - String content: '# Header\n```\ncode\n```'
 
     Returns:
         dict: Validation results with the following keys:
@@ -446,10 +446,10 @@ def validate_prompt_directory(directory: str) -> Dict[str, Any]:
 
 
 def _is_package_relative_path(source: str) -> bool:
-    """Detect if source is a package-relative path that should use find_data_file.
+    r"""Detect if source is a package-relative path that should use find_data_file.
 
     Package-relative paths typically start with a package name (like 'mcp_coder/prompts/...')
-    and don't contain '..' or start with '/' or '\\' (which would indicate absolute paths
+    and don't contain '..' or start with '/' or '\' (which would indicate absolute paths
     or relative paths from current directory).
 
     Args:

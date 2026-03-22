@@ -32,7 +32,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Phase 2 — Cleanup (~102 remaining violations)
 
 - [x] [Step 6: Re-run autofix formatting](./steps/step_6.md) — D212, D202 (~28)
-- [ ] [Step 7: Small manual fixes](./steps/step_7.md) — D301, D417, D205, D415, DOC102 (~11)
+- [x] [Step 7: Small manual fixes](./steps/step_7.md) — D301, D417, D205, D415, DOC102 (~11)
 - [ ] [Step 8: Missing Returns batch 1](./steps/step_8.md) — DOC201 in cli, config, formatters, checks (~16)
 - [ ] [Step 9: Missing Returns batch 2](./steps/step_9.md) — DOC201 in llm, utils, workflows (~16)
 - [ ] [Step 10: Remove extraneous Raises](./steps/step_10.md) — DOC502 (~20)

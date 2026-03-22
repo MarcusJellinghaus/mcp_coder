@@ -111,7 +111,7 @@ def strip_ansi(text: str) -> str:
 
 
 def is_moved_line(raw_line: str) -> bool:
-    """True if the ANSI-coloured diff line is classified as moved by git.
+    r"""True if the ANSI-coloured diff line is classified as moved by git.
 
     Looks for the 'dim' SGR attribute (code 2) in the ANSI codes.
     Only +/- lines can be moved; context lines and headers return False.
@@ -120,7 +120,7 @@ def is_moved_line(raw_line: str) -> bool:
         True if the line has ANSI dim attribute (SGR code 2) indicating a moved line,
         False for context lines, headers, or non-moved +/- lines.
 
-    Note: ANSI dim codes (\\x1b[2m) are confirmed to work on Windows —
+    Note: ANSI dim codes (\x1b[2m) are confirmed to work on Windows —
     no special environment setup is required.
     """
     plain = strip_ansi(raw_line)

@@ -113,6 +113,9 @@ class BranchStatusReport:
     def format_for_llm(self, max_lines: int = 300) -> str:
         """Format report for LLM consumption with truncation.
 
+        Args:
+            max_lines: Maximum number of lines for CI error details.
+
         Returns:
             Compact formatted string optimized for LLM context windows.
         """
@@ -608,7 +611,7 @@ def _collect_github_label(
     """Collect current GitHub workflow status label.
 
     Args:
-        project_dir: Path to the git repository
+        _project_dir: Path to the git repository
         issue_data: Optional pre-fetched issue data (contains labels directly)
 
     Returns:

@@ -147,7 +147,15 @@ def _langchain_session_path(
     base_dir: Optional[str] = None,
 ) -> Path:
     """Return Path for a session's history JSON file.
+
     Default: ~/.mcp_coder/sessions/langchain/{session_id}.json
+
+    Args:
+        session_id: Unique session identifier
+        base_dir: Optional custom base directory for session files
+
+    Returns:
+        Path to the session history JSON file.
     """
     root = (
         Path(base_dir)
