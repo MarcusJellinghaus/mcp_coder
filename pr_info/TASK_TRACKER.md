@@ -35,7 +35,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] [Step 9: tests/ W0612 — unused variables (43)](./steps/step_9.md)
 - [x] [Step 10: tests/ W1514 — unspecified encoding (23)](./steps/step_10.md)
 - [x] [Step 11: tests/ W0718 — broad-exception-caught (31)](./steps/step_11.md)
-- [ ] [Step 12: tests/ W0107 + W0108 + W0702 + W0719 — small mechanical fixes (10)](./steps/step_12.md)
+- [x] [Step 12: tests/ W0107 + W0108 + W0702 + W0719 — small mechanical fixes (10)](./steps/step_12.md)
 - [ ] [Step 13: tests/ W1404 + W0201 — string concat + attribute-outside-init (6)](./steps/step_13.md)
 
 ### Config (Step 14 — LAST)

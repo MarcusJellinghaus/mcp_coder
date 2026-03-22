@@ -366,7 +366,7 @@ class TestCreateStartupScript:
         }
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.workspace.get_vscodeclaude_config",
-            lambda s: three_cmd_configs.get(s),
+            three_cmd_configs.get,
         )
 
         script_path = create_startup_script(
@@ -414,7 +414,7 @@ class TestCreateStartupScript:
         }
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.workspace.get_vscodeclaude_config",
-            lambda s: empty_cmd_configs.get(s),
+            empty_cmd_configs.get,
         )
 
         script_path = create_startup_script(
@@ -455,7 +455,7 @@ class TestCreateStartupScript:
         }
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.workspace.get_vscodeclaude_config",
-            lambda s: bad_configs.get(s),
+            bad_configs.get,
         )
 
         with pytest.raises(ValueError, match="Invalid commands config"):
@@ -490,7 +490,7 @@ class TestCreateStartupScript:
         }
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.workspace.get_vscodeclaude_config",
-            lambda s: bad_configs.get(s),
+            bad_configs.get,
         )
 
         with pytest.raises(ValueError, match="Invalid commands config"):

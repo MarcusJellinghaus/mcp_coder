@@ -1098,7 +1098,7 @@ class TestBuildEligibleIssuesWithBranchCheck:
         # Mock get_cached_eligible_vscodeclaude_issues to fail for bad-repo
         def mock_get_cached(repo_full_name: str, **kwargs: Any) -> list[dict[str, Any]]:
             if "bad" in repo_full_name:
-                raise Exception("API error")
+                raise RuntimeError("API error")
             return [
                 {
                     "number": 5,
