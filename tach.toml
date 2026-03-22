@@ -109,7 +109,7 @@ path = "mcp_coder.checks"
 layer = "application"
 # High-level check modules backing CLI subcommands. Reusable by cli and workflows.
 depends_on = [
-    { path = "mcp_coder" },              # Root module (mcp_workspace)
+    { path = "mcp_coder.mcp_workspace" }, # MCP workspace file utilities
     { path = "mcp_coder.workflow_utils" },
     { path = "mcp_coder.utils" },
     { path = "mcp_coder.config" },
@@ -202,6 +202,13 @@ depends_on = [
 # =============================================================================
 
 [[modules]]
+path = "mcp_coder.mcp_workspace"
+layer = "foundation"
+# MCP workspace file utilities (list_files, etc.).
+# Wraps external mcp_workspace package. No internal dependencies.
+depends_on = []
+
+[[modules]]
 path = "mcp_coder.config"
 layer = "foundation"
 # Configuration management for the entire application.
@@ -230,9 +237,12 @@ path = "mcp_coder"
 # Consumers import from mcp_coder directly rather than deep paths.
 # Note: __init__.py re-exports from submodules but tach tracks actual source.
 depends_on = [
-    { path = "mcp_coder.llm" },           # Export LLM functionality
-    { path = "mcp_coder.utils" },         # Export utility functions
-    { path = "mcp_coder.prompt_manager" }, # Export prompt management
+    { path = "mcp_coder.llm" },            # Export LLM functionality
+    { path = "mcp_coder.utils" },          # Export utility functions
+    { path = "mcp_coder.prompt_manager" },  # Export prompt management
+    { path = "mcp_coder.checks" },          # Export branch status checking
+    { path = "mcp_coder.workflow_utils" },  # Export commit operations
+    { path = "mcp_coder.mcp_workspace" },   # Export mcp_workspace utilities
 ]
 
 
