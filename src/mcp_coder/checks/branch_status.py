@@ -189,8 +189,6 @@ def get_failed_jobs_summary(
     Returns:
         Dict with keys: job_name, step_name, step_number, log_excerpt, other_failed_jobs
     """
-    logger = logging.getLogger(__name__)
-
     # Filter jobs where conclusion == "failure"
     failed_jobs = [job for job in jobs if job.get("conclusion") == "failure"]
 

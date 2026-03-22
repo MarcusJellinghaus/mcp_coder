@@ -344,7 +344,7 @@ def _run_auto_fixes(
 
             # Wait for CI completion
             logger.info(f"Waiting for CI completion (timeout: {ci_timeout}s)")
-            ci_status, ci_passed = _wait_for_ci_completion(
+            _, ci_passed = _wait_for_ci_completion(
                 ci_manager,
                 current_branch,
                 ci_timeout,

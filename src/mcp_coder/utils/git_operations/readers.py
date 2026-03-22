@@ -114,7 +114,7 @@ def get_unstaged_changes(project_dir: Path) -> dict[str, list[str]]:
                     continue
 
                 # Parse git status format: XY filename
-                index_status = line[0]  # Staged changes  # noqa: F841
+                _ = line[0]  # Staged changes
                 working_status = line[1]  # Working tree changes
                 filename = line[3:]  # Skip space and get filename
 

@@ -562,7 +562,7 @@ def _load_content(source: str) -> str:
                 try:
                     with open(resolved_path, "r", encoding="utf-8") as f:
                         return f.read()
-                except Exception as e:
+                except Exception:
                     # Fall through to normal path handling if package resolution fails
                     pass
 
