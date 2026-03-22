@@ -45,7 +45,6 @@ class EventsMixin:
             List of EventData dicts with event information
 
         Raises:
-            ValueError: If issue number is invalid
             GithubException: For authentication, permission, or API errors
 
         Note:

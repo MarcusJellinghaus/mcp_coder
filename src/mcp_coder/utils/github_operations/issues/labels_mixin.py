@@ -199,9 +199,6 @@ class LabelsMixin:
         Returns:
             IssueData with updated issue information, or empty IssueData on error
 
-        Raises:
-            ValueError: If issue number is invalid
-
         Example:
             >>> updated_issue = manager.set_labels(123, "bug", "high-priority")
             >>> print(f"Labels: {updated_issue['labels']}")

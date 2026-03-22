@@ -25,7 +25,11 @@ def create_gemini_model(
     api_key: str | None,
     timeout: int = 30,
 ) -> ChatGoogleGenerativeAI:
-    """Create a Gemini chat model without invoking it."""
+    """Create a Gemini chat model without invoking it.
+
+    Returns:
+        Configured ChatGoogleGenerativeAI instance.
+    """
     effective_api_key = os.getenv("GEMINI_API_KEY") or api_key
     kwargs: dict[str, Any] = {
         "model": model,

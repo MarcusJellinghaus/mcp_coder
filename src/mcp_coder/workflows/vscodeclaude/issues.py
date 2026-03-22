@@ -210,7 +210,11 @@ def _filter_eligible_vscodeclaude_issues(
 
     # Sort by numeric prefix descending (higher number = higher priority)
     def get_issue_priority(issue: IssueData) -> int:
-        """Get max priority from issue's status labels."""
+        """Get max priority from issue's status labels.
+
+        Returns:
+            Maximum numeric priority from status labels.
+        """
         return max(
             (_get_status_priority(label) for label in issue["labels"]), default=0
         )

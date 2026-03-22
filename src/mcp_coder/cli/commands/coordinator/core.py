@@ -228,7 +228,11 @@ def _filter_eligible_issues(issues: List[IssueData]) -> List[IssueData]:
     priority_map = {label: i for i, label in enumerate(PRIORITY_ORDER)}
 
     def get_priority(issue: IssueData) -> int:
-        """Get priority index for an issue (lower = higher priority)."""
+        """Get priority index for an issue (lower = higher priority).
+
+        Returns:
+            Priority index, where lower means higher priority.
+        """
         for label in issue["labels"]:
             if label in priority_map:
                 return priority_map[label]
@@ -298,7 +302,11 @@ def get_eligible_issues(
     priority_map = {label: i for i, label in enumerate(PRIORITY_ORDER)}
 
     def get_priority(issue: IssueData) -> int:
-        """Get priority index for an issue (lower = higher priority)."""
+        """Get priority index for an issue (lower = higher priority).
+
+        Returns:
+            Priority index, where lower means higher priority.
+        """
         for label in issue["labels"]:
             if label in priority_map:
                 return priority_map[label]

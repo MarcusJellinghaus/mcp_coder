@@ -123,7 +123,8 @@ def prompt_llm(
 
     Raises:
         ValueError: If the provider is not supported, or if input validation fails
-        Various exceptions from underlying implementations (e.g., subprocess errors)
+        TimeoutExpired: If the Claude CLI subprocess times out
+        TimeoutError: If the LangChain provider times out (asyncio.TimeoutError)
 
     Examples:
         >>> # Start new conversation

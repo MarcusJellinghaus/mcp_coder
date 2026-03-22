@@ -227,7 +227,11 @@ def get_branch_diff(
 
 
 def _generate_untracked_diff(repo: Repo, project_dir: Path) -> str:
-    """Generate diff for untracked files by creating synthetic diff output."""
+    """Generate diff for untracked files by creating synthetic diff output.
+
+    Returns:
+        Synthetic diff string for untracked files, or empty string if none.
+    """
     try:
         untracked_files = repo.untracked_files
         if not untracked_files:
@@ -287,7 +291,11 @@ def _generate_untracked_diff(repo: Repo, project_dir: Path) -> str:
 def _format_diff_sections(
     staged_diff: str, unstaged_diff: str, untracked_diff: str
 ) -> str:
-    """Format diff sections with appropriate headers."""
+    """Format diff sections with appropriate headers.
+
+    Returns:
+        Combined diff string with section headers.
+    """
     sections = []
 
     if staged_diff.strip():

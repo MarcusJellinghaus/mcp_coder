@@ -7,7 +7,11 @@ logger = logging.getLogger(__name__)
 
 
 def execute_help(args: argparse.Namespace) -> int:
-    """Execute help command. Returns exit code."""
+    """Execute help command.
+
+    Returns:
+        Exit code (0 for success).
+    """
     logger.info("Executing help command")
 
     help_text = get_help_text(include_examples=True)

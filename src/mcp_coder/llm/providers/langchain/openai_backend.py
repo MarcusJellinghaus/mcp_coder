@@ -26,7 +26,11 @@ def create_openai_model(
     api_version: str | None = None,
     timeout: int = 30,
 ) -> ChatOpenAI | AzureChatOpenAI:
-    """Create an OpenAI/Azure chat model without invoking it."""
+    """Create an OpenAI/Azure chat model without invoking it.
+
+    Returns:
+        Configured ChatOpenAI or AzureChatOpenAI instance.
+    """
     effective_api_key = os.getenv("OPENAI_API_KEY") or api_key
     secret_key = SecretStr(effective_api_key) if effective_api_key else None
 

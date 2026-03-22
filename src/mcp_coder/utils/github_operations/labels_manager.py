@@ -37,9 +37,6 @@ class LabelsManager(BaseGitHubManager):
         Args:
             project_dir: Path to the project directory
 
-        Raises:
-            ValueError: If project_dir is None, not a directory, not a git repository,
-                       or GitHub token is not found
         """
         super().__init__(project_dir)
 

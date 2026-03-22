@@ -276,6 +276,7 @@ def generate_pr_summary(
 
     Raises:
         ValueError: If LLM returns an empty response.
+        FileNotFoundError: If the prompt template file cannot be found.
     """
     logger.info("Generating PR summary...")
 

@@ -80,7 +80,11 @@ class CommandOptions:
 
 
 def is_python_command(command: list[str]) -> bool:
-    """Check if a command is a Python execution command."""
+    """Check if a command is a Python execution command.
+
+    Returns:
+        True if the command runs a Python interpreter.
+    """
     if not command:
         return False
 
@@ -92,7 +96,11 @@ def is_python_command(command: list[str]) -> bool:
 
 
 def get_python_isolation_env() -> dict[str, str]:
-    """Get environment variables for Python subprocess isolation."""
+    """Get environment variables for Python subprocess isolation.
+
+    Returns:
+        Dict of environment variables with MCP isolation settings.
+    """
     env = os.environ.copy()
 
     # Python-specific settings to prevent MCP STDIO conflicts
@@ -115,7 +123,11 @@ def get_python_isolation_env() -> dict[str, str]:
 
 
 def get_utf8_env() -> dict[str, str]:
-    """Get environment variables for UTF-8 encoding support on all subprocess types."""
+    """Get environment variables for UTF-8 encoding support on all subprocess types.
+
+    Returns:
+        Dict of environment variables with UTF-8 encoding settings.
+    """
     env = os.environ.copy()
 
     # Set UTF-8 encoding for all subprocess types
@@ -156,6 +168,9 @@ def _run_subprocess(  # pylint: disable=too-many-statements
 
     Returns:
         CompletedProcess with execution results
+
+    Raises:
+        TimeoutExpired: If the subprocess exceeds the configured timeout.
     """
     # Track start time for timeout logging
     subprocess_start_time = time.time()
@@ -507,6 +522,7 @@ def execute_subprocess(
 
     Raises:
         TypeError: If command is None.
+        CalledProcessError: If check is True and the process returns non-zero exit code.
     """
     if command is None:
         raise TypeError("Command cannot be None")

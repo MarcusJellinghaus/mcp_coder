@@ -109,9 +109,6 @@ class CommentsMixin:
         Returns:
             List of CommentData dictionaries with comment information, or empty list on error
 
-        Raises:
-            ValueError: If issue number is invalid
-
         Example:
             >>> comments = manager.get_comments(123)
             >>> for comment in comments:
@@ -247,9 +244,6 @@ class CommentsMixin:
 
         Returns:
             True if deletion was successful, False otherwise
-
-        Raises:
-            ValueError: If issue number is invalid or comment ID is invalid
 
         Example:
             >>> success = manager.delete_comment(123, 456789)

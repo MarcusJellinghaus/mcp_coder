@@ -237,7 +237,11 @@ def _get_vscode_window_titles(refresh: bool = False) -> list[str]:
     titles: list[str] = []
 
     def enum_callback(hwnd: int, _: Any) -> bool:
-        """Callback for EnumWindows."""
+        """Callback for EnumWindows.
+
+        Returns:
+            Always True to continue enumeration.
+        """
         try:
             if win32gui.IsWindowVisible(hwnd):
                 title = win32gui.GetWindowText(hwnd)

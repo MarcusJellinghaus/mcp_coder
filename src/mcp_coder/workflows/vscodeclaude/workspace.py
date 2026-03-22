@@ -396,6 +396,9 @@ def _escape_batch_title(text: str) -> str:
     Prevents shell injection when issue titles contain characters like >
     that cmd.exe would otherwise interpret as redirection operators.
     Order matters: ^ must be escaped first to avoid double-escaping.
+
+    Returns:
+        Text with special batch characters escaped.
     """
     for char in ("^", "&", "|", "<", ">"):
         text = text.replace(char, f"^{char}")
