@@ -126,6 +126,7 @@ def deserialize_llm_response(filepath: Path | str) -> LLMResponseDict:
     Raises:
         FileNotFoundError: If the file does not exist.
         json.JSONDecodeError: If the file content is not valid JSON.
+        ValueError: If version is incompatible or missing.
 
     Example:
         >>> response = deserialize_llm_response("logs/abc-123.json")
