@@ -68,12 +68,34 @@ to:
 len(config.get("commands", [])) > 0
 ```
 
+### Input validation
+
+The `commands` field must be validated when used:
+- **Absent** (no `commands` key, e.g. `pr-created`): `is_status_eligible_for_session()` returns `False`, no session created.
+- **Empty list** (`commands: []`): `create_startup_script()` generates a script with venv setup but no command sections — bare environment.
+- **Invalid** (not a list, or contains non-strings): Raise error early — fail fast on bad config.
+
+All three cases must have unit tests.
+
+### Schema documentation
+
+Add `src/mcp_coder/config/labels_schema.md` — concise field reference for `labels.json` including the `vscodeclaude` block and `commands` format.
+
+### Linux template cleanup
+
+Remove dead Linux templates (`STARTUP_SCRIPT_LINUX`, `AUTOMATED_SECTION_LINUX`, `INTERACTIVE_SECTION_LINUX`, `INTERVENTION_SECTION_LINUX`) as part of the template changes in Step 2.
+
+## Decisions
+
+See [Decisions.md](./Decisions.md) for all reviewed decisions.
+
 ## Files to Modify
 
 | File | Change type |
 |------|-------------|
 | `src/mcp_coder/config/labels.json` | Schema: replace `initial_command`/`followup_command` with `commands` |
-| `src/mcp_coder/workflows/vscodeclaude/templates.py` | Remove old templates, add new ones, update main script template |
+| `src/mcp_coder/config/labels_schema.md` | New: concise schema reference for labels.json |
+| `src/mcp_coder/workflows/vscodeclaude/templates.py` | Remove old templates + Linux templates, add new ones, update main script template |
 | `src/mcp_coder/workflows/vscodeclaude/workspace.py` | Rewrite `create_startup_script()` normal-mode logic |
 | `src/mcp_coder/workflows/vscodeclaude/issues.py` | Update `is_status_eligible_for_session()` |
 | `src/mcp_coder/workflows/vscodeclaude/cleanup.py` | Update docstring references |

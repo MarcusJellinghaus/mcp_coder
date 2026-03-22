@@ -45,6 +45,18 @@ for label in human_action_labels:
 | `status-07:code-review` | `initial_command: "/implementation_review_supervisor", followup_command: null` | `"commands": ["/implementation_review_supervisor"]` |
 | `status-10:pr-created` | `initial_command: null, followup_command: null` | Remove both fields (keep only `emoji`, `display_name`, `stage_short`) |
 
+### 1c. Add `src/mcp_coder/config/labels_schema.md`
+
+**WHERE**: `src/mcp_coder/config/labels_schema.md` (new file)
+
+**WHAT**: Concise schema reference for `labels.json`. Document:
+- Top-level structure (`workflow_labels` array, `ignore_labels` array)
+- Per-label fields: `internal_id`, `name`, `color`, `description`, `category`, `stale_timeout_minutes`
+- `vscodeclaude` block: `emoji`, `display_name`, `stage_short`, `commands`
+- `commands` field: list of strings (slash commands), optional. Absent = display-only (no session). Empty list = bare environment. Examples for 1-command and 2-command flows.
+
+Keep it short — field table + one example block.
+
 ### Verification
 
 Run `test_types.py` to confirm schema validation passes:

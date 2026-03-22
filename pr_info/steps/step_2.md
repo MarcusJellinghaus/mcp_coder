@@ -60,7 +60,7 @@ claude --resume %SESSION_ID% "{command}"
 
 ### Delete unused Linux templates
 
-Remove `STARTUP_SCRIPT_LINUX`, `AUTOMATED_SECTION_LINUX`, `INTERACTIVE_SECTION_LINUX`, and `INTERVENTION_SECTION_LINUX`. They are dead code (Linux raises `NotImplementedError` in `workspace.py`). Can be recreated when Linux support is implemented.
+Remove `STARTUP_SCRIPT_LINUX`, `AUTOMATED_SECTION_LINUX`, `INTERACTIVE_SECTION_LINUX`, and `INTERVENTION_SECTION_LINUX`. They are dead code (Linux raises `NotImplementedError` in `workspace.py`). Can be recreated when Linux support is implemented. (Decision #1)
 
 **DATA**: All templates are raw string constants. No functions or return values.
 

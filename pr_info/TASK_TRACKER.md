@@ -21,6 +21,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+- [ ] [Step 1](./steps/step_1.md): `labels.json` schema + `test_types.py` + `labels_schema.md`
+- [ ] [Step 2](./steps/step_2.md): `templates.py` + `issues.py` + docstrings + Linux template cleanup
+- [ ] [Step 3](./steps/step_3.md): `workspace.py` + `test_workspace.py` + input validation + edge-case tests
+- [ ] [Step 4](./steps/step_4.md): Remaining test comments + full quality checks
 
 ## Pull Request

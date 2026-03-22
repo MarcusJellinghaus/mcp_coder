@@ -171,8 +171,23 @@ script_content = STARTUP_SCRIPT_WINDOWS.format(
 Update the `create_startup_script()` docstring to describe the new behavior:
 - Remove references to `initial_command`/`followup_command`
 - Describe single-command vs multi-command flows
+- Note that `timeout` is unused for single-command flows (Decision #5)
+
+#### Input validation
+
+Add validation at the start of the normal-mode branch (Decision #6):
+```python
+if commands and (not isinstance(commands, list) or not all(isinstance(c, str) for c in commands)):
+    raise ValueError(f"Invalid commands config for status '{status}': expected list of strings, got {commands!r}")
+```
 
 **HOW**: The function signature is unchanged. Only the internal logic of the non-intervention Windows branch changes.
+
+#### New edge-case tests in `test_workspace.py` (Decision #6)
+
+1. **`test_empty_commands_generates_bare_script`**: Config with `"commands": []` — script has venv section but no command sections, no step labels.
+2. **`test_invalid_commands_type_raises_error`**: Config with `"commands": "/single_string"` — raises `ValueError`.
+3. **`test_invalid_commands_element_raises_error`**: Config with `"commands": ["/valid", 123]` — raises `ValueError`.
 
 ### Verification
 
