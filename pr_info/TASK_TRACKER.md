@@ -35,18 +35,18 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Remove `get_linked_branch_for_issue()` Wrapper, Update All Callers ([step_2.md](./steps/step_2.md))
 
-- [ ] Part A: Delete `get_linked_branch_for_issue()` and update `issues.py` — write tests and implement
-- [ ] Part A: Run pylint, pytest, mypy — fix all issues
-- [ ] Part A: Prepare git commit message
-- [ ] Part B: Update `session_launch.py` (`process_eligible_issues`) — write tests and implement
-- [ ] Part B: Run pylint, pytest, mypy — fix all issues
-- [ ] Part B: Prepare git commit message
-- [ ] Part C: Update `session_restart.py` (`_prepare_restart_branch`) — write tests and implement
-- [ ] Part C: Run pylint, pytest, mypy — fix all issues
-- [ ] Part C: Prepare git commit message
-- [ ] Part D: Update `commands.py` (`_handle_intervention_mode`) — fix latent bug — write tests and implement
-- [ ] Part D: Run pylint, pytest, mypy — fix all issues
-- [ ] Part D: Prepare git commit message
+- [x] Part A: Delete `get_linked_branch_for_issue()` and update `issues.py` — write tests and implement
+- [x] Part A: Run pylint, pytest, mypy — fix all issues
+- [x] Part A: Prepare git commit message
+- [x] Part B: Update `session_launch.py` (`process_eligible_issues`) — write tests and implement
+- [x] Part B: Run pylint, pytest, mypy — fix all issues
+- [x] Part B: Prepare git commit message
+- [x] Part C: Update `session_restart.py` (`_prepare_restart_branch`) — write tests and implement
+- [x] Part C: Run pylint, pytest, mypy — fix all issues
+- [x] Part C: Prepare git commit message
+- [x] Part D: Update `commands.py` (`_handle_intervention_mode`) — fix latent bug — write tests and implement
+- [x] Part D: Run pylint, pytest, mypy — fix all issues
+- [x] Part D: Prepare git commit message
 
 ### Step 3: Verify and Fix Remaining Tests Across All Suites ([step_3.md](./steps/step_3.md))
 

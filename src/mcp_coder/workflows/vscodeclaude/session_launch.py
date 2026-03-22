@@ -31,7 +31,6 @@ from .helpers import (
 )
 from .issues import (
     _filter_eligible_vscodeclaude_issues,
-    get_linked_branch_for_issue,
     is_status_eligible_for_session,
     status_requires_linked_branch,
 )
@@ -344,19 +343,11 @@ def process_eligible_issues(
             # Get issue status
             status = get_issue_status(issue)
 
-            # Get linked branch (handle multiple branches case)
-            try:
-                branch_name = get_linked_branch_for_issue(
-                    branch_manager, issue["number"]
-                )
-            except ValueError:
-                # Multiple branches linked to issue
-                logger.error(
-                    "Issue #%d at %s has multiple branches linked - skipping",
-                    issue["number"],
-                    status,
-                )
-                continue
+            # Get linked branch
+            repo_owner, repo_name_str = repo_full_name.split("/", 1)
+            branch_name = branch_manager.get_branch_with_pr_fallback(
+                issue["number"], repo_owner, repo_name_str
+            )
 
             # Check if status requires linked branch
             if status_requires_linked_branch(status) and branch_name is None:

@@ -36,7 +36,6 @@ from ....workflows.vscodeclaude import (
     cleanup_stale_sessions,
     get_active_session_count,
     get_folder_git_status,
-    get_linked_branch_for_issue,
     load_repo_vscodeclaude_config,
     load_sessions,
     load_vscodeclaude_config,
@@ -684,7 +683,16 @@ def _handle_intervention_mode(
         return 1
 
     # Get linked branch
-    branch_name = get_linked_branch_for_issue(branch_manager, args.issue)
+    repo_full_name = _get_repo_full_name_from_url(repo_url)
+    repo_owner, repo_name_str = repo_full_name.split("/", 1)
+    branch_name = branch_manager.get_branch_with_pr_fallback(
+        args.issue, repo_owner, repo_name_str
+    )
+    if branch_name is None:
+        logger.warning(
+            "Issue #%d: no single branch could be resolved — using default branch",
+            args.issue,
+        )
 
     # Load repo vscodeclaude config
     repo_vscodeclaude_config = load_repo_vscodeclaude_config(args.repo)

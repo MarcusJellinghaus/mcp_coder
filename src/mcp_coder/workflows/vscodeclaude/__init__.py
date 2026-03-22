@@ -261,7 +261,6 @@ from .issues import (
     get_cached_eligible_vscodeclaude_issues,
     get_eligible_vscodeclaude_issues,
     get_human_action_labels,
-    get_linked_branch_for_issue,
 )
 
 # Session launch
@@ -364,7 +363,6 @@ __all__ = [
     "get_eligible_vscodeclaude_issues",
     "get_cached_eligible_vscodeclaude_issues",
     "_filter_eligible_vscodeclaude_issues",
-    "get_linked_branch_for_issue",
     # Workspace setup
     "get_working_folder_path",
     "create_working_folder",
