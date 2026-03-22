@@ -738,8 +738,7 @@ def _extract_code_block_after_header(
 
 
 def _find_duplicates(items: List[str]) -> List[str]:
-    """
-    Find duplicate items in a list.
+    """Find duplicate items in a list.
 
     Args:
         items: List of items to check

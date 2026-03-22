@@ -11,8 +11,7 @@ from .readers import branch_exists, is_git_repository
 
 
 def git_push(project_dir: Path, force_with_lease: bool = False) -> dict[str, Any]:
-    """
-    Push current branch to origin remote.
+    """Push current branch to origin remote.
 
     Args:
         project_dir: Path to the project directory containing git repository

@@ -17,8 +17,7 @@ from .readers import (
 
 
 def get_git_diff_for_commit(project_dir: Path) -> Optional[str]:
-    """
-    Generate comprehensive git diff without modifying repository state.
+    """Generate comprehensive git diff without modifying repository state.
 
     Shows staged, unstaged, and untracked files in unified diff format
     suitable for LLM analysis and commit message generation.

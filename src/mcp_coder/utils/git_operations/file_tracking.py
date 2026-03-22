@@ -10,8 +10,7 @@ from .readers import is_git_repository
 
 
 def is_file_tracked(file_path: Path, project_dir: Path) -> bool:
-    """
-    Check if a file is tracked by git.
+    """Check if a file is tracked by git.
 
     Args:
         file_path: Path to the file to check
@@ -55,8 +54,7 @@ def is_file_tracked(file_path: Path, project_dir: Path) -> bool:
 
 
 def git_move(source_path: Path, dest_path: Path, project_dir: Path) -> bool:
-    """
-    Move a file using git mv command.
+    """Move a file using git mv command.
 
     Args:
         source_path: Source file path

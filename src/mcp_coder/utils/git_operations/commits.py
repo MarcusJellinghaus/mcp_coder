@@ -13,8 +13,7 @@ from .readers import get_staged_changes, is_git_repository
 
 
 def commit_staged_files(message: str, project_dir: Path) -> CommitResult:
-    """
-    Create a commit from currently staged files.
+    """Create a commit from currently staged files.
 
     Args:
         message: Commit message
