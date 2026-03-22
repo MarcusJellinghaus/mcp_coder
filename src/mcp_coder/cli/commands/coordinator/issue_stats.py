@@ -286,6 +286,9 @@ def execute_coordinator_issue_stats(args: argparse.Namespace) -> int:
 
     Returns:
         Exit code (0 for success, 1 for error)
+
+    Raises:
+        ValueError: If the GitHub repository URL cannot be determined.
     """
     try:
         logger.info("Starting coordinator issue-stats command execution")

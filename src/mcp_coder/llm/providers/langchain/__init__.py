@@ -85,6 +85,9 @@ def _create_chat_model(
 
     Returns:
         Configured BaseChatModel instance for the selected backend.
+
+    Raises:
+        ValueError: If the configured backend is not supported.
     """
     backend = config.get("backend")
 
@@ -136,6 +139,9 @@ def ask_langchain(
 
     Returns:
         LLMResponseDict with the model's response.
+
+    Raises:
+        ValueError: If the langchain backend is not configured.
     """
     config = _load_langchain_config()
     backend = config["backend"]
@@ -183,6 +189,9 @@ def _ask_text(
 
     Returns:
         LLMResponseDict with the model's text response.
+
+    Raises:
+        ValueError: If the model is not found on the configured backend.
     """
     from langchain_core.messages import HumanMessage, messages_from_dict
 

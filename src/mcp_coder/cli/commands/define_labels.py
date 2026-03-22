@@ -493,6 +493,9 @@ def execute_define_labels(args: argparse.Namespace) -> int:
         - 0: Success (no errors or warnings)
         - 1: Errors found (issues with multiple status labels)
         - 2: Warnings only (stale bot processes detected, no errors)
+
+    Raises:
+        ValueError: If the configuration file is not found or contains invalid JSON.
     """
     try:
         logger.info("Starting define-labels command execution")
