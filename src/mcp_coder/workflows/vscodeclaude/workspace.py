@@ -566,9 +566,7 @@ def create_startup_script(
     else:
         # Linux - TODO: Implement in Step 17
         # For now, raise NotImplementedError
-        raise NotImplementedError(
-            "Linux startup scripts are not yet supported."
-        )
+        raise NotImplementedError("Linux startup scripts are not yet supported.")
 
 
 def create_vscode_task(folder_path: Path, script_path: Path) -> None:
