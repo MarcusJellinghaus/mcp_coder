@@ -277,7 +277,7 @@ class IssueBranchManager(BaseGitHubManager):
         # Execute GraphQL query
         # Note: Using private attribute is the documented way to access GraphQL in PyGithub
         # graphql_query returns (headers, data) tuple - we only need data
-        _, result = self._github_client._Github__requester.graphql_query(  # type: ignore[attr-defined]
+        _, result = self._github_client._Github__requester.graphql_query(  # type: ignore[attr-defined]  # pylint: disable=protected-access  # no public GraphQL API in PyGithub
             query=query, variables=variables
         )
 
@@ -392,7 +392,7 @@ class IssueBranchManager(BaseGitHubManager):
         # Execute GraphQL mutation
         # Note: Using private attribute is the documented way to access GraphQL in PyGithub
         # graphql_named_mutation returns (headers, data) tuple - we only need data
-        _, result = self._github_client._Github__requester.graphql_named_mutation(  # type: ignore[attr-defined]
+        _, result = self._github_client._Github__requester.graphql_named_mutation(  # type: ignore[attr-defined]  # pylint: disable=protected-access  # no public GraphQL API in PyGithub
             mutation_name="createLinkedBranch",
             mutation_input=mutation_input,
             output_schema="linkedBranch { id ref { name target { oid } } }",
@@ -582,7 +582,7 @@ class IssueBranchManager(BaseGitHubManager):
         }
 
         # Execute GraphQL query
-        _, result = self._github_client._Github__requester.graphql_query(  # type: ignore[attr-defined]
+        _, result = self._github_client._Github__requester.graphql_query(  # type: ignore[attr-defined]  # pylint: disable=protected-access  # no public GraphQL API in PyGithub
             query=query, variables=variables
         )
 
@@ -731,7 +731,7 @@ class IssueBranchManager(BaseGitHubManager):
 
         # Execute GraphQL query
         # graphql_query returns (headers, data) tuple - we only need data
-        _, result = self._github_client._Github__requester.graphql_query(  # type: ignore[attr-defined]
+        _, result = self._github_client._Github__requester.graphql_query(  # type: ignore[attr-defined]  # pylint: disable=protected-access  # no public GraphQL API in PyGithub
             query=query, variables=variables
         )
 
@@ -762,7 +762,7 @@ class IssueBranchManager(BaseGitHubManager):
             mutation_input = {"linkedBranchId": linked_branch_id}
 
             # graphql_named_mutation returns (headers, data) tuple - we don't need either
-            _, _ = self._github_client._Github__requester.graphql_named_mutation(  # type: ignore[attr-defined]
+            _, _ = self._github_client._Github__requester.graphql_named_mutation(  # type: ignore[attr-defined]  # pylint: disable=protected-access  # no public GraphQL API in PyGithub
                 mutation_name="deleteLinkedBranch",
                 mutation_input=mutation_input,
                 output_schema="clientMutationId",

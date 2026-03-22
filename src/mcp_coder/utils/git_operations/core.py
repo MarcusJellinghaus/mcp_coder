@@ -36,6 +36,7 @@ def _close_repo_safely(repo: Repo) -> None:
     """Safely close a GitPython repository to prevent handle leaks on Windows."""
     try:
         # Close any active git command processes
+        # pylint: disable=protected-access  # GitPython has no public API for process cleanup
         if hasattr(repo, "git") and hasattr(repo.git, "_proc") and repo.git._proc:
             try:
                 if repo.git._proc.poll() is None:  # Process still running
@@ -47,6 +48,7 @@ def _close_repo_safely(repo: Repo) -> None:
                         repo.git._proc.kill()
             except (OSError, AttributeError):
                 pass  # Ignore errors during process cleanup
+        # pylint: enable=protected-access
 
         # Close the repository if it has a close method
         if hasattr(repo, "close"):
