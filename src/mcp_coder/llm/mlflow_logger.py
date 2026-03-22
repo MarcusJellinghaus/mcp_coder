@@ -9,7 +9,7 @@ import logging
 import os
 import tempfile
 from collections import OrderedDict
-from datetime import datetime
+from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as pkg_version
 from typing import Any, Dict, Optional
@@ -17,6 +17,7 @@ from typing import Any, Dict, Optional
 from ..config import MLflowConfig
 from ..config.mlflow_config import validate_tracking_uri
 from ..utils import load_mlflow_config
+from .mlflow_db_utils import TrackingStats, query_sqlite_tracking
 
 try:
     from .mlflow_metrics import ConversationMetrics
@@ -639,15 +640,36 @@ def _check_artifact_location(path: str | None) -> dict[str, Any]:
     return {"ok": False, "value": f"{path} (not writable)"}
 
 
-def verify_mlflow() -> dict[str, Any]:
+def _format_tracking_data(
+    stats: TrackingStats,
+    since: datetime | None,
+) -> dict[str, Any]:
+    """Format TrackingStats into a verify result entry."""
+    if stats.last_run_time is not None:
+        last_str = stats.last_run_time.strftime("%Y-%m-%d %H:%M")
+    else:
+        last_str = "never"
+    base_value = f"{stats.run_count} runs, last: {last_str}"
+
+    if since is None:
+        return {"ok": True, "value": base_value}
+    if stats.test_prompt_logged:
+        return {"ok": True, "value": f"{base_value} (test prompt logged)"}
+    return {"ok": False, "value": f"{base_value} (test prompt NOT logged)"}
+
+
+def verify_mlflow(since: datetime | None = None) -> dict[str, Any]:
     """Verify MLflow installation, configuration, and connectivity.
 
-    Returns a structured dict with verification results (no printing).
-    The CLI layer handles all output formatting.
+    Args:
+        since: UTC datetime captured before the test prompt was sent.
+               When provided and the backend is SQLite, the DB is queried
+               to confirm a run with start_time >= since was logged.
+               When None, tracking_data shows stats only (no prompt confirmation).
 
     Returns:
-        Dict with keys: installed, enabled, and optionally tracking_uri,
-        connection, experiment, artifact_location, overall_ok.
+        Dict with keys: installed, enabled, and when enabled:
+        tracking_uri, connection, experiment, artifact_location, tracking_data, overall_ok.
 
     overall_ok semantics:
         True  = no action needed (not installed, disabled, or all checks pass)
@@ -672,6 +694,7 @@ def verify_mlflow() -> dict[str, Any]:
     config = load_mlflow_config()
     if not config.enabled:
         result["enabled"] = {"ok": False, "value": "disabled"}
+        result["tracking_data"] = {"ok": None, "value": "skipped (MLflow disabled)"}
         result["overall_ok"] = True  # informational, not a failure
         return result
 
@@ -701,14 +724,22 @@ def verify_mlflow() -> dict[str, Any]:
     # 6. Check artifact location
     result["artifact_location"] = _check_artifact_location(config.artifact_location)
 
+    # 7. Query SQLite tracking data when backend is SQLite and file exists
+    uri = config.tracking_uri or ""
+    tracking_uri_entry = result.get("tracking_uri", {})
+    if uri.startswith("sqlite:///") and tracking_uri_entry.get("ok") is True:
+        db_path = os.path.expanduser(uri[len("sqlite:///") :])
+        stats = query_sqlite_tracking(db_path, config.experiment_name, since)
+        result["tracking_data"] = _format_tracking_data(stats, since)
+
     # overall_ok: True when all checks pass, False when any enabled check fails
-    # overall_ok=True when:
-    #   - mlflow not installed (informational)
-    #   - mlflow installed but not enabled (informational)
-    #   - mlflow enabled and all probes pass
-    # overall_ok=False when:
-    #   - mlflow enabled but: bad URI, unreachable, experiment not found
-    check_keys = ["tracking_uri", "connection", "experiment", "artifact_location"]
+    check_keys = [
+        "tracking_uri",
+        "connection",
+        "experiment",
+        "artifact_location",
+        "tracking_data",
+    ]
     result["overall_ok"] = all(result.get(k, {}).get("ok", True) for k in check_keys)
 
     return result

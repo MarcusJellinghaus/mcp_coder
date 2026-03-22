@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from mcp_coder.config import MLflowConfig
+from mcp_coder.llm.mlflow_db_utils import TrackingStats
 from mcp_coder.llm.mlflow_logger import verify_mlflow
 
 
@@ -44,12 +46,14 @@ class TestVerifyMlflowDisabled:
 class TestVerifyMlflowSqlite:
     """Tests for SQLite tracking URI checks."""
 
+    @patch("mcp_coder.llm.mlflow_logger.query_sqlite_tracking")
     @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
     def test_mlflow_enabled_sqlite_valid(
         self,
         _mock_avail: MagicMock,
         mock_config: MagicMock,
+        mock_query: MagicMock,
         tmp_path: Path,
     ) -> None:
         db_path = tmp_path / "mlflow.db"
@@ -58,6 +62,11 @@ class TestVerifyMlflowSqlite:
             enabled=True,
             tracking_uri=f"sqlite:///{db_path}",
             experiment_name="test-exp",
+        )
+        mock_query.return_value = TrackingStats(
+            run_count=0,
+            last_run_time=None,
+            test_prompt_logged=False,
         )
         result = verify_mlflow()
         assert result["tracking_uri"]["ok"] is True
@@ -293,3 +302,145 @@ class TestVerifyMlflowArtifactLocation:
         result = verify_mlflow()
         assert result["artifact_location"]["ok"] is True
         assert "not configured" in result["artifact_location"]["value"]
+
+
+class TestVerifyMlflowTrackingData:
+    """Tests for the tracking_data result key."""
+
+    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    def test_tracking_data_skipped_when_disabled(
+        self, _mock_avail: MagicMock, mock_config: MagicMock
+    ) -> None:
+        """Disabled branch includes tracking_data with ok=None."""
+        mock_config.return_value = MLflowConfig(enabled=False)
+        result = verify_mlflow()
+        assert result["tracking_data"]["ok"] is None
+        assert "skipped" in result["tracking_data"]["value"]
+
+    @patch("mcp_coder.llm.mlflow_logger.query_sqlite_tracking")
+    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    def test_tracking_data_sqlite_no_since(
+        self,
+        _mock_avail: MagicMock,
+        mock_config: MagicMock,
+        mock_query: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """SQLite, file exists, since=None → ok=True, no prompt mention."""
+        db = tmp_path / "mlflow.db"
+        db.touch()
+        mock_config.return_value = MLflowConfig(
+            enabled=True,
+            tracking_uri=f"sqlite:///{db}",
+            experiment_name="my-exp",
+        )
+        mock_query.return_value = TrackingStats(
+            run_count=42,
+            last_run_time=datetime(2026, 3, 20, 14, 30, tzinfo=timezone.utc),
+            test_prompt_logged=False,
+        )
+        result = verify_mlflow()
+        assert result["tracking_data"]["ok"] is True
+        assert "42 runs" in result["tracking_data"]["value"]
+        assert "prompt" not in result["tracking_data"]["value"]
+
+    @patch("mcp_coder.llm.mlflow_logger.query_sqlite_tracking")
+    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    def test_tracking_data_sqlite_prompt_logged(
+        self,
+        _mock_avail: MagicMock,
+        mock_config: MagicMock,
+        mock_query: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """SQLite, since provided, prompt logged → ok=True."""
+        db = tmp_path / "mlflow.db"
+        db.touch()
+        mock_config.return_value = MLflowConfig(
+            enabled=True,
+            tracking_uri=f"sqlite:///{db}",
+            experiment_name="my-exp",
+        )
+        mock_query.return_value = TrackingStats(
+            run_count=5,
+            last_run_time=datetime(2026, 3, 20, 14, 30, tzinfo=timezone.utc),
+            test_prompt_logged=True,
+        )
+        since = datetime(2026, 3, 20, 14, 0, tzinfo=timezone.utc)
+        result = verify_mlflow(since=since)
+        assert result["tracking_data"]["ok"] is True
+        assert "test prompt logged" in result["tracking_data"]["value"]
+        assert result["overall_ok"] is True
+
+    @patch("mcp_coder.llm.mlflow_logger.query_sqlite_tracking")
+    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    def test_tracking_data_sqlite_prompt_not_logged(
+        self,
+        _mock_avail: MagicMock,
+        mock_config: MagicMock,
+        mock_query: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """SQLite, since provided, prompt NOT logged → ok=False, overall_ok=False."""
+        db = tmp_path / "mlflow.db"
+        db.touch()
+        mock_config.return_value = MLflowConfig(
+            enabled=True,
+            tracking_uri=f"sqlite:///{db}",
+            experiment_name="my-exp",
+        )
+        mock_query.return_value = TrackingStats(
+            run_count=3,
+            last_run_time=datetime(2026, 3, 20, 14, 30, tzinfo=timezone.utc),
+            test_prompt_logged=False,
+        )
+        since = datetime(2026, 3, 20, 14, 0, tzinfo=timezone.utc)
+        result = verify_mlflow(since=since)
+        assert result["tracking_data"]["ok"] is False
+        assert "test prompt NOT logged" in result["tracking_data"]["value"]
+        assert result["overall_ok"] is False
+
+    @patch("mcp_coder.llm.mlflow_logger._probe_mlflow_connection")
+    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    def test_tracking_data_not_present_for_http(
+        self,
+        _mock_avail: MagicMock,
+        mock_config: MagicMock,
+        mock_probe: MagicMock,
+    ) -> None:
+        """HTTP backend → no tracking_data key in result."""
+        mock_config.return_value = MLflowConfig(
+            enabled=True,
+            tracking_uri="http://localhost:5000",
+            experiment_name="test-exp",
+        )
+        mock_probe.return_value = (
+            {"ok": True, "value": "tracking server reachable"},
+            {"ok": True, "value": '"test-exp" (exists)'},
+        )
+        result = verify_mlflow()
+        assert "tracking_data" not in result
+
+    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    def test_tracking_data_not_present_when_db_missing(
+        self,
+        _mock_avail: MagicMock,
+        mock_config: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """SQLite URI but file missing (tracking_uri ok=False) → no tracking_data."""
+        db = tmp_path / "nonexistent.db"
+        mock_config.return_value = MLflowConfig(
+            enabled=True,
+            tracking_uri=f"sqlite:///{db}",
+            experiment_name="test-exp",
+        )
+        result = verify_mlflow()
+        assert result["tracking_uri"]["ok"] is False
+        assert "tracking_data" not in result

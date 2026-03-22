@@ -41,6 +41,7 @@ _LABEL_MAP: dict[str, str] = {
     "connection": "Connection",
     "experiment": "Experiment",
     "artifact_location": "Artifact location",
+    "tracking_data": "Tracking data",
 }
 
 
