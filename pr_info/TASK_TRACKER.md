@@ -21,6 +21,46 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Enhance `branch_manager.py` — Core Resolution Logic ([step_1.md](./steps/step_1.md))
+
+- [ ] Part A: Generalize `_extract_open_prs()` → `_extract_prs_by_states()` — write tests and implement
+- [ ] Part A: Run pylint, pytest, mypy — fix all issues
+- [ ] Part A: Prepare git commit message
+- [ ] Part B: Add `_search_branches_by_pattern()` method — write tests and implement
+- [ ] Part B: Run pylint, pytest, mypy — fix all issues
+- [ ] Part B: Prepare git commit message
+- [ ] Part C: Extend `get_branch_with_pr_fallback()` with closed-PR and pattern-search steps — write tests and implement
+- [ ] Part C: Run pylint, pytest, mypy — fix all issues
+- [ ] Part C: Prepare git commit message
+
+### Step 2: Remove `get_linked_branch_for_issue()` Wrapper, Update All Callers ([step_2.md](./steps/step_2.md))
+
+- [ ] Part A: Delete `get_linked_branch_for_issue()` and update `issues.py` — write tests and implement
+- [ ] Part A: Run pylint, pytest, mypy — fix all issues
+- [ ] Part A: Prepare git commit message
+- [ ] Part B: Update `session_launch.py` (`process_eligible_issues`) — write tests and implement
+- [ ] Part B: Run pylint, pytest, mypy — fix all issues
+- [ ] Part B: Prepare git commit message
+- [ ] Part C: Update `session_restart.py` (`_prepare_restart_branch`) — write tests and implement
+- [ ] Part C: Run pylint, pytest, mypy — fix all issues
+- [ ] Part C: Prepare git commit message
+- [ ] Part D: Update `commands.py` (`_handle_intervention_mode`) — fix latent bug — write tests and implement
+- [ ] Part D: Run pylint, pytest, mypy — fix all issues
+- [ ] Part D: Prepare git commit message
+
+### Step 3: Verify and Fix Remaining Tests Across All Suites ([step_3.md](./steps/step_3.md))
+
+- [ ] Part A: Run full unit test suite (excluding integration tests)
+- [ ] Part B: Fix any remaining test failures (stale mocks, imports, ValueError assertions, missing params)
+- [ ] Part B: Run pylint, pytest, mypy — fix all issues
+- [ ] Part B: Prepare git commit message
+- [ ] Part C: Re-run full test suite — verify all tests pass
+- [ ] Part D: Run pylint and mypy final checks — fix any issues
+- [ ] Part D: Prepare git commit message
 
 ## Pull Request
+
+- [ ] Review all changes across steps 1–3 for consistency and completeness
+- [ ] Verify no references to `get_linked_branch_for_issue` remain in codebase
+- [ ] Run full test suite one final time — all green
+- [ ] Prepare PR title and summary
