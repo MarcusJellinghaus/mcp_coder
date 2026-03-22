@@ -19,7 +19,6 @@ from .config import _get_configured_repos
 from .helpers import get_issue_status, truncate_title
 from .issues import (
     get_ignore_labels,
-    get_linked_branch_for_issue,
     get_matching_ignore_label,
     is_status_eligible_for_session,
     status_requires_linked_branch,
@@ -63,6 +62,8 @@ def _prepare_restart_branch(
     current_status: str,
     branch_manager: IssueBranchManager,
     issue_number: int,
+    repo_owner: str,
+    repo_name: str,
 ) -> BranchPrepResult:
     """Prepare branch for session restart.
 
@@ -93,11 +94,9 @@ def _prepare_restart_branch(
         return BranchPrepResult(True, None, None)
 
     # 3. Get linked branch from GitHub
-    try:
-        linked_branch = get_linked_branch_for_issue(branch_manager, issue_number)
-    except ValueError:
-        # Multiple branches linked to issue
-        return BranchPrepResult(False, "Multi-branch", None)
+    linked_branch = branch_manager.get_branch_with_pr_fallback(
+        issue_number, repo_owner, repo_name
+    )
 
     if not linked_branch:
         return BranchPrepResult(False, "No branch", None)
@@ -367,11 +366,14 @@ def restart_closed_sessions(
 
             # Branch preparation: fetch, check, switch if needed
             branch_manager = IssueBranchManager(repo_url=repo_url)
+            repo_owner, repo_name_str = repo_full_name.split("/", 1)
             branch_result = _prepare_restart_branch(
                 folder_path=folder_path,
                 current_status=current_status,
                 branch_manager=branch_manager,
                 issue_number=issue_number,
+                repo_owner=repo_owner,
+                repo_name=repo_name_str,
             )
 
             if not branch_result.should_proceed:

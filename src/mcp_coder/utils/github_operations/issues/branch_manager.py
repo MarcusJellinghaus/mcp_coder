@@ -5,6 +5,8 @@ import re
 from pathlib import Path
 from typing import Any, List, Optional, TypedDict, cast
 
+from github import GithubException
+
 from mcp_coder.utils.log_utils import log_function_call
 
 from ..base_manager import BaseGitHubManager, _handle_github_errors
@@ -126,16 +128,20 @@ class IssueBranchManager(BaseGitHubManager):
         return True
 
     @staticmethod
-    def _extract_open_prs(timeline_items: List[dict[str, Any]]) -> List[dict[str, Any]]:
-        """Extract OPEN PRs from timeline items.
+    def _extract_prs_by_states(
+        timeline_items: List[dict[str, Any]],
+        states: set[str],
+    ) -> List[dict[str, Any]]:
+        """Extract PRs matching given states from timeline items.
 
         Args:
             timeline_items: List of timeline item nodes from GraphQL response
+            states: Set of PR states to include (e.g. {"OPEN"}, {"CLOSED"})
 
         Returns:
-            List of PR source objects that are in OPEN state
+            List of PR source objects whose state is in the given set
         """
-        open_prs = []
+        matched_prs = []
         for node in timeline_items:
             if not node or node.get("__typename") != "CrossReferencedEvent":
                 continue
@@ -148,11 +154,75 @@ class IssueBranchManager(BaseGitHubManager):
             if "state" not in source or "headRefName" not in source:
                 continue
 
-            # Only consider OPEN PRs
-            if source.get("state") == "OPEN":
-                open_prs.append(source)
+            if source["state"] in states:
+                matched_prs.append(source)
 
-        return open_prs
+        return matched_prs
+
+    def _search_branches_by_pattern(
+        self,
+        issue_number: int,
+        repo: Any,
+    ) -> Optional[str]:
+        """Search for branches matching an issue number pattern.
+
+        Uses a two-pass strategy:
+        1. Prefix match (cheap) - catches "123-foo" style branches
+        2. Full scan fallback - catches "feature/123-foo" style branches
+
+        Args:
+            issue_number: Issue number to search for
+            repo: PyGithub Repository object
+
+        Returns:
+            Branch name if exactly one match found, None otherwise
+        """
+        pattern = re.compile(r"(^|/)" + str(issue_number) + r"[-_]")
+
+        # Pass 1: prefix match (cheap, catches "123-foo" style)
+        refs = list(repo.get_git_matching_refs(f"heads/{issue_number}"))
+        matches: list[str] = [
+            cast(str, ref.ref.removeprefix("refs/heads/"))
+            for ref in refs
+            if pattern.search(ref.ref.removeprefix("refs/heads/"))
+        ]
+        if len(matches) == 1:
+            logger.info(
+                f"Issue #{issue_number}: Found branch via pattern match: {matches[0]}"
+            )
+            return matches[0]
+        if len(matches) > 1:
+            logger.warning(
+                f"Issue #{issue_number}: Ambiguous branch pattern match: {matches}"
+            )
+            return None
+
+        # Pass 2: full scan fallback (catches "feature/123-foo" style)
+        all_refs = list(repo.get_git_matching_refs("heads/"))
+        if len(all_refs) > 500:
+            logger.warning(
+                f"Issue #{issue_number}: Repository has {len(all_refs)} branches, "
+                f"only scanning first 500"
+            )
+            all_refs = all_refs[:500]
+
+        matches = [
+            cast(str, ref.ref.removeprefix("refs/heads/"))
+            for ref in all_refs
+            if pattern.search(ref.ref.removeprefix("refs/heads/"))
+        ]
+        if len(matches) == 1:
+            logger.info(
+                f"Issue #{issue_number}: Found branch via full scan pattern match: {matches[0]}"
+            )
+            return matches[0]
+        if len(matches) > 1:
+            logger.warning(
+                f"Issue #{issue_number}: Ambiguous branch pattern match in full scan: {matches}"
+            )
+            return None
+
+        return None
 
     @log_function_call
     @_handle_github_errors(default_return=[])
@@ -430,11 +500,17 @@ class IssueBranchManager(BaseGitHubManager):
     def get_branch_with_pr_fallback(
         self, issue_number: int, repo_owner: str, repo_name: str
     ) -> Optional[str]:
-        """Get branch for issue using linkedBranches with PR timeline fallback.
+        """Get branch for issue using a 4-step resolution strategy.
 
-        This method implements a two-step resolution strategy:
-        1. Query linkedBranches (primary path, fast)
-        2. Query issue timeline for draft/open PRs (fallback)
+        Resolution order:
+        1. Linked branches via GitHub's linked-branch API (fast)
+        2. Open PRs mentioning the issue in the timeline
+        3. Closed PRs whose branch still exists (most recent first)
+        4. Pattern-matching branch names by issue number
+
+        Returns the first unambiguous match. Steps 1, 2, and 4 treat
+        multiple matches as ambiguous (returns None). Step 3 returns
+        the most recent closed PR whose branch still exists.
 
         Args:
             issue_number: Issue number to find branch for
@@ -443,27 +519,6 @@ class IssueBranchManager(BaseGitHubManager):
 
         Returns:
             Branch name if found, None otherwise
-
-        Examples:
-            >>> manager = IssueBranchManager(Path.cwd())
-            >>> # Case 1: linkedBranches returns branch (primary path)
-            >>> branch = manager.get_branch_with_pr_fallback(123, "owner", "repo")
-            >>> print(branch)  # "123-feature-branch"
-            >>>
-            >>> # Case 2: No linkedBranches, but draft PR exists (fallback)
-            >>> branch = manager.get_branch_with_pr_fallback(456, "owner", "repo")
-            >>> print(branch)  # "456-draft-pr-branch"
-            >>>
-            >>> # Case 3: Multiple PRs found (ambiguous)
-            >>> branch = manager.get_branch_with_pr_fallback(789, "owner", "repo")
-            >>> print(branch)  # None (logs warning with PR numbers)
-
-        Notes:
-            - Returns immediately if linkedBranches found (short-circuit)
-            - Only considers OPEN PRs (includes both draft and non-draft)
-            - Filters out CLOSED/MERGED PRs
-            - Returns None if multiple PRs found (logs warning)
-            - Comprehensive logging for debugging
         """
         # Step 1: Validate issue number
         if not self._validate_issue_number(issue_number):
@@ -478,12 +533,18 @@ class IssueBranchManager(BaseGitHubManager):
 
         # Step 3: Try primary path - query linkedBranches (fast)
         linked_branches = self.get_linked_branches(issue_number)
-        if linked_branches:
+        if len(linked_branches) == 1:
             branch_name = linked_branches[0]
             logger.debug(
                 f"Issue #{issue_number}: Found branch via linkedBranches: {branch_name}"
             )
             return branch_name
+        if len(linked_branches) > 1:
+            logger.warning(
+                f"Issue #{issue_number}: Multiple linked branches found: "
+                f"{linked_branches}. Cannot determine which branch to use."
+            )
+            return None
 
         # Step 4: Fallback - query issue timeline for PRs
         logger.debug(
@@ -555,13 +616,9 @@ class IssueBranchManager(BaseGitHubManager):
                 )
 
             # Filter for OPEN PRs using helper method
-            open_prs = self._extract_open_prs(timeline_items)
+            open_prs = self._extract_prs_by_states(timeline_items, {"OPEN"})
 
-            # Step 6: Handle results based on count
-            if len(open_prs) == 0:
-                logger.debug(f"Issue #{issue_number}: No open PRs found")
-                return None
-
+            # Step 6: Handle open PR results
             if len(open_prs) == 1:
                 pr_data: dict[str, Any] = open_prs[0]
                 branch_name = cast(str, pr_data["headRefName"])
@@ -573,13 +630,42 @@ class IssueBranchManager(BaseGitHubManager):
                 )
                 return branch_name
 
-            # Multiple PRs found - ambiguous
-            pr_numbers = [pr["number"] for pr in open_prs]
-            logger.warning(
-                f"Issue #{issue_number}: Multiple open PRs found: {pr_numbers}. "
-                f"Cannot determine which branch to use."
+            if len(open_prs) > 1:
+                pr_numbers = [pr["number"] for pr in open_prs]
+                logger.warning(
+                    f"Issue #{issue_number}: Multiple open PRs found: {pr_numbers}. "
+                    f"Cannot determine which branch to use."
+                )
+                return None
+
+            # Step 7: Closed PR fallback — check if branch still exists
+            logger.debug(
+                f"Issue #{issue_number}: No open PRs found, checking closed PRs"
             )
-            return None
+            closed_prs = self._extract_prs_by_states(timeline_items, {"CLOSED"})
+            closed_prs.sort(key=lambda pr: pr["number"], reverse=True)
+            branch_checks = 0
+            for pr in closed_prs:
+                if branch_checks >= 25:
+                    logger.debug(
+                        f"Issue #{issue_number}: Reached 25 branch check limit "
+                        f"for closed PRs"
+                    )
+                    break
+                branch_checks += 1
+                try:
+                    repo.get_branch(cast(str, pr["headRefName"]))
+                    branch_name = cast(str, pr["headRefName"])
+                    logger.debug(
+                        f"Issue #{issue_number}: Found branch via closed "
+                        f"PR #{pr['number']}: {branch_name}"
+                    )
+                    return branch_name
+                except GithubException:
+                    continue
+
+            # Step 8: Pattern search fallback
+            return self._search_branches_by_pattern(issue_number, repo)
 
         except (KeyError, TypeError) as e:
             logger.error(f"Issue #{issue_number}: Error parsing timeline response: {e}")

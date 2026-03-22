@@ -12,6 +12,113 @@ from github import GithubException
 from mcp_coder.utils.github_operations.issues import IssueBranchManager
 
 
+def _make_git_ref(ref_name: str) -> Mock:
+    """Helper to build a mock GitRef object."""
+    ref = Mock()
+    ref.ref = ref_name
+    return ref
+
+
+class TestExtractPrsByStates:
+    """Test suite for IssueBranchManager._extract_prs_by_states()."""
+
+    @staticmethod
+    def _make_pr_node(
+        number: int, state: str, head_ref: str, is_draft: bool = False
+    ) -> dict[str, Any]:
+        """Helper to build a CrossReferencedEvent timeline node."""
+        return {
+            "__typename": "CrossReferencedEvent",
+            "source": {
+                "number": number,
+                "state": state,
+                "isDraft": is_draft,
+                "headRefName": head_ref,
+            },
+        }
+
+    def test_extract_prs_by_states_open_only(self) -> None:
+        """Filters OPEN PRs, excludes CLOSED and MERGED."""
+        timeline_items = [
+            self._make_pr_node(1, "OPEN", "branch-open"),
+            self._make_pr_node(2, "CLOSED", "branch-closed"),
+            self._make_pr_node(3, "MERGED", "branch-merged"),
+            self._make_pr_node(4, "OPEN", "branch-open-2", is_draft=True),
+        ]
+
+        result = IssueBranchManager._extract_prs_by_states(timeline_items, {"OPEN"})
+
+        assert len(result) == 2
+        assert result[0]["headRefName"] == "branch-open"
+        assert result[1]["headRefName"] == "branch-open-2"
+
+    def test_extract_prs_by_states_closed_only(self) -> None:
+        """Filters CLOSED PRs, excludes OPEN and MERGED."""
+        timeline_items = [
+            self._make_pr_node(1, "OPEN", "branch-open"),
+            self._make_pr_node(2, "CLOSED", "branch-closed"),
+            self._make_pr_node(3, "MERGED", "branch-merged"),
+            self._make_pr_node(4, "CLOSED", "branch-closed-2"),
+        ]
+
+        result = IssueBranchManager._extract_prs_by_states(timeline_items, {"CLOSED"})
+
+        assert len(result) == 2
+        assert result[0]["headRefName"] == "branch-closed"
+        assert result[1]["headRefName"] == "branch-closed-2"
+
+    def test_extract_prs_by_states_multiple_states(self) -> None:
+        """Passing {"OPEN", "CLOSED"} returns both OPEN and CLOSED, excludes MERGED."""
+        timeline_items = [
+            self._make_pr_node(1, "OPEN", "branch-open"),
+            self._make_pr_node(2, "CLOSED", "branch-closed"),
+            self._make_pr_node(3, "MERGED", "branch-merged"),
+        ]
+
+        result = IssueBranchManager._extract_prs_by_states(
+            timeline_items, {"OPEN", "CLOSED"}
+        )
+
+        assert len(result) == 2
+        head_refs = {pr["headRefName"] for pr in result}
+        assert head_refs == {"branch-open", "branch-closed"}
+
+    def test_extract_prs_by_states_skips_non_cross_referenced(self) -> None:
+        """Skips nodes that are not CrossReferencedEvent."""
+        timeline_items: list[dict[str, Any]] = [
+            {
+                "__typename": "SomeOtherEvent",
+                "source": {"state": "OPEN", "headRefName": "x"},
+            },
+            self._make_pr_node(1, "OPEN", "branch-open"),
+        ]
+
+        result = IssueBranchManager._extract_prs_by_states(timeline_items, {"OPEN"})
+
+        assert len(result) == 1
+        assert result[0]["headRefName"] == "branch-open"
+
+    def test_extract_prs_by_states_skips_missing_fields(self) -> None:
+        """Skips nodes missing state or headRefName."""
+        timeline_items = [
+            {
+                "__typename": "CrossReferencedEvent",
+                "source": {"number": 1, "title": "Issue, not PR"},
+            },
+            self._make_pr_node(2, "OPEN", "branch-open"),
+        ]
+
+        result = IssueBranchManager._extract_prs_by_states(timeline_items, {"OPEN"})
+
+        assert len(result) == 1
+        assert result[0]["headRefName"] == "branch-open"
+
+    def test_extract_prs_by_states_empty_input(self) -> None:
+        """Returns empty list for empty timeline items."""
+        result = IssueBranchManager._extract_prs_by_states([], {"OPEN"})
+        assert result == []
+
+
 class TestGetBranchWithPRFallback:
     """Test suite for IssueBranchManager.get_branch_with_pr_fallback()."""
 
@@ -195,7 +302,7 @@ class TestGetBranchWithPRFallback:
     def test_no_linked_branch_no_prs_returns_none(
         self, mock_manager: IssueBranchManager
     ) -> None:
-        """Test no linkedBranches and no PRs returns None."""
+        """Test no linkedBranches and no PRs falls through to pattern search."""
         # Setup: Mock repository
         mock_repo = Mock()
         mock_repo.owner.login = "test-owner"
@@ -215,6 +322,9 @@ class TestGetBranchWithPRFallback:
             return_value=({}, timeline_response)
         )
 
+        # Setup: Mock pattern search to return None
+        mock_manager._search_branches_by_pattern = Mock(return_value=None)  # type: ignore[method-assign]
+
         # Execute
         result = mock_manager.get_branch_with_pr_fallback(
             issue_number=123, repo_owner="test-owner", repo_name="test-repo"
@@ -224,6 +334,7 @@ class TestGetBranchWithPRFallback:
         assert result is None
         mock_manager.get_linked_branches.assert_called_once_with(123)
         mock_manager._github_client._Github__requester.graphql_query.assert_called_once()  # type: ignore[attr-defined]
+        mock_manager._search_branches_by_pattern.assert_called_once_with(123, mock_repo)
 
     def test_invalid_issue_number_returns_none(
         self, mock_manager: IssueBranchManager
@@ -436,6 +547,9 @@ class TestGetBranchWithPRFallback:
             return_value=({}, timeline_response)
         )
 
+        # Setup: Mock pattern search to return None
+        mock_manager._search_branches_by_pattern = Mock(return_value=None)  # type: ignore[method-assign]
+
         # Execute
         result = mock_manager.get_branch_with_pr_fallback(
             issue_number=123, repo_owner="test-owner", repo_name="test-repo"
@@ -443,3 +557,546 @@ class TestGetBranchWithPRFallback:
 
         # Verify - should return None as no valid PRs found
         assert result is None
+
+    def test_multiple_linked_branches_returns_none(
+        self, mock_manager: IssueBranchManager
+    ) -> None:
+        """Two linked branches returns None (ambiguous)."""
+        mock_repo = Mock()
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        mock_manager.get_linked_branches = Mock(  # type: ignore[method-assign]
+            return_value=["123-branch-a", "123-branch-b"]
+        )
+
+        # GraphQL should NOT be called (short-circuit)
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_graphql_query = Mock()
+        mock_manager._github_client._Github__requester.graphql_query = mock_graphql_query  # type: ignore[attr-defined]
+
+        result = mock_manager.get_branch_with_pr_fallback(
+            issue_number=123, repo_owner="test-owner", repo_name="test-repo"
+        )
+
+        assert result is None
+        mock_graphql_query.assert_not_called()
+
+    def test_closed_pr_with_existing_branch(
+        self, mock_manager: IssueBranchManager
+    ) -> None:
+        """Closed PR with existing branch returns branch name."""
+        mock_repo = Mock()
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        mock_manager.get_linked_branches = Mock(return_value=[])  # type: ignore[method-assign]
+
+        timeline_response = {
+            "data": {
+                "repository": {
+                    "issue": {
+                        "timelineItems": {
+                            "nodes": [
+                                {
+                                    "__typename": "CrossReferencedEvent",
+                                    "source": {
+                                        "number": 50,
+                                        "state": "CLOSED",
+                                        "isDraft": False,
+                                        "headRefName": "123-closed-branch",
+                                    },
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
+            return_value=({}, timeline_response)
+        )
+
+        # Branch exists
+        mock_repo.get_branch = Mock(return_value=Mock())
+
+        result = mock_manager.get_branch_with_pr_fallback(
+            issue_number=123, repo_owner="test-owner", repo_name="test-repo"
+        )
+
+        assert result == "123-closed-branch"
+        mock_repo.get_branch.assert_called_once_with("123-closed-branch")
+
+    def test_closed_pr_with_deleted_branch(
+        self, mock_manager: IssueBranchManager
+    ) -> None:
+        """Closed PR with deleted branch falls through to pattern search."""
+        mock_repo = Mock()
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        mock_manager.get_linked_branches = Mock(return_value=[])  # type: ignore[method-assign]
+
+        timeline_response = {
+            "data": {
+                "repository": {
+                    "issue": {
+                        "timelineItems": {
+                            "nodes": [
+                                {
+                                    "__typename": "CrossReferencedEvent",
+                                    "source": {
+                                        "number": 50,
+                                        "state": "CLOSED",
+                                        "isDraft": False,
+                                        "headRefName": "123-deleted-branch",
+                                    },
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
+            return_value=({}, timeline_response)
+        )
+
+        # Branch deleted — get_branch raises GithubException
+        mock_repo.get_branch = Mock(
+            side_effect=GithubException(404, {"message": "Branch not found"}, None)
+        )
+
+        # Pattern search also returns None
+        mock_manager._search_branches_by_pattern = Mock(return_value=None)  # type: ignore[method-assign]
+
+        result = mock_manager.get_branch_with_pr_fallback(
+            issue_number=123, repo_owner="test-owner", repo_name="test-repo"
+        )
+
+        assert result is None
+        mock_repo.get_branch.assert_called_once_with("123-deleted-branch")
+        mock_manager._search_branches_by_pattern.assert_called_once_with(123, mock_repo)
+
+    def test_merged_pr_not_matched(self, mock_manager: IssueBranchManager) -> None:
+        """Merged PR in timeline is skipped (state is MERGED, not CLOSED)."""
+        mock_repo = Mock()
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        mock_manager.get_linked_branches = Mock(return_value=[])  # type: ignore[method-assign]
+
+        timeline_response = {
+            "data": {
+                "repository": {
+                    "issue": {
+                        "timelineItems": {
+                            "nodes": [
+                                {
+                                    "__typename": "CrossReferencedEvent",
+                                    "source": {
+                                        "number": 50,
+                                        "state": "MERGED",
+                                        "isDraft": False,
+                                        "headRefName": "123-merged-branch",
+                                    },
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
+            return_value=({}, timeline_response)
+        )
+
+        # get_branch should NOT be called (MERGED is not CLOSED)
+        mock_repo.get_branch = Mock()
+        mock_manager._search_branches_by_pattern = Mock(return_value=None)  # type: ignore[method-assign]
+
+        result = mock_manager.get_branch_with_pr_fallback(
+            issue_number=123, repo_owner="test-owner", repo_name="test-repo"
+        )
+
+        assert result is None
+        mock_repo.get_branch.assert_not_called()
+
+    def test_closed_pr_25_check_cap(self, mock_manager: IssueBranchManager) -> None:
+        """30 closed PRs, all branches deleted — stops checking after 25."""
+        mock_repo = Mock()
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        mock_manager.get_linked_branches = Mock(return_value=[])  # type: ignore[method-assign]
+
+        # Build 30 closed PRs
+        nodes = [
+            {
+                "__typename": "CrossReferencedEvent",
+                "source": {
+                    "number": i,
+                    "state": "CLOSED",
+                    "isDraft": False,
+                    "headRefName": f"123-branch-{i}",
+                },
+            }
+            for i in range(30)
+        ]
+
+        timeline_response = {
+            "data": {"repository": {"issue": {"timelineItems": {"nodes": nodes}}}}
+        }
+
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
+            return_value=({}, timeline_response)
+        )
+
+        # All branches deleted
+        mock_repo.get_branch = Mock(
+            side_effect=GithubException(404, {"message": "Not found"}, None)
+        )
+
+        mock_manager._search_branches_by_pattern = Mock(return_value=None)  # type: ignore[method-assign]
+
+        result = mock_manager.get_branch_with_pr_fallback(
+            issue_number=123, repo_owner="test-owner", repo_name="test-repo"
+        )
+
+        assert result is None
+        # Should only check 25 branches, not all 30
+        assert mock_repo.get_branch.call_count == 25
+
+    def test_closed_pr_most_recent_preferred(
+        self, mock_manager: IssueBranchManager
+    ) -> None:
+        """Multiple closed PRs with existing branches — returns highest PR number."""
+        mock_repo = Mock()
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        mock_manager.get_linked_branches = Mock(return_value=[])  # type: ignore[method-assign]
+
+        timeline_response = {
+            "data": {
+                "repository": {
+                    "issue": {
+                        "timelineItems": {
+                            "nodes": [
+                                {
+                                    "__typename": "CrossReferencedEvent",
+                                    "source": {
+                                        "number": 10,
+                                        "state": "CLOSED",
+                                        "isDraft": False,
+                                        "headRefName": "123-old-branch",
+                                    },
+                                },
+                                {
+                                    "__typename": "CrossReferencedEvent",
+                                    "source": {
+                                        "number": 55,
+                                        "state": "CLOSED",
+                                        "isDraft": False,
+                                        "headRefName": "123-newest-branch",
+                                    },
+                                },
+                                {
+                                    "__typename": "CrossReferencedEvent",
+                                    "source": {
+                                        "number": 30,
+                                        "state": "CLOSED",
+                                        "isDraft": False,
+                                        "headRefName": "123-middle-branch",
+                                    },
+                                },
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
+            return_value=({}, timeline_response)
+        )
+
+        # All branches exist
+        mock_repo.get_branch = Mock(return_value=Mock())
+
+        result = mock_manager.get_branch_with_pr_fallback(
+            issue_number=123, repo_owner="test-owner", repo_name="test-repo"
+        )
+
+        # Should return the branch from the highest PR number (55)
+        assert result == "123-newest-branch"
+        mock_repo.get_branch.assert_called_once_with("123-newest-branch")
+
+    def test_closed_pr_prefers_open_pr(self, mock_manager: IssueBranchManager) -> None:
+        """Both open and closed PRs exist — returns open PR branch (step order)."""
+        mock_repo = Mock()
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        mock_manager.get_linked_branches = Mock(return_value=[])  # type: ignore[method-assign]
+
+        timeline_response = {
+            "data": {
+                "repository": {
+                    "issue": {
+                        "timelineItems": {
+                            "nodes": [
+                                {
+                                    "__typename": "CrossReferencedEvent",
+                                    "source": {
+                                        "number": 50,
+                                        "state": "CLOSED",
+                                        "isDraft": False,
+                                        "headRefName": "123-closed-branch",
+                                    },
+                                },
+                                {
+                                    "__typename": "CrossReferencedEvent",
+                                    "source": {
+                                        "number": 60,
+                                        "state": "OPEN",
+                                        "isDraft": False,
+                                        "headRefName": "123-open-branch",
+                                    },
+                                },
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
+            return_value=({}, timeline_response)
+        )
+
+        result = mock_manager.get_branch_with_pr_fallback(
+            issue_number=123, repo_owner="test-owner", repo_name="test-repo"
+        )
+
+        # Open PR is checked first (step 6), before closed PR fallback (step 7)
+        assert result == "123-open-branch"
+
+    def test_pattern_fallback_used_when_no_prs(
+        self, mock_manager: IssueBranchManager
+    ) -> None:
+        """No linked branches, no PRs — pattern search is called and returns result."""
+        mock_repo = Mock()
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        mock_manager.get_linked_branches = Mock(return_value=[])  # type: ignore[method-assign]
+
+        timeline_response: dict[str, Any] = {
+            "data": {"repository": {"issue": {"timelineItems": {"nodes": []}}}}
+        }
+
+        mock_manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
+        mock_manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
+            return_value=({}, timeline_response)
+        )
+
+        # Pattern search finds a branch
+        mock_manager._search_branches_by_pattern = Mock(  # type: ignore[method-assign]
+            return_value="123-pattern-match"
+        )
+
+        result = mock_manager.get_branch_with_pr_fallback(
+            issue_number=123, repo_owner="test-owner", repo_name="test-repo"
+        )
+
+        assert result == "123-pattern-match"
+        mock_manager._search_branches_by_pattern.assert_called_once_with(123, mock_repo)
+
+    def test_pattern_fallback_not_called_when_linked_branch_found(
+        self, mock_manager: IssueBranchManager
+    ) -> None:
+        """Linked branch exists — pattern search NOT called."""
+        mock_repo = Mock()
+        mock_repo.owner.login = "test-owner"
+        mock_repo.name = "test-repo"
+        mock_manager._repository = mock_repo
+
+        mock_manager.get_linked_branches = Mock(  # type: ignore[method-assign]
+            return_value=["123-linked"]
+        )
+
+        mock_manager._search_branches_by_pattern = Mock()  # type: ignore[method-assign]
+
+        result = mock_manager.get_branch_with_pr_fallback(
+            issue_number=123, repo_owner="test-owner", repo_name="test-repo"
+        )
+
+        assert result == "123-linked"
+        mock_manager._search_branches_by_pattern.assert_not_called()
+
+
+class TestSearchBranchesByPattern:
+    """Test suite for IssueBranchManager._search_branches_by_pattern()."""
+
+    @pytest.fixture
+    def mock_manager(self) -> IssueBranchManager:
+        """Create a mock IssueBranchManager for testing."""
+        mock_path = Mock(spec=Path)
+        mock_path.exists.return_value = True
+        mock_path.is_dir.return_value = True
+
+        with (
+            patch(
+                "mcp_coder.utils.git_operations.is_git_repository", return_value=True
+            ),
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={(("github", "token")): "fake_token"},
+            ),
+            patch("mcp_coder.utils.github_operations.base_manager.Github"),
+        ):
+            manager = IssueBranchManager(mock_path)
+            return manager
+
+    def test_search_branches_no_match(self, mock_manager: IssueBranchManager) -> None:
+        """Empty refs list returns None."""
+        mock_repo = Mock()
+        # Both prefix pass and full scan return empty
+        mock_repo.get_git_matching_refs.side_effect = [
+            [],  # prefix pass
+            [],  # full scan
+        ]
+
+        result = mock_manager._search_branches_by_pattern(252, mock_repo)
+
+        assert result is None
+
+    def test_search_branches_single_match_prefix(
+        self, mock_manager: IssueBranchManager
+    ) -> None:
+        """Prefix pass finds '252-bar' — returns branch name without full scan."""
+        mock_repo = Mock()
+        # Prefix pass returns a matching ref
+        mock_repo.get_git_matching_refs.return_value = [
+            _make_git_ref("refs/heads/252-bar"),
+        ]
+
+        result = mock_manager._search_branches_by_pattern(252, mock_repo)
+
+        assert result == "252-bar"
+        # Should only call get_git_matching_refs once (prefix pass)
+        mock_repo.get_git_matching_refs.assert_called_once_with("heads/252")
+
+    def test_search_branches_single_match_nested(
+        self, mock_manager: IssueBranchManager
+    ) -> None:
+        """Prefix pass empty, full scan finds 'feature/252-foo' — returns branch."""
+        mock_repo = Mock()
+        # Prefix pass returns no matches, full scan returns nested match
+        mock_repo.get_git_matching_refs.side_effect = [
+            [],  # prefix pass
+            [_make_git_ref("refs/heads/feature/252-foo")],  # full scan
+        ]
+
+        result = mock_manager._search_branches_by_pattern(252, mock_repo)
+
+        assert result == "feature/252-foo"
+        assert mock_repo.get_git_matching_refs.call_count == 2
+
+    def test_search_branches_multiple_matches(
+        self, mock_manager: IssueBranchManager
+    ) -> None:
+        """Two matching refs in prefix pass returns None (ambiguous)."""
+        mock_repo = Mock()
+        mock_repo.get_git_matching_refs.return_value = [
+            _make_git_ref("refs/heads/252-bar"),
+            _make_git_ref("refs/heads/252-baz"),
+        ]
+
+        result = mock_manager._search_branches_by_pattern(252, mock_repo)
+
+        assert result is None
+
+    def test_search_branches_500_cap(self, mock_manager: IssueBranchManager) -> None:
+        """501 refs in full scan — processes first 500, logs warning."""
+        mock_repo = Mock()
+        # Prefix pass: no matches
+        # Full scan: 501 refs, none matching the pattern
+        refs_501 = [_make_git_ref(f"refs/heads/other-branch-{i}") for i in range(501)]
+        mock_repo.get_git_matching_refs.side_effect = [
+            [],  # prefix pass
+            refs_501,  # full scan
+        ]
+
+        with patch(
+            "mcp_coder.utils.github_operations.issues.branch_manager.logger"
+        ) as mock_logger:
+            result = mock_manager._search_branches_by_pattern(252, mock_repo)
+
+        assert result is None
+        # Should log warning about exceeding 500 refs
+        mock_logger.warning.assert_called()
+        warning_msg = mock_logger.warning.call_args[0][0]
+        assert "500" in warning_msg
+
+    def test_search_branches_pattern_variations(
+        self, mock_manager: IssueBranchManager
+    ) -> None:
+        """Matches expected patterns, does NOT match false positives."""
+        mock_repo = Mock()
+
+        # Test matching patterns individually via full scan
+        # Test: "feature/252-foo" should match
+        mock_repo.get_git_matching_refs.side_effect = [
+            [],  # prefix pass
+            [_make_git_ref("refs/heads/feature/252-foo")],  # full scan
+        ]
+        assert (
+            mock_manager._search_branches_by_pattern(252, mock_repo)
+            == "feature/252-foo"
+        )
+
+        # Test: "252-bar" should match (via prefix pass)
+        mock_repo.get_git_matching_refs.side_effect = [
+            [_make_git_ref("refs/heads/252-bar")],  # prefix pass
+        ]
+        assert mock_manager._search_branches_by_pattern(252, mock_repo) == "252-bar"
+
+        # Test: "fix/252_baz" should match (underscore separator)
+        mock_repo.get_git_matching_refs.side_effect = [
+            [],  # prefix pass
+            [_make_git_ref("refs/heads/fix/252_baz")],  # full scan
+        ]
+        assert mock_manager._search_branches_by_pattern(252, mock_repo) == "fix/252_baz"
+
+        # Test: "1252-foo" should NOT match (different number)
+        mock_repo.get_git_matching_refs.side_effect = [
+            [_make_git_ref("refs/heads/1252-foo")],  # prefix pass
+            [],  # full scan
+        ]
+        assert mock_manager._search_branches_by_pattern(252, mock_repo) is None
+
+        # Test: "252" alone (no separator) should NOT match
+        mock_repo.get_git_matching_refs.side_effect = [
+            [_make_git_ref("refs/heads/252")],  # prefix pass
+            [],  # full scan
+        ]
+        assert mock_manager._search_branches_by_pattern(252, mock_repo) is None

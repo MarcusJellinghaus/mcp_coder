@@ -105,9 +105,7 @@
       "vscodeclaude": {
         "emoji": "❌",
         "display_name": "PLANNING FAILED",
-        "stage_short": "plan-fail",
-        "initial_command": null,
-        "followup_command": null
+        "stage_short": "plan-fail"
       }
     },
     {
@@ -119,9 +117,7 @@
       "vscodeclaude": {
         "emoji": "❌",
         "display_name": "IMPLEMENTING FAILED",
-        "stage_short": "impl-fail",
-        "initial_command": null,
-        "followup_command": null
+        "stage_short": "impl-fail"
       }
     },
     {
@@ -133,9 +129,7 @@
       "vscodeclaude": {
         "emoji": "🔧",
         "display_name": "CI FIX NEEDED",
-        "stage_short": "ci-fail",
-        "initial_command": null,
-        "followup_command": null
+        "stage_short": "ci-fail"
       }
     },
     {
@@ -147,9 +141,7 @@
       "vscodeclaude": {
         "emoji": "⏱️",
         "display_name": "LLM TIMEOUT",
-        "stage_short": "timeout",
-        "initial_command": null,
-        "followup_command": null
+        "stage_short": "timeout"
       }
     },
     {
@@ -161,9 +153,7 @@
       "vscodeclaude": {
         "emoji": "❌",
         "display_name": "PR CREATION FAILED",
-        "stage_short": "pr-fail",
-        "initial_command": null,
-        "followup_command": null
+        "stage_short": "pr-fail"
       }
     }
   ],

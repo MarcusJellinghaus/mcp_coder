@@ -13,7 +13,6 @@ from mcp_coder.workflows.vscodeclaude.issues import (
     get_eligible_vscodeclaude_issues,
     get_human_action_labels,
     get_ignore_labels,
-    get_linked_branch_for_issue,
     get_matching_ignore_label,
     is_status_eligible_for_session,
     status_requires_linked_branch,
@@ -238,30 +237,6 @@ class TestIssueSelection:
 
         assert len(eligible) == 1
         assert eligible[0]["number"] == 2
-
-    def test_get_linked_branch_single(self) -> None:
-        """Returns branch when exactly one linked."""
-        mock_branch_manager = Mock()
-        mock_branch_manager.get_linked_branches.return_value = ["feature-123"]
-
-        branch = get_linked_branch_for_issue(mock_branch_manager, 123)
-        assert branch == "feature-123"
-
-    def test_get_linked_branch_none(self) -> None:
-        """Returns None when no branches linked."""
-        mock_branch_manager = Mock()
-        mock_branch_manager.get_linked_branches.return_value = []
-
-        branch = get_linked_branch_for_issue(mock_branch_manager, 123)
-        assert branch is None
-
-    def test_get_linked_branch_multiple_raises(self) -> None:
-        """Raises ValueError when multiple branches linked."""
-        mock_branch_manager = Mock()
-        mock_branch_manager.get_linked_branches.return_value = ["branch-a", "branch-b"]
-
-        with pytest.raises(ValueError, match="multiple branches"):
-            get_linked_branch_for_issue(mock_branch_manager, 123)
 
 
 class TestFilterEligibleVscodeclaudeIssues:
@@ -850,6 +825,7 @@ class TestBuildEligibleIssuesWithBranchCheck:
         # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
         mock_issue_manager = Mock()
         mock_branch_manager = Mock()
+        mock_branch_manager.get_branch_with_pr_fallback = Mock(return_value=None)
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
             lambda **kwargs: mock_issue_manager,
@@ -882,12 +858,6 @@ class TestBuildEligibleIssuesWithBranchCheck:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.get_issue_status",
             lambda issue: "status-04:plan-review",
-        )
-
-        # Mock get_linked_branch_for_issue to return None (no branch)
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.get_linked_branch_for_issue",
-            lambda branch_manager, issue_number: None,
         )
 
         eligible_issues, issues_without_branch = (
@@ -930,6 +900,7 @@ class TestBuildEligibleIssuesWithBranchCheck:
         # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
         mock_issue_manager = Mock()
         mock_branch_manager = Mock()
+        mock_branch_manager.get_branch_with_pr_fallback = Mock(return_value=None)
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
             lambda **kwargs: mock_issue_manager,
@@ -964,12 +935,6 @@ class TestBuildEligibleIssuesWithBranchCheck:
             lambda issue: "status-07:code-review",
         )
 
-        # Mock get_linked_branch_for_issue to return None (no branch)
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.get_linked_branch_for_issue",
-            lambda branch_manager, issue_number: None,
-        )
-
         eligible_issues, issues_without_branch = (
             build_eligible_issues_with_branch_check(["test-repo"])
         )
@@ -978,7 +943,7 @@ class TestBuildEligibleIssuesWithBranchCheck:
         assert ("owner/repo", 2) in issues_without_branch
 
     def test_handles_multiple_branches(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Issues with multiple linked branches added to set."""
+        """Issues with multiple linked branches (returns None) added to set."""
         # Mock config
         mock_config = {
             "coordinator": {
@@ -1008,6 +973,7 @@ class TestBuildEligibleIssuesWithBranchCheck:
         # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
         mock_issue_manager = Mock()
         mock_branch_manager = Mock()
+        mock_branch_manager.get_branch_with_pr_fallback = Mock(return_value=None)
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
             lambda **kwargs: mock_issue_manager,
@@ -1040,15 +1006,6 @@ class TestBuildEligibleIssuesWithBranchCheck:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.get_issue_status",
             lambda issue: "status-04:plan-review",
-        )
-
-        # Mock get_linked_branch_for_issue to raise ValueError (multiple branches)
-        def mock_get_linked_branch(branch_manager: Mock, issue_number: int) -> None:
-            raise ValueError("Multiple branches")
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.get_linked_branch_for_issue",
-            mock_get_linked_branch,
         )
 
         eligible_issues, issues_without_branch = (
@@ -1123,12 +1080,6 @@ class TestBuildEligibleIssuesWithBranchCheck:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.get_issue_status",
             lambda issue: "status-01:created",
-        )
-
-        # Mock get_linked_branch_for_issue to return None (no branch)
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.get_linked_branch_for_issue",
-            lambda branch_manager, issue_number: None,
         )
 
         eligible_issues, issues_without_branch = (

@@ -291,35 +291,6 @@ def get_cached_eligible_vscodeclaude_issues(
         return get_eligible_vscodeclaude_issues(issue_manager, github_username)
 
 
-def get_linked_branch_for_issue(
-    branch_manager: IssueBranchManager,
-    issue_number: int,
-) -> str | None:
-    """Get linked branch for issue, fail if multiple.
-
-    Args:
-        branch_manager: IssueBranchManager for GitHub API
-        issue_number: GitHub issue number
-
-    Returns:
-        Branch name if exactly one linked, None if none
-
-    Raises:
-        ValueError: If multiple branches linked to issue
-    """
-    branches = branch_manager.get_linked_branches(issue_number)
-
-    if not branches:
-        return None
-
-    if len(branches) > 1:
-        raise ValueError(
-            f"Issue #{issue_number} has multiple branches linked: {branches}"
-        )
-
-    return branches[0]
-
-
 def build_eligible_issues_with_branch_check(
     repo_names: list[str],
 ) -> tuple[list[tuple[str, IssueData]], set[tuple[str, int]]]:
@@ -396,14 +367,11 @@ def build_eligible_issues_with_branch_check(
                 # Check if this issue needs branch but doesn't have one
                 status = get_issue_status(issue)
                 if status_requires_linked_branch(status):
-                    try:
-                        branch = get_linked_branch_for_issue(
-                            branch_manager, issue["number"]
-                        )
-                        if branch is None:
-                            issues_without_branch.add((repo_full_name, issue["number"]))
-                    except ValueError:
-                        # Multiple branches - also add to set
+                    repo_owner, repo_name_str = repo_full_name.split("/", 1)
+                    branch = branch_manager.get_branch_with_pr_fallback(
+                        issue["number"], repo_owner, repo_name_str
+                    )
+                    if branch is None:
                         issues_without_branch.add((repo_full_name, issue["number"]))
 
         except Exception as e:

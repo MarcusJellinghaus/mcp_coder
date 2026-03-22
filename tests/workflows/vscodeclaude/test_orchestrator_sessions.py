@@ -991,6 +991,8 @@ class TestPrepareRestartBranch:
             current_status="status-01:created",
             branch_manager=mock_branch_manager,
             issue_number=123,
+            repo_owner="test-owner",
+            repo_name="test-repo",
         )
 
         assert result == BranchPrepResult(True, None, None)
@@ -1005,17 +1007,21 @@ class TestPrepareRestartBranch:
                 "Result", (), {"stdout": "", "stderr": "", "return_code": 0}
             )(),
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.get_linked_branch_for_issue",
-            lambda _bm, _issue_num: None,
-        )
-        mock_branch_manager = type("MockBranchManager", (), {})()
+        mock_branch_manager = type(
+            "MockBranchManager",
+            (),
+            {
+                "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: None,
+            },
+        )()
 
         result = _prepare_restart_branch(
             folder_path=tmp_path,
             current_status="status-04:plan-review",
             branch_manager=mock_branch_manager,
             issue_number=123,
+            repo_owner="owner",
+            repo_name="repo",
         )
 
         assert result == BranchPrepResult(False, "No branch", None)
@@ -1031,20 +1037,24 @@ class TestPrepareRestartBranch:
             )(),
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.get_linked_branch_for_issue",
-            lambda _bm, _issue_num: "feat-branch",
-        )
-        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart.get_folder_git_status",
             lambda folder: "Dirty",
         )
-        mock_branch_manager = type("MockBranchManager", (), {})()
+        mock_branch_manager = type(
+            "MockBranchManager",
+            (),
+            {
+                "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: "feat-branch",
+            },
+        )()
 
         result = _prepare_restart_branch(
             folder_path=tmp_path,
             current_status="status-07:code-review",
             branch_manager=mock_branch_manager,
             issue_number=456,
+            repo_owner="owner",
+            repo_name="repo",
         )
 
         assert result == BranchPrepResult(False, "Dirty", None)
@@ -1064,20 +1074,24 @@ class TestPrepareRestartBranch:
             mock_execute,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.get_linked_branch_for_issue",
-            lambda _bm, _issue_num: "feat-123",
-        )
-        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart.get_folder_git_status",
             lambda folder: "Clean",
         )
-        mock_branch_manager = type("MockBranchManager", (), {})()
+        mock_branch_manager = type(
+            "MockBranchManager",
+            (),
+            {
+                "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: "feat-123",
+            },
+        )()
 
         result = _prepare_restart_branch(
             folder_path=tmp_path,
             current_status="status-04:plan-review",
             branch_manager=mock_branch_manager,
             issue_number=123,
+            repo_owner="owner",
+            repo_name="repo",
         )
 
         assert result == BranchPrepResult(True, None, "feat-123")
@@ -1100,20 +1114,24 @@ class TestPrepareRestartBranch:
             execute_side_effect,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.get_linked_branch_for_issue",
-            lambda _bm, _issue_num: "feat-branch",
-        )
-        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart.get_folder_git_status",
             lambda folder: "Clean",
         )
-        mock_branch_manager = type("MockBranchManager", (), {})()
+        mock_branch_manager = type(
+            "MockBranchManager",
+            (),
+            {
+                "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: "feat-branch",
+            },
+        )()
 
         result = _prepare_restart_branch(
             folder_path=tmp_path,
             current_status="status-04:plan-review",
             branch_manager=mock_branch_manager,
             issue_number=123,
+            repo_owner="owner",
+            repo_name="repo",
         )
 
         assert result == BranchPrepResult(False, "Git error", None)
@@ -1139,6 +1157,8 @@ class TestPrepareRestartBranch:
             current_status="status-01:created",
             branch_manager=mock_branch_manager,
             issue_number=123,
+            repo_owner="test-owner",
+            repo_name="test-repo",
         )
 
         # First call should be git fetch
@@ -1166,6 +1186,8 @@ class TestPrepareRestartBranch:
             current_status="status-01:created",
             branch_manager=mock_branch_manager,
             issue_number=123,
+            repo_owner="test-owner",
+            repo_name="test-repo",
         )
 
         assert result == BranchPrepResult(False, "Git error", None)
@@ -1173,31 +1195,31 @@ class TestPrepareRestartBranch:
     def test_multi_branch_returns_skip(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Multiple branches linked to issue returns Multi-branch skip."""
+        """Multiple branches (returns None) results in No branch skip."""
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart.execute_subprocess",
             lambda cmd, options: type(
                 "Result", (), {"stdout": "", "stderr": "", "return_code": 0}
             )(),
         )
-
-        def raise_value_error(_bm: Any, _issue_num: int) -> str:
-            raise ValueError("Multiple branches linked")
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.get_linked_branch_for_issue",
-            raise_value_error,
-        )
-        mock_branch_manager = type("MockBranchManager", (), {})()
+        mock_branch_manager = type(
+            "MockBranchManager",
+            (),
+            {
+                "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: None,
+            },
+        )()
 
         result = _prepare_restart_branch(
             folder_path=tmp_path,
             current_status="status-04:plan-review",
             branch_manager=mock_branch_manager,
             issue_number=123,
+            repo_owner="owner",
+            repo_name="repo",
         )
 
-        assert result == BranchPrepResult(False, "Multi-branch", None)
+        assert result == BranchPrepResult(False, "No branch", None)
 
 
 class TestRestartClosedSessionsBranchHandling:
@@ -1244,6 +1266,8 @@ class TestRestartClosedSessionsBranchHandling:
             current_status: str,
             branch_manager: Any,
             issue_number: int,
+            repo_owner: str,
+            repo_name: str,
         ) -> BranchPrepResult:
             prepare_calls.append(
                 {
@@ -1819,6 +1843,8 @@ class TestBranchHandlingIntegration:
             current_status: str,
             branch_manager: Any,
             issue_number: int,
+            repo_owner: str,
+            repo_name: str,
         ) -> BranchPrepResult:
             operations.append(f"prepare_branch:{current_status}")
             # Simulate successful branch switch for status-04
@@ -1914,8 +1940,13 @@ class TestBranchHandlingIntegration:
         )
 
         mock_issue_manager = type("MockIssueManager", (), {})()
-        mock_branch_manager = type("MockBranchManager", (), {})()
-        mock_branch_manager.get_linked_branches = lambda issue_num: []
+        mock_branch_manager = type(
+            "MockBranchManager",
+            (),
+            {
+                "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: None,
+            },
+        )()
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.IssueManager",
@@ -1959,12 +1990,6 @@ class TestBranchHandlingIntegration:
             "mcp_coder.workflows.vscodeclaude.session_launch.load_repo_vscodeclaude_config",
             lambda name: {},
         )
-        # No linked branch
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.get_linked_branch_for_issue",
-            lambda _bm, _num: None,
-        )
-
         with caplog.at_level(logging.ERROR):
             sessions = process_eligible_issues(
                 repo_name="test",
@@ -2008,8 +2033,14 @@ class TestBranchHandlingIntegration:
             mock_execute,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.get_linked_branch_for_issue",
-            lambda _bm, _num: "feat-branch",
+            "mcp_coder.workflows.vscodeclaude.session_restart.IssueBranchManager",
+            lambda **kwargs: type(
+                "MockBranchManager",
+                (),
+                {
+                    "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: "feat-branch",
+                },
+            )(),
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart.get_folder_git_status",
@@ -2069,7 +2100,13 @@ class TestBranchHandlingIntegration:
             mock_execute,
         )
 
-        mock_branch_manager = type("MockBranchManager", (), {})()
+        mock_branch_manager = type(
+            "MockBranchManager",
+            (),
+            {
+                "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: "feat-branch",
+            },
+        )()
 
         # Test with status-01
         _ = _prepare_restart_branch(
@@ -2077,16 +2114,14 @@ class TestBranchHandlingIntegration:
             current_status="status-01:created",
             branch_manager=mock_branch_manager,
             issue_number=100,
+            repo_owner="test-owner",
+            repo_name="test-repo",
         )
         assert "fetch" in fetch_calls
 
         fetch_calls.clear()
 
         # Test with status-04
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.get_linked_branch_for_issue",
-            lambda _bm, _num: "feat-branch",
-        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart.get_folder_git_status",
             lambda folder: "Clean",
@@ -2097,6 +2132,8 @@ class TestBranchHandlingIntegration:
             current_status="status-04:plan-review",
             branch_manager=mock_branch_manager,
             issue_number=100,
+            repo_owner="owner",
+            repo_name="repo",
         )
         assert "fetch" in fetch_calls
 
@@ -2108,6 +2145,8 @@ class TestBranchHandlingIntegration:
             current_status="status-07:code-review",
             branch_manager=mock_branch_manager,
             issue_number=100,
+            repo_owner="owner",
+            repo_name="repo",
         )
         assert "fetch" in fetch_calls
 

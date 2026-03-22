@@ -198,7 +198,7 @@ class TestProcessEligibleIssuesBranchRequirement:
         # Mock IssueManager and IssueBranchManager to avoid token validation
         mock_issue_manager = MagicMock()
         mock_branch_manager = MagicMock()
-        mock_branch_manager.get_linked_branches.return_value = []
+        mock_branch_manager.get_branch_with_pr_fallback.return_value = None
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.IssueManager",
@@ -217,11 +217,6 @@ class TestProcessEligibleIssuesBranchRequirement:
             "mcp_coder.workflows.vscodeclaude.session_launch._filter_eligible_vscodeclaude_issues",
             lambda *args, **kwargs: [mock_issue],
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.get_linked_branch_for_issue",
-            lambda *args, **kwargs: None,  # No linked branch
-        )
-
         mock_launch = MagicMock()
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.prepare_and_launch_session",
@@ -277,7 +272,7 @@ class TestProcessEligibleIssuesBranchRequirement:
         # Mock IssueManager and IssueBranchManager to avoid token validation
         mock_issue_manager = MagicMock()
         mock_branch_manager = MagicMock()
-        mock_branch_manager.get_linked_branches.return_value = []
+        mock_branch_manager.get_branch_with_pr_fallback.return_value = None
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.IssueManager",
@@ -296,11 +291,6 @@ class TestProcessEligibleIssuesBranchRequirement:
             "mcp_coder.workflows.vscodeclaude.session_launch._filter_eligible_vscodeclaude_issues",
             lambda *args, **kwargs: [mock_issue],
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.get_linked_branch_for_issue",
-            lambda *args, **kwargs: None,  # No linked branch
-        )
-
         mock_launch = MagicMock()
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.prepare_and_launch_session",
@@ -360,7 +350,7 @@ class TestProcessEligibleIssuesBranchRequirement:
         # Mock IssueManager and IssueBranchManager to avoid token validation
         mock_issue_manager = MagicMock()
         mock_branch_manager = MagicMock()
-        mock_branch_manager.get_linked_branches.return_value = []
+        mock_branch_manager.get_branch_with_pr_fallback.return_value = None
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.IssueManager",
@@ -379,11 +369,6 @@ class TestProcessEligibleIssuesBranchRequirement:
             "mcp_coder.workflows.vscodeclaude.session_launch._filter_eligible_vscodeclaude_issues",
             lambda *args, **kwargs: [mock_issue],
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.get_linked_branch_for_issue",
-            lambda *args, **kwargs: None,
-        )
-
         mock_launch = MagicMock()
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.prepare_and_launch_session",
@@ -438,7 +423,7 @@ class TestProcessEligibleIssuesBranchRequirement:
         # Mock IssueManager and IssueBranchManager to avoid token validation
         mock_issue_manager = MagicMock()
         mock_branch_manager = MagicMock()
-        mock_branch_manager.get_linked_branches.return_value = ["feat-456"]
+        mock_branch_manager.get_branch_with_pr_fallback.return_value = "feat-456"
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.IssueManager",
@@ -457,11 +442,6 @@ class TestProcessEligibleIssuesBranchRequirement:
             "mcp_coder.workflows.vscodeclaude.session_launch._filter_eligible_vscodeclaude_issues",
             lambda *args, **kwargs: [mock_issue],
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.get_linked_branch_for_issue",
-            lambda *args, **kwargs: "feat-456",  # Has linked branch
-        )
-
         mock_launch = MagicMock()
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.prepare_and_launch_session",
@@ -516,10 +496,7 @@ class TestProcessEligibleIssuesBranchRequirement:
         # Mock IssueManager and IssueBranchManager to avoid token validation
         mock_issue_manager = MagicMock()
         mock_branch_manager = MagicMock()
-        mock_branch_manager.get_linked_branches.return_value = [
-            "feat-456-v1",
-            "feat-456-v2",
-        ]
+        mock_branch_manager.get_branch_with_pr_fallback.return_value = None
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.IssueManager",
@@ -537,15 +514,6 @@ class TestProcessEligibleIssuesBranchRequirement:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch._filter_eligible_vscodeclaude_issues",
             lambda *args, **kwargs: [mock_issue],
-        )
-
-        # Mock get_linked_branch_for_issue to raise ValueError (multiple branches)
-        def mock_get_linked_branch(*args: Any, **kwargs: Any) -> None:
-            raise ValueError("Multiple branches linked to issue")
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.get_linked_branch_for_issue",
-            mock_get_linked_branch,
         )
 
         mock_launch = MagicMock()
@@ -581,7 +549,7 @@ class TestProcessEligibleIssuesBranchRequirement:
         # Session should NOT be launched
         mock_launch.assert_not_called()
         # Error should be logged
-        assert "multiple branches" in caplog.text.lower()
+        assert "no linked branch" in caplog.text.lower()
         assert "#456" in caplog.text
         # Empty result
         assert result == []
@@ -633,11 +601,6 @@ class TestProcessEligibleIssuesPrefetchedIssues:
             "mcp_coder.workflows.vscodeclaude.session_launch._filter_eligible_vscodeclaude_issues",
             lambda *args, **kwargs: [mock_issue],
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.get_linked_branch_for_issue",
-            lambda *args, **kwargs: None,
-        )
-
         mock_launch = MagicMock()
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.prepare_and_launch_session",
