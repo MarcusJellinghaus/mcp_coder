@@ -157,6 +157,71 @@ class IssueBranchManager(BaseGitHubManager):
 
         return matched_prs
 
+    def _search_branches_by_pattern(
+        self,
+        issue_number: int,
+        repo: Any,
+    ) -> Optional[str]:
+        """Search for branches matching an issue number pattern.
+
+        Uses a two-pass strategy:
+        1. Prefix match (cheap) - catches "123-foo" style branches
+        2. Full scan fallback - catches "feature/123-foo" style branches
+
+        Args:
+            issue_number: Issue number to search for
+            repo: PyGithub Repository object
+
+        Returns:
+            Branch name if exactly one match found, None otherwise
+        """
+        pattern = re.compile(r"(^|/)" + str(issue_number) + r"[-_]")
+
+        # Pass 1: prefix match (cheap, catches "123-foo" style)
+        refs = list(repo.get_git_matching_refs(f"heads/{issue_number}"))
+        matches: list[str] = [
+            cast(str, ref.ref.removeprefix("refs/heads/"))
+            for ref in refs
+            if pattern.search(ref.ref.removeprefix("refs/heads/"))
+        ]
+        if len(matches) == 1:
+            logger.info(
+                f"Issue #{issue_number}: Found branch via pattern match: {matches[0]}"
+            )
+            return matches[0]
+        if len(matches) > 1:
+            logger.warning(
+                f"Issue #{issue_number}: Ambiguous branch pattern match: {matches}"
+            )
+            return None
+
+        # Pass 2: full scan fallback (catches "feature/123-foo" style)
+        all_refs = list(repo.get_git_matching_refs("heads/"))
+        if len(all_refs) > 500:
+            logger.warning(
+                f"Issue #{issue_number}: Repository has {len(all_refs)} branches, "
+                f"only scanning first 500"
+            )
+            all_refs = all_refs[:500]
+
+        matches = [
+            cast(str, ref.ref.removeprefix("refs/heads/"))
+            for ref in all_refs
+            if pattern.search(ref.ref.removeprefix("refs/heads/"))
+        ]
+        if len(matches) == 1:
+            logger.info(
+                f"Issue #{issue_number}: Found branch via full scan pattern match: {matches[0]}"
+            )
+            return matches[0]
+        if len(matches) > 1:
+            logger.warning(
+                f"Issue #{issue_number}: Ambiguous branch pattern match in full scan: {matches}"
+            )
+            return None
+
+        return None
+
     @log_function_call
     @_handle_github_errors(default_return=[])
     def get_linked_branches(self, issue_number: int) -> List[str]:

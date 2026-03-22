@@ -26,9 +26,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Part A: Generalize `_extract_open_prs()` → `_extract_prs_by_states()` — write tests and implement
 - [x] Part A: Run pylint, pytest, mypy — fix all issues
 - [x] Part A: Prepare git commit message
-- [ ] Part B: Add `_search_branches_by_pattern()` method — write tests and implement
-- [ ] Part B: Run pylint, pytest, mypy — fix all issues
-- [ ] Part B: Prepare git commit message
+- [x] Part B: Add `_search_branches_by_pattern()` method — write tests and implement
+- [x] Part B: Run pylint, pytest, mypy — fix all issues
+- [x] Part B: Prepare git commit message
 - [ ] Part C: Extend `get_branch_with_pr_fallback()` with closed-PR and pattern-search steps — write tests and implement
 - [ ] Part C: Run pylint, pytest, mypy — fix all issues
 - [ ] Part C: Prepare git commit message
