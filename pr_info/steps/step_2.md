@@ -139,7 +139,7 @@ The caller in `restart_closed_sessions()` already has `repo_full_name` available
 - `tests/workflows/vscodeclaude/test_orchestrator_sessions.py`:
   - Update mocks from `get_linked_branch_for_issue` to `get_branch_with_pr_fallback`
   - Remove `ValueError`-raising mock for multi-branch, replace with `return_value=None`
-  - Update `_prepare_restart_branch` calls in tests with new params
+  - Update `_prepare_restart_branch` calls in tests with new `repo_full_name` param
 
 ---
 

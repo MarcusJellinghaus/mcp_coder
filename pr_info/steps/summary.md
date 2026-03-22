@@ -46,6 +46,10 @@ Single unified path — all callers use get_branch_with_pr_fallback():
 | Pattern search cap | 500 branches | Sufficient for matching; avoids runaway API |
 | Pattern match log | INFO level | Notable event worth surfacing |
 | Multiple linked branches | Return `None` | Consistent with how multiple PRs are handled |
+| Closed PR ordering | Most recent first (by PR number desc) | Most recently closed PR is most likely relevant |
+| Pattern search strategy | Two-pass: prefix match first, full scan fallback | Optimizes common case without sacrificing coverage |
+| `_prepare_restart_branch` param | Single `repo_full_name: str` | Matches existing codebase pattern, split inside function |
+| Intervention mode repo extraction | `RepoIdentifier.from_repo_url()` | Standard codebase pattern, avoids private API coupling |
 
 ## Files Modified
 

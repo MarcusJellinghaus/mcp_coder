@@ -114,5 +114,5 @@ Key constraints:
 - Do NOT change production logic — only fix tests and type issues
 - Mock the correct path: IssueBranchManager.get_branch_with_pr_fallback
 - Replace ValueError side_effects with return_value=None
-- Update _prepare_restart_branch test calls with repo_owner/repo_name params
+- Update _prepare_restart_branch test calls with repo_full_name param
 ```

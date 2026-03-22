@@ -70,9 +70,16 @@ def _search_branches_by_pattern(
 
 ### ALGORITHM
 ```
+# Pass 1: prefix match (cheap, catches "123-foo" style)
+refs = repo.get_git_matching_refs(f"heads/{issue_number}")
+pattern = re.compile(r"(^|/)" + str(issue_number) + r"[-_]")
+matches = [ref.ref.removeprefix("refs/heads/") for ref in refs if pattern.search(ref.ref.removeprefix("refs/heads/"))]
+if len(matches) == 1: log INFO, return matches[0]
+if len(matches) > 1: log WARNING (ambiguous), return None
+
+# Pass 2: full scan fallback (catches "feature/123-foo" style)
 refs = repo.get_git_matching_refs("heads/")
 branches = collect up to 500 refs (log warning if more)
-pattern = re.compile(r"(^|/)" + str(issue_number) + r"[-_]")
 matches = [ref.ref.removeprefix("refs/heads/") for ref in branches if pattern.search(branch_name)]
 if len(matches) == 1: log INFO, return matches[0]
 if len(matches) > 1: log WARNING (ambiguous), return None
@@ -87,10 +94,11 @@ return None  # no match
 
 ### TESTS to write
 1. `test_search_branches_no_match` — empty refs list → `None`
-2. `test_search_branches_single_match` — one matching ref → returns branch name
-3. `test_search_branches_multiple_matches` — two matching refs → `None` (ambiguous)
-4. `test_search_branches_500_cap` — 501 refs → processes first 500, logs warning
-5. `test_search_branches_pattern_variations` — matches `feature/252-foo`, `252-bar`, `fix/252_baz`; does NOT match `1252-foo`, `252` (no separator)
+2. `test_search_branches_single_match_prefix` — prefix pass finds `252-bar` → returns branch name (no full scan needed)
+3. `test_search_branches_single_match_nested` — prefix pass empty, full scan finds `feature/252-foo` → returns branch name
+4. `test_search_branches_multiple_matches` — two matching refs → `None` (ambiguous)
+5. `test_search_branches_500_cap` — 501 refs in full scan → processes first 500, logs warning
+6. `test_search_branches_pattern_variations` — matches `feature/252-foo`, `252-bar`, `fix/252_baz`; does NOT match `1252-foo`, `252` (no separator)
 
 ---
 
@@ -123,6 +131,7 @@ if len(open_prs) > 1: log warning, return None
 
 # Step 3: Closed (not merged) PRs (NEW)
 closed_prs = self._extract_prs_by_states(timeline_items, {"CLOSED"})
+closed_prs.sort(key=lambda pr: pr["number"], reverse=True)  # most recent first
 branch_checks = 0
 for pr in closed_prs:
     if branch_checks >= 25: break
@@ -153,7 +162,8 @@ return self._search_branches_by_pattern(issue_number, repo)
 3. `test_closed_pr_with_deleted_branch` — closed PR, `get_branch` raises → `None`
 4. `test_merged_pr_not_matched` — merged PR in timeline → skipped (state is MERGED, not CLOSED)
 5. `test_closed_pr_25_check_cap` — 30 closed PRs, all branches deleted → stops after 25 checks
-6. `test_closed_pr_prefers_open_pr` — both open and closed PRs exist → returns open PR branch (order)
+6. `test_closed_pr_most_recent_preferred` — multiple closed PRs with existing branches → returns highest PR number
+7. `test_closed_pr_prefers_open_pr` — both open and closed PRs exist → returns open PR branch (order)
 
 **Pattern search integration:**
 7. `test_pattern_fallback_used_when_no_prs` — no linked branches, no PRs → pattern search called
