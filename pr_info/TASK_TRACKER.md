@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Enhance `branch_manager.py` — Core Resolution Logic ([step_1.md](./steps/step_1.md))
 
-- [ ] Part A: Generalize `_extract_open_prs()` → `_extract_prs_by_states()` — write tests and implement
-- [ ] Part A: Run pylint, pytest, mypy — fix all issues
-- [ ] Part A: Prepare git commit message
+- [x] Part A: Generalize `_extract_open_prs()` → `_extract_prs_by_states()` — write tests and implement
+- [x] Part A: Run pylint, pytest, mypy — fix all issues
+- [x] Part A: Prepare git commit message
 - [ ] Part B: Add `_search_branches_by_pattern()` method — write tests and implement
 - [ ] Part B: Run pylint, pytest, mypy — fix all issues
 - [ ] Part B: Prepare git commit message

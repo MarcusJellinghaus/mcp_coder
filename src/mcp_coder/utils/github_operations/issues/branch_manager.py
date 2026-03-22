@@ -126,16 +126,20 @@ class IssueBranchManager(BaseGitHubManager):
         return True
 
     @staticmethod
-    def _extract_open_prs(timeline_items: List[dict[str, Any]]) -> List[dict[str, Any]]:
-        """Extract OPEN PRs from timeline items.
+    def _extract_prs_by_states(
+        timeline_items: List[dict[str, Any]],
+        states: set[str],
+    ) -> List[dict[str, Any]]:
+        """Extract PRs matching given states from timeline items.
 
         Args:
             timeline_items: List of timeline item nodes from GraphQL response
+            states: Set of PR states to include (e.g. {"OPEN"}, {"CLOSED"})
 
         Returns:
-            List of PR source objects that are in OPEN state
+            List of PR source objects whose state is in the given set
         """
-        open_prs = []
+        matched_prs = []
         for node in timeline_items:
             if not node or node.get("__typename") != "CrossReferencedEvent":
                 continue
@@ -148,11 +152,10 @@ class IssueBranchManager(BaseGitHubManager):
             if "state" not in source or "headRefName" not in source:
                 continue
 
-            # Only consider OPEN PRs
-            if source.get("state") == "OPEN":
-                open_prs.append(source)
+            if source["state"] in states:
+                matched_prs.append(source)
 
-        return open_prs
+        return matched_prs
 
     @log_function_call
     @_handle_github_errors(default_return=[])
@@ -555,7 +558,7 @@ class IssueBranchManager(BaseGitHubManager):
                 )
 
             # Filter for OPEN PRs using helper method
-            open_prs = self._extract_open_prs(timeline_items)
+            open_prs = self._extract_prs_by_states(timeline_items, {"OPEN"})
 
             # Step 6: Handle results based on count
             if len(open_prs) == 0:
