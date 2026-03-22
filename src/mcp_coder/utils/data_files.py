@@ -17,8 +17,7 @@ def find_data_file(
     package_name: str,
     relative_path: str,
 ) -> Path:
-    """
-    Find a data file using importlib.resources (Python 3.9+ standard library).
+    """Find a data file using importlib.resources (Python 3.9+ standard library).
 
     This function uses importlib.resources.files() to locate data files in both
     development and installed environments automatically.
@@ -149,8 +148,7 @@ def find_package_data_files(
     package_name: str,
     relative_paths: List[str],
 ) -> List[Path]:
-    """
-    Find multiple data files for a package.
+    """Find multiple data files for a package.
 
     Args:
         package_name: Name of the Python package
@@ -178,8 +176,7 @@ def find_package_data_files(
 
 
 def get_package_directory(package_name: str) -> Path:
-    """
-    Get the directory where a package is installed.
+    """Get the directory where a package is installed.
 
     Args:
         package_name: Name of the Python package

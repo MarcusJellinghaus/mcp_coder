@@ -662,8 +662,7 @@ def ask_claude_code_api_detailed_sync(
     env_vars: dict[str, str] | None = None,
     cwd: str | None = None,
 ) -> dict[str, Any]:
-    """
-    Synchronous wrapper for ask_claude_code_api_detailed.
+    """Synchronous wrapper for ask_claude_code_api_detailed.
 
     See ask_claude_code_api_detailed for complete documentation.
 

@@ -45,7 +45,7 @@ def to_json_string(response: LLMResponseDict) -> str:
     )
 
 
-def from_json_string(json_str: str) -> LLMResponseDict:
+def from_json_string(json_str: str) -> LLMResponseDict:  # noqa: DOC502
     """Parse JSON string and validate version (pure function).
 
     This pure function handles deserialization and validation logic
@@ -59,6 +59,7 @@ def from_json_string(json_str: str) -> LLMResponseDict:
 
     Raises:
         ValueError: If version is incompatible or missing
+        json.JSONDecodeError: If the string is not valid JSON.
 
     Example:
         >>> json_str = '{"version": "1.0", "text": "Hello", ...}'
@@ -110,7 +111,7 @@ def serialize_llm_response(response: LLMResponseDict, filepath: Path | str) -> N
     filepath.write_text(json_str, encoding="utf-8")
 
 
-def deserialize_llm_response(filepath: Path | str) -> LLMResponseDict:
+def deserialize_llm_response(filepath: Path | str) -> LLMResponseDict:  # noqa: DOC502
     """Load LLM response from JSON file (I/O wrapper).
 
     Thin wrapper that handles file I/O, delegating parsing and validation
@@ -121,6 +122,10 @@ def deserialize_llm_response(filepath: Path | str) -> LLMResponseDict:
 
     Returns:
         LLMResponseDict with available fields
+
+    Raises:
+        FileNotFoundError: If the file does not exist.
+        json.JSONDecodeError: If the file content is not valid JSON.
 
     Example:
         >>> response = deserialize_llm_response("logs/abc-123.json")

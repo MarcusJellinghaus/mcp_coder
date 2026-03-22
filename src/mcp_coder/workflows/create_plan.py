@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Create plan workflow script for GitHub issue planning.
+"""Create plan workflow script for GitHub issue planning.
 
 This module orchestrates the complete plan generation workflow including
 argument parsing, prerequisite validation, branch management, prompt execution,

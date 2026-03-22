@@ -179,7 +179,7 @@ def _get_nested_value(
     return str(value) if value is not None else None
 
 
-def get_config_values(
+def get_config_values(  # noqa: DOC502
     keys: list[tuple[str, str, str | None]],
 ) -> dict[tuple[str, str], str | None]:
     """Get multiple config values in one disk read.
@@ -205,6 +205,9 @@ def get_config_values(
         Access values using: result[(section, key)]
 
     Priority: Environment variable > Config file > None
+
+    Raises:
+        ValueError: If config file exists but has invalid TOML syntax.
 
     Examples:
         # Basic usage with auto-detected env vars
