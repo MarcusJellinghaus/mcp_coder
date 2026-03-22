@@ -30,15 +30,28 @@ The only "design" consideration is **docstring style**: the project uses **Googl
 
 **Total:** ~297 fixes in `src/` (tests/ excluded from scope — see [decisions.md](decisions.md))
 
-## Implementation Plan (5 Steps)
+## Implementation Plan
 
-| Step | Description | File |
-|---|---|---|
-| 1 | Autofix formatting with `ruff check --fix` | [step_1.md](step_1.md) |
-| 2 | Small manual fixes (missing module/class/function docstrings, accuracy, punctuation) | [step_2.md](step_2.md) |
-| ~~3~~ | ~~Add missing test method docstrings (D102)~~ | ~~Removed — tests/ out of scope~~ |
-| 4 | Add missing Returns and Yields sections — `src/` only (DOC201, DOC402) | [step_4.md](step_4.md) |
-| 5 | Fix Raises sections — `src/` only (DOC501, DOC502) | [step_5.md](step_5.md) |
+### Phase 1 — Initial pass (Steps 1–5, partially complete)
+
+| Step | Description | Status | File |
+|---|---|---|---|
+| 1 | Autofix formatting with `ruff check --fix` | Done (partial) | [step_1.md](step_1.md) |
+| 2 | Small manual fixes (D100, D101, D103, D403, etc.) | Done (partial) | [step_2.md](step_2.md) |
+| ~~3~~ | ~~Test method docstrings (D102)~~ | Removed | ~~tests/ out of scope~~ |
+| 4 | Missing Returns/Yields (DOC201, DOC402) | Done (partial) | [step_4.md](step_4.md) |
+| 5 | Fix Raises (DOC501, DOC502) | Done (partial) | [step_5.md](step_5.md) |
+
+### Phase 2 — Cleanup (Steps 6–11, ~102 remaining violations)
+
+| Step | Description | Count | File |
+|---|---|---|---|
+| 6 | Re-run autofix formatting (D212, D202) | ~28 | [step_6.md](step_6.md) |
+| 7 | Small manual fixes (D301, D417, D205, D415, DOC102) | ~11 | [step_7.md](step_7.md) |
+| 8 | Missing Returns — batch 1: cli, config, formatters, checks | ~16 | [step_8.md](step_8.md) |
+| 9 | Missing Returns — batch 2: llm, utils, workflows | ~16 | [step_9.md](step_9.md) |
+| 10 | Remove extraneous Raises (DOC502) | ~20 | [step_10.md](step_10.md) |
+| 11 | Add missing Raises (DOC501) — final step | ~11 | [step_11.md](step_11.md) |
 
 ## Files Modified
 
