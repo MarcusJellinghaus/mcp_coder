@@ -579,7 +579,9 @@ def _load_content(source: str) -> str:
                         content = f.read()
                         combined_content.append(content)
                 except Exception as e:
-                    raise FileNotFoundError(f"Error reading file {file_path}: {str(e)}")
+                    raise FileNotFoundError(
+                        f"Error reading file {file_path}: {str(e)}"
+                    ) from e
 
             return "\n\n".join(combined_content)
 
@@ -599,7 +601,7 @@ def _load_content(source: str) -> str:
                     except Exception as e:
                         raise FileNotFoundError(
                             f"Error reading file {file_path}: {str(e)}"
-                        )
+                        ) from e
 
             return "\n\n".join(combined_content)
 
@@ -608,10 +610,12 @@ def _load_content(source: str) -> str:
             try:
                 with open(source, "r", encoding="utf-8") as f:
                     return f.read()
-            except FileNotFoundError:
-                raise FileNotFoundError(f"File '{source}' not found")
+            except FileNotFoundError as exc:
+                raise FileNotFoundError(f"File '{source}' not found") from exc
             except Exception as e:
-                raise FileNotFoundError(f"Error reading file '{source}': {str(e)}")
+                raise FileNotFoundError(
+                    f"Error reading file '{source}': {str(e)}"
+                ) from e
     else:
         # String content
         return source

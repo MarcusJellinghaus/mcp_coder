@@ -477,8 +477,8 @@ def _validate_ci_timeout(value: str) -> int:
         if ivalue < 0:
             raise argparse.ArgumentTypeError("--ci-timeout must be non-negative")
         return ivalue
-    except ValueError:
-        raise argparse.ArgumentTypeError("--ci-timeout must be an integer")
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("--ci-timeout must be an integer") from exc
 
 
 def add_check_parsers(subparsers: Any) -> None:

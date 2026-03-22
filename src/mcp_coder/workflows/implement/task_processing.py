@@ -214,7 +214,7 @@ def _run_mypy_check(project_dir: Path) -> Optional[str]:
             return None  # No errors found
 
     except Exception as e:
-        raise Exception(f"Failed to run mypy check: {e}")
+        raise RuntimeError(f"Failed to run mypy check: {e}") from e
 
 
 def check_and_fix_mypy(

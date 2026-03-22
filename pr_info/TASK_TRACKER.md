@@ -25,7 +25,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] [Step 1: src/ W0611 — unused imports (36)](./steps/step_1.md)
 - [x] [Step 2: src/ W0612 — unused variables (5)](./steps/step_2.md)
 - [x] [Step 3: src/ W0613 + W1309 — unused args + bare f-string (9)](./steps/step_3.md)
-- [ ] [Step 4: src/ W0707 + W0719 — raise-missing-from + broad-exception-raised (8)](./steps/step_4.md)
+- [x] [Step 4: src/ W0707 + W0719 — raise-missing-from + broad-exception-raised (8)](./steps/step_4.md)
 - [ ] [Step 5: src/ W0706 + W4903 — try-except-raise + deprecated arg (4)](./steps/step_5.md)
 - [ ] [Step 6: src/ W0603 — global-statement (7)](./steps/step_6.md)
 - [ ] [Step 7: src/ W0212 — protected-access (11)](./steps/step_7.md)
