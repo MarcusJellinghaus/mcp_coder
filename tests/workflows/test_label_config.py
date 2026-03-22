@@ -76,6 +76,85 @@ def test_load_labels_config_invalid_json(tmp_path: Path) -> None:
         load_labels_config(invalid_json_file)
 
 
+VALID_CATEGORIES = {"human_action", "bot_pickup", "bot_busy"}
+DEPRECATED_FIELDS = {"initial_command", "followup_command"}
+REQUIRED_LABEL_KEYS = {"internal_id", "name", "color", "description", "category"}
+REQUIRED_VSCODECLAUDE_KEYS = {"emoji", "display_name", "stage_short"}
+
+
+def test_bundled_labels_schema_validation() -> None:
+    """Validate bundled labels.json against the documented schema.
+
+    Catches JSON syntax errors, missing required fields, deprecated fields,
+    invalid categories, and vscodeclaude sub-object inconsistencies.
+    """
+    config = load_labels_config(get_labels_config_path(None))
+
+    assert isinstance(config["workflow_labels"], list)
+    assert len(config["workflow_labels"]) > 0
+    assert isinstance(config.get("ignore_labels", []), list)
+
+    seen_ids: set[str] = set()
+    seen_names: set[str] = set()
+
+    for label in config["workflow_labels"]:
+        # Required keys present
+        missing = REQUIRED_LABEL_KEYS - label.keys()
+        assert (
+            not missing
+        ), f"Label {label.get('internal_id', '???')}: missing {missing}"
+
+        # No deprecated fields
+        deprecated_found = DEPRECATED_FIELDS & label.keys()
+        assert (
+            not deprecated_found
+        ), f"Label {label['internal_id']}: has deprecated fields {deprecated_found}"
+
+        # Category is valid
+        assert (
+            label["category"] in VALID_CATEGORIES
+        ), f"Label {label['internal_id']}: invalid category '{label['category']}'"
+
+        # Unique internal_id and name
+        assert (
+            label["internal_id"] not in seen_ids
+        ), f"Duplicate internal_id: {label['internal_id']}"
+        assert label["name"] not in seen_names, f"Duplicate name: {label['name']}"
+        seen_ids.add(label["internal_id"])
+        seen_names.add(label["name"])
+
+        # Color is a valid 6-char hex string
+        assert (
+            len(label["color"]) == 6
+        ), f"Label {label['internal_id']}: color must be 6 hex chars"
+        int(label["color"], 16)  # raises ValueError if not hex
+
+        # vscodeclaude block validation
+        if "vscodeclaude" in label:
+            vsc = label["vscodeclaude"]
+            vsc_missing = REQUIRED_VSCODECLAUDE_KEYS - vsc.keys()
+            assert (
+                not vsc_missing
+            ), f"Label {label['internal_id']}: vscodeclaude missing {vsc_missing}"
+            # commands, if present, must be a list of strings
+            if "commands" in vsc:
+                assert isinstance(
+                    vsc["commands"], list
+                ), f"Label {label['internal_id']}: commands must be a list"
+                assert all(
+                    isinstance(c, str) for c in vsc["commands"]
+                ), f"Label {label['internal_id']}: all commands must be strings"
+
+        # stale_timeout_minutes, if present, must be a positive int
+        if "stale_timeout_minutes" in label:
+            assert isinstance(
+                label["stale_timeout_minutes"], int
+            ), f"Label {label['internal_id']}: stale_timeout_minutes must be int"
+            assert (
+                label["stale_timeout_minutes"] > 0
+            ), f"Label {label['internal_id']}: stale_timeout_minutes must be positive"
+
+
 def test_load_labels_config_missing_workflow_labels_key(tmp_path: Path) -> None:
     """Test error handling for missing workflow_labels key"""
     # Create a temporary file with valid JSON but missing required key
