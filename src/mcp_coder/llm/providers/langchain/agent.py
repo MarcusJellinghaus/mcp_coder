@@ -210,7 +210,7 @@ async def run_agent(
     chat_model: BaseChatModel,
     messages: list[dict[str, Any]],
     mcp_config_path: str,
-    _execution_dir: str | None = None,
+    execution_dir: str | None = None,  # pylint: disable=unused-argument
     env_vars: dict[str, str] | None = None,
     timeout: int = 30,
 ) -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
@@ -222,7 +222,7 @@ async def run_agent(
         messages: Prior conversation history as a list of dicts (LangChain native
             serialization via ``.dict()`` / ``messages_from_dict()``).
         mcp_config_path: Absolute path to the ``.mcp.json`` configuration file.
-        _execution_dir: Optional working directory (currently unused, reserved
+        execution_dir: Optional working directory (currently unused, reserved
             for future).
         env_vars: Optional extra environment variables for MCP server resolution.
         timeout: Maximum time in seconds for the agent invocation.

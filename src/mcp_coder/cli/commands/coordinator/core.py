@@ -241,13 +241,14 @@ def _filter_eligible_issues(issues: List[IssueData]) -> List[IssueData]:
 
 
 def get_eligible_issues(
-    issue_manager: IssueManager, _log_level: str = "INFO"
+    issue_manager: IssueManager,
+    log_level: str = "INFO",  # pylint: disable=unused-argument
 ) -> list[IssueData]:
     """Get issues ready for automation, sorted by priority.
 
     Args:
         issue_manager: IssueManager instance for GitHub API calls
-        _log_level: Logging level for debug output
+        log_level: Logging level for debug output
 
     Returns:
         List of IssueData sorted by priority:
@@ -355,7 +356,7 @@ def get_cached_eligible_issues(
 
 def dispatch_workflow(
     issue: IssueData,
-    _workflow_name: str,
+    workflow_name: str,  # pylint: disable=unused-argument
     repo_config: dict[str, str],
     jenkins_client: JenkinsClient,
     issue_manager: IssueManager,
@@ -366,7 +367,7 @@ def dispatch_workflow(
 
     Args:
         issue: GitHub issue data
-        _workflow_name: Workflow to execute ("create-plan", "implement", "create-pr")
+        workflow_name: Workflow to execute ("create-plan", "implement", "create-pr")
         repo_config: Repository configuration with repo_url, executor_test_path, credentials
         jenkins_client: Jenkins client for job triggering
         issue_manager: IssueManager for label updates

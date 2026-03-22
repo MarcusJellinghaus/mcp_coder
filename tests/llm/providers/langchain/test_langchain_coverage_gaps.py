@@ -270,7 +270,7 @@ class TestExecutionDirEnvVarsForwarding:
             )
 
         call_kwargs = mock_run_agent.call_args
-        assert call_kwargs.kwargs.get("_execution_dir") == "/my/exec/dir" or (
+        assert call_kwargs.kwargs.get("execution_dir") == "/my/exec/dir" or (
             len(call_kwargs.args) > 0
             and any(v == "/my/exec/dir" for v in call_kwargs.args)
         )

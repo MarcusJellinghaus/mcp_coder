@@ -70,13 +70,14 @@ __all__ = [
 
 
 def launch_vscode(
-    workspace_file: Path, _session_working_dir: Path | None = None
+    workspace_file: Path,
+    session_working_dir: Path | None = None,  # pylint: disable=unused-argument
 ) -> int:
     """Launch VSCode with workspace file.
 
     Args:
         workspace_file: Path to .code-workspace file
-        _session_working_dir: Session working directory (passed to startup script for MCP configuration)
+        session_working_dir: Session working directory (passed to startup script for MCP configuration)
 
     Returns:
         VSCode process PID

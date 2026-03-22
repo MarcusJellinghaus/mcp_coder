@@ -114,7 +114,7 @@ def check_prerequisites(project_dir: Path, issue_number: int) -> tuple[bool, Iss
 def manage_branch(
     project_dir: Path,
     issue_number: int,
-    _issue_title: str,
+    issue_title: str,  # pylint: disable=unused-argument
     base_branch: Optional[str] = None,
 ) -> Optional[str]:
     """Get existing linked branch or create new one.
@@ -122,7 +122,7 @@ def manage_branch(
     Args:
         project_dir: Path to the project directory containing git repository
         issue_number: GitHub issue number to link branch to
-        _issue_title: GitHub issue title for branch name generation
+        issue_title: GitHub issue title for branch name generation
         base_branch: Optional base branch to create from (uses repo default if None)
 
     Returns:

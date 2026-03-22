@@ -465,7 +465,7 @@ class TestDispatchWorkflow:
         # Execute
         dispatch_workflow(
             issue=issue,
-            _workflow_name="create-plan",
+            workflow_name="create-plan",
             repo_config=repo_config,
             jenkins_client=mock_jenkins,
             issue_manager=mock_issue_mgr,
@@ -538,7 +538,7 @@ class TestDispatchWorkflow:
         # Execute - should complete gracefully without raising exception
         dispatch_workflow(
             issue=issue,
-            _workflow_name="create-pr",
+            workflow_name="create-pr",
             repo_config=repo_config,
             jenkins_client=mock_jenkins,
             issue_manager=mock_issue_mgr,
@@ -611,7 +611,7 @@ class TestDispatchWorkflow:
         # Execute - should complete successfully
         dispatch_workflow(
             issue=issue,
-            _workflow_name="implement",
+            workflow_name="implement",
             repo_config=repo_config,
             jenkins_client=mock_jenkins,
             issue_manager=mock_issue_mgr,
