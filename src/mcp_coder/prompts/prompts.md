@@ -82,11 +82,13 @@ Read implementation steps in `pr_info/steps/` and update/create `pr_info/TASK_TR
 
 **If file exists:** Add missing tasks only. PRESERVE all existing checked boxes `[x]` - do not modify completed tasks.
 
-Each task should include:
-- Step implementation 
-- Quality checks: pylint, pytest, mypy - and work on all issues found
-- Preparation of a git commit message
-- put one [ ] for each task
+Each step produces one commit. Standard sub-tasks per step (one [ ] each):
+- Implementation (tests + production code)
+- Quality checks: pylint, pytest, mypy — fix all issues
+- Commit message prepared
+
+If a step has multiple independent parts (A, B, C), split them into separate steps instead.
+Do NOT create separate "fix all issues" or "verify everything" cleanup steps.
 
 Add "Pull Request" section at end with PR review and summary tasks.
 
@@ -224,6 +226,7 @@ Also list the folders \ modules \ files that should be created or modified by th
 ### Requirements:
 - Follow **Test-Driven Development** where applicable. 
   Each step should have its own test implementation followed by related functionality implementation.  
+- Each step should produce **exactly one commit** — tests + implementation + checks passing. If a step has multiple independent parts (A, B, C), split them into separate steps.
 - Each step must include a **clear LLM prompt** that references the summary and that specific step
 - Apply **KISS principle** - minimize complexity, maximize maintainability
 - Keep code changes minimal and follow best practices
