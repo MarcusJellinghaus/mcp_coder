@@ -8,6 +8,7 @@ docs/cli-reference.md
 docs/configuration/config.md
 docs/processes-prompts/development-process.md
 src/mcp_coder/cli/commands/coordinator/commands.py
+src/mcp_coder/utils/github_operations/issues/branch_manager.py
 tools/safe_delete_folder.py
 src/mcp_coder/prompt_manager.py
 src/mcp_coder/workflows/implement/core.py
@@ -17,6 +18,7 @@ tests/cli/commands/test_prompt.py
 tests/cli/test_main.py
 tests/llm/test_interface.py
 tests/utils/test_folder_deletion.py
+tests/utils/github_operations/issues/test_branch_resolution.py
 tests/utils/github_operations/test_base_manager.py
 tests/utils/github_operations/test_github_utils.py
 tests/utils/github_operations/test_issue_branch_manager.py
