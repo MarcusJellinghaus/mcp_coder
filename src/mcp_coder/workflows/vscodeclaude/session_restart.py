@@ -62,8 +62,8 @@ def _prepare_restart_branch(
     current_status: str,
     branch_manager: IssueBranchManager,
     issue_number: int,
-    repo_owner: str = "",
-    repo_name: str = "",
+    repo_owner: str,
+    repo_name: str,
 ) -> BranchPrepResult:
     """Prepare branch for session restart.
 

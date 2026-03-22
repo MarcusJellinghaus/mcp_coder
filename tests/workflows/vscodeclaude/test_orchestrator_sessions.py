@@ -991,6 +991,8 @@ class TestPrepareRestartBranch:
             current_status="status-01:created",
             branch_manager=mock_branch_manager,
             issue_number=123,
+            repo_owner="test-owner",
+            repo_name="test-repo",
         )
 
         assert result == BranchPrepResult(True, None, None)
@@ -1155,6 +1157,8 @@ class TestPrepareRestartBranch:
             current_status="status-01:created",
             branch_manager=mock_branch_manager,
             issue_number=123,
+            repo_owner="test-owner",
+            repo_name="test-repo",
         )
 
         # First call should be git fetch
@@ -1182,6 +1186,8 @@ class TestPrepareRestartBranch:
             current_status="status-01:created",
             branch_manager=mock_branch_manager,
             issue_number=123,
+            repo_owner="test-owner",
+            repo_name="test-repo",
         )
 
         assert result == BranchPrepResult(False, "Git error", None)
@@ -2108,6 +2114,8 @@ class TestBranchHandlingIntegration:
             current_status="status-01:created",
             branch_manager=mock_branch_manager,
             issue_number=100,
+            repo_owner="test-owner",
+            repo_name="test-repo",
         )
         assert "fetch" in fetch_calls
 

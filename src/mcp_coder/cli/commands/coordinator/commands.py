@@ -684,6 +684,9 @@ def _handle_intervention_mode(
 
     # Get linked branch
     repo_full_name = _get_repo_full_name_from_url(repo_url)
+    if not repo_full_name:
+        print(f"Error: Could not parse repo URL: {repo_url}", file=sys.stderr)
+        return 1
     repo_owner, repo_name_str = repo_full_name.split("/", 1)
     branch_name = branch_manager.get_branch_with_pr_fallback(
         args.issue, repo_owner, repo_name_str
