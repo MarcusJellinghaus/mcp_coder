@@ -1266,8 +1266,8 @@ class TestRestartClosedSessionsBranchHandling:
             current_status: str,
             branch_manager: Any,
             issue_number: int,
-            repo_owner: str = "",
-            repo_name: str = "",
+            repo_owner: str,
+            repo_name: str,
         ) -> BranchPrepResult:
             prepare_calls.append(
                 {
@@ -1843,8 +1843,8 @@ class TestBranchHandlingIntegration:
             current_status: str,
             branch_manager: Any,
             issue_number: int,
-            repo_owner: str = "",
-            repo_name: str = "",
+            repo_owner: str,
+            repo_name: str,
         ) -> BranchPrepResult:
             operations.append(f"prepare_branch:{current_status}")
             # Simulate successful branch switch for status-04
