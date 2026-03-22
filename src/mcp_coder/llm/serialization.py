@@ -45,7 +45,7 @@ def to_json_string(response: LLMResponseDict) -> str:
     )
 
 
-def from_json_string(json_str: str) -> LLMResponseDict:  # noqa: DOC502
+def from_json_string(json_str: str) -> LLMResponseDict:
     """Parse JSON string and validate version (pure function).
 
     This pure function handles deserialization and validation logic
@@ -111,7 +111,7 @@ def serialize_llm_response(response: LLMResponseDict, filepath: Path | str) -> N
     filepath.write_text(json_str, encoding="utf-8")
 
 
-def deserialize_llm_response(filepath: Path | str) -> LLMResponseDict:  # noqa: DOC502
+def deserialize_llm_response(filepath: Path | str) -> LLMResponseDict:
     """Load LLM response from JSON file (I/O wrapper).
 
     Thin wrapper that handles file I/O, delegating parsing and validation

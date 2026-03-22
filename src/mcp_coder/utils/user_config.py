@@ -179,7 +179,7 @@ def _get_nested_value(
     return str(value) if value is not None else None
 
 
-def get_config_values(  # noqa: DOC502
+def get_config_values(
     keys: list[tuple[str, str, str | None]],
 ) -> dict[tuple[str, str], str | None]:
     """Get multiple config values in one disk read.

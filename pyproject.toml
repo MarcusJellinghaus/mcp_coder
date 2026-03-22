@@ -269,6 +269,8 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["D", "DOC"]
+"src/mcp_coder/llm/serialization.py" = ["DOC502"]
+"src/mcp_coder/utils/user_config.py" = ["DOC502"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
