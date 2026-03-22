@@ -126,23 +126,24 @@ class TestLabelsJsonVscodeclaudeMetadata:
 
         assert len(human_action_labels) == 9
 
-        required_fields = {
-            "emoji",
-            "display_name",
-            "stage_short",
-            "initial_command",
-            "followup_command",
-        }
+        base_fields = {"emoji", "display_name", "stage_short"}
 
         for label in human_action_labels:
             assert "vscodeclaude" in label, f"Missing vscodeclaude in {label['name']}"
             vscodeclaude = label["vscodeclaude"]
-            assert (
-                set(vscodeclaude.keys()) == required_fields
-            ), f"Wrong fields in {label['name']}"
+            assert base_fields.issubset(
+                set(vscodeclaude.keys())
+            ), f"Missing base fields in {label['name']}"
+            if "commands" in vscodeclaude:
+                assert isinstance(
+                    vscodeclaude["commands"], list
+                ), f"commands must be a list in {label['name']}"
+                assert all(
+                    isinstance(cmd, str) for cmd in vscodeclaude["commands"]
+                ), f"All commands must be strings in {label['name']}"
 
-    def test_pr_created_has_null_commands(self) -> None:
-        """status-10:pr-created should have null commands."""
+    def test_pr_created_has_no_commands(self) -> None:
+        """status-10:pr-created should have no commands key."""
         config_resource = resources.files("mcp_coder.config") / "labels.json"
         config_path = Path(str(config_resource))
         labels_config = json.loads(config_path.read_text(encoding="utf-8"))
@@ -153,5 +154,4 @@ class TestLabelsJsonVscodeclaudeMetadata:
             if label["name"] == "status-10:pr-created"
         )
 
-        assert pr_created["vscodeclaude"]["initial_command"] is None
-        assert pr_created["vscodeclaude"]["followup_command"] is None
+        assert "commands" not in pr_created["vscodeclaude"]
