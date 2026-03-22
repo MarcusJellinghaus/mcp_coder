@@ -122,7 +122,7 @@ def manage_branch(
     Args:
         project_dir: Path to the project directory containing git repository
         issue_number: GitHub issue number to link branch to
-        issue_title: GitHub issue title for branch name generation
+        _issue_title: GitHub issue title for branch name generation
         base_branch: Optional base branch to create from (uses repo default if None)
 
     Returns:

@@ -222,7 +222,7 @@ async def run_agent(
         messages: Prior conversation history as a list of dicts (LangChain native
             serialization via ``.dict()`` / ``messages_from_dict()``).
         mcp_config_path: Absolute path to the ``.mcp.json`` configuration file.
-        execution_dir: Optional working directory (currently unused, reserved
+        _execution_dir: Optional working directory (currently unused, reserved
             for future).
         env_vars: Optional extra environment variables for MCP server resolution.
         timeout: Maximum time in seconds for the agent invocation.

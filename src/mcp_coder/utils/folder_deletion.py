@@ -77,7 +77,7 @@ def _rmtree_remove_readonly(func: Callable[..., None], path: str, _exc: object) 
     Args:
         func: The function that raised the exception (e.g., os.remove).
         path: The path that caused the exception.
-        exc: The exception information (varies by Python version).
+        _exc: The exception information (varies by Python version).
     """
     os.chmod(path, stat.S_IWRITE)
     func(path)

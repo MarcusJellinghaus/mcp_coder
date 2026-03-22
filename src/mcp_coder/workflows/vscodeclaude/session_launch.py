@@ -76,7 +76,7 @@ def launch_vscode(
 
     Args:
         workspace_file: Path to .code-workspace file
-        session_working_dir: Session working directory (passed to startup script for MCP configuration)
+        _session_working_dir: Session working directory (passed to startup script for MCP configuration)
 
     Returns:
         VSCode process PID
