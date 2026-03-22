@@ -25,6 +25,7 @@ def _make_args(**kwargs: Any) -> argparse.Namespace:
 class TestExecuteVerify:
     """Test the execute_verify function."""
 
+    @patch("mcp_coder.cli.commands.verify.ask_llm", return_value="OK")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
@@ -33,6 +34,7 @@ class TestExecuteVerify:
         mock_provider: MagicMock,
         mock_verify: MagicMock,
         mock_mlflow: MagicMock,
+        mock_ask_llm: MagicMock,
     ) -> None:
         """Test that execute_verify returns 0 when overall_ok is True."""
         mock_provider.return_value = ("claude", "default")
@@ -52,6 +54,7 @@ class TestExecuteVerify:
         assert result == 0
         mock_verify.assert_called_once()
 
+    @patch("mcp_coder.cli.commands.verify.ask_llm", return_value="OK")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
@@ -60,6 +63,7 @@ class TestExecuteVerify:
         mock_provider: MagicMock,
         mock_verify: MagicMock,
         mock_mlflow: MagicMock,
+        mock_ask_llm: MagicMock,
     ) -> None:
         """Test that execute_verify returns 1 when overall_ok is False."""
         mock_provider.return_value = ("claude", "default")
@@ -79,6 +83,7 @@ class TestExecuteVerify:
         assert result == 1
         mock_verify.assert_called_once()
 
+    @patch("mcp_coder.cli.commands.verify.ask_llm", return_value="OK")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
@@ -87,6 +92,7 @@ class TestExecuteVerify:
         mock_provider: MagicMock,
         mock_verify: MagicMock,
         mock_mlflow: MagicMock,
+        mock_ask_llm: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test that execute_verify prints formatted status lines."""

@@ -341,14 +341,14 @@ class TestVerifyOrchestration:
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
-    def test_since_timestamp_passed_to_verify_mlflow(
+    def test_verify_mlflow_called_without_since(
         self,
         mock_provider: MagicMock,
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_ask_llm: MagicMock,
     ) -> None:
-        """verify_mlflow() is called with a datetime since= argument."""
+        """verify_mlflow() is called without since= (test prompt doesn't log to MLflow)."""
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
@@ -356,8 +356,7 @@ class TestVerifyOrchestration:
 
         execute_verify(_make_args())
 
-        call_kwargs = mock_mlflow.call_args
-        assert call_kwargs.kwargs.get("since") is not None
+        mock_mlflow.assert_called_once_with()
 
 
 class TestFormatSection:

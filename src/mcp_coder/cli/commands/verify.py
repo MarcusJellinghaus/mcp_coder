@@ -5,7 +5,6 @@ MLflow) and formats their output for the terminal.
 """
 
 import argparse
-import datetime
 import logging
 from typing import Any
 
@@ -162,7 +161,6 @@ def execute_verify(args: argparse.Namespace) -> int:
 
     # 3b. Unified test prompt (both providers)
     test_prompt_ok = True
-    timestamp = datetime.datetime.now(datetime.timezone.utc)
     try:
         ask_llm("Reply with OK", provider=active_provider, timeout=30)
         print(f"  {'Test prompt':<20s} {symbols['success']} responded OK")
@@ -171,7 +169,7 @@ def execute_verify(args: argparse.Namespace) -> int:
         print(f"  {'Test prompt':<20s} {symbols['failure']} FAILED ({exc})")
 
     # 4. MLflow verification
-    mlflow_result = verify_mlflow(since=timestamp)
+    mlflow_result = verify_mlflow()
     print(_format_section("MLFLOW", mlflow_result, symbols))
 
     # 5. Compute and return exit code
