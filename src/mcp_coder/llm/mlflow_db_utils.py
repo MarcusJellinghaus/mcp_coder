@@ -43,9 +43,6 @@ def query_sqlite_tracking(
     Returns:
         TrackingStats with run_count, last_run_time, test_prompt_logged.
         Returns TrackingStats(0, None, False) if the DB has no matching data.
-
-    Raises:
-        sqlite3.Error: If the database file is corrupt or schema is unexpected.
     """
     uri = f"file:{db_path}?mode=ro"
     conn = sqlite3.connect(uri, uri=True)

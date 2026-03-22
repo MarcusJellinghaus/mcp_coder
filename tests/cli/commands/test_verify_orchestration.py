@@ -555,3 +555,33 @@ class TestComputeExitCode:
             _compute_exit_code("langchain", _claude_ok(), None, _mlflow_not_installed())
             == 1
         )
+
+    def test_test_prompt_failure_returns_exit_1(self) -> None:
+        """Exit 1 when test_prompt_ok is False, regardless of provider/mlflow."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _claude_ok(),
+                None,
+                _mlflow_not_installed(),
+                test_prompt_ok=False,
+            )
+            == 1
+        )
+
+    def test_test_prompt_failure_with_mlflow_ok(self) -> None:
+        """Exit 1 when test_prompt_ok is False even with MLflow enabled and ok."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _claude_ok(),
+                None,
+                _mlflow_ok(),
+                test_prompt_ok=False,
+            )
+            == 1
+        )
+
+    def test_test_prompt_ok_default_true(self) -> None:
+        """Default test_prompt_ok=True does not affect exit code."""
+        assert _compute_exit_code("claude", _claude_ok(), None, _mlflow_ok()) == 0

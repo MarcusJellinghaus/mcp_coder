@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -425,6 +426,31 @@ class TestVerifyMlflowTrackingData:
         )
         result = verify_mlflow()
         assert "tracking_data" not in result
+
+    @patch("mcp_coder.llm.mlflow_logger.query_sqlite_tracking")
+    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    def test_tracking_data_sqlite_query_error(
+        self,
+        _mock_avail: MagicMock,
+        mock_config: MagicMock,
+        mock_query: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """SQLite query failure → tracking_data ok=False with error message."""
+        db = tmp_path / "mlflow.db"
+        db.touch()
+        mock_config.return_value = MLflowConfig(
+            enabled=True,
+            tracking_uri=f"sqlite:///{db}",
+            experiment_name="my-exp",
+        )
+        mock_query.side_effect = sqlite3.OperationalError("database is locked")
+        result = verify_mlflow()
+        assert result["tracking_data"]["ok"] is False
+        assert "query failed" in result["tracking_data"]["value"]
+        assert "database is locked" in result["tracking_data"]["value"]
+        assert result["overall_ok"] is False
 
     @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
     @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)

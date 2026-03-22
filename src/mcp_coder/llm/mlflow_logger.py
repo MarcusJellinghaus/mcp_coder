@@ -7,6 +7,7 @@ cases where MLflow is not installed or configured.
 import json
 import logging
 import os
+import sqlite3
 import tempfile
 from collections import OrderedDict
 from datetime import datetime, timezone
@@ -737,8 +738,11 @@ def verify_mlflow(since: datetime | None = None) -> dict[str, Any]:
     tracking_uri_entry = result.get("tracking_uri", {})
     if uri.startswith("sqlite:///") and tracking_uri_entry.get("ok") is True:
         db_path = os.path.expanduser(uri[len("sqlite:///") :])
-        stats = query_sqlite_tracking(db_path, config.experiment_name, since)
-        result["tracking_data"] = _format_tracking_data(stats, since)
+        try:
+            stats = query_sqlite_tracking(db_path, config.experiment_name, since)
+            result["tracking_data"] = _format_tracking_data(stats, since)
+        except sqlite3.Error as e:
+            result["tracking_data"] = {"ok": False, "value": f"query failed: {e}"}
 
     # overall_ok: True when all checks pass, False when any enabled check fails
     check_keys = [

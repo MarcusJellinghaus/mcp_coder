@@ -85,14 +85,27 @@ def _compute_exit_code(
     claude_result: dict[str, Any],
     langchain_result: dict[str, Any] | None,
     mlflow_result: dict[str, Any],
+    test_prompt_ok: bool = True,
 ) -> int:
     """Compute CLI exit code from verification results.
 
-    Exit 1 when the active provider fails or when MLflow is enabled but broken.
+    Exit 1 when the active provider fails, when MLflow is enabled but broken,
+    or when the test prompt failed.
+
+    Args:
+        active_provider: The active LLM provider name.
+        claude_result: Claude verification result dict.
+        langchain_result: LangChain verification result dict, or None.
+        mlflow_result: MLflow verification result dict.
+        test_prompt_ok: Whether the test prompt succeeded.
 
     Returns:
-        Exit code (0 if active provider and enabled services pass, 1 if any critical check failed).
+        Exit code (0 if all checks pass, 1 if any critical check failed).
     """
+    # Test prompt failure always means exit 1
+    if not test_prompt_ok:
+        return 1
+
     # Active provider determines primary pass/fail
     if active_provider == "claude" and not claude_result.get("overall_ok"):
         return 1
@@ -163,15 +176,11 @@ def execute_verify(args: argparse.Namespace) -> int:
 
     # 5. Compute and return exit code
     exit_code = _compute_exit_code(
-        active_provider, claude_result, langchain_result, mlflow_result
+        active_provider,
+        claude_result,
+        langchain_result,
+        mlflow_result,
+        test_prompt_ok=test_prompt_ok,
     )
-    # Override if MLflow is enabled and test prompt failed
-    mlflow_enabled = mlflow_result.get("enabled", {})
-    if (
-        isinstance(mlflow_enabled, dict)
-        and mlflow_enabled.get("ok") is True
-        and not test_prompt_ok
-    ):
-        exit_code = 1
     logger.info("Verify command completed with exit code %d", exit_code)
     return exit_code
