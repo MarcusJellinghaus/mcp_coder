@@ -5,6 +5,8 @@ import re
 from pathlib import Path
 from typing import Any, List, Optional, TypedDict, cast
 
+from github import GithubException
+
 from mcp_coder.utils.log_utils import log_function_call
 
 from ..base_manager import BaseGitHubManager, _handle_github_errors
@@ -546,12 +548,18 @@ class IssueBranchManager(BaseGitHubManager):
 
         # Step 3: Try primary path - query linkedBranches (fast)
         linked_branches = self.get_linked_branches(issue_number)
-        if linked_branches:
+        if len(linked_branches) == 1:
             branch_name = linked_branches[0]
             logger.debug(
                 f"Issue #{issue_number}: Found branch via linkedBranches: {branch_name}"
             )
             return branch_name
+        if len(linked_branches) > 1:
+            logger.warning(
+                f"Issue #{issue_number}: Multiple linked branches found: "
+                f"{linked_branches}. Cannot determine which branch to use."
+            )
+            return None
 
         # Step 4: Fallback - query issue timeline for PRs
         logger.debug(
@@ -625,11 +633,7 @@ class IssueBranchManager(BaseGitHubManager):
             # Filter for OPEN PRs using helper method
             open_prs = self._extract_prs_by_states(timeline_items, {"OPEN"})
 
-            # Step 6: Handle results based on count
-            if len(open_prs) == 0:
-                logger.debug(f"Issue #{issue_number}: No open PRs found")
-                return None
-
+            # Step 6: Handle open PR results
             if len(open_prs) == 1:
                 pr_data: dict[str, Any] = open_prs[0]
                 branch_name = cast(str, pr_data["headRefName"])
@@ -641,13 +645,42 @@ class IssueBranchManager(BaseGitHubManager):
                 )
                 return branch_name
 
-            # Multiple PRs found - ambiguous
-            pr_numbers = [pr["number"] for pr in open_prs]
-            logger.warning(
-                f"Issue #{issue_number}: Multiple open PRs found: {pr_numbers}. "
-                f"Cannot determine which branch to use."
+            if len(open_prs) > 1:
+                pr_numbers = [pr["number"] for pr in open_prs]
+                logger.warning(
+                    f"Issue #{issue_number}: Multiple open PRs found: {pr_numbers}. "
+                    f"Cannot determine which branch to use."
+                )
+                return None
+
+            # Step 7: Closed PR fallback — check if branch still exists
+            logger.debug(
+                f"Issue #{issue_number}: No open PRs found, checking closed PRs"
             )
-            return None
+            closed_prs = self._extract_prs_by_states(timeline_items, {"CLOSED"})
+            closed_prs.sort(key=lambda pr: pr["number"], reverse=True)
+            branch_checks = 0
+            for pr in closed_prs:
+                if branch_checks >= 25:
+                    logger.debug(
+                        f"Issue #{issue_number}: Reached 25 branch check limit "
+                        f"for closed PRs"
+                    )
+                    break
+                branch_checks += 1
+                try:
+                    repo.get_branch(cast(str, pr["headRefName"]))
+                    branch_name = cast(str, pr["headRefName"])
+                    logger.debug(
+                        f"Issue #{issue_number}: Found branch via closed "
+                        f"PR #{pr['number']}: {branch_name}"
+                    )
+                    return branch_name
+                except GithubException:
+                    continue
+
+            # Step 8: Pattern search fallback
+            return self._search_branches_by_pattern(issue_number, repo)
 
         except (KeyError, TypeError) as e:
             logger.error(f"Issue #{issue_number}: Error parsing timeline response: {e}")
