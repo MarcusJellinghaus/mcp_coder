@@ -39,6 +39,6 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] [Step 13: tests/ W1404 + W0201 — string concat + attribute-outside-init (6)](./steps/step_13.md)
 
 ### Config (Step 14 — LAST)
-- [ ] [Step 14: pyproject.toml config change](./steps/step_14.md)
+- [x] [Step 14: pyproject.toml config change](./steps/step_14.md)
 
 ## Pull Request

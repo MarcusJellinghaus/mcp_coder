@@ -151,14 +151,20 @@ init-hook = 'import sys; sys.path.insert(0, ".")'
 extension-pkg-allow-list = ["win32gui", "win32process"]
 
 [tool.pylint.messages_control]
-# Disable all warnings (W), conventions (C), and refactor suggestions (R)
-# Only errors (E) and fatals (F) are reported
-# W1203: Disable lazy % formatting - project prefers f-strings for readability
-# W0621: Disable redefined-outer-name - pytest fixtures standard pattern
-# disable = ["W1203", "W0621"]  # covered by W category above
-disable = ["W", "C", "R"]
-# R0401: Enable cyclic-import detection (not enabled by default as it's in refactor category)
-# C0114-C0116: Docstring checks handled by ruff (D rules) with per-file-ignores for tests
+disable = [
+    "C",       # conventions — not enabled in this project
+    "R",       # refactor suggestions — not enabled in this project
+    "W1203",   # logging-fstring-interpolation — project uses f-strings for readability
+    "W0621",   # redefined-outer-name — standard pytest fixture pattern
+    "W0511",   # fixme/TODO — informational only, not a quality gate
+    "W0212",   # protected-access — legitimate in tests and controlled src usage
+    "W0613",   # unused-argument — pytest fixtures injected by name
+    "W0611",   # unused-import — fixture imports, conftest re-exports
+    "W0404",   # reimported — reimports across test functions
+    "W0718",   # broad-exception-caught — intentional catch-all in CLI/workflow error handling
+    "W0706",   # try-except-raise — explicit re-raise for clarity in error chains
+    "W4903",   # deprecated-argument — tracked for future cleanup
+]
 enable = ["R0401"]
 
 
