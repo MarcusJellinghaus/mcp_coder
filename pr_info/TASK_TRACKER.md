@@ -21,7 +21,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-- [ ] [Step 1: New `mlflow_db_utils.py` — `TrackingStats` dataclass and `query_sqlite_tracking()`](./steps/step_1.md)
+- [x] [Step 1: New `mlflow_db_utils.py` — `TrackingStats` dataclass and `query_sqlite_tracking()`](./steps/step_1.md)
 - [ ] [Step 2: Update `verify_mlflow()` — `since=` parameter and `tracking_data` DB check](./steps/step_2.md)
 - [ ] [Step 3: Move test prompt to `execute_verify()`; remove it from `verify_langchain()`](./steps/step_3.md)
 - [ ] [Step 4: Register `llm_integration` marker; remove deprecated test; add E2E integration test](./steps/step_4.md)
