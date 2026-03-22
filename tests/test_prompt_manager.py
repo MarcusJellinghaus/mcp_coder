@@ -154,7 +154,7 @@ code1 = "test1"
 ```
 """
             file1_path = os.path.join(temp_dir, "file1.md")
-            with open(file1_path, "w") as f:
+            with open(file1_path, "w", encoding="utf-8") as f:
                 f.write(file1_content)
 
             # Create second file
@@ -165,7 +165,7 @@ code2 = "test2"
 ```
 """
             file2_path = os.path.join(temp_dir, "file2.md")
-            with open(file2_path, "w") as f:
+            with open(file2_path, "w", encoding="utf-8") as f:
                 f.write(file2_content)
 
             # Test finding prompt from first file
@@ -187,12 +187,12 @@ md_code = "markdown"
 ```
 """
             md_path = os.path.join(temp_dir, "test.md")
-            with open(md_path, "w") as f:
+            with open(md_path, "w", encoding="utf-8") as f:
                 f.write(md_content)
 
             # Create text file (should be ignored)
             txt_path = os.path.join(temp_dir, "test.txt")
-            with open(txt_path, "w") as f:
+            with open(txt_path, "w", encoding="utf-8") as f:
                 f.write("# TXT Header\n```\ntxt_code\n```")
 
             # Test wildcard *.md
@@ -211,7 +211,7 @@ code1 = "test1"
 ```
 """
             file1_path = os.path.join(temp_dir, "file1.md")
-            with open(file1_path, "w") as f:
+            with open(file1_path, "w", encoding="utf-8") as f:
                 f.write(file1_content)
 
             # Create second file with same header
@@ -222,7 +222,7 @@ code2 = "test2"
 ```
 """
             file2_path = os.path.join(temp_dir, "file2.md")
-            with open(file2_path, "w") as f:
+            with open(file2_path, "w", encoding="utf-8") as f:
                 f.write(file2_content)
 
             # Should raise ValueError due to duplicate headers
@@ -383,7 +383,7 @@ code1 = "test1"
 ```
 """
             file1_path = os.path.join(temp_dir, "file1.md")
-            with open(file1_path, "w") as f:
+            with open(file1_path, "w", encoding="utf-8") as f:
                 f.write(file1_content)
 
             # Create second valid file
@@ -394,7 +394,7 @@ code2 = "test2"
 ```
 """
             file2_path = os.path.join(temp_dir, "file2.md")
-            with open(file2_path, "w") as f:
+            with open(file2_path, "w", encoding="utf-8") as f:
                 f.write(file2_content)
 
             result = validate_prompt_directory(temp_dir)
@@ -414,7 +414,7 @@ code1 = "test1"
 ```
 """
             file1_path = os.path.join(temp_dir, "file1.md")
-            with open(file1_path, "w") as f:
+            with open(file1_path, "w", encoding="utf-8") as f:
                 f.write(file1_content)
 
             # Create second file with duplicate header
@@ -425,7 +425,7 @@ code2 = "test2"
 ```
 """
             file2_path = os.path.join(temp_dir, "file2.md")
-            with open(file2_path, "w") as f:
+            with open(file2_path, "w", encoding="utf-8") as f:
                 f.write(file2_content)
 
             result = validate_prompt_directory(temp_dir)
@@ -446,7 +446,7 @@ code2 = "test2"
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create non-markdown file
             txt_path = os.path.join(temp_dir, "test.txt")
-            with open(txt_path, "w") as f:
+            with open(txt_path, "w", encoding="utf-8") as f:
                 f.write("Not markdown")
 
             result = validate_prompt_directory(temp_dir)
