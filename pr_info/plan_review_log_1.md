@@ -31,3 +31,29 @@
 - `pr_info/steps/summary.md`: Added `types.py` to files table, updated test count
 
 **Status**: committed
+
+## Round 2 — 2026-03-23
+**Findings**:
+- Critical: Changing `repo: str` → `str | None` in TypedDict causes ripple effects in 10+ call sites (status.py, session_restart.py, cleanup.py, session_launch.py)
+- Critical: `issue_number: int` in TypedDict also can't be set to `None` in tests without same problem
+
+**Decisions**:
+- Revert TypedDict change entirely — don't touch `types.py`
+- Tests that need `None` for `repo`/`issue_number` omit the key from dict, use plain dict (`.get()` returns `None`)
+- Production code already uses `.get()` so no changes needed there
+
+**User decisions**:
+- Q: Revert TypedDict change? A: Yes — go with simplest approach
+
+**Changes**:
+- `pr_info/steps/step_1.md`: Test 2 now omits keys instead of setting `None`, uses plain dict
+- `pr_info/steps/step_2.md`: Removed TypedDict sub-step, renumbered
+- `pr_info/steps/summary.md`: Removed `types.py` from files table
+
+**Status**: committed
+
+## Final Status
+
+- **Rounds run**: 2
+- **Commits**: 2 (round 1 plan updates + round 2 TypedDict revert)
+- **Plan status**: Ready for approval — no remaining issues

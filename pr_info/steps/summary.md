@@ -42,7 +42,6 @@ existing PID → cmdline fallback is preserved unchanged.
 | File | Change |
 |------|--------|
 | `src/mcp_coder/workflows/vscodeclaude/sessions.py` | Reorder checks in `is_session_active()`, add warning log |
-| `src/mcp_coder/workflows/vscodeclaude/types.py` | Update `repo` field to `str \| None` |
 | `tests/workflows/vscodeclaude/test_sessions.py` | Update 1 existing test, add 3 new tests |
 
 No new files, modules, or classes are created.

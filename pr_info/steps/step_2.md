@@ -6,9 +6,8 @@
 
 ```
 Read pr_info/steps/summary.md and pr_info/steps/step_2.md for context.
-Implement Step 2: update the VSCodeClaudeSession TypedDict to allow repo=None,
-modify is_session_active() in sessions.py to prioritize window title check on
-Windows, and update the existing test that now needs adjusted mocks.
+Implement Step 2: modify is_session_active() in sessions.py to prioritize window
+title check on Windows, and update the existing test that now needs adjusted mocks.
 Run all three code quality checks (pylint, mypy, pytest).
 Commit with message: "fix: prioritize window title over PID in is_session_active #547"
 ```
@@ -16,16 +15,11 @@ Commit with message: "fix: prioritize window title over PID in is_session_active
 ## WHERE
 
 - `src/mcp_coder/workflows/vscodeclaude/sessions.py` — modify `is_session_active()`
-- `tests/workflows/vscodeclaude/test_sessions.py` — update `test_get_active_session_count_with_mocked_pid_check`
+- `tests/workflows/vscodeclaude/test_sessions.py` — update existing test
 
 ## WHAT
 
-### 1. Update `VSCodeClaudeSession` TypedDict (types.py)
-
-Change `repo: str` to `repo: str | None` in the `VSCodeClaudeSession` TypedDict to reflect
-that `repo` can be `None` when the guard condition is not met.
-
-### 2. Modify `is_session_active()` (sessions.py)
+### 1. Modify `is_session_active()` (sessions.py)
 
 Replace the body of `is_session_active()` with the new check order:
 
@@ -46,7 +40,7 @@ Also update the docstring to reflect the new check order:
 - On Windows (with issue_num + repo): window title check is authoritative
 - Non-Windows fallback: PID → cmdline (unchanged)
 
-### 3. Update `test_get_active_session_count_with_mocked_pid_check`
+### 2. Update `test_get_active_session_count_with_mocked_pid_check`
 
 This test currently mocks only `check_vscode_running`. After the fix, on Windows
 the window check runs first. The test needs to also mock the window check path

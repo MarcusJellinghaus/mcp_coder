@@ -36,8 +36,9 @@ Add a new `TestIsSessionActiveWindowPriority` class with 3 test methods:
 
 **Scenario:** Guard condition not met — either `repo` or `issue_number` is `None`, so fallback to PID path.
 - Use `@pytest.mark.parametrize` with two cases:
-  - `repo=None, issue_number=100`
-  - `repo="owner/repo", issue_number=None`
+  - dict omitting `repo` key (has `issue_number=100`)
+  - dict omitting `issue_number` key (has `repo="owner/repo"`)
+- Use a plain `dict` (not typed as `VSCodeClaudeSession`) for these test cases since keys are intentionally missing
 - Mock `HAS_WIN32GUI = True`
 - Mock `session_has_artifacts` → `True`
 - Mock `check_vscode_running` → `True`
@@ -66,7 +67,7 @@ Each test operates on a `VSCodeClaudeSession` TypedDict:
 ```python
 {
     "folder": str,        # path to tmp dir
-    "repo": str | None,   # "owner/repo" or None — note: `repo` is `str | None` in the TypedDict
+    "repo": str,          # "owner/repo"
     "issue_number": int,
     "status": "s",
     "vscode_pid": int,
@@ -74,3 +75,4 @@ Each test operates on a `VSCodeClaudeSession` TypedDict:
     "is_intervention": False,
 }
 ```
+Tests that need `None` for `repo` or `issue_number` omit the key from the dict and use a plain dict instead of the TypedDict.
