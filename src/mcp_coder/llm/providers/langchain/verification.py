@@ -273,7 +273,11 @@ MultiServerMCPClient: Any = None
 
 
 def _import_mcp_client() -> Any:
-    """Deferred import of MultiServerMCPClient."""
+    """Deferred import of MultiServerMCPClient.
+
+    Returns:
+        The MultiServerMCPClient class.
+    """
     global MultiServerMCPClient  # noqa: PLW0603
     if MultiServerMCPClient is None:
         from langchain_mcp_adapters.client import MultiServerMCPClient as _Client
@@ -286,7 +290,15 @@ async def _check_servers(
     server_config: dict[str, dict[str, object]],
     timeout: int,
 ) -> dict[str, dict[str, Any]]:
-    """Connect to each server and list tools (async internals)."""
+    """Connect to each server and list tools (async internals).
+
+    Args:
+        server_config: Dict mapping server names to their configurations.
+        timeout: Connection timeout in seconds per server.
+
+    Returns:
+        Dict mapping server names to result dicts with ok, value, and tools keys.
+    """
     client_cls = _import_mcp_client()
     results: dict[str, dict[str, Any]] = {}
 
@@ -316,6 +328,10 @@ def verify_mcp_servers(
     timeout: int = 15,
 ) -> dict[str, Any]:
     """Check each configured MCP server by connecting and listing tools.
+
+    Args:
+        mcp_config_path: Path to the .mcp.json configuration file.
+        timeout: Connection timeout in seconds per server.
 
     Returns:
         Dict with per-server results and overall_ok.

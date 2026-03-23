@@ -83,7 +83,15 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
 
 
 def _format_mcp_section(mcp_results: dict[str, Any], symbols: dict[str, str]) -> str:
-    """Format MCP server health check results."""
+    """Format MCP server health check results.
+
+    Args:
+        mcp_results: Dict containing server health check results.
+        symbols: Dict with 'success', 'failure', 'warning' keys.
+
+    Returns:
+        Formatted multi-line string for the MCP servers section.
+    """
     lines: list[str] = ["\n=== MCP SERVERS ==="]
     for name, entry in mcp_results["servers"].items():
         ok = entry.get("ok")
