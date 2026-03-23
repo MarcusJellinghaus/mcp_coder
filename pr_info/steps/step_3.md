@@ -77,6 +77,8 @@ def list_openai_models(api_key, endpoint=None):
 ### Google/Gemini special case
 
 ```python
+# (*GOOGLE_CLIENT_ERRORS,) unpacks the tuple into the except clause.
+# When the tuple is empty (SDK not installed), this except is effectively skipped.
 except (*GOOGLE_CLIENT_ERRORS,) as exc:
     if is_google_auth_error(exc):
         raise_auth_error("Gemini", "GEMINI_API_KEY", exc)
@@ -84,8 +86,6 @@ except (*GOOGLE_CLIENT_ERRORS,) as exc:
 except CONNECTION_ERRORS as exc:
     raise_connection_error("Gemini", "GEMINI_API_KEY", exc)
 ```
-
-If `GOOGLE_CLIENT_ERRORS` is empty (SDK not installed), the except clause is effectively skipped.
 
 ## ALGORITHM
 

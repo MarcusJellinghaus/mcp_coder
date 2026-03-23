@@ -72,7 +72,9 @@ chat_model = _create_chat_model(config, timeout=timeout)
 try:
     ai_msg = chat_model.invoke(lc_messages)
 except (*_auth_errors_for_backend(backend),) as exc:
-    provider, env_var, _ = _BACKEND_ERROR_PARAMS.get(backend, (backend, "", ""))
+    provider, env_var, endpoint_hint = _BACKEND_ERROR_PARAMS.get(backend, (backend, "", ""))
+    if backend == "gemini" and not is_google_auth_error(exc):
+        raise_connection_error(provider, env_var, exc, endpoint_hint)
     raise_auth_error(provider, env_var, exc)
 except CONNECTION_ERRORS as exc:
     provider, env_var, endpoint_hint = _BACKEND_ERROR_PARAMS.get(backend, (backend, "", ""))
@@ -92,11 +94,20 @@ def _auth_errors_for_backend(backend: str | None) -> tuple[type[Exception], ...]
     if backend == "anthropic":
         return ANTHROPIC_AUTH_ERRORS
     if backend == "gemini":
-        return GOOGLE_CLIENT_ERRORS  # filtered by is_google_auth_error
+        return GOOGLE_CLIENT_ERRORS  # needs is_google_auth_error() check at call site
     return ()
 ```
 
-**Google special case in `_ask_text()`/`_ask_agent()`**: For Gemini, catch `GOOGLE_CLIENT_ERRORS` and check `is_google_auth_error()` — if auth, raise auth error; otherwise fall through to connection error handling.
+**Google special case in `_ask_text()`/`_ask_agent()`**: For Gemini, catch `GOOGLE_CLIENT_ERRORS` and check `is_google_auth_error()` — if auth, raise auth error; otherwise raise connection error. This matches the pattern in Step 3.
+
+```python
+# Gemini-aware auth/connection handling (used in both _ask_text and _ask_agent):
+except (*_auth_errors_for_backend(backend),) as exc:
+    provider, env_var, endpoint_hint = _BACKEND_ERROR_PARAMS.get(backend, (backend, "", ""))
+    if backend == "gemini" and not is_google_auth_error(exc):
+        raise_connection_error(provider, env_var, exc, endpoint_hint)
+    raise_auth_error(provider, env_var, exc)
+```
 
 ### `_ask_agent()` integration
 
