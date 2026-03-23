@@ -31,26 +31,34 @@ def test_venv_section_installs_dev_dependencies() -> None:
     ), "VENV_SECTION_WINDOWS should not use '--extra types' (incomplete dependencies)"
 
 
-def test_automated_section_no_hardcoded_llm_method() -> None:
-    """Test that AUTOMATED_SECTION_WINDOWS does not hardcode --llm-method.
+def test_automated_section_has_llm_method_claude() -> None:
+    """Test that AUTOMATED_SECTION_WINDOWS includes --llm-method claude.
 
-    The LLM method should be resolved at runtime via config/env var,
-    not hardcoded in templates (issue #528).
+    The automated phase creates a session that will be resumed by
+    'claude --resume', which is Claude-specific. The upstream mcp-coder
+    prompt call must explicitly use Claude (issue #542).
     """
     assert (
-        "--llm-method" not in AUTOMATED_SECTION_WINDOWS
-    ), "AUTOMATED_SECTION_WINDOWS must not hardcode '--llm-method'"
+        "mcp-coder prompt" in AUTOMATED_SECTION_WINDOWS
+    ), "AUTOMATED_SECTION_WINDOWS must contain 'mcp-coder prompt'"
+    assert (
+        "--llm-method claude" in AUTOMATED_SECTION_WINDOWS
+    ), "AUTOMATED_SECTION_WINDOWS must include '--llm-method claude'"
 
 
-def test_automated_resume_section_no_hardcoded_llm_method() -> None:
-    """Test that AUTOMATED_RESUME_SECTION_WINDOWS does not hardcode --llm-method.
+def test_automated_resume_section_has_llm_method_claude() -> None:
+    """Test that AUTOMATED_RESUME_SECTION_WINDOWS includes --llm-method claude.
 
-    The LLM method should be resolved at runtime via config/env var,
-    not hardcoded in templates (issue #528).
+    The automated resume phase continues a session that will be resumed by
+    'claude --resume', which is Claude-specific. The upstream mcp-coder
+    prompt call must explicitly use Claude (issue #542).
     """
     assert (
-        "--llm-method" not in AUTOMATED_RESUME_SECTION_WINDOWS
-    ), "AUTOMATED_RESUME_SECTION_WINDOWS must not hardcode '--llm-method'"
+        "mcp-coder prompt" in AUTOMATED_RESUME_SECTION_WINDOWS
+    ), "AUTOMATED_RESUME_SECTION_WINDOWS must contain 'mcp-coder prompt'"
+    assert (
+        "--llm-method claude" in AUTOMATED_RESUME_SECTION_WINDOWS
+    ), "AUTOMATED_RESUME_SECTION_WINDOWS must include '--llm-method claude'"
 
 
 def test_interactive_only_section_no_hardcoded_llm_method() -> None:

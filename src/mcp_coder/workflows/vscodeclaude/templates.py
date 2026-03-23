@@ -106,7 +106,7 @@ echo === Step {step_number}: Automated Analysis ===
 echo Running: {command} {issue_number}
 echo.
 
-for /f "delims=" %%i in ('mcp-coder prompt "{command} {issue_number}" --output-format session-id --mcp-config .mcp.json --timeout {timeout}') do set SESSION_ID=%%i
+for /f "delims=" %%i in ('mcp-coder prompt "{command} {issue_number}" --llm-method claude --output-format session-id --mcp-config .mcp.json --timeout {timeout}') do set SESSION_ID=%%i
 
 if "%SESSION_ID%"=="" (
     echo.
@@ -135,7 +135,7 @@ echo === Step {step_number}: Automated Session ===
 echo Running: {command}
 echo.
 
-mcp-coder prompt "{command}" --session-id %SESSION_ID% --mcp-config .mcp.json --timeout {timeout}
+mcp-coder prompt "{command}" --llm-method claude --session-id %SESSION_ID% --mcp-config .mcp.json --timeout {timeout}
 
 if errorlevel 1 (
     echo.
