@@ -54,7 +54,14 @@ _BACKEND_ERROR_PARAMS: dict[str, tuple[str, str, str]] = {
 
 
 def _auth_errors_for_backend(backend: str | None) -> tuple[type[Exception], ...]:
-    """Return the auth error tuple for the given backend."""
+    """Return the auth error tuple for the given backend.
+
+    Args:
+        backend: Backend name ("openai", "anthropic", "gemini", or None).
+
+    Returns:
+        Tuple of exception classes for auth errors on the given backend.
+    """
     if backend == "openai":
         return OPENAI_AUTH_ERRORS
     if backend == "anthropic":
@@ -117,6 +124,10 @@ def _create_chat_model(
 ) -> BaseChatModel:
     """Dispatch to correct backend's create_*_model() based on config.
 
+    Args:
+        config: LangChain configuration dict with backend, model, api_key, etc.
+        timeout: Request timeout in seconds.
+
     Returns:
         Configured BaseChatModel instance for the selected backend.
 
@@ -171,6 +182,14 @@ def ask_langchain(
     ReAct agent (agent mode).  Otherwise the existing text-only backend
     dispatch is used.
 
+    Args:
+        question: The user's prompt text.
+        session_id: Optional session ID for conversation history.
+        timeout: Request timeout in seconds.
+        mcp_config: Optional path to .mcp.json for agent mode.
+        execution_dir: Optional working directory for agent execution.
+        env_vars: Optional environment variables for agent subprocesses.
+
     Returns:
         LLMResponseDict with the model's response.
 
@@ -221,11 +240,20 @@ def _ask_text(
 ) -> LLMResponseDict:
     """Text-only backend dispatch using unified chat model factory.
 
+    Args:
+        question: The user's prompt text.
+        config: LangChain configuration dict.
+        backend: Backend name ("openai", "gemini", "anthropic").
+        session_id: Session ID for conversation history.
+        timeout: Request timeout in seconds.
+
     Returns:
         LLMResponseDict with the model's text response.
 
     Raises:
         ValueError: If the model is not found on the configured backend.
+        LLMAuthError: If authentication fails.
+        LLMConnectionError: If the connection fails.
     """
     from langchain_core.messages import HumanMessage, messages_from_dict
 
@@ -296,6 +324,9 @@ def _ask_text(
 def _get_model_suggestions(config: dict[str, str | None]) -> str:
     """Try to list available models for the configured backend.
 
+    Args:
+        config: LangChain configuration dict with backend and api_key.
+
     Returns:
         Formatted string of available models, or empty string if none found.
     """
@@ -329,8 +360,21 @@ def _ask_agent(
 ) -> LLMResponseDict:
     """Agent mode: route through LangGraph ReAct agent with MCP tools.
 
+    Args:
+        question: The user's prompt text.
+        config: LangChain configuration dict.
+        session_id: Session ID for conversation history.
+        mcp_config: Path to .mcp.json configuration file.
+        execution_dir: Optional working directory for agent execution.
+        env_vars: Optional environment variables for agent subprocesses.
+        timeout: Request timeout in seconds.
+
     Returns:
         LLMResponseDict with the agent's text response and tool usage stats.
+
+    Raises:
+        LLMAuthError: If authentication fails.
+        LLMConnectionError: If the connection fails.
     """
     from .agent import _check_agent_dependencies, run_agent
 
@@ -392,7 +436,12 @@ def _log_text_mlflow(
     config: dict[str, str | None],
     session_id: str,
 ) -> None:
-    """Log text-mode params to MLflow (mirrors _log_agent_mlflow for agent mode)."""
+    """Log text-mode params to MLflow (mirrors _log_agent_mlflow for agent mode).
+
+    Args:
+        config: LangChain configuration dict with backend and model.
+        session_id: Session ID for the MLflow run.
+    """
     try:
         mlflow_logger = get_mlflow_logger()
         mlflow_logger.start_run(session_id=session_id)
@@ -416,7 +465,13 @@ def _log_agent_mlflow(
     stats: dict[str, Any],
     session_id: str,
 ) -> None:
-    """Log agent mode params, metrics, and tool_trace artifact to MLflow."""
+    """Log agent mode params, metrics, and tool_trace artifact to MLflow.
+
+    Args:
+        config: LangChain configuration dict with backend and model.
+        stats: Agent execution statistics (steps, tool calls, trace).
+        session_id: Session ID for the MLflow run.
+    """
     try:
         mlflow_logger = get_mlflow_logger()
         mlflow_logger.start_run(session_id=session_id)

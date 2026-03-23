@@ -73,7 +73,17 @@ def raise_connection_error(
     original: Exception,
     endpoint_hint: str = "",
 ) -> NoReturn:
-    """Build multi-line connection error message and raise LLMConnectionError."""
+    """Build multi-line connection error message and raise LLMConnectionError.
+
+    Args:
+        provider: Name of the LLM provider (e.g. "OpenAI").
+        env_var: Environment variable name for the API key.
+        original: The original exception that triggered the error.
+        endpoint_hint: Optional hint about the endpoint/base_url.
+
+    Raises:
+        LLMConnectionError: Always raised with a formatted error message.
+    """
     lines = [f"Connection to {provider} API failed: {original}", "Check:"]
     item = 1
     lines.append(f"  {item}. {env_var} env var or api_key in config.toml")
@@ -91,7 +101,16 @@ def raise_auth_error(
     env_var: str,
     original: Exception,
 ) -> NoReturn:
-    """Build multi-line auth error message and raise LLMAuthError."""
+    """Build multi-line auth error message and raise LLMAuthError.
+
+    Args:
+        provider: Name of the LLM provider (e.g. "OpenAI").
+        env_var: Environment variable name for the API key.
+        original: The original exception that triggered the error.
+
+    Raises:
+        LLMAuthError: Always raised with a formatted error message.
+    """
     lines = [
         f"Authentication to {provider} API failed: {original}",
         "Check:",
@@ -102,7 +121,14 @@ def raise_auth_error(
 
 
 def is_google_auth_error(exc: Exception) -> bool:
-    """Check if a google.genai ClientError is an auth error (code 401 or 403)."""
+    """Check if a google.genai ClientError is an auth error (code 401 or 403).
+
+    Args:
+        exc: The exception to check.
+
+    Returns:
+        True if the exception is a Google client error with code 401 or 403.
+    """
     if not GOOGLE_CLIENT_ERRORS:
         return False
     if not isinstance(exc, GOOGLE_CLIENT_ERRORS):

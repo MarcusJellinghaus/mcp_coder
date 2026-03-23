@@ -34,6 +34,9 @@ _BACKEND_PACKAGES: dict[str, str] = {
 def _mask_api_key(key: str | None) -> str | None:
     """Mask an API key, showing first 4 and last 4 characters.
 
+    Args:
+        key: The API key to mask, or None.
+
     Returns:
         Masked key string (e.g. ``"sk-1...xyz9"``), ``"****"`` if the key is
         8 characters or fewer, or None if the key is None or empty.
@@ -49,6 +52,10 @@ def _resolve_api_key(
     backend: str | None, config_key: str | None
 ) -> tuple[str | None, str | None]:
     """Resolve API key from environment variable or config.
+
+    Args:
+        backend: Backend name ("openai", "gemini", "anthropic", or None).
+        config_key: API key from config.toml, or None.
 
     Returns:
         Tuple of ``(key, source)`` where *key* is the resolved API key string
@@ -67,6 +74,9 @@ def _resolve_api_key(
 
 def _check_package_installed(package_name: str) -> bool:
     """Check if a Python package is installed using importlib.
+
+    Args:
+        package_name: Dotted Python package name to check.
 
     Returns:
         True if the package is installed and importable, False otherwise.
@@ -200,6 +210,11 @@ def _list_models_for_backend(
     backend: str, api_key: str | None, endpoint: str | None
 ) -> dict[str, Any]:
     """List models for the given backend using existing _models.py functions.
+
+    Args:
+        backend: Backend name ("openai", "gemini", or "anthropic").
+        api_key: API key for the backend, or None.
+        endpoint: Optional custom endpoint URL (used by OpenAI backend).
 
     Returns:
         Dict with 'ok' (bool), 'value' (list of model names), and optionally 'error'.

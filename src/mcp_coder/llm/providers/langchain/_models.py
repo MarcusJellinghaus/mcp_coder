@@ -27,8 +27,16 @@ def list_gemini_models(api_key: str | None) -> list[str]:
     Returns short names without the 'models/' prefix, matching the format
     expected by ``[llm.langchain] model = "..."`` in config.toml.
 
+    Args:
+        api_key: Gemini API key, or None to use default credentials.
+
+    Returns:
+        List of model name strings available for the given key.
+
     Raises:
         ImportError: If google-genai is not installed (part of mcp-coder[langchain]).
+        LLMAuthError: If the API key is invalid or unauthorized.
+        LLMConnectionError: If the connection to the Gemini API fails.
     """
     try:
         import google.genai as genai  # pylint: disable=import-error
@@ -56,8 +64,17 @@ def list_gemini_models(api_key: str | None) -> list[str]:
 def list_openai_models(api_key: str | None, endpoint: str | None = None) -> list[str]:
     """Return model IDs available for the given OpenAI API key.
 
+    Args:
+        api_key: OpenAI API key, or None to use default credentials.
+        endpoint: Optional custom base URL for the API.
+
+    Returns:
+        Sorted list of model ID strings.
+
     Raises:
         ImportError: If openai is not installed (part of mcp-coder[langchain]).
+        LLMAuthError: If the API key is invalid or unauthorized.
+        LLMConnectionError: If the connection to the OpenAI API fails.
     """
     try:
         import openai  # pylint: disable=import-outside-toplevel
@@ -87,8 +104,16 @@ def list_openai_models(api_key: str | None, endpoint: str | None = None) -> list
 def list_anthropic_models(api_key: str | None) -> list[str]:
     """Return model IDs available for the given Anthropic API key.
 
+    Args:
+        api_key: Anthropic API key, or None to use default credentials.
+
+    Returns:
+        Sorted list of model ID strings.
+
     Raises:
         ImportError: If anthropic is not installed (part of mcp-coder[langchain]).
+        LLMAuthError: If the API key is invalid or unauthorized.
+        LLMConnectionError: If the connection to the Anthropic API fails.
     """
     try:
         import anthropic  # pylint: disable=import-outside-toplevel
