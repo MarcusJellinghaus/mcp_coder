@@ -5,14 +5,17 @@ MLflow) and formats their output for the terminal.
 """
 
 import argparse
+import datetime
 import logging
+from pathlib import Path
 from typing import Any
 
-from ...llm.interface import ask_llm
+from ...llm.interface import prompt_llm
 from ...llm.mlflow_logger import verify_mlflow
 from ...llm.providers.claude.claude_cli_verification import verify_claude
 from ...llm.providers.langchain.verification import verify_langchain
 from ..utils import _get_status_symbols, resolve_llm_method, resolve_mcp_config_path
+from .prompt import log_to_mlflow
 
 logger = logging.getLogger(__name__)
 
@@ -160,16 +163,20 @@ def execute_verify(args: argparse.Namespace) -> int:
         print("  (uses Claude CLI — see Basic Verification above)")
 
     # 3b. Unified test prompt (both providers)
+    project_dir = Path(args.project_dir).resolve() if args.project_dir else Path.cwd()
+    timestamp = datetime.datetime.now(datetime.timezone.utc)
     test_prompt_ok = True
     try:
-        ask_llm("Reply with OK", provider=active_provider, timeout=30)
+        response = prompt_llm("Reply with OK", provider=active_provider, timeout=30)
         print(f"  {'Test prompt':<20s} {symbols['success']} responded OK")
+        # Log to MLflow (will be confirmed by verify_mlflow's since= check)
+        log_to_mlflow(response, "Reply with OK", project_dir)
     except Exception as exc:  # pylint: disable=broad-except
         test_prompt_ok = False
         print(f"  {'Test prompt':<20s} {symbols['failure']} FAILED ({exc})")
 
-    # 4. MLflow verification
-    mlflow_result = verify_mlflow()
+    # 4. MLflow verification (now with since= to confirm logging)
+    mlflow_result = verify_mlflow(since=timestamp)
     print(_format_section("MLFLOW", mlflow_result, symbols))
 
     # 5. Compute and return exit code
