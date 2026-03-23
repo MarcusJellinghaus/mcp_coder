@@ -230,6 +230,12 @@ class TestSessionManagement:
             lambda: sessions_file,
         )
 
+        # Disable win32gui so the test exercises the PID fallback path
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            False,
+        )
+
         # Mock check_vscode_running to return True for specific PID
         def mock_check(pid: int | None) -> bool:
             return pid == 1111

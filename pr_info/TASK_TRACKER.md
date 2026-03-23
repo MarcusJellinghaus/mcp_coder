@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Implement the fix and update existing test — [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: modify `is_session_active()` in `sessions.py` to prioritize window title check; update `test_get_active_session_count_with_mocked_pid_check` mock setup
-- [ ] Quality checks: pylint, pytest, mypy all pass
-- [ ] Commit: `fix: prioritize window title over PID in is_session_active #547`
+- [x] Implementation: modify `is_session_active()` in `sessions.py` to prioritize window title check; update `test_get_active_session_count_with_mocked_pid_check` mock setup
+- [x] Quality checks: pylint, pytest, mypy all pass
+- [x] Commit: `fix: prioritize window title over PID in is_session_active #547`
 
 ## Pull Request
 

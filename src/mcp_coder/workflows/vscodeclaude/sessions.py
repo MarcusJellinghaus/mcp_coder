@@ -451,10 +451,11 @@ def is_session_active(session: VSCodeClaudeSession) -> bool:
     Single entry point for all VSCode detection logic. Callers should always
     use this instead of assembling individual checks themselves.
 
-    Runs three checks in order (fast to slow):
-    1. PID-based check (fast but unreliable on Windows — launcher exits immediately)
-    2. Window title check (Windows only, reliable for vscodeclaude workspaces)
-    3. Process cmdline check (slow fallback, cross-platform)
+    Check order:
+    - On Windows (with issue_num + repo): window title check is authoritative.
+      Its result is returned directly — no fallthrough to PID or cmdline checks,
+      which can false-positive when a VSCode process has been reused.
+    - Non-Windows fallback: PID check → cmdline check (unchanged).
 
     Pre-condition: only runs checks if session artifacts exist. If both the
     folder and workspace file are gone, any matching process is a zombie.
@@ -467,18 +468,27 @@ def is_session_active(session: VSCodeClaudeSession) -> bool:
     """
     folder = session.get("folder", "")
     issue_num = session.get("issue_number")
+    repo = session.get("repo")
     if not session_has_artifacts(folder):
         logger.debug("is_session_active #%s: no artifacts -> False", issue_num)
         return False
+    if HAS_WIN32GUI and issue_num is not None and repo is not None:
+        found = is_vscode_window_open_for_folder(
+            folder,
+            issue_number=issue_num,
+            repo=repo,
+        )
+        if not found and check_vscode_running(session.get("vscode_pid")):
+            logger.warning(
+                "is_session_active #%s: window title not found but PID %s alive"
+                " — treating as inactive",
+                issue_num,
+                session.get("vscode_pid"),
+            )
+        logger.debug("is_session_active #%s: window check -> %s", issue_num, found)
+        return found
     if check_vscode_running(session.get("vscode_pid")):
         logger.debug("is_session_active #%s: PID check -> True", issue_num)
-        return True
-    if is_vscode_window_open_for_folder(
-        folder,
-        issue_number=issue_num,
-        repo=session.get("repo"),
-    ):
-        logger.debug("is_session_active #%s: window check -> True", issue_num)
         return True
     is_open, _ = is_vscode_open_for_folder(folder)
     logger.debug("is_session_active #%s: process check -> %s", issue_num, is_open)
