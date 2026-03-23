@@ -21,6 +21,19 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1 — Add `verify_config()` Function ([step_1.md](./steps/step_1.md))
+
+- [ ] Implementation: tests (`TestVerifyConfig` in `test_user_config.py`) + `verify_config()` in `user_config.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit: `feat(verify): add verify_config() for config file validation (#552)`
+
+### Step 2 — Integrate CONFIG Section into `verify` Command ([step_2.md](./steps/step_2.md))
+
+- [ ] Implementation: tests (`TestConfigSectionInVerify` + exit code tests in `test_verify_exit_codes.py`) + update `execute_verify()` and `_compute_exit_code()` in `verify.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit: `feat(verify): integrate CONFIG section into verify command (#552)`
 
 ## Pull Request
+
+- [ ] PR review: verify all steps complete, tests pass, no regressions
+- [ ] PR summary prepared
