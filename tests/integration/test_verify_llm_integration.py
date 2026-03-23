@@ -24,9 +24,20 @@ class TestVerifyEndToEndWithRealLLM:
         db_path = tmp_path / "verify_test.db"
         sqlite_uri = f"sqlite:///{db_path}"
 
-        with patch(
-            "mcp_coder.utils.mlflow_config_loader.load_mlflow_config"
-        ) as mock_cfg:
+        with (
+            patch(
+                "mcp_coder.utils.mlflow_config_loader.load_mlflow_config"
+            ) as mock_cfg,
+            patch(
+                "mcp_coder.cli.commands.verify.verify_config",
+                return_value={
+                    "entries": [
+                        {"label": "Config file", "status": "ok", "value": "ok"}
+                    ],
+                    "has_error": False,
+                },
+            ),
+        ):
             mock_cfg.return_value = MLflowConfig(
                 enabled=True,
                 tracking_uri=sqlite_uri,

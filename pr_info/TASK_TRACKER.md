@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2 — Integrate CONFIG Section into `verify` Command ([step_2.md](./steps/step_2.md))
 
-- [ ] Implementation: tests (`TestConfigSectionInVerify` + exit code tests in `test_verify_exit_codes.py`) + update `execute_verify()` and `_compute_exit_code()` in `verify.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(verify): integrate CONFIG section into verify command (#552)`
+- [x] Implementation: tests (`TestConfigSectionInVerify` + exit code tests in `test_verify_exit_codes.py`) + update `execute_verify()` and `_compute_exit_code()` in `verify.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(verify): integrate CONFIG section into verify command (#552)`
 
 ## Pull Request
 

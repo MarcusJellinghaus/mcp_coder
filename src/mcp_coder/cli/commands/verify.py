@@ -14,6 +14,7 @@ from ...llm.interface import prompt_llm
 from ...llm.mlflow_logger import verify_mlflow
 from ...llm.providers.claude.claude_cli_verification import verify_claude
 from ...llm.providers.langchain.verification import verify_langchain, verify_mcp_servers
+from ...utils.user_config import verify_config
 from ..utils import _get_status_symbols, resolve_llm_method, resolve_mcp_config_path
 from .prompt import log_to_mlflow
 
@@ -107,11 +108,13 @@ def _compute_exit_code(
     mlflow_result: dict[str, Any],
     test_prompt_ok: bool = True,
     mcp_result: dict[str, Any] | None = None,
+    config_has_error: bool = False,
 ) -> int:
     """Compute CLI exit code from verification results.
 
-    Exit 1 when the active provider fails, when MLflow is enabled but broken,
-    when the test prompt failed, or when MCP servers failed (langchain only).
+    Exit 1 when the config has errors, the active provider fails, when MLflow
+    is enabled but broken, when the test prompt failed, or when MCP servers
+    failed (langchain only).
 
     Args:
         active_provider: The active LLM provider name.
@@ -120,10 +123,15 @@ def _compute_exit_code(
         mlflow_result: MLflow verification result dict.
         test_prompt_ok: Whether the test prompt succeeded.
         mcp_result: MCP server health check result dict, or None.
+        config_has_error: Whether config verification found errors (invalid TOML).
 
     Returns:
         Exit code (0 if all checks pass, 1 if any critical check failed).
     """
+    # Config error (invalid TOML) always means exit 1
+    if config_has_error:
+        return 1
+
     # Test prompt failure always means exit 1
     if not test_prompt_ok:
         return 1
@@ -163,6 +171,19 @@ def execute_verify(args: argparse.Namespace) -> int:
     """
     logger.info("Executing verify command")
     symbols = _get_status_symbols()
+
+    # 0. Config verification (first section)
+    config_result = verify_config()
+    lines = ["\n=== CONFIG ==="]
+    for entry in config_result["entries"]:
+        status = entry["status"]
+        symbol = {
+            "ok": symbols["success"],
+            "warning": symbols["warning"],
+            "error": symbols["failure"],
+        }.get(status, " ")
+        lines.append(f"  {entry['label']:<20s} {symbol} {entry['value']}")
+    print("\n".join(lines))
 
     # 1. Resolve active provider
     active_provider, source = resolve_llm_method(args.llm_method)
@@ -222,6 +243,7 @@ def execute_verify(args: argparse.Namespace) -> int:
         mlflow_result,
         test_prompt_ok=test_prompt_ok,
         mcp_result=mcp_result,
+        config_has_error=config_result["has_error"],
     )
     logger.info("Verify command completed with exit code %d", exit_code)
     return exit_code

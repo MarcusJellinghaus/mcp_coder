@@ -111,6 +111,7 @@ def _mlflow_enabled_broken() -> dict[str, Any]:
 class TestVerifyOrchestration:
     """Tests for the verify CLI orchestrator."""
 
+    @patch("mcp_coder.cli.commands.verify.verify_config")
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
@@ -125,9 +126,14 @@ class TestVerifyOrchestration:
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
+        mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """All three sections appear in output."""
+        mock_verify_config.return_value = {
+            "entries": [{"label": "Config file", "status": "ok", "value": "ok"}],
+            "has_error": False,
+        }
         mock_provider.return_value = ("langchain", "config.toml")
         mock_claude.return_value = _claude_ok()
         mock_lc.return_value = _langchain_ok()
@@ -141,6 +147,7 @@ class TestVerifyOrchestration:
         assert "LLM PROVIDER" in output
         assert "MLFLOW" in output
 
+    @patch("mcp_coder.cli.commands.verify.verify_config")
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
@@ -153,8 +160,13 @@ class TestVerifyOrchestration:
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
+        mock_verify_config: MagicMock,
     ) -> None:
         """Exit 0 when active provider (claude) succeeds."""
+        mock_verify_config.return_value = {
+            "entries": [{"label": "Config file", "status": "ok", "value": "ok"}],
+            "has_error": False,
+        }
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
@@ -164,6 +176,7 @@ class TestVerifyOrchestration:
 
         assert result == 0
 
+    @patch("mcp_coder.cli.commands.verify.verify_config")
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
@@ -178,8 +191,13 @@ class TestVerifyOrchestration:
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
+        mock_verify_config: MagicMock,
     ) -> None:
         """Exit 1 when active provider (langchain) fails."""
+        mock_verify_config.return_value = {
+            "entries": [{"label": "Config file", "status": "ok", "value": "ok"}],
+            "has_error": False,
+        }
         mock_provider.return_value = ("langchain", "config.toml")
         mock_claude.return_value = _claude_ok()
         mock_lc.return_value = _langchain_fail()
@@ -190,6 +208,7 @@ class TestVerifyOrchestration:
 
         assert result == 1
 
+    @patch("mcp_coder.cli.commands.verify.verify_config")
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
@@ -202,8 +221,13 @@ class TestVerifyOrchestration:
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
+        mock_verify_config: MagicMock,
     ) -> None:
         """Exit 1 when MLflow is enabled and has errors."""
+        mock_verify_config.return_value = {
+            "entries": [{"label": "Config file", "status": "ok", "value": "ok"}],
+            "has_error": False,
+        }
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_enabled_broken()
@@ -213,6 +237,7 @@ class TestVerifyOrchestration:
 
         assert result == 1
 
+    @patch("mcp_coder.cli.commands.verify.verify_config")
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
@@ -225,8 +250,13 @@ class TestVerifyOrchestration:
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
+        mock_verify_config: MagicMock,
     ) -> None:
         """Exit 0 when MLflow not installed (informational)."""
+        mock_verify_config.return_value = {
+            "entries": [{"label": "Config file", "status": "ok", "value": "ok"}],
+            "has_error": False,
+        }
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
@@ -236,6 +266,7 @@ class TestVerifyOrchestration:
 
         assert result == 0
 
+    @patch("mcp_coder.cli.commands.verify.verify_config")
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
@@ -250,9 +281,14 @@ class TestVerifyOrchestration:
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
+        mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Claude CLI section is informational when provider=langchain (doesn't affect exit)."""
+        mock_verify_config.return_value = {
+            "entries": [{"label": "Config file", "status": "ok", "value": "ok"}],
+            "has_error": False,
+        }
         mock_provider.return_value = ("langchain", "config.toml")
         mock_claude.return_value = _claude_fail()
         mock_mlflow.return_value = _mlflow_not_installed()
@@ -265,6 +301,7 @@ class TestVerifyOrchestration:
         # Claude failing should not cause exit 1 when langchain is active
         assert result == 0
 
+    @patch("mcp_coder.cli.commands.verify.verify_config")
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
@@ -281,8 +318,13 @@ class TestVerifyOrchestration:
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
+        mock_verify_config: MagicMock,
     ) -> None:
         """--check-models flag forwarded to verify_langchain."""
+        mock_verify_config.return_value = {
+            "entries": [{"label": "Config file", "status": "ok", "value": "ok"}],
+            "has_error": False,
+        }
         mock_provider.return_value = ("langchain", "config.toml")
         mock_claude.return_value = _claude_ok()
         mock_lc.return_value = _langchain_ok()
@@ -293,6 +335,7 @@ class TestVerifyOrchestration:
 
         mock_lc.assert_called_once_with(check_models=True, mcp_config_path=None)
 
+    @patch("mcp_coder.cli.commands.verify.verify_config")
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
@@ -305,9 +348,14 @@ class TestVerifyOrchestration:
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
+        mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """verify_langchain is not called when provider is claude."""
+        mock_verify_config.return_value = {
+            "entries": [{"label": "Config file", "status": "ok", "value": "ok"}],
+            "has_error": False,
+        }
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
@@ -320,6 +368,7 @@ class TestVerifyOrchestration:
         output = capsys.readouterr().out
         assert "uses Claude CLI" in output
 
+    @patch("mcp_coder.cli.commands.verify.verify_config")
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
@@ -332,9 +381,14 @@ class TestVerifyOrchestration:
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
+        mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test prompt result line appears in LLM PROVIDER section."""
+        mock_verify_config.return_value = {
+            "entries": [{"label": "Config file", "status": "ok", "value": "ok"}],
+            "has_error": False,
+        }
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
@@ -346,6 +400,7 @@ class TestVerifyOrchestration:
         assert "Test prompt" in output
         assert "responded OK" in output
 
+    @patch("mcp_coder.cli.commands.verify.verify_config")
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
@@ -358,8 +413,13 @@ class TestVerifyOrchestration:
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
+        mock_verify_config: MagicMock,
     ) -> None:
         """execute_verify() continues when prompt_llm raises."""
+        mock_verify_config.return_value = {
+            "entries": [{"label": "Config file", "status": "ok", "value": "ok"}],
+            "has_error": False,
+        }
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
@@ -369,6 +429,7 @@ class TestVerifyOrchestration:
 
         assert isinstance(result, int)
 
+    @patch("mcp_coder.cli.commands.verify.verify_config")
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
@@ -381,8 +442,13 @@ class TestVerifyOrchestration:
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
+        mock_verify_config: MagicMock,
     ) -> None:
         """verify_mlflow() is called with since= (a UTC datetime)."""
+        mock_verify_config.return_value = {
+            "entries": [{"label": "Config file", "status": "ok", "value": "ok"}],
+            "has_error": False,
+        }
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
@@ -396,6 +462,7 @@ class TestVerifyOrchestration:
         assert isinstance(since_arg, datetime.datetime)
         assert since_arg.tzinfo is not None  # UTC-aware
 
+    @patch("mcp_coder.cli.commands.verify.verify_config")
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
@@ -408,8 +475,13 @@ class TestVerifyOrchestration:
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
+        mock_verify_config: MagicMock,
     ) -> None:
         """log_to_mlflow is called with the response when prompt succeeds."""
+        mock_verify_config.return_value = {
+            "entries": [{"label": "Config file", "status": "ok", "value": "ok"}],
+            "has_error": False,
+        }
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
@@ -423,6 +495,7 @@ class TestVerifyOrchestration:
         assert call_args[0] == response  # response_data
         assert call_args[1] == "Reply with OK"  # prompt
 
+    @patch("mcp_coder.cli.commands.verify.verify_config")
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
@@ -435,8 +508,13 @@ class TestVerifyOrchestration:
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
+        mock_verify_config: MagicMock,
     ) -> None:
         """log_to_mlflow is NOT called when prompt_llm raises."""
+        mock_verify_config.return_value = {
+            "entries": [{"label": "Config file", "status": "ok", "value": "ok"}],
+            "has_error": False,
+        }
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
@@ -500,6 +578,7 @@ class TestFormatSection:
 class TestVerifyUsesSharedResolveLlmMethod:
     """Tests that verify.py uses the shared resolve_llm_method()."""
 
+    @patch("mcp_coder.cli.commands.verify.verify_config")
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
@@ -514,9 +593,14 @@ class TestVerifyUsesSharedResolveLlmMethod:
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
+        mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """--llm-method langchain is passed to resolve_llm_method and used."""
+        mock_verify_config.return_value = {
+            "entries": [{"label": "Config file", "status": "ok", "value": "ok"}],
+            "has_error": False,
+        }
         mock_resolve.return_value = ("langchain", "cli argument")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
@@ -532,6 +616,7 @@ class TestVerifyUsesSharedResolveLlmMethod:
         assert "langchain" in output
         assert "cli argument" in output
 
+    @patch("mcp_coder.cli.commands.verify.verify_config")
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
@@ -546,9 +631,14 @@ class TestVerifyUsesSharedResolveLlmMethod:
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
+        mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """No --llm-method: resolve_llm_method returns config default_provider."""
+        mock_verify_config.return_value = {
+            "entries": [{"label": "Config file", "status": "ok", "value": "ok"}],
+            "has_error": False,
+        }
         mock_resolve.return_value = ("langchain", "config default_provider")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
@@ -564,6 +654,7 @@ class TestVerifyUsesSharedResolveLlmMethod:
         assert "langchain" in output
         assert "config default_provider" in output
 
+    @patch("mcp_coder.cli.commands.verify.verify_config")
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
@@ -576,9 +667,14 @@ class TestVerifyUsesSharedResolveLlmMethod:
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
+        mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """No arg, no config: resolve_llm_method returns claude default."""
+        mock_verify_config.return_value = {
+            "entries": [{"label": "Config file", "status": "ok", "value": "ok"}],
+            "has_error": False,
+        }
         mock_resolve.return_value = ("claude", "default")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
