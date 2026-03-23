@@ -117,19 +117,6 @@ def _mcp_ok() -> dict[str, Any]:
     }
 
 
-def _mcp_fail() -> dict[str, Any]:
-    return {
-        "servers": {
-            "broken": {
-                "ok": False,
-                "value": "connection refused",
-                "error": "ConnectionError",
-            },
-        },
-        "overall_ok": False,
-    }
-
-
 class TestComputeExitCode:
     """Tests for _compute_exit_code logic."""
 

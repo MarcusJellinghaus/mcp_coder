@@ -226,7 +226,7 @@ def _list_models_for_backend(
 # ---------------------------------------------------------------------------
 
 # Lazy import — only needed when verify_mcp_servers() is actually called.
-MultiServerMCPClient: Any = None
+_mcp_client_cache: dict[str, Any] = {}
 
 
 def _import_mcp_client() -> Any:
@@ -235,12 +235,11 @@ def _import_mcp_client() -> Any:
     Returns:
         The MultiServerMCPClient class.
     """
-    global MultiServerMCPClient  # noqa: PLW0603
-    if MultiServerMCPClient is None:
+    if "cls" not in _mcp_client_cache:
         from langchain_mcp_adapters.client import MultiServerMCPClient as _Client
 
-        MultiServerMCPClient = _Client
-    return MultiServerMCPClient
+        _mcp_client_cache["cls"] = _Client
+    return _mcp_client_cache["cls"]
 
 
 async def _check_servers(

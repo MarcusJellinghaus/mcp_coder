@@ -57,8 +57,8 @@ class TestVerifyMcpServers:
         mock_client.session.return_value.__aexit__ = AsyncMock(return_value=False)
 
         with patch(
-            "mcp_coder.llm.providers.langchain.verification.MultiServerMCPClient",
-            return_value=mock_client,
+            "mcp_coder.llm.providers.langchain.verification._import_mcp_client",
+            return_value=lambda cfg: mock_client,
         ):
             result = verify_mcp_servers("/fake/path/.mcp.json")
 
@@ -83,8 +83,8 @@ class TestVerifyMcpServers:
         mock_client.session.return_value.__aexit__ = AsyncMock(return_value=False)
 
         with patch(
-            "mcp_coder.llm.providers.langchain.verification.MultiServerMCPClient",
-            return_value=mock_client,
+            "mcp_coder.llm.providers.langchain.verification._import_mcp_client",
+            return_value=lambda cfg: mock_client,
         ):
             result = verify_mcp_servers("/fake/path/.mcp.json")
 
@@ -120,8 +120,8 @@ class TestVerifyMcpServers:
         mock_client.session.side_effect = _session_side_effect
 
         with patch(
-            "mcp_coder.llm.providers.langchain.verification.MultiServerMCPClient",
-            return_value=mock_client,
+            "mcp_coder.llm.providers.langchain.verification._import_mcp_client",
+            return_value=lambda cfg: mock_client,
         ):
             result = verify_mcp_servers("/fake/path/.mcp.json")
 
@@ -150,8 +150,8 @@ class TestVerifyMcpServers:
         mock_client.session.return_value.__aexit__ = AsyncMock(return_value=False)
 
         with patch(
-            "mcp_coder.llm.providers.langchain.verification.MultiServerMCPClient",
-            return_value=mock_client,
+            "mcp_coder.llm.providers.langchain.verification._import_mcp_client",
+            return_value=lambda cfg: mock_client,
         ):
             result = verify_mcp_servers("/fake/path/.mcp.json", timeout=1)
 
