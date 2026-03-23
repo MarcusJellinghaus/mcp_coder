@@ -132,7 +132,7 @@ def _get_vscode_processes(refresh: bool = False) -> list[dict[str, Any]]:
     Returns:
         List of dicts with 'pid' and 'cmdline_lower' keys
     """
-    global _vscode_process_cache
+    global _vscode_process_cache  # pylint: disable=global-statement  # module-level singleton
 
     if _vscode_process_cache is not None and not refresh:
         return _vscode_process_cache.get("processes", [])
@@ -171,7 +171,7 @@ def clear_vscode_process_cache() -> None:
 
     Call this at the start of operations to ensure fresh data.
     """
-    global _vscode_process_cache
+    global _vscode_process_cache  # pylint: disable=global-statement  # module-level singleton
     _vscode_process_cache = None
 
 
@@ -189,7 +189,7 @@ def _get_vscode_pids() -> set[int]:
     Returns:
         Set of PIDs for Code.exe processes
     """
-    global _vscode_pids_cache
+    global _vscode_pids_cache  # pylint: disable=global-statement  # module-level singleton
     if _vscode_pids_cache is not None:
         return _vscode_pids_cache
 
@@ -219,7 +219,7 @@ def _get_vscode_window_titles(refresh: bool = False) -> list[str]:
     Returns:
         List of VSCode window titles, or empty list on non-Windows
     """
-    global _vscode_window_cache, _vscode_pids_cache
+    global _vscode_window_cache, _vscode_pids_cache  # pylint: disable=global-statement  # module-level singleton
 
     if not HAS_WIN32GUI:
         return []
@@ -250,13 +250,17 @@ def _get_vscode_window_titles(refresh: bool = False) -> list[str]:
                     _, pid = win32process.GetWindowThreadProcessId(hwnd)
                     if pid in vscode_pids:
                         titles.append(title)
-        except Exception:  # pylint: disable=broad-exception-caught
+        except (
+            Exception
+        ):  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             pass  # Ignore errors for individual windows
         return True
 
     try:
         win32gui.EnumWindows(enum_callback, None)
-    except Exception as e:  # pylint: disable=broad-exception-caught
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.warning("Failed to enumerate windows: %s", e)
         return []
 
@@ -267,7 +271,7 @@ def _get_vscode_window_titles(refresh: bool = False) -> list[str]:
 
 def clear_vscode_window_cache() -> None:
     """Clear the VSCode window title cache."""
-    global _vscode_window_cache, _vscode_pids_cache
+    global _vscode_window_cache, _vscode_pids_cache  # pylint: disable=global-statement  # module-level singleton
     _vscode_window_cache = None
     _vscode_pids_cache = None
 

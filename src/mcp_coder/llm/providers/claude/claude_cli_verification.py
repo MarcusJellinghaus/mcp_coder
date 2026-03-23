@@ -42,14 +42,16 @@ def verify_claude() -> dict[str, Any]:
     # Run advanced verification (API integration)
     api_ok = False
     try:
-        success, claude_path, error_msg = _verify_claude_before_use()
+        success, _, error_msg = _verify_claude_before_use()
         api_ok = success
         result["api_integration"] = {
             "ok": success,
             "value": "OK" if success else "FAILED",
             "error": error_msg if not success else None,
         }
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         result["api_integration"] = {
             "ok": False,
             "value": "FAILED",

@@ -130,7 +130,7 @@ def verify_git_state(repo: Repo, expected_commits: int | None = None) -> dict[st
 
         return state
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         return {
             "error": str(e),
             "commit_count": 0,

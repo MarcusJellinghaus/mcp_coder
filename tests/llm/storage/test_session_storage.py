@@ -42,7 +42,7 @@ class TestStoreSession:
             assert file_path.endswith(".json")
 
             # Verify content
-            with open(file_path, "r") as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 assert data["prompt"] == "Test prompt"
                 assert data["response_data"]["text"] == "Hello"
@@ -61,7 +61,7 @@ class TestStoreSession:
 
             file_path = store_session(response_data, "Test prompt", tmp_path)
 
-            with open(file_path, "r") as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             assert data["prompt"] == "Test prompt"
             assert data["response_data"] == response_data
@@ -121,7 +121,7 @@ class TestStoreSession:
                 response_data, "prompt", tmp_path, branch_name="342-improve-logging"
             )
 
-            with open(file_path, "r") as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             assert data["metadata"]["branch_name"] == "342-improve-logging"
 
@@ -141,7 +141,7 @@ class TestStoreSession:
                 response_data, "prompt", tmp_path, step_name="step_1"
             )
 
-            with open(file_path, "r") as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             assert data["metadata"]["step_name"] == "step_1"
 
@@ -159,7 +159,7 @@ class TestStoreSession:
 
             file_path = store_session(response_data, "prompt", tmp_path)
 
-            with open(file_path, "r") as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             assert data["metadata"]["model"] == "claude-sonnet-4-new"
 
@@ -177,7 +177,7 @@ class TestStoreSession:
 
             file_path = store_session(response_data, "prompt", tmp_path)
 
-            with open(file_path, "r") as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             assert data["metadata"]["model"] == "claude-fallback"
 
@@ -195,7 +195,7 @@ class TestStoreSession:
 
             file_path = store_session(response_data, "prompt", tmp_path)
 
-            with open(file_path, "r") as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             assert "branch_name" not in data["metadata"]
 
@@ -213,7 +213,7 @@ class TestStoreSession:
 
             file_path = store_session(response_data, "prompt", tmp_path)
 
-            with open(file_path, "r") as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             assert "step_name" not in data["metadata"]
 
@@ -230,7 +230,7 @@ class TestExtractSessionId:
             }
 
             file_path = os.path.join(tmp_path, "test_session.json")
-            with open(file_path, "w") as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(session_data, f)
 
             session_id = extract_session_id(str(file_path))
@@ -245,7 +245,7 @@ class TestExtractSessionId:
         """Test graceful handling of invalid JSON."""
         with tempfile.TemporaryDirectory() as tmp_path:
             file_path = os.path.join(tmp_path, "invalid.json")
-            with open(file_path, "w") as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 f.write("{ invalid json }")
 
             session_id = extract_session_id(str(file_path))
@@ -260,7 +260,7 @@ class TestExtractSessionId:
             }
 
             file_path = os.path.join(tmp_path, "no_session.json")
-            with open(file_path, "w") as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(session_data, f)
 
             session_id = extract_session_id(str(file_path))
@@ -282,7 +282,7 @@ class TestExtractSessionId:
             }
 
             file_path = os.path.join(tmp_path, "llm_response.json")
-            with open(file_path, "w") as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(session_data, f)
 
             session_id = extract_session_id(str(file_path))

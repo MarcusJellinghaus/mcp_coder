@@ -93,7 +93,7 @@ class TestSessionResolution:
     def test_continue_from_file_not_found(self) -> None:
         """Test graceful handling when continue_from file doesn't exist."""
         # This tests the file handling logic that would be used in session resolution
-        fake_path = "/path/to/nonexistent_file.json"
+        _ = "/path/to/nonexistent_file.json"
 
         # File existence check should return False
         with patch("os.path.exists") as mock_exists:

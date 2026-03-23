@@ -391,7 +391,9 @@ def restart_closed_sessions(
             # Regenerate all session files with fresh data
             regenerate_session_files(session, issue)
 
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.warning(
                 "Failed to regenerate files for issue #%d: %s",
                 issue_number,
@@ -433,7 +435,9 @@ def restart_closed_sessions(
             }
             restarted.append(updated_session)
 
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.error(
                 "Failed to restart session for issue #%d: %s",
                 session["issue_number"],

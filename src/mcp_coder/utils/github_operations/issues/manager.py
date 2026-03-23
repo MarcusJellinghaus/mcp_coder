@@ -522,6 +522,8 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
             )
             return True
 
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.error(f"Unexpected error updating workflow label: {e}")
             return False

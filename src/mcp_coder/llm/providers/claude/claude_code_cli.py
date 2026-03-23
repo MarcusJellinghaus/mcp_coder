@@ -713,7 +713,9 @@ def ask_claude_code_cli(
     except (TimeoutExpired, CalledProcessError):
         # Already logged above - re-raise without logging again
         raise
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         # Log any other unexpected errors (e.g., ValueError from JSON parsing)
         duration_ms = int((time.time() - start_time) * 1000)
         log_llm_error(error=e, duration_ms=duration_ms)

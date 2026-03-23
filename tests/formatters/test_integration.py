@@ -299,7 +299,7 @@ requires = ["setuptools"]
             },
         ]
 
-        for i, config in enumerate(test_configs):
+        for _, config in enumerate(test_configs):
             with tempfile.TemporaryDirectory() as temp_dir:
                 project_root = Path(temp_dir)
 

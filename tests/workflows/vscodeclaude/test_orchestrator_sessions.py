@@ -977,7 +977,7 @@ class TestPrepareRestartBranch:
     ) -> None:
         """status-01 doesn't require branch - returns success immediately."""
         # Mock git fetch to succeed
-        mock_execute = monkeypatch.setattr(
+        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart.execute_subprocess",
             lambda cmd, options: type(
                 "Result", (), {"stdout": "", "stderr": "", "return_code": 0}

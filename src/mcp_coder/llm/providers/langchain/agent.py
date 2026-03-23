@@ -32,11 +32,11 @@ def _check_agent_dependencies() -> None:
     """
     missing: list[str] = []
     try:
-        import langchain_mcp_adapters  # noqa: F401
+        import langchain_mcp_adapters  # noqa: F401  # pylint: disable=unused-import
     except ImportError:
         missing.append("langchain-mcp-adapters")
     try:
-        import langgraph  # noqa: F401
+        import langgraph  # noqa: F401  # pylint: disable=unused-import
     except ImportError:
         missing.append("langgraph")
     if missing:
@@ -210,7 +210,7 @@ async def run_agent(
     chat_model: BaseChatModel,
     messages: list[dict[str, Any]],
     mcp_config_path: str,
-    execution_dir: str | None = None,
+    execution_dir: str | None = None,  # pylint: disable=unused-argument
     env_vars: dict[str, str] | None = None,
     timeout: int = 30,
 ) -> tuple[str, list[dict[str, Any]], dict[str, Any]]:

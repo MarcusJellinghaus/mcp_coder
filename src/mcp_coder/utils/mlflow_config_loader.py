@@ -10,7 +10,6 @@ Architecture:
 """
 
 import logging
-from typing import Optional
 
 from ..config.mlflow_config import MLflowConfig, validate_tracking_uri
 from .user_config import get_config_values

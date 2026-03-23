@@ -7,7 +7,6 @@ which generates PR summaries and cleans up repository state.
 import argparse
 import logging
 import sys
-from pathlib import Path
 
 from ...workflows.create_pr.core import run_create_pr_workflow
 from ...workflows.utils import resolve_project_dir
@@ -73,7 +72,9 @@ def execute_create_pr(args: argparse.Namespace) -> int:
         print("Operation cancelled by user.")
         return 1
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         print(f"Error during workflow execution: {e}", file=sys.stderr)
         logger.error(f"Unexpected error in create-pr command: {e}", exc_info=True)
         return 1

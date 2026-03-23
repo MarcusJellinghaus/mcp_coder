@@ -65,7 +65,9 @@ def _handle_github_errors(
                 # Log and return default for other GitHub errors
                 logger.error(f"GitHub API error in {func.__name__}: {e}")
                 return cast(T, default_return)
-            except Exception as e:
+            except (
+                Exception
+            ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                 # Log and return default for unexpected errors
                 logger.error(f"Unexpected error in {func.__name__}: {e}")
                 return cast(T, default_return)
@@ -97,7 +99,9 @@ def get_authenticated_username() -> str:
         github_client = Github(auth=Auth.Token(token))
         user = github_client.get_user()
         return user.login
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         raise ValueError(f"Failed to authenticate with GitHub: {e}") from e
 
 
@@ -287,7 +291,9 @@ class BaseGitHubManager:
                     e,
                 )
             return None
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.error(
                 "Unexpected error accessing repository '%s': %s",
                 repo_full_name,

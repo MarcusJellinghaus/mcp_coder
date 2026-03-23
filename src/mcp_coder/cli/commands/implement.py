@@ -7,7 +7,6 @@ which processes implementation tasks from the task tracker.
 import argparse
 import logging
 import sys
-from pathlib import Path
 
 from ...workflows.implement.core import run_implement_workflow
 from ...workflows.utils import resolve_project_dir
@@ -73,7 +72,9 @@ def execute_implement(args: argparse.Namespace) -> int:
         print("Operation cancelled by user.")
         return 1
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         print(f"Error during workflow execution: {e}", file=sys.stderr)
         logger.error(f"Unexpected error in implement command: {e}", exc_info=True)
         return 1

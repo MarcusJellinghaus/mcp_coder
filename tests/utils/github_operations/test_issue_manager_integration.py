@@ -49,7 +49,7 @@ def issue_manager(
     try:
         manager = create_github_manager(IssueManager, github_test_setup)
         yield manager
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         pytest.skip(f"Failed to create IssueManager: {e}")
 
 
@@ -171,7 +171,7 @@ class TestIssueManagerIntegration:
                 else:
                     # Empty dict means error was caught
                     print("✓ Non-existent label returned empty result (error caught)")
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 print(f"✓ Non-existent label handling: {e}")
 
             # Set labels (replace all)
@@ -350,7 +350,7 @@ class TestIssueManagerIntegration:
                     print(
                         f"\n✓ Cleanup: Ensured issue #{created_issue['number']} is closed"
                     )
-                except Exception:
+                except Exception:  # pylint: disable=broad-exception-caught
                     pass  # Ignore cleanup failures
 
     def test_error_handling_without_creating_issues(

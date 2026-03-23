@@ -56,7 +56,7 @@ def labels_manager(
     try:
         manager = create_github_manager(LabelsManager, github_test_setup)
         yield manager
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         pytest.skip(f"Failed to create LabelsManager: {e}")
 
 
@@ -82,7 +82,7 @@ def pr_manager(
     try:
         manager = create_github_manager(PullRequestManager, github_test_setup)
         yield manager
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         pytest.skip(f"Failed to create PullRequestManager: {e}")
 
 
@@ -359,7 +359,7 @@ class TestPullRequestManagerIntegration:
                 branch_exists_remotely = test_branch in remote_branch_names
                 print(f"Remote branches: {remote_branch_names}")
                 print(f"Branch {test_branch} exists remotely: {branch_exists_remotely}")
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 print(f"Failed to check remote branches: {e}")
                 branch_exists_remotely = False
 
@@ -384,14 +384,14 @@ class TestPullRequestManagerIntegration:
                     try:
                         repo.git.pull("origin", test_branch)
                         print(f"[OK] Pulled latest changes for {test_branch}")
-                    except Exception as e:
+                    except Exception as e:  # pylint: disable=broad-exception-caught
                         print(f"[WARN] Pull failed: {e}")
                 else:
                     print(f"Creating local tracking branch for remote {test_branch}")
                     try:
                         repo.git.checkout("-b", test_branch, f"origin/{test_branch}")
                         print(f"[OK] Created local tracking branch for {test_branch}")
-                    except Exception as e:
+                    except Exception as e:  # pylint: disable=broad-exception-caught
                         print(f"[ERROR] Failed to create tracking branch: {e}")
                         pytest.skip(
                             f"Failed to create tracking branch for {test_branch}"
@@ -427,7 +427,9 @@ class TestPullRequestManagerIntegration:
                     push_info = repo.git.push("--set-upstream", "origin", test_branch)
                     print(f"Manual push info: {push_info}")
                     push_result = True
-                except Exception as push_error:
+                except (
+                    Exception
+                ) as push_error:  # pylint: disable=broad-exception-caught
                     print(f"Manual push failed with: {push_error}")
                     assert (
                         pr_manager.project_dir is not None
@@ -458,7 +460,7 @@ class TestPullRequestManagerIntegration:
                 )
                 print(f"[DEBUG] Repository name: {pr_manager.repository_name}")
                 print(f"[DEBUG] Repository URL: {pr_manager.repository_url}")
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 print(f"[ERROR] GitHub API access failed: {e}")
                 pytest.skip(f"GitHub API access failed: {e}")
 
@@ -482,7 +484,7 @@ class TestPullRequestManagerIntegration:
             try:
                 repo.git.push("origin", test_branch)
                 print(f"[DEBUG] Pushed unique commit to remote {test_branch}")
-            except Exception as push_error:
+            except Exception as push_error:  # pylint: disable=broad-exception-caught
                 print(f"[WARN] Failed to push commit: {push_error}")
                 # Continue anyway - PR creation might still work with local commit
 
@@ -500,7 +502,7 @@ class TestPullRequestManagerIntegration:
                 if created_pr:
                     print(f"PR #{created_pr['number']}: {created_pr['title']}")
                     print(f"PR URL: {created_pr['url']}")
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 print(f"[ERROR] Exception during PR creation: {e}")
                 import traceback
 
@@ -556,7 +558,7 @@ class TestPullRequestManagerIntegration:
             if created_pr and "number" in created_pr:
                 try:
                     pr_manager.close_pull_request(created_pr["number"])
-                except Exception:
+                except Exception:  # pylint: disable=broad-exception-caught
                     pass  # Ignore cleanup failures
 
     def test_direct_instantiation(self, tmp_path: Path) -> None:
@@ -857,5 +859,5 @@ class TestLabelsManagerIntegration:
             if created_label and "name" in created_label:
                 try:
                     labels_manager.delete_label(created_label["name"])
-                except Exception:
+                except Exception:  # pylint: disable=broad-exception-caught
                     pass  # Ignore cleanup failures

@@ -24,7 +24,6 @@ except ImportError:
     # Create a mock for type checking in tests
     def execute_implement(*args, **kwargs):  # type: ignore
         """Stub for when implement module is unavailable."""
-        pass
 
 
 @pytest.mark.skipif(

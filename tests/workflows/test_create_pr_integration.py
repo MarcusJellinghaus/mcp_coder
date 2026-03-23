@@ -30,7 +30,7 @@ class TestCreatePRWorkflowIntegration:
     @pytest.mark.git_integration
     def test_workflow_prerequisite_validation(self, git_repo: tuple[Any, Path]) -> None:
         """Test that workflow properly validates prerequisites."""
-        repo, project_dir = git_repo
+        _, project_dir = git_repo
 
         # Create minimal project structure
         self._setup_minimal_project(project_dir)
@@ -74,7 +74,7 @@ class TestCreatePRWorkflowIntegration:
         # Test task tracker
         try:
             incomplete_tasks = get_incomplete_tasks(str(project_dir / "pr_info"))
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             pytest.fail(f"Task tracker check failed: {e}")
 
         # Individual assertions for better error messages
@@ -92,7 +92,7 @@ class TestCreatePRWorkflowIntegration:
     @pytest.mark.git_integration
     def test_repository_cleanup_operations(self, git_repo: tuple[Any, Path]) -> None:
         """Test repository cleanup functions work correctly."""
-        repo, project_dir = git_repo
+        _, project_dir = git_repo
 
         # Setup project with steps directory
         self._setup_project_with_steps(project_dir)
@@ -313,7 +313,7 @@ class TestWorkflowErrorHandling:
         self, git_repo: tuple[Any, Path]
     ) -> None:
         """Test workflow behavior with permission errors."""
-        repo, project_dir = git_repo
+        _, project_dir = git_repo
 
         # Setup basic structure
         pr_info_dir = project_dir / "pr_info"

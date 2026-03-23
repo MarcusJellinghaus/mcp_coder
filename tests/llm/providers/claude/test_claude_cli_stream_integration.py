@@ -132,7 +132,7 @@ class TestClaudeCliStreamIntegration:
     def test_stream_file_created_on_success(self) -> None:
         """Test that stream file is created and contains valid data."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            result = ask_claude_code_cli(
+            _ = ask_claude_code_cli(
                 question="Say 'done'.",
                 timeout=60,
                 logs_dir=tmpdir,

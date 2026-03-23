@@ -148,7 +148,7 @@ class TestGetBaseBranchOutputFormat:
         mock_detect_base_branch.return_value = "release/v2.1"
 
         args = argparse.Namespace(project_dir=None)
-        result = execute_get_base_branch(args)
+        _ = execute_get_base_branch(args)
 
         captured = capsys.readouterr()
         # Should NOT contain labels like "Base branch:" or similar

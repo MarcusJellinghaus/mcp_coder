@@ -147,7 +147,9 @@ def format_raw_response(response_data: Dict[str, Any]) -> str:
         formatted_parts.append(
             json.dumps(response_data, indent=2, default=serialize_message_for_json)
         )
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         # If serialization fails (e.g., circular reference), fall back to string representation
         formatted_parts.append(f"JSON serialization failed: {e}")
         formatted_parts.append(f"Response data type: {type(response_data)}")
@@ -165,7 +167,9 @@ def format_raw_response(response_data: Dict[str, Any]) -> str:
                 formatted_parts.append(
                     json.dumps(message, indent=2, default=serialize_message_for_json)
                 )
-            except Exception as e:
+            except (
+                Exception
+            ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                 # If individual message serialization fails, show basic info
                 formatted_parts.append(f"Message serialization failed: {e}")
                 formatted_parts.append(f"Message type: {type(message)}")
@@ -184,7 +188,9 @@ def format_raw_response(response_data: Dict[str, Any]) -> str:
             formatted_parts.append(
                 json.dumps(api_metadata, indent=2, default=serialize_message_for_json)
             )
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             formatted_parts.append(f"API metadata serialization failed: {e}")
             formatted_parts.append(f"Metadata type: {type(api_metadata)}")
     else:

@@ -36,7 +36,9 @@ def get_clipboard_text() -> Tuple[bool, str, Optional[str]]:
         logger.error(f"Pyperclip error: {error_msg}")
         return False, "", error_msg
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Unexpected clipboard error: {e}")
         return False, "", f"Clipboard access failed: {e}"
 

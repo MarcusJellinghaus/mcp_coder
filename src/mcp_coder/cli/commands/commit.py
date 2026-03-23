@@ -128,7 +128,9 @@ def validate_git_repository(project_dir: Path) -> Tuple[bool, Optional[str]]:
 
         return True, None
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         logger.error("Error validating git repository: %s", e)
         return False, f"Git validation error: {str(e)}"
 

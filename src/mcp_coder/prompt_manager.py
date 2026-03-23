@@ -432,7 +432,9 @@ def validate_prompt_directory(directory: str) -> Dict[str, Any]:
                         f"Duplicate header '{dup_name}' found across files"
                     )
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific file/path exceptions
         all_errors.append(f"Error checking cross-file duplicates: {str(e)}")
 
     return {
@@ -527,7 +529,9 @@ def _resolve_package_path(source: str) -> Optional[Path]:
             except (FileNotFoundError, ImportError):
                 pass
 
-    except Exception:
+    except (
+        Exception
+    ):  # pylint: disable=broad-exception-caught  # TODO: narrow to specific file/path exceptions
         # If anything goes wrong with package resolution, fall back to normal path handling
         pass
 
@@ -562,7 +566,9 @@ def _load_content(source: str) -> str:
                 try:
                     with open(resolved_path, "r", encoding="utf-8") as f:
                         return f.read()
-                except Exception as e:
+                except (
+                    Exception
+                ):  # pylint: disable=broad-exception-caught  # TODO: narrow to specific file/path exceptions
                     # Fall through to normal path handling if package resolution fails
                     pass
 
@@ -578,8 +584,12 @@ def _load_content(source: str) -> str:
                     with open(file_path, "r", encoding="utf-8") as f:
                         content = f.read()
                         combined_content.append(content)
-                except Exception as e:
-                    raise FileNotFoundError(f"Error reading file {file_path}: {str(e)}")
+                except (
+                    Exception
+                ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific file/path exceptions
+                    raise FileNotFoundError(
+                        f"Error reading file {file_path}: {str(e)}"
+                    ) from e
 
             return "\n\n".join(combined_content)
 
@@ -596,10 +606,12 @@ def _load_content(source: str) -> str:
                         with open(file_path, "r", encoding="utf-8") as f:
                             content = f.read()
                             combined_content.append(content)
-                    except Exception as e:
+                    except (
+                        Exception
+                    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific file/path exceptions
                         raise FileNotFoundError(
                             f"Error reading file {file_path}: {str(e)}"
-                        )
+                        ) from e
 
             return "\n\n".join(combined_content)
 
@@ -608,10 +620,14 @@ def _load_content(source: str) -> str:
             try:
                 with open(source, "r", encoding="utf-8") as f:
                     return f.read()
-            except FileNotFoundError:
-                raise FileNotFoundError(f"File '{source}' not found")
-            except Exception as e:
-                raise FileNotFoundError(f"Error reading file '{source}': {str(e)}")
+            except FileNotFoundError as exc:
+                raise FileNotFoundError(f"File '{source}' not found") from exc
+            except (
+                Exception
+            ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific file/path exceptions
+                raise FileNotFoundError(
+                    f"Error reading file '{source}': {str(e)}"
+                ) from e
     else:
         # String content
         return source

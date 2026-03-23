@@ -2,9 +2,7 @@
 """Claude Code Python SDK implementation for programmatic interaction."""
 
 import asyncio
-import json
 import logging
-import os
 import time
 from datetime import datetime
 from typing import Any, Callable, Optional, Tuple
@@ -24,7 +22,6 @@ from mcp_coder.utils.subprocess_runner import CalledProcessError, TimeoutExpired
 
 from ...types import LLM_RESPONSE_VERSION, LLMResponseDict
 from .claude_executable_finder import (
-    find_claude_executable,
     setup_claude_path,
     verify_claude_installation,
 )
@@ -132,7 +129,9 @@ def _verify_claude_before_use() -> Tuple[bool, Optional[str], Optional[str]]:
             logger.warning(
                 "setup_claude_path() returned None - Claude not found in standard locations"
             )
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.warning("Error during PATH setup: %s", e)
         claude_path = None
 
@@ -185,7 +184,9 @@ def _retry_with_backoff(
             if attempt > 0:
                 logger.debug("Function succeeded on attempt %d", attempt + 1)
             return result
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             last_exception = e
 
             if attempt < max_retries:  # Don't sleep after the last attempt
@@ -501,7 +502,9 @@ def ask_claude_code_api(
         log_llm_error(error=e, duration_ms=duration_ms)
         raise
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         # Log error before converting
         duration_ms = int((time.time() - start_time) * 1000)
         log_llm_error(error=e, duration_ms=duration_ms)
@@ -699,7 +702,9 @@ def ask_claude_code_api_detailed_sync(
         # Re-raise input validation errors as-is
         raise
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         # Convert other exceptions to CalledProcessError for consistency
         raise CalledProcessError(
             1,  # Generic error code

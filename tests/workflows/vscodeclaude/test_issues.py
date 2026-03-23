@@ -734,12 +734,6 @@ class TestBuildEligibleIssuesWithBranchCheck:
             lambda: mock_config,
         )
 
-        # Mock vscodeclaude config
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
-            lambda: {"github_username": "testuser"},
-        )
-
         # Mock get_github_username to avoid needing GitHub token
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.get_github_username",
@@ -808,12 +802,6 @@ class TestBuildEligibleIssuesWithBranchCheck:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.load_config",
             lambda: mock_config,
-        )
-
-        # Mock vscodeclaude config
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
-            lambda: {"github_username": "testuser"},
         )
 
         # Mock get_github_username to avoid needing GitHub token
@@ -885,12 +873,6 @@ class TestBuildEligibleIssuesWithBranchCheck:
             lambda: mock_config,
         )
 
-        # Mock vscodeclaude config
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
-            lambda: {"github_username": "testuser"},
-        )
-
         # Mock get_github_username to avoid needing GitHub token
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.get_github_username",
@@ -956,12 +938,6 @@ class TestBuildEligibleIssuesWithBranchCheck:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.load_config",
             lambda: mock_config,
-        )
-
-        # Mock vscodeclaude config
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
-            lambda: {"github_username": "testuser"},
         )
 
         # Mock get_github_username to avoid needing GitHub token
@@ -1033,12 +1009,6 @@ class TestBuildEligibleIssuesWithBranchCheck:
             lambda: mock_config,
         )
 
-        # Mock vscodeclaude config
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
-            lambda: {"github_username": "testuser"},
-        )
-
         # Mock get_github_username to avoid needing GitHub token
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.get_github_username",
@@ -1107,12 +1077,6 @@ class TestBuildEligibleIssuesWithBranchCheck:
             lambda: mock_config,
         )
 
-        # Mock vscodeclaude config
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.load_vscodeclaude_config",
-            lambda: {"github_username": "testuser"},
-        )
-
         # Mock get_github_username to avoid needing GitHub token
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.get_github_username",
@@ -1134,7 +1098,7 @@ class TestBuildEligibleIssuesWithBranchCheck:
         # Mock get_cached_eligible_vscodeclaude_issues to fail for bad-repo
         def mock_get_cached(repo_full_name: str, **kwargs: Any) -> list[dict[str, Any]]:
             if "bad" in repo_full_name:
-                raise Exception("API error")
+                raise RuntimeError("API error")
             return [
                 {
                     "number": 5,
@@ -1162,8 +1126,8 @@ class TestBuildEligibleIssuesWithBranchCheck:
             lambda issue: "status-01:created",
         )
 
-        eligible_issues, issues_without_branch = (
-            build_eligible_issues_with_branch_check(["bad-repo", "good-repo"])
+        eligible_issues, _ = build_eligible_issues_with_branch_check(
+            ["bad-repo", "good-repo"]
         )
 
         # Should have issue from good-repo only

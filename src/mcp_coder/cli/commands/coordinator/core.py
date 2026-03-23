@@ -7,13 +7,11 @@ This module contains:
 """
 
 import logging
-from pathlib import Path
 from typing import List, Optional
 from urllib.parse import quote
 
 from ....utils.github_operations.github_utils import parse_github_url
 from ....utils.github_operations.issues import (
-    CacheData,
     IssueBranchManager,
     IssueData,
     IssueManager,
@@ -243,7 +241,8 @@ def _filter_eligible_issues(issues: List[IssueData]) -> List[IssueData]:
 
 
 def get_eligible_issues(
-    issue_manager: IssueManager, log_level: str = "INFO"
+    issue_manager: IssueManager,
+    log_level: str = "INFO",  # pylint: disable=unused-argument
 ) -> list[IssueData]:
     """Get issues ready for automation, sorted by priority.
 
@@ -357,7 +356,7 @@ def get_cached_eligible_issues(
 
 def dispatch_workflow(
     issue: IssueData,
-    workflow_name: str,
+    workflow_name: str,  # pylint: disable=unused-argument
     repo_config: dict[str, str],
     jenkins_client: JenkinsClient,
     issue_manager: IssueManager,
@@ -469,7 +468,9 @@ def dispatch_workflow(
     job_status = jenkins_client.get_job_status(queue_id)
 
     # Build Jenkins links: pipeline URL and build URL (if available)
-    jenkins_base_url = jenkins_client._client.server.rstrip("/")
+    jenkins_base_url = jenkins_client._client.server.rstrip(
+        "/"
+    )  # pylint: disable=protected-access  # python-jenkins has no public server URL accessor
     # Convert job path to URL format: "Tests/mcp-coder-test" -> "Tests/job/mcp-coder-test"
     # URL-encode each part to handle spaces and special characters
     job_path_parts = repo_config["executor_job_path"].split("/")

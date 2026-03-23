@@ -72,7 +72,9 @@ def log_llm_request(
                 "conversation.session_type": session_status.strip("[]"),
             }
             mlflow_logger.start_run(run_name=run_name, tags=tags)
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.debug(f"Failed to start MLflow run: {e}")
 
 
@@ -132,7 +134,9 @@ def log_llm_response(
             if session_id is not None:
                 mlflow_logger.end_run("FINISHED", session_id=session_id)
             # else: leave run open — _log_to_mlflow will close it via active_run_id
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.debug(f"Failed to log MLflow response metrics: {e}")
 
 
@@ -185,5 +189,7 @@ def log_llm_error(
             mlflow_logger = get_mlflow_logger()
             mlflow_logger.log_error_metrics(error, duration_ms)
             mlflow_logger.end_run("FAILED")
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.debug(f"Failed to log MLflow error: {e}")

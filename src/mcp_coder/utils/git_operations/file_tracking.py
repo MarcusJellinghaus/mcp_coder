@@ -1,6 +1,5 @@
 """File tracking operations for git repositories."""
 
-import logging
 from pathlib import Path
 
 from git.exc import GitCommandError, InvalidGitRepositoryError
@@ -48,7 +47,9 @@ def is_file_tracked(file_path: Path, project_dir: Path) -> bool:
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.debug("Git error checking if file is tracked: %s", e)
         return False
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to GitCommandError
         logger.warning("Unexpected error checking if file is tracked: %s", e)
         return False
 
@@ -92,6 +93,8 @@ def git_move(source_path: Path, dest_path: Path, project_dir: Path) -> bool:
     except GitCommandError as e:
         logger.error("Git move failed: %s", e)
         raise
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to GitCommandError
         logger.error("Unexpected error during git move: %s", e)
         return False

@@ -63,7 +63,7 @@ def parse_iso_timestamp(timestamp_str: str) -> datetime:
         return parsed_dt
 
     except (ValueError, TypeError) as e:
-        raise ValueError(f"Invalid ISO timestamp format '{timestamp_str}': {e}")
+        raise ValueError(f"Invalid ISO timestamp format '{timestamp_str}': {e}") from e
 
 
 def now_utc() -> datetime:

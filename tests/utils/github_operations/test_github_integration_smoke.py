@@ -43,7 +43,7 @@ def labels_manager(
     try:
         manager = create_github_manager(LabelsManager, github_test_setup)
         yield manager
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         pytest.skip(f"Failed to create LabelsManager: {e}")
 
 
@@ -57,7 +57,7 @@ def pr_manager(
     try:
         manager = create_github_manager(PullRequestManager, github_test_setup)
         yield manager
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         pytest.skip(f"Failed to create PullRequestManager: {e}")
 
 
@@ -71,7 +71,7 @@ def ci_manager(
     try:
         manager = create_github_manager(CIResultsManager, github_test_setup)
         yield manager
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         pytest.skip(f"Failed to create CIResultsManager: {e}")
 
 
@@ -175,7 +175,7 @@ class TestPullRequestManagerSmoke:
             if created_pr and "number" in created_pr:
                 try:
                     pr_manager.close_pull_request(created_pr["number"])
-                except Exception:
+                except Exception:  # pylint: disable=broad-exception-caught
                     pass
 
             # Switch back to original branch and delete test branch
@@ -189,7 +189,7 @@ class TestPullRequestManagerSmoke:
                     test_branch, pr_manager.project_dir, force=True, delete_remote=True
                 )
                 print(f"[OK] Cleaned up test branch: {test_branch}")
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 print(f"[WARN] Branch cleanup failed: {e}")
 
 
@@ -242,7 +242,7 @@ class TestLabelsManagerSmoke:
             if created_label and "name" in created_label:
                 try:
                     labels_manager.delete_label(created_label["name"])
-                except Exception:
+                except Exception:  # pylint: disable=broad-exception-caught
                     pass  # Ignore cleanup failures
 
 

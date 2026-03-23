@@ -167,7 +167,9 @@ class JenkinsClient:
                 extra={"job_path": job_path, "queue_id": queue_id},
             )
             return queue_id
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             # Wrap all exceptions as JenkinsError with context
             raise JenkinsError(f"Failed to start job '{job_path}': {str(e)}") from e
 
@@ -247,7 +249,9 @@ class JenkinsClient:
                     url=None,
                 )
 
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             # Wrap all exceptions as JenkinsError with context
             raise JenkinsError(
                 f"Failed to get status for queue_id {queue_id}: {str(e)}"

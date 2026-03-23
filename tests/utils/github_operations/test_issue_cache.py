@@ -1278,7 +1278,7 @@ class TestCacheUpdateIntegration:
             try:
                 update_issue_labels_in_cache("test/repo", 123, "old-label", "new-label")
                 # Should complete without exception
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 pytest.fail(f"Cache update failure should not break workflow: {e}")
 
             # Verify appropriate warning was logged but execution continued

@@ -126,7 +126,7 @@ class TestGitPushForceWithLease:
 
         # Push initial state to remote and capture the expected SHA
         repo.git.push("--set-upstream", "origin", "main")
-        expected_sha = repo.head.commit.hexsha
+        _ = repo.head.commit.hexsha
 
         # Clone the repo to another location to simulate another developer
         other_clone_dir = tmp_path / "other_clone"

@@ -35,7 +35,6 @@ from ....workflows.vscodeclaude import (
     VSCodeClaudeSession,
     cleanup_stale_sessions,
     get_active_session_count,
-    get_folder_git_status,
     load_repo_vscodeclaude_config,
     load_sessions,
     load_vscodeclaude_config,
@@ -155,7 +154,9 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         try:
             status = client.get_job_status(queue_id)
             job_url = status.url
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
             logger.debug(f"Could not get job status: {e}")
             job_url = None
 
@@ -172,7 +173,9 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         print(f"Error: {e}", file=sys.stderr)
         return 1
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
         # Let all other exceptions bubble up with full traceback
         logger.error(f"Unexpected error: {e}", exc_info=True)
         raise
@@ -272,7 +275,9 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                     force_refresh=args.force_refresh,
                     cache_refresh_minutes=get_cache_refresh_minutes(),
                 )
-            except Exception as e:
+            except (
+                Exception
+            ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
                 logger.warning(
                     f"Cache failed for {repo_full_name}: {e}, using direct fetch"
                 )
@@ -322,12 +327,16 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                             old_label=current_label,
                             new_label=workflow_config["next_label"],
                         )
-                    except Exception as cache_error:
+                    except (
+                        Exception
+                    ) as cache_error:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
                         logger.warning(
                             f"Cache update failed for issue #{issue['number']}: {cache_error}"
                         )
 
-                except Exception as e:
+                except (
+                    Exception
+                ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
                     # Fail-fast: log error and exit immediately
                     logger.error(
                         f"Failed processing issue #{issue['number']}: {e}",
@@ -349,7 +358,9 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
         print(f"Error: {e}", file=sys.stderr)
         return 1
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
         # Let all other exceptions bubble up with full traceback
         logger.error(f"Unexpected error: {e}", exc_info=True)
         raise
@@ -447,7 +458,9 @@ def _build_cached_issues_by_repo(
             }
             cached_issues_by_repo[repo_full_name] = issues_by_number
 
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
             logger.warning(f"Failed to build cache for {repo_name}: {e}")
             if repo_full_name:
                 failed_repos.add(repo_full_name)
@@ -594,7 +607,9 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         print(f"Error: {e}", file=sys.stderr)
         return 1
 
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
         # Let all other exceptions bubble up with full traceback
         logger.error(f"Unexpected error: {e}", exc_info=True)
         raise

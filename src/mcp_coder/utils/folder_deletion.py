@@ -68,7 +68,7 @@ def _get_default_staging_dir() -> Path:
     return Path(tempfile.gettempdir()) / "safe_delete_staging"
 
 
-def _rmtree_remove_readonly(func: Callable[..., None], path: str, exc: object) -> None:
+def _rmtree_remove_readonly(func: Callable[..., None], path: str, _exc: object) -> None:
     """Error handler for shutil.rmtree to handle readonly files.
 
     This callback is used with shutil.rmtree's onerror/onexc parameter
@@ -77,7 +77,7 @@ def _rmtree_remove_readonly(func: Callable[..., None], path: str, exc: object) -
     Args:
         func: The function that raised the exception (e.g., os.remove).
         path: The path that caused the exception.
-        exc: The exception information (varies by Python version).
+        _exc: The exception information (varies by Python version).
     """
     os.chmod(path, stat.S_IWRITE)
     func(path)

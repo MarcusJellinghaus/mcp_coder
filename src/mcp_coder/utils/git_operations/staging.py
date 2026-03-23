@@ -1,6 +1,5 @@
 """Git staging operations for managing staged changes."""
 
-import logging
 from pathlib import Path
 
 from git.exc import GitCommandError, InvalidGitRepositoryError
@@ -70,7 +69,9 @@ def stage_specific_files(files: list[Path], project_dir: Path) -> bool:
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.error("Git error staging files: %s", e)
         return False
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to GitCommandError
         logger.error("Unexpected error staging files: %s", e)
         return False
 
@@ -131,6 +132,8 @@ def stage_all_changes(project_dir: Path) -> bool:
     except (InvalidGitRepositoryError, GitCommandError) as e:
         logger.error("Git error staging all changes: %s", e)
         return False
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to GitCommandError
         logger.error("Unexpected error staging all changes: %s", e)
         return False

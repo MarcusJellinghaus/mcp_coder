@@ -13,7 +13,6 @@ from .sessions import (
     clear_vscode_process_cache,
     clear_vscode_window_cache,
     is_session_active,
-    load_sessions,
 )
 from .types import VSCodeClaudeSession
 
@@ -60,7 +59,9 @@ def get_issue_current_status(
             if label.startswith("status-"):
                 return label, is_open
         return None, is_open
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.warning("Failed to get issue #%d status: %s", issue_number, e)
         return None, False  # Assume closed on error (conservative)
 
@@ -173,14 +174,18 @@ def get_folder_git_status(folder_path: Path) -> str:
     # Check if git repo
     try:
         execute_subprocess(["git", "rev-parse", "--git-dir"], options)
-    except Exception:
+    except (
+        Exception
+    ):  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         return "No Git"
 
     # Check for changes
     try:
         result = execute_subprocess(["git", "status", "--porcelain"], options)
         return "Dirty" if result.stdout.strip() else "Clean"
-    except Exception:
+    except (
+        Exception
+    ):  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         return "Error"
 
 

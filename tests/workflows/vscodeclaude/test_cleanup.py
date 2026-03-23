@@ -641,7 +641,7 @@ class TestGetStaleSessions:
         result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
 
         assert len(result) == 1
-        session, git_status, reason = result[0]
+        session, git_status, _ = result[0]
         assert session["issue_number"] == 123
         assert git_status == "Clean"
 
@@ -910,7 +910,7 @@ class TestGetStaleSessions:
         result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
 
         assert len(result) == 1
-        session, git_status, reason = result[0]
+        session, git_status, _ = result[0]
         assert session["issue_number"] == 100
         assert git_status == "Clean"
 
@@ -983,7 +983,7 @@ class TestGetStaleSessions:
         result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
 
         assert len(result) == 1
-        session, git_status, reason = result[0]
+        session, git_status, _ = result[0]
         assert session["issue_number"] == 200
         assert git_status == "Clean"
 
@@ -1056,7 +1056,7 @@ class TestGetStaleSessions:
         result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
 
         assert len(result) == 1
-        session, git_status, reason = result[0]
+        session, git_status, _ = result[0]
         assert session["issue_number"] == 300
         assert git_status == "Clean"
 
@@ -1129,7 +1129,7 @@ class TestGetStaleSessions:
         result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
 
         assert len(result) == 1
-        session, git_status, reason = result[0]
+        session, git_status, _ = result[0]
         assert session["issue_number"] == 400
         assert git_status == "Clean"
 
@@ -1271,7 +1271,7 @@ class TestGetStaleSessions:
 
         # Zombie session must appear in stale list despite VSCode PID being alive
         assert len(result) == 1
-        session, git_status, reason = result[0]
+        session, git_status, _ = result[0]
         assert session["issue_number"] == 123
         assert git_status == "Missing"
 
@@ -1414,7 +1414,7 @@ class TestGetStaleSessions:
         result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
 
         assert len(result) == 1
-        session, git_status, reason = result[0]
+        _, _, reason = result[0]
         assert reason == "closed"
 
     def test_reason_blocked(
@@ -1486,7 +1486,7 @@ class TestGetStaleSessions:
         result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
 
         assert len(result) == 1
-        session, git_status, reason = result[0]
+        _, _, reason = result[0]
         assert reason == "blocked"
 
     def test_reason_bot_status(
@@ -1558,7 +1558,7 @@ class TestGetStaleSessions:
         result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
 
         assert len(result) == 1
-        session, git_status, reason = result[0]
+        _, _, reason = result[0]
         assert reason == "bot status"
 
     def test_reason_stale_with_cache(
@@ -1628,7 +1628,7 @@ class TestGetStaleSessions:
         result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
 
         assert len(result) == 1
-        session, git_status, reason = result[0]
+        _, _, reason = result[0]
         assert reason == "stale → status-04:plan-review"
 
     def test_reason_stale_no_cache(
@@ -1680,7 +1680,7 @@ class TestGetStaleSessions:
         result = get_stale_sessions()
 
         assert len(result) == 1
-        session, git_status, reason = result[0]
+        _, _, reason = result[0]
         assert reason == "stale"
 
     def test_reason_combined_closed_blocked(
@@ -1748,7 +1748,7 @@ class TestGetStaleSessions:
         result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
 
         assert len(result) == 1
-        session, git_status, reason = result[0]
+        _, _, reason = result[0]
         assert reason == "closed, blocked"
 
     def test_includes_unassigned_sessions(

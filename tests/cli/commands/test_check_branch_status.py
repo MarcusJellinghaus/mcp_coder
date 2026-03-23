@@ -29,7 +29,6 @@ except ImportError:
     # Create a mock for type checking in tests
     def execute_check_branch_status(*args, **kwargs):  # type: ignore
         """Stub for when check_branch_status module is unavailable."""
-        pass
 
 
 @pytest.fixture

@@ -106,7 +106,7 @@ class TestLoadAllowlist:
         """Test that blank lines are ignored."""
         allowlist_file = tmp_path / "allowlist.txt"
         allowlist_file.write_text(
-            "src/file1.py\n" "\n" "   \n" "src/file2.py\n" "\n",
+            "src/file1.py\n\n   \nsrc/file2.py\n\n",
             encoding="utf-8",
         )
 
@@ -124,7 +124,7 @@ class TestLoadAllowlist:
         allowlist_file = tmp_path / "allowlist.txt"
         # Write paths with forward slashes (cross-platform format)
         allowlist_file.write_text(
-            "src/module/file1.py\n" "tests/unit/test_file.py\n",
+            "src/module/file1.py\ntests/unit/test_file.py\n",
             encoding="utf-8",
         )
 
@@ -152,7 +152,7 @@ class TestLoadAllowlist:
         """Test that leading and trailing whitespace is stripped."""
         allowlist_file = tmp_path / "allowlist.txt"
         allowlist_file.write_text(
-            "  src/file1.py  \n" "\tsrc/file2.py\t\n",
+            "  src/file1.py  \n\tsrc/file2.py\t\n",
             encoding="utf-8",
         )
 

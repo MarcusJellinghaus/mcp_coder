@@ -188,7 +188,7 @@ class TestVerifyEndToEnd:
         main()
 
         # Verify args namespace has check_models=False
-        call_args = mock_claude.call_args
+        _ = mock_claude.call_args
         # verify_claude takes no args, but we can check the parsed args
         # by inspecting that langchain was NOT called (claude provider)
         mock_claude.assert_called_once()

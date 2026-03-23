@@ -194,7 +194,7 @@ class TestResolveProjectDir:
         self, git_repo: tuple[Any, Path]
     ) -> None:
         """Test resolve_project_dir with None argument uses current directory."""
-        repo, project_dir = git_repo
+        _, project_dir = git_repo
 
         # Change to project directory and test with None
         with patch("pathlib.Path.cwd", return_value=project_dir):
@@ -208,7 +208,7 @@ class TestResolveProjectDir:
         self, git_repo: tuple[Any, Path]
     ) -> None:
         """Test resolve_project_dir with explicit path argument."""
-        repo, project_dir = git_repo
+        _, project_dir = git_repo
 
         # Test with explicit path string
         result = resolve_project_dir(str(project_dir))
@@ -248,7 +248,7 @@ class TestResolveProjectDir:
         self, git_repo: tuple[Any, Path]
     ) -> None:
         """Test resolve_project_dir converts relative path to absolute."""
-        repo, project_dir = git_repo
+        _, project_dir = git_repo
 
         # Test with relative path - use explicit relative path to tmp git repo
         # We can't properly test "." because Path.resolve() accesses the real filesystem

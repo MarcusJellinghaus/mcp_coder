@@ -73,7 +73,9 @@ def get_mcp_coder_install_path() -> Path | None:
 
         logger.warning("Could not determine mcp-coder installation directory")
         return None
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error determining mcp-coder installation path: {e}")
         return None
 
@@ -212,7 +214,9 @@ def setup_git_repo(
                 "Corrupted git repository at %s, deleting and re-cloning",
                 folder_path,
             )
-            shutil.rmtree(folder_path, onerror=_remove_readonly)
+            shutil.rmtree(
+                folder_path, onerror=_remove_readonly
+            )  # pylint: disable=deprecated-argument  # onexc requires Python 3.12+
             folder_path.mkdir(parents=True, exist_ok=True)
             is_empty = True
             has_git = False

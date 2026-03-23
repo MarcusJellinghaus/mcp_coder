@@ -339,7 +339,7 @@ class TestClosedIssueIntegration:
             patch("pathlib.Path.exists") as mock_exists,
             patch(
                 "mcp_coder.workflows.vscodeclaude.session_restart.launch_vscode"
-            ) as mock_launch,
+            ) as _mock_launch,
         ):
             # Setup mocks
             mock_load.return_value = {"sessions": sessions}
@@ -349,7 +349,7 @@ class TestClosedIssueIntegration:
             mock_exists.return_value = True
 
             # Call restart_closed_sessions
-            result = restart_closed_sessions()
+            _ = restart_closed_sessions()
 
             # Verify cache was built with all three issues
             assert 414 in cached_issues["owner/repo"]

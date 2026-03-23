@@ -5,7 +5,6 @@ from pathlib import Path
 
 from ...utils.folder_deletion import (
     DeletionFailureReason,
-    DeletionResult,
     is_directory_empty,
     safe_delete_folder,
 )
@@ -115,7 +114,9 @@ def get_stale_sessions(
                     }
                     cached_issues_by_repo[repo_full_name] = fetched_dict
                     repo_issues = fetched_dict
-                except Exception:
+                except (
+                    Exception
+                ):  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                     logger.debug(
                         "Failed to fetch issue #%d individually; skipping eligibility checks",
                         issue_number,
@@ -237,7 +238,9 @@ def delete_session_folder(session: VSCodeClaudeSession) -> bool:
         remove_session(session["folder"])
 
         return True
-    except Exception as e:
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error("Failed to delete session folder %s: %s", folder_path, e)
         return False
 

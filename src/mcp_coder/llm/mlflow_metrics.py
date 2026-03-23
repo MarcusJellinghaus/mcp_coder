@@ -94,7 +94,9 @@ class ConversationMetrics:
                                 else 0
                             )
 
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
             logger.warning(f"Failed to extract performance metrics: {e}")
 
         return metrics
@@ -162,7 +164,9 @@ class ConversationMetrics:
             else:
                 metrics["has_error"] = 0.0
 
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
             logger.warning(f"Failed to extract error metrics: {e}")
             metrics["has_error"] = 0.0
 

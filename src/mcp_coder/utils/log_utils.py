@@ -468,7 +468,9 @@ def log_function_call(
                 )
                 return result
 
-            except Exception as e:
+            except (
+                Exception
+            ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                 # Log exceptions
                 elapsed_ms = round((time.time() - start_time) * 1000, 2)
 
