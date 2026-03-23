@@ -404,6 +404,10 @@ class TestExitCodeMatrix:
             ),
             patch("mcp_coder.cli.commands.verify.log_to_mlflow"),
             patch(
+                "mcp_coder.cli.commands.verify.resolve_mcp_config_path",
+                return_value=None,
+            ),
+            patch(
                 "mcp_coder.cli.commands.verify.resolve_llm_method",
                 return_value=provider,
             ),

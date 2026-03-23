@@ -344,21 +344,22 @@ class TestBackendImportErrors:
         for mod in modules_to_remove:
             saved[mod] = sys.modules.pop(mod)
 
-        # Also remove the langchain_openai mock so import fails
+        # Block reimport by setting to None (raises ImportError)
         saved_lo = sys.modules.pop("langchain_openai", None)
 
         try:
+            sys.modules["langchain_openai"] = None  # type: ignore[assignment]
             with pytest.raises(ImportError, match="pip install"):
-                # Force reimport
                 import importlib
 
                 importlib.import_module(
                     "mcp_coder.llm.providers.langchain.openai_backend"
                 )
         finally:
-            # Restore all modules
             if saved_lo is not None:
                 sys.modules["langchain_openai"] = saved_lo
+            else:
+                sys.modules.pop("langchain_openai", None)
             for mod, val in saved.items():
                 sys.modules[mod] = val
 
@@ -376,6 +377,7 @@ class TestBackendImportErrors:
         saved_la = sys.modules.pop("langchain_anthropic", None)
 
         try:
+            sys.modules["langchain_anthropic"] = None  # type: ignore[assignment]
             with pytest.raises(ImportError, match="pip install"):
                 import importlib
 
@@ -385,6 +387,8 @@ class TestBackendImportErrors:
         finally:
             if saved_la is not None:
                 sys.modules["langchain_anthropic"] = saved_la
+            else:
+                sys.modules.pop("langchain_anthropic", None)
             for mod, val in saved.items():
                 sys.modules[mod] = val
 
@@ -402,6 +406,7 @@ class TestBackendImportErrors:
         saved_lg = sys.modules.pop("langchain_google_genai", None)
 
         try:
+            sys.modules["langchain_google_genai"] = None  # type: ignore[assignment]
             with pytest.raises(ImportError, match="pip install"):
                 import importlib
 
@@ -411,6 +416,8 @@ class TestBackendImportErrors:
         finally:
             if saved_lg is not None:
                 sys.modules["langchain_google_genai"] = saved_lg
+            else:
+                sys.modules.pop("langchain_google_genai", None)
             for mod, val in saved.items():
                 sys.modules[mod] = val
 
@@ -428,6 +435,7 @@ class TestBackendImportErrors:
         saved_lo = sys.modules.pop("langchain_openai", None)
 
         try:
+            sys.modules["langchain_openai"] = None  # type: ignore[assignment]
             with pytest.raises(ImportError, match=r"mcp-coder\[langchain\]"):
                 import importlib
 
@@ -437,5 +445,7 @@ class TestBackendImportErrors:
         finally:
             if saved_lo is not None:
                 sys.modules["langchain_openai"] = saved_lo
+            else:
+                sys.modules.pop("langchain_openai", None)
             for mod, val in saved.items():
                 sys.modules[mod] = val

@@ -238,6 +238,7 @@ class TestVerifyOrchestration:
 
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
@@ -246,6 +247,7 @@ class TestVerifyOrchestration:
         mock_provider: MagicMock,
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
+        mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
@@ -256,8 +258,6 @@ class TestVerifyOrchestration:
         mock_mlflow.return_value = _mlflow_not_installed()
         mock_prompt_llm.return_value = _minimal_llm_response()
 
-        # verify_langchain is NOT called because we mock _resolve_active_provider
-        # but the code path calls it — we need to patch it too
         with patch("mcp_coder.cli.commands.verify.verify_langchain") as mock_lc:
             mock_lc.return_value = _langchain_ok()
             result = execute_verify(_make_args())
@@ -502,6 +502,7 @@ class TestVerifyUsesSharedResolveLlmMethod:
 
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
@@ -510,6 +511,7 @@ class TestVerifyUsesSharedResolveLlmMethod:
         mock_resolve: MagicMock,
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
+        mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
@@ -532,6 +534,7 @@ class TestVerifyUsesSharedResolveLlmMethod:
 
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
@@ -540,6 +543,7 @@ class TestVerifyUsesSharedResolveLlmMethod:
         mock_resolve: MagicMock,
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
+        mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
