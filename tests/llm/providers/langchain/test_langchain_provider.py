@@ -401,3 +401,311 @@ class TestCreateChatModel:
 
         with pytest.raises(ValueError, match="unknown_llm"):
             _create_chat_model({"backend": "unknown_llm", "model": "x"})
+
+
+# ---------------------------------------------------------------------------
+# Fake exception classes for testing error tuple patching
+# ---------------------------------------------------------------------------
+
+
+class _FakeAuthError(Exception):
+    """Fake auth error for testing exception tuple patching."""
+
+
+class _FakeClientError(Exception):
+    """Fake Google ClientError for testing."""
+
+    def __init__(self, message: str, code: int) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+_MOD = "mcp_coder.llm.providers.langchain"
+
+
+# ---------------------------------------------------------------------------
+# _ask_text connection/auth error tests
+# ---------------------------------------------------------------------------
+
+
+class TestAskTextConnectionError:
+    """_ask_text wraps connection errors as LLMConnectionError."""
+
+    def _make_config(self, backend: str = "openai") -> dict[str, str | None]:
+        return {
+            "provider": "langchain",
+            "backend": backend,
+            "model": "gpt-4o",
+            "api_key": None,
+            "endpoint": None,
+            "api_version": None,
+        }
+
+    def test_connection_error_raises_llm_connection_error(self) -> None:
+        """OSError from chat_model.invoke() raises LLMConnectionError."""
+        from mcp_coder.llm.providers.langchain._exceptions import LLMConnectionError
+
+        mock_model = MagicMock()
+        mock_model.invoke.side_effect = OSError("Connection reset by peer")
+        with (
+            patch(
+                f"{_MOD}._load_langchain_config",
+                return_value=self._make_config(),
+            ),
+            patch(f"{_MOD}.load_langchain_history", return_value=[]),
+            patch(f"{_MOD}.store_langchain_history"),
+            patch(f"{_MOD}._create_chat_model", return_value=mock_model),
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain
+
+            with pytest.raises(LLMConnectionError):
+                ask_langchain("question")
+
+    def test_connection_error_message_contains_provider_hint(self) -> None:
+        """LLMConnectionError message contains provider name and env var hint."""
+        from mcp_coder.llm.providers.langchain._exceptions import LLMConnectionError
+
+        mock_model = MagicMock()
+        mock_model.invoke.side_effect = OSError("Connection reset")
+        with (
+            patch(
+                f"{_MOD}._load_langchain_config",
+                return_value=self._make_config("openai"),
+            ),
+            patch(f"{_MOD}.load_langchain_history", return_value=[]),
+            patch(f"{_MOD}.store_langchain_history"),
+            patch(f"{_MOD}._create_chat_model", return_value=mock_model),
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain
+
+            with pytest.raises(LLMConnectionError, match="OPENAI_API_KEY") as exc_info:
+                ask_langchain("question")
+        assert "OpenAI" in str(exc_info.value)
+
+
+class TestAskTextAuthError:
+    """_ask_text wraps auth errors as LLMAuthError."""
+
+    def _make_config(self, backend: str = "openai") -> dict[str, str | None]:
+        return {
+            "provider": "langchain",
+            "backend": backend,
+            "model": "gpt-4o",
+            "api_key": None,
+            "endpoint": None,
+            "api_version": None,
+        }
+
+    def test_auth_error_raises_llm_auth_error(self) -> None:
+        """Auth error from chat_model.invoke() raises LLMAuthError."""
+        from mcp_coder.llm.providers.langchain._exceptions import LLMAuthError
+
+        mock_model = MagicMock()
+        mock_model.invoke.side_effect = _FakeAuthError("invalid key")
+        with (
+            patch(
+                f"{_MOD}._load_langchain_config",
+                return_value=self._make_config("openai"),
+            ),
+            patch(f"{_MOD}.load_langchain_history", return_value=[]),
+            patch(f"{_MOD}.store_langchain_history"),
+            patch(f"{_MOD}._create_chat_model", return_value=mock_model),
+            patch(f"{_MOD}.OPENAI_AUTH_ERRORS", (_FakeAuthError,)),
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain
+
+            with pytest.raises(LLMAuthError):
+                ask_langchain("question")
+
+    def test_auth_error_message_contains_provider_hint(self) -> None:
+        """LLMAuthError message contains provider name and env var hint."""
+        from mcp_coder.llm.providers.langchain._exceptions import LLMAuthError
+
+        mock_model = MagicMock()
+        mock_model.invoke.side_effect = _FakeAuthError("invalid key")
+        with (
+            patch(
+                f"{_MOD}._load_langchain_config",
+                return_value=self._make_config("openai"),
+            ),
+            patch(f"{_MOD}.load_langchain_history", return_value=[]),
+            patch(f"{_MOD}.store_langchain_history"),
+            patch(f"{_MOD}._create_chat_model", return_value=mock_model),
+            patch(f"{_MOD}.OPENAI_AUTH_ERRORS", (_FakeAuthError,)),
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain
+
+            with pytest.raises(LLMAuthError, match="OPENAI_API_KEY") as exc_info:
+                ask_langchain("question")
+        assert "OpenAI" in str(exc_info.value)
+
+
+# ---------------------------------------------------------------------------
+# _ask_agent connection/auth error tests
+# ---------------------------------------------------------------------------
+
+
+class TestAskAgentConnectionError:
+    """_ask_agent wraps connection errors as LLMConnectionError."""
+
+    def _make_config(self, backend: str = "openai") -> dict[str, str | None]:
+        return {
+            "provider": "langchain",
+            "backend": backend,
+            "model": "gpt-4o",
+            "api_key": None,
+            "endpoint": None,
+            "api_version": None,
+        }
+
+    def test_connection_error_raises_llm_connection_error(self) -> None:
+        """OSError from asyncio.run(run_agent(...)) raises LLMConnectionError."""
+        from mcp_coder.llm.providers.langchain._exceptions import LLMConnectionError
+
+        with (
+            patch(
+                f"{_MOD}._load_langchain_config",
+                return_value=self._make_config(),
+            ),
+            patch(f"{_MOD}.load_langchain_history", return_value=[]),
+            patch(f"{_MOD}.store_langchain_history"),
+            patch(f"{_MOD}._create_chat_model", return_value=MagicMock()),
+            patch(f"{_MOD}.agent._check_agent_dependencies"),
+            patch(f"{_MOD}.asyncio.run", side_effect=OSError("Connection refused")),
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain
+
+            with pytest.raises(LLMConnectionError):
+                ask_langchain("question", mcp_config="/tmp/mcp.json")
+
+    def test_non_connection_error_propagates(self) -> None:
+        """Non-connection errors propagate unchanged from agent path."""
+        with (
+            patch(
+                f"{_MOD}._load_langchain_config",
+                return_value=self._make_config(),
+            ),
+            patch(f"{_MOD}.load_langchain_history", return_value=[]),
+            patch(f"{_MOD}.store_langchain_history"),
+            patch(f"{_MOD}._create_chat_model", return_value=MagicMock()),
+            patch(f"{_MOD}.agent._check_agent_dependencies"),
+            patch(
+                f"{_MOD}.asyncio.run",
+                side_effect=RuntimeError("unexpected agent error"),
+            ),
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain
+
+            with pytest.raises(RuntimeError, match="unexpected agent error"):
+                ask_langchain("question", mcp_config="/tmp/mcp.json")
+
+
+class TestAskAgentAuthError:
+    """_ask_agent wraps auth errors as LLMAuthError."""
+
+    def _make_config(self, backend: str = "openai") -> dict[str, str | None]:
+        return {
+            "provider": "langchain",
+            "backend": backend,
+            "model": "gpt-4o",
+            "api_key": None,
+            "endpoint": None,
+            "api_version": None,
+        }
+
+    def test_auth_error_raises_llm_auth_error(self) -> None:
+        """Auth error from agent run raises LLMAuthError."""
+        from mcp_coder.llm.providers.langchain._exceptions import LLMAuthError
+
+        with (
+            patch(
+                f"{_MOD}._load_langchain_config",
+                return_value=self._make_config("openai"),
+            ),
+            patch(f"{_MOD}.load_langchain_history", return_value=[]),
+            patch(f"{_MOD}.store_langchain_history"),
+            patch(f"{_MOD}._create_chat_model", return_value=MagicMock()),
+            patch(f"{_MOD}.agent._check_agent_dependencies"),
+            patch(
+                f"{_MOD}.asyncio.run",
+                side_effect=_FakeAuthError("invalid key"),
+            ),
+            patch(f"{_MOD}.OPENAI_AUTH_ERRORS", (_FakeAuthError,)),
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain
+
+            with pytest.raises(LLMAuthError):
+                ask_langchain("question", mcp_config="/tmp/mcp.json")
+
+
+# ---------------------------------------------------------------------------
+# ensure_truststore integration tests
+# ---------------------------------------------------------------------------
+
+
+class TestEnsureTruststoreCalled:
+    """Both _ask_text and _ask_agent call ensure_truststore."""
+
+    def _make_config(self, backend: str = "openai") -> dict[str, str | None]:
+        return {
+            "provider": "langchain",
+            "backend": backend,
+            "model": "gpt-4o",
+            "api_key": None,
+            "endpoint": None,
+            "api_version": None,
+        }
+
+    def _mock_chat_model(self, text: str = "Hello!") -> MagicMock:
+        mock_model = MagicMock()
+        mock_ai_msg = MagicMock()
+        mock_ai_msg.content = text
+        mock_ai_msg.model_dump.return_value = {"type": "ai", "content": text}
+        mock_model.invoke.return_value = mock_ai_msg
+        return mock_model
+
+    def test_ask_text_calls_ensure_truststore(self) -> None:
+        """_ask_text calls ensure_truststore before model creation."""
+        with (
+            patch(
+                f"{_MOD}._load_langchain_config",
+                return_value=self._make_config(),
+            ),
+            patch(f"{_MOD}.load_langchain_history", return_value=[]),
+            patch(f"{_MOD}.store_langchain_history"),
+            patch(
+                f"{_MOD}._create_chat_model",
+                return_value=self._mock_chat_model(),
+            ),
+            patch(f"{_MOD}.ensure_truststore") as mock_ts,
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain
+
+            ask_langchain("question")
+        mock_ts.assert_called_once()
+
+    def test_ask_agent_calls_ensure_truststore(self) -> None:
+        """_ask_agent calls ensure_truststore before model creation."""
+        with (
+            patch(
+                f"{_MOD}._load_langchain_config",
+                return_value=self._make_config(),
+            ),
+            patch(f"{_MOD}.load_langchain_history", return_value=[]),
+            patch(f"{_MOD}.store_langchain_history"),
+            patch(f"{_MOD}._create_chat_model", return_value=MagicMock()),
+            patch(f"{_MOD}.agent._check_agent_dependencies"),
+            patch(
+                f"{_MOD}.asyncio.run",
+                return_value=(
+                    "response",
+                    [],
+                    {"agent_steps": 1, "total_tool_calls": 0},
+                ),
+            ),
+            patch(f"{_MOD}.ensure_truststore") as mock_ts,
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain
+
+            ask_langchain("question", mcp_config="/tmp/mcp.json")
+        mock_ts.assert_called_once()

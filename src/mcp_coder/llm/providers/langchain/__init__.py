@@ -23,11 +23,45 @@ from mcp_coder.llm.storage.session_storage import (
 from mcp_coder.llm.types import LLM_RESPONSE_VERSION, LLMResponseDict
 from mcp_coder.utils.user_config import get_config_values
 
+from ._exceptions import (
+    ANTHROPIC_AUTH_ERRORS,
+    CONNECTION_ERRORS,
+    GOOGLE_CLIENT_ERRORS,
+    OPENAI_AUTH_ERRORS,
+    LLMAuthError,
+    LLMConnectionError,
+    is_google_auth_error,
+    raise_auth_error,
+    raise_connection_error,
+)
+from ._ssl import ensure_truststore
+
 if TYPE_CHECKING:
     from langchain_core.language_models import BaseChatModel
 
 
 logger = logging.getLogger(__name__)
+
+_BACKEND_ERROR_PARAMS: dict[str, tuple[str, str, str]] = {
+    "openai": (
+        "OpenAI",
+        "OPENAI_API_KEY",
+        "endpoint/base_url if using a custom server",
+    ),
+    "gemini": ("Gemini", "GEMINI_API_KEY", ""),
+    "anthropic": ("Anthropic", "ANTHROPIC_API_KEY", ""),
+}
+
+
+def _auth_errors_for_backend(backend: str | None) -> tuple[type[Exception], ...]:
+    """Return the auth error tuple for the given backend."""
+    if backend == "openai":
+        return OPENAI_AUTH_ERRORS
+    if backend == "anthropic":
+        return ANTHROPIC_AUTH_ERRORS
+    if backend == "gemini":
+        return GOOGLE_CLIENT_ERRORS  # needs is_google_auth_error() check at call site
+    return ()
 
 
 def _load_langchain_config() -> dict[str, str | None]:
@@ -199,10 +233,23 @@ def _ask_text(
     history_messages = messages_from_dict(history)
     lc_messages = history_messages + [HumanMessage(content=question)]
 
+    ensure_truststore()
     chat_model = _create_chat_model(config, timeout=timeout)
 
     try:
         ai_msg = chat_model.invoke(lc_messages)
+    except (*_auth_errors_for_backend(backend),) as exc:
+        provider, env_var, endpoint_hint = _BACKEND_ERROR_PARAMS.get(
+            backend or "", (backend or "", "", "")
+        )
+        if backend == "gemini" and not is_google_auth_error(exc):
+            raise_connection_error(provider, env_var, exc, endpoint_hint)
+        raise_auth_error(provider, env_var, exc)
+    except CONNECTION_ERRORS as exc:
+        provider, env_var, endpoint_hint = _BACKEND_ERROR_PARAMS.get(
+            backend or "", (backend or "", "", "")
+        )
+        raise_connection_error(provider, env_var, exc, endpoint_hint)
     except Exception as exc:
         exc_str = str(exc)
         if "404" in exc_str or "not_found" in exc_str.lower() or "NOT_FOUND" in exc_str:
@@ -289,20 +336,35 @@ def _ask_agent(
 
     _check_agent_dependencies()
 
+    ensure_truststore()
     chat_model = _create_chat_model(config, timeout=timeout)
     history: list[dict[str, Any]] = load_langchain_history(session_id)
 
-    text, messages, stats = asyncio.run(
-        run_agent(
-            question=question,
-            chat_model=chat_model,
-            messages=history,
-            mcp_config_path=mcp_config,
-            execution_dir=execution_dir,
-            env_vars=env_vars,
-            timeout=timeout,
+    agent_backend = config.get("backend")
+    try:
+        text, messages, stats = asyncio.run(
+            run_agent(
+                question=question,
+                chat_model=chat_model,
+                messages=history,
+                mcp_config_path=mcp_config,
+                execution_dir=execution_dir,
+                env_vars=env_vars,
+                timeout=timeout,
+            )
         )
-    )
+    except (*_auth_errors_for_backend(agent_backend),) as exc:
+        provider, env_var, endpoint_hint = _BACKEND_ERROR_PARAMS.get(
+            agent_backend or "", (agent_backend or "", "", "")
+        )
+        if agent_backend == "gemini" and not is_google_auth_error(exc):
+            raise_connection_error(provider, env_var, exc, endpoint_hint)
+        raise_auth_error(provider, env_var, exc)
+    except CONNECTION_ERRORS as exc:
+        provider, env_var, endpoint_hint = _BACKEND_ERROR_PARAMS.get(
+            agent_backend or "", (agent_backend or "", "", "")
+        )
+        raise_connection_error(provider, env_var, exc, endpoint_hint)
 
     store_langchain_history(session_id, messages)
 
