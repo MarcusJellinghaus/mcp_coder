@@ -53,14 +53,15 @@ elif groups:
     groups[-1] = (label, lines_so_far + [line])
 ```
 
-### Docstring update
+### Docstring updates
 
-Update the `_parse_groups()` docstring to state that **all** lines after `##[endgroup]` (not just `##[error]`) are attached to the preceding group.
+1. Update the `_parse_groups()` docstring to state that **all** lines after `##[endgroup]` (not just `##[error]`) are attached to the preceding group.
+2. Update the `_extract_failed_step_log()` docstring (line 87): change "Lines starting with `##[error]` immediately after `##[endgroup]` are included" to reflect that **all** lines after `##[endgroup]` are now included.
 
 ---
 
 ## DONE WHEN
 
 - [ ] `_parse_groups()` captures all lines between `##[endgroup]` and next marker
-- [ ] Docstring updated
+- [ ] Both docstrings updated (`_parse_groups` and `_extract_failed_step_log`)
 - [ ] `pylint`, `mypy`, `pytest` all pass (existing tests still green)
