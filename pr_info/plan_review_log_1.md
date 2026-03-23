@@ -65,3 +65,16 @@
   2. Non-existent `mcp-coder init` command in hint → replaced with actual docs path
   3. Missing section-to-env-var mapping guidance → added `_SECTION_ENV_VARS` example
   4. Wrong docs path `docs/configuration.md` → corrected to `docs/configuration/config.md`
+
+## Round 4 — 2026-03-23 (supervisor correction)
+
+**Findings**:
+- **Reverted**: Hint text restored to `"Run 'mcp-coder init' to create a default config"` per issue #552 (references upcoming #554)
+- **Verified**: Issue text cross-checked against plan — no other discrepancies found
+  - `_LABEL_MAP` entries: issue suggests adding them, but plan correctly uses inline formatting (design decision documented in summary)
+  - `[llm] provider` cleanup: confirmed not needed (key doesn't exist in codebase)
+  - `_compute_exit_code` parameter: plan uses `config_has_error: bool` instead of full `config_result` dict — cleaner API
+
+**Changes**: Reverted hint text in `pr_info/steps/step_1.md`
+
+**Status**: Ready to commit
