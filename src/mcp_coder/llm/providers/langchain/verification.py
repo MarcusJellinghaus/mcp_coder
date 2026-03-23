@@ -1,17 +1,21 @@
 """LangChain provider verification functionality.
 
 Provides verify_langchain() which checks configuration, packages, API key,
-and optionally sends a test prompt. Returns a structured dict (no printing).
+and reports readiness. Returns a structured dict (no printing).
 """
 
 from __future__ import annotations
 
+import asyncio
 import importlib.util
+import logging
 import os
-import time
 from typing import Any
 
-from . import _load_langchain_config, ask_langchain
+from . import _load_langchain_config
+from .agent import _load_mcp_server_config
+
+logger = logging.getLogger(__name__)
 
 _BACKEND_ENV_VARS: dict[str, str] = {
     "openai": "OPENAI_API_KEY",
@@ -100,7 +104,6 @@ def _check_mcp_adapter_packages() -> dict[str, dict[str, Any]]:
 def verify_langchain(
     check_models: bool = False,
     mcp_config_path: str | None = None,
-    env_vars: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Verify LangChain provider configuration and connectivity.
 
@@ -109,13 +112,11 @@ def verify_langchain(
 
     Args:
         check_models: If True, also list available models for the backend.
-        mcp_config_path: Path to .mcp.json for MCP agent smoke test.
-        env_vars: Optional environment variables for var substitution.
+        mcp_config_path: Unused, kept for API compatibility.
 
     Returns:
         Dict with keys: backend, model, api_key, langchain_core,
-        backend_package, mcp_adapters, langgraph, test_prompt, overall_ok.
-        If mcp_config_path is provided, also includes mcp_agent_test.
+        backend_package, mcp_adapters, langgraph, overall_ok.
         If check_models=True, also includes available_models.
     """
     config = _load_langchain_config()
@@ -177,88 +178,18 @@ def verify_langchain(
     result["mcp_adapters"] = mcp_pkg_results["mcp_adapters"]
     result["langgraph"] = mcp_pkg_results["langgraph"]
 
-    # Test prompt
-    if api_key and backend:
-        start = time.monotonic()
-        try:
-            ask_langchain("Reply with OK", timeout=15)
-            elapsed = time.monotonic() - start
-            result["test_prompt"] = {
-                "ok": True,
-                "value": f"responded in {elapsed:.1f}s",
-                "error": None,
-            }
-        except Exception as exc:
-            result["test_prompt"] = {
-                "ok": False,
-                "value": None,
-                "error": str(exc),
-            }
-    else:
-        result["test_prompt"] = {
-            "ok": None,
-            "value": "skipped (no API key)" if not api_key else "skipped (no backend)",
-            "error": None,
-        }
-
     # Check models (optional)
     if check_models and backend:
         result["available_models"] = _list_models_for_backend(
             backend, api_key, config.get("endpoint")
         )
 
-    # End-to-end MCP agent test (only when mcp_config_path provided)
-    if mcp_config_path:
-        try:
-            from ...interface import ask_llm  # lazy to avoid circular import
-
-            ask_llm(
-                "Reply with OK",
-                provider="langchain",
-                mcp_config=mcp_config_path,
-                env_vars=env_vars,
-                timeout=30,
-            )
-            result["mcp_agent_test"] = {"ok": True, "value": "agent responded"}
-        except FileNotFoundError as exc:
-            result["mcp_agent_test"] = {
-                "ok": False,
-                "value": None,
-                "error": f"MCP config not found: {exc}",
-            }
-        except ImportError as exc:
-            result["mcp_agent_test"] = {
-                "ok": False,
-                "value": None,
-                "error": f"Missing dependency: {exc}",
-            }
-        except ConnectionError as exc:
-            result["mcp_agent_test"] = {
-                "ok": False,
-                "value": None,
-                "error": f"MCP server failed to start: {exc}",
-            }
-        except (
-            Exception
-        ) as exc:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-            result["mcp_agent_test"] = {
-                "ok": False,
-                "value": None,
-                "error": f"Agent test failed: {type(exc).__name__}: {exc}",
-            }
-
-    # overall_ok: True when backend configured AND backend package installed AND
-    # MCP adapter packages installed AND
-    # (test_prompt succeeded OR test_prompt was skipped due to no API key)
-    test_prompt_ok = (
-        result["test_prompt"]["ok"] is True or result["test_prompt"]["ok"] is None
-    )
+    # overall_ok: True when backend configured AND all required packages installed
     result["overall_ok"] = bool(
         backend
         and result["backend_package"]["ok"]
         and result["mcp_adapters"]["ok"]
         and result["langgraph"]["ok"]
-        and test_prompt_ok
     )
 
     return result
@@ -288,3 +219,87 @@ def _list_models_for_backend(
         Exception
     ) as exc:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         return {"ok": False, "value": [], "error": str(exc)}
+
+
+# ---------------------------------------------------------------------------
+# MCP server health check
+# ---------------------------------------------------------------------------
+
+# Lazy import — only needed when verify_mcp_servers() is actually called.
+_mcp_client_cache: dict[str, Any] = {}
+
+
+def _import_mcp_client() -> Any:
+    """Deferred import of MultiServerMCPClient.
+
+    Returns:
+        The MultiServerMCPClient class.
+    """
+    if "cls" not in _mcp_client_cache:
+        from langchain_mcp_adapters.client import MultiServerMCPClient as _Client
+
+        _mcp_client_cache["cls"] = _Client
+    return _mcp_client_cache["cls"]
+
+
+async def _check_servers(
+    server_config: dict[str, dict[str, object]],
+    timeout: int,
+) -> dict[str, dict[str, Any]]:
+    """Connect to each server and list tools (async internals).
+
+    Args:
+        server_config: Dict mapping server names to their configurations.
+        timeout: Connection timeout in seconds per server.
+
+    Returns:
+        Dict mapping server names to result dicts with ok, value, and tools keys.
+    """
+    client_cls = _import_mcp_client()
+    results: dict[str, dict[str, Any]] = {}
+
+    for server_name in server_config:
+        single_config = {server_name: server_config[server_name]}
+        client = client_cls(single_config)
+        try:
+            async with asyncio.timeout(timeout):
+                async with client.session(server_name) as session:
+                    tools = await session.list_tools()
+                    results[server_name] = {
+                        "ok": True,
+                        "value": f"{len(tools.tools)} tools available",
+                        "tools": len(tools.tools),
+                    }
+        except Exception as exc:  # pylint: disable=broad-except
+            results[server_name] = {
+                "ok": False,
+                "value": str(exc),
+                "error": type(exc).__name__,
+            }
+    return results
+
+
+def verify_mcp_servers(
+    mcp_config_path: str,
+    timeout: int = 15,
+) -> dict[str, Any]:
+    """Check each configured MCP server by connecting and listing tools.
+
+    Args:
+        mcp_config_path: Path to the .mcp.json configuration file.
+        timeout: Connection timeout in seconds per server.
+
+    Returns:
+        Dict with per-server results and overall_ok.
+        Keys: ``"servers"`` (dict of server_name → result),
+        ``"overall_ok"`` (bool).
+        Each server result: ``{"ok": bool, "value": str, "tools": int | None,
+        "error": str | None}``.
+    """
+    server_config = _load_mcp_server_config(mcp_config_path)
+    if not server_config:
+        return {"servers": {}, "overall_ok": True, "value": "no servers configured"}
+
+    results = asyncio.run(_check_servers(server_config, timeout))
+    overall_ok = all(r["ok"] for r in results.values())
+    return {"servers": results, "overall_ok": overall_ok}

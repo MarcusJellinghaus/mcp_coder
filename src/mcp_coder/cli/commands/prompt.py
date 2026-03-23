@@ -34,7 +34,7 @@ from ..utils import (
 logger = logging.getLogger(__name__)
 
 
-def _log_to_mlflow(
+def log_to_mlflow(
     response_data: LLMResponseDict,
     prompt: str,
     project_dir: Path,
@@ -231,7 +231,7 @@ def execute_prompt(
                 return 1
 
             # Log to MLflow (even in session-id mode)
-            _log_to_mlflow(response_dict, args.prompt, project_dir)
+            log_to_mlflow(response_dict, args.prompt, project_dir)
 
             print(session_id)
             return 0
@@ -253,7 +253,7 @@ def execute_prompt(
             formatted_output = json.dumps(response_dict, indent=2, default=str)
 
             # Always log to MLflow if enabled
-            _log_to_mlflow(response_dict, args.prompt, project_dir, branch_name)
+            log_to_mlflow(response_dict, args.prompt, project_dir, branch_name)
 
             # Store response to file if requested
             if getattr(args, "store_response", False):
@@ -279,7 +279,7 @@ def execute_prompt(
             formatted_output = llm_response["text"].strip()
 
             # Always log to MLflow if enabled
-            _log_to_mlflow(llm_response, args.prompt, project_dir, branch_name)
+            log_to_mlflow(llm_response, args.prompt, project_dir, branch_name)
 
             # Store response to file if requested
             if getattr(args, "store_response", False):
@@ -302,7 +302,7 @@ def execute_prompt(
             )
 
             # Always log to MLflow if enabled
-            _log_to_mlflow(llm_response, args.prompt, project_dir, branch_name)
+            log_to_mlflow(llm_response, args.prompt, project_dir, branch_name)
 
             # Store response to file if requested
             if getattr(args, "store_response", False):

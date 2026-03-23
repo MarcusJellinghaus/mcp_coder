@@ -45,7 +45,6 @@ def _make_langchain_result(ok: bool = True) -> dict[str, Any]:
             "api_key": {"ok": True, "value": "sk-ab...7x2f", "source": "env var"},
             "langchain_core": {"ok": True, "value": "installed"},
             "backend_package": {"ok": True, "value": "langchain-openai installed"},
-            "test_prompt": {"ok": True, "value": "responded in 1.2s", "error": None},
             "overall_ok": True,
         }
     return {
@@ -54,7 +53,6 @@ def _make_langchain_result(ok: bool = True) -> dict[str, Any]:
         "api_key": {"ok": False, "value": None, "source": None},
         "langchain_core": {"ok": True, "value": "installed"},
         "backend_package": {"ok": False, "value": "langchain-openai not installed"},
-        "test_prompt": {"ok": None, "value": "skipped (no API key)", "error": None},
         "overall_ok": False,
     }
 
@@ -121,6 +119,8 @@ class TestVerifyEndToEnd:
     CLI path: argument parsing → execute_verify → domain mocks → output.
     """
 
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
@@ -130,12 +130,22 @@ class TestVerifyEndToEnd:
         mock_provider: MagicMock,
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Output contains all three section headers."""
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _make_claude_result(ok=True)
         mock_mlflow.return_value = _make_mlflow_result(installed=False)
+        mock_prompt_llm.return_value = {
+            "version": "1.0",
+            "timestamp": "2026-01-01T00:00:00",
+            "text": "OK",
+            "session_id": None,
+            "provider": "claude",
+            "raw_response": {},
+        }
 
         exit_code = main()
         output = capsys.readouterr().out
@@ -145,6 +155,8 @@ class TestVerifyEndToEnd:
         assert "=== MLFLOW ===" in output
         assert exit_code == 0
 
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_langchain")
@@ -158,18 +170,30 @@ class TestVerifyEndToEnd:
         mock_lc: MagicMock,
         mock_mlflow: MagicMock,
         mock_resolve_mcp: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
     ) -> None:
         """--check-models flag reaches verify_langchain via full CLI path."""
         mock_provider.return_value = ("langchain", "config.toml")
         mock_claude.return_value = _make_claude_result(ok=True)
         mock_lc.return_value = _make_langchain_result(ok=True)
         mock_mlflow.return_value = _make_mlflow_result(installed=False)
+        mock_prompt_llm.return_value = {
+            "version": "1.0",
+            "timestamp": "2026-01-01T00:00:00",
+            "text": "OK",
+            "session_id": None,
+            "provider": "claude",
+            "raw_response": {},
+        }
 
         exit_code = main()
 
         assert exit_code == 0
         mock_lc.assert_called_once_with(check_models=True, mcp_config_path=None)
 
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
@@ -179,11 +203,21 @@ class TestVerifyEndToEnd:
         mock_provider: MagicMock,
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
     ) -> None:
         """--check-models defaults to False when not provided."""
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _make_claude_result(ok=True)
         mock_mlflow.return_value = _make_mlflow_result(installed=False)
+        mock_prompt_llm.return_value = {
+            "version": "1.0",
+            "timestamp": "2026-01-01T00:00:00",
+            "text": "OK",
+            "session_id": None,
+            "provider": "claude",
+            "raw_response": {},
+        }
 
         main()
 
@@ -193,6 +227,8 @@ class TestVerifyEndToEnd:
         # by inspecting that langchain was NOT called (claude provider)
         mock_claude.assert_called_once()
 
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
@@ -202,12 +238,22 @@ class TestVerifyEndToEnd:
         mock_provider: MagicMock,
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Output contains platform-appropriate status symbols."""
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _make_claude_result(ok=True)
         mock_mlflow.return_value = _make_mlflow_result(installed=False)
+        mock_prompt_llm.return_value = {
+            "version": "1.0",
+            "timestamp": "2026-01-01T00:00:00",
+            "text": "OK",
+            "session_id": None,
+            "provider": "claude",
+            "raw_response": {},
+        }
 
         main()
         output = capsys.readouterr().out
@@ -215,6 +261,8 @@ class TestVerifyEndToEnd:
         # On Windows: [OK], on Unix: checkmark. Either way, status is shown.
         assert "[OK]" in output or "\u2713" in output
 
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
@@ -224,12 +272,22 @@ class TestVerifyEndToEnd:
         mock_provider: MagicMock,
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Active provider name and source appear in output."""
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _make_claude_result(ok=True)
         mock_mlflow.return_value = _make_mlflow_result(installed=False)
+        mock_prompt_llm.return_value = {
+            "version": "1.0",
+            "timestamp": "2026-01-01T00:00:00",
+            "text": "OK",
+            "session_id": None,
+            "provider": "claude",
+            "raw_response": {},
+        }
 
         main()
         output = capsys.readouterr().out
@@ -237,6 +295,8 @@ class TestVerifyEndToEnd:
         assert "claude" in output
         assert "default" in output
 
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_langchain")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
@@ -248,6 +308,8 @@ class TestVerifyEndToEnd:
         mock_claude: MagicMock,
         mock_lc: MagicMock,
         mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """LangChain details section appears when provider is langchain."""
@@ -255,6 +317,14 @@ class TestVerifyEndToEnd:
         mock_claude.return_value = _make_claude_result(ok=True)
         mock_lc.return_value = _make_langchain_result(ok=True)
         mock_mlflow.return_value = _make_mlflow_result(installed=False)
+        mock_prompt_llm.return_value = {
+            "version": "1.0",
+            "timestamp": "2026-01-01T00:00:00",
+            "text": "OK",
+            "session_id": None,
+            "provider": "claude",
+            "raw_response": {},
+        }
 
         main()
         output = capsys.readouterr().out
@@ -262,6 +332,8 @@ class TestVerifyEndToEnd:
         assert "LLM PROVIDER DETAILS" in output
         assert "openai" in output
 
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
@@ -271,12 +343,22 @@ class TestVerifyEndToEnd:
         mock_provider: MagicMock,
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Claude fallback note shown when provider is claude."""
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _make_claude_result(ok=True)
         mock_mlflow.return_value = _make_mlflow_result(installed=False)
+        mock_prompt_llm.return_value = {
+            "version": "1.0",
+            "timestamp": "2026-01-01T00:00:00",
+            "text": "OK",
+            "session_id": None,
+            "provider": "claude",
+            "raw_response": {},
+        }
 
         main()
         output = capsys.readouterr().out
@@ -287,6 +369,15 @@ class TestVerifyEndToEnd:
 # ---------------------------------------------------------------------------
 # Exit code matrix tests
 # ---------------------------------------------------------------------------
+
+_MOCK_LLM_RESPONSE: dict[str, Any] = {
+    "version": "1.0",
+    "timestamp": "2026-01-01T00:00:00",
+    "text": "OK",
+    "session_id": None,
+    "provider": "claude",
+    "raw_response": {},
+}
 
 
 class TestExitCodeMatrix:
@@ -307,6 +398,15 @@ class TestExitCodeMatrix:
         """Run main() with mocked domain functions and return exit code."""
         with (
             patch("sys.argv", ["mcp-coder", "verify"]),
+            patch(
+                "mcp_coder.cli.commands.verify.prompt_llm",
+                return_value=_MOCK_LLM_RESPONSE,
+            ),
+            patch("mcp_coder.cli.commands.verify.log_to_mlflow"),
+            patch(
+                "mcp_coder.cli.commands.verify.resolve_mcp_config_path",
+                return_value=None,
+            ),
             patch(
                 "mcp_coder.cli.commands.verify.resolve_llm_method",
                 return_value=provider,

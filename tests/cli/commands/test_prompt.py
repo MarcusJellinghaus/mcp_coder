@@ -9,7 +9,7 @@ from unittest.mock import Mock, mock_open, patch
 
 import pytest
 
-from mcp_coder.cli.commands.prompt import _log_to_mlflow, execute_prompt
+from mcp_coder.cli.commands.prompt import execute_prompt, log_to_mlflow
 from mcp_coder.llm.types import LLMResponseDict
 
 
@@ -916,7 +916,7 @@ class TestLogToMlflow:
         mock_mlflow.has_session.return_value = True
         mock_get_mlflow.return_value = mock_mlflow
 
-        _log_to_mlflow(self._make_response("sid-1"), "test prompt", Path("/proj"))
+        log_to_mlflow(self._make_response("sid-1"), "test prompt", Path("/proj"))
 
         mock_mlflow.start_run.assert_called_once_with(session_id="sid-1")
         mock_mlflow.log_conversation_artifacts.assert_called_once()
@@ -935,7 +935,7 @@ class TestLogToMlflow:
         mock_mlflow.active_run_id = None  # no open run from log_llm_response
         mock_get_mlflow.return_value = mock_mlflow
 
-        _log_to_mlflow(self._make_response("sid-2"), "test prompt", Path("/proj"))
+        log_to_mlflow(self._make_response("sid-2"), "test prompt", Path("/proj"))
 
         mock_mlflow.start_run.assert_called_once_with()
         mock_mlflow.log_conversation.assert_called_once()
@@ -950,14 +950,14 @@ class TestLogToMlflow:
         """None session_id but run still open: log artifacts to existing run, close it.
 
         This is the normal path when session_id=None: log_llm_response leaves
-        the run open, and _log_to_mlflow detects it via active_run_id.
+        the run open, and log_to_mlflow detects it via active_run_id.
         """
         mock_mlflow = Mock()
         mock_mlflow.config.enabled = True
         mock_mlflow.active_run_id = "run-open-xyz"  # run left open by log_llm_response
         mock_get_mlflow.return_value = mock_mlflow
 
-        _log_to_mlflow(self._make_response(None), "test prompt", Path("/proj"))
+        log_to_mlflow(self._make_response(None), "test prompt", Path("/proj"))
 
         mock_mlflow.has_session.assert_not_called()
         mock_mlflow.start_run.assert_not_called()
@@ -976,7 +976,7 @@ class TestLogToMlflow:
         mock_mlflow.active_run_id = None  # no open run
         mock_get_mlflow.return_value = mock_mlflow
 
-        _log_to_mlflow(self._make_response(None), "test prompt", Path("/proj"))
+        log_to_mlflow(self._make_response(None), "test prompt", Path("/proj"))
 
         mock_mlflow.has_session.assert_not_called()
         mock_mlflow.start_run.assert_called_once_with()
@@ -993,7 +993,7 @@ class TestLogToMlflow:
         mock_mlflow.config.enabled = False
         mock_get_mlflow.return_value = mock_mlflow
 
-        _log_to_mlflow(self._make_response(), "test prompt", Path("/proj"))
+        log_to_mlflow(self._make_response(), "test prompt", Path("/proj"))
 
         mock_mlflow.start_run.assert_not_called()
         mock_mlflow.log_conversation.assert_not_called()
@@ -1005,14 +1005,14 @@ class TestLogToMlflow:
         self,
         mock_get_mlflow: Mock,
     ) -> None:
-        """Exception in logging: end_run('FAILED') called; _log_to_mlflow does not raise."""
+        """Exception in logging: end_run('FAILED') called; log_to_mlflow does not raise."""
         mock_mlflow = Mock()
         mock_mlflow.config.enabled = True
         mock_mlflow.has_session.return_value = True
         mock_mlflow.start_run.side_effect = Exception("resume failed")
         mock_get_mlflow.return_value = mock_mlflow
 
-        _log_to_mlflow(
+        log_to_mlflow(
             self._make_response("sid-1"), "test prompt", Path("/proj")
         )  # must not raise
 

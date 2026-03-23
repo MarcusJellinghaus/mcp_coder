@@ -217,6 +217,8 @@ def _ask_text(
 
     text = ai_msg.content if isinstance(ai_msg.content, str) else str(ai_msg.content)
 
+    _log_text_mlflow(config, session_id)
+
     raw: dict[str, object] = {
         "backend": backend,
         "model": config.get("model", ""),
@@ -322,6 +324,29 @@ def _ask_agent(
         provider="langchain",
         raw_response=raw_response,
     )
+
+
+def _log_text_mlflow(
+    config: dict[str, str | None],
+    session_id: str,
+) -> None:
+    """Log text-mode params to MLflow (mirrors _log_agent_mlflow for agent mode)."""
+    try:
+        mlflow_logger = get_mlflow_logger()
+        mlflow_logger.start_run(session_id=session_id)
+
+        try:
+            mlflow_logger.log_params(
+                {
+                    "backend": config.get("backend", ""),
+                    "model": config.get("model", ""),
+                    "mode": "text",
+                }
+            )
+        finally:
+            mlflow_logger.end_run(session_id=session_id)
+    except Exception:
+        logger.debug("MLflow logging failed for text mode", exc_info=True)
 
 
 def _log_agent_mlflow(

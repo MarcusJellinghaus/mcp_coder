@@ -664,9 +664,8 @@ class TestPackageIntegration:
 
         # Test that the commit prompt contains key sections
         result = get_prompt(str(prompts_file), "Git Commit Message Generation")
-        assert "REQUIREMENTS:" in result
-        assert "ANALYSIS STEPS:" in result
-        assert "OUTPUT FORMAT:" in result
+        assert "RULES:" in result
+        assert "OUTPUT:" in result
         assert "EXAMPLES:" in result
 
     def test_commit_prompt_content(self) -> None:
@@ -688,14 +687,13 @@ class TestPackageIntegration:
 
         # Check for analysis guidance
         assert "git diff" in result
-        assert "git status" in result
 
         # Check for length guidance
         assert "50 characters" in result
 
         # Check for examples
-        assert "feat:" in result or "feat(" in result
-        assert "fix:" in result or "fix(" in result
+        assert "feat(" in result
+        assert "fix(" in result
 
 
 class TestGetPromptWithSubstitutions:

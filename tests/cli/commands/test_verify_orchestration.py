@@ -1,13 +1,13 @@
-"""Tests for the verify CLI orchestrator (Step 5)."""
+"""Tests for the verify CLI orchestrator (Step 5 & 6)."""
 
 import argparse
+import datetime
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from mcp_coder.cli.commands.verify import (
-    _compute_exit_code,
     _format_section,
     execute_verify,
 )
@@ -23,6 +23,18 @@ def _make_args(**kwargs: Any) -> argparse.Namespace:
     }
     defaults.update(kwargs)
     return argparse.Namespace(**defaults)
+
+
+def _minimal_llm_response() -> dict[str, Any]:
+    """Return a minimal LLMResponseDict-shaped dict for mocking prompt_llm."""
+    return {
+        "version": "1.0",
+        "timestamp": "2026-01-01T00:00:00",
+        "text": "OK",
+        "session_id": None,
+        "provider": "claude",
+        "raw_response": {},
+    }
 
 
 def _claude_ok() -> dict[str, Any]:
@@ -50,7 +62,6 @@ def _langchain_ok() -> dict[str, Any]:
         "api_key": {"ok": True, "value": "sk-ab...7x2f", "source": "env var"},
         "langchain_core": {"ok": True, "value": "installed"},
         "backend_package": {"ok": True, "value": "langchain-openai installed"},
-        "test_prompt": {"ok": True, "value": "responded in 1.2s", "error": None},
         "overall_ok": True,
     }
 
@@ -62,7 +73,6 @@ def _langchain_fail() -> dict[str, Any]:
         "api_key": {"ok": False, "value": None, "source": None},
         "langchain_core": {"ok": True, "value": "installed"},
         "backend_package": {"ok": False, "value": "langchain-openai not installed"},
-        "test_prompt": {"ok": None, "value": "skipped (no API key)", "error": None},
         "overall_ok": False,
     }
 
@@ -101,6 +111,8 @@ def _mlflow_enabled_broken() -> dict[str, Any]:
 class TestVerifyOrchestration:
     """Tests for the verify CLI orchestrator."""
 
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_langchain")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
@@ -111,6 +123,8 @@ class TestVerifyOrchestration:
         mock_claude: MagicMock,
         mock_lc: MagicMock,
         mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """All three sections appear in output."""
@@ -118,6 +132,7 @@ class TestVerifyOrchestration:
         mock_claude.return_value = _claude_ok()
         mock_lc.return_value = _langchain_ok()
         mock_mlflow.return_value = _mlflow_ok()
+        mock_prompt_llm.return_value = _minimal_llm_response()
 
         execute_verify(_make_args())
         output = capsys.readouterr().out
@@ -126,6 +141,8 @@ class TestVerifyOrchestration:
         assert "LLM PROVIDER" in output
         assert "MLFLOW" in output
 
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
@@ -134,16 +151,21 @@ class TestVerifyOrchestration:
         mock_provider: MagicMock,
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
     ) -> None:
         """Exit 0 when active provider (claude) succeeds."""
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
 
         result = execute_verify(_make_args())
 
         assert result == 0
 
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_langchain")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
@@ -154,17 +176,22 @@ class TestVerifyOrchestration:
         mock_claude: MagicMock,
         mock_lc: MagicMock,
         mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
     ) -> None:
         """Exit 1 when active provider (langchain) fails."""
         mock_provider.return_value = ("langchain", "config.toml")
         mock_claude.return_value = _claude_ok()
         mock_lc.return_value = _langchain_fail()
         mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
 
         result = execute_verify(_make_args())
 
         assert result == 1
 
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
@@ -173,16 +200,21 @@ class TestVerifyOrchestration:
         mock_provider: MagicMock,
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
     ) -> None:
         """Exit 1 when MLflow is enabled and has errors."""
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_enabled_broken()
+        mock_prompt_llm.return_value = _minimal_llm_response()
 
         result = execute_verify(_make_args())
 
         assert result == 1
 
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
@@ -191,16 +223,22 @@ class TestVerifyOrchestration:
         mock_provider: MagicMock,
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
     ) -> None:
         """Exit 0 when MLflow not installed (informational)."""
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
 
         result = execute_verify(_make_args())
 
         assert result == 0
 
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
@@ -209,15 +247,17 @@ class TestVerifyOrchestration:
         mock_provider: MagicMock,
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
+        mock_resolve_mcp: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Claude CLI section is informational when provider=langchain (doesn't affect exit)."""
         mock_provider.return_value = ("langchain", "config.toml")
         mock_claude.return_value = _claude_fail()
         mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
 
-        # verify_langchain is NOT called because we mock _resolve_active_provider
-        # but the code path calls it — we need to patch it too
         with patch("mcp_coder.cli.commands.verify.verify_langchain") as mock_lc:
             mock_lc.return_value = _langchain_ok()
             result = execute_verify(_make_args())
@@ -225,6 +265,8 @@ class TestVerifyOrchestration:
         # Claude failing should not cause exit 1 when langchain is active
         assert result == 0
 
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_langchain")
@@ -237,17 +279,22 @@ class TestVerifyOrchestration:
         mock_lc: MagicMock,
         mock_mlflow: MagicMock,
         mock_resolve_mcp: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
     ) -> None:
         """--check-models flag forwarded to verify_langchain."""
         mock_provider.return_value = ("langchain", "config.toml")
         mock_claude.return_value = _claude_ok()
         mock_lc.return_value = _langchain_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
 
         execute_verify(_make_args(check_models=True))
 
         mock_lc.assert_called_once_with(check_models=True, mcp_config_path=None)
 
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
@@ -256,12 +303,15 @@ class TestVerifyOrchestration:
         mock_provider: MagicMock,
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """verify_langchain is not called when provider is claude."""
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
 
         with patch("mcp_coder.cli.commands.verify.verify_langchain") as mock_lc:
             execute_verify(_make_args())
@@ -269,6 +319,132 @@ class TestVerifyOrchestration:
 
         output = capsys.readouterr().out
         assert "uses Claude CLI" in output
+
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
+    @patch("mcp_coder.cli.commands.verify.verify_claude")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    def test_test_prompt_displayed_in_output(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test prompt result line appears in LLM PROVIDER section."""
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+
+        execute_verify(_make_args())
+        output = capsys.readouterr().out
+
+        assert "Test prompt" in output
+        assert "responded OK" in output
+
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
+    @patch("mcp_coder.cli.commands.verify.verify_claude")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    def test_test_prompt_failure_does_not_raise(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
+    ) -> None:
+        """execute_verify() continues when prompt_llm raises."""
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.side_effect = Exception("timeout")
+
+        result = execute_verify(_make_args())
+
+        assert isinstance(result, int)
+
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
+    @patch("mcp_coder.cli.commands.verify.verify_claude")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    def test_since_timestamp_passed_to_verify_mlflow(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
+    ) -> None:
+        """verify_mlflow() is called with since= (a UTC datetime)."""
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+
+        execute_verify(_make_args())
+
+        mock_mlflow.assert_called_once()
+        call_kwargs = mock_mlflow.call_args
+        since_arg = call_kwargs.kwargs.get("since") or call_kwargs[1].get("since")
+        assert isinstance(since_arg, datetime.datetime)
+        assert since_arg.tzinfo is not None  # UTC-aware
+
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
+    @patch("mcp_coder.cli.commands.verify.verify_claude")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    def test_log_to_mlflow_called_on_success(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
+    ) -> None:
+        """log_to_mlflow is called with the response when prompt succeeds."""
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        response = _minimal_llm_response()
+        mock_prompt_llm.return_value = response
+
+        execute_verify(_make_args())
+
+        mock_log_mlflow.assert_called_once()
+        call_args = mock_log_mlflow.call_args[0]
+        assert call_args[0] == response  # response_data
+        assert call_args[1] == "Reply with OK"  # prompt
+
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
+    @patch("mcp_coder.cli.commands.verify.verify_claude")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    def test_log_to_mlflow_not_called_on_failure(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
+    ) -> None:
+        """log_to_mlflow is NOT called when prompt_llm raises."""
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.side_effect = Exception("timeout")
+
+        execute_verify(_make_args())
+
+        mock_log_mlflow.assert_not_called()
 
 
 class TestFormatSection:
@@ -324,6 +500,9 @@ class TestFormatSection:
 class TestVerifyUsesSharedResolveLlmMethod:
     """Tests that verify.py uses the shared resolve_llm_method()."""
 
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
@@ -332,12 +511,16 @@ class TestVerifyUsesSharedResolveLlmMethod:
         mock_resolve: MagicMock,
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
+        mock_resolve_mcp: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """--llm-method langchain is passed to resolve_llm_method and used."""
         mock_resolve.return_value = ("langchain", "cli argument")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
 
         with patch("mcp_coder.cli.commands.verify.verify_langchain") as mock_lc:
             mock_lc.return_value = _langchain_ok()
@@ -349,6 +532,9 @@ class TestVerifyUsesSharedResolveLlmMethod:
         assert "langchain" in output
         assert "cli argument" in output
 
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
@@ -357,12 +543,16 @@ class TestVerifyUsesSharedResolveLlmMethod:
         mock_resolve: MagicMock,
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
+        mock_resolve_mcp: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """No --llm-method: resolve_llm_method returns config default_provider."""
         mock_resolve.return_value = ("langchain", "config default_provider")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
 
         with patch("mcp_coder.cli.commands.verify.verify_langchain") as mock_lc:
             mock_lc.return_value = _langchain_ok()
@@ -374,6 +564,8 @@ class TestVerifyUsesSharedResolveLlmMethod:
         assert "langchain" in output
         assert "config default_provider" in output
 
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
@@ -382,12 +574,15 @@ class TestVerifyUsesSharedResolveLlmMethod:
         mock_resolve: MagicMock,
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """No arg, no config: resolve_llm_method returns claude default."""
         mock_resolve.return_value = ("claude", "default")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
 
         result = execute_verify(_make_args())
 
@@ -396,64 +591,3 @@ class TestVerifyUsesSharedResolveLlmMethod:
         output = capsys.readouterr().out
         assert "claude" in output
         assert "default" in output
-
-
-class TestComputeExitCode:
-    """Tests for _compute_exit_code logic."""
-
-    def test_claude_active_ok(self) -> None:
-        """Exit 0 when claude is active and ok."""
-        assert (
-            _compute_exit_code("claude", _claude_ok(), None, _mlflow_not_installed())
-            == 0
-        )
-
-    def test_claude_active_fail(self) -> None:
-        """Exit 1 when claude is active and fails."""
-        assert (
-            _compute_exit_code("claude", _claude_fail(), None, _mlflow_not_installed())
-            == 1
-        )
-
-    def test_langchain_active_ok(self) -> None:
-        """Exit 0 when langchain is active and ok."""
-        assert (
-            _compute_exit_code(
-                "langchain", _claude_ok(), _langchain_ok(), _mlflow_not_installed()
-            )
-            == 0
-        )
-
-    def test_langchain_active_fail(self) -> None:
-        """Exit 1 when langchain is active and fails."""
-        assert (
-            _compute_exit_code(
-                "langchain", _claude_ok(), _langchain_fail(), _mlflow_not_installed()
-            )
-            == 1
-        )
-
-    def test_mlflow_enabled_broken(self) -> None:
-        """Exit 1 when mlflow is enabled but broken."""
-        assert (
-            _compute_exit_code("claude", _claude_ok(), None, _mlflow_enabled_broken())
-            == 1
-        )
-
-    def test_mlflow_not_installed_ok(self) -> None:
-        """Exit 0 when mlflow not installed (informational)."""
-        assert (
-            _compute_exit_code("claude", _claude_ok(), None, _mlflow_not_installed())
-            == 0
-        )
-
-    def test_mlflow_ok(self) -> None:
-        """Exit 0 when mlflow is enabled and working."""
-        assert _compute_exit_code("claude", _claude_ok(), None, _mlflow_ok()) == 0
-
-    def test_langchain_none_fails(self) -> None:
-        """Exit 1 when langchain is active but result is None."""
-        assert (
-            _compute_exit_code("langchain", _claude_ok(), None, _mlflow_not_installed())
-            == 1
-        )

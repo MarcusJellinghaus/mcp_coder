@@ -22,9 +22,33 @@ def _make_args(**kwargs: Any) -> argparse.Namespace:
     return argparse.Namespace(**defaults)
 
 
+def _minimal_llm_response() -> dict[str, Any]:
+    """Return a minimal LLMResponseDict-shaped dict for mocking prompt_llm."""
+    return {
+        "version": "1.0",
+        "timestamp": "2026-01-01T00:00:00",
+        "text": "OK",
+        "session_id": None,
+        "provider": "claude",
+        "raw_response": {},
+    }
+
+
 class TestExecuteVerify:
     """Test the execute_verify function."""
 
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch(
+        "mcp_coder.cli.commands.verify.prompt_llm",
+        return_value={
+            "version": "1.0",
+            "timestamp": "2026-01-01T00:00:00",
+            "text": "OK",
+            "session_id": None,
+            "provider": "claude",
+            "raw_response": {},
+        },
+    )
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
@@ -33,6 +57,8 @@ class TestExecuteVerify:
         mock_provider: MagicMock,
         mock_verify: MagicMock,
         mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
     ) -> None:
         """Test that execute_verify returns 0 when overall_ok is True."""
         mock_provider.return_value = ("claude", "default")
@@ -52,6 +78,18 @@ class TestExecuteVerify:
         assert result == 0
         mock_verify.assert_called_once()
 
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch(
+        "mcp_coder.cli.commands.verify.prompt_llm",
+        return_value={
+            "version": "1.0",
+            "timestamp": "2026-01-01T00:00:00",
+            "text": "OK",
+            "session_id": None,
+            "provider": "claude",
+            "raw_response": {},
+        },
+    )
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
@@ -60,6 +98,8 @@ class TestExecuteVerify:
         mock_provider: MagicMock,
         mock_verify: MagicMock,
         mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
     ) -> None:
         """Test that execute_verify returns 1 when overall_ok is False."""
         mock_provider.return_value = ("claude", "default")
@@ -79,6 +119,18 @@ class TestExecuteVerify:
         assert result == 1
         mock_verify.assert_called_once()
 
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch(
+        "mcp_coder.cli.commands.verify.prompt_llm",
+        return_value={
+            "version": "1.0",
+            "timestamp": "2026-01-01T00:00:00",
+            "text": "OK",
+            "session_id": None,
+            "provider": "claude",
+            "raw_response": {},
+        },
+    )
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
@@ -87,6 +139,8 @@ class TestExecuteVerify:
         mock_provider: MagicMock,
         mock_verify: MagicMock,
         mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test that execute_verify prints formatted status lines."""
@@ -117,4 +171,3 @@ class TestVerifyLabelMap:
         """Label map contains entries for MCP adapter checks."""
         assert "mcp_adapters" in _LABEL_MAP
         assert "langgraph" in _LABEL_MAP
-        assert "mcp_agent_test" in _LABEL_MAP

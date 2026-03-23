@@ -146,59 +146,12 @@ class TestVerifyLangchain:
         assert result["api_key"]["value"] == "sk-a...5678"
         assert result["api_key"]["source"] == "config.toml"
 
-    @patch("mcp_coder.llm.providers.langchain.verification.ask_langchain")
     @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
-    def test_test_prompt_success(
-        self,
-        mock_config: MagicMock,
-        mock_pkg: MagicMock,
-        mock_ask: MagicMock,
-    ) -> None:
-        mock_config.return_value = {
-            "provider": "langchain",
-            "backend": "openai",
-            "model": "gpt-4o",
-            "api_key": "sk-test1234test5678",
-            "endpoint": None,
-            "api_version": None,
-        }
-        mock_pkg.return_value = True
-        mock_ask.return_value = {"text": "OK"}
-        with patch.dict("os.environ", {}, clear=True):
-            result = verify_langchain()
-        assert result["test_prompt"]["ok"] is True
-        assert "responded in" in result["test_prompt"]["value"]
-
-    @patch("mcp_coder.llm.providers.langchain.verification.ask_langchain")
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
-    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
-    def test_test_prompt_failure(
-        self,
-        mock_config: MagicMock,
-        mock_pkg: MagicMock,
-        mock_ask: MagicMock,
-    ) -> None:
-        mock_config.return_value = {
-            "provider": "langchain",
-            "backend": "openai",
-            "model": "gpt-4o",
-            "api_key": "sk-test1234test5678",
-            "endpoint": None,
-            "api_version": None,
-        }
-        mock_pkg.return_value = True
-        mock_ask.side_effect = Exception("404 model not found")
-        with patch.dict("os.environ", {}, clear=True):
-            result = verify_langchain()
-        assert result["test_prompt"]["ok"] is False
-        assert "404" in result["test_prompt"]["error"]
-
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
-    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
-    def test_test_prompt_skipped_no_api_key(
+    def test_no_api_key_overall_ok_true(
         self, mock_config: MagicMock, mock_pkg: MagicMock
     ) -> None:
+        """overall_ok is True even when no API key (verify_langchain no longer tests prompt)."""
         mock_config.return_value = {
             "provider": "langchain",
             "backend": "openai",
@@ -210,8 +163,8 @@ class TestVerifyLangchain:
         mock_pkg.return_value = True
         with patch.dict("os.environ", {}, clear=True):
             result = verify_langchain()
-        assert result["test_prompt"]["ok"] is None
-        assert result["overall_ok"] is True  # Skipped is acceptable
+        assert "test_prompt" not in result
+        assert result["overall_ok"] is True
 
     @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
@@ -371,90 +324,6 @@ class TestVerifyLangchainMcpSection:
         assert "langgraph" in result
         assert result["mcp_adapters"]["ok"] is True
         assert result["langgraph"]["ok"] is True
-
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
-    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
-    def test_mcp_agent_test_skipped_when_no_config(
-        self, mock_config: MagicMock, mock_pkg: MagicMock
-    ) -> None:
-        """No mcp_agent_test entry when mcp_config_path is None."""
-        mock_config.return_value = {
-            "provider": "langchain",
-            "backend": "openai",
-            "model": "gpt-4o",
-            "api_key": None,
-            "endpoint": None,
-            "api_version": None,
-        }
-        mock_pkg.return_value = True
-        with patch.dict("os.environ", {}, clear=True):
-            result = verify_langchain(mcp_config_path=None)
-        assert "mcp_agent_test" not in result
-
-    @patch("mcp_coder.llm.providers.langchain.verification.ask_langchain")
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
-    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
-    def test_mcp_agent_test_calls_ask_llm_end_to_end(
-        self,
-        mock_config: MagicMock,
-        mock_pkg: MagicMock,
-        _mock_ask_langchain: MagicMock,
-    ) -> None:
-        """mcp_config_path triggers ask_llm() call with mcp_config."""
-        mock_config.return_value = {
-            "provider": "langchain",
-            "backend": "openai",
-            "model": "gpt-4o",
-            "api_key": None,
-            "endpoint": None,
-            "api_version": None,
-        }
-        mock_pkg.return_value = True
-        with (
-            patch.dict("os.environ", {}, clear=True),
-            patch("mcp_coder.llm.interface.ask_llm") as mock_ask_llm,
-        ):
-            mock_ask_llm.return_value = "OK"
-            result = verify_langchain(mcp_config_path="/tmp/mcp.json")
-        assert result["mcp_agent_test"]["ok"] is True
-        assert result["mcp_agent_test"]["value"] == "agent responded"
-        mock_ask_llm.assert_called_once_with(
-            "Reply with OK",
-            provider="langchain",
-            mcp_config="/tmp/mcp.json",
-            env_vars=None,
-            timeout=30,
-        )
-
-    @patch("mcp_coder.llm.providers.langchain.verification.ask_langchain")
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
-    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
-    def test_mcp_agent_test_handles_file_not_found(
-        self,
-        mock_config: MagicMock,
-        mock_pkg: MagicMock,
-        _mock_ask_langchain: MagicMock,
-    ) -> None:
-        """FileNotFoundError is caught and reported."""
-        mock_config.return_value = {
-            "provider": "langchain",
-            "backend": "openai",
-            "model": "gpt-4o",
-            "api_key": None,
-            "endpoint": None,
-            "api_version": None,
-        }
-        mock_pkg.return_value = True
-        with (
-            patch.dict("os.environ", {}, clear=True),
-            patch(
-                "mcp_coder.llm.interface.ask_llm",
-                side_effect=FileNotFoundError("mcp.json missing"),
-            ),
-        ):
-            result = verify_langchain(mcp_config_path="/tmp/mcp.json")
-        assert result["mcp_agent_test"]["ok"] is False
-        assert "MCP config not found" in result["mcp_agent_test"]["error"]
 
     @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
