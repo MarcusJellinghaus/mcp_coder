@@ -29,14 +29,23 @@ def verify_config() -> dict[str, Any]:
 - Uses existing `get_config_file_path()`, `load_config()`, `_format_toml_error()` from same module
 - Uses `os.environ.get()` for env var checks
 - Uses `_get_standard_env_var()` mappings already defined in the module
+- Build a local section-to-env-var mapping for the verify loop, e.g.:
+  ```python
+  _SECTION_ENV_VARS = {
+      "github": [("token", "GITHUB_TOKEN")],
+      "jenkins": [("server_url", "JENKINS_URL"), ("username", "JENKINS_USER"), ("api_token", "JENKINS_TOKEN")],
+  }
+  ```
 - Add to module's `__all__` or just ensure it's importable
 
 ## ALGORITHM
 
 ```
 1. path = get_config_file_path()
-2. if not path.exists() → return warning entries (not found + expected path + hint)
-3. try load_config() → on ValueError → return error entry with parse error, has_error=True
+2. if not path.exists():
+   2a. add warning entries (not found + expected path + hint)
+   2b. config_data = {}
+3. else: try load_config() → on ValueError → return error entry with parse error, has_error=True
 4. for each known section (llm, github, jenkins, coordinator):
    4a. check config data AND relevant env vars
    4b. build entry with source annotation ("env var", "config.toml", "env var, also in config.toml")
@@ -51,7 +60,7 @@ def verify_config() -> dict[str, Any]:
     "entries": [
         {"label": "Config file", "status": "warning", "value": "not found"},
         {"label": "Expected path", "status": "info", "value": "C:\\Users\\user\\.mcp_coder\\config.toml"},
-        {"label": "Hint", "status": "info", "value": "Run 'mcp-coder init' to create a default config"},
+        {"label": "Hint", "status": "info", "value": "Create a config at <path> — see docs/configuration.md for format"},
     ],
     "has_error": False
 }
