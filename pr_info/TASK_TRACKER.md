@@ -32,7 +32,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: Wrap `list_*_models()` with connection/auth error catching ([step_3.md](./steps/step_3.md))
-- [ ] Implementation: modify `_models.py` + add tests to `test_langchain_models.py` (tests + production code)
+- [x] Implementation: modify `_models.py` + add tests to `test_langchain_models.py` (tests + production code)
 - [ ] Quality checks: pylint, pytest, mypy — fix all issues
 - [ ] Commit message prepared
 
