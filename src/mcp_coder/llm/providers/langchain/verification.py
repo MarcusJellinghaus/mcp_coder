@@ -13,6 +13,7 @@ import os
 from typing import Any
 
 from . import _load_langchain_config
+from ._exceptions import LLMAuthError, LLMConnectionError
 from .agent import _load_mcp_server_config
 
 logger = logging.getLogger(__name__)
@@ -215,10 +216,12 @@ def _list_models_for_backend(
         else:
             return {"ok": False, "value": [], "error": f"Unknown backend: {backend}"}
         return {"ok": True, "value": models}
-    except (
-        Exception
-    ) as exc:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-        return {"ok": False, "value": [], "error": str(exc)}
+    except LLMConnectionError as exc:
+        return {"ok": False, "value": [], "error": str(exc), "error_type": "connection"}
+    except LLMAuthError as exc:
+        return {"ok": False, "value": [], "error": str(exc), "error_type": "auth"}
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        return {"ok": False, "value": [], "error": str(exc), "error_type": "unknown"}
 
 
 # ---------------------------------------------------------------------------
