@@ -21,6 +21,13 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Add --llm-method claude to automated Windows templates ([step_1.md](./steps/step_1.md))
+
+- [ ] Implementation: update `AUTOMATED_SECTION_WINDOWS` and `AUTOMATED_RESUME_SECTION_WINDOWS` templates, flip 2 automated tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: verify all changes match summary and step descriptions
+- [ ] PR summary prepared
