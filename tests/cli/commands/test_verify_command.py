@@ -37,7 +37,6 @@ def _minimal_llm_response() -> dict[str, Any]:
 class TestExecuteVerify:
     """Test the execute_verify function."""
 
-    @patch("mcp_coder.cli.commands.verify.verify_config")
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch(
         "mcp_coder.cli.commands.verify.prompt_llm",
@@ -60,13 +59,8 @@ class TestExecuteVerify:
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
-        mock_verify_config: MagicMock,
     ) -> None:
         """Test that execute_verify returns 0 when overall_ok is True."""
-        mock_verify_config.return_value = {
-            "entries": [{"label": "Config file", "status": "ok", "value": "ok"}],
-            "has_error": False,
-        }
         mock_provider.return_value = ("claude", "default")
         mock_verify.return_value = {
             "cli_found": {"ok": True, "value": "YES"},
@@ -84,7 +78,6 @@ class TestExecuteVerify:
         assert result == 0
         mock_verify.assert_called_once()
 
-    @patch("mcp_coder.cli.commands.verify.verify_config")
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch(
         "mcp_coder.cli.commands.verify.prompt_llm",
@@ -107,13 +100,8 @@ class TestExecuteVerify:
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
-        mock_verify_config: MagicMock,
     ) -> None:
         """Test that execute_verify returns 1 when overall_ok is False."""
-        mock_verify_config.return_value = {
-            "entries": [{"label": "Config file", "status": "ok", "value": "ok"}],
-            "has_error": False,
-        }
         mock_provider.return_value = ("claude", "default")
         mock_verify.return_value = {
             "cli_found": {"ok": False, "value": "NO"},
@@ -131,7 +119,6 @@ class TestExecuteVerify:
         assert result == 1
         mock_verify.assert_called_once()
 
-    @patch("mcp_coder.cli.commands.verify.verify_config")
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch(
         "mcp_coder.cli.commands.verify.prompt_llm",
@@ -154,14 +141,9 @@ class TestExecuteVerify:
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
-        mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test that execute_verify prints formatted status lines."""
-        mock_verify_config.return_value = {
-            "entries": [{"label": "Config file", "status": "ok", "value": "ok"}],
-            "has_error": False,
-        }
         mock_provider.return_value = ("claude", "default")
         mock_verify.return_value = {
             "cli_found": {"ok": True, "value": "YES"},

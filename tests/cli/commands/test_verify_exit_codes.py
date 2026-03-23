@@ -278,7 +278,6 @@ class TestComputeExitCode:
 class TestMcpServersInVerify:
     """Tests for MCP server health check integration in execute_verify."""
 
-    @patch("mcp_coder.cli.commands.verify.verify_config")
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mcp_servers")
@@ -300,7 +299,6 @@ class TestMcpServersInVerify:
         mock_mcp_servers: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
-        mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """MCP SERVERS section shown when mcp_config is present."""
@@ -310,10 +308,6 @@ class TestMcpServersInVerify:
         mock_mlflow.return_value = _mlflow_not_installed()
         mock_prompt_llm.return_value = _minimal_llm_response()
         mock_mcp_servers.return_value = _mcp_ok()
-        mock_verify_config.return_value = {
-            "entries": [{"label": "Config file", "status": "ok", "value": "ok"}],
-            "has_error": False,
-        }
 
         execute_verify(_make_args(mcp_config=".mcp.json"))
         output = capsys.readouterr().out
@@ -323,7 +317,6 @@ class TestMcpServersInVerify:
         assert "5 tools available" in output
         mock_mcp_servers.assert_called_once_with("/fake/.mcp.json")
 
-    @patch("mcp_coder.cli.commands.verify.verify_config")
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mcp_servers")
@@ -345,7 +338,6 @@ class TestMcpServersInVerify:
         mock_mcp_servers: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
-        mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """MCP SERVERS section hidden when no MCP config."""
@@ -354,10 +346,6 @@ class TestMcpServersInVerify:
         mock_lc.return_value = _langchain_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
         mock_prompt_llm.return_value = _minimal_llm_response()
-        mock_verify_config.return_value = {
-            "entries": [{"label": "Config file", "status": "ok", "value": "ok"}],
-            "has_error": False,
-        }
 
         execute_verify(_make_args())
         output = capsys.readouterr().out

@@ -1,6 +1,7 @@
 """Shared test fixtures for CLI commands tests."""
 
-from typing import Any, Dict
+from typing import Any, Dict, Generator
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -51,3 +52,20 @@ def mock_labels_config() -> Dict[str, Any]:
         ],
         "ignore_labels": ["Overview"],
     }
+
+
+@pytest.fixture(autouse=True)
+def _mock_verify_config() -> Generator[MagicMock, None, None]:
+    """Auto-mock verify_config to return a default OK result.
+
+    Tests that need a specific config result can override by patching
+    verify_config explicitly inside the test body.
+    """
+    default = {
+        "entries": [{"label": "Config file", "status": "ok", "value": "ok"}],
+        "has_error": False,
+    }
+    with patch(
+        "mcp_coder.cli.commands.verify.verify_config", return_value=default
+    ) as mock:
+        yield mock
