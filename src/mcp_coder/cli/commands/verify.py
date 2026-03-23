@@ -36,7 +36,6 @@ _LABEL_MAP: dict[str, str] = {
     # MCP adapter section
     "mcp_adapters": "MCP adapters",
     "langgraph": "LangGraph",
-    "mcp_agent_test": "MCP agent test",
     # MLflow section
     "installed": "MLflow installed",
     "enabled": "MLflow enabled",

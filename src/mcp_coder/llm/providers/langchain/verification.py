@@ -104,7 +104,6 @@ def _check_mcp_adapter_packages() -> dict[str, dict[str, Any]]:
 def verify_langchain(
     check_models: bool = False,
     mcp_config_path: str | None = None,
-    env_vars: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Verify LangChain provider configuration and connectivity.
 
@@ -113,13 +112,11 @@ def verify_langchain(
 
     Args:
         check_models: If True, also list available models for the backend.
-        mcp_config_path: Path to .mcp.json for MCP agent smoke test.
-        env_vars: Optional environment variables for var substitution.
+        mcp_config_path: Unused, kept for API compatibility.
 
     Returns:
         Dict with keys: backend, model, api_key, langchain_core,
         backend_package, mcp_adapters, langgraph, overall_ok.
-        If mcp_config_path is provided, also includes mcp_agent_test.
         If check_models=True, also includes available_models.
     """
     config = _load_langchain_config()
@@ -186,46 +183,6 @@ def verify_langchain(
         result["available_models"] = _list_models_for_backend(
             backend, api_key, config.get("endpoint")
         )
-
-    # End-to-end MCP agent test (only when mcp_config_path provided)
-    if mcp_config_path:
-        try:
-            from ...interface import ask_llm  # lazy to avoid circular import
-
-            ask_llm(
-                "Reply with OK",
-                provider="langchain",
-                mcp_config=mcp_config_path,
-                env_vars=env_vars,
-                timeout=30,
-            )
-            result["mcp_agent_test"] = {"ok": True, "value": "agent responded"}
-        except FileNotFoundError as exc:
-            result["mcp_agent_test"] = {
-                "ok": False,
-                "value": None,
-                "error": f"MCP config not found: {exc}",
-            }
-        except ImportError as exc:
-            result["mcp_agent_test"] = {
-                "ok": False,
-                "value": None,
-                "error": f"Missing dependency: {exc}",
-            }
-        except ConnectionError as exc:
-            result["mcp_agent_test"] = {
-                "ok": False,
-                "value": None,
-                "error": f"MCP server failed to start: {exc}",
-            }
-        except (
-            Exception
-        ) as exc:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-            result["mcp_agent_test"] = {
-                "ok": False,
-                "value": None,
-                "error": f"Agent test failed: {type(exc).__name__}: {exc}",
-            }
 
     # overall_ok: True when backend configured AND all required packages installed
     result["overall_ok"] = bool(

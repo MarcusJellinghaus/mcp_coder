@@ -171,4 +171,3 @@ class TestVerifyLabelMap:
         """Label map contains entries for MCP adapter checks."""
         assert "mcp_adapters" in _LABEL_MAP
         assert "langgraph" in _LABEL_MAP
-        assert "mcp_agent_test" in _LABEL_MAP

@@ -344,9 +344,12 @@ mcp-coder implement --project-dir /path/to/project
     in `llm/providers/langchain/test_*.py`
     - **When to use**: Testing LangChain provider integrations, real API calls
     - **Requirements**: LangChain packages installed, API keys configured
+  - `llm_integration`: End-to-end LLM prompt tests (network, auth needed)
+    - **When to use**: Testing real LLM round-trips across any provider
+    - **Requirements**: Valid API keys or CLI auth for the active provider
 - **Fast development**: Use exclusion pattern to skip slow integration tests
 - **Parallel execution**: Always use `extra_args: ["-n", "auto"]`
-- **Recommended**: `"-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"`
+- **Recommended**: `"-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration and not llm_integration"`
 - **Integration testing**: Use specific markers when developing integration features
 - **CI/CD**: Run all tests including integration tests in automated pipelines
 
