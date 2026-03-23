@@ -25,17 +25,20 @@ Issue: #552 — `mcp-coder verify` CONFIG section
 
 ## Round 2 — 2026-03-23
 
-**Findings:** None. Round 1 fix verified correct. All quality checks pass (pylint, mypy, pytest 2522/2522).
+**Findings:** CI failing — `tests/utils/test_user_config.py` at 914 lines exceeds 750-line limit.
 
-**Decisions:** N/A
+**Decisions:** Accept — split `TestVerifyConfig` into `tests/utils/test_verify_config.py`.
 
-**Changes:** None needed.
+**Changes:**
+- Extracted `TestVerifyConfig` class to new `tests/utils/test_verify_config.py` (241 lines)
+- Original file reduced from 914 to 678 lines
 
-**Status:** Clean
+**Status:** Committed (4eef9ec)
 
 ## Final Status
 
 - **Rounds:** 2
-- **Commits:** 1 (2f02af6 — refactor test boilerplate)
+- **Commits:** 3 (2f02af6, d78ea64 log, 4eef9ec file split)
 - **Open issues:** None
-- **Quality checks:** All passing (pylint, mypy, pytest)
+- **Quality checks:** All passing (pylint, mypy, pytest 2522/2522)
+- **Rebase:** Not needed (branch is current with main)
