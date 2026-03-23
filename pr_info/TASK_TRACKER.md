@@ -27,7 +27,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] [Step 4: Register `llm_integration` marker; remove deprecated test; add E2E integration test](./steps/step_4.md)
 - [x] [Step 5: Add MLflow logging to LangChain text mode (`_log_text_mlflow`)](./steps/step_5.md)
 - [x] [Step 6: Make verify test prompt log to MLflow; restore `since=`](./steps/step_6.md)
-- [ ] [Step 7: Add per-server MCP health check to verify](./steps/step_7.md)
+- [x] [Step 7: Add per-server MCP health check to verify](./steps/step_7.md)
 - [ ] [Step 8: Add MCP server integration test](./steps/step_8.md)
 
 ## Pull Request

@@ -6,11 +6,16 @@ and reports readiness. Returns a structured dict (no printing).
 
 from __future__ import annotations
 
+import asyncio
 import importlib.util
+import logging
 import os
 from typing import Any
 
 from . import _load_langchain_config
+from .agent import _load_mcp_server_config
+
+logger = logging.getLogger(__name__)
 
 _BACKEND_ENV_VARS: dict[str, str] = {
     "openai": "OPENAI_API_KEY",
@@ -257,3 +262,72 @@ def _list_models_for_backend(
         Exception
     ) as exc:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         return {"ok": False, "value": [], "error": str(exc)}
+
+
+# ---------------------------------------------------------------------------
+# MCP server health check
+# ---------------------------------------------------------------------------
+
+# Lazy import — only needed when verify_mcp_servers() is actually called.
+MultiServerMCPClient: Any = None
+
+
+def _import_mcp_client() -> Any:
+    """Deferred import of MultiServerMCPClient."""
+    global MultiServerMCPClient  # noqa: PLW0603
+    if MultiServerMCPClient is None:
+        from langchain_mcp_adapters.client import MultiServerMCPClient as _Client
+
+        MultiServerMCPClient = _Client
+    return MultiServerMCPClient
+
+
+async def _check_servers(
+    server_config: dict[str, dict[str, object]],
+    timeout: int,
+) -> dict[str, dict[str, Any]]:
+    """Connect to each server and list tools (async internals)."""
+    client_cls = _import_mcp_client()
+    results: dict[str, dict[str, Any]] = {}
+
+    for server_name in server_config:
+        single_config = {server_name: server_config[server_name]}
+        client = client_cls(single_config)
+        try:
+            async with asyncio.timeout(timeout):
+                async with client.session(server_name) as session:
+                    tools = await session.list_tools()
+                    results[server_name] = {
+                        "ok": True,
+                        "value": f"{len(tools.tools)} tools available",
+                        "tools": len(tools.tools),
+                    }
+        except Exception as exc:  # pylint: disable=broad-except
+            results[server_name] = {
+                "ok": False,
+                "value": str(exc),
+                "error": type(exc).__name__,
+            }
+    return results
+
+
+def verify_mcp_servers(
+    mcp_config_path: str,
+    timeout: int = 15,
+) -> dict[str, Any]:
+    """Check each configured MCP server by connecting and listing tools.
+
+    Returns:
+        Dict with per-server results and overall_ok.
+        Keys: ``"servers"`` (dict of server_name → result),
+        ``"overall_ok"`` (bool).
+        Each server result: ``{"ok": bool, "value": str, "tools": int | None,
+        "error": str | None}``.
+    """
+    server_config = _load_mcp_server_config(mcp_config_path)
+    if not server_config:
+        return {"servers": {}, "overall_ok": True, "value": "no servers configured"}
+
+    results = asyncio.run(_check_servers(server_config, timeout))
+    overall_ok = all(r["ok"] for r in results.values())
+    return {"servers": results, "overall_ok": overall_ok}

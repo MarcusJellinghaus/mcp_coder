@@ -9,6 +9,7 @@ import pytest
 
 from mcp_coder.cli.commands.verify import (
     _compute_exit_code,
+    _format_mcp_section,
     _format_section,
     execute_verify,
 )
@@ -679,3 +680,145 @@ class TestComputeExitCode:
     def test_test_prompt_ok_default_true(self) -> None:
         """Default test_prompt_ok=True does not affect exit code."""
         assert _compute_exit_code("claude", _claude_ok(), None, _mlflow_ok()) == 0
+
+    def test_mcp_failure_langchain_returns_exit_1(self) -> None:
+        """Exit 1 when langchain active and MCP servers failed."""
+        mcp_fail = {"servers": {"bad": {"ok": False}}, "overall_ok": False}
+        assert (
+            _compute_exit_code(
+                "langchain",
+                _claude_ok(),
+                _langchain_ok(),
+                _mlflow_not_installed(),
+                mcp_result=mcp_fail,
+            )
+            == 1
+        )
+
+    def test_mcp_failure_claude_does_not_affect_exit(self) -> None:
+        """MCP failure ignored when provider is claude."""
+        mcp_fail = {"servers": {"bad": {"ok": False}}, "overall_ok": False}
+        assert (
+            _compute_exit_code(
+                "claude",
+                _claude_ok(),
+                None,
+                _mlflow_not_installed(),
+                mcp_result=mcp_fail,
+            )
+            == 0
+        )
+
+    def test_mcp_none_does_not_affect_exit(self) -> None:
+        """mcp_result=None (no config) does not affect exit code."""
+        assert (
+            _compute_exit_code(
+                "langchain",
+                _claude_ok(),
+                _langchain_ok(),
+                _mlflow_not_installed(),
+                mcp_result=None,
+            )
+            == 0
+        )
+
+
+def _mcp_ok() -> dict[str, Any]:
+    return {
+        "servers": {
+            "tools-py": {"ok": True, "value": "5 tools available", "tools": 5},
+        },
+        "overall_ok": True,
+    }
+
+
+def _mcp_fail() -> dict[str, Any]:
+    return {
+        "servers": {
+            "broken": {
+                "ok": False,
+                "value": "connection refused",
+                "error": "ConnectionError",
+            },
+        },
+        "overall_ok": False,
+    }
+
+
+class TestMcpServersInVerify:
+    """Tests for MCP server health check integration in execute_verify."""
+
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch("mcp_coder.cli.commands.verify.verify_mcp_servers")
+    @patch(
+        "mcp_coder.cli.commands.verify.resolve_mcp_config_path",
+        return_value="/fake/.mcp.json",
+    )
+    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
+    @patch("mcp_coder.cli.commands.verify.verify_langchain")
+    @patch("mcp_coder.cli.commands.verify.verify_claude")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    def test_mcp_servers_displayed_when_config_present(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_lc: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_resolve_mcp: MagicMock,
+        mock_mcp_servers: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """MCP SERVERS section shown when mcp_config is present."""
+        mock_provider.return_value = ("langchain", "config.toml")
+        mock_claude.return_value = _claude_ok()
+        mock_lc.return_value = _langchain_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+        mock_mcp_servers.return_value = _mcp_ok()
+
+        execute_verify(_make_args(mcp_config=".mcp.json"))
+        output = capsys.readouterr().out
+
+        assert "MCP SERVERS" in output
+        assert "tools-py" in output
+        assert "5 tools available" in output
+        mock_mcp_servers.assert_called_once_with("/fake/.mcp.json")
+
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch("mcp_coder.cli.commands.verify.verify_mcp_servers")
+    @patch(
+        "mcp_coder.cli.commands.verify.resolve_mcp_config_path",
+        return_value=None,
+    )
+    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
+    @patch("mcp_coder.cli.commands.verify.verify_langchain")
+    @patch("mcp_coder.cli.commands.verify.verify_claude")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    def test_mcp_servers_skipped_when_no_config(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_lc: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_resolve_mcp: MagicMock,
+        mock_mcp_servers: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """MCP SERVERS section hidden when no MCP config."""
+        mock_provider.return_value = ("langchain", "config.toml")
+        mock_claude.return_value = _claude_ok()
+        mock_lc.return_value = _langchain_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+
+        execute_verify(_make_args())
+        output = capsys.readouterr().out
+
+        assert "MCP SERVERS" not in output
+        mock_mcp_servers.assert_not_called()
