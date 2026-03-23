@@ -21,6 +21,19 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Add tests for new `is_session_active()` behavior — [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: add `TestIsSessionActiveWindowPriority` test class with 3 test methods to `tests/workflows/vscodeclaude/test_sessions.py`
+- [ ] Quality checks: pylint, mypy pass (pytest skipped — tests expected to fail until Step 2)
+- [ ] Commit: `test: add tests for window-title-priority in is_session_active #547`
+
+### Step 2: Implement the fix and update existing test — [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: modify `is_session_active()` in `sessions.py` to prioritize window title check; update `test_get_active_session_count_with_mocked_pid_check` mock setup
+- [ ] Quality checks: pylint, pytest, mypy all pass
+- [ ] Commit: `fix: prioritize window title over PID in is_session_active #547`
 
 ## Pull Request
+
+- [ ] Review all changes across both steps for correctness and consistency
+- [ ] Create PR with summary of issue #547 fix
