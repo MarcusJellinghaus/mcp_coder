@@ -328,6 +328,150 @@ executor_os = "linux"
     return True
 
 
+# Section-to-env-var mapping for verify_config
+_SECTION_ENV_VARS: dict[str, list[tuple[str, str]]] = {
+    "github": [("token", "GITHUB_TOKEN")],
+    "jenkins": [
+        ("server_url", "JENKINS_URL"),
+        ("username", "JENKINS_USER"),
+        ("api_token", "JENKINS_TOKEN"),
+    ],
+}
+
+
+def _get_source_annotation(section: str, key: str, config_data: dict[str, Any]) -> str:
+    """Get source annotation for a config key (env var, config.toml, or both).
+
+    Args:
+        section: TOML section name
+        key: Configuration key
+        config_data: Loaded config data
+
+    Returns:
+        Source annotation string like "(env var)", "(config.toml)",
+        or "(env var, also in config.toml)"
+    """
+    env_var_name = _get_standard_env_var(section, key)
+    has_env = bool(env_var_name and os.environ.get(env_var_name))
+    has_config = bool(
+        config_data.get(section, {}).get(key)
+        if isinstance(config_data.get(section), dict)
+        else False
+    )
+
+    if has_env and has_config:
+        return "(env var, also in config.toml)"
+    if has_env:
+        return "(env var)"
+    return "(config.toml)"
+
+
+def verify_config() -> dict[str, Any]:
+    """Verify user config file and return structured result.
+
+    Returns:
+        Dict with:
+        - "entries": list of {"label": str, "status": "ok"|"warning"|"error"|"info",
+          "value": str}
+        - "has_error": bool (True only for invalid TOML)
+    """
+    entries: list[dict[str, str]] = []
+    path = get_config_file_path()
+
+    # Step 1-2: Check if config file exists
+    if not path.exists():
+        entries.append(
+            {"label": "Config file", "status": "warning", "value": "not found"}
+        )
+        entries.append({"label": "Expected path", "status": "info", "value": str(path)})
+        entries.append(
+            {
+                "label": "Hint",
+                "status": "info",
+                "value": "Run 'mcp-coder init' to create a default config",
+            }
+        )
+        config_data: dict[str, Any] = {}
+    else:
+        # Step 3: Try to load config
+        try:
+            config_data = load_config()
+        except ValueError as e:
+            entries.append(
+                {"label": "Config file", "status": "error", "value": "invalid TOML"}
+            )
+            entries.append({"label": "Parse error", "status": "error", "value": str(e)})
+            return {"entries": entries, "has_error": True}
+
+        # Config file found and valid
+        entries.append({"label": "Config file", "status": "ok", "value": str(path)})
+
+    # Step 4: Check known sections
+    # [llm] - show if section exists
+    llm_section = config_data.get("llm")
+    if isinstance(llm_section, dict) and "default_provider" in llm_section:
+        provider = llm_section["default_provider"]
+        entries.append(
+            {
+                "label": "[llm]",
+                "status": "ok",
+                "value": f"default_provider = {provider}",
+            }
+        )
+
+    # [github] - check env var + config
+    github_env = os.environ.get("GITHUB_TOKEN")
+    github_config = (
+        config_data.get("github", {}).get("token")
+        if isinstance(config_data.get("github"), dict)
+        else None
+    )
+    if github_env or github_config:
+        source = _get_source_annotation("github", "token", config_data)
+        entries.append(
+            {
+                "label": "[github]",
+                "status": "ok",
+                "value": f"token configured {source}",
+            }
+        )
+
+    # [jenkins] - check env vars + config, use server_url as representative
+    jenkins_env_any = any(
+        os.environ.get(env_var) for _, env_var in _SECTION_ENV_VARS["jenkins"]
+    )
+    jenkins_config_any = (
+        bool(config_data.get("jenkins"))
+        if isinstance(config_data.get("jenkins"), dict)
+        else False
+    )
+    if jenkins_env_any or jenkins_config_any:
+        source = _get_source_annotation("jenkins", "server_url", config_data)
+        entries.append(
+            {
+                "label": "[jenkins]",
+                "status": "ok",
+                "value": f"server_url configured {source}",
+            }
+        )
+
+    # [coordinator] - count repos
+    coordinator = config_data.get("coordinator")
+    if isinstance(coordinator, dict):
+        repos = coordinator.get("repos")
+        if isinstance(repos, dict) and repos:
+            count = len(repos)
+            entries.append(
+                {
+                    "label": "[coordinator]",
+                    "status": "ok",
+                    "value": f"{count} repos configured",
+                }
+            )
+
+    return {"entries": entries, "has_error": False}
+
+
 # Module-level logger for configuration functions
 logger = logging.getLogger(__name__)
 

@@ -9,16 +9,17 @@ You are a technical lead supervising a software engineer (subagent). You do not 
 
 **Setup:**
 
-1. Read the knowledge base files:
+1. Read the GitHub issue (`gh issue view` using the branch name), `pr_info/steps/summary.md`, and `pr_info/steps/Decisions.md` (if it exists) to understand requirements and design decisions.
+2. Read the knowledge base files:
    - `.claude/knowledge_base/software_engineering_principles.md`
    - `.claude/knowledge_base/python.md`
-2. Check for existing `pr_info/implementation_review_log_*.md` files to determine the next run number `{n}`.
-3. Create `pr_info/implementation_review_log_{n}.md` with a header.
+3. Check for existing `pr_info/implementation_review_log_*.md` files to determine the next run number `{n}`.
+4. Create `pr_info/implementation_review_log_{n}.md` with a header.
 
 **Your Role:**
 
 - **Delegate**: Launch subagents to do the work. Do not execute code, read files, or run tests yourself.
-- **Triage**: Assess each review finding against the knowledge base. Skip items that are out of scope, cosmetic, or speculative. Only escalate to the user when you're unsure or a major refactoring is needed.
+- **Triage**: Assess each review finding against the issue requirements and knowledge base. Skip items that are out of scope, cosmetic, or speculative. Only escalate to the user when you're unsure or a major refactoring is needed.
 - **Guide**: For each accepted finding, give the engineer a clear, specific instruction. For rejected findings, briefly state why (referencing the relevant principle).
 - **Scope**: Stay close to the relevant issue. Don't let the review drift into unrelated improvements.
 
