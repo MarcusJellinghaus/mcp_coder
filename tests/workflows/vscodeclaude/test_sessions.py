@@ -1,6 +1,7 @@
 """Test session management functions for VSCode Claude."""
 
 import json
+import logging
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -15,6 +16,7 @@ from mcp_coder.workflows.vscodeclaude.sessions import (
     get_active_session_count,
     get_session_for_issue,
     get_sessions_file_path,
+    is_session_active,
     is_vscode_window_open_for_folder,
     load_sessions,
     remove_session,
@@ -763,6 +765,140 @@ class TestWindowTitleMatching:
         )
 
         assert result is False
+
+
+class TestIsSessionActiveWindowPriority:
+    """Tests for is_session_active() window-title-priority behavior.
+
+    These tests verify that is_session_active() prioritizes window title
+    checks over PID checks, so that a stale PID (alive but belonging to a
+    different VSCode instance) does not cause a false positive when the
+    session's workspace window is actually gone.
+    """
+
+    def test_pid_alive_but_window_gone_returns_inactive_with_warning(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """PID alive but no matching window title -> inactive with warning."""
+        folder = tmp_path / "mcp_coder_542"
+        folder.mkdir()
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 542,
+            "status": "s",
+            "vscode_pid": 28036,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI", True
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.session_has_artifacts",
+            lambda f: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_window_open_for_folder",
+            lambda folder_path, issue_number=None, repo=None: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.check_vscode_running",
+            lambda pid: True,
+        )
+
+        with caplog.at_level(
+            logging.WARNING, logger="mcp_coder.workflows.vscodeclaude.sessions"
+        ):
+            result = is_session_active(session)
+
+        assert result is False
+        assert any(
+            "window title not found but PID" in record.message
+            for record in caplog.records
+        )
+
+    @pytest.mark.parametrize(
+        "session_data",
+        [
+            {"issue_number": 100, "vscode_pid": 1234},
+            {"repo": "owner/repo", "vscode_pid": 1234},
+        ],
+        ids=["missing_repo", "missing_issue_number"],
+    )
+    def test_guard_none_falls_through_to_pid_check(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        session_data: dict[str, object],
+    ) -> None:
+        """When repo or issue_number is None, falls through to PID check."""
+        folder = tmp_path / "mcp_coder_session"
+        folder.mkdir()
+
+        session: dict[str, object] = {
+            "folder": str(folder),
+            "status": "s",
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+            **session_data,
+        }
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI", True
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.session_has_artifacts",
+            lambda f: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.check_vscode_running",
+            lambda pid: True,
+        )
+
+        result = is_session_active(session)  # type: ignore[arg-type]
+
+        assert result is True
+
+    def test_non_windows_uses_pid_fallback(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """HAS_WIN32GUI=False preserves existing PID-based behavior."""
+        folder = tmp_path / "mcp_coder_100"
+        folder.mkdir()
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 100,
+            "status": "s",
+            "vscode_pid": 1234,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI", False
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.session_has_artifacts",
+            lambda f: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.check_vscode_running",
+            lambda pid: True,
+        )
+
+        result = is_session_active(session)
+
+        assert result is True
 
     def test_returns_false_on_non_windows(
         self, monkeypatch: pytest.MonkeyPatch

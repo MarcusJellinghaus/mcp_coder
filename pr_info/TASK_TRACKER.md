@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Add tests for new `is_session_active()` behavior — [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: add `TestIsSessionActiveWindowPriority` test class with 3 test methods to `tests/workflows/vscodeclaude/test_sessions.py`
-- [ ] Quality checks: pylint, mypy pass (pytest skipped — tests expected to fail until Step 2)
-- [ ] Commit: `test: add tests for window-title-priority in is_session_active #547`
+- [x] Implementation: add `TestIsSessionActiveWindowPriority` test class with 3 test methods to `tests/workflows/vscodeclaude/test_sessions.py`
+- [x] Quality checks: pylint, mypy pass (pytest skipped — tests expected to fail until Step 2)
+- [x] Commit: `test: add tests for window-title-priority in is_session_active #547`
 
 ### Step 2: Implement the fix and update existing test — [step_2.md](./steps/step_2.md)
 
