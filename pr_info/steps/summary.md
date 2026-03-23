@@ -31,9 +31,13 @@ execute_verify()
 execute_verify()
   ├── verify_claude()          # unchanged: checks CLI only
   ├── verify_langchain()       # checks config + packages only (no LLM call)
-  ├── ask_llm("Reply with OK", provider=active_provider, timeout=30)  ← NEW, unified
-  └── verify_mlflow(since=timestamp)  # NEW: also queries SQLite DB
-        └── query_sqlite_tracking()  ← NEW module: mlflow_db_utils.py
+  ├── verify_mcp_servers()     # NEW: per-server connectivity check (list_tools)
+  ├── prompt_llm() + _log_to_mlflow()  # NEW: test prompt logged to MLflow
+  └── verify_mlflow(since=timestamp)   # NEW: queries SQLite DB to confirm logging
+        └── query_sqlite_tracking()    # NEW module: mlflow_db_utils.py
+
+_ask_text() [LangChain text mode]
+  └── _log_text_mlflow()       # NEW: provider-level MLflow logging for text mode
 ```
 
 ### Key Design Decisions
@@ -86,6 +90,10 @@ execute_verify()
 | Step 2 | Update `verify_mlflow()` to accept `since=` and add `tracking_data` DB check | 1 |
 | Step 3 | Move test prompt to `execute_verify()`; remove it from `verify_langchain()` | 1 |
 | Step 4 | Register `llm_integration` marker; remove deprecated test; add E2E integration test | 1 |
+| Step 5 | Add MLflow logging to LangChain text mode (`_log_text_mlflow`) | 1 |
+| Step 6 | Make verify test prompt log to MLflow; restore `since=` | 1 |
+| Step 7 | Add per-server MCP health check to verify | 1 |
+| Step 8 | Add MCP server integration test | 1 |
 
 ---
 
