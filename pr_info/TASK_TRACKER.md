@@ -22,7 +22,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Custom exceptions, error tuples, and message helpers ([step_1.md](./steps/step_1.md))
-- [ ] Implementation: `_exceptions.py` + `test_langchain_exceptions.py` (tests + production code)
+- [x] Implementation: `_exceptions.py` + `test_langchain_exceptions.py` (tests + production code)
 - [ ] Quality checks: pylint, pytest, mypy — fix all issues
 - [ ] Commit message prepared
 
