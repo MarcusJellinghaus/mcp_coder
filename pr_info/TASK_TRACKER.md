@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1 — Add `verify_config()` Function ([step_1.md](./steps/step_1.md))
 
-- [ ] Implementation: tests (`TestVerifyConfig` in `test_user_config.py`) + `verify_config()` in `user_config.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(verify): add verify_config() for config file validation (#552)`
+- [x] Implementation: tests (`TestVerifyConfig` in `test_user_config.py`) + `verify_config()` in `user_config.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(verify): add verify_config() for config file validation (#552)`
 
 ### Step 2 — Integrate CONFIG Section into `verify` Command ([step_2.md](./steps/step_2.md))
 
