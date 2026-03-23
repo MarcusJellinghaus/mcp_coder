@@ -60,7 +60,7 @@ def verify_config() -> dict[str, Any]:
     "entries": [
         {"label": "Config file", "status": "warning", "value": "not found"},
         {"label": "Expected path", "status": "info", "value": "C:\\Users\\user\\.mcp_coder\\config.toml"},
-        {"label": "Hint", "status": "info", "value": "Create a config at <path> — see docs/configuration.md for format"},
+        {"label": "Hint", "status": "info", "value": "Create a config at <path> — see docs/configuration/config.md for format"},
     ],
     "has_error": False
 }
