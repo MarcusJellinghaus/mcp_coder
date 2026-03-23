@@ -1,8 +1,9 @@
-"""Tests for verify_mcp_servers() health check (Step 7)."""
+"""Tests for verify_mcp_servers() health check (Steps 7–8)."""
 
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -157,3 +158,34 @@ class TestVerifyMcpServers:
         assert result["overall_ok"] is False
         assert result["servers"]["slow"]["ok"] is False
         assert result["servers"]["slow"]["error"] == "TimeoutError"
+
+
+@pytest.mark.langchain_integration
+class TestMcpServerIntegration:
+    """Integration tests for verify_mcp_servers() with real MCP config."""
+
+    @staticmethod
+    def _find_mcp_config() -> Path:
+        """Locate .mcp.json in the project root, or skip."""
+        # Walk up from this test file to find the project root
+        candidate = Path(__file__).resolve().parents[4] / ".mcp.json"
+        if candidate.is_file():
+            return candidate
+        # Fallback: check cwd
+        cwd_candidate = Path.cwd() / ".mcp.json"
+        if cwd_candidate.is_file():
+            return cwd_candidate
+        pytest.skip("No .mcp.json found")
+
+    def test_verify_mcp_servers_with_real_config(self) -> None:
+        """verify_mcp_servers() with a real .mcp.json reports per-server results."""
+        config_path = self._find_mcp_config()
+
+        result = verify_mcp_servers(str(config_path))
+
+        assert "servers" in result
+        assert isinstance(result["overall_ok"], bool)
+
+        for name, server_result in result["servers"].items():
+            assert "ok" in server_result, f"Server {name!r} missing 'ok' key"
+            assert "value" in server_result, f"Server {name!r} missing 'value' key"

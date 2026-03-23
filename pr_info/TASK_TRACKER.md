@@ -28,6 +28,6 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] [Step 5: Add MLflow logging to LangChain text mode (`_log_text_mlflow`)](./steps/step_5.md)
 - [x] [Step 6: Make verify test prompt log to MLflow; restore `since=`](./steps/step_6.md)
 - [x] [Step 7: Add per-server MCP health check to verify](./steps/step_7.md)
-- [ ] [Step 8: Add MCP server integration test](./steps/step_8.md)
+- [x] [Step 8: Add MCP server integration test](./steps/step_8.md)
 
 ## Pull Request
