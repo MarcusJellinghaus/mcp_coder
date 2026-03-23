@@ -18,7 +18,7 @@ def ensure_truststore() -> None:
     Idempotent — calls truststore.inject_into_ssl() at most once.
     No-op if truststore is not installed.
     """
-    global _injected  # noqa: PLW0603
+    global _injected  # noqa: PLW0603  # pylint: disable=global-statement
     if _injected:
         return
     try:
