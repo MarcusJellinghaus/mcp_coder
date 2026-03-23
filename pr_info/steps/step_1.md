@@ -34,7 +34,7 @@ No new files in this step.
 
 ## WHAT
 
-### Current code (lines 67-73)
+### Current code (lines 61-65)
 
 ```python
 elif groups:
