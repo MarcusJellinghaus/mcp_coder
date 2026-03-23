@@ -31,7 +31,7 @@ Add `--llm-method claude` back to the two automated Windows templates that use `
 | File | Change |
 |------|--------|
 | `src/mcp_coder/workflows/vscodeclaude/templates.py` | Add `--llm-method claude` to `AUTOMATED_SECTION_WINDOWS` and `AUTOMATED_RESUME_SECTION_WINDOWS` |
-| `tests/workflows/vscodeclaude/test_templates.py` | Flip 2 automated tests to assert `--llm-method claude` IS present; delete 2 irrelevant interactive tests |
+| `tests/workflows/vscodeclaude/test_templates.py` | Flip 2 automated tests to assert `mcp-coder prompt` and `--llm-method claude` ARE present; keep 2 interactive tests unchanged |
 
 ## Implementation Steps
 

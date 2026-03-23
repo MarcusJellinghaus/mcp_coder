@@ -25,10 +25,10 @@ No new functions. String-level edits to two existing template constants and upda
 
 ### Test changes (`test_templates.py`)
 
-1. **Flip** `test_automated_section_no_hardcoded_llm_method` — rename to `test_automated_section_has_llm_method_claude`, assert `--llm-method claude` IS in `AUTOMATED_SECTION_WINDOWS`
-2. **Flip** `test_automated_resume_section_no_hardcoded_llm_method` — rename to `test_automated_resume_section_has_llm_method_claude`, assert `--llm-method claude` IS in `AUTOMATED_RESUME_SECTION_WINDOWS`
-3. **Delete** `test_interactive_only_section_no_hardcoded_llm_method` — tests `INTERACTIVE_ONLY_SECTION_WINDOWS` which uses `claude` CLI directly, not `mcp-coder prompt`; `--llm-method` is irrelevant
-4. **Delete** `test_interactive_resume_section_no_hardcoded_llm_method` — tests `INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS` which uses `claude` CLI directly; same reasoning
+1. **Flip** `test_automated_section_no_hardcoded_llm_method` — rename to `test_automated_section_has_llm_method_claude`, assert both `mcp-coder prompt` and `--llm-method claude` ARE in `AUTOMATED_SECTION_WINDOWS`
+2. **Flip** `test_automated_resume_section_no_hardcoded_llm_method` — rename to `test_automated_resume_section_has_llm_method_claude`, assert both `mcp-coder prompt` and `--llm-method claude` ARE in `AUTOMATED_RESUME_SECTION_WINDOWS`
+3. **Keep** `test_interactive_only_section_no_hardcoded_llm_method` — unchanged, guards the invariant that interactive templates don't use `--llm-method`
+4. **Keep** `test_interactive_resume_section_no_hardcoded_llm_method` — unchanged, same reasoning
 
 ## HOW
 
@@ -40,8 +40,8 @@ No new functions. String-level edits to two existing template constants and upda
 ```
 1. In AUTOMATED_SECTION_WINDOWS, insert "--llm-method claude" after the prompt argument
 2. In AUTOMATED_RESUME_SECTION_WINDOWS, insert "--llm-method claude" after the prompt argument
-3. Flip 2 automated tests: assert --llm-method claude IS present
-4. Delete 2 interactive tests: they don't use mcp-coder prompt
+3. Flip 2 automated tests: assert mcp-coder prompt and --llm-method claude ARE present
+4. Keep 2 interactive tests unchanged (they guard the no-llm-method invariant)
 5. Run pylint, pytest, mypy — all must pass
 6. Commit
 ```
