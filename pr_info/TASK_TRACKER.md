@@ -4,9 +4,9 @@
 
 ### Step 1: Fix `_parse_groups()` to Capture All Lines Between Groups
 
-- [ ] Implementation: remove `##[error]`-only guard, update docstrings for `_parse_groups` and `_extract_failed_step_log`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: remove `##[error]`-only guard, update docstrings for `_parse_groups` and `_extract_failed_step_log`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Add Tests With Real CI Log Structure
 
