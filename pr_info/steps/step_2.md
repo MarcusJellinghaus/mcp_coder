@@ -13,7 +13,7 @@ Rewrite `get_help_text()` to render detailed output from the shared `CATEGORIES`
 
 ## WHAT
 
-### Rewritten function
+### Rewritten function (renders from `COMMAND_CATEGORIES`)
 
 ```python
 def get_help_text() -> str:
@@ -44,19 +44,20 @@ def execute_help(_args: argparse.Namespace) -> int:
 max_width = max command name length across all categories
 lines = [header, blank, usage line, blank]
 for each category:
-    lines += [blank, category.name (ALL CAPS)]
+    lines += [blank, category.name]
     lines += ["  " + category.description]     # <-- only difference from compact
     lines += [blank]
     for each command:
         lines += [f"  {name:<{max_width}}  {description}"]
 lines += [blank, "Run 'mcp-coder <command> --help' for command-specific options."]
+lines += [blank, "For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder"]
 return "\n".join(lines)
 ```
 
 ## DATA
 
 - `get_help_text()` returns `str` — no parameters
-- Same `CATEGORIES` data as step 1
+- Same `COMMAND_CATEGORIES` data as step 1
 
 ## HOW (Integration)
 

@@ -2,7 +2,7 @@
 
 ## Summary
 
-Refactor the CLI help system from hardcoded inline strings to a **data-driven design** where all command metadata lives in a single `CATEGORIES` list. Both the compact output (`mcp-coder` with no args) and detailed output (`mcp-coder help`) render from this shared data source.
+Refactor the CLI help system from hardcoded inline strings to a **data-driven design** where all command metadata lives in a single `COMMAND_CATEGORIES` list. Both the compact output (`mcp-coder` with no args) and detailed output (`mcp-coder help`) render from this shared data source.
 
 ## Architectural / Design Changes
 
@@ -14,7 +14,7 @@ Refactor the CLI help system from hardcoded inline strings to a **data-driven de
 
 ### After
 - `help.py` defines `Command` and `Category` as `NamedTuple` types
-- A module-level `CATEGORIES` list holds all command metadata (4 categories, ~19 commands)
+- A module-level `COMMAND_CATEGORIES` list holds all command metadata (4 categories, ~19 commands)
 - `get_compact_help_text()` renders category headers + aligned commands (no category descriptions)
 - `get_help_text()` renders category headers + category descriptions + aligned commands
 - Column alignment is computed programmatically from the longest command name
@@ -33,7 +33,7 @@ Refactor the CLI help system from hardcoded inline strings to a **data-driven de
 
 | File | Change |
 |---|---|
-| `src/mcp_coder/cli/commands/help.py` | Add `Command`/`Category` NamedTuples, `CATEGORIES` data, `get_compact_help_text()`, rewrite `get_help_text()`, remove `get_usage_examples()` |
+| `src/mcp_coder/cli/commands/help.py` | Add `Command`/`Category` NamedTuples, `COMMAND_CATEGORIES` data, `get_compact_help_text()`, rewrite `get_help_text()`, remove `get_usage_examples()` |
 | `src/mcp_coder/cli/main.py` | Import `get_compact_help_text`, use it in `handle_no_command()`, return `0` |
 | `tests/cli/commands/test_help.py` | Update tests for new output format, add tests for new functions, remove tests for deleted functions |
 | `tests/cli/test_main.py` | Update expected exit code from `1` to `0` |

@@ -39,6 +39,7 @@ def handle_no_command(_args: argparse.Namespace) -> int:
 ## HOW (Integration)
 
 - Import `get_compact_help_text` from `help.py` (replaces `get_help_text` import)
+- Uses shared `COMMAND_CATEGORIES` data indirectly via `get_compact_help_text()`
 - `execute_help` import remains unchanged
 
 ## Tests to Update

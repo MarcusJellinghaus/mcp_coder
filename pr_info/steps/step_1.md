@@ -31,12 +31,12 @@ class Category(NamedTuple):
 ### Module-level data
 
 ```python
-CATEGORIES: list[Category] = [
+COMMAND_CATEGORIES: list[Category] = [
     Category(
         name="SETUP",
         description="Configure your project and verify the environment.",
         commands=[
-            Command("init", "Initialize project configuration"),
+            Command("init", "Create default configuration file"),
             Command("verify", "Verify CLI installation and configuration"),
             Command("define-labels", "Sync workflow status labels to GitHub"),
         ],
@@ -57,6 +57,7 @@ CATEGORIES: list[Category] = [
             Command("coordinator test", "Trigger integration test"),
             Command("coordinator run", "Monitor and dispatch workflows"),
             Command("coordinator vscodeclaude", "Manage VSCode/Claude sessions"),
+            Command("coordinator vscodeclaude status", "Show issue and VSCode/Claude session status"),
             Command("coordinator issue-stats", "Display issue statistics"),
         ],
     ),
@@ -72,7 +73,6 @@ CATEGORIES: list[Category] = [
             Command("check file-size", "Check file sizes against maximum"),
             Command("gh-tool get-base-branch", "Detect base branch for feature branch"),
             Command("git-tool compact-diff", "Generate compact diff"),
-            Command("help", "Show detailed help information"),
         ],
     ),
 ]
@@ -89,9 +89,9 @@ def get_compact_help_text() -> str:
 
 ```
 max_width = max command name length across all categories
-lines = [header, blank, usage line, blank]
+lines = ["mcp-coder - AI-powered software development automation toolkit", "", "Usage: mcp-coder <command> [options]"]
 for each category:
-    lines += [blank, "  " + category.name (ALL CAPS)]
+    lines += [blank, category.name]
     for each command:
         lines += [f"  {name:<{max_width}}  {description}"]
 lines += [blank, "Run 'mcp-coder help' for detailed usage."]
@@ -101,22 +101,22 @@ return "\n".join(lines)
 
 ## DATA
 
-- `CATEGORIES`: `list[Category]` — module-level constant
+- `COMMAND_CATEGORIES`: `list[Category]` — module-level constant
 - `get_compact_help_text()` returns `str` — the formatted compact help text
 
 ## HOW (Integration)
 
 - `Command` and `Category` are added as top-level types in `help.py`
-- `CATEGORIES` is a module-level constant in `help.py`
+- `COMMAND_CATEGORIES` is a module-level constant in `help.py`
 - No imports change yet in `main.py` (that's step 3)
 
 ## Tests to Write First
 
 In `tests/cli/commands/test_help.py`, add:
 
-1. **`test_categories_contains_all_commands`** — verify `CATEGORIES` has 4 categories, check all expected command names are present
+1. **`test_command_categories_contains_all_commands`** — verify `COMMAND_CATEGORIES` has 4 categories, check all expected command names are present
 2. **`test_compact_help_has_all_category_headers`** — output contains "SETUP", "BACKGROUND DEVELOPMENT", "COORDINATION", "TOOLS"
-3. **`test_compact_help_has_all_commands`** — output contains every command name from `CATEGORIES`
+3. **`test_compact_help_has_all_commands`** — output contains every command name from `COMMAND_CATEGORIES`
 4. **`test_compact_help_no_category_descriptions`** — output does NOT contain category description strings
 5. **`test_compact_help_column_alignment`** — all description columns start at the same position
 6. **`test_compact_help_has_usage_line`** — contains "Usage: mcp-coder <command> [options]"
