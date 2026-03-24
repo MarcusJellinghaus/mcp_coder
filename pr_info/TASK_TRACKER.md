@@ -57,9 +57,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 5B: Add httpx Dependency and mypy Override
-- [ ] Implementation: add `httpx>=0.27.0` to langchain extras + mypy override in `pyproject.toml`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `httpx>=0.27.0` to langchain extras + mypy override in `pyproject.toml`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: verify all steps integrated correctly
