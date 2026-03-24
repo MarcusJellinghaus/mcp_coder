@@ -8,11 +8,15 @@ logger = logging.getLogger(__name__)
 
 
 class Command(NamedTuple):
+    """A CLI command with a name and description."""
+
     name: str
     description: str
 
 
 class Category(NamedTuple):
+    """A group of related CLI commands."""
+
     name: str
     description: str
     commands: list[Command]
@@ -69,7 +73,11 @@ COMMAND_CATEGORIES: list[Category] = [
 
 
 def get_compact_help_text() -> str:
-    """Render compact help: category headers + aligned commands."""
+    """Render compact help: category headers + aligned commands.
+
+    Returns:
+        Formatted compact help text.
+    """
     max_width = max(len(cmd.name) for cat in COMMAND_CATEGORIES for cmd in cat.commands)
     lines = [
         "mcp-coder - AI-powered software development automation toolkit",
@@ -103,7 +111,11 @@ def execute_help(_args: argparse.Namespace) -> int:
 
 
 def get_help_text() -> str:
-    """Render detailed help: category headers + descriptions + aligned commands."""
+    """Render detailed help: category headers + descriptions + aligned commands.
+
+    Returns:
+        Formatted detailed help text.
+    """
     max_width = max(len(cmd.name) for cat in COMMAND_CATEGORIES for cmd in cat.commands)
     lines = [
         "mcp-coder - AI-powered software development automation toolkit",
