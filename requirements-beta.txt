@@ -1,0 +1,9 @@
+# Override PyPI versions of MCP packages with latest from GitHub.
+# PyPI rejects direct URL dependencies in pyproject.toml, so use this file instead.
+#
+# Usage:
+#   pip install mcp-coder[dev]           # install normally from PyPI
+#   pip install -r requirements-beta.txt  # override with latest from GitHub
+#
+mcp-tools-py @ git+https://github.com/MarcusJellinghaus/mcp-tools-py.git@main
+mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git@main
