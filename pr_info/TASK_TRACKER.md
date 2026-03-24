@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: Fix `prompt_llm()` kwargs + add MCP edit smoke test
-- [ ] Implementation: fix kwargs, add `_run_mcp_edit_smoke_test()` + tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: fix kwargs, add `_run_mcp_edit_smoke_test()` + tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: verify all steps integrated correctly

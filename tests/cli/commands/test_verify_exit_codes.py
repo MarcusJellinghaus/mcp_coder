@@ -1,6 +1,7 @@
 """Tests for exit code logic and MCP server integration in verify."""
 
 import argparse
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -9,6 +10,7 @@ import pytest
 from mcp_coder.cli.commands.verify import (
     _compute_exit_code,
     _format_mcp_section,
+    _run_mcp_edit_smoke_test,
     execute_verify,
 )
 
@@ -483,3 +485,160 @@ class TestConfigSectionInVerify:
 
         assert "CONFIG" in output
         assert "not found" in output
+
+
+class TestMcpEditSmokeTest:
+    """Tests for _run_mcp_edit_smoke_test function."""
+
+    def _symbols(self) -> dict[str, str]:
+        return {"success": "[OK]", "failure": "[FAIL]", "warning": "[!!]"}
+
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    def test_smoke_test_pass_displays_ok(
+        self,
+        mock_prompt_llm: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Smoke test passes when prompt_llm writes B between A and C."""
+        test_file = tmp_path / ".mcp_coder_verify.md"
+
+        def fake_llm(*args: Any, **kwargs: Any) -> dict[str, Any]:
+            test_file.write_text("A\nB\nC\n", encoding="utf-8")
+            return {"text": "done"}
+
+        mock_prompt_llm.side_effect = fake_llm
+
+        result = _run_mcp_edit_smoke_test(
+            tmp_path, "langchain", "/fake/.mcp.json", str(tmp_path), self._symbols()
+        )
+
+        assert "[OK]" in result
+        assert "edit verified" in result
+
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    def test_smoke_test_fail_displays_warning(
+        self,
+        mock_prompt_llm: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Smoke test warns when prompt_llm does not edit the file."""
+        mock_prompt_llm.return_value = {"text": "done"}
+
+        result = _run_mcp_edit_smoke_test(
+            tmp_path, "langchain", "/fake/.mcp.json", str(tmp_path), self._symbols()
+        )
+
+        assert "[!!]" in result
+        assert "edit not verified" in result
+
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    def test_smoke_test_error_displays_warning(
+        self,
+        mock_prompt_llm: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Smoke test warns when prompt_llm raises an exception."""
+        mock_prompt_llm.side_effect = TimeoutError("timed out")
+
+        result = _run_mcp_edit_smoke_test(
+            tmp_path, "langchain", "/fake/.mcp.json", str(tmp_path), self._symbols()
+        )
+
+        assert "[!!]" in result
+        assert "edit not verified" in result
+        assert "timed out" in result
+
+    @patch("mcp_coder.cli.commands.verify.verify_config")
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch("mcp_coder.cli.commands.verify.verify_mcp_servers")
+    @patch(
+        "mcp_coder.cli.commands.verify.resolve_mcp_config_path",
+        return_value="/fake/.mcp.json",
+    )
+    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
+    @patch("mcp_coder.cli.commands.verify.verify_langchain")
+    @patch("mcp_coder.cli.commands.verify.verify_claude")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    def test_smoke_test_does_not_affect_exit_code(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_lc: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_resolve_mcp: MagicMock,
+        mock_mcp_servers: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
+        mock_verify_config: MagicMock,
+    ) -> None:
+        """Smoke test failure does not affect exit code."""
+        mock_provider.return_value = ("langchain", "config.toml")
+        mock_claude.return_value = _claude_ok()
+        mock_lc.return_value = _langchain_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        # prompt_llm returns OK for test prompt but does not edit file
+        mock_prompt_llm.return_value = _minimal_llm_response()
+        mock_mcp_servers.return_value = _mcp_ok()
+        mock_verify_config.return_value = {
+            "entries": [],
+            "has_error": False,
+        }
+
+        exit_code = execute_verify(_make_args(mcp_config=".mcp.json"))
+
+        assert exit_code == 0
+
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    def test_smoke_test_cleans_up_file(
+        self,
+        mock_prompt_llm: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test file is cleaned up after smoke test."""
+        mock_prompt_llm.return_value = {"text": "done"}
+
+        _run_mcp_edit_smoke_test(
+            tmp_path, "langchain", "/fake/.mcp.json", str(tmp_path), self._symbols()
+        )
+
+        assert not (tmp_path / ".mcp_coder_verify.md").exists()
+
+    @patch("mcp_coder.cli.commands.verify.verify_config")
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch(
+        "mcp_coder.cli.commands.verify.resolve_mcp_config_path",
+        return_value=None,
+    )
+    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
+    @patch("mcp_coder.cli.commands.verify.verify_langchain")
+    @patch("mcp_coder.cli.commands.verify.verify_claude")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    def test_smoke_test_skipped_when_no_mcp_config(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_lc: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_resolve_mcp: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
+        mock_verify_config: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Smoke test line not in output when no mcp_config."""
+        mock_provider.return_value = ("langchain", "config.toml")
+        mock_claude.return_value = _claude_ok()
+        mock_lc.return_value = _langchain_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+        mock_verify_config.return_value = {
+            "entries": [],
+            "has_error": False,
+        }
+
+        execute_verify(_make_args())
+        output = capsys.readouterr().out
+
+        assert "MCP edit smoke test" not in output
