@@ -7,6 +7,7 @@ MLflow) and formats their output for the terminal.
 import argparse
 import datetime
 import logging
+import textwrap
 from pathlib import Path
 from typing import Any
 
@@ -97,8 +98,64 @@ def _format_mcp_section(mcp_results: dict[str, Any], symbols: dict[str, str]) ->
         ok = entry.get("ok")
         value = entry.get("value", "")
         symbol = symbols["success"] if ok else symbols["failure"]
-        lines.append(f"  {name:<20s} {symbol} {value}")
+        tool_names = entry.get("tool_names")
+        if tool_names:
+            prefix = f"  {name:<20s} {symbol} "
+            tools_text = f"{len(tool_names)} tools: {', '.join(tool_names)}"
+            wrapped = textwrap.wrap(
+                tools_text,
+                width=80,
+                initial_indent=prefix,
+                subsequent_indent=" " * len(prefix),
+            )
+            lines.extend(wrapped)
+        else:
+            lines.append(f"  {name:<20s} {symbol} {value}")
     return "\n".join(lines)
+
+
+def _run_mcp_edit_smoke_test(
+    project_dir: Path,
+    provider: str,
+    mcp_config: str,
+    execution_dir: str,
+    symbols: dict[str, str],
+) -> str:
+    """Run MCP edit smoke test.
+
+    Args:
+        project_dir: Path to the project directory.
+        provider: The active LLM provider name.
+        mcp_config: Path to the MCP config file.
+        execution_dir: Execution directory path.
+        symbols: Dict with 'success', 'failure', 'warning' keys.
+
+    Returns:
+        Formatted output line for the smoke test result.
+    """
+    label = "MCP edit smoke test"
+    test_file = project_dir / ".mcp_coder_verify.md"
+    try:
+        test_file.write_text("A\n\nC\n", encoding="utf-8")
+        prompt_llm(
+            "Edit the file .mcp_coder_verify.md to insert a line 'B' between 'A' and 'C'",
+            provider=provider,
+            timeout=60,
+            mcp_config=mcp_config,
+            execution_dir=execution_dir,
+        )
+        content = test_file.read_text(encoding="utf-8")
+        pos_a, pos_b, pos_c = content.find("A"), content.find("B"), content.find("C")
+        if pos_a < pos_b < pos_c:
+            return f"  {label:<20s} {symbols['success']} edit verified"
+        return (
+            f"  {label:<20s} {symbols['warning']}"
+            " edit not verified (B not found between A and C)"
+        )
+    except Exception as exc:  # pylint: disable=broad-except
+        return f"  {label:<20s} {symbols['warning']} edit not verified ({exc})"
+    finally:
+        test_file.unlink(missing_ok=True)
 
 
 def _compute_exit_code(
@@ -218,12 +275,29 @@ def execute_verify(args: argparse.Namespace) -> int:
         mcp_result = verify_mcp_servers(mcp_config_resolved)
         print(_format_mcp_section(mcp_result, symbols))
 
-    # 3b. Unified test prompt (both providers)
+    # 3b. MCP edit smoke test (informational only)
     project_dir = Path(args.project_dir).resolve() if args.project_dir else Path.cwd()
+    if mcp_config_resolved:
+        smoke_line = _run_mcp_edit_smoke_test(
+            project_dir,
+            active_provider,
+            mcp_config_resolved,
+            str(project_dir),
+            symbols,
+        )
+        print(smoke_line)
+
+    # 3c. Unified test prompt (both providers)
     timestamp = datetime.datetime.now(datetime.timezone.utc)
     test_prompt_ok = True
     try:
-        response = prompt_llm("Reply with OK", provider=active_provider, timeout=30)
+        response = prompt_llm(
+            "Reply with OK",
+            provider=active_provider,
+            timeout=30,
+            mcp_config=mcp_config_resolved,
+            execution_dir=str(project_dir),
+        )
         print(f"  {'Test prompt':<20s} {symbols['success']} responded OK")
         # Log to MLflow (will be confirmed by verify_mlflow's since= check)
         log_to_mlflow(response, "Reply with OK", project_dir)

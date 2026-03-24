@@ -1,8 +1,8 @@
-"""Tests for _format_section output formatting (Decision 10)."""
+"""Tests for _format_section and _format_mcp_section output formatting (Decision 10)."""
 
 from typing import Any
 
-from mcp_coder.cli.commands.verify import _format_section
+from mcp_coder.cli.commands.verify import _format_mcp_section, _format_section
 
 
 class TestFormatSection:
@@ -53,3 +53,100 @@ class TestFormatSection:
         result: dict[str, Any] = {"overall_ok": True}
         output = _format_section("MY SECTION", result, self._symbols())
         assert "=== MY SECTION ===" in output
+
+
+class TestFormatMcpSection:
+    """Tests for _format_mcp_section tool name rendering."""
+
+    def _symbols(self) -> dict[str, str]:
+        return {"success": "[OK]", "failure": "[!!]", "warning": "[??]"}
+
+    def test_tool_names_displayed_inline(self) -> None:
+        """Short tool names fit on one line."""
+        mcp_results: dict[str, Any] = {
+            "servers": {
+                "srv": {
+                    "ok": True,
+                    "value": "2 tools available",
+                    "tools": 2,
+                    "tool_names": ["alpha", "beta"],
+                },
+            },
+            "overall_ok": True,
+        }
+        output = _format_mcp_section(mcp_results, self._symbols())
+        assert "2 tools: alpha, beta" in output
+        assert "[OK]" in output
+
+    def test_tool_names_wrap_at_80_columns(self) -> None:
+        """Long tool name lists wrap at 80 columns with indented continuation."""
+        long_names = [f"very_long_tool_name_{i}" for i in range(10)]
+        mcp_results: dict[str, Any] = {
+            "servers": {
+                "tools-py": {
+                    "ok": True,
+                    "value": f"{len(long_names)} tools available",
+                    "tools": len(long_names),
+                    "tool_names": long_names,
+                },
+            },
+            "overall_ok": True,
+        }
+        output = _format_mcp_section(mcp_results, self._symbols())
+        output_lines = output.split("\n")
+        # Should have more than just header + 1 line (wrapping occurred)
+        content_lines = [
+            l for l in output_lines if "tools:" in l or l.startswith("  " + " " * 20)
+        ]
+        assert len(content_lines) >= 2, f"Expected wrapping, got: {output}"
+        # All content lines should be <= 80 chars
+        for line in output_lines[1:]:  # skip header
+            assert len(line) <= 80, f"Line too long ({len(line)}): {line!r}"
+
+    def test_no_tool_names_falls_back_to_value(self) -> None:
+        """Server without tool_names key shows value string."""
+        mcp_results: dict[str, Any] = {
+            "servers": {
+                "tools-py": {
+                    "ok": True,
+                    "value": "3 tools available",
+                    "tools": 3,
+                },
+            },
+            "overall_ok": True,
+        }
+        output = _format_mcp_section(mcp_results, self._symbols())
+        assert "3 tools available" in output
+        assert "[OK]" in output
+
+    def test_failed_server_shows_value_not_tools(self) -> None:
+        """Failed server with ok=False shows error value."""
+        mcp_results: dict[str, Any] = {
+            "servers": {
+                "broken": {
+                    "ok": False,
+                    "value": "connection refused",
+                    "error": "ConnectionError",
+                },
+            },
+            "overall_ok": False,
+        }
+        output = _format_mcp_section(mcp_results, self._symbols())
+        assert "connection refused" in output
+        assert "[!!]" in output
+
+    def test_empty_tool_names_falls_back_to_value(self) -> None:
+        """Server with tool_names=[] shows value string (0 tools case)."""
+        mcp_results: dict[str, Any] = {
+            "servers": {
+                "tools-py": {
+                    "ok": True,
+                    "value": "0 tools available",
+                    "tools": 0,
+                    "tool_names": [],
+                },
+            },
+            "overall_ok": True,
+        }
+        output = _format_mcp_section(mcp_results, self._symbols())
+        assert "0 tools available" in output

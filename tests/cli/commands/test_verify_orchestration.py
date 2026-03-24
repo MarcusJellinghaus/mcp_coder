@@ -2,6 +2,7 @@
 
 import argparse
 import datetime
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -419,6 +420,57 @@ class TestVerifyOrchestration:
         call_args = mock_log_mlflow.call_args[0]
         assert call_args[0] == response  # response_data
         assert call_args[1] == "Reply with OK"  # prompt
+
+    @patch("mcp_coder.cli.commands.verify.verify_config")
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch(
+        "mcp_coder.cli.commands.verify.resolve_mcp_config_path",
+        return_value="/fake/.mcp.json",
+    )
+    @patch("mcp_coder.cli.commands.verify.verify_mcp_servers")
+    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
+    @patch("mcp_coder.cli.commands.verify.verify_langchain")
+    @patch("mcp_coder.cli.commands.verify.verify_claude")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    def test_prompt_llm_receives_mcp_config_and_execution_dir(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_lc: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_mcp_servers: MagicMock,
+        mock_resolve_mcp: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
+        mock_verify_config: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """prompt_llm is called with mcp_config and execution_dir kwargs."""
+        mock_provider.return_value = ("langchain", "config.toml")
+        mock_claude.return_value = _claude_ok()
+        mock_lc.return_value = _langchain_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+        mock_mcp_servers.return_value = {
+            "servers": {"tools-py": {"ok": True, "value": "5 tools", "tools": 5}},
+            "overall_ok": True,
+        }
+        mock_verify_config.return_value = {
+            "entries": [],
+            "has_error": False,
+        }
+
+        execute_verify(_make_args(mcp_config=".mcp.json", project_dir=str(tmp_path)))
+
+        # Find the test prompt call ("Reply with OK")
+        test_prompt_calls = [
+            c for c in mock_prompt_llm.call_args_list if c[0][0] == "Reply with OK"
+        ]
+        assert len(test_prompt_calls) == 1
+        call_kwargs = test_prompt_calls[0][1]
+        assert call_kwargs["mcp_config"] == "/fake/.mcp.json"
+        assert "execution_dir" in call_kwargs
 
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")

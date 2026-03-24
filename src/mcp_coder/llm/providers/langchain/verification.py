@@ -283,10 +283,12 @@ async def _check_servers(
             async with asyncio.timeout(timeout):
                 async with client.session(server_name) as session:
                     tools = await session.list_tools()
+                    tool_names = [t.name for t in tools.tools]
                     results[server_name] = {
                         "ok": True,
                         "value": f"{len(tools.tools)} tools available",
                         "tools": len(tools.tools),
+                        "tool_names": tool_names,
                     }
         except Exception as exc:  # pylint: disable=broad-except
             results[server_name] = {
