@@ -21,6 +21,21 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Store tool names in `_check_servers()` result
+- [ ] Implementation: add `tool_names` to server result dict + tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Render tool names in `_format_mcp_section()` with 80-column wrapping
+- [ ] Implementation: update formatting function + tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Fix `prompt_llm()` kwargs + add MCP edit smoke test
+- [ ] Implementation: fix kwargs, add `_run_mcp_edit_smoke_test()` + tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review: verify all steps integrated correctly
+- [ ] PR summary prepared
