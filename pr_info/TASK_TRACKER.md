@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Store tool names in `_check_servers()` result
-- [ ] Implementation: add `tool_names` to server result dict + tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `tool_names` to server result dict + tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Render tool names in `_format_mcp_section()` with 80-column wrapping
 - [ ] Implementation: update formatting function + tests

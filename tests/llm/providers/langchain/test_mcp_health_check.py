@@ -20,6 +20,16 @@ def _make_tools_response(count: int) -> MagicMock:
     return result
 
 
+def _make_tools_response_with_names(names: list[str]) -> MagicMock:
+    """Create a mock ListToolsResult with named tools."""
+    tool_mocks = [MagicMock() for _ in names]
+    for mock, tool_name in zip(tool_mocks, names):
+        mock.name = tool_name
+    result = MagicMock()
+    result.tools = tool_mocks
+    return result
+
+
 class TestVerifyMcpServers:
     """Tests for verify_mcp_servers() function."""
 
@@ -158,6 +168,66 @@ class TestVerifyMcpServers:
         assert result["overall_ok"] is False
         assert result["servers"]["slow"]["ok"] is False
         assert result["servers"]["slow"]["error"] == "TimeoutError"
+
+    @patch(
+        "mcp_coder.llm.providers.langchain.verification._load_mcp_server_config",
+    )
+    def test_server_success_includes_tool_names(self, mock_load: MagicMock) -> None:
+        """Successful server result includes tool_names list."""
+        mock_load.return_value = {
+            "tools-py": {
+                "command": "python",
+                "args": ["-m", "tools"],
+                "transport": "stdio",
+            },
+        }
+
+        tool_names = ["read_file", "save_file", "edit_file"]
+        mock_session = AsyncMock()
+        mock_session.list_tools.return_value = _make_tools_response_with_names(
+            tool_names
+        )
+
+        mock_client = MagicMock()
+        mock_client.session.return_value.__aenter__ = AsyncMock(
+            return_value=mock_session
+        )
+        mock_client.session.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        with patch(
+            "mcp_coder.llm.providers.langchain.verification._import_mcp_client",
+            return_value=lambda cfg: mock_client,
+        ):
+            result = verify_mcp_servers("/fake/path/.mcp.json")
+
+        server_result = result["servers"]["tools-py"]
+        assert server_result["ok"] is True
+        assert server_result["tool_names"] == ["read_file", "save_file", "edit_file"]
+
+    @patch(
+        "mcp_coder.llm.providers.langchain.verification._load_mcp_server_config",
+    )
+    def test_server_failure_has_no_tool_names(self, mock_load: MagicMock) -> None:
+        """Failed server result does not contain tool_names."""
+        mock_load.return_value = {
+            "broken": {"command": "nonexistent", "args": [], "transport": "stdio"},
+        }
+
+        mock_client = MagicMock()
+        mock_client.session.return_value.__aenter__ = AsyncMock(
+            side_effect=FileNotFoundError("executable not found")
+        )
+        mock_client.session.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        with patch(
+            "mcp_coder.llm.providers.langchain.verification._import_mcp_client",
+            return_value=lambda cfg: mock_client,
+        ):
+            result = verify_mcp_servers("/fake/path/.mcp.json")
+
+        server_result = result["servers"]["broken"]
+        assert server_result["ok"] is False
+        assert "tool_names" not in server_result
 
 
 @pytest.mark.langchain_integration
