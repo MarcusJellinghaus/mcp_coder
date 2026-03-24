@@ -52,9 +52,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 5A: Improve Verify Command Failure Output
-- [ ] Implementation: guard classification in `verify.py` except block + tests in `test_verify_orchestration.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: guard classification in `verify.py` except block + tests in `test_verify_orchestration.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5B: Add httpx Dependency and mypy Override
 - [ ] Implementation: add `httpx>=0.27.0` to langchain extras + mypy override in `pyproject.toml`
