@@ -30,6 +30,8 @@ def test_get_help_text_contains_all_commands() -> None:
     assert "USAGE:" in help_text
     assert "COMMANDS:" in help_text
     assert "help" in help_text
+    assert "init" in help_text
+    assert "Create default configuration file" in help_text
     assert "commit auto" in help_text
     assert "commit clipboard" in help_text
     assert "EXAMPLES:" in help_text
