@@ -11,11 +11,30 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.llm.providers.langchain._exceptions import (
+    LLMAuthError,
+    LLMConnectionError,
+)
 from mcp_coder.llm.providers.langchain._models import (
     list_anthropic_models,
     list_gemini_models,
     list_openai_models,
 )
+
+_MODELS = "mcp_coder.llm.providers.langchain._models"
+
+
+class _FakeAuthError(Exception):
+    """Fake auth error for testing exception tuple patching."""
+
+
+class _FakeClientError(Exception):
+    """Fake Google ClientError for testing."""
+
+    def __init__(self, message: str, code: int) -> None:
+        super().__init__(message)
+        self.code = code
+
 
 # google.genai is a namespace package — sys.modules mocking doesn't
 # reliably intercept its imports.  Use the real module + patch.object instead.
@@ -238,3 +257,181 @@ class TestListModelsCommon:
         with patch.dict(sys.modules, {"anthropic": None}):
             with pytest.raises(ImportError):
                 list_anthropic_models(api_key="test")
+
+
+# ---------------------------------------------------------------------------
+# Connection-error wrapping tests
+# ---------------------------------------------------------------------------
+
+
+class TestListOpenaiModelsConnectionError:
+    """list_openai_models wraps OSError as LLMConnectionError."""
+
+    def test_oserror_raises_llm_connection_error(self) -> None:
+        mock_openai = _openai_mock()
+        mock_openai.OpenAI.return_value.models.list.side_effect = OSError("reset")
+        with patch.dict(sys.modules, {"openai": mock_openai}):
+            with pytest.raises(LLMConnectionError):
+                list_openai_models(api_key="k")
+
+    def test_connection_error_message_contains_hints(self) -> None:
+        mock_openai = _openai_mock()
+        mock_openai.OpenAI.return_value.models.list.side_effect = OSError("reset")
+        with patch.dict(sys.modules, {"openai": mock_openai}):
+            with pytest.raises(LLMConnectionError, match="OPENAI_API_KEY") as exc_info:
+                list_openai_models(api_key="k")
+        assert "endpoint" in str(exc_info.value).lower()
+
+
+class TestListOpenaiModelsAuthError:
+    """list_openai_models wraps auth errors as LLMAuthError."""
+
+    def test_auth_error_raises_llm_auth_error(self) -> None:
+        mock_openai = _openai_mock()
+        mock_openai.OpenAI.return_value.models.list.side_effect = _FakeAuthError(
+            "invalid key"
+        )
+        with (
+            patch.dict(sys.modules, {"openai": mock_openai}),
+            patch(f"{_MODELS}.OPENAI_AUTH_ERRORS", (_FakeAuthError,)),
+        ):
+            with pytest.raises(LLMAuthError):
+                list_openai_models(api_key="k")
+
+    def test_auth_error_message_contains_hints(self) -> None:
+        mock_openai = _openai_mock()
+        mock_openai.OpenAI.return_value.models.list.side_effect = _FakeAuthError(
+            "invalid key"
+        )
+        with (
+            patch.dict(sys.modules, {"openai": mock_openai}),
+            patch(f"{_MODELS}.OPENAI_AUTH_ERRORS", (_FakeAuthError,)),
+        ):
+            with pytest.raises(LLMAuthError, match="OPENAI_API_KEY"):
+                list_openai_models(api_key="k")
+
+
+class TestListGeminiModelsConnectionError:
+    """list_gemini_models wraps OSError as LLMConnectionError."""
+
+    def test_oserror_raises_llm_connection_error(self) -> None:
+        with patch.object(_google_genai, "Client") as mock_client:
+            mock_client.return_value.models.list.side_effect = OSError("reset")
+            with pytest.raises(LLMConnectionError):
+                list_gemini_models(api_key="k")
+
+    def test_connection_error_message_contains_hints(self) -> None:
+        with patch.object(_google_genai, "Client") as mock_client:
+            mock_client.return_value.models.list.side_effect = OSError("reset")
+            with pytest.raises(LLMConnectionError, match="GEMINI_API_KEY"):
+                list_gemini_models(api_key="k")
+
+
+class TestListGeminiModelsAuthError:
+    """list_gemini_models wraps ClientError auth codes as LLMAuthError."""
+
+    def test_client_error_401_raises_llm_auth_error(self) -> None:
+        exc = _FakeClientError("unauthorized", code=401)
+        with (
+            patch.object(_google_genai, "Client") as mock_client,
+            patch(f"{_MODELS}.GOOGLE_CLIENT_ERRORS", (_FakeClientError,)),
+            patch(f"{_MODELS}.is_google_auth_error", return_value=True),
+        ):
+            mock_client.return_value.models.list.side_effect = exc
+            with pytest.raises(LLMAuthError):
+                list_gemini_models(api_key="k")
+
+    def test_client_error_500_raises_llm_connection_error(self) -> None:
+        exc = _FakeClientError("server error", code=500)
+        with (
+            patch.object(_google_genai, "Client") as mock_client,
+            patch(f"{_MODELS}.GOOGLE_CLIENT_ERRORS", (_FakeClientError,)),
+            patch(f"{_MODELS}.is_google_auth_error", return_value=False),
+        ):
+            mock_client.return_value.models.list.side_effect = exc
+            with pytest.raises(LLMConnectionError):
+                list_gemini_models(api_key="k")
+
+
+class TestListAnthropicModelsConnectionError:
+    """list_anthropic_models wraps OSError as LLMConnectionError."""
+
+    def test_oserror_raises_llm_connection_error(self) -> None:
+        mock_anthropic = _anthropic_mock()
+        mock_anthropic.Anthropic.return_value.models.list.side_effect = OSError("reset")
+        with patch.dict(sys.modules, {"anthropic": mock_anthropic}):
+            with pytest.raises(LLMConnectionError):
+                list_anthropic_models(api_key="k")
+
+    def test_connection_error_message_contains_hints(self) -> None:
+        mock_anthropic = _anthropic_mock()
+        mock_anthropic.Anthropic.return_value.models.list.side_effect = OSError("reset")
+        with patch.dict(sys.modules, {"anthropic": mock_anthropic}):
+            with pytest.raises(LLMConnectionError, match="ANTHROPIC_API_KEY"):
+                list_anthropic_models(api_key="k")
+
+
+class TestListAnthropicModelsAuthError:
+    """list_anthropic_models wraps auth errors as LLMAuthError."""
+
+    def test_auth_error_raises_llm_auth_error(self) -> None:
+        mock_anthropic = _anthropic_mock()
+        mock_anthropic.Anthropic.return_value.models.list.side_effect = _FakeAuthError(
+            "invalid key"
+        )
+        with (
+            patch.dict(sys.modules, {"anthropic": mock_anthropic}),
+            patch(f"{_MODELS}.ANTHROPIC_AUTH_ERRORS", (_FakeAuthError,)),
+        ):
+            with pytest.raises(LLMAuthError):
+                list_anthropic_models(api_key="k")
+
+    def test_auth_error_message_contains_hints(self) -> None:
+        mock_anthropic = _anthropic_mock()
+        mock_anthropic.Anthropic.return_value.models.list.side_effect = _FakeAuthError(
+            "invalid key"
+        )
+        with (
+            patch.dict(sys.modules, {"anthropic": mock_anthropic}),
+            patch(f"{_MODELS}.ANTHROPIC_AUTH_ERRORS", (_FakeAuthError,)),
+        ):
+            with pytest.raises(LLMAuthError, match="ANTHROPIC_API_KEY"):
+                list_anthropic_models(api_key="k")
+
+
+# ---------------------------------------------------------------------------
+# ensure_truststore integration tests
+# ---------------------------------------------------------------------------
+
+
+class TestListModelsEnsureTruststore:
+    """All list_*_models functions call ensure_truststore."""
+
+    def test_openai_calls_ensure_truststore(self) -> None:
+        mock_openai = _openai_mock()
+        mock_openai.OpenAI.return_value.models.list.return_value = []
+        with (
+            patch.dict(sys.modules, {"openai": mock_openai}),
+            patch(f"{_MODELS}.ensure_truststore") as mock_ts,
+        ):
+            list_openai_models(api_key="k")
+        mock_ts.assert_called_once()
+
+    def test_gemini_calls_ensure_truststore(self) -> None:
+        with (
+            patch.object(_google_genai, "Client") as mock_client,
+            patch(f"{_MODELS}.ensure_truststore") as mock_ts,
+        ):
+            mock_client.return_value.models.list.return_value = []
+            list_gemini_models(api_key="k")
+        mock_ts.assert_called_once()
+
+    def test_anthropic_calls_ensure_truststore(self) -> None:
+        mock_anthropic = _anthropic_mock()
+        mock_anthropic.Anthropic.return_value.models.list.return_value = []
+        with (
+            patch.dict(sys.modules, {"anthropic": mock_anthropic}),
+            patch(f"{_MODELS}.ensure_truststore") as mock_ts,
+        ):
+            list_anthropic_models(api_key="k")
+        mock_ts.assert_called_once()

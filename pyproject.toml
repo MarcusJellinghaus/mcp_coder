@@ -59,6 +59,11 @@ mlflow = [
     "mlflow>=2.10.0",
 ]
 
+# OS certificate store integration — fixes SSL errors behind corporate proxies
+truststore = [
+    "truststore>=0.9.0",
+]
+
 # LangChain integration — alternative LLM providers (OpenAI, Gemini, Anthropic, …)
 langchain = [
     "langchain-core>=0.3.0",
@@ -250,6 +255,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["openai", "openai.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["truststore"]
 ignore_missing_imports = true
 
 [tool.setuptools_scm]

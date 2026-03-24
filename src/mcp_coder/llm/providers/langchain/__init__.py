@@ -23,11 +23,70 @@ from mcp_coder.llm.storage.session_storage import (
 from mcp_coder.llm.types import LLM_RESPONSE_VERSION, LLMResponseDict
 from mcp_coder.utils.user_config import get_config_values
 
+from ._exceptions import (
+    ANTHROPIC_AUTH_ERRORS,
+    CONNECTION_ERRORS,
+    GOOGLE_CLIENT_ERRORS,
+    OPENAI_AUTH_ERRORS,
+    is_google_auth_error,
+    raise_auth_error,
+    raise_connection_error,
+)
+from ._ssl import ensure_truststore
+
 if TYPE_CHECKING:
     from langchain_core.language_models import BaseChatModel
 
 
 logger = logging.getLogger(__name__)
+
+_BACKEND_ERROR_PARAMS: dict[str, tuple[str, str, str]] = {
+    # (provider_label, env_var, endpoint_hint)
+    "openai": (
+        "OpenAI",
+        "OPENAI_API_KEY",
+        "endpoint/base_url if using a custom server",
+    ),
+    "gemini": ("Gemini", "GEMINI_API_KEY", ""),
+    "anthropic": ("Anthropic", "ANTHROPIC_API_KEY", ""),
+}
+
+
+def _auth_errors_for_backend(backend: str | None) -> tuple[type[Exception], ...]:
+    """Return the auth error tuple for the given backend.
+
+    Args:
+        backend: Backend name ("openai", "anthropic", "gemini", or None).
+
+    Returns:
+        Tuple of exception classes for auth errors on the given backend.
+    """
+    if backend == "openai":
+        return OPENAI_AUTH_ERRORS
+    if backend == "anthropic":
+        return ANTHROPIC_AUTH_ERRORS
+    if backend == "gemini":
+        return GOOGLE_CLIENT_ERRORS  # needs is_google_auth_error() check at call site
+    return ()
+
+
+def _handle_provider_error(exc: Exception, backend: str | None) -> None:
+    """Raise LLMAuthError or LLMConnectionError when *exc* matches, else return.
+
+    Args:
+        exc: The caught exception.
+        backend: Backend name ("openai", "gemini", "anthropic", or None).
+    """
+    auth_errors = _auth_errors_for_backend(backend)
+    provider, env_var, endpoint_hint = _BACKEND_ERROR_PARAMS.get(
+        backend or "", (backend or "", "", "")
+    )
+    if auth_errors and isinstance(exc, auth_errors):
+        if backend == "gemini" and not is_google_auth_error(exc):
+            raise_connection_error(provider, env_var, exc, endpoint_hint)
+        raise_auth_error(provider, env_var, exc)
+    if isinstance(exc, CONNECTION_ERRORS):
+        raise_connection_error(provider, env_var, exc, endpoint_hint)
 
 
 def _load_langchain_config() -> dict[str, str | None]:
@@ -83,6 +142,10 @@ def _create_chat_model(
 ) -> BaseChatModel:
     """Dispatch to correct backend's create_*_model() based on config.
 
+    Args:
+        config: LangChain configuration dict with backend, model, api_key, etc.
+        timeout: Request timeout in seconds.
+
     Returns:
         Configured BaseChatModel instance for the selected backend.
 
@@ -137,6 +200,14 @@ def ask_langchain(
     ReAct agent (agent mode).  Otherwise the existing text-only backend
     dispatch is used.
 
+    Args:
+        question: The user's prompt text.
+        session_id: Optional session ID for conversation history.
+        timeout: Request timeout in seconds.
+        mcp_config: Optional path to .mcp.json for agent mode.
+        execution_dir: Optional working directory for agent execution.
+        env_vars: Optional environment variables for agent subprocesses.
+
     Returns:
         LLMResponseDict with the model's response.
 
@@ -187,23 +258,32 @@ def _ask_text(
 ) -> LLMResponseDict:
     """Text-only backend dispatch using unified chat model factory.
 
+    Args:
+        question: The user's prompt text.
+        config: LangChain configuration dict.
+        backend: Backend name ("openai", "gemini", "anthropic").
+        session_id: Session ID for conversation history.
+        timeout: Request timeout in seconds.
+
     Returns:
         LLMResponseDict with the model's text response.
 
     Raises:
         ValueError: If the model is not found on the configured backend.
-    """
+    """  # Also raises LLMAuthError / LLMConnectionError via _handle_provider_error.
     from langchain_core.messages import HumanMessage, messages_from_dict
 
     history = load_langchain_history(session_id)
     history_messages = messages_from_dict(history)
     lc_messages = history_messages + [HumanMessage(content=question)]
 
+    ensure_truststore()
     chat_model = _create_chat_model(config, timeout=timeout)
 
     try:
         ai_msg = chat_model.invoke(lc_messages)
     except Exception as exc:
+        _handle_provider_error(exc, backend)
         exc_str = str(exc)
         if "404" in exc_str or "not_found" in exc_str.lower() or "NOT_FOUND" in exc_str:
             model = config.get("model", "")
@@ -249,6 +329,9 @@ def _ask_text(
 def _get_model_suggestions(config: dict[str, str | None]) -> str:
     """Try to list available models for the configured backend.
 
+    Args:
+        config: LangChain configuration dict with backend and api_key.
+
     Returns:
         Formatted string of available models, or empty string if none found.
     """
@@ -282,27 +365,43 @@ def _ask_agent(
 ) -> LLMResponseDict:
     """Agent mode: route through LangGraph ReAct agent with MCP tools.
 
+    Args:
+        question: The user's prompt text.
+        config: LangChain configuration dict.
+        session_id: Session ID for conversation history.
+        mcp_config: Path to .mcp.json configuration file.
+        execution_dir: Optional working directory for agent execution.
+        env_vars: Optional environment variables for agent subprocesses.
+        timeout: Request timeout in seconds.
+
     Returns:
         LLMResponseDict with the agent's text response and tool usage stats.
-    """
+
+    """  # Also raises LLMAuthError / LLMConnectionError via _handle_provider_error.
     from .agent import _check_agent_dependencies, run_agent
 
     _check_agent_dependencies()
 
+    ensure_truststore()
     chat_model = _create_chat_model(config, timeout=timeout)
     history: list[dict[str, Any]] = load_langchain_history(session_id)
 
-    text, messages, stats = asyncio.run(
-        run_agent(
-            question=question,
-            chat_model=chat_model,
-            messages=history,
-            mcp_config_path=mcp_config,
-            execution_dir=execution_dir,
-            env_vars=env_vars,
-            timeout=timeout,
+    agent_backend = config.get("backend")
+    try:
+        text, messages, stats = asyncio.run(
+            run_agent(
+                question=question,
+                chat_model=chat_model,
+                messages=history,
+                mcp_config_path=mcp_config,
+                execution_dir=execution_dir,
+                env_vars=env_vars,
+                timeout=timeout,
+            )
         )
-    )
+    except Exception as exc:
+        _handle_provider_error(exc, agent_backend)
+        raise
 
     store_langchain_history(session_id, messages)
 
@@ -330,7 +429,12 @@ def _log_text_mlflow(
     config: dict[str, str | None],
     session_id: str,
 ) -> None:
-    """Log text-mode params to MLflow (mirrors _log_agent_mlflow for agent mode)."""
+    """Log text-mode params to MLflow (mirrors _log_agent_mlflow for agent mode).
+
+    Args:
+        config: LangChain configuration dict with backend and model.
+        session_id: Session ID for the MLflow run.
+    """
     try:
         mlflow_logger = get_mlflow_logger()
         mlflow_logger.start_run(session_id=session_id)
@@ -354,7 +458,13 @@ def _log_agent_mlflow(
     stats: dict[str, Any],
     session_id: str,
 ) -> None:
-    """Log agent mode params, metrics, and tool_trace artifact to MLflow."""
+    """Log agent mode params, metrics, and tool_trace artifact to MLflow.
+
+    Args:
+        config: LangChain configuration dict with backend and model.
+        stats: Agent execution statistics (steps, tool calls, trace).
+        session_id: Session ID for the MLflow run.
+    """
     try:
         mlflow_logger = get_mlflow_logger()
         mlflow_logger.start_run(session_id=session_id)
