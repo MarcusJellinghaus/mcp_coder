@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3B: Inject HTTP Clients into Anthropic Backend
-- [ ] Implementation: pass `http_client`/`http_async_client` to `ChatAnthropic` + tests in `test_langchain_anthropic.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: pass `http_client`/`http_async_client` to `ChatAnthropic` + tests in `test_langchain_anthropic.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4A: Inject HTTP Clients into Model Listing (`_models.py`)
 - [ ] Implementation: pass `http_client` to `openai.OpenAI()` and `anthropic.Anthropic()` + tests in `test_langchain_models.py`

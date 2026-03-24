@@ -21,7 +21,6 @@ except ImportError as exc:
     ) from exc
 
 
-
 def create_openai_model(
     model: str,
     api_key: str | None,
