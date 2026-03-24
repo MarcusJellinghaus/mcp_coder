@@ -2,6 +2,7 @@
 
 import argparse
 import datetime
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -443,6 +444,7 @@ class TestVerifyOrchestration:
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
         mock_verify_config: MagicMock,
+        tmp_path: Path,
     ) -> None:
         """prompt_llm is called with mcp_config and execution_dir kwargs."""
         mock_provider.return_value = ("langchain", "config.toml")
@@ -459,7 +461,7 @@ class TestVerifyOrchestration:
             "has_error": False,
         }
 
-        execute_verify(_make_args(mcp_config=".mcp.json"))
+        execute_verify(_make_args(mcp_config=".mcp.json", project_dir=str(tmp_path)))
 
         # Find the test prompt call ("Reply with OK")
         test_prompt_calls = [

@@ -302,6 +302,7 @@ class TestMcpServersInVerify:
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
+        tmp_path: Path,
     ) -> None:
         """MCP SERVERS section shown when mcp_config is present."""
         mock_provider.return_value = ("langchain", "config.toml")
@@ -311,7 +312,7 @@ class TestMcpServersInVerify:
         mock_prompt_llm.return_value = _minimal_llm_response()
         mock_mcp_servers.return_value = _mcp_ok()
 
-        execute_verify(_make_args(mcp_config=".mcp.json"))
+        execute_verify(_make_args(mcp_config=".mcp.json", project_dir=str(tmp_path)))
         output = capsys.readouterr().out
 
         assert "MCP SERVERS" in output
