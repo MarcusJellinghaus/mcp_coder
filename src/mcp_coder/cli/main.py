@@ -109,7 +109,7 @@ def handle_no_command(_args: argparse.Namespace) -> int:
     """
     logger.info("No command provided, showing help")
 
-    help_text = get_help_text(include_examples=False)
+    help_text = get_help_text()
     print(help_text)
 
     return 1  # Exit with error code since no command was provided
