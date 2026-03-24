@@ -9,6 +9,7 @@ Rewrite `get_help_text()` to render detailed output from the shared `CATEGORIES`
 ## WHERE
 
 - `src/mcp_coder/cli/commands/help.py`
+- `src/mcp_coder/cli/main.py`
 - `tests/cli/commands/test_help.py`
 
 ## WHAT
