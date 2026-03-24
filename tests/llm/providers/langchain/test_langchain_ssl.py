@@ -7,6 +7,8 @@ OS certificate store integration.
 import logging
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from mcp_coder.llm.providers.langchain import _ssl
 from mcp_coder.llm.providers.langchain._ssl import ensure_truststore
 
@@ -45,7 +47,7 @@ class TestEnsureTruststore:
         mock_truststore.inject_into_ssl.assert_called_once()
 
     def test_logs_activation_on_first_call(
-        self, caplog: "logging.LogCaptureFixture"
+        self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """First call logs a debug message mentioning truststore."""
         self._reset()
@@ -60,7 +62,7 @@ class TestEnsureTruststore:
         assert any("truststore" in record.message for record in caplog.records)
 
     def test_does_not_log_on_second_call(
-        self, caplog: "logging.LogCaptureFixture"
+        self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Second call does not produce a debug log."""
         self._reset()

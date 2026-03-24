@@ -35,9 +35,7 @@ def list_gemini_models(api_key: str | None) -> list[str]:
 
     Raises:
         ImportError: If google-genai is not installed (part of mcp-coder[langchain]).
-        LLMAuthError: If the API key is invalid or unauthorized.
-        LLMConnectionError: If the connection to the Gemini API fails.
-    """
+    """  # Also raises LLMAuthError / LLMConnectionError via helpers.
     try:
         import google.genai as genai  # pylint: disable=import-error
     except ImportError as exc:
@@ -73,9 +71,7 @@ def list_openai_models(api_key: str | None, endpoint: str | None = None) -> list
 
     Raises:
         ImportError: If openai is not installed (part of mcp-coder[langchain]).
-        LLMAuthError: If the API key is invalid or unauthorized.
-        LLMConnectionError: If the connection to the OpenAI API fails.
-    """
+    """  # Also raises LLMAuthError / LLMConnectionError via helpers.
     try:
         import openai  # pylint: disable=import-outside-toplevel
     except ImportError as exc:
@@ -112,9 +108,7 @@ def list_anthropic_models(api_key: str | None) -> list[str]:
 
     Raises:
         ImportError: If anthropic is not installed (part of mcp-coder[langchain]).
-        LLMAuthError: If the API key is invalid or unauthorized.
-        LLMConnectionError: If the connection to the Anthropic API fails.
-    """
+    """  # Also raises LLMAuthError / LLMConnectionError via helpers.
     try:
         import anthropic  # pylint: disable=import-outside-toplevel
     except ImportError as exc:

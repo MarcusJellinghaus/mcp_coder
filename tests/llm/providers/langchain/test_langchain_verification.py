@@ -350,51 +350,47 @@ class TestVerifyLangchainMcpSection:
 class TestListModelsForBackendErrors:
     """Tests for _list_models_for_backend error handling with specific exceptions."""
 
-    @patch("mcp_coder.llm.providers.langchain.verification._models")
+    @patch("mcp_coder.llm.providers.langchain._models.list_openai_models")
     def test_connection_error_returns_error_type_connection(
-        self, mock_models: MagicMock
+        self, mock_list: MagicMock
     ) -> None:
         from mcp_coder.llm.providers.langchain._exceptions import LLMConnectionError
         from mcp_coder.llm.providers.langchain.verification import (
             _list_models_for_backend,
         )
 
-        mock_models.list_openai_models.side_effect = LLMConnectionError(
-            "Connection to OpenAI API failed"
-        )
+        mock_list.side_effect = LLMConnectionError("Connection to OpenAI API failed")
         result = _list_models_for_backend("openai", "sk-test", None)
         assert result["ok"] is False
         assert result["error_type"] == "connection"
 
-    @patch("mcp_coder.llm.providers.langchain.verification._models")
-    def test_auth_error_returns_error_type_auth(self, mock_models: MagicMock) -> None:
+    @patch("mcp_coder.llm.providers.langchain._models.list_openai_models")
+    def test_auth_error_returns_error_type_auth(self, mock_list: MagicMock) -> None:
         from mcp_coder.llm.providers.langchain._exceptions import LLMAuthError
         from mcp_coder.llm.providers.langchain.verification import (
             _list_models_for_backend,
         )
 
-        mock_models.list_openai_models.side_effect = LLMAuthError(
-            "Authentication to OpenAI API failed"
-        )
+        mock_list.side_effect = LLMAuthError("Authentication to OpenAI API failed")
         result = _list_models_for_backend("openai", "sk-test", None)
         assert result["ok"] is False
         assert result["error_type"] == "auth"
 
-    @patch("mcp_coder.llm.providers.langchain.verification._models")
+    @patch("mcp_coder.llm.providers.langchain._models.list_openai_models")
     def test_unknown_error_returns_error_type_unknown(
-        self, mock_models: MagicMock
+        self, mock_list: MagicMock
     ) -> None:
         from mcp_coder.llm.providers.langchain.verification import (
             _list_models_for_backend,
         )
 
-        mock_models.list_openai_models.side_effect = RuntimeError("something broke")
+        mock_list.side_effect = RuntimeError("something broke")
         result = _list_models_for_backend("openai", "sk-test", None)
         assert result["ok"] is False
         assert result["error_type"] == "unknown"
 
-    @patch("mcp_coder.llm.providers.langchain.verification._models")
-    def test_connection_error_message_preserved(self, mock_models: MagicMock) -> None:
+    @patch("mcp_coder.llm.providers.langchain._models.list_openai_models")
+    def test_connection_error_message_preserved(self, mock_list: MagicMock) -> None:
         from mcp_coder.llm.providers.langchain._exceptions import LLMConnectionError
         from mcp_coder.llm.providers.langchain.verification import (
             _list_models_for_backend,
@@ -405,12 +401,12 @@ class TestListModelsForBackendErrors:
             "Check:\n"
             "  1. OPENAI_API_KEY env var or api_key in config.toml"
         )
-        mock_models.list_openai_models.side_effect = LLMConnectionError(hint_msg)
+        mock_list.side_effect = LLMConnectionError(hint_msg)
         result = _list_models_for_backend("openai", "sk-test", None)
         assert result["error"] == hint_msg
 
-    @patch("mcp_coder.llm.providers.langchain.verification._models")
-    def test_auth_error_message_preserved(self, mock_models: MagicMock) -> None:
+    @patch("mcp_coder.llm.providers.langchain._models.list_openai_models")
+    def test_auth_error_message_preserved(self, mock_list: MagicMock) -> None:
         from mcp_coder.llm.providers.langchain._exceptions import LLMAuthError
         from mcp_coder.llm.providers.langchain.verification import (
             _list_models_for_backend,
@@ -421,17 +417,17 @@ class TestListModelsForBackendErrors:
             "Check:\n"
             "  1. OPENAI_API_KEY env var is set and valid"
         )
-        mock_models.list_openai_models.side_effect = LLMAuthError(hint_msg)
+        mock_list.side_effect = LLMAuthError(hint_msg)
         result = _list_models_for_backend("openai", "sk-test", None)
         assert result["error"] == hint_msg
 
-    @patch("mcp_coder.llm.providers.langchain.verification._models")
-    def test_success_has_no_error_type(self, mock_models: MagicMock) -> None:
+    @patch("mcp_coder.llm.providers.langchain._models.list_openai_models")
+    def test_success_has_no_error_type(self, mock_list: MagicMock) -> None:
         from mcp_coder.llm.providers.langchain.verification import (
             _list_models_for_backend,
         )
 
-        mock_models.list_openai_models.return_value = ["gpt-4o", "gpt-3.5-turbo"]
+        mock_list.return_value = ["gpt-4o", "gpt-3.5-turbo"]
         result = _list_models_for_backend("openai", "sk-test", None)
         assert result["ok"] is True
         assert "error_type" not in result

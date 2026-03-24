@@ -43,6 +43,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _BACKEND_ERROR_PARAMS: dict[str, tuple[str, str, str]] = {
+    # (provider_label, env_var, endpoint_hint)
     "openai": (
         "OpenAI",
         "OPENAI_API_KEY",
@@ -69,6 +70,25 @@ def _auth_errors_for_backend(backend: str | None) -> tuple[type[Exception], ...]
     if backend == "gemini":
         return GOOGLE_CLIENT_ERRORS  # needs is_google_auth_error() check at call site
     return ()
+
+
+def _handle_provider_error(exc: Exception, backend: str | None) -> None:
+    """Raise LLMAuthError or LLMConnectionError when *exc* matches, else return.
+
+    Args:
+        exc: The caught exception.
+        backend: Backend name ("openai", "gemini", "anthropic", or None).
+    """
+    auth_errors = _auth_errors_for_backend(backend)
+    provider, env_var, endpoint_hint = _BACKEND_ERROR_PARAMS.get(
+        backend or "", (backend or "", "", "")
+    )
+    if auth_errors and isinstance(exc, auth_errors):
+        if backend == "gemini" and not is_google_auth_error(exc):
+            raise_connection_error(provider, env_var, exc, endpoint_hint)
+        raise_auth_error(provider, env_var, exc)
+    if isinstance(exc, CONNECTION_ERRORS):
+        raise_connection_error(provider, env_var, exc, endpoint_hint)
 
 
 def _load_langchain_config() -> dict[str, str | None]:
@@ -252,9 +272,7 @@ def _ask_text(
 
     Raises:
         ValueError: If the model is not found on the configured backend.
-        LLMAuthError: If authentication fails.
-        LLMConnectionError: If the connection fails.
-    """
+    """  # Also raises LLMAuthError / LLMConnectionError via _handle_provider_error.
     from langchain_core.messages import HumanMessage, messages_from_dict
 
     history = load_langchain_history(session_id)
@@ -267,16 +285,7 @@ def _ask_text(
     try:
         ai_msg = chat_model.invoke(lc_messages)
     except Exception as exc:
-        _auth_errors = _auth_errors_for_backend(backend)
-        provider, env_var, endpoint_hint = _BACKEND_ERROR_PARAMS.get(
-            backend or "", (backend or "", "", "")
-        )
-        if _auth_errors and isinstance(exc, _auth_errors):
-            if backend == "gemini" and not is_google_auth_error(exc):
-                raise_connection_error(provider, env_var, exc, endpoint_hint)
-            raise_auth_error(provider, env_var, exc)
-        if isinstance(exc, CONNECTION_ERRORS):
-            raise_connection_error(provider, env_var, exc, endpoint_hint)
+        _handle_provider_error(exc, backend)
         exc_str = str(exc)
         if "404" in exc_str or "not_found" in exc_str.lower() or "NOT_FOUND" in exc_str:
             model = config.get("model", "")
@@ -370,10 +379,7 @@ def _ask_agent(
     Returns:
         LLMResponseDict with the agent's text response and tool usage stats.
 
-    Raises:
-        LLMAuthError: If authentication fails.
-        LLMConnectionError: If the connection fails.
-    """
+    """  # Also raises LLMAuthError / LLMConnectionError via _handle_provider_error.
     from .agent import _check_agent_dependencies, run_agent
 
     _check_agent_dependencies()
@@ -396,16 +402,7 @@ def _ask_agent(
             )
         )
     except Exception as exc:
-        _auth_errors = _auth_errors_for_backend(agent_backend)
-        provider, env_var, endpoint_hint = _BACKEND_ERROR_PARAMS.get(
-            agent_backend or "", (agent_backend or "", "", "")
-        )
-        if _auth_errors and isinstance(exc, _auth_errors):
-            if agent_backend == "gemini" and not is_google_auth_error(exc):
-                raise_connection_error(provider, env_var, exc, endpoint_hint)
-            raise_auth_error(provider, env_var, exc)
-        if isinstance(exc, CONNECTION_ERRORS):
-            raise_connection_error(provider, env_var, exc, endpoint_hint)
+        _handle_provider_error(exc, agent_backend)
         raise
 
     store_langchain_history(session_id, messages)
