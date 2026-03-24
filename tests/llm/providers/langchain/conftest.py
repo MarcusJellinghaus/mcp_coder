@@ -109,6 +109,9 @@ def _mock_langchain_modules() -> Generator[None, None, None]:
             mocks["google"] = MagicMock()
         mocks["google.genai"] = MagicMock()
 
+    if "httpx" not in sys.modules:
+        mocks["httpx"] = MagicMock()
+
     if not mocks:
         yield
         return

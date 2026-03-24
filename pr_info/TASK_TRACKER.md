@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Create `_http.py` — Shared httpx Client Factory
-- [ ] Implementation: `_http.py` (SSL context + httpx client factories) + tests in `test_langchain_http.py` + conftest update
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `_http.py` (SSL context + httpx client factories) + tests in `test_langchain_http.py` + conftest update
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Add Error Classification and Diagnostics to `_exceptions.py`
 - [ ] Implementation: `classify_connection_error()`, `format_diagnostics()`, `_is_connection_reset()` + tests in `test_langchain_diagnostics.py`
