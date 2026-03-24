@@ -34,7 +34,7 @@ def _strip_timestamps(log_content: str) -> str:
 def _parse_groups(log_content: str) -> List[Tuple[str, List[str]]]:
     """Parse ``##[group]``/``##[endgroup]`` sections from a GitHub Actions log.
 
-    Lines starting with ``##[error]`` immediately after ``##[endgroup]`` are
+    All lines after ``##[endgroup]`` (before the next ``##[group]``) are
     attached to the preceding group.
 
     Returns:
@@ -59,10 +59,9 @@ def _parse_groups(log_content: str) -> List[Tuple[str, List[str]]]:
             if current_label is not None:
                 current_lines.append(line)
             elif groups:
-                # Lines after ##[endgroup] – capture ##[error] lines
-                if line.startswith("##[error]"):
-                    label, lines_so_far = groups[-1]
-                    groups[-1] = (label, lines_so_far + [line])
+                # Lines after ##[endgroup] – attach to preceding group
+                label, lines_so_far = groups[-1]
+                groups[-1] = (label, lines_so_far + [line])
 
     # Save any unclosed group
     if current_label is not None:
@@ -86,8 +85,8 @@ def _extract_failed_step_log(log_content: str, step_name: str) -> str:
       4. Error-group fallback: if step_name is empty/unknown or none of
          the above matched, return all groups containing ``##[error]`` lines.
 
-    Lines starting with ``##[error]`` immediately after ``##[endgroup]`` are
-    included (they typically contain the exit-code information).
+    All lines after ``##[endgroup]`` are included (they typically contain
+    exit-code information and command output).
 
     Args:
         log_content: Full job log content (all steps concatenated).

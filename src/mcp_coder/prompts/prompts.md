@@ -72,9 +72,13 @@ Each step produces one commit. Standard sub-tasks per step (one [ ] each):
 If a step has multiple independent parts (A, B, C), split them into separate steps instead.
 Do NOT create separate "fix all issues" or "verify everything" cleanup steps.
 
-Add "Pull Request" section at end with PR review and summary tasks.
+Add `## Pull Request` section at end with PR review and summary tasks.
 
-Follow existing format in TASK_TRACKER.md or standard checkbox format.
+**Required structure:**
+- Use `## Tasks` as the section header (required by parser)
+- Use `### Step N: ...` for each step
+- Use `- [ ]` / `- [x]` for sub-tasks
+- End with `## Pull Request`
 ```
 
 ### Implementation step
