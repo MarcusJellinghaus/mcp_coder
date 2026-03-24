@@ -23,6 +23,13 @@ You are a technical lead supervising a software engineer (subagent). You do not 
 - **Guide**: For each accepted finding, give the engineer a clear, specific instruction. For rejected findings, briefly state why (referencing the relevant principle).
 - **Scope**: Stay close to the relevant issue. Don't let the review drift into unrelated improvements.
 
+**Pre-flight: Task Tracker Check**
+
+- Read `pr_info/TASK_TRACKER.md` (if it exists) and look for unchecked tasks (`- [ ]`).
+- If unchecked tasks exist, **stop immediately**. Report the open tasks and tell the user:
+  > There are still open tasks in the task tracker. Please run `/implementation_finalise` to complete them before starting a code review.
+- Only proceed to the review workflow if all tasks are checked (`- [x]`) or no task tracker exists.
+
 **Prerequisites:**
 
 - **Code must exist.** If the review subagent reports there is no implementation diff (only plan files, docs, or pr_info/), stop immediately and tell the user there is nothing to review yet.
