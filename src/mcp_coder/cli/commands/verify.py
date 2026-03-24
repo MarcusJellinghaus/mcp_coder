@@ -121,7 +121,18 @@ def _run_mcp_edit_smoke_test(
     execution_dir: str,
     symbols: dict[str, str],
 ) -> str:
-    """Run MCP edit smoke test. Returns formatted output line."""
+    """Run MCP edit smoke test.
+
+    Args:
+        project_dir: Path to the project directory.
+        provider: The active LLM provider name.
+        mcp_config: Path to the MCP config file.
+        execution_dir: Execution directory path.
+        symbols: Dict with 'success', 'failure', 'warning' keys.
+
+    Returns:
+        Formatted output line for the smoke test result.
+    """
     label = "MCP edit smoke test"
     test_file = project_dir / ".mcp_coder_verify.md"
     try:
