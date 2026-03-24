@@ -28,6 +28,7 @@ The only structural addition is a new command module file and its test file, wir
 | `src/mcp_coder/cli/main.py` | Import `execute_init`, add inline parser registration, add routing `elif` |
 | `src/mcp_coder/cli/commands/__init__.py` | Add `execute_init` to exports |
 | `src/mcp_coder/cli/commands/help.py` | Add `init` line to COMMANDS section in help text |
+| `tests/cli/commands/test_help.py` | Add assertion for `init` in help text |
 
 ## Files NOT Modified (Simplification)
 
@@ -38,8 +39,7 @@ The only structural addition is a new command module file and its test file, wir
 
 ## Implementation Steps
 
-- **Step 1**: Create `init.py` command module with tests (TDD) and wire into CLI
-- **Step 2**: Add `init` to help text with test
+- **Step 1**: Create `init.py` command module with tests (TDD), wire into CLI, and add to help text
 
 ## Expected CLI Behavior
 
