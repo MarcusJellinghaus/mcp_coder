@@ -442,3 +442,113 @@ class TestVerifyOrchestration:
         execute_verify(_make_args())
 
         mock_log_mlflow.assert_not_called()
+
+
+class TestVerifyTestPromptFailure:
+    """Tests for improved test prompt failure output (Step 5A)."""
+
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
+    @patch("mcp_coder.cli.commands.verify.verify_claude")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    def test_connection_error_shows_category(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """ConnectionResetError shows classified category, not raw traceback."""
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.side_effect = ConnectionResetError("Connection reset by peer")
+
+        execute_verify(_make_args())
+        output = capsys.readouterr().out
+
+        assert "FAILED" in output
+        assert "connection-reset" in output
+        # Should NOT contain the raw exception message
+        assert "Connection reset by peer" not in output
+
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
+    @patch("mcp_coder.cli.commands.verify.verify_claude")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    def test_non_connection_error_shows_type_and_message(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Non-connection errors show type(exc).__name__: str(exc) directly."""
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.side_effect = RuntimeError("oops")
+
+        execute_verify(_make_args())
+        output = capsys.readouterr().out
+
+        assert "FAILED" in output
+        assert "RuntimeError: oops" in output
+
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
+    @patch("mcp_coder.cli.commands.verify.verify_claude")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    def test_failure_shows_debug_hint(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Failure output includes --debug hint."""
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.side_effect = RuntimeError("fail")
+
+        execute_verify(_make_args())
+        output = capsys.readouterr().out
+
+        assert "Run with --debug for detailed diagnostics." in output
+
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
+    @patch("mcp_coder.cli.commands.verify.verify_claude")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    def test_oserror_shows_category(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """OSError with WinError 10054 uses classify_connection_error."""
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        exc = OSError(10054, "An existing connection was forcibly closed")
+        mock_prompt_llm.side_effect = exc
+
+        execute_verify(_make_args())
+        output = capsys.readouterr().out
+
+        assert "FAILED" in output
+        assert "connection-reset" in output

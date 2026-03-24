@@ -9,6 +9,8 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from ._http import create_async_http_client, create_http_client
+
 # pylint: disable=import-error
 try:
     from langchain_anthropic import ChatAnthropic
@@ -34,6 +36,8 @@ def create_anthropic_model(
     kwargs: dict[str, Any] = {
         "model_name": model,
         "default_request_timeout": float(timeout),
+        "http_client": create_http_client(),
+        "http_async_client": create_async_http_client(),
     }
     if effective_api_key:
         kwargs["anthropic_api_key"] = SecretStr(effective_api_key)

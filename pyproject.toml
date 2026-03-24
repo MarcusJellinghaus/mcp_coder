@@ -72,6 +72,7 @@ langchain = [
     "langchain-anthropic>=0.3.0",
     "langchain-mcp-adapters>=0.1.0",
     "langgraph>=0.2.0",
+    "httpx>=0.27.0",
 ]
 
 # Full development setup - combines all groups for local development
@@ -259,6 +260,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["truststore"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["httpx", "httpx.*"]
 ignore_missing_imports = true
 
 [tool.setuptools_scm]

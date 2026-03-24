@@ -229,7 +229,23 @@ def execute_verify(args: argparse.Namespace) -> int:
         log_to_mlflow(response, "Reply with OK", project_dir)
     except Exception as exc:  # pylint: disable=broad-except
         test_prompt_ok = False
-        print(f"  {'Test prompt':<20s} {symbols['failure']} FAILED ({exc})")
+        # Only classify connection-related exceptions
+        if isinstance(exc, (OSError, ConnectionError)):
+            try:
+                from ...llm.providers.langchain._exceptions import (
+                    classify_connection_error,
+                    format_diagnostics,
+                )
+
+                category = classify_connection_error(exc)
+                logger.debug("Connection diagnostics:\n%s", format_diagnostics(exc))
+            except ImportError:
+                category = "Connection error"
+        else:
+            category = f"{type(exc).__name__}: {exc}"
+        print(f"  {'Test prompt':<20s} {symbols['failure']} FAILED ({category})")
+        logger.debug("Test prompt failure details: %s", exc, exc_info=True)
+        print("  Run with --debug for detailed diagnostics.")
 
     # 4. MLflow verification (now with since= to confirm logging)
     mlflow_result = verify_mlflow(since=timestamp)

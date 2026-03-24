@@ -110,3 +110,115 @@ class TestCreateOpenaiModel:
 
             result = create_openai_model(model="gpt-4o", api_key=None)
             assert result is mock_instance
+
+
+class TestCreateOpenaiModelHttpClient:
+    """Tests for HTTP client injection into OpenAI/Azure constructors."""
+
+    def test_http_client_passed_to_chat_openai(self) -> None:
+        """create_http_client result is passed as http_client to ChatOpenAI."""
+        mock_sync_client = MagicMock(name="sync_http_client")
+        with (
+            patch(
+                "mcp_coder.llm.providers.langchain.openai_backend.ChatOpenAI"
+            ) as MockChat,
+            patch(
+                "mcp_coder.llm.providers.langchain.openai_backend.create_http_client",
+                return_value=mock_sync_client,
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain.openai_backend.create_async_http_client",
+                return_value=MagicMock(),
+            ),
+        ):
+            from mcp_coder.llm.providers.langchain.openai_backend import (
+                create_openai_model,
+            )
+
+            create_openai_model(model="gpt-4o", api_key="k")
+            _, kwargs = MockChat.call_args
+            assert kwargs["http_client"] is mock_sync_client
+
+    def test_http_async_client_passed_to_chat_openai(self) -> None:
+        """create_async_http_client result is passed as http_async_client to ChatOpenAI."""
+        mock_async_client = MagicMock(name="async_http_client")
+        with (
+            patch(
+                "mcp_coder.llm.providers.langchain.openai_backend.ChatOpenAI"
+            ) as MockChat,
+            patch(
+                "mcp_coder.llm.providers.langchain.openai_backend.create_http_client",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain.openai_backend.create_async_http_client",
+                return_value=mock_async_client,
+            ),
+        ):
+            from mcp_coder.llm.providers.langchain.openai_backend import (
+                create_openai_model,
+            )
+
+            create_openai_model(model="gpt-4o", api_key="k")
+            _, kwargs = MockChat.call_args
+            assert kwargs["http_async_client"] is mock_async_client
+
+    def test_http_client_passed_to_azure_chat_openai(self) -> None:
+        """create_http_client result is passed as http_client to AzureChatOpenAI."""
+        mock_sync_client = MagicMock(name="sync_http_client")
+        with (
+            patch(
+                "mcp_coder.llm.providers.langchain.openai_backend.AzureChatOpenAI"
+            ) as MockAzure,
+            patch("mcp_coder.llm.providers.langchain.openai_backend.ChatOpenAI"),
+            patch(
+                "mcp_coder.llm.providers.langchain.openai_backend.create_http_client",
+                return_value=mock_sync_client,
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain.openai_backend.create_async_http_client",
+                return_value=MagicMock(),
+            ),
+        ):
+            from mcp_coder.llm.providers.langchain.openai_backend import (
+                create_openai_model,
+            )
+
+            create_openai_model(
+                model="gpt-4o",
+                api_key="k",
+                endpoint="https://my.openai.azure.com/",
+                api_version="2024-02-01",
+            )
+            _, kwargs = MockAzure.call_args
+            assert kwargs["http_client"] is mock_sync_client
+
+    def test_http_async_client_passed_to_azure_chat_openai(self) -> None:
+        """create_async_http_client result is passed as http_async_client to AzureChatOpenAI."""
+        mock_async_client = MagicMock(name="async_http_client")
+        with (
+            patch(
+                "mcp_coder.llm.providers.langchain.openai_backend.AzureChatOpenAI"
+            ) as MockAzure,
+            patch("mcp_coder.llm.providers.langchain.openai_backend.ChatOpenAI"),
+            patch(
+                "mcp_coder.llm.providers.langchain.openai_backend.create_http_client",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain.openai_backend.create_async_http_client",
+                return_value=mock_async_client,
+            ),
+        ):
+            from mcp_coder.llm.providers.langchain.openai_backend import (
+                create_openai_model,
+            )
+
+            create_openai_model(
+                model="gpt-4o",
+                api_key="k",
+                endpoint="https://my.openai.azure.com/",
+                api_version="2024-02-01",
+            )
+            _, kwargs = MockAzure.call_args
+            assert kwargs["http_async_client"] is mock_async_client

@@ -22,6 +22,7 @@ from mcp_coder.llm.providers.langchain._models import (
 )
 
 _MODELS = "mcp_coder.llm.providers.langchain._models"
+_HTTP = f"{_MODELS}.create_http_client"
 
 
 class _FakeAuthError(Exception):
@@ -128,9 +129,10 @@ class TestListOpenaiModels:
         mock_openai.OpenAI.return_value.models.list.return_value = []
         with patch.dict(sys.modules, {"openai": mock_openai}):
             list_openai_models(api_key="my-key", endpoint="https://custom.example.com")
-        mock_openai.OpenAI.assert_called_once_with(
-            api_key="my-key", base_url="https://custom.example.com"
-        )
+        mock_openai.OpenAI.assert_called_once()
+        _, kwargs = mock_openai.OpenAI.call_args
+        assert kwargs["api_key"] == "my-key"
+        assert kwargs["base_url"] == "https://custom.example.com"
 
     def test_omits_none_api_key_and_endpoint(self) -> None:
         """None values for api_key and endpoint are passed as None."""
@@ -138,7 +140,10 @@ class TestListOpenaiModels:
         mock_openai.OpenAI.return_value.models.list.return_value = []
         with patch.dict(sys.modules, {"openai": mock_openai}):
             list_openai_models(api_key=None, endpoint=None)
-        mock_openai.OpenAI.assert_called_once_with(api_key=None, base_url=None)
+        mock_openai.OpenAI.assert_called_once()
+        _, kwargs = mock_openai.OpenAI.call_args
+        assert kwargs["api_key"] is None
+        assert kwargs["base_url"] is None
 
     def test_returns_empty_list_when_no_models(self) -> None:
         """Returns empty list when API returns no models."""
@@ -147,6 +152,19 @@ class TestListOpenaiModels:
         with patch.dict(sys.modules, {"openai": mock_openai}):
             result = list_openai_models(api_key=None)
         assert result == []
+
+    def test_http_client_passed_to_openai_client(self) -> None:
+        """create_http_client result is passed as http_client to openai.OpenAI."""
+        sentinel = MagicMock(name="http_client_sentinel")
+        mock_openai = _openai_mock()
+        mock_openai.OpenAI.return_value.models.list.return_value = []
+        with (
+            patch.dict(sys.modules, {"openai": mock_openai}),
+            patch(_HTTP, return_value=sentinel),
+        ):
+            list_openai_models(api_key="k")
+        _, kwargs = mock_openai.OpenAI.call_args
+        assert kwargs["http_client"] is sentinel
 
 
 class TestListAnthropicModels:
@@ -170,7 +188,9 @@ class TestListAnthropicModels:
         mock_anthropic.Anthropic.return_value.models.list.return_value = []
         with patch.dict(sys.modules, {"anthropic": mock_anthropic}):
             list_anthropic_models(api_key="my-key")
-        mock_anthropic.Anthropic.assert_called_once_with(api_key="my-key")
+        mock_anthropic.Anthropic.assert_called_once()
+        _, kwargs = mock_anthropic.Anthropic.call_args
+        assert kwargs["api_key"] == "my-key"
 
     def test_omits_none_api_key(self) -> None:
         """None api_key is passed as None."""
@@ -178,7 +198,9 @@ class TestListAnthropicModels:
         mock_anthropic.Anthropic.return_value.models.list.return_value = []
         with patch.dict(sys.modules, {"anthropic": mock_anthropic}):
             list_anthropic_models(api_key=None)
-        mock_anthropic.Anthropic.assert_called_once_with(api_key=None)
+        mock_anthropic.Anthropic.assert_called_once()
+        _, kwargs = mock_anthropic.Anthropic.call_args
+        assert kwargs["api_key"] is None
 
     def test_returns_empty_list_when_no_models(self) -> None:
         """Returns empty list when API returns no models."""
@@ -187,6 +209,19 @@ class TestListAnthropicModels:
         with patch.dict(sys.modules, {"anthropic": mock_anthropic}):
             result = list_anthropic_models(api_key=None)
         assert result == []
+
+    def test_http_client_passed_to_anthropic_client(self) -> None:
+        """create_http_client result is passed as http_client to anthropic.Anthropic."""
+        sentinel = MagicMock(name="http_client_sentinel")
+        mock_anthropic = _anthropic_mock()
+        mock_anthropic.Anthropic.return_value.models.list.return_value = []
+        with (
+            patch.dict(sys.modules, {"anthropic": mock_anthropic}),
+            patch(_HTTP, return_value=sentinel),
+        ):
+            list_anthropic_models(api_key="k")
+        _, kwargs = mock_anthropic.Anthropic.call_args
+        assert kwargs["http_client"] is sentinel
 
 
 class TestListModelsCommon:
