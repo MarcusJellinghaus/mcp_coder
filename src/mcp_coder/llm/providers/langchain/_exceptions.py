@@ -190,9 +190,9 @@ def classify_connection_error(exc: Exception) -> str:
 
     if isinstance(exc, OSError):
         err = getattr(exc, "errno", None)
-        if err == 111 or err == 10061:  # ECONNREFUSED / WinError
+        if err in (111, 10061):  # ECONNREFUSED / WinError
             return "connection-refused"
-        if err == 110 or err == 10060:  # ETIMEDOUT / WinError
+        if err in (110, 10060):  # ETIMEDOUT / WinError
             return "connection-timeout"
 
     exc_name = type(exc).__name__.lower()
@@ -238,15 +238,15 @@ def format_diagnostics(exc: Exception) -> str:
     """
     category = classify_connection_error(exc)
     proxy = _proxy_configured()
-    truststore = _truststore_available()
+    truststore_active = _truststore_available()
     lines = [
         f"Error category : {category}",
         f"Proxy configured: {proxy}",
-        f"Truststore active: {truststore}",
+        f"Truststore active: {truststore_active}",
     ]
     if not proxy:
         lines.append("Hint: If behind a corporate proxy, set HTTPS_PROXY / HTTP_PROXY.")
-    if not truststore:
+    if not truststore_active:
         lines.append(
             "Hint: Install truststore (pip install 'mcp-coder[truststore]') "
             "for OS certificate store support."
