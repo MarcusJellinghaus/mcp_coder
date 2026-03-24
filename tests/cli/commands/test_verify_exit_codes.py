@@ -287,12 +287,12 @@ class TestMcpServersInVerify:
     )
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_langchain")
-    @patch("mcp_coder.cli.commands.verify.verify_claude")
+    @patch("mcp_coder.cli.commands.verify.find_claude_executable", return_value=None)
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     def test_mcp_servers_displayed_when_config_present(
         self,
         mock_provider: MagicMock,
-        mock_claude: MagicMock,
+        mock_find_claude: MagicMock,
         mock_lc: MagicMock,
         mock_mlflow: MagicMock,
         mock_resolve_mcp: MagicMock,
@@ -303,7 +303,6 @@ class TestMcpServersInVerify:
     ) -> None:
         """MCP SERVERS section shown when mcp_config is present."""
         mock_provider.return_value = ("langchain", "config.toml")
-        mock_claude.return_value = _claude_ok()
         mock_lc.return_value = _langchain_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
         mock_prompt_llm.return_value = _minimal_llm_response()
@@ -326,12 +325,12 @@ class TestMcpServersInVerify:
     )
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_langchain")
-    @patch("mcp_coder.cli.commands.verify.verify_claude")
+    @patch("mcp_coder.cli.commands.verify.find_claude_executable", return_value=None)
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     def test_mcp_servers_skipped_when_no_config(
         self,
         mock_provider: MagicMock,
-        mock_claude: MagicMock,
+        mock_find_claude: MagicMock,
         mock_lc: MagicMock,
         mock_mlflow: MagicMock,
         mock_resolve_mcp: MagicMock,
@@ -342,7 +341,6 @@ class TestMcpServersInVerify:
     ) -> None:
         """MCP SERVERS section hidden when no MCP config."""
         mock_provider.return_value = ("langchain", "config.toml")
-        mock_claude.return_value = _claude_ok()
         mock_lc.return_value = _langchain_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
         mock_prompt_llm.return_value = _minimal_llm_response()
