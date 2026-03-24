@@ -54,7 +54,12 @@
       "Bash(git ls-tree:*)",
       "Bash(mcp-coder git-tool:*)",
       "Bash(ruff rule:*)",
-      "Bash(ruff check:*)"
+      "Bash(ruff check:*)",
+      "mcp__tools-py__list_symbols",
+      "mcp__tools-py__find_references",
+      "mcp__tools-py__move_symbol",
+      "mcp__tools-py__rename_symbol",
+      "mcp__tools-py__move_module"
     ]
   },
   "enableAllProjectMcpServers": true,
