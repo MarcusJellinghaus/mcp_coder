@@ -96,19 +96,28 @@ def _check_mcp_adapter_packages() -> dict[str, dict[str, Any]]:
     """
     mcp_ok = _check_package_installed("langchain_mcp_adapters")
     lg_ok = _check_package_installed("langgraph")
+
+    mcp_entry: dict[str, Any] = {
+        "ok": mcp_ok,
+        "value": (
+            "langchain-mcp-adapters installed"
+            if mcp_ok
+            else "langchain-mcp-adapters not installed"
+        ),
+    }
+    if not mcp_ok:
+        mcp_entry["install_hint"] = "pip install langchain-mcp-adapters"
+
+    lg_entry: dict[str, Any] = {
+        "ok": lg_ok,
+        "value": "langgraph installed" if lg_ok else "langgraph not installed",
+    }
+    if not lg_ok:
+        lg_entry["install_hint"] = "pip install langgraph"
+
     return {
-        "mcp_adapters": {
-            "ok": mcp_ok,
-            "value": (
-                "langchain-mcp-adapters installed"
-                if mcp_ok
-                else "langchain-mcp-adapters not installed"
-            ),
-        },
-        "langgraph": {
-            "ok": lg_ok,
-            "value": "langgraph installed" if lg_ok else "langgraph not installed",
-        },
+        "mcp_adapters": mcp_entry,
+        "langgraph": lg_entry,
     }
 
 
@@ -163,6 +172,8 @@ def verify_langchain(
         "ok": lc_core_installed,
         "value": "installed" if lc_core_installed else "not installed",
     }
+    if not lc_core_installed:
+        result["langchain_core"]["install_hint"] = "pip install langchain-core"
 
     # Backend package check
     backend_pkg = _BACKEND_PACKAGES.get(backend or "")
@@ -178,6 +189,8 @@ def verify_langchain(
                 else f"{display_name} not installed"
             ),
         }
+        if not pkg_installed:
+            result["backend_package"]["install_hint"] = f"pip install {display_name}"
     else:
         result["backend_package"] = {
             "ok": False,

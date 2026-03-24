@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Detail: [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: tests in `test_langchain_verification.py` + production code in `verification.py`
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(verify): add install hints to langchain verification results`
+- [x] Implementation: tests in `test_langchain_verification.py` + production code in `verification.py`
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(verify): add install hints to langchain verification results`
 
 ### Step 2: Add `install_hint` to Claude CLI verification
 
