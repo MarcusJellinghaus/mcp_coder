@@ -38,7 +38,7 @@
         "emoji": "📋",
         "display_name": "PLAN REVIEW",
         "stage_short": "plan",
-        "commands": ["/plan_review", "/discuss"]
+        "commands": ["/plan_review_supervisor"]
       }
     },
     {
