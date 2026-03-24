@@ -33,7 +33,7 @@ def create_async_http_client() -> httpx.AsyncClient:
 
 - Imports: `ssl`, `logging`, and try-import for `truststore` and `httpx`
 - `create_ssl_context()` is the shared core used by both factory functions
-- DEBUG-level logging: proxy configured (yes/no based on `HTTPS_PROXY`/`HTTP_PROXY` presence), SSL context type (truststore vs default)
+- DEBUG-level logging: proxy configured (yes/no based on `HTTPS_PROXY`/`https_proxy`/`HTTP_PROXY`/`http_proxy` presence), SSL context type (truststore vs default)
 - **Security**: Never log env var values, only presence
 
 ## ALGORITHM — `create_ssl_context()`
@@ -56,7 +56,10 @@ def create_ssl_context():
 ```python
 def create_http_client():
     ctx = create_ssl_context()
-    proxy_configured = bool(os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY"))
+    proxy_configured = bool(
+        os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy")
+        or os.environ.get("HTTP_PROXY") or os.environ.get("http_proxy")
+    )
     logger.debug("httpx client: proxy_configured=%s", proxy_configured)
     return httpx.Client(verify=ctx)
 ```
@@ -85,7 +88,8 @@ Write tests **first** (TDD), then implement.
 - `test_returns_httpx_client` — verify return type is `httpx.Client`
 - `test_passes_ssl_context_as_verify` — mock `create_ssl_context`, verify `httpx.Client(verify=ctx)` called
 - `test_logs_proxy_configured_true` — set `HTTPS_PROXY` env var, caplog check
-- `test_logs_proxy_configured_false` — clear proxy env vars, caplog check
+- `test_logs_proxy_configured_true_lowercase` — set `https_proxy` env var, caplog check
+- `test_logs_proxy_configured_false` — clear all proxy env vars (upper and lowercase), caplog check
 - `test_never_logs_proxy_value` — set `HTTPS_PROXY=http://secret:pass@proxy:8080`, verify value NOT in logs
 
 **`TestCreateAsyncHttpClient`**:

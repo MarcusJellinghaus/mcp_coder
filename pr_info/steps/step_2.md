@@ -51,8 +51,11 @@ def classify_connection_error(exc):
 def format_diagnostics(exc):
     category = classify_connection_error(exc)
     lines = [f"Diagnosis: {category}"]
-    # Proxy presence (yes/no, never the value)
-    has_proxy = bool(os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY"))
+    # Proxy presence (yes/no, never the value) — check both upper and lowercase
+    has_proxy = bool(
+        os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy")
+        or os.environ.get("HTTP_PROXY") or os.environ.get("http_proxy")
+    )
     lines.append(f"  HTTPS_PROXY/HTTP_PROXY configured: {'yes' if has_proxy else 'no'}")
     # Truststore status
     from ._ssl import _injected as truststore_active
@@ -64,16 +67,20 @@ def format_diagnostics(exc):
 
 ## ALGORITHM — `_is_connection_reset(exc)`
 
+Uses an iterative loop with a max depth of 5 to avoid unbounded recursion on deeply chained exceptions.
+
 ```python
-def _is_connection_reset(exc):
-    if isinstance(exc, ConnectionResetError):
-        return True
-    errno = getattr(exc, "errno", None)
-    if errno == 10054:  # WinError 10054
-        return True
-    # Check exception chain
-    if exc.__cause__ and _is_connection_reset(exc.__cause__):
-        return True
+def _is_connection_reset(exc, _max_depth: int = 5) -> bool:
+    current = exc
+    for _ in range(_max_depth):
+        if current is None:
+            break
+        if isinstance(current, ConnectionResetError):
+            return True
+        errno = getattr(current, "errno", None)
+        if errno == 10054:  # WinError 10054
+            return True
+        current = current.__cause__
     return False
 ```
 
@@ -105,18 +112,50 @@ Write tests **first** (TDD), then implement.
 ### Test Classes
 
 **`TestClassifyConnectionError`**:
-- `test_ssl_error_classified` — `ssl.SSLError` → "SSL/TLS error"
-- `test_gaierror_classified` — `socket.gaierror` → "DNS resolution failed"
-- `test_connection_reset_error_classified` — `ConnectionResetError` → "Connection reset (likely proxy/firewall)"
-- `test_winerror_10054_classified` — `OSError` with `errno=10054` → "Connection reset (likely proxy/firewall)"
-- `test_timeout_classified` — exception with "Timeout" in class name → "Connection timeout"
-- `test_generic_oserror_classified` — plain `OSError` → "Connection error"
-- `test_chained_connection_reset` — `OSError` with `__cause__=ConnectionResetError` → "Connection reset"
+
+Use `@pytest.mark.parametrize` to consolidate the classification cases into a single parameterized test:
+
+```python
+@pytest.mark.parametrize(
+    "exc, expected_category",
+    [
+        (ssl.SSLError(), "SSL/TLS error"),
+        (socket.gaierror(), "DNS resolution failed"),
+        (ConnectionResetError(), "Connection reset (likely proxy/firewall)"),
+        (OSError_with_errno_10054, "Connection reset (likely proxy/firewall)"),
+        (TimeoutError(), "Connection timeout"),
+        (OSError(), "Connection error"),
+        (chained_connection_reset, "Connection reset (likely proxy/firewall)"),
+    ],
+)
+def test_classify_connection_error(exc, expected_category):
+    assert classify_connection_error(exc) == expected_category
+```
+
+Additional standalone test:
+- `test_is_connection_reset_stops_at_max_depth` — build a chain deeper than 5 levels, verify it returns `False` (does not recurse infinitely)
 
 **`TestFormatDiagnostics`**:
+
+Use `@pytest.mark.parametrize` where multiple tests check string presence/absence:
+
+```python
+@pytest.mark.parametrize(
+    "env_vars, expected_substring",
+    [
+        ({"HTTPS_PROXY": "http://proxy:8080"}, "configured: yes"),
+        ({"https_proxy": "http://proxy:8080"}, "configured: yes"),
+        ({"HTTP_PROXY": "http://proxy:8080"}, "configured: yes"),
+        ({"http_proxy": "http://proxy:8080"}, "configured: yes"),
+        ({}, "configured: no"),
+    ],
+)
+def test_proxy_detection(env_vars, expected_substring):
+    # ... set env_vars, call format_diagnostics, assert expected_substring in output
+```
+
+Additional standalone tests:
 - `test_contains_category` — output includes the classified category string
-- `test_shows_proxy_yes_when_set` — set `HTTPS_PROXY`, check "yes" in output
-- `test_shows_proxy_no_when_unset` — clear proxy env vars, check "no" in output
 - `test_shows_truststore_status` — check "Truststore active:" in output
 - `test_contains_hint` — output includes a hint string
 - `test_never_contains_proxy_value` — set proxy to `http://secret:pass@host`, verify value not in output
