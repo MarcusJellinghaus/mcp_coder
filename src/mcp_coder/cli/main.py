@@ -22,6 +22,7 @@ from .commands.gh_tool import execute_get_base_branch
 from .commands.git_tool import execute_compact_diff
 from .commands.help import execute_help, get_help_text
 from .commands.implement import execute_implement
+from .commands.init import execute_init
 from .commands.prompt import execute_prompt
 from .commands.set_status import execute_set_status
 from .commands.verify import execute_verify
@@ -81,6 +82,7 @@ def create_parser() -> argparse.ArgumentParser:
 
     # Simple commands without subparsers
     subparsers.add_parser("help", help="Show help information")
+    subparsers.add_parser("init", help="Create default configuration file")
     add_verify_parser(subparsers)
 
     # Add command parsers from parsers module
@@ -261,6 +263,8 @@ def main() -> int:
         # Route to appropriate command handler
         if args.command == "help":
             return execute_help(args)
+        elif args.command == "init":
+            return execute_init(args)
         elif args.command == "verify":
             return execute_verify(args)
         elif args.command == "prompt":
