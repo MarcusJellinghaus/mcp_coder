@@ -71,3 +71,5 @@ After:
 ```
 
 When `ok=True`, the `install_hint` key is **absent**.
+
+**Note**: This URL hint will only appear inline via `_format_section()` rendering. It will NOT appear in the pip install summary block (Step 3), since that block only collects hints starting with `"pip install"`.

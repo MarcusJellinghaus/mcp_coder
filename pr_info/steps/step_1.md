@@ -64,6 +64,8 @@ if not pkg_installed:
     entry["install_hint"] = "pip install <pip-package-name>"
 ```
 
+**Edge case**: When `backend_pkg` is `None` (no backend configured), the entry has `ok=False` with `value="no backend configured"` — do NOT add `install_hint` since there's no specific package to suggest. Only add `install_hint` when a specific backend package is identified but not importable.
+
 Package name mapping (Python import → pip name):
 - `langchain_core` → `langchain-core`
 - `langchain_openai` → `langchain-openai`

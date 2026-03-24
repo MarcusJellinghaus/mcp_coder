@@ -32,9 +32,21 @@ Run all three code quality checks after changes. Commit as one unit.
 ```python
 def test_install_hint_rendered_inline(self) -> None:
     """When entry has install_hint and ok=False, hint appears indented below."""
+```
 
-def test_no_install_hint_when_ok(self) -> None:
-    """When entry has ok=True, no install hint line appears even if hint key exists."""
+```python
+class TestCollectInstallHints:
+    def test_collects_hints_from_failed_entries(self) -> None:
+        """Collects install_hint values from entries with ok=False."""
+
+    def test_skips_entries_without_hint(self) -> None:
+        """Entries with ok=False but no install_hint key are skipped."""
+
+    def test_skips_ok_entries(self) -> None:
+        """Entries with ok=True are skipped even if install_hint is present."""
+
+    def test_skips_non_dict_entries(self) -> None:
+        """Non-dict entries (like overall_ok bool) are skipped."""
 ```
 
 ### In `test_verify_orchestration.py` — add new class `TestConditionalClaudeDisplay`:
@@ -62,6 +74,14 @@ class TestInstallSummaryBlock:
         """When all packages installed, no INSTALL INSTRUCTIONS block."""
 ```
 
+### Existing Tests to Update
+
+These tests currently mock `verify_claude()` when langchain is active. After this step, `verify_claude()` is no longer called when `active_provider == "langchain"` — the quick binary check replaces it. Each test needs its mock setup adjusted:
+
+- `test_all_sections_printed` — currently expects "BASIC VERIFICATION" in output when langchain is active. Update to expect the one-liner or no Claude section instead.
+- `test_claude_informational_when_langchain_active` — currently patches `verify_claude`. Update to patch `find_claude_executable` instead, and assert the one-liner output.
+- `test_exit_1_when_active_provider_fails` — the `verify_claude` mock becomes unused when langchain is active. Verify the test still makes sense or split into provider-specific exit code tests.
+
 ## WHAT — Implementation Changes
 
 ### New function:
@@ -78,7 +98,7 @@ def _collect_install_hints(result: dict[str, Any]) -> list[str]:
 
 ## HOW — Integration
 
-- Import `find_claude_executable` from `claude_executable_finder` (already in the provider package) for the quick binary check when langchain is active.
+- Import: `from mcp_coder.llm.providers.claude.claude_executable_finder import find_claude_executable` (use relative import `from ...llm.providers.claude.claude_executable_finder import find_claude_executable` to match file conventions).
 - No new external dependencies.
 
 ## ALGORITHM
@@ -130,6 +150,8 @@ if all_hints:
     print("\n=== INSTALL INSTRUCTIONS ===")
     print(f"  pip install {pip_packages}")
 ```
+
+**Note**: The `pip install` summary block only collects hints starting with `"pip install"`. The Claude docs URL hint (from Step 2) is naturally excluded. When `active_provider == "langchain"`, Claude hints are not collected at all (consistent with issue requirement: "Only show install hints for the active provider's missing dependencies").
 
 ## DATA
 
