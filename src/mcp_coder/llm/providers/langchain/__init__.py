@@ -266,19 +266,17 @@ def _ask_text(
 
     try:
         ai_msg = chat_model.invoke(lc_messages)
-    except (*_auth_errors_for_backend(backend),) as exc:
-        provider, env_var, endpoint_hint = _BACKEND_ERROR_PARAMS.get(
-            backend or "", (backend or "", "", "")
-        )
-        if backend == "gemini" and not is_google_auth_error(exc):
-            raise_connection_error(provider, env_var, exc, endpoint_hint)
-        raise_auth_error(provider, env_var, exc)
-    except CONNECTION_ERRORS as exc:
-        provider, env_var, endpoint_hint = _BACKEND_ERROR_PARAMS.get(
-            backend or "", (backend or "", "", "")
-        )
-        raise_connection_error(provider, env_var, exc, endpoint_hint)
     except Exception as exc:
+        _auth_errors = _auth_errors_for_backend(backend)
+        provider, env_var, endpoint_hint = _BACKEND_ERROR_PARAMS.get(
+            backend or "", (backend or "", "", "")
+        )
+        if _auth_errors and isinstance(exc, _auth_errors):
+            if backend == "gemini" and not is_google_auth_error(exc):
+                raise_connection_error(provider, env_var, exc, endpoint_hint)
+            raise_auth_error(provider, env_var, exc)
+        if isinstance(exc, CONNECTION_ERRORS):
+            raise_connection_error(provider, env_var, exc, endpoint_hint)
         exc_str = str(exc)
         if "404" in exc_str or "not_found" in exc_str.lower() or "NOT_FOUND" in exc_str:
             model = config.get("model", "")
@@ -397,18 +395,18 @@ def _ask_agent(
                 timeout=timeout,
             )
         )
-    except (*_auth_errors_for_backend(agent_backend),) as exc:
+    except Exception as exc:
+        _auth_errors = _auth_errors_for_backend(agent_backend)
         provider, env_var, endpoint_hint = _BACKEND_ERROR_PARAMS.get(
             agent_backend or "", (agent_backend or "", "", "")
         )
-        if agent_backend == "gemini" and not is_google_auth_error(exc):
+        if _auth_errors and isinstance(exc, _auth_errors):
+            if agent_backend == "gemini" and not is_google_auth_error(exc):
+                raise_connection_error(provider, env_var, exc, endpoint_hint)
+            raise_auth_error(provider, env_var, exc)
+        if isinstance(exc, CONNECTION_ERRORS):
             raise_connection_error(provider, env_var, exc, endpoint_hint)
-        raise_auth_error(provider, env_var, exc)
-    except CONNECTION_ERRORS as exc:
-        provider, env_var, endpoint_hint = _BACKEND_ERROR_PARAMS.get(
-            agent_backend or "", (agent_backend or "", "", "")
-        )
-        raise_connection_error(provider, env_var, exc, endpoint_hint)
+        raise
 
     store_langchain_history(session_id, messages)
 

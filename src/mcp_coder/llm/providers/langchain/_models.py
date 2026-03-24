@@ -53,7 +53,7 @@ def list_gemini_models(api_key: str | None) -> list[str]:
             for m in client.models.list()
             if m.name is not None and "generateContent" in (m.supported_actions or [])
         ]
-    except (*GOOGLE_CLIENT_ERRORS,) as exc:
+    except GOOGLE_CLIENT_ERRORS as exc:
         if is_google_auth_error(exc):
             raise_auth_error("Gemini", "GEMINI_API_KEY", exc)
         raise_connection_error("Gemini", "GEMINI_API_KEY", exc)
