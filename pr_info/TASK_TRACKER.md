@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3A: Inject HTTP Clients into OpenAI Backend
-- [ ] Implementation: pass `http_client`/`http_async_client` to `ChatOpenAI`/`AzureChatOpenAI` + tests in `test_langchain_openai.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: pass `http_client`/`http_async_client` to `ChatOpenAI`/`AzureChatOpenAI` + tests in `test_langchain_openai.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3B: Inject HTTP Clients into Anthropic Backend
 - [ ] Implementation: pass `http_client`/`http_async_client` to `ChatAnthropic` + tests in `test_langchain_anthropic.py`

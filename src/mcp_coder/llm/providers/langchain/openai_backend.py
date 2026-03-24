@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import os
 
+from ._http import create_async_http_client, create_http_client
+
 # pylint: disable=import-error
 try:
     from langchain_openai import AzureChatOpenAI, ChatOpenAI
@@ -17,6 +19,7 @@ except ImportError as exc:
         "LangChain OpenAI backend requires extra dependencies.\n"
         "Install with: pip install 'mcp-coder[langchain]'"
     ) from exc
+
 
 
 def create_openai_model(
@@ -34,6 +37,9 @@ def create_openai_model(
     effective_api_key = os.getenv("OPENAI_API_KEY") or api_key
     secret_key = SecretStr(effective_api_key) if effective_api_key else None
 
+    http_client = create_http_client()
+    async_http_client = create_async_http_client()
+
     if api_version:
         return AzureChatOpenAI(
             azure_deployment=model,
@@ -41,10 +47,14 @@ def create_openai_model(
             api_key=secret_key,
             api_version=api_version,
             timeout=timeout,
+            http_client=http_client,
+            http_async_client=async_http_client,
         )
     return ChatOpenAI(
         model=model,
         api_key=secret_key,
         base_url=endpoint,
         timeout=timeout,
+        http_client=http_client,
+        http_async_client=async_http_client,
     )
