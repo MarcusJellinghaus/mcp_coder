@@ -35,12 +35,13 @@ def _format_mcp_section(mcp_results: dict[str, Any], symbols: dict[str, str]) ->
 for name, entry in servers.items():
     symbol = [OK] or [!!]
     tool_names = entry.get("tool_names")
+    # Note: empty tool_names=[] is falsy, intentionally falls through to value-string path
     if tool_names:
         prefix = f"  {name:<20s} {symbol} "
         tools_text = f"{len(tool_names)} tools: {', '.join(tool_names)}"
         wrapped = textwrap.wrap(tools_text, width=80,
                                 initial_indent=prefix,
-                                subsequent_indent=" " * 28)
+                                subsequent_indent=" " * len(prefix))
         lines.extend(wrapped)
     else:
         lines.append(f"  {name:<20s} {symbol} {value}")
@@ -77,6 +78,7 @@ Add to `test_verify_format_section.py` in a new `TestFormatMcpSection` class:
 2. **`test_tool_names_wrap_at_80_columns`** — 10 tool names with long names cause wrapping, continuation lines indented
 3. **`test_no_tool_names_falls_back_to_value`** — Server with no `tool_names` key shows `value` string (backward compat)
 4. **`test_failed_server_shows_value_not_tools`** — Failed server with `ok=False` shows error value
+5. **`test_empty_tool_names_falls_back_to_value`** — Server with `tool_names=[]` shows value string (0 tools case)
 
 ## COMMIT
 

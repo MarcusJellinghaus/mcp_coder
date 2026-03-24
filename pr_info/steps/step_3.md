@@ -20,7 +20,7 @@
 ### Fix existing `prompt_llm()` call
 
 ```python
-# BEFORE (line ~165 in execute_verify):
+# BEFORE (line ~226 in execute_verify):
 response = prompt_llm("Reply with OK", provider=active_provider, timeout=30)
 
 # AFTER:
@@ -111,10 +111,12 @@ if mcp_config_resolved:
 ### In `test_verify_orchestration.py`
 
 1. **`test_prompt_llm_receives_mcp_config_and_execution_dir`** — Assert `prompt_llm` is called with `mcp_config=` and `execution_dir=` kwargs for the test prompt
+   Note: Must also patch `mcp_coder.cli.commands.verify.verify_config` (see `test_verify_exit_codes.py` for pattern).
 
 ### In `test_verify_exit_codes.py`
 
 2. **`test_smoke_test_pass_displays_ok`** — Mock `prompt_llm` to write "B" into the file, verify output contains `[OK] edit verified`
+   Note: The `prompt_llm` mock needs a `side_effect` that writes the expected content to the test file, e.g.: `side_effect=lambda *a, **kw: test_file.write_text("A\nB\nC\n")`.
 3. **`test_smoke_test_fail_displays_warning`** — Mock `prompt_llm` to do nothing (file unchanged), verify output contains `[!!] edit not verified`
 4. **`test_smoke_test_error_displays_warning`** — Mock `prompt_llm` to raise, verify output contains `[!!] edit not verified`
 5. **`test_smoke_test_does_not_affect_exit_code`** — Smoke test fails but exit code is still 0 (when provider ok)
