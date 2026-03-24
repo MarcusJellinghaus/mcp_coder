@@ -108,25 +108,24 @@ def _mlflow_enabled_broken() -> dict[str, Any]:
 class TestVerifyOrchestration:
     """Tests for the verify CLI orchestrator."""
 
+    @patch("mcp_coder.cli.commands.verify.find_claude_executable", return_value=None)
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_langchain")
-    @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     def test_all_sections_printed(
         self,
         mock_provider: MagicMock,
-        mock_claude: MagicMock,
         mock_lc: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
+        mock_find_claude: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """All three sections appear in output."""
+        """LLM PROVIDER and MLFLOW sections appear; no BASIC VERIFICATION when langchain."""
         mock_provider.return_value = ("langchain", "config.toml")
-        mock_claude.return_value = _claude_ok()
         mock_lc.return_value = _langchain_ok()
         mock_mlflow.return_value = _mlflow_ok()
         mock_prompt_llm.return_value = _minimal_llm_response()
@@ -134,7 +133,7 @@ class TestVerifyOrchestration:
         execute_verify(_make_args())
         output = capsys.readouterr().out
 
-        assert "BASIC VERIFICATION" in output
+        assert "BASIC VERIFICATION" not in output
         assert "LLM PROVIDER" in output
         assert "MLFLOW" in output
 
@@ -161,24 +160,23 @@ class TestVerifyOrchestration:
 
         assert result == 0
 
+    @patch("mcp_coder.cli.commands.verify.find_claude_executable", return_value=None)
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_langchain")
-    @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     def test_exit_1_when_active_provider_fails(
         self,
         mock_provider: MagicMock,
-        mock_claude: MagicMock,
         mock_lc: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
+        mock_find_claude: MagicMock,
     ) -> None:
         """Exit 1 when active provider (langchain) fails."""
         mock_provider.return_value = ("langchain", "config.toml")
-        mock_claude.return_value = _claude_ok()
         mock_lc.return_value = _langchain_fail()
         mock_mlflow.return_value = _mlflow_not_installed()
         mock_prompt_llm.return_value = _minimal_llm_response()
@@ -233,25 +231,25 @@ class TestVerifyOrchestration:
 
         assert result == 0
 
+    @patch("mcp_coder.cli.commands.verify.find_claude_executable")
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
-    @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     def test_claude_informational_when_langchain_active(
         self,
         mock_provider: MagicMock,
-        mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
+        mock_find_claude: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """Claude CLI section is informational when provider=langchain (doesn't affect exit)."""
+        """Claude one-liner shown when langchain active and CLI found."""
         mock_provider.return_value = ("langchain", "config.toml")
-        mock_claude.return_value = _claude_fail()
+        mock_find_claude.return_value = "/usr/bin/claude"
         mock_mlflow.return_value = _mlflow_not_installed()
         mock_prompt_llm.return_value = _minimal_llm_response()
 
@@ -259,29 +257,30 @@ class TestVerifyOrchestration:
             mock_lc.return_value = _langchain_ok()
             result = execute_verify(_make_args())
 
-        # Claude failing should not cause exit 1 when langchain is active
         assert result == 0
+        output = capsys.readouterr().out
+        assert "Claude CLI: available at /usr/bin/claude" in output
+        assert "BASIC VERIFICATION" not in output
 
+    @patch("mcp_coder.cli.commands.verify.find_claude_executable", return_value=None)
     @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_langchain")
-    @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
     def test_check_models_passed_to_langchain(
         self,
         mock_provider: MagicMock,
-        mock_claude: MagicMock,
         mock_lc: MagicMock,
         mock_mlflow: MagicMock,
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
+        mock_find_claude: MagicMock,
     ) -> None:
         """--check-models flag forwarded to verify_langchain."""
         mock_provider.return_value = ("langchain", "config.toml")
-        mock_claude.return_value = _claude_ok()
         mock_lc.return_value = _langchain_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
         mock_prompt_llm.return_value = _minimal_llm_response()
@@ -442,3 +441,163 @@ class TestVerifyOrchestration:
         execute_verify(_make_args())
 
         mock_log_mlflow.assert_not_called()
+
+
+class TestConditionalClaudeDisplay:
+    """Tests for conditional Claude display based on active provider."""
+
+    @patch("mcp_coder.cli.commands.verify.find_claude_executable")
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
+    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
+    @patch("mcp_coder.cli.commands.verify.verify_langchain")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    def test_langchain_active_cli_found_shows_oneliner(
+        self,
+        mock_provider: MagicMock,
+        mock_lc: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_resolve_mcp: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
+        mock_find_claude: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """When langchain active and CLI binary exists, show brief one-liner."""
+        mock_provider.return_value = ("langchain", "config.toml")
+        mock_find_claude.return_value = "/usr/bin/claude"
+        mock_lc.return_value = _langchain_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+
+        execute_verify(_make_args())
+        output = capsys.readouterr().out
+
+        assert "Claude CLI: available at /usr/bin/claude (not active)" in output
+        assert "BASIC VERIFICATION" not in output
+
+    @patch("mcp_coder.cli.commands.verify.find_claude_executable")
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
+    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
+    @patch("mcp_coder.cli.commands.verify.verify_langchain")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    def test_langchain_active_cli_not_found_skips_claude_section(
+        self,
+        mock_provider: MagicMock,
+        mock_lc: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_resolve_mcp: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
+        mock_find_claude: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """When langchain active and CLI not found, no BASIC VERIFICATION section."""
+        mock_provider.return_value = ("langchain", "config.toml")
+        mock_find_claude.return_value = None
+        mock_lc.return_value = _langchain_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+
+        execute_verify(_make_args())
+        output = capsys.readouterr().out
+
+        assert "BASIC VERIFICATION" not in output
+        assert "Claude CLI:" not in output
+
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
+    @patch("mcp_coder.cli.commands.verify.verify_claude")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    def test_claude_active_shows_full_section(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """When claude active, show full BASIC VERIFICATION section as before."""
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+
+        execute_verify(_make_args())
+        output = capsys.readouterr().out
+
+        assert "BASIC VERIFICATION" in output
+
+
+class TestInstallSummaryBlock:
+    """Tests for install summary block display."""
+
+    @patch("mcp_coder.cli.commands.verify.find_claude_executable", return_value=None)
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
+    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
+    @patch("mcp_coder.cli.commands.verify.verify_langchain")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    def test_summary_block_shown_for_missing_packages(
+        self,
+        mock_provider: MagicMock,
+        mock_lc: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_resolve_mcp: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
+        mock_find_claude: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """When langchain packages missing, INSTALL INSTRUCTIONS block appears."""
+        mock_provider.return_value = ("langchain", "config.toml")
+        lc_result = _langchain_fail()
+        lc_result["backend_package"] = {
+            "ok": False,
+            "value": "langchain-openai not installed",
+            "install_hint": "pip install langchain-openai",
+        }
+        mock_lc.return_value = lc_result
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+
+        execute_verify(_make_args())
+        output = capsys.readouterr().out
+
+        assert "INSTALL INSTRUCTIONS" in output
+        assert "pip install langchain-openai" in output
+
+    @patch("mcp_coder.cli.commands.verify.find_claude_executable", return_value=None)
+    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
+    @patch("mcp_coder.cli.commands.verify.prompt_llm")
+    @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
+    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
+    @patch("mcp_coder.cli.commands.verify.verify_langchain")
+    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    def test_no_summary_block_when_all_installed(
+        self,
+        mock_provider: MagicMock,
+        mock_lc: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_resolve_mcp: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_log_mlflow: MagicMock,
+        mock_find_claude: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """When all packages installed, no INSTALL INSTRUCTIONS block."""
+        mock_provider.return_value = ("langchain", "config.toml")
+        mock_lc.return_value = _langchain_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+
+        execute_verify(_make_args())
+        output = capsys.readouterr().out
+
+        assert "INSTALL INSTRUCTIONS" not in output

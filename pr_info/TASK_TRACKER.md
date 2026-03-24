@@ -41,11 +41,11 @@ Detail: [step_2.md](./steps/step_2.md)
 
 Detail: [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: tests in `test_verify_format_section.py` and `test_verify_orchestration.py` + production code in `verify.py`
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(verify): contextual display and install summary in verify command`
+- [x] Implementation: tests in `test_verify_format_section.py` and `test_verify_orchestration.py` + production code in `verify.py`
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(verify): contextual display and install summary in verify command`
 
 ## Pull Request
 
-- [ ] PR review: verify all steps integrated correctly
-- [ ] PR summary prepared
+- [x] PR review: verify all steps integrated correctly
+- [x] PR summary prepared

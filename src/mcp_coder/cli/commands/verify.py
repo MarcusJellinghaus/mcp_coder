@@ -13,6 +13,7 @@ from typing import Any
 from ...llm.interface import prompt_llm
 from ...llm.mlflow_logger import verify_mlflow
 from ...llm.providers.claude.claude_cli_verification import verify_claude
+from ...llm.providers.claude.claude_executable_finder import find_claude_executable
 from ...llm.providers.langchain.verification import verify_langchain, verify_mcp_servers
 from ...utils.user_config import verify_config
 from ..utils import _get_status_symbols, resolve_llm_method, resolve_mcp_config_path
@@ -79,6 +80,8 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
         if error and ok is False:
             line += f" ({error})"
         lines.append(line)
+        if ok is False and "install_hint" in entry:
+            lines.append(f"                           \u2192 {entry['install_hint']}")
     return "\n".join(lines)
 
 
@@ -160,6 +163,19 @@ def _compute_exit_code(
     return 0
 
 
+def _collect_install_hints(result: dict[str, Any]) -> list[str]:
+    """Collect install_hint values from failed entries in a verification result.
+
+    Returns:
+        List of install hint strings from failed entries.
+    """
+    hints: list[str] = []
+    for _key, entry in result.items():
+        if isinstance(entry, dict) and not entry.get("ok") and "install_hint" in entry:
+            hints.append(entry["install_hint"])
+    return hints
+
+
 def execute_verify(args: argparse.Namespace) -> int:
     """Execute verify command: orchestrate domain checks and format output.
 
@@ -188,9 +204,16 @@ def execute_verify(args: argparse.Namespace) -> int:
     # 1. Resolve active provider
     active_provider, source = resolve_llm_method(args.llm_method)
 
-    # 2. Claude CLI verification
-    claude_result = verify_claude()
-    print(_format_section("BASIC VERIFICATION", claude_result, symbols))
+    # 2. Claude CLI verification (conditional on provider)
+    if active_provider == "claude":
+        claude_result = verify_claude()
+        print(_format_section("BASIC VERIFICATION", claude_result, symbols))
+    else:
+        # Quick binary check only
+        claude_path = find_claude_executable(return_none_if_not_found=True)
+        if claude_path:
+            print(f"\n  Claude CLI: available at {claude_path} (not active)")
+        claude_result = {"overall_ok": True}  # neutral for exit code
 
     # 3. LangChain verification (only when provider is langchain)
     langchain_result: dict[str, Any] | None = None
@@ -235,7 +258,24 @@ def execute_verify(args: argparse.Namespace) -> int:
     mlflow_result = verify_mlflow(since=timestamp)
     print(_format_section("MLFLOW", mlflow_result, symbols))
 
-    # 5. Compute and return exit code
+    # 5. Collect and display install hints
+    all_hints: list[str] = []
+    if langchain_result:
+        all_hints.extend(_collect_install_hints(langchain_result))
+    if active_provider == "claude":
+        all_hints.extend(_collect_install_hints(claude_result))
+
+    if all_hints:
+        pip_packages = " ".join(
+            h.replace("pip install ", "")
+            for h in all_hints
+            if h.startswith("pip install")
+        )
+        if pip_packages:
+            print("\n=== INSTALL INSTRUCTIONS ===")
+            print(f"  pip install {pip_packages}")
+
+    # 6. Compute and return exit code
     exit_code = _compute_exit_code(
         active_provider,
         claude_result,
