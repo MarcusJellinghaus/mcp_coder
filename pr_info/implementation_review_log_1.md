@@ -44,3 +44,24 @@
 - All checks pass: 2609 tests, pylint clean, mypy clean.
 
 **Status**: committed
+
+## Round 3 — 2026-03-24
+**Findings**:
+- S1: `_collect_install_hints` uses `not entry.get("ok")` which also matches `None`
+- S2: Non-pip hints dropped from summary (repeat of Round 2)
+- S3: Duplicate test helpers across files (repeat of Round 2)
+
+**Decisions**:
+- S1: **Skip** — No entries carry `install_hint` with `ok=None`. Speculative.
+- S2: **Skip** — Already triaged in Round 2. Intentional by design.
+- S3: **Skip** — Pre-existing, out of scope.
+
+**Changes**: None
+**Status**: no changes needed
+
+## Final Status
+
+**Rounds**: 3
+**Commits produced**: 2 (fix mock targets, remove duplicate test)
+**Remaining issues**: None
+**Branch status**: CI passing, 6 commits behind base — needs rebase before merge.
