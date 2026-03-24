@@ -38,6 +38,7 @@ USAGE:
 
 COMMANDS:
     help                    Show help information
+    init                    Create default configuration file
     verify                  Verify Claude CLI installation and configuration
     prompt <text>           Execute prompt via Claude API with configurable debug output
 
