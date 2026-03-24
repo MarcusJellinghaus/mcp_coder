@@ -7,6 +7,7 @@ MLflow) and formats their output for the terminal.
 import argparse
 import datetime
 import logging
+import textwrap
 from pathlib import Path
 from typing import Any
 
@@ -97,7 +98,19 @@ def _format_mcp_section(mcp_results: dict[str, Any], symbols: dict[str, str]) ->
         ok = entry.get("ok")
         value = entry.get("value", "")
         symbol = symbols["success"] if ok else symbols["failure"]
-        lines.append(f"  {name:<20s} {symbol} {value}")
+        tool_names = entry.get("tool_names")
+        if tool_names:
+            prefix = f"  {name:<20s} {symbol} "
+            tools_text = f"{len(tool_names)} tools: {', '.join(tool_names)}"
+            wrapped = textwrap.wrap(
+                tools_text,
+                width=80,
+                initial_indent=prefix,
+                subsequent_indent=" " * len(prefix),
+            )
+            lines.extend(wrapped)
+        else:
+            lines.append(f"  {name:<20s} {symbol} {value}")
     return "\n".join(lines)
 
 
