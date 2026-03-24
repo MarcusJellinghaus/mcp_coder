@@ -234,9 +234,11 @@ def execute_verify(args: argparse.Namespace) -> int:
             try:
                 from ...llm.providers.langchain._exceptions import (
                     classify_connection_error,
+                    format_diagnostics,
                 )
 
                 category = classify_connection_error(exc)
+                logger.debug("Connection diagnostics:\n%s", format_diagnostics(exc))
             except ImportError:
                 category = "Connection error"
         else:
