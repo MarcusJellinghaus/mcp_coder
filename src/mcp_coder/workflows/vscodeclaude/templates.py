@@ -73,12 +73,25 @@ if not exist .venv\Scripts\activate.bat (
         exit /b 1
     )
     echo Installing project dependencies...
+    setlocal EnableDelayedExpansion
+    set UV_RETRY=0
+    :retry_uv_sync
     uv sync --extra dev
     if errorlevel 1 (
-        echo ERROR: Failed to install dependencies.
+        set /a UV_RETRY+=1
+        if !UV_RETRY! LSS 3 (
+            echo WARNING: uv sync failed ^(attempt !UV_RETRY! of 3^). Retrying in 5s...
+            echo Common cause: file lock from antivirus or IDE indexing .venv
+            timeout /t 5 /nobreak >nul
+            goto :retry_uv_sync
+        )
+        echo ERROR: Failed to install dependencies after 3 attempts.
+        echo TIP: Close other programs accessing .venv, then run: uv pip install -e ".[dev]"
+        endlocal
         pause
         exit /b 1
     )
+    endlocal
     set VENV_CREATED=1
 ) else (
     set VENV_CREATED=0

@@ -31,6 +31,24 @@ def test_venv_section_installs_dev_dependencies() -> None:
     ), "VENV_SECTION_WINDOWS should not use '--extra types' (incomplete dependencies)"
 
 
+def test_venv_section_has_uv_sync_retry_logic() -> None:
+    """Test that VENV_SECTION_WINDOWS retries uv sync on failure.
+
+    Windows file locks (antivirus, IDE indexing) can cause transient
+    'Access is denied' errors during uv sync renames. A retry loop
+    handles this reliably.
+    """
+    assert (
+        "EnableDelayedExpansion" in VENV_SECTION_WINDOWS
+    ), "VENV_SECTION_WINDOWS needs EnableDelayedExpansion for retry counter"
+    assert (
+        "retry_uv_sync" in VENV_SECTION_WINDOWS
+    ), "VENV_SECTION_WINDOWS should have a retry label for uv sync"
+    assert (
+        "UV_RETRY" in VENV_SECTION_WINDOWS
+    ), "VENV_SECTION_WINDOWS should track retry attempts"
+
+
 def test_automated_section_has_llm_method_claude() -> None:
     """Test that AUTOMATED_SECTION_WINDOWS includes --llm-method claude.
 
