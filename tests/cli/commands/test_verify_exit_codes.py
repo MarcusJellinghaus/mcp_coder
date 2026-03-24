@@ -571,6 +571,7 @@ class TestMcpEditSmokeTest:
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
         mock_verify_config: MagicMock,
+        tmp_path: Path,
     ) -> None:
         """Smoke test failure does not affect exit code."""
         mock_provider.return_value = ("langchain", "config.toml")
@@ -585,7 +586,9 @@ class TestMcpEditSmokeTest:
             "has_error": False,
         }
 
-        exit_code = execute_verify(_make_args(mcp_config=".mcp.json"))
+        exit_code = execute_verify(
+            _make_args(mcp_config=".mcp.json", project_dir=str(tmp_path))
+        )
 
         assert exit_code == 0
 
