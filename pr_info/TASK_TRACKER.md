@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: Add Error Classification and Diagnostics to `_exceptions.py`
-- [ ] Implementation: `classify_connection_error()`, `format_diagnostics()`, `_is_connection_reset()` + tests in `test_langchain_diagnostics.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `classify_connection_error()`, `format_diagnostics()`, `_is_connection_reset()` + tests in `test_langchain_diagnostics.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3A: Inject HTTP Clients into OpenAI Backend
 - [ ] Implementation: pass `http_client`/`http_async_client` to `ChatOpenAI`/`AzureChatOpenAI` + tests in `test_langchain_openai.py`
