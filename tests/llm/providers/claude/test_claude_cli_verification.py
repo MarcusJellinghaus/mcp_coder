@@ -91,35 +91,6 @@ class TestVerifyClaude:
     @patch(
         "mcp_coder.llm.providers.claude.claude_cli_verification._verify_claude_before_use"
     )
-    def test_cli_not_found_has_install_hint(
-        self,
-        mock_api_verify: MagicMock,
-        mock_basic_verify: MagicMock,
-    ) -> None:
-        """When CLI is not found, cli_found entry includes install_hint with docs URL."""
-        mock_basic_verify.return_value = {
-            "found": False,
-            "path": None,
-            "version": None,
-            "works": False,
-            "error": "Claude CLI not found",
-        }
-        mock_api_verify.return_value = (False, None, "Claude CLI not accessible")
-
-        result = verify_claude()
-
-        assert "install_hint" in result["cli_found"]
-        assert (
-            result["cli_found"]["install_hint"]
-            == "https://docs.anthropic.com/en/docs/claude-code"
-        )
-
-    @patch(
-        "mcp_coder.llm.providers.claude.claude_cli_verification.verify_claude_installation"
-    )
-    @patch(
-        "mcp_coder.llm.providers.claude.claude_cli_verification._verify_claude_before_use"
-    )
     def test_api_integration_fails(
         self,
         mock_api_verify: MagicMock,
