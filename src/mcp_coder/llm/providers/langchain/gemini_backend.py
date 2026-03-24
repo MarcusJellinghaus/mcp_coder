@@ -20,6 +20,9 @@ except ImportError as exc:
     ) from exc
 
 
+# Gemini SDK (google-genai) does not support custom httpx clients or SSL
+# contexts. Proxy/SSL relies on global truststore via _ssl.ensure_truststore().
+# See issue #562.
 def create_gemini_model(
     model: str,
     api_key: str | None,

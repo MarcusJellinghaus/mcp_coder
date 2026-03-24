@@ -47,9 +47,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 4B: Document Gemini SDK Limitation
-- [ ] Implementation: add limitation comment to `gemini_backend.py` + test in `test_langchain_gemini.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add limitation comment to `gemini_backend.py` + test in `test_langchain_gemini.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5A: Improve Verify Command Failure Output
 - [ ] Implementation: guard classification in `verify.py` except block + tests in `test_verify_orchestration.py`

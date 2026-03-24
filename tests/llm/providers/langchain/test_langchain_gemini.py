@@ -1,5 +1,6 @@
 """Tests for mcp_coder.llm.providers.langchain.gemini_backend."""
 
+import inspect
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -85,3 +86,15 @@ class TestCreateGeminiModel:
 
             result = create_gemini_model(model="gemini-1.5-pro", api_key=None)
             assert result is mock_instance
+
+
+class TestGeminiSdkLimitation:
+    """Tests documenting Gemini SDK HTTP client limitation."""
+
+    def test_gemini_limitation_documented(self) -> None:
+        """Verify create_gemini_model has a comment about SDK limitation (#562)."""
+        import mcp_coder.llm.providers.langchain.gemini_backend as mod
+
+        source = inspect.getsource(mod)
+        assert "does not support custom httpx clients" in source
+        assert "#562" in source
