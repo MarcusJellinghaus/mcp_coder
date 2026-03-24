@@ -21,6 +21,6 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-- [ ] [Step 1: Create `init` command module with tests, wire into CLI, and add to help text](./steps/step_1.md)
+- [x] [Step 1: Create `init` command module with tests, wire into CLI, and add to help text](./steps/step_1.md)
 
 ## Pull Request
