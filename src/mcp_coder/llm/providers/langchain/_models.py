@@ -18,6 +18,7 @@ from ._exceptions import (
     raise_auth_error,
     raise_connection_error,
 )
+from ._http import create_http_client
 from ._ssl import ensure_truststore
 
 
@@ -84,6 +85,7 @@ def list_openai_models(api_key: str | None, endpoint: str | None = None) -> list
         client = openai.OpenAI(
             api_key=api_key if api_key else None,
             base_url=endpoint if endpoint else None,
+            http_client=create_http_client(),
         )
         return sorted(m.id for m in client.models.list())
     except OPENAI_AUTH_ERRORS as exc:
@@ -120,6 +122,7 @@ def list_anthropic_models(api_key: str | None) -> list[str]:
     try:
         client = anthropic.Anthropic(
             api_key=api_key if api_key else None,
+            http_client=create_http_client(),
         )
         return sorted(m.id for m in client.models.list())
     except ANTHROPIC_AUTH_ERRORS as exc:

@@ -42,9 +42,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 4A: Inject HTTP Clients into Model Listing (`_models.py`)
-- [ ] Implementation: pass `http_client` to `openai.OpenAI()` and `anthropic.Anthropic()` + tests in `test_langchain_models.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: pass `http_client` to `openai.OpenAI()` and `anthropic.Anthropic()` + tests in `test_langchain_models.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4B: Document Gemini SDK Limitation
 - [ ] Implementation: add limitation comment to `gemini_backend.py` + test in `test_langchain_gemini.py`
