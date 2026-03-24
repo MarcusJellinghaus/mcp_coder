@@ -35,7 +35,7 @@ Detail: [step_2.md](./steps/step_2.md)
 
 - [x] Implementation: test in `test_claude_cli_verification.py` + production code in `claude_cli_verification.py`
 - [x] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(verify): add install hint to claude CLI verification`
+- [x] Commit: `feat(verify): add install hint to claude CLI verification`
 
 ### Step 3: Conditional Claude display, inline hints, and install summary
 
