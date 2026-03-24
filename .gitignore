@@ -11,6 +11,7 @@ venv/
 .vscode/
 .idea/
 *.swp
+.ropeproject/
 
 # Local configuration
 .env
