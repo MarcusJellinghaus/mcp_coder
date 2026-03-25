@@ -579,6 +579,28 @@ class TestCreateDefaultConfig:
         assert "# [llm]" in content
         assert "# default_provider" in content
 
+    def test_create_default_config_has_mcp_section(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that config template contains commented-out [mcp] section."""
+        # Setup
+        config_file = tmp_path / ".mcp_coder" / "config.toml"
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute
+        create_default_config()
+
+        # Verify
+        content = config_file.read_text(encoding="utf-8")
+        assert "# [mcp]" in content
+        assert "# default_config_path" in content
+        # Ensure [mcp] does NOT appear as an uncommented section
+        lines = content.splitlines()
+        uncommented_mcp = [l for l in lines if l.strip() == "[mcp]"]
+        assert len(uncommented_mcp) == 0
+
     def test_create_default_config_handles_permission_error(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

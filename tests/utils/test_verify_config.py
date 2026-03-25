@@ -17,6 +17,7 @@ class TestVerifyConfig:
             "JENKINS_URL",
             "JENKINS_USER",
             "JENKINS_TOKEN",
+            "MCP_CODER_MCP_CONFIG",
         ):
             monkeypatch.delenv(var, raising=False)
 
@@ -100,11 +101,12 @@ repo_url = "https://github.com/test/workspace.git"
         assert "[llm]" in labels
         assert "[github]" in labels
         assert "[jenkins]" in labels
+        assert "[mcp]" in labels
         assert "[coordinator]" in labels
 
         # Check statuses are all ok
         for entry in result["entries"]:
-            assert entry["status"] == "ok"
+            assert entry["status"] in ("ok", "info")
 
         # Check specific values
         by_label = {e["label"]: e for e in result["entries"]}
@@ -217,13 +219,68 @@ repo_url = "https://example.com/repo3.git"
 
         labels = [e["label"] for e in result["entries"]]
         assert "[custom]" not in labels
-        # Only the Config file entry should be present
-        assert labels == ["Config file"]
+
+    def test_verify_config_mcp_configured_in_config(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """[mcp] in config -> ok status with default_config_path value."""
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            '[mcp]\ndefault_config_path = ".mcp.json"\n', encoding="utf-8"
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+        self._clear_env_vars(monkeypatch)
+
+        result = verify_config()
+
+        by_label = {e["label"]: e for e in result["entries"]}
+        assert "[mcp]" in by_label
+        assert by_label["[mcp]"]["status"] == "ok"
+        assert "default_config_path = .mcp.json" in by_label["[mcp]"]["value"]
+
+    def test_verify_config_mcp_not_configured(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """No [mcp] config and no env var -> info status, not configured."""
+        config_file = tmp_path / "config.toml"
+        config_file.write_text("", encoding="utf-8")
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+        self._clear_env_vars(monkeypatch)
+
+        result = verify_config()
+
+        by_label = {e["label"]: e for e in result["entries"]}
+        assert "[mcp]" in by_label
+        assert by_label["[mcp]"]["status"] == "info"
+        assert "not configured" in by_label["[mcp]"]["value"]
+
+    def test_verify_config_mcp_configured_via_env_var(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """MCP_CODER_MCP_CONFIG env var set -> ok status with (env var)."""
+        config_file = tmp_path / "config.toml"
+        config_file.write_text("", encoding="utf-8")
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+        self._clear_env_vars(monkeypatch)
+        monkeypatch.setenv("MCP_CODER_MCP_CONFIG", "/path/to/.mcp.json")
+
+        result = verify_config()
+
+        by_label = {e["label"]: e for e in result["entries"]}
+        assert "[mcp]" in by_label
+        assert by_label["[mcp]"]["status"] == "ok"
+        assert "(env var)" in by_label["[mcp]"]["value"]
 
     def test_verify_config_empty_valid_file(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Valid but empty TOML -> ok config file, no section entries."""
+        """Valid but empty TOML -> ok config file, [mcp] info entry."""
         config_file = tmp_path / "config.toml"
         config_file.write_text("", encoding="utf-8")
         monkeypatch.setattr(
@@ -235,7 +292,6 @@ repo_url = "https://example.com/repo3.git"
 
         assert result["has_error"] is False
         entries = result["entries"]
-        assert len(entries) == 1
         assert entries[0]["label"] == "Config file"
         assert entries[0]["status"] == "ok"
         assert str(config_file) in entries[0]["value"]
