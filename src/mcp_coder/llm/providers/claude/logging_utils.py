@@ -5,15 +5,6 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# Import MLflow logger with graceful fallback
-try:
-    from ...mlflow_logger import get_mlflow_logger
-
-    _mlflow_available = True
-except ImportError:
-    _mlflow_available = False
-    get_mlflow_logger = None  # type: ignore
-
 
 def log_llm_request(
     provider: str,
@@ -62,21 +53,6 @@ def log_llm_request(
     log_message = "\n".join(log_lines)
     logger.debug(log_message)
 
-    # Start MLflow run if enabled
-    if _mlflow_available and get_mlflow_logger is not None:
-        try:
-            mlflow_logger = get_mlflow_logger()
-            run_name = f"{provider}_{session_status.strip('[]')}"
-            tags = {
-                "conversation.provider": provider,
-                "conversation.session_type": session_status.strip("[]"),
-            }
-            mlflow_logger.start_run(run_name=run_name, tags=tags)
-        except (
-            Exception
-        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-            logger.debug(f"Failed to start MLflow run: {e}")
-
 
 def log_llm_response(
     duration_ms: int,
@@ -109,35 +85,6 @@ def log_llm_response(
 
     log_message = "\n".join(log_lines)
     logger.debug(log_message)
-
-    # Log metrics to MLflow if enabled
-    if _mlflow_available and get_mlflow_logger is not None:
-        try:
-            mlflow_logger = get_mlflow_logger()
-            metrics = {"duration_ms": float(duration_ms)}
-            if cost_usd is not None:
-                metrics["cost_usd"] = float(cost_usd)
-            if num_turns is not None:
-                metrics["num_turns"] = float(num_turns)
-
-            mlflow_logger.log_metrics(metrics)
-
-            # Log usage metrics if available
-            if usage:
-                usage_metrics = {}
-                for key, value in usage.items():
-                    if isinstance(value, (int, float)):
-                        usage_metrics[f"usage_{key}"] = float(value)
-                if usage_metrics:
-                    mlflow_logger.log_metrics(usage_metrics)
-
-            if session_id is not None:
-                mlflow_logger.end_run("FINISHED", session_id=session_id)
-            # else: leave run open — _log_to_mlflow will close it via active_run_id
-        except (
-            Exception
-        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-            logger.debug(f"Failed to log MLflow response metrics: {e}")
 
 
 # Maximum characters to include from subprocess stdout/stderr in error logs
@@ -182,14 +129,3 @@ def log_llm_error(
 
     log_message = "\n".join(log_lines)
     logger.debug(log_message)
-
-    # Log error to MLflow if enabled
-    if _mlflow_available and get_mlflow_logger is not None:
-        try:
-            mlflow_logger = get_mlflow_logger()
-            mlflow_logger.log_error_metrics(error, duration_ms)
-            mlflow_logger.end_run("FAILED")
-        except (
-            Exception
-        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-            logger.debug(f"Failed to log MLflow error: {e}")
