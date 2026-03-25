@@ -37,7 +37,6 @@ def _minimal_llm_response() -> dict[str, Any]:
 class TestExecuteVerify:
     """Test the execute_verify function."""
 
-    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch(
         "mcp_coder.cli.commands.verify.prompt_llm",
         return_value={
@@ -58,7 +57,6 @@ class TestExecuteVerify:
         mock_verify: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
     ) -> None:
         """Test that execute_verify returns 0 when overall_ok is True."""
         mock_provider.return_value = ("claude", "default")
@@ -78,7 +76,6 @@ class TestExecuteVerify:
         assert result == 0
         mock_verify.assert_called_once()
 
-    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch(
         "mcp_coder.cli.commands.verify.prompt_llm",
         return_value={
@@ -99,7 +96,6 @@ class TestExecuteVerify:
         mock_verify: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
     ) -> None:
         """Test that execute_verify returns 1 when overall_ok is False."""
         mock_provider.return_value = ("claude", "default")
@@ -119,7 +115,6 @@ class TestExecuteVerify:
         assert result == 1
         mock_verify.assert_called_once()
 
-    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch(
         "mcp_coder.cli.commands.verify.prompt_llm",
         return_value={
@@ -140,7 +135,6 @@ class TestExecuteVerify:
         mock_verify: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test that execute_verify prints formatted status lines."""

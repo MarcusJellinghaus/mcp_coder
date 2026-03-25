@@ -410,10 +410,10 @@ class TestGenerateCommitMessageWithLLM:
     @patch("mcp_coder.workflow_utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.workflow_utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.prompt_manager.get_prompt")
-    @patch("mcp_coder.workflow_utils.commit_operations.ask_llm")
+    @patch("mcp_coder.workflow_utils.commit_operations.prompt_llm")
     def test_generate_commit_message_with_llm_success(
         self,
-        mock_ask_llm: Mock,
+        mock_prompt_llm: Mock,
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
         mock_stage: Mock,
@@ -423,7 +423,14 @@ class TestGenerateCommitMessageWithLLM:
         mock_stage.return_value = True
         mock_get_diff.return_value = "diff --git a/file.py b/file.py\n+new line"
         mock_get_prompt.return_value = "Generate commit message"
-        mock_ask_llm.return_value = "feat: add new feature"
+        mock_prompt_llm.return_value = {
+            "text": "feat: add new feature",
+            "session_id": None,
+            "provider": "claude",
+            "version": None,
+            "timestamp": None,
+            "raw_response": None,
+        }
 
         project_dir = Path("/test/repo")
 
@@ -436,7 +443,7 @@ class TestGenerateCommitMessageWithLLM:
         # Verify calls
         mock_stage.assert_called_once_with(project_dir)
         mock_get_diff.assert_called_once_with(project_dir)
-        mock_ask_llm.assert_called_once()
+        mock_prompt_llm.assert_called_once()
 
     @patch("mcp_coder.workflow_utils.commit_operations.stage_all_changes")
     def test_generate_commit_message_with_llm_stage_failure(
@@ -477,10 +484,10 @@ class TestGenerateCommitMessageWithLLM:
     @patch("mcp_coder.workflow_utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.workflow_utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.prompt_manager.get_prompt")
-    @patch("mcp_coder.workflow_utils.commit_operations.ask_llm")
+    @patch("mcp_coder.workflow_utils.commit_operations.prompt_llm")
     def test_generate_commit_message_with_llm_failure(
         self,
-        mock_ask_llm: Mock,
+        mock_prompt_llm: Mock,
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
         mock_stage: Mock,
@@ -490,7 +497,7 @@ class TestGenerateCommitMessageWithLLM:
         mock_stage.return_value = True
         mock_get_diff.return_value = "diff --git a/file.py b/file.py\n+new line"
         mock_get_prompt.return_value = "Generate commit message"
-        mock_ask_llm.side_effect = Exception("LLM API error")
+        mock_prompt_llm.side_effect = Exception("LLM API error")
 
         project_dir = Path("/test/repo")
 
@@ -662,10 +669,10 @@ class TestGenerateCommitMessageWithLLMExtended:
     @patch("mcp_coder.workflow_utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.workflow_utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.prompt_manager.get_prompt")
-    @patch("mcp_coder.workflow_utils.commit_operations.ask_llm")
+    @patch("mcp_coder.workflow_utils.commit_operations.prompt_llm")
     def test_empty_llm_response(
         self,
-        mock_ask_llm: Mock,
+        mock_prompt_llm: Mock,
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
         mock_stage: Mock,
@@ -674,7 +681,14 @@ class TestGenerateCommitMessageWithLLMExtended:
         mock_stage.return_value = True
         mock_get_diff.return_value = "some changes"
         mock_get_prompt.return_value = "prompt text"
-        mock_ask_llm.return_value = ""
+        mock_prompt_llm.return_value = {
+            "text": "",
+            "session_id": None,
+            "provider": "claude",
+            "version": None,
+            "timestamp": None,
+            "raw_response": None,
+        }
 
         project_dir = Path("/test/repo")
         success, message, error = generate_commit_message_with_llm(project_dir)
@@ -688,12 +702,12 @@ class TestGenerateCommitMessageWithLLMExtended:
     @patch("mcp_coder.workflow_utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.workflow_utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.prompt_manager.get_prompt")
-    @patch("mcp_coder.workflow_utils.commit_operations.ask_llm")
+    @patch("mcp_coder.workflow_utils.commit_operations.prompt_llm")
     @patch("mcp_coder.workflow_utils.commit_operations.parse_llm_commit_response")
     def test_empty_parsed_commit_message(
         self,
         mock_parse: Mock,
-        mock_ask_llm: Mock,
+        mock_prompt_llm: Mock,
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
         mock_stage: Mock,
@@ -702,7 +716,14 @@ class TestGenerateCommitMessageWithLLMExtended:
         mock_stage.return_value = True
         mock_get_diff.return_value = "some changes"
         mock_get_prompt.return_value = "prompt text"
-        mock_ask_llm.return_value = "some response"
+        mock_prompt_llm.return_value = {
+            "text": "some response",
+            "session_id": None,
+            "provider": "claude",
+            "version": None,
+            "timestamp": None,
+            "raw_response": None,
+        }
         mock_parse.return_value = ("", None)
 
         project_dir = Path("/test/repo")
@@ -717,12 +738,12 @@ class TestGenerateCommitMessageWithLLMExtended:
     @patch("mcp_coder.workflow_utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.workflow_utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.prompt_manager.get_prompt")
-    @patch("mcp_coder.workflow_utils.commit_operations.ask_llm")
+    @patch("mcp_coder.workflow_utils.commit_operations.prompt_llm")
     @patch("mcp_coder.workflow_utils.commit_operations.parse_llm_commit_response")
     def test_invalid_commit_message_format(
         self,
         mock_parse: Mock,
-        mock_ask_llm: Mock,
+        mock_prompt_llm: Mock,
         mock_get_prompt: Mock,
         mock_get_diff: Mock,
         mock_stage: Mock,
@@ -731,7 +752,14 @@ class TestGenerateCommitMessageWithLLMExtended:
         mock_stage.return_value = True
         mock_get_diff.return_value = "some changes"
         mock_get_prompt.return_value = "prompt text"
-        mock_ask_llm.return_value = "some response"
+        mock_prompt_llm.return_value = {
+            "text": "some response",
+            "session_id": None,
+            "provider": "claude",
+            "version": None,
+            "timestamp": None,
+            "raw_response": None,
+        }
         # Simulate a commit message that starts with empty line (invalid)
         mock_parse.return_value = ("\n\nActual content here", None)
 

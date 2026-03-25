@@ -14,7 +14,6 @@ from unittest.mock import patch
 import pytest
 
 from mcp_coder import (
-    ask_llm,
     deserialize_llm_response,
     prompt_llm,
     serialize_llm_response,
@@ -481,23 +480,24 @@ class TestErrorHandling:
 class TestBackwardCompatibility:
     """Test backward compatibility with existing code."""
 
-    def test_ask_llm_still_works(self, mock_claude_cli: MockClaudeCLI) -> None:
-        """Test that ask_llm (simple interface) still works."""
+    def test_prompt_llm_returns_dict(self, mock_claude_cli: MockClaudeCLI) -> None:
+        """Test that prompt_llm returns a dict response."""
         with patch("mcp_coder.llm.interface.ask_claude_code_cli", mock_claude_cli):
             mock_claude_cli.set_response("Simple response")
 
-            response = ask_llm("Simple question")
+            response = prompt_llm("Simple question")
 
-            # Should return string as before
-            assert isinstance(response, str)
-            assert response == "Simple response"
+            # Should return dict
+            assert isinstance(response, dict)
+            assert response["text"] == "Simple response"
 
-    def test_ask_llm_without_session_id(self, mock_claude_cli: MockClaudeCLI) -> None:
-        """Test ask_llm works without session_id parameter."""
+    def test_prompt_llm_without_session_id(
+        self, mock_claude_cli: MockClaudeCLI
+    ) -> None:
+        """Test prompt_llm works without session_id parameter."""
         with patch("mcp_coder.llm.interface.ask_claude_code_cli", mock_claude_cli):
             mock_claude_cli.set_response("No session needed")
 
-            # Old calling pattern should still work
-            response = ask_llm("Question", provider="claude", timeout=30)
+            response = prompt_llm("Question", provider="claude", timeout=30)
 
-            assert response == "No session needed"
+            assert response["text"] == "No session needed"

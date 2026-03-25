@@ -1,7 +1,6 @@
 """Tests for logging_utils functions."""
 
 import logging
-from unittest.mock import Mock, patch
 
 import pytest
 
@@ -149,58 +148,6 @@ class TestLogLLMResponse:
         # Optional fields should not be in output
         assert "cost:" not in log_output
         assert "usage:" not in log_output
-
-    def test_log_llm_response_with_session_id_calls_end_run(self) -> None:
-        """Test that log_llm_response with session_id calls end_run with that session_id."""
-        mock_logger = Mock()
-        with (
-            patch(
-                "mcp_coder.llm.providers.claude.logging_utils._mlflow_available", True
-            ),
-            patch(
-                "mcp_coder.llm.providers.claude.logging_utils.get_mlflow_logger",
-                return_value=mock_logger,
-            ),
-        ):
-            log_llm_response(duration_ms=1000, session_id="sid-1")
-
-        mock_logger.end_run.assert_called_once_with("FINISHED", session_id="sid-1")
-
-    def test_log_llm_response_with_session_id_none_leaves_run_open(self) -> None:
-        """Test that log_llm_response with session_id=None does NOT call end_run.
-
-        The run is left open so _log_to_mlflow can close it via active_run_id,
-        resulting in a single MLflow run for the whole conversation.
-        """
-        mock_logger = Mock()
-        with (
-            patch(
-                "mcp_coder.llm.providers.claude.logging_utils._mlflow_available", True
-            ),
-            patch(
-                "mcp_coder.llm.providers.claude.logging_utils.get_mlflow_logger",
-                return_value=mock_logger,
-            ),
-        ):
-            log_llm_response(duration_ms=1000, session_id=None)
-
-        mock_logger.end_run.assert_not_called()
-
-    def test_log_llm_response_default_session_id_leaves_run_open(self) -> None:
-        """Test that omitting session_id also does NOT call end_run."""
-        mock_logger = Mock()
-        with (
-            patch(
-                "mcp_coder.llm.providers.claude.logging_utils._mlflow_available", True
-            ),
-            patch(
-                "mcp_coder.llm.providers.claude.logging_utils.get_mlflow_logger",
-                return_value=mock_logger,
-            ),
-        ):
-            log_llm_response(duration_ms=500)
-
-        mock_logger.end_run.assert_not_called()
 
 
 class TestLogLLMError:

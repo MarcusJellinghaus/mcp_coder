@@ -521,7 +521,7 @@ class TestSubprocessCwdParameter:
         tmp_path: Path,
     ) -> None:
         """Test LLM interface layer passes execution_dir to provider."""
-        from mcp_coder.llm.interface import ask_llm
+        from mcp_coder.llm.interface import prompt_llm
 
         # Setup
         execution_dir = tmp_path / "execution"
@@ -541,14 +541,14 @@ class TestSubprocessCwdParameter:
         mock_execute_subprocess.return_value = mock_result
 
         # Execute
-        result = ask_llm(
+        result = prompt_llm(
             "Test question",
             provider="claude",
             execution_dir=str(execution_dir),
         )
 
         # Verify
-        assert result == "LLM response"
+        assert result["text"] == "LLM response"
         # Check that subprocess was called with execution_dir as cwd
         assert mock_execute_subprocess.called
         # execute_subprocess is called with (command, options) as positional args
@@ -565,7 +565,7 @@ class TestSubprocessCwdParameter:
         tmp_path: Path,
     ) -> None:
         """Test that execution_dir and project_dir are truly separate in subprocess."""
-        from mcp_coder.llm.interface import ask_llm
+        from mcp_coder.llm.interface import prompt_llm
 
         # Setup distinct directories
         execution_dir = tmp_path / "execution_workspace"
@@ -586,16 +586,16 @@ class TestSubprocessCwdParameter:
         mock_result.timed_out = False
         mock_execute_subprocess.return_value = mock_result
 
-        # Execute with execution_dir only (project_dir is not a parameter of ask_llm;
+        # Execute with execution_dir only (project_dir is not a parameter of prompt_llm;
         # it is passed via env_vars by callers that need it)
-        result = ask_llm(
+        result = prompt_llm(
             "Test question",
             provider="claude",
             execution_dir=str(execution_dir),
         )
 
         # Verify
-        assert result == "LLM response"
+        assert result["text"] == "LLM response"
         assert mock_execute_subprocess.called
 
         # Verify subprocess got execution_dir as cwd (not project_dir)

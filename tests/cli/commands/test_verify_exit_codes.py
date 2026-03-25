@@ -280,7 +280,6 @@ class TestComputeExitCode:
 class TestMcpServersInVerify:
     """Tests for MCP server health check integration in execute_verify."""
 
-    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mcp_servers")
     @patch(
@@ -300,7 +299,6 @@ class TestMcpServersInVerify:
         mock_resolve_mcp: MagicMock,
         mock_mcp_servers: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
         tmp_path: Path,
     ) -> None:
@@ -319,7 +317,6 @@ class TestMcpServersInVerify:
         assert "5 tools available" in output
         mock_mcp_servers.assert_called_once_with("/fake/.mcp.json")
 
-    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mcp_servers")
     @patch(
@@ -339,7 +336,6 @@ class TestMcpServersInVerify:
         mock_resolve_mcp: MagicMock,
         mock_mcp_servers: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """MCP SERVERS section hidden when no MCP config."""
@@ -400,7 +396,6 @@ class TestConfigSectionInVerify:
     """Tests for CONFIG section integration in execute_verify."""
 
     @patch("mcp_coder.cli.commands.verify.verify_config")
-    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
@@ -411,7 +406,6 @@ class TestConfigSectionInVerify:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
         mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -430,7 +424,6 @@ class TestConfigSectionInVerify:
         assert config_pos < basic_pos
 
     @patch("mcp_coder.cli.commands.verify.verify_config")
-    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
@@ -441,7 +434,6 @@ class TestConfigSectionInVerify:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
         mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -457,7 +449,6 @@ class TestConfigSectionInVerify:
         assert exit_code == 1
 
     @patch("mcp_coder.cli.commands.verify.verify_config")
-    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
@@ -468,7 +459,6 @@ class TestConfigSectionInVerify:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
         mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -548,7 +538,6 @@ class TestMcpEditSmokeTest:
         assert "timed out" in result
 
     @patch("mcp_coder.cli.commands.verify.verify_config")
-    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch("mcp_coder.cli.commands.verify.verify_mcp_servers")
     @patch(
@@ -568,7 +557,6 @@ class TestMcpEditSmokeTest:
         mock_resolve_mcp: MagicMock,
         mock_mcp_servers: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
         mock_verify_config: MagicMock,
         tmp_path: Path,
     ) -> None:
@@ -607,7 +595,6 @@ class TestMcpEditSmokeTest:
         assert not (tmp_path / ".mcp_coder_verify.md").exists()
 
     @patch("mcp_coder.cli.commands.verify.verify_config")
-    @patch("mcp_coder.cli.commands.verify.log_to_mlflow")
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     @patch(
         "mcp_coder.cli.commands.verify.resolve_mcp_config_path",
@@ -625,7 +612,6 @@ class TestMcpEditSmokeTest:
         mock_mlflow: MagicMock,
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
         mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
