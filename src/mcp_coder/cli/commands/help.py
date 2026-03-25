@@ -72,11 +72,14 @@ COMMAND_CATEGORIES: list[Category] = [
 ]
 
 
-def get_compact_help_text() -> str:
-    """Render compact help: category headers + aligned commands.
+def _render_help(*, include_descriptions: bool) -> str:
+    """Render help text from COMMAND_CATEGORIES.
+
+    Args:
+        include_descriptions: Include category descriptions and URL footer.
 
     Returns:
-        Formatted compact help text.
+        Formatted help text.
     """
     max_width = max(len(cmd.name) for cat in COMMAND_CATEGORIES for cmd in cat.commands)
     lines = [
@@ -87,12 +90,32 @@ def get_compact_help_text() -> str:
     for cat in COMMAND_CATEGORIES:
         lines.append("")
         lines.append(cat.name)
+        if include_descriptions:
+            lines.append(f"  {cat.description}")
+            lines.append("")
         for cmd in cat.commands:
             lines.append(f"  {cmd.name:<{max_width}}  {cmd.description}")
     lines.append("")
-    lines.append("Run 'mcp-coder help' for detailed usage.")
-    lines.append("Run 'mcp-coder <command> --help' for command-specific options.")
+    if include_descriptions:
+        lines.append("Run 'mcp-coder <command> --help' for command-specific options.")
+        lines.append("")
+        lines.append(
+            "For more information, visit:"
+            " https://github.com/MarcusJellinghaus/mcp_coder"
+        )
+    else:
+        lines.append("Run 'mcp-coder help' for detailed usage.")
+        lines.append("Run 'mcp-coder <command> --help' for command-specific options.")
     return "\n".join(lines)
+
+
+def get_compact_help_text() -> str:
+    """Render compact help: category headers + aligned commands.
+
+    Returns:
+        Formatted compact help text.
+    """
+    return _render_help(include_descriptions=False)
 
 
 def execute_help(_args: argparse.Namespace) -> int:
@@ -116,23 +139,4 @@ def get_help_text() -> str:
     Returns:
         Formatted detailed help text.
     """
-    max_width = max(len(cmd.name) for cat in COMMAND_CATEGORIES for cmd in cat.commands)
-    lines = [
-        "mcp-coder - AI-powered software development automation toolkit",
-        "",
-        "Usage: mcp-coder <command> [options]",
-    ]
-    for cat in COMMAND_CATEGORIES:
-        lines.append("")
-        lines.append(cat.name)
-        lines.append(f"  {cat.description}")
-        lines.append("")
-        for cmd in cat.commands:
-            lines.append(f"  {cmd.name:<{max_width}}  {cmd.description}")
-    lines.append("")
-    lines.append("Run 'mcp-coder <command> --help' for command-specific options.")
-    lines.append("")
-    lines.append(
-        "For more information, visit: https://github.com/MarcusJellinghaus/mcp_coder"
-    )
-    return "\n".join(lines)
+    return _render_help(include_descriptions=True)

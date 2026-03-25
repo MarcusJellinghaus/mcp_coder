@@ -102,6 +102,7 @@ def test_compact_help_column_alignment() -> None:
 
     for line in command_lines:
         # Description should start at expected_col
+        assert len(line) > expected_col, f"Line too short: {line!r}"
         desc_char = line[expected_col]
         assert (
             desc_char != " "
@@ -168,6 +169,7 @@ def test_detailed_help_column_alignment() -> None:
     assert len(command_lines) > 0, "No command lines found"
 
     for line in command_lines:
+        assert len(line) > expected_col, f"Line too short: {line!r}"
         desc_char = line[expected_col]
         assert (
             desc_char != " "
