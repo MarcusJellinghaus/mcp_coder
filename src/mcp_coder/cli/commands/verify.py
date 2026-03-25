@@ -15,7 +15,6 @@ from ...llm.interface import prompt_llm
 from ...llm.mlflow_logger import verify_mlflow
 from ...llm.providers.claude.claude_cli_verification import verify_claude
 from ...llm.providers.claude.claude_executable_finder import find_claude_executable
-from ...llm.providers.langchain.verification import verify_langchain, verify_mcp_servers
 from ...utils.user_config import verify_config
 from ..utils import _get_status_symbols, resolve_llm_method, resolve_mcp_config_path
 
@@ -95,7 +94,7 @@ def _format_mcp_section(mcp_results: dict[str, Any], symbols: dict[str, str]) ->
     Returns:
         Formatted multi-line string for the MCP servers section.
     """
-    lines: list[str] = ["\n=== MCP SERVERS ==="]
+    lines: list[str] = ["\n=== MCP SERVERS (via langchain-mcp-adapters) ==="]
     for name, entry in mcp_results["servers"].items():
         ok = entry.get("ok")
         value = entry.get("value", "")
@@ -277,25 +276,37 @@ def execute_verify(args: argparse.Namespace) -> int:
     print(
         f"  {'Active provider':<20s} {symbols['success']} {active_provider} (from {source})"
     )
+    # 2a. Resolve MCP config for ALL providers (before provider branch)
+    mcp_config_resolved = resolve_mcp_config_path(
+        args.mcp_config, project_dir=args.project_dir
+    )
+
     if active_provider == "langchain":
         check_models = getattr(args, "check_models", False)
-        mcp_config_resolved = resolve_mcp_config_path(
-            args.mcp_config, project_dir=args.project_dir
-        )
+        from ...llm.providers.langchain.verification import verify_langchain
+
         langchain_result = verify_langchain(
             check_models=check_models,
             mcp_config_path=mcp_config_resolved,
         )
         print(_format_section("LLM PROVIDER DETAILS", langchain_result, symbols))
     else:
-        mcp_config_resolved = None
         print("  (uses Claude CLI — see Basic Verification above)")
 
-    # 3a. MCP server health check
+    # 3a. MCP server health check (all providers, with ImportError handling)
     mcp_result: dict[str, Any] | None = None
     if mcp_config_resolved:
-        mcp_result = verify_mcp_servers(mcp_config_resolved)
-        print(_format_mcp_section(mcp_result, symbols))
+        try:
+            from ...llm.providers.langchain.verification import verify_mcp_servers
+
+            mcp_result = verify_mcp_servers(mcp_config_resolved)
+            print(_format_mcp_section(mcp_result, symbols))
+        except ImportError:
+            print("\n=== MCP SERVERS (via langchain-mcp-adapters) ===")
+            print(
+                f"  {symbols['warning']} server health check skipped"
+                " (langchain-mcp-adapters not installed)"
+            )
 
     # 3b. MCP edit smoke test (informational only)
     project_dir = Path(args.project_dir).resolve() if args.project_dir else Path.cwd()
