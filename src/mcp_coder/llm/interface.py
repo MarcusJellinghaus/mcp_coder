@@ -6,6 +6,7 @@ import os
 
 from mcp_coder.utils.subprocess_runner import TimeoutExpired
 
+from .mlflow_conversation_logger import mlflow_conversation
 from .providers.claude.claude_code_cli import ask_claude_code_cli
 
 # Serialization functions are now in .serialization module
@@ -96,58 +97,66 @@ def prompt_llm(
     # Allow env var to override the provider parameter (e.g. in CI)
     provider = os.environ.get("MCP_CODER_LLM_PROVIDER") or provider
 
-    # Non-subprocess providers — placed before the existing try block
-    if provider == "langchain":
-        from .providers.langchain import ask_langchain  # lazy import  # noqa: PLC0415
-
-        try:
-            return ask_langchain(
-                question,
-                session_id=session_id,
-                timeout=timeout,
-                mcp_config=mcp_config,
-                execution_dir=execution_dir,
-                env_vars=env_vars,
-            )
-        except asyncio.TimeoutError:
-            logger.error("LLM request timed out after %ds", timeout)
-            logger.error(
-                "Prompt length: %d characters (%d words)",
-                len(question),
-                len(question.split()),
-            )
-            logger.error("LLM provider: %s", provider)
-            logger.error(
-                "Consider: checking network, simplifying prompt, increasing timeout"
-            )
-            raise
-
-    # Unsupported provider check — also before the try block
-    if provider != "claude":
+    # Unsupported provider check — before context manager (no MLflow run needed)
+    if provider not in ("claude", "langchain"):
         raise ValueError(
             f"Unsupported provider: {provider}. Supported: 'claude', 'langchain'"
         )
 
-    # Claude provider — always uses CLI
-    try:
-        return ask_claude_code_cli(
-            question,
-            session_id=session_id,
-            timeout=timeout,
-            env_vars=env_vars,
-            cwd=execution_dir,
-            mcp_config=mcp_config,
-            branch_name=branch_name,
-        )
-    except TimeoutExpired:
-        logger.error("LLM request timed out after %ds", timeout)
-        logger.error(
-            "Prompt length: %d characters (%d words)",
-            len(question),
-            len(question.split()),
-        )
-        logger.error("LLM provider: %s", provider)
-        logger.error(
-            "Consider: checking network, simplifying prompt, increasing timeout"
-        )
-        raise  # re-raise original TimeoutExpired — type transparent to callers
+    metadata = {"branch_name": branch_name, "working_directory": execution_dir}
+
+    with mlflow_conversation(question, provider, session_id, metadata) as mlflow_ctx:
+        if provider == "langchain":
+            from .providers.langchain import (  # lazy import  # noqa: PLC0415
+                ask_langchain,
+            )
+
+            try:
+                response = ask_langchain(
+                    question,
+                    session_id=session_id,
+                    timeout=timeout,
+                    mcp_config=mcp_config,
+                    execution_dir=execution_dir,
+                    env_vars=env_vars,
+                )
+            except asyncio.TimeoutError:
+                logger.error("LLM request timed out after %ds", timeout)
+                logger.error(
+                    "Prompt length: %d characters (%d words)",
+                    len(question),
+                    len(question.split()),
+                )
+                logger.error("LLM provider: %s", provider)
+                logger.error(
+                    "Consider: checking network, simplifying prompt, increasing timeout"
+                )
+                raise
+        else:
+            # Claude provider — always uses CLI
+            try:
+                response = ask_claude_code_cli(
+                    question,
+                    session_id=session_id,
+                    timeout=timeout,
+                    env_vars=env_vars,
+                    cwd=execution_dir,
+                    mcp_config=mcp_config,
+                    branch_name=branch_name,
+                )
+            except TimeoutExpired:
+                logger.error("LLM request timed out after %ds", timeout)
+                logger.error(
+                    "Prompt length: %d characters (%d words)",
+                    len(question),
+                    len(question.split()),
+                )
+                logger.error("LLM provider: %s", provider)
+                logger.error(
+                    "Consider: checking network, simplifying prompt, increasing timeout"
+                )
+                raise
+
+        mlflow_ctx["response_data"] = response
+
+    return response
