@@ -8,6 +8,9 @@ import pytest
 
 from mcp_coder.cli.commands.verify import execute_verify
 
+_LC_VERIFY = "mcp_coder.llm.providers.langchain.verification"
+_VERIFY = "mcp_coder.cli.commands.verify"
+
 
 def _make_args(**kwargs: Any) -> argparse.Namespace:
     """Create a Namespace with defaults for execute_verify."""
@@ -63,12 +66,13 @@ def _mlflow_not_installed() -> dict[str, Any]:
 class TestVerifyUsesSharedResolveLlmMethod:
     """Tests that verify.py uses the shared resolve_llm_method()."""
 
-    @patch("mcp_coder.cli.commands.verify.verify_config")
-    @patch("mcp_coder.cli.commands.verify.prompt_llm")
-    @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
-    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
-    @patch("mcp_coder.cli.commands.verify.verify_claude")
-    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    @patch(f"{_VERIFY}.verify_config")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None)
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
     def test_verify_uses_llm_method_arg(
         self,
         mock_resolve: MagicMock,
@@ -76,6 +80,7 @@ class TestVerifyUsesSharedResolveLlmMethod:
         mock_mlflow: MagicMock,
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -89,7 +94,7 @@ class TestVerifyUsesSharedResolveLlmMethod:
         mock_mlflow.return_value = _mlflow_not_installed()
         mock_prompt_llm.return_value = _minimal_llm_response()
 
-        with patch("mcp_coder.cli.commands.verify.verify_langchain") as mock_lc:
+        with patch(f"{_LC_VERIFY}.verify_langchain") as mock_lc:
             mock_lc.return_value = _langchain_ok()
             result = execute_verify(_make_args(llm_method="langchain"))
 
@@ -99,12 +104,13 @@ class TestVerifyUsesSharedResolveLlmMethod:
         assert "langchain" in output
         assert "cli argument" in output
 
-    @patch("mcp_coder.cli.commands.verify.verify_config")
-    @patch("mcp_coder.cli.commands.verify.prompt_llm")
-    @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
-    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
-    @patch("mcp_coder.cli.commands.verify.verify_claude")
-    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    @patch(f"{_VERIFY}.verify_config")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None)
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
     def test_verify_defaults_to_config(
         self,
         mock_resolve: MagicMock,
@@ -112,6 +118,7 @@ class TestVerifyUsesSharedResolveLlmMethod:
         mock_mlflow: MagicMock,
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -125,7 +132,7 @@ class TestVerifyUsesSharedResolveLlmMethod:
         mock_mlflow.return_value = _mlflow_not_installed()
         mock_prompt_llm.return_value = _minimal_llm_response()
 
-        with patch("mcp_coder.cli.commands.verify.verify_langchain") as mock_lc:
+        with patch(f"{_LC_VERIFY}.verify_langchain") as mock_lc:
             mock_lc.return_value = _langchain_ok()
             result = execute_verify(_make_args())
 
@@ -135,17 +142,19 @@ class TestVerifyUsesSharedResolveLlmMethod:
         assert "langchain" in output
         assert "config default_provider" in output
 
-    @patch("mcp_coder.cli.commands.verify.verify_config")
-    @patch("mcp_coder.cli.commands.verify.prompt_llm")
-    @patch("mcp_coder.cli.commands.verify.verify_mlflow")
-    @patch("mcp_coder.cli.commands.verify.verify_claude")
-    @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
+    @patch(f"{_VERIFY}.verify_config")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
     def test_verify_defaults_to_claude(
         self,
         mock_resolve: MagicMock,
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:

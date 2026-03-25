@@ -788,6 +788,11 @@ Many commands support the `--mcp-config` flag to specify MCP (Model Context Prot
 .mcp.macos.json    # macOS environments
 ```
 
+**Default configuration:** The `--mcp-config` flag is optional when a default
+is configured via the `MCP_CODER_MCP_CONFIG` environment variable or
+`[mcp] default_config_path` in `config.toml`. See
+[Configuration Guide](configuration/config.md) for details.
+
 **Commands supporting `--mcp-config`:**
 - `prompt`
 - `commit auto`

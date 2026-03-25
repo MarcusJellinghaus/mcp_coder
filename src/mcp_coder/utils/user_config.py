@@ -142,6 +142,7 @@ def _get_standard_env_var(section: str, key: str) -> Optional[str]:
         ("jenkins", "server_url"): "JENKINS_URL",
         ("jenkins", "username"): "JENKINS_USER",
         ("jenkins", "api_token"): "JENKINS_TOKEN",
+        ("mcp", "default_config_path"): "MCP_CODER_MCP_CONFIG",
     }
 
     return mappings.get((section, key))
@@ -275,6 +276,11 @@ def create_default_config() -> bool:
 # [llm]
 # Default LLM provider: "claude" (default) or "langchain"
 # default_provider = "langchain"
+
+# [mcp]
+# Default MCP config file path (relative to CWD or absolute)
+# Environment variable (higher priority): MCP_CODER_MCP_CONFIG
+# default_config_path = ".mcp.json"
 
 [github]
 # GitHub authentication
@@ -416,6 +422,39 @@ def verify_config() -> dict[str, Any]:
                 "label": "[llm]",
                 "status": "ok",
                 "value": f"default_provider = {provider}",
+            }
+        )
+
+    # [mcp] - always shown
+    mcp_env = os.environ.get("MCP_CODER_MCP_CONFIG")
+    mcp_config = (
+        config_data.get("mcp", {}).get("default_config_path")
+        if isinstance(config_data.get("mcp"), dict)
+        else None
+    )
+    if mcp_env:
+        source = _get_source_annotation("mcp", "default_config_path", config_data)
+        entries.append(
+            {
+                "label": "[mcp]",
+                "status": "ok",
+                "value": f"default_config_path configured {source}",
+            }
+        )
+    elif mcp_config:
+        entries.append(
+            {
+                "label": "[mcp]",
+                "status": "ok",
+                "value": f"default_config_path = {mcp_config} (config.toml)",
+            }
+        )
+    else:
+        entries.append(
+            {
+                "label": "[mcp]",
+                "status": "info",
+                "value": "not configured (using auto-detect)",
             }
         )
 

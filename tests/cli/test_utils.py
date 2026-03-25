@@ -10,6 +10,7 @@ from mcp_coder.cli.utils import (
     resolve_llm_method,
     resolve_mcp_config_path,
 )
+from mcp_coder.utils.user_config import _get_standard_env_var
 
 
 class TestParseLLMMethodFromArgs:
@@ -146,8 +147,11 @@ class TestResolveLlmMethod:
 class TestResolveMcpConfigPath:
     """Test cases for resolve_mcp_config_path function."""
 
-    def test_resolve_mcp_config_auto_detect_project_dir(self, tmp_path: Path) -> None:
+    def test_resolve_mcp_config_auto_detect_project_dir(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that .mcp.json in project_dir is auto-detected when mcp_config is None."""
+        monkeypatch.delenv("MCP_CODER_MCP_CONFIG", raising=False)
         mcp_json = tmp_path / ".mcp.json"
         mcp_json.write_text("{}")
 
@@ -158,6 +162,7 @@ class TestResolveMcpConfigPath:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that .mcp.json in CWD is auto-detected when no project_dir given."""
+        monkeypatch.delenv("MCP_CODER_MCP_CONFIG", raising=False)
         mcp_json = tmp_path / ".mcp.json"
         mcp_json.write_text("{}")
         monkeypatch.chdir(tmp_path)
@@ -169,6 +174,7 @@ class TestResolveMcpConfigPath:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that None is returned when no .mcp.json exists."""
+        monkeypatch.delenv("MCP_CODER_MCP_CONFIG", raising=False)
         monkeypatch.chdir(tmp_path)
 
         result = resolve_mcp_config_path(None)
@@ -186,6 +192,112 @@ class TestResolveMcpConfigPath:
         """Test that explicit path to non-existent file raises FileNotFoundError."""
         with pytest.raises(FileNotFoundError):
             resolve_mcp_config_path("/nonexistent/path/config.json")
+
+    def test_resolve_mcp_config_env_var(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that MCP_CODER_MCP_CONFIG env var is used when mcp_config is None."""
+        config_file = tmp_path / "mcp_config.json"
+        config_file.write_text("{}")
+        monkeypatch.setenv("MCP_CODER_MCP_CONFIG", str(config_file))
+
+        result = resolve_mcp_config_path(None)
+        assert result == str(config_file.resolve())
+
+    @patch("mcp_coder.cli.utils.get_config_values")
+    def test_resolve_mcp_config_config_file(
+        self, mock_config: MagicMock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that [mcp] default_config_path from config file is used."""
+        monkeypatch.delenv("MCP_CODER_MCP_CONFIG", raising=False)
+        config_file = tmp_path / "mcp_from_config.json"
+        config_file.write_text("{}")
+        mock_config.return_value = {("mcp", "default_config_path"): str(config_file)}
+        # No .mcp.json in tmp_path
+        monkeypatch.chdir(tmp_path)
+
+        result = resolve_mcp_config_path(None)
+        assert result == str(config_file.resolve())
+
+    def test_resolve_mcp_config_cli_overrides_env(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that explicit CLI mcp_config overrides env var."""
+        cli_file = tmp_path / "cli_config.json"
+        cli_file.write_text("{}")
+        env_file = tmp_path / "env_config.json"
+        env_file.write_text("{}")
+        monkeypatch.setenv("MCP_CODER_MCP_CONFIG", str(env_file))
+
+        result = resolve_mcp_config_path(str(cli_file))
+        assert result == str(cli_file.resolve())
+
+    @patch("mcp_coder.cli.utils.get_config_values")
+    def test_resolve_mcp_config_env_overrides_config(
+        self, mock_config: MagicMock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that env var takes precedence over config file."""
+        env_file = tmp_path / "env_config.json"
+        env_file.write_text("{}")
+        cfg_file = tmp_path / "cfg_config.json"
+        cfg_file.write_text("{}")
+        monkeypatch.setenv("MCP_CODER_MCP_CONFIG", str(env_file))
+        mock_config.return_value = {("mcp", "default_config_path"): str(cfg_file)}
+
+        result = resolve_mcp_config_path(None)
+        assert result == str(env_file.resolve())
+
+    def test_resolve_mcp_config_env_missing_file_falls_back(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Test that missing env var file warns and falls back to auto-detect."""
+        monkeypatch.setenv("MCP_CODER_MCP_CONFIG", "/nonexistent/mcp.json")
+        mcp_json = tmp_path / ".mcp.json"
+        mcp_json.write_text("{}")
+        monkeypatch.chdir(tmp_path)
+
+        import logging
+
+        with caplog.at_level(logging.WARNING, logger="mcp_coder.cli.utils"):
+            result = resolve_mcp_config_path(None)
+
+        assert result == str(mcp_json.resolve())
+        assert "MCP_CODER_MCP_CONFIG" in caplog.text
+        assert "file not found" in caplog.text
+
+    @patch("mcp_coder.cli.utils.get_config_values")
+    def test_resolve_mcp_config_config_missing_file_falls_back(
+        self,
+        mock_config: MagicMock,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Test that missing config file path warns and falls back to auto-detect."""
+        monkeypatch.delenv("MCP_CODER_MCP_CONFIG", raising=False)
+        mock_config.return_value = {
+            ("mcp", "default_config_path"): "/nonexistent/mcp.json"
+        }
+        mcp_json = tmp_path / ".mcp.json"
+        mcp_json.write_text("{}")
+        monkeypatch.chdir(tmp_path)
+
+        import logging
+
+        with caplog.at_level(logging.WARNING, logger="mcp_coder.cli.utils"):
+            result = resolve_mcp_config_path(None)
+
+        assert result == str(mcp_json.resolve())
+        assert "default_config_path" in caplog.text
+        assert "file not found" in caplog.text
+
+    def test_get_standard_env_var_mcp_config(self) -> None:
+        """Test that _get_standard_env_var maps mcp/default_config_path correctly."""
+        result = _get_standard_env_var("mcp", "default_config_path")
+        assert result == "MCP_CODER_MCP_CONFIG"
 
 
 class TestResolveExecutionDir:
