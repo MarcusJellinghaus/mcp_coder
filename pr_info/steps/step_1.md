@@ -22,6 +22,8 @@ def resolve_mcp_config_path(
 
 ### New tests to add to `TestResolveMcpConfigPath`
 
+**Note:** Existing `TestResolveMcpConfigPath` tests must add `monkeypatch.delenv("MCP_CODER_MCP_CONFIG", raising=False)` to prevent test pollution from the new env var support.
+
 ```python
 # Priority tests
 def test_resolve_mcp_config_env_var(self, tmp_path, monkeypatch): ...
@@ -30,6 +32,7 @@ def test_resolve_mcp_config_cli_overrides_env(self, tmp_path, monkeypatch): ...
 def test_resolve_mcp_config_env_overrides_config(self, tmp_path, monkeypatch): ...
 def test_resolve_mcp_config_env_missing_file_falls_back(self, tmp_path, monkeypatch, caplog): ...
 def test_resolve_mcp_config_config_missing_file_falls_back(self, tmp_path, monkeypatch, caplog): ...
+def test_get_standard_env_var_mcp_config(self): ...
 ```
 
 ## HOW
@@ -37,7 +40,7 @@ def test_resolve_mcp_config_config_missing_file_falls_back(self, tmp_path, monke
 - Import `get_config_values` (already imported in utils.py)
 - Use `os.environ.get("MCP_CODER_MCP_CONFIG")` for env var check (same pattern as `resolve_llm_method`)
 - Use `get_config_values([("mcp", "default_config_path", None)])` for config file check
-- No new env var mapping in `_get_standard_env_var()` (env var is checked directly, not via auto-detect)
+- Add env var mapping `("mcp", "default_config_path"): "MCP_CODER_MCP_CONFIG"` to `_get_standard_env_var()` so that `_get_source_annotation()` in `verify_config()` can detect the env var source correctly.
 
 ## ALGORITHM
 
@@ -99,6 +102,10 @@ def resolve_mcp_config_path(mcp_config, project_dir=None):
 ### `test_resolve_mcp_config_config_missing_file_falls_back`
 - Mock config to return non-existent path, place `.mcp.json` in CWD
 - Assert returns auto-detected `.mcp.json`, assert warning logged
+
+### `test_get_standard_env_var_mcp_config`
+- Call `_get_standard_env_var("mcp", "default_config_path")`
+- Assert returns `"MCP_CODER_MCP_CONFIG"`
 
 ## Commit
 

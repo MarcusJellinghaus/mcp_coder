@@ -71,7 +71,7 @@ For `verify_config()` addition (~8 lines):
 mcp_env = os.environ.get("MCP_CODER_MCP_CONFIG")
 mcp_config_val = config_data.get("mcp", {}).get("default_config_path") if isinstance(...)
 if mcp_env:
-    source = _get_source_annotation(...)
+    source = _get_source_annotation(...)  # works because step 1 added the mapping
     entries.append({"label": "[mcp]", "status": "ok", "value": f"... {source}"})
 elif mcp_config_val:
     entries.append({"label": "[mcp]", "status": "ok", "value": f"... (config.toml)"})
@@ -93,6 +93,8 @@ else:
 # When not configured:
 {"label": "[mcp]", "status": "info", "value": "not configured (using auto-detect)"}
 ```
+
+**Dependency:** This relies on step 1 having added the `("mcp", "default_config_path"): "MCP_CODER_MCP_CONFIG"` mapping to `_get_standard_env_var()`.
 
 ## Test Details
 

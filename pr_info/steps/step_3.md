@@ -17,6 +17,7 @@
 2. Run `verify_mcp_servers()` whenever `mcp_config_resolved` is not None, regardless of provider
 3. Wrap `verify_mcp_servers()` in try/except `ImportError` — if `langchain-mcp-adapters` is not installed, print info message and skip
 4. Change `_format_mcp_section` header from `"MCP SERVERS"` to `"MCP SERVERS (via langchain-mcp-adapters)"`
+5. `_run_mcp_edit_smoke_test()` also depends on `mcp_config_resolved` — after this change it runs for all providers when MCP config is found. This is desirable (consistent with "all providers" goal) and requires no additional code changes.
 
 ### New tests
 
@@ -52,7 +53,7 @@ if mcp_config_resolved:
 mcp_config_resolved = resolve_mcp_config_path(args.mcp_config, project_dir=args.project_dir)
 
 if active_provider == "langchain":
-    langchain_result = verify_langchain(...)
+    langchain_result = verify_langchain(..., mcp_config_path=mcp_config_resolved)
 else:
     ...
 
@@ -64,6 +65,16 @@ if mcp_config_resolved:
     except ImportError:
         print("\n=== MCP SERVERS (via langchain-mcp-adapters) ===")
         print(f"  {symbols['warning']} server health check skipped (langchain-mcp-adapters not installed)")
+```
+
+**ImportError handling:** Before implementing, verify whether `langchain-mcp-adapters` is imported eagerly (at module level in `langchain/verification.py`) or lazily (inside `verify_mcp_servers()`). If eagerly imported, `verify_mcp_servers` must be lazily imported inside `execute_verify()` to catch the `ImportError` at call time. Example:
+```python
+try:
+    from ...llm.providers.langchain.verification import verify_mcp_servers
+    mcp_result = verify_mcp_servers(mcp_config_resolved)
+except ImportError:
+    # langchain-mcp-adapters not installed
+    ...
 ```
 
 ## ALGORITHM
@@ -93,6 +104,8 @@ if mcp_config_resolved:
 
 ## Test Details
 
+**Note:** Existing claude-provider tests in `test_verify_orchestration.py` don't mock `resolve_mcp_config_path` since it wasn't called for claude. After this change, these tests will call the real function. Add `resolve_mcp_config_path` mock returning `None` to existing claude-provider tests to maintain isolation.
+
 ### `test_mcp_config_resolved_for_claude_provider`
 - Set provider to claude, provide `mcp_config` arg pointing to real file
 - Mock `verify_mcp_servers` to return ok result
@@ -114,6 +127,11 @@ if mcp_config_resolved:
 ### `test_mcp_failure_informational_for_claude`
 - Set provider to claude, mock MCP result with `overall_ok=False`
 - Assert exit code is still 0 (informational only for claude)
+
+### `test_mcp_edit_smoke_test_runs_for_claude_provider`
+- Set provider to claude, mock `resolve_mcp_config_path` to return a path
+- Mock `verify_mcp_servers` to return ok result
+- Assert `_run_mcp_edit_smoke_test` is called with the resolved MCP config path
 
 ## Commit
 
