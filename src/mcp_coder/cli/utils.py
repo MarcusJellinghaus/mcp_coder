@@ -126,13 +126,34 @@ def resolve_mcp_config_path(
         logger.debug(f"Resolved MCP config path: {mcp_config} -> {mcp_config_path}")
         return str(mcp_config_path)
 
+    # Check env var MCP_CODER_MCP_CONFIG
+    if (env_path := os.environ.get("MCP_CODER_MCP_CONFIG")) is not None:
+        resolved = Path(env_path).resolve()
+        if resolved.exists():
+            return str(resolved)
+        logger.warning(
+            "MCP_CODER_MCP_CONFIG=%s: file not found, falling back to auto-detect",
+            env_path,
+        )
+
+    # Check config file [mcp] default_config_path
+    config = get_config_values([("mcp", "default_config_path", None)])
+    if (cfg_path := config[("mcp", "default_config_path")]) is not None:
+        resolved = Path(cfg_path).resolve()
+        if resolved.exists():
+            return str(resolved)
+        logger.warning(
+            "[mcp] default_config_path=%s: file not found, falling back to auto-detect",
+            cfg_path,
+        )
+
     # Auto-detect .mcp.json
     base = Path(project_dir) if project_dir else Path.cwd()
     candidate = base / ".mcp.json"
     if candidate.exists():
-        resolved = str(candidate.resolve())
-        logger.debug(f"Auto-detected MCP config: {resolved}")
-        return resolved
+        resolved_path = str(candidate.resolve())
+        logger.debug(f"Auto-detected MCP config: {resolved_path}")
+        return resolved_path
 
     logger.debug(f"No .mcp.json found in {base}")
     return None

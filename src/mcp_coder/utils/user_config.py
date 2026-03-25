@@ -142,6 +142,7 @@ def _get_standard_env_var(section: str, key: str) -> Optional[str]:
         ("jenkins", "server_url"): "JENKINS_URL",
         ("jenkins", "username"): "JENKINS_USER",
         ("jenkins", "api_token"): "JENKINS_TOKEN",
+        ("mcp", "default_config_path"): "MCP_CODER_MCP_CONFIG",
     }
 
     return mappings.get((section, key))
