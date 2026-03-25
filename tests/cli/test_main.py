@@ -72,7 +72,7 @@ class TestHandleNoCommand:
         args = argparse.Namespace(command=None)
         result = handle_no_command(args)
 
-        assert result == 1
+        assert result == 0
         # Verify help text was printed
         mock_print.assert_called()
         call_args = [call[0][0] for call in mock_print.call_args_list]
@@ -108,11 +108,11 @@ class TestMain:
             command=None, log_level="INFO"
         )
         mock_create_parser.return_value = mock_parser
-        mock_handle_no_command.return_value = 1
+        mock_handle_no_command.return_value = 0
 
         result = main()
 
-        assert result == 1
+        assert result == 0
         mock_handle_no_command.assert_called_once()
         mock_setup_logging.assert_called_once_with("INFO")
 
@@ -221,11 +221,11 @@ class TestMain:
             command=None, log_level="DEBUG"
         )
         mock_create_parser.return_value = mock_parser
-        mock_handle_no_command.return_value = 1
+        mock_handle_no_command.return_value = 0
 
         result = main()
 
-        assert result == 1
+        assert result == 0
         mock_handle_no_command.assert_called_once()
         mock_setup_logging.assert_called_once_with("DEBUG")
 

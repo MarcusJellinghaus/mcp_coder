@@ -20,7 +20,7 @@ from .commands.create_pr import execute_create_pr
 from .commands.define_labels import execute_define_labels
 from .commands.gh_tool import execute_get_base_branch
 from .commands.git_tool import execute_compact_diff
-from .commands.help import execute_help, get_help_text
+from .commands.help import execute_help, get_compact_help_text
 from .commands.implement import execute_implement
 from .commands.init import execute_init
 from .commands.prompt import execute_prompt
@@ -105,14 +105,14 @@ def handle_no_command(_args: argparse.Namespace) -> int:
     """Handle case when no command is provided.
 
     Returns:
-        Exit code (1 for error since no command was provided).
+        Exit code (0 — showing help is valid behavior).
     """
     logger.info("No command provided, showing help")
 
-    help_text = get_help_text(include_examples=False)
+    help_text = get_compact_help_text()
     print(help_text)
 
-    return 1  # Exit with error code since no command was provided
+    return 0
 
 
 def _handle_coordinator_command(args: argparse.Namespace) -> int:
