@@ -5,7 +5,7 @@ from typing import Any, Callable
 
 import pytest
 
-from mcp_coder.llm.interface import ask_llm
+from mcp_coder.llm.interface import prompt_llm
 from mcp_coder.llm.providers.claude.claude_code_api import (
     ask_claude_code_api,
     ask_claude_code_api_detailed_sync,
@@ -19,7 +19,7 @@ class TestInputValidation:
     @pytest.mark.parametrize(
         "_function_name,function",
         [
-            ("ask_llm", ask_llm),
+            ("prompt_llm", prompt_llm),
             ("ask_claude_code_cli", ask_claude_code_cli),
             ("ask_claude_code_api", ask_claude_code_api),
             ("ask_claude_code_api_detailed_sync", ask_claude_code_api_detailed_sync),
@@ -37,7 +37,7 @@ class TestInputValidation:
     @pytest.mark.parametrize(
         "_function_name,function",
         [
-            ("ask_llm", ask_llm),
+            ("prompt_llm", prompt_llm),
             ("ask_claude_code_cli", ask_claude_code_cli),
             ("ask_claude_code_api", ask_claude_code_api),
             ("ask_claude_code_api_detailed_sync", ask_claude_code_api_detailed_sync),
@@ -55,7 +55,7 @@ class TestInputValidation:
     @pytest.mark.parametrize(
         "_function_name,function",
         [
-            ("ask_llm", ask_llm),
+            ("prompt_llm", prompt_llm),
             ("ask_claude_code_cli", ask_claude_code_cli),
             ("ask_claude_code_api", ask_claude_code_api),
             ("ask_claude_code_api_detailed_sync", ask_claude_code_api_detailed_sync),
@@ -71,7 +71,7 @@ class TestInputValidation:
     @pytest.mark.parametrize(
         "_function_name,function",
         [
-            ("ask_llm", ask_llm),
+            ("prompt_llm", prompt_llm),
             ("ask_claude_code_cli", ask_claude_code_cli),
             ("ask_claude_code_api", ask_claude_code_api),
             ("ask_claude_code_api_detailed_sync", ask_claude_code_api_detailed_sync),
@@ -84,7 +84,7 @@ class TestInputValidation:
         with pytest.raises(ValueError, match="Timeout must be a positive number"):
             function("test question", timeout=-1)
 
-    def test_ask_llm_invalid_provider_raises_error(self) -> None:
+    def test_prompt_llm_invalid_provider_raises_error(self) -> None:
         """Test that invalid provider raises ValueError."""
         with pytest.raises(ValueError, match="Unsupported provider: invalid"):
-            ask_llm("test question", provider="invalid")
+            prompt_llm("test question", provider="invalid")

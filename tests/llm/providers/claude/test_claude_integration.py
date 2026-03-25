@@ -14,7 +14,7 @@ from typing import Any, Callable
 
 import pytest
 
-from mcp_coder import ask_llm, prompt_llm
+from mcp_coder import prompt_llm
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.providers.claude.claude_code_api import ask_claude_code_api
 from mcp_coder.llm.providers.claude.claude_code_cli import ask_claude_code_cli
@@ -52,16 +52,16 @@ class TestCriticalPathIntegration:
         # Prepare environment variables for MCP servers
         env_vars = prepare_llm_environment(Path.cwd())
 
-        # Test CLI path: ask_llm → ask_claude_code → ask_claude_code_cli
-        cli_result = ask_llm(
+        # Test CLI path: prompt_llm → ask_claude_code_cli
+        cli_result = prompt_llm(
             "Yes or no: Is 1+1=2?",
             provider="claude",
             timeout=60,  # Increased for real API calls
             env_vars=env_vars,
         )
-        assert isinstance(cli_result, str)
-        assert len(cli_result) > 0
-        assert "yes" in cli_result.lower()
+        assert isinstance(cli_result, dict)
+        assert len(cli_result["text"]) > 0
+        assert "yes" in cli_result["text"].lower()
 
         # Test API path: ask_llm → ask_claude_code → ask_claude_code_api
         # TODO: Commented out due to Claude Code SDK compatibility issues
@@ -164,14 +164,14 @@ class TestEnvironmentVariablePropagation:
         env_vars = prepare_llm_environment(Path.cwd())
 
         # Test CLI method - env_vars should be passed to subprocess
-        result_cli = ask_llm(
+        result_cli = prompt_llm(
             "Say hello",
             provider="claude",
             timeout=60,  # Increased for real API calls
             env_vars=env_vars,
         )
-        assert isinstance(result_cli, str)
-        assert len(result_cli) > 0
+        assert isinstance(result_cli, dict)
+        assert len(result_cli["text"]) > 0
         # Successful execution means env_vars were prepared and passed correctly
 
         # Test API method - env_vars should be passed to SDK

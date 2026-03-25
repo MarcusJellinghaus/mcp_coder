@@ -5,18 +5,18 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.llm.interface import ask_llm, prompt_llm
+from mcp_coder.llm.interface import prompt_llm
 from mcp_coder.utils.subprocess_runner import TimeoutExpired
 
 
-class TestAskLLM:
-    """Test the main ask_llm function."""
+class TestPromptLLMRouting:
+    """Test prompt_llm routing to providers."""
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
-    def test_ask_llm_routes_to_claude_code(
+    def test_prompt_llm_routes_to_claude_code(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
-        """Test that ask_llm routes to ask_claude_code_cli for claude provider."""
+        """Test that prompt_llm routes to ask_claude_code_cli for claude provider."""
         mock_ask_claude_code_cli.return_value = {
             "text": "Test response from Claude",
             "session_id": "test-session",
@@ -26,7 +26,7 @@ class TestAskLLM:
             "raw_response": {},
         }
 
-        result = ask_llm("Test question", provider="claude", timeout=30)
+        result = prompt_llm("Test question", provider="claude", timeout=30)
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Test question",
@@ -37,13 +37,13 @@ class TestAskLLM:
             mcp_config=None,
             branch_name=None,
         )
-        assert result == "Test response from Claude"
+        assert result["text"] == "Test response from Claude"
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
-    def test_ask_llm_default_parameters(
+    def test_prompt_llm_routes_default_parameters(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
-        """Test that ask_llm uses correct default parameters."""
+        """Test that prompt_llm uses correct default parameters."""
         mock_ask_claude_code_cli.return_value = {
             "text": "Default response",
             "session_id": "test-session",
@@ -53,7 +53,7 @@ class TestAskLLM:
             "raw_response": {},
         }
 
-        result = ask_llm("Test question")
+        result = prompt_llm("Test question")
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Test question",
@@ -64,26 +64,28 @@ class TestAskLLM:
             mcp_config=None,
             branch_name=None,
         )
-        assert result == "Default response"
+        assert result["text"] == "Default response"
 
-    def test_ask_llm_unsupported_provider(self) -> None:
-        """Test that ask_llm raises ValueError for unsupported provider."""
+    def test_prompt_llm_unsupported_provider_gpt(self) -> None:
+        """Test that prompt_llm raises ValueError for unsupported provider."""
         with pytest.raises(ValueError, match="Unsupported provider: gpt"):
-            ask_llm("Test question", provider="gpt")
+            prompt_llm("Test question", provider="gpt")
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
-    def test_ask_llm_passes_through_exceptions(
+    def test_prompt_llm_passes_through_exceptions(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
-        """Test that ask_llm passes through exceptions from underlying implementations."""
+        """Test that prompt_llm passes through exceptions from underlying implementations."""
         mock_ask_claude_code_cli.side_effect = RuntimeError("Claude error")
 
         with pytest.raises(RuntimeError, match="Claude error"):
-            ask_llm("Test question", provider="claude")
+            prompt_llm("Test question", provider="claude")
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
-    def test_ask_llm_custom_timeout(self, mock_ask_claude_code_cli: MagicMock) -> None:
-        """Test that ask_llm passes through custom timeout."""
+    def test_prompt_llm_routes_custom_timeout(
+        self, mock_ask_claude_code_cli: MagicMock
+    ) -> None:
+        """Test that prompt_llm passes through custom timeout."""
         mock_ask_claude_code_cli.return_value = {
             "text": "Timeout response",
             "session_id": "test-session",
@@ -93,7 +95,7 @@ class TestAskLLM:
             "raw_response": {},
         }
 
-        result = ask_llm("Test question", timeout=60)
+        result = prompt_llm("Test question", timeout=60)
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Test question",
@@ -104,10 +106,12 @@ class TestAskLLM:
             mcp_config=None,
             branch_name=None,
         )
-        assert result == "Timeout response"
+        assert result["text"] == "Timeout response"
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
-    def test_ask_llm_with_session_id(self, mock_ask_claude_code_cli: MagicMock) -> None:
+    def test_prompt_llm_routes_with_session_id(
+        self, mock_ask_claude_code_cli: MagicMock
+    ) -> None:
         """Test that session_id is passed through to ask_claude_code_cli."""
         mock_ask_claude_code_cli.return_value = {
             "text": "Response with session",
@@ -118,7 +122,7 @@ class TestAskLLM:
             "raw_response": {},
         }
 
-        result = ask_llm(
+        result = prompt_llm(
             "Test question",
             provider="claude",
             session_id="test-session-123",
@@ -133,10 +137,10 @@ class TestAskLLM:
             mcp_config=None,
             branch_name=None,
         )
-        assert result == "Response with session"
+        assert result["text"] == "Response with session"
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
-    def test_ask_llm_without_session_id(
+    def test_prompt_llm_routes_without_session_id(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
         """Test that session_id is optional and defaults to None."""
@@ -149,8 +153,7 @@ class TestAskLLM:
             "raw_response": {},
         }
 
-        # Should work without session_id (backward compatible)
-        result = ask_llm("Test question")
+        result = prompt_llm("Test question")
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Test question",
@@ -161,13 +164,11 @@ class TestAskLLM:
             mcp_config=None,
             branch_name=None,
         )
-        assert result == "Response without session"
+        assert result["text"] == "Response without session"
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
-    def test_ask_llm_returns_string_only(
-        self, mock_ask_claude_code_cli: MagicMock
-    ) -> None:
-        """Test that ask_llm returns string, not dict."""
+    def test_prompt_llm_returns_dict(self, mock_ask_claude_code_cli: MagicMock) -> None:
+        """Test that prompt_llm returns dict, not string."""
         mock_ask_claude_code_cli.return_value = {
             "text": "Just the text",
             "session_id": "some-session",
@@ -177,15 +178,16 @@ class TestAskLLM:
             "raw_response": {},
         }
 
-        response = ask_llm("Test", session_id="some-session")
+        response = prompt_llm("Test", session_id="some-session")
 
-        # Should return string only
-        assert isinstance(response, str)
-        assert response == "Just the text"
+        assert isinstance(response, dict)
+        assert response["text"] == "Just the text"
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
-    def test_ask_llm_with_env_vars(self, mock_ask_claude_code_cli: MagicMock) -> None:
-        """Test that ask_llm passes env_vars to ask_claude_code_cli."""
+    def test_prompt_llm_routes_with_env_vars(
+        self, mock_ask_claude_code_cli: MagicMock
+    ) -> None:
+        """Test that prompt_llm passes env_vars to ask_claude_code_cli."""
         mock_ask_claude_code_cli.return_value = {
             "text": "Response with env vars",
             "session_id": "test-session",
@@ -196,7 +198,7 @@ class TestAskLLM:
         }
         test_env_vars = {"VAR1": "value1", "VAR2": "value2"}
 
-        result = ask_llm(
+        result = prompt_llm(
             "Test question",
             provider="claude",
             env_vars=test_env_vars,
@@ -211,31 +213,31 @@ class TestAskLLM:
             mcp_config=None,
             branch_name=None,
         )
-        assert result == "Response with env vars"
+        assert result["text"] == "Response with env vars"
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
-    def test_ask_llm_timeout_expired_logged_and_reraised(
+    def test_prompt_llm_timeout_expired_reraised(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
-        """Test that TimeoutExpired is re-raised as-is (not wrapped) from ask_llm."""
+        """Test that TimeoutExpired is re-raised as-is (not wrapped) from prompt_llm."""
         mock_ask_claude_code_cli.side_effect = TimeoutExpired(cmd="claude", timeout=30)
 
         with pytest.raises(TimeoutExpired):
-            ask_llm("Test question", provider="claude", timeout=30)
+            prompt_llm("Test question", provider="claude", timeout=30)
 
     @patch("mcp_coder.llm.providers.langchain.ask_langchain")
-    def test_ask_llm_asyncio_timeout_reraised_for_langchain(
+    def test_prompt_llm_asyncio_timeout_reraised_for_langchain(
         self, mock_ask_langchain: MagicMock
     ) -> None:
         """asyncio.TimeoutError from langchain provider is re-raised."""
         mock_ask_langchain.side_effect = asyncio.TimeoutError()
 
         with pytest.raises(asyncio.TimeoutError):
-            ask_llm("Test question", provider="langchain", timeout=30)
+            prompt_llm("Test question", provider="langchain", timeout=30)
 
 
-class TestAskLLMExecutionDir:
-    """Tests for execution_dir parameter in ask_llm."""
+class TestPromptLLMExecutionDirRouting:
+    """Tests for execution_dir parameter routing in prompt_llm."""
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_execution_dir_passed_to_provider(
@@ -251,7 +253,7 @@ class TestAskLLMExecutionDir:
             "raw_response": {},
         }
 
-        result = ask_llm(
+        result = prompt_llm(
             "Test question",
             execution_dir="/custom/execution/dir",
         )
@@ -265,7 +267,7 @@ class TestAskLLMExecutionDir:
             mcp_config=None,
             branch_name=None,
         )
-        assert result == "Response with execution_dir"
+        assert result["text"] == "Response with execution_dir"
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_execution_dir_none_uses_default(
@@ -281,7 +283,7 @@ class TestAskLLMExecutionDir:
             "raw_response": {},
         }
 
-        result = ask_llm("Test question", execution_dir=None)
+        result = prompt_llm("Test question", execution_dir=None)
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Test question",
@@ -292,7 +294,7 @@ class TestAskLLMExecutionDir:
             mcp_config=None,
             branch_name=None,
         )
-        assert result == "Response with default dir"
+        assert result["text"] == "Response with default dir"
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_execution_dir_with_absolute_path(
@@ -308,7 +310,7 @@ class TestAskLLMExecutionDir:
             "raw_response": {},
         }
 
-        result = ask_llm(
+        result = prompt_llm(
             "Test question",
             execution_dir="/home/user/workspace",
         )
@@ -322,7 +324,7 @@ class TestAskLLMExecutionDir:
             mcp_config=None,
             branch_name=None,
         )
-        assert result == "Response with absolute path"
+        assert result["text"] == "Response with absolute path"
 
 
 class TestIntegration:
@@ -330,7 +332,7 @@ class TestIntegration:
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_full_routing_chain(self, mock_ask_claude_code_cli: MagicMock) -> None:
-        """Test the full routing chain from ask_llm to ask_claude_code_cli."""
+        """Test the full routing chain from prompt_llm to ask_claude_code_cli."""
         mock_ask_claude_code_cli.return_value = {
             "text": "Full chain response",
             "session_id": "chain-session",
@@ -340,7 +342,7 @@ class TestIntegration:
             "raw_response": {},
         }
 
-        result = ask_llm("Integration test question", provider="claude", timeout=25)
+        result = prompt_llm("Integration test question", provider="claude", timeout=25)
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Integration test question",
@@ -351,13 +353,13 @@ class TestIntegration:
             mcp_config=None,
             branch_name=None,
         )
-        assert result == "Full chain response"
+        assert result["text"] == "Full chain response"
 
     def test_parameter_validation_propagation(self) -> None:
         """Test that parameter validation errors propagate correctly."""
         # Test invalid provider
         with pytest.raises(ValueError, match="Unsupported provider"):
-            ask_llm("Test", provider="invalid")
+            prompt_llm("Test", provider="invalid")
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_full_routing_chain_with_session_id(
@@ -373,7 +375,7 @@ class TestIntegration:
             "raw_response": {},
         }
 
-        result = ask_llm(
+        result = prompt_llm(
             "Integration test with session",
             provider="claude",
             session_id="integration-session-789",
@@ -389,7 +391,7 @@ class TestIntegration:
             mcp_config=None,
             branch_name=None,
         )
-        assert result == "Full chain response with session"
+        assert result["text"] == "Full chain response with session"
 
 
 # Real integration tests for LLM interface are removed
@@ -838,14 +840,15 @@ class TestPromptLlmLangchainRouting:
         assert kwargs.get("env_vars") is None
         assert result["text"] == "langchain reply"
 
-    def test_ask_llm_delegates_to_prompt_llm_for_langchain(self) -> None:
-        """ask_llm with provider='langchain' also routes correctly."""
+    def test_prompt_llm_returns_full_response_for_langchain(self) -> None:
+        """prompt_llm with provider='langchain' returns full dict response."""
         expected = self._make_langchain_response()
         with patch(
             "mcp_coder.llm.providers.langchain.ask_langchain",
             return_value=expected,
         ):
-            from mcp_coder.llm.interface import ask_llm
+            from mcp_coder.llm.interface import prompt_llm
 
-            result = ask_llm("Hello", provider="langchain")
-        assert result == "langchain reply"
+            result = prompt_llm("Hello", provider="langchain")
+        assert result["text"] == "langchain reply"
+        assert result["provider"] == "langchain"

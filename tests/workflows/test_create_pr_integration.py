@@ -136,10 +136,15 @@ class TestCreatePRWorkflowIntegration:
         repo.index.commit("Add new feature")
 
         # Mock LLM response for PR summary
-        with patch("mcp_coder.workflows.create_pr.core.ask_llm") as mock_llm:
-            mock_llm.return_value = (
-                "feat: Add new feature\n\nThis PR adds a new feature function."
-            )
+        with patch("mcp_coder.llm.interface.prompt_llm") as mock_prompt_llm:
+            mock_prompt_llm.return_value = {
+                "text": "feat: Add new feature\n\nThis PR adds a new feature function.",
+                "session_id": None,
+                "provider": "claude",
+                "version": None,
+                "timestamp": None,
+                "raw_response": None,
+            }
 
             from mcp_coder.workflows.create_pr.core import generate_pr_summary
 
@@ -147,7 +152,7 @@ class TestCreatePRWorkflowIntegration:
 
             assert title == "feat: Add new feature"
             assert "This PR adds a new feature function." in body
-            mock_llm.assert_called_once()
+            mock_prompt_llm.assert_called_once()
 
     @pytest.mark.git_integration
     def test_workflow_git_operations_integration(

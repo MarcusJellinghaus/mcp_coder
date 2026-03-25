@@ -15,10 +15,10 @@ class TestGeneratePrSummary:
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
     @patch("mcp_coder.workflows.create_pr.core.get_prompt")
-    @patch("mcp_coder.workflows.create_pr.core.ask_llm")
+    @patch("mcp_coder.llm.interface.prompt_llm")
     def test_generate_pr_summary_success(
         self,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
         mock_get_prompt: MagicMock,
         mock_get_diff: MagicMock,
         mock_get_current_branch: MagicMock,
@@ -29,7 +29,14 @@ class TestGeneratePrSummary:
         mock_detect_base_branch.return_value = "main"
         mock_get_diff.return_value = "diff content here"
         mock_get_prompt.return_value = "PR Summary prompt template"
-        mock_ask_llm.return_value = "feat: Add authentication\n\nDetailed description"
+        mock_prompt_llm.return_value = {
+            "text": "feat: Add authentication\n\nDetailed description",
+            "session_id": None,
+            "provider": "claude",
+            "version": None,
+            "timestamp": None,
+            "raw_response": None,
+        }
 
         title, body = generate_pr_summary(Path("/test/project"), "claude", "cli")
 
@@ -39,16 +46,16 @@ class TestGeneratePrSummary:
             Path("/test/project"), base_branch="main", exclude_paths=["pr_info/steps/"]
         )
         mock_get_prompt.assert_called_once()
-        mock_ask_llm.assert_called_once()
+        mock_prompt_llm.assert_called_once()
 
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
     @patch("mcp_coder.workflows.create_pr.core.get_prompt")
-    @patch("mcp_coder.workflows.create_pr.core.ask_llm")
+    @patch("mcp_coder.llm.interface.prompt_llm")
     def test_generate_pr_summary_structured_response(
         self,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
         mock_get_prompt: MagicMock,
         mock_get_diff: MagicMock,
         mock_get_current_branch: MagicMock,
@@ -59,7 +66,8 @@ class TestGeneratePrSummary:
         mock_detect_base_branch.return_value = "main"
         mock_get_diff.return_value = "diff content here"
         mock_get_prompt.return_value = "PR Summary prompt template"
-        mock_ask_llm.return_value = """TITLE: feat: Add user management
+        mock_prompt_llm.return_value = {
+            "text": """TITLE: feat: Add user management
 BODY:
 ## Summary
 Implements comprehensive user management functionality.
@@ -67,7 +75,13 @@ Implements comprehensive user management functionality.
 ## Changes
 - User registration and authentication
 - Role-based access control
-- User profile management"""
+- User profile management""",
+            "session_id": None,
+            "provider": "claude",
+            "version": None,
+            "timestamp": None,
+            "raw_response": None,
+        }
 
         title, body = generate_pr_summary(Path("/test/project"), "claude", "cli")
 
@@ -118,10 +132,10 @@ Implements comprehensive user management functionality.
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
     @patch("mcp_coder.workflows.create_pr.core.get_prompt")
-    @patch("mcp_coder.workflows.create_pr.core.ask_llm")
+    @patch("mcp_coder.llm.interface.prompt_llm")
     def test_generate_pr_summary_llm_failure(
         self,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
         mock_get_prompt: MagicMock,
         mock_get_diff: MagicMock,
         mock_get_current_branch: MagicMock,
@@ -132,7 +146,14 @@ Implements comprehensive user management functionality.
         mock_detect_base_branch.return_value = "main"
         mock_get_diff.return_value = "diff content"
         mock_get_prompt.return_value = "prompt template"
-        mock_ask_llm.return_value = None  # LLM failure
+        mock_prompt_llm.return_value = {
+            "text": None,
+            "session_id": None,
+            "provider": "claude",
+            "version": None,
+            "timestamp": None,
+            "raw_response": None,
+        }  # LLM failure
 
         # Should raise ValueError on LLM failure
         with pytest.raises(ValueError, match="LLM returned empty response"):
@@ -142,10 +163,10 @@ Implements comprehensive user management functionality.
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
     @patch("mcp_coder.workflows.create_pr.core.get_prompt")
-    @patch("mcp_coder.workflows.create_pr.core.ask_llm")
+    @patch("mcp_coder.llm.interface.prompt_llm")
     def test_generate_pr_summary_llm_exception(
         self,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
         mock_get_prompt: MagicMock,
         mock_get_diff: MagicMock,
         mock_get_current_branch: MagicMock,
@@ -156,7 +177,7 @@ Implements comprehensive user management functionality.
         mock_detect_base_branch.return_value = "main"
         mock_get_diff.return_value = "diff content"
         mock_get_prompt.return_value = "prompt template"
-        mock_ask_llm.side_effect = Exception("LLM API error")
+        mock_prompt_llm.side_effect = Exception("LLM API error")
 
         # Should propagate exception from LLM
         with pytest.raises(Exception, match="LLM API error"):
@@ -166,10 +187,10 @@ Implements comprehensive user management functionality.
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
     @patch("mcp_coder.workflows.create_pr.core.get_prompt")
-    @patch("mcp_coder.workflows.create_pr.core.ask_llm")
+    @patch("mcp_coder.llm.interface.prompt_llm")
     def test_generate_pr_summary_empty_llm_response(
         self,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
         mock_get_prompt: MagicMock,
         mock_get_diff: MagicMock,
         mock_get_current_branch: MagicMock,
@@ -180,7 +201,14 @@ Implements comprehensive user management functionality.
         mock_detect_base_branch.return_value = "main"
         mock_get_diff.return_value = "diff content"
         mock_get_prompt.return_value = "prompt template"
-        mock_ask_llm.return_value = ""  # Empty response
+        mock_prompt_llm.return_value = {
+            "text": "",
+            "session_id": None,
+            "provider": "claude",
+            "version": None,
+            "timestamp": None,
+            "raw_response": None,
+        }  # Empty response
 
         # Should raise ValueError on empty response
         with pytest.raises(ValueError, match="LLM returned empty response"):
@@ -190,10 +218,10 @@ Implements comprehensive user management functionality.
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
     @patch("mcp_coder.workflows.create_pr.core.get_prompt")
-    @patch("mcp_coder.workflows.create_pr.core.ask_llm")
+    @patch("mcp_coder.llm.interface.prompt_llm")
     def test_generate_pr_summary_whitespace_llm_response(
         self,
-        mock_ask_llm: MagicMock,
+        mock_prompt_llm: MagicMock,
         mock_get_prompt: MagicMock,
         mock_get_diff: MagicMock,
         mock_get_current_branch: MagicMock,
@@ -204,7 +232,14 @@ Implements comprehensive user management functionality.
         mock_detect_base_branch.return_value = "main"
         mock_get_diff.return_value = "diff content"
         mock_get_prompt.return_value = "prompt template"
-        mock_ask_llm.return_value = "   \n\n   \t   \n   "  # Whitespace only
+        mock_prompt_llm.return_value = {
+            "text": "   \n\n   \t   \n   ",
+            "session_id": None,
+            "provider": "claude",
+            "version": None,
+            "timestamp": None,
+            "raw_response": None,
+        }  # Whitespace only
 
         # Should raise ValueError on whitespace-only response
         with pytest.raises(ValueError, match="LLM returned empty response"):
