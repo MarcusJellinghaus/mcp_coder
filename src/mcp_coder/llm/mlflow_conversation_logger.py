@@ -5,6 +5,7 @@ Provides a context manager that wraps LLM calls with automatic MLflow logging:
 - Phase 2 (finally): logs response, metrics, artifacts, ends run
 """
 
+import json
 import logging
 from contextlib import contextmanager
 from typing import Any, Generator
@@ -62,6 +63,15 @@ def mlflow_conversation(
                 mlflow_logger.log_conversation(
                     prompt, result["response_data"], metadata or {}
                 )
+                # Log tool trace artifact if present (LangChain agent mode)
+                tool_trace = (
+                    result["response_data"].get("raw_response", {}).get("tool_trace")
+                )
+                if tool_trace:
+                    mlflow_logger.log_artifact(
+                        json.dumps(tool_trace, indent=2, default=str),
+                        "tool_trace.json",
+                    )
                 response_sid = result["response_data"].get("session_id")
                 mlflow_logger.end_run("FINISHED", session_id=response_sid)
             elif result["error"]:

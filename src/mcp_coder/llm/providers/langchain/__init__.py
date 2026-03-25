@@ -8,14 +8,12 @@ importing this package does not fail when langchain is not installed.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from mcp_coder.llm.mlflow_logger import get_mlflow_logger
 from mcp_coder.llm.storage.session_storage import (
     load_langchain_history,
     store_langchain_history,
@@ -297,8 +295,6 @@ def _ask_text(
 
     text = ai_msg.content if isinstance(ai_msg.content, str) else str(ai_msg.content)
 
-    _log_text_mlflow(config, session_id)
-
     raw: dict[str, object] = {
         "backend": backend,
         "model": config.get("model", ""),
@@ -412,9 +408,6 @@ def _ask_agent(
         **stats,
     }
 
-    # MLflow logging for agent mode
-    _log_agent_mlflow(config, stats, session_id)
-
     return LLMResponseDict(
         version=LLM_RESPONSE_VERSION,
         timestamp=datetime.now().isoformat(),
@@ -423,75 +416,3 @@ def _ask_agent(
         provider="langchain",
         raw_response=raw_response,
     )
-
-
-def _log_text_mlflow(
-    config: dict[str, str | None],
-    session_id: str,
-) -> None:
-    """Log text-mode params to MLflow (mirrors _log_agent_mlflow for agent mode).
-
-    Args:
-        config: LangChain configuration dict with backend and model.
-        session_id: Session ID for the MLflow run.
-    """
-    try:
-        mlflow_logger = get_mlflow_logger()
-        mlflow_logger.start_run(session_id=session_id)
-
-        try:
-            mlflow_logger.log_params(
-                {
-                    "backend": config.get("backend", ""),
-                    "model": config.get("model", ""),
-                    "mode": "text",
-                }
-            )
-        finally:
-            mlflow_logger.end_run(session_id=session_id)
-    except Exception:
-        logger.debug("MLflow logging failed for text mode", exc_info=True)
-
-
-def _log_agent_mlflow(
-    config: dict[str, str | None],
-    stats: dict[str, Any],
-    session_id: str,
-) -> None:
-    """Log agent mode params, metrics, and tool_trace artifact to MLflow.
-
-    Args:
-        config: LangChain configuration dict with backend and model.
-        stats: Agent execution statistics (steps, tool calls, trace).
-        session_id: Session ID for the MLflow run.
-    """
-    try:
-        mlflow_logger = get_mlflow_logger()
-        mlflow_logger.start_run(session_id=session_id)
-
-        try:
-            mlflow_logger.log_params(
-                {
-                    "backend": config.get("backend", ""),
-                    "model": config.get("model", ""),
-                    "tool_call_count": stats.get("total_tool_calls", 0),
-                }
-            )
-
-            mlflow_logger.log_metrics(
-                {
-                    "agent_steps": float(stats.get("agent_steps", 0)),
-                    "total_tool_calls": float(stats.get("total_tool_calls", 0)),
-                }
-            )
-
-            tool_trace = stats.get("tool_trace", [])
-            if tool_trace:
-                mlflow_logger.log_artifact(
-                    json.dumps(tool_trace, indent=2, default=str),
-                    "tool_trace.json",
-                )
-        finally:
-            mlflow_logger.end_run(session_id=session_id)
-    except Exception:
-        logger.debug("MLflow logging failed for agent mode", exc_info=True)

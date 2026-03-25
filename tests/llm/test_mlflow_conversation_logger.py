@@ -1,8 +1,9 @@
 """Tests for MLflow conversation context manager (two-phase logging)."""
 
+import json
 import logging
 from typing import Any, Generator
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 
@@ -184,3 +185,88 @@ class TestMlflowConversationKilledPath:
 
         mock_logger.log_conversation.assert_not_called()
         mock_logger.end_run.assert_called_once_with("KILLED", session_id="sid-k")
+
+
+class TestMlflowConversationToolTrace:
+    """Test tool_trace artifact logging in Phase 2."""
+
+    @patch("mcp_coder.llm.mlflow_conversation_logger.get_mlflow_logger")
+    def test_tool_trace_logged_as_artifact(self, mock_get_logger: Any) -> None:
+        """When raw_response contains tool_trace, it is logged as tool_trace.json artifact."""
+        mock_logger = MagicMock()
+        mock_logger._is_enabled.return_value = True
+        mock_logger.has_session.return_value = False
+        mock_get_logger.return_value = mock_logger
+
+        tool_trace = [
+            {"name": "read_file", "args": {"path": "a.py"}, "result": "content"},
+        ]
+        response_data = {
+            "text": "done",
+            "session_id": "sid-t",
+            "provider": "langchain",
+            "raw_response": {"tool_trace": tool_trace, "backend": "openai"},
+        }
+
+        with mlflow_conversation(
+            prompt="test", provider="langchain", session_id="sid-t"
+        ) as result:
+            result["response_data"] = response_data
+
+        # prompt.txt artifact + tool_trace.json artifact
+        artifact_calls = mock_logger.log_artifact.call_args_list
+        assert len(artifact_calls) == 2
+        assert artifact_calls[0] == call("test", "prompt.txt")
+        # Verify tool_trace.json content
+        trace_content = artifact_calls[1][0][0]
+        assert artifact_calls[1][0][1] == "tool_trace.json"
+        assert json.loads(trace_content) == tool_trace
+
+    @patch("mcp_coder.llm.mlflow_conversation_logger.get_mlflow_logger")
+    def test_no_tool_trace_artifact_when_absent(self, mock_get_logger: Any) -> None:
+        """When raw_response has no tool_trace, no extra artifact is logged."""
+        mock_logger = MagicMock()
+        mock_logger._is_enabled.return_value = True
+        mock_logger.has_session.return_value = False
+        mock_get_logger.return_value = mock_logger
+
+        response_data = {
+            "text": "done",
+            "session_id": "sid-n",
+            "provider": "claude",
+            "raw_response": {"backend": "openai"},
+        }
+
+        with mlflow_conversation(
+            prompt="test", provider="claude", session_id="sid-n"
+        ) as result:
+            result["response_data"] = response_data
+
+        # Only prompt.txt artifact, no tool_trace.json
+        artifact_calls = mock_logger.log_artifact.call_args_list
+        assert len(artifact_calls) == 1
+        assert artifact_calls[0] == call("test", "prompt.txt")
+
+    @patch("mcp_coder.llm.mlflow_conversation_logger.get_mlflow_logger")
+    def test_no_tool_trace_artifact_when_empty_list(self, mock_get_logger: Any) -> None:
+        """When tool_trace is an empty list, no artifact is logged."""
+        mock_logger = MagicMock()
+        mock_logger._is_enabled.return_value = True
+        mock_logger.has_session.return_value = False
+        mock_get_logger.return_value = mock_logger
+
+        response_data = {
+            "text": "done",
+            "session_id": "sid-e",
+            "provider": "langchain",
+            "raw_response": {"tool_trace": [], "backend": "openai"},
+        }
+
+        with mlflow_conversation(
+            prompt="test", provider="langchain", session_id="sid-e"
+        ) as result:
+            result["response_data"] = response_data
+
+        # Only prompt.txt artifact
+        artifact_calls = mock_logger.log_artifact.call_args_list
+        assert len(artifact_calls) == 1
