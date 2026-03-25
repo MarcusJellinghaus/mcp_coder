@@ -38,6 +38,7 @@ class TestVerifyClaude:
 
         assert result["cli_found"]["ok"] is True
         assert result["cli_found"]["value"] == "YES"
+        assert "install_hint" not in result["cli_found"]
         assert result["cli_path"]["ok"] is True
         assert result["cli_path"]["value"] == "/usr/bin/claude"
         assert result["cli_version"]["ok"] is True
@@ -74,6 +75,10 @@ class TestVerifyClaude:
 
         assert result["cli_found"]["ok"] is False
         assert result["cli_found"]["value"] == "NO"
+        assert (
+            result["cli_found"]["install_hint"]
+            == "https://docs.anthropic.com/en/docs/claude-code"
+        )
         assert "cli_path" not in result
         assert "cli_version" not in result
         assert result["cli_works"]["ok"] is False

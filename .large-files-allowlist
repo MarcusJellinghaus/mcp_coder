@@ -16,6 +16,7 @@ src/mcp_coder/workflows/implement/core.py
 tests/cli/commands/coordinator/test_core.py
 tests/cli/commands/test_commit.py
 tests/cli/commands/test_prompt.py
+tests/cli/commands/test_verify_orchestration.py
 tests/cli/test_main.py
 tests/llm/test_interface.py
 tests/utils/test_folder_deletion.py

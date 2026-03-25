@@ -347,6 +347,117 @@ class TestVerifyLangchainMcpSection:
         assert result["overall_ok"] is False
 
 
+class TestInstallHints:
+    """Tests for install_hint fields in verification results."""
+
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
+    def test_langchain_core_missing_has_install_hint(
+        self, mock_config: MagicMock, mock_pkg: MagicMock
+    ) -> None:
+        """When langchain-core is not installed, result includes install_hint."""
+        mock_config.return_value = {
+            "provider": "langchain",
+            "backend": "openai",
+            "model": "gpt-4o",
+            "api_key": None,
+            "endpoint": None,
+            "api_version": None,
+        }
+        # langchain_core missing, backend_package ok, mcp_adapters ok, langgraph ok
+        mock_pkg.side_effect = [False, True, True, True]
+        with patch.dict("os.environ", {}, clear=True):
+            result = verify_langchain()
+        assert result["langchain_core"]["ok"] is False
+        assert result["langchain_core"]["install_hint"] == "pip install langchain-core"
+
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
+    def test_backend_package_missing_has_install_hint(
+        self, mock_config: MagicMock, mock_pkg: MagicMock
+    ) -> None:
+        """When backend package is missing, result includes install_hint with correct pip name."""
+        mock_config.return_value = {
+            "provider": "langchain",
+            "backend": "openai",
+            "model": "gpt-4o",
+            "api_key": None,
+            "endpoint": None,
+            "api_version": None,
+        }
+        # langchain_core ok, backend_package missing, mcp_adapters ok, langgraph ok
+        mock_pkg.side_effect = [True, False, True, True]
+        with patch.dict("os.environ", {}, clear=True):
+            result = verify_langchain()
+        assert result["backend_package"]["ok"] is False
+        assert (
+            result["backend_package"]["install_hint"] == "pip install langchain-openai"
+        )
+
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    def test_mcp_adapters_missing_has_install_hint(self, mock_pkg: MagicMock) -> None:
+        """When langchain-mcp-adapters is missing, result includes install_hint."""
+        # mcp_adapters missing, langgraph ok
+        mock_pkg.side_effect = [False, True]
+        result = _check_mcp_adapter_packages()
+        assert result["mcp_adapters"]["ok"] is False
+        assert (
+            result["mcp_adapters"]["install_hint"]
+            == "pip install langchain-mcp-adapters"
+        )
+
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    def test_langgraph_missing_has_install_hint(self, mock_pkg: MagicMock) -> None:
+        """When langgraph is missing, result includes install_hint."""
+        # mcp_adapters ok, langgraph missing
+        mock_pkg.side_effect = [True, False]
+        result = _check_mcp_adapter_packages()
+        assert result["langgraph"]["ok"] is False
+        assert result["langgraph"]["install_hint"] == "pip install langgraph"
+
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
+    def test_installed_packages_have_no_install_hint(
+        self, mock_config: MagicMock, mock_pkg: MagicMock
+    ) -> None:
+        """When packages are installed, no install_hint key is present."""
+        mock_config.return_value = {
+            "provider": "langchain",
+            "backend": "openai",
+            "model": "gpt-4o",
+            "api_key": None,
+            "endpoint": None,
+            "api_version": None,
+        }
+        mock_pkg.return_value = True
+        with patch.dict("os.environ", {}, clear=True):
+            result = verify_langchain()
+        assert "install_hint" not in result["langchain_core"]
+        assert "install_hint" not in result["backend_package"]
+        assert "install_hint" not in result["mcp_adapters"]
+        assert "install_hint" not in result["langgraph"]
+
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
+    def test_no_backend_configured_no_install_hint(
+        self, mock_config: MagicMock, mock_pkg: MagicMock
+    ) -> None:
+        """When no backend configured, backend_package has no install_hint."""
+        mock_config.return_value = {
+            "provider": "langchain",
+            "backend": None,
+            "model": None,
+            "api_key": None,
+            "endpoint": None,
+            "api_version": None,
+        }
+        mock_pkg.return_value = True
+        with patch.dict("os.environ", {}, clear=True):
+            result = verify_langchain()
+        assert result["backend_package"]["ok"] is False
+        assert "install_hint" not in result["backend_package"]
+
+
 class TestListModelsForBackendErrors:
     """Tests for _list_models_for_backend error handling with specific exceptions."""
 

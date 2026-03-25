@@ -27,6 +27,10 @@ def verify_claude() -> dict[str, Any]:
     result: dict[str, Any] = {
         "cli_found": {"ok": basic["found"], "value": "YES" if basic["found"] else "NO"},
     }
+    if not basic["found"]:
+        result["cli_found"][
+            "install_hint"
+        ] = "https://docs.anthropic.com/en/docs/claude-code"
 
     if basic["path"]:
         result["cli_path"] = {"ok": True, "value": basic["path"]}
