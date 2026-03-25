@@ -22,6 +22,10 @@ BASE_BRANCH=$(mcp-coder gh-tool get-base-branch)
 echo "Rebasing onto: $BASE_BRANCH"
 ```
 
+## Base Branch Confirmation
+
+If the base branch is not `main` or `master`, ask the user to confirm before proceeding. Display the detected base branch and wait for explicit approval.
+
 ## Pre-flight Checks (Abort if any fail)
 
 1. Working directory is clean (`git status` shows no uncommitted changes)
