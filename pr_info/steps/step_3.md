@@ -67,8 +67,14 @@ if mcp_config_resolved:
         print(f"  {symbols['warning']} server health check skipped (langchain-mcp-adapters not installed)")
 ```
 
-**ImportError handling:** Before implementing, verify whether `langchain-mcp-adapters` is imported eagerly (at module level in `langchain/verification.py`) or lazily (inside `verify_mcp_servers()`). If eagerly imported, `verify_mcp_servers` must be lazily imported inside `execute_verify()` to catch the `ImportError` at call time. Example:
+**Lazy imports required:** Both `verify_mcp_servers` and `verify_langchain` must be lazily imported inside `execute_verify()`, not at module level. The current top-level import `from ...llm.providers.langchain.verification import verify_langchain, verify_mcp_servers` must be removed and replaced with lazy imports inside their respective code paths. This ensures `verify.py` loads correctly even when the langchain provider is not installed.
+
 ```python
+# In the langchain provider branch:
+from ...llm.providers.langchain.verification import verify_langchain
+langchain_result = verify_langchain(..., mcp_config_path=mcp_config_resolved)
+
+# In the MCP health check block:
 try:
     from ...llm.providers.langchain.verification import verify_mcp_servers
     mcp_result = verify_mcp_servers(mcp_config_resolved)
@@ -104,7 +110,7 @@ if mcp_config_resolved:
 
 ## Test Details
 
-**Note:** Existing claude-provider tests in `test_verify_orchestration.py` don't mock `resolve_mcp_config_path` since it wasn't called for claude. After this change, these tests will call the real function. Add `resolve_mcp_config_path` mock returning `None` to existing claude-provider tests to maintain isolation.
+**Existing test isolation:** After moving `resolve_mcp_config_path()` outside the provider branch, all existing tests will call it. Add a class-level `autouse` fixture to `TestVerifyOrchestration` (or equivalent base) that mocks `resolve_mcp_config_path` to return `None` by default. Individual tests that need MCP config can override this. This prevents needing to update ~12 individual tests and avoids future test pollution.
 
 ### `test_mcp_config_resolved_for_claude_provider`
 - Set provider to claude, provide `mcp_config` arg pointing to real file

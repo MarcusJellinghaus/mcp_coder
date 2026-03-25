@@ -35,3 +35,26 @@
 - `step_3.md`: Fixed pseudocode, added lazy import guidance, added test mock note, added smoke test note + test
 
 **Status:** Committed
+
+## Round 2 — 2025-03-25
+
+**Findings:**
+- **Improvement I1:** Lazy import of `verify_mcp_servers` must be an explicit requirement, not conditional guidance; `verify_langchain` should also be lazy for environments without langchain
+- **Improvement I2:** ~12 existing claude-provider tests need `resolve_mcp_config_path` mocked — recommend class-level autouse fixture instead of updating individually
+- **Improvement I3:** Top-level `verify_langchain` import addressed by I1
+- **Note N1:** `get_config_values` will also check env var via `_get_standard_env_var` — explicit check is fine for clarity
+- **Note N2:** `_get_source_annotation` correctly shows env var source after step 1 mapping
+- **Note N3:** Docs files should be verified to exist before implementation
+
+**Decisions:**
+- I1: Accept — make lazy imports a definitive requirement in step 3
+- I2: Accept — recommend autouse fixture in step 3
+- I3: Covered by I1
+- N1-N3: No action needed
+
+**User decisions:** None needed.
+
+**Changes:**
+- `step_3.md`: Replaced conditional import guidance with definitive lazy import requirement for both functions; replaced individual test mock note with autouse fixture recommendation
+
+**Status:** Committed
