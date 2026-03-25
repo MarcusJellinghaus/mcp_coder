@@ -856,6 +856,10 @@ class TestVerifyMcpAllProviders:
 
         mock_resolve_mcp.assert_called_once()
 
+    @patch(
+        f"{_VERIFY}._run_mcp_edit_smoke_test",
+        return_value="  MCP edit smoke test  [OK] edit verified",
+    )
     @patch(f"{_VERIFY}.log_to_mlflow")
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value="/fake/.mcp.json")
@@ -872,6 +876,7 @@ class TestVerifyMcpAllProviders:
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
+        mock_smoke_test: MagicMock,
     ) -> None:
         """verify_mcp_servers is called when provider is claude and MCP config exists."""
         mock_provider.return_value = ("claude", "default")
@@ -884,6 +889,10 @@ class TestVerifyMcpAllProviders:
 
         mock_mcp_servers.assert_called_once_with("/fake/.mcp.json")
 
+    @patch(
+        f"{_VERIFY}._run_mcp_edit_smoke_test",
+        return_value="  MCP edit smoke test  [OK] edit verified",
+    )
     @patch(f"{_VERIFY}.log_to_mlflow")
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value="/fake/.mcp.json")
@@ -898,6 +907,7 @@ class TestVerifyMcpAllProviders:
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
+        mock_smoke_test: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """ImportError from verify_mcp_servers prints info message and skips."""
@@ -924,6 +934,10 @@ class TestVerifyMcpAllProviders:
         output = _format_mcp_section(mcp_result, symbols)
         assert "MCP SERVERS (via langchain-mcp-adapters)" in output
 
+    @patch(
+        f"{_VERIFY}._run_mcp_edit_smoke_test",
+        return_value="  MCP edit smoke test  [OK] edit verified",
+    )
     @patch(f"{_VERIFY}.log_to_mlflow")
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value="/fake/.mcp.json")
@@ -940,6 +954,7 @@ class TestVerifyMcpAllProviders:
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_log_mlflow: MagicMock,
+        mock_smoke_test: MagicMock,
     ) -> None:
         """MCP failure does not affect exit code when provider is claude."""
         mock_provider.return_value = ("claude", "default")

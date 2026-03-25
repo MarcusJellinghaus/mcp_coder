@@ -137,7 +137,7 @@ def resolve_mcp_config_path(
         )
 
     # Check config file [mcp] default_config_path
-    config = get_config_values([("mcp", "default_config_path", "")])
+    config = get_config_values([("mcp", "default_config_path", "_NO_ENV_VAR_")])
     if (cfg_path := config[("mcp", "default_config_path")]) is not None:
         resolved = Path(cfg_path).resolve()
         if resolved.exists():
