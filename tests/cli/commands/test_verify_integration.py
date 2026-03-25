@@ -127,7 +127,7 @@ class TestVerifyEndToEnd:
         with patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None):
             yield
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_VERIFY}.verify_claude")
@@ -163,7 +163,7 @@ class TestVerifyEndToEnd:
         assert "=== MLFLOW ===" in output
         assert exit_code == 0
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None)
     @patch(f"{_VERIFY}.verify_mlflow")
@@ -200,7 +200,7 @@ class TestVerifyEndToEnd:
         assert exit_code == 0
         mock_lc.assert_called_once_with(check_models=True, mcp_config_path=None)
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_VERIFY}.verify_claude")
@@ -235,7 +235,7 @@ class TestVerifyEndToEnd:
         # by inspecting that langchain was NOT called (claude provider)
         mock_claude.assert_called_once()
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_VERIFY}.verify_claude")
@@ -269,7 +269,7 @@ class TestVerifyEndToEnd:
         # On Windows: [OK], on Unix: checkmark. Either way, status is shown.
         assert "[OK]" in output or "\u2713" in output
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_VERIFY}.verify_claude")
@@ -303,7 +303,7 @@ class TestVerifyEndToEnd:
         assert "claude" in output
         assert "default" in output
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_LC_VERIFY}.verify_langchain")
@@ -340,7 +340,7 @@ class TestVerifyEndToEnd:
         assert "LLM PROVIDER DETAILS" in output
         assert "openai" in output
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_VERIFY}.verify_claude")
@@ -410,7 +410,7 @@ class TestExitCodeMatrix:
                 f"{_VERIFY}.prompt_llm",
                 return_value=_MOCK_LLM_RESPONSE,
             ),
-            patch(f"{_VERIFY}.log_to_mlflow"),
+            patch(f"{_VERIFY}.log_to_mlflow", create=True),
             patch(
                 f"{_VERIFY}.resolve_mcp_config_path",
                 return_value=None,

@@ -283,7 +283,7 @@ class TestComputeExitCode:
 class TestMcpServersInVerify:
     """Tests for MCP server health check integration in execute_verify."""
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_LC_VERIFY}.verify_mcp_servers")
     @patch(
@@ -322,7 +322,7 @@ class TestMcpServersInVerify:
         assert "5 tools available" in output
         mock_mcp_servers.assert_called_once_with("/fake/.mcp.json")
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_LC_VERIFY}.verify_mcp_servers")
     @patch(
@@ -409,7 +409,7 @@ class TestConfigSectionInVerify:
             yield
 
     @patch(f"{_VERIFY}.verify_config")
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_VERIFY}.verify_claude")
@@ -439,7 +439,7 @@ class TestConfigSectionInVerify:
         assert config_pos < basic_pos
 
     @patch(f"{_VERIFY}.verify_config")
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_VERIFY}.verify_claude")
@@ -466,7 +466,7 @@ class TestConfigSectionInVerify:
         assert exit_code == 1
 
     @patch(f"{_VERIFY}.verify_config")
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_VERIFY}.verify_claude")
@@ -557,7 +557,7 @@ class TestMcpEditSmokeTest:
         assert "timed out" in result
 
     @patch(f"{_VERIFY}.verify_config")
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_LC_VERIFY}.verify_mcp_servers")
     @patch(
@@ -616,7 +616,7 @@ class TestMcpEditSmokeTest:
         assert not (tmp_path / ".mcp_coder_verify.md").exists()
 
     @patch(f"{_VERIFY}.verify_config")
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(
         f"{_VERIFY}.resolve_mcp_config_path",

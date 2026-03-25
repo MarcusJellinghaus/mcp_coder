@@ -120,7 +120,7 @@ class TestVerifyOrchestration:
             yield
 
     @patch(f"{_VERIFY}.find_claude_executable", return_value=None)
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_LC_VERIFY}.verify_langchain")
@@ -148,7 +148,7 @@ class TestVerifyOrchestration:
         assert "LLM PROVIDER" in output
         assert "MLFLOW" in output
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_VERIFY}.verify_claude")
@@ -172,7 +172,7 @@ class TestVerifyOrchestration:
         assert result == 0
 
     @patch(f"{_VERIFY}.find_claude_executable", return_value=None)
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_LC_VERIFY}.verify_langchain")
@@ -196,7 +196,7 @@ class TestVerifyOrchestration:
 
         assert result == 1
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_VERIFY}.verify_claude")
@@ -219,7 +219,7 @@ class TestVerifyOrchestration:
 
         assert result == 1
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_VERIFY}.verify_claude")
@@ -243,7 +243,7 @@ class TestVerifyOrchestration:
         assert result == 0
 
     @patch(f"{_VERIFY}.find_claude_executable")
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None)
     @patch(f"{_VERIFY}.verify_mlflow")
@@ -274,7 +274,7 @@ class TestVerifyOrchestration:
         assert "BASIC VERIFICATION" not in output
 
     @patch(f"{_VERIFY}.find_claude_executable", return_value=None)
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None)
     @patch(f"{_VERIFY}.verify_mlflow")
@@ -300,7 +300,7 @@ class TestVerifyOrchestration:
 
         mock_lc.assert_called_once_with(check_models=True, mcp_config_path=None)
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_VERIFY}.verify_claude")
@@ -327,7 +327,7 @@ class TestVerifyOrchestration:
         output = capsys.readouterr().out
         assert "uses Claude CLI" in output
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_VERIFY}.verify_claude")
@@ -353,7 +353,7 @@ class TestVerifyOrchestration:
         assert "Test prompt" in output
         assert "responded OK" in output
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_VERIFY}.verify_claude")
@@ -376,7 +376,7 @@ class TestVerifyOrchestration:
 
         assert isinstance(result, int)
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_VERIFY}.verify_claude")
@@ -403,35 +403,8 @@ class TestVerifyOrchestration:
         assert isinstance(since_arg, datetime.datetime)
         assert since_arg.tzinfo is not None  # UTC-aware
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
-    @patch(f"{_VERIFY}.prompt_llm")
-    @patch(f"{_VERIFY}.verify_mlflow")
-    @patch(f"{_VERIFY}.verify_claude")
-    @patch(f"{_VERIFY}.resolve_llm_method")
-    def test_log_to_mlflow_called_on_success(
-        self,
-        mock_provider: MagicMock,
-        mock_claude: MagicMock,
-        mock_mlflow: MagicMock,
-        mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
-    ) -> None:
-        """log_to_mlflow is called with the response when prompt succeeds."""
-        mock_provider.return_value = ("claude", "default")
-        mock_claude.return_value = _claude_ok()
-        mock_mlflow.return_value = _mlflow_not_installed()
-        response = _minimal_llm_response()
-        mock_prompt_llm.return_value = response
-
-        execute_verify(_make_args())
-
-        mock_log_mlflow.assert_called_once()
-        call_args = mock_log_mlflow.call_args[0]
-        assert call_args[0] == response  # response_data
-        assert call_args[1] == "Reply with OK"  # prompt
-
     @patch(f"{_VERIFY}.verify_config")
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(
         f"{_VERIFY}.resolve_mcp_config_path",
@@ -481,29 +454,6 @@ class TestVerifyOrchestration:
         assert call_kwargs["mcp_config"] == "/fake/.mcp.json"
         assert "execution_dir" in call_kwargs
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
-    @patch(f"{_VERIFY}.prompt_llm")
-    @patch(f"{_VERIFY}.verify_mlflow")
-    @patch(f"{_VERIFY}.verify_claude")
-    @patch(f"{_VERIFY}.resolve_llm_method")
-    def test_log_to_mlflow_not_called_on_failure(
-        self,
-        mock_provider: MagicMock,
-        mock_claude: MagicMock,
-        mock_mlflow: MagicMock,
-        mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
-    ) -> None:
-        """log_to_mlflow is NOT called when prompt_llm raises."""
-        mock_provider.return_value = ("claude", "default")
-        mock_claude.return_value = _claude_ok()
-        mock_mlflow.return_value = _mlflow_not_installed()
-        mock_prompt_llm.side_effect = Exception("timeout")
-
-        execute_verify(_make_args())
-
-        mock_log_mlflow.assert_not_called()
-
 
 class TestVerifyTestPromptFailure:
     """Tests for improved test prompt failure output (Step 5A)."""
@@ -514,7 +464,7 @@ class TestVerifyTestPromptFailure:
         with patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None):
             yield
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_VERIFY}.verify_claude")
@@ -542,7 +492,7 @@ class TestVerifyTestPromptFailure:
         # Should NOT contain the raw exception message
         assert "Connection reset by peer" not in output
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_VERIFY}.verify_claude")
@@ -568,7 +518,7 @@ class TestVerifyTestPromptFailure:
         assert "FAILED" in output
         assert "RuntimeError: oops" in output
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_VERIFY}.verify_claude")
@@ -593,7 +543,7 @@ class TestVerifyTestPromptFailure:
 
         assert "Run with --debug for detailed diagnostics." in output
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_VERIFY}.verify_claude")
@@ -631,7 +581,7 @@ class TestConditionalClaudeDisplay:
             yield
 
     @patch(f"{_VERIFY}.find_claude_executable")
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None)
     @patch(f"{_VERIFY}.verify_mlflow")
@@ -662,7 +612,7 @@ class TestConditionalClaudeDisplay:
         assert "BASIC VERIFICATION" not in output
 
     @patch(f"{_VERIFY}.find_claude_executable")
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None)
     @patch(f"{_VERIFY}.verify_mlflow")
@@ -692,7 +642,7 @@ class TestConditionalClaudeDisplay:
         assert "BASIC VERIFICATION" not in output
         assert "Claude CLI:" not in output
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_VERIFY}.verify_claude")
@@ -728,7 +678,7 @@ class TestInstallSummaryBlock:
             yield
 
     @patch(f"{_VERIFY}.find_claude_executable", return_value=None)
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None)
     @patch(f"{_VERIFY}.verify_mlflow")
@@ -764,7 +714,7 @@ class TestInstallSummaryBlock:
         assert "pip install langchain-openai" in output
 
     @patch(f"{_VERIFY}.find_claude_executable", return_value=None)
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None)
     @patch(f"{_VERIFY}.verify_mlflow")
@@ -829,7 +779,7 @@ class TestVerifyMcpAllProviders:
         with patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None):
             yield
 
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value="/fake/.mcp.json")
     @patch(f"{_VERIFY}.verify_mlflow")
@@ -860,7 +810,7 @@ class TestVerifyMcpAllProviders:
         f"{_VERIFY}._run_mcp_edit_smoke_test",
         return_value="  MCP edit smoke test  [OK] edit verified",
     )
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value="/fake/.mcp.json")
     @patch(f"{_LC_VERIFY}.verify_mcp_servers")
@@ -893,7 +843,7 @@ class TestVerifyMcpAllProviders:
         f"{_VERIFY}._run_mcp_edit_smoke_test",
         return_value="  MCP edit smoke test  [OK] edit verified",
     )
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value="/fake/.mcp.json")
     @patch(f"{_VERIFY}.verify_mlflow")
@@ -938,7 +888,7 @@ class TestVerifyMcpAllProviders:
         f"{_VERIFY}._run_mcp_edit_smoke_test",
         return_value="  MCP edit smoke test  [OK] edit verified",
     )
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value="/fake/.mcp.json")
     @patch(f"{_LC_VERIFY}.verify_mcp_servers")
@@ -968,7 +918,7 @@ class TestVerifyMcpAllProviders:
         assert result == 0  # MCP failure is informational for non-langchain
 
     @patch(f"{_VERIFY}._run_mcp_edit_smoke_test")
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value="/fake/.mcp.json")
     @patch(f"{_LC_VERIFY}.verify_mcp_servers")

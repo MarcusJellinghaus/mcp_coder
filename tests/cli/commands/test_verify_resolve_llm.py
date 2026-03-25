@@ -67,7 +67,7 @@ class TestVerifyUsesSharedResolveLlmMethod:
     """Tests that verify.py uses the shared resolve_llm_method()."""
 
     @patch(f"{_VERIFY}.verify_config")
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None)
     @patch(f"{_VERIFY}.verify_mlflow")
@@ -105,7 +105,7 @@ class TestVerifyUsesSharedResolveLlmMethod:
         assert "cli argument" in output
 
     @patch(f"{_VERIFY}.verify_config")
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None)
     @patch(f"{_VERIFY}.verify_mlflow")
@@ -143,7 +143,7 @@ class TestVerifyUsesSharedResolveLlmMethod:
         assert "config default_provider" in output
 
     @patch(f"{_VERIFY}.verify_config")
-    @patch(f"{_VERIFY}.log_to_mlflow")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_VERIFY}.verify_claude")
