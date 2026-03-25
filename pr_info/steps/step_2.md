@@ -15,9 +15,10 @@ Task: Create src/mcp_coder/llm/mlflow_conversation_logger.py with a context mana
 two-phase MLflow logging, and comprehensive tests.
 
 1. Write tests FIRST in tests/llm/test_mlflow_conversation_logger.py:
-   - Test happy path: Phase 1 logs prompt, Phase 2 logs response + ends run FINISHED
+   - Test happy path: Phase 1 logs prompt artifact, Phase 2 logs response via log_conversation + ends run FINISHED
    - Test error path: exception during yield → Phase 2 logs error + ends run FAILED
    - Test MLflow disabled: context manager is a no-op, yields normally
+   - Test MLflow not installed: context manager is a no-op (_is_enabled returns False)
    - Test session reuse: passing session_id reuses existing MLflow run
    - Test Phase 2 failure: if Phase 2 logging itself fails, warning is logged but no exception
    - Mock get_mlflow_logger() to avoid needing real MLflow
@@ -30,10 +31,10 @@ two-phase MLflow logging, and comprehensive tests.
 3. Run all quality checks (pylint, mypy, pytest) and fix any issues.
 ```
 
-## WHERE: Files to Create
+## WHERE: Files to Create/Modify
 
-- `src/mcp_coder/llm/mlflow_conversation_logger.py` (~40-60 lines)
-- `tests/llm/test_mlflow_conversation_logger.py` (~100-150 lines)
+- `src/mcp_coder/llm/mlflow_conversation_logger.py` (~40-60 lines, new)
+- `tests/llm/test_mlflow_conversation_logger.py` (~100-150 lines, new)
 
 ## WHAT: Main Function Signature
 
@@ -53,15 +54,14 @@ def mlflow_conversation(
 @contextmanager
 def mlflow_conversation(prompt, provider, session_id=None, metadata=None):
     logger = get_mlflow_logger()
-    if not logger.config.enabled:
+    if not logger._is_enabled():
         yield {"response_data": None}    # no-op when disabled
         return
 
-    # Phase 1: log prompt (survives timeout/kill)
+    # Phase 1: minimal data that survives timeout/kill
     run_name = f"{provider}_{'resuming' if session_id and logger.has_session(session_id) else 'new'}"
     logger.start_run(session_id=session_id, run_name=run_name, tags={...})
-    logger.log_params({"provider": provider, "prompt_length": len(prompt), ...})
-    logger.log_artifact(prompt, "prompt.txt")
+    logger.log_artifact(prompt, "prompt.txt")  # persists immediately to disk
 
     result = {"response_data": None, "error": None}
     try:
@@ -73,6 +73,7 @@ def mlflow_conversation(prompt, provider, session_id=None, metadata=None):
         # Phase 2: log response or error
         try:
             if result["response_data"]:
+                # Phase 2: log full conversation (re-logs prompt.txt, harmless overwrite)
                 logger.log_conversation(prompt, result["response_data"], metadata or {})
                 response_sid = result["response_data"].get("session_id")
                 logger.end_run("FINISHED", session_id=response_sid)
@@ -101,6 +102,7 @@ The caller sets `result["response_data"] = response` after the provider call suc
 
 ## Key Design Choices
 
+- **Uses `_is_enabled()` directly**: The context manager calls `logger._is_enabled()` (private method) rather than adding a public API — keeps the change minimal
 - **Context manager, not class**: Simplest possible API for wrapping a call
 - **Yields a mutable dict**: Caller sets response_data; finally-block reads it
 - **No new MLflow logic**: Pure orchestration of existing `MLflowLogger` methods

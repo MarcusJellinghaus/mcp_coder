@@ -42,6 +42,8 @@ ANY caller      ──→ prompt_llm()
 
 ## Key Design Decisions
 
+See also [Decisions.md](./Decisions.md) for discussion-based decisions.
+
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | Logging location | Context manager in `prompt_llm()` | Automatic for all callers |
@@ -82,7 +84,8 @@ ANY caller      ──→ prompt_llm()
 
 | Step | Description | Key Change |
 |------|-------------|------------|
-| 1 | Remove `ask_llm()`, migrate callers | Smallest surface change, removes dead code |
+| 1a | Update test mocks from `ask_llm` to `prompt_llm` | TDD: all tests mock `prompt_llm`, CI stays green |
+| 1b | Remove `ask_llm()`, migrate production callers | Delete wrapper, callers use `prompt_llm()["text"]` |
 | 2 | Create `mlflow_conversation_logger.py` | New context manager, tested in isolation |
 | 3 | Wire context manager into `prompt_llm()` | All callers get auto-logging |
 | 4 | Remove MLflow from Claude provider | Delete MLflow calls from `logging_utils.py` |

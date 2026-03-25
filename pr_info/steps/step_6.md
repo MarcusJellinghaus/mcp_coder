@@ -26,7 +26,7 @@ and enhance the verify MLflow check to assert logged content.
    - Delete the entire log_to_mlflow() function definition (~50 lines)
    - Remove ALL calls to log_to_mlflow() throughout execute_prompt() 
      (there are 4 calls: session-id mode, json mode, just-text mode, verbose/raw mode)
-   - Remove the import of get_mlflow_logger (if no longer needed)
+   - Remove the import of get_mlflow_logger (confirmed only used by log_to_mlflow)
    - Remove unused imports that were only used by log_to_mlflow()
 
 3. Modify src/mcp_coder/cli/commands/verify.py:
@@ -47,6 +47,9 @@ and enhance the verify MLflow check to assert logged content.
 - `src/mcp_coder/cli/commands/verify.py` — remove import/call, enhance verification
 - `tests/cli/commands/test_prompt.py` — remove log_to_mlflow tests
 - `tests/cli/commands/test_verify.py` — update verification tests
+- `tests/cli/commands/test_verify_command.py` — remove log_to_mlflow assertions
+- `tests/cli/commands/test_verify_resolve_llm.py` — remove log_to_mlflow assertions
+- `tests/cli/commands/test_verify_orchestration.py` — remove log_to_mlflow assertions (~20 patches)
 
 ## WHAT: Deletions in `prompt.py`
 

@@ -25,6 +25,7 @@ keeping debug logging intact.
 2. Modify logging_utils.py:
    - Remove the MLflow import block at top (try/except importing get_mlflow_logger)
    - Remove the _mlflow_available flag
+   - Remove the stale comment on line ~136 that references `_log_to_mlflow`
    - In log_llm_request(): remove the MLflow start_run block at the end
    - In log_llm_response(): remove the MLflow log_metrics and end_run block at the end
    - In log_llm_error(): remove the MLflow log_error_metrics and end_run block at the end

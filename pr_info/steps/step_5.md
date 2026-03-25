@@ -30,8 +30,8 @@ is available in raw_response for the central logger.
    - Remove the call to _log_agent_mlflow() from _ask_agent()
    - Remove the import of get_mlflow_logger (if no longer used elsewhere)
    - Verify that _ask_agent() already includes tool_trace in raw_response via **stats 
-     (stats dict contains "tool_trace" key from the agent runner)
-     If not, explicitly add: raw_response["tool_trace"] = stats.get("tool_trace", [])
+     (stats dict contains "tool_trace" key from the agent runner) — confirmed, already present
+     via **stats spread, no code change needed in _ask_agent
 
 3. In the central logger (mlflow_conversation_logger.py from Step 2):
    - In Phase 2, check if response_data["raw_response"] contains "tool_trace"
@@ -47,6 +47,7 @@ is available in raw_response for the central logger.
 - `src/mcp_coder/llm/mlflow_conversation_logger.py` — add tool_trace artifact logging in Phase 2
 - `tests/llm/test_mlflow_conversation_logger.py` — add tool_trace test
 - `tests/llm/providers/langchain/test_*.py` — update tests
+- `tests/llm/providers/langchain/test_langchain_text_mlflow.py` — remove MLflow assertions
 
 ## WHAT: Deletions in `langchain/__init__.py`
 
