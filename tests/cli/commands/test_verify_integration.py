@@ -139,7 +139,7 @@ class TestVerifyEndToEnd:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Output contains all three section headers."""
@@ -179,7 +179,7 @@ class TestVerifyEndToEnd:
         mock_mlflow: MagicMock,
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
     ) -> None:
         """--check-models flag reaches verify_langchain via full CLI path."""
         mock_provider.return_value = ("langchain", "config.toml")
@@ -212,7 +212,7 @@ class TestVerifyEndToEnd:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
     ) -> None:
         """--check-models defaults to False when not provided."""
         mock_provider.return_value = ("claude", "default")
@@ -247,7 +247,7 @@ class TestVerifyEndToEnd:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Output contains platform-appropriate status symbols."""
@@ -281,7 +281,7 @@ class TestVerifyEndToEnd:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Active provider name and source appear in output."""
@@ -317,7 +317,7 @@ class TestVerifyEndToEnd:
         mock_lc: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """LangChain details section appears when provider is langchain."""
@@ -352,7 +352,7 @@ class TestVerifyEndToEnd:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Claude fallback note shown when provider is claude."""

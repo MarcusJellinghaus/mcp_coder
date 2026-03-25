@@ -131,7 +131,7 @@ class TestVerifyOrchestration:
         mock_lc: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_find_claude: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -159,7 +159,7 @@ class TestVerifyOrchestration:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
     ) -> None:
         """Exit 0 when active provider (claude) succeeds."""
         mock_provider.return_value = ("claude", "default")
@@ -183,7 +183,7 @@ class TestVerifyOrchestration:
         mock_lc: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_find_claude: MagicMock,
     ) -> None:
         """Exit 1 when active provider (langchain) fails."""
@@ -207,7 +207,7 @@ class TestVerifyOrchestration:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
     ) -> None:
         """Exit 1 when MLflow is enabled and has errors."""
         mock_provider.return_value = ("claude", "default")
@@ -230,7 +230,7 @@ class TestVerifyOrchestration:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
     ) -> None:
         """Exit 0 when MLflow not installed (informational)."""
         mock_provider.return_value = ("claude", "default")
@@ -254,7 +254,7 @@ class TestVerifyOrchestration:
         mock_mlflow: MagicMock,
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_find_claude: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -287,7 +287,7 @@ class TestVerifyOrchestration:
         mock_mlflow: MagicMock,
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_find_claude: MagicMock,
     ) -> None:
         """--check-models flag forwarded to verify_langchain."""
@@ -311,7 +311,7 @@ class TestVerifyOrchestration:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """verify_langchain is not called when provider is claude."""
@@ -338,7 +338,7 @@ class TestVerifyOrchestration:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test prompt result line appears in LLM PROVIDER section."""
@@ -364,7 +364,7 @@ class TestVerifyOrchestration:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
     ) -> None:
         """execute_verify() continues when prompt_llm raises."""
         mock_provider.return_value = ("claude", "default")
@@ -387,7 +387,7 @@ class TestVerifyOrchestration:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
     ) -> None:
         """verify_mlflow() is called with since= (a UTC datetime)."""
         mock_provider.return_value = ("claude", "default")
@@ -424,7 +424,7 @@ class TestVerifyOrchestration:
         mock_mcp_servers: MagicMock,
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_verify_config: MagicMock,
         tmp_path: Path,
     ) -> None:
@@ -475,7 +475,7 @@ class TestVerifyTestPromptFailure:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """ConnectionResetError shows classified category, not raw traceback."""
@@ -503,7 +503,7 @@ class TestVerifyTestPromptFailure:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Non-connection errors show type(exc).__name__: str(exc) directly."""
@@ -529,7 +529,7 @@ class TestVerifyTestPromptFailure:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Failure output includes --debug hint."""
@@ -554,7 +554,7 @@ class TestVerifyTestPromptFailure:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """OSError with WinError 10054 uses classify_connection_error."""
@@ -594,7 +594,7 @@ class TestConditionalClaudeDisplay:
         mock_mlflow: MagicMock,
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_find_claude: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -625,7 +625,7 @@ class TestConditionalClaudeDisplay:
         mock_mlflow: MagicMock,
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_find_claude: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -653,7 +653,7 @@ class TestConditionalClaudeDisplay:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """When claude active, show full BASIC VERIFICATION section as before."""
@@ -691,7 +691,7 @@ class TestInstallSummaryBlock:
         mock_mlflow: MagicMock,
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_find_claude: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -727,7 +727,7 @@ class TestInstallSummaryBlock:
         mock_mlflow: MagicMock,
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_find_claude: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -792,7 +792,7 @@ class TestVerifyMcpAllProviders:
         mock_mlflow: MagicMock,
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
     ) -> None:
         """resolve_mcp_config_path is called regardless of provider."""
         mock_provider.return_value = ("claude", "default")
@@ -825,7 +825,7 @@ class TestVerifyMcpAllProviders:
         mock_mcp_servers: MagicMock,
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_smoke_test: MagicMock,
     ) -> None:
         """verify_mcp_servers is called when provider is claude and MCP config exists."""
@@ -856,7 +856,7 @@ class TestVerifyMcpAllProviders:
         mock_mlflow: MagicMock,
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_smoke_test: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -903,7 +903,7 @@ class TestVerifyMcpAllProviders:
         mock_mcp_servers: MagicMock,
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_smoke_test: MagicMock,
     ) -> None:
         """MCP failure does not affect exit code when provider is claude."""
@@ -933,7 +933,7 @@ class TestVerifyMcpAllProviders:
         mock_mcp_servers: MagicMock,
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_smoke_test: MagicMock,
     ) -> None:
         """_run_mcp_edit_smoke_test is called for claude provider when MCP config exists."""

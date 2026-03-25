@@ -131,6 +131,9 @@ _.isolate_mlflow_artifacts
 # cli/commands/conftest.py - Autouse fixture to mock verify_config
 _._mock_verify_config
 
+# test_verify_*.py - Autouse fixture to mock resolve_mcp_config_path
+_._mock_resolve_mcp
+
 # test_langchain_integration.py - Module-level pytest marker assignment
 _.pytestmark
 

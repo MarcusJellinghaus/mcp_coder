@@ -80,7 +80,7 @@ class TestVerifyUsesSharedResolveLlmMethod:
         mock_mlflow: MagicMock,
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -118,7 +118,7 @@ class TestVerifyUsesSharedResolveLlmMethod:
         mock_mlflow: MagicMock,
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -154,7 +154,7 @@ class TestVerifyUsesSharedResolveLlmMethod:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:

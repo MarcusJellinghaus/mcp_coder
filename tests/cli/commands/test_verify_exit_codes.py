@@ -303,7 +303,7 @@ class TestMcpServersInVerify:
         mock_resolve_mcp: MagicMock,
         mock_mcp_servers: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
         tmp_path: Path,
     ) -> None:
@@ -342,7 +342,7 @@ class TestMcpServersInVerify:
         mock_resolve_mcp: MagicMock,
         mock_mcp_servers: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """MCP SERVERS section hidden when no MCP config."""
@@ -420,7 +420,7 @@ class TestConfigSectionInVerify:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -450,7 +450,7 @@ class TestConfigSectionInVerify:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -477,7 +477,7 @@ class TestConfigSectionInVerify:
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -577,7 +577,7 @@ class TestMcpEditSmokeTest:
         mock_resolve_mcp: MagicMock,
         mock_mcp_servers: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_verify_config: MagicMock,
         tmp_path: Path,
     ) -> None:
@@ -634,7 +634,7 @@ class TestMcpEditSmokeTest:
         mock_mlflow: MagicMock,
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
-        mock_log_mlflow: MagicMock,
+        _mock_log_mlflow: MagicMock,
         mock_verify_config: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
