@@ -136,7 +136,7 @@ class TestCreatePRWorkflowIntegration:
         repo.index.commit("Add new feature")
 
         # Mock LLM response for PR summary
-        with patch("mcp_coder.llm.interface.prompt_llm") as mock_prompt_llm:
+        with patch("mcp_coder.workflows.create_pr.core.prompt_llm") as mock_prompt_llm:
             mock_prompt_llm.return_value = {
                 "text": "feat: Add new feature\n\nThis PR adds a new feature function.",
                 "session_id": None,
