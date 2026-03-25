@@ -18,7 +18,6 @@ from ...llm.providers.claude.claude_executable_finder import find_claude_executa
 from ...llm.providers.langchain.verification import verify_langchain, verify_mcp_servers
 from ...utils.user_config import verify_config
 from ..utils import _get_status_symbols, resolve_llm_method, resolve_mcp_config_path
-from .prompt import log_to_mlflow
 
 logger = logging.getLogger(__name__)
 
@@ -314,7 +313,7 @@ def execute_verify(args: argparse.Namespace) -> int:
     timestamp = datetime.datetime.now(datetime.timezone.utc)
     test_prompt_ok = True
     try:
-        response = prompt_llm(
+        prompt_llm(
             "Reply with OK",
             provider=active_provider,
             timeout=30,
@@ -322,8 +321,6 @@ def execute_verify(args: argparse.Namespace) -> int:
             execution_dir=str(project_dir),
         )
         print(f"  {'Test prompt':<20s} {symbols['success']} responded OK")
-        # Log to MLflow (will be confirmed by verify_mlflow's since= check)
-        log_to_mlflow(response, "Reply with OK", project_dir)
     except Exception as exc:  # pylint: disable=broad-except
         test_prompt_ok = False
         # Only classify connection-related exceptions
