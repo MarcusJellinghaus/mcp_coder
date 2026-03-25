@@ -24,6 +24,6 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] [Step 1: Add env var + config resolution to resolve_mcp_config_path()](./steps/step_1.md)
 - [x] [Step 2: Add [mcp] section to config template and verify display](./steps/step_2.md)
 - [x] [Step 3: Verify MCP for all providers + ImportError handling](./steps/step_3.md)
-- [ ] [Step 4: Documentation updates](./steps/step_4.md)
+- [x] [Step 4: Documentation updates](./steps/step_4.md)
 
 ## Pull Request

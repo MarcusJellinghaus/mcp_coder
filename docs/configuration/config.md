@@ -9,6 +9,7 @@ Complete configuration documentation for MCP Coder, covering user configuration 
 | **User Config** | `~/.config/mcp_coder/config.toml` (Linux/macOS)<br>`%USERPROFILE%\.mcp_coder\config.toml` (Windows) |
 | **Environment Variables** | `JENKINS_URL`, `JENKINS_USER`, `JENKINS_TOKEN` |
 | **LLM Provider** | `[llm]` section in `config.toml` |
+| **MCP Config** | `[mcp]` section in `config.toml` |
 | **Repository Setup** | [Repository Setup Guide](../repository-setup.md) |
 | **CLI Commands** | [CLI Reference](../cli-reference.md) |
 
@@ -149,6 +150,28 @@ cache_refresh_minutes = 360  # 6 hours - balanced approach
 - Enables frequent coordinator runs without API exhaustion
 - Particularly effective for repositories with 100+ issues
 
+### [mcp]
+
+Configures the default MCP (Model Context Protocol) configuration file path. When set, the `--mcp-config` CLI flag becomes optional.
+
+| Field | Type | Description | Required | Default |
+|-------|------|-------------|----------|---------|
+| `default_config_path` | string | Path to MCP config file (relative to CWD or absolute) | No | None |
+
+**Resolution priority:** CLI `--mcp-config` arg > `MCP_CODER_MCP_CONFIG` env var > `[mcp] default_config_path` config > auto-detect
+
+**Error behavior:**
+- **CLI arg** (`--mcp-config`): strict — raises `FileNotFoundError` if file not found
+- **Env var / config**: lenient — logs warning with source, falls back to auto-detect
+
+**Example:**
+```toml
+[mcp]
+# Default MCP config file path (relative to CWD or absolute)
+# Environment variable (higher priority): MCP_CODER_MCP_CONFIG
+default_config_path = ".mcp.json"
+```
+
 ### [llm]
 
 Selects the LLM provider. Defaults to `"claude"` when omitted.
@@ -252,6 +275,7 @@ Environment variables take **highest priority** over config file values.
 | `OPENAI_API_KEY` | `[llm.langchain] api_key` | `openai` |
 | `GEMINI_API_KEY` | `[llm.langchain] api_key` | `gemini` |
 | `ANTHROPIC_API_KEY` | `[llm.langchain] api_key` | `anthropic` |
+| `MCP_CODER_MCP_CONFIG` | `[mcp] default_config_path` | `.mcp.json` |
 
 **Usage in CI/CD:**
 ```bash
