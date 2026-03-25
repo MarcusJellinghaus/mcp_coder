@@ -15,7 +15,7 @@ class TestGeneratePrSummary:
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
     @patch("mcp_coder.workflows.create_pr.core.get_prompt")
-    @patch("mcp_coder.llm.interface.prompt_llm")
+    @patch("mcp_coder.workflows.create_pr.core.prompt_llm")
     def test_generate_pr_summary_success(
         self,
         mock_prompt_llm: MagicMock,
@@ -52,7 +52,7 @@ class TestGeneratePrSummary:
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
     @patch("mcp_coder.workflows.create_pr.core.get_prompt")
-    @patch("mcp_coder.llm.interface.prompt_llm")
+    @patch("mcp_coder.workflows.create_pr.core.prompt_llm")
     def test_generate_pr_summary_structured_response(
         self,
         mock_prompt_llm: MagicMock,
@@ -132,7 +132,7 @@ Implements comprehensive user management functionality.
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
     @patch("mcp_coder.workflows.create_pr.core.get_prompt")
-    @patch("mcp_coder.llm.interface.prompt_llm")
+    @patch("mcp_coder.workflows.create_pr.core.prompt_llm")
     def test_generate_pr_summary_llm_failure(
         self,
         mock_prompt_llm: MagicMock,
@@ -163,7 +163,7 @@ Implements comprehensive user management functionality.
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
     @patch("mcp_coder.workflows.create_pr.core.get_prompt")
-    @patch("mcp_coder.llm.interface.prompt_llm")
+    @patch("mcp_coder.workflows.create_pr.core.prompt_llm")
     def test_generate_pr_summary_llm_exception(
         self,
         mock_prompt_llm: MagicMock,
@@ -187,7 +187,7 @@ Implements comprehensive user management functionality.
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
     @patch("mcp_coder.workflows.create_pr.core.get_prompt")
-    @patch("mcp_coder.llm.interface.prompt_llm")
+    @patch("mcp_coder.workflows.create_pr.core.prompt_llm")
     def test_generate_pr_summary_empty_llm_response(
         self,
         mock_prompt_llm: MagicMock,
@@ -218,7 +218,7 @@ Implements comprehensive user management functionality.
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.get_branch_diff")
     @patch("mcp_coder.workflows.create_pr.core.get_prompt")
-    @patch("mcp_coder.llm.interface.prompt_llm")
+    @patch("mcp_coder.workflows.create_pr.core.prompt_llm")
     def test_generate_pr_summary_whitespace_llm_response(
         self,
         mock_prompt_llm: MagicMock,

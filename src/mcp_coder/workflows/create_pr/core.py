@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS, PROMPTS_FILE_PATH
-from mcp_coder.llm.interface import ask_llm
+from mcp_coder.llm.interface import prompt_llm
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils import (
     commit_all_changes,
@@ -328,14 +328,14 @@ def generate_pr_summary(
     logger.info(f"Calling LLM for PR summary using provider={provider}...")
     try:
         branch_name = get_branch_name_for_logging(project_dir)
-        llm_response = ask_llm(
+        llm_response = prompt_llm(
             full_prompt,
             provider=provider,
             timeout=300,
             execution_dir=str(execution_dir) if execution_dir else None,
             mcp_config=mcp_config,
             branch_name=branch_name,
-        )
+        )["text"]
 
         if not llm_response or not llm_response.strip():
             logger.error(

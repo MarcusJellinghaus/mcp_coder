@@ -9,7 +9,7 @@ from typing import Optional, Tuple
 
 from ..constants import PROMPTS_FILE_PATH
 from ..llm.env import prepare_llm_environment
-from ..llm.interface import ask_llm
+from ..llm.interface import prompt_llm
 from ..llm.providers.claude.claude_code_api import ClaudeAPIError
 from ..utils.git_operations import get_git_diff_for_commit, stage_all_changes
 from ..utils.git_utils import get_branch_name_for_logging
@@ -153,14 +153,14 @@ def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
         logger.debug("Sending request to LLM (prompt size: %d chars)", len(full_prompt))
         logger.debug("Calling LLM for auto generated commit message...")
         branch_name = get_branch_name_for_logging(project_dir)
-        response = ask_llm(
+        response = prompt_llm(
             full_prompt,
             provider=provider,
             timeout=LLM_COMMIT_TIMEOUT_SECONDS,
             env_vars=env_vars,
             execution_dir=execution_dir,
             branch_name=branch_name,
-        )
+        )["text"]
 
         if not response or not response.strip():
             error_msg = "LLM returned empty or null response. The AI service may be unavailable or overloaded. Try again in a moment."

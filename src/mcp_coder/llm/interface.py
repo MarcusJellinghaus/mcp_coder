@@ -17,70 +17,8 @@ logger = logging.getLogger(__name__)
 LLM_DEFAULT_TIMEOUT_SECONDS = 30  # Default timeout for LLM requests
 
 __all__ = [
-    "ask_llm",
     "prompt_llm",
 ]
-
-
-def ask_llm(
-    question: str,
-    provider: str = "claude",
-    session_id: str | None = None,
-    timeout: int = LLM_DEFAULT_TIMEOUT_SECONDS,
-    env_vars: dict[str, str] | None = None,
-    execution_dir: str | None = None,
-    mcp_config: str | None = None,
-    branch_name: str | None = None,
-) -> str:
-    """Ask a question to an LLM provider.
-
-    This is the main entry point for simple LLM interactions. It returns only
-    the text response. For full session management with metadata, use prompt_llm()
-    or the provider-specific functions directly.
-
-    Args:
-        question: The question to ask the LLM
-        provider: The LLM provider to use ("claude" or "langchain")
-        session_id: Optional session ID to resume previous conversation
-                   Note: This function doesn't return session_id. Use prompt_llm()
-                   for full session management capabilities.
-        timeout: Timeout in seconds for the request (default: 30)
-        env_vars: Optional environment variables to pass to the LLM subprocess.
-            MCP server configuration (e.g. MCP_CODER_PROJECT_DIR) is passed here
-            via prepare_llm_environment(); see execution_dir for MCP discovery.
-        execution_dir: Working directory for the LLM subprocess. Claude discovers
-            .mcp.json (and therefore which MCP servers to load) relative to this
-            directory. Defaults to the caller's current working directory.
-        mcp_config: Optional path to MCP configuration file
-        branch_name: Optional git branch name to include in log filename
-
-    Returns:
-        The LLM's response text as a string
-
-    Examples:
-        >>> # Simple usage
-        >>> response = ask_llm("What is Python?")
-        >>> print(response)
-
-        >>> # With session (managed externally - see prompt_llm for better approach)
-        >>> response = ask_llm("My color is blue", session_id="known-session-id")
-        >>> # Note: session_id not returned - use prompt_llm() instead
-
-    Note:
-        For session management with access to session_id and metadata, use:
-        - prompt_llm() for high-level session-aware interface
-        - ask_claude_code_cli() directly for provider-specific control
-    """
-    return prompt_llm(
-        question,
-        provider=provider,
-        session_id=session_id,
-        timeout=timeout,
-        env_vars=env_vars,
-        execution_dir=execution_dir,
-        mcp_config=mcp_config,
-        branch_name=branch_name,
-    )["text"]
 
 
 def prompt_llm(
@@ -141,7 +79,7 @@ def prompt_llm(
         >>> print(f"Duration: {result2['raw_response'].get('duration_ms')}ms")
 
     Note:
-        For simple text-only responses without session management, use ask_llm().
+        For simple text-only responses, use ``prompt_llm(...)["text"]``.
         This function is designed for:
         - Conversation continuity across multiple turns
         - Comprehensive logging and analysis

@@ -3,13 +3,6 @@
 import pytest
 
 
-def test_ask_llm_exported_from_main_module() -> None:
-    """Test that ask_llm can be imported from main module."""
-    from mcp_coder import ask_llm
-
-    assert callable(ask_llm)
-
-
 def test_prompt_llm_exported_from_main_module() -> None:
     """Test that prompt_llm can be imported from main module."""
     from mcp_coder import prompt_llm
@@ -80,7 +73,6 @@ def test_all_contains_new_exports() -> None:
     import mcp_coder
 
     required_exports = [
-        "ask_llm",
         "prompt_llm",
         "serialize_llm_response",
         "deserialize_llm_response",
@@ -102,7 +94,6 @@ def test_llm_interface_all_is_correct() -> None:
     from mcp_coder.llm import interface
 
     expected = [
-        "ask_llm",
         "prompt_llm",
     ]
 
@@ -153,7 +144,6 @@ def test_no_import_errors() -> None:
         from mcp_coder import (
             LLM_RESPONSE_VERSION,
             LLMResponseDict,
-            ask_llm,
             collect_branch_status,
             deserialize_llm_response,
             generate_commit_message_with_llm,

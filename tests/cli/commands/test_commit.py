@@ -410,7 +410,7 @@ class TestGenerateCommitMessageWithLLM:
     @patch("mcp_coder.workflow_utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.workflow_utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.prompt_manager.get_prompt")
-    @patch("mcp_coder.llm.interface.prompt_llm")
+    @patch("mcp_coder.workflow_utils.commit_operations.prompt_llm")
     def test_generate_commit_message_with_llm_success(
         self,
         mock_prompt_llm: Mock,
@@ -484,7 +484,7 @@ class TestGenerateCommitMessageWithLLM:
     @patch("mcp_coder.workflow_utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.workflow_utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.prompt_manager.get_prompt")
-    @patch("mcp_coder.llm.interface.prompt_llm")
+    @patch("mcp_coder.workflow_utils.commit_operations.prompt_llm")
     def test_generate_commit_message_with_llm_failure(
         self,
         mock_prompt_llm: Mock,
@@ -669,7 +669,7 @@ class TestGenerateCommitMessageWithLLMExtended:
     @patch("mcp_coder.workflow_utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.workflow_utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.prompt_manager.get_prompt")
-    @patch("mcp_coder.llm.interface.prompt_llm")
+    @patch("mcp_coder.workflow_utils.commit_operations.prompt_llm")
     def test_empty_llm_response(
         self,
         mock_prompt_llm: Mock,
@@ -702,7 +702,7 @@ class TestGenerateCommitMessageWithLLMExtended:
     @patch("mcp_coder.workflow_utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.workflow_utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.prompt_manager.get_prompt")
-    @patch("mcp_coder.llm.interface.prompt_llm")
+    @patch("mcp_coder.workflow_utils.commit_operations.prompt_llm")
     @patch("mcp_coder.workflow_utils.commit_operations.parse_llm_commit_response")
     def test_empty_parsed_commit_message(
         self,
@@ -738,7 +738,7 @@ class TestGenerateCommitMessageWithLLMExtended:
     @patch("mcp_coder.workflow_utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.workflow_utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.prompt_manager.get_prompt")
-    @patch("mcp_coder.llm.interface.prompt_llm")
+    @patch("mcp_coder.workflow_utils.commit_operations.prompt_llm")
     @patch("mcp_coder.workflow_utils.commit_operations.parse_llm_commit_response")
     def test_invalid_commit_message_format(
         self,

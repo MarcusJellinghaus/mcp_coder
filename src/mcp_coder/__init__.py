@@ -4,17 +4,16 @@ This package provides extensible LLM interfaces for code analysis, testing, and 
 workflows. It supports multiple LLM providers.
 
 Main Interfaces:
-    ask_llm: High-level interface supporting multiple LLM providers
     prompt_llm: High-level interface returning full LLMResponseDict with session management
 
 Example:
-    >>> from mcp_coder import ask_llm
-    >>> response = ask_llm("Explain recursion", provider="claude")
-    >>> print(response)
+    >>> from mcp_coder import prompt_llm
+    >>> result = prompt_llm("Explain recursion", provider="claude")
+    >>> print(result["text"])
 """
 
 from .checks.branch_status import collect_branch_status
-from .llm.interface import ask_llm, prompt_llm
+from .llm.interface import prompt_llm
 from .llm.mlflow_logger import verify_mlflow
 from .llm.providers.claude.claude_cli_verification import verify_claude
 from .llm.providers.claude.claude_executable_finder import (
@@ -60,7 +59,6 @@ except (
 
 __all__ = [
     # Core LLM interfaces
-    "ask_llm",
     "prompt_llm",
     "serialize_llm_response",
     "deserialize_llm_response",

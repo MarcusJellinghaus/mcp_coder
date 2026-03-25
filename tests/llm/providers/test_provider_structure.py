@@ -18,9 +18,8 @@ def test_providers_package_structure() -> None:
 
 def test_public_api_provider_exports() -> None:
     """Verify provider functions accessible via public API."""
-    from mcp_coder import ask_llm, prompt_llm
+    from mcp_coder import prompt_llm
 
-    assert callable(ask_llm)
     assert callable(prompt_llm)
 
 
