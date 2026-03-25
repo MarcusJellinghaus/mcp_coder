@@ -36,4 +36,14 @@
 - `summary.md`: updated step table (1a, 1b, 2, 3, 4, 5, 6)
 - `Decisions.md`: marked Decision 1 as DROPPED
 
-**Status**: Ready to commit
+**Status**: Committed (9cdf266)
+
+## Final Status
+
+Plan review complete in 1 round. One commit produced (9cdf266). The plan is ready for approval.
+
+Key changes made:
+- Split Step 1 → 1a + 1b for CI safety (user decision)
+- Added ~15 missing test files across Steps 1, 5, 6
+- Dropped unnecessary `_is_enabled()` rename
+- Fixed pseudocode and minor improvements to Steps 4, 5, 6
