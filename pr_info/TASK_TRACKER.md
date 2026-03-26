@@ -21,6 +21,13 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Derive `logs_dir` from `env_vars` in `prompt_llm()` ([detail](./steps/step_1.md))
+
+- [ ] Implementation: tests + production code (`interface.py`, `test_interface.py`, `create_pr/core.py`)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: verify all steps complete and checks pass
+- [ ] PR summary prepared
