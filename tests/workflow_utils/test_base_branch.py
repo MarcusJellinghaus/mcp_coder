@@ -1,7 +1,7 @@
 """Tests for base branch detection functionality.
 
 Note: Tests for detect_parent_branch_via_merge_base are located in
-tests/utils/git_operations/test_readers.py to match the source structure.
+tests/utils/git_operations/test_parent_branch_detection.py to match the source structure.
 """
 
 from collections.abc import Generator

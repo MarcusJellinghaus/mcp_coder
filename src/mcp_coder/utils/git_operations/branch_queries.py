@@ -1,3 +1,5 @@
+"""Branch name validation and querying utilities."""
+
 import re
 from pathlib import Path
 from typing import Optional

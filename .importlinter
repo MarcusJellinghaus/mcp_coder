@@ -120,7 +120,7 @@ forbidden_modules =
 # Enforces the internal layering within git_operations:
 # - Orchestration layer (workflows) can import from any git_operations module
 # - Command modules (branches, remotes, commits, staging, file_tracking, diffs)
-#   can import from readers and core
+#   can import from branch_queries, parent_branch_detection, repository_status, and core
 # - Readers can only import from core
 # - No imports between modules in the same layer
 #

@@ -1,3 +1,5 @@
+"""Git repository status and staging queries."""
+
 from pathlib import Path
 
 from git.exc import GitCommandError, InvalidGitRepositoryError

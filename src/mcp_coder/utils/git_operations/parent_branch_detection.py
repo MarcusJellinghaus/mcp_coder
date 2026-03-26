@@ -1,3 +1,5 @@
+"""Parent branch detection via merge-base analysis."""
+
 # Maximum commits between merge-base and candidate branch HEAD to consider
 # the candidate as the parent branch. Higher values are more permissive but
 # risk selecting wrong branches; lower values may miss valid parents that
