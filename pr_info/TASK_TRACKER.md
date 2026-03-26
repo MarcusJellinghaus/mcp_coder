@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat(subprocess): add stream_subprocess generator`
 
 ### Step 3: Claude CLI Streaming Provider
-- [ ] Implementation: `ask_claude_code_cli_stream()` in `claude_code_cli.py` with tests in `test_claude_code_cli.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(claude): add ask_claude_code_cli_stream`
+- [x] Implementation: `ask_claude_code_cli_stream()` in `claude_code_cli.py` with tests in `test_claude_code_cli.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(claude): add ask_claude_code_cli_stream`
 
 ### Step 4: LangChain Streaming Provider
 - [ ] Implementation: `ask_langchain_stream()` + `_ask_text_stream()` in `langchain/__init__.py` with tests in `test_langchain_provider.py`

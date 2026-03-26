@@ -716,11 +716,13 @@ def stream_subprocess(
 
     timed_out = False
 
+    stdin_mode = subprocess.PIPE if options.input_data else subprocess.DEVNULL
+
     proc = subprocess.Popen(
         command,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        stdin=subprocess.DEVNULL,
+        stdin=stdin_mode,
         cwd=options.cwd,
         text=True,
         encoding="utf-8",
@@ -728,6 +730,11 @@ def stream_subprocess(
         env=env,
         start_new_session=start_new_session,
     )
+
+    # Write input data and close stdin before reading stdout
+    if options.input_data and proc.stdin:
+        proc.stdin.write(options.input_data)
+        proc.stdin.close()
 
     def _on_timeout() -> None:
         nonlocal timed_out
