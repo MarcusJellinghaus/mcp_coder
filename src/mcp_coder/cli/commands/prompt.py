@@ -18,7 +18,6 @@ from ...llm.storage import (
 )
 from ...llm.types import ResponseAssembler
 from ...utils.git_utils import get_branch_name_for_logging
-from ...utils.log_utils import NOTICE
 from ..utils import (
     parse_llm_method_from_args,
     resolve_execution_dir,
@@ -162,7 +161,7 @@ def execute_prompt(
                 stored_path = store_session(
                     llm_response, args.prompt, branch_name=branch_name
                 )
-                logger.log(NOTICE, "Response stored to: %s", stored_path)
+                logger.info("Response stored to: %s", stored_path)
 
         elif output_format == "session-id":
             # Session ID only mode - return only the session_id for shell script capture
@@ -205,9 +204,9 @@ def execute_prompt(
                 stored_path = store_session(
                     response_dict, args.prompt, branch_name=branch_name
                 )
-                logger.log(NOTICE, "Response stored to: %s", stored_path)
+                logger.info("Response stored to: %s", stored_path)
 
-        logger.log(NOTICE, "Prompt command completed successfully")
+        logger.info("Prompt command completed successfully")
         return 0
 
     except (

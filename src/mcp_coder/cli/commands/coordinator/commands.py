@@ -18,7 +18,6 @@ from ....utils.github_operations.issues import (
     update_issue_labels_in_cache,
 )
 from ....utils.jenkins_operations.client import JenkinsClient
-from ....utils.log_utils import NOTICE
 from ....utils.user_config import (
     create_default_config,
     get_cache_refresh_minutes,
@@ -100,8 +99,7 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         created = create_default_config()
         if created:
             config_path = get_config_file_path()
-            logger.log(
-                NOTICE,
+            logger.info(
                 "Created default config file. Please update with your credentials.",
             )
             print(f"Created default config file at {config_path}")
@@ -197,8 +195,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
         created = create_default_config()
         if created:
             config_path = get_config_file_path()
-            logger.log(
-                NOTICE,
+            logger.info(
                 "Created default config file. Please update with your credentials.",
             )
             print(f"Created default config file at {config_path}")
@@ -237,9 +234,9 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
 
             # Log repository header with URL
             repo_url = repo_config["repo_url"]
-            logger.log(NOTICE, f"{'='*80}")
-            logger.log(NOTICE, f"Processing repository: {repo_url}")
-            logger.log(NOTICE, f"{'='*80}")
+            logger.info(f"{'='*80}")
+            logger.info(f"Processing repository: {repo_url}")
+            logger.info(f"{'='*80}")
 
             # Type narrowing: validate_repo_config raises if any fields are None
             # Assert to help mypy understand the values are non-None after validation
@@ -347,7 +344,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                     )
                     return 1
 
-            logger.log(NOTICE, f"Successfully processed all issues in {repo_name}")
+            logger.info(f"Successfully processed all issues in {repo_name}")
 
         # Step 5: Success - all repos processed
         return 0
