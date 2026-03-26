@@ -25,6 +25,6 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] [Step 2](./steps/step_2.md) — Update slash commands and docs for `gh-tool set-status`
 - [x] [Step 3](./steps/step_3.md) — Register NOTICE log level and add per-command defaults
 - [x] [Step 4](./steps/step_4.md) — Triage logger.info() calls — promote progress messages to NOTICE
-- [ ] [Step 5](./steps/step_5.md) — Unified help output
+- [x] [Step 5](./steps/step_5.md) — Unified help output
 
 ## Pull Request

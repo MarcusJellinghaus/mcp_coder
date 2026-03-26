@@ -20,7 +20,7 @@ from .commands.create_pr import execute_create_pr
 from .commands.define_labels import execute_define_labels
 from .commands.gh_tool import execute_get_base_branch
 from .commands.git_tool import execute_compact_diff
-from .commands.help import execute_help, get_compact_help_text
+from .commands.help import get_help_text
 from .commands.implement import execute_implement
 from .commands.init import execute_init
 from .commands.prompt import execute_prompt
@@ -77,6 +77,16 @@ def create_parser() -> argparse.ArgumentParser:
         prog="mcp-coder",
         description="AI-powered software development automation toolkit",
         formatter_class=WideHelpFormatter,
+        add_help=False,
+    )
+
+    parser.add_argument(
+        "--help",
+        "-h",
+        action="store_true",
+        default=False,
+        dest="help",
+        help=argparse.SUPPRESS,
     )
 
     parser.add_argument(
@@ -102,7 +112,7 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     # Simple commands without subparsers
-    subparsers.add_parser("help", help="Show help information")
+    subparsers.add_parser("help", help=argparse.SUPPRESS)
     subparsers.add_parser("init", help="Create default configuration file")
     add_verify_parser(subparsers)
 
@@ -119,20 +129,6 @@ def create_parser() -> argparse.ArgumentParser:
     add_vscodeclaude_parsers(subparsers)
 
     return parser
-
-
-def handle_no_command(_args: argparse.Namespace) -> int:
-    """Handle case when no command is provided.
-
-    Returns:
-        Exit code (0 — showing help is valid behavior).
-    """
-    logger.info("No command provided, showing help")
-
-    help_text = get_compact_help_text()
-    print(help_text)
-
-    return 0
 
 
 def _handle_coordinator_command(args: argparse.Namespace) -> int:
@@ -303,14 +299,14 @@ def main() -> int:
             f"Starting mcp-coder CLI: command={args.command}, log_level={args.log_level}"
         )
 
-        # Handle case when no command is provided
-        if not args.command:
-            return handle_no_command(args)
+        # Unified help: no command, "help" command, or --help flag
+        if not args.command or args.command == "help" or args.help:
+            help_text = get_help_text()
+            print(help_text)
+            return 0
 
         # Route to appropriate command handler
-        if args.command == "help":
-            return execute_help(args)
-        elif args.command == "init":
+        if args.command == "init":
             return execute_init(args)
         elif args.command == "verify":
             return execute_verify(args)

@@ -1,10 +1,8 @@
 """Help commands for the MCP Coder CLI."""
 
-import argparse
-import logging
 from typing import NamedTuple
 
-logger = logging.getLogger(__name__)
+from ... import __version__
 
 
 class Command(NamedTuple):
@@ -58,84 +56,51 @@ COMMAND_CATEGORIES: list[Category] = [
             Command("prompt", "Execute prompt via Claude API"),
             Command("commit auto", "Auto-generate commit message"),
             Command("commit clipboard", "Use clipboard commit message"),
-            Command("gh-tool set-status", "Update GitHub issue workflow status label"),
             Command("check branch-status", "Check branch readiness status"),
             Command("check file-size", "Check file sizes against maximum"),
+            Command("gh-tool set-status", "Update GitHub issue workflow status label"),
             Command("gh-tool define-labels", "Sync workflow status labels to GitHub"),
             Command("gh-tool issue-stats", "Display issue statistics"),
             Command("gh-tool get-base-branch", "Detect base branch for feature branch"),
             Command("git-tool compact-diff", "Generate compact diff"),
-            Command("help", "Show help information"),
         ],
     ),
 ]
 
 
-def _render_help(*, include_descriptions: bool) -> str:
+def _render_help() -> str:
     """Render help text from COMMAND_CATEGORIES.
 
-    Args:
-        include_descriptions: Include category descriptions and URL footer.
-
     Returns:
-        Formatted help text.
+        Formatted help text with version header and OPTIONS section.
     """
     max_width = max(len(cmd.name) for cat in COMMAND_CATEGORIES for cmd in cat.commands)
+    option_width = max_width  # align OPTIONS section with commands
     lines = [
         "mcp-coder - AI-powered software development automation toolkit",
+        f"mcp-coder {__version__}",
         "",
         "Usage: mcp-coder <command> [options]",
+        "",
+        "OPTIONS",
+        f"  {'--version':<{option_width}}  Show version number",
+        f"  {'--log-level LEVEL':<{option_width}}  Set logging level"
+        " (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
     ]
     for cat in COMMAND_CATEGORIES:
         lines.append("")
         lines.append(cat.name)
-        if include_descriptions:
-            lines.append(f"  {cat.description}")
-            lines.append("")
         for cmd in cat.commands:
             lines.append(f"  {cmd.name:<{max_width}}  {cmd.description}")
     lines.append("")
-    if include_descriptions:
-        lines.append("Run 'mcp-coder <command> --help' for command-specific options.")
-        lines.append("")
-        lines.append(
-            "For more information, visit:"
-            " https://github.com/MarcusJellinghaus/mcp_coder"
-        )
-    else:
-        lines.append("Run 'mcp-coder help' for detailed usage.")
-        lines.append("Run 'mcp-coder <command> --help' for command-specific options.")
+    lines.append("Run 'mcp-coder <command> --help' for command-specific options.")
     return "\n".join(lines)
 
 
-def get_compact_help_text() -> str:
-    """Render compact help: category headers + aligned commands.
-
-    Returns:
-        Formatted compact help text.
-    """
-    return _render_help(include_descriptions=False)
-
-
-def execute_help(_args: argparse.Namespace) -> int:
-    """Execute help command.
-
-    Returns:
-        Exit code (0 for success).
-    """
-    logger.info("Executing help command")
-
-    help_text = get_help_text()
-    print(help_text)
-
-    logger.info("Help command completed successfully")
-    return 0
-
-
 def get_help_text() -> str:
-    """Render detailed help: category headers + descriptions + aligned commands.
+    """Render unified help text with version, options, and categorized commands.
 
     Returns:
-        Formatted detailed help text.
+        Formatted help text.
     """
-    return _render_help(include_descriptions=True)
+    return _render_help()

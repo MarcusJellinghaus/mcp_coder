@@ -5,7 +5,7 @@ from .commit import execute_commit_auto, execute_commit_clipboard
 from .coordinator import execute_coordinator_test
 from .create_plan import execute_create_plan
 from .create_pr import execute_create_pr
-from .help import execute_help
+from .help import get_help_text
 from .implement import execute_implement
 from .init import execute_init
 from .prompt import execute_prompt
@@ -13,7 +13,7 @@ from .verify import execute_verify
 
 __all__ = [
     "coordinator",
-    "execute_help",
+    "get_help_text",
     "execute_init",
     "execute_verify",
     "execute_prompt",

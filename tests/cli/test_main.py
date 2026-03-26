@@ -10,7 +10,6 @@ import pytest
 from mcp_coder.cli.main import (
     _resolve_log_level,
     create_parser,
-    handle_no_command,
     main,
 )
 
@@ -31,9 +30,27 @@ class TestCreateParser:
     def test_parser_has_version_action(self) -> None:
         """Test parser includes version argument."""
         parser = create_parser()
-        # Check if version action exists by trying to parse --version
+        # --version triggers SystemExit
         with pytest.raises(SystemExit):
             parser.parse_args(["--version"])
+
+    def test_parser_help_flag_stored_as_bool(self) -> None:
+        """Test --help is stored as boolean, not intercepted by argparse."""
+        parser = create_parser()
+        args = parser.parse_args(["--help"])
+        assert args.help is True
+
+    def test_parser_h_flag_stored_as_bool(self) -> None:
+        """Test -h is stored as boolean, not intercepted by argparse."""
+        parser = create_parser()
+        args = parser.parse_args(["-h"])
+        assert args.help is True
+
+    def test_parser_no_help_flag_default_false(self) -> None:
+        """Test help defaults to False when not provided."""
+        parser = create_parser()
+        args = parser.parse_args([])
+        assert args.help is False
 
     def test_parser_has_subparsers(self) -> None:
         """Test parser has subcommand structure."""
@@ -45,14 +62,14 @@ class TestCreateParser:
         """Test parser includes log level argument."""
         parser = create_parser()
         # Test parsing with log level
-        args = parser.parse_args(["--log-level", "DEBUG", "help"])
+        args = parser.parse_args(["--log-level", "DEBUG", "init"])
         assert args.log_level == "DEBUG"
-        assert args.command == "help"
+        assert args.command == "init"
 
     def test_parser_log_level_default(self) -> None:
         """Test log level has correct default value."""
         parser = create_parser()
-        args = parser.parse_args(["help"])
+        args = parser.parse_args(["init"])
         assert args.log_level is None
 
     def test_parser_log_level_choices(self) -> None:
@@ -60,12 +77,12 @@ class TestCreateParser:
         parser = create_parser()
         # Valid choices should work
         for level in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
-            args = parser.parse_args(["--log-level", level, "help"])
+            args = parser.parse_args(["--log-level", level, "init"])
             assert args.log_level == level
 
         # Invalid choice should raise SystemExit
         with pytest.raises(SystemExit):
-            parser.parse_args(["--log-level", "INVALID", "help"])
+            parser.parse_args(["--log-level", "INVALID", "init"])
 
 
 class TestLogLevelResolution:
@@ -126,81 +143,72 @@ class TestLogLevelResolution:
         assert _resolve_log_level(args) == "NOTICE"
 
 
-class TestHandleNoCommand:
-    """Test handling when no command is provided."""
+class TestNoCommandShowsHelp:
+    """Test that no command shows unified help."""
 
-    @patch("builtins.print")
-    def test_handle_no_command_prints_help(self, mock_print: Mock) -> None:
-        """Test that handle_no_command prints help information."""
-        args = argparse.Namespace(command=None)
-        result = handle_no_command(args)
+    def test_no_command_prints_help(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Test that running with no command prints help text."""
+        with patch("sys.argv", ["mcp-coder"]):
+            result = main()
 
         assert result == 0
-        # Verify help text was printed
-        mock_print.assert_called()
-        call_args = [call[0][0] for call in mock_print.call_args_list]
-        help_text = " ".join(call_args)
-        assert "mcp-coder" in help_text
-        assert "help" in help_text
-        assert "commit" in help_text
-
-    @patch("mcp_coder.cli.main.logger")
-    def test_handle_no_command_logs_info(self, mock_logger: Mock) -> None:
-        """Test that handle_no_command logs appropriate message."""
-        args = argparse.Namespace(command=None)
-        handle_no_command(args)
-
-        mock_logger.info.assert_called_with("No command provided, showing help")
+        captured = capsys.readouterr()
+        assert (
+            "mcp-coder - AI-powered software development automation toolkit"
+            in captured.out
+        )
+        assert "commit" in captured.out
 
 
 class TestMain:
     """Test main CLI entry point."""
 
-    @patch("mcp_coder.cli.main.setup_logging")
-    @patch("mcp_coder.cli.main.handle_no_command")
-    @patch("mcp_coder.cli.main.create_parser")
-    def test_main_no_args_calls_handle_no_command(
-        self,
-        mock_create_parser: Mock,
-        mock_handle_no_command: Mock,
-        mock_setup_logging: Mock,
-    ) -> None:
-        """Test that main calls handle_no_command when no command provided."""
-        mock_parser = Mock()
-        mock_parser.parse_args.return_value = argparse.Namespace(
-            command=None, log_level="INFO"
-        )
-        mock_create_parser.return_value = mock_parser
-        mock_handle_no_command.return_value = 0
-
-        result = main()
+    def test_main_no_args_shows_help(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Test that main with no command prints unified help."""
+        with patch("sys.argv", ["mcp-coder"]):
+            result = main()
 
         assert result == 0
-        mock_handle_no_command.assert_called_once()
-        mock_setup_logging.assert_called_once_with("INFO")
-
-    @patch("mcp_coder.cli.main.setup_logging")
-    @patch("mcp_coder.cli.main.execute_help")
-    @patch("mcp_coder.cli.main.create_parser")
-    def test_main_help_command(
-        self,
-        mock_create_parser: Mock,
-        mock_execute_help: Mock,
-        mock_setup_logging: Mock,
-    ) -> None:
-        """Test 'mcp-coder help' command works."""
-        mock_parser = Mock()
-        mock_parser.parse_args.return_value = argparse.Namespace(
-            command="help", log_level="INFO"
+        captured = capsys.readouterr()
+        assert (
+            "mcp-coder - AI-powered software development automation toolkit"
+            in captured.out
         )
-        mock_create_parser.return_value = mock_parser
-        mock_execute_help.return_value = 0
 
-        result = main()
+    def test_main_help_command(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Test 'mcp-coder help' command shows unified help."""
+        with patch("sys.argv", ["mcp-coder", "help"]):
+            result = main()
 
         assert result == 0
-        mock_execute_help.assert_called_once()
-        mock_setup_logging.assert_called_once_with("INFO")
+        captured = capsys.readouterr()
+        assert (
+            "mcp-coder - AI-powered software development automation toolkit"
+            in captured.out
+        )
+
+    def test_main_help_flag_shows_help(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test 'mcp-coder --help' shows categorized help (not argparse)."""
+        with patch("sys.argv", ["mcp-coder", "--help"]):
+            result = main()
+
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "SETUP" in captured.out
+        assert "TOOLS" in captured.out
+        assert "OPTIONS" in captured.out
+
+    def test_main_h_flag_shows_help(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Test 'mcp-coder -h' shows categorized help."""
+        with patch("sys.argv", ["mcp-coder", "-h"]):
+            result = main()
+
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "SETUP" in captured.out
+        assert "TOOLS" in captured.out
 
     @patch("mcp_coder.cli.main.setup_logging")
     @patch("mcp_coder.cli.main.create_parser")
@@ -211,7 +219,7 @@ class TestMain:
         """Test that main returns error for unknown commands."""
         mock_parser = Mock()
         mock_parser.parse_args.return_value = argparse.Namespace(
-            command="unknown", log_level="INFO"
+            command="unknown", log_level="INFO", help=False
         )
         mock_create_parser.return_value = mock_parser
 
@@ -231,14 +239,12 @@ class TestMain:
         # For KeyboardInterrupt, the exception occurs before we get log_level,
         # so we need to mock the args parsing to succeed first
         mock_parser.parse_args.return_value = argparse.Namespace(
-            command=None, log_level="INFO"
+            command=None, log_level="INFO", help=False
         )
         mock_create_parser.return_value = mock_parser
 
-        # Patch the handle_no_command to raise KeyboardInterrupt
-        with patch(
-            "mcp_coder.cli.main.handle_no_command", side_effect=KeyboardInterrupt()
-        ):
+        # Patch get_help_text to raise KeyboardInterrupt
+        with patch("mcp_coder.cli.main.get_help_text", side_effect=KeyboardInterrupt()):
             with patch("builtins.print"):
                 result = main()
 
@@ -255,13 +261,13 @@ class TestMain:
         # For unexpected exceptions, the exception occurs after we get log_level,
         # so we need args parsing to succeed first
         mock_parser.parse_args.return_value = argparse.Namespace(
-            command=None, log_level="INFO"
+            command=None, log_level="INFO", help=False
         )
         mock_create_parser.return_value = mock_parser
 
-        # Patch the handle_no_command to raise an unexpected exception
+        # Patch get_help_text to raise an unexpected exception
         with patch(
-            "mcp_coder.cli.main.handle_no_command", side_effect=Exception("Test error")
+            "mcp_coder.cli.main.get_help_text", side_effect=Exception("Test error")
         ):
             with patch("builtins.print"):
                 result = main()
@@ -270,49 +276,43 @@ class TestMain:
         mock_setup_logging.assert_called_once_with("INFO")
 
     @patch("mcp_coder.cli.main.setup_logging")
-    @patch("mcp_coder.cli.main.handle_no_command")
     @patch("mcp_coder.cli.main.create_parser")
     def test_main_custom_log_level(
         self,
         mock_create_parser: Mock,
-        mock_handle_no_command: Mock,
         mock_setup_logging: Mock,
     ) -> None:
         """Test that main uses custom log level when provided."""
         mock_parser = Mock()
         mock_parser.parse_args.return_value = argparse.Namespace(
-            command=None, log_level="DEBUG"
+            command=None, log_level="DEBUG", help=False
         )
         mock_create_parser.return_value = mock_parser
-        mock_handle_no_command.return_value = 0
 
-        result = main()
+        with patch("builtins.print"):
+            result = main()
 
         assert result == 0
-        mock_handle_no_command.assert_called_once()
         mock_setup_logging.assert_called_once_with("DEBUG")
 
     @patch("mcp_coder.cli.main.setup_logging")
-    @patch("mcp_coder.cli.main.execute_help")
     @patch("mcp_coder.cli.main.create_parser")
     def test_main_error_log_level(
         self,
         mock_create_parser: Mock,
-        mock_execute_help: Mock,
         mock_setup_logging: Mock,
     ) -> None:
         """Test that main works with ERROR log level."""
         mock_parser = Mock()
         mock_parser.parse_args.return_value = argparse.Namespace(
-            command="help", log_level="ERROR"
+            command="help", log_level="ERROR", help=False
         )
         mock_create_parser.return_value = mock_parser
-        mock_execute_help.return_value = 0
 
-        result = main()
+        with patch("builtins.print"):
+            result = main()
 
         assert result == 0
-        mock_execute_help.assert_called_once()
         mock_setup_logging.assert_called_once_with("ERROR")
 
 
