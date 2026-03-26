@@ -8,10 +8,9 @@ import pytest
 from mcp_coder.utils.subprocess_runner import (
     CommandOptions,
     CommandResult,
-    StreamResult,
     launch_process,
-    stream_subprocess,
 )
+from mcp_coder.utils.subprocess_streaming import StreamResult, stream_subprocess
 
 
 class TestLaunchProcess:
@@ -121,7 +120,7 @@ class TestStreamSubprocess:
         mock_proc.poll.return_value = 0
 
         with patch(
-            "mcp_coder.utils.subprocess_runner.subprocess.Popen",
+            "mcp_coder.utils.subprocess_streaming.subprocess.Popen",
             return_value=mock_proc,
         ):
             lines = list(stream_subprocess(["echo", "test"]))
@@ -140,7 +139,7 @@ class TestStreamSubprocess:
         mock_proc.poll.return_value = 0
 
         with patch(
-            "mcp_coder.utils.subprocess_runner.subprocess.Popen",
+            "mcp_coder.utils.subprocess_streaming.subprocess.Popen",
             return_value=mock_proc,
         ):
             stream = StreamResult(stream_subprocess(["echo", "test"]))
@@ -164,7 +163,7 @@ class TestStreamSubprocess:
         mock_proc.poll.return_value = 1
 
         with patch(
-            "mcp_coder.utils.subprocess_runner.subprocess.Popen",
+            "mcp_coder.utils.subprocess_streaming.subprocess.Popen",
             return_value=mock_proc,
         ):
             stream = StreamResult(stream_subprocess(["failing_cmd"]))
@@ -205,11 +204,11 @@ class TestStreamSubprocess:
 
         with (
             patch(
-                "mcp_coder.utils.subprocess_runner.subprocess.Popen",
+                "mcp_coder.utils.subprocess_streaming.subprocess.Popen",
                 return_value=mock_proc,
             ),
             patch(
-                "mcp_coder.utils.subprocess_runner.threading.Timer",
+                "mcp_coder.utils.subprocess_streaming.threading.Timer",
                 side_effect=instant_timer,
             ),
         ):
@@ -246,7 +245,7 @@ class TestStreamSubprocess:
             return mock_proc
 
         with patch(
-            "mcp_coder.utils.subprocess_runner.subprocess.Popen",
+            "mcp_coder.utils.subprocess_streaming.subprocess.Popen",
             side_effect=mock_popen,
         ):
             list(stream_subprocess([sys.executable, "-c", "print('hi')"]))
@@ -271,7 +270,7 @@ class TestStreamResult:
         mock_proc.poll.return_value = 0
 
         with patch(
-            "mcp_coder.utils.subprocess_runner.subprocess.Popen",
+            "mcp_coder.utils.subprocess_streaming.subprocess.Popen",
             return_value=mock_proc,
         ):
             stream = StreamResult(stream_subprocess(["echo", "test"]))
@@ -294,7 +293,7 @@ class TestStreamResult:
         mock_proc.poll.return_value = 0
 
         with patch(
-            "mcp_coder.utils.subprocess_runner.subprocess.Popen",
+            "mcp_coder.utils.subprocess_streaming.subprocess.Popen",
             return_value=mock_proc,
         ):
             stream = StreamResult(stream_subprocess(["echo", "test"]))

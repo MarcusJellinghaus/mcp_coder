@@ -224,7 +224,7 @@ def prompt_llm_stream(
             env_vars=env_vars,
         )
     else:
-        from .providers.claude.claude_code_cli import (  # noqa: PLC0415
+        from .providers.claude.claude_code_cli_streaming import (  # noqa: PLC0415
             ask_claude_code_cli_stream,
         )
 

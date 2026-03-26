@@ -1142,7 +1142,9 @@ class TestPromptLlmStream:
         with pytest.raises(ValueError, match="Unsupported provider"):
             list(prompt_llm_stream("Test", provider="gpt"))
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.ask_claude_code_cli_stream")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.ask_claude_code_cli_stream"
+    )
     def test_prompt_llm_stream_routes_to_claude(self, mock_stream: MagicMock) -> None:
         """prompt_llm_stream routes to ask_claude_code_cli_stream for claude provider."""
         mock_stream.return_value = iter(
@@ -1198,7 +1200,9 @@ class TestPromptLlmStream:
         mock_stream.assert_called_once()
         assert len(events) == 1
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.ask_claude_code_cli_stream")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.ask_claude_code_cli_stream"
+    )
     def test_prompt_llm_stream_passes_all_params(self, mock_stream: MagicMock) -> None:
         """prompt_llm_stream passes all parameters to the claude provider."""
         mock_stream.return_value = iter([{"type": "done", "usage": {}}])
