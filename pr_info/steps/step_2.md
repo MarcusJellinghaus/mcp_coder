@@ -63,6 +63,13 @@ class TestRunAgentStream:
     @pytest.mark.asyncio
     async def test_error_propagation(self) -> None:
         """Errors from astream_events propagate as error event + exception."""
+
+    @pytest.mark.asyncio
+    async def test_cancel_event_stops_stream(self) -> None:
+        """Setting cancel_event stops the async generator."""
+        # Mock agent with astream_events yielding many events
+        # Set cancel_event after first event
+        # Verify generator stops early
 ```
 
 **Note:** These tests mock `MultiServerMCPClient`, `create_react_agent`, and `astream_events`.
@@ -169,6 +176,12 @@ we must reconstruct the conversation for history storage:
 
 This keeps history storage self-contained within `run_agent_stream()` without extra API calls.
 
+**Reconstruction detail:**
+- Buffer `on_tool_start` events in a dict keyed by `run_id` (stores `name` and `args`).
+- On `on_tool_end`, extract `tool_call_id` from `ToolMessage.tool_call_id`. Look up the buffered start by matching `run_id`. Construct a complete tool_call entry: `{"name": name, "args": args, "id": tool_call_id}`.
+- After streaming completes, build `AIMessage(content=accumulated_text, tool_calls=tool_call_list)` and one `ToolMessage(content=output, tool_call_id=id)` per tool result.
+- If multiple agent turns occur (tool call -> result -> more text -> more tool calls), accumulate all turns into the message list in order.
+
 ## DATA
 
 - **Input**: Same as `run_agent()` plus `session_id: str` and `cancel_event: threading.Event | None`
@@ -181,7 +194,7 @@ This keeps history storage self-contained within `run_agent_stream()` without ex
 - Import `StreamEvent` from `mcp_coder.llm.types`
 - Import `json` (already imported)
 - Import `store_langchain_history` from `mcp_coder.llm.storage.session_storage` (deferred inside function)
-- `cancel_event` parameter allows Step 4's bridge to signal cancellation
+- `cancel_event` parameter allows Step 3's bridge to signal cancellation
 
 ## Verification
 

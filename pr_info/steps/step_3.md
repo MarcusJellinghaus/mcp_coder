@@ -1,8 +1,8 @@
-# Step 3: Replace Agent Fallback with Thread+Queue Bridge
+# Step 3: Replace Agent Fallback with Thread+Queue Bridge (with Timeout and Cancellation)
 
 **Commit message:** `feat(langchain): replace agent streaming fallback with real streaming`
 
-**References:** [summary.md](summary.md) — "Async-to-Sync Bridge" section
+**References:** [summary.md](summary.md) — "Async-to-Sync Bridge" and "Timeout Strategy" sections
 
 ## LLM Prompt
 
@@ -49,6 +49,37 @@ class TestAskLangchainStreamAgentReal:
         # Verify exception propagates through the bridge
 ```
 
+**Add** `TestAskLangchainStreamAgentTimeouts` class:
+
+```python
+class TestAskLangchainStreamAgentTimeouts:
+    """Timeout and cancellation behavior for agent streaming."""
+
+    def test_no_progress_timeout_raises(self) -> None:
+        """If agent produces no events for NO_PROGRESS_TIMEOUT, TimeoutError raised."""
+        # Mock run_agent_stream as async generator that blocks forever (asyncio.sleep)
+        # Use short timeout override for test speed (e.g., 0.5s)
+        # Verify TimeoutError raised
+
+    def test_overall_timeout_raises(self) -> None:
+        """If total time exceeds OVERALL_TIMEOUT, TimeoutError raised."""
+        # Mock run_agent_stream to yield events slowly (one every 0.3s)
+        # Use short overall timeout (e.g., 0.5s)
+        # Verify TimeoutError raised after overall cap
+
+    def test_generator_exit_sets_cancel(self) -> None:
+        """When consumer stops iterating, cancel_event is set."""
+        # Mock run_agent_stream to yield many events
+        # Consume only first event, then break (triggers GeneratorExit)
+        # Verify cancel_event was set (check thread behavior)
+```
+
+**Testing notes for timeouts:** For fast tests, patch the timeout constants to small values:
+```python
+with patch(f"{_MOD_LC}._AGENT_NO_PROGRESS_TIMEOUT", 0.5):
+    ...
+```
+
 **Key mocking approach:** Mock `run_agent_stream` as an async generator that yields
 predetermined `StreamEvent` dicts. This tests the bridge without needing real LangChain.
 
@@ -61,6 +92,13 @@ Modify `ask_langchain_stream()` in `__init__.py`:
 import queue
 import threading
 import time
+```
+
+**Add module-level constants:**
+```python
+# Agent streaming timeout constants (seconds)
+_AGENT_NO_PROGRESS_TIMEOUT = 600   # 10 minutes
+_AGENT_OVERALL_TIMEOUT = 3600      # 60 minutes
 ```
 
 **Replace the agent branch** (currently lines calling `ask_langchain()`) with:
@@ -110,7 +148,7 @@ def _ask_agent_stream(...) -> Iterator[StreamEvent]:
     history = load_langchain_history(session_id)
 
     q: queue.Queue[StreamEvent | None] = queue.Queue()
-    error_holder: list[BaseException] = []
+    error_holder: list[Exception] = []
     cancel = threading.Event()
 
     async def _run() -> None:
@@ -135,11 +173,24 @@ def _ask_agent_stream(...) -> Iterator[StreamEvent]:
     thread.start()
 
     cancelled = False
+    start = time.monotonic()
+
     try:
         while True:
-            event = q.get()  # timeout added in Step 4
+            try:
+                event = q.get(timeout=_AGENT_NO_PROGRESS_TIMEOUT)
+            except queue.Empty:
+                cancel.set()
+                raise TimeoutError(
+                    f"Agent produced no output for {_AGENT_NO_PROGRESS_TIMEOUT}s"
+                )
             if event is None:
                 break
+            if time.monotonic() - start > _AGENT_OVERALL_TIMEOUT:
+                cancel.set()
+                raise TimeoutError(
+                    f"Agent execution exceeded {_AGENT_OVERALL_TIMEOUT}s overall timeout"
+                )
             yield event
     except GeneratorExit:
         cancel.set()
@@ -156,8 +207,11 @@ def _ask_agent_stream(...) -> Iterator[StreamEvent]:
 ## DATA
 
 - `q`: `queue.Queue[StreamEvent | None]` — events from async thread, `None` = sentinel
-- `error_holder`: `list[BaseException]` — captures exception from async thread
+- `error_holder`: `list[Exception]` — captures exception from async thread
 - `cancel`: `threading.Event` — signals cancellation to async generator
+- `_AGENT_NO_PROGRESS_TIMEOUT`: `int = 600` — 10 min no-event timeout
+- `_AGENT_OVERALL_TIMEOUT`: `int = 3600` — 60 min hard cap
+- Both timeout constants raise `TimeoutError` with descriptive message
 
 ## HOW — Integration
 

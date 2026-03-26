@@ -41,8 +41,8 @@ ask_langchain_stream()  [sync generator]
 
 ### Timeout Strategy (2 lines, not 2 classes)
 
-- **No-progress**: `q.get(timeout=600)` — raises `queue.Empty` after 10 min of silence
-- **Overall cap**: `time.monotonic() - start > 3600` — checked each iteration
+- **No-progress**: `q.get(timeout=600)` -- raises `queue.Empty` after 10 min of silence
+- **Overall cap**: `time.monotonic() - start > 3600` -- checked each iteration
 
 ### ResponseAssembler Extension (in `types.py`)
 
@@ -77,5 +77,4 @@ Simpler than a shared helper; trivial to extract later if they diverge.
 |------|-------------|--------|
 | 1 | Extend `ResponseAssembler` with tool_trace (TDD) | `feat(types): add tool_trace accumulation to ResponseAssembler` |
 | 2 | Add `run_agent_stream()` async generator in agent.py (TDD) | `feat(agent): add run_agent_stream async generator with astream_events` |
-| 3 | Replace agent fallback with thread+queue bridge in `__init__.py` (TDD) | `feat(langchain): replace agent streaming fallback with real streaming` |
-| 4 | Add timeout and cancellation handling (TDD) | `feat(langchain): add timeout and cancellation to agent streaming` |
+| 3 | Replace agent fallback with thread+queue bridge with timeout and cancellation in `__init__.py` (TDD) | `feat(langchain): replace agent streaming fallback with real streaming` |
