@@ -10,21 +10,13 @@ Quick reference for refactoring rules and tools. For detailed process, examples,
 - **Small steps.** One module per PR. Keep diffs under 25,000 tokens.
 - **Tests mirror source structure.**
 
-## MCP Refactoring Tools
+## Process
 
-| Tool | Purpose |
-|------|---------|
-| `mcp__tools-py__list_symbols` | List top-level symbols in a file |
-| `mcp__tools-py__find_references` | Find all references project-wide |
-| `mcp__tools-py__move_symbol` | Move symbol + update all imports |
-| `mcp__tools-py__rename_symbol` | Rename symbol + update all references |
-| `mcp__tools-py__move_module` | Move entire module + update references |
+1. Plan target structure
+2. Move source code — `move_symbol` / `move_module`
+3. Move tests to mirror new structure
+4. Review diff — `mcp-coder git-tool compact-diff` (remaining diff should be imports only)
+5. Run all checks — pytest, pylint, mypy, ruff
+6. Check file sizes — `mcp-coder check file-size --max-lines 750`
 
-## Verification Tools
-
-| Tool | Purpose |
-|------|---------|
-| `mcp-coder git-tool compact-diff` | Suppress moved-code blocks in diff — remaining diff should be imports only |
-| `mcp-coder check file-size --max-lines 750` | Verify all files are under the size threshold |
-
-See [Safe Refactoring Guide — Verification](../../docs/processes-prompts/refactoring-guide.md#step-4-verify) for the full checklist.
+See [Safe Refactoring Guide](../../docs/processes-prompts/refactoring-guide.md) for the full checklist.
