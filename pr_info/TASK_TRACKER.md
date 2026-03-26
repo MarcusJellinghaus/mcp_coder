@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Update Help Categories
 > [Detail](./steps/step_1.md) — Update `COMMAND_CATEGORIES` in `help.py` to reflect new command structure.
-- [ ] Implementation: update `help.py` categories and `test_help.py` expectations
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: update `help.py` categories and `test_help.py` expectations
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Flatten Coordinator Command
 > [Detail](./steps/step_2.md) — Convert `coordinator` from subcommand group to direct command with `--dry-run` flag.
