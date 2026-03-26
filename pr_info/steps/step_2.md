@@ -12,8 +12,8 @@ Revert all `logger.log(NOTICE, ...)` calls to `logger.info(...)` in CLI command 
 - `src/mcp_coder/cli/commands/define_labels.py` — 4 calls
 - `src/mcp_coder/cli/commands/prompt.py` — 3 calls
 - `src/mcp_coder/cli/commands/set_status.py` — 1 call
-- `src/mcp_coder/cli/commands/coordinator/commands.py` — 2 calls
-- `src/mcp_coder/cli/commands/coordinator/core.py` — 4 calls
+- `src/mcp_coder/cli/commands/coordinator/commands.py` — 6 calls
+- `src/mcp_coder/cli/commands/coordinator/core.py` — 1 call
 - `src/mcp_coder/cli/commands/coordinator/issue_stats.py` — 1 call
 
 ## WHAT
@@ -92,8 +92,8 @@ Files to edit:
 - src/mcp_coder/cli/commands/define_labels.py (4 calls)
 - src/mcp_coder/cli/commands/prompt.py (3 calls)
 - src/mcp_coder/cli/commands/set_status.py (1 call)
-- src/mcp_coder/cli/commands/coordinator/commands.py (2 calls)
-- src/mcp_coder/cli/commands/coordinator/core.py (4 calls)
+- src/mcp_coder/cli/commands/coordinator/commands.py (6 calls)
+- src/mcp_coder/cli/commands/coordinator/core.py (1 call)
 - src/mcp_coder/cli/commands/coordinator/issue_stats.py (1 call)
 
 After all edits, run all three code quality checks (pylint, mypy, pytest). Fix any issues.

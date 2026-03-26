@@ -4,34 +4,29 @@
 
 ## Goal
 
-Revert all `logger.log(NOTICE, ...)` calls to `logger.info(...)` in workflow files, remove NOTICE imports from those files, and remove unused NOTICE imports from 4 additional files.
+Revert all `logger.log(NOTICE, ...)` calls to `logger.info(...)` in workflow and utility files, and remove NOTICE imports from those files.
 
-## WHERE (12 files)
+## WHERE (11 files)
 
-### Workflow files with log call reverts (8 files):
+### Workflow and utility files with log call reverts (11 files):
 
-- `src/mcp_coder/workflows/create_plan.py` — 18 calls
-- `src/mcp_coder/workflows/create_pr/core.py` — 8 calls
-- `src/mcp_coder/workflows/implement/core.py` — 18 calls
+- `src/mcp_coder/workflows/create_plan.py` — 28 calls
+- `src/mcp_coder/workflows/create_pr/core.py` — 11 calls
+- `src/mcp_coder/workflows/implement/core.py` — 22 calls
 - `src/mcp_coder/workflows/implement/prerequisites.py` — 1 call
-- `src/mcp_coder/workflows/implement/task_processing.py` — 4 calls
+- `src/mcp_coder/workflows/implement/task_processing.py` — 6 calls
 - `src/mcp_coder/workflows/vscodeclaude/cleanup.py` — 2 calls
 - `src/mcp_coder/workflows/vscodeclaude/workspace.py` — 3 calls
-
-### Files with unused NOTICE import only (4 files):
-
-- `src/mcp_coder/utils/github_operations/issues/branch_manager.py`
-- `src/mcp_coder/utils/github_operations/issues/manager.py`
-- `src/mcp_coder/workflows/vscodeclaude/session_launch.py`
-- `src/mcp_coder/workflows/vscodeclaude/session_restart.py`
+- `src/mcp_coder/workflows/vscodeclaude/session_launch.py` — 1 call
+- `src/mcp_coder/workflows/vscodeclaude/session_restart.py` — 1 call
+- `src/mcp_coder/utils/github_operations/issues/branch_manager.py` — 2 calls
+- `src/mcp_coder/utils/github_operations/issues/manager.py` — 1 call
 
 ## WHAT
 
 Same patterns as Step 2:
 1. Replace every `logger.log(NOTICE, ...)` with `logger.info(...)`
 2. Remove `NOTICE` from import lines
-3. For the 4 unused-import-only files, just remove `NOTICE` from the import line
-
 ## HOW
 
 Identical to Step 2 patterns:
@@ -62,7 +57,7 @@ No data structure changes. Only the log level of emitted messages changes (NOTIC
 
 ## Verification
 
-After all 12 files are edited, run:
+After all 11 files are edited, run:
 1. `mcp__tools-py__run_pylint_check`
 2. `mcp__tools-py__run_mypy_check`
 3. `mcp__tools-py__run_pytest_check` with `extra_args: ["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"]`
@@ -74,35 +69,28 @@ All checks must pass. Then commit.
 ```
 Read pr_info/steps/summary.md and pr_info/steps/step_3.md for full context.
 
-Implement Step 3: Revert workflow files from NOTICE logging to INFO logging, and remove unused NOTICE imports.
+Implement Step 3: Revert workflow and utility files from NOTICE logging to INFO logging.
 
-For each of the 8 workflow files listed in step_3.md:
+For each of the 11 files listed in step_3.md:
 1. Read the file
 2. Replace all logger.log(NOTICE, ...) calls with logger.info(...)
-3. Remove the NOTICE import
+3. Remove the NOTICE import (remove from import line, or remove entire line if sole import)
 4. Save the file
 
-For each of the 4 unused-import-only files:
-1. Read the file
-2. Remove NOTICE from the import line (or remove entire line if sole import)
-3. Save the file
-
-Files with log call reverts:
-- src/mcp_coder/workflows/create_plan.py (18 calls)
-- src/mcp_coder/workflows/create_pr/core.py (8 calls)
-- src/mcp_coder/workflows/implement/core.py (18 calls)
+Files to edit:
+- src/mcp_coder/workflows/create_plan.py (28 calls)
+- src/mcp_coder/workflows/create_pr/core.py (11 calls)
+- src/mcp_coder/workflows/implement/core.py (22 calls)
 - src/mcp_coder/workflows/implement/prerequisites.py (1 call)
-- src/mcp_coder/workflows/implement/task_processing.py (4 calls)
+- src/mcp_coder/workflows/implement/task_processing.py (6 calls)
 - src/mcp_coder/workflows/vscodeclaude/cleanup.py (2 calls)
 - src/mcp_coder/workflows/vscodeclaude/workspace.py (3 calls)
-
-Files with unused import removal only:
-- src/mcp_coder/utils/github_operations/issues/branch_manager.py
-- src/mcp_coder/utils/github_operations/issues/manager.py
-- src/mcp_coder/workflows/vscodeclaude/session_launch.py
-- src/mcp_coder/workflows/vscodeclaude/session_restart.py
+- src/mcp_coder/workflows/vscodeclaude/session_launch.py (1 call)
+- src/mcp_coder/workflows/vscodeclaude/session_restart.py (1 call)
+- src/mcp_coder/utils/github_operations/issues/branch_manager.py (2 calls)
+- src/mcp_coder/utils/github_operations/issues/manager.py (1 call)
 
 After all edits, run all three code quality checks (pylint, mypy, pytest). Fix any issues.
 
-Commit with message: "Revert workflow files from NOTICE logging to INFO, remove unused NOTICE imports"
+Commit with message: "Revert workflow and utility files from NOTICE logging to INFO"
 ```
