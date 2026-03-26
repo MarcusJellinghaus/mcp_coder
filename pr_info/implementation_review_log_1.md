@@ -28,3 +28,22 @@
 - Added tests: `test_format_status_labels_empty_workflow_labels`, `test_execute_set_status_no_args_malformed_config_fallback`
 
 **Status:** Committed
+
+## Round 2 — 2026-03-26
+
+**Findings:**
+- (Critical) Double `load_labels_config` in normal path — `get_status_labels_from_config` re-loads the config file that's already loaded
+- (Accept) Trailing `\n` inconsistency in `format_status_labels` empty case vs normal case
+- (Accept) `get_status_labels_from_config` now fully redundant after fixing double load
+
+**Decisions:**
+- Accept #1a: Real inefficiency from round 1 fix. Inline extraction from already-loaded config.
+- Accept #2a: Trivial consistency fix.
+- Accept #2b: Dead code after #1a fix. Remove function and its direct test.
+
+**Changes:**
+- Replaced `get_status_labels_from_config(config_path)` with inline set comprehension from loaded config
+- Removed dead `get_status_labels_from_config` function and its test
+- Normalized trailing newline in `format_status_labels` empty case
+
+**Status:** Committed

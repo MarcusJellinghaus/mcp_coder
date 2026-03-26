@@ -17,7 +17,6 @@ from mcp_coder.cli.commands.set_status import (
     compute_new_labels,
     execute_set_status,
     format_status_labels,
-    get_status_labels_from_config,
     validate_status_label,
 )
 
@@ -104,21 +103,6 @@ def mock_issue_manager() -> MagicMock:
 class TestSetStatusHelpers:
     """Test helper functions."""
 
-    def test_get_status_labels_from_config(self, labels_config_path: Path) -> None:
-        """Test loading status labels from config."""
-        # Load actual labels from config
-        labels = get_status_labels_from_config(labels_config_path)
-
-        # Verify we get a set of label names
-        assert isinstance(labels, set)
-        assert len(labels) == 15  # 15 workflow labels
-
-        # Verify all labels start with 'status-'
-        for label in labels:
-            assert label.startswith(
-                "status-"
-            ), f"Label '{label}' should start with 'status-'"
-
     def test_format_status_labels_output(
         self, full_labels_config: Dict[str, Any]
     ) -> None:
@@ -182,7 +166,7 @@ class TestSetStatusHelpers:
         """Test format_status_labels returns fallback for empty workflow_labels."""
         empty_config: Dict[str, Any] = {"workflow_labels": []}
         result = format_status_labels(empty_config)
-        assert result == "No labels configured.\n"
+        assert result == "No labels configured."
 
     def test_validate_status_label_valid(
         self, full_labels_config: Dict[str, Any]

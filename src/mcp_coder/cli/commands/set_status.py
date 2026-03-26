@@ -7,7 +7,6 @@ label on GitHub issues through the workflow system.
 import argparse
 import logging
 import sys
-from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
@@ -39,7 +38,7 @@ def format_status_labels(labels_config: Dict[str, Any]) -> str:
     """
     labels = labels_config["workflow_labels"]
     if not labels:
-        return "No labels configured.\n"
+        return "No labels configured."
     max_width = max(len(label["name"]) for label in labels) + 2
     lines = ["Available status labels:"]
     for label in labels:
@@ -65,21 +64,6 @@ def build_set_status_epilog() -> str:
         # Log at debug level to aid troubleshooting (Decision #9)
         logger.debug(f"Failed to build set-status epilog: {e}")
         return "Run in a project directory to see available status labels."
-
-
-def get_status_labels_from_config(config_path: Path | Traversable) -> set[str]:
-    """Load status labels from config and return set of label names.
-
-    Args:
-        config_path: Path or Traversable resource pointing to labels config file
-
-    Returns:
-        Set of label names (e.g., {"status-01:created", "status-02:awaiting-planning", ...})
-    """
-    labels_config = load_labels_config(config_path)
-
-    # Extract workflow label names
-    return {label["name"] for label in labels_config["workflow_labels"]}
 
 
 def validate_status_label(
@@ -260,7 +244,7 @@ def execute_set_status(args: argparse.Namespace) -> int:
         # Step 2: Load and validate label
         config_path = get_labels_config_path(project_dir)
         labels_config = load_labels_config(config_path)
-        status_labels = get_status_labels_from_config(config_path)
+        status_labels = {lbl["name"] for lbl in labels_config["workflow_labels"]}
         is_valid, error_msg = validate_status_label(args.status_label, labels_config)
         if not is_valid:
             print(f"Error: {error_msg}", file=sys.stderr)
