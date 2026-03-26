@@ -486,11 +486,11 @@ Please implement this task step by step."""
         all_changes = status["staged"] + status["modified"] + status["untracked"]
 
         if not all_changes:
-            logger.warning(f"No files were changed for task: {next_task}")
-            logger.warning(
+            logger.info(f"No files were changed for task: {next_task}")
+            logger.info(
                 "This might indicate the task is already complete or the LLM didn't make changes"
             )
-            logger.warning("Skipping commit/push for this task")
+            logger.info("Skipping commit/push for this task")
             return True, "completed"  # Consider it successful but skip commit
     except (
         Exception
