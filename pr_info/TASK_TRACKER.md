@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 > [Detail](./steps/step_1.md) — Extract `format_status_labels()`, refactor `build_set_status_epilog()` and `validate_status_label()` to use it. No behavior change.
 
-- [ ] Implementation: tests (`test_format_status_labels_output`, `test_format_status_labels_dynamic_width`, update `validate_status_label` tests) + production code (`format_status_labels`, refactor callers)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests (`test_format_status_labels_output`, `test_format_status_labels_dynamic_width`, update `validate_status_label` tests) + production code (`format_status_labels`, refactor callers)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Make `status_label` optional and add no-args label listing
 

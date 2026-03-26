@@ -16,6 +16,7 @@ import pytest
 from mcp_coder.cli.commands.set_status import (
     compute_new_labels,
     execute_set_status,
+    format_status_labels,
     get_status_labels_from_config,
     validate_status_label,
 )
@@ -118,28 +119,79 @@ class TestSetStatusHelpers:
                 "status-"
             ), f"Label '{label}' should start with 'status-'"
 
+    def test_format_status_labels_output(
+        self, full_labels_config: Dict[str, Any]
+    ) -> None:
+        """Test format_status_labels contains header, all labels, and descriptions."""
+        result = format_status_labels(full_labels_config)
+
+        # Verify header
+        assert result.startswith("Available status labels:")
+
+        # Verify all label names and descriptions are present
+        for label in full_labels_config["workflow_labels"]:
+            assert label["name"] in result, f"Label '{label['name']}' missing"
+            assert (
+                label["description"] in result
+            ), f"Description for '{label['name']}' missing"
+
+        # Verify alignment: all description starts should be at the same column
+        lines = result.split("\n")
+        label_lines = [line for line in lines if line.startswith("  ")]
+        assert len(label_lines) == len(full_labels_config["workflow_labels"])
+
+    def test_format_status_labels_dynamic_width(
+        self,
+    ) -> None:
+        """Test column width adapts to label name length."""
+        short_config = {
+            "workflow_labels": [
+                {"name": "a", "description": "short"},
+                {"name": "bb", "description": "medium"},
+            ]
+        }
+        long_config = {
+            "workflow_labels": [
+                {"name": "very-long-label-name", "description": "desc1"},
+                {"name": "x", "description": "desc2"},
+            ]
+        }
+
+        short_result = format_status_labels(short_config)
+        long_result = format_status_labels(long_config)
+
+        # In short_config, max name length is 2, so width = 4
+        # "bb" line should have the name padded to width 4
+        short_lines = short_result.split("\n")
+        # Find line with "a" - it should be padded to same width as "bb"
+        a_line = [l for l in short_lines if "short" in l][0]
+        bb_line = [l for l in short_lines if "medium" in l][0]
+        # Both descriptions should start at the same column
+        assert a_line.index("short") == bb_line.index("medium")
+
+        # In long_config, max name length is 20, so width = 22
+        long_lines = long_result.split("\n")
+        desc1_line = [l for l in long_lines if "desc1" in l][0]
+        desc2_line = [l for l in long_lines if "desc2" in l][0]
+        assert desc1_line.index("desc1") == desc2_line.index("desc2")
+
+        # The description column should be further right in long_config
+        assert desc1_line.index("desc1") > a_line.index("short")
+
     def test_validate_status_label_valid(
         self, full_labels_config: Dict[str, Any]
     ) -> None:
         """Test validation accepts valid status labels."""
-        all_status_labels = {
-            label["name"] for label in full_labels_config["workflow_labels"]
-        }
-
         # Test each valid label
         for label_name in VALID_STATUS_LABELS:
-            is_valid, error = validate_status_label(label_name, all_status_labels)
+            is_valid, error = validate_status_label(label_name, full_labels_config)
             assert is_valid is True, f"Label '{label_name}' should be valid"
             assert error is None
 
     def test_validate_status_label_invalid(
         self, full_labels_config: Dict[str, Any]
     ) -> None:
-        """Test validation rejects invalid labels."""
-        all_status_labels = {
-            label["name"] for label in full_labels_config["workflow_labels"]
-        }
-
+        """Test validation rejects invalid labels with descriptive error."""
         # Test invalid labels
         invalid_labels = [
             "invalid-label",
@@ -150,9 +202,12 @@ class TestSetStatusHelpers:
         ]
 
         for label_name in invalid_labels:
-            is_valid, error = validate_status_label(label_name, all_status_labels)
+            is_valid, error = validate_status_label(label_name, full_labels_config)
             assert is_valid is False, f"Label '{label_name}' should be invalid"
             assert error is not None
+            # Error should contain label descriptions (from format_status_labels)
+            first_label = full_labels_config["workflow_labels"][0]
+            assert first_label["description"] in error
 
 
 class TestComputeNewLabels:

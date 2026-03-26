@@ -9,7 +9,7 @@ import logging
 import sys
 from importlib.resources.abc import Traversable
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from ...constants import DEFAULT_IGNORED_BUILD_ARTIFACTS
 from ...utils.git_operations.branch_queries import (
@@ -28,26 +28,35 @@ from ...workflows.utils import resolve_project_dir
 logger = logging.getLogger(__name__)
 
 
+def format_status_labels(labels_config: Dict[str, Any]) -> str:
+    """Format available status labels as an aligned table.
+
+    Args:
+        labels_config: Loaded labels config dict with 'workflow_labels' key.
+
+    Returns:
+        Formatted string with label names and descriptions.
+    """
+    labels = labels_config["workflow_labels"]
+    max_width = max(len(label["name"]) for label in labels) + 2
+    lines = ["Available status labels:"]
+    for label in labels:
+        lines.append(f"  {label['name']:<{max_width}} {label['description']}")
+    return "\n".join(lines)
+
+
 def build_set_status_epilog() -> str:
     """Build epilog text with available labels from config.
 
     Returns:
-        Formatted string with available status labels and examples,
+        Formatted string with available status labels,
         or fallback message if config cannot be loaded.
     """
     try:
         # Use package bundled config (always available)
         config_path = get_labels_config_path(None)
         labels_config = load_labels_config(config_path)
-
-        lines = ["Available status labels:"]
-        for label in labels_config["workflow_labels"]:
-            lines.append(f"  {label['name']:30} {label['description']}")
-        lines.append("")
-        lines.append("Examples:")
-        lines.append("  mcp-coder gh-tool set-status status-05:plan-ready")
-        lines.append("  mcp-coder gh-tool set-status status-08:ready-pr --issue 123")
-        return "\n".join(lines)
+        return format_status_labels(labels_config)
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
@@ -72,27 +81,26 @@ def get_status_labels_from_config(config_path: Path | Traversable) -> set[str]:
 
 
 def validate_status_label(
-    label: str, valid_labels: set[str]
+    label: str, labels_config: Dict[str, Any]
 ) -> Tuple[bool, Optional[str]]:
     """Check if label is a valid status label.
 
     Args:
         label: Label name to validate
-        valid_labels: Set of valid label names from config
+        labels_config: Loaded labels config dict with 'workflow_labels' key.
 
     Returns:
         Tuple of (is_valid, error_message)
         - (True, None) if valid
         - (False, error_message) if invalid
     """
+    valid_labels = {lbl["name"] for lbl in labels_config["workflow_labels"]}
     if label in valid_labels:
         return True, None
 
-    # Build error message with available labels
-    sorted_labels = sorted(valid_labels)
-    formatted_labels = "\n".join(f"  - {lbl}" for lbl in sorted_labels)
+    # Build error message with available labels table
     error_msg = (
-        f"'{label}' is not a valid status label.\nAvailable labels:\n{formatted_labels}"
+        f"'{label}' is not a valid status label.\n{format_status_labels(labels_config)}"
     )
     return False, error_msg
 
@@ -232,8 +240,9 @@ def execute_set_status(args: argparse.Namespace) -> int:
 
         # Step 2: Load and validate label
         config_path = get_labels_config_path(project_dir)
-        status_labels = get_status_labels_from_config(config_path)
-        is_valid, error_msg = validate_status_label(args.status_label, status_labels)
+        labels_config = load_labels_config(config_path)
+        status_labels = {label["name"] for label in labels_config["workflow_labels"]}
+        is_valid, error_msg = validate_status_label(args.status_label, labels_config)
         if not is_valid:
             print(f"Error: {error_msg}", file=sys.stderr)
             return 1
