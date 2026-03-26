@@ -1,0 +1,30 @@
+# Plan Review Log — Run 1
+
+**Issue:** #597 — Fix session log files stored in target project instead of mcp-coder directory
+**Date:** 2026-03-26
+**Branch:** 597-fix-session-log-files-stored-in-target-project-instead-of-mcp-coder-directory
+
+## Round 1 — 2026-03-26
+**Findings**:
+- [CRITICAL] `generate_pr_summary()` in `create_pr/core.py` calls `prompt_llm()` without `env_vars` — won't benefit from fix
+- [IMPROVEMENT] Path construction uses string concatenation instead of `pathlib`
+- [IMPROVEMENT] Test assertion guidance should explicitly cover `env_vars` dicts without `MCP_CODER_PROJECT_DIR`
+- [OK] `MCP_CODER_PROJECT_DIR` reliably present in `env_vars` for most callers
+- [OK] `ask_claude_code_cli()` already accepts `logs_dir` parameter
+- [OK] Step scoping is appropriate (one step, one commit)
+- [QUESTION] Langchain provider doesn't get `logs_dir` — skipped (YAGNI, no NDJSON logging)
+
+**Decisions**:
+- `generate_pr_summary()` gap: **ask user** → user chose option B (fix in this step)
+- Path concatenation: **accept** — use `Path(...) / "logs"` instead
+- Test assertion clarity: **accept** — add explicit note
+- Langchain question: **skip** — YAGNI
+
+**User decisions**:
+- Q: `generate_pr_summary()` doesn't pass `env_vars`. (A) Document as gap, (B) Fix in this step, (C) Investigate first? → **User chose B**: fix it in this step
+
+**Changes**:
+- `summary.md`: Added `create_pr/core.py` to modified files, updated "not modified" count
+- `step_1.md`: Added `create_pr/core.py` fix, changed path construction to `pathlib`, clarified test assertions, updated checklist
+
+**Status**: Changes made, pending commit

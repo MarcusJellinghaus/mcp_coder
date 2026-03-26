@@ -38,10 +38,11 @@ AFTER:
 |---|---|
 | `src/mcp_coder/llm/interface.py` | Extract `MCP_CODER_PROJECT_DIR` from `env_vars`, pass as `logs_dir` |
 | `tests/llm/test_interface.py` | Add new tests for `logs_dir` derivation; update existing assertions |
+| `src/mcp_coder/workflows/create_pr/core.py` | Import `prepare_llm_environment`, call it to get `env_vars`, pass to `prompt_llm()` |
 
 ## Files NOT Modified
 - `src/mcp_coder/llm/providers/claude/claude_code_cli.py` — already supports `logs_dir` parameter
-- All 7 caller files — no signature changes needed
+- All 6 remaining caller files — no signature changes needed
 - No new files created
 
 ## Requirements Preserved

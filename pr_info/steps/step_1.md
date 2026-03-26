@@ -6,6 +6,7 @@
 ## WHERE
 - `tests/llm/test_interface.py` — new tests + update existing assertions
 - `src/mcp_coder/llm/interface.py` — production fix (~4 lines)
+- `src/mcp_coder/workflows/create_pr/core.py` — pass `env_vars` to `prompt_llm()`
 
 ## WHAT
 
@@ -31,6 +32,17 @@ All existing `mock_ask_claude_code_cli.assert_called_once_with(...)` calls must 
 For tests that pass `env_vars=None` or no `env_vars`: add `logs_dir=None`
 For tests that pass `env_vars` with `MCP_CODER_PROJECT_DIR`: add `logs_dir="{project_dir}/logs"`
 
+Tests that pass `env_vars` dicts without `MCP_CODER_PROJECT_DIR` (e.g., `{"VAR1": "value1"}`) also get `logs_dir=None`.
+
+### Fix `generate_pr_summary()` in `create_pr/core.py`
+
+This caller doesn't pass `env_vars` to `prompt_llm()`, so it wouldn't benefit from the `logs_dir` fix. Add:
+- Import `prepare_llm_environment` from `mcp_coder.llm.env`
+- Before the `prompt_llm()` call (~line 332): `env_vars = prepare_llm_environment(project_dir)`
+- Pass `env_vars=env_vars` to `prompt_llm()`
+
+This follows the same pattern as `implement/core.py`.
+
 ### Production change in `src/mcp_coder/llm/interface.py`
 
 **Function:** `prompt_llm()` — Claude provider branch (around line 108)
@@ -45,8 +57,10 @@ In `prompt_llm()`, before the `ask_claude_code_cli()` call in the Claude provide
 # Derive logs_dir from env_vars to store logs in mcp-coder's project dir
 logs_dir = None
 if env_vars and "MCP_CODER_PROJECT_DIR" in env_vars:
-    logs_dir = env_vars["MCP_CODER_PROJECT_DIR"] + "/logs"
+    logs_dir = str(Path(env_vars["MCP_CODER_PROJECT_DIR"]) / "logs")
 ```
+
+Note: `Path` from `pathlib` — check if already imported in `interface.py`; add if needed.
 
 Then pass it:
 ```python
@@ -66,7 +80,7 @@ response = ask_claude_code_cli(
 ```
 1. logs_dir = None
 2. if env_vars is not None and "MCP_CODER_PROJECT_DIR" in env_vars:
-3.     logs_dir = env_vars["MCP_CODER_PROJECT_DIR"] + "/logs"
+3.     logs_dir = str(Path(env_vars["MCP_CODER_PROJECT_DIR"]) / "logs")
 4. pass logs_dir=logs_dir to ask_claude_code_cli()
 ```
 
@@ -79,6 +93,7 @@ response = ask_claude_code_cli(
 - [ ] Write 3 new tests in `TestPromptLLMLogsDirDerivation`
 - [ ] Update all existing `assert_called_once_with` assertions to include `logs_dir=...`
 - [ ] Add 4 lines of production code in `interface.py`
+- [ ] Update `create_pr/core.py` to import `prepare_llm_environment` and pass `env_vars` to `prompt_llm()`
 - [ ] Run pylint — must pass
 - [ ] Run mypy — must pass
 - [ ] Run pytest (unit tests) — must pass
