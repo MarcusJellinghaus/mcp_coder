@@ -50,7 +50,12 @@ class StreamResult:
         return self
 
     def __next__(self) -> str:
-        """Return the next line from the stream."""
+        """Return the next line from the stream.
+
+        Raises:
+            StopIteration: When the underlying stream is exhausted and the
+                final ``CommandResult`` has been captured.
+        """
         try:
             return next(self._gen)
         except StopIteration as exc:
