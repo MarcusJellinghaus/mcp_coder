@@ -249,7 +249,7 @@ class TestMlflowConversationToolTrace:
         assert artifact_calls[0] == call("test", "step_0_prompt.txt")
         # Verify tool_trace.json content
         trace_content = artifact_calls[1][0][0]
-        assert artifact_calls[1][0][1] == "tool_trace.json"
+        assert artifact_calls[1][0][1] == "step_0_tool_trace.json"
         assert json.loads(trace_content) == tool_trace
 
     @patch("mcp_coder.llm.mlflow_conversation_logger.get_mlflow_logger")

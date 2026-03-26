@@ -365,6 +365,59 @@ class MLflowLogger:
         ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
             logger.warning(f"Failed to log artifact '{filename}' to MLflow: {e}")
 
+    def _log_step_params_and_artifacts(
+        self,
+        step: int,
+        prompt: str,
+        response_data: Dict[str, Any],
+        metadata: Dict[str, Any],
+    ) -> None:
+        """Log step params and artifacts shared by conversation logging methods.
+
+        Logs stable params at step 0, plus step-prefixed all_params, prompt,
+        and conversation artifacts. Does NOT advance the step counter.
+
+        Args:
+            step: Current step index
+            prompt: The user prompt
+            response_data: LLM response data
+            metadata: Additional metadata
+        """
+        # Stable params only at step 0
+        if step == 0:
+            stable_params = {
+                "model": metadata.get("model", "unknown"),
+                "provider": response_data.get("provider", "unknown"),
+                "working_directory": metadata.get("working_directory"),
+            }
+            self.log_params(stable_params)
+
+        # All param values as step artifact
+        all_params = {
+            "model": metadata.get("model", "unknown"),
+            "provider": response_data.get("provider", "unknown"),
+            "working_directory": metadata.get("working_directory"),
+            "branch_name": metadata.get("branch_name"),
+            "step_name": metadata.get("step_name"),
+            "prompt_length": len(prompt),
+        }
+        self.log_artifact(
+            json.dumps(all_params, indent=2, default=str),
+            f"step_{step}_all_params.json",
+        )
+
+        # Step-prefixed artifacts
+        self.log_artifact(prompt, f"step_{step}_prompt.txt")
+        conversation_data = {
+            "prompt": prompt,
+            "response_data": response_data,
+            "metadata": metadata,
+        }
+        self.log_artifact(
+            json.dumps(conversation_data, indent=2, default=str),
+            f"step_{step}_conversation.json",
+        )
+
     def log_conversation(
         self,
         prompt: str,
@@ -385,28 +438,7 @@ class MLflowLogger:
             step = self.current_step()
             session_info = response_data.get("raw_response", {}).get("session_info", {})
 
-            # Stable params only at step 0
-            if step == 0:
-                stable_params = {
-                    "model": metadata.get("model", "unknown"),
-                    "provider": response_data.get("provider", "unknown"),
-                    "working_directory": metadata.get("working_directory"),
-                }
-                self.log_params(stable_params)
-
-            # All param values as step artifact
-            all_params = {
-                "model": metadata.get("model", "unknown"),
-                "provider": response_data.get("provider", "unknown"),
-                "working_directory": metadata.get("working_directory"),
-                "branch_name": metadata.get("branch_name"),
-                "step_name": metadata.get("step_name"),
-                "prompt_length": len(prompt),
-            }
-            self.log_artifact(
-                json.dumps(all_params, indent=2, default=str),
-                f"step_{step}_all_params.json",
-            )
+            self._log_step_params_and_artifacts(step, prompt, response_data, metadata)
 
             # Collect all numeric metrics
             numeric_metrics: Dict[str, float] = {
@@ -439,19 +471,6 @@ class MLflowLogger:
                     logger.debug(f"Failed to calculate performance metrics: {e}")
 
             self.log_metrics(numeric_metrics, step=step)
-
-            # Step-prefixed artifacts
-            self.log_artifact(prompt, f"step_{step}_prompt.txt")
-            conversation_data = {
-                "prompt": prompt,
-                "response_data": response_data,
-                "metadata": metadata,
-            }
-            self.log_artifact(
-                json.dumps(conversation_data, indent=2, default=str),
-                f"step_{step}_conversation.json",
-            )
-
             self._advance_step()
 
         except (
@@ -490,7 +509,8 @@ class MLflowLogger:
                 ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
                     logger.debug(f"Failed to calculate advanced error metrics: {e}")
 
-            self.log_metrics(error_metrics)
+            self.log_metrics(error_metrics, step=self.current_step())
+            self._advance_step()
 
         except (
             Exception
@@ -514,42 +534,7 @@ class MLflowLogger:
             return
 
         step = self.current_step()
-
-        # Stable params only at step 0
-        if step == 0:
-            stable_params = {
-                "model": metadata.get("model", "unknown"),
-                "provider": response_data.get("provider", "unknown"),
-                "working_directory": metadata.get("working_directory"),
-            }
-            self.log_params(stable_params)
-
-        # All param values as step artifact
-        all_params = {
-            "model": metadata.get("model", "unknown"),
-            "provider": response_data.get("provider", "unknown"),
-            "working_directory": metadata.get("working_directory"),
-            "branch_name": metadata.get("branch_name"),
-            "step_name": metadata.get("step_name"),
-            "prompt_length": len(prompt),
-        }
-        self.log_artifact(
-            json.dumps(all_params, indent=2, default=str),
-            f"step_{step}_all_params.json",
-        )
-
-        # Step-prefixed artifacts
-        self.log_artifact(prompt, f"step_{step}_prompt.txt")
-        conversation_data = {
-            "prompt": prompt,
-            "response_data": response_data,
-            "metadata": metadata,
-        }
-        self.log_artifact(
-            json.dumps(conversation_data, indent=2, default=str),
-            f"step_{step}_conversation.json",
-        )
-
+        self._log_step_params_and_artifacts(step, prompt, response_data, metadata)
         self._advance_step()
 
     def end_run(
@@ -576,7 +561,8 @@ class MLflowLogger:
                 self._session_run_map.pop(session_id, None)  # reset LRU order
                 self._session_run_map[session_id] = self.active_run_id
                 if len(self._session_run_map) > self._MAX_SESSION_MAP_SIZE:
-                    self._session_run_map.popitem(last=False)  # evict LRU
+                    _, evicted_run_id = self._session_run_map.popitem(last=False)
+                    self._run_step_count.pop(evicted_run_id, None)  # evict LRU
 
             mlflow.end_run(status=status)
             logger.debug(f"Ended MLflow run: {self.active_run_id}")

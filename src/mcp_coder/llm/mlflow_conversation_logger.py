@@ -71,7 +71,7 @@ def mlflow_conversation(
                 if tool_trace:
                     mlflow_logger.log_artifact(
                         json.dumps(tool_trace, indent=2, default=str),
-                        "tool_trace.json",
+                        f"step_{step}_tool_trace.json",
                     )
                 response_sid = result["response_data"].get("session_id")
                 mlflow_logger.end_run("FINISHED", session_id=response_sid)
