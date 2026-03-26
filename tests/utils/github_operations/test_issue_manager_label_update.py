@@ -565,7 +565,10 @@ class TestIssueManagerLabelUpdate:
         """
         import logging
 
-        caplog.set_level(logging.INFO)
+        caplog.set_level(
+            logging.DEBUG,
+            logger="mcp_coder.utils.github_operations.issues.manager",
+        )
 
         # Configure issue with a DIFFERENT workflow label (planning instead of implementing)
         # This simulates the bug scenario where a different workflow label exists
