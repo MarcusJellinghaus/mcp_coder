@@ -32,7 +32,8 @@ def prompt_llm_stream(
     dicts instead of a single LLMResponseDict.
 
     Does NOT wrap in mlflow_conversation context — the caller should handle
-    mlflow logging after assembling the final response.
+    mlflow logging after assembling the final response (see Step 6 for details
+    on how _execute_prompt_streaming logs via mlflow_conversation after assembly).
 
     Yields:
         StreamEvent dicts from the underlying provider.
@@ -109,7 +110,7 @@ def prompt_llm_stream(question, provider, ...):
         yield from ask_langchain_stream(question, session_id, timeout, mcp_config, execution_dir, env_vars)
     else:
         from .providers.claude.claude_code_cli import ask_claude_code_cli_stream
-        yield from ask_claude_code_cli_stream(question, session_id, timeout, env_vars, execution_dir, mcp_config, branch_name=branch_name)
+        yield from ask_claude_code_cli_stream(question, session_id, timeout, env_vars, cwd=execution_dir, mcp_config=mcp_config, branch_name=branch_name)
 ```
 
 ### print_stream_event:

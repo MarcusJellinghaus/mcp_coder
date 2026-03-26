@@ -51,7 +51,7 @@ def result(self) -> LLMResponseDict:
 ## HOW
 
 - Add to existing `__all__` list: `"StreamEvent"`, `"ResponseAssembler"`
-- No new imports needed beyond what's already in the file
+- Add `from datetime import datetime` import
 - `ResponseAssembler` uses `datetime.now().isoformat()` for timestamp (import `datetime`)
 
 ## ALGORITHM

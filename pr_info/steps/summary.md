@@ -41,10 +41,11 @@ execute_prompt() → prompt_llm_stream() → provider_stream → yields events �
 ### Key Design Decisions
 
 1. **No consumer classes or pub/sub** — a simple `for` loop dispatches events to assembler + printer
-2. **No new files** — all additions go into existing modules
+2. **No new source files** — all source additions go into existing modules (test files may be new)
 3. **`prompt_llm()` unchanged** — workflows (implement, create-pr, create-plan) are unaffected
 4. **Sync only** — no async APIs for LangChain streaming
 5. **Stream events are plain dicts** — no dataclass hierarchy
+6. **Agent mode not streamed** — LangChain agent mode falls back to blocking `ask_langchain()` due to async MCP tool complexity. Text mode streams via `chat_model.stream()`.
 
 ## Files Modified
 
@@ -53,7 +54,7 @@ execute_prompt() → prompt_llm_stream() → provider_stream → yields events �
 | `src/mcp_coder/llm/types.py` | Add `StreamEvent` type alias, `ResponseAssembler` class |
 | `src/mcp_coder/utils/subprocess_runner.py` | Add `stream_subprocess()` generator function |
 | `src/mcp_coder/llm/providers/claude/claude_code_cli.py` | Add `ask_claude_code_cli_stream()` |
-| `src/mcp_coder/llm/providers/langchain/__init__.py` | Add `ask_langchain_stream()`, `_ask_text_stream()`, `_ask_agent_stream()` |
+| `src/mcp_coder/llm/providers/langchain/__init__.py` | Add `ask_langchain_stream()`, `_ask_text_stream()` (agent mode falls back to blocking) |
 | `src/mcp_coder/llm/interface.py` | Add `prompt_llm_stream()` |
 | `src/mcp_coder/llm/formatting/formatters.py` | Add `print_stream_event()`, remove verbosity formatters |
 | `src/mcp_coder/cli/parsers.py` | Update `--output-format` choices, remove `--verbosity` |

@@ -65,7 +65,7 @@ def ask_claude_code_cli_stream(question, ...):
     options = CommandOptions(timeout_seconds=timeout, input_data=input_data, env=env_vars, cwd=cwd)
 
     stream = StreamResult(stream_subprocess(command, options))
-    with open(stream_file, 'w') as log:
+    with open(stream_file, 'w', encoding='utf-8') as log:
         for line in stream:
             log.write(line + '\n'); log.flush()
             yield {"type": "raw_line", "line": line}

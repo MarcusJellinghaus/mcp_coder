@@ -99,6 +99,11 @@ def _execute_prompt_streaming(args, output_format, provider, session_id, env_var
         return 1
 
     response = assembler.result()
+
+    # MLflow logging (same as blocking path)
+    with mlflow_conversation(args.prompt, provider):
+        pass  # response already assembled; log it
+
     if getattr(args, "store_response", False):
         store_session(response, args.prompt, branch_name=branch_name)
     return 0
@@ -140,10 +145,14 @@ def _execute_prompt_streaming(args, output_format, provider, session_id, env_var
 7. `test_json_format_unchanged` — verify json format still uses blocking prompt_llm()
 8. `test_session_id_format_unchanged` — verify session-id format still uses blocking prompt_llm()
 9. `test_default_format_is_text` — verify text is default output format
+10. `test_existing_fixtures_use_json_format` — verify existing blocking-path tests explicitly set output_format='json'
+
+### Fixture update guidance:
+All existing `argparse.Namespace` test fixtures that don't specify `output_format` must be updated to include `output_format='json'` (to keep them on the blocking path) or `output_format='text'` (for streaming tests). Without this, the default `'text'` will route to the streaming path and break existing mocks.
 
 ### Verbosity removal checklist:
 - `parsers.py`: remove `--verbosity` argument
 - `prompt.py`: remove `verbosity` getattr and all verbosity-based branching
 - `prompt.py`: remove imports of `format_text_response`, `format_verbose_response`, `format_raw_response`
 - `test_prompt.py`: remove `verbosity` from all argparse.Namespace objects
-- Note: keep `formatters.py` functions for now (they may still be used elsewhere) — remove in a follow-up if truly unused
+- Verify `format_text_response`, `format_verbose_response`, `format_raw_response` have no other callers (grep). If unused, remove them from `formatters.py`.

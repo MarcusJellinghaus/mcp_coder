@@ -51,6 +51,8 @@ class StreamResult:
         for line in stream:
             process(line)
         result = stream.result  # CommandResult after iteration
+
+    Note: Accessing `result` before iteration completes raises RuntimeError.
     """
 
     def __init__(self, gen: Iterator[str]) -> None: ...
@@ -75,12 +77,16 @@ class StreamResult:
 def stream_subprocess(command, options):
     env = prepare_env(command, options)  # reuse existing env logic
     proc = Popen(command, stdout=PIPE, stderr=PIPE, env=env, cwd=options.cwd, text=True)
-    start_time = time.time()
+    timer = threading.Timer(options.timeout_seconds, lambda: kill_process(proc))
+    timed_out = False
+    def on_timeout():
+        nonlocal timed_out
+        timed_out = True
+        kill_process(proc)
+    timer = threading.Timer(options.timeout_seconds, on_timeout)
+    timer.start()
     try:
         for line in proc.stdout:
-            if time.time() - start_time > options.timeout_seconds:
-                kill_process(proc)
-                return CommandResult(timed_out=True, ...)
             yield line.rstrip('\n')
         proc.wait()
         stderr = proc.stderr.read() if proc.stderr else ""
@@ -109,3 +115,4 @@ def stream_subprocess(command, options):
 5. `test_stream_subprocess_none_command_raises` — verify TypeError for None command
 6. `test_stream_subprocess_env_setup` — verify Python commands get isolation env
 7. `test_stream_result_wrapper_iteration` — verify StreamResult wraps generator correctly
+8. `test_stream_result_accessed_before_iteration_raises` — verify RuntimeError if `result` accessed before iteration completes
