@@ -7,7 +7,12 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from mcp_coder.cli.main import create_parser, handle_no_command, main
+from mcp_coder.cli.main import (
+    _resolve_log_level,
+    create_parser,
+    handle_no_command,
+    main,
+)
 
 
 class TestCreateParser:
@@ -48,7 +53,7 @@ class TestCreateParser:
         """Test log level has correct default value."""
         parser = create_parser()
         args = parser.parse_args(["help"])
-        assert args.log_level == "INFO"
+        assert args.log_level is None
 
     def test_parser_log_level_choices(self) -> None:
         """Test log level validates choices."""
@@ -61,6 +66,64 @@ class TestCreateParser:
         # Invalid choice should raise SystemExit
         with pytest.raises(SystemExit):
             parser.parse_args(["--log-level", "INVALID", "help"])
+
+
+class TestLogLevelResolution:
+    """Tests for _resolve_log_level function."""
+
+    def test_log_level_default_is_none(self) -> None:
+        """Test that parser default for --log-level is None."""
+        parser = create_parser()
+        args = parser.parse_args(["help"])
+        assert args.log_level is None
+
+    def test_resolve_log_level_workflow_commands_default_info(self) -> None:
+        """Test that workflow commands default to INFO."""
+        for cmd in ["create-plan", "implement", "create-pr", "coordinator"]:
+            args = argparse.Namespace(command=cmd, log_level=None)
+            assert _resolve_log_level(args) == "INFO", f"Expected INFO for {cmd}"
+
+    def test_resolve_log_level_vscodeclaude_launch_default_info(self) -> None:
+        """Test that vscodeclaude launch defaults to INFO."""
+        args = argparse.Namespace(
+            command="vscodeclaude", log_level=None, vscodeclaude_subcommand="launch"
+        )
+        assert _resolve_log_level(args) == "INFO"
+
+    def test_resolve_log_level_vscodeclaude_status_default_notice(self) -> None:
+        """Test that vscodeclaude status defaults to NOTICE."""
+        args = argparse.Namespace(
+            command="vscodeclaude", log_level=None, vscodeclaude_subcommand="status"
+        )
+        assert _resolve_log_level(args) == "NOTICE"
+
+    def test_resolve_log_level_other_commands_default_notice(self) -> None:
+        """Test that non-workflow commands default to NOTICE."""
+        for cmd in [
+            "help",
+            "verify",
+            "check",
+            "gh-tool",
+            "git-tool",
+            "commit",
+            "init",
+            "prompt",
+        ]:
+            args = argparse.Namespace(command=cmd, log_level=None)
+            assert _resolve_log_level(args) == "NOTICE", f"Expected NOTICE for {cmd}"
+
+    def test_resolve_log_level_explicit_overrides_default(self) -> None:
+        """Test that explicit --log-level always wins."""
+        args = argparse.Namespace(command="help", log_level="DEBUG")
+        assert _resolve_log_level(args) == "DEBUG"
+
+        args = argparse.Namespace(command="implement", log_level="WARNING")
+        assert _resolve_log_level(args) == "WARNING"
+
+    def test_resolve_log_level_none_command(self) -> None:
+        """Test that None command (no command provided) defaults to NOTICE."""
+        args = argparse.Namespace(command=None, log_level=None)
+        assert _resolve_log_level(args) == "NOTICE"
 
 
 class TestHandleNoCommand:
@@ -478,7 +541,7 @@ class TestCoordinatorRunCommand:
         assert call_args.command == "coordinator"
         assert call_args.repo == "mcp_coder"
         assert call_args.all is False
-        assert call_args.log_level == "INFO"  # default
+        assert call_args.log_level is None  # default (resolved at runtime)
 
     @patch("mcp_coder.cli.main.execute_coordinator_run")
     def test_coordinator_run_with_all_argument(self, mock_execute: Mock) -> None:
@@ -502,7 +565,7 @@ class TestCoordinatorRunCommand:
         assert call_args.command == "coordinator"
         assert call_args.all is True
         assert call_args.repo is None
-        assert call_args.log_level == "INFO"  # default
+        assert call_args.log_level is None  # default (resolved at runtime)
 
     @patch("mcp_coder.cli.main.execute_coordinator_run")
     def test_coordinator_run_with_log_level(self, mock_execute: Mock) -> None:

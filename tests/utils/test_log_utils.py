@@ -10,12 +10,54 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.utils.log_utils import (
+    NOTICE,
     ExtraFieldsFormatter,
     RedactableDict,
     _redact_for_logging,
     log_function_call,
     setup_logging,
 )
+
+
+class TestNoticeLevel:
+    """Tests for the custom NOTICE log level."""
+
+    def test_notice_level_is_registered(self) -> None:
+        """Test that NOTICE level name is registered with logging."""
+        assert logging.getLevelName(25) == "NOTICE"
+
+    def test_notice_level_value(self) -> None:
+        """Test that NOTICE constant has the expected value."""
+        assert NOTICE == 25
+
+    def test_notice_between_info_and_warning(self) -> None:
+        """Test that NOTICE sits between INFO and WARNING."""
+        assert logging.INFO < NOTICE < logging.WARNING
+
+    def test_setup_logging_accepts_notice(self) -> None:
+        """Test that setup_logging works with NOTICE level."""
+        root_logger = logging.getLogger()
+        initial_handlers = root_logger.handlers[:]
+        initial_level = root_logger.level
+
+        try:
+            for handler in root_logger.handlers[:]:
+                root_logger.removeHandler(handler)
+
+            setup_logging("NOTICE")
+
+            assert root_logger.level == 25
+        finally:
+            for handler in root_logger.handlers[:]:
+                handler.close()
+                root_logger.removeHandler(handler)
+            for handler in initial_handlers:
+                root_logger.addHandler(handler)
+            root_logger.setLevel(initial_level)
+
+    def test_logger_notice_method_exists(self) -> None:
+        """Test that loggers have the notice() convenience method."""
+        assert hasattr(logging.getLogger(), "notice")
 
 
 class TestSetupLogging:

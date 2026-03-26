@@ -23,7 +23,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 - [x] [Step 1](./steps/step_1.md) — Move `set-status` under `gh-tool` (parser + routing + help)
 - [x] [Step 2](./steps/step_2.md) — Update slash commands and docs for `gh-tool set-status`
-- [ ] [Step 3](./steps/step_3.md) — Register NOTICE log level and add per-command defaults
+- [x] [Step 3](./steps/step_3.md) — Register NOTICE log level and add per-command defaults
 - [ ] [Step 4](./steps/step_4.md) — Triage logger.info() calls — promote progress messages to NOTICE
 - [ ] [Step 5](./steps/step_5.md) — Unified help output
 

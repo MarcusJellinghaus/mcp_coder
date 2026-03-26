@@ -43,6 +43,29 @@ from .parsers import (
 # Logger will be initialized in main()
 logger = logging.getLogger(__name__)
 
+_INFO_COMMANDS = frozenset({"create-plan", "implement", "create-pr", "coordinator"})
+
+
+def _resolve_log_level(args: argparse.Namespace) -> str:
+    """Resolve the effective log level based on command and explicit flag.
+
+    Workflow commands default to INFO; other commands default to NOTICE.
+    An explicit --log-level always wins.
+
+    Returns:
+        The log level string to pass to setup_logging.
+    """
+    if args.log_level is not None:
+        return str(args.log_level)
+    if args.command in _INFO_COMMANDS:
+        return "INFO"
+    if (
+        args.command == "vscodeclaude"
+        and getattr(args, "vscodeclaude_subcommand", None) == "launch"
+    ):
+        return "INFO"
+    return "NOTICE"
+
 
 def create_parser() -> argparse.ArgumentParser:
     """Create and configure argument parser.
@@ -65,9 +88,9 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--log-level",
         type=str.upper,
-        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        default="INFO",
-        help="Set the logging level (default: INFO)",
+        choices=["DEBUG", "INFO", "NOTICE", "WARNING", "ERROR", "CRITICAL"],
+        default=None,
+        help="Set the logging level (default: NOTICE, or INFO for workflow commands)",
         metavar="LEVEL",
     )
 
@@ -271,8 +294,9 @@ def main() -> int:
     parser = create_parser()
     args = parser.parse_args()
 
-    # Initialize logging with user-specified level
-    setup_logging(args.log_level)
+    # Initialize logging with resolved level
+    log_level = _resolve_log_level(args)
+    setup_logging(log_level)
 
     try:
         logger.debug(
