@@ -98,7 +98,7 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--log-level",
         type=str.upper,
-        choices=["DEBUG", "INFO", "NOTICE", "WARNING", "ERROR", "CRITICAL"],
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         default=None,
         help="Set the logging level (default: NOTICE, or INFO for workflow commands)",
         metavar="LEVEL",
