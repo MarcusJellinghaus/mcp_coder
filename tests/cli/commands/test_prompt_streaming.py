@@ -316,6 +316,42 @@ class TestStreamingStoreResponse:
         assert stored_response["session_id"] == "store-sess"
 
 
+class TestStreamingMlflowLogging:
+    """Tests for MLflow conversation logging in streaming paths."""
+
+    @patch("mcp_coder.cli.commands.prompt.mlflow_conversation")
+    @patch(_RESOLVE_MCP)
+    @patch(_RESOLVE_LLM)
+    @patch(_PREPARE_ENV)
+    @patch(_STREAM)
+    def test_mlflow_conversation_called_during_streaming(
+        self,
+        mock_stream: Mock,
+        mock_env: Mock,
+        mock_llm: Mock,
+        mock_mcp: Mock,
+        mock_mlflow: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """mlflow_conversation is entered with prompt and provider during streaming."""
+        mock_llm.return_value = ("claude", "cli")
+        mock_mcp.return_value = None
+        mock_env.return_value = {"MCP_CODER_PROJECT_DIR": "/t"}
+        mock_stream.return_value = iter(
+            _stream_events(text="mlflow test", session_id="mlf-sess")
+        )
+        ctx = mock_mlflow.return_value.__enter__.return_value
+        ctx.__setitem__ = Mock()
+
+        result = execute_prompt(_make_args(output_format="text"))
+
+        assert result == 0
+        mock_mlflow.assert_called_once()
+        call_args = mock_mlflow.call_args[0]
+        assert call_args[0] == "test prompt"  # prompt
+        assert call_args[1] == "claude"  # provider
+
+
 class TestStreamingErrorHandling:
     """Tests for error handling in streaming paths."""
 

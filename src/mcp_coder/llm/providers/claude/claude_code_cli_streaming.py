@@ -7,6 +7,7 @@ Extracted from claude_code_cli.py to keep file sizes manageable.
 """
 
 import logging
+import os
 from collections.abc import Iterator
 
 from ....utils.subprocess_runner import CommandOptions, CommandResult
@@ -113,7 +114,14 @@ def ask_claude_code_cli_stream(
     )
 
     stream = StreamResult(stream_subprocess(command, options))
-    with open(stream_file, "w", encoding="utf-8") as log:
+    try:
+        log_fh = open(stream_file, "w", encoding="utf-8")  # noqa: SIM115
+    except OSError:
+        logger.warning(
+            "Cannot open stream log %s; continuing without file logging", stream_file
+        )
+        log_fh = open(os.devnull, "w", encoding="utf-8")  # noqa: SIM115
+    with log_fh as log:
         for line in stream:
             log.write(line + "\n")
             log.flush()
