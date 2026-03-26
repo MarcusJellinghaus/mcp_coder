@@ -145,6 +145,7 @@ No new data structures. `COMMAND_CATEGORIES` structure unchanged (just `help` en
 
 ### test_main.py
 
+- **Add `help=False` to all mocked Namespace objects** in `TestMain`: `test_main_no_args_calls_handle_no_command`, `test_main_help_command`, `test_main_unknown_command_returns_error`, `test_main_keyboard_interrupt_returns_1`, `test_main_unexpected_exception_returns_2`, `test_main_custom_log_level`, `test_main_error_log_level`. Without this, `args.help` access raises `AttributeError`.
 - **Update** `test_handle_no_command_*` tests → now test that `main()` with no command prints help text directly (no `handle_no_command` function).
 - **Add** `test_main_help_flag_shows_help`: `mcp-coder --help` shows categorized help (not argparse).
 - **Add** `test_main_h_flag_shows_help`: `mcp-coder -h` shows categorized help.

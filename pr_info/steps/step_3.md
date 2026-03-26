@@ -106,7 +106,10 @@ otherwise:                              return "NOTICE"
   - `test_resolve_log_level_vscodeclaude_launch_default_info`: test vscodeclaude with launch subcommand
   - `test_resolve_log_level_other_commands_default_notice`: test help, verify, check, gh-tool, etc.
   - `test_resolve_log_level_explicit_overrides_default`: `--log-level DEBUG` always wins
-- Update existing tests that assume `log_level="INFO"` default — they now need `log_level=None` in mock Namespace and the mock for `setup_logging` will receive `"NOTICE"` or `"INFO"` depending on command.
+- Update existing tests affected by `None` default:
+  - `test_parser_log_level_default`: change assertion from `args.log_level == "INFO"` to `args.log_level is None`
+  - `test_coordinator_run_with_repo_argument`: change assertion from `call_args.log_level == "INFO"` to `call_args.log_level is None`
+  - `test_coordinator_run_with_all_argument`: change assertion from `call_args.log_level == "INFO"` to `call_args.log_level is None`
 
 ## LLM Prompt
 
