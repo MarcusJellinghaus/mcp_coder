@@ -35,7 +35,7 @@ Orchestration and monitoring of automated development across repositories.
 
 | Command | Description |
 |---------|-------------|
-| [`coordinator --dry-run`](#coordinator---dry-run) | Trigger Jenkins integration test for repository |
+| [`coordinator --dry-run`](#coordinator) | Trigger Jenkins integration test for repository |
 | [`coordinator`](#coordinator) | Monitor and dispatch workflows for GitHub issues |
 | [`vscodeclaude launch`](#vscodeclaude-launch) | Launch VS Code sessions for issues needing human review |
 | [`vscodeclaude status`](#vscodeclaude-status) | Show current VS Code session status |
