@@ -8,9 +8,11 @@ importing this package does not fail when langchain is not installed.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import uuid
+from collections.abc import Iterator
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
@@ -18,7 +20,7 @@ from mcp_coder.llm.storage.session_storage import (
     load_langchain_history,
     store_langchain_history,
 )
-from mcp_coder.llm.types import LLM_RESPONSE_VERSION, LLMResponseDict
+from mcp_coder.llm.types import LLM_RESPONSE_VERSION, LLMResponseDict, StreamEvent
 from mcp_coder.utils.user_config import get_config_values
 
 from ._exceptions import (
@@ -416,3 +418,116 @@ def _ask_agent(
         provider="langchain",
         raw_response=raw_response,
     )
+
+
+def ask_langchain_stream(
+    question: str,
+    session_id: str | None = None,
+    timeout: int = 30,
+    mcp_config: str | None = None,
+    execution_dir: str | None = None,
+    env_vars: dict[str, str] | None = None,
+) -> Iterator[StreamEvent]:
+    """Stream LangChain responses as events.
+
+    Same parameters as ask_langchain(). For text mode (no mcp_config),
+    routes to _ask_text_stream() for real streaming. For agent mode
+    (mcp_config present), falls back to blocking ask_langchain() and
+    yields its result as text_delta + done events.
+
+    Yields:
+        StreamEvent dicts: text_delta, done, error, raw_line
+    """
+    if mcp_config:
+        # Agent mode: fall back to blocking call
+        response = ask_langchain(
+            question=question,
+            session_id=session_id,
+            timeout=timeout,
+            mcp_config=mcp_config,
+            execution_dir=execution_dir,
+            env_vars=env_vars,
+        )
+        yield {"type": "text_delta", "text": response.get("text", "")}
+        yield {
+            "type": "done",
+            "session_id": response.get("session_id"),
+            "usage": response.get("raw_response", {}).get("usage", {}),
+        }
+        return
+
+    config = _load_langchain_config()
+    backend = config["backend"]
+
+    if not backend:
+        raise ValueError(
+            "llm.langchain.backend not configured. "
+            "Set [llm.langchain] backend in config.toml "
+            "or MCP_CODER_LLM_LANGCHAIN_BACKEND env var."
+        )
+
+    sid = session_id or str(uuid.uuid4())
+    yield from _ask_text_stream(
+        question=question,
+        config=config,
+        backend=backend,
+        session_id=sid,
+        timeout=timeout,
+    )
+
+
+def _ask_text_stream(
+    question: str,
+    config: dict[str, str | None],
+    backend: str | None,
+    session_id: str,
+    timeout: int,
+) -> Iterator[StreamEvent]:
+    """Stream text-only responses using chat_model.stream().
+
+    Yields:
+        raw_line events for each chunk (JSON serialization),
+        text_delta events for each chunk, then done event.
+    """
+    from langchain_core.messages import AIMessage, HumanMessage, messages_from_dict
+
+    history = load_langchain_history(session_id)
+    history_messages = messages_from_dict(history)
+    lc_messages = history_messages + [HumanMessage(content=question)]
+
+    ensure_truststore()
+    chat_model = _create_chat_model(config, timeout=timeout)
+
+    try:
+        all_text_parts: list[str] = []
+        for chunk in chat_model.stream(lc_messages):
+            chunk_dict = (
+                chunk.model_dump() if hasattr(chunk, "model_dump") else chunk.dict()
+            )
+            yield {"type": "raw_line", "line": json.dumps(chunk_dict)}
+            content = (
+                chunk.content if isinstance(chunk.content, str) else str(chunk.content)
+            )
+            yield {"type": "text_delta", "text": content}
+            all_text_parts.append(content)
+
+        # Store history with the complete AI response
+        full_text = "".join(all_text_parts)
+        ai_msg = AIMessage(content=full_text)
+        serialized: list[dict[str, Any]] = []
+        for msg in list(history_messages) + [
+            HumanMessage(content=question),
+            ai_msg,
+        ]:
+            if hasattr(msg, "model_dump"):
+                dump = msg.model_dump()
+            else:
+                dump = msg.dict()
+            msg_type = dump.pop("type", "unknown")
+            serialized.append({"type": msg_type, "data": dump})
+        store_langchain_history(session_id, serialized)
+
+        yield {"type": "done", "session_id": session_id, "usage": {}}
+    except Exception as exc:  # pylint: disable=broad-except
+        _handle_provider_error(exc, backend)
+        yield {"type": "error", "message": str(exc)}

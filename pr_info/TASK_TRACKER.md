@@ -37,8 +37,8 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat(claude): add ask_claude_code_cli_stream`
 
 ### Step 4: LangChain Streaming Provider
-- [ ] Implementation: `ask_langchain_stream()` + `_ask_text_stream()` in `langchain/__init__.py` with tests in `test_langchain_provider.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Implementation: `ask_langchain_stream()` + `_ask_text_stream()` in `langchain/__init__.py` with tests in `test_langchain_provider.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
 - [ ] Commit: `feat(langchain): add ask_langchain_stream`
 
 ### Step 5: prompt_llm_stream() Interface + Stream Print Formatting
