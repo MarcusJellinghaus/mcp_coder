@@ -106,7 +106,11 @@ class ResponseAssembler:
                 self._error = message
 
     def result(self) -> LLMResponseDict:
-        """Build and return the final LLMResponseDict from accumulated events."""
+        """Build and return the final LLMResponseDict from accumulated events.
+
+        Returns:
+            LLMResponseDict with text, session info, and raw events.
+        """
         raw_response: dict[str, object] = {"events": list(self._raw_events)}
         if self._usage:
             raw_response["usage"] = self._usage

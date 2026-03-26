@@ -437,6 +437,9 @@ def ask_langchain_stream(
 
     Yields:
         StreamEvent dicts: text_delta, done, error, raw_line
+
+    Raises:
+        ValueError: If the langchain backend is not configured.
     """
     if mcp_config:
         # Agent mode: fall back to blocking call

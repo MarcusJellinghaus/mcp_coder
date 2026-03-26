@@ -88,6 +88,9 @@ def ask_claude_code_cli_stream(
     Yields:
         StreamEvent dicts: text_delta, tool_use_start, tool_result, done, error, raw_line
 
+    Raises:
+        ValueError: If the question is empty/whitespace or timeout is not positive.
+
     The "done" event includes session_id and usage data from the result message.
     The "raw_line" event wraps each raw NDJSON line for json-raw mode consumers.
     """

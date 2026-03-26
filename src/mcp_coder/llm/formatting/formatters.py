@@ -203,7 +203,11 @@ def format_raw_response(response_data: Dict[str, Any]) -> str:
 
 
 def _format_tool_args(args: object) -> str:
-    """Format tool arguments for text display."""
+    """Format tool arguments for text display.
+
+    Returns:
+        Formatted string of tool arguments.
+    """
     if isinstance(args, dict):
         parts = [f"{k}={v!r}" for k, v in args.items()]
         return ", ".join(parts)
@@ -213,7 +217,8 @@ def _format_tool_args(args: object) -> str:
 def _normalize_event_to_ndjson(event: StreamEvent) -> dict[str, object] | None:
     """Map a StreamEvent to Claude CLI stream-json compatible NDJSON dict.
 
-    Returns None for event types that have no NDJSON representation.
+    Returns:
+        NDJSON dict, or None for event types that have no NDJSON representation.
     """
     event_type = event.get("type")
 
@@ -286,10 +291,10 @@ def print_stream_event(
         err_file: Output stream for errors (default: stderr)
 
     Behavior by format:
-        text: Print text_delta content inline (no newline between deltas).
-              Tool calls shown with bordered sections.
-        ndjson: Print normalized NDJSON line (Claude CLI schema).
-        json-raw: Print raw_line content as-is.
+        - text: Print text_delta content inline (no newline between deltas).
+          Tool calls shown with bordered sections.
+        - ndjson: Print normalized NDJSON line (Claude CLI schema).
+        - json-raw: Print raw_line content as-is.
     """
     if file is None:
         file = sys.stdout

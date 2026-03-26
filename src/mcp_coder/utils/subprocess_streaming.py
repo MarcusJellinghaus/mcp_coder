@@ -46,9 +46,11 @@ class StreamResult:
         self._result: CommandResult | None = None
 
     def __iter__(self) -> Iterator[str]:
+        """Return the iterator object (self)."""
         return self
 
     def __next__(self) -> str:
+        """Return the next line from the stream."""
         try:
             return next(self._gen)
         except StopIteration as exc:
@@ -57,7 +59,14 @@ class StreamResult:
 
     @property
     def result(self) -> CommandResult:
-        """Return the final CommandResult after iteration completes."""
+        """Return the final CommandResult after iteration completes.
+
+        Returns:
+            The CommandResult captured when the generator finished.
+
+        Raises:
+            RuntimeError: If iteration has not yet completed.
+        """
         if self._result is None:
             raise RuntimeError("Result is not yet available; iterate fully first.")
         return self._result
@@ -78,11 +87,11 @@ def stream_subprocess(
         command: Command and arguments as a list
         options: Execution options (timeout, env, cwd, etc.)
 
-    Yields:
-        Individual lines from stdout (without trailing newline)
-
     Returns:
         CommandResult with final execution details (via generator return)
+
+    Yields:
+        Individual lines from stdout (without trailing newline)
 
     Raises:
         TypeError: If command is None.
