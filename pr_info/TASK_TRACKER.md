@@ -21,6 +21,36 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Stream Event Types and ResponseAssembler
+- [ ] Implementation: `StreamEvent` type alias + `ResponseAssembler` class in `types.py` with tests in `test_types.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit: `feat(types): add StreamEvent type and ResponseAssembler`
+
+### Step 2: stream_subprocess() in subprocess_runner
+- [ ] Implementation: `stream_subprocess()` generator + `StreamResult` wrapper in `subprocess_runner.py` with tests in `test_subprocess_runner.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit: `feat(subprocess): add stream_subprocess generator`
+
+### Step 3: Claude CLI Streaming Provider
+- [ ] Implementation: `ask_claude_code_cli_stream()` in `claude_code_cli.py` with tests in `test_claude_code_cli.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit: `feat(claude): add ask_claude_code_cli_stream`
+
+### Step 4: LangChain Streaming Provider
+- [ ] Implementation: `ask_langchain_stream()` + `_ask_text_stream()` in `langchain/__init__.py` with tests in `test_langchain_provider.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit: `feat(langchain): add ask_langchain_stream`
+
+### Step 5: prompt_llm_stream() Interface + Stream Print Formatting
+- [ ] Implementation: `prompt_llm_stream()` in `interface.py` + `print_stream_event()` in `formatters.py` with tests in `test_interface.py` and `test_formatters.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit: `feat(interface): add prompt_llm_stream and stream formatting`
+
+### Step 6: CLI Changes — New Output Formats, Remove --verbosity, Wire Streaming
+- [ ] Implementation: Update `parsers.py` + `prompt.py` for streaming path, remove `--verbosity`, add `ndjson`/`json-raw` formats, with tests in `test_prompt.py` and new `test_prompt_streaming.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit: `feat(cli): add streaming output formats, remove --verbosity`
 
 ## Pull Request
+- [ ] PR review: verify all steps integrated, no regressions
+- [ ] PR summary prepared
