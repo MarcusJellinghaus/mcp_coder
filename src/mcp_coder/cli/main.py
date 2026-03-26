@@ -24,7 +24,6 @@ from .commands.help import execute_help, get_compact_help_text
 from .commands.implement import execute_implement
 from .commands.init import execute_init
 from .commands.prompt import execute_prompt
-from .commands.set_status import execute_set_status
 from .commands.verify import execute_verify
 from .parsers import (
     WideHelpFormatter,
@@ -37,7 +36,6 @@ from .parsers import (
     add_git_tool_parsers,
     add_implement_parser,
     add_prompt_parser,
-    add_set_status_parser,
     add_verify_parser,
     add_vscodeclaude_parsers,
 )
@@ -92,7 +90,6 @@ def create_parser() -> argparse.ArgumentParser:
     add_create_plan_parser(subparsers)
     add_create_pr_parser(subparsers)
     add_coordinator_parsers(subparsers)
-    add_set_status_parser(subparsers)
     add_check_parsers(subparsers)
     add_gh_tool_parsers(subparsers)
     add_git_tool_parsers(subparsers)
@@ -179,6 +176,10 @@ def _handle_gh_tool_command(args: argparse.Namespace) -> int:
             return execute_define_labels(args)
         elif args.gh_tool_subcommand == "issue-stats":
             return execute_coordinator_issue_stats(args)
+        elif args.gh_tool_subcommand == "set-status":
+            from .commands.set_status import execute_set_status
+
+            return execute_set_status(args)
         else:
             logger.error(f"Unknown gh-tool subcommand: {args.gh_tool_subcommand}")
             print(f"Error: Unknown gh-tool subcommand '{args.gh_tool_subcommand}'")
@@ -187,7 +188,7 @@ def _handle_gh_tool_command(args: argparse.Namespace) -> int:
         logger.error("gh-tool subcommand required")
         print(
             "Error: Please specify a gh-tool subcommand"
-            " (e.g., 'get-base-branch', 'define-labels', 'issue-stats')"
+            " (e.g., 'get-base-branch', 'define-labels', 'issue-stats', 'set-status')"
         )
         return 1
 
@@ -301,8 +302,6 @@ def main() -> int:
             return execute_create_pr(args)
         elif args.command == "coordinator":
             return _handle_coordinator_command(args)
-        elif args.command == "set-status":
-            return execute_set_status(args)
         elif args.command == "check":
             return _handle_check_command(args)
         elif args.command == "gh-tool":

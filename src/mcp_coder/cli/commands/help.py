@@ -58,7 +58,7 @@ COMMAND_CATEGORIES: list[Category] = [
             Command("prompt", "Execute prompt via Claude API"),
             Command("commit auto", "Auto-generate commit message"),
             Command("commit clipboard", "Use clipboard commit message"),
-            Command("set-status", "Update GitHub issue workflow status label"),
+            Command("gh-tool set-status", "Update GitHub issue workflow status label"),
             Command("check branch-status", "Check branch readiness status"),
             Command("check file-size", "Check file sizes against maximum"),
             Command("gh-tool define-labels", "Sync workflow status labels to GitHub"),

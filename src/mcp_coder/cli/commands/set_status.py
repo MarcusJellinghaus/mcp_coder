@@ -44,8 +44,8 @@ def build_set_status_epilog() -> str:
             lines.append(f"  {label['name']:30} {label['description']}")
         lines.append("")
         lines.append("Examples:")
-        lines.append("  mcp-coder set-status status-05:plan-ready")
-        lines.append("  mcp-coder set-status status-08:ready-pr --issue 123")
+        lines.append("  mcp-coder gh-tool set-status status-05:plan-ready")
+        lines.append("  mcp-coder gh-tool set-status status-08:ready-pr --issue 123")
         return "\n".join(lines)
     except (
         Exception

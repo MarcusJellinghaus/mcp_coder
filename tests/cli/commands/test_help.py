@@ -46,7 +46,7 @@ def test_command_categories_contains_all_commands() -> None:
         "prompt",
         "commit auto",
         "commit clipboard",
-        "set-status",
+        "gh-tool set-status",
         "check branch-status",
         "check file-size",
         "gh-tool define-labels",

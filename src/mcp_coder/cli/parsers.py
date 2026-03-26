@@ -10,8 +10,6 @@ from __future__ import annotations
 import argparse
 from typing import Any
 
-from .commands.set_status import build_set_status_epilog
-
 
 class WideHelpFormatter(argparse.RawDescriptionHelpFormatter):
     """Custom formatter with wider help position for longer command names."""
@@ -325,37 +323,6 @@ def add_coordinator_parsers(subparsers: Any) -> None:
     )
 
 
-def add_set_status_parser(subparsers: Any) -> None:
-    """Add the set-status command parser."""
-    set_status_parser = subparsers.add_parser(
-        "set-status",
-        help="Update GitHub issue workflow status label",
-        formatter_class=WideHelpFormatter,
-        epilog=build_set_status_epilog(),
-    )
-    set_status_parser.add_argument(
-        "status_label",
-        help="Status label to set (e.g., status-05:plan-ready)",
-    )
-    set_status_parser.add_argument(
-        "--issue",
-        type=int,
-        default=None,
-        help="Issue number (default: auto-detect from branch name)",
-    )
-    set_status_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
-    )
-    set_status_parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Bypass clean working directory check",
-    )
-
-
 def _validate_ci_timeout(value: str) -> int:
     """Validate ci-timeout argument is non-negative integer.
 
@@ -535,6 +502,37 @@ def add_gh_tool_parsers(subparsers: Any) -> None:
         "--project-dir",
         metavar="PATH",
         help="Project directory. Default: current directory",
+    )
+
+    # gh-tool set-status command
+    from .commands.set_status import build_set_status_epilog
+
+    set_status_parser = gh_tool_subparsers.add_parser(
+        "set-status",
+        help="Update GitHub issue workflow status label",
+        formatter_class=WideHelpFormatter,
+        epilog=build_set_status_epilog(),
+    )
+    set_status_parser.add_argument(
+        "status_label",
+        help="Status label to set (e.g., status-05:plan-ready)",
+    )
+    set_status_parser.add_argument(
+        "--issue",
+        type=int,
+        default=None,
+        help="Issue number (default: auto-detect from branch name)",
+    )
+    set_status_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
+    )
+    set_status_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Bypass clean working directory check",
     )
 
 
