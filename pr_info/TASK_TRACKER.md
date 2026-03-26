@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Flatten Coordinator Command
 > [Detail](./steps/step_2.md) — Convert `coordinator` from subcommand group to direct command with `--dry-run` flag.
-- [ ] Implementation: rewrite `add_coordinator_parsers()` in `parsers.py`, update `_handle_coordinator_command()` in `main.py`, update coordinator tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: rewrite `add_coordinator_parsers()` in `parsers.py`, update `_handle_coordinator_command()` in `main.py`, update coordinator tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Add vscodeclaude Top-Level Command
 > [Detail](./steps/step_3.md) — Add `vscodeclaude` as top-level command with `launch` and `status` subcommands.

@@ -276,47 +276,22 @@ def add_create_pr_parser(subparsers: Any) -> None:
 
 
 def add_coordinator_parsers(subparsers: Any) -> None:
-    """Add coordinator command parsers."""
+    """Add coordinator command parser (direct command, no subcommands)."""
     coordinator_parser = subparsers.add_parser(
-        "coordinator", help="Coordinator commands for repository testing"
-    )
-    coordinator_subparsers = coordinator_parser.add_subparsers(
-        dest="coordinator_subcommand",
-        help="Available coordinator commands",
-        metavar="SUBCOMMAND",
-    )
-
-    # coordinator test command
-    test_parser = coordinator_subparsers.add_parser(
-        "test",
-        help="Trigger Jenkins integration test for repository",
-        formatter_class=WideHelpFormatter,
-    )
-    test_parser.add_argument(
-        "repo_name", help="Repository name from config (e.g., mcp_coder)"
-    )
-    test_parser.add_argument(
-        "--branch-name",
-        required=True,
-        help="Git branch to test (e.g., feature-x, main)",
-    )
-    test_parser.add_argument(
-        "--log-level",
-        type=str.upper,
-        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        default="DEBUG",
-        help="Log level for mcp-coder commands in test script (default: DEBUG)",
-        metavar="LEVEL",
-    )
-
-    # coordinator run command
-    run_parser = coordinator_subparsers.add_parser(
-        "run",
+        "coordinator",
         help="Monitor and dispatch workflows for GitHub issues",
         formatter_class=WideHelpFormatter,
     )
 
-    run_group = run_parser.add_mutually_exclusive_group(required=True)
+    # --dry-run mode (replaces old "coordinator test")
+    coordinator_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Trigger Jenkins test instead of dispatching workflows",
+    )
+
+    # Run mode args (--all or --repo, mutually exclusive)
+    run_group = coordinator_parser.add_mutually_exclusive_group()
     run_group.add_argument(
         "--all", action="store_true", help="Process all repositories from config"
     )
@@ -327,88 +302,26 @@ def add_coordinator_parsers(subparsers: Any) -> None:
         help="Process single repository (e.g., mcp_coder)",
     )
 
-    run_parser.add_argument(
+    coordinator_parser.add_argument(
         "--force-refresh",
         action="store_true",
         help="Force full cache refresh, bypass all caching",
     )
 
-    # coordinator vscodeclaude command
-    vscodeclaude_parser = coordinator_subparsers.add_parser(
-        "vscodeclaude",
-        help="Manage VSCode/Claude sessions for interactive workflow stages",
-        epilog="Documentation: https://github.com/MarcusJellinghaus/mcp_coder/blob/main/docs/coordinator-vscodeclaude.md",
-    )
-    vscodeclaude_subparsers = vscodeclaude_parser.add_subparsers(
-        dest="vscodeclaude_subcommand",
-        help="VSCodeClaude commands",
-        metavar="SUBCOMMAND",
-    )
-
-    vscodeclaude_parser.add_argument(
-        "--repo",
+    # Dry-run specific args (for Jenkins test trigger)
+    coordinator_parser.add_argument(
+        "--branch-name",
         type=str,
-        metavar="NAME",
-        help="Filter to specific repository only",
+        help="Git branch to test (required with --dry-run)",
     )
-    vscodeclaude_parser.add_argument(
-        "--max-sessions",
-        type=int,
-        metavar="N",
-        help="Override max concurrent sessions (default: from config or 3)",
-    )
-    vscodeclaude_parser.add_argument(
-        "--cleanup",
-        action="store_true",
-        help="Delete stale clean folders (without this flag, only lists them)",
-    )
-    vscodeclaude_parser.add_argument(
-        "--intervene",
-        action="store_true",
-        help="Force open a bot_busy issue for debugging",
-    )
-    vscodeclaude_parser.add_argument(
-        "--issue",
-        type=int,
-        metavar="NUMBER",
-        help="Issue number for intervention mode (requires --intervene)",
-    )
-
-    # vscodeclaude status subcommand
-    status_parser = vscodeclaude_subparsers.add_parser(
-        "status",
-        help="Show current VSCodeClaude sessions",
-    )
-    status_parser.add_argument(
-        "--repo",
-        type=str,
-        metavar="NAME",
-        help="Filter to specific repository only",
-    )
-
-    # coordinator issue-stats command
-    issue_stats_parser = coordinator_subparsers.add_parser(
-        "issue-stats",
-        help="Display issue statistics by workflow status",
-        formatter_class=WideHelpFormatter,
-    )
-    issue_stats_parser.add_argument(
-        "--filter",
-        type=str.lower,
-        choices=["all", "human", "bot"],
-        default="all",
-        help="Filter issues by category (default: all)",
-    )
-    issue_stats_parser.add_argument(
-        "--details",
-        action="store_true",
-        default=False,
-        help="Show individual issue details with links",
-    )
-    issue_stats_parser.add_argument(
-        "--project-dir",
-        metavar="PATH",
-        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
+    coordinator_parser.add_argument(
+        "--log-level-coordinator",
+        type=str.upper,
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        default="DEBUG",
+        help="Log level for mcp-coder commands in test script (default: DEBUG)",
+        metavar="LEVEL",
+        dest="coordinator_log_level",
     )
 
 

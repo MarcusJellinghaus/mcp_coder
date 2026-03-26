@@ -42,7 +42,6 @@ class TestCoordinatorRunCacheIntegration:
         # Setup - Mock args with force_refresh enabled
         args = argparse.Namespace(
             command="coordinator",
-            coordinator_subcommand="run",
             repo="test_repo",
             all=False,
             log_level="INFO",
@@ -127,7 +126,6 @@ class TestCoordinatorRunCacheIntegration:
         # Setup - Mock args
         args = argparse.Namespace(
             command="coordinator",
-            coordinator_subcommand="run",
             repo="test_repo",
             all=False,
             log_level="INFO",
@@ -199,7 +197,6 @@ class TestCoordinatorRunCacheIntegration:
         # Setup - Mock args for single repository mode
         args = argparse.Namespace(
             command="coordinator",
-            coordinator_subcommand="run",
             repo="test_repo",
             all=False,
             log_level="INFO",
@@ -305,7 +302,6 @@ class TestCacheUpdateIntegration:
         # Setup - Mock args
         args = argparse.Namespace(
             command="coordinator",
-            coordinator_subcommand="run",
             repo="test_repo",
             all=False,
             log_level="INFO",
@@ -396,7 +392,6 @@ class TestCacheUpdateIntegration:
         # Setup - Mock args
         args = argparse.Namespace(
             command="coordinator",
-            coordinator_subcommand="run",
             repo="test_repo",
             all=False,
             log_level="INFO",
@@ -490,7 +485,6 @@ class TestCacheUpdateIntegration:
         # Setup - Mock args
         args = argparse.Namespace(
             command="coordinator",
-            coordinator_subcommand="run",
             repo="test_repo",
             all=False,
             log_level="INFO",

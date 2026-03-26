@@ -262,6 +262,9 @@ class TestWindowsTemplates:
         assert "{timeout}" in AUTOMATED_RESUME_SECTION_WINDOWS
 
 
+@pytest.mark.skip(
+    reason="coordinator vscodeclaude subcommand removed in step 2; will be re-added as top-level command in step 3"
+)
 class TestCLI:
     """Test CLI argument parsing and routing."""
 

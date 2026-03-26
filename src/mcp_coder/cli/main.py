@@ -11,10 +11,7 @@ from .commands.commit import execute_commit_auto, execute_commit_clipboard
 from .commands.coordinator import (
     execute_coordinator_run,
     execute_coordinator_test,
-    execute_coordinator_vscodeclaude,
-    execute_coordinator_vscodeclaude_status,
 )
-from .commands.coordinator.issue_stats import execute_coordinator_issue_stats
 from .commands.create_plan import execute_create_plan
 from .commands.create_pr import execute_create_pr
 from .commands.define_labels import execute_define_labels
@@ -116,39 +113,29 @@ def handle_no_command(_args: argparse.Namespace) -> int:
 
 
 def _handle_coordinator_command(args: argparse.Namespace) -> int:
-    """Handle coordinator subcommands.
+    """Handle coordinator command (flat, no subcommands).
 
     Returns:
-        Exit code from the executed coordinator subcommand.
+        Exit code from the executed coordinator action.
     """
-    if hasattr(args, "coordinator_subcommand") and args.coordinator_subcommand:
-        if args.coordinator_subcommand == "test":
-            return execute_coordinator_test(args)
-        elif args.coordinator_subcommand == "run":
-            return execute_coordinator_run(args)
-        elif args.coordinator_subcommand == "vscodeclaude":
-            # Check for status subcommand first
-            if (
-                hasattr(args, "vscodeclaude_subcommand")
-                and args.vscodeclaude_subcommand == "status"
-            ):
-                return execute_coordinator_vscodeclaude_status(args)
-            else:
-                return execute_coordinator_vscodeclaude(args)
-        elif args.coordinator_subcommand == "issue-stats":
-            return execute_coordinator_issue_stats(args)
-        else:
-            logger.error(
-                f"Unknown coordinator subcommand: {args.coordinator_subcommand}"
-            )
-            print(
-                f"Error: Unknown coordinator subcommand '{args.coordinator_subcommand}'"
-            )
+    if args.dry_run:
+        # Validate dry-run args
+        if not args.repo:
+            print("Error: --dry-run requires --repo NAME", file=sys.stderr)
             return 1
+        if not args.branch_name:
+            print("Error: --dry-run requires --branch-name BRANCH", file=sys.stderr)
+            return 1
+        # Map args to what execute_coordinator_test expects
+        args.repo_name = args.repo
+        args.log_level = args.coordinator_log_level
+        return execute_coordinator_test(args)
     else:
-        logger.error("Coordinator subcommand required")
-        print("Error: Please specify a coordinator subcommand (e.g., 'test', 'run')")
-        return 1
+        # Validate run args
+        if not args.all and not args.repo:
+            print("Error: Either --all or --repo must be specified", file=sys.stderr)
+            return 1
+        return execute_coordinator_run(args)
 
 
 def _handle_check_command(args: argparse.Namespace) -> int:

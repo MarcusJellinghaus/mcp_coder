@@ -13,6 +13,9 @@ from unittest.mock import patch
 import pytest
 
 
+@pytest.mark.skip(
+    reason="coordinator issue-stats subcommand removed in step 2; will be re-added under gh-tool in step 4"
+)
 class TestParseArguments:
     """Test argument parsing for issue-stats."""
 
