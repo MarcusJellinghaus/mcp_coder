@@ -16,6 +16,7 @@ Implement Step 2 of issue #570 (CLI restructure). Read pr_info/steps/summary.md 
 - `src/mcp_coder/cli/main.py` — rewrite `_handle_coordinator_command()`, update imports
 - `tests/cli/test_main.py` — update `TestCoordinatorCommand`, `TestCoordinatorRunCommand`
 - `tests/cli/commands/coordinator/test_commands.py` — update `TestExecuteCoordinatorRun`
+- `tests/cli/commands/coordinator/test_integration.py` — remove stale `coordinator_subcommand` from mock Namespaces
 
 ## WHAT
 
@@ -144,6 +145,10 @@ else:
 **TestExecuteCoordinatorRun** — update mock args:
 - Remove `coordinator_subcommand="run"` from Namespace
 - Tests for `execute_coordinator_test` and `execute_coordinator_run` functions don't change (they test the execute functions directly, not CLI parsing)
+
+### tests/cli/commands/coordinator/test_integration.py
+
+Remove `coordinator_subcommand="run"` from all `argparse.Namespace()` constructors (6 occurrences). This attribute is no longer set by the flattened coordinator parser and is not read by `execute_coordinator_run`. Removing it keeps test fixtures consistent with the new CLI structure.
 
 ## DATA
 - `args.dry_run: bool` — new flag
