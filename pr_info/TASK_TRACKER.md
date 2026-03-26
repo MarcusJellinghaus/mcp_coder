@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat(types): add StreamEvent type and ResponseAssembler`
 
 ### Step 2: stream_subprocess() in subprocess_runner
-- [ ] Implementation: `stream_subprocess()` generator + `StreamResult` wrapper in `subprocess_runner.py` with tests in `test_subprocess_runner.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(subprocess): add stream_subprocess generator`
+- [x] Implementation: `stream_subprocess()` generator + `StreamResult` wrapper in `subprocess_runner.py` with tests in `test_subprocess_runner.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(subprocess): add stream_subprocess generator`
 
 ### Step 3: Claude CLI Streaming Provider
 - [ ] Implementation: `ask_claude_code_cli_stream()` in `claude_code_cli.py` with tests in `test_claude_code_cli.py`
