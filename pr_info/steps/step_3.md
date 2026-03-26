@@ -126,7 +126,7 @@ def _ask_agent_stream(...) -> Iterator[StreamEvent]:
                 env_vars=env_vars,
             ):
                 q.put(event)
-        except BaseException as exc:
+        except Exception as exc:
             error_holder.append(exc)
         finally:
             q.put(None)  # sentinel
@@ -134,6 +134,7 @@ def _ask_agent_stream(...) -> Iterator[StreamEvent]:
     thread = threading.Thread(target=asyncio.run, args=(_run(),), daemon=True)
     thread.start()
 
+    cancelled = False
     try:
         while True:
             event = q.get()  # timeout added in Step 4
@@ -142,10 +143,11 @@ def _ask_agent_stream(...) -> Iterator[StreamEvent]:
             yield event
     except GeneratorExit:
         cancel.set()
+        cancelled = True
     finally:
         thread.join(timeout=5)
 
-    if error_holder:
+    if error_holder and not cancelled:
         exc = error_holder[0]
         _handle_provider_error(exc, config.get("backend"))
         raise exc
@@ -162,6 +164,7 @@ def _ask_agent_stream(...) -> Iterator[StreamEvent]:
 - `_ask_agent_stream` follows same pattern as `_ask_agent` (config, dependencies, chat_model, history)
 - `_handle_provider_error` reused for auth/connection error wrapping
 - `run_agent_stream` imported from `.agent` (deferred import, same as existing `run_agent`)
+- `ask_langchain()` and `_ask_agent()` (non-streaming path) are unchanged — their existing tests remain valid
 - Thread is `daemon=True` so it doesn't prevent process exit
 
 ## Verification

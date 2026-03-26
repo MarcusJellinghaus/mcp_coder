@@ -68,6 +68,12 @@ class TestRunAgentStream:
 **Note:** These tests mock `MultiServerMCPClient`, `create_react_agent`, and `astream_events`.
 Use `conftest.py`'s existing mock setup for langchain imports. Add `pytest-asyncio` marker.
 
+Tests mock the entire `astream_events` output including `AIMessageChunk`-like objects (plain dicts or
+simple mock objects with `.content` attribute). No changes to `conftest.py` are needed since we mock
+at the `astream_events` level, not at the message class level.
+
+These are unit tests — do NOT add `langchain_integration` marker. They will run in the default test suite.
+
 ## WHAT — Implementation
 
 Add to `src/mcp_coder/llm/providers/langchain/agent.py`:
@@ -107,6 +113,8 @@ async def run_agent_stream(...) -> AsyncIterator[StreamEvent]:
     # 6. yield done event with session_id
 ```
 
+**Note on tool_call_id:** LangChain's `astream_events` v2 does not include `tool_call_id` in `on_tool_start` events. We use `run_id` (unique per tool invocation) as the correlation key in `tool_use_start`. For `tool_result`, we extract the real `tool_call_id` from the `ToolMessage` output when available, falling back to `run_id`. Both `on_tool_start` and `on_tool_end` share the same `run_id`, so consumers can correlate starts with results using either field.
+
 ## Event Mapping (if/elif chain)
 
 ```python
@@ -132,18 +140,34 @@ elif event_kind == "on_tool_start":
         "type": "tool_use_start",
         "name": event.get("name", ""),
         "args": json.dumps(event["data"].get("input", {})),
-        "tool_call_id": event.get("run_id", ""),
+        "tool_call_id": event.get("run_id", ""),  # run_id for start/end correlation
     }
 
 elif event_kind == "on_tool_end":
     output = event["data"].get("output", "")
+    # ToolMessage has the real tool_call_id from the LLM
+    tool_call_id = getattr(output, "tool_call_id", None) or event.get("run_id", "")
     yield {
         "type": "tool_result",
         "name": event.get("name", ""),
         "output": str(output),
-        "tool_call_id": event.get("run_id", ""),
+        "tool_call_id": tool_call_id,
     }
 ```
+
+## HISTORY ACCUMULATION
+
+Since `astream_events()` yields individual events (not full message objects like `ainvoke()`),
+we must reconstruct the conversation for history storage:
+
+1. Before streaming: build `input_messages` from history + new `HumanMessage(question)`
+2. During streaming: accumulate text from `text_delta` events into a buffer string
+3. During streaming: accumulate tool calls from `on_tool_start`/`on_tool_end` into a list
+4. After streaming completes: construct `AIMessage(content=accumulated_text, tool_calls=accumulated_tool_calls)`
+   and any `ToolMessage` objects from tool results
+5. Serialize all messages via `message_to_dict()` and pass to `store_langchain_history()`
+
+This keeps history storage self-contained within `run_agent_stream()` without extra API calls.
 
 ## DATA
 
