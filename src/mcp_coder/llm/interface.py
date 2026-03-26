@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+from pathlib import Path
 
 from mcp_coder.utils.subprocess_runner import TimeoutExpired
 
@@ -134,6 +135,11 @@ def prompt_llm(
                 raise
         else:
             # Claude provider — always uses CLI
+            # Derive logs_dir from env_vars to store logs in mcp-coder's project dir
+            logs_dir = None
+            if env_vars and "MCP_CODER_PROJECT_DIR" in env_vars:
+                logs_dir = str(Path(env_vars["MCP_CODER_PROJECT_DIR"]) / "logs")
+
             try:
                 response = ask_claude_code_cli(
                     question,
@@ -143,6 +149,7 @@ def prompt_llm(
                     cwd=execution_dir,
                     mcp_config=mcp_config,
                     branch_name=branch_name,
+                    logs_dir=logs_dir,
                 )
             except TimeoutExpired:
                 logger.error("LLM request timed out after %ds", timeout)

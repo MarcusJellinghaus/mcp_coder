@@ -1,6 +1,7 @@
 """Tests for the high-level LLM interface."""
 
 import asyncio
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, call, patch
 
@@ -37,6 +38,7 @@ class TestPromptLLMRouting:
             cwd=None,
             mcp_config=None,
             branch_name=None,
+            logs_dir=None,
         )
         assert result["text"] == "Test response from Claude"
 
@@ -64,6 +66,7 @@ class TestPromptLLMRouting:
             cwd=None,
             mcp_config=None,
             branch_name=None,
+            logs_dir=None,
         )
         assert result["text"] == "Default response"
 
@@ -106,6 +109,7 @@ class TestPromptLLMRouting:
             cwd=None,
             mcp_config=None,
             branch_name=None,
+            logs_dir=None,
         )
         assert result["text"] == "Timeout response"
 
@@ -137,6 +141,7 @@ class TestPromptLLMRouting:
             cwd=None,
             mcp_config=None,
             branch_name=None,
+            logs_dir=None,
         )
         assert result["text"] == "Response with session"
 
@@ -164,6 +169,7 @@ class TestPromptLLMRouting:
             cwd=None,
             mcp_config=None,
             branch_name=None,
+            logs_dir=None,
         )
         assert result["text"] == "Response without session"
 
@@ -213,6 +219,7 @@ class TestPromptLLMRouting:
             cwd=None,
             mcp_config=None,
             branch_name=None,
+            logs_dir=None,
         )
         assert result["text"] == "Response with env vars"
 
@@ -267,6 +274,7 @@ class TestPromptLLMExecutionDirRouting:
             cwd="/custom/execution/dir",
             mcp_config=None,
             branch_name=None,
+            logs_dir=None,
         )
         assert result["text"] == "Response with execution_dir"
 
@@ -294,6 +302,7 @@ class TestPromptLLMExecutionDirRouting:
             cwd=None,
             mcp_config=None,
             branch_name=None,
+            logs_dir=None,
         )
         assert result["text"] == "Response with default dir"
 
@@ -324,6 +333,7 @@ class TestPromptLLMExecutionDirRouting:
             cwd="/home/user/workspace",
             mcp_config=None,
             branch_name=None,
+            logs_dir=None,
         )
         assert result["text"] == "Response with absolute path"
 
@@ -353,6 +363,7 @@ class TestIntegration:
             cwd=None,
             mcp_config=None,
             branch_name=None,
+            logs_dir=None,
         )
         assert result["text"] == "Full chain response"
 
@@ -391,6 +402,7 @@ class TestIntegration:
             cwd=None,
             mcp_config=None,
             branch_name=None,
+            logs_dir=None,
         )
         assert result["text"] == "Full chain response with session"
 
@@ -428,6 +440,7 @@ class TestPromptLLM:
             cwd=None,
             mcp_config=None,
             branch_name=None,
+            logs_dir=None,
         )
         assert isinstance(result, dict)
         assert result["version"] == "1.0"
@@ -460,6 +473,7 @@ class TestPromptLLM:
             cwd=None,
             mcp_config=None,
             branch_name=None,
+            logs_dir=None,
         )
         assert result["session_id"] == "existing-session"
 
@@ -537,6 +551,7 @@ class TestPromptLLM:
             cwd=None,
             mcp_config=None,
             branch_name=None,
+            logs_dir=None,
         )
         assert result["text"] == "Response with custom timeout"
 
@@ -565,6 +580,7 @@ class TestPromptLLM:
             cwd=None,
             mcp_config=None,
             branch_name=None,
+            logs_dir=None,
         )
         assert result["provider"] == "claude"
 
@@ -594,6 +610,7 @@ class TestPromptLLM:
             cwd=None,
             mcp_config=None,
             branch_name=None,
+            logs_dir=None,
         )
         assert result["text"] == "CLI response with env vars"
 
@@ -647,6 +664,7 @@ class TestPromptLLMExecutionDir:
             cwd="/custom/execution/path",
             mcp_config=None,
             branch_name=None,
+            logs_dir=None,
         )
         assert result["text"] == "CLI response with execution_dir"
 
@@ -675,8 +693,99 @@ class TestPromptLLMExecutionDir:
             cwd=None,
             mcp_config=None,
             branch_name=None,
+            logs_dir=None,
         )
         assert result["text"] == "Response with default execution dir"
+
+
+class TestPromptLLMLogsDirDerivation:
+    """Tests for logs_dir derivation from env_vars in prompt_llm."""
+
+    @patch("mcp_coder.llm.interface.ask_claude_code_cli")
+    def test_logs_dir_derived_from_env_vars_project_dir(
+        self, mock_ask_claude_code_cli: MagicMock
+    ) -> None:
+        """When env_vars has MCP_CODER_PROJECT_DIR, logs_dir is derived and passed."""
+        mock_ask_claude_code_cli.return_value = {
+            "text": "Response with logs_dir",
+            "session_id": "test-session",
+            "version": "1.0",
+            "timestamp": "2025-10-01T10:30:00",
+            "provider": "claude",
+            "raw_response": {},
+        }
+        test_env_vars = {"MCP_CODER_PROJECT_DIR": "/home/user/mcp-coder"}
+
+        result = prompt_llm("Test question", env_vars=test_env_vars)
+
+        mock_ask_claude_code_cli.assert_called_once_with(
+            "Test question",
+            session_id=None,
+            timeout=30,
+            env_vars=test_env_vars,
+            cwd=None,
+            mcp_config=None,
+            branch_name=None,
+            logs_dir=str(Path("/home/user/mcp-coder") / "logs"),
+        )
+        assert result["text"] == "Response with logs_dir"
+
+    @patch("mcp_coder.llm.interface.ask_claude_code_cli")
+    def test_logs_dir_none_when_env_vars_missing_project_dir(
+        self, mock_ask_claude_code_cli: MagicMock
+    ) -> None:
+        """When env_vars lacks MCP_CODER_PROJECT_DIR, logs_dir=None."""
+        mock_ask_claude_code_cli.return_value = {
+            "text": "Response without project dir",
+            "session_id": "test-session",
+            "version": "1.0",
+            "timestamp": "2025-10-01T10:30:00",
+            "provider": "claude",
+            "raw_response": {},
+        }
+        test_env_vars = {"OTHER_VAR": "some_value"}
+
+        result = prompt_llm("Test question", env_vars=test_env_vars)
+
+        mock_ask_claude_code_cli.assert_called_once_with(
+            "Test question",
+            session_id=None,
+            timeout=30,
+            env_vars=test_env_vars,
+            cwd=None,
+            mcp_config=None,
+            branch_name=None,
+            logs_dir=None,
+        )
+        assert result["text"] == "Response without project dir"
+
+    @patch("mcp_coder.llm.interface.ask_claude_code_cli")
+    def test_logs_dir_none_when_env_vars_is_none(
+        self, mock_ask_claude_code_cli: MagicMock
+    ) -> None:
+        """When env_vars is None, logs_dir=None (backward compat)."""
+        mock_ask_claude_code_cli.return_value = {
+            "text": "Response with no env vars",
+            "session_id": "test-session",
+            "version": "1.0",
+            "timestamp": "2025-10-01T10:30:00",
+            "provider": "claude",
+            "raw_response": {},
+        }
+
+        result = prompt_llm("Test question", env_vars=None)
+
+        mock_ask_claude_code_cli.assert_called_once_with(
+            "Test question",
+            session_id=None,
+            timeout=30,
+            env_vars=None,
+            cwd=None,
+            mcp_config=None,
+            branch_name=None,
+            logs_dir=None,
+        )
+        assert result["text"] == "Response with no env vars"
 
 
 class TestPromptLlmLangchainRouting:

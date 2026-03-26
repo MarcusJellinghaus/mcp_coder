@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Derive `logs_dir` from `env_vars` in `prompt_llm()` ([detail](./steps/step_1.md))
 
-- [ ] Implementation: tests + production code (`interface.py`, `test_interface.py`, `create_pr/core.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + production code (`interface.py`, `test_interface.py`, `create_pr/core.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
