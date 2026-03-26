@@ -49,7 +49,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 6: CLI Changes — New Output Formats, Remove --verbosity, Wire Streaming
 - [x] Implementation: Update `parsers.py` + `prompt.py` for streaming path, remove `--verbosity`, add `ndjson`/`json-raw` formats, with tests in `test_prompt.py` and new `test_prompt_streaming.py`
 - [x] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(cli): add streaming output formats, remove --verbosity`
+- [x] Commit: `feat(cli): add streaming output formats, remove --verbosity`
 
 ## Pull Request
 - [ ] PR review: verify all steps integrated, no regressions
