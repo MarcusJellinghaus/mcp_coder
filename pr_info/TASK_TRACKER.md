@@ -21,6 +21,28 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Update `log_utils.py` — remove NOTICE monkey-patch, add threshold-only comment
+> [Detail](./steps/step_1.md) — `src/mcp_coder/utils/log_utils.py`, `tests/utils/test_log_utils.py`
+
+- [ ] Implementation: remove `_notice()` function and monkey-patch, add threshold comment, remove test
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Revert CLI command files from NOTICE logging to INFO logging
+> [Detail](./steps/step_2.md) — 7 CLI command files
+
+- [ ] Implementation: revert `logger.log(NOTICE, ...)` → `logger.info(...)` and remove NOTICE imports in all 7 files
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Revert workflow and utility files from NOTICE logging to INFO logging
+> [Detail](./steps/step_3.md) — 11 workflow/utility files
+
+- [ ] Implementation: revert `logger.log(NOTICE, ...)` → `logger.info(...)` and remove NOTICE imports in all 11 files
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: verify all steps complete, no regressions
+- [ ] PR summary prepared
