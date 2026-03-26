@@ -274,8 +274,8 @@ def _normalize_event_to_ndjson(event: StreamEvent) -> dict[str, object] | None:
 def print_stream_event(
     event: StreamEvent,
     output_format: str,
-    file: IO[str] = sys.stdout,
-    err_file: IO[str] = sys.stderr,
+    file: IO[str] | None = None,
+    err_file: IO[str] | None = None,
 ) -> None:
     """Print a single stream event to stdout based on output format.
 
@@ -291,6 +291,10 @@ def print_stream_event(
         ndjson: Print normalized NDJSON line (Claude CLI schema).
         json-raw: Print raw_line content as-is.
     """
+    if file is None:
+        file = sys.stdout
+    if err_file is None:
+        err_file = sys.stderr
     event_type = event.get("type")
 
     if output_format == "json-raw":

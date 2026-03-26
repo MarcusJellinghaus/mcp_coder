@@ -12,6 +12,18 @@ import pytest
 from mcp_coder.cli.commands.prompt import execute_prompt
 
 
+def _make_text_events(
+    text: str, session_id: str | None = None
+) -> list[dict[str, object]]:
+    """Create a minimal list of stream events for testing."""
+    events: list[dict[str, object]] = [{"type": "text_delta", "text": text}]
+    done_event: dict[str, object] = {"type": "done", "usage": {}}
+    if session_id is not None:
+        done_event["session_id"] = session_id
+    events.append(done_event)
+    return events
+
+
 class TestSessionIdOutputFormat:
     """Tests for --output-format session-id functionality."""
 
@@ -193,27 +205,23 @@ class TestExecutePrompt:
     @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
-    @patch("mcp_coder.cli.commands.prompt.prompt_llm")
+    @patch("mcp_coder.cli.commands.prompt.prompt_llm_stream")
     def test_basic_prompt_success(
         self,
-        mock_prompt_llm: Mock,
+        mock_prompt_llm_stream: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
         mock_resolve_mcp: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """Test successful prompt execution with mocked prompt_llm function."""
+        """Test successful prompt execution with streaming."""
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_resolve_mcp.return_value = None
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
-        mock_prompt_llm.return_value = {
-            "text": "The capital of France is Paris.",
-            "session_id": None,
-            "version": "1.0",
-            "timestamp": "2024-01-01T00:00:00",
-            "provider": "claude",
-            "raw_response": {},
-        }
+        mock_prompt_llm_stream.return_value = iter(
+            _make_text_events("The capital of France is Paris.")
+        )
+
         args = argparse.Namespace(
             prompt="What is the capital of France?",
             llm_method="claude",
@@ -224,7 +232,7 @@ class TestExecutePrompt:
         result = execute_prompt(args)
 
         assert result == 0
-        mock_prompt_llm.assert_called_once_with(
+        mock_prompt_llm_stream.assert_called_once_with(
             "What is the capital of France?",
             provider="claude",
             timeout=30,
@@ -240,10 +248,10 @@ class TestExecutePrompt:
     @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
-    @patch("mcp_coder.cli.commands.prompt.prompt_llm")
+    @patch("mcp_coder.cli.commands.prompt.prompt_llm_stream")
     def test_prompt_api_error(
         self,
-        mock_prompt_llm: Mock,
+        mock_prompt_llm_stream: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
         mock_resolve_mcp: Mock,
@@ -253,7 +261,7 @@ class TestExecutePrompt:
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_resolve_mcp.return_value = None
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
-        mock_prompt_llm.side_effect = Exception("Claude API connection failed")
+        mock_prompt_llm_stream.side_effect = Exception("Claude API connection failed")
         args = argparse.Namespace(
             prompt="Test question",
             llm_method="claude",
@@ -271,14 +279,14 @@ class TestExecutePrompt:
     @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
-    @patch("mcp_coder.cli.commands.prompt.prompt_llm")
+    @patch("mcp_coder.cli.commands.prompt.prompt_llm_stream")
     @patch("builtins.open", new_callable=mock_open)
     @patch("os.path.exists")
     def test_continue_from_success(
         self,
         mock_exists: Mock,
         mock_file_open: Mock,
-        mock_prompt_llm: Mock,
+        mock_prompt_llm_stream: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
         mock_resolve_mcp: Mock,
@@ -292,14 +300,9 @@ class TestExecutePrompt:
 
         mock_exists.return_value = True
         mock_file_open.return_value.read.return_value = json.dumps(stored_response)
-        mock_prompt_llm.return_value = {
-            "text": "Adding error handling.",
-            "session_id": None,
-            "version": "1.0",
-            "timestamp": "2024-01-01T00:00:00",
-            "provider": "claude",
-            "raw_response": {},
-        }
+        mock_prompt_llm_stream.return_value = iter(
+            _make_text_events("Adding error handling.")
+        )
 
         args = argparse.Namespace(
             prompt="Add error handling",
@@ -312,7 +315,7 @@ class TestExecutePrompt:
         result = execute_prompt(args)
 
         assert result == 0
-        mock_prompt_llm.assert_called_once_with(
+        mock_prompt_llm_stream.assert_called_once_with(
             "Add error handling",
             provider="claude",
             timeout=30,
@@ -329,12 +332,12 @@ class TestExecutePrompt:
     @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
-    @patch("mcp_coder.cli.commands.prompt.prompt_llm")
+    @patch("mcp_coder.cli.commands.prompt.prompt_llm_stream")
     @patch("os.path.exists")
     def test_continue_from_file_not_found(
         self,
         mock_exists: Mock,
-        mock_prompt_llm: Mock,
+        mock_prompt_llm_stream: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
         mock_resolve_mcp: Mock,
@@ -345,14 +348,9 @@ class TestExecutePrompt:
         mock_resolve_mcp.return_value = None
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
         mock_exists.return_value = False
-        mock_prompt_llm.return_value = {
-            "text": "Starting new conversation.",
-            "session_id": None,
-            "version": "1.0",
-            "timestamp": "2024-01-01T00:00:00",
-            "provider": "claude",
-            "raw_response": {},
-        }
+        mock_prompt_llm_stream.return_value = iter(
+            _make_text_events("Starting new conversation.")
+        )
 
         args = argparse.Namespace(
             prompt="Continue conversation",
@@ -365,7 +363,7 @@ class TestExecutePrompt:
         result = execute_prompt(args)
 
         assert result == 0
-        mock_prompt_llm.assert_called_once_with(
+        mock_prompt_llm_stream.assert_called_once_with(
             "Continue conversation",
             provider="claude",
             timeout=30,
@@ -384,14 +382,14 @@ class TestExecutePrompt:
     @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
-    @patch("mcp_coder.cli.commands.prompt.prompt_llm")
+    @patch("mcp_coder.cli.commands.prompt.prompt_llm_stream")
     @patch("builtins.open", new_callable=mock_open)
     @patch("os.path.exists")
     def test_continue_from_invalid_json(
         self,
         mock_exists: Mock,
         mock_file_open: Mock,
-        mock_prompt_llm: Mock,
+        mock_prompt_llm_stream: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
         mock_resolve_mcp: Mock,
@@ -403,14 +401,9 @@ class TestExecutePrompt:
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
         mock_exists.return_value = True
         mock_file_open.return_value.read.return_value = "{ invalid json content }"
-        mock_prompt_llm.return_value = {
-            "text": "Starting new conversation.",
-            "session_id": None,
-            "version": "1.0",
-            "timestamp": "2024-01-01T00:00:00",
-            "provider": "claude",
-            "raw_response": {},
-        }
+        mock_prompt_llm_stream.return_value = iter(
+            _make_text_events("Starting new conversation.")
+        )
 
         args = argparse.Namespace(
             prompt="Continue conversation",
@@ -423,7 +416,7 @@ class TestExecutePrompt:
         result = execute_prompt(args)
 
         assert result == 0
-        mock_prompt_llm.assert_called_once_with(
+        mock_prompt_llm_stream.assert_called_once_with(
             "Continue conversation",
             provider="claude",
             timeout=30,
@@ -442,14 +435,14 @@ class TestExecutePrompt:
     @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
-    @patch("mcp_coder.cli.commands.prompt.prompt_llm")
+    @patch("mcp_coder.cli.commands.prompt.prompt_llm_stream")
     @patch("builtins.open", new_callable=mock_open)
     @patch("os.path.exists")
     def test_continue_from_missing_session_id(
         self,
         mock_exists: Mock,
         mock_file_open: Mock,
-        mock_prompt_llm: Mock,
+        mock_prompt_llm_stream: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
         mock_resolve_mcp: Mock,
@@ -463,14 +456,9 @@ class TestExecutePrompt:
 
         mock_exists.return_value = True
         mock_file_open.return_value.read.return_value = json.dumps(incomplete_response)
-        mock_prompt_llm.return_value = {
-            "text": "Starting new conversation.",
-            "session_id": None,
-            "version": "1.0",
-            "timestamp": "2024-01-01T00:00:00",
-            "provider": "claude",
-            "raw_response": {},
-        }
+        mock_prompt_llm_stream.return_value = iter(
+            _make_text_events("Starting new conversation.")
+        )
 
         args = argparse.Namespace(
             prompt="Continue conversation",
@@ -483,7 +471,7 @@ class TestExecutePrompt:
         result = execute_prompt(args)
 
         assert result == 0
-        mock_prompt_llm.assert_called_once_with(
+        mock_prompt_llm_stream.assert_called_once_with(
             "Continue conversation",
             provider="claude",
             timeout=30,
@@ -499,46 +487,39 @@ class TestExecutePrompt:
     @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
-    @patch("mcp_coder.cli.commands.prompt.prompt_llm")
+    @patch("mcp_coder.cli.commands.prompt.prompt_llm_stream")
     @patch("builtins.open", new_callable=mock_open)
     @patch("os.path.exists")
-    def test_continue_from_with_verbose_output(
+    def test_continue_from_with_ndjson_format(
         self,
         mock_exists: Mock,
         mock_file_open: Mock,
-        mock_prompt_llm: Mock,
+        mock_prompt_llm_stream: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
         mock_resolve_mcp: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """Test continuation functionality works with verbose verbosity."""
+        """Test continuation functionality works with ndjson output format."""
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_resolve_mcp.return_value = None
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
-        stored_response = {"response_data": {"session_id": "verbose-continuation-123"}}
+        stored_response = {"response_data": {"session_id": "ndjson-session-123"}}
 
         mock_exists.return_value = True
         mock_file_open.return_value.read.return_value = json.dumps(stored_response)
 
-        mock_prompt_llm.return_value = {
-            "text": "Here are some advanced Python features.",
-            "session_id": "verbose-continuation-new-456",
-            "version": "1.0",
-            "timestamp": "2024-01-01T00:00:00",
-            "provider": "claude",
-            "raw_response": {
-                "session_info": {"session_id": "verbose-continuation-new-456"},
-                "result_info": {"duration_ms": 2500, "cost_usd": 0.040},
-                "raw_messages": [],
-                "api_metadata": {},
-            },
-        }
+        mock_prompt_llm_stream.return_value = iter(
+            _make_text_events(
+                "Here are some advanced Python features.",
+                session_id="ndjson-session-new-456",
+            )
+        )
 
         args = argparse.Namespace(
             prompt="Tell me about advanced features",
             continue_session_from="path/to/previous.json",
-            verbosity="verbose",
+            output_format="ndjson",
             llm_method="claude",
             mcp_config=None,
             project_dir=None,
@@ -547,32 +528,33 @@ class TestExecutePrompt:
         result = execute_prompt(args)
 
         assert result == 0
-        mock_prompt_llm.assert_called_once_with(
+        mock_prompt_llm_stream.assert_called_once_with(
             "Tell me about advanced features",
             provider=mock.ANY,
             timeout=30,
-            session_id="verbose-continuation-123",
+            session_id="ndjson-session-123",
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
             execution_dir=mock.ANY,
             mcp_config=None,
             branch_name=mock.ANY,
         )
         captured = capsys.readouterr()
-        assert "verbose-continuation-new-456" in captured.out
+        # NDJSON format should output JSON lines
+        assert "ndjson-session-new-456" in captured.out
 
     @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
-    @patch("mcp_coder.cli.commands.prompt.prompt_llm")
+    @patch("mcp_coder.cli.commands.prompt.prompt_llm_stream")
     def test_execute_prompt_with_env_vars(
         self,
-        mock_prompt_llm: Mock,
+        mock_prompt_llm_stream: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
         mock_resolve_mcp: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """Test that env_vars are prepared and passed to prompt_llm."""
+        """Test that env_vars are prepared and passed to prompt_llm_stream."""
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_resolve_mcp.return_value = None
         mock_env_vars = {
@@ -580,14 +562,9 @@ class TestExecutePrompt:
             "MCP_CODER_VENV_DIR": "/test/project/.venv",
         }
         mock_prepare_env.return_value = mock_env_vars
-        mock_prompt_llm.return_value = {
-            "text": "Response with env vars.",
-            "session_id": None,
-            "version": "1.0",
-            "timestamp": "2024-01-01T00:00:00",
-            "provider": "claude",
-            "raw_response": {},
-        }
+        mock_prompt_llm_stream.return_value = iter(
+            _make_text_events("Response with env vars.")
+        )
 
         args = argparse.Namespace(
             prompt="Test prompt",
@@ -605,7 +582,7 @@ class TestExecutePrompt:
         assert len(call_args) == 1
         assert isinstance(call_args[0], Path)
 
-        mock_prompt_llm.assert_called_once_with(
+        mock_prompt_llm_stream.assert_called_once_with(
             "Test prompt",
             provider="claude",
             timeout=30,
@@ -621,10 +598,10 @@ class TestExecutePrompt:
     @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
-    @patch("mcp_coder.cli.commands.prompt.prompt_llm")
+    @patch("mcp_coder.cli.commands.prompt.prompt_llm_stream")
     def test_execute_prompt_no_venv_graceful(
         self,
-        mock_prompt_llm: Mock,
+        mock_prompt_llm_stream: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
         mock_resolve_mcp: Mock,
@@ -635,14 +612,9 @@ class TestExecutePrompt:
         mock_resolve_mcp.return_value = None
         # Simulate RuntimeError when no venv found
         mock_prepare_env.side_effect = RuntimeError("No virtual environment found")
-        mock_prompt_llm.return_value = {
-            "text": "Response without env vars.",
-            "session_id": None,
-            "version": "1.0",
-            "timestamp": "2024-01-01T00:00:00",
-            "provider": "claude",
-            "raw_response": {},
-        }
+        mock_prompt_llm_stream.return_value = iter(
+            _make_text_events("Response without env vars.")
+        )
 
         args = argparse.Namespace(
             prompt="Test prompt without venv",
@@ -657,8 +629,8 @@ class TestExecutePrompt:
         assert result == 0
         mock_prepare_env.assert_called_once()
 
-        # Should call prompt_llm with env_vars=None
-        mock_prompt_llm.assert_called_once_with(
+        # Should call prompt_llm_stream with env_vars=None
+        mock_prompt_llm_stream.assert_called_once_with(
             "Test prompt without venv",
             provider="claude",
             timeout=30,
@@ -677,10 +649,10 @@ class TestPromptExecutionDir:
 
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
-    @patch("mcp_coder.cli.commands.prompt.prompt_llm")
+    @patch("mcp_coder.cli.commands.prompt.prompt_llm_stream")
     def test_default_execution_dir_uses_cwd(
         self,
-        mock_prompt_llm: Mock,
+        mock_prompt_llm_stream: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
         capsys: pytest.CaptureFixture[str],
@@ -688,14 +660,9 @@ class TestPromptExecutionDir:
         """Test default execution_dir should use current working directory."""
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
-        mock_prompt_llm.return_value = {
-            "text": "Response with default execution_dir.",
-            "session_id": None,
-            "version": "1.0",
-            "timestamp": "2024-01-01T00:00:00",
-            "provider": "claude",
-            "raw_response": {},
-        }
+        mock_prompt_llm_stream.return_value = iter(
+            _make_text_events("Response with default execution_dir.")
+        )
 
         args = argparse.Namespace(
             prompt="Test prompt",
@@ -708,8 +675,8 @@ class TestPromptExecutionDir:
         result = execute_prompt(args)
 
         assert result == 0
-        # Verify execution_dir was passed to prompt_llm and equals CWD
-        call_kwargs = mock_prompt_llm.call_args[1]
+        # Verify execution_dir was passed to prompt_llm_stream and equals CWD
+        call_kwargs = mock_prompt_llm_stream.call_args[1]
         assert "execution_dir" in call_kwargs
         assert call_kwargs["execution_dir"] == str(Path.cwd())
         captured = capsys.readouterr()
@@ -717,10 +684,10 @@ class TestPromptExecutionDir:
 
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
-    @patch("mcp_coder.cli.commands.prompt.prompt_llm")
+    @patch("mcp_coder.cli.commands.prompt.prompt_llm_stream")
     def test_explicit_execution_dir_absolute(
         self,
-        mock_prompt_llm: Mock,
+        mock_prompt_llm_stream: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
         tmp_path: Path,
@@ -729,14 +696,9 @@ class TestPromptExecutionDir:
         """Test explicit absolute execution_dir should be validated and used."""
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
-        mock_prompt_llm.return_value = {
-            "text": "Response with explicit execution_dir.",
-            "session_id": None,
-            "version": "1.0",
-            "timestamp": "2024-01-01T00:00:00",
-            "provider": "claude",
-            "raw_response": {},
-        }
+        mock_prompt_llm_stream.return_value = iter(
+            _make_text_events("Response with explicit execution_dir.")
+        )
 
         # Create a valid temporary directory
         execution_dir = tmp_path / "exec_dir"
@@ -753,8 +715,8 @@ class TestPromptExecutionDir:
         result = execute_prompt(args)
 
         assert result == 0
-        # Verify execution_dir was validated and passed to prompt_llm
-        call_kwargs = mock_prompt_llm.call_args[1]
+        # Verify execution_dir was validated and passed to prompt_llm_stream
+        call_kwargs = mock_prompt_llm_stream.call_args[1]
         assert "execution_dir" in call_kwargs
         assert call_kwargs["execution_dir"] == str(execution_dir)
         captured = capsys.readouterr()
@@ -762,10 +724,10 @@ class TestPromptExecutionDir:
 
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
-    @patch("mcp_coder.cli.commands.prompt.prompt_llm")
+    @patch("mcp_coder.cli.commands.prompt.prompt_llm_stream")
     def test_explicit_execution_dir_relative(
         self,
-        mock_prompt_llm: Mock,
+        mock_prompt_llm_stream: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
         tmp_path: Path,
@@ -775,14 +737,9 @@ class TestPromptExecutionDir:
         """Test explicit relative execution_dir should be resolved to CWD."""
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
-        mock_prompt_llm.return_value = {
-            "text": "Response with relative execution_dir.",
-            "session_id": None,
-            "version": "1.0",
-            "timestamp": "2024-01-01T00:00:00",
-            "provider": "claude",
-            "raw_response": {},
-        }
+        mock_prompt_llm_stream.return_value = iter(
+            _make_text_events("Response with relative execution_dir.")
+        )
 
         # Create a valid temporary directory structure
         base_dir = tmp_path / "base"
@@ -805,7 +762,7 @@ class TestPromptExecutionDir:
 
         assert result == 0
         # Verify execution_dir was resolved to absolute path
-        call_kwargs = mock_prompt_llm.call_args[1]
+        call_kwargs = mock_prompt_llm_stream.call_args[1]
         assert "execution_dir" in call_kwargs
         assert call_kwargs["execution_dir"] == str(rel_dir)
         captured = capsys.readouterr()
@@ -840,10 +797,10 @@ class TestPromptExecutionDir:
 
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
-    @patch("mcp_coder.cli.commands.prompt.prompt_llm")
+    @patch("mcp_coder.cli.commands.prompt.prompt_llm_stream")
     def test_execution_dir_with_all_other_args(
         self,
-        mock_prompt_llm: Mock,
+        mock_prompt_llm_stream: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
         tmp_path: Path,
@@ -852,14 +809,9 @@ class TestPromptExecutionDir:
         """Test execution_dir works with all other args (no conflicts)."""
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
-        mock_prompt_llm.return_value = {
-            "text": "Response with all args.",
-            "session_id": None,
-            "version": "1.0",
-            "timestamp": "2024-01-01T00:00:00",
-            "provider": "claude",
-            "raw_response": {},
-        }
+        mock_prompt_llm_stream.return_value = iter(
+            _make_text_events("Response with all args.")
+        )
 
         # Create valid directories
         execution_dir = tmp_path / "exec_dir"
@@ -873,7 +825,7 @@ class TestPromptExecutionDir:
             project_dir=str(project_dir),
             timeout=60,
             llm_method="claude",
-            verbosity="just-text",
+            output_format="text",
             session_id="test-session-123",
             mcp_config=None,
         )
@@ -882,7 +834,7 @@ class TestPromptExecutionDir:
 
         assert result == 0
         # Verify all arguments were passed correctly
-        call_kwargs = mock_prompt_llm.call_args[1]
+        call_kwargs = mock_prompt_llm_stream.call_args[1]
         assert call_kwargs["execution_dir"] == str(execution_dir)
         assert call_kwargs["timeout"] == 60
         assert call_kwargs["session_id"] == "test-session-123"

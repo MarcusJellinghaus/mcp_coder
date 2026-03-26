@@ -47,8 +47,8 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat(interface): add prompt_llm_stream and stream formatting`
 
 ### Step 6: CLI Changes — New Output Formats, Remove --verbosity, Wire Streaming
-- [ ] Implementation: Update `parsers.py` + `prompt.py` for streaming path, remove `--verbosity`, add `ndjson`/`json-raw` formats, with tests in `test_prompt.py` and new `test_prompt_streaming.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Implementation: Update `parsers.py` + `prompt.py` for streaming path, remove `--verbosity`, add `ndjson`/`json-raw` formats, with tests in `test_prompt.py` and new `test_prompt_streaming.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
 - [ ] Commit: `feat(cli): add streaming output formats, remove --verbosity`
 
 ## Pull Request
