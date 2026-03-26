@@ -11,6 +11,7 @@ from ...utils.github_operations.issues import (
     IssueManager,
     get_all_cached_issues,
 )
+from ...utils.log_utils import NOTICE
 from ...utils.subprocess_runner import (
     CalledProcessError,
     CommandOptions,
@@ -223,7 +224,8 @@ def prepare_and_launch_session(
         )
         add_session(session)
 
-        logger.info(
+        logger.log(
+            NOTICE,
             "Started session for issue #%d in %s",
             issue_number,
             folder_str,

@@ -56,6 +56,7 @@ GitHub repository utilities for branch detection and workflow automation.
 | [`gh-tool get-base-branch`](#gh-tool-get-base-branch) | Detect base branch for current feature branch |
 | [`gh-tool define-labels`](#gh-tool-define-labels) | Sync workflow status labels to GitHub repository |
 | [`gh-tool issue-stats`](#gh-tool-issue-stats) | Display issue statistics grouped by workflow status category |
+| [`gh-tool set-status`](#gh-tool-set-status) | Set workflow status label on a GitHub issue |
 
 ### Git Tools
 Git utility commands.
@@ -692,6 +693,53 @@ mcp-coder gh-tool get-base-branch --project-dir /path/to/project
 - Slash commands (`/rebase`, `/implementation_review`, `/implementation_review_supervisor`) use this to determine correct base branch
 - CI scripts that need to compare against the correct parent branch
 - Workflows involving feature branches based on non-main branches
+
+---
+
+### gh-tool set-status
+
+Set workflow status label on a GitHub issue.
+
+#### Synopsis
+
+```bash
+mcp-coder gh-tool set-status LABEL [OPTIONS]
+```
+
+#### Arguments
+
+- `label` - The status label to set (e.g., `status-05:plan-ready`) (required)
+
+#### Options
+
+- `--project-dir PATH` - Project directory path (default: current directory)
+- `--force` - Force status change even if transition is not allowed
+
+#### Description
+
+Sets a workflow status label on the GitHub issue linked to the current branch. Removes any existing status labels before applying the new one. The issue number is extracted from the branch name.
+
+#### Examples
+
+```bash
+# Set issue status to plan-ready
+mcp-coder gh-tool set-status status-05:plan-ready
+
+# Set issue status to ready for PR
+mcp-coder gh-tool set-status status-08:ready-pr
+
+# Force a status transition
+mcp-coder gh-tool set-status status-05:plan-ready --force
+
+# Specify project directory
+mcp-coder gh-tool set-status status-05:plan-ready --project-dir /path/to/project
+```
+
+#### Use Cases
+
+- **Slash commands** (`/plan_approve`, `/implementation_approve`, `/implementation_needs_rework`) use this to transition issue status
+- **Failure recovery** — reset issue status after automated workflow failures (see [Failure Handling](processes-prompts/development-process.md#8-failure-handling))
+- **Manual workflow control** — override issue status when needed
 
 ---
 

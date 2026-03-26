@@ -288,7 +288,7 @@ class TestCheckPrerequisitesTaskTracker:
 
         # Assert: returns True, file unchanged
         assert result is True
-        assert "Task tracker structure validated" in caplog.text
+        assert "Prerequisites check passed" in caplog.text
 
     def test_validates_existing_tracker_failure(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture

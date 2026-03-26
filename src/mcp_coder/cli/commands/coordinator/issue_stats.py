@@ -18,6 +18,7 @@ from ....utils.github_operations.label_config import (
     get_labels_config_path,
     load_labels_config,
 )
+from ....utils.log_utils import NOTICE
 from ....workflows.utils import resolve_project_dir
 
 logger = logging.getLogger(__name__)
@@ -338,7 +339,7 @@ def execute_coordinator_issue_stats(args: argparse.Namespace) -> int:
             show_details=args.details,
         )
 
-        logger.info("Issue statistics command completed successfully")
+        logger.log(NOTICE, "Issue statistics command completed successfully")
         return 0
 
     except ValueError as e:

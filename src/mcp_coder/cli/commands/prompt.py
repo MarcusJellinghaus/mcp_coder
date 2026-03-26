@@ -20,6 +20,7 @@ from ...llm.storage import (
     store_session,
 )
 from ...utils.git_utils import get_branch_name_for_logging
+from ...utils.log_utils import NOTICE
 from ..utils import (
     parse_llm_method_from_args,
     resolve_execution_dir,
@@ -173,7 +174,7 @@ def execute_prompt(
                 stored_path = store_session(
                     response_dict, args.prompt, branch_name=branch_name
                 )
-                logger.info("Response stored to: %s", stored_path)
+                logger.log(NOTICE, "Response stored to: %s", stored_path)
         elif verbosity == "just-text":
             # Use unified prompt_llm interface for simple text output
             branch_name = get_branch_name_for_logging(project_dir)
@@ -196,7 +197,7 @@ def execute_prompt(
                 stored_path = store_session(
                     llm_response, args.prompt, branch_name=branch_name
                 )
-                logger.info("Response stored to: %s", stored_path)
+                logger.log(NOTICE, "Response stored to: %s", stored_path)
         else:
             # Use prompt_llm for verbose/raw modes that need metadata
             branch_name = get_branch_name_for_logging(project_dir)
@@ -216,7 +217,7 @@ def execute_prompt(
                 stored_path = store_session(
                     llm_response, args.prompt, branch_name=branch_name
                 )
-                logger.info("Response stored to: %s", stored_path)
+                logger.log(NOTICE, "Response stored to: %s", stored_path)
 
             # Pass raw_response sub-dict to formatters — same shape as before
             raw_data = llm_response["raw_response"]
@@ -232,7 +233,7 @@ def execute_prompt(
         # Print formatted output to stdout
         print(formatted_output)
 
-        logger.info("Prompt command completed successfully")
+        logger.log(NOTICE, "Prompt command completed successfully")
         return 0
 
     except (

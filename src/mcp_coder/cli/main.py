@@ -20,11 +20,10 @@ from .commands.create_pr import execute_create_pr
 from .commands.define_labels import execute_define_labels
 from .commands.gh_tool import execute_get_base_branch
 from .commands.git_tool import execute_compact_diff
-from .commands.help import execute_help, get_compact_help_text
+from .commands.help import get_help_text
 from .commands.implement import execute_implement
 from .commands.init import execute_init
 from .commands.prompt import execute_prompt
-from .commands.set_status import execute_set_status
 from .commands.verify import execute_verify
 from .parsers import (
     WideHelpFormatter,
@@ -37,13 +36,35 @@ from .parsers import (
     add_git_tool_parsers,
     add_implement_parser,
     add_prompt_parser,
-    add_set_status_parser,
     add_verify_parser,
     add_vscodeclaude_parsers,
 )
 
 # Logger will be initialized in main()
 logger = logging.getLogger(__name__)
+
+_INFO_COMMANDS = frozenset({"create-plan", "implement", "create-pr", "coordinator"})
+
+
+def _resolve_log_level(args: argparse.Namespace) -> str:
+    """Resolve the effective log level based on command and explicit flag.
+
+    Workflow commands default to INFO; other commands default to NOTICE.
+    An explicit --log-level always wins.
+
+    Returns:
+        The log level string to pass to setup_logging.
+    """
+    if args.log_level is not None:
+        return str(args.log_level)
+    if args.command in _INFO_COMMANDS:
+        return "INFO"
+    if (
+        args.command == "vscodeclaude"
+        and getattr(args, "vscodeclaude_subcommand", None) == "launch"
+    ):
+        return "INFO"
+    return "NOTICE"
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -56,6 +77,16 @@ def create_parser() -> argparse.ArgumentParser:
         prog="mcp-coder",
         description="AI-powered software development automation toolkit",
         formatter_class=WideHelpFormatter,
+        add_help=False,
+    )
+
+    parser.add_argument(
+        "--help",
+        "-h",
+        action="store_true",
+        default=False,
+        dest="help",
+        help=argparse.SUPPRESS,
     )
 
     parser.add_argument(
@@ -68,8 +99,8 @@ def create_parser() -> argparse.ArgumentParser:
         "--log-level",
         type=str.upper,
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        default="INFO",
-        help="Set the logging level (default: INFO)",
+        default=None,
+        help="Set the logging level (default: NOTICE, or INFO for workflow commands)",
         metavar="LEVEL",
     )
 
@@ -81,7 +112,7 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     # Simple commands without subparsers
-    subparsers.add_parser("help", help="Show help information")
+    subparsers.add_parser("help", help=argparse.SUPPRESS)
     subparsers.add_parser("init", help="Create default configuration file")
     add_verify_parser(subparsers)
 
@@ -92,27 +123,12 @@ def create_parser() -> argparse.ArgumentParser:
     add_create_plan_parser(subparsers)
     add_create_pr_parser(subparsers)
     add_coordinator_parsers(subparsers)
-    add_set_status_parser(subparsers)
     add_check_parsers(subparsers)
     add_gh_tool_parsers(subparsers)
     add_git_tool_parsers(subparsers)
     add_vscodeclaude_parsers(subparsers)
 
     return parser
-
-
-def handle_no_command(_args: argparse.Namespace) -> int:
-    """Handle case when no command is provided.
-
-    Returns:
-        Exit code (0 — showing help is valid behavior).
-    """
-    logger.info("No command provided, showing help")
-
-    help_text = get_compact_help_text()
-    print(help_text)
-
-    return 0
 
 
 def _handle_coordinator_command(args: argparse.Namespace) -> int:
@@ -179,6 +195,10 @@ def _handle_gh_tool_command(args: argparse.Namespace) -> int:
             return execute_define_labels(args)
         elif args.gh_tool_subcommand == "issue-stats":
             return execute_coordinator_issue_stats(args)
+        elif args.gh_tool_subcommand == "set-status":
+            from .commands.set_status import execute_set_status
+
+            return execute_set_status(args)
         else:
             logger.error(f"Unknown gh-tool subcommand: {args.gh_tool_subcommand}")
             print(f"Error: Unknown gh-tool subcommand '{args.gh_tool_subcommand}'")
@@ -187,7 +207,7 @@ def _handle_gh_tool_command(args: argparse.Namespace) -> int:
         logger.error("gh-tool subcommand required")
         print(
             "Error: Please specify a gh-tool subcommand"
-            " (e.g., 'get-base-branch', 'define-labels', 'issue-stats')"
+            " (e.g., 'get-base-branch', 'define-labels', 'issue-stats', 'set-status')"
         )
         return 1
 
@@ -270,22 +290,23 @@ def main() -> int:
     parser = create_parser()
     args = parser.parse_args()
 
-    # Initialize logging with user-specified level
-    setup_logging(args.log_level)
+    # Initialize logging with resolved level
+    log_level = _resolve_log_level(args)
+    setup_logging(log_level)
 
     try:
         logger.debug(
             f"Starting mcp-coder CLI: command={args.command}, log_level={args.log_level}"
         )
 
-        # Handle case when no command is provided
-        if not args.command:
-            return handle_no_command(args)
+        # Unified help: no command, "help" command, or --help flag
+        if not args.command or args.command == "help" or args.help:
+            help_text = get_help_text()
+            print(help_text)
+            return 0
 
         # Route to appropriate command handler
-        if args.command == "help":
-            return execute_help(args)
-        elif args.command == "init":
+        if args.command == "init":
             return execute_init(args)
         elif args.command == "verify":
             return execute_verify(args)
@@ -301,8 +322,6 @@ def main() -> int:
             return execute_create_pr(args)
         elif args.command == "coordinator":
             return _handle_coordinator_command(args)
-        elif args.command == "set-status":
-            return execute_set_status(args)
         elif args.command == "check":
             return _handle_check_command(args)
         elif args.command == "gh-tool":

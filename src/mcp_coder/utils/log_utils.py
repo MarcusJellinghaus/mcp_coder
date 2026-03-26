@@ -38,6 +38,18 @@ from typing import Any, Callable, Optional, TypeVar, cast, overload
 import structlog
 from pythonjsonlogger.json import JsonFormatter
 
+# Custom NOTICE log level (between INFO=20 and WARNING=30)
+NOTICE = 25
+logging.addLevelName(NOTICE, "NOTICE")
+
+
+def _notice(self: logging.Logger, message: str, *args: Any, **kwargs: Any) -> None:
+    if self.isEnabledFor(NOTICE):
+        self.log(NOTICE, message, *args, **kwargs)
+
+
+logging.Logger.notice = _notice  # type: ignore[attr-defined]
+
 # Type variable for function return types
 T = TypeVar("T")
 
@@ -153,7 +165,9 @@ def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
     # Set log level
     numeric_level = getattr(logging, log_level.upper(), None)
     if not isinstance(numeric_level, int):
-        raise ValueError(f"Invalid log level: {log_level}")
+        numeric_level = logging.getLevelName(log_level.upper())
+        if not isinstance(numeric_level, int):
+            raise ValueError(f"Invalid log level: {log_level}")
 
     # Don't clear handlers if we're in a testing environment (pytest)
     # This prevents conflicts with pytest's logging capture

@@ -14,6 +14,7 @@ from mcp_coder.utils import (
     get_full_status,
     is_working_directory_clean,
 )
+from mcp_coder.utils.log_utils import NOTICE
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerSectionNotFoundError,
     _find_implementation_section,
@@ -165,7 +166,7 @@ def check_prerequisites(project_dir: Path) -> bool:
         logger.error(f"Invalid task tracker structure: {e}")
         return False
 
-    logger.info("Prerequisites check passed")
+    logger.log(NOTICE, "Prerequisites check passed")
     return True
 
 

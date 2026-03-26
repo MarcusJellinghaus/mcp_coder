@@ -23,6 +23,7 @@ from ...utils.github_operations.label_config import (
     load_labels_config,
 )
 from ...utils.github_operations.labels_manager import LabelsManager
+from ...utils.log_utils import NOTICE
 from ...workflows.utils import resolve_project_dir
 
 logger = logging.getLogger(__name__)
@@ -451,7 +452,7 @@ def apply_labels(
         color, description = target_map[label_name]
         try:
             labels_manager.create_label(label_name, color, description)
-            logger.info(f"Created: {label_name}")
+            logger.log(NOTICE, f"Created: {label_name}")
         except (
             Exception
         ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
@@ -464,7 +465,7 @@ def apply_labels(
             labels_manager.update_label(
                 label_name, color=color, description=description
             )
-            logger.info(f"Updated: {label_name}")
+            logger.log(NOTICE, f"Updated: {label_name}")
         except (
             Exception
         ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
@@ -474,7 +475,7 @@ def apply_labels(
     for label_name in changes["deleted"]:
         try:
             labels_manager.delete_label(label_name)
-            logger.info(f"Deleted: {label_name}")
+            logger.log(NOTICE, f"Deleted: {label_name}")
         except (
             Exception
         ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
@@ -573,7 +574,7 @@ def execute_define_labels(args: argparse.Namespace) -> int:
         print(summary)
 
         # Log completion
-        logger.info("Label operation completed successfully")
+        logger.log(NOTICE, "Label operation completed successfully")
 
         # Return exit code based on validation results
         if validation["errors"]:

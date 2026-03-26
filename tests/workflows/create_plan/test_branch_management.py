@@ -146,14 +146,19 @@ class TestManageBranch:
                 with patch("mcp_coder.workflows.create_plan.logger") as mock_logger:
                     branch_name = manage_branch(tmp_path, 123, "Test Feature")
 
-                    # Verify logging calls
-                    assert mock_logger.info.call_count >= 3
-                    log_calls = [call[0][0] for call in mock_logger.info.call_args_list]
-                    assert any("Managing branch" in call for call in log_calls)
+                    # Verify logging calls (some promoted to NOTICE via logger.log)
+                    info_calls = [
+                        call[0][0] for call in mock_logger.info.call_args_list
+                    ]
+                    log_calls = [
+                        str(call[0][1]) for call in mock_logger.log.call_args_list
+                    ]
+                    all_calls = info_calls + log_calls
+                    assert any("Managing branch" in call for call in all_calls)
                     assert any(
-                        "Using existing linked branch" in call for call in log_calls
+                        "Using existing linked branch" in call for call in all_calls
                     )
-                    assert any("Switched to branch" in call for call in log_calls)
+                    assert any("Switched to branch" in call for call in all_calls)
 
         assert branch_name == "123-existing-branch"
 
@@ -181,11 +186,17 @@ class TestManageBranch:
                 with patch("mcp_coder.workflows.create_plan.logger") as mock_logger:
                     branch_name = manage_branch(tmp_path, 123, "Test Feature")
 
-                    # Verify logging calls
-                    log_calls = [call[0][0] for call in mock_logger.info.call_args_list]
-                    assert any("Managing branch" in call for call in log_calls)
-                    assert any("Created new branch" in call for call in log_calls)
-                    assert any("Switched to branch" in call for call in log_calls)
+                    # Verify logging calls (some promoted to NOTICE via logger.log)
+                    info_calls = [
+                        call[0][0] for call in mock_logger.info.call_args_list
+                    ]
+                    notice_calls = [
+                        str(call[0][1]) for call in mock_logger.log.call_args_list
+                    ]
+                    all_calls = info_calls + notice_calls
+                    assert any("Managing branch" in call for call in all_calls)
+                    assert any("Created new branch" in call for call in all_calls)
+                    assert any("Switched to branch" in call for call in all_calls)
 
         assert branch_name == "123-new-branch"
 

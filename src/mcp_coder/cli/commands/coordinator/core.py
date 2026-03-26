@@ -19,6 +19,7 @@ from ....utils.github_operations.issues import (
 )
 from ....utils.github_operations.label_config import load_labels_config
 from ....utils.jenkins_operations.client import JenkinsClient
+from ....utils.log_utils import NOTICE
 from ....utils.user_config import get_config_file_path, get_config_values
 from .command_templates import (
     CREATE_PLAN_COMMAND_TEMPLATE,
@@ -490,8 +491,9 @@ def dispatch_workflow(
 
     # Step 8: Log success with issue and Jenkins links
     issue_url = issue["url"]
-    logger.info(
+    logger.log(
+        NOTICE,
         f"Successfully dispatched {workflow_config['workflow']} workflow for issue #{issue['number']}: "
         f"removed '{current_label}', added '{workflow_config['next_label']}' | "
-        f"Issue: {issue_url} | {jenkins_link}"
+        f"Issue: {issue_url} | {jenkins_link}",
     )
