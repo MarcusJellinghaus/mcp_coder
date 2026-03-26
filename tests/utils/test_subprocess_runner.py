@@ -189,7 +189,7 @@ class TestStreamSubprocess:
 
         # Patch Timer to call the callback immediately
         def instant_timer(
-            interval: float, function: object, args: object = None
+            _interval: float, function: object, args: object = None
         ) -> MagicMock:
             """Timer that fires the callback immediately on start."""
             timer = MagicMock()

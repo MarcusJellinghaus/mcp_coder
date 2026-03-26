@@ -204,6 +204,7 @@ _.index_status
 # These are set on MagicMock objects to simulate repo.heads iteration and indexing
 _.__iter__
 _.__getitem__
+_.__setitem__
 _.__enter__
 _.__exit__
 _.__aenter__
