@@ -44,6 +44,9 @@ nul
 # Log folder for LLM sessions etc
 /.mcp-coder/*
 
+# API claude session logs
+api/logs/claude-sessions/
+
 
 # profiler data
 docs/tests/performance_data/prof/*.prof
