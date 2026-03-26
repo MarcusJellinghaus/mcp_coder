@@ -43,6 +43,7 @@ AFTER:
 ## Files NOT Modified
 - `src/mcp_coder/llm/providers/claude/claude_code_cli.py` — already supports `logs_dir` parameter
 - All 6 remaining caller files — no signature changes needed
+- `src/mcp_coder/cli/commands/verify.py` — diagnostic commands; fallback `logs_dir=None` is acceptable
 - No new files created
 
 ## Requirements Preserved
