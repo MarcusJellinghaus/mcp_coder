@@ -1,11 +1,7 @@
 """CLI command handlers for coordinator package.
 
-Provides two main commands:
-- coordinator test: Trigger Jenkins integration tests for repositories
-- coordinator run: Monitor GitHub issues and dispatch workflows based on labels
-
-The coordinator run command automates the issue → plan → implement → PR pipeline
-by filtering eligible issues and triggering appropriate Jenkins workflows.
+The coordinator command monitors GitHub issues and dispatches workflows based on
+labels. Use --dry-run to trigger Jenkins integration tests instead.
 """
 
 import argparse

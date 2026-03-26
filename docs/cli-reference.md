@@ -600,8 +600,6 @@ fi
 
 ---
 
----
-
 ### check file-size
 
 Check file sizes against maximum line count.

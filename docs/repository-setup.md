@@ -123,7 +123,7 @@ mcp-coder gh-tool define-labels --dry-run  # Preview your custom labels
 
 ### Issue Validation and Initialization
 
-The `define-labels` command now includes automatic issue validation:
+The `gh-tool define-labels` command now includes automatic issue validation:
 
 **Automatic initialization:**
 - Issues without any workflow status label are initialized with `status-01:created`

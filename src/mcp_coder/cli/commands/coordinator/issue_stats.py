@@ -1,4 +1,4 @@
-"""Issue statistics functions for coordinator issue-stats command.
+"""Issue statistics functions for gh-tool issue-stats command.
 
 This module provides core functionality to analyze and display statistics for issues
 in a GitHub repository, grouped by workflow status labels and categories.
