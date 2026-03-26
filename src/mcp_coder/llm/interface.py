@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+from collections.abc import Iterator
 from pathlib import Path
 
 from mcp_coder.utils.subprocess_runner import TimeoutExpired
@@ -11,7 +12,7 @@ from .mlflow_conversation_logger import mlflow_conversation
 from .providers.claude.claude_code_cli import ask_claude_code_cli
 
 # Serialization functions are now in .serialization module
-from .types import LLMResponseDict
+from .types import LLMResponseDict, StreamEvent
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ LLM_DEFAULT_TIMEOUT_SECONDS = 30  # Default timeout for LLM requests
 
 __all__ = [
     "prompt_llm",
+    "prompt_llm_stream",
 ]
 
 
@@ -167,3 +169,71 @@ def prompt_llm(
         mlflow_ctx["response_data"] = response
 
     return response
+
+
+def prompt_llm_stream(
+    question: str,
+    provider: str = "claude",
+    session_id: str | None = None,
+    timeout: int = LLM_DEFAULT_TIMEOUT_SECONDS,
+    env_vars: dict[str, str] | None = None,
+    execution_dir: str | None = None,
+    mcp_config: str | None = None,
+    branch_name: str | None = None,
+) -> Iterator[StreamEvent]:
+    """Stream LLM responses as events.
+
+    Same parameters as prompt_llm(). Returns an iterator of StreamEvent
+    dicts instead of a single LLMResponseDict.
+
+    Does NOT wrap in mlflow_conversation context — the caller should handle
+    mlflow logging after assembling the final response.
+
+    Yields:
+        StreamEvent dicts from the underlying provider.
+
+    Raises:
+        ValueError: If provider is not supported or input validation fails.
+    """
+    # Input validation (same as prompt_llm)
+    if not question or not question.strip():
+        raise ValueError("Question cannot be empty or whitespace only")
+
+    if timeout <= 0:
+        raise ValueError("Timeout must be a positive number")
+
+    # Allow env var to override the provider parameter
+    provider = os.environ.get("MCP_CODER_LLM_PROVIDER") or provider
+
+    if provider not in ("claude", "langchain"):
+        raise ValueError(
+            f"Unsupported provider: {provider}. Supported: 'claude', 'langchain'"
+        )
+
+    if provider == "langchain":
+        from .providers.langchain import (  # noqa: PLC0415
+            ask_langchain_stream,
+        )
+
+        yield from ask_langchain_stream(
+            question,
+            session_id=session_id,
+            timeout=timeout,
+            mcp_config=mcp_config,
+            execution_dir=execution_dir,
+            env_vars=env_vars,
+        )
+    else:
+        from .providers.claude.claude_code_cli import (  # noqa: PLC0415
+            ask_claude_code_cli_stream,
+        )
+
+        yield from ask_claude_code_cli_stream(
+            question,
+            session_id=session_id,
+            timeout=timeout,
+            env_vars=env_vars,
+            cwd=execution_dir,
+            mcp_config=mcp_config,
+            branch_name=branch_name,
+        )

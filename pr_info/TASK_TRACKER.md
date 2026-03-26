@@ -42,9 +42,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat(langchain): add ask_langchain_stream`
 
 ### Step 5: prompt_llm_stream() Interface + Stream Print Formatting
-- [ ] Implementation: `prompt_llm_stream()` in `interface.py` + `print_stream_event()` in `formatters.py` with tests in `test_interface.py` and `test_formatters.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(interface): add prompt_llm_stream and stream formatting`
+- [x] Implementation: `prompt_llm_stream()` in `interface.py` + `print_stream_event()` in `formatters.py` with tests in `test_interface.py` and `test_formatters.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(interface): add prompt_llm_stream and stream formatting`
 
 ### Step 6: CLI Changes — New Output Formats, Remove --verbosity, Wire Streaming
 - [ ] Implementation: Update `parsers.py` + `prompt.py` for streaming path, remove `--verbosity`, add `ndjson`/`json-raw` formats, with tests in `test_prompt.py` and new `test_prompt_streaming.py`

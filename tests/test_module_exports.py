@@ -95,6 +95,7 @@ def test_llm_interface_all_is_correct() -> None:
 
     expected = [
         "prompt_llm",
+        "prompt_llm_stream",
     ]
 
     assert set(interface.__all__) == set(expected)

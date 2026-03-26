@@ -330,3 +330,173 @@ class TestFormatterComparison:
         assert "unique_tool_id_456" not in verbose_output
         assert "api.anthropic.com" in raw_output
         assert "api.anthropic.com" not in verbose_output
+
+
+class TestPrintStreamEvent:
+    """Tests for print_stream_event() function."""
+
+    def test_print_stream_event_text_delta(self) -> None:
+        """text_delta prints text with no newline."""
+        import io
+
+        from mcp_coder.llm.formatting.formatters import print_stream_event
+
+        buf = io.StringIO()
+        print_stream_event(
+            {"type": "text_delta", "text": "Hello"},
+            output_format="text",
+            file=buf,
+        )
+        assert buf.getvalue() == "Hello"
+
+    def test_print_stream_event_tool_use_bordered(self) -> None:
+        """tool_use_start prints bordered header."""
+        import io
+
+        from mcp_coder.llm.formatting.formatters import print_stream_event
+
+        buf = io.StringIO()
+        print_stream_event(
+            {"type": "tool_use_start", "name": "read_file", "args": {"path": "x.py"}},
+            output_format="text",
+            file=buf,
+        )
+        output = buf.getvalue()
+        assert "tool:" in output
+        assert "read_file" in output
+        assert "──" in output
+
+    def test_print_stream_event_tool_result_bordered(self) -> None:
+        """tool_result prints result + border close."""
+        import io
+
+        from mcp_coder.llm.formatting.formatters import print_stream_event
+
+        buf = io.StringIO()
+        print_stream_event(
+            {"type": "tool_result", "name": "read_file", "output": "file content"},
+            output_format="text",
+            file=buf,
+        )
+        output = buf.getvalue()
+        assert "file content" in output
+        assert "─" in output
+
+    def test_print_stream_event_error_to_stderr(self) -> None:
+        """error event goes to stderr."""
+        import io
+
+        from mcp_coder.llm.formatting.formatters import print_stream_event
+
+        out = io.StringIO()
+        err = io.StringIO()
+        print_stream_event(
+            {"type": "error", "message": "Something failed"},
+            output_format="text",
+            file=out,
+            err_file=err,
+        )
+        assert out.getvalue() == ""
+        assert "Something failed" in err.getvalue()
+
+    def test_print_stream_event_done_newline(self) -> None:
+        """done event prints a final newline."""
+        import io
+
+        from mcp_coder.llm.formatting.formatters import print_stream_event
+
+        buf = io.StringIO()
+        print_stream_event(
+            {"type": "done", "usage": {}},
+            output_format="text",
+            file=buf,
+        )
+        assert buf.getvalue() == "\n"
+
+    def test_print_stream_event_ndjson_text(self) -> None:
+        """ndjson format outputs JSON line with Claude schema."""
+        import io
+        import json
+
+        from mcp_coder.llm.formatting.formatters import print_stream_event
+
+        buf = io.StringIO()
+        print_stream_event(
+            {"type": "text_delta", "text": "Hello"},
+            output_format="ndjson",
+            file=buf,
+        )
+        line = buf.getvalue().strip()
+        parsed = json.loads(line)
+        assert parsed["type"] == "assistant"
+        assert parsed["message"]["role"] == "assistant"
+        content = parsed["message"]["content"]
+        assert len(content) == 1
+        assert content[0]["type"] == "text"
+        assert content[0]["text"] == "Hello"
+
+    def test_print_stream_event_ndjson_tool_use(self) -> None:
+        """ndjson format maps tool_use_start to assistant message with tool_use."""
+        import io
+        import json
+
+        from mcp_coder.llm.formatting.formatters import print_stream_event
+
+        buf = io.StringIO()
+        print_stream_event(
+            {"type": "tool_use_start", "name": "sleep", "args": {"seconds": 2}},
+            output_format="ndjson",
+            file=buf,
+        )
+        parsed = json.loads(buf.getvalue().strip())
+        assert parsed["type"] == "assistant"
+        content = parsed["message"]["content"]
+        assert content[0]["type"] == "tool_use"
+        assert content[0]["name"] == "sleep"
+        assert content[0]["input"] == {"seconds": 2}
+
+    def test_print_stream_event_ndjson_done(self) -> None:
+        """ndjson format maps done to result message."""
+        import io
+        import json
+
+        from mcp_coder.llm.formatting.formatters import print_stream_event
+
+        buf = io.StringIO()
+        print_stream_event(
+            {"type": "done", "session_id": "abc", "usage": {"input_tokens": 10}},
+            output_format="ndjson",
+            file=buf,
+        )
+        parsed = json.loads(buf.getvalue().strip())
+        assert parsed["type"] == "result"
+        assert parsed["session_id"] == "abc"
+        assert parsed["usage"]["input_tokens"] == 10
+
+    def test_print_stream_event_json_raw(self) -> None:
+        """json-raw format prints raw_line content as-is."""
+        import io
+
+        from mcp_coder.llm.formatting.formatters import print_stream_event
+
+        buf = io.StringIO()
+        print_stream_event(
+            {"type": "raw_line", "line": '{"type":"assistant","message":{}}'},
+            output_format="json-raw",
+            file=buf,
+        )
+        assert buf.getvalue().strip() == '{"type":"assistant","message":{}}'
+
+    def test_print_stream_event_json_raw_ignores_non_raw_line(self) -> None:
+        """json-raw format ignores events that are not raw_line."""
+        import io
+
+        from mcp_coder.llm.formatting.formatters import print_stream_event
+
+        buf = io.StringIO()
+        print_stream_event(
+            {"type": "text_delta", "text": "Hello"},
+            output_format="json-raw",
+            file=buf,
+        )
+        assert buf.getvalue() == ""
