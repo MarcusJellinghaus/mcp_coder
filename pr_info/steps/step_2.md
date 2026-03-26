@@ -6,7 +6,7 @@
 
 ## WHERE
 
-- **Modify**: `src/mcp_coder/utils/subprocess_runner.py`
+- **Modify**: `src/mcp_coder/utils/subprocess_streaming.py` (note: original subprocess_runner.py still modified for re-exports/imports, but primary target is the new module)
 - **Modify**: `tests/utils/test_subprocess_runner.py`
 
 ## WHAT

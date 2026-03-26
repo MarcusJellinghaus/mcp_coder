@@ -8,6 +8,7 @@
 
 - **Modify**: `src/mcp_coder/llm/providers/langchain/__init__.py`
 - **Modify**: `tests/llm/providers/langchain/test_langchain_provider.py`
+- **Modify**: `tests/llm/providers/langchain/test_langchain_streaming.py` (streaming tests extracted to separate file)
 
 ## WHAT
 

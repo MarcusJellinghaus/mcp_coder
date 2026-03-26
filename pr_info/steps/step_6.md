@@ -58,6 +58,10 @@ def _execute_prompt_streaming(
 ) -> int:
     """Execute prompt with streaming output.
 
+    Implementation note: streaming logic was inlined directly in
+    `execute_prompt()` rather than extracted to a separate helper,
+    as the function size remained manageable.
+
     Streams events to stdout via print_stream_event(), assembles
     LLMResponseDict via ResponseAssembler, handles store-response.
 
@@ -156,3 +160,4 @@ All existing `argparse.Namespace` test fixtures that don't specify `output_forma
 - `prompt.py`: remove imports of `format_text_response`, `format_verbose_response`, `format_raw_response`
 - `test_prompt.py`: remove `verbosity` from all argparse.Namespace objects
 - Verify `format_text_response`, `format_verbose_response`, `format_raw_response` have no other callers (grep). If unused, remove them from `formatters.py`.
+- `formatters.py`: remove dead `format_text_response`, `format_verbose_response`, `format_raw_response` functions and stale verbosity references in docstrings

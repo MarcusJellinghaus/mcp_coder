@@ -6,7 +6,7 @@
 
 ## WHERE
 
-- **Modify**: `src/mcp_coder/llm/providers/claude/claude_code_cli.py`
+- **Modify**: `src/mcp_coder/llm/providers/claude/claude_code_cli_streaming.py` (note: original claude_code_cli.py still modified for re-exports/imports, but primary target is the new module)
 - **Modify**: `tests/llm/providers/claude/test_claude_code_cli.py`
 
 ## WHAT
