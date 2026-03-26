@@ -13,21 +13,18 @@ from unittest.mock import patch
 import pytest
 
 
-@pytest.mark.skip(
-    reason="coordinator issue-stats subcommand removed in step 2; will be re-added under gh-tool in step 4"
-)
 class TestParseArguments:
-    """Test argument parsing for issue-stats."""
+    """Test argument parsing for issue-stats (now under gh-tool)."""
 
     def test_default_values(self) -> None:
         """Test that default values are correctly set."""
         from mcp_coder.cli.main import create_parser
 
         parser = create_parser()
-        args = parser.parse_args(["coordinator", "issue-stats"])
+        args = parser.parse_args(["gh-tool", "issue-stats"])
 
-        assert args.command == "coordinator"
-        assert args.coordinator_subcommand == "issue-stats"
+        assert args.command == "gh-tool"
+        assert args.gh_tool_subcommand == "issue-stats"
         assert args.filter == "all"
         assert args.details is False
         assert args.project_dir is None
@@ -37,7 +34,7 @@ class TestParseArguments:
         from mcp_coder.cli.main import create_parser
 
         parser = create_parser()
-        args = parser.parse_args(["coordinator", "issue-stats", "--filter", "human"])
+        args = parser.parse_args(["gh-tool", "issue-stats", "--filter", "human"])
 
         assert args.filter == "human"
 
@@ -46,7 +43,7 @@ class TestParseArguments:
         from mcp_coder.cli.main import create_parser
 
         parser = create_parser()
-        args = parser.parse_args(["coordinator", "issue-stats", "--filter", "bot"])
+        args = parser.parse_args(["gh-tool", "issue-stats", "--filter", "bot"])
 
         assert args.filter == "bot"
 
@@ -57,11 +54,11 @@ class TestParseArguments:
         parser = create_parser()
 
         # Test uppercase
-        args = parser.parse_args(["coordinator", "issue-stats", "--filter", "HUMAN"])
+        args = parser.parse_args(["gh-tool", "issue-stats", "--filter", "HUMAN"])
         assert args.filter == "human"
 
         # Test mixed case
-        args = parser.parse_args(["coordinator", "issue-stats", "--filter", "Bot"])
+        args = parser.parse_args(["gh-tool", "issue-stats", "--filter", "Bot"])
         assert args.filter == "bot"
 
     def test_details_flag(self) -> None:
@@ -69,7 +66,7 @@ class TestParseArguments:
         from mcp_coder.cli.main import create_parser
 
         parser = create_parser()
-        args = parser.parse_args(["coordinator", "issue-stats", "--details"])
+        args = parser.parse_args(["gh-tool", "issue-stats", "--details"])
 
         assert args.details is True
 
@@ -79,7 +76,7 @@ class TestParseArguments:
 
         parser = create_parser()
         args = parser.parse_args(
-            ["coordinator", "issue-stats", "--project-dir", "/path/to/project"]
+            ["gh-tool", "issue-stats", "--project-dir", "/path/to/project"]
         )
 
         assert args.project_dir == "/path/to/project"
@@ -91,7 +88,7 @@ class TestParseArguments:
         parser = create_parser()
         args = parser.parse_args(
             [
-                "coordinator",
+                "gh-tool",
                 "issue-stats",
                 "--filter",
                 "bot",

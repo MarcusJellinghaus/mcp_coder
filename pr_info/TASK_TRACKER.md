@@ -41,9 +41,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 4: Move define-labels and issue-stats to gh-tool
 > [Detail](./steps/step_4.md) — Add `define-labels` and `issue-stats` as subcommands under `gh-tool`, remove top-level `define-labels`.
-- [ ] Implementation: update `add_gh_tool_parsers()` in `parsers.py`, update `_handle_gh_tool_command()` in `main.py`, remove `add_define_labels_parser()`, update gh-tool and issue-stats tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: update `add_gh_tool_parsers()` in `parsers.py`, update `_handle_gh_tool_command()` in `main.py`, remove `add_define_labels_parser()`, update gh-tool and issue-stats tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Migrate Config Keys
 > [Detail](./steps/step_5.md) — Migrate config keys from `coordinator.vscodeclaude` to top-level `vscodeclaude` section.

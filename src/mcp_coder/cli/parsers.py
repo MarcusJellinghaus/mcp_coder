@@ -325,26 +325,6 @@ def add_coordinator_parsers(subparsers: Any) -> None:
     )
 
 
-def add_define_labels_parser(subparsers: Any) -> None:
-    """Add the define-labels command parser."""
-    define_labels_parser = subparsers.add_parser(
-        "define-labels",
-        help="Sync workflow status labels to GitHub repository",
-        formatter_class=WideHelpFormatter,
-    )
-    define_labels_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
-    )
-    define_labels_parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Preview changes without applying them",
-    )
-
-
 def add_set_status_parser(subparsers: Any) -> None:
     """Add the set-status command parser."""
     set_status_parser = subparsers.add_parser(
@@ -512,6 +492,49 @@ def add_gh_tool_parsers(subparsers: Any) -> None:
         type=str,
         default=None,
         help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
+    )
+
+    # gh-tool define-labels (moved from top-level)
+    define_labels_parser = gh_tool_subparsers.add_parser(
+        "define-labels",
+        help="Sync workflow status labels to GitHub repository",
+        formatter_class=WideHelpFormatter,
+    )
+    define_labels_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory. Default: current directory",
+    )
+    define_labels_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview changes without applying them",
+    )
+
+    # gh-tool issue-stats (moved from coordinator)
+    issue_stats_parser = gh_tool_subparsers.add_parser(
+        "issue-stats",
+        help="Display issue statistics by workflow status",
+        formatter_class=WideHelpFormatter,
+    )
+    issue_stats_parser.add_argument(
+        "--filter",
+        type=str.lower,
+        choices=["all", "human", "bot"],
+        default="all",
+        help="Filter issues by category (default: all)",
+    )
+    issue_stats_parser.add_argument(
+        "--details",
+        action="store_true",
+        default=False,
+        help="Show individual issue details with links",
+    )
+    issue_stats_parser.add_argument(
+        "--project-dir",
+        metavar="PATH",
+        help="Project directory. Default: current directory",
     )
 
 

@@ -14,6 +14,7 @@ from .commands.coordinator import (
     execute_coordinator_vscodeclaude,
     execute_coordinator_vscodeclaude_status,
 )
+from .commands.coordinator.issue_stats import execute_coordinator_issue_stats
 from .commands.create_plan import execute_create_plan
 from .commands.create_pr import execute_create_pr
 from .commands.define_labels import execute_define_labels
@@ -32,7 +33,6 @@ from .parsers import (
     add_coordinator_parsers,
     add_create_plan_parser,
     add_create_pr_parser,
-    add_define_labels_parser,
     add_gh_tool_parsers,
     add_git_tool_parsers,
     add_implement_parser,
@@ -92,7 +92,6 @@ def create_parser() -> argparse.ArgumentParser:
     add_create_plan_parser(subparsers)
     add_create_pr_parser(subparsers)
     add_coordinator_parsers(subparsers)
-    add_define_labels_parser(subparsers)
     add_set_status_parser(subparsers)
     add_check_parsers(subparsers)
     add_gh_tool_parsers(subparsers)
@@ -176,13 +175,20 @@ def _handle_gh_tool_command(args: argparse.Namespace) -> int:
     if hasattr(args, "gh_tool_subcommand") and args.gh_tool_subcommand:
         if args.gh_tool_subcommand == "get-base-branch":
             return execute_get_base_branch(args)
+        elif args.gh_tool_subcommand == "define-labels":
+            return execute_define_labels(args)
+        elif args.gh_tool_subcommand == "issue-stats":
+            return execute_coordinator_issue_stats(args)
         else:
             logger.error(f"Unknown gh-tool subcommand: {args.gh_tool_subcommand}")
             print(f"Error: Unknown gh-tool subcommand '{args.gh_tool_subcommand}'")
             return 1
     else:
         logger.error("gh-tool subcommand required")
-        print("Error: Please specify a gh-tool subcommand (e.g., 'get-base-branch')")
+        print(
+            "Error: Please specify a gh-tool subcommand"
+            " (e.g., 'get-base-branch', 'define-labels', 'issue-stats')"
+        )
         return 1
 
 
@@ -291,8 +297,6 @@ def main() -> int:
             return execute_create_pr(args)
         elif args.command == "coordinator":
             return _handle_coordinator_command(args)
-        elif args.command == "define-labels":
-            return execute_define_labels(args)
         elif args.command == "set-status":
             return execute_set_status(args)
         elif args.command == "check":
