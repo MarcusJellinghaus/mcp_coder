@@ -72,6 +72,7 @@ Use the MCP refactoring tools — they move code and update all imports automati
 3. `mcp__tools-py__move_symbol(source_file=..., symbol_name=..., dest_file=...)` — execute
 4. Repeat for each symbol/group
 5. Update `__init__.py` re-exports if needed
+6. Update `.importlinter` layering contracts if the split introduces sub-layers (see [Import Linter](#import-linter) below)
 
 ### Step 3: Move Tests
 
@@ -157,6 +158,7 @@ Before merging a refactoring PR:
 - [ ] All unit tests pass
 - [ ] `mcp-coder check file-size --max-lines 750` passes
 - [ ] `.large-files-allowlist` updated (remove entries for split files)
+- [ ] `.importlinter` updated if modules were split (sub-layers)
 - [ ] PR diff is under 25,000 tokens
 
 ## Related
