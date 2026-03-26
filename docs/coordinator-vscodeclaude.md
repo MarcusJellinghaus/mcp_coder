@@ -1,11 +1,11 @@
-# Coordinator VSCodeClaude
+# VSCodeClaude
 
-The `coordinator vscodeclaude` command automates multi-issue workspace management by launching VS Code sessions for GitHub issues that need human review.
+The `vscodeclaude launch` command automates multi-issue workspace management by launching VS Code sessions for GitHub issues that need human review.
 
 ## Quick Start
 
 ```bash
-mcp-coder coordinator vscodeclaude
+mcp-coder vscodeclaude launch
 ```
 
 This will:
@@ -49,19 +49,19 @@ Each repository needs a `.mcp.json` file for Claude Code integration. See [repos
 
 ```bash
 # Process all configured repositories
-mcp-coder coordinator vscodeclaude
+mcp-coder vscodeclaude launch
 
 # Process a specific repository only
-mcp-coder coordinator vscodeclaude --repo mcp_coder
+mcp-coder vscodeclaude launch --repo mcp_coder
 
 # Check session status
-mcp-coder coordinator vscodeclaude status
+mcp-coder vscodeclaude status
 
 # Clean up stale sessions
-mcp-coder coordinator vscodeclaude --cleanup
+mcp-coder vscodeclaude launch --cleanup
 
 # Enable debug logging
-mcp-coder --log-level debug coordinator vscodeclaude
+mcp-coder --log-level debug vscodeclaude launch
 ```
 
 ### Options
@@ -146,7 +146,7 @@ Sessions are tracked in:
 This means the session folder was deleted but the session is still tracked. Run the main command to clean up:
 
 ```bash
-mcp-coder coordinator vscodeclaude
+mcp-coder vscodeclaude launch
 ```
 
 ### Sessions showing "!! Manual"
@@ -155,7 +155,7 @@ The folder has uncommitted changes. Either:
 1. Open the folder and commit/push your changes
 2. Or discard changes: `cd <folder> && git checkout .`
 
-Then run `mcp-coder coordinator vscodeclaude --cleanup` to remove the session.
+Then run `mcp-coder vscodeclaude launch --cleanup` to remove the session.
 
 ### "Access is denied" errors on Windows
 

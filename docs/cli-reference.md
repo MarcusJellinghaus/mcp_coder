@@ -35,10 +35,11 @@ Orchestration and monitoring of automated development across repositories.
 
 | Command | Description |
 |---------|-------------|
-| [`coordinator test`](#coordinator-test) | Trigger Jenkins integration test for repository |
-| [`coordinator run`](#coordinator-run) | Monitor and dispatch workflows for GitHub issues |
-| [`coordinator vscodeclaude`](#coordinator-vscodeclaude) | Launch VS Code sessions for issues needing human review |
-| [`coordinator issue-stats`](#coordinator-issue-stats) | Display issue statistics grouped by workflow status category |
+| [`coordinator --dry-run`](#coordinator---dry-run) | Trigger Jenkins integration test for repository |
+| [`coordinator`](#coordinator) | Monitor and dispatch workflows for GitHub issues |
+| [`vscodeclaude launch`](#vscodeclaude-launch) | Launch VS Code sessions for issues needing human review |
+| [`vscodeclaude status`](#vscodeclaude-status) | Show current VS Code session status |
+| [`gh-tool issue-stats`](#gh-tool-issue-stats) | Display issue statistics grouped by workflow status category |
 
 ### Quality Checks
 Branch readiness verification and code quality tools.
@@ -54,6 +55,8 @@ GitHub repository utilities for branch detection and workflow automation.
 | Command | Description |
 |---------|-------------|
 | [`gh-tool get-base-branch`](#gh-tool-get-base-branch) | Detect base branch for current feature branch |
+| [`gh-tool define-labels`](#gh-tool-define-labels) | Sync workflow status labels to GitHub repository |
+| [`gh-tool issue-stats`](#gh-tool-issue-stats) | Display issue statistics grouped by workflow status category |
 
 ### Git Tools
 Git utility commands.
@@ -61,13 +64,6 @@ Git utility commands.
 | Command | Description |
 |---------|-------------|
 | [`git-tool compact-diff`](#git-tool-compact-diff) | Generate compact diff replacing moved code blocks with summary comments |
-
-### Repository & Issue Setup
-Setup and configuration for GitHub workflow automation.
-
-| Command | Description |
-|---------|-------------|
-| [`define-labels`](#define-labels) | Sync workflow status labels to GitHub repository |
 
 ## Global Options
 
@@ -302,46 +298,12 @@ mcp-coder create-pr --update-labels
 
 ---
 
-### coordinator test
-
-Trigger Jenkins integration test for repository.
-
-```bash
-mcp-coder coordinator test REPO_NAME --branch-name BRANCH [OPTIONS]
-```
-
-**Arguments:**
-- `repo_name` - Repository name from config (e.g., `mcp_coder`) (required)
-
-**Options:**
-- `--branch-name BRANCH` - Git branch to test (required)
-- `--log-level LEVEL` - Log level for mcp-coder commands in test script (default: DEBUG)
-
-**Description:** Trigger Jenkins-based integration tests for a specific repository and branch. Uses configuration from user config file.
-
-**Examples:**
-```bash
-# Test main branch
-mcp-coder coordinator test mcp_coder --branch-name main
-
-# Test feature branch with info logging
-mcp-coder coordinator test my_project --branch-name feature-x --log-level INFO
-```
-
-**Output:**
-```
-Job triggered: MCP_Coder/mcp-coder-test-job - test - queue: 12345
-https://jenkins.example.com/job/MCP_Coder/mcp-coder-test-job/42/
-```
-
----
-
-### coordinator run
+### coordinator
 
 Monitor and dispatch workflows for GitHub issues.
 
 ```bash
-mcp-coder coordinator run (--all | --repo REPO_NAME) [OPTIONS]
+mcp-coder coordinator (--all | --repo REPO_NAME) [OPTIONS]
 ```
 
 **Options (mutually exclusive):**
@@ -349,6 +311,7 @@ mcp-coder coordinator run (--all | --repo REPO_NAME) [OPTIONS]
 - `--repo NAME` - Process single repository (required if --all not specified)
 
 **Additional Options:**
+- `--dry-run` - Preview what would be dispatched without executing
 - `--force-refresh` - Force full cache refresh, bypass all caching
 
 **Description:** Monitor GitHub issues and automatically dispatch workflows (create-plan, implement, create-pr) based on issue labels and status.
@@ -356,27 +319,34 @@ mcp-coder coordinator run (--all | --repo REPO_NAME) [OPTIONS]
 **Examples:**
 ```bash
 # Process all configured repositories
-mcp-coder coordinator run --all
+mcp-coder coordinator --all
 
 # Process single repository
-mcp-coder coordinator run --repo mcp_coder
+mcp-coder coordinator --repo mcp_coder
+
+# Preview without executing
+mcp-coder coordinator --all --dry-run
 
 # Force cache refresh
-mcp-coder coordinator run --all --force-refresh
+mcp-coder coordinator --all --force-refresh
 ```
 
 ---
 
-### coordinator vscodeclaude
+### vscodeclaude launch
 
 Launch VS Code sessions for GitHub issues needing human review.
 
 ```bash
-mcp-coder coordinator vscodeclaude [OPTIONS]
+mcp-coder vscodeclaude launch [OPTIONS]
 ```
 
 **Options:**
 - `--repo NAME` - Process only the specified repository
+- `--max-sessions N` - Override max concurrent sessions (default: from config or 3)
+- `--cleanup` - Delete stale clean folders (without this, only lists them)
+- `--intervene` - Force open a bot_busy issue for debugging
+- `--issue NUMBER` - Issue number for intervention mode (requires `--intervene`)
 
 **Description:** Automatically launch VS Code sessions for issues requiring human action (code review, plan review, issue analysis). Each session includes automated Claude Code integration.
 
@@ -388,25 +358,82 @@ mcp-coder coordinator vscodeclaude [OPTIONS]
 **Examples:**
 ```bash
 # Process all configured repositories
-mcp-coder coordinator vscodeclaude
+mcp-coder vscodeclaude launch
 
 # Process specific repository only
-mcp-coder coordinator vscodeclaude --repo mcp_coder
+mcp-coder vscodeclaude launch --repo mcp_coder
+
+# Clean up stale sessions
+mcp-coder vscodeclaude launch --cleanup
 
 # With debug logging
-mcp-coder --log-level debug coordinator vscodeclaude
+mcp-coder --log-level debug vscodeclaude launch
 ```
 
 **See Also:** [Coordinator VSCodeClaude Guide](coordinator-vscodeclaude.md) for detailed setup and troubleshooting.
 
 ---
 
-### coordinator issue-stats
+### vscodeclaude status
+
+Show current VS Code session status.
+
+```bash
+mcp-coder vscodeclaude status
+```
+
+**Description:** Display a status table of all tracked VS Code Claude sessions, showing their current state (active, closed, stale, dirty, orphaned).
+
+**Examples:**
+```bash
+# Show session status
+mcp-coder vscodeclaude status
+```
+
+---
+
+### gh-tool define-labels
+
+Sync workflow status labels to GitHub repository.
+
+```bash
+mcp-coder gh-tool define-labels [OPTIONS]
+```
+
+**Options:**
+- `--project-dir PATH` - Project directory path (default: current directory)
+- `--dry-run` - Preview changes without applying them
+
+**Description:** Create or update GitHub issue labels for workflow status tracking. Uses label configuration from `workflows/config/labels.json` or package defaults. Also validates issues and initializes issues without status labels.
+
+**Exit Codes:**
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success - no errors or warnings |
+| 1 | Errors found - issues with multiple status labels |
+| 2 | Warnings only - stale bot processes detected |
+
+**Examples:**
+```bash
+# Preview label changes
+mcp-coder gh-tool define-labels --dry-run
+
+# Apply labels to repository
+mcp-coder gh-tool define-labels
+
+# Apply to specific project
+mcp-coder gh-tool define-labels --project-dir /path/to/project
+```
+
+---
+
+### gh-tool issue-stats
 
 Display issue statistics grouped by workflow status category.
 
 ```bash
-mcp-coder coordinator issue-stats [OPTIONS]
+mcp-coder gh-tool issue-stats [OPTIONS]
 ```
 
 **Options:**
@@ -417,13 +444,13 @@ mcp-coder coordinator issue-stats [OPTIONS]
 **Examples:**
 ```bash
 # Show all categories
-mcp-coder coordinator issue-stats
+mcp-coder gh-tool issue-stats
 
 # Show only human action required
-mcp-coder coordinator issue-stats --filter human
+mcp-coder gh-tool issue-stats --filter human
 
 # Show bot issues with details
-mcp-coder coordinator issue-stats --filter bot --details
+mcp-coder gh-tool issue-stats --filter bot --details
 ```
 
 **Example Output:**
@@ -573,40 +600,6 @@ fi
 - **Progress Feedback**: Controlled by --llm-truncate (dots in human mode, silent in LLM mode)
 
 ---
-
-### define-labels
-
-Sync workflow status labels to GitHub repository.
-
-```bash
-mcp-coder define-labels [OPTIONS]
-```
-
-**Options:**
-- `--project-dir PATH` - Project directory path (default: current directory)
-- `--dry-run` - Preview changes without applying them
-
-**Description:** Create or update GitHub issue labels for workflow status tracking. Uses label configuration from `workflows/config/labels.json` or package defaults. Also validates issues and initializes issues without status labels.
-
-**Exit Codes:**
-
-| Code | Meaning |
-|------|---------|
-| 0 | Success - no errors or warnings |
-| 1 | Errors found - issues with multiple status labels |
-| 2 | Warnings only - stale bot processes detected |
-
-**Examples:**
-```bash
-# Preview label changes
-mcp-coder define-labels --dry-run
-
-# Apply labels to repository
-mcp-coder define-labels
-
-# Apply to specific project
-mcp-coder define-labels --project-dir /path/to/project
-```
 
 ---
 
@@ -813,7 +806,7 @@ Some commands require configuration on first run:
 
 ```bash
 # Coordinator commands auto-create config template
-mcp-coder coordinator test repo_name --branch-name main
+mcp-coder coordinator --repo repo_name --dry-run
 # Output: Created default config file at ~/.config/mcp_coder/config.toml
 ```
 
@@ -840,13 +833,13 @@ mcp-coder prompt "Let's plan feature X" --store-response
 mcp-coder prompt "What's the next step?" --continue-session
 ```
 
-**Repository Testing:**
+**Repository Automation:**
 ```bash
-# Test specific branch
-mcp-coder coordinator test my_repo --branch-name feature-branch
-
 # Monitor all repositories for automation
-mcp-coder coordinator run --all
+mcp-coder coordinator --all
+
+# Preview without executing
+mcp-coder coordinator --all --dry-run
 ```
 
 ---

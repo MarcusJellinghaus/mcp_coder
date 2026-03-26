@@ -34,7 +34,7 @@ Example: `/home/username/.config/mcp_coder/config.toml`
 On first run of any command requiring configuration, MCP Coder will automatically create the config directory and a template file. You'll see:
 
 ```bash
-$ mcp-coder coordinator test mcp_coder --branch-name main
+$ mcp-coder coordinator --repo mcp_coder --dry-run
 Created default config file at ~/.mcp_coder/config.toml
 Please update it with your Jenkins and repository information.
 ```
@@ -402,7 +402,7 @@ export JENKINS_URL="https://jenkins.dev.local:8080"
 export JENKINS_USER="dev-automation"
 export JENKINS_TOKEN="dev-token-123"
 
-mcp-coder coordinator test mcp_coder --branch-name feature-x
+mcp-coder coordinator --repo mcp_coder
 ```
 
 **Use cases:**
@@ -414,22 +414,16 @@ mcp-coder coordinator test mcp_coder --branch-name feature-x
 
 ### Basic Usage
 
-Trigger test for mcp_coder repository on feature branch:
+Process mcp_coder repository:
 
 ```bash
-mcp-coder coordinator test mcp_coder --branch-name feature-x
-```
-
-Expected output:
-```
-Job triggered: MCP_Coder/mcp-coder-test-job - test - queue: 12345
-https://jenkins.example.com/job/MCP_Coder/mcp-coder-test-job/42/
+mcp-coder coordinator --repo mcp_coder
 ```
 
 ### With Debug Logging
 
 ```bash
-mcp-coder coordinator test mcp_coder --branch-name feature-x --log-level DEBUG
+mcp-coder coordinator --repo mcp_coder --log-level DEBUG
 ```
 
 ### With Cache Refresh
@@ -438,33 +432,33 @@ Force fresh GitHub API data (bypasses all caching):
 
 ```bash
 # Force refresh on specific repository
-mcp-coder coordinator test mcp_coder --branch-name feature-x --force-refresh
+mcp-coder coordinator --repo mcp_coder --force-refresh
 
 # Force refresh with debug logging
-mcp-coder coordinator test mcp_coder --branch-name feature-x --force-refresh --log-level DEBUG
+mcp-coder coordinator --repo mcp_coder --force-refresh --log-level DEBUG
 ```
 
 #### CLI Flag Usage Examples
 
 **Normal operation (uses cache):**
 ```bash
-mcp-coder coordinator test mcp_coder --branch-name feature-x
+mcp-coder coordinator --repo mcp_coder
 ```
 
 **Force fresh data (bypass cache completely):**
 ```bash
-mcp-coder coordinator test mcp_coder --branch-name feature-x --force-refresh
+mcp-coder coordinator --repo mcp_coder --force-refresh
 ```
 
 **Multiple repositories with fresh data:**
 ```bash
-mcp-coder coordinator test repo_a --branch-name main --force-refresh
-mcp-coder coordinator test repo_b --branch-name develop --force-refresh
+mcp-coder coordinator --repo repo_a --force-refresh
+mcp-coder coordinator --repo repo_b --force-refresh
 ```
 
 **Debug cache behavior:**
 ```bash
-mcp-coder coordinator test mcp_coder --branch-name feature-x --log-level DEBUG
+mcp-coder coordinator --repo mcp_coder --log-level DEBUG
 ```
 
 #### When to use `--force-refresh`
@@ -524,16 +518,16 @@ cache_refresh_minutes = 1440  # Stable, less frequent updates
 cache_refresh_minutes = 4320  # Maximize performance, minimal changes
 ```
 
-### Testing Main Branch
+### Processing Specific Repository
 
 ```bash
-mcp-coder coordinator test mcp_coder --branch-name main
+mcp-coder coordinator --repo mcp_coder
 ```
 
-### Testing Different Repository
+### Processing Different Repository
 
 ```bash
-mcp-coder coordinator test mcp-workspace --branch-name develop
+mcp-coder coordinator --repo mcp-workspace
 ```
 
 ## Test Command
@@ -716,7 +710,7 @@ PermissionError: [Errno 13] Permission denied: '/home/user/.mcp_coder/config.tom
 **Solution:**
 ```bash
 # Force refresh to bypass cache
-mcp-coder coordinator test mcp_coder --branch-name feature-x --force-refresh
+mcp-coder coordinator --repo mcp_coder --force-refresh
 ```
 
 #### Error: Cache file corruption
@@ -734,7 +728,7 @@ rm -rf ~/.mcp_coder/cache/
 # rmdir /s %USERPROFILE%\.mcp_coder\cache
 
 # Then run normally (cache rebuilds automatically)
-mcp-coder coordinator test mcp_coder --branch-name feature-x
+mcp-coder coordinator --repo mcp_coder
 ```
 
 #### Performance: Cache not improving speed
@@ -752,7 +746,7 @@ ls -la ~/.mcp_coder/cache/
 # dir %USERPROFILE%\.mcp_coder\cache
 
 # Run with debug logging to see cache behavior
-mcp-coder coordinator test mcp_coder --branch-name feature-x --log-level DEBUG
+mcp-coder coordinator --repo mcp_coder --log-level DEBUG
 ```
 
 **Solutions:**
@@ -880,7 +874,7 @@ github_credentials_id = "github-infra-pat"
 
 3. Test:
    ```bash
-   mcp-coder coordinator test new_repo --branch-name main
+   mcp-coder coordinator --repo new_repo --dry-run
    ```
 
 ## Platform-Specific Notes

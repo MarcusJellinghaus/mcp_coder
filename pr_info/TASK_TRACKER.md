@@ -53,9 +53,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 6: Update Documentation and Slash Commands
 > [Detail](./steps/step_6.md) — Update all docs and `.claude/commands/` files to reference new command names.
-- [ ] Implementation: update `cli-reference.md`, `coordinator-vscodeclaude.md`, `label-setup.md`, `config.md`, and slash command files
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: update `cli-reference.md`, `coordinator-vscodeclaude.md`, `label-setup.md`, `config.md`, and slash command files
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] Review all changes across steps for consistency
