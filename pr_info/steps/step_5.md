@@ -16,8 +16,13 @@ Implement Step 5 of issue #570 (CLI restructure). Read pr_info/steps/summary.md 
 - `src/mcp_coder/utils/user_config.py` — update default config template + verify_config
 - `tests/workflows/vscodeclaude/test_config.py` — update config key expectations
 - `tests/utils/test_user_config.py` — update if default template is tested
+- `src/mcp_coder/cli/commands/coordinator/commands.py` — update hardcoded config section name in error message
 
 ## WHAT
+
+### coordinator/commands.py — hardcoded config reference
+
+Line ~491 contains `"Please configure [coordinator.vscodeclaude] section."`. Update to `"Please configure [vscodeclaude] section."` to match the new top-level config key.
 
 ### vscodeclaude/config.py — `load_vscodeclaude_config()`
 

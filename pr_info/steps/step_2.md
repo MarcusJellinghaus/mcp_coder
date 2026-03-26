@@ -119,6 +119,8 @@ else:
     return execute_coordinator_run(args)
 ```
 
+**Note:** The `args.log_level = args.coordinator_log_level` assignment only happens in the dry-run branch. The normal (run) branch uses the global `args.log_level` set by the top-level `--log-level` flag, preserving current behavior.
+
 ## TEST CHANGES
 
 ### tests/cli/test_main.py
