@@ -16,7 +16,7 @@ from mcp_coder.checks.ci_log_parser import _find_log_content as _find_log_conten
 from mcp_coder.checks.ci_log_parser import _strip_timestamps as _strip_timestamps
 from mcp_coder.checks.ci_log_parser import truncate_ci_details as truncate_ci_details
 from mcp_coder.utils.git_operations import needs_rebase
-from mcp_coder.utils.git_operations.readers import (
+from mcp_coder.utils.git_operations.branch_queries import (
     extract_issue_number_from_branch,
     get_current_branch_name,
 )

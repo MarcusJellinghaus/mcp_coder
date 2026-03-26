@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 from ...checks.branch_status import BranchStatusReport, collect_branch_status
-from ...utils.git_operations.readers import get_current_branch_name
+from ...utils.git_operations.branch_queries import get_current_branch_name
 from ...utils.github_operations.ci_results_manager import (
     CIResultsManager,
     CIStatusData,

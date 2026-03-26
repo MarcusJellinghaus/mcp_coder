@@ -8,7 +8,7 @@ from git.exc import GitCommandError, InvalidGitRepositoryError
 from mcp_coder.utils.subprocess_runner import execute_command
 
 from .core import GIT_SHORT_HASH_LENGTH, CommitResult, _safe_repo_context, logger
-from .readers import get_staged_changes, is_git_repository
+from .repository_status import get_staged_changes, is_git_repository
 
 
 def commit_staged_files(message: str, project_dir: Path) -> CommitResult:

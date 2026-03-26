@@ -6,13 +6,9 @@ from typing import Optional
 from git import Repo
 from git.exc import GitCommandError, InvalidGitRepositoryError
 
+from .branch_queries import branch_exists, get_current_branch_name, remote_branch_exists
 from .core import PLACEHOLDER_HASH, _safe_repo_context, logger
-from .readers import (
-    branch_exists,
-    get_current_branch_name,
-    is_git_repository,
-    remote_branch_exists,
-)
+from .repository_status import is_git_repository
 
 
 def get_git_diff_for_commit(project_dir: Path) -> Optional[str]:

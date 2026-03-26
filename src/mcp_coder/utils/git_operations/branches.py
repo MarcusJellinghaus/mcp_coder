@@ -5,11 +5,9 @@ from typing import Optional
 
 from git.exc import GitCommandError, InvalidGitRepositoryError
 
+from .branch_queries import validate_branch_name
 from .core import _safe_repo_context, logger
-from .readers import (
-    is_git_repository,
-    validate_branch_name,
-)
+from .repository_status import is_git_repository
 
 
 def create_branch(

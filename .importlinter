@@ -127,8 +127,15 @@ forbidden_modules =
 # Architecture:
 #   Layer 0: workflows (orchestration)
 #   Layer 1: branches | remotes | commits | staging | file_tracking | diffs
-#   Layer 2: readers
-#   Layer 3: core
+#   Layer 2: branch_queries | parent_branch_detection (depend on repository_status)
+#   Layer 3: repository_status (foundational read-only checks)
+#   Layer 4: core
+#
+# Note on sub-layers (Layer 2/3): When splitting a large module (e.g. readers.py)
+# into smaller files, the split modules may depend on each other. Use sub-layers
+# to model this: put the dependency (repository_status) on a lower layer than its
+# consumers (branch_queries, parent_branch_detection). Pipe (|) enforces
+# independence between siblings; separate lines enforce direction.
 # -----------------------------------------------------------------------------
 [importlinter:contract:git_operations_internal_layering]
 name = Git Operations Internal Layering
@@ -136,7 +143,8 @@ type = layers
 layers =
     mcp_coder.utils.git_operations.workflows
     mcp_coder.utils.git_operations.branches | mcp_coder.utils.git_operations.remotes | mcp_coder.utils.git_operations.commits | mcp_coder.utils.git_operations.staging | mcp_coder.utils.git_operations.file_tracking | mcp_coder.utils.git_operations.diffs
-    mcp_coder.utils.git_operations.readers
+    mcp_coder.utils.git_operations.branch_queries | mcp_coder.utils.git_operations.parent_branch_detection
+    mcp_coder.utils.git_operations.repository_status
     mcp_coder.utils.git_operations.core
 
 # -----------------------------------------------------------------------------

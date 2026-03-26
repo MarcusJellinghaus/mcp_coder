@@ -102,6 +102,20 @@ mcp-coder check file-size --max-lines 750
 
 Verifies all tracked Python files are under the line threshold. If split files were previously in `.large-files-allowlist`, remove those entries. Stale entries are reported automatically.
 
+#### Import Linter
+
+When splitting a module into sub-modules, the new files may have internal dependencies (e.g. `branch_queries` imports from `repository_status`). If the import linter uses a `layers` contract with `|` (pipe) separators, siblings can't import each other.
+
+**Fix:** Use sub-layers — put the dependency on a lower layer than its consumers:
+```ini
+# Before (single module):
+    mcp_coder.utils.git_operations.readers
+
+# After (split into sub-layers):
+    mcp_coder.utils.git_operations.branch_queries | mcp_coder.utils.git_operations.parent_branch_detection
+    mcp_coder.utils.git_operations.repository_status
+```
+
 #### Standard Checks
 
 ```bash

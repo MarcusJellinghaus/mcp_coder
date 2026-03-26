@@ -16,15 +16,11 @@ from typing import Optional, Tuple
 
 from git.exc import GitCommandError, InvalidGitRepositoryError
 
+from .branch_queries import get_current_branch_name, get_default_branch_name
 from .commits import commit_staged_files
 from .core import CommitResult, _safe_repo_context
-from .readers import (
-    get_current_branch_name,
-    get_default_branch_name,
-    get_full_status,
-    is_git_repository,
-)
 from .remotes import fetch_remote
+from .repository_status import get_full_status, is_git_repository
 from .staging import stage_all_changes
 
 # Use same logging pattern as other git_operations modules
