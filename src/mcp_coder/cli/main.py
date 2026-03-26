@@ -11,6 +11,8 @@ from .commands.commit import execute_commit_auto, execute_commit_clipboard
 from .commands.coordinator import (
     execute_coordinator_run,
     execute_coordinator_test,
+    execute_coordinator_vscodeclaude,
+    execute_coordinator_vscodeclaude_status,
 )
 from .commands.create_plan import execute_create_plan
 from .commands.create_pr import execute_create_pr
@@ -37,6 +39,7 @@ from .parsers import (
     add_prompt_parser,
     add_set_status_parser,
     add_verify_parser,
+    add_vscodeclaude_parsers,
 )
 
 # Logger will be initialized in main()
@@ -94,6 +97,7 @@ def create_parser() -> argparse.ArgumentParser:
     add_check_parsers(subparsers)
     add_gh_tool_parsers(subparsers)
     add_git_tool_parsers(subparsers)
+    add_vscodeclaude_parsers(subparsers)
 
     return parser
 
@@ -179,6 +183,27 @@ def _handle_gh_tool_command(args: argparse.Namespace) -> int:
     else:
         logger.error("gh-tool subcommand required")
         print("Error: Please specify a gh-tool subcommand (e.g., 'get-base-branch')")
+        return 1
+
+
+def _handle_vscodeclaude_command(args: argparse.Namespace) -> int:
+    """Handle vscodeclaude subcommands.
+
+    Returns:
+        Exit code from the executed vscodeclaude subcommand.
+    """
+    if hasattr(args, "vscodeclaude_subcommand") and args.vscodeclaude_subcommand:
+        if args.vscodeclaude_subcommand == "launch":
+            return execute_coordinator_vscodeclaude(args)
+        elif args.vscodeclaude_subcommand == "status":
+            return execute_coordinator_vscodeclaude_status(args)
+        else:
+            print(
+                f"Error: Unknown vscodeclaude subcommand '{args.vscodeclaude_subcommand}'"
+            )
+            return 1
+    else:
+        print("Error: Please specify a subcommand (e.g., 'launch', 'status')")
         return 1
 
 
@@ -276,6 +301,8 @@ def main() -> int:
             return _handle_gh_tool_command(args)
         elif args.command == "git-tool":
             return _handle_git_tool_command(args)
+        elif args.command == "vscodeclaude":
+            return _handle_vscodeclaude_command(args)
 
         # Other commands will be implemented in later steps
         logger.error(f"Command '{args.command}' not yet implemented")

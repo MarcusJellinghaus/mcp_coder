@@ -35,9 +35,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: Add vscodeclaude Top-Level Command
 > [Detail](./steps/step_3.md) — Add `vscodeclaude` as top-level command with `launch` and `status` subcommands.
-- [ ] Implementation: add `add_vscodeclaude_parsers()` in `parsers.py`, add `_handle_vscodeclaude_command()` in `main.py`, update vscodeclaude CLI tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `add_vscodeclaude_parsers()` in `parsers.py`, add `_handle_vscodeclaude_command()` in `main.py`, update vscodeclaude CLI tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Move define-labels and issue-stats to gh-tool
 > [Detail](./steps/step_4.md) — Add `define-labels` and `issue-stats` as subcommands under `gh-tool`, remove top-level `define-labels`.

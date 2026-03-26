@@ -548,6 +548,66 @@ def add_verify_parser(subparsers: Any) -> None:
     )
 
 
+def add_vscodeclaude_parsers(subparsers: Any) -> None:
+    """Add vscodeclaude command parsers."""
+    vscodeclaude_parser = subparsers.add_parser(
+        "vscodeclaude",
+        help="Manage VSCode/Claude sessions for interactive workflow stages",
+    )
+    vscodeclaude_subparsers = vscodeclaude_parser.add_subparsers(
+        dest="vscodeclaude_subcommand",
+        help="VSCodeClaude commands",
+        metavar="SUBCOMMAND",
+    )
+
+    # vscodeclaude launch
+    launch_parser = vscodeclaude_subparsers.add_parser(
+        "launch",
+        help="Launch VSCode/Claude sessions for issues needing review",
+        formatter_class=WideHelpFormatter,
+    )
+    launch_parser.add_argument(
+        "--repo",
+        type=str,
+        metavar="NAME",
+        help="Filter to specific repository only",
+    )
+    launch_parser.add_argument(
+        "--max-sessions",
+        type=int,
+        metavar="N",
+        help="Override max concurrent sessions (default: from config or 3)",
+    )
+    launch_parser.add_argument(
+        "--cleanup",
+        action="store_true",
+        help="Delete stale clean folders (without this flag, only lists them)",
+    )
+    launch_parser.add_argument(
+        "--intervene",
+        action="store_true",
+        help="Force open a bot_busy issue for debugging",
+    )
+    launch_parser.add_argument(
+        "--issue",
+        type=int,
+        metavar="NUMBER",
+        help="Issue number for intervention mode (requires --intervene)",
+    )
+
+    # vscodeclaude status
+    status_parser = vscodeclaude_subparsers.add_parser(
+        "status",
+        help="Show current VSCodeClaude sessions",
+    )
+    status_parser.add_argument(
+        "--repo",
+        type=str,
+        metavar="NAME",
+        help="Filter to specific repository only",
+    )
+
+
 def add_git_tool_parsers(subparsers: Any) -> None:
     """Add git-tool command parsers."""
     git_tool_parser = subparsers.add_parser("git-tool", help="Git tool commands")
