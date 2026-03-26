@@ -178,6 +178,12 @@ class TestSetStatusHelpers:
         # The description column should be further right in long_config
         assert desc1_line.index("desc1") > a_line.index("short")
 
+    def test_format_status_labels_empty_workflow_labels(self) -> None:
+        """Test format_status_labels returns fallback for empty workflow_labels."""
+        empty_config: Dict[str, Any] = {"workflow_labels": []}
+        result = format_status_labels(empty_config)
+        assert result == "No labels configured.\n"
+
     def test_validate_status_label_valid(
         self, full_labels_config: Dict[str, Any]
     ) -> None:
@@ -318,6 +324,43 @@ class TestExecuteSetStatus:
         # Verify no side effects occurred
         mock_is_working_directory_clean.assert_not_called()
         mock_issue_manager_class.assert_not_called()
+
+    @patch("mcp_coder.cli.commands.set_status.load_labels_config")
+    @patch("mcp_coder.cli.commands.set_status.get_labels_config_path")
+    @patch("mcp_coder.cli.commands.set_status.resolve_project_dir")
+    def test_execute_set_status_no_args_malformed_config_fallback(
+        self,
+        mock_resolve_dir: MagicMock,
+        mock_get_config_path: MagicMock,
+        mock_load_config: MagicMock,
+        full_labels_config: Dict[str, Any],
+        capsys: pytest.CaptureFixture[str],
+        tmp_path: Path,
+    ) -> None:
+        """Test no-args falls back to bundled config when load_labels_config fails."""
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        mock_resolve_dir.return_value = project_dir
+        project_config = project_dir / "config" / "labels.json"
+        bundled_config = Path("/bundled/labels.json")
+        mock_get_config_path.side_effect = [project_config, bundled_config]
+        # First call (project config) fails, second call (bundled) succeeds
+        mock_load_config.side_effect = [ValueError("malformed"), full_labels_config]
+
+        args = argparse.Namespace(
+            status_label=None,
+            issue=None,
+            project_dir=str(project_dir),
+            force=False,
+        )
+
+        result = execute_set_status(args)
+
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "Available status labels" in captured.out
+        # Verify it fell back to bundled config
+        mock_get_config_path.assert_called_with(None)
 
     @patch("mcp_coder.cli.commands.set_status.load_labels_config")
     @patch("mcp_coder.cli.commands.set_status.get_labels_config_path")

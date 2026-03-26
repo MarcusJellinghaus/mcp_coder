@@ -38,6 +38,8 @@ def format_status_labels(labels_config: Dict[str, Any]) -> str:
         Formatted string with label names and descriptions.
     """
     labels = labels_config["workflow_labels"]
+    if not labels:
+        return "No labels configured.\n"
     max_width = max(len(label["name"]) for label in labels) + 2
     lines = ["Available status labels:"]
     for label in labels:
@@ -228,7 +230,11 @@ def execute_set_status(args: argparse.Namespace) -> int:
                 config_path = get_labels_config_path(project_dir)
             except (ValueError, FileNotFoundError, OSError):
                 config_path = get_labels_config_path(None)
-            labels_config = load_labels_config(config_path)
+            try:
+                labels_config = load_labels_config(config_path)
+            except Exception:  # pylint: disable=broad-exception-caught
+                config_path = get_labels_config_path(None)
+                labels_config = load_labels_config(config_path)
             print(format_status_labels(labels_config))
             return 0
 
@@ -254,7 +260,7 @@ def execute_set_status(args: argparse.Namespace) -> int:
         # Step 2: Load and validate label
         config_path = get_labels_config_path(project_dir)
         labels_config = load_labels_config(config_path)
-        status_labels = {label["name"] for label in labels_config["workflow_labels"]}
+        status_labels = get_status_labels_from_config(config_path)
         is_valid, error_msg = validate_status_label(args.status_label, labels_config)
         if not is_valid:
             print(f"Error: {error_msg}", file=sys.stderr)
