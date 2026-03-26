@@ -161,19 +161,23 @@ class TestCheckPrerequisites:
                 with patch("mcp_coder.workflows.create_plan.logger") as mock_logger:
                     success, issue_data = check_prerequisites(tmp_path, 456)
 
-                    # Verify logging calls
-                    assert mock_logger.info.call_count >= 3
-                    # Check for specific log messages
-                    log_calls = [call[0][0] for call in mock_logger.info.call_args_list]
-                    assert any("Checking prerequisites" in call for call in log_calls)
+                    # Verify logging calls (some promoted to NOTICE via logger.log)
+                    info_calls = [
+                        call[0][0] for call in mock_logger.info.call_args_list
+                    ]
+                    notice_calls = [
+                        str(call[0][1]) for call in mock_logger.log.call_args_list
+                    ]
+                    all_calls = info_calls + notice_calls
+                    assert any("Checking prerequisites" in call for call in all_calls)
                     assert any(
-                        "✓ Git working directory is clean" in call for call in log_calls
+                        "✓ Git working directory is clean" in call for call in all_calls
                     )
                     assert any(
                         "✓ Issue #456 exists: 'Feature Request: Add logging'" in call
-                        for call in log_calls
+                        for call in all_calls
                     )
-                    assert any("All prerequisites passed" in call for call in log_calls)
+                    assert any("All prerequisites passed" in call for call in all_calls)
 
         assert success is True
         assert issue_data["number"] == 456
@@ -417,12 +421,14 @@ class TestCreatePrInfoStructure:
 
             # Assert: success was logged
             assert result is True
-            assert mock_logger.info.called
-            # Check for success message in any info call
-            log_calls = [call[0][0] for call in mock_logger.info.call_args_list]
+            # Check for success message in info or log (NOTICE) calls
+            info_calls = [call[0][0] for call in mock_logger.info.call_args_list]
+            notice_calls = [str(call[0][1]) for call in mock_logger.log.call_args_list]
+            all_calls = info_calls + notice_calls
+            assert len(all_calls) > 0
             assert any(
                 "pr_info" in call.lower() or "created" in call.lower()
-                for call in log_calls
+                for call in all_calls
             )
 
     def test_logs_error_on_failure(self, tmp_path: Path) -> None:

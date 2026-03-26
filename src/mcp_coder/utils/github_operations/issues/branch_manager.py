@@ -7,7 +7,7 @@ from typing import Any, List, Optional, TypedDict, cast
 
 from github import GithubException
 
-from mcp_coder.utils.log_utils import log_function_call
+from mcp_coder.utils.log_utils import NOTICE, log_function_call
 
 from ..base_manager import BaseGitHubManager, _handle_github_errors
 
@@ -472,8 +472,9 @@ class IssueBranchManager(BaseGitHubManager):
 
             created_branch_name = linked_branch["ref"]["name"]
 
-            logger.info(
-                f"Successfully created and linked branch '{created_branch_name}' to issue #{issue_number}"
+            logger.log(
+                NOTICE,
+                f"Successfully created and linked branch '{created_branch_name}' to issue #{issue_number}",
             )
             return BranchCreationResult(
                 success=True,
@@ -768,8 +769,9 @@ class IssueBranchManager(BaseGitHubManager):
                 output_schema="clientMutationId",
             )
 
-            logger.info(
-                f"Successfully unlinked branch '{branch_name}' from issue #{issue_number}"
+            logger.log(
+                NOTICE,
+                f"Successfully unlinked branch '{branch_name}' from issue #{issue_number}",
             )
             return True
 

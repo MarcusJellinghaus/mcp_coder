@@ -26,6 +26,7 @@ from mcp_coder.utils.git_operations.branch_queries import (
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.github_operations.issues import IssueBranchManager
 from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
+from mcp_coder.utils.log_utils import NOTICE
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerFileNotFoundError,
@@ -208,7 +209,7 @@ def check_prerequisites(project_dir: Path) -> bool:
                 "Git working directory is not clean. Please commit or stash changes."
             )
             return False
-        logger.info("✓ Git working directory is clean")
+        logger.log(NOTICE, "✓ Git working directory is clean")
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
@@ -225,7 +226,7 @@ def check_prerequisites(project_dir: Path) -> bool:
                 logger.error(f"  - {task}")
             logger.error("Please complete all tasks before creating PR.")
             return False
-        logger.info("✓ No incomplete tasks found")
+        logger.log(NOTICE, "✓ No incomplete tasks found")
     except TaskTrackerFileNotFoundError:
         logger.info("TASK_TRACKER.md not found - skipping task completeness check")
         # Continue with other prerequisites - task tracker is optional
@@ -256,8 +257,9 @@ def check_prerequisites(project_dir: Path) -> bool:
             )
             return False
 
-        logger.info(
-            f"✓ Current branch '{current_branch}' is not base branch '{base_branch}'"
+        logger.log(
+            NOTICE,
+            f"✓ Current branch '{current_branch}' is not base branch '{base_branch}'",
         )
     except (
         Exception
@@ -265,7 +267,7 @@ def check_prerequisites(project_dir: Path) -> bool:
         logger.error(f"Error checking branch status: {e}")
         return False
 
-    logger.info("All prerequisites passed")
+    logger.log(NOTICE, "All prerequisites passed")
     return True
 
 
@@ -290,7 +292,7 @@ def generate_pr_summary(
         ValueError: If LLM returns an empty response.
         FileNotFoundError: If the prompt template file cannot be found.
     """
-    logger.info("Generating PR summary...")
+    logger.log(NOTICE, "Generating PR summary...")
 
     # Get base branch for diff
     current_branch = get_current_branch_name(project_dir)
@@ -347,7 +349,7 @@ def generate_pr_summary(
             raise ValueError("LLM returned empty response")
 
         title, body = parse_pr_summary(llm_response)
-        logger.info("PR summary generated successfully")
+        logger.log(NOTICE, "PR summary generated successfully")
         return title, body
 
     except (
@@ -384,7 +386,7 @@ def cleanup_repository(project_dir: Path) -> bool:
         success = False
 
     if success:
-        logger.info("Repository cleanup completed successfully")
+        logger.log(NOTICE, "Repository cleanup completed successfully")
     else:
         logger.error("Repository cleanup completed with errors")
 
@@ -402,7 +404,7 @@ def create_pull_request(project_dir: Path, title: str, body: str) -> bool:
     Returns:
         True if PR created successfully, False otherwise
     """
-    logger.info("Creating GitHub pull request...")
+    logger.log(NOTICE, "Creating GitHub pull request...")
 
     try:
         # Get current and base branches
@@ -435,9 +437,9 @@ def create_pull_request(project_dir: Path, title: str, body: str) -> bool:
         pr_number = pr_result["number"]
         pr_url = pr_result.get("url", "")
 
-        logger.info(f"Pull request created successfully: #{pr_number}")
+        logger.log(NOTICE, f"Pull request created successfully: #{pr_number}")
         if pr_url:
-            logger.info(f"PR URL: {pr_url}")
+            logger.log(NOTICE, f"PR URL: {pr_url}")
 
         return True
 
@@ -495,7 +497,7 @@ def validate_branch_issue_linkage(project_dir: Path) -> Optional[int]:
 
 def log_step(message: str) -> None:
     """Log step with structured logging instead of print."""
-    logger.info(message)
+    logger.log(NOTICE, message)
 
 
 def run_create_pr_workflow(

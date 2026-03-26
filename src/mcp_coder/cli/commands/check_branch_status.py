@@ -17,6 +17,7 @@ from ...utils.github_operations.ci_results_manager import (
     CIResultsManager,
     CIStatusData,
 )
+from ...utils.log_utils import NOTICE
 from ...workflows.implement.core import check_and_fix_ci
 from ...workflows.utils import resolve_project_dir
 from ..utils import (
@@ -104,10 +105,10 @@ def _wait_for_ci_completion(
 
             conclusion = run_info.get("conclusion")
             if conclusion == "success":
-                logger.info("CI passed")
+                logger.log(NOTICE, "CI passed")
                 return ci_status, True
             else:
-                logger.info(f"CI completed with conclusion: {conclusion}")
+                logger.log(NOTICE, f"CI completed with conclusion: {conclusion}")
                 return ci_status, False
 
         # CI still running, continue polling
@@ -217,7 +218,7 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
                 logger.error("Auto-fix operations failed")
                 return 1
 
-            logger.info("Auto-fix operations completed successfully")
+            logger.log(NOTICE, "Auto-fix operations completed successfully")
             # If fixes succeeded, return success regardless of initial CI status
             return 0
 
@@ -276,7 +277,7 @@ def _run_auto_fixes(
         )
         return True  # Success when no fixes needed
 
-    logger.info("CI failures detected - attempting automatic fixes")
+    logger.log(NOTICE, "CI failures detected - attempting automatic fixes")
 
     try:
         # Get current branch from project directory
@@ -293,7 +294,7 @@ def _run_auto_fixes(
             )
 
             if ci_success:
-                logger.info("CI fix completed successfully")
+                logger.log(NOTICE, "CI fix completed successfully")
                 return True
             else:
                 logger.error("CI fix failed")
@@ -311,7 +312,7 @@ def _run_auto_fixes(
             return False
 
         for attempt in range(fix_attempts):
-            logger.info(f"Fix attempt {attempt + 1}/{fix_attempts}")
+            logger.log(NOTICE, f"Fix attempt {attempt + 1}/{fix_attempts}")
 
             # Attempt fix
             ci_success = check_and_fix_ci(
@@ -364,7 +365,7 @@ def _run_auto_fixes(
             )
 
             if ci_passed:
-                logger.info(f"CI passed after fix attempt {attempt + 1}")
+                logger.log(NOTICE, f"CI passed after fix attempt {attempt + 1}")
                 return True  # Early exit on success
 
             # If last attempt and still failing

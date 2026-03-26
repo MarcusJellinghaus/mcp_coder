@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from ...utils.git_operations import checkout_branch, fetch_remote
+from ...utils.log_utils import NOTICE
 from ...utils.subprocess_runner import (
     CalledProcessError,
     CommandOptions,
@@ -223,7 +224,7 @@ def setup_git_repo(
 
     if is_empty:
         # Clone into folder
-        logger.info("Cloning %s into %s", repo_url, folder_path)
+        logger.log(NOTICE, "Cloning %s into %s", repo_url, folder_path)
         clone_options = CommandOptions(check=True)
         execute_subprocess(
             ["git", "clone", repo_url, str(folder_path)],
@@ -237,7 +238,7 @@ def setup_git_repo(
 
     # Checkout and pull
     branch = branch_name or "main"
-    logger.info("Checking out branch %s", branch)
+    logger.log(NOTICE, "Checking out branch %s", branch)
 
     # Use git operations utility to checkout branch (handles remote tracking)
     if not checkout_branch(branch, folder_path):
@@ -248,7 +249,7 @@ def setup_git_repo(
         )
 
     # Fetch and pull latest changes
-    logger.info("Pulling latest changes")
+    logger.log(NOTICE, "Pulling latest changes")
     if not fetch_remote(folder_path):
         raise CalledProcessError(
             returncode=1,

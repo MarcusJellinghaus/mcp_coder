@@ -27,6 +27,7 @@ from mcp_coder.utils.github_operations.ci_results_manager import (
     CIResultsManager,
     CIStatusData,
 )
+from mcp_coder.utils.log_utils import NOTICE
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.commit_operations import generate_commit_message_with_llm
 from mcp_coder.workflow_utils.task_tracker import (
@@ -311,12 +312,14 @@ def _poll_for_ci_completion(
             logger.debug(f"CI run {run_ids} completed (sha: {_short_sha(run_sha)})")
 
             if run_conclusion == "success":
-                logger.info(
-                    f"CI_PASSED: Pipeline succeeded (sha: {_short_sha(run_sha)})"
+                logger.log(
+                    NOTICE,
+                    f"CI_PASSED: Pipeline succeeded (sha: {_short_sha(run_sha)})",
                 )
                 return ci_status, True
-            logger.info(
-                f"CI run completed with conclusion: {run_conclusion} (sha: {_short_sha(run_sha)})"
+            logger.log(
+                NOTICE,
+                f"CI run completed with conclusion: {run_conclusion} (sha: {_short_sha(run_sha)})",
             )
             return ci_status, False  # Needs fixing
 
@@ -523,8 +526,9 @@ def check_and_fix_ci(
 
     for fix_attempt in range(CI_MAX_FIX_ATTEMPTS):
         run_sha = ci_status.get("run", {}).get("commit_sha") or "unknown"
-        logger.info(
-            f"CI fix attempt {fix_attempt + 1}/{CI_MAX_FIX_ATTEMPTS} (sha: {_short_sha(run_sha)})"
+        logger.log(
+            NOTICE,
+            f"CI fix attempt {fix_attempt + 1}/{CI_MAX_FIX_ATTEMPTS} (sha: {_short_sha(run_sha)})",
         )
 
         should_continue, return_value = _run_ci_analysis_and_fix(
@@ -592,7 +596,7 @@ def _attempt_rebase_and_push(project_dir: Path) -> bool:
     """
     target = _get_rebase_target_branch(project_dir)
     if target:
-        logger.info("Rebasing onto origin/%s...", target)
+        logger.log(NOTICE, "Rebasing onto origin/%s...", target)
         if rebase_onto_branch(project_dir, target):
             # Push rebased branch with force_with_lease
             if push_changes(project_dir, force_with_lease=True):
@@ -727,7 +731,7 @@ def prepare_task_tracker(
             )
             return False
 
-        logger.info("Task tracker updated and committed successfully")
+        logger.log(NOTICE, "Task tracker updated and committed successfully")
         return True
 
     except Exception as e:
@@ -753,9 +757,9 @@ def log_progress_summary(project_dir: Path) -> None:
             logger.debug("No step progress information available")
             return
 
-        logger.info("=" * 60)
-        logger.info("TASK TRACKER PROGRESS SUMMARY")
-        logger.info("=" * 60)
+        logger.log(NOTICE, "=" * 60)
+        logger.log(NOTICE, "TASK TRACKER PROGRESS SUMMARY")
+        logger.log(NOTICE, "=" * 60)
 
         for step_name, step_info in progress.items():
             # Extract and validate types from step_info dict
@@ -787,17 +791,19 @@ def log_progress_summary(project_dir: Path) -> None:
             bar = "█" * filled + "░" * (bar_length - filled)
 
             # Log step summary
-            logger.info(f"{step_name}:")
-            logger.info(f"  [{bar}] {percentage:.0f}% ({completed}/{total} complete)")
+            logger.log(NOTICE, f"{step_name}:")
+            logger.log(
+                NOTICE, f"  [{bar}] {percentage:.0f}% ({completed}/{total} complete)"
+            )
 
             # Show incomplete tasks for this step if any
             if incomplete > 0:
                 task_preview = ", ".join(incomplete_list[:3])
                 if len(incomplete_list) > 3:
                     task_preview += "..."
-                logger.info(f"  Remaining: {task_preview}")
+                logger.log(NOTICE, f"  Remaining: {task_preview}")
 
-        logger.info("=" * 60)
+        logger.log(NOTICE, "=" * 60)
 
     except Exception as e:
         logger.debug(f"Could not generate progress summary: {e}")
@@ -906,14 +912,14 @@ def run_finalisation(
         logger.warning("Using default commit message")
 
     # 6. Stage all changes and commit
-    logger.info("Committing finalisation changes...")
+    logger.log(NOTICE, "Committing finalisation changes...")
     commit_result = commit_all_changes(commit_message, project_dir)
     if not commit_result["success"]:
         logger.error(f"Failed to commit finalisation changes: {commit_result['error']}")
         return False
 
     # 7. Push changes
-    logger.info("Pushing finalisation changes...")
+    logger.log(NOTICE, "Pushing finalisation changes...")
     if not push_changes(project_dir):
         logger.warning("Failed to push finalisation changes")
         return False
@@ -986,7 +992,7 @@ def run_implement_workflow(
                 break
 
         completed_tasks += 1
-        logger.info(f"Completed {completed_tasks} task(s). Checking for more...")
+        logger.log(NOTICE, f"Completed {completed_tasks} task(s). Checking for more...")
 
         # Show updated progress after each task
         log_progress_summary(project_dir)
@@ -1019,7 +1025,7 @@ def run_implement_workflow(
         all_changes = status["staged"] + status["modified"] + status["untracked"]
 
         if all_changes:
-            logger.info("Committing final mypy fixes...")
+            logger.log(NOTICE, "Committing final mypy fixes...")
             if not commit_changes(project_dir, provider):
                 logger.error("Failed to commit final mypy fixes")
                 return 1
@@ -1061,21 +1067,25 @@ def run_implement_workflow(
 
     # Step 6: Show final progress summary with appropriate messaging
     if error_occurred:
-        logger.info(
-            f"Workflow stopped due to error after processing {completed_tasks} task(s)"
+        logger.log(
+            NOTICE,
+            f"Workflow stopped due to error after processing {completed_tasks} task(s)",
         )
         if completed_tasks > 0:
-            logger.info("\nProgress before error:")
+            logger.log(NOTICE, "\nProgress before error:")
             log_progress_summary(project_dir)
         return 1
     elif completed_tasks > 0:
-        logger.info(
-            f"Implement workflow completed successfully! Processed {completed_tasks} task(s)."
+        logger.log(
+            NOTICE,
+            f"Implement workflow completed successfully! Processed {completed_tasks} task(s).",
         )
-        logger.info("\nFinal Progress:")
+        logger.log(NOTICE, "\nFinal Progress:")
         log_progress_summary(project_dir)
     else:
-        logger.info("No incomplete implementation tasks found - workflow complete")
+        logger.log(
+            NOTICE, "No incomplete implementation tasks found - workflow complete"
+        )
 
     # Step 7: Update GitHub issue label if requested
     if update_labels and completed_tasks > 0 and not error_occurred:
@@ -1090,7 +1100,7 @@ def run_implement_workflow(
             )
 
             if success:
-                logger.info("✓ Issue label updated: implementing → code-review")
+                logger.log(NOTICE, "✓ Issue label updated: implementing → code-review")
             else:
                 logger.warning("✗ Failed to update issue label (non-blocking)")
 
