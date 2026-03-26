@@ -9,6 +9,7 @@ from pathlib import Path
 from ...llm.env import prepare_llm_environment
 from ...llm.formatting.formatters import print_stream_event
 from ...llm.interface import prompt_llm, prompt_llm_stream
+from ...llm.mlflow_conversation_logger import mlflow_conversation
 from ...llm.storage import (
     extract_langchain_session_id,
     extract_session_id,
@@ -145,6 +146,16 @@ def execute_prompt(
                 print_stream_event(event, output_format)
 
             llm_response = assembler.result()
+
+            # MLflow logging (mirrors non-streaming path)
+            metadata = {
+                "branch_name": branch_name,
+                "working_directory": str(execution_dir),
+            }
+            with mlflow_conversation(
+                args.prompt, provider, resume_session_id, metadata
+            ) as mlflow_ctx:
+                mlflow_ctx["response_data"] = llm_response
 
             # Store response to file if requested
             if getattr(args, "store_response", False):

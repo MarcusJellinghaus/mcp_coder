@@ -491,6 +491,9 @@ def _ask_text_stream(
     Yields:
         raw_line events for each chunk (JSON serialization),
         text_delta events for each chunk, then done event.
+
+    Raises:
+        ValueError: If the model is not found (404/NOT_FOUND in error).
     """
     from langchain_core.messages import AIMessage, HumanMessage, messages_from_dict
 
@@ -531,6 +534,18 @@ def _ask_text_stream(
         store_langchain_history(session_id, serialized)
 
         yield {"type": "done", "session_id": session_id, "usage": {}}
-    except Exception as exc:  # pylint: disable=broad-except
+    except Exception as exc:
         _handle_provider_error(exc, backend)
+        # Handle 404/model-not-found errors (mirrors _ask_text() path)
+        exc_str = str(exc)
+        if "404" in exc_str or "not_found" in exc_str.lower() or "NOT_FOUND" in exc_str:
+            model = config.get("model", "")
+            hint = f"Model {model!r} not found."
+            try:
+                hint += _get_model_suggestions(config)
+            except Exception:  # pylint: disable=broad-except
+                pass
+            yield {"type": "error", "message": hint}
+            raise ValueError(hint) from exc
         yield {"type": "error", "message": str(exc)}
+        raise

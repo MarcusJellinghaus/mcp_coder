@@ -157,6 +157,16 @@ def stream_subprocess(
     timer = threading.Timer(options.timeout_seconds, _on_timeout)
     timer.start()
 
+    # Collect stderr in a background thread to avoid pipe-buffer deadlock
+    stderr_chunks: list[str] = []
+
+    def _read_stderr() -> None:
+        if proc.stderr:
+            stderr_chunks.append(proc.stderr.read())
+
+    stderr_thread = threading.Thread(target=_read_stderr, daemon=True)
+    stderr_thread.start()
+
     try:
         assert proc.stdout is not None  # guaranteed by stdout=PIPE  # noqa: S101
         for line in proc.stdout:
@@ -171,8 +181,9 @@ def stream_subprocess(
         raise
     finally:
         timer.cancel()
+        stderr_thread.join(timeout=5)
 
-    stderr = proc.stderr.read() if proc.stderr else ""
+    stderr = stderr_chunks[0] if stderr_chunks else ""
     execution_time_ms = int((time.time() - start_time) * 1000)
 
     return CommandResult(

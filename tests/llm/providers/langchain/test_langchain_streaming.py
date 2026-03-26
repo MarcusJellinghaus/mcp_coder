@@ -212,7 +212,7 @@ class TestAskLangchainStreamErrorHandling:
     """ask_langchain_stream yields error event on provider errors."""
 
     def test_error_handling(self) -> None:
-        """Provider error yields an error event."""
+        """Provider error yields an error event and re-raises."""
         mock_model = MagicMock()
         mock_model.stream.side_effect = RuntimeError("boom")
 
@@ -225,8 +225,5 @@ class TestAskLangchainStreamErrorHandling:
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain_stream
 
-            events = list(ask_langchain_stream("Hi"))
-
-        error_events = [e for e in events if e["type"] == "error"]
-        assert len(error_events) == 1
-        assert "boom" in str(error_events[0]["message"])
+            with pytest.raises(RuntimeError, match="boom"):
+                list(ask_langchain_stream("Hi"))

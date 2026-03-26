@@ -684,6 +684,13 @@ class TestAskClaudeCodeCliStream:
 
             assert any("Timed out" in str(e["message"]) for e in error_events)
 
+    def test_ask_claude_stream_empty_question_raises(self) -> None:
+        """Test that empty/whitespace question raises ValueError."""
+        with pytest.raises(ValueError, match="empty"):
+            list(ask_claude_code_cli_stream(""))
+        with pytest.raises(ValueError, match="empty"):
+            list(ask_claude_code_cli_stream("   "))
+
     @patch(
         "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
     )
