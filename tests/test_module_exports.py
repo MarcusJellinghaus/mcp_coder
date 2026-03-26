@@ -107,6 +107,8 @@ def test_llm_types_all_is_correct() -> None:
     expected = [
         "LLMResponseDict",
         "LLM_RESPONSE_VERSION",
+        "ResponseAssembler",
+        "StreamEvent",
     ]
 
     assert set(types.__all__) == set(expected)

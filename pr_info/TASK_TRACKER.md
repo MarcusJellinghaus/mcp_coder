@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Stream Event Types and ResponseAssembler
-- [ ] Implementation: `StreamEvent` type alias + `ResponseAssembler` class in `types.py` with tests in `test_types.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(types): add StreamEvent type and ResponseAssembler`
+- [x] Implementation: `StreamEvent` type alias + `ResponseAssembler` class in `types.py` with tests in `test_types.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(types): add StreamEvent type and ResponseAssembler`
 
 ### Step 2: stream_subprocess() in subprocess_runner
 - [ ] Implementation: `stream_subprocess()` generator + `StreamResult` wrapper in `subprocess_runner.py` with tests in `test_subprocess_runner.py`
