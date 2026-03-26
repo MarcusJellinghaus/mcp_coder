@@ -9,7 +9,7 @@ import shutil
 import stat
 import sys
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -638,7 +638,7 @@ def create_status_file(
         status_name=status,
         repo=repo_full_name,
         branch=branch_name,
-        started_at=datetime.now(timezone.utc).isoformat(),
+        started_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         intervention_line=intervention_line,
         issue_url=issue_url,
     )
