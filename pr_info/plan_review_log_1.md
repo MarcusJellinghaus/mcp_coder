@@ -33,3 +33,26 @@
 **Changes**: Updated call counts in summary.md, step_2.md, step_3.md. Moved 4 "import-only" files into main log-revert sections. Removed empty "unused import removal only" section.
 
 **Status**: Committed
+
+## Round 2 — 2026-03-26
+
+**Findings**:
+
+- Missing `llm_integration` marker in pytest exclusion patterns (all 3 steps) — would cause slow/failing integration tests during verification
+- `log_utils.py` listed in both "Files Modified" and "Files NOT modified" tables in summary.md — contradictory
+
+**Decisions**:
+
+- Both: **Accept** — straightforward fixes, no design impact
+
+**User decisions**: None needed.
+
+**Changes**: Added `and not llm_integration` to pytest markers in step_1.md, step_2.md, step_3.md. Removed `log_utils.py` from "Files NOT modified" in summary.md.
+
+**Status**: Committed
+
+## Final Status
+
+- **Rounds**: 2
+- **Commits**: 2 (plan count corrections + marker/table fixes)
+- **Plan status**: Ready for approval — all counts verified against source, step structure sound, no remaining issues.

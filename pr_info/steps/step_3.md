@@ -60,7 +60,7 @@ No data structure changes. Only the log level of emitted messages changes (NOTIC
 After all 11 files are edited, run:
 1. `mcp__tools-py__run_pylint_check`
 2. `mcp__tools-py__run_mypy_check`
-3. `mcp__tools-py__run_pytest_check` with `extra_args: ["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"]`
+3. `mcp__tools-py__run_pytest_check` with `extra_args: ["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration and not llm_integration"]`
 
 All checks must pass. Then commit.
 

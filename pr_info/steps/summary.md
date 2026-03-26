@@ -50,7 +50,6 @@ However, 101 `logger.info()` calls were simultaneously promoted to `logger.log(N
 
 ### Files NOT modified (unchanged)
 
-- `src/mcp_coder/utils/log_utils.py` — `NOTICE = 25` constant and `logging.addLevelName()` stay
 - `src/mcp_coder/utils/__init__.py` — `NOTICE` re-export stays (valid as threshold constant)
 - `src/mcp_coder/cli/main.py` — `_resolve_log_level()` stays as-is
 - `tests/cli/test_main.py` — All assertions are about threshold resolution, not log emission
