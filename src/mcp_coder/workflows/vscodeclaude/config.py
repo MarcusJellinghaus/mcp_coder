@@ -60,19 +60,19 @@ def load_vscodeclaude_config() -> VSCodeClaudeConfig:
     # Batch fetch config values
     config = get_config_values(
         [
-            ("coordinator.vscodeclaude", "workspace_base", None),
-            ("coordinator.vscodeclaude", "max_sessions", None),
+            ("vscodeclaude", "workspace_base", None),
+            ("vscodeclaude", "max_sessions", None),
         ]
     )
 
-    workspace_base = config[("coordinator.vscodeclaude", "workspace_base")]
-    max_sessions_str = config[("coordinator.vscodeclaude", "max_sessions")]
+    workspace_base = config[("vscodeclaude", "workspace_base")]
+    max_sessions_str = config[("vscodeclaude", "max_sessions")]
 
     # Validate workspace_base is configured
     if not workspace_base:
         config_path = get_config_file_path()
         raise ValueError(
-            f"workspace_base not configured in [coordinator.vscodeclaude] section. "
+            f"workspace_base not configured in [vscodeclaude] section. "
             f"Config file: {config_path}"
         )
 

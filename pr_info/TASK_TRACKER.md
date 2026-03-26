@@ -47,9 +47,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 5: Migrate Config Keys
 > [Detail](./steps/step_5.md) — Migrate config keys from `coordinator.vscodeclaude` to top-level `vscodeclaude` section.
-- [ ] Implementation: update config key strings in `vscodeclaude/config.py`, update default config template in `user_config.py`, update `commands.py` error message, update config tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: update config key strings in `vscodeclaude/config.py`, update default config template in `user_config.py`, update `commands.py` error message, update config tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: Update Documentation and Slash Commands
 > [Detail](./steps/step_6.md) — Update all docs and `.claude/commands/` files to reference new command names.

@@ -488,7 +488,7 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         if created:
             config_path = get_config_file_path()
             print(f"Created default config at {config_path}")
-            print("Please configure [coordinator.vscodeclaude] section.")
+            print("Please configure [vscodeclaude] section.")
             return 1
 
         # Load vscodeclaude config

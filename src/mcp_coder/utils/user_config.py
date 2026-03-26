@@ -326,6 +326,11 @@ executor_os = "linux"
 # executor_job_path = "Tests/your-repo-coordinator-test"
 # github_credentials_id = "github-credentials-id"
 # executor_os = "linux"
+
+[vscodeclaude]
+# VSCodeClaude session configuration
+# workspace_base = "C:/path/to/vscodeclaude/workspaces"
+# max_sessions = 3
 """
 
     # Write template to file
@@ -507,6 +512,17 @@ def verify_config() -> dict[str, Any]:
                     "value": f"{count} repos configured",
                 }
             )
+
+    # [vscodeclaude] - check workspace_base
+    vscodeclaude = config_data.get("vscodeclaude")
+    if isinstance(vscodeclaude, dict) and vscodeclaude.get("workspace_base"):
+        entries.append(
+            {
+                "label": "[vscodeclaude]",
+                "status": "ok",
+                "value": "workspace_base configured",
+            }
+        )
 
     return {"entries": entries, "has_error": False}
 
