@@ -31,3 +31,36 @@
 - Updated test assertion for step-prefixed tool trace
 
 **Status:** Committed
+
+## Round 2 — 2026-03-26
+
+**Findings:**
+- C1 (Medium): Duplicate `step_N_prompt.txt` artifact — repeat of round 1 C1
+- S1 (Low): Mixed `Dict` vs `dict` typing — repeat of round 1 S4
+- S2 (Low): `log_conversation_artifacts()` has zero production callers — pre-existing
+- S3 (Low): `_mlflow_module` assigned but never read — pre-existing dead code
+
+**Decisions:**
+- C1: **Skip** — already triaged in round 1; intentional crash insurance design
+- S1: **Skip** — already triaged in round 1; cosmetic
+- S2: **Skip** — pre-existing, out of scope for this PR
+- S3: **Skip** — pre-existing, out of scope for this PR
+
+**Changes:** None
+**Status:** No changes needed
+
+## Final Status
+
+**Review complete.** 2 rounds, 1 commit produced (`58b4c3d`).
+
+**Accepted fixes (round 1):**
+1. `log_error_metrics()` now step-aware (consistency bug)
+2. Tool trace artifact step-prefixed (data loss prevention)
+3. Extracted `_log_step_params_and_artifacts()` (DRY)
+4. LRU eviction cleans `_run_step_count` (memory leak)
+
+**Skipped (all rounds):**
+- Duplicate prompt artifact (intentional crash insurance)
+- File size >750 lines (pre-existing verify functions)
+- Mixed Dict/dict typing (cosmetic)
+- Zero-caller method, dead field (pre-existing)
