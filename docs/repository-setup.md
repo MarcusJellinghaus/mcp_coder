@@ -472,7 +472,7 @@ Add to `.gitignore` if configs contain sensitive paths:
 
 ### VSCodeClaude Setup
 
-For `mcp-coder coordinator vscodeclaude`, add to `.gitignore`:
+For `mcp-coder vscodeclaude launch`, add to `.gitignore`:
 
 ```gitignore
 .vscodeclaude_status.txt

@@ -204,11 +204,15 @@ def _handle_vscodeclaude_command(args: argparse.Namespace) -> int:
         elif args.vscodeclaude_subcommand == "status":
             return execute_coordinator_vscodeclaude_status(args)
         else:
+            logger.error(
+                f"Unknown vscodeclaude subcommand: {args.vscodeclaude_subcommand}"
+            )
             print(
                 f"Error: Unknown vscodeclaude subcommand '{args.vscodeclaude_subcommand}'"
             )
             return 1
     else:
+        logger.error("vscodeclaude subcommand required")
         print("Error: Please specify a subcommand (e.g., 'launch', 'status')")
         return 1
 
