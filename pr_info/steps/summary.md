@@ -26,7 +26,7 @@ When the implement workflow fails, the issue stays stuck at `status-06:implement
 
 - **`update_labels` parameter removed** — labels always transition. Success → `code_review`, failure → appropriate failure label
 - **Prerequisite failures** (`check_git_clean`, `check_main_branch`) return early without touching labels — workflow never started
-- **Post-error `log_progress_summary` removed** — progress info is in the failure banner instead
+- **Post-error `log_progress_summary` removed** (Step 4) — the `if error_occurred:` block is replaced with just `return 1`; progress info is in the failure banner instead
 
 ### Task processing changes (`task_processing.py`)
 
@@ -54,6 +54,6 @@ When the implement workflow fails, the issue stays stuck at `status-06:implement
 
 - `FailureCategory.value` **is** the label `internal_id` — no mapping table needed, direct pass-through to `update_workflow_label()`
 - `_handle_workflow_failure()` is a private module function, not a method — it's workflow-specific, not reusable across workflows
-- `IssueManager` is instantiated inside `_handle_workflow_failure()` (same pattern as the existing success path)
+- `IssueManager` is imported from `mcp_coder.utils.github_operations.issues` and instantiated inside `_handle_workflow_failure()` (same pattern as the existing success path)
 - `git diff --stat` uses gitpython's `repo.git.diff("--stat")` — no new helper function needed
 - Issue number extraction from branch is handled internally by `update_workflow_label()` — no extra logic needed

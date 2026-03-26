@@ -64,7 +64,7 @@ def test_process_single_task_llm_timeout(
     mock_get_next_task.return_value = "Step 1: Test task"
     mock_get_prompt.return_value = "Template"
     mock_prompt_llm.side_effect = TimeoutExpired(
-        cmd="claude", timeout=3600, stderr="", stdout=""
+        cmd="claude", timeout=3600, output="", stderr=""
     )
 
     success, reason = process_single_task(Path("/test/project"), "claude")

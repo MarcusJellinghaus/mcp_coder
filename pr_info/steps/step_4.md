@@ -27,7 +27,7 @@ def _handle_workflow_failure(failure: WorkflowFailure, project_dir: Path) -> Non
 
 1. **On success** (existing success path, end of function): unconditionally call `update_workflow_label(from_label_id="implementing", to_label_id="code_review")`
 2. **On failure** (each `return 1` after prerequisites): call `_handle_workflow_failure()` with appropriate `WorkflowFailure`
-3. **Remove post-error progress display** (the `if error_occurred:` block that calls `log_progress_summary`)
+3. **Remove post-error progress display** — replace the `if error_occurred:` block (which calls `log_progress_summary`) with just `return 1`. Failure details are already logged by `_handle_workflow_failure()` at each error exit point.
 
 ## HOW
 
@@ -36,6 +36,7 @@ def _handle_workflow_failure(failure: WorkflowFailure, project_dir: Path) -> Non
 from mcp_coder.utils.subprocess_runner import TimeoutExpired
 from mcp_coder.utils.git_operations.core import _safe_repo_context
 from mcp_coder.utils.git_operations.branch_queries import extract_issue_number_from_branch
+from mcp_coder.utils.github_operations.issues import IssueManager
 
 from .constants import FailureCategory, WorkflowFailure
 ```
@@ -48,6 +49,24 @@ def _get_diff_stat(project_dir: Path) -> str:
             return repo.git.diff("--stat")
     except Exception:
         return ""
+```
+
+### `_format_failure_comment` implementation
+```python
+def _format_failure_comment(failure: WorkflowFailure, diff_stat: str) -> str:
+    """Format a GitHub comment for a workflow failure."""
+    lines = [
+        "## Implementation Failed",
+        f"**Category:** {failure.category.name.replace('_', ' ').title()}",
+        f"**Stage:** {failure.stage}",
+        f"**Error:** {failure.message}",
+    ]
+    if failure.tasks_total > 0:
+        lines.append(f"**Progress:** {failure.tasks_completed}/{failure.tasks_total} tasks completed")
+    lines.append("")
+    lines.append("### Uncommitted Changes")
+    lines.append(f"```\n{diff_stat or 'No uncommitted changes'}\n```")
+    return "\n".join(lines)
 ```
 
 ### `_handle_workflow_failure` implementation
@@ -198,6 +217,26 @@ class TestHandleWorkflowFailure:
         # Verify IssueManager is never instantiated
         ...
 
+class TestNoPostErrorProgressDisplay:
+    """Verify post-error progress display is removed."""
+
+    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.process_single_task")
+    # ... (other prerequisite mocks)
+    def test_no_progress_summary_after_error(self, ...):
+        """After error, log_progress_summary should NOT be called again."""
+        # Setup: process_single_task returns error
+        mock_process.return_value = (False, "error")
+        
+        result = run_implement_workflow(Path("/project"), "claude")
+        
+        assert result == 1
+        # log_progress_summary is called once for initial display (Step 3 in workflow)
+        # but NOT again after error
+        # _handle_workflow_failure should have been called instead
+        mock_handle_failure.assert_called_once()
+
 class TestRunImplementWorkflowLabelTransitions:
     """Test that labels always transition on success/failure."""
 
@@ -214,14 +253,31 @@ class TestRunImplementWorkflowLabelTransitions:
         ...
 ```
 
+## VERIFICATION CHECKLIST
+
+After all 4 steps, verify all acceptance criteria:
+
+- [ ] `WorkflowFailure` dataclass and `FailureCategory` enum implemented (Step 1)
+- [ ] Workflow sets `status-06f:implementing-failed` on general failures (Step 4)
+- [ ] Workflow sets `status-06f-ci:ci-fix-needed` when CI fix attempts exhausted (Step 4)
+- [ ] Workflow sets `status-06f-timeout:llm-timeout` on LLM timeout (Step 4)
+- [ ] GitHub comment posted with structured failure details (Step 4)
+- [ ] GitHub comment includes `git diff --stat` (Step 4)
+- [ ] Failure banner is prominent with stage, message, and task progress (Step 4)
+- [ ] Uncommitted changes shown via git diff --stat (Step 4)
+- [ ] Post-error task tracker progress display removed (Step 4)
+- [ ] `update_labels` parameter removed (Step 3)
+- [ ] Prerequisite failures do not change labels (Step 4)
+
 ## LLM PROMPT
 ```
 Implement Step 4 of issue #189 (see pr_info/steps/summary.md for context).
 
-Add `_get_diff_stat()` and `_handle_workflow_failure()` to core.py.
+Add `_get_diff_stat()`, `_format_failure_comment()`, and `_handle_workflow_failure()` to core.py.
 Wire `_handle_workflow_failure()` into every error exit in `run_implement_workflow()`.
 Add unconditional label transition to code_review on success.
-Remove the post-error log_progress_summary calls.
+Remove the post-error log_progress_summary calls (replace the `if error_occurred:` block
+with just `return 1` — failure details are handled by `_handle_workflow_failure()`).
 
 Write tests first in test_core.py, then implement.
 See pr_info/steps/step_4.md for exact function signatures, algorithm,
