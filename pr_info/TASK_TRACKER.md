@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Update `log_utils.py` — remove NOTICE monkey-patch, add threshold-only comment
 > [Detail](./steps/step_1.md) — `src/mcp_coder/utils/log_utils.py`, `tests/utils/test_log_utils.py`
 
-- [ ] Implementation: remove `_notice()` function and monkey-patch, add threshold comment, remove test
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: remove `_notice()` function and monkey-patch, add threshold comment, remove test
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Revert CLI command files from NOTICE logging to INFO logging
 > [Detail](./steps/step_2.md) — 7 CLI command files

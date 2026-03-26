@@ -51,10 +51,6 @@ class TestNoticeLevel:
                 root_logger.addHandler(handler)
             root_logger.setLevel(initial_level)
 
-    def test_logger_notice_method_exists(self) -> None:
-        """Test that loggers have the notice() convenience method."""
-        assert hasattr(logging.getLogger(), "notice")
-
 
 class TestSetupLogging:
     """Tests for the setup_logging function."""

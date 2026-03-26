@@ -39,16 +39,10 @@ import structlog
 from pythonjsonlogger.json import JsonFormatter
 
 # Custom NOTICE log level (between INFO=20 and WARNING=30)
+# NOTICE is a threshold-only level for CLI output filtering — never log at this level.
+# Use logger.info() for messages; they will be hidden when threshold is NOTICE.
 NOTICE = 25
 logging.addLevelName(NOTICE, "NOTICE")
-
-
-def _notice(self: logging.Logger, message: str, *args: Any, **kwargs: Any) -> None:
-    if self.isEnabledFor(NOTICE):
-        self.log(NOTICE, message, *args, **kwargs)
-
-
-logging.Logger.notice = _notice  # type: ignore[attr-defined]
 
 # Type variable for function return types
 T = TypeVar("T")
