@@ -1,20 +1,30 @@
 # Refactoring Principles
 
+Quick reference for refactoring rules and tools. For detailed process, examples, and checklists, see the [Safe Refactoring Guide](../../docs/processes-prompts/refactoring-guide.md).
+
 ## Key Rules
 
-- **Move, don't change.** Functions and classes should be relocated as-is. Logic changes belong in a separate PR.
-- **Only adjust imports.** The only code changes during a refactor should be import statements and `__init__.py` re-exports.
-- **Clean deletion, no legacy artifacts.** Delete old files entirely — no stubs, no deprecation warnings, no backward-compatible re-exports. Update all consumers immediately.
-- **Small steps.** One module per PR when possible. Keep diffs under 25,000 tokens. Move related functions together.
-- **Tests mirror source structure.** When moving source code, move corresponding tests to match.
+- **Move, don't change.** Logic changes belong in a separate PR.
+- **Only adjust imports.** Use `move_symbol` — it updates imports automatically.
+- **Clean deletion, no legacy artifacts.** No stubs, no re-exports for backward compatibility.
+- **Small steps.** One module per PR. Keep diffs under 25,000 tokens.
+- **Tests mirror source structure.**
 
-## Process
+## MCP Refactoring Tools
 
-1. Plan the target structure before moving anything
-2. Move source code (copy-paste, no modifications)
-3. Move tests to mirror new structure
-4. Run all checks (pytest, pylint, mypy, import linter, tach)
+| Tool | Purpose |
+|------|---------|
+| `mcp__tools-py__list_symbols` | List top-level symbols in a file |
+| `mcp__tools-py__find_references` | Find all references project-wide |
+| `mcp__tools-py__move_symbol` | Move symbol + update all imports |
+| `mcp__tools-py__rename_symbol` | Rename symbol + update all references |
+| `mcp__tools-py__move_module` | Move entire module + update references |
 
-## Full Guide
+## Verification Tools
 
-For detailed process, checklists, and conflict resolution strategies, see [Safe Refactoring Guide](../../docs/processes-prompts/refactoring-guide.md).
+| Tool | Purpose |
+|------|---------|
+| `mcp-coder git-tool compact-diff` | Suppress moved-code blocks in diff — remaining diff should be imports only |
+| `mcp-coder check file-size --max-lines 750` | Verify all files are under the size threshold |
+
+See [Safe Refactoring Guide — Verification](../../docs/processes-prompts/refactoring-guide.md#step-4-verify) for the full checklist.
