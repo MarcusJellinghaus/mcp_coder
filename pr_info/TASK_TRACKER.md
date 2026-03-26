@@ -21,6 +21,23 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Add `format_status_labels()` and unify label formatting
+
+> [Detail](./steps/step_1.md) — Extract `format_status_labels()`, refactor `build_set_status_epilog()` and `validate_status_label()` to use it. No behavior change.
+
+- [ ] Implementation: tests (`test_format_status_labels_output`, `test_format_status_labels_dynamic_width`, update `validate_status_label` tests) + production code (`format_status_labels`, refactor callers)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Make `status_label` optional and add no-args label listing
+
+> [Detail](./steps/step_2.md) — Make `status_label` argument optional (`nargs="?"`), add no-args early return printing available labels, update docstring.
+
+- [ ] Implementation: tests (`test_execute_set_status_no_args_shows_labels`, `test_execute_set_status_no_args_fallback_config`) + production code (parser change, no-args path in `execute_set_status`)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: verify all steps integrated correctly, no regressions
+- [ ] PR summary prepared
