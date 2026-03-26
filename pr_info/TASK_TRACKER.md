@@ -39,7 +39,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 4: LangChain Streaming Provider
 - [x] Implementation: `ask_langchain_stream()` + `_ask_text_stream()` in `langchain/__init__.py` with tests in `test_langchain_provider.py`
 - [x] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(langchain): add ask_langchain_stream`
+- [x] Commit: `feat(langchain): add ask_langchain_stream`
 
 ### Step 5: prompt_llm_stream() Interface + Stream Print Formatting
 - [ ] Implementation: `prompt_llm_stream()` in `interface.py` + `print_stream_event()` in `formatters.py` with tests in `test_interface.py` and `test_formatters.py`
