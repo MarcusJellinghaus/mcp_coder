@@ -11,11 +11,13 @@ import pytest
 
 from mcp_coder.llm.providers.claude.claude_code_cli import (
     ask_claude_code_cli,
-    ask_claude_code_cli_stream,
     build_cli_command,
     create_response_dict,
     format_stream_json_input,
     parse_cli_json_string,
+)
+from mcp_coder.llm.providers.claude.claude_code_cli_streaming import (
+    ask_claude_code_cli_stream,
 )
 from mcp_coder.utils.subprocess_runner import (
     CalledProcessError,
@@ -438,9 +440,13 @@ class TestEnvVarsParameter:
 class TestAskClaudeCodeCliStream:
     """Tests for ask_claude_code_cli_stream function."""
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.stream_subprocess")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.get_stream_log_path")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path"
+    )
     def test_ask_claude_stream_yields_text_delta(
         self,
         mock_get_path: MagicMock,
@@ -482,9 +488,13 @@ class TestAskClaudeCodeCliStream:
             assert text_deltas[0]["text"] == "Hello "
             assert text_deltas[1]["text"] == "world"
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.stream_subprocess")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.get_stream_log_path")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path"
+    )
     def test_ask_claude_stream_yields_tool_events(
         self,
         mock_get_path: MagicMock,
@@ -539,9 +549,13 @@ class TestAskClaudeCodeCliStream:
             assert tool_results[0]["name"] == "Bash"
             assert tool_results[0]["output"] == "file.txt"
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.stream_subprocess")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.get_stream_log_path")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path"
+    )
     def test_ask_claude_stream_yields_done(
         self,
         mock_get_path: MagicMock,
@@ -575,9 +589,13 @@ class TestAskClaudeCodeCliStream:
             }
             assert done_events[0]["cost_usd"] == 0.05
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.stream_subprocess")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.get_stream_log_path")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path"
+    )
     def test_ask_claude_stream_yields_raw_lines(
         self,
         mock_get_path: MagicMock,
@@ -607,9 +625,13 @@ class TestAskClaudeCodeCliStream:
             for raw_event, original_line in zip(raw_lines, lines):
                 assert raw_event["line"] == original_line
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.stream_subprocess")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.get_stream_log_path")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path"
+    )
     def test_ask_claude_stream_writes_log_file(
         self,
         mock_get_path: MagicMock,
@@ -636,9 +658,13 @@ class TestAskClaudeCodeCliStream:
             written_lines = content.strip().split("\n")
             assert written_lines == lines
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.stream_subprocess")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.get_stream_log_path")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path"
+    )
     def test_ask_claude_stream_timeout_yields_error(
         self,
         mock_get_path: MagicMock,
@@ -658,9 +684,13 @@ class TestAskClaudeCodeCliStream:
 
             assert any("Timed out" in str(e["message"]) for e in error_events)
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.stream_subprocess")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.get_stream_log_path")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path"
+    )
     def test_ask_claude_stream_nonzero_exit_yields_error(
         self,
         mock_get_path: MagicMock,
