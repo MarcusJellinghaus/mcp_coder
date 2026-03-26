@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Detail: [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: add `_run_step_count`, `current_step()`, `_advance_step()`, `step` param on `log_metrics()`, `end_run()` cleanup (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `_run_step_count`, `current_step()`, `_advance_step()`, `step` param on `log_metrics()`, `end_run()` cleanup (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Rewrite `log_conversation()` and `log_conversation_artifacts()` with step-aware logging
 

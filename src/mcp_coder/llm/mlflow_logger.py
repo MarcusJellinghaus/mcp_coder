@@ -81,6 +81,7 @@ class MLflowLogger:
         self.active_run_id: Optional[str] = None
         self._mlflow_module: Any = None
         self._session_run_map: OrderedDict[str, str] = OrderedDict()
+        self._run_step_count: dict[str, int] = {}
 
         # Only initialize MLflow if it's available and enabled
         if self.config.enabled and is_mlflow_available():
@@ -194,6 +195,17 @@ class MLflowLogger:
         """
         return session_id in self._session_run_map
 
+    def current_step(self) -> int:
+        """Return the current step index for the active run (0 if no run or first step)."""
+        if not self.active_run_id:
+            return 0
+        return self._run_step_count.get(self.active_run_id, 0)
+
+    def _advance_step(self) -> None:
+        """Increment the step counter for the active run."""
+        if self.active_run_id:
+            self._run_step_count[self.active_run_id] = self.current_step() + 1
+
     def start_run(
         self,
         session_id: Optional[str] = None,
@@ -279,11 +291,14 @@ class MLflowLogger:
         ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
             logger.warning(f"Failed to log parameters to MLflow: {e}")
 
-    def log_metrics(self, metrics: Dict[str, float]) -> None:
+    def log_metrics(
+        self, metrics: Dict[str, float], step: Optional[int] = None
+    ) -> None:
         """Log metrics to the current MLflow run.
 
         Args:
             metrics: Metrics to log (must be numeric)
+            step: Optional step index for time-series metrics
         """
         if not self._is_enabled() or not self.active_run_id:
             return
@@ -300,7 +315,11 @@ class MLflowLogger:
                     logger.debug(f"Skipping non-numeric metric '{k}': {v}")
 
             if numeric_metrics:
-                mlflow.log_metrics(numeric_metrics)
+                if step is None:
+                    mlflow.log_metrics(numeric_metrics)
+                else:
+                    for key, value in numeric_metrics.items():
+                        mlflow.log_metric(key, value, step=step)
                 logger.debug(f"Logged {len(numeric_metrics)} metrics to MLflow")
 
         except (
@@ -523,6 +542,10 @@ class MLflowLogger:
 
         try:
             import mlflow  # pylint: disable=import-error
+
+            # Clean up step count when run won't be resumed
+            if session_id is None and self.active_run_id in self._run_step_count:
+                del self._run_step_count[self.active_run_id]
 
             # Store session→run mapping with LRU eviction before clearing run_id
             if session_id is not None:

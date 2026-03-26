@@ -362,6 +362,167 @@ class TestGlobalLogger:
         assert logger.config == mock_config
 
 
+class TestStepTracking:
+    """Test step tracking infrastructure in MLflowLogger."""
+
+    config: MLflowConfig
+
+    def setup_method(self) -> None:
+        """Setup for each test."""
+        self.config = MLflowConfig(
+            enabled=True, tracking_uri="file:///tmp/test", experiment_name="test-exp"
+        )
+
+    def test_current_step_returns_zero_when_no_active_run(self) -> None:
+        """current_step() returns 0 when no run is active."""
+        mock_mlflow = MagicMock()
+        with patch.dict("sys.modules", {"mlflow": mock_mlflow}):
+            with patch(
+                "mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True
+            ):
+                logger = MLflowLogger(self.config)
+                assert logger.active_run_id is None
+                assert logger.current_step() == 0
+
+    def test_current_step_returns_zero_for_new_run(self) -> None:
+        """current_step() returns 0 for a freshly started run."""
+        mock_mlflow = MagicMock()
+        mock_run = Mock()
+        mock_run.info.run_id = "run-new"
+        mock_mlflow.start_run.return_value = mock_run
+
+        with patch.dict("sys.modules", {"mlflow": mock_mlflow}):
+            with patch(
+                "mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True
+            ):
+                logger = MLflowLogger(self.config)
+                logger.start_run(run_name="test")
+                assert logger.current_step() == 0
+
+    def test_current_step_increments_after_advance(self) -> None:
+        """After _advance_step(), current_step() returns 1."""
+        mock_mlflow = MagicMock()
+        mock_run = Mock()
+        mock_run.info.run_id = "run-adv"
+        mock_mlflow.start_run.return_value = mock_run
+
+        with patch.dict("sys.modules", {"mlflow": mock_mlflow}):
+            with patch(
+                "mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True
+            ):
+                logger = MLflowLogger(self.config)
+                logger.start_run(run_name="test")
+                assert logger.current_step() == 0
+                logger._advance_step()
+                assert logger.current_step() == 1
+
+    def test_step_persists_across_end_and_resume(self) -> None:
+        """Step count persists when a run is ended and resumed via session_id."""
+        mock_mlflow = MagicMock()
+        mock_run = Mock()
+        mock_run.info.run_id = "run-persist"
+        mock_mlflow.start_run.return_value = mock_run
+
+        with patch.dict("sys.modules", {"mlflow": mock_mlflow}):
+            with patch(
+                "mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True
+            ):
+                logger = MLflowLogger(self.config)
+                logger.start_run(run_name="test")
+                logger._advance_step()
+                assert logger.current_step() == 1
+
+                # End with session_id to preserve step count
+                logger.end_run("FINISHED", session_id="sid-persist")
+
+                # Resume
+                logger.start_run(session_id="sid-persist")
+                assert logger.current_step() == 1
+
+    def test_new_run_starts_at_step_zero(self) -> None:
+        """A brand new run (different session) starts at step 0."""
+        mock_mlflow = MagicMock()
+        mock_run1 = Mock()
+        mock_run1.info.run_id = "run-old"
+        mock_run2 = Mock()
+        mock_run2.info.run_id = "run-new"
+        mock_mlflow.start_run.side_effect = [mock_run1, mock_run2]
+
+        with patch.dict("sys.modules", {"mlflow": mock_mlflow}):
+            with patch(
+                "mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True
+            ):
+                logger = MLflowLogger(self.config)
+                logger.start_run(run_name="first")
+                logger._advance_step()
+                logger._advance_step()
+                assert logger.current_step() == 2
+                logger.end_run("FINISHED")  # no session_id → cleans up
+
+                # New run starts at 0
+                logger.start_run(run_name="second")
+                assert logger.current_step() == 0
+
+    def test_end_run_without_session_cleans_step_count(self) -> None:
+        """Ending a run without session_id removes the step count entry."""
+        mock_mlflow = MagicMock()
+        mock_run = Mock()
+        mock_run.info.run_id = "run-clean"
+        mock_mlflow.start_run.return_value = mock_run
+
+        with patch.dict("sys.modules", {"mlflow": mock_mlflow}):
+            with patch(
+                "mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True
+            ):
+                logger = MLflowLogger(self.config)
+                logger.start_run(run_name="test")
+                logger._advance_step()
+                assert "run-clean" in logger._run_step_count
+
+                logger.end_run("FINISHED", session_id=None)
+                assert "run-clean" not in logger._run_step_count
+
+
+class TestLogMetricsWithStep:
+    """Test log_metrics with step parameter."""
+
+    config: MLflowConfig
+
+    def setup_method(self) -> None:
+        """Setup for each test."""
+        self.config = MLflowConfig(
+            enabled=True, tracking_uri="file:///tmp/test", experiment_name="test-exp"
+        )
+
+    def test_log_metrics_with_step_uses_log_metric(self) -> None:
+        """When step is provided, each metric is logged via mlflow.log_metric(key, value, step=step)."""
+        mock_mlflow = MagicMock()
+
+        with patch.dict("sys.modules", {"mlflow": mock_mlflow}):
+            with patch(
+                "mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True
+            ):
+                logger = MLflowLogger(self.config)
+                logger.active_run_id = "test-run"
+
+                metrics: dict[str, Any] = {
+                    "duration_ms": 1500,
+                    "cost_usd": 0.01,
+                }
+                logger.log_metrics(metrics, step=3)
+
+                # Should NOT call log_metrics (batch)
+                mock_mlflow.log_metrics.assert_not_called()
+                # Should call log_metric per metric with step
+                assert mock_mlflow.log_metric.call_count == 2
+                calls = {
+                    c[0][0]: (c[0][1], c[1]["step"])
+                    for c in mock_mlflow.log_metric.call_args_list
+                }
+                assert calls["duration_ms"] == (1500.0, 3)
+                assert calls["cost_usd"] == (0.01, 3)
+
+
 class TestSessionMapBehavior:
     """Test LRU session map behavior in MLflowLogger."""
 
