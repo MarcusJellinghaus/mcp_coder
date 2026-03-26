@@ -6,8 +6,10 @@ human-readable output formats (text, verbose, raw).
 
 import json
 import logging
-from typing import Any, Dict
+import sys
+from typing import IO, Any, Dict
 
+from ..types import StreamEvent
 from .sdk_serialization import extract_tool_interactions, serialize_message_for_json
 
 logger = logging.getLogger(__name__)
@@ -16,6 +18,7 @@ __all__ = [
     "format_text_response",
     "format_verbose_response",
     "format_raw_response",
+    "print_stream_event",
 ]
 
 
@@ -197,3 +200,130 @@ def format_raw_response(response_data: Dict[str, Any]) -> str:
         formatted_parts.append("  No API metadata available")
 
     return "\n".join(formatted_parts)
+
+
+def _format_tool_args(args: object) -> str:
+    """Format tool arguments for text display.
+
+    Returns:
+        Formatted string of tool arguments.
+    """
+    if isinstance(args, dict):
+        parts = [f"{k}={v!r}" for k, v in args.items()]
+        return ", ".join(parts)
+    return str(args) if args else ""
+
+
+def _normalize_event_to_ndjson(event: StreamEvent) -> dict[str, object] | None:
+    """Map a StreamEvent to Claude CLI stream-json compatible NDJSON dict.
+
+    Returns:
+        NDJSON dict, or None for event types that have no NDJSON representation.
+    """
+    event_type = event.get("type")
+
+    if event_type == "text_delta":
+        return {
+            "type": "assistant",
+            "message": {
+                "role": "assistant",
+                "content": [{"type": "text", "text": event.get("text", "")}],
+            },
+        }
+    if event_type == "tool_use_start":
+        return {
+            "type": "assistant",
+            "message": {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "",
+                        "name": event.get("name", ""),
+                        "input": event.get("args", {}),
+                    }
+                ],
+            },
+        }
+    if event_type == "tool_result":
+        return {
+            "type": "user",
+            "message": {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": "",
+                        "content": str(event.get("output", "")),
+                    }
+                ],
+            },
+        }
+    if event_type == "done":
+        result: dict[str, object] = {"type": "result"}
+        if "session_id" in event:
+            result["session_id"] = event["session_id"]
+        if "usage" in event:
+            result["usage"] = event["usage"]
+        if "cost_usd" in event:
+            result["total_cost_usd"] = event["cost_usd"]
+        return result
+    if event_type == "error":
+        return {
+            "type": "error",
+            "message": str(event.get("message", "")),
+        }
+    return None
+
+
+def print_stream_event(
+    event: StreamEvent,
+    output_format: str,
+    file: IO[str] | None = None,
+    err_file: IO[str] | None = None,
+) -> None:
+    """Print a single stream event to stdout based on output format.
+
+    Args:
+        event: StreamEvent dict to print
+        output_format: One of "text", "ndjson", "json-raw"
+        file: Output stream for normal output (default: stdout)
+        err_file: Output stream for errors (default: stderr)
+
+    Behavior by format:
+        - text: Print text_delta content inline (no newline between deltas).
+          Tool calls shown with bordered sections.
+        - ndjson: Print normalized NDJSON line (Claude CLI schema).
+        - json-raw: Print raw_line content as-is.
+    """
+    if file is None:
+        file = sys.stdout
+    if err_file is None:
+        err_file = sys.stderr
+    event_type = event.get("type")
+
+    if output_format == "json-raw":
+        if event_type == "raw_line":
+            print(event["line"], file=file, flush=True)
+        return
+
+    if output_format == "ndjson":
+        ndjson = _normalize_event_to_ndjson(event)
+        if ndjson is not None:
+            print(json.dumps(ndjson), file=file, flush=True)
+        return
+
+    # text format
+    if event_type == "text_delta":
+        print(event.get("text", ""), end="", file=file, flush=True)
+    elif event_type == "tool_use_start":
+        name = event.get("name", "")
+        args_str = _format_tool_args(event.get("args"))
+        print(f"\n── tool: {name}({args_str}) ──", file=file)
+    elif event_type == "tool_result":
+        output = event.get("output", "")
+        print(f"{output}\n{'─' * 26}", file=file)
+    elif event_type == "error":
+        print(event.get("message", ""), file=err_file)
+    elif event_type == "done":
+        print(file=file)

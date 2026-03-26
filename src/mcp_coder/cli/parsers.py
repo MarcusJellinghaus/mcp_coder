@@ -39,12 +39,6 @@ def add_prompt_parser(subparsers: Any) -> None:
         help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
     )
     prompt_parser.add_argument(
-        "--verbosity",
-        choices=["just-text", "verbose", "raw"],
-        default="just-text",
-        help="Output detail: just-text (response only), verbose (+ metrics), raw (+ full JSON)",
-    )
-    prompt_parser.add_argument(
         "--store-response",
         action="store_true",
         help="Save session to .mcp-coder/responses/ for later continuation",
@@ -86,10 +80,10 @@ def add_prompt_parser(subparsers: Any) -> None:
     )
     prompt_parser.add_argument(
         "--output-format",
-        choices=["text", "json", "session-id"],
+        choices=["text", "json", "session-id", "ndjson", "json-raw"],
         default="text",
         metavar="FORMAT",
-        help="Output format: text (default), json (includes session_id), or session-id (only session_id)",
+        help="Output format: text (default), json (complete response), session-id (only session_id), ndjson (streaming NDJSON events), json-raw (raw NDJSON lines from CLI)",
     )
     prompt_parser.add_argument(
         "--mcp-config",

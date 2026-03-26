@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
-from mcp_coder.llm.interface import prompt_llm
+from mcp_coder.llm.interface import prompt_llm, prompt_llm_stream
 from mcp_coder.utils.subprocess_runner import TimeoutExpired
 
 
@@ -1112,3 +1112,120 @@ class TestMlflowConversationIntegration:
         _, args, _ = mock_mlflow_cm.mock_calls[0]
         metadata = args[3]
         assert metadata == {"branch_name": None, "working_directory": None}
+
+
+class TestPromptLlmStream:
+    """Tests for prompt_llm_stream() function."""
+
+    def test_prompt_llm_stream_validates_empty_question(self) -> None:
+        """prompt_llm_stream raises ValueError for empty question."""
+        with pytest.raises(ValueError, match="cannot be empty"):
+            list(prompt_llm_stream(""))
+
+    def test_prompt_llm_stream_validates_whitespace_question(self) -> None:
+        """prompt_llm_stream raises ValueError for whitespace-only question."""
+        with pytest.raises(ValueError, match="cannot be empty"):
+            list(prompt_llm_stream("   "))
+
+    def test_prompt_llm_stream_validates_timeout_zero(self) -> None:
+        """prompt_llm_stream raises ValueError for timeout <= 0."""
+        with pytest.raises(ValueError, match="positive number"):
+            list(prompt_llm_stream("Test", timeout=0))
+
+    def test_prompt_llm_stream_validates_timeout_negative(self) -> None:
+        """prompt_llm_stream raises ValueError for negative timeout."""
+        with pytest.raises(ValueError, match="positive number"):
+            list(prompt_llm_stream("Test", timeout=-5))
+
+    def test_prompt_llm_stream_validates_provider(self) -> None:
+        """prompt_llm_stream raises ValueError for unsupported provider."""
+        with pytest.raises(ValueError, match="Unsupported provider"):
+            list(prompt_llm_stream("Test", provider="gpt"))
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.ask_claude_code_cli_stream"
+    )
+    def test_prompt_llm_stream_routes_to_claude(self, mock_stream: MagicMock) -> None:
+        """prompt_llm_stream routes to ask_claude_code_cli_stream for claude provider."""
+        mock_stream.return_value = iter(
+            [{"type": "text_delta", "text": "Hi"}, {"type": "done", "usage": {}}]
+        )
+
+        events = list(prompt_llm_stream("Hello", provider="claude"))
+
+        mock_stream.assert_called_once_with(
+            "Hello",
+            session_id=None,
+            timeout=30,
+            env_vars=None,
+            cwd=None,
+            mcp_config=None,
+            branch_name=None,
+        )
+        assert len(events) == 2
+        assert events[0]["type"] == "text_delta"
+
+    @patch("mcp_coder.llm.providers.langchain.ask_langchain_stream")
+    def test_prompt_llm_stream_routes_to_langchain(
+        self, mock_stream: MagicMock
+    ) -> None:
+        """prompt_llm_stream routes to ask_langchain_stream for langchain provider."""
+        mock_stream.return_value = iter(
+            [{"type": "text_delta", "text": "Hi"}, {"type": "done", "usage": {}}]
+        )
+
+        events = list(prompt_llm_stream("Hello", provider="langchain"))
+
+        mock_stream.assert_called_once_with(
+            "Hello",
+            session_id=None,
+            timeout=30,
+            mcp_config=None,
+            execution_dir=None,
+            env_vars=None,
+        )
+        assert len(events) == 2
+
+    def test_prompt_llm_stream_env_override(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """MCP_CODER_LLM_PROVIDER env var overrides provider parameter."""
+        monkeypatch.setenv("MCP_CODER_LLM_PROVIDER", "langchain")
+        with patch(
+            "mcp_coder.llm.providers.langchain.ask_langchain_stream",
+            return_value=iter([{"type": "done", "usage": {}}]),
+        ) as mock_stream:
+            events = list(prompt_llm_stream("Hello", provider="claude"))
+
+        mock_stream.assert_called_once()
+        assert len(events) == 1
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.ask_claude_code_cli_stream"
+    )
+    def test_prompt_llm_stream_passes_all_params(self, mock_stream: MagicMock) -> None:
+        """prompt_llm_stream passes all parameters to the claude provider."""
+        mock_stream.return_value = iter([{"type": "done", "usage": {}}])
+
+        list(
+            prompt_llm_stream(
+                "Q",
+                provider="claude",
+                session_id="sid",
+                timeout=60,
+                env_vars={"K": "V"},
+                execution_dir="/work",
+                mcp_config="/mcp.json",
+                branch_name="main",
+            )
+        )
+
+        mock_stream.assert_called_once_with(
+            "Q",
+            session_id="sid",
+            timeout=60,
+            env_vars={"K": "V"},
+            cwd="/work",
+            mcp_config="/mcp.json",
+            branch_name="main",
+        )

@@ -4,6 +4,7 @@ from .formatters import (
     format_raw_response,
     format_text_response,
     format_verbose_response,
+    print_stream_event,
 )
 from .sdk_serialization import (
     extract_tool_interactions,
@@ -18,6 +19,7 @@ __all__ = [
     "format_text_response",
     "format_verbose_response",
     "format_raw_response",
+    "print_stream_event",
     # SDK utilities
     "is_sdk_message",
     "get_message_role",

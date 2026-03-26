@@ -534,3 +534,4 @@ forbidden_modules =
     subprocess
 ignore_imports =
     mcp_coder.utils.subprocess_runner -> subprocess
+    mcp_coder.utils.subprocess_streaming -> subprocess

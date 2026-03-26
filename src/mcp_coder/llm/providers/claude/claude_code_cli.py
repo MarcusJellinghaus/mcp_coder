@@ -12,6 +12,7 @@ from typing import Any, TypedDict, cast
 from ....utils.subprocess_runner import (
     CalledProcessError,
     CommandOptions,
+    CommandResult,
     TimeoutExpired,
     execute_subprocess,
 )

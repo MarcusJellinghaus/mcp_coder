@@ -7,18 +7,16 @@ import sys
 from pathlib import Path
 
 from ...llm.env import prepare_llm_environment
-from ...llm.formatting.formatters import (
-    format_raw_response,
-    format_text_response,
-    format_verbose_response,
-)
-from ...llm.interface import prompt_llm
+from ...llm.formatting.formatters import print_stream_event
+from ...llm.interface import prompt_llm, prompt_llm_stream
+from ...llm.mlflow_conversation_logger import mlflow_conversation
 from ...llm.storage import (
     extract_langchain_session_id,
     extract_session_id,
     find_latest_session,
     store_session,
 )
+from ...llm.types import ResponseAssembler
 from ...utils.git_utils import get_branch_name_for_logging
 from ...utils.log_utils import NOTICE
 from ..utils import (
@@ -125,15 +123,48 @@ def execute_prompt(
 
         # Get user-specified timeout, output_format, and mcp_config
         timeout = getattr(args, "timeout", 30)
-        verbosity = getattr(args, "verbosity", "just-text")
         output_format = getattr(args, "output_format", "text")
         mcp_config = resolve_mcp_config_path(
             args.mcp_config, project_dir=args.project_dir
         )
 
-        # Route to appropriate method based on output_format and verbosity
-        formatted_output = ""
-        if output_format == "session-id":
+        # Streaming formats use prompt_llm_stream()
+        if output_format in ("text", "ndjson", "json-raw"):
+            branch_name = get_branch_name_for_logging(project_dir)
+            assembler = ResponseAssembler(provider)
+            for event in prompt_llm_stream(
+                args.prompt,
+                provider=provider,
+                timeout=timeout,
+                session_id=resume_session_id,
+                env_vars=env_vars,
+                execution_dir=str(execution_dir),
+                mcp_config=mcp_config,
+                branch_name=branch_name,
+            ):
+                assembler.add(event)
+                print_stream_event(event, output_format)
+
+            llm_response = assembler.result()
+
+            # MLflow logging (mirrors non-streaming path)
+            metadata = {
+                "branch_name": branch_name,
+                "working_directory": str(execution_dir),
+            }
+            with mlflow_conversation(
+                args.prompt, provider, resume_session_id, metadata
+            ) as mlflow_ctx:
+                mlflow_ctx["response_data"] = llm_response
+
+            # Store response to file if requested
+            if getattr(args, "store_response", False):
+                stored_path = store_session(
+                    llm_response, args.prompt, branch_name=branch_name
+                )
+                logger.log(NOTICE, "Response stored to: %s", stored_path)
+
+        elif output_format == "session-id":
             # Session ID only mode - return only the session_id for shell script capture
             response_dict = prompt_llm(
                 args.prompt,
@@ -167,7 +198,7 @@ def execute_prompt(
                 branch_name=branch_name,
             )
             # Output complete response as JSON (includes session_id)
-            formatted_output = json.dumps(response_dict, indent=2, default=str)
+            print(json.dumps(response_dict, indent=2, default=str))
 
             # Store response to file if requested
             if getattr(args, "store_response", False):
@@ -175,63 +206,6 @@ def execute_prompt(
                     response_dict, args.prompt, branch_name=branch_name
                 )
                 logger.log(NOTICE, "Response stored to: %s", stored_path)
-        elif verbosity == "just-text":
-            # Use unified prompt_llm interface for simple text output
-            branch_name = get_branch_name_for_logging(project_dir)
-            llm_response = prompt_llm(
-                args.prompt,
-                provider=provider,
-                timeout=timeout,
-                session_id=resume_session_id,
-                env_vars=env_vars,
-                execution_dir=str(execution_dir),
-                mcp_config=mcp_config,
-                branch_name=branch_name,
-            )
-
-            # Simple text output with tool summary
-            formatted_output = llm_response["text"].strip()
-
-            # Store response to file if requested
-            if getattr(args, "store_response", False):
-                stored_path = store_session(
-                    llm_response, args.prompt, branch_name=branch_name
-                )
-                logger.log(NOTICE, "Response stored to: %s", stored_path)
-        else:
-            # Use prompt_llm for verbose/raw modes that need metadata
-            branch_name = get_branch_name_for_logging(project_dir)
-            llm_response = prompt_llm(
-                args.prompt,
-                provider=provider,
-                timeout=timeout,
-                session_id=resume_session_id,
-                env_vars=env_vars,
-                execution_dir=str(execution_dir),
-                mcp_config=mcp_config,
-                branch_name=branch_name,
-            )
-
-            # Store response to file if requested
-            if getattr(args, "store_response", False):
-                stored_path = store_session(
-                    llm_response, args.prompt, branch_name=branch_name
-                )
-                logger.log(NOTICE, "Response stored to: %s", stored_path)
-
-            # Pass raw_response sub-dict to formatters — same shape as before
-            raw_data = llm_response["raw_response"]
-
-            # Format based on verbosity level
-            if verbosity == "raw":
-                formatted_output = format_raw_response(raw_data)
-            elif verbosity == "verbose":
-                formatted_output = format_verbose_response(raw_data)
-            else:
-                formatted_output = format_text_response(raw_data)
-
-        # Print formatted output to stdout
-        print(formatted_output)
 
         logger.log(NOTICE, "Prompt command completed successfully")
         return 0

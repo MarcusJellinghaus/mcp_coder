@@ -4,11 +4,14 @@ This module provides TypedDict definitions and constants for structured
 LLM responses with session management and versioned serialization support.
 """
 
+from datetime import datetime
 from typing import TypedDict
 
 __all__ = [
     "LLMResponseDict",
     "LLM_RESPONSE_VERSION",
+    "ResponseAssembler",
+    "StreamEvent",
 ]
 
 
@@ -57,3 +60,67 @@ class LLMResponseDict(TypedDict):
 # - Major version (X.0): Breaking changes to structure
 # - Minor version (1.X): Backward-compatible additions
 LLM_RESPONSE_VERSION = "1.0"
+
+StreamEvent = dict[str, object]
+"""Stream event dict. Always has a "type" key. Known types:
+
+- {"type": "text_delta", "text": "..."} — incremental text token
+- {"type": "tool_use_start", "name": "...", "args": {...}} — tool call begins
+- {"type": "tool_result", "name": "...", "output": "..."} — tool call result
+- {"type": "error", "message": "..."} — error during stream
+- {"type": "done", "usage": {...}} — stream complete with optional usage stats
+- {"type": "raw_line", "line": "..."} — raw NDJSON line passthrough (json-raw mode)
+"""
+
+
+class ResponseAssembler:
+    """Accumulates StreamEvents into a complete LLMResponseDict."""
+
+    def __init__(self, provider: str) -> None:
+        """Initialize assembler for given provider name."""
+        self._provider = provider
+        self._text_parts: list[str] = []
+        self._session_id: str | None = None
+        self._usage: dict[str, object] = {}
+        self._raw_events: list[StreamEvent] = []
+        self._error: str | None = None
+
+    def add(self, event: StreamEvent) -> None:
+        """Process a single stream event, accumulating text and metadata."""
+        self._raw_events.append(event)
+        event_type = event.get("type")
+        if event_type == "text_delta":
+            text = event.get("text", "")
+            if isinstance(text, str):
+                self._text_parts.append(text)
+        elif event_type == "done":
+            usage = event.get("usage")
+            if isinstance(usage, dict):
+                self._usage = usage
+            session_id = event.get("session_id")
+            if isinstance(session_id, str):
+                self._session_id = session_id
+        elif event_type == "error":
+            message = event.get("message")
+            if isinstance(message, str):
+                self._error = message
+
+    def result(self) -> LLMResponseDict:
+        """Build and return the final LLMResponseDict from accumulated events.
+
+        Returns:
+            LLMResponseDict with text, session info, and raw events.
+        """
+        raw_response: dict[str, object] = {"events": list(self._raw_events)}
+        if self._usage:
+            raw_response["usage"] = self._usage
+        if self._error is not None:
+            raw_response["error"] = self._error
+        return LLMResponseDict(
+            version=LLM_RESPONSE_VERSION,
+            timestamp=datetime.now().isoformat(),
+            text="".join(self._text_parts),
+            session_id=self._session_id,
+            provider=self._provider,
+            raw_response=raw_response,
+        )

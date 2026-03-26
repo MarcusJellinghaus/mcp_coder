@@ -95,6 +95,7 @@ def test_llm_interface_all_is_correct() -> None:
 
     expected = [
         "prompt_llm",
+        "prompt_llm_stream",
     ]
 
     assert set(interface.__all__) == set(expected)
@@ -107,6 +108,8 @@ def test_llm_types_all_is_correct() -> None:
     expected = [
         "LLMResponseDict",
         "LLM_RESPONSE_VERSION",
+        "ResponseAssembler",
+        "StreamEvent",
     ]
 
     assert set(types.__all__) == set(expected)

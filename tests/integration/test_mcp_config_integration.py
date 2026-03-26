@@ -139,12 +139,12 @@ class TestMcpConfigIntegration:
             mock_execute.return_value = mock_subprocess_success
 
             # Create args with mcp_config parameter
+            # Use output_format="json" to go through blocking prompt_llm path
             args = argparse.Namespace(
                 prompt="Test question",
                 project_dir=None,
                 llm_method="claude",
-                verbosity="just-text",
-                output_format="text",
+                output_format="json",
                 store_response=False,
                 timeout=60,
                 session_id=None,
@@ -201,12 +201,12 @@ class TestMcpConfigIntegration:
                 mock_execute.return_value = mock_subprocess_success
 
                 # Create args with mcp_config=None and no project_dir
+                # Use output_format="json" to go through blocking prompt_llm path
                 args = argparse.Namespace(
                     prompt="Test question",
                     project_dir=None,
                     llm_method="claude",
-                    verbosity="just-text",
-                    output_format="text",
+                    output_format="json",
                     store_response=False,
                     timeout=60,
                     session_id=None,
@@ -266,12 +266,12 @@ class TestMcpConfigIntegration:
                 mock_execute.return_value = mock_subprocess_success
 
                 # Create args with relative mcp_config path
+                # Use output_format="json" to go through blocking prompt_llm path
                 args = argparse.Namespace(
                     prompt="Test question",
                     project_dir=None,
                     llm_method="claude",
-                    verbosity="just-text",
-                    output_format="text",
+                    output_format="json",
                     store_response=False,
                     timeout=60,
                     session_id=None,

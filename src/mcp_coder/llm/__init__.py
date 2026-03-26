@@ -14,7 +14,12 @@ from mcp_coder.llm.serialization import (
     serialize_llm_response,
     to_json_string,
 )
-from mcp_coder.llm.types import LLM_RESPONSE_VERSION, LLMResponseDict
+from mcp_coder.llm.types import (
+    LLM_RESPONSE_VERSION,
+    LLMResponseDict,
+    ResponseAssembler,
+    StreamEvent,
+)
 
 __all__ = [
     "prompt_llm",
@@ -24,4 +29,6 @@ __all__ = [
     "from_json_string",
     "LLMResponseDict",
     "LLM_RESPONSE_VERSION",
+    "ResponseAssembler",
+    "StreamEvent",
 ]

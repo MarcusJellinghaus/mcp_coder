@@ -2,7 +2,12 @@
 
 import pytest
 
-from mcp_coder.llm.types import LLM_RESPONSE_VERSION, LLMResponseDict
+from mcp_coder.llm.types import (
+    LLM_RESPONSE_VERSION,
+    LLMResponseDict,
+    ResponseAssembler,
+    StreamEvent,
+)
 
 
 def test_llm_response_version_format() -> None:
@@ -81,3 +86,83 @@ def test_llm_response_dict_none_session_id() -> None:
 
     assert response["session_id"] is None
     assert response["text"] == "Test response without session"
+
+
+# --- StreamEvent tests ---
+
+
+def test_stream_event_type_alias() -> None:
+    """Verify StreamEvent is dict[str, object]."""
+    assert StreamEvent == dict[str, object]
+    # A StreamEvent should be usable as a plain dict
+    event: StreamEvent = {"type": "text_delta", "text": "hello"}
+    assert event["type"] == "text_delta"
+
+
+# --- ResponseAssembler tests ---
+
+
+def test_response_assembler_text_delta() -> None:
+    """Feed text_delta events, verify assembled text."""
+    assembler = ResponseAssembler(provider="claude")
+    assembler.add({"type": "text_delta", "text": "Hello"})
+    assembler.add({"type": "text_delta", "text": " world"})
+    result = assembler.result()
+    assert result["text"] == "Hello world"
+
+
+def test_response_assembler_done_event() -> None:
+    """Feed done event with usage/session_id, verify result."""
+    assembler = ResponseAssembler(provider="claude")
+    assembler.add({"type": "text_delta", "text": "Hi"})
+    assembler.add(
+        {
+            "type": "done",
+            "usage": {"input_tokens": 100, "output_tokens": 50},
+            "session_id": "abc123",
+        }
+    )
+    result = assembler.result()
+    assert result["text"] == "Hi"
+    assert result["session_id"] == "abc123"
+    assert result["raw_response"]["usage"] == {
+        "input_tokens": 100,
+        "output_tokens": 50,
+    }
+
+
+def test_response_assembler_error_event() -> None:
+    """Feed error event, verify error in raw_response."""
+    assembler = ResponseAssembler(provider="claude")
+    assembler.add({"type": "error", "message": "Connection reset"})
+    result = assembler.result()
+    assert result["raw_response"]["error"] == "Connection reset"
+
+
+def test_response_assembler_tool_events() -> None:
+    """Feed tool_use_start + tool_result, verify in raw_response events."""
+    assembler = ResponseAssembler(provider="langchain")
+    assembler.add({"type": "tool_use_start", "name": "sleep", "args": {"seconds": 2}})
+    assembler.add({"type": "tool_result", "name": "sleep", "output": "done"})
+    result = assembler.result()
+    events = result["raw_response"]["events"]
+    assert isinstance(events, list)
+    assert len(events) == 2
+    assert events[0]["type"] == "tool_use_start"
+    assert events[1]["type"] == "tool_result"
+
+
+def test_response_assembler_empty() -> None:
+    """No events, result has empty text and None session_id."""
+    assembler = ResponseAssembler(provider="claude")
+    result = assembler.result()
+    assert result["text"] == ""
+    assert result["session_id"] is None
+    assert result["version"] == LLM_RESPONSE_VERSION
+
+
+def test_response_assembler_provider() -> None:
+    """Verify provider field matches constructor arg."""
+    assembler = ResponseAssembler(provider="langchain")
+    result = assembler.result()
+    assert result["provider"] == "langchain"

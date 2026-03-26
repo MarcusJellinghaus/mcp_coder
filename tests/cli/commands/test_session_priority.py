@@ -9,25 +9,37 @@ import pytest
 
 from mcp_coder.cli.commands.prompt import execute_prompt
 
+# Common patches needed for all tests
+_STREAM = "mcp_coder.cli.commands.prompt.prompt_llm_stream"
+_RESOLVE_LLM = "mcp_coder.cli.commands.prompt.resolve_llm_method"
+_PREPARE_ENV = "mcp_coder.cli.commands.prompt.prepare_llm_environment"
+_RESOLVE_MCP = "mcp_coder.cli.commands.prompt.resolve_mcp_config_path"
 
-def _llm_response(session_id: str = "test-session") -> Dict[str, Any]:
-    return {
-        "text": "Response",
-        "session_id": session_id,
-        "version": "1.0",
-        "timestamp": "2024-01-01T00:00:00",
-        "provider": "claude",
-        "raw_response": {},
-    }
+
+def _stream_events(session_id: str = "test-session") -> list[dict[str, object]]:
+    """Create minimal stream events for testing."""
+    return [
+        {"type": "text_delta", "text": "Response"},
+        {"type": "done", "usage": {}, "session_id": session_id},
+    ]
 
 
 class TestSessionPriority:
     """Test priority order: --session-id > --continue-session-from > --continue-session."""
 
-    @patch("mcp_coder.cli.commands.prompt.prompt_llm")
-    def test_session_id_alone(self, mock_prompt_llm: Mock) -> None:
+    @patch(_RESOLVE_MCP, return_value=None)
+    @patch(_PREPARE_ENV, return_value={"MCP_CODER_PROJECT_DIR": "/test"})
+    @patch(_RESOLVE_LLM, return_value=("claude", "cli"))
+    @patch(_STREAM)
+    def test_session_id_alone(
+        self,
+        mock_prompt_llm_stream: Mock,
+        mock_llm: Mock,
+        mock_env: Mock,
+        mock_mcp: Mock,
+    ) -> None:
         """Test --session-id is used when provided alone."""
-        mock_prompt_llm.return_value = _llm_response("explicit-123")
+        mock_prompt_llm_stream.return_value = iter(_stream_events("explicit-123"))
 
         args = argparse.Namespace(
             prompt="Test",
@@ -41,10 +53,13 @@ class TestSessionPriority:
 
         execute_prompt(args)
 
-        mock_prompt_llm.assert_called_once()
-        assert mock_prompt_llm.call_args[1]["session_id"] == "explicit-123"
+        mock_prompt_llm_stream.assert_called_once()
+        assert mock_prompt_llm_stream.call_args[1]["session_id"] == "explicit-123"
 
-    @patch("mcp_coder.cli.commands.prompt.prompt_llm")
+    @patch(_RESOLVE_MCP, return_value=None)
+    @patch(_PREPARE_ENV, return_value={"MCP_CODER_PROJECT_DIR": "/test"})
+    @patch(_RESOLVE_LLM, return_value=("claude", "cli"))
+    @patch(_STREAM)
     @patch(
         "builtins.open",
         mock_open(read_data=json.dumps({"response_data": {"session_id": "file-456"}})),
@@ -53,11 +68,14 @@ class TestSessionPriority:
     def test_session_id_overrides_continue_session_from(
         self,
         mock_exists: Mock,
-        mock_prompt_llm: Mock,
+        mock_prompt_llm_stream: Mock,
+        mock_llm: Mock,
+        mock_env: Mock,
+        mock_mcp: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test --session-id takes priority over --continue-session-from."""
-        mock_prompt_llm.return_value = _llm_response("explicit-123")
+        mock_prompt_llm_stream.return_value = iter(_stream_events("explicit-123"))
 
         args = argparse.Namespace(
             prompt="Test",
@@ -71,13 +89,16 @@ class TestSessionPriority:
 
         execute_prompt(args)
 
-        mock_prompt_llm.assert_called_once()
-        assert mock_prompt_llm.call_args[1]["session_id"] == "explicit-123"
+        mock_prompt_llm_stream.assert_called_once()
+        assert mock_prompt_llm_stream.call_args[1]["session_id"] == "explicit-123"
 
         captured = capsys.readouterr()
         assert "Using explicit session ID" in captured.out
 
-    @patch("mcp_coder.cli.commands.prompt.prompt_llm")
+    @patch(_RESOLVE_MCP, return_value=None)
+    @patch(_PREPARE_ENV, return_value={"MCP_CODER_PROJECT_DIR": "/test"})
+    @patch(_RESOLVE_LLM, return_value=("claude", "cli"))
+    @patch(_STREAM)
     @patch("mcp_coder.llm.storage.find_latest_session")
     @patch(
         "builtins.open",
@@ -88,11 +109,14 @@ class TestSessionPriority:
         self,
         mock_exists: Mock,
         mock_find: Mock,
-        mock_prompt_llm: Mock,
+        mock_prompt_llm_stream: Mock,
+        mock_llm: Mock,
+        mock_env: Mock,
+        mock_mcp: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test --session-id takes priority over --continue-session."""
-        mock_prompt_llm.return_value = _llm_response("explicit-123")
+        mock_prompt_llm_stream.return_value = iter(_stream_events("explicit-123"))
         mock_find.return_value = "latest.json"
 
         args = argparse.Namespace(
@@ -107,13 +131,16 @@ class TestSessionPriority:
 
         execute_prompt(args)
 
-        mock_prompt_llm.assert_called_once()
-        assert mock_prompt_llm.call_args[1]["session_id"] == "explicit-123"
+        mock_prompt_llm_stream.assert_called_once()
+        assert mock_prompt_llm_stream.call_args[1]["session_id"] == "explicit-123"
 
         captured = capsys.readouterr()
         assert "Using explicit session ID" in captured.out
 
-    @patch("mcp_coder.cli.commands.prompt.prompt_llm")
+    @patch(_RESOLVE_MCP, return_value=None)
+    @patch(_PREPARE_ENV, return_value={"MCP_CODER_PROJECT_DIR": "/test"})
+    @patch(_RESOLVE_LLM, return_value=("claude", "cli"))
+    @patch(_STREAM)
     @patch(
         "builtins.open",
         mock_open(read_data=json.dumps({"response_data": {"session_id": "file-456"}})),
@@ -122,11 +149,14 @@ class TestSessionPriority:
     def test_continue_session_from_when_no_session_id(
         self,
         mock_exists: Mock,
-        mock_prompt_llm: Mock,
+        mock_prompt_llm_stream: Mock,
+        mock_llm: Mock,
+        mock_env: Mock,
+        mock_mcp: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test --continue-session-from works when --session-id not provided."""
-        mock_prompt_llm.return_value = _llm_response("file-456")
+        mock_prompt_llm_stream.return_value = iter(_stream_events("file-456"))
 
         args = argparse.Namespace(
             prompt="Test",
@@ -140,13 +170,16 @@ class TestSessionPriority:
 
         execute_prompt(args)
 
-        mock_prompt_llm.assert_called_once()
-        assert mock_prompt_llm.call_args[1]["session_id"] == "file-456"
+        mock_prompt_llm_stream.assert_called_once()
+        assert mock_prompt_llm_stream.call_args[1]["session_id"] == "file-456"
 
         captured = capsys.readouterr()
         assert "Resuming session" in captured.out
 
-    @patch("mcp_coder.cli.commands.prompt.prompt_llm")
+    @patch(_RESOLVE_MCP, return_value=None)
+    @patch(_PREPARE_ENV, return_value={"MCP_CODER_PROJECT_DIR": "/test"})
+    @patch(_RESOLVE_LLM, return_value=("claude", "cli"))
+    @patch(_STREAM)
     @patch("mcp_coder.cli.commands.prompt.find_latest_session")
     @patch(
         "builtins.open",
@@ -157,11 +190,14 @@ class TestSessionPriority:
         self,
         mock_exists: Mock,
         mock_find: Mock,
-        mock_prompt_llm: Mock,
+        mock_prompt_llm_stream: Mock,
+        mock_llm: Mock,
+        mock_env: Mock,
+        mock_mcp: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test --continue-session works when --session-id not provided."""
-        mock_prompt_llm.return_value = _llm_response("file-789")
+        mock_prompt_llm_stream.return_value = iter(_stream_events("file-789"))
         mock_find.return_value = (
             ".mcp-coder/responses/response_2025-09-19T14-30-22.json"
         )
@@ -178,10 +214,9 @@ class TestSessionPriority:
 
         execute_prompt(args)
 
-        mock_prompt_llm.assert_called_once()
-        assert mock_prompt_llm.call_args[1]["session_id"] == "file-789"
+        mock_prompt_llm_stream.assert_called_once()
+        assert mock_prompt_llm_stream.call_args[1]["session_id"] == "file-789"
 
-        # Should show resumption message (session discovery no longer prints file count
-        # as find_latest_session() replaced direct glob usage)
+        # Should show resumption message
         captured = capsys.readouterr()
         assert "Resuming session" in captured.out
