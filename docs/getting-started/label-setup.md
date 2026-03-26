@@ -14,7 +14,7 @@ The mcp-coder development workflow uses **status labels** to track issues throug
 
 ### GitHub Token Configuration
 
-The `define-labels` command requires a GitHub token configured in your user config file:
+The `gh-tool define-labels` command requires a GitHub token configured in your user config file:
 
 | Platform | Config Location |
 |----------|-----------------|
@@ -32,7 +32,7 @@ The token needs `repo` scope permissions to create and manage labels.
 
 ## Label Configuration
 
-The `define-labels` command uses a two-location configuration system to determine which labels to create.
+The `gh-tool define-labels` command uses a two-location configuration system to determine which labels to create.
 
 ### Configuration Priority
 
@@ -91,7 +91,7 @@ To use custom labels for your project:
 
 4. Preview changes before applying:
    ```bash
-   mcp-coder define-labels --dry-run
+   mcp-coder gh-tool define-labels --dry-run
    ```
 
 ## Using the define-labels Command
@@ -100,10 +100,10 @@ To use custom labels for your project:
 
 ```bash
 # Preview changes (recommended first step)
-mcp-coder define-labels --dry-run
+mcp-coder gh-tool define-labels --dry-run
 
 # Apply labels to repository
-mcp-coder define-labels
+mcp-coder gh-tool define-labels
 ```
 
 ### Command Options
@@ -117,13 +117,13 @@ mcp-coder define-labels
 
 ```bash
 # Preview what labels will be created
-mcp-coder define-labels --dry-run
+mcp-coder gh-tool define-labels --dry-run
 
 # Apply labels to current project
-mcp-coder define-labels
+mcp-coder gh-tool define-labels
 
 # Apply labels to a specific project
-mcp-coder define-labels --project-dir /path/to/project
+mcp-coder gh-tool define-labels --project-dir /path/to/project
 ```
 
 ### Output
@@ -259,7 +259,7 @@ The default workflow uses these status labels:
 
 After setup, verify everything works:
 
-1. Run `mcp-coder define-labels --dry-run` to confirm labels are configured
+1. Run `mcp-coder gh-tool define-labels --dry-run` to confirm labels are configured
 2. Create a test issue in your repository
 3. Verify the issue automatically receives the `status-01:created` label
 4. Comment `/approve` on the issue to test status promotion

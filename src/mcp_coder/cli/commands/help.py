@@ -29,7 +29,6 @@ COMMAND_CATEGORIES: list[Category] = [
         commands=[
             Command("init", "Create default configuration file"),
             Command("verify", "Verify CLI installation and configuration"),
-            Command("define-labels", "Sync workflow status labels to GitHub"),
         ],
     ),
     Category(
@@ -39,20 +38,17 @@ COMMAND_CATEGORIES: list[Category] = [
             Command("create-plan", "Generate implementation plan for a GitHub issue"),
             Command("implement", "Execute implementation workflow"),
             Command("create-pr", "Create pull request with AI-generated summary"),
+            Command(
+                "coordinator", "Monitor and dispatch workflows across repositories"
+            ),
         ],
     ),
     Category(
-        name="COORDINATION",
-        description="Orchestrate workflows across repositories.",
+        name="INTERACTIVE DEVELOPMENT",
+        description="Manage local workspaces and VSCode sessions.",
         commands=[
-            Command("coordinator test", "Trigger integration test"),
-            Command("coordinator run", "Monitor and dispatch workflows"),
-            Command("coordinator vscodeclaude", "Manage VSCode/Claude sessions"),
-            Command(
-                "coordinator vscodeclaude status",
-                "Show issue and VSCode/Claude session status",
-            ),
-            Command("coordinator issue-stats", "Display issue statistics"),
+            Command("vscodeclaude launch", "Launch VSCode/Claude session for issues"),
+            Command("vscodeclaude status", "Show current VSCode/Claude sessions"),
         ],
     ),
     Category(
@@ -65,8 +61,11 @@ COMMAND_CATEGORIES: list[Category] = [
             Command("set-status", "Update GitHub issue workflow status label"),
             Command("check branch-status", "Check branch readiness status"),
             Command("check file-size", "Check file sizes against maximum"),
+            Command("gh-tool define-labels", "Sync workflow status labels to GitHub"),
+            Command("gh-tool issue-stats", "Display issue statistics"),
             Command("gh-tool get-base-branch", "Detect base branch for feature branch"),
             Command("git-tool compact-diff", "Generate compact diff"),
+            Command("help", "Show help information"),
         ],
     ),
 ]

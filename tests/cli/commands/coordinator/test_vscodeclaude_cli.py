@@ -266,14 +266,13 @@ class TestCLI:
     """Test CLI argument parsing and routing."""
 
     def test_vscodeclaude_parser_exists(self) -> None:
-        """vscodeclaude subcommand is registered."""
+        """vscodeclaude top-level command is registered."""
         from mcp_coder.cli.main import create_parser
 
         parser = create_parser()
 
-        # Parse valid command
-        args = parser.parse_args(["coordinator", "vscodeclaude"])
-        assert args.coordinator_subcommand == "vscodeclaude"
+        args = parser.parse_args(["vscodeclaude", "launch"])
+        assert args.vscodeclaude_subcommand == "launch"
 
     def test_vscodeclaude_repo_argument(self) -> None:
         """--repo argument is parsed."""
@@ -281,7 +280,7 @@ class TestCLI:
 
         parser = create_parser()
 
-        args = parser.parse_args(["coordinator", "vscodeclaude", "--repo", "test"])
+        args = parser.parse_args(["vscodeclaude", "launch", "--repo", "test"])
         assert args.repo == "test"
 
     def test_vscodeclaude_max_sessions_argument(self) -> None:
@@ -290,7 +289,7 @@ class TestCLI:
 
         parser = create_parser()
 
-        args = parser.parse_args(["coordinator", "vscodeclaude", "--max-sessions", "5"])
+        args = parser.parse_args(["vscodeclaude", "launch", "--max-sessions", "5"])
         assert args.max_sessions == 5
 
     def test_vscodeclaude_cleanup_flag(self) -> None:
@@ -299,7 +298,7 @@ class TestCLI:
 
         parser = create_parser()
 
-        args = parser.parse_args(["coordinator", "vscodeclaude", "--cleanup"])
+        args = parser.parse_args(["vscodeclaude", "launch", "--cleanup"])
         assert args.cleanup is True
 
     def test_vscodeclaude_intervene_with_issue(self) -> None:
@@ -309,7 +308,7 @@ class TestCLI:
         parser = create_parser()
 
         args = parser.parse_args(
-            ["coordinator", "vscodeclaude", "--intervene", "--issue", "123"]
+            ["vscodeclaude", "launch", "--intervene", "--issue", "123"]
         )
         assert args.intervene is True
         assert args.issue == 123
@@ -320,7 +319,7 @@ class TestCLI:
 
         parser = create_parser()
 
-        args = parser.parse_args(["coordinator", "vscodeclaude", "status"])
+        args = parser.parse_args(["vscodeclaude", "status"])
         assert args.vscodeclaude_subcommand == "status"
 
     def test_vscodeclaude_status_with_repo(self) -> None:
@@ -329,9 +328,7 @@ class TestCLI:
 
         parser = create_parser()
 
-        args = parser.parse_args(
-            ["coordinator", "vscodeclaude", "status", "--repo", "myrepo"]
-        )
+        args = parser.parse_args(["vscodeclaude", "status", "--repo", "myrepo"])
         assert args.vscodeclaude_subcommand == "status"
         assert args.repo == "myrepo"
 

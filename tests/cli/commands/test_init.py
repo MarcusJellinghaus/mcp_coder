@@ -33,7 +33,7 @@ class TestInitCommand:
         assert "Please update it" in captured.out
         assert "Next steps:" in captured.out
         assert "mcp-coder verify" in captured.out
-        assert "mcp-coder define-labels" in captured.out
+        assert "mcp-coder gh-tool define-labels" in captured.out
 
     @patch("mcp_coder.cli.commands.init.get_config_file_path")
     @patch("mcp_coder.cli.commands.init.create_default_config")

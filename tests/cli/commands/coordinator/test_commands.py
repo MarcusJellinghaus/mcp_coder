@@ -156,7 +156,6 @@ class TestExecuteCoordinatorRun:
         # Setup - Mock args for single repository mode
         args = argparse.Namespace(
             command="coordinator",
-            coordinator_subcommand="run",
             repo="mcp_coder",
             all=False,
             log_level="INFO",

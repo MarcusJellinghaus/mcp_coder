@@ -33,13 +33,13 @@ from .parsers import (
     add_coordinator_parsers,
     add_create_plan_parser,
     add_create_pr_parser,
-    add_define_labels_parser,
     add_gh_tool_parsers,
     add_git_tool_parsers,
     add_implement_parser,
     add_prompt_parser,
     add_set_status_parser,
     add_verify_parser,
+    add_vscodeclaude_parsers,
 )
 
 # Logger will be initialized in main()
@@ -92,11 +92,11 @@ def create_parser() -> argparse.ArgumentParser:
     add_create_plan_parser(subparsers)
     add_create_pr_parser(subparsers)
     add_coordinator_parsers(subparsers)
-    add_define_labels_parser(subparsers)
     add_set_status_parser(subparsers)
     add_check_parsers(subparsers)
     add_gh_tool_parsers(subparsers)
     add_git_tool_parsers(subparsers)
+    add_vscodeclaude_parsers(subparsers)
 
     return parser
 
@@ -116,39 +116,29 @@ def handle_no_command(_args: argparse.Namespace) -> int:
 
 
 def _handle_coordinator_command(args: argparse.Namespace) -> int:
-    """Handle coordinator subcommands.
+    """Handle coordinator command (flat, no subcommands).
 
     Returns:
-        Exit code from the executed coordinator subcommand.
+        Exit code from the executed coordinator action.
     """
-    if hasattr(args, "coordinator_subcommand") and args.coordinator_subcommand:
-        if args.coordinator_subcommand == "test":
-            return execute_coordinator_test(args)
-        elif args.coordinator_subcommand == "run":
-            return execute_coordinator_run(args)
-        elif args.coordinator_subcommand == "vscodeclaude":
-            # Check for status subcommand first
-            if (
-                hasattr(args, "vscodeclaude_subcommand")
-                and args.vscodeclaude_subcommand == "status"
-            ):
-                return execute_coordinator_vscodeclaude_status(args)
-            else:
-                return execute_coordinator_vscodeclaude(args)
-        elif args.coordinator_subcommand == "issue-stats":
-            return execute_coordinator_issue_stats(args)
-        else:
-            logger.error(
-                f"Unknown coordinator subcommand: {args.coordinator_subcommand}"
-            )
-            print(
-                f"Error: Unknown coordinator subcommand '{args.coordinator_subcommand}'"
-            )
+    if args.dry_run:
+        # Validate dry-run args
+        if not args.repo:
+            print("Error: --dry-run requires --repo NAME", file=sys.stderr)
             return 1
+        if not args.branch_name:
+            print("Error: --dry-run requires --branch-name BRANCH", file=sys.stderr)
+            return 1
+        # Map args to what execute_coordinator_test expects
+        args.repo_name = args.repo
+        args.log_level = args.coordinator_log_level
+        return execute_coordinator_test(args)
     else:
-        logger.error("Coordinator subcommand required")
-        print("Error: Please specify a coordinator subcommand (e.g., 'test', 'run')")
-        return 1
+        # Validate run args
+        if not args.all and not args.repo:
+            print("Error: Either --all or --repo must be specified", file=sys.stderr)
+            return 1
+        return execute_coordinator_run(args)
 
 
 def _handle_check_command(args: argparse.Namespace) -> int:
@@ -185,13 +175,45 @@ def _handle_gh_tool_command(args: argparse.Namespace) -> int:
     if hasattr(args, "gh_tool_subcommand") and args.gh_tool_subcommand:
         if args.gh_tool_subcommand == "get-base-branch":
             return execute_get_base_branch(args)
+        elif args.gh_tool_subcommand == "define-labels":
+            return execute_define_labels(args)
+        elif args.gh_tool_subcommand == "issue-stats":
+            return execute_coordinator_issue_stats(args)
         else:
             logger.error(f"Unknown gh-tool subcommand: {args.gh_tool_subcommand}")
             print(f"Error: Unknown gh-tool subcommand '{args.gh_tool_subcommand}'")
             return 1
     else:
         logger.error("gh-tool subcommand required")
-        print("Error: Please specify a gh-tool subcommand (e.g., 'get-base-branch')")
+        print(
+            "Error: Please specify a gh-tool subcommand"
+            " (e.g., 'get-base-branch', 'define-labels', 'issue-stats')"
+        )
+        return 1
+
+
+def _handle_vscodeclaude_command(args: argparse.Namespace) -> int:
+    """Handle vscodeclaude subcommands.
+
+    Returns:
+        Exit code from the executed vscodeclaude subcommand.
+    """
+    if hasattr(args, "vscodeclaude_subcommand") and args.vscodeclaude_subcommand:
+        if args.vscodeclaude_subcommand == "launch":
+            return execute_coordinator_vscodeclaude(args)
+        elif args.vscodeclaude_subcommand == "status":
+            return execute_coordinator_vscodeclaude_status(args)
+        else:
+            logger.error(
+                f"Unknown vscodeclaude subcommand: {args.vscodeclaude_subcommand}"
+            )
+            print(
+                f"Error: Unknown vscodeclaude subcommand '{args.vscodeclaude_subcommand}'"
+            )
+            return 1
+    else:
+        logger.error("vscodeclaude subcommand required")
+        print("Error: Please specify a subcommand (e.g., 'launch', 'status')")
         return 1
 
 
@@ -279,8 +301,6 @@ def main() -> int:
             return execute_create_pr(args)
         elif args.command == "coordinator":
             return _handle_coordinator_command(args)
-        elif args.command == "define-labels":
-            return execute_define_labels(args)
         elif args.command == "set-status":
             return execute_set_status(args)
         elif args.command == "check":
@@ -289,6 +309,8 @@ def main() -> int:
             return _handle_gh_tool_command(args)
         elif args.command == "git-tool":
             return _handle_git_tool_command(args)
+        elif args.command == "vscodeclaude":
+            return _handle_vscodeclaude_command(args)
 
         # Other commands will be implemented in later steps
         logger.error(f"Command '{args.command}' not yet implemented")

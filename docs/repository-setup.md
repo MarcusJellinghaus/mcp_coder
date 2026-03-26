@@ -24,7 +24,7 @@ This guide covers the **mandatory** and **optional** components for integrating 
 ## Quick Setup Checklist
 
 - [ ] Configure GitHub token in user config
-- [ ] Set up workflow labels with `mcp-coder define-labels`
+- [ ] Set up workflow labels with `mcp-coder gh-tool define-labels`
 - [ ] Install GitHub Actions workflows
 - [ ] Configure Claude Code files (`.claude/`, `.mcp.json`)
 - [ ] Test workflow with a sample issue
@@ -77,12 +77,12 @@ status-01:created → status-02:awaiting-planning → ... → status-10:pr-creat
 
 **1. Preview labels:**
 ```bash
-mcp-coder define-labels --dry-run  # Preview changes
+mcp-coder gh-tool define-labels --dry-run  # Preview changes
 ```
 
 **2. Apply labels:**
 ```bash
-mcp-coder define-labels            # Create/update labels
+mcp-coder gh-tool define-labels            # Create/update labels
 ```
 
 **3. Verify in GitHub:**
@@ -118,12 +118,12 @@ EOF
 
 **Test custom config:**
 ```bash
-mcp-coder define-labels --dry-run  # Preview your custom labels
+mcp-coder gh-tool define-labels --dry-run  # Preview your custom labels
 ```
 
 ### Issue Validation and Initialization
 
-The `define-labels` command now includes automatic issue validation:
+The `gh-tool define-labels` command now includes automatic issue validation:
 
 **Automatic initialization:**
 - Issues without any workflow status label are initialized with `status-01:created`
@@ -472,7 +472,7 @@ Add to `.gitignore` if configs contain sensitive paths:
 
 ### VSCodeClaude Setup
 
-For `mcp-coder coordinator vscodeclaude`, add to `.gitignore`:
+For `mcp-coder vscodeclaude launch`, add to `.gitignore`:
 
 ```gitignore
 .vscodeclaude_status.txt
@@ -768,7 +768,7 @@ These tools are no longer actively used but kept for reference:
 
 **1. Test label creation:**
 ```bash
-mcp-coder define-labels --dry-run
+mcp-coder gh-tool define-labels --dry-run
 # Should show configured labels
 ```
 

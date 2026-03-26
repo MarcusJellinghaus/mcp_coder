@@ -274,3 +274,89 @@ class TestGhToolCommandIntegration:
         # Verify resolve_project_dir was called with the custom path
         mock_resolve_project_dir.assert_called_once_with("/custom/path")
         mock_detect_base_branch.assert_called_once_with(custom_dir)
+
+
+# ============================================================================
+# Test Classes for gh-tool define-labels
+# ============================================================================
+
+
+class TestGhToolDefineLabelsIntegration:
+    """Test gh-tool define-labels CLI integration."""
+
+    def test_gh_tool_define_labels_command_exists(self) -> None:
+        """define-labels is registered under gh-tool."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+        args = parser.parse_args(["gh-tool", "define-labels"])
+
+        assert args.command == "gh-tool"
+        assert args.gh_tool_subcommand == "define-labels"
+
+    def test_gh_tool_define_labels_with_dry_run(self) -> None:
+        """--dry-run flag is parsed."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+        args = parser.parse_args(["gh-tool", "define-labels", "--dry-run"])
+
+        assert args.dry_run is True
+
+    def test_gh_tool_define_labels_with_project_dir(self) -> None:
+        """--project-dir is parsed."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+        args = parser.parse_args(
+            ["gh-tool", "define-labels", "--project-dir", "/my/project"]
+        )
+
+        assert args.project_dir == "/my/project"
+
+
+# ============================================================================
+# Test Classes for gh-tool issue-stats
+# ============================================================================
+
+
+class TestGhToolIssueStatsIntegration:
+    """Test gh-tool issue-stats CLI integration."""
+
+    def test_gh_tool_issue_stats_command_exists(self) -> None:
+        """issue-stats is registered under gh-tool."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+        args = parser.parse_args(["gh-tool", "issue-stats"])
+
+        assert args.command == "gh-tool"
+        assert args.gh_tool_subcommand == "issue-stats"
+
+    def test_gh_tool_issue_stats_default_values(self) -> None:
+        """Default filter=all, details=False."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+        args = parser.parse_args(["gh-tool", "issue-stats"])
+
+        assert args.filter == "all"
+        assert args.details is False
+
+    def test_gh_tool_issue_stats_with_filter(self) -> None:
+        """--filter argument is parsed."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+        args = parser.parse_args(["gh-tool", "issue-stats", "--filter", "human"])
+
+        assert args.filter == "human"
+
+    def test_gh_tool_issue_stats_with_details(self) -> None:
+        """--details flag is parsed."""
+        from mcp_coder.cli.main import create_parser
+
+        parser = create_parser()
+        args = parser.parse_args(["gh-tool", "issue-stats", "--details"])
+
+        assert args.details is True

@@ -37,23 +37,23 @@ def test_command_categories_contains_all_commands() -> None:
     expected_commands = [
         "init",
         "verify",
-        "define-labels",
         "create-plan",
         "implement",
         "create-pr",
-        "coordinator test",
-        "coordinator run",
-        "coordinator vscodeclaude",
-        "coordinator vscodeclaude status",
-        "coordinator issue-stats",
+        "coordinator",
+        "vscodeclaude launch",
+        "vscodeclaude status",
         "prompt",
         "commit auto",
         "commit clipboard",
         "set-status",
         "check branch-status",
         "check file-size",
+        "gh-tool define-labels",
+        "gh-tool issue-stats",
         "gh-tool get-base-branch",
         "git-tool compact-diff",
+        "help",
     ]
     for cmd in expected_commands:
         assert cmd in all_command_names, f"Missing command: {cmd}"
@@ -64,7 +64,7 @@ def test_compact_help_has_all_category_headers() -> None:
     output = get_compact_help_text()
     assert "SETUP" in output
     assert "BACKGROUND DEVELOPMENT" in output
-    assert "COORDINATION" in output
+    assert "INTERACTIVE DEVELOPMENT" in output
     assert "TOOLS" in output
 
 
@@ -138,7 +138,7 @@ def test_detailed_help_has_all_category_headers() -> None:
     output = get_help_text()
     assert "SETUP" in output
     assert "BACKGROUND DEVELOPMENT" in output
-    assert "COORDINATION" in output
+    assert "INTERACTIVE DEVELOPMENT" in output
     assert "TOOLS" in output
 
 

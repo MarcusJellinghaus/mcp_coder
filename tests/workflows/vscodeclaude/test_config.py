@@ -22,8 +22,8 @@ class TestConfiguration:
         """Loads config with valid workspace_base."""
         # Mock get_config_values directly
         mock_config = {
-            ("coordinator.vscodeclaude", "workspace_base"): str(tmp_path),
-            ("coordinator.vscodeclaude", "max_sessions"): "5",
+            ("vscodeclaude", "workspace_base"): str(tmp_path),
+            ("vscodeclaude", "max_sessions"): "5",
         }
 
         def mock_get_config_values(
@@ -45,8 +45,8 @@ class TestConfiguration:
     ) -> None:
         """Raises ValueError when workspace_base missing."""
         mock_config: dict[tuple[str, str], str | None] = {
-            ("coordinator.vscodeclaude", "workspace_base"): None,
-            ("coordinator.vscodeclaude", "max_sessions"): None,
+            ("vscodeclaude", "workspace_base"): None,
+            ("vscodeclaude", "max_sessions"): None,
         }
 
         def mock_get_config_values(
@@ -67,8 +67,8 @@ class TestConfiguration:
     ) -> None:
         """Uses default when max_sessions not set."""
         mock_config: dict[tuple[str, str], str | None] = {
-            ("coordinator.vscodeclaude", "workspace_base"): str(tmp_path),
-            ("coordinator.vscodeclaude", "max_sessions"): None,
+            ("vscodeclaude", "workspace_base"): str(tmp_path),
+            ("vscodeclaude", "max_sessions"): None,
         }
 
         def mock_get_config_values(
@@ -89,8 +89,8 @@ class TestConfiguration:
     ) -> None:
         """Raises ValueError when workspace_base path doesn't exist."""
         mock_config: dict[tuple[str, str], str | None] = {
-            ("coordinator.vscodeclaude", "workspace_base"): "/nonexistent/path",
-            ("coordinator.vscodeclaude", "max_sessions"): None,
+            ("vscodeclaude", "workspace_base"): "/nonexistent/path",
+            ("vscodeclaude", "max_sessions"): None,
         }
 
         def mock_get_config_values(

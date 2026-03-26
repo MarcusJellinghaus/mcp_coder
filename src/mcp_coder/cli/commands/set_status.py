@@ -191,7 +191,7 @@ def _update_issue_labels(
         return False, (
             f"Failed to update labels for issue #{issue_number}.\n"
             f"Label '{status_label}' may not exist on GitHub.\n"
-            "Run `mcp-coder define-labels` to create workflow labels."
+            "Run `mcp-coder gh-tool define-labels` to create workflow labels."
         )
 
     return True, None
