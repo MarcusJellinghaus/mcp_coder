@@ -22,6 +22,7 @@
 | Run mypy | `Bash("mypy ...")` | `mcp__tools-py__run_mypy_check()` |
 | Run ruff | `Bash("ruff ...")` | ✅ `Bash("./tools/ruff_check.sh")` |
 | Git operations | ✅ `Bash("git ...")` | ✅ `Bash("git ...")` (allowed) |
+| Refactoring | Manual copy-paste | `mcp__tools-py__move_symbol()`, `list_symbols()`, `find_references()` |
 
 ## 🔴 CRITICAL: Code Quality Requirements
 

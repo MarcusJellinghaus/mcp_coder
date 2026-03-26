@@ -63,13 +63,16 @@ Before moving anything:
 2. Check that test files mirror source structure
 3. Verify the new structure aligns with import linter / tach rules
 
-### Step 2: Move Source Code
+### Step 2: Move Source Code (Using MCP Refactoring Tools)
 
-1. Create the new file(s)
-2. Move functions/classes (copy-paste, no modifications)
-3. Update imports in the new file
-4. Update imports in consuming files
+Use the MCP refactoring tools — they move code and update all imports automatically:
+
+1. `mcp__tools-py__list_symbols(file=...)` — inventory the source file
+2. `mcp__tools-py__move_symbol(source_file=..., symbol_name=..., dest_file=..., dry_run=true)` — preview
+3. `mcp__tools-py__move_symbol(source_file=..., symbol_name=..., dest_file=...)` — execute
+4. Repeat for each symbol/group
 5. Update `__init__.py` re-exports if needed
+6. Update `.importlinter` layering contracts if the split introduces sub-layers (see [Import Linter](#import-linter) below)
 
 ### Step 3: Move Tests
 
@@ -82,7 +85,39 @@ tests/utils/test_string_helpers.py
 
 ### Step 4: Verify
 
-Run all checks after each move:
+After all moves, verify the refactoring:
+
+#### Compact Diff
+
+```bash
+mcp-coder git-tool compact-diff
+```
+
+Suppresses moved-code blocks from the diff output. After a pure refactoring, the remaining diff should contain **only import changes and new/deleted file headers**. If you see logic changes in the compact diff, something was modified during the move.
+
+#### File Size Check
+
+```bash
+mcp-coder check file-size --max-lines 750
+```
+
+Verifies all tracked Python files are under the line threshold. If split files were previously in `.large-files-allowlist`, remove those entries. Stale entries are reported automatically.
+
+#### Import Linter
+
+When splitting a module into sub-modules, the new files may have internal dependencies (e.g. `branch_queries` imports from `repository_status`). If the import linter uses a `layers` contract with `|` (pipe) separators, siblings can't import each other.
+
+**Fix:** Use sub-layers — put the dependency on a lower layer than its consumers:
+```ini
+# Before (single module):
+    mcp_coder.utils.git_operations.readers
+
+# After (split into sub-layers):
+    mcp_coder.utils.git_operations.branch_queries | mcp_coder.utils.git_operations.parent_branch_detection
+    mcp_coder.utils.git_operations.repository_status
+```
+
+#### Standard Checks
 
 ```bash
 # Import structure
@@ -102,7 +137,7 @@ mcp__tools-py__run_mypy_check
 1. Identify logical groupings (by responsibility, by domain)
 2. Create new files for each group
 3. Move functions one group at a time
-4. Keep the original file as a facade (re-exports) if external code depends on it
+4. Delete the original file — update all consumers to use new locations directly
 
 ### Architectural Restructuring
 
@@ -115,16 +150,19 @@ mcp__tools-py__run_mypy_check
 
 Before merging a refactoring PR:
 
-- [ ] No function/class logic was changed (only moved)
-- [ ] All imports updated correctly
+- [ ] No function/class logic was changed (only moved) — verify with `mcp-coder git-tool compact-diff`
+- [ ] All imports updated correctly (automatic when using `move_symbol`)
 - [ ] Tests moved to mirror source structure
 - [ ] `lint-imports` passes
 - [ ] `tach check` passes
 - [ ] All unit tests pass
+- [ ] `mcp-coder check file-size --max-lines 750` passes
+- [ ] `.large-files-allowlist` updated (remove entries for split files)
+- [ ] `.importlinter` updated if modules were split (sub-layers)
 - [ ] PR diff is under 25,000 tokens
 
 ## Related
 
-- [Refactoring Principles](../../.claude/knowledge_base/refactoring_principles.md) — quick-reference rules
+- [Refactoring Principles](../../.claude/knowledge_base/refactoring_principles.md) — quick-reference rules and tool tables (loaded by slash commands)
 - [Architecture Documentation](../architecture/architecture.md)
 - [Dependency Management](../architecture/dependencies/readme.md)

@@ -20,7 +20,9 @@ from mcp_coder.utils import (
     git_push,
     is_working_directory_clean,
 )
-from mcp_coder.utils.git_operations.readers import extract_issue_number_from_branch
+from mcp_coder.utils.git_operations.branch_queries import (
+    extract_issue_number_from_branch,
+)
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.github_operations.issues import IssueBranchManager
 from mcp_coder.utils.github_operations.pr_manager import PullRequestManager

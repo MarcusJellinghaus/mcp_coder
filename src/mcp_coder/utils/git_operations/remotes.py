@@ -6,8 +6,9 @@ from typing import Any, Optional
 
 from git.exc import GitCommandError, InvalidGitRepositoryError
 
+from .branch_queries import branch_exists
 from .core import _safe_repo_context, logger
-from .readers import branch_exists, is_git_repository
+from .repository_status import is_git_repository
 
 
 def git_push(project_dir: Path, force_with_lease: bool = False) -> dict[str, Any]:

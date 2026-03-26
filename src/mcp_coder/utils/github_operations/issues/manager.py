@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-from mcp_coder.utils.git_operations.readers import (
+from mcp_coder.utils.git_operations.branch_queries import (
     extract_issue_number_from_branch,
     get_current_branch_name,
 )
