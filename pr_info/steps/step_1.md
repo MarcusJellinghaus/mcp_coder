@@ -75,7 +75,7 @@ return "\n".join(lines)
 ### Updated tests
 
 3. Update `test_validate_status_label_valid` — pass `full_labels_config` dict instead of `set`
-4. Update `test_validate_status_label_invalid` — pass `full_labels_config` dict instead of `set`, verify error message contains descriptions (not just names)
+4. Update `test_validate_status_label_invalid` — pass `full_labels_config` dict instead of `set`. Assert that the error message contains at least one label description string (e.g., from the config's `workflow_labels`), not just label names.
 
 ## LLM Prompt
 

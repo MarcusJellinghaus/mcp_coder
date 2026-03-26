@@ -48,7 +48,7 @@ Add to `execute_set_status()` docstring: "When called without a status_label, pr
 ## HOW
 
 - `execute_set_status()`: Insert no-args check at top of try block, before `resolve_project_dir`
-- Best-effort config loading: try `resolve_project_dir(args.project_dir)` → `get_labels_config_path(project_dir)`, on `ValueError`/`Exception` fall back to `get_labels_config_path(None)`
+- Best-effort config loading: try `resolve_project_dir(args.project_dir)` → `get_labels_config_path(project_dir)`, on `ValueError`/`FileNotFoundError`/`OSError` fall back to `get_labels_config_path(None)`
 - Uses `format_status_labels()` from Step 1 and `load_labels_config()` (already imported)
 
 ## ALGORITHM — no-args path in `execute_set_status`
@@ -58,7 +58,7 @@ if args.status_label is None:
     try:
         project_dir = resolve_project_dir(args.project_dir)
         config_path = get_labels_config_path(project_dir)
-    except (ValueError, Exception):
+    except (ValueError, FileNotFoundError, OSError):
         config_path = get_labels_config_path(None)
     labels_config = load_labels_config(config_path)
     print(format_status_labels(labels_config))
