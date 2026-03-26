@@ -1,7 +1,7 @@
 # Step 1: MLflowLogger infrastructure — step tracking and step-aware metrics
 
 > **Context:** See `pr_info/steps/summary.md` for the full design.
-> This step adds the foundational infrastructure that steps 2–4 build on.
+> This step adds the foundational infrastructure that steps 2–3 build on.
 
 ## LLM Prompt
 
@@ -37,6 +37,9 @@ def test_step_persists_across_end_and_resume(self) -> None:
 
 def test_new_run_starts_at_step_zero(self) -> None:
     """A brand new run (different session) starts at step 0."""
+
+def test_end_run_without_session_cleans_step_count(self) -> None:
+    """Ending a run without session_id removes the step count entry."""
 ```
 
 Update existing `TestMLflowLogger.test_log_metrics` to verify backward compatibility
@@ -93,6 +96,16 @@ else:
         mlflow.log_metric(key, value, step=step) # per-metric with step
 ```
 
+### 5. `end_run()` — clean up step count when run won't be resumed
+
+In the existing `end_run()` method, when `session_id is None` (run won't be resumed),
+delete the entry from `_run_step_count` to prevent unbounded growth:
+
+```python
+if session_id is None and self.active_run_id in self._run_step_count:
+    del self._run_step_count[self.active_run_id]
+```
+
 ## DATA
 
 - `_run_step_count`: `dict[str, int]` — maps `run_id` → next step index
@@ -102,7 +115,7 @@ else:
 ## HOW — Integration
 
 No callers change in this step. `log_conversation()` and `log_conversation_artifacts()`
-are updated in steps 2 and 3. This step only adds infrastructure and verifies it works.
+are updated in step 2. This step only adds infrastructure and verifies it works.
 
 ## Commit
 

@@ -1,75 +1,77 @@
-# Step 3: Rewrite `log_conversation_artifacts()` with step-aware logging
+# Step 3: Update `mlflow_conversation` context manager for step-prefixed Phase 1 prompt
 
 > **Context:** See `pr_info/steps/summary.md` for the full design.
-> Same pattern as step 2, applied to the artifacts-only method.
+> This is the final step — builds on steps 1–2, connects the context manager to the step tracking.
 
 ## LLM Prompt
 
 ```
 Implement step 3 of issue #593 (see pr_info/steps/summary.md and pr_info/steps/step_3.md).
 
-Rewrite log_conversation_artifacts() to use step-aware params and artifacts.
-Same pattern as log_conversation(): stable params at step 0 only,
-step-prefixed artifact names, all_params JSON dump.
+Update the mlflow_conversation context manager to use current_step() for
+step-prefixed Phase 1 prompt artifact naming (step_N_prompt.txt).
 Update existing tests first (TDD), then implement, then run all three code quality checks.
 ```
 
 ## WHERE
 
-- `tests/llm/test_mlflow_logger.py` — update `test_log_conversation_artifacts_logs_params_and_artifacts_not_metrics`, add multi-step test
-- `src/mcp_coder/llm/mlflow_logger.py` — `MLflowLogger.log_conversation_artifacts()`
+- `tests/llm/test_mlflow_conversation_logger.py` — update Phase 1 artifact assertions, add resumed-session test
+- `src/mcp_coder/llm/mlflow_conversation_logger.py` — `mlflow_conversation()`
 
 ## WHAT — Tests (update/add)
 
-### Update `test_log_conversation_artifacts_logs_params_and_artifacts_not_metrics`
+### Update all existing tests that assert `"prompt.txt"`
 
-Verify for step 0:
-- `log_params` called with only stable keys: `model`, `provider`, `working_directory`
-- `log_artifact` called 3 times: `step_0_prompt.txt`, `step_0_conversation.json`, `step_0_all_params.json`
-- `log_metrics` NOT called (this method never logs metrics)
-- `current_step()` returns 1 after the call
+Change expected artifact name from `"prompt.txt"` to `"step_0_prompt.txt"` in:
+- `test_phase1_logs_prompt_phase2_logs_response`
+- `test_tool_trace_logged_as_artifact`
+- `test_no_tool_trace_artifact_when_absent`
+- `test_no_tool_trace_artifact_when_empty_list`
 
-### Add `test_log_conversation_artifacts_step1_skips_params`
+### Add `test_resumed_session_uses_step_1_prompt_artifact`
 
-Simulate step 1:
-- `log_params` NOT called
-- Artifacts prefixed `step_1_`
-- `current_step()` returns 2
+```python
+def test_resumed_session_uses_step_1_prompt_artifact(self) -> None:
+    """When resuming a session at step 1, Phase 1 artifact is step_1_prompt.txt."""
+    mock_logger._is_enabled.return_value = True
+    mock_logger.has_session.return_value = True
+    mock_logger.current_step.return_value = 1  # resumed at step 1
+
+    with mlflow_conversation(prompt="hi", provider="claude", session_id="sid-x") as result:
+        result["response_data"] = {"text": "ok", "session_id": "sid-x", "provider": "claude"}
+
+    # Phase 1 artifact should be step_1_prompt.txt
+    mock_logger.log_artifact.assert_any_call("hi", "step_1_prompt.txt")
+```
 
 ## WHAT — Implementation
 
-Rewrite `log_conversation_artifacts()` body:
+One-line change in `mlflow_conversation()`:
 
-**Algorithm (pseudocode):**
-```
-step = self.current_step()
-
-if step == 0:
-    log_params({model, provider, working_directory})
-
-all_params = {model, provider, working_directory, branch_name, step_name, prompt_length}
-log_artifact(json.dumps(all_params), f"step_{step}_all_params.json")
-
-log_artifact(prompt, f"step_{step}_prompt.txt")
-log_artifact(conversation_json, f"step_{step}_conversation.json")
-
-_advance_step()
+**Before:**
+```python
+mlflow_logger.log_artifact(prompt, "prompt.txt")
 ```
 
-**Key changes from current code:**
-- Same 3 changes as step 2: stable params only at step 0, all_params artifact, step-prefixed names
-- No metrics (this method intentionally skips metrics — preserving existing behavior)
+**After:**
+```python
+step = mlflow_logger.current_step()
+mlflow_logger.log_artifact(prompt, f"step_{step}_prompt.txt")
+```
 
 ## DATA
 
-Same `step_N_all_params.json` structure as step 2.
+No new data structures. Just uses `current_step()` from step 1.
 
 ## HOW — Integration
 
-No callers change. Same internal refactor as step 2.
+The Phase 1 prompt artifact now uses the same `step_N_` prefix as Phase 2 artifacts.
+When `log_conversation()` runs in Phase 2, it will also write `step_N_prompt.txt`
+(same name, same content) — this is intentional: Phase 1 ensures the prompt survives
+a timeout/kill, Phase 2 overwrites it as part of the complete artifact set.
 
 ## Commit
 
 ```
-fix(mlflow): make log_conversation_artifacts() step-aware (#593)
+fix(mlflow): use step-prefixed prompt artifact in mlflow_conversation (#593)
 ```

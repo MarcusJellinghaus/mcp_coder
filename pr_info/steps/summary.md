@@ -41,7 +41,6 @@ No new files created.
 
 ## Implementation Steps
 
-1. **Step 1** — `MLflowLogger` infrastructure: `_run_step_count`, `current_step()`, `step` param on `log_metrics()`
-2. **Step 2** — Rewrite `log_conversation()` with step-aware params/metrics/artifacts
-3. **Step 3** — Rewrite `log_conversation_artifacts()` with step-aware params/artifacts
-4. **Step 4** — Update `mlflow_conversation` context manager for step-prefixed Phase 1 prompt artifact
+1. **Step 1** — `MLflowLogger` infrastructure: `_run_step_count`, `current_step()`, `_advance_step()`, `step` param on `log_metrics()`, `end_run()` cleanup
+2. **Step 2** — Rewrite `log_conversation()` and `log_conversation_artifacts()` with step-aware logging
+3. **Step 3** — Update `mlflow_conversation` context manager for step-prefixed Phase 1 prompt artifact
