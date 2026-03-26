@@ -371,7 +371,7 @@ class MLflowLogger:
         response_data: Dict[str, Any],
         metadata: Dict[str, Any],
     ) -> None:
-        """Log a complete conversation to MLflow with advanced metrics.
+        """Log a complete conversation to MLflow with step-aware metrics.
 
         Args:
             prompt: The user prompt
@@ -382,11 +382,20 @@ class MLflowLogger:
             return
 
         try:
-            # Extract relevant information for logging
+            step = self.current_step()
             session_info = response_data.get("raw_response", {}).get("session_info", {})
 
-            # Log parameters
-            params = {
+            # Stable params only at step 0
+            if step == 0:
+                stable_params = {
+                    "model": metadata.get("model", "unknown"),
+                    "provider": response_data.get("provider", "unknown"),
+                    "working_directory": metadata.get("working_directory"),
+                }
+                self.log_params(stable_params)
+
+            # All param values as step artifact
+            all_params = {
                 "model": metadata.get("model", "unknown"),
                 "provider": response_data.get("provider", "unknown"),
                 "working_directory": metadata.get("working_directory"),
@@ -394,51 +403,45 @@ class MLflowLogger:
                 "step_name": metadata.get("step_name"),
                 "prompt_length": len(prompt),
             }
+            self.log_artifact(
+                json.dumps(all_params, indent=2, default=str),
+                f"step_{step}_all_params.json",
+            )
 
-            self.log_params(params)
-
-            # Log basic metrics
-            basic_metrics = {}
+            # Collect all numeric metrics
+            numeric_metrics: Dict[str, float] = {
+                "prompt_length": float(len(prompt)),
+            }
             if "duration_ms" in response_data:
-                basic_metrics["duration_ms"] = float(response_data["duration_ms"])
+                numeric_metrics["duration_ms"] = float(response_data["duration_ms"])
             if "cost_usd" in response_data:
-                basic_metrics["cost_usd"] = float(response_data["cost_usd"])
+                numeric_metrics["cost_usd"] = float(response_data["cost_usd"])
 
-            if basic_metrics:
-                self.log_metrics(basic_metrics)
-
-            # Log usage metrics separately (to maintain test expectations)
-            usage_metrics = {}
+            # Usage metrics
             if isinstance(session_info, dict):
                 usage = session_info.get("usage", {})
                 if isinstance(usage, dict):
                     for key, value in usage.items():
                         if isinstance(value, (int, float)):
-                            usage_metrics[f"usage_{key}"] = float(value)
+                            numeric_metrics[f"usage_{key}"] = float(value)
 
-            # Add performance metrics if available
+            # Performance metrics
             if ConversationMetrics is not None:
                 try:
                     metrics_calculator = ConversationMetrics()
-
-                    # Performance metrics
                     perf_metrics = metrics_calculator.extract_performance_metrics(
                         response_data
                     )
-                    usage_metrics.update(perf_metrics)
-
+                    numeric_metrics.update(perf_metrics)
                 except (
                     Exception
                 ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
                     logger.debug(f"Failed to calculate performance metrics: {e}")
 
-            if usage_metrics:
-                self.log_metrics(usage_metrics)
+            self.log_metrics(numeric_metrics, step=step)
 
-            # Log artifacts
-            self.log_artifact(prompt, "prompt.txt")
-
-            # Log full conversation data as JSON
+            # Step-prefixed artifacts
+            self.log_artifact(prompt, f"step_{step}_prompt.txt")
             conversation_data = {
                 "prompt": prompt,
                 "response_data": response_data,
@@ -446,8 +449,10 @@ class MLflowLogger:
             }
             self.log_artifact(
                 json.dumps(conversation_data, indent=2, default=str),
-                "conversation.json",
+                f"step_{step}_conversation.json",
             )
+
+            self._advance_step()
 
         except (
             Exception
@@ -508,7 +513,19 @@ class MLflowLogger:
         if not self._is_enabled() or not self.active_run_id:
             return
 
-        params = {
+        step = self.current_step()
+
+        # Stable params only at step 0
+        if step == 0:
+            stable_params = {
+                "model": metadata.get("model", "unknown"),
+                "provider": response_data.get("provider", "unknown"),
+                "working_directory": metadata.get("working_directory"),
+            }
+            self.log_params(stable_params)
+
+        # All param values as step artifact
+        all_params = {
             "model": metadata.get("model", "unknown"),
             "provider": response_data.get("provider", "unknown"),
             "working_directory": metadata.get("working_directory"),
@@ -516,17 +533,24 @@ class MLflowLogger:
             "step_name": metadata.get("step_name"),
             "prompt_length": len(prompt),
         }
-        self.log_params(params)
+        self.log_artifact(
+            json.dumps(all_params, indent=2, default=str),
+            f"step_{step}_all_params.json",
+        )
 
-        self.log_artifact(prompt, "prompt.txt")
+        # Step-prefixed artifacts
+        self.log_artifact(prompt, f"step_{step}_prompt.txt")
         conversation_data = {
             "prompt": prompt,
             "response_data": response_data,
             "metadata": metadata,
         }
         self.log_artifact(
-            json.dumps(conversation_data, indent=2, default=str), "conversation.json"
+            json.dumps(conversation_data, indent=2, default=str),
+            f"step_{step}_conversation.json",
         )
+
+        self._advance_step()
 
     def end_run(
         self, status: str = "FINISHED", session_id: Optional[str] = None

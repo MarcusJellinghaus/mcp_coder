@@ -246,7 +246,7 @@ class TestMLflowLogger:
                 assert call_args[0][1] == "conversation_data"  # artifact_path
 
     def test_log_conversation(self) -> None:
-        """Test logging complete conversation."""
+        """Test logging complete conversation at step 0."""
         mock_mlflow = MagicMock()
 
         with patch.dict("sys.modules", {"mlflow": mock_mlflow}):
@@ -274,22 +274,79 @@ class TestMLflowLogger:
                         with patch.object(logger, "log_artifact") as mock_artifact:
                             logger.log_conversation(prompt, response_data, metadata)
 
-                            # Verify parameters were logged
+                            # Step 0: stable params logged once
                             mock_params.assert_called_once()
                             params = mock_params.call_args[0][0]
-                            assert params["model"] == "claude-3"
-                            assert params["provider"] == "claude"
-                            assert params["prompt_length"] == len(prompt)
+                            assert params == {
+                                "model": "claude-3",
+                                "provider": "claude",
+                                "working_directory": "/tmp",
+                            }
 
-                            # Verify metrics were logged
-                            assert (
-                                mock_metrics.call_count == 2
-                            )  # Main metrics + usage metrics
+                            # Metrics logged with step=0
+                            mock_metrics.assert_called_once()
+                            call_args = mock_metrics.call_args
+                            metrics = call_args[0][0]
+                            assert "prompt_length" in metrics
+                            assert "duration_ms" in metrics
+                            assert "cost_usd" in metrics
+                            assert call_args[1]["step"] == 0
 
-                            # Verify artifacts were logged
-                            assert (
-                                mock_artifact.call_count == 2
-                            )  # Prompt + conversation JSON
+                            # 3 artifacts: all_params, prompt, conversation
+                            assert mock_artifact.call_count == 3
+                            artifact_names = [
+                                c[0][1] for c in mock_artifact.call_args_list
+                            ]
+                            assert "step_0_all_params.json" in artifact_names
+                            assert "step_0_prompt.txt" in artifact_names
+                            assert "step_0_conversation.json" in artifact_names
+
+                            # Step advanced to 1
+                            assert logger.current_step() == 1
+
+    def test_log_conversation_step1_skips_params(self) -> None:
+        """Test log_conversation at step 1 skips params, uses step_1_ prefixes."""
+        mock_mlflow = MagicMock()
+
+        with patch.dict("sys.modules", {"mlflow": mock_mlflow}):
+            with patch(
+                "mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True
+            ):
+                logger = MLflowLogger(self.config)
+                logger.active_run_id = "test-run"
+                logger._run_step_count["test-run"] = 1  # simulate step 1
+
+                prompt = "Follow-up question"
+                response_data = {
+                    "provider": "claude",
+                    "duration_ms": 800,
+                    "cost_usd": 0.005,
+                    "raw_response": {},
+                }
+                metadata = {"model": "claude-3", "working_directory": "/tmp"}
+
+                with patch.object(logger, "log_params") as mock_params:
+                    with patch.object(logger, "log_metrics") as mock_metrics:
+                        with patch.object(logger, "log_artifact") as mock_artifact:
+                            logger.log_conversation(prompt, response_data, metadata)
+
+                            # Step 1: NO params logged
+                            mock_params.assert_not_called()
+
+                            # Metrics logged with step=1
+                            mock_metrics.assert_called_once()
+                            assert mock_metrics.call_args[1]["step"] == 1
+
+                            # Artifacts prefixed step_1_
+                            artifact_names = [
+                                c[0][1] for c in mock_artifact.call_args_list
+                            ]
+                            assert "step_1_all_params.json" in artifact_names
+                            assert "step_1_prompt.txt" in artifact_names
+                            assert "step_1_conversation.json" in artifact_names
+
+                            # Step advanced to 2
+                            assert logger.current_step() == 2
 
     def test_end_run(self) -> None:
         """Test ending a run."""
@@ -583,7 +640,7 @@ class TestSessionMapBehavior:
     def test_log_conversation_artifacts_logs_params_and_artifacts_not_metrics(
         self,
     ) -> None:
-        """Test log_conversation_artifacts logs params+artifacts but not metrics."""
+        """Test log_conversation_artifacts at step 0 logs stable params+artifacts, no metrics."""
         mock_mlflow = MagicMock()
         with patch.dict("sys.modules", {"mlflow": mock_mlflow}):
             with patch(
@@ -607,13 +664,66 @@ class TestSessionMapBehavior:
                                 "prompt text", response_data, metadata
                             )
 
+                            # Step 0: stable params only
                             mock_params.assert_called_once()
                             params = mock_params.call_args[0][0]
-                            assert "model" in params
-                            assert "provider" in params
-                            assert "prompt_length" in params
-                            assert mock_artifact.call_count == 2
+                            assert params == {
+                                "model": "claude-3",
+                                "provider": "claude",
+                                "working_directory": "/tmp",
+                            }
+
+                            # 3 artifacts: all_params, prompt, conversation
+                            assert mock_artifact.call_count == 3
+                            artifact_names = [
+                                c[0][1] for c in mock_artifact.call_args_list
+                            ]
+                            assert "step_0_all_params.json" in artifact_names
+                            assert "step_0_prompt.txt" in artifact_names
+                            assert "step_0_conversation.json" in artifact_names
+
+                            # No metrics
                             mock_metrics.assert_not_called()
+
+                            # Step advanced to 1
+                            assert logger.current_step() == 1
+
+    def test_log_conversation_artifacts_step1_skips_params(self) -> None:
+        """Test log_conversation_artifacts at step 1 skips params."""
+        mock_mlflow = MagicMock()
+        with patch.dict("sys.modules", {"mlflow": mock_mlflow}):
+            with patch(
+                "mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True
+            ):
+                logger = MLflowLogger(self.config)
+                logger.active_run_id = "run-x"
+                logger._run_step_count["run-x"] = 1  # simulate step 1
+
+                response_data = {"provider": "claude"}
+                metadata = {"model": "claude-3", "working_directory": "/tmp"}
+
+                with patch.object(logger, "log_params") as mock_params:
+                    with patch.object(logger, "log_metrics") as mock_metrics:
+                        with patch.object(logger, "log_artifact") as mock_artifact:
+                            logger.log_conversation_artifacts(
+                                "prompt text", response_data, metadata
+                            )
+
+                            # Step 1: NO params
+                            mock_params.assert_not_called()
+
+                            # Artifacts prefixed step_1_
+                            artifact_names = [
+                                c[0][1] for c in mock_artifact.call_args_list
+                            ]
+                            assert "step_1_all_params.json" in artifact_names
+                            assert "step_1_prompt.txt" in artifact_names
+                            assert "step_1_conversation.json" in artifact_names
+
+                            mock_metrics.assert_not_called()
+
+                            # Step advanced to 2
+                            assert logger.current_step() == 2
 
     def test_lru_eviction_on_101st_entry(self) -> None:
         """Test that the 101st entry evicts the least recently used entry."""
@@ -647,3 +757,52 @@ class TestSessionMapBehavior:
 
                 assert len(logger._session_run_map) == 0
                 assert logger.active_run_id is None
+
+    def test_multi_prompt_session_no_param_conflict(self) -> None:
+        """Regression test for #593: multi-prompt session must not re-log params."""
+        mock_mlflow = MagicMock()
+        mock_run = Mock()
+        mock_run.info.run_id = "run-593"
+        mock_mlflow.start_run.return_value = mock_run
+
+        with patch.dict("sys.modules", {"mlflow": mock_mlflow}):
+            with patch(
+                "mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True
+            ):
+                lgr = MLflowLogger(self.config)
+
+                # --- Prompt 1 ---
+                lgr.start_run(run_name="multi")
+                with (
+                    patch.object(lgr, "log_params") as p1,
+                    patch.object(lgr, "log_metrics") as m1,
+                    patch.object(lgr, "log_artifact"),
+                ):
+                    lgr.log_conversation(
+                        "prompt A",
+                        {"provider": "claude", "duration_ms": 100, "cost_usd": 0.01},
+                        {"model": "claude-3", "working_directory": "/tmp"},
+                    )
+                    p1.assert_called_once()  # step 0 → params logged
+                    m1.assert_called_once()
+                    assert m1.call_args[1]["step"] == 0
+
+                lgr.end_run("FINISHED", session_id="s1")
+
+                # --- Prompt 2 (resumed session) ---
+                lgr.start_run(session_id="s1")
+                with (
+                    patch.object(lgr, "log_params") as p2,
+                    patch.object(lgr, "log_metrics") as m2,
+                    patch.object(lgr, "log_artifact"),
+                ):
+                    lgr.log_conversation(
+                        "prompt B",
+                        {"provider": "claude", "duration_ms": 200, "cost_usd": 0.02},
+                        {"model": "claude-3", "working_directory": "/tmp"},
+                    )
+                    p2.assert_not_called()  # step 1 → NO params (no conflict)
+                    m2.assert_called_once()
+                    assert m2.call_args[1]["step"] == 1
+
+                lgr.end_run("FINISHED", session_id="s1")

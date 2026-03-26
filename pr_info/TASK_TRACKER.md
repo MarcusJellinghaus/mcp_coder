@@ -33,11 +33,11 @@ Detail: [step_1.md](./steps/step_1.md)
 
 Detail: [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: rewrite `log_conversation()` with step-aware params, metrics, and artifacts (tests + production code)
-- [ ] Implementation: rewrite `log_conversation_artifacts()` with step-aware params and artifacts (tests + production code)
-- [ ] Implementation: add multi-prompt session regression test for #593 (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: rewrite `log_conversation()` with step-aware params, metrics, and artifacts (tests + production code)
+- [x] Implementation: rewrite `log_conversation_artifacts()` with step-aware params and artifacts (tests + production code)
+- [x] Implementation: add multi-prompt session regression test for #593 (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Update `mlflow_conversation` context manager for step-prefixed Phase 1 prompt
 
