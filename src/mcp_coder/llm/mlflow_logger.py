@@ -81,6 +81,7 @@ class MLflowLogger:
         self.active_run_id: Optional[str] = None
         self._mlflow_module: Any = None
         self._session_run_map: OrderedDict[str, str] = OrderedDict()
+        self._run_step_count: dict[str, int] = {}
 
         # Only initialize MLflow if it's available and enabled
         if self.config.enabled and is_mlflow_available():
@@ -194,6 +195,17 @@ class MLflowLogger:
         """
         return session_id in self._session_run_map
 
+    def current_step(self) -> int:
+        """Return the current step index for the active run (0 if no run or first step)."""
+        if not self.active_run_id:
+            return 0
+        return self._run_step_count.get(self.active_run_id, 0)
+
+    def _advance_step(self) -> None:
+        """Increment the step counter for the active run."""
+        if self.active_run_id:
+            self._run_step_count[self.active_run_id] = self.current_step() + 1
+
     def start_run(
         self,
         session_id: Optional[str] = None,
@@ -279,11 +291,14 @@ class MLflowLogger:
         ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
             logger.warning(f"Failed to log parameters to MLflow: {e}")
 
-    def log_metrics(self, metrics: Dict[str, float]) -> None:
+    def log_metrics(
+        self, metrics: Dict[str, float], step: Optional[int] = None
+    ) -> None:
         """Log metrics to the current MLflow run.
 
         Args:
             metrics: Metrics to log (must be numeric)
+            step: Optional step index for time-series metrics
         """
         if not self._is_enabled() or not self.active_run_id:
             return
@@ -300,7 +315,11 @@ class MLflowLogger:
                     logger.debug(f"Skipping non-numeric metric '{k}': {v}")
 
             if numeric_metrics:
-                mlflow.log_metrics(numeric_metrics)
+                if step is None:
+                    mlflow.log_metrics(numeric_metrics)
+                else:
+                    for key, value in numeric_metrics.items():
+                        mlflow.log_metric(key, value, step=step)
                 logger.debug(f"Logged {len(numeric_metrics)} metrics to MLflow")
 
         except (
@@ -346,13 +365,66 @@ class MLflowLogger:
         ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
             logger.warning(f"Failed to log artifact '{filename}' to MLflow: {e}")
 
+    def _log_step_params_and_artifacts(
+        self,
+        step: int,
+        prompt: str,
+        response_data: Dict[str, Any],
+        metadata: Dict[str, Any],
+    ) -> None:
+        """Log step params and artifacts shared by conversation logging methods.
+
+        Logs stable params at step 0, plus step-prefixed all_params, prompt,
+        and conversation artifacts. Does NOT advance the step counter.
+
+        Args:
+            step: Current step index
+            prompt: The user prompt
+            response_data: LLM response data
+            metadata: Additional metadata
+        """
+        # Stable params only at step 0
+        if step == 0:
+            stable_params = {
+                "model": metadata.get("model", "unknown"),
+                "provider": response_data.get("provider", "unknown"),
+                "working_directory": metadata.get("working_directory"),
+            }
+            self.log_params(stable_params)
+
+        # All param values as step artifact
+        all_params = {
+            "model": metadata.get("model", "unknown"),
+            "provider": response_data.get("provider", "unknown"),
+            "working_directory": metadata.get("working_directory"),
+            "branch_name": metadata.get("branch_name"),
+            "step_name": metadata.get("step_name"),
+            "prompt_length": len(prompt),
+        }
+        self.log_artifact(
+            json.dumps(all_params, indent=2, default=str),
+            f"step_{step}_all_params.json",
+        )
+
+        # Step-prefixed artifacts
+        self.log_artifact(prompt, f"step_{step}_prompt.txt")
+        conversation_data = {
+            "prompt": prompt,
+            "response_data": response_data,
+            "metadata": metadata,
+        }
+        self.log_artifact(
+            json.dumps(conversation_data, indent=2, default=str),
+            f"step_{step}_conversation.json",
+        )
+
     def log_conversation(
         self,
         prompt: str,
         response_data: Dict[str, Any],
         metadata: Dict[str, Any],
     ) -> None:
-        """Log a complete conversation to MLflow with advanced metrics.
+        """Log a complete conversation to MLflow with step-aware metrics.
 
         Args:
             prompt: The user prompt
@@ -363,72 +435,43 @@ class MLflowLogger:
             return
 
         try:
-            # Extract relevant information for logging
+            step = self.current_step()
             session_info = response_data.get("raw_response", {}).get("session_info", {})
 
-            # Log parameters
-            params = {
-                "model": metadata.get("model", "unknown"),
-                "provider": response_data.get("provider", "unknown"),
-                "working_directory": metadata.get("working_directory"),
-                "branch_name": metadata.get("branch_name"),
-                "step_name": metadata.get("step_name"),
-                "prompt_length": len(prompt),
+            self._log_step_params_and_artifacts(step, prompt, response_data, metadata)
+
+            # Collect all numeric metrics
+            numeric_metrics: Dict[str, float] = {
+                "prompt_length": float(len(prompt)),
             }
-
-            self.log_params(params)
-
-            # Log basic metrics
-            basic_metrics = {}
             if "duration_ms" in response_data:
-                basic_metrics["duration_ms"] = float(response_data["duration_ms"])
+                numeric_metrics["duration_ms"] = float(response_data["duration_ms"])
             if "cost_usd" in response_data:
-                basic_metrics["cost_usd"] = float(response_data["cost_usd"])
+                numeric_metrics["cost_usd"] = float(response_data["cost_usd"])
 
-            if basic_metrics:
-                self.log_metrics(basic_metrics)
-
-            # Log usage metrics separately (to maintain test expectations)
-            usage_metrics = {}
+            # Usage metrics
             if isinstance(session_info, dict):
                 usage = session_info.get("usage", {})
                 if isinstance(usage, dict):
                     for key, value in usage.items():
                         if isinstance(value, (int, float)):
-                            usage_metrics[f"usage_{key}"] = float(value)
+                            numeric_metrics[f"usage_{key}"] = float(value)
 
-            # Add performance metrics if available
+            # Performance metrics
             if ConversationMetrics is not None:
                 try:
                     metrics_calculator = ConversationMetrics()
-
-                    # Performance metrics
                     perf_metrics = metrics_calculator.extract_performance_metrics(
                         response_data
                     )
-                    usage_metrics.update(perf_metrics)
-
+                    numeric_metrics.update(perf_metrics)
                 except (
                     Exception
                 ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
                     logger.debug(f"Failed to calculate performance metrics: {e}")
 
-            if usage_metrics:
-                self.log_metrics(usage_metrics)
-
-            # Log artifacts
-            self.log_artifact(prompt, "prompt.txt")
-
-            # Log full conversation data as JSON
-            conversation_data = {
-                "prompt": prompt,
-                "response_data": response_data,
-                "metadata": metadata,
-            }
-            self.log_artifact(
-                json.dumps(conversation_data, indent=2, default=str),
-                "conversation.json",
-            )
+            self.log_metrics(numeric_metrics, step=step)
+            self._advance_step()
 
         except (
             Exception
@@ -466,7 +509,8 @@ class MLflowLogger:
                 ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
                     logger.debug(f"Failed to calculate advanced error metrics: {e}")
 
-            self.log_metrics(error_metrics)
+            self.log_metrics(error_metrics, step=self.current_step())
+            self._advance_step()
 
         except (
             Exception
@@ -489,25 +533,9 @@ class MLflowLogger:
         if not self._is_enabled() or not self.active_run_id:
             return
 
-        params = {
-            "model": metadata.get("model", "unknown"),
-            "provider": response_data.get("provider", "unknown"),
-            "working_directory": metadata.get("working_directory"),
-            "branch_name": metadata.get("branch_name"),
-            "step_name": metadata.get("step_name"),
-            "prompt_length": len(prompt),
-        }
-        self.log_params(params)
-
-        self.log_artifact(prompt, "prompt.txt")
-        conversation_data = {
-            "prompt": prompt,
-            "response_data": response_data,
-            "metadata": metadata,
-        }
-        self.log_artifact(
-            json.dumps(conversation_data, indent=2, default=str), "conversation.json"
-        )
+        step = self.current_step()
+        self._log_step_params_and_artifacts(step, prompt, response_data, metadata)
+        self._advance_step()
 
     def end_run(
         self, status: str = "FINISHED", session_id: Optional[str] = None
@@ -524,12 +552,17 @@ class MLflowLogger:
         try:
             import mlflow  # pylint: disable=import-error
 
+            # Clean up step count when run won't be resumed
+            if session_id is None and self.active_run_id in self._run_step_count:
+                del self._run_step_count[self.active_run_id]
+
             # Store session→run mapping with LRU eviction before clearing run_id
             if session_id is not None:
                 self._session_run_map.pop(session_id, None)  # reset LRU order
                 self._session_run_map[session_id] = self.active_run_id
                 if len(self._session_run_map) > self._MAX_SESSION_MAP_SIZE:
-                    self._session_run_map.popitem(last=False)  # evict LRU
+                    _, evicted_run_id = self._session_run_map.popitem(last=False)
+                    self._run_step_count.pop(evicted_run_id, None)  # evict LRU
 
             mlflow.end_run(status=status)
             logger.debug(f"Ended MLflow run: {self.active_run_id}")

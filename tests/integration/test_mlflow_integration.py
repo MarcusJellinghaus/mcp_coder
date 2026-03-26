@@ -324,11 +324,16 @@ class TestMLflowWithRealInstallation:
             params = cursor.fetchall()
             assert len(params) > 0, "No parameters found in database"
 
-            # Verify expected parameters
+            # Verify expected parameters (only stable params at step 0)
             param_dict = {param[0]: param[1] for param in params}
             assert param_dict.get("model") == "claude-3-sonnet"
             assert param_dict.get("provider") == "claude"
-            assert param_dict.get("branch_name") == "test-branch"
+            # branch_name is now in step_0_all_params.json artifact, not params
+            assert "branch_name" not in param_dict
+
+            # Verify prompt_length is now a metric, not a param
+            assert "prompt_length" not in param_dict
+            assert "prompt_length" in metric_keys
 
             # Verify artifacts are referenced in the database
             cursor.execute(
@@ -338,12 +343,6 @@ class TestMLflowWithRealInstallation:
             assert run_result is not None, "No run found"
             _, artifact_uri = run_result
             assert artifact_uri is not None, "No artifact URI in database"
-
-            # Verify prompt_length parameter was logged (indicates prompt was captured)
-            assert "prompt_length" in param_dict, "prompt_length parameter not logged"
-            assert int(param_dict["prompt_length"]) == len(
-                prompt
-            ), "prompt_length mismatch"
 
             conn.close()
 
@@ -365,17 +364,19 @@ class TestMLflowWithRealInstallation:
                 artifact_path.is_dir()
             ), f"Artifact path is not a directory: {artifact_path}"
 
-            # Verify prompt.txt exists and contains prompt
-            prompt_file = artifact_path / "prompt.txt"
-            assert prompt_file.exists(), f"prompt.txt not found at {prompt_file}"
+            # Verify step_0_prompt.txt exists and contains prompt
+            prompt_file = artifact_path / "step_0_prompt.txt"
+            assert prompt_file.exists(), f"step_0_prompt.txt not found at {prompt_file}"
             prompt_content = prompt_file.read_text(encoding="utf-8")
-            assert prompt in prompt_content, "Prompt text not found in prompt.txt"
+            assert (
+                prompt in prompt_content
+            ), "Prompt text not found in step_0_prompt.txt"
 
-            # Verify conversation.json exists and contains conversation data
-            conversation_file = artifact_path / "conversation.json"
+            # Verify step_0_conversation.json exists and contains conversation data
+            conversation_file = artifact_path / "step_0_conversation.json"
             assert (
                 conversation_file.exists()
-            ), f"conversation.json not found at {conversation_file}"
+            ), f"step_0_conversation.json not found at {conversation_file}"
             conversation_json = json.loads(
                 conversation_file.read_text(encoding="utf-8")
             )
