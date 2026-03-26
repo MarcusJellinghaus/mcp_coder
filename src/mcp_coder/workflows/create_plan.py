@@ -26,7 +26,6 @@ from mcp_coder.utils.github_operations.issues import (
     IssueData,
     IssueManager,
 )
-from mcp_coder.utils.log_utils import NOTICE
 from mcp_coder.workflow_utils.task_tracker import TASK_TRACKER_TEMPLATE
 
 # Setup logger
@@ -80,7 +79,7 @@ def check_prerequisites(project_dir: Path, issue_number: int) -> tuple[bool, Iss
                 "Please commit or stash your changes before creating a plan."
             )
             return (False, empty_issue_data)
-        logger.log(NOTICE, "✓ Git working directory is clean")
+        logger.info("✓ Git working directory is clean")
     except ValueError as e:
         logger.error(f"✗ Error checking git status: {e}")
         return (False, empty_issue_data)
@@ -100,9 +99,7 @@ def check_prerequisites(project_dir: Path, issue_number: int) -> tuple[bool, Iss
             logger.error(f"✗ Issue #{issue_number} not found or not accessible")
             return (False, empty_issue_data)
 
-        logger.log(
-            NOTICE, f"✓ Issue #{issue_data['number']} exists: '{issue_data['title']}'"
-        )
+        logger.info(f"✓ Issue #{issue_data['number']} exists: '{issue_data['title']}'")
 
     except (
         Exception
@@ -110,7 +107,7 @@ def check_prerequisites(project_dir: Path, issue_number: int) -> tuple[bool, Iss
         logger.error(f"✗ Error fetching issue #{issue_number}: {e}")
         return (False, empty_issue_data)
 
-    logger.log(NOTICE, "All prerequisites passed")
+    logger.info("All prerequisites passed")
     return (True, issue_data)
 
 
@@ -143,7 +140,7 @@ def manage_branch(
         # If linked branches exist, use the first one
         if linked_branches:
             branch_name = linked_branches[0]
-            logger.log(NOTICE, "Using existing linked branch: %s", branch_name)
+            logger.info("Using existing linked branch: %s", branch_name)
         else:
             # Create new branch on GitHub
             result = manager.create_remote_branch_for_issue(
@@ -156,14 +153,14 @@ def manage_branch(
                 )
                 return None
             branch_name = result["branch_name"]
-            logger.log(NOTICE, "Created new branch: %s", branch_name)
+            logger.info("Created new branch: %s", branch_name)
 
         # Checkout the branch locally
         if not checkout_branch(branch_name, project_dir):
             logger.error("Failed to checkout branch: %s", branch_name)
             return None
 
-        logger.log(NOTICE, "Switched to branch: %s", branch_name)
+        logger.info("Switched to branch: %s", branch_name)
         return branch_name
 
     except (
@@ -216,7 +213,7 @@ def create_pr_info_structure(project_dir: Path) -> bool:
         task_tracker_path = pr_info_dir / "TASK_TRACKER.md"
         task_tracker_path.write_text(TASK_TRACKER_TEMPLATE, encoding="utf-8")
 
-        logger.log(NOTICE, "Created pr_info/ directory structure successfully")
+        logger.info("Created pr_info/ directory structure successfully")
         return True
 
     except (
@@ -327,7 +324,7 @@ def run_planning_prompts(
     logger.debug(f"LLM provider: {provider}")
 
     # Execute first prompt
-    logger.log(NOTICE, "Executing prompt 1: Initial Analysis...")
+    logger.info("Executing prompt 1: Initial Analysis...")
     logger.debug(f"Sending {len(formatted_prompt_1)} chars to LLM with timeout=600s")
     try:
         response_1 = prompt_llm(
@@ -350,7 +347,7 @@ def run_planning_prompts(
             logger.error("Prompt 1 did not return session_id")
             return False
 
-        logger.log(NOTICE, f"Prompt 1 completed (session: {session_id})")
+        logger.info(f"Prompt 1 completed (session: {session_id})")
 
         # Store conversation for logging/debugging
         try:
@@ -371,7 +368,7 @@ def run_planning_prompts(
         return False
 
     # Execute second prompt with session continuation
-    logger.log(NOTICE, "Executing prompt 2: Simplification Review...")
+    logger.info("Executing prompt 2: Simplification Review...")
     logger.debug(
         f"Sending {len(prompt_2)} chars to LLM with session_id={session_id[:16]}... timeout=600s"
     )
@@ -391,7 +388,7 @@ def run_planning_prompts(
             logger.error("Prompt 2 returned empty response")
             return False
 
-        logger.log(NOTICE, "Prompt 2 completed")
+        logger.info("Prompt 2 completed")
 
         # Store conversation for logging/debugging
         try:
@@ -412,7 +409,7 @@ def run_planning_prompts(
         return False
 
     # Execute third prompt with session continuation
-    logger.log(NOTICE, "Executing prompt 3: Implementation Plan Creation...")
+    logger.info("Executing prompt 3: Implementation Plan Creation...")
     logger.debug(
         f"Sending {len(prompt_3)} chars to LLM with session_id={session_id[:16]}... timeout={PROMPT_3_TIMEOUT}s"
     )
@@ -432,7 +429,7 @@ def run_planning_prompts(
             logger.error("Prompt 3 returned empty response")
             return False
 
-        logger.log(NOTICE, "Prompt 3 completed")
+        logger.info("Prompt 3 completed")
 
         # Store conversation for logging/debugging
         try:
@@ -454,7 +451,7 @@ def run_planning_prompts(
         logger.error(f"Error executing prompt 3: {e}")
         return False
 
-    logger.log(NOTICE, "All planning prompts executed successfully")
+    logger.info("All planning prompts executed successfully")
     logger.info(f"Full conversation session ID: {session_id}")
     logger.info(f"Conversation logs stored in: {session_storage_path}/")
     return True
@@ -482,7 +479,7 @@ def validate_output_files(project_dir: Path) -> bool:
         logger.error(f"Required file not found: {step_1_path}")
         return False
 
-    logger.log(NOTICE, "✓ Required output files exist")
+    logger.info("✓ Required output files exist")
     return True
 
 
@@ -564,14 +561,14 @@ def run_create_plan_workflow(
     logger.info(f"LLM provider: {provider}")
 
     # Step 1: Validate prerequisites
-    logger.log(NOTICE, "Step 1/7: Validating prerequisites...")
+    logger.info("Step 1/7: Validating prerequisites...")
     success, issue_data = check_prerequisites(project_dir, issue_number)
     if not success:
         logger.error("Prerequisites validation failed")
         return 1
 
     # Step 2: Manage branch
-    logger.log(NOTICE, "Step 2/7: Managing branch...")
+    logger.info("Step 2/7: Managing branch...")
     base_branch = issue_data.get("base_branch")
     if base_branch:
         logger.info(f"Using base branch from issue: {base_branch}")
@@ -586,7 +583,7 @@ def run_create_plan_workflow(
         return 1
 
     # Step 3: Check pr_info/ doesn't exist and create structure
-    logger.log(NOTICE, "Step 3/7: Setting up pr_info/ directory structure...")
+    logger.info("Step 3/7: Setting up pr_info/ directory structure...")
     if not check_pr_info_not_exists(project_dir):
         logger.error(
             "pr_info/ directory already exists. Please clean up before creating a new plan."
@@ -598,16 +595,15 @@ def run_create_plan_workflow(
         return 1
 
     # Step 4: Run initial analysis
-    logger.log(
-        NOTICE,
+    logger.info(
         f"Step 4/7: Running initial analysis for issue #{issue_number} '{issue_data['title']}'...",
     )
 
     # Step 5: Run simplification review
-    logger.log(NOTICE, "Step 5/7: Running simplification review...")
+    logger.info("Step 5/7: Running simplification review...")
 
     # Step 6: Generate implementation plan
-    logger.log(NOTICE, "Step 6/7: Generating implementation plan...")
+    logger.info("Step 6/7: Generating implementation plan...")
     if not run_planning_prompts(
         project_dir, issue_data, provider, mcp_config, execution_dir
     ):
@@ -615,27 +611,27 @@ def run_create_plan_workflow(
         return 1
 
     # Step 7: Validate output files
-    logger.log(NOTICE, "Step 7/7: Validating output files...")
+    logger.info("Step 7/7: Validating output files...")
     if not validate_output_files(project_dir):
         logger.error("Output files validation failed")
         return 1
 
     # Commit changes
-    logger.log(NOTICE, "Committing generated plan...")
+    logger.info("Committing generated plan...")
     commit_message = f"Initial plan generated for issue #{issue_number}"
     commit_result = commit_all_changes(commit_message, project_dir)
     if not commit_result["success"]:
         logger.warning(f"Commit failed: {commit_result.get('error')}")
     else:
-        logger.log(NOTICE, f"Committed with hash: {commit_result['commit_hash']}")
+        logger.info(f"Committed with hash: {commit_result['commit_hash']}")
 
     # Push changes
-    logger.log(NOTICE, "Pushing changes to remote...")
+    logger.info("Pushing changes to remote...")
     push_result = git_push(project_dir)
     if not push_result["success"]:
         logger.warning(f"Push failed: {push_result.get('error')}")
     else:
-        logger.log(NOTICE, "Successfully pushed changes to remote")
+        logger.info("Successfully pushed changes to remote")
 
     # Update GitHub issue label if requested
     if update_labels:
@@ -648,7 +644,7 @@ def run_create_plan_workflow(
             )
 
             if success:
-                logger.log(NOTICE, "✓ Issue label updated: planning → plan-review")
+                logger.info("✓ Issue label updated: planning → plan-review")
             else:
                 logger.warning("✗ Failed to update issue label (non-blocking)")
 
@@ -657,5 +653,5 @@ def run_create_plan_workflow(
         ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.error(f"Error updating issue label (non-blocking): {e}")
 
-    logger.log(NOTICE, "Create plan workflow completed successfully!")
+    logger.info("Create plan workflow completed successfully!")
     return 0

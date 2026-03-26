@@ -10,7 +10,6 @@ from ...utils.folder_deletion import (
 )
 from ...utils.github_operations.issues import IssueData, IssueManager
 from ...utils.github_operations.issues.cache import get_all_cached_issues
-from ...utils.log_utils import NOTICE
 from .config import _get_configured_repos, get_github_username
 from .issues import (
     get_ignore_labels,
@@ -226,14 +225,14 @@ def delete_session_folder(session: VSCodeClaudeSession) -> bool:
                         deletion.detail or folder_path,
                     )
                 return False
-            logger.log(NOTICE, "Deleted folder: %s", folder_path)
+            logger.info("Deleted folder: %s", folder_path)
 
         # Also delete the workspace file if it exists
         workspace_base = folder_path.parent
         workspace_file = workspace_base / f"{folder_path.name}.code-workspace"
         if workspace_file.exists():
             workspace_file.unlink()
-            logger.log(NOTICE, "Deleted workspace file: %s", workspace_file)
+            logger.info("Deleted workspace file: %s", workspace_file)
 
         # Remove session from store
         remove_session(session["folder"])

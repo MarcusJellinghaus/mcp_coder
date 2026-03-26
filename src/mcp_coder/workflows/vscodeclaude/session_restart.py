@@ -11,7 +11,6 @@ from ...utils.github_operations.issues import (
     IssueManager,
     get_all_cached_issues,
 )
-from ...utils.log_utils import NOTICE
 from ...utils.subprocess_runner import (
     CalledProcessError,
     CommandOptions,
@@ -271,8 +270,7 @@ def restart_closed_sessions(
         if not folder_path.exists():
             # Remove orphaned session
             remove_session(session["folder"])
-            logger.log(
-                NOTICE,
+            logger.info(
                 "Removed orphaned session for issue #%d (folder missing)",
                 session["issue_number"],
             )

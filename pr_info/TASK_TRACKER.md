@@ -38,9 +38,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 3: Revert workflow and utility files from NOTICE logging to INFO logging
 > [Detail](./steps/step_3.md) — 11 workflow/utility files
 
-- [ ] Implementation: revert `logger.log(NOTICE, ...)` → `logger.info(...)` and remove NOTICE imports in all 11 files
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: revert `logger.log(NOTICE, ...)` → `logger.info(...)` and remove NOTICE imports in all 11 files
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
