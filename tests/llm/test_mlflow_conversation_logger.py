@@ -21,6 +21,7 @@ class TestMlflowConversationHappyPath:
         mock_logger = MagicMock()
         mock_logger._is_enabled.return_value = True
         mock_logger.has_session.return_value = False
+        mock_logger.current_step.return_value = 0
         mock_get_logger.return_value = mock_logger
 
         response_data = {"text": "hello", "session_id": "sid-1", "provider": "claude"}
@@ -34,7 +35,7 @@ class TestMlflowConversationHappyPath:
             # Verify Phase 1 happened: start_run and log_artifact called
             mock_logger.start_run.assert_called_once()
             mock_logger.log_artifact.assert_called_once_with(
-                "What is Python?", "prompt.txt"
+                "What is Python?", "step_0_prompt.txt"
             )
             # Caller sets response_data
             result["response_data"] = response_data
@@ -51,6 +52,7 @@ class TestMlflowConversationHappyPath:
         mock_logger = MagicMock()
         mock_logger._is_enabled.return_value = True
         mock_logger.has_session.return_value = False
+        mock_logger.current_step.return_value = 0
         mock_get_logger.return_value = mock_logger
 
         with mlflow_conversation(prompt="hi", provider="claude") as result:
@@ -71,6 +73,7 @@ class TestMlflowConversationErrorPath:
         mock_logger = MagicMock()
         mock_logger._is_enabled.return_value = True
         mock_logger.has_session.return_value = False
+        mock_logger.current_step.return_value = 0
         mock_get_logger.return_value = mock_logger
 
         with pytest.raises(ValueError, match="boom"):
@@ -126,6 +129,7 @@ class TestMlflowConversationSessionReuse:
         mock_logger = MagicMock()
         mock_logger._is_enabled.return_value = True
         mock_logger.has_session.return_value = True
+        mock_logger.current_step.return_value = 0
         mock_get_logger.return_value = mock_logger
 
         with mlflow_conversation(
@@ -141,6 +145,29 @@ class TestMlflowConversationSessionReuse:
         assert "resuming" in call_kwargs["run_name"]
         assert call_kwargs["session_id"] == "sid-existing"
 
+    @patch("mcp_coder.llm.mlflow_conversation_logger.get_mlflow_logger")
+    def test_resumed_session_uses_step_1_prompt_artifact(
+        self, mock_get_logger: Any
+    ) -> None:
+        """When resuming a session at step 1, Phase 1 artifact is step_1_prompt.txt."""
+        mock_logger = MagicMock()
+        mock_logger._is_enabled.return_value = True
+        mock_logger.has_session.return_value = True
+        mock_logger.current_step.return_value = 1
+        mock_get_logger.return_value = mock_logger
+
+        with mlflow_conversation(
+            prompt="hi", provider="claude", session_id="sid-x"
+        ) as result:
+            result["response_data"] = {
+                "text": "ok",
+                "session_id": "sid-x",
+                "provider": "claude",
+            }
+
+        # Phase 1 artifact should be step_1_prompt.txt
+        mock_logger.log_artifact.assert_any_call("hi", "step_1_prompt.txt")
+
 
 class TestMlflowConversationPhase2Failure:
     """Test that Phase 2 failures are swallowed with a warning."""
@@ -153,6 +180,7 @@ class TestMlflowConversationPhase2Failure:
         mock_logger = MagicMock()
         mock_logger._is_enabled.return_value = True
         mock_logger.has_session.return_value = False
+        mock_logger.current_step.return_value = 0
         mock_logger.log_conversation.side_effect = RuntimeError("mlflow down")
         mock_get_logger.return_value = mock_logger
 
@@ -176,6 +204,7 @@ class TestMlflowConversationKilledPath:
         mock_logger = MagicMock()
         mock_logger._is_enabled.return_value = True
         mock_logger.has_session.return_value = False
+        mock_logger.current_step.return_value = 0
         mock_get_logger.return_value = mock_logger
 
         with mlflow_conversation(
@@ -196,6 +225,7 @@ class TestMlflowConversationToolTrace:
         mock_logger = MagicMock()
         mock_logger._is_enabled.return_value = True
         mock_logger.has_session.return_value = False
+        mock_logger.current_step.return_value = 0
         mock_get_logger.return_value = mock_logger
 
         tool_trace = [
@@ -216,7 +246,7 @@ class TestMlflowConversationToolTrace:
         # prompt.txt artifact + tool_trace.json artifact
         artifact_calls = mock_logger.log_artifact.call_args_list
         assert len(artifact_calls) == 2
-        assert artifact_calls[0] == call("test", "prompt.txt")
+        assert artifact_calls[0] == call("test", "step_0_prompt.txt")
         # Verify tool_trace.json content
         trace_content = artifact_calls[1][0][0]
         assert artifact_calls[1][0][1] == "tool_trace.json"
@@ -228,6 +258,7 @@ class TestMlflowConversationToolTrace:
         mock_logger = MagicMock()
         mock_logger._is_enabled.return_value = True
         mock_logger.has_session.return_value = False
+        mock_logger.current_step.return_value = 0
         mock_get_logger.return_value = mock_logger
 
         response_data = {
@@ -245,7 +276,7 @@ class TestMlflowConversationToolTrace:
         # Only prompt.txt artifact, no tool_trace.json
         artifact_calls = mock_logger.log_artifact.call_args_list
         assert len(artifact_calls) == 1
-        assert artifact_calls[0] == call("test", "prompt.txt")
+        assert artifact_calls[0] == call("test", "step_0_prompt.txt")
 
     @patch("mcp_coder.llm.mlflow_conversation_logger.get_mlflow_logger")
     def test_no_tool_trace_artifact_when_empty_list(self, mock_get_logger: Any) -> None:
@@ -253,6 +284,7 @@ class TestMlflowConversationToolTrace:
         mock_logger = MagicMock()
         mock_logger._is_enabled.return_value = True
         mock_logger.has_session.return_value = False
+        mock_logger.current_step.return_value = 0
         mock_get_logger.return_value = mock_logger
 
         response_data = {
@@ -267,6 +299,7 @@ class TestMlflowConversationToolTrace:
         ) as result:
             result["response_data"] = response_data
 
-        # Only prompt.txt artifact
+        # Only step_0_prompt.txt artifact
         artifact_calls = mock_logger.log_artifact.call_args_list
         assert len(artifact_calls) == 1
+        assert artifact_calls[0] == call("test", "step_0_prompt.txt")

@@ -43,9 +43,9 @@ Detail: [step_2.md](./steps/step_2.md)
 
 Detail: [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: use `current_step()` for step-prefixed Phase 1 prompt artifact naming, update existing test assertions, add resumed-session test (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: use `current_step()` for step-prefixed Phase 1 prompt artifact naming, update existing test assertions, add resumed-session test (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

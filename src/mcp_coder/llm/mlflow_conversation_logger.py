@@ -48,7 +48,8 @@ def mlflow_conversation(
     mlflow_logger.start_run(
         session_id=session_id, run_name=run_name, tags={"provider": provider}
     )
-    mlflow_logger.log_artifact(prompt, "prompt.txt")
+    step = mlflow_logger.current_step()
+    mlflow_logger.log_artifact(prompt, f"step_{step}_prompt.txt")
 
     result: dict[str, Any] = {"response_data": None, "error": None}
     try:
