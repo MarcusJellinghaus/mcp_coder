@@ -509,6 +509,8 @@ def add_gh_tool_parsers(subparsers: Any) -> None:
     )
     set_status_parser.add_argument(
         "status_label",
+        nargs="?",
+        default=None,
         help="Status label to set (e.g., status-05:plan-ready)",
     )
     set_status_parser.add_argument(

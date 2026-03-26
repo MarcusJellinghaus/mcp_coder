@@ -285,6 +285,76 @@ class TestExecuteSetStatus:
     @patch("mcp_coder.cli.commands.set_status.load_labels_config")
     @patch("mcp_coder.cli.commands.set_status.get_labels_config_path")
     @patch("mcp_coder.cli.commands.set_status.resolve_project_dir")
+    def test_execute_set_status_no_args_shows_labels(
+        self,
+        mock_resolve_dir: MagicMock,
+        mock_get_config_path: MagicMock,
+        mock_load_config: MagicMock,
+        mock_issue_manager_class: MagicMock,
+        mock_is_working_directory_clean: MagicMock,
+        tmp_path: Path,
+        full_labels_config: Dict[str, Any],
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test no-args prints available labels and returns 0."""
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        mock_resolve_dir.return_value = project_dir
+        mock_get_config_path.return_value = project_dir / "config" / "labels.json"
+        mock_load_config.return_value = full_labels_config
+
+        args = argparse.Namespace(
+            status_label=None,
+            issue=None,
+            project_dir=str(project_dir),
+            force=False,
+        )
+
+        result = execute_set_status(args)
+
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "Available status labels" in captured.out
+        # Verify no side effects occurred
+        mock_is_working_directory_clean.assert_not_called()
+        mock_issue_manager_class.assert_not_called()
+
+    @patch("mcp_coder.cli.commands.set_status.load_labels_config")
+    @patch("mcp_coder.cli.commands.set_status.get_labels_config_path")
+    @patch("mcp_coder.cli.commands.set_status.resolve_project_dir")
+    def test_execute_set_status_no_args_fallback_config(
+        self,
+        mock_resolve_dir: MagicMock,
+        mock_get_config_path: MagicMock,
+        mock_load_config: MagicMock,
+        full_labels_config: Dict[str, Any],
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test no-args falls back to bundled config when project dir fails."""
+        mock_resolve_dir.side_effect = ValueError("No project dir")
+        mock_get_config_path.return_value = Path("/fallback/labels.json")
+        mock_load_config.return_value = full_labels_config
+
+        args = argparse.Namespace(
+            status_label=None,
+            issue=None,
+            project_dir=None,
+            force=False,
+        )
+
+        result = execute_set_status(args)
+
+        assert result == 0
+        # Should have called get_labels_config_path with None (fallback)
+        mock_get_config_path.assert_called_with(None)
+        captured = capsys.readouterr()
+        assert "Available status labels" in captured.out
+
+    @patch("mcp_coder.cli.commands.set_status.is_working_directory_clean")
+    @patch("mcp_coder.cli.commands.set_status.IssueManager")
+    @patch("mcp_coder.cli.commands.set_status.load_labels_config")
+    @patch("mcp_coder.cli.commands.set_status.get_labels_config_path")
+    @patch("mcp_coder.cli.commands.set_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.set_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.set_status.extract_issue_number_from_branch")
     def test_execute_success_with_branch_detection(

@@ -209,9 +209,11 @@ def _update_issue_labels(
 def execute_set_status(args: argparse.Namespace) -> int:
     """Execute the set-status command.
 
+    When called without a status_label, prints available labels and exits 0.
+
     Args:
         args: Parsed CLI arguments with:
-            - status_label: The status label to set
+            - status_label: The status label to set (None to list labels)
             - issue: Optional explicit issue number
             - project_dir: Optional project directory
 
@@ -219,6 +221,17 @@ def execute_set_status(args: argparse.Namespace) -> int:
         Exit code (0=success, 1=error)
     """
     try:
+        # No-args: print available labels and exit
+        if args.status_label is None:
+            try:
+                project_dir = resolve_project_dir(args.project_dir)
+                config_path = get_labels_config_path(project_dir)
+            except (ValueError, FileNotFoundError, OSError):
+                config_path = get_labels_config_path(None)
+            labels_config = load_labels_config(config_path)
+            print(format_status_labels(labels_config))
+            return 0
+
         # Step 1: Resolve project directory
         project_dir = resolve_project_dir(args.project_dir)
 

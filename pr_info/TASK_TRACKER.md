@@ -33,9 +33,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 > [Detail](./steps/step_2.md) — Make `status_label` argument optional (`nargs="?"`), add no-args early return printing available labels, update docstring.
 
-- [ ] Implementation: tests (`test_execute_set_status_no_args_shows_labels`, `test_execute_set_status_no_args_fallback_config`) + production code (parser change, no-args path in `execute_set_status`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests (`test_execute_set_status_no_args_shows_labels`, `test_execute_set_status_no_args_fallback_config`) + production code (parser change, no-args path in `execute_set_status`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
