@@ -39,7 +39,6 @@ Orchestration and monitoring of automated development across repositories.
 | [`coordinator`](#coordinator) | Monitor and dispatch workflows for GitHub issues |
 | [`vscodeclaude launch`](#vscodeclaude-launch) | Launch VS Code sessions for issues needing human review |
 | [`vscodeclaude status`](#vscodeclaude-status) | Show current VS Code session status |
-| [`gh-tool issue-stats`](#gh-tool-issue-stats) | Display issue statistics grouped by workflow status category |
 
 ### Quality Checks
 Branch readiness verification and code quality tools.
@@ -311,7 +310,7 @@ mcp-coder coordinator (--all | --repo REPO_NAME) [OPTIONS]
 - `--repo NAME` - Process single repository (required if --all not specified)
 
 **Additional Options:**
-- `--dry-run` - Preview what would be dispatched without executing
+- `--dry-run` - Trigger Jenkins integration test for repository
 - `--force-refresh` - Force full cache refresh, bypass all caching
 
 **Description:** Monitor GitHub issues and automatically dispatch workflows (create-plan, implement, create-pr) based on issue labels and status.

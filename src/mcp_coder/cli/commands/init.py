@@ -31,7 +31,9 @@ def execute_init(_args: argparse.Namespace) -> int:
         print("Please update it with your actual credentials and settings.")
         print("\nNext steps:")
         print("  mcp-coder verify          Check your setup")
-        print("  mcp-coder define-labels   Sync workflow labels to your GitHub repo")
+        print(
+            "  mcp-coder gh-tool define-labels   Sync workflow labels to your GitHub repo"
+        )
     else:
         print(f"Config already exists: {path}")
 
