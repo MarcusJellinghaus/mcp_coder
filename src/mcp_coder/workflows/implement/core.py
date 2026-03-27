@@ -118,7 +118,14 @@ def _short_sha(sha: str) -> str:
 
 
 def _get_diff_stat(project_dir: Path) -> str:
-    """Get git diff --stat for uncommitted changes. Returns empty string on error."""
+    """Get git diff --stat for uncommitted changes.
+
+    Args:
+        project_dir: Path to the project directory
+
+    Returns:
+        Git diff stat output as a string, or empty string on error.
+    """
     try:
         with _safe_repo_context(project_dir) as repo:
             return str(repo.git.diff("--stat"))
@@ -127,7 +134,15 @@ def _get_diff_stat(project_dir: Path) -> str:
 
 
 def _format_failure_comment(failure: WorkflowFailure, diff_stat: str) -> str:
-    """Format a GitHub comment for a workflow failure."""
+    """Format a GitHub comment for a workflow failure.
+
+    Args:
+        failure: The workflow failure details
+        diff_stat: Git diff stat string for uncommitted changes
+
+    Returns:
+        Formatted GitHub comment string.
+    """
     lines = [
         "## Implementation Failed",
         f"**Category:** {failure.category.name.replace('_', ' ').title()}",
