@@ -1,6 +1,5 @@
 """Tests for run_agent_stream() in langchain agent provider."""
 
-import json
 import threading
 from collections.abc import AsyncIterator, Generator
 from contextlib import contextmanager
@@ -136,7 +135,7 @@ class TestRunAgentStream:
         tool_starts = [e for e in result if e["type"] == "tool_use_start"]
         assert len(tool_starts) == 1
         assert tool_starts[0]["name"] == "search_tool"
-        assert json.loads(str(tool_starts[0]["args"])) == {"query": "test"}
+        assert tool_starts[0]["args"] == {"query": "test"}
         assert tool_starts[0]["tool_call_id"] == "run-1"
 
     async def test_tool_result_from_on_tool_end(self) -> None:

@@ -443,7 +443,7 @@ async def run_agent_stream(
                 yield {
                     "type": "tool_use_start",
                     "name": name,
-                    "args": json.dumps(input_data),
+                    "args": input_data,
                     "tool_call_id": run_id,
                 }
 

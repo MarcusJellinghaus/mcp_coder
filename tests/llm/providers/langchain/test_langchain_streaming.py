@@ -282,6 +282,48 @@ class TestAskLangchainStreamAgentReal:
                 list(ask_langchain_stream("Hi", mcp_config="/tmp/mcp.json"))
 
 
+class TestAskLangchainStreamAgentAuthError:
+    """Auth errors from agent thread are transformed to LLMAuthError."""
+
+    def test_auth_error_transformed_to_llm_auth_error(self) -> None:
+        """AuthenticationError from agent is re-raised as LLMAuthError."""
+        try:
+            import anthropic
+        except ImportError:
+            pytest.skip("anthropic not installed")
+
+        async def _auth_error_stream(
+            **kwargs: object,
+        ) -> AsyncIterator[dict[str, object]]:
+            raise anthropic.AuthenticationError(
+                message="invalid api key",
+                response=MagicMock(status_code=401),
+                body=None,
+            )
+            yield {}  # pragma: no cover  # pylint: disable=unreachable
+
+        from mcp_coder.llm.providers.langchain._exceptions import LLMAuthError
+
+        with (
+            patch(
+                f"{_MOD_LC}._load_langchain_config",
+                return_value=_make_config("anthropic"),
+            ),
+            patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
+            patch(f"{_MOD_LC}.ensure_truststore"),
+            patch(f"{_MOD_LC}._create_chat_model", return_value=MagicMock()),
+            patch(f"{_MOD_LC}.agent._check_agent_dependencies"),
+            patch(
+                f"{_MOD_LC}.agent.run_agent_stream",
+                side_effect=_auth_error_stream,
+            ),
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain_stream
+
+            with pytest.raises(LLMAuthError, match="Authentication"):
+                list(ask_langchain_stream("Hi", mcp_config="/tmp/mcp.json"))
+
+
 class TestAskLangchainStreamAgentTimeouts:
     """Timeout and cancellation behavior for agent streaming."""
 
