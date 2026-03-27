@@ -1428,7 +1428,7 @@ class TestGetDiffStat:
         result = _get_diff_stat(Path("/project"))
 
         assert result == "file.py | 3 +++"
-        mock_repo.git.diff.assert_called_once_with("--stat")
+        mock_repo.git.diff.assert_called_once_with("HEAD", "--stat")
 
     @patch("mcp_coder.workflows.implement.core._safe_repo_context")
     def test_returns_empty_on_error(self, mock_ctx: MagicMock) -> None:

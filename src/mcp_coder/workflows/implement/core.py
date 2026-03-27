@@ -128,7 +128,7 @@ def _get_diff_stat(project_dir: Path) -> str:
     """
     try:
         with _safe_repo_context(project_dir) as repo:
-            return str(repo.git.diff("--stat"))
+            return str(repo.git.diff("HEAD", "--stat"))
     except Exception:  # pylint: disable=broad-exception-caught
         return ""
 
@@ -1065,6 +1065,17 @@ def run_implement_workflow(
     # Step 3: Show initial progress summary
     log_progress_summary(project_dir)
 
+    total_tasks = 0
+    try:
+        pr_info_path = str(project_dir / PR_INFO_DIR)
+        progress = get_step_progress(pr_info_path)
+        for step in progress.values():
+            step_total = step["total"]
+            assert isinstance(step_total, int)
+            total_tasks += step_total
+    except Exception:  # pylint: disable=broad-exception-caught
+        pass
+
     # Step 4: Process all incomplete tasks in a loop
     completed_tasks = 0
 
@@ -1085,6 +1096,7 @@ def run_implement_workflow(
                         stage="Task implementation",
                         message="LLM timed out during task processing",
                         tasks_completed=completed_tasks,
+                        tasks_total=total_tasks,
                     ),
                     project_dir,
                 )
@@ -1097,6 +1109,7 @@ def run_implement_workflow(
                         stage="Task implementation",
                         message="Task processing failed",
                         tasks_completed=completed_tasks,
+                        tasks_total=total_tasks,
                     ),
                     project_dir,
                 )
@@ -1135,6 +1148,7 @@ def run_implement_workflow(
                     stage="Post-implementation formatting",
                     message="Formatting failed after final mypy check",
                     tasks_completed=completed_tasks,
+                    tasks_total=total_tasks,
                 ),
                 project_dir,
             )
@@ -1154,6 +1168,7 @@ def run_implement_workflow(
                         stage="Post-implementation commit",
                         message="Failed to commit final mypy fixes",
                         tasks_completed=completed_tasks,
+                        tasks_total=total_tasks,
                     ),
                     project_dir,
                 )
@@ -1167,6 +1182,7 @@ def run_implement_workflow(
                         stage="Post-implementation commit",
                         message="Failed to push final mypy fixes",
                         tasks_completed=completed_tasks,
+                        tasks_total=total_tasks,
                     ),
                     project_dir,
                 )
@@ -1184,31 +1200,32 @@ def run_implement_workflow(
     if not finalisation_success:
         logger.warning("Finalisation encountered issues - continuing anyway")
 
-        # Step 5.6: Check CI pipeline and auto-fix if needed
-        logger.info("Checking CI pipeline status...")
-        current_branch = get_current_branch_name(project_dir)
-        if current_branch:
-            ci_success = check_and_fix_ci(
-                project_dir=project_dir,
-                branch=current_branch,
-                provider=provider,
-                mcp_config=mcp_config,
-                execution_dir=execution_dir,
+    # Step 5.6: Check CI pipeline and auto-fix if needed
+    logger.info("Checking CI pipeline status...")
+    current_branch = get_current_branch_name(project_dir)
+    if current_branch:
+        ci_success = check_and_fix_ci(
+            project_dir=project_dir,
+            branch=current_branch,
+            provider=provider,
+            mcp_config=mcp_config,
+            execution_dir=execution_dir,
+        )
+        if not ci_success:
+            logger.error("CI check failed after maximum fix attempts")
+            _handle_workflow_failure(
+                WorkflowFailure(
+                    category=FailureCategory.CI_FIX_EXHAUSTED,
+                    stage="CI pipeline fix",
+                    message="CI check failed after maximum fix attempts",
+                    tasks_completed=completed_tasks,
+                    tasks_total=total_tasks,
+                ),
+                project_dir,
             )
-            if not ci_success:
-                logger.error("CI check failed after maximum fix attempts")
-                _handle_workflow_failure(
-                    WorkflowFailure(
-                        category=FailureCategory.CI_FIX_EXHAUSTED,
-                        stage="CI pipeline fix",
-                        message="CI check failed after maximum fix attempts",
-                        tasks_completed=completed_tasks,
-                    ),
-                    project_dir,
-                )
-                return 1
-        else:
-            logger.error("Could not determine current branch - skipping CI check")
+            return 1
+    else:
+        logger.error("Could not determine current branch - skipping CI check")
 
     # Step 6: Unconditional success label transition
     try:
