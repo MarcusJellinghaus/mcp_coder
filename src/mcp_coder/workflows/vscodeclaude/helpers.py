@@ -69,6 +69,7 @@ def build_session(
         status: Status label
         vscode_pid: VSCode process ID
         is_intervention: If True, intervention mode
+        from_github: If True, session was triggered from GitHub
 
     Returns:
         VSCodeClaudeSession dict
