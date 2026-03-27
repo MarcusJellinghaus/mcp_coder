@@ -1,113 +1,201 @@
-# Step 5: Add Elapsed Time and Heartbeat to CI Polling
+# Step 5: Add Heartbeat Support to `execute_subprocess()` and Pass from `ask_claude_code_cli()`
 
 ## Context
 
-See [summary.md](summary.md) for full context. This step adds elapsed time info to existing CI polling log messages and a periodic INFO-level heartbeat every ~2 minutes — using only the existing loop, no threads.
+See [summary.md](summary.md) for full context. This step adds optional heartbeat logging to `execute_subprocess()` using a daemon thread, and makes `ask_claude_code_cli()` opt in with a 2-minute interval. These were previously two separate steps but are merged since the CLI pass-through is trivially small.
 
 ## WHERE
 
-- **Source**: `src/mcp_coder/workflows/implement/core.py` — `_poll_for_ci_completion()` function
-- **Tests**: `tests/workflows/implement/test_core.py`
+- **Source**: `src/mcp_coder/utils/subprocess_runner.py` — `execute_subprocess()` function
+- **Source**: `src/mcp_coder/llm/providers/claude/claude_code_cli.py` — `ask_claude_code_cli()` function
+- **Tests**: `tests/utils/test_subprocess_runner.py`
+- **Tests**: `tests/llm/providers/claude/test_claude_code_cli.py`
 
 ## WHAT
 
-### Updated `_poll_for_ci_completion()` (pseudocode for changes):
+### Part A: Heartbeat in `execute_subprocess()`
+
+Add two optional parameters to `execute_subprocess()`:
 
 ```python
-def _poll_for_ci_completion(ci_manager, branch):
-    poll_start_time = time.time()                         # NEW
-    heartbeat_iteration_interval = 8  # ~2min at 15s      # NEW
-
-    for poll_attempt in range(CI_MAX_POLL_ATTEMPTS):
-        # ... existing CI status check code ...
-
-        elapsed = time.time() - poll_start_time           # NEW
-        elapsed_min, elapsed_sec = divmod(int(elapsed), 60)  # NEW
-
-        # Existing "in progress" log — add elapsed time
-        logger.debug(
-            f"CI run in progress (status: {run_status}, "
-            f"attempt {poll_attempt + 1}/{CI_MAX_POLL_ATTEMPTS}, "
-            f"elapsed: {elapsed_min}m {elapsed_sec}s)"        # CHANGED
-        )
-
-        # Periodic heartbeat at INFO level (~every 2 min)     # NEW
-        if (poll_attempt + 1) % heartbeat_iteration_interval == 0:
-            logger.info(
-                "CI polling heartbeat: waiting for CI completion "
-                "(attempt %d/%d, elapsed: %dm %ds)",
-                poll_attempt + 1, CI_MAX_POLL_ATTEMPTS,
-                elapsed_min, elapsed_sec,
-            )
-
-        time.sleep(CI_POLL_INTERVAL_SECONDS)
+def execute_subprocess(
+    command: list[str],
+    options: CommandOptions | None = None,
+    heartbeat_interval_seconds: int | None = None,  # NEW
+    heartbeat_message: str = "",                      # NEW
+) -> CommandResult:
 ```
 
-Also add elapsed time to the "No CI run found yet" debug log in the same function.
+When `heartbeat_interval_seconds` is set and > 0, start a daemon thread before `_run_subprocess()` that logs periodically. Cancel it in `finally`.
+
+### Heartbeat thread implementation:
+
+```python
+import threading
+
+def _run_heartbeat(
+    stop_event: threading.Event,
+    interval: int,
+    message: str,
+    start_time: float,
+) -> None:
+    """Heartbeat loop — runs in a daemon thread, logs at regular intervals."""
+    while not stop_event.wait(interval):
+        elapsed = time.time() - start_time
+        minutes, seconds = divmod(int(elapsed), 60)
+        logger.info("%s (elapsed: %dm %ds)", message, minutes, seconds)
+```
+
+### Integration in `execute_subprocess()` (pseudocode):
+
+```python
+def execute_subprocess(command, options=None, heartbeat_interval_seconds=None, heartbeat_message=""):
+    # ... existing setup ...
+
+    stop_event = None
+    heartbeat_thread = None
+
+    if heartbeat_interval_seconds and heartbeat_interval_seconds > 0:
+        stop_event = threading.Event()
+        heartbeat_thread = threading.Thread(
+            target=_run_heartbeat,
+            args=(stop_event, heartbeat_interval_seconds, heartbeat_message, start_time),
+            daemon=True,
+        )
+        heartbeat_thread.start()
+
+    try:
+        # ... existing _run_subprocess() call and result handling ...
+    finally:
+        if stop_event is not None:
+            stop_event.set()
+        if heartbeat_thread is not None:
+            heartbeat_thread.join(timeout=2)
+```
+
+### Part B: Pass heartbeat params from `ask_claude_code_cli()`
+
+```python
+# In claude_code_cli.py:
+LLM_HEARTBEAT_INTERVAL_SECONDS = 120  # 2 minutes
+
+# Update the execute_subprocess() call:
+result = execute_subprocess(
+    command,
+    options,
+    heartbeat_interval_seconds=LLM_HEARTBEAT_INTERVAL_SECONDS,
+    heartbeat_message="LLM call in progress",
+)
+```
 
 ## HOW
 
-- Add `poll_start_time = time.time()` at function start
-- Compute elapsed time before each log statement
-- Append elapsed to existing debug log messages
-- Add INFO heartbeat every 8th iteration (8 × 15s = 120s ≈ 2 min)
-- No new threads, no new imports, no signature changes
-
-## ALGORITHM
-
-```
-1. Record poll_start_time at function entry
-2. On each poll iteration, compute elapsed = now - poll_start_time
-3. Include elapsed in existing debug log messages
-4. Every 8th iteration, emit INFO-level heartbeat log
-5. No changes to return values or control flow
-```
-
-## DATA
-
-- No signature changes
-- No new return values
-- Log messages gain elapsed time info
+- Add `import threading` at top of `subprocess_runner.py`
+- Add `_run_heartbeat()` as a private module-level function
+- Modify `execute_subprocess()` to optionally start/stop the heartbeat thread
+- Add `LLM_HEARTBEAT_INTERVAL_SECONDS = 120` constant to `claude_code_cli.py`
+- Update the `execute_subprocess()` call in `ask_claude_code_cli()` to pass heartbeat params
+- Additive change — existing callers pass no heartbeat params and get identical behavior
 
 ## TESTS
 
-Add to `tests/workflows/implement/test_core.py`:
+### Part A tests — `tests/utils/test_subprocess_runner.py`:
 
 ```python
-class TestPollForCiCompletionHeartbeat:
-    def test_heartbeat_logged_at_interval(self, caplog):
-        """INFO heartbeat is logged every 8 iterations."""
-        mock_ci_manager = MagicMock()
-        # Return "in progress" status for 9 iterations, then completed
-        in_progress = {"run": {"status": "in_progress", "run_ids": [1], "commit_sha": "abc"}, "jobs": []}
-        completed = {"run": {"status": "completed", "conclusion": "success", "run_ids": [1], "commit_sha": "abc"}, "jobs": []}
-        mock_ci_manager.get_latest_ci_status.side_effect = [in_progress] * 9 + [completed]
+class TestHeartbeat:
+    def test_no_heartbeat_by_default(self, caplog):
+        """No heartbeat logs when params not provided."""
+        with patch("mcp_coder.utils.subprocess_runner._run_subprocess") as mock_run:
+            mock_run.return_value = CompletedProcess(args=["echo"], returncode=0, stdout="", stderr="")
+            with caplog.at_level(logging.INFO, logger="mcp_coder.utils.subprocess_runner"):
+                execute_subprocess(["echo", "hi"])
+            # No heartbeat-related log messages should appear
+            heartbeat_logs = [r for r in caplog.records if "heartbeat" in r.message.lower() or "elapsed" in r.message.lower()]
+            assert len(heartbeat_logs) == 0
 
-        with patch("mcp_coder.workflows.implement.core.time.sleep"):
-            with caplog.at_level(logging.INFO):
-                _poll_for_ci_completion(mock_ci_manager, "main")
+    def test_heartbeat_thread_started_and_stopped(self):
+        """Heartbeat thread is started before subprocess and stopped after."""
+        with patch("mcp_coder.utils.subprocess_runner._run_subprocess") as mock_run:
+            mock_run.return_value = CompletedProcess(args=["echo"], returncode=0, stdout="", stderr="")
+            with patch("mcp_coder.utils.subprocess_runner.threading") as mock_threading:
+                mock_event = MagicMock()
+                mock_threading.Event.return_value = mock_event
+                mock_thread = MagicMock()
+                mock_threading.Thread.return_value = mock_thread
 
-        heartbeat_logs = [r for r in caplog.records if "CI polling heartbeat" in r.message]
-        assert len(heartbeat_logs) == 1  # Fires at iteration 8
+                execute_subprocess(
+                    ["echo", "hi"],
+                    heartbeat_interval_seconds=120,
+                    heartbeat_message="Test heartbeat",
+                )
 
-    def test_elapsed_time_in_debug_logs(self, caplog):
-        """Debug logs include elapsed time."""
-        mock_ci_manager = MagicMock()
-        in_progress = {"run": {"status": "in_progress", "run_ids": [1], "commit_sha": "abc"}, "jobs": []}
-        completed = {"run": {"status": "completed", "conclusion": "success", "run_ids": [1], "commit_sha": "abc"}, "jobs": []}
-        mock_ci_manager.get_latest_ci_status.side_effect = [in_progress, completed]
+                mock_threading.Thread.assert_called_once()
+                mock_thread.start.assert_called_once()
+                mock_event.set.assert_called_once()  # Stop signal sent
+                mock_thread.join.assert_called_once()
 
-        with patch("mcp_coder.workflows.implement.core.time.sleep"):
-            with caplog.at_level(logging.DEBUG):
-                _poll_for_ci_completion(mock_ci_manager, "main")
+    def test_heartbeat_stopped_on_exception(self):
+        """Heartbeat thread is stopped even if subprocess raises."""
+        with patch("mcp_coder.utils.subprocess_runner._run_subprocess") as mock_run:
+            mock_run.side_effect = TimeoutExpired(["cmd"], 10)
+            with patch("mcp_coder.utils.subprocess_runner.threading") as mock_threading:
+                mock_event = MagicMock()
+                mock_threading.Event.return_value = mock_event
+                mock_thread = MagicMock()
+                mock_threading.Thread.return_value = mock_thread
 
-        debug_logs = [r for r in caplog.records if "elapsed" in r.message.lower() and "in progress" in r.message.lower()]
-        assert len(debug_logs) >= 1
+                result = execute_subprocess(
+                    ["cmd"], heartbeat_interval_seconds=60, heartbeat_message="test",
+                )
+
+                assert result.timed_out is True
+                mock_event.set.assert_called_once()  # Stopped despite exception
+
+    def test_heartbeat_zero_interval_disabled(self):
+        """heartbeat_interval_seconds=0 does not start a thread."""
+        with patch("mcp_coder.utils.subprocess_runner._run_subprocess") as mock_run:
+            mock_run.return_value = CompletedProcess(args=["echo"], returncode=0, stdout="", stderr="")
+            with patch("mcp_coder.utils.subprocess_runner.threading") as mock_threading:
+                execute_subprocess(["echo"], heartbeat_interval_seconds=0, heartbeat_message="x")
+                mock_threading.Thread.assert_not_called()
+
+    def test_run_heartbeat_logs_periodically(self, caplog):
+        """_run_heartbeat logs at intervals until stop event is set."""
+        from mcp_coder.utils.subprocess_runner import _run_heartbeat
+
+        stop_event = MagicMock(spec=threading.Event)
+        # First wait returns False (not stopped, triggers log), second returns True (stopped, exits)
+        stop_event.wait.side_effect = [False, True]
+
+        with caplog.at_level(logging.INFO, logger="mcp_coder.utils.subprocess_runner"):
+            _run_heartbeat(stop_event, interval=120, message="Test HB", start_time=time.time())
+
+        assert any("Test HB" in record.message for record in caplog.records)
+```
+
+### Part B tests — `tests/llm/providers/claude/test_claude_code_cli.py`:
+
+```python
+class TestAskClaudeCodeCliHeartbeat:
+    def test_passes_heartbeat_params_to_execute_subprocess(self):
+        """Verify heartbeat parameters are passed to execute_subprocess."""
+        with patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable") as mock_find:
+            mock_find.return_value = "claude"
+            with patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess") as mock_exec:
+                mock_exec.return_value = CommandResult(
+                    return_code=0, stdout=make_valid_stream_output(), stderr="",
+                    timed_out=False, command=["claude"], runner_type="subprocess",
+                )
+                with patch("mcp_coder.llm.providers.claude.claude_code_cli.get_stream_log_path"):
+                    ask_claude_code_cli("test question", timeout=30)
+
+                assert mock_exec.call_args.kwargs["heartbeat_interval_seconds"] == 120
+                assert "LLM call in progress" in mock_exec.call_args.kwargs["heartbeat_message"]
 ```
 
 ## COMMIT
 
-`feat(core): add elapsed time and heartbeat to CI polling logs (#598)`
+`feat(subprocess): add heartbeat logging to execute_subprocess and enable for LLM calls (#598)`
 
 ## LLM PROMPT
 
@@ -115,13 +203,17 @@ class TestPollForCiCompletionHeartbeat:
 Implement Step 5 from pr_info/steps/step_5.md.
 Context: pr_info/steps/summary.md
 
-1. In `_poll_for_ci_completion()` in `src/mcp_coder/workflows/implement/core.py`:
-   - Add `poll_start_time = time.time()` at function start
-   - Add elapsed time to existing debug log messages ("CI run in progress" and "No CI run found yet")
-   - Add INFO-level heartbeat log every 8th iteration ("CI polling heartbeat: ...")
-2. Add tests in `tests/workflows/implement/test_core.py` for the heartbeat and elapsed time logging.
+Part A — Heartbeat in execute_subprocess:
+1. Add `_run_heartbeat(stop_event, interval, message, start_time)` function to `src/mcp_coder/utils/subprocess_runner.py`.
+2. Add `heartbeat_interval_seconds: int | None = None` and `heartbeat_message: str = ""` parameters to `execute_subprocess()`.
+3. Start a daemon thread before `_run_subprocess()` when heartbeat is enabled, stop it in `finally`.
+4. Add tests in `tests/utils/test_subprocess_runner.py`.
 
-No signature changes, no threads, no new imports needed (time is already imported).
-Run all code quality checks.
-Commit: "feat(core): add elapsed time and heartbeat to CI polling logs (#598)"
+Part B — Pass heartbeat from ask_claude_code_cli:
+1. Add `LLM_HEARTBEAT_INTERVAL_SECONDS = 120` constant to `src/mcp_coder/llm/providers/claude/claude_code_cli.py`.
+2. Update the `execute_subprocess()` call in `ask_claude_code_cli()` to pass heartbeat params.
+3. Add test in `tests/llm/providers/claude/test_claude_code_cli.py`.
+
+Additive change — existing callers are unaffected. Run all code quality checks.
+Commit: "feat(subprocess): add heartbeat logging to execute_subprocess and enable for LLM calls (#598)"
 ```

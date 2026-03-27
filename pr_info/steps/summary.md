@@ -17,7 +17,7 @@ The implement workflow can silently exit without setting a failure label, postin
 
 Wrap `run_implement_workflow()` body in `try/finally`. A `reached_terminal_state` boolean tracks whether the workflow completed normally (success or already-handled failure). If `finally` runs and `reached_terminal_state` is False, call `_handle_workflow_failure()` with `FailureCategory.GENERAL`.
 
-Register a SIGTERM handler at workflow start that triggers failure handling before exit. Restore the previous handler in `finally`.
+Register a SIGTERM handler at workflow start that sets a flag and calls `sys.exit(1)`. The `finally` block checks the flag and handles the failure from normal context (no I/O in signal handlers).
 
 ### 2. Jenkins URL + Elapsed Time in Failure Comments (`constants.py`, `core.py`)
 
@@ -38,27 +38,38 @@ Add `build_url: Optional[str]` and `elapsed_time: Optional[float]` to `WorkflowF
 | `execute_subprocess()` | No heartbeat | Optional heartbeat via daemon thread (`heartbeat_interval_seconds`, `heartbeat_message` params) |
 | `ask_claude_code_cli()` | No heartbeat | Passes `heartbeat_interval_seconds=120` to `execute_subprocess()` |
 | CI polling logs | Basic debug logs per iteration | Elapsed time on every iteration + INFO heartbeat every ~2 min |
-| Signal handling | None | SIGTERM handler registered/restored around workflow |
+| Signal handling | None | SIGTERM handler sets flag + `sys.exit(1)`, `finally` block handles failure |
+
+## Steps
+
+| Step | Description |
+|------|-------------|
+| [Step 1](step_1.md) | Add `build_url` and `elapsed_time` to `WorkflowFailure` dataclass |
+| [Step 2](step_2.md) | Update `_format_failure_comment()` to include elapsed time and build URL |
+| [Step 3](step_3.md) | Update existing `WorkflowFailure(...)` constructions with `build_url` and `elapsed_time` |
+| [Step 4](step_4.md) | Add `try/finally` safety net + SIGTERM handler |
+| [Step 5](step_5.md) | Add heartbeat support to `execute_subprocess()` and pass from `ask_claude_code_cli()` |
+| [Step 6](step_6.md) | Add elapsed time and heartbeat to CI polling logs |
 
 ## Files Modified
 
-| File | Change Type |
-|------|-------------|
-| `src/mcp_coder/workflows/implement/constants.py` | Add `build_url` and `elapsed_time` fields to `WorkflowFailure` |
-| `src/mcp_coder/utils/subprocess_runner.py` | Add optional heartbeat parameters to `execute_subprocess()` |
-| `src/mcp_coder/llm/providers/claude/claude_code_cli.py` | Pass heartbeat params to `execute_subprocess()` |
-| `src/mcp_coder/workflows/implement/core.py` | Safety net, SIGTERM handler, updated failure comment format, CI polling heartbeat |
-| `tests/workflows/implement/test_constants.py` | Tests for new `WorkflowFailure` fields |
-| `tests/utils/test_subprocess_runner.py` | Tests for heartbeat functionality |
-| `tests/llm/providers/claude/test_claude_code_cli.py` | Tests for heartbeat passthrough |
-| `tests/workflows/implement/test_core.py` | Tests for safety net, SIGTERM handler, failure comment format, CI heartbeat |
+| File | Change Type | Steps |
+|------|-------------|-------|
+| `src/mcp_coder/workflows/implement/constants.py` | Add `build_url` and `elapsed_time` fields to `WorkflowFailure` | 1 |
+| `src/mcp_coder/workflows/implement/core.py` | Updated failure comment format, existing failures get new fields, safety net, SIGTERM handler, CI polling heartbeat | 2, 3, 4, 6 |
+| `src/mcp_coder/utils/subprocess_runner.py` | Add optional heartbeat parameters to `execute_subprocess()` | 5 |
+| `src/mcp_coder/llm/providers/claude/claude_code_cli.py` | Pass heartbeat params to `execute_subprocess()` | 5 |
+| `tests/workflows/implement/test_constants.py` | Tests for new `WorkflowFailure` fields | 1 |
+| `tests/workflows/implement/test_core.py` | Tests for failure comment format, existing failures, safety net, SIGTERM handler, CI heartbeat | 2, 3, 4, 6 |
+| `tests/utils/test_subprocess_runner.py` | Tests for heartbeat functionality | 5 |
+| `tests/llm/providers/claude/test_claude_code_cli.py` | Tests for heartbeat passthrough | 5 |
 
 ## Design Decisions
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | Safety net | `try/finally` + `reached_terminal_state` flag | Standard Python pattern, covers all exit paths |
-| SIGTERM handler | `signal.signal()` with restore in `finally` | Covers Jenkins stop signals, no side effects |
+| SIGTERM handler | Sets flag + `sys.exit(1)`, `finally` handles I/O | Avoids I/O inside signal handlers (re-entrancy/deadlock risk) |
 | Heartbeat thread | `threading.Event.wait()` daemon thread | Simpler than chained Timers, auto-cleanup on exit |
 | CI polling heartbeat | Counter arithmetic on existing loop | No threads needed — loop already runs every 15s |
 | Jenkins URL | `WorkflowFailure.build_url` field from env var | Keeps `_format_failure_comment()` pure (no env reads) |
