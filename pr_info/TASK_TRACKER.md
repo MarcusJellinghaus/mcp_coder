@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md) for details.
 ### Step 2: Add `run_agent_stream()` Async Generator
 See [step_2.md](./steps/step_2.md) for details.
 
-- [ ] Implementation: tests (`TestRunAgentStream`) + `run_agent_stream()` in `agent.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(agent): add run_agent_stream async generator with astream_events`
+- [x] Implementation: tests (`TestRunAgentStream`) + `run_agent_stream()` in `agent.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(agent): add run_agent_stream async generator with astream_events`
 
 ### Step 3: Replace Agent Fallback with Thread+Queue Bridge
 See [step_3.md](./steps/step_3.md) for details.

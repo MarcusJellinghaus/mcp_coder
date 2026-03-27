@@ -12,11 +12,16 @@ import json
 import logging
 import os
 import re
+import threading
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from langchain_core.language_models import BaseChatModel
+
+    from mcp_coder.llm.types import StreamEvent
 
 logger = logging.getLogger(__name__)
 
@@ -334,3 +339,173 @@ async def run_agent(
         serialized.append({"type": msg_type, "data": dump})
 
     return (final_text, serialized, stats)
+
+
+async def run_agent_stream(
+    question: str,
+    chat_model: BaseChatModel,
+    messages: list[dict[str, Any]],
+    mcp_config_path: str,
+    session_id: str,
+    cancel_event: threading.Event | None = None,
+    execution_dir: str | None = None,  # pylint: disable=unused-argument
+    env_vars: dict[str, str] | None = None,
+) -> AsyncIterator[StreamEvent]:
+    """Stream agent execution events as an async generator.
+
+    Uses LangChain's ``astream_events(version="v2")`` to yield incremental
+    events as the agent processes tools and generates text.
+
+    Args:
+        question: The user question / prompt to send to the agent.
+        chat_model: A LangChain ``BaseChatModel`` instance.
+        messages: Prior conversation history as a list of dicts.
+        mcp_config_path: Absolute path to the ``.mcp.json`` configuration file.
+        session_id: Session identifier for history storage.
+        cancel_event: Optional threading.Event to signal early cancellation.
+        execution_dir: Optional working directory (reserved for future).
+        env_vars: Optional extra environment variables for MCP server resolution.
+
+    Yields:
+        ``StreamEvent`` dicts: ``text_delta``, ``tool_use_start``,
+        ``tool_result``, ``raw_line``, ``error``, and ``done``.
+    """
+    from langchain_core.messages import (
+        AIMessage,
+        HumanMessage,
+        ToolMessage,
+        messages_from_dict,
+    )
+    from langchain_mcp_adapters.client import MultiServerMCPClient
+    from langchain_mcp_adapters.tools import convert_mcp_tool_to_langchain_tool
+    from langgraph.prebuilt import create_react_agent
+
+    server_config = _load_mcp_server_config(mcp_config_path, env_vars)
+
+    # Load tools with schema sanitization (inline, same as run_agent)
+    client = MultiServerMCPClient(cast(Any, server_config))
+    all_tools = []
+    for server_name, connection in client.connections.items():
+        async with client.session(server_name) as session:
+            raw_tools = await session.list_tools()
+            for tool in raw_tools.tools:
+                sanitized = _sanitize_tool_schema(tool.inputSchema)
+                tool = tool.model_copy(update={"inputSchema": sanitized})
+                lc_tool = convert_mcp_tool_to_langchain_tool(
+                    None,
+                    tool,
+                    connection=connection,
+                    server_name=server_name,
+                )
+                all_tools.append(lc_tool)
+
+    agent = create_react_agent(chat_model, all_tools)
+
+    input_messages = messages_from_dict(messages) + [HumanMessage(content=question)]
+
+    # Accumulators for history reconstruction
+    accumulated_text = ""
+    tool_calls_by_run_id: dict[str, dict[str, Any]] = {}
+    tool_results_list: list[dict[str, Any]] = []
+
+    try:
+        async for event in agent.astream_events(
+            {"messages": input_messages},
+            version="v2",
+            config={"recursion_limit": AGENT_MAX_STEPS},
+        ):
+            if cancel_event and cancel_event.is_set():
+                break
+
+            yield {"type": "raw_line", "line": json.dumps(event, default=str)}
+
+            event_kind = event.get("event", "")
+
+            if event_kind == "on_chat_model_stream":
+                chunk = event.get("data", {}).get("chunk")
+                content = chunk.content if chunk else ""
+                if isinstance(content, str) and content:
+                    accumulated_text += content
+                    yield {"type": "text_delta", "text": content}
+                elif isinstance(content, list):
+                    for block in content:
+                        if isinstance(block, dict) and block.get("type") == "text":
+                            text = block.get("text", "")
+                            if text:
+                                accumulated_text += text
+                                yield {"type": "text_delta", "text": text}
+
+            elif event_kind == "on_tool_start":
+                run_id = event.get("run_id", "")
+                input_data = event.get("data", {}).get("input", {})
+                name = event.get("name", "")
+                tool_calls_by_run_id[run_id] = {"name": name, "args": input_data}
+                yield {
+                    "type": "tool_use_start",
+                    "name": name,
+                    "args": json.dumps(input_data),
+                    "tool_call_id": run_id,
+                }
+
+            elif event_kind == "on_tool_end":
+                output = event.get("data", {}).get("output", "")
+                run_id = event.get("run_id", "")
+                name = event.get("name", "")
+                tool_call_id = getattr(output, "tool_call_id", None) or run_id
+                tool_results_list.append(
+                    {
+                        "name": name,
+                        "output": str(output),
+                        "tool_call_id": tool_call_id,
+                        "run_id": run_id,
+                    }
+                )
+                yield {
+                    "type": "tool_result",
+                    "name": name,
+                    "output": str(output),
+                    "tool_call_id": tool_call_id,
+                }
+
+    except Exception as exc:
+        yield {"type": "error", "message": str(exc)}
+        raise
+
+    # Reconstruct and store conversation history
+    ai_tool_calls = []
+    for run_id, tc_info in tool_calls_by_run_id.items():
+        result_entry = next(
+            (r for r in tool_results_list if r["run_id"] == run_id), None
+        )
+        tc_id = result_entry["tool_call_id"] if result_entry else run_id
+        ai_tool_calls.append(
+            {"name": tc_info["name"], "args": tc_info["args"], "id": tc_id}
+        )
+
+    history_messages = list(input_messages)
+    if accumulated_text or ai_tool_calls:
+        ai_kwargs: dict[str, Any] = {"content": accumulated_text}
+        if ai_tool_calls:
+            ai_kwargs["tool_calls"] = ai_tool_calls
+        history_messages.append(AIMessage(**ai_kwargs))
+    for tr in tool_results_list:
+        history_messages.append(
+            ToolMessage(content=tr["output"], tool_call_id=tr["tool_call_id"])
+        )
+
+    serialized: list[dict[str, Any]] = []
+    for msg in history_messages:
+        if hasattr(msg, "model_dump"):
+            dump = cast(dict[str, Any], msg.model_dump())
+        else:
+            dump = cast(dict[str, Any], msg.dict())
+        msg_type = dump.pop("type", "unknown")
+        serialized.append({"type": msg_type, "data": dump})
+
+    from mcp_coder.llm.storage.session_storage import (
+        store_langchain_history as _store_history,
+    )
+
+    _store_history(session_id, serialized)
+
+    yield {"type": "done", "session_id": session_id}
