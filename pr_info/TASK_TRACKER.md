@@ -55,18 +55,12 @@ See [step_3.md](./steps/step_3.md) for details.
 - [x] LangChain agent streaming — list directory via MCP workspace tools
 - [x] LangChain agent streaming — file lifecycle: create, read, edit, delete file via MCP
 
-Batch file: `tools/manual_streaming_tests.bat` (run from project root)
+Diagnostic tools (`tools/manual_streaming_tests.bat`, `tools/streaming_diagnostic.py`) removed — served their purpose during review. Unit tests cover the streaming pipeline.
 
-## Open Issues
+## Open Issues (pre-existing, not caused by this PR)
 
-- [x] `--output-format text` streams at chunk level for all providers (verified with timestamp diagnostic)
-- [ ] `--output-format ndjson` batches text_delta events into single `assistant` messages for Claude CLI and LangChain text mode — pre-existing formatter issue, not caused by this PR
-- [x] Agent mode `--mcp-config` works when `VIRTUAL_ENV` is set (batch file now activates venv)
+- [ ] `--output-format ndjson` batches text_delta events into single `assistant` messages for Claude CLI and LangChain text mode — pre-existing formatter issue
 - [ ] Misleading error message when `VIRTUAL_ENV` not set: shows "Connection to Anthropic API failed" instead of MCP subprocess not found
-- [ ] Short responses (e.g. "count to 5") appear instant because LLM generates them in ms — streaming only visible for longer responses or agent mode with tool calls
-
-Diagnostic: `tools/streaming_diagnostic.py` (run with `.venv/Scripts/python tools/streaming_diagnostic.py`)
-- [ ] decide what should happen with `tools\manual_streaming_tests.bat`
 
 ## Pull Request
 
