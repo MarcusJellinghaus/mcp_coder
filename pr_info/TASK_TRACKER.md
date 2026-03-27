@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Add `build_url` and `elapsed_time` to `WorkflowFailure` Dataclass
-- [ ] Implementation: add two optional fields to `WorkflowFailure` in `constants.py` + tests in `test_constants.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(constants): add build_url and elapsed_time fields to WorkflowFailure (#598)`
+- [x] Implementation: add two optional fields to `WorkflowFailure` in `constants.py` + tests in `test_constants.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(constants): add build_url and elapsed_time fields to WorkflowFailure (#598)`
 
 ### Step 2: Update `_format_failure_comment()` to Include Elapsed Time and Build URL
 - [ ] Implementation: add `_format_elapsed_time()` helper and update `_format_failure_comment()` in `core.py` + tests in `test_core.py`

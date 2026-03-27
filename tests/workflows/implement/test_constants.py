@@ -47,3 +47,49 @@ class TestWorkflowFailure:
         )
         assert wf.tasks_completed == 2
         assert wf.tasks_total == 5
+
+    def test_build_url_default_none(self) -> None:
+        """build_url defaults to None."""
+        failure = WorkflowFailure(
+            category=FailureCategory.GENERAL, stage="test", message="msg"
+        )
+        assert failure.build_url is None
+
+    def test_elapsed_time_default_none(self) -> None:
+        """elapsed_time defaults to None."""
+        failure = WorkflowFailure(
+            category=FailureCategory.GENERAL, stage="test", message="msg"
+        )
+        assert failure.elapsed_time is None
+
+    def test_build_url_set(self) -> None:
+        """build_url can be set."""
+        failure = WorkflowFailure(
+            category=FailureCategory.GENERAL,
+            stage="test",
+            message="msg",
+            build_url="https://jenkins.example.com/job/123/console",
+        )
+        assert failure.build_url == "https://jenkins.example.com/job/123/console"
+
+    def test_elapsed_time_set(self) -> None:
+        """elapsed_time can be set."""
+        failure = WorkflowFailure(
+            category=FailureCategory.GENERAL,
+            stage="test",
+            message="msg",
+            elapsed_time=754.3,
+        )
+        assert failure.elapsed_time == 754.3
+
+    def test_frozen_new_fields(self) -> None:
+        """New fields are also frozen."""
+        failure = WorkflowFailure(
+            category=FailureCategory.GENERAL,
+            stage="test",
+            message="msg",
+            build_url="url",
+            elapsed_time=1.0,
+        )
+        with pytest.raises(dataclasses.FrozenInstanceError):
+            failure.build_url = "other"  # type: ignore[misc]
