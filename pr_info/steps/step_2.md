@@ -36,7 +36,7 @@ Rules:
 
 ## WHAT — Contents
 
-### test_get_branch_with_pr_fallback.py (~710 lines)
+### test_get_branch_with_pr_fallback.py (~827 lines, allowlisted)
 
 - **Module docstring**: `"""Unit tests for IssueBranchManager.get_branch_with_pr_fallback() method."""`
 - **Imports**:
