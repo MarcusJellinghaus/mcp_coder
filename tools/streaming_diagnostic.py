@@ -64,7 +64,10 @@ def run_test(test: dict) -> dict:
             cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             text=True, encoding="utf-8", bufsize=1, env=env,
         )
-        for line in proc.stdout:
+        while True:
+            line = proc.stdout.readline()
+            if not line:
+                break
             t = time.monotonic() - start
             lines.append((t, line.rstrip()))
         proc.wait(timeout=10)
