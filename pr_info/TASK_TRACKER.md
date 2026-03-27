@@ -26,9 +26,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Create shared `conftest.py` and extract `TestExtractPrsByStates`, `TestSearchBranchesByPattern` into their own files.
 
-- [ ] Implementation: create `conftest.py`, `test_extract_prs_by_states.py`, `test_search_branches_by_pattern.py` with verbatim code moves and adjusted imports
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `refactor: extract conftest and smaller test classes from test_branch_resolution`
+- [x] Implementation: create `conftest.py`, `test_extract_prs_by_states.py`, `test_search_branches_by_pattern.py` with verbatim code moves and adjusted imports
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `refactor: extract conftest and smaller test classes from test_branch_resolution`
 
 ### Step 2: Create test_get_branch_with_pr_fallback.py and delete original
 [Detail](./steps/step_2.md)
