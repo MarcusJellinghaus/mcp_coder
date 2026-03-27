@@ -472,6 +472,9 @@ async def run_agent_stream(
         raise
 
     # Reconstruct and store conversation history
+    # NOTE: History is flattened into a single AIMessage + ToolMessages.
+    # Multi-turn agents (think→tool→think→tool→answer) produce a simplified
+    # structure. Acceptable for now; see run_agent() for the full structure.
     ai_tool_calls = []
     for run_id, tc_info in tool_calls_by_run_id.items():
         result_entry = next(

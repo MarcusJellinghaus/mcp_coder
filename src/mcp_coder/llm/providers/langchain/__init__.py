@@ -514,6 +514,9 @@ def _ask_agent_stream(
     finally:
         thread.join(timeout=5)
 
+    # If the async thread raised an exception but the consumer exited
+    # normally (sentinel received), re-raise that error. Skipped when
+    # cancelled (GeneratorExit) to avoid masking the exit.
     if error_holder and not cancelled:
         held_exc = error_holder[0]
         _handle_provider_error(held_exc, config.get("backend"))
