@@ -17,7 +17,6 @@ from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils import commit_all_changes, get_full_status, git_push
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
-from mcp_coder.utils.log_utils import NOTICE
 from mcp_coder.workflow_utils.commit_operations import (
     generate_commit_message_with_llm,
     parse_llm_commit_response,
@@ -149,8 +148,7 @@ def commit_changes(project_dir: Path, provider: str = "claude") -> bool:
         # Show commit message first line along with hash
         commit_lines = commit_message.strip().split("\n")
         first_line = commit_lines[0].strip() if commit_lines else commit_message.strip()
-        logger.log(
-            NOTICE,
+        logger.info(
             f"Changes committed successfully: {commit_result['commit_hash']} - {first_line}",
         )
         return True
@@ -187,11 +185,9 @@ def push_changes(project_dir: Path, force_with_lease: bool = False) -> bool:
             return False
 
         if force_with_lease:
-            logger.log(
-                NOTICE, "Changes force-pushed successfully to remote (with lease)"
-            )
+            logger.info("Changes force-pushed successfully to remote (with lease)")
         else:
-            logger.log(NOTICE, "Changes pushed successfully to remote")
+            logger.info("Changes pushed successfully to remote")
         return True
 
     except (
@@ -261,7 +257,7 @@ def check_and_fix_mypy(
         mypy_result = _run_mypy_check(project_dir)
 
         if mypy_result is None:
-            logger.log(NOTICE, "Mypy check passed - no type errors found")
+            logger.info("Mypy check passed - no type errors found")
             return True
 
         logger.info("Type errors found, attempting fixes...")
@@ -356,7 +352,7 @@ def check_and_fix_mypy(
                 mypy_result = _run_mypy_check(project_dir)
 
                 if mypy_result is None:
-                    logger.log(NOTICE, "Mypy check passed after fixes")
+                    logger.info("Mypy check passed after fixes")
                     return True
 
             except (
@@ -525,5 +521,5 @@ Please implement this task step by step."""
     if not push_changes(project_dir):
         return False, "error"
 
-    logger.log(NOTICE, f"Task completed successfully: {next_task}")
+    logger.info(f"Task completed successfully: {next_task}")
     return True, "completed"

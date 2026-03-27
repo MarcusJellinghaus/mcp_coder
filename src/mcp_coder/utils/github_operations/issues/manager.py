@@ -18,7 +18,7 @@ from mcp_coder.utils.github_operations.label_config import (
     get_labels_config_path,
     load_labels_config,
 )
-from mcp_coder.utils.log_utils import NOTICE, log_function_call
+from mcp_coder.utils.log_utils import log_function_call
 
 from ..base_manager import BaseGitHubManager, _handle_github_errors
 from .base import parse_base_branch, validate_issue_number
@@ -516,8 +516,7 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
                 logger.error(f"Failed to update labels for issue #{issue_number}")
                 return False
 
-            logger.log(
-                NOTICE,
+            logger.info(
                 f"Successfully updated issue #{issue_number} label: "
                 f"{from_label_name} → {to_label_name}",
             )

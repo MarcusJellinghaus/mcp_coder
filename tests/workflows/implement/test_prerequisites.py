@@ -283,7 +283,9 @@ class TestCheckPrerequisitesTaskTracker:
         )
 
         # Call check_prerequisites() with INFO level logging captured
-        with caplog.at_level(logging.INFO):
+        with caplog.at_level(
+            logging.INFO, logger="mcp_coder.workflows.implement.prerequisites"
+        ):
             result = check_prerequisites(tmp_path)
 
         # Assert: returns True, file unchanged

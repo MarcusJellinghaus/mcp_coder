@@ -21,7 +21,6 @@ from ...utils.github_operations.label_config import (
     get_labels_config_path,
     load_labels_config,
 )
-from ...utils.log_utils import NOTICE
 from ...workflows.utils import resolve_project_dir
 
 logger = logging.getLogger(__name__)
@@ -265,7 +264,7 @@ def execute_set_status(args: argparse.Namespace) -> int:
             print(f"Error: {update_error}", file=sys.stderr)
             return 1
 
-        logger.log(NOTICE, f"Updated issue #{issue_number} to {args.status_label}")
+        logger.info(f"Updated issue #{issue_number} to {args.status_label}")
         return 0
 
     except ValueError as e:
