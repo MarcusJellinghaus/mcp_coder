@@ -41,7 +41,7 @@ Rules:
 ### conftest.py (~30 lines)
 
 - **Imports**: `Path`, `Mock`, `patch`, `pytest`, `IssueBranchManager`
-- **Fixture**: `mock_manager()` — the exact fixture body from `TestGetBranchWithPRFallback` or `TestSearchBranchesByPattern` (they are identical), promoted to module-level pytest fixture
+- **Fixture**: `mock_manager()` — the exact fixture body from `TestGetBranchWithPRFallback` or `TestSearchBranchesByPattern` (they are identical), promoted to module-level pytest fixture. **Important**: Remove `self` parameter when extracting — it becomes a standalone function
 
 ### test_extract_prs_by_states.py (~110 lines)
 
@@ -75,7 +75,7 @@ def mock_manager() -> IssueBranchManager:
 ## Verification
 
 1. `mcp__tools-py__run_pylint_check` — all new files pass
-2. `mcp__tools-py__run_pytest_check` with `-n auto -m "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"` — all tests pass (both old and new)
+2. `mcp__tools-py__run_pytest_check` with `-n auto -m "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration and not llm_integration"` — all tests pass (both old and new)
 3. `mcp__tools-py__run_mypy_check` — no type errors
 
 ## Commit

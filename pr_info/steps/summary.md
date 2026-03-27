@@ -19,7 +19,7 @@ This is a **pure refactoring** — no logic changes, only moves and import adjus
 |------|----------|--------|
 | `tests/utils/github_operations/issues/conftest.py` | Shared `mock_manager` fixture | ~30 |
 | `tests/utils/github_operations/issues/test_extract_prs_by_states.py` | `TestExtractPrsByStates` (6 tests) | ~110 |
-| `tests/utils/github_operations/issues/test_get_branch_with_pr_fallback.py` | `TestGetBranchWithPRFallback` (20 tests) | ~710 |
+| `tests/utils/github_operations/issues/test_get_branch_with_pr_fallback.py` | `TestGetBranchWithPRFallback` (20 tests) | ~827 (allowlisted) |
 | `tests/utils/github_operations/issues/test_search_branches_by_pattern.py` | `TestSearchBranchesByPattern` + `_make_git_ref` helper (6 tests) | ~270 |
 
 ## Files Deleted
@@ -46,3 +46,4 @@ This is a **pure refactoring** — no logic changes, only moves and import adjus
 - **2 steps instead of 4**: Since this is a pure move (no TDD needed — tests already exist), we group the smaller files in step 1 and the large file + deletion in step 2. Each step is independently verifiable.
 - **No `move_symbol` tools**: Test files have no external consumers, so direct file creation + deletion is simpler.
 - **Verbatim moves**: Code is copied exactly as-is, only imports and fixture references change.
+- **`test_get_branch_with_pr_fallback.py` exceeds 750 lines**: At ~827 lines this file exceeds the limit, but all 20 tests are tightly coupled to one method. Splitting the class across files would be artificial. Added to `.large-files-allowlist`.

@@ -83,7 +83,7 @@ test_pattern_fallback_not_called_when_linked_branch_found
 ## Verification
 
 1. `mcp__tools-py__run_pylint_check` — all files pass
-2. `mcp__tools-py__run_pytest_check` with `-n auto -m "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"` — all 32 tests pass across the 3 new files
+2. `mcp__tools-py__run_pytest_check` with `-n auto -m "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration and not llm_integration"` — all 32 tests pass across the 3 new files
 3. `mcp__tools-py__run_mypy_check` — no type errors
 4. Confirm `test_branch_resolution.py` no longer exists
 
