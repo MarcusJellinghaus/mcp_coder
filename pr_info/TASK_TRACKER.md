@@ -35,9 +35,9 @@ Create shared `conftest.py` and extract `TestExtractPrsByStates`, `TestSearchBra
 
 Extract `TestGetBranchWithPRFallback` into its own file, then delete `test_branch_resolution.py`.
 
-- [ ] Implementation: create `test_get_branch_with_pr_fallback.py` with verbatim code move, delete `test_branch_resolution.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `refactor: complete split of test_branch_resolution.py (#539)`
+- [x] Implementation: create `test_get_branch_with_pr_fallback.py` with verbatim code move, delete `test_branch_resolution.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `refactor: complete split of test_branch_resolution.py (#539)`
 
 ## Pull Request
 
