@@ -5,6 +5,9 @@ This module consolidates all constants used across the implement workflow module
 single source of truth.
 """
 
+from dataclasses import dataclass
+from enum import Enum
+
 # Directory paths
 PR_INFO_DIR = "pr_info"
 COMMIT_MESSAGE_FILE = f"{PR_INFO_DIR}/.commit_message.txt"
@@ -25,3 +28,22 @@ CI_MAX_FIX_ATTEMPTS = 3  # Max 3 fix attempts before giving up
 CI_NEW_RUN_POLL_INTERVAL_SECONDS = 5  # Poll for new CI run every 5 seconds
 CI_NEW_RUN_MAX_POLL_ATTEMPTS = 6  # Max 6 attempts = 30 seconds to detect new run
 # Note: CI fix uses existing LLM_IMPLEMENTATION_TIMEOUT_SECONDS (3600s) - see Decision 9
+
+
+class FailureCategory(Enum):
+    """Maps 1:1 to failure label IDs in labels.json."""
+
+    GENERAL = "implementing_failed"
+    CI_FIX_EXHAUSTED = "ci_fix_needed"
+    LLM_TIMEOUT = "llm_timeout"
+
+
+@dataclass(frozen=True)
+class WorkflowFailure:
+    """Structured failure info for the implement workflow."""
+
+    category: FailureCategory
+    stage: str
+    message: str
+    tasks_completed: int = 0
+    tasks_total: int = 0

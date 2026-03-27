@@ -181,11 +181,6 @@ def add_implement_parser(subparsers: Any) -> None:
         default=None,
         help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
     )
-    implement_parser.add_argument(
-        "--update-labels",
-        action="store_true",
-        help="Automatically update GitHub issue labels on successful completion",
-    )
 
 
 def add_create_plan_parser(subparsers: Any) -> None:

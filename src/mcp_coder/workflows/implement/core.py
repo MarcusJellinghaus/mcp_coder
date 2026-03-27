@@ -21,12 +21,17 @@ from mcp_coder.utils.git_operations import (
     get_current_branch_name,
     rebase_onto_branch,
 )
+from mcp_coder.utils.git_operations.branch_queries import (
+    extract_issue_number_from_branch,
+)
 from mcp_coder.utils.git_operations.commits import get_latest_commit_sha
+from mcp_coder.utils.git_operations.core import _safe_repo_context
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.github_operations.ci_results_manager import (
     CIResultsManager,
     CIStatusData,
 )
+from mcp_coder.utils.github_operations.issues import IssueManager
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.commit_operations import generate_commit_message_with_llm
 from mcp_coder.workflow_utils.task_tracker import (
@@ -48,6 +53,8 @@ from .constants import (
     LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS,
     PR_INFO_DIR,
     RUN_MYPY_AFTER_EACH_TASK,
+    FailureCategory,
+    WorkflowFailure,
 )
 from .prerequisites import (
     check_git_clean,
@@ -108,6 +115,92 @@ def _short_sha(sha: str) -> str:
     if not sha or sha == "unknown":
         return "unknown"
     return sha[:7]
+
+
+def _get_diff_stat(project_dir: Path) -> str:
+    """Get git diff --stat for uncommitted changes.
+
+    Args:
+        project_dir: Path to the project directory
+
+    Returns:
+        Git diff stat output as a string, or empty string on error.
+    """
+    try:
+        with _safe_repo_context(project_dir) as repo:
+            return str(repo.git.diff("HEAD", "--stat"))
+    except Exception:  # pylint: disable=broad-exception-caught
+        return ""
+
+
+def _format_failure_comment(failure: WorkflowFailure, diff_stat: str) -> str:
+    """Format a GitHub comment for a workflow failure.
+
+    Args:
+        failure: The workflow failure details
+        diff_stat: Git diff stat string for uncommitted changes
+
+    Returns:
+        Formatted GitHub comment string.
+    """
+    lines = [
+        "## Implementation Failed",
+        f"**Category:** {failure.category.name.replace('_', ' ').title()}",
+        f"**Stage:** {failure.stage}",
+        f"**Error:** {failure.message}",
+    ]
+    if failure.tasks_total > 0:
+        lines.append(
+            f"**Progress:** {failure.tasks_completed}/{failure.tasks_total} tasks completed"
+        )
+    lines.append("")
+    lines.append("### Uncommitted Changes")
+    lines.append(f"```\n{diff_stat or 'No uncommitted changes'}\n```")
+    return "\n".join(lines)
+
+
+def _handle_workflow_failure(failure: WorkflowFailure, project_dir: Path) -> None:
+    """Handle workflow failure: set label, post comment, log banner."""
+    # 1. Log failure banner
+    logger.info("=" * 60)
+    logger.info("IMPLEMENTATION FAILED")
+    logger.info("Category: %s", failure.category.name)
+    logger.info("Stage: %s", failure.stage)
+    logger.info("Error: %s", failure.message)
+    if failure.tasks_total > 0:
+        logger.info(
+            "Progress: %d/%d tasks",
+            failure.tasks_completed,
+            failure.tasks_total,
+        )
+    diff_stat = _get_diff_stat(project_dir)
+    if diff_stat:
+        logger.info("Uncommitted changes:")
+        logger.info(diff_stat)
+    logger.info("=" * 60)
+
+    # 2. Set failure label (non-blocking)
+    try:
+        issue_manager = IssueManager(project_dir)
+        issue_manager.update_workflow_label(
+            from_label_id="implementing",
+            to_label_id=failure.category.value,
+        )
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        logger.warning("Failed to update issue label: %s", exc)
+
+    # 3. Post GitHub comment (non-blocking)
+    try:
+        branch_name = get_current_branch_name(project_dir)
+        issue_number = (
+            extract_issue_number_from_branch(branch_name) if branch_name else None
+        )
+        if issue_number:
+            comment_body = _format_failure_comment(failure, diff_stat)
+            issue_manager = IssueManager(project_dir)
+            issue_manager.add_comment(issue_number, comment_body)
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        logger.warning("Failed to post failure comment: %s", exc)
 
 
 def _run_ci_analysis(
@@ -926,7 +1019,6 @@ def run_implement_workflow(
     provider: str,
     mcp_config: Optional[str] = None,
     execution_dir: Optional[Path] = None,
-    update_labels: bool = False,
 ) -> int:
     """Main workflow orchestration function - processes all implementation tasks in sequence.
 
@@ -935,7 +1027,6 @@ def run_implement_workflow(
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional path to MCP configuration file
         execution_dir: Optional working directory for Claude subprocess
-        update_labels: If True, update GitHub issue labels on success
 
     Returns:
         int: Exit code (0 for success, 1 for error)
@@ -961,14 +1052,32 @@ def run_implement_workflow(
 
     # Step 2: Prepare task tracker if needed
     if not prepare_task_tracker(project_dir, provider, mcp_config, execution_dir):
+        _handle_workflow_failure(
+            WorkflowFailure(
+                category=FailureCategory.GENERAL,
+                stage="Task tracker preparation",
+                message="Failed to prepare task tracker",
+            ),
+            project_dir,
+        )
         return 1
 
     # Step 3: Show initial progress summary
     log_progress_summary(project_dir)
 
+    total_tasks = 0
+    try:
+        pr_info_path = str(project_dir / PR_INFO_DIR)
+        progress = get_step_progress(pr_info_path)
+        for step in progress.values():
+            step_total = step["total"]
+            assert isinstance(step_total, int)
+            total_tasks += step_total
+    except Exception:  # pylint: disable=broad-exception-caught
+        pass
+
     # Step 4: Process all incomplete tasks in a loop
     completed_tasks = 0
-    error_occurred = False
 
     while True:
         success, reason = process_single_task(
@@ -979,11 +1088,32 @@ def run_implement_workflow(
             if reason == "no_tasks":
                 # Legitimate completion - no more tasks
                 break
+            elif reason == "timeout":
+                # LLM timeout during task processing
+                _handle_workflow_failure(
+                    WorkflowFailure(
+                        category=FailureCategory.LLM_TIMEOUT,
+                        stage="Task implementation",
+                        message="LLM timed out during task processing",
+                        tasks_completed=completed_tasks,
+                        tasks_total=total_tasks,
+                    ),
+                    project_dir,
+                )
+                return 1
             elif reason == "error":
                 # Error occurred during task processing
-                error_occurred = True
-                logger.error("Task processing failed - stopping workflow")
-                break
+                _handle_workflow_failure(
+                    WorkflowFailure(
+                        category=FailureCategory.GENERAL,
+                        stage="Task implementation",
+                        message="Task processing failed",
+                        tasks_completed=completed_tasks,
+                        tasks_total=total_tasks,
+                    ),
+                    project_dir,
+                )
+                return 1
 
         completed_tasks += 1
         logger.info(f"Completed {completed_tasks} task(s). Checking for more...")
@@ -992,7 +1122,7 @@ def run_implement_workflow(
         log_progress_summary(project_dir)
 
     # Step 5: Run final mypy check if not running after each task
-    if not RUN_MYPY_AFTER_EACH_TASK and completed_tasks > 0 and not error_occurred:
+    if not RUN_MYPY_AFTER_EACH_TASK and completed_tasks > 0:
         logger.info("Running final mypy check after all tasks...")
         env_vars = prepare_llm_environment(project_dir)
 
@@ -1012,6 +1142,16 @@ def run_implement_workflow(
         # Format code after mypy fixes
         if not run_formatters(project_dir):
             logger.error("Formatting failed after final mypy check")
+            _handle_workflow_failure(
+                WorkflowFailure(
+                    category=FailureCategory.GENERAL,
+                    stage="Post-implementation formatting",
+                    message="Formatting failed after final mypy check",
+                    tasks_completed=completed_tasks,
+                    tasks_total=total_tasks,
+                ),
+                project_dir,
+            )
             return 1
 
         # Commit mypy fixes if any changes were made
@@ -1022,53 +1162,83 @@ def run_implement_workflow(
             logger.info("Committing final mypy fixes...")
             if not commit_changes(project_dir, provider):
                 logger.error("Failed to commit final mypy fixes")
+                _handle_workflow_failure(
+                    WorkflowFailure(
+                        category=FailureCategory.GENERAL,
+                        stage="Post-implementation commit",
+                        message="Failed to commit final mypy fixes",
+                        tasks_completed=completed_tasks,
+                        tasks_total=total_tasks,
+                    ),
+                    project_dir,
+                )
                 return 1
 
             if not push_changes(project_dir):
                 logger.error("Failed to push final mypy fixes")
+                _handle_workflow_failure(
+                    WorkflowFailure(
+                        category=FailureCategory.GENERAL,
+                        stage="Post-implementation commit",
+                        message="Failed to push final mypy fixes",
+                        tasks_completed=completed_tasks,
+                        tasks_total=total_tasks,
+                    ),
+                    project_dir,
+                )
                 return 1
         else:
             logger.info("No changes from final mypy check - skipping commit")
 
     # Step 5.5: Run finalisation to complete any remaining tasks
-    if not error_occurred:
-        finalisation_success = run_finalisation(
-            project_dir,
-            provider,
-            mcp_config,
-            execution_dir,
-        )
-        if not finalisation_success:
-            logger.warning("Finalisation encountered issues - continuing anyway")
+    finalisation_success = run_finalisation(
+        project_dir,
+        provider,
+        mcp_config,
+        execution_dir,
+    )
+    if not finalisation_success:
+        logger.warning("Finalisation encountered issues - continuing anyway")
 
     # Step 5.6: Check CI pipeline and auto-fix if needed
-    if not error_occurred:
-        logger.info("Checking CI pipeline status...")
-        current_branch = get_current_branch_name(project_dir)
-        if current_branch:
-            ci_success = check_and_fix_ci(
-                project_dir=project_dir,
-                branch=current_branch,
-                provider=provider,
-                mcp_config=mcp_config,
-                execution_dir=execution_dir,
-            )
-            if not ci_success:
-                logger.error("CI check failed after maximum fix attempts")
-                return 1
-        else:
-            logger.error("Could not determine current branch - skipping CI check")
-
-    # Step 6: Show final progress summary with appropriate messaging
-    if error_occurred:
-        logger.info(
-            f"Workflow stopped due to error after processing {completed_tasks} task(s)",
+    logger.info("Checking CI pipeline status...")
+    current_branch = get_current_branch_name(project_dir)
+    if current_branch:
+        ci_success = check_and_fix_ci(
+            project_dir=project_dir,
+            branch=current_branch,
+            provider=provider,
+            mcp_config=mcp_config,
+            execution_dir=execution_dir,
         )
-        if completed_tasks > 0:
-            logger.info("\nProgress before error:")
-            log_progress_summary(project_dir)
-        return 1
-    elif completed_tasks > 0:
+        if not ci_success:
+            logger.error("CI check failed after maximum fix attempts")
+            _handle_workflow_failure(
+                WorkflowFailure(
+                    category=FailureCategory.CI_FIX_EXHAUSTED,
+                    stage="CI pipeline fix",
+                    message="CI check failed after maximum fix attempts",
+                    tasks_completed=completed_tasks,
+                    tasks_total=total_tasks,
+                ),
+                project_dir,
+            )
+            return 1
+    else:
+        logger.error("Could not determine current branch - skipping CI check")
+
+    # Step 6: Unconditional success label transition
+    try:
+        issue_manager = IssueManager(project_dir)
+        issue_manager.update_workflow_label(
+            from_label_id="implementing",
+            to_label_id="code_review",
+        )
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        logger.warning("Failed to update issue label on success: %s", exc)
+
+    # Step 7: Show final progress summary with appropriate messaging
+    if completed_tasks > 0:
         logger.info(
             f"Implement workflow completed successfully! Processed {completed_tasks} task(s).",
         )
@@ -1076,25 +1246,5 @@ def run_implement_workflow(
         log_progress_summary(project_dir)
     else:
         logger.info("No incomplete implementation tasks found - workflow complete")
-
-    # Step 7: Update GitHub issue label if requested
-    if update_labels and completed_tasks > 0 and not error_occurred:
-        logger.info("Updating GitHub issue label...")
-        try:
-            from mcp_coder.utils.github_operations.issues import IssueManager
-
-            issue_manager = IssueManager(project_dir)
-            success = issue_manager.update_workflow_label(
-                from_label_id="implementing",
-                to_label_id="code_review",
-            )
-
-            if success:
-                logger.info("✓ Issue label updated: implementing → code-review")
-            else:
-                logger.warning("✗ Failed to update issue label (non-blocking)")
-
-        except Exception as e:
-            logger.error(f"Error updating issue label (non-blocking): {e}")
 
     return 0
