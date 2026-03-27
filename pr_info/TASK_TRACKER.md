@@ -57,12 +57,7 @@ See [step_3.md](./steps/step_3.md) for details.
 
 Diagnostic tools (`tools/manual_streaming_tests.bat`, `tools/streaming_diagnostic.py`) removed — served their purpose during review. Unit tests cover the streaming pipeline.
 
-## Open Issues (pre-existing, not caused by this PR)
-
-- [ ] `--output-format ndjson` batches text_delta events into single `assistant` messages for Claude CLI and LangChain text mode — pre-existing formatter issue
-- [ ] Misleading error message when `VIRTUAL_ENV` not set: shows "Connection to Anthropic API failed" instead of MCP subprocess not found
-
 ## Pull Request
 
 - [x] PR review: all steps completed, all checks green
-- [ ] PR summary prepared
+- [x] PR summary prepared
