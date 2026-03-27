@@ -59,8 +59,12 @@ Batch file: `tools/manual_streaming_tests.bat` (run from project root)
 
 ## Open Issues
 
-- [ ] `--output-format text` does not stream incrementally in terminal — output appears all at once instead of token-by-token
-- [ ] Agent mode with `--mcp-config` fails with `[WinError 2]` when `VIRTUAL_ENV` env var is not set — `.mcp.json` uses `${VIRTUAL_ENV}` paths that only resolve inside an activated venv. Error is misclassified as "Connection to Anthropic API failed" instead of showing the real cause (MCP server subprocess not found)
+- [x] `--output-format text` streams correctly for all providers (verified with timestamp diagnostic)
+- [ ] `--output-format ndjson` batches text_delta events into single `assistant` messages for Claude CLI and LangChain text mode — pre-existing formatter issue, not caused by this PR
+- [x] Agent mode `--mcp-config` works when `VIRTUAL_ENV` is set (batch file now activates venv)
+- [ ] Misleading error message when `VIRTUAL_ENV` not set: shows "Connection to Anthropic API failed" instead of MCP subprocess not found
+
+Diagnostic: `tools/streaming_diagnostic.py` (run with `.venv/Scripts/python tools/streaming_diagnostic.py`)
 - [ ] decide what should happen with `tools\manual_streaming_tests.bat`
 
 ## Pull Request

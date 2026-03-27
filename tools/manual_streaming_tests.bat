@@ -28,7 +28,7 @@ echo === Test 3: LangChain agent - see MCP servers? ===
 echo.
 
 echo === Test 4: LangChain agent - list directory ===
-%MCPCODER% prompt --llm-method langchain --output-format %FMT% --timeout 120 --mcp-config %MCP_CONFIG% "Use your tools to list files in the project root directory."
+%MCPCODER% prompt --llm-method langchain --output-format %FMT% --timeout 120 --mcp-config %MCP_CONFIG% "Use your tools to list files in the project root directory. Print only the first 3"
 echo.
 
 echo === Test 5: LangChain agent - file lifecycle ===
