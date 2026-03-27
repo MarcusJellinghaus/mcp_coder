@@ -166,3 +166,113 @@ def test_response_assembler_provider() -> None:
     assembler = ResponseAssembler(provider="langchain")
     result = assembler.result()
     assert result["provider"] == "langchain"
+
+
+# --- ResponseAssembler tool_trace tests ---
+
+
+class TestResponseAssemblerToolTrace:
+    """ResponseAssembler accumulates tool events into tool_trace."""
+
+    def test_tool_use_start_accumulated(self) -> None:
+        """tool_use_start events appear in tool_trace."""
+        assembler = ResponseAssembler(provider="langchain")
+        assembler.add(
+            {
+                "type": "tool_use_start",
+                "name": "read_file",
+                "args": {"path": "x.py"},
+                "tool_call_id": "tc_1",
+            }
+        )
+        result = assembler.result()
+        assert result["raw_response"]["tool_trace"] == [
+            {
+                "type": "tool_use_start",
+                "name": "read_file",
+                "args": {"path": "x.py"},
+                "tool_call_id": "tc_1",
+            }
+        ]
+
+    def test_tool_result_accumulated(self) -> None:
+        """tool_result events appear in tool_trace."""
+        assembler = ResponseAssembler(provider="langchain")
+        assembler.add(
+            {
+                "type": "tool_result",
+                "name": "read_file",
+                "output": "content",
+                "tool_call_id": "tc_1",
+            }
+        )
+        result = assembler.result()
+        assert result["raw_response"]["tool_trace"] == [
+            {
+                "type": "tool_result",
+                "name": "read_file",
+                "output": "content",
+                "tool_call_id": "tc_1",
+            }
+        ]
+
+    def test_full_tool_cycle_in_order(self) -> None:
+        """tool_use_start + tool_result accumulate in order."""
+        assembler = ResponseAssembler(provider="langchain")
+        assembler.add(
+            {
+                "type": "tool_use_start",
+                "name": "sleep",
+                "args": {"s": 1},
+                "tool_call_id": "tc_1",
+            }
+        )
+        assembler.add(
+            {
+                "type": "tool_result",
+                "name": "sleep",
+                "output": "ok",
+                "tool_call_id": "tc_1",
+            }
+        )
+        result = assembler.result()
+        trace = result["raw_response"]["tool_trace"]
+        assert isinstance(trace, list)
+        assert len(trace) == 2
+        assert trace[0]["type"] == "tool_use_start"
+        assert trace[1]["type"] == "tool_result"
+
+    def test_empty_tool_trace_not_in_result(self) -> None:
+        """When no tool events, tool_trace key is absent from raw_response."""
+        assembler = ResponseAssembler(provider="langchain")
+        assembler.add({"type": "text_delta", "text": "hi"})
+        assembler.add({"type": "done", "session_id": "s1", "usage": {}})
+        result = assembler.result()
+        assert "tool_trace" not in result["raw_response"]
+
+    def test_tool_trace_with_text_deltas(self) -> None:
+        """Tool events interleaved with text still accumulate correctly."""
+        assembler = ResponseAssembler(provider="langchain")
+        assembler.add({"type": "text_delta", "text": "thinking..."})
+        assembler.add(
+            {
+                "type": "tool_use_start",
+                "name": "run",
+                "args": {},
+                "tool_call_id": "tc_1",
+            }
+        )
+        assembler.add(
+            {
+                "type": "tool_result",
+                "name": "run",
+                "output": "done",
+                "tool_call_id": "tc_1",
+            }
+        )
+        assembler.add({"type": "text_delta", "text": "Result is done."})
+        result = assembler.result()
+        assert result["text"] == "thinking...Result is done."
+        tool_trace = result["raw_response"]["tool_trace"]
+        assert isinstance(tool_trace, list)
+        assert len(tool_trace) == 2

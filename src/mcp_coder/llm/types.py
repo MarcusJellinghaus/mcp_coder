@@ -83,6 +83,7 @@ class ResponseAssembler:
         self._session_id: str | None = None
         self._usage: dict[str, object] = {}
         self._raw_events: list[StreamEvent] = []
+        self._tool_trace: list[StreamEvent] = []
         self._error: str | None = None
 
     def add(self, event: StreamEvent) -> None:
@@ -100,6 +101,8 @@ class ResponseAssembler:
             session_id = event.get("session_id")
             if isinstance(session_id, str):
                 self._session_id = session_id
+        elif event_type in ("tool_use_start", "tool_result"):
+            self._tool_trace.append(event)
         elif event_type == "error":
             message = event.get("message")
             if isinstance(message, str):
@@ -114,6 +117,8 @@ class ResponseAssembler:
         raw_response: dict[str, object] = {"events": list(self._raw_events)}
         if self._usage:
             raw_response["usage"] = self._usage
+        if self._tool_trace:
+            raw_response["tool_trace"] = list(self._tool_trace)
         if self._error is not None:
             raw_response["error"] = self._error
         return LLMResponseDict(

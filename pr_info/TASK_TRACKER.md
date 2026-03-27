@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Extend ResponseAssembler with tool_trace Accumulation
 See [step_1.md](./steps/step_1.md) for details.
 
-- [ ] Implementation: tests (`TestResponseAssemblerToolTrace`) + production code in `ResponseAssembler`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(types): add tool_trace accumulation to ResponseAssembler`
+- [x] Implementation: tests (`TestResponseAssemblerToolTrace`) + production code in `ResponseAssembler`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(types): add tool_trace accumulation to ResponseAssembler`
 
 ### Step 2: Add `run_agent_stream()` Async Generator
 See [step_2.md](./steps/step_2.md) for details.
