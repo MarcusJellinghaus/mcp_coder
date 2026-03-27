@@ -393,6 +393,9 @@ def _poll_for_ci_completion(
         success=True means CI passed, success=False means CI failed or needs fixing.
         If ci_status is None and success is True, it means graceful exit (no CI found).
     """
+    poll_start_time = time.time()
+    heartbeat_iteration_interval = 8  # ~2min at 15s intervals
+
     for poll_attempt in range(CI_MAX_POLL_ATTEMPTS):
         try:
             ci_status = ci_manager.get_latest_ci_status(branch)
@@ -404,10 +407,14 @@ def _poll_for_ci_completion(
 
         run_info = ci_status.get("run", {})
 
+        elapsed = time.time() - poll_start_time
+        elapsed_min, elapsed_sec = divmod(int(elapsed), 60)
+
         if len(run_info) == 0:
             if poll_attempt < CI_MAX_POLL_ATTEMPTS - 1:
                 logger.debug(
-                    f"No CI run found yet (attempt {poll_attempt + 1}/{CI_MAX_POLL_ATTEMPTS})"
+                    f"No CI run found yet (attempt {poll_attempt + 1}/{CI_MAX_POLL_ATTEMPTS}, "
+                    f"elapsed: {elapsed_min}m {elapsed_sec}s)"
                 )
                 time.sleep(CI_POLL_INTERVAL_SECONDS)
                 continue
@@ -434,8 +441,20 @@ def _poll_for_ci_completion(
 
         logger.debug(
             f"CI run in progress (status: {run_status}, "
-            f"attempt {poll_attempt + 1}/{CI_MAX_POLL_ATTEMPTS})"
+            f"attempt {poll_attempt + 1}/{CI_MAX_POLL_ATTEMPTS}, "
+            f"elapsed: {elapsed_min}m {elapsed_sec}s)"
         )
+
+        if (poll_attempt + 1) % heartbeat_iteration_interval == 0:
+            logger.info(
+                "CI polling heartbeat: waiting for CI completion "
+                "(attempt %d/%d, elapsed: %dm %ds)",
+                poll_attempt + 1,
+                CI_MAX_POLL_ATTEMPTS,
+                elapsed_min,
+                elapsed_sec,
+            )
+
         time.sleep(CI_POLL_INTERVAL_SECONDS)
 
     logger.info("CI_TIMEOUT: No completed run after polling - skipping CI check")

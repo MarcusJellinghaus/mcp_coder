@@ -48,9 +48,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat(subprocess): add heartbeat logging to execute_subprocess and enable for LLM calls (#598)`
 
 ### Step 6: Add Elapsed Time and Heartbeat to CI Polling Logs
-- [ ] Implementation: add `poll_start_time`, elapsed time to debug logs, and INFO heartbeat every 8th iteration in `_poll_for_ci_completion()` in `core.py` + tests in `test_core.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(core): add elapsed time and heartbeat to CI polling logs (#598)`
+- [x] Implementation: add `poll_start_time`, elapsed time to debug logs, and INFO heartbeat every 8th iteration in `_poll_for_ci_completion()` in `core.py` + tests in `test_core.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(core): add elapsed time and heartbeat to CI polling logs (#598)`
 
 ## Pull Request
 - [ ] PR review: verify all steps integrated correctly
