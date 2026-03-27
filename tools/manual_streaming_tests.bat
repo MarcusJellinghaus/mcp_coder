@@ -16,11 +16,11 @@ echo === Format: %FMT% ===
 echo.
 
 echo === Test 1: Claude CLI streaming ===
-%MCPCODER% prompt --llm-method claude --output-format %FMT% --timeout 60 "Count from 1 to 5, and run sleep(2) between each number. Just the numbers."
+%MCPCODER% prompt --llm-method claude --output-format %FMT% --timeout 60 "Count from 1 to 5. Just the numbers, one per line."
 echo.
 
 echo === Test 2: LangChain text streaming (no MCP) ===
-%MCPCODER% prompt --llm-method langchain --output-format %FMT% --timeout 60 "Count from 1 to 5, and run sleep(2) between each number. Just the numbers."
+%MCPCODER% prompt --llm-method langchain --output-format %FMT% --timeout 60 "Count from 1 to 5. Just the numbers, one per line."
 echo.
 
 echo === Test 3: LangChain agent - see MCP servers? ===
@@ -28,11 +28,15 @@ echo === Test 3: LangChain agent - see MCP servers? ===
 echo.
 
 echo === Test 4: LangChain agent - list directory ===
-%MCPCODER% prompt --llm-method langchain --output-format %FMT% --timeout 120 --mcp-config %MCP_CONFIG% "Use your tools to list files in the project root directory. Print only the first 3"
+%MCPCODER% prompt --llm-method langchain --output-format %FMT% --timeout 120 --mcp-config %MCP_CONFIG% "Use your tools to list files in the project root directory."
 echo.
 
 echo === Test 5: LangChain agent - file lifecycle ===
 %MCPCODER% prompt --llm-method langchain --output-format %FMT% --timeout 180 --mcp-config %MCP_CONFIG% "Using tools: 1) Create _test_603.txt with 'hello'. 2) Read it. 3) Edit it to 'hello streaming'. 4) Read it. 5) Delete it. 6) List dir to confirm gone."
+echo.
+
+echo === Test 6: LangChain agent - streaming with sleep ===
+%MCPCODER% prompt --llm-method langchain --output-format %FMT% --timeout 120 --mcp-config %MCP_CONFIG% "Count from 1 to 5. Between each number, use the sleep tool to wait 3 seconds. Print each number, then sleep, then next number."
 echo.
 
 echo === Done ===
