@@ -53,9 +53,9 @@ See [step_5.md](./steps/step_5.md)
 
 ### Step 6: Add `[tool.mcp-coder.from-github]` to pyproject.toml
 See [step_6.md](./steps/step_6.md)
-- [ ] Implementation: Add `[tool.mcp-coder.from-github]` config section to pyproject.toml with package specs, add TOML parse test (TDD)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: Add `[tool.mcp-coder.from-github]` config section to pyproject.toml with package specs, add TOML parse test (TDD)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: verify all steps integrated correctly
