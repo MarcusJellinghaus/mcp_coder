@@ -262,8 +262,9 @@ class TestAskLangchainStreamAgentReal:
         async def _error_stream(
             **kwargs: object,
         ) -> AsyncIterator[dict[str, object]]:
+            if False:  # pylint: disable=using-constant-test
+                yield {}  # make this an async generator
             raise RuntimeError("agent boom")
-            yield {}  # pragma: no cover  # pylint: disable=unreachable
 
         with (
             patch(f"{_MOD_LC}._load_langchain_config", return_value=_make_config()),
@@ -295,12 +296,13 @@ class TestAskLangchainStreamAgentAuthError:
         async def _auth_error_stream(
             **kwargs: object,
         ) -> AsyncIterator[dict[str, object]]:
+            if False:  # pylint: disable=using-constant-test
+                yield {}  # make this an async generator
             raise anthropic.AuthenticationError(
                 message="invalid api key",
                 response=MagicMock(status_code=401),
                 body=None,
             )
-            yield {}  # pragma: no cover  # pylint: disable=unreachable
 
         from mcp_coder.llm.providers.langchain._exceptions import LLMAuthError
 

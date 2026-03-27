@@ -257,8 +257,9 @@ class TestRunAgentStream:
         """Errors from astream_events propagate as error event + exception."""
 
         async def _error_events() -> AsyncIterator[dict[str, object]]:
+            if False:  # pylint: disable=using-constant-test
+                yield  # make this an async generator
             raise RuntimeError("agent error")
-            yield  # pylint: disable=unreachable
 
         mock_agent = MagicMock()
         mock_agent.astream_events.return_value = _error_events()
