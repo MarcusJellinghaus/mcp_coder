@@ -107,6 +107,9 @@ if not exist .venv\Scripts\activate.bat (
 REM Add MCP-Coder tools to PATH so they're available in project context
 set "PATH=%MCP_CODER_VENV_PATH%;%PATH%"
 
+REM Install project in editable mode (ensures current code is always used)
+uv pip install -e . --no-deps
+
 echo Environment setup complete.
 echo - Project Python: %VIRTUAL_ENV%\Scripts\python.exe
 echo - MCP-Coder tools available in PATH
