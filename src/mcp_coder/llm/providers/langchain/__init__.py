@@ -11,6 +11,9 @@ import asyncio
 import json
 import logging
 import os
+import queue
+import threading
+import time
 import uuid
 from collections.abc import Iterator
 from datetime import datetime
@@ -39,6 +42,10 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+# Agent streaming timeout constants (seconds)
+_AGENT_NO_PROGRESS_TIMEOUT = 600  # 10 minutes
+_AGENT_OVERALL_TIMEOUT = 3600  # 60 minutes
 
 _BACKEND_ERROR_PARAMS: dict[str, tuple[str, str, str]] = {
     # (provider_label, env_var, endpoint_hint)
@@ -420,6 +427,99 @@ def _ask_agent(
     )
 
 
+def _ask_agent_stream(
+    question: str,
+    config: dict[str, str | None],
+    session_id: str,
+    mcp_config: str,
+    execution_dir: str | None = None,
+    env_vars: dict[str, str] | None = None,
+    timeout: int = 30,
+) -> Iterator[StreamEvent]:
+    """Stream agent events via thread+queue bridge from async to sync.
+
+    Runs ``run_agent_stream()`` in a background thread with ``asyncio.run()``
+    and bridges events through a ``queue.Queue``.
+
+    Args:
+        question: The user's prompt text.
+        config: LangChain configuration dict.
+        session_id: Session ID for conversation history.
+        mcp_config: Path to .mcp.json configuration file.
+        execution_dir: Optional working directory for agent execution.
+        env_vars: Optional environment variables for agent subprocesses.
+        timeout: Request timeout in seconds.
+
+    Yields:
+        StreamEvent dicts from the agent.
+
+    Raises:
+        TimeoutError: If no-progress or overall timeout is exceeded.
+    """
+    from .agent import _check_agent_dependencies, run_agent_stream
+
+    _check_agent_dependencies()
+    ensure_truststore()
+    chat_model = _create_chat_model(config, timeout=timeout)
+    history: list[dict[str, Any]] = load_langchain_history(session_id)
+
+    q: queue.Queue[StreamEvent | None] = queue.Queue()
+    error_holder: list[Exception] = []
+    cancel = threading.Event()
+
+    async def _run() -> None:
+        try:
+            async for event in run_agent_stream(
+                question=question,
+                chat_model=chat_model,
+                messages=history,
+                mcp_config_path=mcp_config,
+                session_id=session_id,
+                cancel_event=cancel,
+                execution_dir=execution_dir,
+                env_vars=env_vars,
+            ):
+                q.put(event)
+        except Exception as exc:  # pylint: disable=broad-except
+            error_holder.append(exc)
+        finally:
+            q.put(None)  # sentinel
+
+    thread = threading.Thread(target=asyncio.run, args=(_run(),), daemon=True)
+    thread.start()
+
+    cancelled = False
+    start = time.monotonic()
+
+    try:
+        while True:
+            try:
+                event = q.get(timeout=_AGENT_NO_PROGRESS_TIMEOUT)
+            except queue.Empty as exc:
+                cancel.set()
+                raise TimeoutError(
+                    f"Agent produced no output for {_AGENT_NO_PROGRESS_TIMEOUT}s"
+                ) from exc
+            if event is None:
+                break
+            if time.monotonic() - start > _AGENT_OVERALL_TIMEOUT:
+                cancel.set()
+                raise TimeoutError(
+                    f"Agent execution exceeded {_AGENT_OVERALL_TIMEOUT}s overall timeout"
+                )
+            yield event
+    except GeneratorExit:
+        cancel.set()
+        cancelled = True
+    finally:
+        thread.join(timeout=5)
+
+    if error_holder and not cancelled:
+        held_exc = error_holder[0]
+        _handle_provider_error(held_exc, config.get("backend"))
+        raise held_exc
+
+
 def ask_langchain_stream(
     question: str,
     session_id: str | None = None,
@@ -432,33 +532,15 @@ def ask_langchain_stream(
 
     Same parameters as ask_langchain(). For text mode (no mcp_config),
     routes to _ask_text_stream() for real streaming. For agent mode
-    (mcp_config present), falls back to blocking ask_langchain() and
-    yields its result as text_delta + done events.
+    (mcp_config present), routes to _ask_agent_stream() for real
+    streaming via thread+queue bridge.
 
     Yields:
-        StreamEvent dicts: text_delta, done, error, raw_line
+        StreamEvent dicts: text_delta, tool_use_start, tool_result, done, error, raw_line
 
     Raises:
         ValueError: If the langchain backend is not configured.
     """
-    if mcp_config:
-        # Agent mode: fall back to blocking call
-        response = ask_langchain(
-            question=question,
-            session_id=session_id,
-            timeout=timeout,
-            mcp_config=mcp_config,
-            execution_dir=execution_dir,
-            env_vars=env_vars,
-        )
-        yield {"type": "text_delta", "text": response.get("text", "")}
-        yield {
-            "type": "done",
-            "session_id": response.get("session_id"),
-            "usage": response.get("raw_response", {}).get("usage", {}),
-        }
-        return
-
     config = _load_langchain_config()
     backend = config["backend"]
 
@@ -470,6 +552,19 @@ def ask_langchain_stream(
         )
 
     sid = session_id or str(uuid.uuid4())
+
+    if mcp_config:
+        yield from _ask_agent_stream(
+            question=question,
+            config=config,
+            session_id=sid,
+            mcp_config=mcp_config,
+            execution_dir=execution_dir,
+            env_vars=env_vars,
+            timeout=timeout,
+        )
+        return
+
     yield from _ask_text_stream(
         question=question,
         config=config,

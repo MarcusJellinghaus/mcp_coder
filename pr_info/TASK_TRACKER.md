@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md) for details.
 ### Step 3: Replace Agent Fallback with Thread+Queue Bridge
 See [step_3.md](./steps/step_3.md) for details.
 
-- [ ] Implementation: tests (`TestAskLangchainStreamAgentReal`, `TestAskLangchainStreamAgentTimeouts`) + `_ask_agent_stream()` in `__init__.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(langchain): replace agent streaming fallback with real streaming`
+- [x] Implementation: tests (`TestAskLangchainStreamAgentReal`, `TestAskLangchainStreamAgentTimeouts`) + `_ask_agent_stream()` in `__init__.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(langchain): replace agent streaming fallback with real streaming`
 
 ## Pull Request
 
