@@ -9,49 +9,64 @@ MCPCODER = os.path.join(".venv", "Scripts", "mcp-coder.exe")
 MCP_CONFIG = ".mcp.json"
 
 TESTS = [
+    # Claude CLI
     {
-        "name": "Claude CLI / ndjson",
+        "name": "Claude / ndjson",
         "args": ["--llm-method", "claude", "--output-format", "ndjson", "--timeout", "60"],
         "prompt": "Count from 1 to 5. Just the numbers, one per line.",
     },
     {
-        "name": "Claude CLI / text",
+        "name": "Claude / text",
         "args": ["--llm-method", "claude", "--output-format", "text", "--timeout", "60"],
         "prompt": "Count from 1 to 5. Just the numbers, one per line.",
     },
     {
-        "name": "LangChain text / ndjson",
+        "name": "Claude+MCP+sleep / ndjson",
+        "args": ["--llm-method", "claude", "--output-format", "ndjson", "--timeout", "120",
+                 "--mcp-config", MCP_CONFIG],
+        "prompt": "Count from 1 to 5. Between each number, use the sleep tool to wait 3 seconds.",
+    },
+    {
+        "name": "Claude+MCP+sleep / text",
+        "args": ["--llm-method", "claude", "--output-format", "text", "--timeout", "120",
+                 "--mcp-config", MCP_CONFIG],
+        "prompt": "Count from 1 to 5. Between each number, use the sleep tool to wait 3 seconds.",
+    },
+    # LangChain text (no MCP)
+    {
+        "name": "LC text / ndjson",
         "args": ["--llm-method", "langchain", "--output-format", "ndjson", "--timeout", "60"],
         "prompt": "Count from 1 to 5. Just the numbers, one per line.",
     },
     {
-        "name": "LangChain text / text",
+        "name": "LC text / text",
         "args": ["--llm-method", "langchain", "--output-format", "text", "--timeout", "60"],
         "prompt": "Count from 1 to 5. Just the numbers, one per line.",
     },
+    # LangChain agent (with MCP)
     {
-        "name": "LangChain agent / ndjson",
+        "name": "LC agent / ndjson",
         "args": ["--llm-method", "langchain", "--output-format", "ndjson", "--timeout", "120",
                  "--mcp-config", MCP_CONFIG],
         "prompt": "List all MCP tools available to you, one per line.",
     },
     {
-        "name": "LangChain agent / text",
+        "name": "LC agent / text",
         "args": ["--llm-method", "langchain", "--output-format", "text", "--timeout", "120",
                  "--mcp-config", MCP_CONFIG],
         "prompt": "List all MCP tools available to you, one per line.",
     },
     {
-        "name": "LangChain agent+sleep / ndjson",
+        "name": "LC agent+sleep / ndjson",
         "args": ["--llm-method", "langchain", "--output-format", "ndjson", "--timeout", "120",
                  "--mcp-config", MCP_CONFIG],
-        "prompt": "Count from 1 to 5. Between each number, use the sleep tool to wait 3 seconds. Print each number, then sleep, then next number.",
+        "prompt": "Count from 1 to 5. Between each number, use the sleep tool to wait 3 seconds.",
     },
     {
-        "name": "LangChain agent+sleep / text",
+        "name": "LC agent+sleep / text",
         "args": ["--llm-method", "langchain", "--output-format", "text", "--timeout", "120",
                  "--mcp-config", MCP_CONFIG],
-        "prompt": "Count from 1 to 5. Between each number, use the sleep tool to wait 3 seconds. Print each number, then sleep, then next number.",
+        "prompt": "Count from 1 to 5. Between each number, use the sleep tool to wait 3 seconds.",
     },
 ]
 
@@ -124,8 +139,8 @@ def main():
     print(f"\n{'='*60}")
     print("  SUMMARY MATRIX")
     print(f"{'='*60}")
-    print(f"  {'Test':<35} {'Works':>6} {'Streaming':>12} {'Lines':>6} {'Time':>6}")
-    print(f"  {'-'*35} {'-'*6} {'-'*12} {'-'*6} {'-'*6}")
+    print(f"  {'Test':<30} {'Works':>6} {'Streaming':>12} {'Lines':>6} {'Time':>6}")
+    print(f"  {'-'*30} {'-'*6} {'-'*12} {'-'*6} {'-'*6}")
     for r in results:
         works = "FAIL" if r["error"] else "OK"
         if r["error"]:
@@ -135,7 +150,7 @@ def main():
             spread = (ts[-1] - ts[0]) if len(ts) >= 2 else 0
             streaming = "YES" if spread > 0.5 else "NO"
         n = len(r["lines"])
-        print(f"  {r['name']:<35} {works:>6} {streaming:>12} {n:>6} {r['elapsed']:>5.1f}s")
+        print(f"  {r['name']:<30} {works:>6} {streaming:>12} {n:>6} {r['elapsed']:>5.1f}s")
 
 
 if __name__ == "__main__":
