@@ -42,7 +42,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat(core): add try/finally safety net and SIGTERM handler to implement workflow (#598)`
 
 ### Step 5: Add Heartbeat Support to `execute_subprocess()` and Pass from `ask_claude_code_cli()`
-- [ ] Implementation A: add `_run_heartbeat()` and heartbeat params to `execute_subprocess()` in `subprocess_runner.py` + tests in `test_subprocess_runner.py`
+- [x] Implementation A: add `_run_heartbeat()` and heartbeat params to `execute_subprocess()` in `subprocess_runner.py` + tests in `test_subprocess_runner.py`
 - [ ] Implementation B: add `LLM_HEARTBEAT_INTERVAL_SECONDS` constant and pass heartbeat params from `ask_claude_code_cli()` in `claude_code_cli.py` + tests in `test_claude_code_cli.py`
 - [ ] Quality checks: pylint, pytest, mypy — fix all issues
 - [ ] Commit: `feat(subprocess): add heartbeat logging to execute_subprocess and enable for LLM calls (#598)`
