@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 4: Add `_handle_workflow_failure()` and wire into `run_implement_workflow()`
-- [ ] Implementation: tests in `test_core.py` + add `_get_diff_stat()`, `_format_failure_comment()`, `_handle_workflow_failure()` to `core.py`, wire into all error exits, add unconditional success label transition, remove post-error progress display
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests in `test_core.py` + add `_get_diff_stat()`, `_format_failure_comment()`, `_handle_workflow_failure()` to `core.py`, wire into all error exits, add unconditional success label transition, remove post-error progress display
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: verify all acceptance criteria from step_4.md checklist

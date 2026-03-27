@@ -8,8 +8,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.workflow_utils.task_tracker import TaskTrackerFileNotFoundError
+from mcp_coder.workflows.implement.constants import FailureCategory, WorkflowFailure
 from mcp_coder.workflows.implement.core import (
+    _format_failure_comment,
+    _get_diff_stat,
     _get_rebase_target_branch,
+    _handle_workflow_failure,
     log_progress_summary,
     prepare_task_tracker,
     run_finalisation,
@@ -1408,3 +1412,394 @@ class TestIntegration:
 
         # Test progress logging without data
         log_progress_summary(tmp_path)  # Should not raise exception
+
+
+class TestGetDiffStat:
+    """Tests for _get_diff_stat."""
+
+    @patch("mcp_coder.workflows.implement.core._safe_repo_context")
+    def test_returns_diff_stat(self, mock_ctx: MagicMock) -> None:
+        """Returns git diff --stat output."""
+        mock_repo = MagicMock()
+        mock_repo.git.diff.return_value = "file.py | 3 +++"
+        mock_ctx.return_value.__enter__ = MagicMock(return_value=mock_repo)
+        mock_ctx.return_value.__exit__ = MagicMock(return_value=False)
+
+        result = _get_diff_stat(Path("/project"))
+
+        assert result == "file.py | 3 +++"
+        mock_repo.git.diff.assert_called_once_with("--stat")
+
+    @patch("mcp_coder.workflows.implement.core._safe_repo_context")
+    def test_returns_empty_on_error(self, mock_ctx: MagicMock) -> None:
+        """Returns empty string when git fails."""
+        mock_ctx.side_effect = Exception("git error")
+
+        result = _get_diff_stat(Path("/project"))
+
+        assert result == ""
+
+
+class TestFormatFailureComment:
+    """Tests for _format_failure_comment."""
+
+    def test_basic_failure_comment(self) -> None:
+        """Formats basic failure comment with category, stage, error."""
+        failure = WorkflowFailure(
+            category=FailureCategory.GENERAL,
+            stage="test stage",
+            message="something failed",
+        )
+        result = _format_failure_comment(failure, "")
+
+        assert "## Implementation Failed" in result
+        assert "General" in result
+        assert "test stage" in result
+        assert "something failed" in result
+        assert "No uncommitted changes" in result
+
+    def test_includes_progress_when_set(self) -> None:
+        """Includes progress info when tasks_total > 0."""
+        failure = WorkflowFailure(
+            category=FailureCategory.LLM_TIMEOUT,
+            stage="Task implementation",
+            message="timed out",
+            tasks_completed=2,
+            tasks_total=5,
+        )
+        result = _format_failure_comment(failure, "file.py | 3 +++")
+
+        assert "2/5" in result
+        assert "file.py" in result
+
+    def test_no_progress_when_zero_total(self) -> None:
+        """No progress line when tasks_total is 0."""
+        failure = WorkflowFailure(
+            category=FailureCategory.GENERAL,
+            stage="test",
+            message="failed",
+        )
+        result = _format_failure_comment(failure, "")
+
+        assert "Progress" not in result
+
+
+class TestHandleWorkflowFailure:
+    """Tests for _handle_workflow_failure."""
+
+    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.implement.core.IssueManager")
+    @patch("mcp_coder.workflows.implement.core._get_diff_stat")
+    def test_sets_failure_label(
+        self,
+        mock_diff: MagicMock,
+        mock_issue_cls: MagicMock,
+        mock_branch: MagicMock,
+    ) -> None:
+        """Failure handler sets the correct label."""
+        mock_diff.return_value = ""
+        mock_branch.return_value = None
+        mock_manager = MagicMock()
+        mock_issue_cls.return_value = mock_manager
+
+        failure = WorkflowFailure(
+            category=FailureCategory.GENERAL,
+            stage="test",
+            message="failed",
+        )
+        _handle_workflow_failure(failure, Path("/project"))
+
+        mock_manager.update_workflow_label.assert_called_once_with(
+            from_label_id="implementing",
+            to_label_id="implementing_failed",
+        )
+
+    @patch("mcp_coder.workflows.implement.core.extract_issue_number_from_branch")
+    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.implement.core.IssueManager")
+    @patch("mcp_coder.workflows.implement.core._get_diff_stat")
+    def test_posts_github_comment(
+        self,
+        mock_diff: MagicMock,
+        mock_issue_cls: MagicMock,
+        mock_branch: MagicMock,
+        mock_extract: MagicMock,
+    ) -> None:
+        """Failure handler posts comment with failure details."""
+        mock_branch.return_value = "189-feature"
+        mock_extract.return_value = 189
+        mock_diff.return_value = "file.py | 3 +++"
+        mock_manager = MagicMock()
+        mock_issue_cls.return_value = mock_manager
+
+        failure = WorkflowFailure(
+            category=FailureCategory.LLM_TIMEOUT,
+            stage="Task implementation",
+            message="timed out",
+            tasks_completed=2,
+            tasks_total=5,
+        )
+        _handle_workflow_failure(failure, Path("/project"))
+
+        mock_manager.add_comment.assert_called_once()
+        comment = mock_manager.add_comment.call_args[0][1]
+        assert "Implementation Failed" in comment
+        assert "Llm Timeout" in comment
+        assert "2/5" in comment
+        assert "file.py" in comment
+
+    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.implement.core.IssueManager")
+    @patch("mcp_coder.workflows.implement.core._get_diff_stat")
+    def test_label_error_non_blocking(
+        self,
+        mock_diff: MagicMock,
+        mock_issue_cls: MagicMock,
+        mock_branch: MagicMock,
+    ) -> None:
+        """Label update failure should not raise."""
+        mock_diff.return_value = ""
+        mock_branch.return_value = None
+        mock_manager = MagicMock()
+        mock_manager.update_workflow_label.side_effect = Exception("API error")
+        mock_issue_cls.return_value = mock_manager
+
+        failure = WorkflowFailure(
+            category=FailureCategory.GENERAL,
+            stage="test",
+            message="failed",
+        )
+        # Should not raise
+        _handle_workflow_failure(failure, Path("/project"))
+
+    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.implement.core.IssueManager")
+    @patch("mcp_coder.workflows.implement.core._get_diff_stat")
+    def test_ci_exhaustion_sets_ci_fix_needed_label(
+        self,
+        mock_diff: MagicMock,
+        mock_issue_cls: MagicMock,
+        mock_branch: MagicMock,
+    ) -> None:
+        """CI fix exhaustion sets ci_fix_needed label."""
+        mock_diff.return_value = ""
+        mock_branch.return_value = None
+        mock_manager = MagicMock()
+        mock_issue_cls.return_value = mock_manager
+
+        failure = WorkflowFailure(
+            category=FailureCategory.CI_FIX_EXHAUSTED,
+            stage="CI pipeline fix",
+            message="CI failed",
+        )
+        _handle_workflow_failure(failure, Path("/project"))
+
+        mock_manager.update_workflow_label.assert_called_once_with(
+            from_label_id="implementing",
+            to_label_id="ci_fix_needed",
+        )
+
+    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.implement.core.IssueManager")
+    @patch("mcp_coder.workflows.implement.core._get_diff_stat")
+    def test_timeout_sets_llm_timeout_label(
+        self,
+        mock_diff: MagicMock,
+        mock_issue_cls: MagicMock,
+        mock_branch: MagicMock,
+    ) -> None:
+        """LLM timeout sets llm_timeout label."""
+        mock_diff.return_value = ""
+        mock_branch.return_value = None
+        mock_manager = MagicMock()
+        mock_issue_cls.return_value = mock_manager
+
+        failure = WorkflowFailure(
+            category=FailureCategory.LLM_TIMEOUT,
+            stage="Task implementation",
+            message="timed out",
+        )
+        _handle_workflow_failure(failure, Path("/project"))
+
+        mock_manager.update_workflow_label.assert_called_once_with(
+            from_label_id="implementing",
+            to_label_id="llm_timeout",
+        )
+
+
+class TestRunImplementWorkflowLabelTransitions:
+    """Test that labels always transition on success/failure."""
+
+    @patch("mcp_coder.workflows.implement.core.IssueManager")
+    @patch("mcp_coder.workflows.implement.core.check_and_fix_ci")
+    @patch("mcp_coder.workflows.implement.core.run_finalisation")
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.process_single_task")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
+    def test_success_always_updates_label_to_code_review(
+        self,
+        mock_branch: MagicMock,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_process: MagicMock,
+        mock_progress: MagicMock,
+        mock_finalise: MagicMock,
+        mock_ci: MagicMock,
+        mock_issue_cls: MagicMock,
+    ) -> None:
+        """On success, label transitions to code_review unconditionally."""
+        mock_git_clean.return_value = True
+        mock_main_branch.return_value = True
+        mock_prereq.return_value = True
+        mock_rebase.return_value = True
+        mock_prepare.return_value = True
+        mock_process.return_value = (False, "no_tasks")
+        mock_finalise.return_value = True
+        mock_branch.return_value = "189-feature"
+        mock_ci.return_value = True
+        mock_manager = MagicMock()
+        mock_issue_cls.return_value = mock_manager
+
+        result = run_implement_workflow(Path("/project"), "claude")
+
+        assert result == 0
+        mock_manager.update_workflow_label.assert_called_once_with(
+            from_label_id="implementing",
+            to_label_id="code_review",
+        )
+
+    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    def test_prerequisite_failures_dont_change_labels(
+        self,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_handle_failure: MagicMock,
+    ) -> None:
+        """Prerequisite failures return 1 without calling failure handler."""
+        mock_git_clean.return_value = False
+
+        result = run_implement_workflow(Path("/project"), "claude")
+
+        assert result == 1
+        mock_handle_failure.assert_not_called()
+
+    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.process_single_task")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    def test_timeout_calls_handle_failure_with_llm_timeout(
+        self,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_process: MagicMock,
+        mock_progress: MagicMock,
+        mock_handle_failure: MagicMock,
+    ) -> None:
+        """When LLM times out, calls _handle_workflow_failure with LLM_TIMEOUT."""
+        mock_git_clean.return_value = True
+        mock_main_branch.return_value = True
+        mock_prereq.return_value = True
+        mock_rebase.return_value = True
+        mock_prepare.return_value = True
+        mock_process.return_value = (False, "timeout")
+
+        result = run_implement_workflow(Path("/project"), "claude")
+
+        assert result == 1
+        mock_handle_failure.assert_called_once()
+        failure_arg = mock_handle_failure.call_args[0][0]
+        assert failure_arg.category == FailureCategory.LLM_TIMEOUT
+        assert failure_arg.stage == "Task implementation"
+
+    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.process_single_task")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    def test_error_calls_handle_failure_with_general(
+        self,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_process: MagicMock,
+        mock_progress: MagicMock,
+        mock_handle_failure: MagicMock,
+    ) -> None:
+        """When task errors, calls _handle_workflow_failure with GENERAL."""
+        mock_git_clean.return_value = True
+        mock_main_branch.return_value = True
+        mock_prereq.return_value = True
+        mock_rebase.return_value = True
+        mock_prepare.return_value = True
+        mock_process.return_value = (False, "error")
+
+        result = run_implement_workflow(Path("/project"), "claude")
+
+        assert result == 1
+        mock_handle_failure.assert_called_once()
+        failure_arg = mock_handle_failure.call_args[0][0]
+        assert failure_arg.category == FailureCategory.GENERAL
+        assert failure_arg.stage == "Task implementation"
+
+
+class TestNoPostErrorProgressDisplay:
+    """Verify post-error progress display is removed."""
+
+    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.process_single_task")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    def test_no_progress_summary_after_error(
+        self,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_process: MagicMock,
+        mock_progress: MagicMock,
+        mock_handle_failure: MagicMock,
+    ) -> None:
+        """After error, log_progress_summary is only called once (initial), not after error."""
+        mock_git_clean.return_value = True
+        mock_main_branch.return_value = True
+        mock_prereq.return_value = True
+        mock_rebase.return_value = True
+        mock_prepare.return_value = True
+        mock_process.return_value = (False, "error")
+
+        result = run_implement_workflow(Path("/project"), "claude")
+
+        assert result == 1
+        # log_progress_summary called once for initial display (Step 3)
+        # NOT called again after error (post-error display removed)
+        mock_progress.assert_called_once()
+        mock_handle_failure.assert_called_once()
