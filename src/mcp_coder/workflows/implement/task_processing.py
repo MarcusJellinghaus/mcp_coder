@@ -400,7 +400,7 @@ def process_single_task(
     Returns:
         Tuple of (success, reason) where:
         - success: True if task completed successfully
-        - reason: 'completed' | 'no_tasks' | 'error'
+        - reason: 'completed' | 'no_tasks' | 'error' | 'timeout'
     """
     # Cleanup stale commit message file from previous failed runs
     _cleanup_commit_message_file(project_dir)
