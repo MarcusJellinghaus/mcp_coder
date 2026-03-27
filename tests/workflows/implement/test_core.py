@@ -1883,3 +1883,134 @@ class TestFormatFailureCommentElapsedAndBuildUrl:
         comment = _format_failure_comment(failure, "some diff")
         assert "**Elapsed:** 1h 1m 1s" in comment
         assert "**Build:** https://jenkins.example.com/job/1/console" in comment
+
+
+class TestExistingFailuresIncludeNewFields:
+    """Tests that existing WorkflowFailure constructions include build_url and elapsed_time."""
+
+    @patch("mcp_coder.workflows.implement.core.check_and_fix_ci")
+    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.implement.core.run_finalisation")
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.process_single_task")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch.dict(
+        "os.environ", {"BUILD_URL": "https://jenkins.example.com/job/2/console"}
+    )
+    def test_existing_failures_include_build_url_and_elapsed(
+        self,
+        mock_handle_failure: MagicMock,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_process: MagicMock,
+        mock_progress: MagicMock,
+        mock_finalisation: MagicMock,
+        mock_branch: MagicMock,
+        mock_ci: MagicMock,
+    ) -> None:
+        """Existing handled failures include build_url and elapsed_time."""
+        mock_git_clean.return_value = True
+        mock_main_branch.return_value = True
+        mock_prereq.return_value = True
+        mock_rebase.return_value = True
+        mock_prepare.return_value = False  # Trigger failure at task tracker preparation
+
+        run_implement_workflow(Path("/fake"), "claude")
+
+        mock_handle_failure.assert_called_once()
+        failure = mock_handle_failure.call_args[0][0]
+        assert failure.build_url == "https://jenkins.example.com/job/2/console"
+        assert failure.elapsed_time is not None
+        assert failure.elapsed_time >= 0
+
+    @patch("mcp_coder.workflows.implement.core.check_and_fix_ci")
+    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.implement.core.run_finalisation")
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.process_single_task")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch.dict("os.environ", {}, clear=True)
+    def test_build_url_none_when_env_not_set(
+        self,
+        mock_handle_failure: MagicMock,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_process: MagicMock,
+        mock_progress: MagicMock,
+        mock_finalisation: MagicMock,
+        mock_branch: MagicMock,
+        mock_ci: MagicMock,
+    ) -> None:
+        """build_url is None when BUILD_URL env var is not set."""
+        mock_git_clean.return_value = True
+        mock_main_branch.return_value = True
+        mock_prereq.return_value = True
+        mock_rebase.return_value = True
+        mock_prepare.return_value = False  # Trigger failure
+
+        run_implement_workflow(Path("/fake"), "claude")
+
+        mock_handle_failure.assert_called_once()
+        failure = mock_handle_failure.call_args[0][0]
+        assert failure.build_url is None
+
+    @patch("mcp_coder.workflows.implement.core.check_and_fix_ci")
+    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.implement.core.run_finalisation")
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.process_single_task")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch.dict(
+        "os.environ", {"BUILD_URL": "https://jenkins.example.com/job/5/console"}
+    )
+    def test_timeout_failure_includes_build_url_and_elapsed(
+        self,
+        mock_handle_failure: MagicMock,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_process: MagicMock,
+        mock_progress: MagicMock,
+        mock_finalisation: MagicMock,
+        mock_branch: MagicMock,
+        mock_ci: MagicMock,
+    ) -> None:
+        """Timeout failures include build_url and elapsed_time."""
+        mock_git_clean.return_value = True
+        mock_main_branch.return_value = True
+        mock_prereq.return_value = True
+        mock_rebase.return_value = True
+        mock_prepare.return_value = True
+        mock_process.return_value = (False, "timeout")
+
+        run_implement_workflow(Path("/fake"), "claude")
+
+        mock_handle_failure.assert_called_once()
+        failure = mock_handle_failure.call_args[0][0]
+        assert failure.category == FailureCategory.LLM_TIMEOUT
+        assert failure.build_url == "https://jenkins.example.com/job/5/console"
+        assert failure.elapsed_time is not None
+        assert failure.elapsed_time >= 0

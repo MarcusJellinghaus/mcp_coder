@@ -5,6 +5,7 @@ prerequisites checking, task tracker preparation, and task processing loops.
 """
 
 import logging
+import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -1053,6 +1054,9 @@ def run_implement_workflow(
     """
     logger.info(f"Starting implement workflow for project: {project_dir}")
 
+    start_time = time.time()
+    build_url = os.environ.get("BUILD_URL")
+
     # Step 1: Check git status and prerequisites
     if not check_git_clean(project_dir):
         return 1
@@ -1073,6 +1077,8 @@ def run_implement_workflow(
                 category=FailureCategory.GENERAL,
                 stage="Task tracker preparation",
                 message="Failed to prepare task tracker",
+                build_url=build_url,
+                elapsed_time=time.time() - start_time,
             ),
             project_dir,
         )
@@ -1113,6 +1119,8 @@ def run_implement_workflow(
                         message="LLM timed out during task processing",
                         tasks_completed=completed_tasks,
                         tasks_total=total_tasks,
+                        build_url=build_url,
+                        elapsed_time=time.time() - start_time,
                     ),
                     project_dir,
                 )
@@ -1126,6 +1134,8 @@ def run_implement_workflow(
                         message="Task processing failed",
                         tasks_completed=completed_tasks,
                         tasks_total=total_tasks,
+                        build_url=build_url,
+                        elapsed_time=time.time() - start_time,
                     ),
                     project_dir,
                 )
@@ -1165,6 +1175,8 @@ def run_implement_workflow(
                     message="Formatting failed after final mypy check",
                     tasks_completed=completed_tasks,
                     tasks_total=total_tasks,
+                    build_url=build_url,
+                    elapsed_time=time.time() - start_time,
                 ),
                 project_dir,
             )
@@ -1185,6 +1197,8 @@ def run_implement_workflow(
                         message="Failed to commit final mypy fixes",
                         tasks_completed=completed_tasks,
                         tasks_total=total_tasks,
+                        build_url=build_url,
+                        elapsed_time=time.time() - start_time,
                     ),
                     project_dir,
                 )
@@ -1199,6 +1213,8 @@ def run_implement_workflow(
                         message="Failed to push final mypy fixes",
                         tasks_completed=completed_tasks,
                         tasks_total=total_tasks,
+                        build_url=build_url,
+                        elapsed_time=time.time() - start_time,
                     ),
                     project_dir,
                 )
@@ -1236,6 +1252,8 @@ def run_implement_workflow(
                     message="CI check failed after maximum fix attempts",
                     tasks_completed=completed_tasks,
                     tasks_total=total_tasks,
+                    build_url=build_url,
+                    elapsed_time=time.time() - start_time,
                 ),
                 project_dir,
             )

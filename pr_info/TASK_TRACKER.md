@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat(core): include elapsed time and build URL in failure comments (#598)`
 
 ### Step 3: Update Existing `WorkflowFailure(...)` Constructions with `build_url` and `elapsed_time`
-- [ ] Implementation: capture `start_time` and `build_url` at top of `run_implement_workflow()`, pass to every `WorkflowFailure(...)` in `core.py` + tests in `test_core.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(core): add build_url and elapsed_time to existing WorkflowFailure constructions (#598)`
+- [x] Implementation: capture `start_time` and `build_url` at top of `run_implement_workflow()`, pass to every `WorkflowFailure(...)` in `core.py` + tests in `test_core.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(core): add build_url and elapsed_time to existing WorkflowFailure constructions (#598)`
 
 ### Step 4: Add `try/finally` Safety Net + SIGTERM Handler
 - [ ] Implementation: wrap workflow body in `try/finally`, add `reached_terminal_state` flag, register SIGTERM handler in `core.py` + tests in `test_core.py`
