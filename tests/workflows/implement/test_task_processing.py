@@ -570,6 +570,29 @@ class TestProcessSingleTask:
         assert success is False
         assert reason == "error"
 
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    def test_process_single_task_llm_timeout(
+        self,
+        mock_get_next_task: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+    ) -> None:
+        """Test processing single task returns 'timeout' on TimeoutExpired."""
+        from mcp_coder.utils.subprocess_runner import TimeoutExpired
+
+        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_prompt.return_value = "Template"
+        mock_prompt_llm.side_effect = TimeoutExpired(
+            cmd="claude", timeout=3600, output="", stderr=""
+        )
+
+        success, reason = process_single_task(Path("/test/project"), "claude")
+
+        assert success is False
+        assert reason == "timeout"
+
     @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
     @patch("mcp_coder.workflows.implement.task_processing.store_session")
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")

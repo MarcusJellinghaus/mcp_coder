@@ -17,6 +17,7 @@ from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils import commit_all_changes, get_full_status, git_push
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
+from mcp_coder.utils.subprocess_runner import TimeoutExpired
 from mcp_coder.workflow_utils.commit_operations import (
     generate_commit_message_with_llm,
     parse_llm_commit_response,
@@ -474,6 +475,9 @@ Please implement this task step by step."""
         ) as store_err:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.warning("Failed to store implement session: %s", store_err)
 
+    except TimeoutExpired:
+        logger.error("LLM call timed out for task: %s", next_task)
+        return False, "timeout"
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type

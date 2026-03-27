@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: Return `"timeout"` from `process_single_task()` on `TimeoutExpired`
-- [ ] Implementation: test in `test_task_processing.py` + catch `TimeoutExpired` in `task_processing.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: test in `test_task_processing.py` + catch `TimeoutExpired` in `task_processing.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Remove `update_labels` parameter from CLI and workflow
 - [ ] Implementation: remove from `parsers.py`, `commands/implement.py`, `core.py` + update tests in `test_implement.py` and `test_core.py`
