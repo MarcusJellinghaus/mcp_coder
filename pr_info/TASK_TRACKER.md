@@ -41,9 +41,9 @@ See [step_3.md](./steps/step_3.md)
 
 ### Step 4: Thread `from_github` through session_launch.py
 See [step_4.md](./steps/step_4.md)
-- [ ] Implementation: Add `from_github` param to `process_eligible_issues()`, `prepare_and_launch_session()`, `regenerate_session_files()` and thread to `create_startup_script()` + `build_session()` (TDD)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: Add `from_github` param to `process_eligible_issues()`, `prepare_and_launch_session()`, `regenerate_session_files()` and thread to `create_startup_script()` + `build_session()` (TDD)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: CLI flag + command wiring
 See [step_5.md](./steps/step_5.md)
