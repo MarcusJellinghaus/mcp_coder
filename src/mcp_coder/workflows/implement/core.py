@@ -137,7 +137,11 @@ def _get_diff_stat(project_dir: Path) -> str:
 
 
 def _format_elapsed_time(seconds: float) -> str:
-    """Format seconds into human-readable string like '12m 34s' or '1h 5m 30s'."""
+    """Format seconds into human-readable string like '12m 34s' or '1h 5m 30s'.
+
+    Returns:
+        Formatted time string in human-readable format.
+    """
     total = int(seconds)
     hours, remainder = divmod(total, 3600)
     minutes, secs = divmod(remainder, 60)
@@ -1072,6 +1076,9 @@ def run_implement_workflow(
     Note:
         Coordinates the full workflow from prerequisites through task completion.
         Handles errors gracefully and provides comprehensive progress tracking.
+
+    Raises:
+        SystemExit: If SIGTERM signal is received during workflow execution.
     """
     logger.info(f"Starting implement workflow for project: {project_dir}")
 
