@@ -69,7 +69,7 @@ The startup script reads this at generation time (not runtime) and injects
 
 | File | Change |
 |------|--------|
-| `src/mcp_coder/workflows/vscodeclaude/types.py` | Add `from_github: bool` to `VSCodeClaudeSession` |
+| `src/mcp_coder/workflows/vscodeclaude/types.py` | Add `from_github: NotRequired[bool]` to `VSCodeClaudeSession` |
 | `src/mcp_coder/workflows/vscodeclaude/helpers.py` | Add `from_github` param to `build_session()` |
 | `src/mcp_coder/workflows/vscodeclaude/templates.py` | Append `uv pip install -e . --no-deps` to `VENV_SECTION_WINDOWS` |
 | `src/mcp_coder/workflows/vscodeclaude/workspace.py` | Add `from_github` param + pyproject.toml reading + inline github install generation in `create_startup_script()` |

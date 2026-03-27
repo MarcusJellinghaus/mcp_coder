@@ -9,14 +9,19 @@
 ```
 Read pr_info/steps/summary.md for context, then implement Step 1.
 
-Add `from_github: bool` field to `VSCodeClaudeSession` TypedDict and update
-`build_session()` to accept and include it. Write tests first (TDD), then
+Add `from_github: NotRequired[bool]` field to `VSCodeClaudeSession` TypedDict
+and update `build_session()` to accept and include it. Update existing tests
+that assert on the TypedDict field set. Write new tests first (TDD), then
 implement. Run all three code quality checks (pylint, pytest, mypy) after changes.
 ```
 
 ## Files to Modify
 
 ### Tests (write first)
+
+**`tests/workflows/vscodeclaude/test_types.py`** — Update existing tests:
+- `test_vscodeclaude_session_type_structure`: Add `"from_github"` to the expected fields set.
+- `test_vscodeclaude_session_creation`: Add `"from_github": False` to the session dict literal.
 
 **`tests/workflows/vscodeclaude/test_types.py`** — Add test:
 - `test_vscodeclaude_session_supports_from_github`: Verify a `VSCodeClaudeSession`
@@ -39,6 +44,8 @@ implement. Run all three code quality checks (pylint, pytest, mypy) after change
 - HOW: New field in the TypedDict class body
 
 ```python
+from typing import NotRequired, TypedDict
+
 class VSCodeClaudeSession(TypedDict):
     folder: str
     repo: str
@@ -47,7 +54,7 @@ class VSCodeClaudeSession(TypedDict):
     vscode_pid: int | None
     started_at: str
     is_intervention: bool
-    from_github: bool          # ← NEW
+    from_github: NotRequired[bool]  # ← NEW (optional for backward compat)
 ```
 
 **`src/mcp_coder/workflows/vscodeclaude/helpers.py`**
@@ -74,7 +81,7 @@ def build_session(
 
 ## Data
 
-- `VSCodeClaudeSession["from_github"]` → `bool`
+- `VSCodeClaudeSession["from_github"]` → `NotRequired[bool]`
 - Backward compat: existing session JSON files lack this key;
   all consumers must use `session.get("from_github", False)`
 

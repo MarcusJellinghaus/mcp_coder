@@ -10,8 +10,8 @@
 Read pr_info/steps/summary.md for context, then implement Step 6.
 
 Add the `[tool.mcp-coder.from-github]` section to `pyproject.toml` with the
-package specs from the issue. No tests needed for this step (it's declarative
-config). Run all three code quality checks to ensure nothing breaks.
+package specs from the issue. Add a minimal TOML parse test, then add the config section.
+Run all three code quality checks to ensure nothing breaks.
 ```
 
 ## Files to Modify
@@ -44,6 +44,14 @@ packages-no-deps = [
   - `mcp-workspace`: MCP workspace server (leaf — no sibling deps)
 - `packages-no-deps`: list of specs installed with `--no-deps`
   - `mcp-tools-py`: depends on siblings, `--no-deps` prevents downgrading them
+
+### Tests
+
+**`tests/test_pyproject_config.py`** — Add test:
+- `test_pyproject_from_github_config_exists`: Use `tomllib` to parse the project's
+  `pyproject.toml`. Assert `config["tool"]["mcp-coder"]["from-github"]` exists.
+  Assert it has a `packages` key with a `list` value. Assert it has a
+  `packages-no-deps` key with a `list` value.
 
 ## Verification
 

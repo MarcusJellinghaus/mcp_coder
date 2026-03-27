@@ -75,7 +75,12 @@ def create_startup_script(
 ### Algorithm (pseudocode)
 
 ```python
-# Inside create_startup_script(), after venv_section is built:
+# Injection point: AFTER `venv_section = VENV_SECTION_WINDOWS.format(...)`
+# but BEFORE `STARTUP_SCRIPT_WINDOWS.format(venv_section=venv_section, ...)`
+# and `INTERVENTION_SCRIPT_WINDOWS.format(venv_section=venv_section, ...)`.
+#
+# This means the github override applies to BOTH normal and intervention mode
+# scripts, since both consume the `venv_section` variable.
 github_install_section = ""
 if from_github:
     pyproject_path = folder_path / "pyproject.toml"
@@ -97,7 +102,7 @@ if from_github:
             lines.append("uv pip install -e . --no-deps")
             github_install_section = "\n".join(lines)
 
-# Inject after venv_section:
+# Inject after venv_section, before it's consumed by format():
 venv_section = venv_section + github_install_section
 ```
 
