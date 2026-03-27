@@ -26,6 +26,7 @@ from mcp_coder.cli.commands.coordinator import (
 )
 from mcp_coder.utils.github_operations.issues import IssueData
 from mcp_coder.utils.jenkins_operations.models import JobStatus
+from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeConfig
 
 
 class TestFormatJobOutput:
@@ -370,7 +371,10 @@ class TestFromGithubWiring:
             intervene=True,
             from_github=True,
         )
-        vscodeclaude_config = {"workspace_base": "/tmp", "max_sessions": 3}
+        vscodeclaude_config: VSCodeClaudeConfig = {
+            "workspace_base": "/tmp",
+            "max_sessions": 3,
+        }
 
         from mcp_coder.cli.commands.coordinator.commands import (
             _handle_intervention_mode,
