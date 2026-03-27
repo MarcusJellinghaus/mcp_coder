@@ -35,9 +35,9 @@ See [step_2.md](./steps/step_2.md)
 
 ### Step 3: Core logic — pyproject.toml reading + github install generation
 See [step_3.md](./steps/step_3.md)
-- [ ] Implementation: Add `from_github` param to `create_startup_script()`, read `[tool.mcp-coder.from-github]` from pyproject.toml, generate `uv pip install` commands in .bat script (TDD)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: Add `from_github` param to `create_startup_script()`, read `[tool.mcp-coder.from-github]` from pyproject.toml, generate `uv pip install` commands in .bat script (TDD)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Thread `from_github` through session_launch.py
 See [step_4.md](./steps/step_4.md)

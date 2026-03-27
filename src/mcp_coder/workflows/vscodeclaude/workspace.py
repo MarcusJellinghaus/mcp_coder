@@ -8,6 +8,7 @@ import platform
 import shutil
 import stat
 import sys
+import tomllib
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -409,6 +410,45 @@ def _escape_batch_title(text: str) -> str:
     return text
 
 
+def _build_github_install_section(folder_path: Path) -> str:
+    """Read [tool.mcp-coder.from-github] from pyproject.toml and build install commands.
+
+    Args:
+        folder_path: Path to the cloned repo containing pyproject.toml.
+
+    Returns:
+        Batch script lines to inject, or empty string if no packages configured.
+    """
+    pyproject_path = folder_path / "pyproject.toml"
+    if not pyproject_path.exists():
+        logger.warning(
+            "pyproject.toml not found at %s, skipping GitHub installs", folder_path
+        )
+        return ""
+
+    with open(pyproject_path, "rb") as f:
+        config = tomllib.load(f)
+
+    gh_config = config.get("tool", {}).get("mcp-coder", {}).get("from-github", {})
+    packages = gh_config.get("packages", [])
+    packages_no_deps = gh_config.get("packages-no-deps", [])
+
+    if not packages and not packages_no_deps:
+        logger.info("No GitHub override packages configured in pyproject.toml")
+        return ""
+
+    lines = ["", "REM === GitHub override installs ==="]
+    if packages:
+        quoted = " ".join(f'"{p}"' for p in packages)
+        lines.append(f"uv pip install {quoted}")
+    if packages_no_deps:
+        quoted = " ".join(f'"{p}"' for p in packages_no_deps)
+        lines.append(f"uv pip install --no-deps {quoted}")
+    lines.append("uv pip install -e . --no-deps")
+
+    return "\n".join(lines)
+
+
 def create_startup_script(
     folder_path: Path,
     issue_number: int,
@@ -420,6 +460,7 @@ def create_startup_script(
     timeout: int = DEFAULT_PROMPT_TIMEOUT,
     mcp_coder_install_path: Path | None = None,
     session_folder_path: Path | None = None,
+    from_github: bool = False,
 ) -> Path:
     """Create platform-specific startup script.
 
@@ -436,6 +477,8 @@ def create_startup_script(
             (for finding the executable, separate from session folder)
         session_folder_path: Path to session folder for MCP environment variables
             (overrides folder_path if provided, used for MCP_CODER_PROJECT_DIR)
+        from_github: If True, read [tool.mcp-coder.from-github] from the repo's
+            pyproject.toml and inject uv pip install commands for GitHub packages.
 
     Returns:
         Path to created script (.bat or .sh)
@@ -492,6 +535,11 @@ def create_startup_script(
             mcp_coder_install_path=mcp_coder_install_path or "",
             session_folder_path=str(session_path),
         )
+
+        # Inject GitHub override install commands when from_github is True
+        if from_github:
+            github_install_section = _build_github_install_section(folder_path)
+            venv_section = venv_section + github_install_section
 
         if is_intervention:
             # Intervention mode - plain claude, no automation
