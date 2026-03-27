@@ -21,6 +21,28 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Extend ResponseAssembler with tool_trace Accumulation
+See [step_1.md](./steps/step_1.md) for details.
+
+- [ ] Implementation: tests (`TestResponseAssemblerToolTrace`) + production code in `ResponseAssembler`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit: `feat(types): add tool_trace accumulation to ResponseAssembler`
+
+### Step 2: Add `run_agent_stream()` Async Generator
+See [step_2.md](./steps/step_2.md) for details.
+
+- [ ] Implementation: tests (`TestRunAgentStream`) + `run_agent_stream()` in `agent.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit: `feat(agent): add run_agent_stream async generator with astream_events`
+
+### Step 3: Replace Agent Fallback with Thread+Queue Bridge
+See [step_3.md](./steps/step_3.md) for details.
+
+- [ ] Implementation: tests (`TestAskLangchainStreamAgentReal`, `TestAskLangchainStreamAgentTimeouts`) + `_ask_agent_stream()` in `__init__.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit: `feat(langchain): replace agent streaming fallback with real streaming`
 
 ## Pull Request
+
+- [ ] PR review: all steps completed, all checks green
+- [ ] PR summary prepared
