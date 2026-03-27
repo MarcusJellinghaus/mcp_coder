@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.llm.providers.claude.claude_code_cli import (
+    LLM_HEARTBEAT_INTERVAL_SECONDS,
     ask_claude_code_cli,
     build_cli_command,
     create_response_dict,
@@ -370,6 +371,47 @@ class TestSessionIdPropagation:
             mock_log_response.assert_called_once()
             _, kwargs = mock_log_response.call_args
             assert kwargs.get("session_id") == "cli-session-abc"
+
+
+class TestAskClaudeCodeCliHeartbeat:
+    """Tests for heartbeat parameter passing to execute_subprocess."""
+
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.get_stream_log_path")
+    def test_passes_heartbeat_params_to_execute_subprocess(
+        self,
+        mock_get_path: MagicMock,
+        mock_execute: MagicMock,
+        mock_find: MagicMock,
+        make_stream_json_output: StreamJsonFactory,
+    ) -> None:
+        """Verify heartbeat parameters are passed to execute_subprocess."""
+        mock_find.return_value = "claude"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_get_path.return_value = Path(tmpdir) / "test.ndjson"
+            mock_result = CommandResult(
+                return_code=0,
+                stdout=make_stream_json_output("Response", "sess-hb"),
+                stderr="",
+                timed_out=False,
+            )
+            mock_execute.return_value = mock_result
+
+            ask_claude_code_cli("test question", timeout=30)
+
+            assert (
+                mock_execute.call_args.kwargs["heartbeat_interval_seconds"]
+                == LLM_HEARTBEAT_INTERVAL_SECONDS
+            )
+            assert (
+                "LLM call in progress"
+                in mock_execute.call_args.kwargs["heartbeat_message"]
+            )
+
+    def test_llm_heartbeat_interval_constant_value(self) -> None:
+        """Verify the heartbeat interval constant is 120 seconds (2 minutes)."""
+        assert LLM_HEARTBEAT_INTERVAL_SECONDS == 120
 
 
 class TestEnvVarsParameter:
