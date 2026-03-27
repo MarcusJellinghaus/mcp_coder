@@ -10,6 +10,7 @@ import pytest
 from mcp_coder.workflow_utils.task_tracker import TaskTrackerFileNotFoundError
 from mcp_coder.workflows.implement.constants import FailureCategory, WorkflowFailure
 from mcp_coder.workflows.implement.core import (
+    _format_elapsed_time,
     _format_failure_comment,
     _get_diff_stat,
     _get_rebase_target_branch,
@@ -1803,3 +1804,82 @@ class TestNoPostErrorProgressDisplay:
         # NOT called again after error (post-error display removed)
         mock_progress.assert_called_once()
         mock_handle_failure.assert_called_once()
+
+
+class TestFormatElapsedTime:
+    """Tests for _format_elapsed_time."""
+
+    def test_seconds_only(self) -> None:
+        """Formats sub-minute durations as seconds only."""
+        assert _format_elapsed_time(45.7) == "45s"
+
+    def test_minutes_and_seconds(self) -> None:
+        """Formats durations with minutes and seconds."""
+        assert _format_elapsed_time(754.0) == "12m 34s"
+
+    def test_hours_minutes_seconds(self) -> None:
+        """Formats durations with hours, minutes, and seconds."""
+        assert _format_elapsed_time(3661.0) == "1h 1m 1s"
+
+    def test_zero(self) -> None:
+        """Formats zero seconds."""
+        assert _format_elapsed_time(0.0) == "0s"
+
+
+class TestFormatFailureCommentElapsedAndBuildUrl:
+    """Tests for elapsed time and build URL in _format_failure_comment."""
+
+    def test_includes_elapsed_time_when_set(self) -> None:
+        """Includes elapsed time line when elapsed_time is set."""
+        failure = WorkflowFailure(
+            category=FailureCategory.GENERAL,
+            stage="Test",
+            message="err",
+            elapsed_time=754.0,
+        )
+        comment = _format_failure_comment(failure, "")
+        assert "**Elapsed:** 12m 34s" in comment
+
+    def test_includes_build_url_when_set(self) -> None:
+        """Includes build URL line when build_url is set."""
+        failure = WorkflowFailure(
+            category=FailureCategory.GENERAL,
+            stage="Test",
+            message="err",
+            build_url="https://jenkins.example.com/job/123/console",
+        )
+        comment = _format_failure_comment(failure, "")
+        assert "**Build:** https://jenkins.example.com/job/123/console" in comment
+
+    def test_excludes_elapsed_time_when_none(self) -> None:
+        """Excludes elapsed time line when elapsed_time is None."""
+        failure = WorkflowFailure(
+            category=FailureCategory.GENERAL,
+            stage="Test",
+            message="err",
+        )
+        comment = _format_failure_comment(failure, "")
+        assert "Elapsed" not in comment
+
+    def test_excludes_build_url_when_none(self) -> None:
+        """Excludes build URL line when build_url is None."""
+        failure = WorkflowFailure(
+            category=FailureCategory.GENERAL,
+            stage="Test",
+            message="err",
+        )
+        comment = _format_failure_comment(failure, "")
+        assert "Build" not in comment
+
+    def test_includes_both_elapsed_and_build_url(self) -> None:
+        """Includes both elapsed time and build URL when both are set."""
+        failure = WorkflowFailure(
+            category=FailureCategory.GENERAL,
+            stage="Test",
+            message="err",
+            elapsed_time=3661.0,
+            build_url="https://jenkins.example.com/job/1/console",
+        )
+        comment = _format_failure_comment(failure, "some diff")
+        assert "**Elapsed:** 1h 1m 1s" in comment
+        assert "**Build:** https://jenkins.example.com/job/1/console" in comment

@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat(constants): add build_url and elapsed_time fields to WorkflowFailure (#598)`
 
 ### Step 2: Update `_format_failure_comment()` to Include Elapsed Time and Build URL
-- [ ] Implementation: add `_format_elapsed_time()` helper and update `_format_failure_comment()` in `core.py` + tests in `test_core.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(core): include elapsed time and build URL in failure comments (#598)`
+- [x] Implementation: add `_format_elapsed_time()` helper and update `_format_failure_comment()` in `core.py` + tests in `test_core.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(core): include elapsed time and build URL in failure comments (#598)`
 
 ### Step 3: Update Existing `WorkflowFailure(...)` Constructions with `build_url` and `elapsed_time`
 - [ ] Implementation: capture `start_time` and `build_url` at top of `run_implement_workflow()`, pass to every `WorkflowFailure(...)` in `core.py` + tests in `test_core.py`

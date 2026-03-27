@@ -133,6 +133,18 @@ def _get_diff_stat(project_dir: Path) -> str:
         return ""
 
 
+def _format_elapsed_time(seconds: float) -> str:
+    """Format seconds into human-readable string like '12m 34s' or '1h 5m 30s'."""
+    total = int(seconds)
+    hours, remainder = divmod(total, 3600)
+    minutes, secs = divmod(remainder, 60)
+    if hours > 0:
+        return f"{hours}h {minutes}m {secs}s"
+    if minutes > 0:
+        return f"{minutes}m {secs}s"
+    return f"{secs}s"
+
+
 def _format_failure_comment(failure: WorkflowFailure, diff_stat: str) -> str:
     """Format a GitHub comment for a workflow failure.
 
@@ -153,6 +165,10 @@ def _format_failure_comment(failure: WorkflowFailure, diff_stat: str) -> str:
         lines.append(
             f"**Progress:** {failure.tasks_completed}/{failure.tasks_total} tasks completed"
         )
+    if failure.elapsed_time is not None:
+        lines.append(f"**Elapsed:** {_format_elapsed_time(failure.elapsed_time)}")
+    if failure.build_url:
+        lines.append(f"**Build:** {failure.build_url}")
     lines.append("")
     lines.append("### Uncommitted Changes")
     lines.append(f"```\n{diff_stat or 'No uncommitted changes'}\n```")
