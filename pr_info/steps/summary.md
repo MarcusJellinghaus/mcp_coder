@@ -23,9 +23,10 @@ CLI (parsers.py)
 
 ### Session Persistence
 
-`VSCodeClaudeSession` TypedDict gains a `from_github: bool` field. On restart,
-`regenerate_session_files()` reads `session.get("from_github", False)` and passes
-it to `create_startup_script()` — no changes to `session_restart.py` needed.
+`VSCodeClaudeSession` TypedDict gains a `from_github: bool` field (required).
+On restart, `regenerate_session_files()` reads `session["from_github"]` and passes
+it to `create_startup_script()`. The `updated_session` dict literal in
+`session_restart.py` also includes the new field.
 
 ### Startup Script Changes
 
@@ -69,7 +70,7 @@ The startup script reads this at generation time (not runtime) and injects
 
 | File | Change |
 |------|--------|
-| `src/mcp_coder/workflows/vscodeclaude/types.py` | Add `from_github: NotRequired[bool]` to `VSCodeClaudeSession` |
+| `src/mcp_coder/workflows/vscodeclaude/types.py` | Add `from_github: bool` to `VSCodeClaudeSession` |
 | `src/mcp_coder/workflows/vscodeclaude/helpers.py` | Add `from_github` param to `build_session()` |
 | `src/mcp_coder/workflows/vscodeclaude/templates.py` | Append `uv pip install -e . --no-deps` to `VENV_SECTION_WINDOWS` |
 | `src/mcp_coder/workflows/vscodeclaude/workspace.py` | Add `from_github` param + pyproject.toml reading + inline github install generation in `create_startup_script()` |

@@ -31,7 +31,17 @@
 **Changes**: None
 **Status**: No changes needed
 
+## Round 3 — 2026-03-27 (user feedback)
+**Findings**: User rejected `NotRequired[bool]` — wants clean code, no backward compat hacks.
+**Decisions**: Revert to `from_github: bool` (required). Update all session dict creation sites instead.
+**User decisions**: "No backward compatibility — focus on clean code."
+**Changes**:
+- `step_1.md`: Reverted to `bool`, added `session_restart.py` + 8 test files to update list
+- `step_4.md`: Changed `session.get()` to direct `session["from_github"]` access
+- `summary.md`: Updated type and session persistence description
+
+**Status**: Committed
+
 ## Final Status
-- **Rounds**: 2 (1 with changes, 1 verification)
-- **Commits**: 1 (`0b9d07d`)
+- **Rounds**: 3 (2 with changes, 1 verification)
 - **Plan status**: Ready for approval

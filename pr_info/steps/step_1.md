@@ -9,10 +9,10 @@
 ```
 Read pr_info/steps/summary.md for context, then implement Step 1.
 
-Add `from_github: NotRequired[bool]` field to `VSCodeClaudeSession` TypedDict
-and update `build_session()` to accept and include it. Update existing tests
-that assert on the TypedDict field set. Write new tests first (TDD), then
-implement. Run all three code quality checks (pylint, pytest, mypy) after changes.
+Add `from_github: bool` field to `VSCodeClaudeSession` TypedDict and update
+`build_session()` to accept and include it. Update ALL existing session dict
+literals across src/ and tests/ so mypy stays green. Write new tests first (TDD),
+then implement. Run all three code quality checks (pylint, pytest, mypy) after changes.
 ```
 
 ## Files to Modify
@@ -44,8 +44,6 @@ implement. Run all three code quality checks (pylint, pytest, mypy) after change
 - HOW: New field in the TypedDict class body
 
 ```python
-from typing import NotRequired, TypedDict
-
 class VSCodeClaudeSession(TypedDict):
     folder: str
     repo: str
@@ -54,7 +52,7 @@ class VSCodeClaudeSession(TypedDict):
     vscode_pid: int | None
     started_at: str
     is_intervention: bool
-    from_github: NotRequired[bool]  # ← NEW (optional for backward compat)
+    from_github: bool              # ← NEW
 ```
 
 **`src/mcp_coder/workflows/vscodeclaude/helpers.py`**
@@ -79,11 +77,24 @@ def build_session(
     }
 ```
 
+**`src/mcp_coder/workflows/vscodeclaude/session_restart.py`**
+
+- WHERE: `restart_closed_sessions()` — the `updated_session` dict literal
+- WHAT: Add `"from_github": session["from_github"]` to the dict
+
+**Update ALL test files with session dict literals** — add `"from_github": False`:
+- `tests/workflows/vscodeclaude/test_sessions.py`
+- `tests/workflows/vscodeclaude/test_cache_aware.py`
+- `tests/workflows/vscodeclaude/test_cleanup.py`
+- `tests/workflows/vscodeclaude/test_orchestrator_regenerate.py` (mock_session fixture)
+- `tests/workflows/vscodeclaude/test_orchestrator_cache.py`
+- `tests/workflows/vscodeclaude/test_closed_issues_integration.py`
+- `tests/workflows/vscodeclaude/test_orchestrator_launch.py`
+- `tests/workflows/vscodeclaude/test_orchestrator_sessions.py`
+
 ## Data
 
-- `VSCodeClaudeSession["from_github"]` → `NotRequired[bool]`
-- Backward compat: existing session JSON files lack this key;
-  all consumers must use `session.get("from_github", False)`
+- `VSCodeClaudeSession["from_github"]` → `bool` (required field)
 
 ## Verification
 

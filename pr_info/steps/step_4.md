@@ -39,10 +39,10 @@ code quality checks.
   Call `regenerate_session_files(session, issue)`. Assert `create_startup_script`
   was called with `from_github=True`.
 
-- `test_regenerate_session_files_defaults_from_github_false`:
-  Create a session dict WITHOUT `from_github` key (old session format).
-  Mock `create_startup_script`. Call `regenerate_session_files(session, issue)`.
-  Assert `create_startup_script` was called with `from_github=False`.
+- `test_regenerate_session_files_with_from_github_false`:
+  Create a session dict with `from_github: False`. Mock `create_startup_script`.
+  Call `regenerate_session_files(session, issue)`. Assert `create_startup_script`
+  was called with `from_github=False`.
 
 ### Implementation
 
@@ -50,7 +50,7 @@ code quality checks.
 
 - WHERE: Three functions in session_launch.py
 - WHAT: Add `from_github: bool = False` parameter to each
-- HOW: Pass through the call chain, use `session.get("from_github", False)` for restart
+- HOW: Pass through the call chain, use `session["from_github"]` for restart
 
 ```python
 def prepare_and_launch_session(
@@ -85,8 +85,7 @@ def regenerate_session_files(
     issue: IssueData,
 ) -> Path:
     ...
-    # Read from session dict (backward compat with old sessions)
-    from_github = session.get("from_github", False)
+    from_github = session["from_github"]
     script_path = create_startup_script(
         ...,
         from_github=from_github,
@@ -97,9 +96,8 @@ def regenerate_session_files(
 
 - `from_github` flows: `process_eligible_issues()` → `prepare_and_launch_session()`
   → `create_startup_script()` and `build_session()`
-- `regenerate_session_files()` reads from `session.get("from_github", False)` — no
-  parameter needed, it's already in the session dict
-- All defaults are `False` — fully backward compatible
+- `regenerate_session_files()` reads `session["from_github"]` directly
+  (required field, no `.get()` fallback needed)
 
 ## Verification
 
