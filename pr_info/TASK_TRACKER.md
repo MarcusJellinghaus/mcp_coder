@@ -21,6 +21,26 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Add `FailureCategory` enum and `WorkflowFailure` dataclass
+- [ ] Implementation: tests in `test_constants.py` + production code in `constants.py` and `__init__.py` exports
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Return `"timeout"` from `process_single_task()` on `TimeoutExpired`
+- [ ] Implementation: test in `test_task_processing.py` + catch `TimeoutExpired` in `task_processing.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Remove `update_labels` parameter from CLI and workflow
+- [ ] Implementation: remove from `parsers.py`, `commands/implement.py`, `core.py` + update tests in `test_implement.py` and `test_core.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Add `_handle_workflow_failure()` and wire into `run_implement_workflow()`
+- [ ] Implementation: tests in `test_core.py` + add `_get_diff_stat()`, `_format_failure_comment()`, `_handle_workflow_failure()` to `core.py`, wire into all error exits, add unconditional success label transition, remove post-error progress display
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review: verify all acceptance criteria from step_4.md checklist
+- [ ] PR summary prepared
