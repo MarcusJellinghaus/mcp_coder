@@ -42,7 +42,13 @@ See [step_3.md](./steps/step_3.md) for details.
 - [x] Quality checks: pylint, pytest, mypy — fix all issues
 - [x] Commit: `feat(langchain): replace agent streaming fallback with real streaming`
 
+## LLM testing during code review
+
+- [x] Claude CLI streaming: `mcp-coder prompt --llm-method claude --output-format ndjson "Count from 1 to 5"` — works, returns text + result events
+- [x] LangChain text streaming (no MCP): `mcp-coder prompt --llm-method langchain --output-format ndjson "Count from 1 to 5"` — works after fixing pre-existing `http_client` bug in `anthropic_backend.py`
+- [ ] LangChain agent streaming (with MCP): requires `.mcp.json` with MCP server — needs manual test with MCP tools configured
+
 ## Pull Request
 
-- [ ] PR review: all steps completed, all checks green
+- [x] PR review: all steps completed, all checks green
 - [ ] PR summary prepared
