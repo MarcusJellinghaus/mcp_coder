@@ -22,6 +22,7 @@
 | Run mypy | `Bash("mypy ...")` | `mcp__tools-py__run_mypy_check()` |
 | Run ruff | `Bash("ruff ...")` | ✅ `Bash("./tools/ruff_check.sh")` |
 | Git operations | ✅ `Bash("git ...")` | ✅ `Bash("git ...")` (allowed) |
+| View diff (compact) | `Bash("git diff")` | ✅ `Bash("mcp-coder git-tool compact-diff")` |
 | Refactoring | Manual copy-paste | `mcp__tools-py__move_symbol()`, `list_symbols()`, `find_references()` |
 
 ## 🔴 CRITICAL: Code Quality Requirements
@@ -185,7 +186,13 @@ git log
 git fetch
 git ls-tree
 ./tools/ruff_check.sh
+mcp-coder git-tool compact-diff
+mcp-coder check branch-status
 ```
+
+**Compact diff for code review:**
+
+Use `mcp-coder git-tool compact-diff` instead of `git diff` when reviewing branch changes. It detects moved code, collapses unchanged blocks, and separates committed vs uncommitted changes. Supports `--exclude PATTERN` to filter files.
 
 **⚠️ Bash discipline (applies to subagents too):**
 

@@ -3,9 +3,6 @@
 # pylint: disable=protected-access  # Tests need to access protected members for mocking
 
 from typing import Any
-from unittest.mock import Mock
-
-import pytest
 
 from mcp_coder.utils.github_operations.issues import IssueBranchManager
 

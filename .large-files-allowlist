@@ -20,7 +20,6 @@ tests/cli/commands/test_verify_orchestration.py
 tests/cli/test_main.py
 tests/llm/test_interface.py
 tests/utils/test_folder_deletion.py
-tests/utils/github_operations/issues/test_branch_resolution.py
 tests/utils/github_operations/issues/test_get_branch_with_pr_fallback.py
 tests/utils/github_operations/test_base_manager.py
 tests/utils/github_operations/test_github_utils.py

@@ -4,8 +4,6 @@
 
 from unittest.mock import Mock, patch
 
-import pytest
-
 from mcp_coder.utils.github_operations.issues import IssueBranchManager
 
 
