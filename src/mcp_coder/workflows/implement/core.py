@@ -6,6 +6,8 @@ prerequisites checking, task tracker preparation, and task processing loops.
 
 import logging
 import os
+import signal
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -1056,8 +1058,24 @@ def run_implement_workflow(
 
     start_time = time.time()
     build_url = os.environ.get("BUILD_URL")
+    reached_terminal_state = False
+    sigterm_received = False
+    completed_tasks = 0
+    total_tasks = 0
+    previous_sigterm_handler = None
 
-    # Step 1: Check git status and prerequisites
+    def sigterm_handler(signum: int, frame: Any) -> None:  # noqa: ARG001
+        nonlocal sigterm_received
+        sigterm_received = True
+        sys.exit(1)
+
+    # Register SIGTERM handler
+    try:
+        previous_sigterm_handler = signal.signal(signal.SIGTERM, sigterm_handler)
+    except (OSError, ValueError):
+        logger.debug("Could not register SIGTERM handler")
+
+    # Step 1: Check git status and prerequisites (early returns, no safety net needed)
     if not check_git_clean(project_dir):
         return 1
 
@@ -1070,131 +1088,110 @@ def run_implement_workflow(
     # Step 1.5: Attempt rebase onto parent branch (never blocks workflow)
     _attempt_rebase_and_push(project_dir)
 
-    # Step 2: Prepare task tracker if needed
-    if not prepare_task_tracker(project_dir, provider, mcp_config, execution_dir):
-        _handle_workflow_failure(
-            WorkflowFailure(
-                category=FailureCategory.GENERAL,
-                stage="Task tracker preparation",
-                message="Failed to prepare task tracker",
-                build_url=build_url,
-                elapsed_time=time.time() - start_time,
-            ),
-            project_dir,
-        )
-        return 1
-
-    # Step 3: Show initial progress summary
-    log_progress_summary(project_dir)
-
-    total_tasks = 0
     try:
-        pr_info_path = str(project_dir / PR_INFO_DIR)
-        progress = get_step_progress(pr_info_path)
-        for step in progress.values():
-            step_total = step["total"]
-            assert isinstance(step_total, int)
-            total_tasks += step_total
-    except Exception:  # pylint: disable=broad-exception-caught
-        pass
-
-    # Step 4: Process all incomplete tasks in a loop
-    completed_tasks = 0
-
-    while True:
-        success, reason = process_single_task(
-            project_dir, provider, mcp_config, execution_dir
-        )
-
-        if not success:
-            if reason == "no_tasks":
-                # Legitimate completion - no more tasks
-                break
-            elif reason == "timeout":
-                # LLM timeout during task processing
-                _handle_workflow_failure(
-                    WorkflowFailure(
-                        category=FailureCategory.LLM_TIMEOUT,
-                        stage="Task implementation",
-                        message="LLM timed out during task processing",
-                        tasks_completed=completed_tasks,
-                        tasks_total=total_tasks,
-                        build_url=build_url,
-                        elapsed_time=time.time() - start_time,
-                    ),
-                    project_dir,
-                )
-                return 1
-            elif reason == "error":
-                # Error occurred during task processing
-                _handle_workflow_failure(
-                    WorkflowFailure(
-                        category=FailureCategory.GENERAL,
-                        stage="Task implementation",
-                        message="Task processing failed",
-                        tasks_completed=completed_tasks,
-                        tasks_total=total_tasks,
-                        build_url=build_url,
-                        elapsed_time=time.time() - start_time,
-                    ),
-                    project_dir,
-                )
-                return 1
-
-        completed_tasks += 1
-        logger.info(f"Completed {completed_tasks} task(s). Checking for more...")
-
-        # Show updated progress after each task
-        log_progress_summary(project_dir)
-
-    # Step 5: Run final mypy check if not running after each task
-    if not RUN_MYPY_AFTER_EACH_TASK and completed_tasks > 0:
-        logger.info("Running final mypy check after all tasks...")
-        env_vars = prepare_llm_environment(project_dir)
-
-        # Use step number 0 for final mypy check conversation
-        if not check_and_fix_mypy(
-            project_dir,
-            0,
-            provider,
-            env_vars,
-            mcp_config,
-            execution_dir=execution_dir,
-        ):
-            logger.warning(
-                "Final mypy check found unresolved issues - continuing anyway"
-            )
-
-        # Format code after mypy fixes
-        if not run_formatters(project_dir):
-            logger.error("Formatting failed after final mypy check")
+        # Step 2: Prepare task tracker if needed
+        if not prepare_task_tracker(project_dir, provider, mcp_config, execution_dir):
             _handle_workflow_failure(
                 WorkflowFailure(
                     category=FailureCategory.GENERAL,
-                    stage="Post-implementation formatting",
-                    message="Formatting failed after final mypy check",
-                    tasks_completed=completed_tasks,
-                    tasks_total=total_tasks,
+                    stage="Task tracker preparation",
+                    message="Failed to prepare task tracker",
                     build_url=build_url,
                     elapsed_time=time.time() - start_time,
                 ),
                 project_dir,
             )
+            reached_terminal_state = True
             return 1
 
-        # Commit mypy fixes if any changes were made
-        status = get_full_status(project_dir)
-        all_changes = status["staged"] + status["modified"] + status["untracked"]
+        # Step 3: Show initial progress summary
+        log_progress_summary(project_dir)
 
-        if all_changes:
-            logger.info("Committing final mypy fixes...")
-            if not commit_changes(project_dir, provider):
-                logger.error("Failed to commit final mypy fixes")
+        try:
+            pr_info_path = str(project_dir / PR_INFO_DIR)
+            progress = get_step_progress(pr_info_path)
+            for step in progress.values():
+                step_total = step["total"]
+                assert isinstance(step_total, int)
+                total_tasks += step_total
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
+
+        # Step 4: Process all incomplete tasks in a loop
+        while True:
+            success, reason = process_single_task(
+                project_dir, provider, mcp_config, execution_dir
+            )
+
+            if not success:
+                if reason == "no_tasks":
+                    # Legitimate completion - no more tasks
+                    break
+                if reason == "timeout":
+                    # LLM timeout during task processing
+                    _handle_workflow_failure(
+                        WorkflowFailure(
+                            category=FailureCategory.LLM_TIMEOUT,
+                            stage="Task implementation",
+                            message="LLM timed out during task processing",
+                            tasks_completed=completed_tasks,
+                            tasks_total=total_tasks,
+                            build_url=build_url,
+                            elapsed_time=time.time() - start_time,
+                        ),
+                        project_dir,
+                    )
+                    reached_terminal_state = True
+                    return 1
+                if reason == "error":
+                    # Error occurred during task processing
+                    _handle_workflow_failure(
+                        WorkflowFailure(
+                            category=FailureCategory.GENERAL,
+                            stage="Task implementation",
+                            message="Task processing failed",
+                            tasks_completed=completed_tasks,
+                            tasks_total=total_tasks,
+                            build_url=build_url,
+                            elapsed_time=time.time() - start_time,
+                        ),
+                        project_dir,
+                    )
+                    reached_terminal_state = True
+                    return 1
+
+            completed_tasks += 1
+            logger.info(f"Completed {completed_tasks} task(s). Checking for more...")
+
+            # Show updated progress after each task
+            log_progress_summary(project_dir)
+
+        # Step 5: Run final mypy check if not running after each task
+        if not RUN_MYPY_AFTER_EACH_TASK and completed_tasks > 0:
+            logger.info("Running final mypy check after all tasks...")
+            env_vars = prepare_llm_environment(project_dir)
+
+            # Use step number 0 for final mypy check conversation
+            if not check_and_fix_mypy(
+                project_dir,
+                0,
+                provider,
+                env_vars,
+                mcp_config,
+                execution_dir=execution_dir,
+            ):
+                logger.warning(
+                    "Final mypy check found unresolved issues - continuing anyway"
+                )
+
+            # Format code after mypy fixes
+            if not run_formatters(project_dir):
+                logger.error("Formatting failed after final mypy check")
                 _handle_workflow_failure(
                     WorkflowFailure(
                         category=FailureCategory.GENERAL,
-                        stage="Post-implementation commit",
-                        message="Failed to commit final mypy fixes",
+                        stage="Post-implementation formatting",
+                        message="Formatting failed after final mypy check",
                         tasks_completed=completed_tasks,
                         tasks_total=total_tasks,
                         build_url=build_url,
@@ -1202,15 +1199,79 @@ def run_implement_workflow(
                     ),
                     project_dir,
                 )
+                reached_terminal_state = True
                 return 1
 
-            if not push_changes(project_dir):
-                logger.error("Failed to push final mypy fixes")
+            # Commit mypy fixes if any changes were made
+            status = get_full_status(project_dir)
+            all_changes = status["staged"] + status["modified"] + status["untracked"]
+
+            if all_changes:
+                logger.info("Committing final mypy fixes...")
+                if not commit_changes(project_dir, provider):
+                    logger.error("Failed to commit final mypy fixes")
+                    _handle_workflow_failure(
+                        WorkflowFailure(
+                            category=FailureCategory.GENERAL,
+                            stage="Post-implementation commit",
+                            message="Failed to commit final mypy fixes",
+                            tasks_completed=completed_tasks,
+                            tasks_total=total_tasks,
+                            build_url=build_url,
+                            elapsed_time=time.time() - start_time,
+                        ),
+                        project_dir,
+                    )
+                    reached_terminal_state = True
+                    return 1
+
+                if not push_changes(project_dir):
+                    logger.error("Failed to push final mypy fixes")
+                    _handle_workflow_failure(
+                        WorkflowFailure(
+                            category=FailureCategory.GENERAL,
+                            stage="Post-implementation commit",
+                            message="Failed to push final mypy fixes",
+                            tasks_completed=completed_tasks,
+                            tasks_total=total_tasks,
+                            build_url=build_url,
+                            elapsed_time=time.time() - start_time,
+                        ),
+                        project_dir,
+                    )
+                    reached_terminal_state = True
+                    return 1
+            else:
+                logger.info("No changes from final mypy check - skipping commit")
+
+        # Step 5.5: Run finalisation to complete any remaining tasks
+        finalisation_success = run_finalisation(
+            project_dir,
+            provider,
+            mcp_config,
+            execution_dir,
+        )
+        if not finalisation_success:
+            logger.warning("Finalisation encountered issues - continuing anyway")
+
+        # Step 5.6: Check CI pipeline and auto-fix if needed
+        logger.info("Checking CI pipeline status...")
+        current_branch = get_current_branch_name(project_dir)
+        if current_branch:
+            ci_success = check_and_fix_ci(
+                project_dir=project_dir,
+                branch=current_branch,
+                provider=provider,
+                mcp_config=mcp_config,
+                execution_dir=execution_dir,
+            )
+            if not ci_success:
+                logger.error("CI check failed after maximum fix attempts")
                 _handle_workflow_failure(
                     WorkflowFailure(
-                        category=FailureCategory.GENERAL,
-                        stage="Post-implementation commit",
-                        message="Failed to push final mypy fixes",
+                        category=FailureCategory.CI_FIX_EXHAUSTED,
+                        stage="CI pipeline fix",
+                        message="CI check failed after maximum fix attempts",
                         tasks_completed=completed_tasks,
                         tasks_total=total_tasks,
                         build_url=build_url,
@@ -1218,67 +1279,67 @@ def run_implement_workflow(
                     ),
                     project_dir,
                 )
+                reached_terminal_state = True
                 return 1
         else:
-            logger.info("No changes from final mypy check - skipping commit")
+            logger.error("Could not determine current branch - skipping CI check")
 
-    # Step 5.5: Run finalisation to complete any remaining tasks
-    finalisation_success = run_finalisation(
-        project_dir,
-        provider,
-        mcp_config,
-        execution_dir,
-    )
-    if not finalisation_success:
-        logger.warning("Finalisation encountered issues - continuing anyway")
-
-    # Step 5.6: Check CI pipeline and auto-fix if needed
-    logger.info("Checking CI pipeline status...")
-    current_branch = get_current_branch_name(project_dir)
-    if current_branch:
-        ci_success = check_and_fix_ci(
-            project_dir=project_dir,
-            branch=current_branch,
-            provider=provider,
-            mcp_config=mcp_config,
-            execution_dir=execution_dir,
-        )
-        if not ci_success:
-            logger.error("CI check failed after maximum fix attempts")
-            _handle_workflow_failure(
-                WorkflowFailure(
-                    category=FailureCategory.CI_FIX_EXHAUSTED,
-                    stage="CI pipeline fix",
-                    message="CI check failed after maximum fix attempts",
-                    tasks_completed=completed_tasks,
-                    tasks_total=total_tasks,
-                    build_url=build_url,
-                    elapsed_time=time.time() - start_time,
-                ),
-                project_dir,
+        # Step 6: Unconditional success label transition
+        try:
+            issue_manager = IssueManager(project_dir)
+            issue_manager.update_workflow_label(
+                from_label_id="implementing",
+                to_label_id="code_review",
             )
-            return 1
-    else:
-        logger.error("Could not determine current branch - skipping CI check")
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            logger.warning("Failed to update issue label on success: %s", exc)
 
-    # Step 6: Unconditional success label transition
-    try:
-        issue_manager = IssueManager(project_dir)
-        issue_manager.update_workflow_label(
-            from_label_id="implementing",
-            to_label_id="code_review",
-        )
-    except Exception as exc:  # pylint: disable=broad-exception-caught
-        logger.warning("Failed to update issue label on success: %s", exc)
+        # Step 7: Show final progress summary with appropriate messaging
+        if completed_tasks > 0:
+            logger.info(
+                f"Implement workflow completed successfully! Processed {completed_tasks} task(s).",
+            )
+            logger.info("\nFinal Progress:")
+            log_progress_summary(project_dir)
+        else:
+            logger.info("No incomplete implementation tasks found - workflow complete")
 
-    # Step 7: Show final progress summary with appropriate messaging
-    if completed_tasks > 0:
-        logger.info(
-            f"Implement workflow completed successfully! Processed {completed_tasks} task(s).",
-        )
-        logger.info("\nFinal Progress:")
-        log_progress_summary(project_dir)
-    else:
-        logger.info("No incomplete implementation tasks found - workflow complete")
+        reached_terminal_state = True
+        return 0
+    except SystemExit:
+        raise
+    except Exception:  # pylint: disable=broad-exception-caught
+        logger.error("Unexpected exception in workflow", exc_info=True)
+        return 1
+    finally:
+        # Restore previous SIGTERM handler
+        if previous_sigterm_handler is not None:
+            try:
+                signal.signal(signal.SIGTERM, previous_sigterm_handler)
+            except (OSError, ValueError):
+                pass
 
-    return 0
+        # Safety net: handle unexpected exit (including SIGTERM via sys.exit)
+        if not reached_terminal_state:
+            elapsed = time.time() - start_time
+            stage = "SIGTERM received" if sigterm_received else "Unexpected exit"
+            message = (
+                "Workflow terminated by signal"
+                if sigterm_received
+                else "Workflow exited without reaching a terminal state"
+            )
+            try:
+                _handle_workflow_failure(
+                    WorkflowFailure(
+                        category=FailureCategory.GENERAL,
+                        stage=stage,
+                        message=message,
+                        tasks_completed=completed_tasks,
+                        tasks_total=total_tasks,
+                        build_url=build_url,
+                        elapsed_time=elapsed,
+                    ),
+                    project_dir,
+                )
+            except Exception:  # pylint: disable=broad-exception-caught
+                logger.error("Safety net failure handling also failed", exc_info=True)

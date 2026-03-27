@@ -1,5 +1,7 @@
 """Tests for implement workflow core orchestration."""
 
+import os
+import signal
 import sys
 from pathlib import Path
 from typing import Any, Dict
@@ -2014,3 +2016,233 @@ class TestExistingFailuresIncludeNewFields:
         assert failure.build_url == "https://jenkins.example.com/job/5/console"
         assert failure.elapsed_time is not None
         assert failure.elapsed_time >= 0
+
+
+class TestWorkflowSafetyNet:
+    """Tests for the try/finally safety net in run_implement_workflow."""
+
+    @patch("mcp_coder.workflows.implement.core.signal.signal")
+    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch(
+        "mcp_coder.workflows.implement.core.prepare_task_tracker",
+        side_effect=RuntimeError("unexpected"),
+    )
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
+    def test_safety_net_fires_on_unexpected_exception(
+        self,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_handle: MagicMock,
+        mock_signal: MagicMock,
+    ) -> None:
+        """Safety net calls _handle_workflow_failure on unexpected exception."""
+        result = run_implement_workflow(Path("/fake"), "claude")
+
+        assert result == 1
+        mock_handle.assert_called()
+        failure = mock_handle.call_args[0][0]
+        assert failure.stage == "Unexpected exit"
+        assert failure.category == FailureCategory.GENERAL
+        assert failure.message == "Workflow exited without reaching a terminal state"
+
+    @patch("mcp_coder.workflows.implement.core.signal.signal")
+    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch("mcp_coder.workflows.implement.core.IssueManager")
+    @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.get_current_branch_name",
+        return_value="feat-123",
+    )
+    @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.process_single_task",
+        return_value=(False, "no_tasks"),
+    )
+    @patch("mcp_coder.workflows.implement.core.get_step_progress", return_value={})
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker", return_value=True)
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
+    def test_safety_net_does_not_fire_on_normal_success(
+        self,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_progress: MagicMock,
+        mock_step_progress: MagicMock,
+        mock_process: MagicMock,
+        mock_finalisation: MagicMock,
+        mock_branch: MagicMock,
+        mock_ci: MagicMock,
+        mock_issue_mgr: MagicMock,
+        mock_handle: MagicMock,
+        mock_signal: MagicMock,
+    ) -> None:
+        """Safety net does NOT fire when workflow completes successfully."""
+        result = run_implement_workflow(Path("/fake"), "claude")
+
+        assert result == 0
+        unexpected_calls = [
+            c for c in mock_handle.call_args_list if c[0][0].stage == "Unexpected exit"
+        ]
+        assert len(unexpected_calls) == 0
+
+    @patch("mcp_coder.workflows.implement.core.signal.signal")
+    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch(
+        "mcp_coder.workflows.implement.core.prepare_task_tracker", return_value=False
+    )
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
+    def test_safety_net_does_not_double_handle(
+        self,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_handle: MagicMock,
+        mock_signal: MagicMock,
+    ) -> None:
+        """When workflow already handled a failure, safety net does not fire again."""
+        result = run_implement_workflow(Path("/fake"), "claude")
+
+        assert result == 1
+        assert mock_handle.call_count == 1
+        assert mock_handle.call_args[0][0].stage == "Task tracker preparation"
+
+    @patch("mcp_coder.workflows.implement.core.signal.signal")
+    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch(
+        "mcp_coder.workflows.implement.core.prepare_task_tracker",
+        side_effect=RuntimeError("boom"),
+    )
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
+    @patch.dict(os.environ, {"BUILD_URL": "https://jenkins.example.com/job/1/console"})
+    def test_safety_net_includes_build_url_and_elapsed(
+        self,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_handle: MagicMock,
+        mock_signal: MagicMock,
+    ) -> None:
+        """Safety net failure includes build_url and elapsed_time."""
+        run_implement_workflow(Path("/fake"), "claude")
+
+        failure = mock_handle.call_args[0][0]
+        assert failure.build_url == "https://jenkins.example.com/job/1/console"
+        assert failure.elapsed_time is not None
+        assert failure.elapsed_time >= 0
+
+
+class TestSigtermHandler:
+    """Tests for SIGTERM handler registration and behavior."""
+
+    @patch("mcp_coder.workflows.implement.core.signal.signal")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=False)
+    def test_sigterm_handler_registered(
+        self,
+        mock_git_clean: MagicMock,
+        mock_signal: MagicMock,
+    ) -> None:
+        """SIGTERM handler is registered at workflow start."""
+        run_implement_workflow(Path("/fake"), "claude")
+
+        sigterm_calls = [
+            c for c in mock_signal.call_args_list if c[0][0] == signal.SIGTERM
+        ]
+        assert len(sigterm_calls) >= 1
+
+    @patch("mcp_coder.workflows.implement.core.signal.signal")
+    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch(
+        "mcp_coder.workflows.implement.core.prepare_task_tracker", return_value=False
+    )
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
+    def test_sigterm_handler_restored_in_finally(
+        self,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_handle: MagicMock,
+        mock_signal: MagicMock,
+    ) -> None:
+        """Previous SIGTERM handler is restored after workflow completes."""
+        original_handler = MagicMock()
+        mock_signal.return_value = original_handler
+
+        run_implement_workflow(Path("/fake"), "claude")
+
+        final_call = mock_signal.call_args_list[-1]
+        assert final_call[0][0] == signal.SIGTERM
+        assert final_call[0][1] == original_handler
+
+    @patch("mcp_coder.workflows.implement.core.signal.signal")
+    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
+    def test_sigterm_sets_flag_and_exits(
+        self,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prep: MagicMock,
+        mock_handle: MagicMock,
+        mock_signal: MagicMock,
+    ) -> None:
+        """SIGTERM handler sets sigterm_received flag and calls sys.exit(1)."""
+        # Capture the registered handler
+        handlers: dict[int, Any] = {}
+
+        def capture_handler(sig: int, handler: Any) -> Any:
+            handlers[sig] = handler
+            return signal.SIG_DFL
+
+        mock_signal.side_effect = capture_handler
+
+        # Make prepare_task_tracker call the SIGTERM handler
+        def trigger_sigterm(*args: Any, **kwargs: Any) -> None:
+            handler = handlers.get(signal.SIGTERM)
+            if handler:
+                with pytest.raises(SystemExit):
+                    handler(signal.SIGTERM, None)
+            raise SystemExit(1)
+
+        mock_prep.side_effect = trigger_sigterm
+
+        with pytest.raises(SystemExit):
+            run_implement_workflow(Path("/fake"), "claude")
+
+        # The finally block should have called _handle_workflow_failure
+        # with stage "SIGTERM received"
+        mock_handle.assert_called()
+        failure = mock_handle.call_args[0][0]
+        assert failure.stage == "SIGTERM received"
+        assert failure.message == "Workflow terminated by signal"

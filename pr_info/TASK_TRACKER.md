@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat(core): add build_url and elapsed_time to existing WorkflowFailure constructions (#598)`
 
 ### Step 4: Add `try/finally` Safety Net + SIGTERM Handler
-- [ ] Implementation: wrap workflow body in `try/finally`, add `reached_terminal_state` flag, register SIGTERM handler in `core.py` + tests in `test_core.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(core): add try/finally safety net and SIGTERM handler to implement workflow (#598)`
+- [x] Implementation: wrap workflow body in `try/finally`, add `reached_terminal_state` flag, register SIGTERM handler in `core.py` + tests in `test_core.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(core): add try/finally safety net and SIGTERM handler to implement workflow (#598)`
 
 ### Step 5: Add Heartbeat Support to `execute_subprocess()` and Pass from `ask_claude_code_cli()`
 - [ ] Implementation A: add `_run_heartbeat()` and heartbeat params to `execute_subprocess()` in `subprocess_runner.py` + tests in `test_subprocess_runner.py`
