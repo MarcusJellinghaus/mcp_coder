@@ -47,9 +47,9 @@ See [step_4.md](./steps/step_4.md)
 
 ### Step 5: CLI flag + command wiring
 See [step_5.md](./steps/step_5.md)
-- [ ] Implementation: Add `--from-github` argument to vscodeclaude launch subparser, wire `args.from_github` through `execute_coordinator_vscodeclaude()` and `_handle_intervention_mode()` (TDD)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: Add `--from-github` argument to vscodeclaude launch subparser, wire `args.from_github` through `execute_coordinator_vscodeclaude()` and `_handle_intervention_mode()` (TDD)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: Add `[tool.mcp-coder.from-github]` to pyproject.toml
 See [step_6.md](./steps/step_6.md)
