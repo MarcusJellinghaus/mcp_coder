@@ -432,6 +432,7 @@ def restart_closed_sessions(
                 "vscode_pid": new_pid,
                 "started_at": session["started_at"],
                 "is_intervention": session.get("is_intervention", False),
+                "from_github": session.get("from_github", False),
             }
             restarted.append(updated_session)
 

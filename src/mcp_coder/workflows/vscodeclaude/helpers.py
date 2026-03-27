@@ -58,6 +58,7 @@ def build_session(
     status: str,
     vscode_pid: int,
     is_intervention: bool,
+    from_github: bool = False,
 ) -> VSCodeClaudeSession:
     """Build a session dictionary.
 
@@ -80,6 +81,7 @@ def build_session(
         "vscode_pid": vscode_pid,
         "started_at": datetime.now(timezone.utc).isoformat(),
         "is_intervention": is_intervention,
+        "from_github": from_github,
     }
 
 

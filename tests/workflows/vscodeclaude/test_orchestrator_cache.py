@@ -41,6 +41,7 @@ class TestBuildCachedIssuesByRepo:
                 "vscode_pid": 1234,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
+                "from_github": False,
             },
             {
                 "folder": "/path/to/owner-repo-408",
@@ -50,6 +51,7 @@ class TestBuildCachedIssuesByRepo:
                 "vscode_pid": 1235,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
+                "from_github": False,
             },
             {
                 "folder": "/path/to/other-repo-123",
@@ -59,6 +61,7 @@ class TestBuildCachedIssuesByRepo:
                 "vscode_pid": 1236,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
+                "from_github": False,
             },
         ]
 
@@ -241,6 +244,7 @@ class TestRestartClosedSessions:
                 "vscode_pid": 9999,  # Non-existent PID
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
+                "from_github": False,
             },
             {
                 "folder": "/path/to/owner-repo-100",
@@ -250,6 +254,7 @@ class TestRestartClosedSessions:
                 "vscode_pid": 9998,  # Non-existent PID
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
+                "from_github": False,
             },
         ]
 
@@ -336,6 +341,7 @@ class TestRestartClosedSessions:
                 "vscode_pid": 9999,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
+                "from_github": False,
             }
         ]
 
@@ -413,6 +419,7 @@ class TestRestartClosedSessions:
                 "vscode_pid": 9999,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
+                "from_github": False,
             }
         ]
 

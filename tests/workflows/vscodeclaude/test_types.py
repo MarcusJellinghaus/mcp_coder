@@ -35,6 +35,7 @@ class TestTypeHints:
             "vscode_pid",
             "started_at",
             "is_intervention",
+            "from_github",
         }
         assert set(annotations.keys()) == expected_fields
 
@@ -66,6 +67,7 @@ class TestTypeHints:
             "vscode_pid": 1234,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
         assert isinstance(session["folder"], str)
         assert isinstance(session["repo"], str)
@@ -74,6 +76,21 @@ class TestTypeHints:
         assert session["vscode_pid"] is None or isinstance(session["vscode_pid"], int)
         assert isinstance(session["started_at"], str)
         assert isinstance(session["is_intervention"], bool)
+        assert isinstance(session["from_github"], bool)
+
+    def test_vscodeclaude_session_supports_from_github(self) -> None:
+        """VSCodeClaudeSession dict can include from_github: True."""
+        session: VSCodeClaudeSession = {
+            "folder": "/path/to/folder",
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-01:created",
+            "vscode_pid": 1234,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+            "from_github": True,
+        }
+        assert session["from_github"] is True
 
     def test_vscodeclaude_session_store_creation(self) -> None:
         """Can create a valid VSCodeClaudeSessionStore instance."""

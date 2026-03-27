@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Add `from_github` to data layer (types + helpers)
 See [step_1.md](./steps/step_1.md)
-- [ ] Implementation: Add `from_github: bool` to `VSCodeClaudeSession` TypedDict, update `build_session()`, update all session dict literals in src/ and tests/ (TDD)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: Add `from_github: bool` to `VSCodeClaudeSession` TypedDict, update `build_session()`, update all session dict literals in src/ and tests/ (TDD)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Add always-run editable install to VENV_SECTION_WINDOWS
 See [step_2.md](./steps/step_2.md)

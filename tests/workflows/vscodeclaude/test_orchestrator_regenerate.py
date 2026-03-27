@@ -57,6 +57,7 @@ class TestRegenerateSessionFiles:
             "vscode_pid": 1234,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
     def test_regenerate_creates_startup_script(
