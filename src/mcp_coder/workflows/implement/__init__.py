@@ -4,6 +4,7 @@ This package contains the implementation workflow components for automated
 code development and refactoring tasks.
 """
 
+from .constants import FailureCategory, WorkflowFailure
 from .core import log_progress_summary, prepare_task_tracker, run_implement_workflow
 from .prerequisites import (
     check_git_clean,
@@ -21,6 +22,8 @@ from .task_processing import (
 )
 
 __all__ = [
+    "FailureCategory",
+    "WorkflowFailure",
     "check_git_clean",
     "check_main_branch",
     "check_prerequisites",

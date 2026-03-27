@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Add `FailureCategory` enum and `WorkflowFailure` dataclass
-- [ ] Implementation: tests in `test_constants.py` + production code in `constants.py` and `__init__.py` exports
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests in `test_constants.py` + production code in `constants.py` and `__init__.py` exports
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Return `"timeout"` from `process_single_task()` on `TimeoutExpired`
 - [ ] Implementation: test in `test_task_processing.py` + catch `TimeoutExpired` in `task_processing.py`
