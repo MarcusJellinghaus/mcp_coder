@@ -83,7 +83,7 @@ def add_prompt_parser(subparsers: Any) -> None:
         choices=["text", "json", "session-id", "ndjson", "json-raw"],
         default="text",
         metavar="FORMAT",
-        help="Output format: text (default), json (complete response), session-id (only session_id), ndjson (streaming NDJSON events), json-raw (raw NDJSON lines from CLI)",
+        help="Output format: text (default, streaming), ndjson (streaming NDJSON events), json-raw (streaming raw events), json (blocking, complete response), session-id (blocking, only session_id)",
     )
     prompt_parser.add_argument(
         "--mcp-config",
