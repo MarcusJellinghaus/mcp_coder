@@ -54,13 +54,8 @@ def execute_implement(args: argparse.Namespace) -> int:
             args.mcp_config, project_dir=args.project_dir
         )
 
-        # Extract update_labels flag from args
-        update_labels = getattr(args, "update_labels", False)
-
         # Run the implement workflow
-        return run_implement_workflow(
-            project_dir, provider, mcp_config, execution_dir, update_labels
-        )
+        return run_implement_workflow(project_dir, provider, mcp_config, execution_dir)
 
     except ValueError as e:
         # Handle invalid execution_dir

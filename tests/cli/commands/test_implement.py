@@ -74,7 +74,7 @@ class TestExecuteImplement:
         mock_resolve_exec.assert_called_once_with(None)
         mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, str(execution_dir), False
+            project_dir, "claude", None, str(execution_dir)
         )
 
     @patch("mcp_coder.cli.commands.implement.resolve_execution_dir")
@@ -115,7 +115,7 @@ class TestExecuteImplement:
         mock_resolve_exec.assert_called_once_with(None)
         mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, str(execution_dir), False
+            project_dir, "claude", None, str(execution_dir)
         )
 
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
@@ -180,7 +180,7 @@ class TestExecuteImplement:
         mock_resolve_exec.assert_called_once_with(None)
         mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, str(execution_dir), False
+            project_dir, "claude", None, str(execution_dir)
         )
 
     @patch("mcp_coder.cli.commands.implement.resolve_execution_dir")
@@ -217,9 +217,7 @@ class TestExecuteImplement:
         result = execute_implement(args_cli)
         assert result == 0
         mock_parse_llm.assert_called_with("claude")
-        mock_run_workflow.assert_called_with(
-            project_dir, "claude", None, execution_dir, False
-        )
+        mock_run_workflow.assert_called_with(project_dir, "claude", None, execution_dir)
 
         # Reset mocks
         mock_resolve_dir.reset_mock()
@@ -240,7 +238,7 @@ class TestExecuteImplement:
         assert result == 0
         mock_parse_llm.assert_called_with("langchain")
         mock_run_workflow.assert_called_with(
-            project_dir, "langchain", None, execution_dir, False
+            project_dir, "langchain", None, execution_dir
         )
 
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
@@ -408,7 +406,7 @@ class TestImplementExecutionDir:
         assert result == 0
         mock_resolve_exec.assert_called_once_with(None)
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, str(execution_dir), False
+            project_dir, "claude", None, str(execution_dir)
         )
 
     @patch("mcp_coder.cli.commands.implement.resolve_execution_dir")
@@ -441,7 +439,6 @@ class TestImplementExecutionDir:
             execution_dir=str(execution_dir),
             llm_method="claude",
             mcp_config=None,
-            update_labels=False,
         )
 
         result = execute_implement(args)
@@ -449,7 +446,7 @@ class TestImplementExecutionDir:
         assert result == 0
         mock_resolve_exec.assert_called_once_with(str(execution_dir))
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, str(execution_dir), False
+            project_dir, "claude", None, str(execution_dir)
         )
 
     @patch("mcp_coder.cli.commands.implement.resolve_execution_dir")

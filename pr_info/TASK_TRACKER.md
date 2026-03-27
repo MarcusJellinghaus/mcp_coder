@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: Remove `update_labels` parameter from CLI and workflow
-- [ ] Implementation: remove from `parsers.py`, `commands/implement.py`, `core.py` + update tests in `test_implement.py` and `test_core.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: remove from `parsers.py`, `commands/implement.py`, `core.py` + update tests in `test_implement.py` and `test_core.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Add `_handle_workflow_failure()` and wire into `run_implement_workflow()`
 - [ ] Implementation: tests in `test_core.py` + add `_get_diff_stat()`, `_format_failure_comment()`, `_handle_workflow_failure()` to `core.py`, wire into all error exits, add unconditional success label transition, remove post-error progress display
