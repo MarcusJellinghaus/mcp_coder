@@ -105,6 +105,7 @@ def main():
 
         for t, line in result["lines"]:
             preview = line[:120] + ("..." if len(line) > 120 else "")
+            preview = preview.encode("ascii", errors="replace").decode("ascii")
             print(f"  [{t:6.2f}s] {preview}")
 
         # Streaming verdict
