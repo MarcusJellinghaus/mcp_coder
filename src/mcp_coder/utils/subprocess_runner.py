@@ -209,21 +209,7 @@ def _run_subprocess(  # pylint: disable=too-many-statements
     """
     # Track start time for timeout logging
     subprocess_start_time = time.time()
-    # Prepare environment with UTF-8 encoding support
-    if is_python_command(command):
-        env = get_python_isolation_env()
-        if options.env:
-            env.update(options.env)
-    else:
-        # For non-Python commands, use UTF-8 environment
-        env = get_utf8_env()
-        if options.env:
-            env.update(options.env)
-
-    # Remove CLAUDECODE to allow nested Claude CLI invocations
-    if "CLAUDECODE" in env:
-        logger.debug("Removing CLAUDECODE env var to allow nested Claude CLI execution")
-        env.pop("CLAUDECODE")
+    env = prepare_env(command, options.env, options.env_remove)
 
     # Handle input data and stdin
     stdin_value = subprocess.DEVNULL if options.input_data is None else None

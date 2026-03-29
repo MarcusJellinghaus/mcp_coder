@@ -111,6 +111,7 @@ def ask_claude_code_cli_stream(
         input_data=input_data,
         env=env_vars,
         cwd=cwd,
+        env_remove=["CLAUDECODE"],  # Allow nested Claude CLI invocations
     )
 
     stream = StreamResult(stream_subprocess(command, options))

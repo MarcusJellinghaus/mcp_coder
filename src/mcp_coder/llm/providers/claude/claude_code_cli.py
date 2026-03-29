@@ -638,6 +638,7 @@ def ask_claude_code_cli(
         input_data=input_data,  # Pass JSON-formatted question via stdin
         env=env_vars,
         cwd=cwd,  # Set working directory for Claude subprocess execution
+        env_remove=["CLAUDECODE"],  # Allow nested Claude CLI invocations
     )
 
     parsed: ParsedStreamResponse | None = None

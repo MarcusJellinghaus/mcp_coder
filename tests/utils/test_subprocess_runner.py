@@ -379,6 +379,77 @@ class TestPrepareEnv:
         assert "PATH" in result or "Path" in result  # Windows uses 'Path'
 
 
+class TestRunSubprocessUsesPrepareEnv:
+    """Test that _run_subprocess delegates env setup to prepare_env."""
+
+    def test_run_subprocess_passes_env_remove_to_prepare_env(self) -> None:
+        """_run_subprocess calls prepare_env with options.env_remove."""
+        mock_proc = MagicMock()
+        mock_proc.communicate.return_value = ("out", "err")
+        mock_proc.returncode = 0
+        mock_proc.pid = 42
+        mock_proc.poll.return_value = 0
+
+        options = CommandOptions(
+            env={"MY": "val"},
+            env_remove=["CLAUDECODE", "SECRET"],
+        )
+
+        with (
+            patch(
+                "mcp_coder.utils.subprocess_runner.prepare_env",
+                return_value={"PATH": "/usr/bin"},
+            ) as mock_prepare,
+            patch(
+                "mcp_coder.utils.subprocess_runner.subprocess.Popen",
+                return_value=mock_proc,
+            ),
+        ):
+            from mcp_coder.utils.subprocess_runner import _run_subprocess
+
+            _run_subprocess(["echo", "hi"], options)
+
+        mock_prepare.assert_called_once_with(
+            ["echo", "hi"], {"MY": "val"}, ["CLAUDECODE", "SECRET"]
+        )
+
+
+class TestStreamSubprocessUsesPrepareEnv:
+    """Test that stream_subprocess delegates env setup to prepare_env."""
+
+    def test_stream_subprocess_passes_env_remove(self) -> None:
+        """stream_subprocess calls prepare_env with options.env_remove."""
+        mock_proc = MagicMock()
+        mock_proc.stdout = iter([])
+        mock_proc.stderr = MagicMock()
+        mock_proc.stderr.read.return_value = ""
+        mock_proc.wait.return_value = 0
+        mock_proc.returncode = 0
+        mock_proc.pid = 55
+        mock_proc.poll.return_value = 0
+
+        options = CommandOptions(
+            env={"FOO": "bar"},
+            env_remove=["CLAUDECODE"],
+        )
+
+        with (
+            patch(
+                "mcp_coder.utils.subprocess_streaming.prepare_env",
+                return_value={"PATH": "/usr/bin"},
+            ) as mock_prepare,
+            patch(
+                "mcp_coder.utils.subprocess_streaming.subprocess.Popen",
+                return_value=mock_proc,
+            ),
+        ):
+            list(stream_subprocess(["echo", "test"], options))
+
+        mock_prepare.assert_called_once_with(
+            ["echo", "test"], {"FOO": "bar"}, ["CLAUDECODE"]
+        )
+
+
 class TestPrepareEnvIntegration:
     """Integration test calling prepare_env with real os.environ."""
 

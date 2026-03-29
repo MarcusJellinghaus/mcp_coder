@@ -16,9 +16,7 @@ from collections.abc import Generator, Iterator
 from .subprocess_runner import (
     CommandOptions,
     CommandResult,
-    get_python_isolation_env,
-    get_utf8_env,
-    is_python_command,
+    prepare_env,
 )
 
 logger = logging.getLogger(__name__)
@@ -109,18 +107,7 @@ def stream_subprocess(
 
     start_time = time.time()
 
-    # Prepare environment (reuse existing env logic)
-    if is_python_command(command):
-        env = get_python_isolation_env()
-        if options.env:
-            env.update(options.env)
-    else:
-        env = get_utf8_env()
-        if options.env:
-            env.update(options.env)
-
-    # Remove CLAUDECODE to allow nested Claude CLI invocations
-    env.pop("CLAUDECODE", None)
+    env = prepare_env(command, options.env, options.env_remove)
 
     start_new_session = os.name != "nt"
 
