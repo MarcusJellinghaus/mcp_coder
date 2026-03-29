@@ -91,6 +91,7 @@ class CommandOptions:
         env: Environment variables for the subprocess. May contain internal
              testing flags prefixed with underscore (e.g., _DISABLE_STDIO_ISOLATION)
              that should NEVER be used in production code.
+        env_remove: List of environment variable names to remove after merging
         capture_output: Whether to capture stdout and stderr
         text: Whether to decode output as text
         check: Whether to raise exception on non-zero exit code

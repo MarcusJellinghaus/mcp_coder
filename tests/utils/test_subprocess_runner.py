@@ -302,8 +302,6 @@ class TestStreamSubprocess:
 
     def test_stream_subprocess_env_setup(self) -> None:
         """Python commands get isolation env variables."""
-        import sys
-
         captured_kwargs: dict[str, object] = {}
         mock_proc = MagicMock()
         mock_proc.stdout = iter([])
