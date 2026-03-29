@@ -1095,12 +1095,6 @@ def run_implement_workflow(
         sigterm_received = True
         sys.exit(1)
 
-    # Register SIGTERM handler
-    try:
-        previous_sigterm_handler = signal.signal(signal.SIGTERM, sigterm_handler)
-    except (OSError, ValueError):
-        logger.debug("Could not register SIGTERM handler")
-
     # Step 1: Check git status and prerequisites (early returns, no safety net needed)
     if not check_git_clean(project_dir):
         return 1
@@ -1113,6 +1107,12 @@ def run_implement_workflow(
 
     # Step 1.5: Attempt rebase onto parent branch (never blocks workflow)
     _attempt_rebase_and_push(project_dir)
+
+    # Register SIGTERM handler (after early checks, before protected region)
+    try:
+        previous_sigterm_handler = signal.signal(signal.SIGTERM, sigterm_handler)
+    except (OSError, ValueError):
+        logger.debug("Could not register SIGTERM handler")
 
     try:
         # Step 2: Prepare task tracker if needed
@@ -1336,6 +1336,7 @@ def run_implement_workflow(
         raise
     except Exception:  # pylint: disable=broad-exception-caught
         logger.error("Unexpected exception in workflow", exc_info=True)
+        reached_terminal_state = True
         return 1
     finally:
         # Restore previous SIGTERM handler
