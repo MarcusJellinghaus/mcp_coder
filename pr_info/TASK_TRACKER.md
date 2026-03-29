@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: `claude.bat` — Two-env aware launcher for end-users
-- [ ] Implementation: rewrite with two-env discovery, project env activation, MCP tool verification, and launch
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: rewrite with two-env discovery, project env activation, MCP tool verification, and launch
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: `claude_local.bat` — Two-env aware launcher for developers
 - [ ] Implementation: rewrite with two-env discovery, editable-install check, and launch
