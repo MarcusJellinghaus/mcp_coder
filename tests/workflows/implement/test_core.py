@@ -2033,7 +2033,7 @@ class TestWorkflowSafetyNet:
     @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
     @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
     @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
-    def test_safety_net_does_not_fire_on_caught_exception(
+    def test_safety_net_fires_on_unexpected_exception(
         self,
         mock_git_clean: MagicMock,
         mock_main_branch: MagicMock,
@@ -2043,11 +2043,11 @@ class TestWorkflowSafetyNet:
         mock_handle: MagicMock,
         mock_signal: MagicMock,
     ) -> None:
-        """except Exception sets reached_terminal_state, so safety net does not fire."""
+        """Safety net fires on unexpected exception to post GitHub comment and set label."""
         result = run_implement_workflow(Path("/fake"), "claude")
 
         assert result == 1
-        mock_handle.assert_not_called()
+        mock_handle.assert_called_once()
 
     @patch("mcp_coder.workflows.implement.core.signal.signal")
     @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
@@ -2132,7 +2132,7 @@ class TestWorkflowSafetyNet:
     @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
     @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
     @patch.dict(os.environ, {"BUILD_URL": "https://jenkins.example.com/job/1/console"})
-    def test_caught_exception_does_not_trigger_safety_net(
+    def test_caught_exception_triggers_safety_net(
         self,
         mock_git_clean: MagicMock,
         mock_main_branch: MagicMock,
@@ -2142,11 +2142,11 @@ class TestWorkflowSafetyNet:
         mock_handle: MagicMock,
         mock_signal: MagicMock,
     ) -> None:
-        """Caught exception sets reached_terminal_state, safety net does not fire."""
+        """Unexpected exception allows safety net to fire for GitHub reporting."""
         result = run_implement_workflow(Path("/fake"), "claude")
 
         assert result == 1
-        mock_handle.assert_not_called()
+        mock_handle.assert_called_once()
 
 
 class TestSigtermHandler:

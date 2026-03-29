@@ -1336,7 +1336,6 @@ def run_implement_workflow(
         raise
     except Exception:  # pylint: disable=broad-exception-caught
         logger.error("Unexpected exception in workflow", exc_info=True)
-        reached_terminal_state = True
         return 1
     finally:
         # Restore previous SIGTERM handler
