@@ -5,6 +5,8 @@ This module consolidates all constants used across the implement workflow module
 single source of truth.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import Enum
 
@@ -47,3 +49,5 @@ class WorkflowFailure:
     message: str
     tasks_completed: int = 0
     tasks_total: int = 0
+    build_url: str | None = None
+    elapsed_time: float | None = None

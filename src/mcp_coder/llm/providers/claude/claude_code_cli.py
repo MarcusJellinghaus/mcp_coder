@@ -24,6 +24,9 @@ logger = logging.getLogger(__name__)
 
 # Default logs directory for stream output
 DEFAULT_LOGS_DIR = "logs"
+
+# Heartbeat interval for LLM subprocess calls (2 minutes)
+LLM_HEARTBEAT_INTERVAL_SECONDS = 120
 CLAUDE_SESSIONS_SUBDIR = "claude-sessions"
 
 
@@ -645,7 +648,12 @@ def ask_claude_code_cli(
     stream_file_str = str(stream_file_path)
 
     try:
-        result = execute_subprocess(command, options)
+        result = execute_subprocess(
+            command,
+            options,
+            heartbeat_interval_seconds=LLM_HEARTBEAT_INTERVAL_SECONDS,
+            heartbeat_message="LLM call in progress",
+        )
 
         # Save stream output to file
         if result.stdout:

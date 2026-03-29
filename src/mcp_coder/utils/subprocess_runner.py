@@ -12,6 +12,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -563,14 +564,33 @@ def _run_subprocess(  # pylint: disable=too-many-statements
             raise  # pylint: disable=try-except-raise
 
 
+def _run_heartbeat(
+    stop_event: threading.Event,
+    interval: int,
+    message: str,
+    start_time: float,
+) -> None:
+    """Heartbeat loop — runs in a daemon thread, logs at regular intervals."""
+    while not stop_event.wait(interval):
+        elapsed = time.time() - start_time
+        minutes, seconds = divmod(int(elapsed), 60)
+        logger.info("%s (elapsed: %dm %ds)", message, minutes, seconds)
+
+
 def execute_subprocess(
-    command: list[str], options: CommandOptions | None = None
+    command: list[str],
+    options: CommandOptions | None = None,
+    heartbeat_interval_seconds: int | None = None,
+    heartbeat_message: str = "",
 ) -> CommandResult:
     """Execute a command with automatic STDIO isolation for Python commands.
 
     Args:
         command: Command and arguments as a list
         options: Execution options
+        heartbeat_interval_seconds: If set and > 0, log a heartbeat message
+            at this interval (in seconds) while the subprocess is running.
+        heartbeat_message: Message to include in heartbeat log entries.
 
     Returns:
         CommandResult with execution details
@@ -594,6 +614,23 @@ def execute_subprocess(
     use_isolation = is_python_command(command) and not disable_isolation
 
     logger.debug(f"Starting subprocess execution: {command[:3] if command else None}")
+
+    stop_event = None
+    heartbeat_thread = None
+
+    if heartbeat_interval_seconds and heartbeat_interval_seconds > 0:
+        stop_event = threading.Event()
+        heartbeat_thread = threading.Thread(
+            target=_run_heartbeat,
+            args=(
+                stop_event,
+                heartbeat_interval_seconds,
+                heartbeat_message,
+                start_time,
+            ),
+            daemon=True,
+        )
+        heartbeat_thread.start()
 
     try:
         process = _run_subprocess(command, options, use_isolation)
@@ -657,6 +694,12 @@ def execute_subprocess(
             runner_type="subprocess",
             execution_time_ms=execution_time_ms,
         )
+
+    finally:
+        if stop_event is not None:
+            stop_event.set()
+        if heartbeat_thread is not None:
+            heartbeat_thread.join(timeout=2)
 
 
 def execute_command(

@@ -1,8 +1,11 @@
 """Test subprocess_runner module."""
 
+import logging
 import os
 import sys
 import threading
+import time
+from subprocess import CompletedProcess, TimeoutExpired
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -11,7 +14,9 @@ from mcp_coder.utils.subprocess_runner import (
     MAX_STDERR_IN_ERROR,
     CommandOptions,
     CommandResult,
+    _run_heartbeat,
     check_tool_missing_error,
+    execute_subprocess,
     launch_process,
     prepare_env,
     truncate_stderr,
@@ -575,3 +580,95 @@ class TestMergedUtilities:
     def test_max_stderr_in_error_constant(self) -> None:
         """Verify MAX_STDERR_IN_ERROR == 500."""
         assert MAX_STDERR_IN_ERROR == 500
+
+
+class TestHeartbeat:
+    """Test heartbeat functionality in execute_subprocess."""
+
+    def test_no_heartbeat_by_default(self, caplog: pytest.LogCaptureFixture) -> None:
+        """No heartbeat logs when params not provided."""
+        with patch("mcp_coder.utils.subprocess_runner._run_subprocess") as mock_run:
+            mock_run.return_value = CompletedProcess(
+                args=["echo"], returncode=0, stdout="", stderr=""
+            )
+            with caplog.at_level(
+                logging.INFO, logger="mcp_coder.utils.subprocess_runner"
+            ):
+                execute_subprocess(["echo", "hi"])
+            heartbeat_logs = [
+                r
+                for r in caplog.records
+                if "heartbeat" in r.message.lower() or "elapsed" in r.message.lower()
+            ]
+            assert len(heartbeat_logs) == 0
+
+    def test_heartbeat_thread_started_and_stopped(self) -> None:
+        """Heartbeat thread is started before subprocess and stopped after."""
+        with patch("mcp_coder.utils.subprocess_runner._run_subprocess") as mock_run:
+            mock_run.return_value = CompletedProcess(
+                args=["echo"], returncode=0, stdout="", stderr=""
+            )
+            with patch("mcp_coder.utils.subprocess_runner.threading") as mock_threading:
+                mock_event = MagicMock()
+                mock_threading.Event.return_value = mock_event
+                mock_thread = MagicMock()
+                mock_threading.Thread.return_value = mock_thread
+
+                execute_subprocess(
+                    ["echo", "hi"],
+                    heartbeat_interval_seconds=120,
+                    heartbeat_message="Test heartbeat",
+                )
+
+                mock_threading.Thread.assert_called_once()
+                mock_thread.start.assert_called_once()  # pylint: disable=no-member
+                mock_event.set.assert_called_once()  # Stop signal sent
+                mock_thread.join.assert_called_once()  # pylint: disable=no-member
+
+    def test_heartbeat_stopped_on_exception(self) -> None:
+        """Heartbeat thread is stopped even if subprocess raises."""
+        with patch("mcp_coder.utils.subprocess_runner._run_subprocess") as mock_run:
+            mock_run.side_effect = TimeoutExpired(["cmd"], 10)
+            with patch("mcp_coder.utils.subprocess_runner.threading") as mock_threading:
+                mock_event = MagicMock()
+                mock_threading.Event.return_value = mock_event
+                mock_thread = MagicMock()
+                mock_threading.Thread.return_value = mock_thread
+
+                result = execute_subprocess(
+                    ["cmd"],
+                    heartbeat_interval_seconds=60,
+                    heartbeat_message="test",
+                )
+
+                assert result.timed_out is True
+                mock_event.set.assert_called_once()  # Stopped despite exception
+
+    def test_heartbeat_zero_interval_disabled(self) -> None:
+        """heartbeat_interval_seconds=0 does not start a thread."""
+        with patch("mcp_coder.utils.subprocess_runner._run_subprocess") as mock_run:
+            mock_run.return_value = CompletedProcess(
+                args=["echo"], returncode=0, stdout="", stderr=""
+            )
+            with patch("mcp_coder.utils.subprocess_runner.threading") as mock_threading:
+                execute_subprocess(
+                    ["echo"],
+                    heartbeat_interval_seconds=0,
+                    heartbeat_message="x",
+                )
+                mock_threading.Thread.assert_not_called()
+
+    def test_run_heartbeat_logs_periodically(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """_run_heartbeat logs at intervals until stop event is set."""
+        stop_event = MagicMock(spec=threading.Event)
+        # First wait returns False (not stopped), second returns True (stopped)
+        stop_event.wait.side_effect = [False, True]
+
+        with caplog.at_level(logging.INFO, logger="mcp_coder.utils.subprocess_runner"):
+            _run_heartbeat(
+                stop_event, interval=120, message="Test HB", start_time=time.time()
+            )
+
+        assert any("Test HB" in record.message for record in caplog.records)
