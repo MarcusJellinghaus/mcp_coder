@@ -1512,7 +1512,7 @@ class TestHandleWorkflowFailure:
             stage="test",
             message="failed",
         )
-        _handle_workflow_failure(failure, Path("/project"))
+        _handle_workflow_failure(failure, Path("/project"), update_labels=True)
 
         mock_manager.update_workflow_label.assert_called_once_with(
             from_label_id="implementing",
@@ -1544,7 +1544,7 @@ class TestHandleWorkflowFailure:
             tasks_completed=2,
             tasks_total=5,
         )
-        _handle_workflow_failure(failure, Path("/project"))
+        _handle_workflow_failure(failure, Path("/project"), update_labels=True)
 
         mock_manager.add_comment.assert_called_once()
         comment = mock_manager.add_comment.call_args[0][1]
@@ -1575,7 +1575,7 @@ class TestHandleWorkflowFailure:
             message="failed",
         )
         # Should not raise
-        _handle_workflow_failure(failure, Path("/project"))
+        _handle_workflow_failure(failure, Path("/project"), update_labels=True)
 
     @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
     @patch("mcp_coder.workflows.implement.core.IssueManager")
@@ -1597,7 +1597,7 @@ class TestHandleWorkflowFailure:
             stage="CI pipeline fix",
             message="CI failed",
         )
-        _handle_workflow_failure(failure, Path("/project"))
+        _handle_workflow_failure(failure, Path("/project"), update_labels=True)
 
         mock_manager.update_workflow_label.assert_called_once_with(
             from_label_id="implementing",
@@ -1624,12 +1624,32 @@ class TestHandleWorkflowFailure:
             stage="Task implementation",
             message="timed out",
         )
-        _handle_workflow_failure(failure, Path("/project"))
+        _handle_workflow_failure(failure, Path("/project"), update_labels=True)
 
         mock_manager.update_workflow_label.assert_called_once_with(
             from_label_id="implementing",
             to_label_id="llm_timeout",
         )
+
+    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.implement.core._get_diff_stat")
+    def test_handle_workflow_failure_skips_label_when_update_labels_disabled(
+        self,
+        mock_diff: MagicMock,
+        mock_branch: MagicMock,
+    ) -> None:
+        """When update_labels=False, label update is skipped."""
+        mock_diff.return_value = ""
+        mock_branch.return_value = None
+
+        failure = WorkflowFailure(
+            category=FailureCategory.GENERAL,
+            stage="test",
+            message="failed",
+        )
+        with patch("mcp_coder.workflows.implement.core.IssueManager") as mock_issue_cls:
+            _handle_workflow_failure(failure, Path("/project"), update_labels=False)
+            mock_issue_cls.return_value.update_workflow_label.assert_not_called()
 
 
 class TestRunImplementWorkflowLabelTransitions:
@@ -1646,7 +1666,7 @@ class TestRunImplementWorkflowLabelTransitions:
     @patch("mcp_coder.workflows.implement.core.check_main_branch")
     @patch("mcp_coder.workflows.implement.core.check_git_clean")
     @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
-    def test_success_always_updates_label_to_code_review(
+    def test_success_updates_label_when_update_labels_enabled(
         self,
         mock_branch: MagicMock,
         mock_git_clean: MagicMock,
@@ -1660,7 +1680,7 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_ci: MagicMock,
         mock_issue_cls: MagicMock,
     ) -> None:
-        """On success, label transitions to code_review unconditionally."""
+        """On success with update_labels=True, label transitions to code_review."""
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
@@ -1673,13 +1693,54 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_manager = MagicMock()
         mock_issue_cls.return_value = mock_manager
 
-        result = run_implement_workflow(Path("/project"), "claude")
+        result = run_implement_workflow(Path("/project"), "claude", update_labels=True)
 
         assert result == 0
         mock_manager.update_workflow_label.assert_called_once_with(
             from_label_id="implementing",
             to_label_id="code_review",
         )
+
+    @patch("mcp_coder.workflows.implement.core.IssueManager")
+    @patch("mcp_coder.workflows.implement.core.check_and_fix_ci")
+    @patch("mcp_coder.workflows.implement.core.run_finalisation")
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.process_single_task")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
+    def test_success_skips_label_when_update_labels_disabled(
+        self,
+        mock_branch: MagicMock,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_process: MagicMock,
+        mock_progress: MagicMock,
+        mock_finalise: MagicMock,
+        mock_ci: MagicMock,
+        mock_issue_cls: MagicMock,
+    ) -> None:
+        """On success with update_labels=False, label is not updated."""
+        mock_git_clean.return_value = True
+        mock_main_branch.return_value = True
+        mock_prereq.return_value = True
+        mock_rebase.return_value = True
+        mock_prepare.return_value = True
+        mock_process.return_value = (False, "no_tasks")
+        mock_finalise.return_value = True
+        mock_branch.return_value = "189-feature"
+        mock_ci.return_value = True
+
+        result = run_implement_workflow(Path("/project"), "claude", update_labels=False)
+
+        assert result == 0
+        mock_issue_cls.assert_not_called()
 
     @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
