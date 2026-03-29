@@ -34,8 +34,9 @@ See [summary.md](./summary.md) for overall design. Step 1 created the class. Thi
 | `_handle_coordinator_command` (`--dry-run requires --repo NAME`) | `Try 'mcp-coder coordinator --help' for more information.` | (no logger call exists) |
 | `_handle_coordinator_command` (`--dry-run requires --branch-name BRANCH`) | `Try 'mcp-coder coordinator --help' for more information.` | (no logger call exists) |
 | `_handle_coordinator_command` (`Either --all or --repo must be specified`) | `Try 'mcp-coder coordinator --help' for more information.` | (no logger call exists) |
+| `_handle_commit_command` (no subcommand / `commit_mode=None`) | `Try 'mcp-coder commit --help' for more information.` | `logger.error` → `logger.debug` |
 
-Note: The "unknown subcommand" branches and `_handle_commit_command` are dead code paths (argparse rejects unknown subcommands before these are reached). Do **not** add hints there — keep changes minimal.
+Note: The "unknown subcommand" branches are dead code paths (argparse rejects unknown subcommands before these are reached). Do **not** add hints there — keep changes minimal. However, `_handle_commit_command`'s else branch is reachable (`commit_mode=None` when no subcommand given) — it gets a help hint, not deletion.
 
 ### Test updates in `test_main.py`
 
@@ -50,6 +51,7 @@ def test_gh_tool_no_subcommand_shows_help_hint(self) -> None: ...
 def test_vscodeclaude_no_subcommand_shows_help_hint(self) -> None: ...
 def test_git_tool_no_subcommand_shows_help_hint(self) -> None: ...
 def test_coordinator_no_flags_shows_help_hint(self) -> None: ...  # parameterized: covers all 3 error paths (--dry-run requires --repo, --dry-run requires --branch-name, Either --all or --repo)
+def test_commit_no_subcommand_shows_help_hint(self) -> None: ...
 ```
 
 ## HOW

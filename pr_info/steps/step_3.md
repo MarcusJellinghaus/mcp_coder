@@ -33,7 +33,7 @@ These `else` branches handle "unknown subcommand" values, but argparse's `add_su
 | `_handle_gh_tool_command` | `else: "Unknown gh-tool subcommand"` | argparse validates `gh_tool_subcommand` choices |
 | `_handle_vscodeclaude_command` | `else: "Unknown vscodeclaude subcommand"` | argparse validates `vscodeclaude_subcommand` choices |
 | `_handle_git_tool_command` | `else: "Unknown git-tool subcommand"` | argparse validates `git_tool_subcommand` choices |
-| `_handle_commit_command` | `else: "Commit mode not yet implemented"` | argparse validates `commit_mode` choices |
+| ~~`_handle_commit_command`~~ | ~~`else: "Commit mode not yet implemented"`~~ | **Removed** — this branch is reachable when `commit_mode=None` (no subcommand given). Moved to step 2 for help hint addition. |
 | `main()` | fallback `"Command not yet implemented"` block | argparse validates top-level `command` choices |
 
 ### Mypy fix
