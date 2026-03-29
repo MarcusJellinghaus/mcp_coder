@@ -498,15 +498,10 @@ class TestStartJobHttpErrorMessages:
 
         # Execute & Verify
         expected_msg = f"Failed to start job 'Windows-Agents/Executor': {status_code} {reason}{expected_hint}"
-        with pytest.raises(JenkinsError, match=re.escape(expected_msg)):
+        with pytest.raises(JenkinsError, match=re.escape(expected_msg)) as exc_info:
             client.start_job("Windows-Agents/Executor")
-
-        # Verify URL is NOT in the error message
-        try:
-            client.start_job("Windows-Agents/Executor")
-        except JenkinsError as e:
-            assert "buildWithParameters" not in str(e)
-            assert "https://jenkins" not in str(e)
+        assert "buildWithParameters" not in str(exc_info.value)
+        assert "https://jenkins" not in str(exc_info.value)
 
     @patch("mcp_coder.utils.jenkins_operations.client.Jenkins")
     def test_start_job_http_error_no_response(
