@@ -21,6 +21,31 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: `.mcp.json` — Separate tool env from project env
+- [ ] Implementation: update `command` fields to use `MCP_CODER_VENV_PATH` and `PYTHONPATH` to use `MCP_CODER_VENV_DIR`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: `claude.bat` — Two-env aware launcher for end-users
+- [ ] Implementation: rewrite with two-env discovery, project env activation, MCP tool verification, and launch
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: `claude_local.bat` — Two-env aware launcher for developers
+- [ ] Implementation: rewrite with two-env discovery, editable-install check, and launch
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: `tools/reinstall.bat` — Restructure with venv guard and non-editable install
+- [ ] Implementation: restructure with venv guard, non-editable PyPI install, entry point verification
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: `tools/reinstall_local.bat` — New developer editable install script
+- [ ] Implementation: create new script with editable install, GitHub overrides, entry point verification
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review: verify all steps integrated correctly
+- [ ] PR summary prepared
