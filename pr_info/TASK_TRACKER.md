@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: Fix `launch_process()` env inheritance
-- [ ] Implementation: tests + production code ([step_3.md](./steps/step_3.md))
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + production code ([step_3.md](./steps/step_3.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Merge utility functions from p_tools reference
 - [ ] Implementation: tests + production code ([step_4.md](./steps/step_4.md))

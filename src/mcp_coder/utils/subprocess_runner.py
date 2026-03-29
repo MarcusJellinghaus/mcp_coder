@@ -655,40 +655,42 @@ def launch_process(
     cwd: str | Path | None = None,
     shell: bool = False,
     env: dict[str, str] | None = None,
+    env_remove: list[str] | None = None,
 ) -> int:
     """Launch a process without waiting for it to complete.
 
     This is for fire-and-forget process launching where you need the PID
     but don't need to wait for completion or capture output.
 
+    Environment variables are always inherited from the parent process
+    via prepare_env(). The ``env`` parameter merges on top of the parent
+    environment rather than replacing it entirely.
+
     Args:
         command: Command as list or string (string requires shell=True)
         cwd: Working directory for the process
         shell: Whether to execute through shell (required for string commands)
-        env: Environment variables for the process (None = inherit parent env)
+        env: Extra environment variables merged on top of the parent env
+        env_remove: Environment variable names to remove after merging
 
     Returns:
         Process ID (PID) of the launched process
 
     Example:
-        # Launch VSCode
+        # Launch VSCode — parent env is inherited automatically
         pid = launch_process(["code", "myfile.txt"])
 
-        # Launch with shell on Windows
-        pid = launch_process('code "my file.txt"', shell=True)
-
-        # Launch with custom environment
-        env = os.environ.copy()
-        env['CUSTOM_VAR'] = 'value'
-        pid = launch_process(["code", "myfile.txt"], env=env)
+        # Launch with extra env vars (no need for os.environ.copy())
+        pid = launch_process(["code", "myfile.txt"], env={"CUSTOM_VAR": "value"})
     """
     cwd_str = str(cwd) if cwd else None
+    prepared_env = prepare_env(command, env, env_remove)
 
     process = subprocess.Popen(
         command,
         cwd=cwd_str,
         shell=shell,
-        env=env,
+        env=prepared_env,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )

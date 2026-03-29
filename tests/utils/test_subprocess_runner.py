@@ -107,6 +107,74 @@ class TestLaunchProcess:
         assert captured_kwargs["stdout"] < 0  # DEVNULL is negative
         assert captured_kwargs["stdout"] == captured_kwargs["stderr"]
 
+    def test_launch_process_inherits_parent_env(self) -> None:
+        """env=None still inherits parent env via prepare_env (core bug fix)."""
+        captured_kwargs: dict[str, object] = {}
+
+        def mock_popen(cmd: list[str], **kwargs: object) -> MagicMock:
+            captured_kwargs.update(kwargs)
+            mock = MagicMock()
+            mock.pid = 1
+            return mock
+
+        with patch(
+            "mcp_coder.utils.subprocess_runner.subprocess.Popen",
+            side_effect=mock_popen,
+        ):
+            launch_process(["echo", "hello"], env=None)
+
+        env = captured_kwargs["env"]
+        assert isinstance(env, dict)
+        # Parent env should be inherited — PATH is always present
+        assert "PATH" in env or "Path" in env
+
+    def test_launch_process_merges_custom_env(self) -> None:
+        """Custom env vars are merged on top of parent env."""
+        captured_kwargs: dict[str, object] = {}
+
+        def mock_popen(cmd: list[str], **kwargs: object) -> MagicMock:
+            captured_kwargs.update(kwargs)
+            mock = MagicMock()
+            mock.pid = 1
+            return mock
+
+        with patch(
+            "mcp_coder.utils.subprocess_runner.subprocess.Popen",
+            side_effect=mock_popen,
+        ):
+            launch_process(["echo", "hello"], env={"CUSTOM": "val"})
+
+        env = captured_kwargs["env"]
+        assert isinstance(env, dict)
+        assert env["CUSTOM"] == "val"
+        # Parent env should also be present
+        assert "PATH" in env or "Path" in env
+
+    def test_launch_process_env_remove(self) -> None:
+        """env_remove excludes specified keys from the prepared env."""
+        captured_kwargs: dict[str, object] = {}
+
+        def mock_popen(cmd: list[str], **kwargs: object) -> MagicMock:
+            captured_kwargs.update(kwargs)
+            mock = MagicMock()
+            mock.pid = 1
+            return mock
+
+        with patch(
+            "mcp_coder.utils.subprocess_runner.subprocess.Popen",
+            side_effect=mock_popen,
+        ):
+            launch_process(
+                ["echo", "hello"],
+                env={"FOO": "bar", "KEEP": "yes"},
+                env_remove=["FOO"],
+            )
+
+        env = captured_kwargs["env"]
+        assert isinstance(env, dict)
+        assert "FOO" not in env
+        assert env["KEEP"] == "yes"
+
 
 class TestStreamSubprocess:
     """Test stream_subprocess generator function."""
