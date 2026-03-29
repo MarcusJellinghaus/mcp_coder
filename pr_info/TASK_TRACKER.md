@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 4: `tools/reinstall.bat` — Restructure with venv guard and non-editable install
-- [ ] Implementation: restructure with venv guard, non-editable PyPI install, entry point verification
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: restructure with venv guard, non-editable PyPI install, entry point verification
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: `tools/reinstall_local.bat` — New developer editable install script
 - [ ] Implementation: create new script with editable install, GitHub overrides, entry point verification

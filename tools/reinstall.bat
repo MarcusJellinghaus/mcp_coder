@@ -1,134 +1,143 @@
 @echo off
-REM Reinstall mcp-coder package in development mode
-REM This script uninstalls and reinstalls the package to ensure clean installation
-
+setlocal enabledelayedexpansion
+REM Reinstall mcp-coder package (non-editable, from PyPI)
+REM For end-users. Developers should use tools\reinstall_local.bat instead.
+REM Usage: call tools\reinstall.bat  (from project root)
 echo =============================================
-echo MCP-Coder Package Reinstallation
+echo MCP-Coder Package Reinstallation (PyPI)
 echo =============================================
 echo.
+echo NOTE: This installs from PyPI (non-editable).
+echo       Developers should use tools\reinstall_local.bat instead.
+echo.
 
-REM Check if uv is installed
-where uv >nul 2>nul
-if %ERRORLEVEL% NEQ 0 (
-    echo [INFO] uv not found. Installing uv...
-    pip install uv
-    if %ERRORLEVEL% NEQ 0 (
-        echo [ERROR] Failed to install uv!
-        echo Please install uv manually: pip install uv
-        pause
+REM Determine project root (parent of tools directory)
+set "PROJECT_DIR=%~dp0.."
+pushd "!PROJECT_DIR!"
+set "PROJECT_DIR=%CD%"
+popd
+
+set "VENV_DIR=!PROJECT_DIR!\.venv"
+set "VENV_SCRIPTS=!VENV_DIR!\Scripts"
+echo [0/5] Checking Python environment...
+
+REM Guard: if a venv is active, it must be the project-local .venv
+if defined VIRTUAL_ENV (
+    if /I not "!VIRTUAL_ENV!"=="!VENV_DIR!" (
+        echo [FAIL] Wrong virtual environment is active!
+        echo.
+        echo   Active venv:   !VIRTUAL_ENV!
+        echo   Expected venv: !VENV_DIR!
+        echo.
+        echo   Deactivate the current venv first, or activate the correct one:
+        echo     !VENV_DIR!\Scripts\activate
         exit /b 1
     )
-    echo [OK] uv installed successfully
-    echo.
 )
-echo [OK] uv is available
-echo.
 
-REM Check if running in a virtual environment
-if "%VIRTUAL_ENV%"=="" (
-    echo [ERROR] Not running in a virtual environment!
-    echo.
-    echo This script must be run from within a Python virtual environment.
-    echo.
-    echo To create a virtual environment:
-    echo   python -m venv .venv
-    echo.
-    echo Then activate your virtual environment:
-    echo   .venv\Scripts\activate
-    echo.
-    pause
+REM Check if uv is available
+where uv >nul 2>&1
+if !ERRORLEVEL! NEQ 0 (
+    echo [FAIL] uv not found. Install it: pip install uv
     exit /b 1
 )
-echo [OK] Running in virtual environment: %VIRTUAL_ENV%
-echo.
+echo [OK] uv found
 
-echo [1/7] Uninstalling existing packages...
-echo Uninstalling mcp-coder...
-uv pip uninstall mcp-coder 2>nul
-echo Uninstalling mcp-config...
-uv pip uninstall mcp-config 2>nul
-echo Uninstalling mcp-tools-py...
-uv pip uninstall mcp-tools-py 2>nul
-echo Uninstalling mcp-workspace...
-uv pip uninstall mcp-workspace 2>nul
-if %ERRORLEVEL% NEQ 0 (
-    echo Warning: Some packages may not have been installed
-) else (
-    echo [OK] Packages uninstalled successfully
+REM Check if local .venv exists
+if not exist "!VENV_SCRIPTS!\activate.bat" (
+    echo Local virtual environment not found at !VENV_DIR!
+    uv venv .venv
+    echo Local virtual environment created at !VENV_DIR!
 )
+echo [OK] Target environment: !VENV_DIR!
 echo.
 
-echo [2/7] Installing package in development mode...
-uv pip install -e .
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Installation failed!
-    echo Please check for errors above and try again.
-    pause
+echo [1/5] Uninstalling existing packages...
+uv pip uninstall mcp-coder mcp-tools-py mcp-config mcp-workspace --python "!VENV_SCRIPTS!\python.exe" 2>nul
+echo [OK] Packages uninstalled
+
+echo.
+echo [2/5] Installing mcp-coder from PyPI (non-editable)...
+uv pip install "mcp-coder[dev]" --python "!VENV_SCRIPTS!\python.exe"
+if !ERRORLEVEL! NEQ 0 (
+    echo [FAIL] Installation failed!
     exit /b 1
 )
-echo [OK] Package installed successfully
-echo.
+echo [OK] Package and dev dependencies installed
 
-echo [3/7] Installing development dependencies...
-uv pip install -e ".[dev]"
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Development dependencies installation failed!
-    echo Please check for errors above and try again.
-    pause
+echo.
+echo [3/5] Verifying CLI entry points in venv...
+
+if not exist "!VENV_SCRIPTS!\mcp-tools-py.exe" (
+    echo [FAIL] mcp-tools-py.exe not found in !VENV_SCRIPTS!
+    echo   The entry point was not installed into the virtual environment.
     exit /b 1
 )
-echo [OK] Development dependencies installed successfully
-echo.
+echo [OK] mcp-tools-py.exe found in !VENV_SCRIPTS!
 
-echo [4/7] Verifying installation...
-python -c "import mcp_coder; print('mcp_coder imported successfully')"
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Import verification failed!
-    echo The mcp_coder package is not working properly.
-    pause
+if not exist "!VENV_SCRIPTS!\mcp-workspace.exe" (
+    echo [FAIL] mcp-workspace.exe not found in !VENV_SCRIPTS!
+    echo   The entry point was not installed into the virtual environment.
     exit /b 1
 )
-echo [OK] Package import verified successfully
-echo.
+echo [OK] mcp-workspace.exe found in !VENV_SCRIPTS!
 
-echo [5/7] Verifying CLI entry point...
-python -c "from mcp_coder.cli.main import main; print('CLI main function imported successfully')"
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] CLI entry point verification failed!
-    echo The CLI is not working properly.
-    pause
+if not exist "!VENV_SCRIPTS!\mcp-coder.exe" (
+    echo [FAIL] mcp-coder.exe not found in !VENV_SCRIPTS!
+    echo   The entry point was not installed into the virtual environment.
     exit /b 1
 )
-echo [OK] CLI entry point verified successfully
-echo.
+echo [OK] mcp-coder.exe found in !VENV_SCRIPTS!
 
-echo [6/7] Testing CLI basic functionality...
-echo Testing mcp-coder command without arguments (should exit with code 1):
-mcp-coder
-set CLI_EXIT_CODE=%ERRORLEVEL%
-if %CLI_EXIT_CODE% EQU 1 (
-    echo [OK] CLI basic functionality working ^(expected exit code 1^)
-) else (
-    echo [ERROR] CLI not working as expected ^(exit code was %CLI_EXIT_CODE%^)
-)
 echo.
+echo [4/5] Verifying CLI functionality...
+"!VENV_SCRIPTS!\mcp-tools-py.exe" --help >nul 2>&1
+if !ERRORLEVEL! NEQ 0 (
+    echo [FAIL] mcp-tools-py CLI verification failed!
+    exit /b 1
+)
+echo [OK] mcp-tools-py CLI works
 
-echo [7/7] Verifying MCP servers are installed...
-python -c "import mcp_tools_py; print('mcp-tools-py installed successfully')"
-if %ERRORLEVEL% NEQ 0 (
-    echo Warning: mcp-tools-py not available
-) else (
-    echo [OK] MCP tools py verified
+"!VENV_SCRIPTS!\mcp-workspace.exe" --help >nul 2>&1
+if !ERRORLEVEL! NEQ 0 (
+    echo [FAIL] mcp-workspace CLI verification failed!
+    exit /b 1
 )
-python -c "import mcp_workspace; print('mcp-workspace installed successfully')"
-if %ERRORLEVEL% NEQ 0 (
-    echo Warning: mcp-workspace not available
-) else (
-    echo [OK] MCP workspace verified
+echo [OK] mcp-workspace CLI works
+
+"!VENV_SCRIPTS!\mcp-coder.exe" --help >nul 2>&1
+if !ERRORLEVEL! NEQ 0 (
+    echo [FAIL] mcp-coder CLI verification failed!
+    exit /b 1
 )
+echo [OK] mcp-coder CLI works
+
 echo.
-
 echo =============================================
-echo Reinstallation completed successfully!
-echo You can now use the mcp_coder module
+echo [5/5] Reinstallation completed successfully!
+echo.
+echo Entry points installed in: !VENV_SCRIPTS!
+echo   - mcp-tools-py.exe
+echo   - mcp-workspace.exe
+echo   - mcp-coder.exe
 echo =============================================
+echo.
+
+REM Pass VENV_DIR out of setlocal scope so activation persists to caller
+endlocal & set "_REINSTALL_VENV=%VENV_DIR%"
+
+REM Deactivate wrong venv if one is active
+if defined VIRTUAL_ENV (
+    if not "%VIRTUAL_ENV%"=="%_REINSTALL_VENV%" (
+        echo   Deactivating wrong virtual environment: %VIRTUAL_ENV%
+        call deactivate 2>nul
+    )
+)
+
+REM Activate the correct venv (persists to caller's shell)
+if not "%VIRTUAL_ENV%"=="%_REINSTALL_VENV%" (
+    echo   Activating virtual environment: %_REINSTALL_VENV%
+    call "%_REINSTALL_VENV%\Scripts\activate.bat"
+)
+
+set "_REINSTALL_VENV="
