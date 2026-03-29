@@ -26,6 +26,7 @@ from .commands.init import execute_init
 from .commands.prompt import execute_prompt
 from .commands.verify import execute_verify
 from .parsers import (
+    HelpHintArgumentParser,
     WideHelpFormatter,
     add_check_parsers,
     add_commit_parsers,
@@ -73,7 +74,7 @@ def create_parser() -> argparse.ArgumentParser:
     Returns:
         Configured ArgumentParser for the mcp-coder CLI.
     """
-    parser = argparse.ArgumentParser(
+    parser = HelpHintArgumentParser(
         prog="mcp-coder",
         description="AI-powered software development automation toolkit",
         formatter_class=WideHelpFormatter,
@@ -141,9 +142,17 @@ def _handle_coordinator_command(args: argparse.Namespace) -> int:
         # Validate dry-run args
         if not args.repo:
             print("Error: --dry-run requires --repo NAME", file=sys.stderr)
+            print(
+                "Try 'mcp-coder coordinator --help' for more information.",
+                file=sys.stderr,
+            )
             return 1
         if not args.branch_name:
             print("Error: --dry-run requires --branch-name BRANCH", file=sys.stderr)
+            print(
+                "Try 'mcp-coder coordinator --help' for more information.",
+                file=sys.stderr,
+            )
             return 1
         # Map args to what execute_coordinator_test expects
         args.repo_name = args.repo
@@ -153,6 +162,10 @@ def _handle_coordinator_command(args: argparse.Namespace) -> int:
         # Validate run args
         if not args.all and not args.repo:
             print("Error: Either --all or --repo must be specified", file=sys.stderr)
+            print(
+                "Try 'mcp-coder coordinator --help' for more information.",
+                file=sys.stderr,
+            )
             return 1
         return execute_coordinator_run(args)
 
@@ -175,10 +188,11 @@ def _handle_check_command(args: argparse.Namespace) -> int:
             print(f"Error: Unknown check subcommand '{args.check_subcommand}'")
             return 1
     else:
-        logger.error("Check subcommand required")
+        logger.debug("Check subcommand required")
         print(
             "Error: Please specify a check subcommand (e.g., 'branch-status', 'file-size')"
         )
+        print("Try 'mcp-coder check --help' for more information.", file=sys.stderr)
         return 1
 
 
@@ -204,11 +218,12 @@ def _handle_gh_tool_command(args: argparse.Namespace) -> int:
             print(f"Error: Unknown gh-tool subcommand '{args.gh_tool_subcommand}'")
             return 1
     else:
-        logger.error("gh-tool subcommand required")
+        logger.debug("gh-tool subcommand required")
         print(
             "Error: Please specify a gh-tool subcommand"
             " (e.g., 'get-base-branch', 'define-labels', 'issue-stats', 'set-status')"
         )
+        print("Try 'mcp-coder gh-tool --help' for more information.", file=sys.stderr)
         return 1
 
 
@@ -232,8 +247,11 @@ def _handle_vscodeclaude_command(args: argparse.Namespace) -> int:
             )
             return 1
     else:
-        logger.error("vscodeclaude subcommand required")
+        logger.debug("vscodeclaude subcommand required")
         print("Error: Please specify a subcommand (e.g., 'launch', 'status')")
+        print(
+            "Try 'mcp-coder vscodeclaude --help' for more information.", file=sys.stderr
+        )
         return 1
 
 
@@ -251,8 +269,9 @@ def _handle_git_tool_command(args: argparse.Namespace) -> int:
             print(f"Error: Unknown git-tool subcommand '{args.git_tool_subcommand}'")
             return 1
     else:
-        logger.error("git-tool subcommand required")
+        logger.debug("git-tool subcommand required")
         print("Error: Please specify a git-tool subcommand (e.g., 'compact-diff')")
+        print("Try 'mcp-coder git-tool --help' for more information.", file=sys.stderr)
         return 1
 
 
@@ -267,8 +286,9 @@ def _handle_commit_command(args: argparse.Namespace) -> int:
     elif args.commit_mode == "clipboard":
         return execute_commit_clipboard(args)
     else:
-        logger.error(f"Commit mode '{args.commit_mode}' not yet implemented")
+        logger.debug(f"Commit mode '{args.commit_mode}' not yet implemented")
         print(f"Error: Commit mode '{args.commit_mode}' is not yet implemented.")
+        print("Try 'mcp-coder commit --help' for more information.", file=sys.stderr)
         return 1
 
 

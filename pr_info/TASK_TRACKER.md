@@ -26,12 +26,12 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
   - [x] Add unit tests in `tests/cli/test_parsers.py`
   - [x] All checks pass (pylint, mypy, pytest)
 
-- [ ] **Step 2: Wire into CLI + update manual error paths** - [step_2.md](steps/step_2.md)
-  - [ ] Use `HelpHintArgumentParser` in `create_parser()`
-  - [ ] Add help hints to manual error messages in `_handle_*` functions
-  - [ ] Downgrade `logger.error` → `logger.debug` in manual error paths
-  - [ ] Update/add tests in `tests/cli/test_main.py`
-  - [ ] All checks pass (pylint, mypy, pytest)
+- [x] **Step 2: Wire into CLI + update manual error paths** - [step_2.md](steps/step_2.md)
+  - [x] Use `HelpHintArgumentParser` in `create_parser()`
+  - [x] Add help hints to manual error messages in `_handle_*` functions
+  - [x] Downgrade `logger.error` → `logger.debug` in manual error paths
+  - [x] Update/add tests in `tests/cli/test_main.py`
+  - [x] All checks pass (pylint, mypy, pytest)
 
 - [ ] **Step 3: Remove dead "unknown subcommand" branches** - [step_3.md](steps/step_3.md)
   - [ ] Verify each branch is truly unreachable before removing
