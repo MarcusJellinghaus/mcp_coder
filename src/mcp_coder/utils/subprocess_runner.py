@@ -42,7 +42,11 @@ __all__ = [
 def check_tool_missing_error(
     stderr: str, tool_name: str, python_path: str
 ) -> str | None:
-    """Check if stderr indicates the tool is not installed."""
+    """Check if stderr indicates the tool is not installed.
+
+    Returns:
+        Error message string if the tool is missing, or None if no issue detected.
+    """
     if f"No module named {tool_name}" in stderr:
         return (
             f"{tool_name} is not installed in the configured Python environment "
@@ -53,7 +57,11 @@ def check_tool_missing_error(
 
 
 def truncate_stderr(stderr: str, max_len: int = MAX_STDERR_IN_ERROR) -> str:
-    """Truncate stderr to a maximum length."""
+    """Truncate stderr to a maximum length.
+
+    Returns:
+        The original stderr if within max_len, otherwise truncated with ellipsis.
+    """
     if len(stderr) > max_len:
         return stderr[:max_len] + "..."
     return stderr
