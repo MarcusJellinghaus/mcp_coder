@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: `claude_local.bat` — Two-env aware launcher for developers
-- [ ] Implementation: rewrite with two-env discovery, editable-install check, and launch
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: rewrite with two-env discovery, editable-install check, and launch
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: `tools/reinstall.bat` — Restructure with venv guard and non-editable install
 - [ ] Implementation: restructure with venv guard, non-editable PyPI install, entry point verification
