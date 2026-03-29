@@ -1,5 +1,7 @@
 """Test subprocess_runner module."""
 
+import os
+import sys
 import threading
 from unittest.mock import MagicMock, patch
 
@@ -9,6 +11,7 @@ from mcp_coder.utils.subprocess_runner import (
     CommandOptions,
     CommandResult,
     launch_process,
+    prepare_env,
 )
 from mcp_coder.utils.subprocess_streaming import StreamResult, stream_subprocess
 
@@ -299,3 +302,96 @@ class TestStreamResult:
             stream = StreamResult(stream_subprocess(["echo", "test"]))
             with pytest.raises(RuntimeError, match="not yet available"):
                 _ = stream.result
+
+
+class TestCommandOptionsEnvRemove:
+    """Test env_remove field on CommandOptions."""
+
+    def test_command_options_env_remove_default_none(self) -> None:
+        """env_remove defaults to None."""
+        opts = CommandOptions()
+        assert opts.env_remove is None
+
+
+class TestPrepareEnv:
+    """Test prepare_env helper function."""
+
+    def test_prepare_env_python_command_uses_isolation_env(self) -> None:
+        """Python command gets PYTHONUNBUFFERED=1 etc."""
+        result = prepare_env([sys.executable, "-c", "pass"], env=None, env_remove=None)
+        assert result["PYTHONUNBUFFERED"] == "1"
+        assert result["PYTHONDONTWRITEBYTECODE"] == "1"
+
+    def test_prepare_env_non_python_command_uses_utf8_env(self) -> None:
+        """Non-Python command gets UTF-8 env, not isolation env."""
+        with patch.dict(os.environ, {}, clear=False):
+            # Ensure isolation-specific key is absent from parent env
+            os.environ.pop("PYTHONHASHSEED", None)
+            result = prepare_env(["echo", "hello"], env=None, env_remove=None)
+        assert result["PYTHONIOENCODING"] == "utf-8"
+        # PYTHONHASHSEED="0" is only set by isolation env, not utf8 env
+        assert result.get("PYTHONHASHSEED") != "0"
+
+    def test_prepare_env_string_command_treated_as_non_python(self) -> None:
+        """String command uses utf8 env, not isolation env."""
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("PYTHONHASHSEED", None)
+            result = prepare_env("python -c pass", env=None, env_remove=None)
+        assert result["PYTHONIOENCODING"] == "utf-8"
+        # PYTHONHASHSEED="0" is only set by isolation env
+        assert result.get("PYTHONHASHSEED") != "0"
+
+    def test_prepare_env_merges_caller_env(self) -> None:
+        """env={"MY_VAR": "hello"} appears in result."""
+        result = prepare_env(["echo", "test"], env={"MY_VAR": "hello"}, env_remove=None)
+        assert result["MY_VAR"] == "hello"
+
+    def test_prepare_env_caller_env_overrides_base(self) -> None:
+        """Caller env takes precedence over base env."""
+        result = prepare_env(
+            ["echo", "test"],
+            env={"PYTHONIOENCODING": "ascii"},
+            env_remove=None,
+        )
+        assert result["PYTHONIOENCODING"] == "ascii"
+
+    @pytest.mark.parametrize(
+        "env_remove,key_present",
+        [
+            (["PYTHONIOENCODING"], False),  # existing key is removed
+            (["NONEXISTENT_KEY_XYZ"], True),  # missing key doesn't error
+        ],
+        ids=["removes_existing_key", "ignores_missing_key"],
+    )
+    def test_prepare_env_env_remove(
+        self, env_remove: list[str], key_present: bool
+    ) -> None:
+        """env_remove removes keys; ignores missing keys without error."""
+        result = prepare_env(["echo", "test"], env=None, env_remove=env_remove)
+        if not key_present:
+            assert "PYTHONIOENCODING" not in result
+        # No exception for missing keys — test passes if we get here
+
+    def test_prepare_env_none_env_still_inherits_parent(self) -> None:
+        """env=None still gets full parent env (the core bug scenario)."""
+        result = prepare_env(["echo", "test"], env=None, env_remove=None)
+        # PATH should always be inherited from parent environment
+        assert "PATH" in result or "Path" in result  # Windows uses 'Path'
+
+
+class TestPrepareEnvIntegration:
+    """Integration test calling prepare_env with real os.environ."""
+
+    def test_prepare_env_integration_real_env(self) -> None:
+        """Validate core bug scenario: env inheritance + merge + remove."""
+        result = prepare_env(
+            ["echo", "test"],
+            env={"CUSTOM_TEST_VAR": "custom_value"},
+            env_remove=["CUSTOM_TEST_VAR_REMOVE"],
+        )
+        # Parent env inherited (PATH always present)
+        assert "PATH" in result or "Path" in result
+        # Caller-provided env vars are present
+        assert result["CUSTOM_TEST_VAR"] == "custom_value"
+        # env_remove keys are absent (even if they weren't present)
+        assert "CUSTOM_TEST_VAR_REMOVE" not in result

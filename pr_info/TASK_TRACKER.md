@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Add `prepare_env` helper + `env_remove` on `CommandOptions`
-- [ ] Implementation: tests + production code ([step_1.md](./steps/step_1.md))
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + production code ([step_1.md](./steps/step_1.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Refactor `_run_subprocess` + `stream_subprocess` to use `prepare_env`; update Claude CLI callers
 - [ ] Implementation: tests + production code ([step_2.md](./steps/step_2.md))

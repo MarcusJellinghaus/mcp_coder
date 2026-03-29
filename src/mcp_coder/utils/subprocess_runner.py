@@ -77,6 +77,7 @@ class CommandOptions:
     check: bool = False
     shell: bool = False
     input_data: str | None = None
+    env_remove: list[str] | None = None
 
 
 def is_python_command(command: list[str]) -> bool:
@@ -154,6 +155,40 @@ def get_utf8_env() -> dict[str, str]:
         )
 
     return env
+
+
+def prepare_env(
+    command: list[str] | str,
+    env: dict[str, str] | None,
+    env_remove: list[str] | None,
+) -> dict[str, str]:
+    """Build a complete environment dict for subprocess execution.
+
+    Starts from os.environ, applies Python isolation or UTF-8 settings
+    based on command type, merges caller-provided env on top, then
+    removes any keys listed in env_remove.
+
+    Args:
+        command: Command as list or string. String commands are always
+            treated as non-Python (shell=True implies unknown executable).
+        env: Optional caller-provided environment variables to merge.
+        env_remove: Optional list of environment variable names to remove.
+
+    Returns:
+        Complete environment dict ready for subprocess.Popen.
+    """
+    if isinstance(command, list) and is_python_command(command):
+        result = get_python_isolation_env()
+    else:
+        result = get_utf8_env()
+
+    if env:
+        result.update(env)
+
+    for key in env_remove or []:
+        result.pop(key, None)
+
+    return result
 
 
 def _run_subprocess(  # pylint: disable=too-many-statements
