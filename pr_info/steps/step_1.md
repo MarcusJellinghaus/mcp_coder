@@ -87,17 +87,16 @@ def _http_error_hint(status_code):
 class TestStartJobHttpErrorMessages:
     """Tests for clean HTTP error messages in start_job."""
 
-    def test_start_job_http_409_clean_message(self):
-        """409 error produces clean message with hint, no URL."""
-
-    def test_start_job_http_500_clean_message(self):
-        """500 error produces clean message without hint, no URL."""
+    @pytest.mark.parametrize("status_code,reason,expected_hint", [
+        (409, "Conflict", " (job may be disabled, already queued, or running)"),
+        (500, "Internal Server Error", ""),
+    ])
+    def test_start_job_http_error_clean_message(self, status_code, reason, expected_hint):
+        """HTTP errors produce clean message with appropriate hint, no URL."""
 
     def test_start_job_http_error_no_response(self):
         """HTTPError without response falls back to str(e)."""
 
-    def test_start_job_non_http_error_unchanged(self):
-        """Non-HTTP exceptions still use str(e) as before."""
 ```
 
 Each test mocks `build_job` to raise a `requests.exceptions.HTTPError` with a mock `response` object containing `status_code` and `reason`, then asserts the `JenkinsError` message matches the expected clean format and does NOT contain `buildWithParameters` or URL fragments.
