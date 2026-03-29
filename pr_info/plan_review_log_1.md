@@ -41,6 +41,16 @@
 
 **Status:** Committed
 
+## Final Status
+
+- **Rounds:** 2 (+ 1 verification pass)
+- **Commits:** 2 (`5a69068`, `bc64953`)
+- **Plan status:** Ready for approval
+- **Critical fixes applied:** 2 (workspace PYTHONPATH in step 1, VIRTUAL_ENV guard in step 2)
+- **Improvements applied:** 5 (first-result-only, transient breakage note, VENV_DIR derivation, behavioral change note, self-hosting fallback)
+- **Skipped:** 5 (pre-existing issues, observations, auto-populated tracker)
+- **User escalations:** 0
+
 ## Round 2 — 2026-03-29
 
 **Findings:**
