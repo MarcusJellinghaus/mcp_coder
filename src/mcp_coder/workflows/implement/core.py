@@ -183,7 +183,7 @@ def _format_failure_comment(failure: WorkflowFailure, diff_stat: str) -> str:
 
 
 def _handle_workflow_failure(
-    failure: WorkflowFailure, project_dir: Path, update_labels: bool = True
+    failure: WorkflowFailure, project_dir: Path, update_labels: bool = False
 ) -> None:
     """Handle workflow failure: set label, post comment, log banner."""
     # 1. Log failure banner

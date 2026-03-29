@@ -319,6 +319,43 @@ class TestExecuteImplement:
         captured_out: str = captured.out or ""
         assert "Operation cancelled by user." in captured_out
 
+    @patch("mcp_coder.cli.commands.implement.resolve_execution_dir")
+    @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
+    @patch("mcp_coder.cli.commands.implement.run_implement_workflow")
+    @patch("mcp_coder.cli.commands.implement.resolve_llm_method")
+    @patch("mcp_coder.cli.commands.implement.parse_llm_method_from_args")
+    def test_execute_implement_passes_update_labels_true(
+        self,
+        mock_parse_llm: Mock,
+        mock_resolve_llm: Mock,
+        mock_run_workflow: Mock,
+        mock_resolve_dir: Mock,
+        mock_resolve_exec: Mock,
+    ) -> None:
+        """Test that update_labels=True is forwarded to the workflow."""
+        project_dir = Path("/test/project")
+        execution_dir = str(Path.cwd())
+        mock_resolve_dir.return_value = project_dir
+        mock_resolve_exec.return_value = execution_dir
+        mock_resolve_llm.return_value = ("claude", "cli argument")
+        mock_parse_llm.return_value = "claude"
+        mock_run_workflow.return_value = 0
+
+        args = argparse.Namespace(
+            project_dir="/test/project",
+            llm_method="claude",
+            execution_dir=None,
+            mcp_config=None,
+            update_labels=True,
+        )
+
+        result = execute_implement(args)
+
+        assert result == 0
+        mock_run_workflow.assert_called_once_with(
+            project_dir, "claude", None, execution_dir, True
+        )
+
 
 class TestImplementCommandError:
     """Test error handling scenarios for implement command."""
