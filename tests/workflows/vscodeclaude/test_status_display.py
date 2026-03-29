@@ -144,6 +144,7 @@ class TestStatusDisplay:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         assert is_session_stale(session, cached_issues=cached_issues) is False
@@ -175,6 +176,7 @@ class TestStatusDisplay:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         assert is_session_stale(session, cached_issues=cached_issues) is True
@@ -206,6 +208,7 @@ class TestStatusDisplay:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         # Open issue without status label - should NOT be stale
@@ -232,6 +235,7 @@ class TestStatusDisplay:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         # Without cached_issues, falls back to IssueManager which returns None
@@ -264,6 +268,7 @@ class TestStatusDisplay:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         assert is_issue_closed(session, cached_issues=cached_issues) is True
@@ -295,6 +300,7 @@ class TestStatusDisplay:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         assert is_issue_closed(session, cached_issues=cached_issues) is False
@@ -407,6 +413,7 @@ class TestStatusDisplay:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
@@ -499,6 +506,7 @@ class TestClosedIssuePrefixDisplay:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
@@ -530,6 +538,7 @@ class TestClosedIssuePrefixDisplay:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
@@ -560,6 +569,7 @@ class TestClosedIssuePrefixDisplay:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
@@ -589,6 +599,7 @@ class TestClosedIssuePrefixDisplay:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
@@ -620,6 +631,7 @@ class TestClosedIssuePrefixDisplay:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
@@ -651,6 +663,7 @@ class TestClosedIssuePrefixDisplay:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
@@ -682,6 +695,7 @@ class TestClosedIssuePrefixDisplay:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
@@ -733,6 +747,7 @@ class TestClosedIssuePrefixDisplay:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         # Provide cache with updated (current) status
@@ -801,6 +816,7 @@ class TestBotStageSessionsDeleteAction:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
@@ -834,6 +850,7 @@ class TestBotStageSessionsDeleteAction:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
@@ -863,6 +880,7 @@ class TestBotStageSessionsDeleteAction:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
@@ -892,6 +910,7 @@ class TestBotStageSessionsDeleteAction:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
@@ -921,6 +940,7 @@ class TestBotStageSessionsDeleteAction:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
@@ -950,6 +970,7 @@ class TestBotStageSessionsDeleteAction:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
@@ -979,6 +1000,7 @@ class TestBotStageSessionsDeleteAction:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
@@ -1010,6 +1032,7 @@ class TestBotStageSessionsDeleteAction:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
@@ -1052,6 +1075,7 @@ class TestPrCreatedSessionsDeleteAction:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
@@ -1085,6 +1109,7 @@ class TestPrCreatedSessionsDeleteAction:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
@@ -1115,6 +1140,7 @@ class TestPrCreatedSessionsDeleteAction:
             "vscode_pid": 12345,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
@@ -1145,6 +1171,7 @@ class TestPrCreatedSessionsDeleteAction:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
+            "from_github": False,
         }
 
         display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)

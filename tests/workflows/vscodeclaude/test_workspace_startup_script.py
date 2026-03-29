@@ -358,7 +358,7 @@ class TestCreateStartupScript:
         # Custom 3-command mock config
         three_cmd_configs: dict[str, dict[str, Any]] = {
             "status-triple": {
-                "emoji": "🔧",
+                "emoji": "\U0001f527",
                 "display_name": "TRIPLE",
                 "stage_short": "tri",
                 "commands": ["/step_one", "/step_two", "/step_three"],
@@ -406,7 +406,7 @@ class TestCreateStartupScript:
 
         empty_cmd_configs: dict[str, dict[str, Any]] = {
             "status-empty": {
-                "emoji": "📋",
+                "emoji": "\U0001f4cb",
                 "display_name": "EMPTY",
                 "stage_short": "emp",
                 "commands": [],
@@ -447,7 +447,7 @@ class TestCreateStartupScript:
 
         bad_configs: dict[str, dict[str, Any]] = {
             "status-bad": {
-                "emoji": "📋",
+                "emoji": "\U0001f4cb",
                 "display_name": "BAD",
                 "stage_short": "bad",
                 "commands": "/single_string",
@@ -482,7 +482,7 @@ class TestCreateStartupScript:
 
         bad_configs: dict[str, dict[str, Any]] = {
             "status-bad": {
-                "emoji": "📋",
+                "emoji": "\U0001f4cb",
                 "display_name": "BAD",
                 "stage_short": "bad",
                 "commands": ["/valid", 123],

@@ -8,6 +8,7 @@ from mcp_coder.workflows.vscodeclaude.config import (
     get_repo_short_name,
 )
 from mcp_coder.workflows.vscodeclaude.helpers import (
+    build_session,
     get_issue_status,
     get_repo_short_name_from_full,
     get_stage_display_name,
@@ -175,3 +176,45 @@ class TestDisplayHelpers:
         assert result.endswith("...")
         # Should have 47 'A's followed by '...'
         assert result == "A" * 47 + "..."
+
+
+class TestBuildSessionFromGithub:
+    """Test build_session from_github parameter."""
+
+    def test_build_session_with_from_github_true(self) -> None:
+        """build_session with from_github=True sets the field."""
+        session = build_session(
+            folder="/test",
+            repo="owner/repo",
+            issue_number=1,
+            status="status-01:created",
+            vscode_pid=1234,
+            is_intervention=False,
+            from_github=True,
+        )
+        assert session["from_github"] is True
+
+    def test_build_session_with_from_github_false(self) -> None:
+        """build_session with from_github=False sets the field."""
+        session = build_session(
+            folder="/test",
+            repo="owner/repo",
+            issue_number=1,
+            status="status-01:created",
+            vscode_pid=1234,
+            is_intervention=False,
+            from_github=False,
+        )
+        assert session["from_github"] is False
+
+    def test_build_session_default_from_github(self) -> None:
+        """build_session without from_github defaults to False."""
+        session = build_session(
+            folder="/test",
+            repo="owner/repo",
+            issue_number=1,
+            status="status-01:created",
+            vscode_pid=1234,
+            is_intervention=False,
+        )
+        assert session["from_github"] is False

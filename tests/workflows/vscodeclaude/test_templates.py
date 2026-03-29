@@ -91,3 +91,14 @@ def test_interactive_resume_section_no_hardcoded_llm_method() -> None:
     assert (
         "--llm-method" not in INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS
     ), "INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS must not hardcode '--llm-method'"
+
+
+def test_venv_section_runs_editable_install() -> None:
+    """Test that VENV_SECTION_WINDOWS runs editable install on every launch.
+
+    The editable install ensures the current project code is always used
+    in the session environment, even if the code changes between launches.
+    """
+    assert (
+        "uv pip install -e . --no-deps" in VENV_SECTION_WINDOWS
+    ), "VENV_SECTION_WINDOWS should run 'uv pip install -e . --no-deps'"

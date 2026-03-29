@@ -606,6 +606,11 @@ def add_vscodeclaude_parsers(subparsers: Any) -> None:
         metavar="NUMBER",
         help="Issue number for intervention mode (requires --intervene)",
     )
+    launch_parser.add_argument(
+        "--from-github",
+        action="store_true",
+        help="Install MCP packages from GitHub repos instead of PyPI (latest main)",
+    )
 
     # vscodeclaude status
     status_parser = vscodeclaude_subparsers.add_parser(
