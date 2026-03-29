@@ -19,4 +19,17 @@ CLI: add '--help' hint to argument error messages
 - `pr_info/steps/step_2.md` — added `_handle_commit_command` to manual error path table, added `test_commit_no_subcommand_shows_help_hint` to test list, updated note about dead vs reachable code
 - `pr_info/steps/step_3.md` — struck through `_handle_commit_command` row, added explanation that branch is reachable and moved to step 2
 
-**Status**: committed
+**Status**: committed (f6abc27)
+
+## Round 2 — 2026-03-29
+**Findings**: Re-verified step_2.md and step_3.md against source code. All corrections applied correctly. Remaining dead code entries in step 3 confirmed truly unreachable. Minor note: `_handle_commit_command` error message says "Commit mode 'None' not yet implemented" for the no-subcommand case — implementer can adjust wording during step 2.
+**Decisions**: No further changes needed.
+**User decisions**: none
+**Changes**: none
+**Status**: no changes needed
+
+## Final Status
+
+- **Rounds**: 2 (1 with changes, 1 verification)
+- **Commits**: 1
+- **Plan status**: Ready for approval. Critical finding resolved (commit_command reclassified). Plan has 3 steps: parser subclass, CLI wiring (now with 8 manual error paths), dead code removal (now 5 branches, not 6).
