@@ -31,7 +31,9 @@ See [summary.md](./summary.md) for overall design. Step 1 created the class. Thi
 | `_handle_gh_tool_command` (no subcommand) | `Try 'mcp-coder gh-tool --help' for more information.` | `logger.error` → `logger.debug` |
 | `_handle_vscodeclaude_command` (no subcommand) | `Try 'mcp-coder vscodeclaude --help' for more information.` | `logger.error` → `logger.debug` |
 | `_handle_git_tool_command` (no subcommand) | `Try 'mcp-coder git-tool --help' for more information.` | `logger.error` → `logger.debug` |
-| `_handle_coordinator_command` (missing flags) | `Try 'mcp-coder coordinator --help' for more information.` | (no logger call exists) |
+| `_handle_coordinator_command` (`--dry-run requires --repo NAME`) | `Try 'mcp-coder coordinator --help' for more information.` | (no logger call exists) |
+| `_handle_coordinator_command` (`--dry-run requires --branch-name BRANCH`) | `Try 'mcp-coder coordinator --help' for more information.` | (no logger call exists) |
+| `_handle_coordinator_command` (`Either --all or --repo must be specified`) | `Try 'mcp-coder coordinator --help' for more information.` | (no logger call exists) |
 
 Note: The "unknown subcommand" branches and `_handle_commit_command` are dead code paths (argparse rejects unknown subcommands before these are reached). Do **not** add hints there — keep changes minimal.
 
@@ -47,7 +49,7 @@ def test_subcommand_unrecognized_arg_shows_help_hint(self) -> None: ...
 def test_gh_tool_no_subcommand_shows_help_hint(self) -> None: ...
 def test_vscodeclaude_no_subcommand_shows_help_hint(self) -> None: ...
 def test_git_tool_no_subcommand_shows_help_hint(self) -> None: ...
-def test_coordinator_no_flags_shows_help_hint(self) -> None: ...
+def test_coordinator_no_flags_shows_help_hint(self) -> None: ...  # parameterized: covers all 3 error paths (--dry-run requires --repo, --dry-run requires --branch-name, Either --all or --repo)
 ```
 
 ## HOW
