@@ -686,10 +686,7 @@ class TestCreateStartupScriptFromGithub:
         content = script_path.read_text(encoding="utf-8")
         assert "GitHub override installs" in content
         assert 'uv pip install "pkg1 @ git+https://github.com/org/pkg1.git"' in content
-        assert (
-            "uv pip install --no-deps" not in content
-            or 'uv pip install --no-deps "pkg' not in content
-        )
+        assert 'uv pip install --no-deps "pkg' not in content
         # Restore editable
         assert content.count("uv pip install -e . --no-deps") >= 2
 

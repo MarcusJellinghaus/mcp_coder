@@ -426,7 +426,7 @@ def _build_github_install_section(folder_path: Path) -> str:
         )
         return ""
 
-    with open(pyproject_path, "rb") as f:
+    with pyproject_path.open("rb") as f:
         config = tomllib.load(f)
 
     gh_config = config.get("tool", {}).get("mcp-coder", {}).get("from-github", {})

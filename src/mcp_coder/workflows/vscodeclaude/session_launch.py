@@ -420,7 +420,7 @@ def regenerate_session_files(
     issue_url = issue.get("url", "")
     status = get_issue_status(issue)
     is_intervention = session.get("is_intervention", False)
-    from_github = session["from_github"]
+    from_github = session.get("from_github", False)
 
     # Get current branch from git
     try:

@@ -69,7 +69,7 @@ def build_session(
         status: Status label
         vscode_pid: VSCode process ID
         is_intervention: If True, intervention mode
-        from_github: If True, session was triggered from GitHub
+        from_github: If True, install MCP packages from GitHub repos instead of PyPI
 
     Returns:
         VSCodeClaudeSession dict
