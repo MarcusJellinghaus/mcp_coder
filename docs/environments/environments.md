@@ -56,8 +56,8 @@ There are two paths that set up environment variables: batch launchers (for inte
 | Entry point | Sets tool env how | Sets project env how | Two-env aware? |
 |---|---|---|---|
 | `.vscodeclaude_start.bat` (coordinator) | `MCP_CODER_VENV_PATH` on PATH | activates project `.venv`, sets `VIRTUAL_ENV` | **Yes** |
-| `claude.bat` | Not yet — assumes single env | activates `.venv` | **No** (to be fixed in #613) |
-| `claude_local.bat` | Not yet — assumes single env | activates `.venv` with wrong-venv detection | **No** (to be fixed in #613) |
+| `claude.bat` | Discovers tool env via `MCP_CODER_VENV_PATH` or registry | activates `.venv`, sets `VIRTUAL_ENV` | **Yes** |
+| `claude_local.bat` | Discovers tool env via `MCP_CODER_VENV_PATH` or registry; verifies editable install | activates `.venv`, sets `VIRTUAL_ENV` | **Yes** |
 | `env.py` (`prepare_llm_environment()`) | Sets `MCP_CODER_VENV_DIR` from `VIRTUAL_ENV` / `CONDA_PREFIX` / `sys.prefix` | Sets `MCP_CODER_PROJECT_DIR` from `project_dir` arg | **Partial** — reads whatever venv is active |
 
 ### How `.vscodeclaude_start.bat` Does It (Coordinator)
@@ -95,13 +95,13 @@ env_vars = {
 
 This sets `MCP_CODER_VENV_DIR` to whatever venv is currently active. In the two-env model, `VIRTUAL_ENV` is the project env at this point (the tool env is only on PATH), so `MCP_CODER_VENV_DIR` ends up pointing to the **project** env — not the tool env. This is a known limitation.
 
-### How `claude.bat` Does It (Current — Broken)
+### How `claude.bat` Does It
 
-Simpler: activates the project-local `.venv` if no venv is active. Assumes mcp-coder is installed in that same venv. Works only when tool env = project env.
+Discovers the tool environment via `MCP_CODER_VENV_PATH` (if set) or the Windows registry, then adds it to PATH. Activates the project-local `.venv` for the project environment. Supports the same two-env model as the coordinator.
 
-### How `claude_local.bat` Does It (Current — Broken)
+### How `claude_local.bat` Does It
 
-For local development: ensures the project `.venv` is active and mcp-coder is importable from it. Deactivates wrong venvs. Assumes mcp-coder is editable-installed in the project env.
+For local development: discovers the tool environment the same way as `claude.bat`, then activates the project `.venv`. Verifies that mcp-coder is editable-installed (pip `-e` mode) so local source changes take effect immediately.
 
 ## Which Environment Runs What?
 
@@ -115,34 +115,7 @@ The MCP server runs in the tool env but launches pytest/pylint/mypy using the **
 
 ## Configuration (`.mcp.json`)
 
-### Current State (Broken)
-
-```json
-{
-  "tools-py": {
-    "command": "${VIRTUAL_ENV}\\Scripts\\mcp-tools-py.exe",
-    "args": [
-      "--project-dir", "${MCP_CODER_PROJECT_DIR}",
-      "--venv-path", "${VIRTUAL_ENV}",
-      "--python-executable", "${VIRTUAL_ENV}\\Scripts\\python.exe"
-    ]
-  },
-  "workspace": {
-    "command": "${VIRTUAL_ENV}/Scripts/mcp-workspace.exe",
-    "args": ["--project-dir", "${MCP_CODER_PROJECT_DIR}"]
-  }
-}
-```
-
-### Problem: `${VIRTUAL_ENV}` Used for Both Environments
-
-`.mcp.json` uses `${VIRTUAL_ENV}` for:
-1. **MCP server executable** (`command`) — should come from the **tool env**
-2. **`--venv-path`** for pytest execution — should come from the **project env**
-
-This works today only because `uv sync --extra dev` installs mcp-tools-py into the project env redundantly (the project IS mcp-coder, so its dependencies include the MCP servers). For other projects, `${VIRTUAL_ENV}\Scripts\mcp-tools-py.exe` would not exist.
-
-### Target State (After #613)
+### Current State (After #613)
 
 ```json
 {
