@@ -21,6 +21,11 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Improve `--continue-session` no-session message
+- [ ] Implementation: add test + update message string ([step_1.md](./steps/step_1.md))
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review
+- [ ] PR summary
