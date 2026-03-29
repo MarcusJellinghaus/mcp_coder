@@ -1916,7 +1916,7 @@ class TestExistingFailuresIncludeNewFields:
         mock_prepare: MagicMock,
         mock_process: MagicMock,
         mock_progress: MagicMock,
-        mock_finalisation: MagicMock,
+        _mock_finalisation: MagicMock,
         mock_branch: MagicMock,
         mock_ci: MagicMock,
     ) -> None:
@@ -1957,7 +1957,7 @@ class TestExistingFailuresIncludeNewFields:
         mock_prepare: MagicMock,
         mock_process: MagicMock,
         mock_progress: MagicMock,
-        mock_finalisation: MagicMock,
+        _mock_finalisation: MagicMock,
         mock_branch: MagicMock,
         mock_ci: MagicMock,
     ) -> None:
@@ -1998,7 +1998,7 @@ class TestExistingFailuresIncludeNewFields:
         mock_prepare: MagicMock,
         mock_process: MagicMock,
         mock_progress: MagicMock,
-        mock_finalisation: MagicMock,
+        _mock_finalisation: MagicMock,
         mock_branch: MagicMock,
         mock_ci: MagicMock,
     ) -> None:
@@ -2077,9 +2077,9 @@ class TestWorkflowSafetyNet:
         mock_rebase: MagicMock,
         mock_prepare: MagicMock,
         mock_progress: MagicMock,
-        mock_step_progress: MagicMock,
+        _mock_step_progress: MagicMock,
         mock_process: MagicMock,
-        mock_finalisation: MagicMock,
+        _mock_finalisation: MagicMock,
         mock_branch: MagicMock,
         mock_ci: MagicMock,
         mock_issue_mgr: MagicMock,
@@ -2287,7 +2287,9 @@ class TestPollForCiCompletionHeartbeat:
         ]
 
         with patch("mcp_coder.workflows.implement.core.time.sleep"):
-            with caplog.at_level(logging.INFO):
+            with caplog.at_level(
+                logging.INFO, logger="mcp_coder.workflows.implement.core"
+            ):
                 _poll_for_ci_completion(mock_ci_manager, "main")
 
         heartbeat_logs = [
@@ -2323,7 +2325,9 @@ class TestPollForCiCompletionHeartbeat:
         ]
 
         with patch("mcp_coder.workflows.implement.core.time.sleep"):
-            with caplog.at_level(logging.INFO):
+            with caplog.at_level(
+                logging.INFO, logger="mcp_coder.workflows.implement.core"
+            ):
                 _poll_for_ci_completion(mock_ci_manager, "main")
 
         heartbeat_logs = [
@@ -2354,7 +2358,9 @@ class TestPollForCiCompletionHeartbeat:
         mock_ci_manager.get_latest_ci_status.side_effect = [in_progress, completed]
 
         with patch("mcp_coder.workflows.implement.core.time.sleep"):
-            with caplog.at_level(logging.DEBUG):
+            with caplog.at_level(
+                logging.DEBUG, logger="mcp_coder.workflows.implement.core"
+            ):
                 _poll_for_ci_completion(mock_ci_manager, "main")
 
         debug_logs = [
@@ -2382,7 +2388,9 @@ class TestPollForCiCompletionHeartbeat:
         mock_ci_manager.get_latest_ci_status.side_effect = [empty_status, completed]
 
         with patch("mcp_coder.workflows.implement.core.time.sleep"):
-            with caplog.at_level(logging.DEBUG):
+            with caplog.at_level(
+                logging.DEBUG, logger="mcp_coder.workflows.implement.core"
+            ):
                 _poll_for_ci_completion(mock_ci_manager, "main")
 
         no_run_logs = [
@@ -2419,7 +2427,9 @@ class TestPollForCiCompletionHeartbeat:
         ]
 
         with patch("mcp_coder.workflows.implement.core.time.sleep"):
-            with caplog.at_level(logging.INFO):
+            with caplog.at_level(
+                logging.INFO, logger="mcp_coder.workflows.implement.core"
+            ):
                 _poll_for_ci_completion(mock_ci_manager, "main")
 
         heartbeat_logs = [

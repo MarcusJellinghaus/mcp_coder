@@ -1090,7 +1090,7 @@ def run_implement_workflow(
     total_tasks = 0
     previous_sigterm_handler = None
 
-    def sigterm_handler(signum: int, frame: Any) -> None:  # noqa: ARG001
+    def sigterm_handler(_signum: int, _frame: Any) -> None:
         nonlocal sigterm_received
         sigterm_received = True
         sys.exit(1)
