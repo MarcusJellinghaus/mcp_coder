@@ -26,8 +26,15 @@ CLI: add '--help' hint to argument error messages
 **Changes**: none
 **Status**: no changes needed
 
+## Round 3 — 2026-03-29
+**Findings**: Dead "unknown subcommand" else branches identified in 6 locations across `main.py`. These are unreachable because argparse validates subcommand choices during `parse_args()`.
+**Decisions**: Add as new Step 3 in the plan per user request.
+**User decisions**: User requested dead code removal be added to the plan. Instructed that the implementation step should only remove code that is verified to be truly dead — if analysis is wrong and a branch is reachable, leave it alone.
+**Changes**: Added `step_3.md`, updated `summary.md` and `TASK_TRACKER.md`
+**Status**: committed
+
 ## Final Status
 
-- **Rounds**: 2 (1 with changes, 1 verification)
-- **Commits**: 1 (`7241951` — plan update)
-- **Plan status**: Ready for approval. All review findings resolved. The plan accurately reflects the codebase and covers all error paths.
+- **Rounds**: 3 (2 with changes, 1 verification)
+- **Commits**: 3
+- **Plan status**: Ready for approval. All review findings resolved. Plan has 3 steps: parser subclass, CLI wiring, dead code removal.

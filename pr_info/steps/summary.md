@@ -43,3 +43,4 @@ The `_handle_*` functions print their own error messages for missing subcommands
 
 - **Step 1**: `HelpHintArgumentParser` class + unit tests (`parsers.py`, `test_parsers.py`)
 - **Step 2**: Wire it into `create_parser()` + update manual error paths + tests (`main.py`, `test_main.py`)
+- **Step 3**: Remove dead "unknown subcommand" else branches from `main.py` + related tests
