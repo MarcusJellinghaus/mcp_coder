@@ -19,4 +19,18 @@
 **Changes**:
 - `pr_info/steps/step_1.md`: test file → `test_session_priority.py` (Modify), updated test name and mock guidance
 - `pr_info/steps/summary.md`: updated test file reference, removed "Folders / Modules Created" section
+**Status**: committed (26f76ec)
+
+## Round 2 — 2026-03-29
+**Findings**:
+- Prior review issue (test file location) is resolved — accept
+- Mock target path for `find_latest_session` is ambiguous — plan should specify `"mcp_coder.cli.commands.prompt.find_latest_session"` — critical
+- All other aspects (string content, test patterns, commit strategy, Namespace attributes) are correct — accept
+
+**Decisions**:
+- Critical: add explicit mock target path to step_1.md — straightforward fix
+
+**User decisions**: none needed
+**Changes**:
+- `pr_info/steps/step_1.md`: added explicit mock target path note in ALGORITHM section
 **Status**: committing

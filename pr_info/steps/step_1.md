@@ -48,6 +48,8 @@ print("No previous response files found, starting new conversation. Save convers
 
 ## ALGORITHM
 
+**Important:** `find_latest_session` must be mocked at `"mcp_coder.cli.commands.prompt.find_latest_session"` (not at its definition in `mcp_coder.llm.storage`), matching the pattern in the existing `test_continue_session_when_no_session_id` test.
+
 ```
 1. find_latest_session returns None  (mocked)
 2. execute_prompt prints improved message
