@@ -56,8 +56,8 @@ There are two paths that set up environment variables: batch launchers (for inte
 | Entry point | Sets tool env how | Sets project env how | Two-env aware? |
 |---|---|---|---|
 | `.vscodeclaude_start.bat` (coordinator) | `MCP_CODER_VENV_PATH` on PATH | activates project `.venv`, sets `VIRTUAL_ENV` | **Yes** |
-| `claude.bat` | Discovers tool env via `MCP_CODER_VENV_PATH` or registry | activates `.venv`, sets `VIRTUAL_ENV` | **Yes** |
-| `claude_local.bat` | Discovers tool env via `MCP_CODER_VENV_PATH` or registry; verifies editable install | activates `.venv`, sets `VIRTUAL_ENV` | **Yes** |
+| `claude.bat` | Discovers tool env via `MCP_CODER_VENV_PATH` or PATH lookup | activates `.venv`, sets `VIRTUAL_ENV` | **Yes** |
+| `claude_local.bat` | Discovers tool env via `MCP_CODER_VENV_PATH` or PATH lookup; verifies editable install | activates `.venv`, sets `VIRTUAL_ENV` | **Yes** |
 | `env.py` (`prepare_llm_environment()`) | Sets `MCP_CODER_VENV_DIR` from `VIRTUAL_ENV` / `CONDA_PREFIX` / `sys.prefix` | Sets `MCP_CODER_PROJECT_DIR` from `project_dir` arg | **Partial** — reads whatever venv is active |
 
 ### How `.vscodeclaude_start.bat` Does It (Coordinator)
@@ -97,7 +97,7 @@ This sets `MCP_CODER_VENV_DIR` to whatever venv is currently active. In the two-
 
 ### How `claude.bat` Does It
 
-Discovers the tool environment via `MCP_CODER_VENV_PATH` (if set) or the Windows registry, then adds it to PATH. Activates the project-local `.venv` for the project environment. Supports the same two-env model as the coordinator.
+Discovers the tool environment via `MCP_CODER_VENV_PATH` (if set) or PATH lookup (`where mcp-coder`), then adds it to PATH. Activates the project-local `.venv` for the project environment. Supports the same two-env model as the coordinator.
 
 ### How `claude_local.bat` Does It
 
