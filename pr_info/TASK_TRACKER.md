@@ -33,10 +33,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
   - [x] Update/add tests in `tests/cli/test_main.py`
   - [x] All checks pass (pylint, mypy, pytest)
 
-- [ ] **Step 3: Remove dead "unknown subcommand" branches** - [step_3.md](steps/step_3.md)
-  - [ ] Verify each branch is truly unreachable before removing
-  - [ ] Remove dead else branches and related tests
-  - [ ] Add `return 1` fallbacks for mypy
-  - [ ] All checks pass (pylint, mypy, pytest)
+- [x] **Step 3: Remove dead "unknown subcommand" branches** - [step_3.md](steps/step_3.md)
+  - [x] Verify each branch is truly unreachable before removing
+  - [x] Remove dead else branches and related tests
+  - [x] Add `return 1` fallbacks for mypy
+  - [x] All checks pass (pylint, mypy, pytest)
 
 ## Pull Request

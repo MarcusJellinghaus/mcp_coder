@@ -212,25 +212,6 @@ class TestMain:
 
     @patch("mcp_coder.cli.main.setup_logging")
     @patch("mcp_coder.cli.main.create_parser")
-    @patch("builtins.print")
-    def test_main_unknown_command_returns_error(
-        self, mock_print: Mock, mock_create_parser: Mock, mock_setup_logging: Mock
-    ) -> None:
-        """Test that main returns error for unknown commands."""
-        mock_parser = Mock()
-        mock_parser.parse_args.return_value = argparse.Namespace(
-            command="unknown", log_level="INFO", help=False
-        )
-        mock_create_parser.return_value = mock_parser
-
-        result = main()
-
-        assert result == 1
-        mock_print.assert_called()
-        mock_setup_logging.assert_called_once_with("INFO")
-
-    @patch("mcp_coder.cli.main.setup_logging")
-    @patch("mcp_coder.cli.main.create_parser")
     def test_main_keyboard_interrupt_returns_1(
         self, mock_create_parser: Mock, mock_setup_logging: Mock
     ) -> None:

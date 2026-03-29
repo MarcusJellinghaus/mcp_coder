@@ -183,10 +183,7 @@ def _handle_check_command(args: argparse.Namespace) -> int:
             return execute_check_branch_status(args)
         elif args.check_subcommand == "file-size":
             return execute_check_file_sizes(args)
-        else:
-            logger.error(f"Unknown check subcommand: {args.check_subcommand}")
-            print(f"Error: Unknown check subcommand '{args.check_subcommand}'")
-            return 1
+        return 1  # unreachable: argparse validates subcommand choices
     else:
         logger.debug("Check subcommand required")
         print(
@@ -213,10 +210,7 @@ def _handle_gh_tool_command(args: argparse.Namespace) -> int:
             from .commands.set_status import execute_set_status
 
             return execute_set_status(args)
-        else:
-            logger.error(f"Unknown gh-tool subcommand: {args.gh_tool_subcommand}")
-            print(f"Error: Unknown gh-tool subcommand '{args.gh_tool_subcommand}'")
-            return 1
+        return 1  # unreachable: argparse validates subcommand choices
     else:
         logger.debug("gh-tool subcommand required")
         print(
@@ -238,14 +232,7 @@ def _handle_vscodeclaude_command(args: argparse.Namespace) -> int:
             return execute_coordinator_vscodeclaude(args)
         elif args.vscodeclaude_subcommand == "status":
             return execute_coordinator_vscodeclaude_status(args)
-        else:
-            logger.error(
-                f"Unknown vscodeclaude subcommand: {args.vscodeclaude_subcommand}"
-            )
-            print(
-                f"Error: Unknown vscodeclaude subcommand '{args.vscodeclaude_subcommand}'"
-            )
-            return 1
+        return 1  # unreachable: argparse validates subcommand choices
     else:
         logger.debug("vscodeclaude subcommand required")
         print("Error: Please specify a subcommand (e.g., 'launch', 'status')")
@@ -264,10 +251,7 @@ def _handle_git_tool_command(args: argparse.Namespace) -> int:
     if hasattr(args, "git_tool_subcommand") and args.git_tool_subcommand:
         if args.git_tool_subcommand == "compact-diff":
             return execute_compact_diff(args)
-        else:
-            logger.error(f"Unknown git-tool subcommand: {args.git_tool_subcommand}")
-            print(f"Error: Unknown git-tool subcommand '{args.git_tool_subcommand}'")
-            return 1
+        return 1  # unreachable: argparse validates subcommand choices
     else:
         logger.debug("git-tool subcommand required")
         print("Error: Please specify a git-tool subcommand (e.g., 'compact-diff')")
@@ -351,11 +335,7 @@ def main() -> int:
         elif args.command == "vscodeclaude":
             return _handle_vscodeclaude_command(args)
 
-        # Other commands will be implemented in later steps
-        logger.error(f"Command '{args.command}' not yet implemented")
-        print(f"Error: Command '{args.command}' is not yet implemented.")
-        print("Available commands will be added in upcoming implementation steps.")
-        return 1
+        return 1  # unreachable: argparse validates command choices
 
     except KeyboardInterrupt:
         logger.info("CLI interrupted by user")
