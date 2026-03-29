@@ -21,6 +21,26 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Add `prepare_env` helper + `env_remove` on `CommandOptions`
+- [ ] Implementation: tests + production code ([step_1.md](./steps/step_1.md))
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Refactor `_run_subprocess` + `stream_subprocess` to use `prepare_env`; update Claude CLI callers
+- [ ] Implementation: tests + production code ([step_2.md](./steps/step_2.md))
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Fix `launch_process()` env inheritance
+- [ ] Implementation: tests + production code ([step_3.md](./steps/step_3.md))
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Merge utility functions from p_tools reference
+- [ ] Implementation: tests + production code ([step_4.md](./steps/step_4.md))
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review: verify all steps complete and checks pass
+- [ ] PR summary prepared
