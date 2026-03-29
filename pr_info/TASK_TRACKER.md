@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Clean HTTP error messages in `start_job()`
-- [ ] Implementation: tests (`TestStartJobHttpErrorMessages`) + production code (`_http_error_hint()` helper, `start_job()` except block)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests (`TestStartJobHttpErrorMessages`) + production code (`_http_error_hint()` helper, `start_job()` except block)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review

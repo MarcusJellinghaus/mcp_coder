@@ -1,15 +1,18 @@
 """Tests for Jenkins client module."""
 
+import re
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from jenkins import JenkinsException
+from requests.exceptions import HTTPError
 
 from mcp_coder.utils.jenkins_operations.client import (
     JenkinsClient,
     JenkinsError,
     _get_jenkins_config,
+    _http_error_hint,
 )
 from mcp_coder.utils.jenkins_operations.models import JobStatus
 
@@ -456,3 +459,89 @@ class TestJenkinsClientGetJobStatus:
             JenkinsError, match="Failed to get status for queue_id 12345"
         ):
             client.get_job_status(12345)
+
+
+class TestStartJobHttpErrorMessages:
+    """Tests for clean HTTP error messages in start_job."""
+
+    @pytest.mark.parametrize(
+        "status_code,reason,expected_hint",
+        [
+            (409, "Conflict", " (job may be disabled, already queued, or running)"),
+            (500, "Internal Server Error", ""),
+        ],
+    )
+    @patch("mcp_coder.utils.jenkins_operations.client.Jenkins")
+    def test_start_job_http_error_clean_message(
+        self,
+        mock_jenkins_class: MagicMock,
+        status_code: int,
+        reason: str,
+        expected_hint: str,
+    ) -> None:
+        """HTTP errors produce clean message with appropriate hint, no URL."""
+        # Setup
+        mock_client = Mock()
+        mock_jenkins_class.return_value = mock_client
+
+        mock_response = Mock()
+        mock_response.status_code = status_code
+        mock_response.reason = reason
+
+        http_error = HTTPError(
+            f"{status_code} {reason}: https://jenkins:8080/job/folder/job/test/buildWithParameters?param=value%20encoded",
+            response=mock_response,
+        )
+        mock_client.build_job.side_effect = http_error
+
+        client = JenkinsClient("http://jenkins:8080", "user", "token")
+
+        # Execute & Verify
+        expected_msg = f"Failed to start job 'Windows-Agents/Executor': {status_code} {reason}{expected_hint}"
+        with pytest.raises(JenkinsError, match=re.escape(expected_msg)):
+            client.start_job("Windows-Agents/Executor")
+
+        # Verify URL is NOT in the error message
+        try:
+            client.start_job("Windows-Agents/Executor")
+        except JenkinsError as e:
+            assert "buildWithParameters" not in str(e)
+            assert "https://jenkins" not in str(e)
+
+    @patch("mcp_coder.utils.jenkins_operations.client.Jenkins")
+    def test_start_job_http_error_no_response(
+        self, mock_jenkins_class: MagicMock
+    ) -> None:
+        """HTTPError without response falls back to str(e)."""
+        # Setup
+        mock_client = Mock()
+        mock_jenkins_class.return_value = mock_client
+
+        http_error = HTTPError("Connection failed")
+        http_error.response = None
+        mock_client.build_job.side_effect = http_error
+
+        client = JenkinsClient("http://jenkins:8080", "user", "token")
+
+        # Execute & Verify
+        with pytest.raises(
+            JenkinsError, match="Failed to start job 'test-job': Connection failed"
+        ):
+            client.start_job("test-job")
+
+
+class TestHttpErrorHint:
+    """Tests for _http_error_hint helper."""
+
+    def test_known_status_409(self) -> None:
+        """409 returns hint about disabled/queued/running."""
+        assert (
+            _http_error_hint(409)
+            == " (job may be disabled, already queued, or running)"
+        )
+
+    def test_unknown_status_returns_empty(self) -> None:
+        """Unknown status codes return empty string."""
+        assert _http_error_hint(500) == ""
+        assert _http_error_hint(404) == ""
+        assert _http_error_hint(200) == ""

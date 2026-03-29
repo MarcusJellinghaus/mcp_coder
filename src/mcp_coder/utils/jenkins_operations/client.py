@@ -30,6 +30,7 @@ import logging
 from typing import Any, Optional, cast
 
 from jenkins import Jenkins
+from requests.exceptions import HTTPError
 
 from ..log_utils import log_function_call
 from ..user_config import get_config_values
@@ -37,6 +38,19 @@ from .models import JobStatus
 
 # Setup logger
 logger = logging.getLogger(__name__)
+
+
+def _http_error_hint(status_code: int) -> str:
+    """Return a human-readable hint for known HTTP status codes.
+
+    Args:
+        status_code: HTTP status code from the response.
+
+    Returns:
+        Hint string with leading space and parens, or empty string if unknown.
+    """
+    hints = {409: " (job may be disabled, already queued, or running)"}
+    return hints.get(status_code, "")
 
 
 class JenkinsError(Exception):
@@ -167,6 +181,16 @@ class JenkinsClient:
                 extra={"job_path": job_path, "queue_id": queue_id},
             )
             return queue_id
+        except HTTPError as e:
+            # HTTP errors: build a clean message without the full URL
+            if e.response is not None:
+                code = e.response.status_code
+                reason = e.response.reason
+                hint = _http_error_hint(code)
+                msg = f"Failed to start job '{job_path}': {code} {reason}{hint}"
+            else:
+                msg = f"Failed to start job '{job_path}': {str(e)}"
+            raise JenkinsError(msg) from e
         except (
             Exception
         ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
