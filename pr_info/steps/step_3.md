@@ -8,7 +8,7 @@
 ```
 Implement Step 3 of Issue #618 (see pr_info/steps/summary.md and pr_info/steps/step_3.md).
 
-Fix launch_process() to use _prepare_env for proper env inheritance. Add env_remove parameter.
+Fix launch_process() to use prepare_env for proper env inheritance. Add env_remove parameter.
 Write tests first (TDD), including an integration test with a real subprocess. Run all three code quality checks.
 ```
 
@@ -47,7 +47,7 @@ def launch_process(
     env_remove: list[str] | None = None,
 ) -> int:
     cwd_str = str(cwd) if cwd else None
-    prepared_env = _prepare_env(command, env, env_remove)
+    prepared_env = prepare_env(command, env, env_remove)
     process = subprocess.Popen(
         command, cwd=cwd_str, shell=shell, env=prepared_env,
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -60,7 +60,7 @@ def launch_process(
 ```
 def launch_process(command, cwd, shell, env, env_remove):
     cwd_str = str(cwd) if cwd else None
-    prepared_env = _prepare_env(command, env, env_remove)    # always inherit parent env
+    prepared_env = prepare_env(command, env, env_remove)     # always inherit parent env
     process = Popen(command, cwd=cwd_str, shell=shell, env=prepared_env, ...)
     return process.pid
 ```
@@ -69,7 +69,7 @@ def launch_process(command, cwd, shell, env, env_remove):
 
 - **Input**: same as before + new `env_remove: list[str] | None = None`
 - **Output**: PID (int) — unchanged
-- **Key change**: `env=None` now produces full parent env (via `_prepare_env`) instead of passing `None` to Popen
+- **Key change**: `env=None` now produces full parent env (via `prepare_env`) instead of passing `None` to Popen
 
 ## TESTS
 
@@ -79,20 +79,12 @@ def launch_process(command, cwd, shell, env, env_remove):
 2. **`test_launch_process_merges_custom_env`** — pass `env={"CUSTOM": "val"}`, verify Popen gets both `CUSTOM` and parent vars
 3. **`test_launch_process_env_remove`** — pass `env_remove=["FOO"]` with `env={"FOO": "bar"}`, verify FOO not in Popen's env
 
-### Integration test (new class `TestLaunchProcessIntegration`)
+### Update `launch_process` docstring
 
-4. **`test_launch_process_real_subprocess_inherits_env`** — This is the **key bug verification test**.
-   Run a real subprocess: `python -c "import os; print(os.environ.get('PATH', 'MISSING'))"` 
-   with `env={"CUSTOM_TEST_VAR": "hello"}`.
-   Verify both `PATH` (inherited) and `CUSTOM_TEST_VAR` (added) are present.
-   
-   Note: Since `launch_process` discards output (DEVNULL), this test should use `execute_subprocess` 
-   or `subprocess.run` directly to verify `_prepare_env` produces correct env. Alternatively, 
-   use `_prepare_env` directly in the integration test to verify the env dict, then trust that
-   `launch_process` passes it to Popen (already verified by unit test).
+Update the docstring to reflect that `env` is now merged on top of the parent environment (not used as the complete env). Update the example to show the simpler usage: `launch_process(["code", "myfile.txt"], env={"CUSTOM_VAR": "value"})` — no need for `os.environ.copy()` anymore.
 
 ## COMMIT MESSAGE
 
 ```
-fix: launch_process() now inherits parent env vars via _prepare_env (#618)
+fix: launch_process() now inherits parent env vars via prepare_env (#618)
 ```

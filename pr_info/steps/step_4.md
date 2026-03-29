@@ -74,6 +74,8 @@ Add a new `TestMergedUtilities` class:
 5. **`test_truncate_stderr_custom_max_len`** — verify custom max_len parameter works
 6. **`test_max_stderr_in_error_constant`** — verify `MAX_STDERR_IN_ERROR == 500`
 
+Use `@pytest.mark.parametrize` for the `truncate_stderr` tests (short string, long string, custom max_len) to reduce boilerplate.
+
 ## COMMIT MESSAGE
 
 ```

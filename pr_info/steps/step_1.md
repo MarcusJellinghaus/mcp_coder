@@ -1,4 +1,4 @@
-# Step 1: Add `_prepare_env` helper + `env_remove` on `CommandOptions`
+# Step 1: Add `prepare_env` helper + `env_remove` on `CommandOptions`
 
 > **Context**: See `pr_info/steps/summary.md` for full issue context (Issue #618).
 > This step creates the core building block that all subsequent steps depend on.
@@ -8,14 +8,14 @@
 ```
 Implement Step 1 of Issue #618 (see pr_info/steps/summary.md and pr_info/steps/step_1.md).
 
-Add the `_prepare_env` helper function and `env_remove` field to `CommandOptions` in subprocess_runner.py.
+Add the `prepare_env` helper function and `env_remove` field to `CommandOptions` in subprocess_runner.py.
 Write tests first (TDD), then implement. Run all three code quality checks after changes.
 ```
 
 ## WHERE
 
 - `tests/utils/test_subprocess_runner.py` — add tests
-- `src/mcp_coder/utils/subprocess_runner.py` — add `_prepare_env`, modify `CommandOptions`
+- `src/mcp_coder/utils/subprocess_runner.py` — add `prepare_env`, modify `CommandOptions`
 
 ## WHAT
 
@@ -28,10 +28,10 @@ class CommandOptions:
     env_remove: list[str] | None = None
 ```
 
-### 2. Add `_prepare_env` helper (module-private, NOT in `__all__`)
+### 2. Add `prepare_env` helper (not in `__all__`)
 
 ```python
-def _prepare_env(
+def prepare_env(
     command: list[str] | str,
     env: dict[str, str] | None,
     env_remove: list[str] | None,
@@ -41,7 +41,7 @@ def _prepare_env(
 ## ALGORITHM (pseudocode)
 
 ```
-def _prepare_env(command, env, env_remove):
+def prepare_env(command, env, env_remove):
     if isinstance(command, list) and is_python_command(command):
         result = get_python_isolation_env()       # os.environ.copy() + python isolation
     else:
@@ -61,9 +61,11 @@ def _prepare_env(command, env, env_remove):
 
 ## HOW
 
-- `_prepare_env` is placed in `subprocess_runner.py` near the existing `get_python_isolation_env` / `get_utf8_env` functions
-- It is NOT added to `__all__` — module-private helper
+- `prepare_env` is placed in `subprocess_runner.py` near the existing `get_python_isolation_env` / `get_utf8_env` functions
+- Named `prepare_env` (no underscore) because it's imported by `subprocess_streaming.py`. Not added to `__all__` — internal helper shared between subprocess modules.
 - `env_remove` field on `CommandOptions` defaults to `None` — fully backward compatible
+
+Note: `execute_command()` does not gain an `env_remove` parameter — no current callers need it (YAGNI). Callers needing `env_remove` should use `execute_subprocess` directly.
 
 ## TESTS (write first)
 
@@ -82,8 +84,18 @@ Add a test for the new `CommandOptions` field:
 
 9. **`test_command_options_env_remove_default_none`** — verify default is None
 
+### Integration test (new class `TestPrepareEnvIntegration`)
+
+10. **`test_prepare_env_integration_real_env`** — Integration test calling `prepare_env` directly with real `os.environ`. Verify:
+   - Result contains `PATH` (inherited from parent)
+   - Caller-provided env vars are present
+   - `env_remove` keys are absent
+   This validates the core bug scenario (env inheritance) without needing to capture launch_process output.
+
+Use `@pytest.mark.parametrize` where appropriate — e.g., combine `test_prepare_env_env_remove_removes_keys` and `test_prepare_env_env_remove_ignores_missing_keys` into one parameterized test.
+
 ## COMMIT MESSAGE
 
 ```
-feat: add _prepare_env helper and env_remove to CommandOptions (#618)
+feat: add prepare_env helper and env_remove to CommandOptions (#618)
 ```
