@@ -43,6 +43,7 @@ Standalone batch file. Inherits the same env var contract as `claude.bat`.
    Else (no VIRTUAL_ENV):
      derive tool env from "where mcp-coder" (extract first result's directory)
 3. Set MCP_CODER_VENV_PATH = TOOL_VENV_SCRIPTS
+   Set MCP_CODER_VENV_DIR = parent of MCP_CODER_VENV_PATH (i.e., resolve %MCP_CODER_VENV_PATH%\..)
 4. Activate %CD%\.venv as project env
 5. Verify editable install: pip show mcp-coder → check Location contains %CD%
    If not editable → warn (but continue)

@@ -40,3 +40,28 @@
 - `pr_info/steps/summary.md`: Updated step 1 description to "3-line edit"
 
 **Status:** Committed
+
+## Round 2 — 2026-03-29
+
+**Findings:**
+- **Improvement**: Step 1 LLM prompt references environments.md target state for verification, but target state doesn't show the PYTHONPATH change
+- **Improvement**: Step 3 missing MCP_CODER_VENV_DIR derivation in algorithm (inconsistent with step 2)
+- **Observation**: .vscodeclaude_start.bat sets MCP_CODER_VENV_DIR to project env — pre-existing inconsistency, out of scope
+- **Improvement**: Self-hosting case in step 2: VIRTUAL_ENV could be unset, causing .mcp.json variable references to fail
+- **Observation**: Round 1 fixes applied correctly and consistently
+
+**Decisions:**
+- Finding 1 (LLM prompt): Accept — fix prompt to note PYTHONPATH is additional
+- Finding 2 (step 3 VENV_DIR): Accept — consistency fix
+- Finding 3 (coordinator): Skip — pre-existing, out of scope
+- Finding 4 (self-hosting VIRTUAL_ENV): Accept — add explicit fallback
+- Finding 5 (round 1 verification): Skip — positive confirmation
+
+**User decisions:** None required — all straightforward improvements.
+
+**Changes:**
+- `pr_info/steps/step_1.md`: Updated LLM prompt verification note
+- `pr_info/steps/step_2.md`: Added explicit VIRTUAL_ENV fallback for self-hosting case
+- `pr_info/steps/step_3.md`: Added MCP_CODER_VENV_DIR derivation to algorithm
+
+**Status:** Committed

@@ -56,7 +56,7 @@ The script is a standalone batch file. No imports or decorators — just sequent
 3. If %CD%\.venv exists:
      call .venv\Scripts\activate.bat  (sets VIRTUAL_ENV to project env)
    Else (self-hosting):
-     keep VIRTUAL_ENV pointing to tool env
+     set VIRTUAL_ENV=%MCP_CODER_VENV_DIR% (tool env serves as both; ensures .mcp.json vars resolve)
 4. Verify mcp-tools-py.exe and mcp-workspace.exe exist in MCP_CODER_VENV_PATH
 5. Set MCP_CODER_PROJECT_DIR=%CD%, DISABLE_AUTOUPDATER=1
 6. Add MCP_CODER_VENV_PATH to front of PATH

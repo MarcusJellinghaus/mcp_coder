@@ -71,6 +71,8 @@ executables, and change workspace.env.PYTHONPATH from ${VIRTUAL_ENV}\Lib\
 to ${MCP_CODER_VENV_DIR}\Lib\. Keep all other fields (--venv-path,
 --python-executable) unchanged — they correctly use the project environment.
 
-After editing, verify the result matches the "Target State" in
-docs/environments/environments.md.
+After editing, verify the command fields match the "Target State" in
+docs/environments/environments.md. Note: the PYTHONPATH change
+(VIRTUAL_ENV → MCP_CODER_VENV_DIR) is not shown in the target state
+but is required per the variable reference table.
 ```
