@@ -220,3 +220,36 @@ class TestSessionPriority:
         # Should show resumption message
         captured = capsys.readouterr()
         assert "Resuming session" in captured.out
+
+    @patch(_RESOLVE_MCP, return_value=None)
+    @patch(_PREPARE_ENV, return_value={"MCP_CODER_PROJECT_DIR": "/test"})
+    @patch(_RESOLVE_LLM, return_value=("claude", "cli"))
+    @patch(_STREAM)
+    @patch("mcp_coder.cli.commands.prompt.find_latest_session", return_value=None)
+    def test_continue_session_no_sessions_message_includes_store_response_hint(
+        self,
+        mock_find: Mock,
+        mock_prompt_llm_stream: Mock,
+        mock_llm: Mock,
+        mock_env: Mock,
+        mock_mcp: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Verify the message includes --store-response guidance."""
+        mock_prompt_llm_stream.return_value = iter(_stream_events())
+
+        args = argparse.Namespace(
+            prompt="test",
+            session_id=None,
+            continue_session_from=None,
+            continue_session=True,
+            llm_method="claude",
+            mcp_config=None,
+            project_dir=None,
+        )
+
+        result = execute_prompt(args)
+
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "Save conversations with --store-response" in captured.out

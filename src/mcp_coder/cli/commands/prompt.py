@@ -96,7 +96,9 @@ def execute_prompt(
                 # Find latest session file (provider-aware)
                 continue_file_path = find_latest_session(provider=provider)
                 if continue_file_path is None:
-                    print("No previous response files found, starting new conversation")
+                    print(
+                        "No previous response files found, starting new conversation. Save conversations with --store-response"
+                    )
                     # Continue execution without session resumption
 
             if continue_file_path:
