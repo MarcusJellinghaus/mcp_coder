@@ -12,6 +12,19 @@ import pytest
 _MOD_LC = "mcp_coder.llm.providers.langchain"
 
 
+class _RaisingAsyncIter:
+    """Async iterator that raises on first __anext__ call."""
+
+    def __init__(self, exc: BaseException):
+        self._exc = exc
+
+    def __aiter__(self) -> "_RaisingAsyncIter":
+        return self
+
+    async def __anext__(self) -> dict[str, object]:
+        raise self._exc
+
+
 def _make_config(backend: str = "openai") -> dict[str, str | None]:
     return {
         "provider": "langchain",
@@ -259,12 +272,10 @@ class TestAskLangchainStreamAgentReal:
     def test_agent_error_propagation(self) -> None:
         """Errors from run_agent_stream propagate to caller."""
 
-        async def _error_stream(
+        def _error_stream(
             **kwargs: object,
-        ) -> AsyncIterator[dict[str, object]]:
-            if False:  # pylint: disable=using-constant-test
-                yield {}  # make this an async generator
-            raise RuntimeError("agent boom")
+        ) -> _RaisingAsyncIter:
+            return _RaisingAsyncIter(RuntimeError("agent boom"))
 
         with (
             patch(f"{_MOD_LC}._load_langchain_config", return_value=_make_config()),
@@ -293,15 +304,15 @@ class TestAskLangchainStreamAgentAuthError:
         except ImportError:
             pytest.skip("anthropic not installed")
 
-        async def _auth_error_stream(
+        def _auth_error_stream(
             **kwargs: object,
-        ) -> AsyncIterator[dict[str, object]]:
-            if False:  # pylint: disable=using-constant-test
-                yield {}  # make this an async generator
-            raise anthropic.AuthenticationError(
-                message="invalid api key",
-                response=MagicMock(status_code=401),
-                body=None,
+        ) -> _RaisingAsyncIter:
+            return _RaisingAsyncIter(
+                anthropic.AuthenticationError(
+                    message="invalid api key",
+                    response=MagicMock(status_code=401),
+                    body=None,
+                )
             )
 
         from mcp_coder.llm.providers.langchain._exceptions import LLMAuthError

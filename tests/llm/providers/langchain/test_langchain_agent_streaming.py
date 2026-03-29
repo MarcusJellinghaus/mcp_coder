@@ -11,6 +11,19 @@ _AGENT_MOD_PATH = "mcp_coder.llm.providers.langchain.agent"
 _STORAGE_MOD_PATH = "mcp_coder.llm.storage.session_storage"
 
 
+class _RaisingAsyncIter:
+    """Async iterator that raises on first __anext__ call."""
+
+    def __init__(self, exc: BaseException):
+        self._exc = exc
+
+    def __aiter__(self) -> "_RaisingAsyncIter":
+        return self
+
+    async def __anext__(self) -> dict[str, object]:
+        raise self._exc
+
+
 async def _async_events(
     items: list[dict[str, object]],
 ) -> AsyncIterator[dict[str, object]]:
@@ -256,13 +269,10 @@ class TestRunAgentStream:
     async def test_error_propagation(self) -> None:
         """Errors from astream_events propagate as error event + exception."""
 
-        async def _error_events() -> AsyncIterator[dict[str, object]]:
-            if False:  # pylint: disable=using-constant-test
-                yield  # make this an async generator
-            raise RuntimeError("agent error")
-
         mock_agent = MagicMock()
-        mock_agent.astream_events.return_value = _error_events()
+        mock_agent.astream_events.return_value = _RaisingAsyncIter(
+            RuntimeError("agent error")
+        )
         mock_client_cls = MagicMock()
         mock_client_cls.return_value.connections = {}
 
