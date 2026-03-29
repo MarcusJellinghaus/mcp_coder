@@ -204,51 +204,51 @@ class TestFromGithubThreading:
         # Mock all workspace functions
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_working_folder_path",
-            lambda *a, **kw: folder_path,
+            lambda *a, **_kw: folder_path,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.create_working_folder",
-            lambda *a, **kw: True,
+            lambda *a, **_kw: True,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.setup_git_repo",
-            lambda *a, **kw: None,
+            lambda *a, **_kw: None,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.validate_mcp_json",
-            lambda *a, **kw: None,
+            lambda *a, **_kw: None,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.update_gitignore",
-            lambda *a, **kw: None,
+            lambda *a, **_kw: None,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.create_workspace_file",
-            lambda *a, **kw: tmp_path / "test.code-workspace",
+            lambda *a, **_kw: tmp_path / "test.code-workspace",
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.create_vscode_task",
-            lambda *a, **kw: None,
+            lambda *a, **_kw: None,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.create_status_file",
-            lambda *a, **kw: None,
+            lambda *a, **_kw: None,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.launch_vscode",
-            lambda *a, **kw: 9999,
+            lambda *a, **_kw: 9999,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.add_session",
-            lambda *a, **kw: None,
+            lambda *a, **_kw: None,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_repo_short_name",
-            lambda *a, **kw: "repo",
+            lambda *a, **_kw: "repo",
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_repo_full_name",
-            lambda *a, **kw: "owner/repo",
+            lambda *a, **_kw: "owner/repo",
         )
 
         mock_create_startup = MagicMock(return_value=tmp_path / "script.bat")
@@ -292,55 +292,55 @@ class TestFromGithubThreading:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_working_folder_path",
-            lambda *a, **kw: folder_path,
+            lambda *a, **_kw: folder_path,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.create_working_folder",
-            lambda *a, **kw: True,
+            lambda *a, **_kw: True,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.setup_git_repo",
-            lambda *a, **kw: None,
+            lambda *a, **_kw: None,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.validate_mcp_json",
-            lambda *a, **kw: None,
+            lambda *a, **_kw: None,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.update_gitignore",
-            lambda *a, **kw: None,
+            lambda *a, **_kw: None,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.create_workspace_file",
-            lambda *a, **kw: tmp_path / "test.code-workspace",
+            lambda *a, **_kw: tmp_path / "test.code-workspace",
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.create_startup_script",
-            lambda *a, **kw: tmp_path / "script.bat",
+            lambda *a, **_kw: tmp_path / "script.bat",
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.create_vscode_task",
-            lambda *a, **kw: None,
+            lambda *a, **_kw: None,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.create_status_file",
-            lambda *a, **kw: None,
+            lambda *a, **_kw: None,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.launch_vscode",
-            lambda *a, **kw: 9999,
+            lambda *a, **_kw: 9999,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.add_session",
-            lambda *a, **kw: None,
+            lambda *a, **_kw: None,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_repo_short_name",
-            lambda *a, **kw: "repo",
+            lambda *a, **_kw: "repo",
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_repo_full_name",
-            lambda *a, **kw: "owner/repo",
+            lambda *a, **_kw: "owner/repo",
         )
 
         session = prepare_and_launch_session(
@@ -464,7 +464,7 @@ class TestFromGithubThreading:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.execute_subprocess",
-            lambda *a, **kw: Mock(stdout="main\n"),
+            lambda *a, **_kw: Mock(stdout="main\n"),
         )
 
         mock_create_startup = MagicMock(return_value=tmp_path / "script.bat")
@@ -474,15 +474,15 @@ class TestFromGithubThreading:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.create_vscode_task",
-            lambda *a, **kw: None,
+            lambda *a, **_kw: None,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.create_status_file",
-            lambda *a, **kw: None,
+            lambda *a, **_kw: None,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.create_workspace_file",
-            lambda *a, **kw: tmp_path / "test.code-workspace",
+            lambda *a, **_kw: tmp_path / "test.code-workspace",
         )
 
         regenerate_session_files(session, issue)
@@ -527,7 +527,7 @@ class TestFromGithubThreading:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.execute_subprocess",
-            lambda *a, **kw: Mock(stdout="main\n"),
+            lambda *a, **_kw: Mock(stdout="main\n"),
         )
 
         mock_create_startup = MagicMock(return_value=tmp_path / "script.bat")
@@ -537,15 +537,15 @@ class TestFromGithubThreading:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.create_vscode_task",
-            lambda *a, **kw: None,
+            lambda *a, **_kw: None,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.create_status_file",
-            lambda *a, **kw: None,
+            lambda *a, **_kw: None,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.create_workspace_file",
-            lambda *a, **kw: tmp_path / "test.code-workspace",
+            lambda *a, **_kw: tmp_path / "test.code-workspace",
         )
 
         regenerate_session_files(session, issue)
