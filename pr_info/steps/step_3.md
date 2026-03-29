@@ -39,9 +39,9 @@ Standalone batch file. Inherits the same env var contract as `claude.bat`.
 2. If VIRTUAL_ENV is set AND != %CD%\.venv:
      save TOOL_VENV_SCRIPTS = %VIRTUAL_ENV%\Scripts (tool env)
    Elif VIRTUAL_ENV is set AND == %CD%\.venv:
-     derive tool env from "where mcp-coder"
+     derive tool env from "where mcp-coder" (extract first result's directory)
    Else (no VIRTUAL_ENV):
-     derive tool env from "where mcp-coder"
+     derive tool env from "where mcp-coder" (extract first result's directory)
 3. Set MCP_CODER_VENV_PATH = TOOL_VENV_SCRIPTS
 4. Activate %CD%\.venv as project env
 5. Verify editable install: pip show mcp-coder → check Location contains %CD%

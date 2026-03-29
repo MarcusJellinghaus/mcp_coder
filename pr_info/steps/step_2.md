@@ -43,18 +43,22 @@ The script is a standalone batch file. No imports or decorators — just sequent
 ## ALGORITHM
 
 ```
-1. If VIRTUAL_ENV is set:
+1. If VIRTUAL_ENV is set AND != %CD%\.venv:
      save TOOL_VENV_SCRIPTS = %VIRTUAL_ENV%\Scripts
-   Else:
-     run "where mcp-coder" → extract directory as TOOL_VENV_SCRIPTS
+   Elif VIRTUAL_ENV is set AND == %CD%\.venv:
+     run "where mcp-coder" → extract first result's directory as TOOL_VENV_SCRIPTS
+     if not found → error and exit
+   Else (no VIRTUAL_ENV):
+     run "where mcp-coder" → extract first result's directory as TOOL_VENV_SCRIPTS
      if not found → error and exit
 2. Set MCP_CODER_VENV_PATH = %TOOL_VENV_SCRIPTS%
+   Set MCP_CODER_VENV_DIR = parent of MCP_CODER_VENV_PATH (i.e., resolve %MCP_CODER_VENV_PATH%\..)
 3. If %CD%\.venv exists:
      call .venv\Scripts\activate.bat  (sets VIRTUAL_ENV to project env)
    Else (self-hosting):
      keep VIRTUAL_ENV pointing to tool env
 4. Verify mcp-tools-py.exe and mcp-workspace.exe exist in MCP_CODER_VENV_PATH
-5. Set MCP_CODER_PROJECT_DIR=%CD%, MCP_CODER_VENV_DIR, DISABLE_AUTOUPDATER=1
+5. Set MCP_CODER_PROJECT_DIR=%CD%, DISABLE_AUTOUPDATER=1
 6. Add MCP_CODER_VENV_PATH to front of PATH
 7. Launch claude.exe %*
 ```

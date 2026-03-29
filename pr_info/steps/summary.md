@@ -49,7 +49,7 @@ No new Python modules, no new test files. Batch files are tested manually per is
 
 ## Implementation Steps
 
-1. **Step 1**: `.mcp.json` — separate tool env from project env (2-line edit)
+1. **Step 1**: `.mcp.json` — separate tool env from project env (3-line edit)
 2. **Step 2**: `claude.bat` — two-env aware launcher for end-users
 3. **Step 3**: `claude_local.bat` — two-env aware launcher for developers
 4. **Step 4**: `tools/reinstall.bat` — restructure with venv guard and entry point checks

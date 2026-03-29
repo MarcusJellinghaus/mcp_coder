@@ -10,6 +10,8 @@ Restructure `tools/reinstall.bat` following the p_tools `reinstall_local.bat` pa
 
 **Purpose:** Non-editable PyPI install (`uv pip install mcp-coder[dev]`) for end-users.
 
+**Note:** This changes from editable to non-editable install. Developers should use `tools\reinstall_local.bat` (step 5) instead. Consider printing a guidance message during install.
+
 ## WHERE
 
 - `tools/reinstall.bat`
