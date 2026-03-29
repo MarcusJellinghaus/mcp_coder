@@ -182,7 +182,9 @@ def _format_failure_comment(failure: WorkflowFailure, diff_stat: str) -> str:
     return "\n".join(lines)
 
 
-def _handle_workflow_failure(failure: WorkflowFailure, project_dir: Path) -> None:
+def _handle_workflow_failure(
+    failure: WorkflowFailure, project_dir: Path, update_labels: bool = True
+) -> None:
     """Handle workflow failure: set label, post comment, log banner."""
     # 1. Log failure banner
     logger.info("=" * 60)
@@ -203,14 +205,15 @@ def _handle_workflow_failure(failure: WorkflowFailure, project_dir: Path) -> Non
     logger.info("=" * 60)
 
     # 2. Set failure label (non-blocking)
-    try:
-        issue_manager = IssueManager(project_dir)
-        issue_manager.update_workflow_label(
-            from_label_id="implementing",
-            to_label_id=failure.category.value,
-        )
-    except Exception as exc:  # pylint: disable=broad-exception-caught
-        logger.warning("Failed to update issue label: %s", exc)
+    if update_labels:
+        try:
+            issue_manager = IssueManager(project_dir)
+            issue_manager.update_workflow_label(
+                from_label_id="implementing",
+                to_label_id=failure.category.value,
+            )
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            logger.warning("Failed to update issue label: %s", exc)
 
     # 3. Post GitHub comment (non-blocking)
     try:
@@ -1061,6 +1064,7 @@ def run_implement_workflow(
     provider: str,
     mcp_config: Optional[str] = None,
     execution_dir: Optional[Path] = None,
+    update_labels: bool = False,
 ) -> int:
     """Main workflow orchestration function - processes all implementation tasks in sequence.
 
@@ -1069,6 +1073,7 @@ def run_implement_workflow(
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional path to MCP configuration file
         execution_dir: Optional working directory for Claude subprocess
+        update_labels: If True, update GitHub issue labels on success/failure
 
     Returns:
         int: Exit code (0 for success, 1 for error)
@@ -1126,6 +1131,7 @@ def run_implement_workflow(
                     elapsed_time=time.time() - start_time,
                 ),
                 project_dir,
+                update_labels=update_labels,
             )
             reached_terminal_state = True
             return 1
@@ -1166,6 +1172,7 @@ def run_implement_workflow(
                             elapsed_time=time.time() - start_time,
                         ),
                         project_dir,
+                        update_labels=update_labels,
                     )
                     reached_terminal_state = True
                     return 1
@@ -1182,6 +1189,7 @@ def run_implement_workflow(
                             elapsed_time=time.time() - start_time,
                         ),
                         project_dir,
+                        update_labels=update_labels,
                     )
                     reached_terminal_state = True
                     return 1
@@ -1224,6 +1232,7 @@ def run_implement_workflow(
                         elapsed_time=time.time() - start_time,
                     ),
                     project_dir,
+                    update_labels=update_labels,
                 )
                 reached_terminal_state = True
                 return 1
@@ -1247,6 +1256,7 @@ def run_implement_workflow(
                             elapsed_time=time.time() - start_time,
                         ),
                         project_dir,
+                        update_labels=update_labels,
                     )
                     reached_terminal_state = True
                     return 1
@@ -1264,6 +1274,7 @@ def run_implement_workflow(
                             elapsed_time=time.time() - start_time,
                         ),
                         project_dir,
+                        update_labels=update_labels,
                     )
                     reached_terminal_state = True
                     return 1
@@ -1304,21 +1315,23 @@ def run_implement_workflow(
                         elapsed_time=time.time() - start_time,
                     ),
                     project_dir,
+                    update_labels=update_labels,
                 )
                 reached_terminal_state = True
                 return 1
         else:
             logger.error("Could not determine current branch - skipping CI check")
 
-        # Step 6: Unconditional success label transition
-        try:
-            issue_manager = IssueManager(project_dir)
-            issue_manager.update_workflow_label(
-                from_label_id="implementing",
-                to_label_id="code_review",
-            )
-        except Exception as exc:  # pylint: disable=broad-exception-caught
-            logger.warning("Failed to update issue label on success: %s", exc)
+        # Step 6: Success label transition
+        if update_labels:
+            try:
+                issue_manager = IssueManager(project_dir)
+                issue_manager.update_workflow_label(
+                    from_label_id="implementing",
+                    to_label_id="code_review",
+                )
+            except Exception as exc:  # pylint: disable=broad-exception-caught
+                logger.warning("Failed to update issue label on success: %s", exc)
 
         # Step 7: Show final progress summary with appropriate messaging
         if completed_tasks > 0:
@@ -1366,6 +1379,7 @@ def run_implement_workflow(
                         elapsed_time=elapsed,
                     ),
                     project_dir,
+                    update_labels=update_labels,
                 )
             except Exception:  # pylint: disable=broad-exception-caught
                 logger.error("Safety net failure handling also failed", exc_info=True)

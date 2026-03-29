@@ -1673,7 +1673,7 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_manager = MagicMock()
         mock_issue_cls.return_value = mock_manager
 
-        result = run_implement_workflow(Path("/project"), "claude")
+        result = run_implement_workflow(Path("/project"), "claude", update_labels=True)
 
         assert result == 0
         mock_manager.update_workflow_label.assert_called_once_with(
