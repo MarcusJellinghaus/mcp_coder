@@ -21,17 +21,50 @@ from subprocess import CalledProcessError, SubprocessError, TimeoutExpired
 
 logger = logging.getLogger(__name__)
 
+MAX_STDERR_IN_ERROR: int = 500
+
 __all__ = [
     "CommandResult",
     "CommandOptions",
+    "MAX_STDERR_IN_ERROR",
+    "check_tool_missing_error",
     "execute_command",
     "execute_subprocess",
     "launch_process",
+    "truncate_stderr",
     # Re-exported exceptions
     "CalledProcessError",
     "SubprocessError",
     "TimeoutExpired",
 ]
+
+
+def check_tool_missing_error(
+    stderr: str, tool_name: str, python_path: str
+) -> str | None:
+    """Check if stderr indicates the tool is not installed.
+
+    Returns:
+        Error message string if the tool is missing, or None if no issue detected.
+    """
+    if f"No module named {tool_name}" in stderr:
+        return (
+            f"{tool_name} is not installed in the configured Python environment "
+            f"({python_path}). Ensure --python-executable and --venv-path point "
+            f"to the environment where {tool_name} is installed."
+        )
+    return None
+
+
+def truncate_stderr(stderr: str, max_len: int = MAX_STDERR_IN_ERROR) -> str:
+    """Truncate stderr to a maximum length.
+
+    Returns:
+        The original stderr if within max_len, otherwise truncated with ellipsis.
+    """
+    if len(stderr) > max_len:
+        return stderr[:max_len] + "..."
+    return stderr
 
 
 @dataclass
@@ -58,6 +91,7 @@ class CommandOptions:
         env: Environment variables for the subprocess. May contain internal
              testing flags prefixed with underscore (e.g., _DISABLE_STDIO_ISOLATION)
              that should NEVER be used in production code.
+        env_remove: List of environment variable names to remove after merging
         capture_output: Whether to capture stdout and stderr
         text: Whether to decode output as text
         check: Whether to raise exception on non-zero exit code
@@ -77,6 +111,7 @@ class CommandOptions:
     check: bool = False
     shell: bool = False
     input_data: str | None = None
+    env_remove: list[str] | None = None
 
 
 def is_python_command(command: list[str]) -> bool:
@@ -156,6 +191,40 @@ def get_utf8_env() -> dict[str, str]:
     return env
 
 
+def prepare_env(
+    command: list[str] | str,
+    env: dict[str, str] | None,
+    env_remove: list[str] | None,
+) -> dict[str, str]:
+    """Build a complete environment dict for subprocess execution.
+
+    Starts from os.environ, applies Python isolation or UTF-8 settings
+    based on command type, merges caller-provided env on top, then
+    removes any keys listed in env_remove.
+
+    Args:
+        command: Command as list or string. String commands are always
+            treated as non-Python (shell=True implies unknown executable).
+        env: Optional caller-provided environment variables to merge.
+        env_remove: Optional list of environment variable names to remove.
+
+    Returns:
+        Complete environment dict ready for subprocess.Popen.
+    """
+    if isinstance(command, list) and is_python_command(command):
+        result = get_python_isolation_env()
+    else:
+        result = get_utf8_env()
+
+    if env:
+        result.update(env)
+
+    for key in env_remove or []:
+        result.pop(key, None)
+
+    return result
+
+
 def _run_subprocess(  # pylint: disable=too-many-statements
     command: list[str], options: CommandOptions, use_stdio_isolation: bool = False
 ) -> subprocess.CompletedProcess[str]:
@@ -174,21 +243,7 @@ def _run_subprocess(  # pylint: disable=too-many-statements
     """
     # Track start time for timeout logging
     subprocess_start_time = time.time()
-    # Prepare environment with UTF-8 encoding support
-    if is_python_command(command):
-        env = get_python_isolation_env()
-        if options.env:
-            env.update(options.env)
-    else:
-        # For non-Python commands, use UTF-8 environment
-        env = get_utf8_env()
-        if options.env:
-            env.update(options.env)
-
-    # Remove CLAUDECODE to allow nested Claude CLI invocations
-    if "CLAUDECODE" in env:
-        logger.debug("Removing CLAUDECODE env var to allow nested Claude CLI execution")
-        env.pop("CLAUDECODE")
+    env = prepare_env(command, options.env, options.env_remove)
 
     # Handle input data and stdin
     stdin_value = subprocess.DEVNULL if options.input_data is None else None
@@ -634,40 +689,42 @@ def launch_process(
     cwd: str | Path | None = None,
     shell: bool = False,
     env: dict[str, str] | None = None,
+    env_remove: list[str] | None = None,
 ) -> int:
     """Launch a process without waiting for it to complete.
 
     This is for fire-and-forget process launching where you need the PID
     but don't need to wait for completion or capture output.
 
+    Environment variables are always inherited from the parent process
+    via prepare_env(). The ``env`` parameter merges on top of the parent
+    environment rather than replacing it entirely.
+
     Args:
         command: Command as list or string (string requires shell=True)
         cwd: Working directory for the process
         shell: Whether to execute through shell (required for string commands)
-        env: Environment variables for the process (None = inherit parent env)
+        env: Extra environment variables merged on top of the parent env
+        env_remove: Environment variable names to remove after merging
 
     Returns:
         Process ID (PID) of the launched process
 
     Example:
-        # Launch VSCode
+        # Launch VSCode — parent env is inherited automatically
         pid = launch_process(["code", "myfile.txt"])
 
-        # Launch with shell on Windows
-        pid = launch_process('code "my file.txt"', shell=True)
-
-        # Launch with custom environment
-        env = os.environ.copy()
-        env['CUSTOM_VAR'] = 'value'
-        pid = launch_process(["code", "myfile.txt"], env=env)
+        # Launch with extra env vars (no need for os.environ.copy())
+        pid = launch_process(["code", "myfile.txt"], env={"CUSTOM_VAR": "value"})
     """
     cwd_str = str(cwd) if cwd else None
+    prepared_env = prepare_env(command, env, env_remove)
 
     process = subprocess.Popen(
         command,
         cwd=cwd_str,
         shell=shell,
-        env=env,
+        env=prepared_env,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )

@@ -1,14 +1,20 @@
 """Test subprocess_runner module."""
 
+import os
+import sys
 import threading
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from mcp_coder.utils.subprocess_runner import (
+    MAX_STDERR_IN_ERROR,
     CommandOptions,
     CommandResult,
+    check_tool_missing_error,
     launch_process,
+    prepare_env,
+    truncate_stderr,
 )
 from mcp_coder.utils.subprocess_streaming import StreamResult, stream_subprocess
 
@@ -103,6 +109,74 @@ class TestLaunchProcess:
         assert isinstance(captured_kwargs["stdout"], int)
         assert captured_kwargs["stdout"] < 0  # DEVNULL is negative
         assert captured_kwargs["stdout"] == captured_kwargs["stderr"]
+
+    def test_launch_process_inherits_parent_env(self) -> None:
+        """env=None still inherits parent env via prepare_env (core bug fix)."""
+        captured_kwargs: dict[str, object] = {}
+
+        def mock_popen(cmd: list[str], **kwargs: object) -> MagicMock:
+            captured_kwargs.update(kwargs)
+            mock = MagicMock()
+            mock.pid = 1
+            return mock
+
+        with patch(
+            "mcp_coder.utils.subprocess_runner.subprocess.Popen",
+            side_effect=mock_popen,
+        ):
+            launch_process(["echo", "hello"], env=None)
+
+        env = captured_kwargs["env"]
+        assert isinstance(env, dict)
+        # Parent env should be inherited — PATH is always present
+        assert "PATH" in env or "Path" in env
+
+    def test_launch_process_merges_custom_env(self) -> None:
+        """Custom env vars are merged on top of parent env."""
+        captured_kwargs: dict[str, object] = {}
+
+        def mock_popen(cmd: list[str], **kwargs: object) -> MagicMock:
+            captured_kwargs.update(kwargs)
+            mock = MagicMock()
+            mock.pid = 1
+            return mock
+
+        with patch(
+            "mcp_coder.utils.subprocess_runner.subprocess.Popen",
+            side_effect=mock_popen,
+        ):
+            launch_process(["echo", "hello"], env={"CUSTOM": "val"})
+
+        env = captured_kwargs["env"]
+        assert isinstance(env, dict)
+        assert env["CUSTOM"] == "val"
+        # Parent env should also be present
+        assert "PATH" in env or "Path" in env
+
+    def test_launch_process_env_remove(self) -> None:
+        """env_remove excludes specified keys from the prepared env."""
+        captured_kwargs: dict[str, object] = {}
+
+        def mock_popen(cmd: list[str], **kwargs: object) -> MagicMock:
+            captured_kwargs.update(kwargs)
+            mock = MagicMock()
+            mock.pid = 1
+            return mock
+
+        with patch(
+            "mcp_coder.utils.subprocess_runner.subprocess.Popen",
+            side_effect=mock_popen,
+        ):
+            launch_process(
+                ["echo", "hello"],
+                env={"FOO": "bar", "KEEP": "yes"},
+                env_remove=["FOO"],
+            )
+
+        env = captured_kwargs["env"]
+        assert isinstance(env, dict)
+        assert "FOO" not in env
+        assert env["KEEP"] == "yes"
 
 
 class TestStreamSubprocess:
@@ -228,8 +302,6 @@ class TestStreamSubprocess:
 
     def test_stream_subprocess_env_setup(self) -> None:
         """Python commands get isolation env variables."""
-        import sys
-
         captured_kwargs: dict[str, object] = {}
         mock_proc = MagicMock()
         mock_proc.stdout = iter([])
@@ -299,3 +371,207 @@ class TestStreamResult:
             stream = StreamResult(stream_subprocess(["echo", "test"]))
             with pytest.raises(RuntimeError, match="not yet available"):
                 _ = stream.result
+
+
+class TestCommandOptionsEnvRemove:
+    """Test env_remove field on CommandOptions."""
+
+    def test_command_options_env_remove_default_none(self) -> None:
+        """env_remove defaults to None."""
+        opts = CommandOptions()
+        assert opts.env_remove is None
+
+
+class TestPrepareEnv:
+    """Test prepare_env helper function."""
+
+    def test_prepare_env_python_command_uses_isolation_env(self) -> None:
+        """Python command gets PYTHONUNBUFFERED=1 etc."""
+        result = prepare_env([sys.executable, "-c", "pass"], env=None, env_remove=None)
+        assert result["PYTHONUNBUFFERED"] == "1"
+        assert result["PYTHONDONTWRITEBYTECODE"] == "1"
+
+    def test_prepare_env_non_python_command_uses_utf8_env(self) -> None:
+        """Non-Python command gets UTF-8 env, not isolation env."""
+        with patch.dict(os.environ, {}, clear=False):
+            # Ensure isolation-specific key is absent from parent env
+            os.environ.pop("PYTHONHASHSEED", None)
+            result = prepare_env(["echo", "hello"], env=None, env_remove=None)
+        assert result["PYTHONIOENCODING"] == "utf-8"
+        # PYTHONHASHSEED="0" is only set by isolation env, not utf8 env
+        assert result.get("PYTHONHASHSEED") != "0"
+
+    def test_prepare_env_string_command_treated_as_non_python(self) -> None:
+        """String command uses utf8 env, not isolation env."""
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("PYTHONHASHSEED", None)
+            result = prepare_env("python -c pass", env=None, env_remove=None)
+        assert result["PYTHONIOENCODING"] == "utf-8"
+        # PYTHONHASHSEED="0" is only set by isolation env
+        assert result.get("PYTHONHASHSEED") != "0"
+
+    def test_prepare_env_merges_caller_env(self) -> None:
+        """env={"MY_VAR": "hello"} appears in result."""
+        result = prepare_env(["echo", "test"], env={"MY_VAR": "hello"}, env_remove=None)
+        assert result["MY_VAR"] == "hello"
+
+    def test_prepare_env_caller_env_overrides_base(self) -> None:
+        """Caller env takes precedence over base env."""
+        result = prepare_env(
+            ["echo", "test"],
+            env={"PYTHONIOENCODING": "ascii"},
+            env_remove=None,
+        )
+        assert result["PYTHONIOENCODING"] == "ascii"
+
+    @pytest.mark.parametrize(
+        "env_remove,key_present",
+        [
+            (["PYTHONIOENCODING"], False),  # existing key is removed
+            (["NONEXISTENT_KEY_XYZ"], True),  # missing key doesn't error
+        ],
+        ids=["removes_existing_key", "ignores_missing_key"],
+    )
+    def test_prepare_env_env_remove(
+        self, env_remove: list[str], key_present: bool
+    ) -> None:
+        """env_remove removes keys; ignores missing keys without error."""
+        result = prepare_env(["echo", "test"], env=None, env_remove=env_remove)
+        if not key_present:
+            assert "PYTHONIOENCODING" not in result
+        # No exception for missing keys — test passes if we get here
+
+    def test_prepare_env_none_env_still_inherits_parent(self) -> None:
+        """env=None still gets full parent env (the core bug scenario)."""
+        result = prepare_env(["echo", "test"], env=None, env_remove=None)
+        # PATH should always be inherited from parent environment
+        assert "PATH" in result or "Path" in result  # Windows uses 'Path'
+
+
+class TestRunSubprocessUsesPrepareEnv:
+    """Test that _run_subprocess delegates env setup to prepare_env."""
+
+    def test_run_subprocess_passes_env_remove_to_prepare_env(self) -> None:
+        """_run_subprocess calls prepare_env with options.env_remove."""
+        mock_proc = MagicMock()
+        mock_proc.communicate.return_value = ("out", "err")
+        mock_proc.returncode = 0
+        mock_proc.pid = 42
+        mock_proc.poll.return_value = 0
+
+        options = CommandOptions(
+            env={"MY": "val"},
+            env_remove=["CLAUDECODE", "SECRET"],
+        )
+
+        with (
+            patch(
+                "mcp_coder.utils.subprocess_runner.prepare_env",
+                return_value={"PATH": "/usr/bin"},
+            ) as mock_prepare,
+            patch(
+                "mcp_coder.utils.subprocess_runner.subprocess.Popen",
+                return_value=mock_proc,
+            ),
+        ):
+            from mcp_coder.utils.subprocess_runner import _run_subprocess
+
+            _run_subprocess(["echo", "hi"], options)
+
+        mock_prepare.assert_called_once_with(
+            ["echo", "hi"], {"MY": "val"}, ["CLAUDECODE", "SECRET"]
+        )
+
+
+class TestStreamSubprocessUsesPrepareEnv:
+    """Test that stream_subprocess delegates env setup to prepare_env."""
+
+    def test_stream_subprocess_passes_env_remove(self) -> None:
+        """stream_subprocess calls prepare_env with options.env_remove."""
+        mock_proc = MagicMock()
+        mock_proc.stdout = iter([])
+        mock_proc.stderr = MagicMock()
+        mock_proc.stderr.read.return_value = ""
+        mock_proc.wait.return_value = 0
+        mock_proc.returncode = 0
+        mock_proc.pid = 55
+        mock_proc.poll.return_value = 0
+
+        options = CommandOptions(
+            env={"FOO": "bar"},
+            env_remove=["CLAUDECODE"],
+        )
+
+        with (
+            patch(
+                "mcp_coder.utils.subprocess_streaming.prepare_env",
+                return_value={"PATH": "/usr/bin"},
+            ) as mock_prepare,
+            patch(
+                "mcp_coder.utils.subprocess_streaming.subprocess.Popen",
+                return_value=mock_proc,
+            ),
+        ):
+            list(stream_subprocess(["echo", "test"], options))
+
+        mock_prepare.assert_called_once_with(
+            ["echo", "test"], {"FOO": "bar"}, ["CLAUDECODE"]
+        )
+
+
+class TestPrepareEnvIntegration:
+    """Integration test calling prepare_env with real os.environ."""
+
+    def test_prepare_env_integration_real_env(self) -> None:
+        """Validate core bug scenario: env inheritance + merge + remove."""
+        result = prepare_env(
+            ["echo", "test"],
+            env={"CUSTOM_TEST_VAR": "custom_value"},
+            env_remove=["CUSTOM_TEST_VAR_REMOVE"],
+        )
+        # Parent env inherited (PATH always present)
+        assert "PATH" in result or "Path" in result
+        # Caller-provided env vars are present
+        assert result["CUSTOM_TEST_VAR"] == "custom_value"
+        # env_remove keys are absent (even if they weren't present)
+        assert "CUSTOM_TEST_VAR_REMOVE" not in result
+
+
+class TestMergedUtilities:
+    """Test utility functions merged from p_tools reference project."""
+
+    def test_check_tool_missing_error_detects_missing_module(self) -> None:
+        """stderr containing 'No module named pytest' returns actionable message."""
+        stderr = "No module named pytest"
+        result = check_tool_missing_error(stderr, "pytest", "/usr/bin/python3")
+        assert result is not None
+        assert "pytest is not installed" in result
+        assert "/usr/bin/python3" in result
+        assert "--python-executable" in result
+
+    def test_check_tool_missing_error_returns_none_for_other_errors(self) -> None:
+        """stderr with unrelated error returns None."""
+        stderr = "SyntaxError: invalid syntax"
+        result = check_tool_missing_error(stderr, "pytest", "/usr/bin/python3")
+        assert result is None
+
+    @pytest.mark.parametrize(
+        "input_str,max_len,expected",
+        [
+            ("short", 500, "short"),
+            ("x" * 600, 500, "x" * 500 + "..."),
+            ("hello world", 5, "hello..."),
+        ],
+        ids=[
+            "short_string_unchanged",
+            "long_string_truncated",
+            "custom_max_len",
+        ],
+    )
+    def test_truncate_stderr(self, input_str: str, max_len: int, expected: str) -> None:
+        """Verify truncate_stderr with various inputs and max_len values."""
+        assert truncate_stderr(input_str, max_len) == expected
+
+    def test_max_stderr_in_error_constant(self) -> None:
+        """Verify MAX_STDERR_IN_ERROR == 500."""
+        assert MAX_STDERR_IN_ERROR == 500
