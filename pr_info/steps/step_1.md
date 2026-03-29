@@ -9,15 +9,17 @@
 
 | File | Action |
 |------|--------|
-| `tests/cli/commands/test_prompt_continue_session_message.py` | **Create** — new test file |
+| `tests/cli/commands/test_session_priority.py` | **Modify** — add test to existing file |
 | `src/mcp_coder/cli/commands/prompt.py` | **Modify** — line 99 |
 
 ## WHAT
 
-### Test (`test_prompt_continue_session_message.py`)
+### Test (`test_session_priority.py`)
+
+Add to the existing `test_session_priority.py` which already tests `--continue-session` with `find_latest_session` mocking. Follow the existing decorator/mock patterns in that file (e.g., mocking `resolve_mcp_config_path`, `resolve_llm_method`, etc.).
 
 ```python
-def test_continue_session_no_previous_sessions_message(capsys):
+def test_continue_session_no_sessions_message_includes_store_response_hint(capsys):
     """Verify the message includes --store-response guidance."""
 ```
 
@@ -40,6 +42,7 @@ print("No previous response files found, starting new conversation. Save convers
 
 ## HOW
 
+- Test follows existing patterns in `test_session_priority.py` (decorator-based mocking of `resolve_mcp_config_path`, `resolve_llm_method`, etc.)
 - Test uses `unittest.mock.patch` to mock `find_latest_session` and `prompt_llm_stream`
 - Test creates a minimal `argparse.Namespace` matching `execute_prompt`'s expected attributes
 

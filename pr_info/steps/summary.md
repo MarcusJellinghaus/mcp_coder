@@ -13,13 +13,7 @@ When using `--continue-session` without a prior `--store-response`, the CLI prin
 | File | Change |
 |------|--------|
 | `src/mcp_coder/cli/commands/prompt.py` | Update message string on line 99 |
-| `tests/cli/commands/test_prompt_continue_session_message.py` | New test asserting the improved message text |
-
-## Folders / Modules Created
-
-| Path | Purpose |
-|------|---------|
-| `pr_info/steps/` | Implementation plan documents (this PR) |
+| `tests/cli/commands/test_session_priority.py` | Add test for improved message text |
 
 ## Implementation Overview
 
