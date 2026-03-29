@@ -8,10 +8,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.utils.subprocess_runner import (
+    MAX_STDERR_IN_ERROR,
     CommandOptions,
     CommandResult,
+    check_tool_missing_error,
     launch_process,
     prepare_env,
+    truncate_stderr,
 )
 from mcp_coder.utils.subprocess_streaming import StreamResult, stream_subprocess
 
@@ -534,3 +537,43 @@ class TestPrepareEnvIntegration:
         assert result["CUSTOM_TEST_VAR"] == "custom_value"
         # env_remove keys are absent (even if they weren't present)
         assert "CUSTOM_TEST_VAR_REMOVE" not in result
+
+
+class TestMergedUtilities:
+    """Test utility functions merged from p_tools reference project."""
+
+    def test_check_tool_missing_error_detects_missing_module(self) -> None:
+        """stderr containing 'No module named pytest' returns actionable message."""
+        stderr = "No module named pytest"
+        result = check_tool_missing_error(stderr, "pytest", "/usr/bin/python3")
+        assert result is not None
+        assert "pytest is not installed" in result
+        assert "/usr/bin/python3" in result
+        assert "--python-executable" in result
+
+    def test_check_tool_missing_error_returns_none_for_other_errors(self) -> None:
+        """stderr with unrelated error returns None."""
+        stderr = "SyntaxError: invalid syntax"
+        result = check_tool_missing_error(stderr, "pytest", "/usr/bin/python3")
+        assert result is None
+
+    @pytest.mark.parametrize(
+        "input_str,max_len,expected",
+        [
+            ("short", 500, "short"),
+            ("x" * 600, 500, "x" * 500 + "..."),
+            ("hello world", 5, "hello..."),
+        ],
+        ids=[
+            "short_string_unchanged",
+            "long_string_truncated",
+            "custom_max_len",
+        ],
+    )
+    def test_truncate_stderr(self, input_str: str, max_len: int, expected: str) -> None:
+        """Verify truncate_stderr with various inputs and max_len values."""
+        assert truncate_stderr(input_str, max_len) == expected
+
+    def test_max_stderr_in_error_constant(self) -> None:
+        """Verify MAX_STDERR_IN_ERROR == 500."""
+        assert MAX_STDERR_IN_ERROR == 500

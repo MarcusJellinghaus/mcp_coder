@@ -21,17 +21,42 @@ from subprocess import CalledProcessError, SubprocessError, TimeoutExpired
 
 logger = logging.getLogger(__name__)
 
+MAX_STDERR_IN_ERROR: int = 500
+
 __all__ = [
     "CommandResult",
     "CommandOptions",
+    "MAX_STDERR_IN_ERROR",
+    "check_tool_missing_error",
     "execute_command",
     "execute_subprocess",
     "launch_process",
+    "truncate_stderr",
     # Re-exported exceptions
     "CalledProcessError",
     "SubprocessError",
     "TimeoutExpired",
 ]
+
+
+def check_tool_missing_error(
+    stderr: str, tool_name: str, python_path: str
+) -> str | None:
+    """Check if stderr indicates the tool is not installed."""
+    if f"No module named {tool_name}" in stderr:
+        return (
+            f"{tool_name} is not installed in the configured Python environment "
+            f"({python_path}). Ensure --python-executable and --venv-path point "
+            f"to the environment where {tool_name} is installed."
+        )
+    return None
+
+
+def truncate_stderr(stderr: str, max_len: int = MAX_STDERR_IN_ERROR) -> str:
+    """Truncate stderr to a maximum length."""
+    if len(stderr) > max_len:
+        return stderr[:max_len] + "..."
+    return stderr
 
 
 @dataclass
