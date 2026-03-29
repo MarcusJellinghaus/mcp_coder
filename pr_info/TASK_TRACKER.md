@@ -21,7 +21,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-- [ ] **Step 1: HelpHintArgumentParser class + unit tests** - [step_1.md](steps/step_1.md)
+- [x] **Step 1: HelpHintArgumentParser class + unit tests** - [step_1.md](steps/step_1.md)
   - [x] Add `HelpHintArgumentParser` class to `parsers.py`
   - [x] Add unit tests in `tests/cli/test_parsers.py`
   - [x] All checks pass (pylint, mypy, pytest)
