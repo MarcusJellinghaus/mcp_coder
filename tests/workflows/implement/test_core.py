@@ -1631,13 +1631,16 @@ class TestHandleWorkflowFailure:
             to_label_id="llm_timeout",
         )
 
+    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
     @patch("mcp_coder.workflows.implement.core._get_diff_stat")
     def test_handle_workflow_failure_skips_label_when_update_labels_disabled(
         self,
         mock_diff: MagicMock,
+        mock_branch: MagicMock,
     ) -> None:
         """When update_labels=False, label update is skipped."""
         mock_diff.return_value = ""
+        mock_branch.return_value = None
 
         failure = WorkflowFailure(
             category=FailureCategory.GENERAL,
@@ -1646,7 +1649,7 @@ class TestHandleWorkflowFailure:
         )
         with patch("mcp_coder.workflows.implement.core.IssueManager") as mock_issue_cls:
             _handle_workflow_failure(failure, Path("/project"), update_labels=False)
-            mock_issue_cls.assert_not_called()
+            mock_issue_cls.return_value.update_workflow_label.assert_not_called()
 
 
 class TestRunImplementWorkflowLabelTransitions:
