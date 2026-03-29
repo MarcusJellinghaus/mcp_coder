@@ -31,7 +31,7 @@ from mcp_coder.utils.subprocess_runner import (
 )
 ```
 
-**Standard library imports:** `os`, `queue`, `subprocess`, `sys`, `tempfile`, `threading`
+**Standard library imports:** `gc`, `os`, `queue`, `subprocess`, `sys`, `tempfile`, `threading`, `time`
 **Third-party:** `pytest`
 **Mock usage:** `unittest.mock.patch` (only for `test_execute_command_permission_error`)
 
@@ -66,6 +66,7 @@ All tests assert on `CommandResult` fields:
 2. **Windows timeout handling**: Tests accept `PermissionError` as valid timeout on Windows (STDIO isolation file locking)
 3. **Platform-specific commands**: `echo` on Unix, `cmd /c echo` on Windows
 4. **Environment save/restore**: Tests that modify `os.environ` use `original_env = os.environ.copy()` with `try/finally` restore
+5. **Mock patch target**: The reference test patches `"subprocess.Popen"` — in the ported test, this must become `"mcp_coder.utils.subprocess_runner.subprocess.Popen"` (matching the existing mock-based tests pattern)
 
 ## Verification
 
