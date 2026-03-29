@@ -725,3 +725,31 @@ class TestCreateStartupScriptFromGithub:
         )
         # Restore editable
         assert content.count("uv pip install -e . --no-deps") >= 2
+
+    def test_from_github_missing_pyproject_toml(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+    ) -> None:
+        """from_github=True with no pyproject.toml at all degrades gracefully."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: "Windows",
+        )
+        # Deliberately do NOT create pyproject.toml in tmp_path
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=1,
+            issue_title="Test",
+            status="status-07:code-review",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/1",
+            is_intervention=False,
+            from_github=True,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        assert "GitHub override" not in content
+        assert "uv pip install" not in content or "uv pip install -e ." in content
