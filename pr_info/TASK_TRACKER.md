@@ -34,7 +34,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 3: Render detailed MCP tool listing + orchestrator passthrough
 - [x] Implementation: tests (`test_verify_format_section.py`, `test_verify_orchestration.py`) + production code (`verify.py`)
 - [x] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `Render detailed MCP tool listing with --list-mcp-tools flag (#639)`
+- [x] Commit: `Render detailed MCP tool listing with --list-mcp-tools flag (#639)`
 
 ## Pull Request
 - [ ] PR review: verify all steps integrated correctly

@@ -1,10 +1,6 @@
 Render detailed MCP tool listing with --list-mcp-tools flag (#639)
 
-Add list_mcp_tools parameter to _format_mcp_section() that renders
-each tool on its own indented line with descriptions aligned globally
-across all servers. Update execute_verify() to pass the flag from
-CLI args through to the formatter.
-
-Update all test mock data to use (name, description) tuples and add
-tests for detailed rendering, global alignment, missing descriptions,
-failed servers, and orchestrator flag passthrough.
+Add formatted output for MCP tool details in the verify command. When
+--list-mcp-tools is passed, the verify output now renders each server's
+tools with their descriptions in a readable format. The orchestrator
+passes the flag through to the verify subcommand.
