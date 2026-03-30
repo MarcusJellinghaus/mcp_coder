@@ -15,10 +15,13 @@ from mcp_coder.icoder.services.llm_service import FakeLLMService
 from mcp_coder.icoder.ui.app import ICoderApp
 from mcp_coder.icoder.ui.widgets.input_area import InputArea
 
-pytestmark = pytest.mark.skipif(
-    sys.platform != "win32",
-    reason="Snapshot tests are Windows-only to avoid baseline drift",
-)
+pytestmark = [
+    pytest.mark.skipif(
+        sys.platform != "win32",
+        reason="Snapshot tests are Windows-only to avoid baseline drift",
+    ),
+    pytest.mark.textual_integration,
+]
 
 
 @pytest.fixture()

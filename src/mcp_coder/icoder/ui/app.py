@@ -85,12 +85,12 @@ class ICoderApp(App[None]):
             if isinstance(text, str) and text:
                 output.append_text(text)
         elif event_type == "tool_use_start":
-            name = event.get("name", "")
-            args = event.get("args", {})
-            output.append_text(f"\u2699 {name}({args})...")
+            name = str(event.get("name", ""))
+            args = str(event.get("args", {}))
+            output.append_tool_use(name, args, "...")
         elif event_type == "tool_result":
-            name = event.get("name", "")
-            output.append_text(f"\u2192 {name} done")
+            name = str(event.get("name", ""))
+            output.append_tool_use(name, "", "done")
         elif event_type == "error":
             msg = event.get("message", "Unknown error")
             output.append_text(f"Error: {msg}")

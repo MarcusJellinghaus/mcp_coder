@@ -11,6 +11,8 @@ from mcp_coder.icoder.ui.app import ICoderApp
 from mcp_coder.icoder.ui.widgets.input_area import InputArea
 from mcp_coder.icoder.ui.widgets.output_log import OutputLog
 
+pytestmark = pytest.mark.textual_integration
+
 
 @pytest.fixture
 def icoder_app(fake_llm: FakeLLMService, event_log: EventLog) -> ICoderApp:
