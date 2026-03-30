@@ -83,9 +83,23 @@ Part of #642 (rendered output format) - Step 3/4.
 ### Step 4: CLI wiring — parser + prompt command + test updates
 > [Detail](./steps/step_4.md) — `parsers.py`, `prompt.py`, test files
 
-- [ ] Implementation: add `rendered` to parser choices/default, add to streaming format tuple in `prompt.py`, update affected tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `rendered` to parser choices/default, add to streaming format tuple in `prompt.py`, update affected tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
+
+**Commit message:**
+```
+feat: wire rendered format into CLI parser and prompt streaming
+
+Add "rendered" to --output-format choices and change default from
+"text" to "rendered" in parsers.py. Add "rendered" to the streaming
+format tuple in prompt.py so it routes through prompt_llm_stream().
+Update print_stream_event() docstring to document the new format.
+
+No test changes needed — existing tests explicitly set output_format.
+
+Part of #642 (rendered output format) - Step 4/4.
+```
 
 ## Pull Request
 

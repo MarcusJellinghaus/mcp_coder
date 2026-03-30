@@ -345,11 +345,13 @@ def print_stream_event(
 
     Args:
         event: StreamEvent dict to print
-        output_format: One of "text", "ndjson", "json-raw"
+        output_format: One of "rendered", "text", "ndjson", "json-raw"
         file: Output stream for normal output (default: stdout)
         err_file: Output stream for errors (default: stderr)
 
     Behavior by format:
+        - rendered: Human-friendly output with box-drawing characters for
+          tool calls and truncated tool results.
         - text: Print text_delta content inline (no newline between deltas).
           Tool calls shown with bordered sections.
         - ndjson: Print normalized NDJSON line (Claude CLI schema).
