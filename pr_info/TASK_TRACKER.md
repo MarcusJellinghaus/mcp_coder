@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Add `--list-mcp-tools` flag to verify parser
-- [ ] Implementation: tests (`test_verify_parser.py`) + production code (`parsers.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `Add --list-mcp-tools flag to verify parser (#639)`
+- [x] Implementation: tests (`test_verify_parser.py`) + production code (`parsers.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `Add --list-mcp-tools flag to verify parser (#639)`
 
 ### Step 2: Return tool descriptions from `_check_servers()`
 - [ ] Implementation: tests (`test_mcp_health_check.py`) + production code (`verification.py`)

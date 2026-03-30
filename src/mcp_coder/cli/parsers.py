@@ -583,6 +583,11 @@ def add_verify_parser(subparsers: Any) -> None:
         default=None,
         help="Path to .mcp.json for MCP agent smoke test",
     )
+    verify_parser.add_argument(
+        "--list-mcp-tools",
+        action="store_true",
+        help="List MCP tools with descriptions grouped by server",
+    )
 
 
 def add_vscodeclaude_parsers(subparsers: Any) -> None:
