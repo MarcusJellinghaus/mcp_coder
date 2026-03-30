@@ -779,7 +779,7 @@ class TestCheckBranchStatusCommand:
         assert result == 1
         mock_logger.debug.assert_called_with("Check subcommand required")
         captured = capsys.readouterr()
-        assert "Error: Please specify a check subcommand" in captured.out
+        assert "Error: Please specify a check subcommand" in captured.err
         assert "Try 'mcp-coder check --help' for more information." in captured.err
 
 
@@ -823,7 +823,7 @@ class TestHelpHintIntegration:
 
         assert result == 1
         captured = capsys.readouterr()
-        assert "Error: Please specify a gh-tool subcommand" in captured.out
+        assert "Error: Please specify a gh-tool subcommand" in captured.err
         assert "Try 'mcp-coder gh-tool --help' for more information." in captured.err
 
     def test_vscodeclaude_no_subcommand_shows_help_hint(
@@ -835,7 +835,7 @@ class TestHelpHintIntegration:
 
         assert result == 1
         captured = capsys.readouterr()
-        assert "Error: Please specify a subcommand" in captured.out
+        assert "Error: Please specify a subcommand" in captured.err
         assert (
             "Try 'mcp-coder vscodeclaude --help' for more information." in captured.err
         )
@@ -849,7 +849,7 @@ class TestHelpHintIntegration:
 
         assert result == 1
         captured = capsys.readouterr()
-        assert "Error: Please specify a git-tool subcommand" in captured.out
+        assert "Error: Please specify a git-tool subcommand" in captured.err
         assert "Try 'mcp-coder git-tool --help' for more information." in captured.err
 
     @pytest.mark.parametrize(
@@ -900,5 +900,5 @@ class TestHelpHintIntegration:
 
         assert result == 1
         captured = capsys.readouterr()
-        assert "Error: Commit mode 'None' is not yet implemented." in captured.out
+        assert "Error: Commit mode 'None' is not yet implemented." in captured.err
         assert "Try 'mcp-coder commit --help' for more information." in captured.err

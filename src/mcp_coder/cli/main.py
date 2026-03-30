@@ -187,7 +187,8 @@ def _handle_check_command(args: argparse.Namespace) -> int:
     else:
         logger.debug("Check subcommand required")
         print(
-            "Error: Please specify a check subcommand (e.g., 'branch-status', 'file-size')"
+            "Error: Please specify a check subcommand (e.g., 'branch-status', 'file-size')",
+            file=sys.stderr,
         )
         print("Try 'mcp-coder check --help' for more information.", file=sys.stderr)
         return 1
@@ -215,7 +216,8 @@ def _handle_gh_tool_command(args: argparse.Namespace) -> int:
         logger.debug("gh-tool subcommand required")
         print(
             "Error: Please specify a gh-tool subcommand"
-            " (e.g., 'get-base-branch', 'define-labels', 'issue-stats', 'set-status')"
+            " (e.g., 'get-base-branch', 'define-labels', 'issue-stats', 'set-status')",
+            file=sys.stderr,
         )
         print("Try 'mcp-coder gh-tool --help' for more information.", file=sys.stderr)
         return 1
@@ -235,7 +237,10 @@ def _handle_vscodeclaude_command(args: argparse.Namespace) -> int:
         return 1  # unreachable: argparse validates subcommand choices
     else:
         logger.debug("vscodeclaude subcommand required")
-        print("Error: Please specify a subcommand (e.g., 'launch', 'status')")
+        print(
+            "Error: Please specify a subcommand (e.g., 'launch', 'status')",
+            file=sys.stderr,
+        )
         print(
             "Try 'mcp-coder vscodeclaude --help' for more information.", file=sys.stderr
         )
@@ -254,7 +259,10 @@ def _handle_git_tool_command(args: argparse.Namespace) -> int:
         return 1  # unreachable: argparse validates subcommand choices
     else:
         logger.debug("git-tool subcommand required")
-        print("Error: Please specify a git-tool subcommand (e.g., 'compact-diff')")
+        print(
+            "Error: Please specify a git-tool subcommand (e.g., 'compact-diff')",
+            file=sys.stderr,
+        )
         print("Try 'mcp-coder git-tool --help' for more information.", file=sys.stderr)
         return 1
 
@@ -271,7 +279,10 @@ def _handle_commit_command(args: argparse.Namespace) -> int:
         return execute_commit_clipboard(args)
     else:
         logger.debug(f"Commit mode '{args.commit_mode}' not yet implemented")
-        print(f"Error: Commit mode '{args.commit_mode}' is not yet implemented.")
+        print(
+            f"Error: Commit mode '{args.commit_mode}' is not yet implemented.",
+            file=sys.stderr,
+        )
         print("Try 'mcp-coder commit --help' for more information.", file=sys.stderr)
         return 1
 

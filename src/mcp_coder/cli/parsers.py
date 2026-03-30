@@ -28,7 +28,7 @@ class HelpHintArgumentParser(argparse.ArgumentParser):
         self._print_message(
             f"Try '{self.prog} --help' for more information.\n", sys.stderr
         )
-        self.exit(2, "")
+        self.exit(2)
 
 
 class WideHelpFormatter(argparse.RawDescriptionHelpFormatter):
