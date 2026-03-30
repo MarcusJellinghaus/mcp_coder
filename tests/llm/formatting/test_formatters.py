@@ -1,6 +1,7 @@
 """Tests for response formatting functions."""
 
 import argparse
+import io
 import json
 from typing import Any, Dict, Iterator, List
 from unittest.mock import Mock, patch
@@ -8,6 +9,11 @@ from unittest.mock import Mock, patch
 import pytest
 
 from mcp_coder.cli.commands.prompt import execute_prompt
+from mcp_coder.llm.formatting.formatters import (
+    _format_tool_name,
+    _render_tool_output,
+    print_stream_event,
+)
 from mcp_coder.llm.types import StreamEvent
 
 
@@ -272,14 +278,10 @@ class TestFormatToolName:
 
     def test_mcp_name_two_segments(self) -> None:
         """MCP name with two segments formats as 'server > tool'."""
-        from mcp_coder.llm.formatting.formatters import _format_tool_name
-
         assert _format_tool_name("mcp__workspace__read_file") == "workspace > read_file"
 
     def test_mcp_name_hyphenated_server(self) -> None:
         """MCP name with hyphenated server preserves hyphen."""
-        from mcp_coder.llm.formatting.formatters import _format_tool_name
-
         assert (
             _format_tool_name("mcp__tools-py__run_pytest_check")
             == "tools-py > run_pytest_check"
@@ -287,14 +289,10 @@ class TestFormatToolName:
 
     def test_builtin_tool_name(self) -> None:
         """Built-in tool name passes through unchanged."""
-        from mcp_coder.llm.formatting.formatters import _format_tool_name
-
         assert _format_tool_name("Bash") == "Bash"
 
     def test_mcp_name_single_segment(self) -> None:
         """MCP name with only one segment returns just the server name."""
-        from mcp_coder.llm.formatting.formatters import _format_tool_name
-
         assert _format_tool_name("mcp__something") == "something"
 
 
@@ -303,22 +301,16 @@ class TestRenderToolOutput:
 
     def test_empty_output(self) -> None:
         """Empty output returns ([], 0)."""
-        from mcp_coder.llm.formatting.formatters import _render_tool_output
-
         assert _render_tool_output("") == ([], 0)
 
     def test_short_plain_text(self) -> None:
         """Short plain text returns all lines."""
-        from mcp_coder.llm.formatting.formatters import _render_tool_output
-
         lines, total = _render_tool_output("line one\nline two")
         assert lines == ["line one", "line two"]
         assert total == 2
 
     def test_long_plain_text_truncated(self) -> None:
         """Plain text longer than limit is truncated."""
-        from mcp_coder.llm.formatting.formatters import _render_tool_output
-
         text = "\n".join(f"line {i}" for i in range(10))
         lines, total = _render_tool_output(text)
         assert len(lines) == 5
@@ -328,10 +320,6 @@ class TestRenderToolOutput:
 
     def test_json_dict_simple_values(self) -> None:
         """JSON dict with simple values expands to key: value lines."""
-        import json
-
-        from mcp_coder.llm.formatting.formatters import _render_tool_output
-
         data = {"success": True, "count": 42}
         lines, total = _render_tool_output(json.dumps(data))
         assert lines == ["success: true", "count: 42"]
@@ -339,10 +327,6 @@ class TestRenderToolOutput:
 
     def test_json_dict_multiline_string(self) -> None:
         """JSON dict with multiline string value indents continuation lines."""
-        import json
-
-        from mcp_coder.llm.formatting.formatters import _render_tool_output
-
         data = {"success": True, "diff": "@@ -1 @@\n-foo\n+bar"}
         lines, total = _render_tool_output(json.dumps(data))
         assert lines == [
@@ -356,10 +340,6 @@ class TestRenderToolOutput:
 
     def test_non_dict_json(self) -> None:
         """Non-dict JSON (array) falls back to str().splitlines()."""
-        import json
-
-        from mcp_coder.llm.formatting.formatters import _render_tool_output
-
         data = [1, 2, 3]
         lines, total = _render_tool_output(json.dumps(data))
         assert lines == ["[1, 2, 3]"]
@@ -367,8 +347,6 @@ class TestRenderToolOutput:
 
     def test_invalid_json(self) -> None:
         """Invalid JSON falls back to plain text splitting."""
-        from mcp_coder.llm.formatting.formatters import _render_tool_output
-
         lines, total = _render_tool_output("not json at all\nsecond line")
         assert lines == ["not json at all", "second line"]
         assert total == 2
@@ -404,10 +382,6 @@ class TestRenderedStreamFormat:
         self, event: StreamEvent, expected_output: str, use_stderr: bool
     ) -> None:
         """Non-tool events: text_delta, error, done."""
-        import io
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         out = io.StringIO()
         err = io.StringIO()
         print_stream_event(event, output_format="rendered", file=out, err_file=err)
@@ -419,10 +393,6 @@ class TestRenderedStreamFormat:
 
     def test_inline_params(self) -> None:
         """Tool with 1-2 args renders inline: ┌ server > tool(args)."""
-        import io
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         buf = io.StringIO()
         print_stream_event(
             {
@@ -442,10 +412,6 @@ class TestRenderedStreamFormat:
 
     def test_block_params(self) -> None:
         """Tool with 3+ args renders block format with │ lines."""
-        import io
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         buf = io.StringIO()
         print_stream_event(
             {
@@ -496,10 +462,6 @@ class TestRenderedStreamFormat:
         expected_footer: str,
     ) -> None:
         """Result rendering: short, long (truncated), empty."""
-        import io
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         buf = io.StringIO()
         print_stream_event(
             {"type": "tool_result", "output": output_str},
@@ -516,10 +478,6 @@ class TestRenderedStreamFormat:
 
     def test_json_result_expanded(self) -> None:
         """JSON dict result expands keys with indented multiline strings."""
-        import io
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         data = json.dumps({"success": True, "diff": "@@ -1 @@\n-foo\n+bar"})
         buf = io.StringIO()
         print_stream_event(
@@ -535,10 +493,6 @@ class TestRenderedStreamFormat:
 
     def test_blank_line_after_footer(self) -> None:
         """Output ends with blank line after └ done."""
-        import io
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         buf = io.StringIO()
         print_stream_event(
             {"type": "tool_result", "output": "ok"},
@@ -555,10 +509,6 @@ class TestPrintStreamEvent:
 
     def test_print_stream_event_text_delta(self) -> None:
         """text_delta prints text with no newline."""
-        import io
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         buf = io.StringIO()
         print_stream_event(
             {"type": "text_delta", "text": "Hello"},
@@ -569,10 +519,6 @@ class TestPrintStreamEvent:
 
     def test_print_stream_event_tool_use_bordered(self) -> None:
         """tool_use_start prints bordered header."""
-        import io
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         buf = io.StringIO()
         print_stream_event(
             {"type": "tool_use_start", "name": "read_file", "args": {"path": "x.py"}},
@@ -586,10 +532,6 @@ class TestPrintStreamEvent:
 
     def test_print_stream_event_tool_result_bordered(self) -> None:
         """tool_result prints result + border close."""
-        import io
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         buf = io.StringIO()
         print_stream_event(
             {"type": "tool_result", "name": "read_file", "output": "file content"},
@@ -602,10 +544,6 @@ class TestPrintStreamEvent:
 
     def test_print_stream_event_error_to_stderr(self) -> None:
         """error event goes to stderr."""
-        import io
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         out = io.StringIO()
         err = io.StringIO()
         print_stream_event(
@@ -619,10 +557,6 @@ class TestPrintStreamEvent:
 
     def test_print_stream_event_done_newline(self) -> None:
         """done event prints a final newline."""
-        import io
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         buf = io.StringIO()
         print_stream_event(
             {"type": "done", "usage": {}},
@@ -633,11 +567,6 @@ class TestPrintStreamEvent:
 
     def test_print_stream_event_ndjson_text(self) -> None:
         """ndjson format outputs JSON line with Claude schema."""
-        import io
-        import json
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         buf = io.StringIO()
         print_stream_event(
             {"type": "text_delta", "text": "Hello"},
@@ -655,11 +584,6 @@ class TestPrintStreamEvent:
 
     def test_print_stream_event_ndjson_tool_use(self) -> None:
         """ndjson format maps tool_use_start to assistant message with tool_use."""
-        import io
-        import json
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         buf = io.StringIO()
         print_stream_event(
             {"type": "tool_use_start", "name": "sleep", "args": {"seconds": 2}},
@@ -675,11 +599,6 @@ class TestPrintStreamEvent:
 
     def test_print_stream_event_ndjson_done(self) -> None:
         """ndjson format maps done to result message."""
-        import io
-        import json
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         buf = io.StringIO()
         print_stream_event(
             {"type": "done", "session_id": "abc", "usage": {"input_tokens": 10}},
@@ -693,10 +612,6 @@ class TestPrintStreamEvent:
 
     def test_print_stream_event_json_raw(self) -> None:
         """json-raw format prints raw_line content as-is."""
-        import io
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         buf = io.StringIO()
         print_stream_event(
             {"type": "raw_line", "line": '{"type":"assistant","message":{}}'},
@@ -707,10 +622,6 @@ class TestPrintStreamEvent:
 
     def test_print_stream_event_json_raw_ignores_non_raw_line(self) -> None:
         """json-raw format ignores events that are not raw_line."""
-        import io
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         buf = io.StringIO()
         print_stream_event(
             {"type": "text_delta", "text": "Hello"},
