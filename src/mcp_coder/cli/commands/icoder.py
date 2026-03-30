@@ -87,7 +87,7 @@ def execute_icoder(args: argparse.Namespace) -> int:
 
         # Lazy import of Textual app (optional dependency)
         try:
-            from ...icoder.ui.app import ICoderApp  # type: ignore[import-not-found]
+            from ...icoder.ui.app import ICoderApp
         except ImportError:
             print(
                 "Error: Textual is not installed. "
