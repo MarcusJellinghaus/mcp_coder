@@ -26,13 +26,11 @@ pytestmark = [
 
 @pytest.fixture()
 def icoder_app(tmp_path: Path) -> Iterator[ICoderApp]:
-    """Create ICoderApp with FakeLLM; closes EventLog after the test."""
+    """Create ICoderApp with FakeLLM; uses context manager for EventLog."""
     fake_llm = FakeLLMService()
-    event_log = EventLog(logs_dir=tmp_path)
-    app_core = AppCore(llm_service=fake_llm, event_log=event_log)
-    app = ICoderApp(app_core)
-    yield app
-    event_log.close()
+    with EventLog(logs_dir=tmp_path) as event_log:
+        app_core = AppCore(llm_service=fake_llm, event_log=event_log)
+        yield ICoderApp(app_core)
 
 
 def test_snapshot_initial_state(snap_compare: Any, icoder_app: ICoderApp) -> None:
