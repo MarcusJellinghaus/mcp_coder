@@ -47,6 +47,7 @@ types = [
 test = [
     "pytest-asyncio",
     "pytest-xdist",
+    "pytest-textual-snapshot>=1.0.0",
 ]
 
 # MCP servers - for local development (execution env already has these)
