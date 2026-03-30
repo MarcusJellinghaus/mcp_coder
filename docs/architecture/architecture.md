@@ -220,7 +220,6 @@ Interactive terminal chat for LLM-assisted coding. Three-layer architecture maxi
   - `widgets/output_log.py` - RichLog-based scrollable output
   - `widgets/input_area.py` - TextArea with Enter=submit, Shift-Enter=newline
 - **Tests** (`tests/icoder/`): Unit tests for each layer + Textual pilot integration tests + SVG snapshot tests (🏷️ textual_integration)
-- **Optional dependency**: `pip install mcp-coder[tui]` (Textual)
 
 
 
@@ -369,7 +368,7 @@ Interactive terminal chat for LLM-assisted coding. Three-layer architecture maxi
     - **Requirements**: Valid API keys or CLI auth for the active provider
   - `textual_integration`: Textual TUI tests (headless app, pilot, snapshots) in `tests/icoder/`
     - **When to use**: Testing iCoder TUI behavior, widget interactions, visual snapshots
-    - **Requirements**: Textual package installed (`pip install mcp-coder[tui]`)
+    - **Requirements**: Textual package (included by default)
     - **Note**: Snapshot tests are Windows-only to avoid baseline drift
 - **Fast development**: Use exclusion pattern to skip slow integration tests
 - **Parallel execution**: Always use `extra_args: ["-n", "auto"]`
