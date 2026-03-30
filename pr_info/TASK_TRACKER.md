@@ -31,9 +31,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 2: Event Log
 > [step_2.md](./steps/step_2.md) — Implement structured event log with in-memory list + JSONL file output (EventLog class with context manager)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Command Registry + Built-in Commands
 > [step_3.md](./steps/step_3.md) — Implement slash command registry with decorator-based registration and /help, /clear, /quit commands
