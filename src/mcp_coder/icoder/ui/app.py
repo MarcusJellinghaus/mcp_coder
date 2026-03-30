@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 from textual.app import App, ComposeResult
-from textual.worker import Worker, WorkerState
 
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.ui.styles import CSS
@@ -53,7 +52,7 @@ class ICoderApp(App[None]):
             self.exit()
         elif response.clear_output:
             output.clear()
-            output._recorded.clear()
+            output.clear_recorded()
         elif response.text:
             output.append_text(response.text)
         elif response.send_to_llm:

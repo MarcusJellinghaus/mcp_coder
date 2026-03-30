@@ -15,6 +15,10 @@ class OutputLog(RichLog):
         super().__init__(**kwargs)
         self._recorded: list[str] = []
 
+    def clear_recorded(self) -> None:
+        """Clear the internal recorded-lines buffer."""
+        self._recorded.clear()
+
     @property
     def recorded_lines(self) -> list[str]:
         """Return recorded output lines (for testing/assertions).
