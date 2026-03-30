@@ -21,6 +21,16 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Fix PATH ordering in VENV_SECTION_WINDOWS
+- [ ] Implementation: reorder VENV_SECTION_WINDOWS template + add tests (`templates.py`, `test_templates.py`)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Add commands to error statuses in labels.json
+- [ ] Implementation: add commands to 5 error statuses + add test (`labels.json`, `test_label_config.py`)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review completed
+- [ ] PR summary prepared
