@@ -29,4 +29,10 @@ Review of implementation plan for `verify --list-mcp-tools`.
 - `step_3.md`: Updated `max()` to use `default=0`; added `test_list_mcp_tools_all_servers_failed` test
 - `Decisions.md`: Created with three decisions logged
 
-**Status**: Ready to commit
+**Status**: Committed (15c9e95)
+
+## Final Status
+
+- **Rounds**: 1
+- **Commits**: 1 (15c9e95 — plan review fixes)
+- **Plan status**: Ready for approval. Three issues found and fixed; one design question resolved with user (option A — full verify still runs).
