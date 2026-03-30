@@ -1,6 +1,11 @@
-feat(icoder): add LLM service protocol and implementations
+feat(icoder): implement AppCore central input router (#617)
 
-Add LLMService Protocol with stream() and session_id for dependency
-injection, RealLLMService wrapping prompt_llm_stream(), and
-FakeLLMService for deterministic testing with canned responses.
-Both implementations track session_id from done events.
+Add AppCore class that routes user input to slash commands or LLM
+service, manages session state, and emits structured events. This is
+the testable core coordinator for iCoder with no Textual dependency.
+
+- Add AppCore with handle_input() for sync command dispatch and
+  stream_llm() generator for async LLM streaming
+- Add shared test fixtures (fake_llm, event_log, app_core) to conftest
+- Add 14 tests covering commands, free text, streaming, event logging,
+  empty input, and session state
