@@ -77,9 +77,8 @@ langchain = [
     "httpx>=0.27.0",
 ]
 
-# Textual TUI - for interactive coding interface
+# Textual TUI - dev tooling for interactive coding interface
 tui = [
-    "textual>=1.0.0",
     "textual-dev>=1.0.0",
 ]
 

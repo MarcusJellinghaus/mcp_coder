@@ -85,18 +85,8 @@ def execute_icoder(args: argparse.Namespace) -> int:
             env_vars=env_vars,
         )
 
-        # Lazy import of Textual app (optional dependency)
-        try:
-            from ...icoder.ui.app import ICoderApp
-        except ImportError:
-            print(
-                "Error: Textual is not installed. "
-                "Install it with: pip install mcp-coder[tui]",
-                file=sys.stderr,
-            )
-            return 1
-
         from ...icoder.core.app_core import AppCore
+        from ...icoder.ui.app import ICoderApp
 
         with EventLog(logs_dir=project_dir / "logs") as event_log:
             app_core = AppCore(llm_service, event_log)
