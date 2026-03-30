@@ -21,6 +21,35 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Tool name formatting helper (`_format_tool_name`)
+> [Detail](./steps/step_1.md) — `formatters.py`, `test_formatters.py`
+
+- [ ] Implementation: add `_format_tool_name()` + unit tests (TestFormatToolName)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Tool output rendering helper (`_render_tool_output`)
+> [Detail](./steps/step_2.md) — `formatters.py`, `test_formatters.py`
+
+- [ ] Implementation: add `_render_tool_output()` + `_RENDERED_TRUNCATION_LIMIT` constant + unit tests (TestRenderToolOutput)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Rendered format branch in `print_stream_event`
+> [Detail](./steps/step_3.md) — `formatters.py`, `test_formatters.py`
+
+- [ ] Implementation: add `rendered` branch in `print_stream_event()` + `_RENDERED_INLINE_ARG_LIMIT` constant + unit tests (TestRenderedStreamFormat)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: CLI wiring — parser + prompt command + test updates
+> [Detail](./steps/step_4.md) — `parsers.py`, `prompt.py`, test files
+
+- [ ] Implementation: add `rendered` to parser choices/default, add to streaming format tuple in `prompt.py`, update affected tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: verify all steps integrated correctly
+- [ ] PR summary prepared
