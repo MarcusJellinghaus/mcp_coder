@@ -155,6 +155,39 @@ def test_bundled_labels_schema_validation() -> None:
             ), f"Label {label['internal_id']}: stale_timeout_minutes must be positive"
 
 
+ERROR_STATUS_IDS = [
+    "planning_failed",
+    "implementing_failed",
+    "ci_fix_needed",
+    "llm_timeout",
+    "pr_creating_failed",
+]
+
+
+@pytest.mark.parametrize("internal_id", ERROR_STATUS_IDS)
+def test_error_statuses_have_vscodeclaude_commands(internal_id: str) -> None:
+    """Error statuses must have commands so a Claude session launches."""
+    config = load_labels_config(get_labels_config_path(None))
+    label = next(
+        l for l in config["workflow_labels"] if l["internal_id"] == internal_id
+    )
+    assert "vscodeclaude" in label, f"{internal_id}: missing vscodeclaude block"
+    assert label["vscodeclaude"].get("commands") == ["/check_branch_status"], (
+        f"{internal_id}: expected commands=['/check_branch_status'], "
+        f"got {label['vscodeclaude'].get('commands')}"
+    )
+
+
+def test_pr_created_has_no_commands() -> None:
+    """status-10:pr-created intentionally has no commands."""
+    config = load_labels_config(get_labels_config_path(None))
+    label = next(
+        l for l in config["workflow_labels"] if l["internal_id"] == "pr_created"
+    )
+    assert "vscodeclaude" in label
+    assert "commands" not in label["vscodeclaude"]
+
+
 def test_load_labels_config_missing_workflow_labels_key(tmp_path: Path) -> None:
     """Test error handling for missing workflow_labels key"""
     # Create a temporary file with valid JSON but missing required key
