@@ -42,6 +42,9 @@ class AppCore:
         - Other text: return Response(send_to_llm=True) so UI can start streaming
 
         Always emits "input_received" event for non-empty input.
+
+        Returns:
+            Response with command output or send_to_llm flag.
         """
         text = text.strip()
         if not text:
@@ -64,7 +67,9 @@ class AppCore:
 
         Called by UI layer after handle_input() returns send_to_llm=True.
         Emits events for each stream phase.
-        Yields StreamEvent dicts for UI to render.
+
+        Yields:
+            StreamEvent dicts for UI to render.
         """
         self._event_log.emit("llm_request_start", text=text)
         for event in self._llm_service.stream(text):

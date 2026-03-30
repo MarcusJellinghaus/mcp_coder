@@ -38,7 +38,11 @@ class RealLLMService:
         self._env_vars = env_vars
 
     def stream(self, question: str) -> Iterator[StreamEvent]:
-        """Call prompt_llm_stream() with stored config. Updates session_id from 'done' events."""
+        """Call prompt_llm_stream() with stored config. Updates session_id from 'done' events.
+
+        Yields:
+            StreamEvent dicts from the underlying LLM provider.
+        """
         for event in prompt_llm_stream(
             question,
             provider=self._provider,

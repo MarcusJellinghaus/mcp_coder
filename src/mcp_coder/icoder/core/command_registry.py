@@ -20,6 +20,9 @@ class CommandRegistry:
             @registry.register("/help", "Show available commands")
             def handle_help(args: list[str]) -> Response:
                 ...
+
+        Returns:
+            Decorator that registers the handler function.
         """
 
         def decorator(
@@ -35,8 +38,10 @@ class CommandRegistry:
     def dispatch(self, text: str) -> Response | None:
         """Parse input and dispatch to registered handler.
 
-        Returns Response if input is a slash command, None if not.
         Unrecognized slash commands return an error Response.
+
+        Returns:
+            Response if input is a slash command, None if not.
         """
         text = text.strip()
         if not text or not text.startswith("/"):
@@ -59,7 +64,11 @@ class CommandRegistry:
 
 
 def create_default_registry() -> CommandRegistry:
-    """Create registry with all built-in commands registered."""
+    """Create registry with all built-in commands registered.
+
+    Returns:
+        CommandRegistry with help, clear, and quit commands.
+    """
     # Import here to avoid circular imports
     from mcp_coder.icoder.core.commands.clear import register_clear
     from mcp_coder.icoder.core.commands.help import register_help
