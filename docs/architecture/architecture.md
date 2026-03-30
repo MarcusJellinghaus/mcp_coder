@@ -201,6 +201,26 @@ mcp-coder implement --project-dir /path/to/project
   - `commit.py` - Git commit operations (tests: `cli/commands/test_commit.py`)
   - `help.py` - Documentation and usage (tests: `cli/commands/test_help.py`)
   - `verify.py` - System verification (tests: `cli/commands/test_verify.py`)
+  - `icoder.py` - iCoder TUI launcher (tests: `cli/commands/test_cli_icoder.py`)
+
+### iCoder Interactive TUI (`src/mcp_coder/icoder/`)
+Interactive terminal chat for LLM-assisted coding. Three-layer architecture maximizes testability by keeping all logic outside the UI layer.
+
+- **Core layer** (`icoder/core/`): Plain Python, no Textual dependency. Owns command registry, input routing, event log. Exposes `handle_input(text) → Response`. Directly testable with pytest.
+  - `types.py` - Response, Command, EventEntry dataclasses
+  - `event_log.py` - Structured event log (in-memory + JSONL file output)
+  - `command_registry.py` - Slash command registry with decorator-based registration
+  - `app_core.py` - Central input router: commands or LLM
+  - `commands/` - Built-in slash command handlers (`/help`, `/clear`, `/quit`)
+- **Services layer** (`icoder/services/`): IO abstractions. `LLMService` Protocol wraps `prompt_llm_stream()`. `FakeLLMService` provides deterministic test doubles.
+  - `llm_service.py` - LLMService Protocol, RealLLMService, FakeLLMService
+- **UI layer** (`icoder/ui/`): Thin Textual shell. Translates UI events to `core.handle_input()` calls and renders responses. Uses `run_worker(thread=True)` + `call_from_thread()` to bridge the sync LLM iterator into the async event loop.
+  - `app.py` - ICoderApp(App) wiring UI events to AppCore
+  - `styles.py` - CSS / theming
+  - `widgets/output_log.py` - RichLog-based scrollable output
+  - `widgets/input_area.py` - TextArea with Enter=submit, Shift-Enter=newline
+- **Tests** (`tests/icoder/`): Unit tests for each layer + Textual pilot integration tests + SVG snapshot tests (🏷️ textual_integration)
+- **Optional dependency**: `pip install mcp-coder[tui]` (Textual)
 
 
 
@@ -347,9 +367,13 @@ mcp-coder implement --project-dir /path/to/project
   - `llm_integration`: End-to-end LLM prompt tests (network, auth needed)
     - **When to use**: Testing real LLM round-trips across any provider
     - **Requirements**: Valid API keys or CLI auth for the active provider
+  - `textual_integration`: Textual TUI tests (headless app, pilot, snapshots) in `tests/icoder/`
+    - **When to use**: Testing iCoder TUI behavior, widget interactions, visual snapshots
+    - **Requirements**: Textual package installed (`pip install mcp-coder[tui]`)
+    - **Note**: Snapshot tests are Windows-only to avoid baseline drift
 - **Fast development**: Use exclusion pattern to skip slow integration tests
 - **Parallel execution**: Always use `extra_args: ["-n", "auto"]`
-- **Recommended**: `"-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration and not llm_integration"`
+- **Recommended**: `"-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration and not llm_integration and not textual_integration"`
 - **Integration testing**: Use specific markers when developing integration features
 - **CI/CD**: Run all tests including integration tests in automated pipelines
 

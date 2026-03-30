@@ -30,6 +30,15 @@ End-to-end development automation from planning to pull requests.
 | [`implement`](#implement) | Execute implementation workflow from task tracker |
 | [`create-pr`](#create-pr) | Create pull request with AI-generated summary |
 
+### Interactive Development
+Interactive coding tools and local workspace management.
+
+| Command | Description |
+|---------|-------------|
+| [`icoder`](#icoder) | Interactive terminal chat for LLM-assisted coding |
+| [`vscodeclaude launch`](#vscodeclaude-launch) | Launch VS Code sessions for issues needing human review |
+| [`vscodeclaude status`](#vscodeclaude-status) | Show current VS Code session status |
+
 ### Coordinating Automated Development
 Orchestration and monitoring of automated development across repositories.
 
@@ -37,8 +46,6 @@ Orchestration and monitoring of automated development across repositories.
 |---------|-------------|
 | [`coordinator --dry-run`](#coordinator) | Trigger Jenkins integration test for repository |
 | [`coordinator`](#coordinator) | Monitor and dispatch workflows for GitHub issues |
-| [`vscodeclaude launch`](#vscodeclaude-launch) | Launch VS Code sessions for issues needing human review |
-| [`vscodeclaude status`](#vscodeclaude-status) | Show current VS Code session status |
 
 ### Quality Checks
 Branch readiness verification and code quality tools.
@@ -144,6 +151,50 @@ mcp-coder prompt "What's next?" --continue-session
 
 # Use verbose output with MCP config
 mcp-coder prompt "Review my implementation" --verbosity verbose --mcp-config .mcp.linux.json
+```
+
+---
+
+### icoder
+
+Interactive terminal chat for LLM-assisted coding.
+
+```bash
+mcp-coder icoder [OPTIONS]
+```
+
+**Description:** Launch an interactive Textual TUI for conversational coding with LLMs. Provides a terminal-based chat interface with streaming responses, slash commands, and session persistence across restarts.
+
+**Requires:** `pip install mcp-coder[tui]` (installs Textual dependency)
+
+**Options:**
+- `--llm-method METHOD` - LLM provider: `claude` (default) or `langchain`
+- `--mcp-config PATH` - Path to MCP configuration file
+- `--project-dir PATH` - Project directory path (default: current directory)
+- `--execution-dir PATH` - Working directory for Claude subprocess
+
+**Built-in commands:**
+- `/help` - Show available commands
+- `/clear` - Clear the output area
+- `/quit` - Exit the application
+
+**Features:**
+- Streaming LLM responses displayed progressively
+- Automatic session resumption (picks up last session on restart)
+- Structured event log written to `logs/icoder_<timestamp>.jsonl`
+- MCP tool calls shown in compact format
+- Shift+Enter for multi-line input, Enter to submit
+
+**Examples:**
+```bash
+# Launch with default settings
+mcp-coder icoder
+
+# Use LangChain provider
+mcp-coder icoder --llm-method langchain
+
+# Specify project and MCP config
+mcp-coder icoder --project-dir /path/to/project --mcp-config .mcp.linux.json
 ```
 
 ---
@@ -833,6 +884,7 @@ is configured via the `MCP_CODER_MCP_CONFIG` environment variable or
 
 **Commands supporting `--mcp-config`:**
 - `prompt`
+- `icoder`
 - `commit auto`
 - `implement`
 - `create-plan`

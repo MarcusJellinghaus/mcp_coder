@@ -89,9 +89,20 @@
 
 **Status:** No changes needed
 
+## Post-Review: Documentation & CI Updates — 2026-03-30
+
+**Changes:**
+- Added `icoder` to CLI help system (COMMAND_CATEGORIES in help.py)
+- Added icoder command section to `docs/cli-reference.md` with full docs
+- Added iCoder section to architecture.md Building Block View (Section 5)
+- Added `textual_integration` marker to architecture.md test markers (Section 8)
+- Updated CI `ci.yml` unit-tests exclusion to include `textual_integration`
+- Updated `pyproject.toml` recommended exclusion pattern and marker list
+- Moved vscodeclaude commands to new "Interactive Development" section in cli-reference.md
+
 ## Final Status
 
-- **Rounds:** 4
-- **Commits produced:** 3 (3d5fa4b, 18d487e, edd656d)
+- **Review rounds:** 4 (3 with code changes)
+- **Commits produced:** 3 review fixes + 1 documentation update
 - **All checks pass:** pylint, mypy, pytest (3025 tests), ruff
-- **Remaining notes:** `_replace_via_keyboard` private API usage is a known fragility (skipped — no public alternative). Architecture docs update deferred to follow-up issue.
+- **Remaining notes:** `_replace_via_keyboard` private API usage is a known fragility (skipped — no public alternative).
