@@ -209,3 +209,22 @@ _.__enter__
 _.__exit__
 _.__aenter__
 _.__aexit__
+
+# =============================================================================
+# FALSE POSITIVES - iCoder TUI (Textual Framework)
+# =============================================================================
+# Textual framework calls these methods via its component lifecycle and message system.
+# They are registered/discovered by the framework, not called directly.
+
+# icoder/core/commands/*.py - Command handlers registered in CommandRegistry
+_.handle_clear
+_.handle_help
+_.handle_quit
+
+# icoder/ui/app.py - Textual lifecycle and message handlers
+_.compose
+_.on_mount
+_.on_input_area_input_submitted
+
+# tests/icoder/test_command_registry.py - Test command handler
+_.handle_test

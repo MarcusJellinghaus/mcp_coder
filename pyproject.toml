@@ -32,6 +32,7 @@ dependencies = [
     "mcp-workspace",
     "psutil>=5.9.0",
     "tabulate>=0.9.0",
+    "textual>=1.0.0",
     "pywin32>=306; sys_platform == 'win32'",
 ]
 
@@ -47,6 +48,7 @@ types = [
 test = [
     "pytest-asyncio",
     "pytest-xdist",
+    "pytest-textual-snapshot>=1.0.0",
 ]
 
 # MCP servers - for local development (execution env already has these)
@@ -75,9 +77,14 @@ langchain = [
     "httpx>=0.27.0",
 ]
 
+# Textual TUI - dev tooling for interactive coding interface
+tui = [
+    "textual-dev>=1.0.0",
+]
+
 # Full development setup - combines all groups for local development
 dev = [
-    "mcp-coder[types,test,mcp,langchain,mlflow]",
+    "mcp-coder[types,test,mcp,langchain,mlflow,tui]",
     "import-linter>=2.0",
     "pycycle>=0.0.8",
     "pydeps>=3.0.0",
@@ -122,17 +129,19 @@ markers = [
     "llm_integration: end-to-end tests with real LLM call, real MLflow logging, real DB check (slow, requires provider credentials)",
     "langchain_integration: tests requiring LangChain and provider API access (network, auth needed)",
     "integration: general integration tests",
+    "textual_integration: tests requiring Textual TUI (headless app, pilot, snapshots)",
     "execution_dir: tests for --execution-dir feature",
 ]
 # RECOMMENDED usage patterns:
 # pytest (no markers) - All unit tests (fast, mocked, default for CI)
-# -m "not claude_cli_integration and not claude_api_integration and not git_integration and not formatter_integration and not github_integration and not langchain_integration" - All unit tests (explicit)
+# -m "not claude_cli_integration and not claude_api_integration and not git_integration and not formatter_integration and not github_integration and not langchain_integration and not textual_integration" - All unit tests (explicit)
 # -m "claude_cli_integration"
 # -m "claude_api_integration"
 # -m "git_integration"
 # -m "checker_integration"
 # -m "formatter_integration"
 # -m "github_integration"
+# -m "textual_integration"
 
 # Default pytest options:
 # --strict-markers: Fail if unknown markers are used (prevents typos)
