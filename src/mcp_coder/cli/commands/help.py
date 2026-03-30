@@ -43,8 +43,9 @@ COMMAND_CATEGORIES: list[Category] = [
     ),
     Category(
         name="INTERACTIVE DEVELOPMENT",
-        description="Manage local workspaces and VSCode sessions.",
+        description="Interactive coding tools and local workspace management.",
         commands=[
+            Command("icoder", "Interactive terminal chat for LLM-assisted coding"),
             Command("vscodeclaude launch", "Launch VSCode/Claude session for issues"),
             Command("vscodeclaude status", "Show current VSCode/Claude sessions"),
         ],

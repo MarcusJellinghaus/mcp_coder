@@ -134,13 +134,14 @@ markers = [
 ]
 # RECOMMENDED usage patterns:
 # pytest (no markers) - All unit tests (fast, mocked, default for CI)
-# -m "not claude_cli_integration and not claude_api_integration and not git_integration and not formatter_integration and not github_integration and not langchain_integration" - All unit tests (explicit)
+# -m "not claude_cli_integration and not claude_api_integration and not git_integration and not formatter_integration and not github_integration and not langchain_integration and not textual_integration" - All unit tests (explicit)
 # -m "claude_cli_integration"
 # -m "claude_api_integration"
 # -m "git_integration"
 # -m "checker_integration"
 # -m "formatter_integration"
 # -m "github_integration"
+# -m "textual_integration"
 
 # Default pytest options:
 # --strict-markers: Fail if unknown markers are used (prevents typos)
