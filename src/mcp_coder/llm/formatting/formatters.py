@@ -251,6 +251,9 @@ def _format_tool_name(name: str) -> str:
       mcp__workspace__read_file  → workspace > read_file
       mcp__tools-py__run_pytest  → tools-py > run_pytest
       Bash                       → Bash (unchanged)
+
+    Returns:
+        Shortened display name for the tool.
     """
     if name.startswith("mcp__"):
         rest = name[5:]
