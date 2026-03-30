@@ -30,7 +30,8 @@ tool_names = [(t.name, t.description or "") for t in tools.tools]
 1. **Update `_make_tools_response_with_names`** to also set `.description` on each mock (accept `list[tuple[str, str]]`).
 2. **Add new helper** `_make_tools_response_with_descriptions(tools: list[tuple[str, str]])` — creates mocks with both `.name` and `.description` attributes.
 3. **Update `test_server_success_includes_tool_names`** — assert `tool_names` contains tuples `(name, description)` instead of plain strings.
-4. **Add `test_server_success_includes_tool_descriptions`** — verify descriptions are captured, including empty string for `None` descriptions.
+4. **Update `_make_tools_response(count)`** — set `.description = None` on each mock tool, so that `t.description or ""` correctly yields `""` instead of a MagicMock object.
+5. **Add `test_server_success_includes_tool_descriptions`** — verify descriptions are captured, including empty string for `None` descriptions.
 
 ### Test signatures
 

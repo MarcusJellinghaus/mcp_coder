@@ -56,8 +56,8 @@ Replace the comma-separated tool list with per-tool indented lines.
 
 ```python
 # 1. Compute global max tool name width across ALL servers
-max_name = max(len(name) for srv in servers.values()
-               if srv.get("tool_names") for name, _ in srv["tool_names"])
+max_name = max((len(name) for srv in servers.values()
+               if srv.get("tool_names") for name, _ in srv["tool_names"]), default=0)
 
 # 2. For each server:
 #    a. Print status line: "  {server:<20s} {symbol} {value}"
@@ -113,6 +113,9 @@ def test_list_mcp_tools_failed_server_shows_error(self) -> None:
 
 def test_list_mcp_tools_false_still_shows_comma_format(self) -> None:
     """Default mode with tuple data still produces comma-separated output."""
+
+def test_list_mcp_tools_all_servers_failed(self) -> None:
+    """All servers failed — no crash, no tool lines rendered."""
 ```
 
 ### `test_verify_orchestration.py`
