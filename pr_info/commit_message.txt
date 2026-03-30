@@ -1,0 +1,6 @@
+feat(icoder): add LLM service protocol and implementations
+
+Add LLMService Protocol with stream() and session_id for dependency
+injection, RealLLMService wrapping prompt_llm_stream(), and
+FakeLLMService for deterministic testing with canned responses.
+Both implementations track session_id from done events.

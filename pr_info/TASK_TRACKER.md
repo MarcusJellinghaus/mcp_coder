@@ -45,9 +45,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 4: LLM Service Protocol
 > [step_4.md](./steps/step_4.md) — Create LLMService Protocol, RealLLMService wrapping prompt_llm_stream(), and FakeLLMService for testing
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: AppCore — Central Input Routing
 > [step_5.md](./steps/step_5.md) — Implement AppCore coordinator that routes input to commands or LLM, manages session state, emits events
