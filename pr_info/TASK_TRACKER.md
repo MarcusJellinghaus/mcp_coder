@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `Add --list-mcp-tools flag to verify parser (#639)`
 
 ### Step 2: Return tool descriptions from `_check_servers()`
-- [ ] Implementation: tests (`test_mcp_health_check.py`) + production code (`verification.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `Include tool descriptions in MCP server health check (#639)`
+- [x] Implementation: tests (`test_mcp_health_check.py`) + production code (`verification.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `Include tool descriptions in MCP server health check (#639)`
 
 ### Step 3: Render detailed MCP tool listing + orchestrator passthrough
 - [ ] Implementation: tests (`test_verify_format_section.py`, `test_verify_orchestration.py`) + production code (`verify.py`)

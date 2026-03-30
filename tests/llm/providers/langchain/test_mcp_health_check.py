@@ -15,6 +15,8 @@ from mcp_coder.llm.providers.langchain.verification import verify_mcp_servers
 def _make_tools_response(count: int) -> MagicMock:
     """Create a mock ListToolsResult with *count* tools."""
     tool_mocks = [MagicMock() for _ in range(count)]
+    for mock in tool_mocks:
+        mock.description = None
     result = MagicMock()
     result.tools = tool_mocks
     return result
@@ -25,6 +27,20 @@ def _make_tools_response_with_names(names: list[str]) -> MagicMock:
     tool_mocks = [MagicMock() for _ in names]
     for mock, tool_name in zip(tool_mocks, names):
         mock.name = tool_name
+        mock.description = None
+    result = MagicMock()
+    result.tools = tool_mocks
+    return result
+
+
+def _make_tools_response_with_descriptions(
+    tools: list[tuple[str, str]],
+) -> MagicMock:
+    """Create a mock ListToolsResult with named tools and descriptions."""
+    tool_mocks = [MagicMock() for _ in tools]
+    for mock, (tool_name, desc) in zip(tool_mocks, tools):
+        mock.name = tool_name
+        mock.description = desc if desc else None
     result = MagicMock()
     result.tools = tool_mocks
     return result
@@ -202,7 +218,56 @@ class TestVerifyMcpServers:
 
         server_result = result["servers"]["tools-py"]
         assert server_result["ok"] is True
-        assert server_result["tool_names"] == ["read_file", "save_file", "edit_file"]
+        assert server_result["tool_names"] == [
+            ("read_file", ""),
+            ("save_file", ""),
+            ("edit_file", ""),
+        ]
+
+    @patch(
+        "mcp_coder.llm.providers.langchain.verification._load_mcp_server_config",
+    )
+    def test_server_success_includes_tool_descriptions(
+        self, mock_load: MagicMock
+    ) -> None:
+        """Successful server result includes tool descriptions in tuples."""
+        mock_load.return_value = {
+            "workspace": {
+                "command": "python",
+                "args": ["-m", "workspace"],
+                "transport": "stdio",
+            },
+        }
+
+        tools_with_descs = [
+            ("read_file", "Read file contents"),
+            ("save_file", "Write content to a file"),
+            ("edit_file", ""),
+        ]
+        mock_session = AsyncMock()
+        mock_session.list_tools.return_value = _make_tools_response_with_descriptions(
+            tools_with_descs
+        )
+
+        mock_client = MagicMock()
+        mock_client.session.return_value.__aenter__ = AsyncMock(
+            return_value=mock_session
+        )
+        mock_client.session.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        with patch(
+            "mcp_coder.llm.providers.langchain.verification._import_mcp_client",
+            return_value=lambda cfg: mock_client,
+        ):
+            result = verify_mcp_servers("/fake/path/.mcp.json")
+
+        server_result = result["servers"]["workspace"]
+        assert server_result["ok"] is True
+        assert server_result["tool_names"] == [
+            ("read_file", "Read file contents"),
+            ("save_file", "Write content to a file"),
+            ("edit_file", ""),
+        ]
 
     @patch(
         "mcp_coder.llm.providers.langchain.verification._load_mcp_server_config",
