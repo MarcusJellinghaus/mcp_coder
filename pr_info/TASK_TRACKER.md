@@ -24,9 +24,20 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Tool name formatting helper (`_format_tool_name`)
 > [Detail](./steps/step_1.md) — `formatters.py`, `test_formatters.py`
 
-- [ ] Implementation: add `_format_tool_name()` + unit tests (TestFormatToolName)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `_format_tool_name()` + unit tests (TestFormatToolName)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
+
+**Commit message:**
+```
+feat: add _format_tool_name() helper for rendered output format
+
+Add private helper that strips mcp__ prefix and splits on first
+remaining __ to produce human-readable server > tool display names.
+Built-in tool names pass through unchanged. Includes unit tests.
+
+Part of #642 (rendered output format) - Step 1/4.
+```
 
 ### Step 2: Tool output rendering helper (`_render_tool_output`)
 > [Detail](./steps/step_2.md) — `formatters.py`, `test_formatters.py`

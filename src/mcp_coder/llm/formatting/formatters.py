@@ -202,6 +202,23 @@ def format_raw_response(response_data: Dict[str, Any]) -> str:
     return "\n".join(formatted_parts)
 
 
+def _format_tool_name(name: str) -> str:
+    """Format tool name for rendered display.
+
+    Strip 'mcp__' prefix, split on first remaining '__':
+      mcp__workspace__read_file  → workspace > read_file
+      mcp__tools-py__run_pytest  → tools-py > run_pytest
+      Bash                       → Bash (unchanged)
+    """
+    if name.startswith("mcp__"):
+        rest = name[5:]
+        server, _, tool = rest.partition("__")
+        if tool:
+            return f"{server} > {tool}"
+        return server
+    return name
+
+
 def _format_tool_args(args: object) -> str:
     """Format tool arguments for text display.
 

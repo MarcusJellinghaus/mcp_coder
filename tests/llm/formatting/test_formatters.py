@@ -267,6 +267,37 @@ class TestStreamFormatComparison:
         assert "Hello" not in raw_output
 
 
+class TestFormatToolName:
+    """Tests for _format_tool_name() helper."""
+
+    def test_mcp_name_two_segments(self) -> None:
+        """MCP name with two segments formats as 'server > tool'."""
+        from mcp_coder.llm.formatting.formatters import _format_tool_name
+
+        assert _format_tool_name("mcp__workspace__read_file") == "workspace > read_file"
+
+    def test_mcp_name_hyphenated_server(self) -> None:
+        """MCP name with hyphenated server preserves hyphen."""
+        from mcp_coder.llm.formatting.formatters import _format_tool_name
+
+        assert (
+            _format_tool_name("mcp__tools-py__run_pytest_check")
+            == "tools-py > run_pytest_check"
+        )
+
+    def test_builtin_tool_name(self) -> None:
+        """Built-in tool name passes through unchanged."""
+        from mcp_coder.llm.formatting.formatters import _format_tool_name
+
+        assert _format_tool_name("Bash") == "Bash"
+
+    def test_mcp_name_single_segment(self) -> None:
+        """MCP name with only one segment returns just the server name."""
+        from mcp_coder.llm.formatting.formatters import _format_tool_name
+
+        assert _format_tool_name("mcp__something") == "something"
+
+
 class TestPrintStreamEvent:
     """Tests for print_stream_event() function."""
 
