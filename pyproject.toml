@@ -75,9 +75,15 @@ langchain = [
     "httpx>=0.27.0",
 ]
 
+# Textual TUI - for interactive coding interface
+tui = [
+    "textual>=1.0.0",
+    "textual-dev>=1.0.0",
+]
+
 # Full development setup - combines all groups for local development
 dev = [
-    "mcp-coder[types,test,mcp,langchain,mlflow]",
+    "mcp-coder[types,test,mcp,langchain,mlflow,tui]",
     "import-linter>=2.0",
     "pycycle>=0.0.8",
     "pydeps>=3.0.0",
