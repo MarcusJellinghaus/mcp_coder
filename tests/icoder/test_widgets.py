@@ -8,6 +8,8 @@ from textual.app import App, ComposeResult
 from mcp_coder.icoder.ui.widgets.input_area import InputArea
 from mcp_coder.icoder.ui.widgets.output_log import OutputLog
 
+pytestmark = pytest.mark.textual_integration
+
 
 class WidgetTestApp(App[None]):
     """Minimal test app that hosts the widgets."""

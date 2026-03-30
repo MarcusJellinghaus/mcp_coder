@@ -77,7 +77,7 @@ Do NOT call `ruff` directly — always use the script in `tools/`.
 
 ```python
 # RECOMMENDED: Fast unit tests (excludes all integration tests)
-mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration and not llm_integration"])
+mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration and not llm_integration and not textual_integration"])
 
 # All tests including slow integration tests (not recommended for regular development)
 mcp__tools-py__run_pytest_check(extra_args=["-n", "auto"])

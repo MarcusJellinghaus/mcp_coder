@@ -32,7 +32,7 @@ include_external_packages = True
 name = Layered Architecture
 type = layers
 layers =
-    mcp_coder.cli
+    mcp_coder.cli | mcp_coder.icoder
     mcp_coder.workflows
     mcp_coder.checks
     mcp_coder.workflow_utils
@@ -416,6 +416,22 @@ forbidden_modules =
     isort
 
 
+# -----------------------------------------------------------------------------
+# Contract: Textual Library Isolation
+# -----------------------------------------------------------------------------
+# The 'textual' library should only be used by icoder.ui.
+# Other modules must not depend on the TUI framework directly.
+# -----------------------------------------------------------------------------
+[importlinter:contract:textual_library_isolation]
+name = Textual Library Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    textual
+ignore_imports =
+    mcp_coder.icoder.ui.** -> textual
+
 # =============================================================================
 # TEST MODULE CONTRACTS
 # =============================================================================
@@ -469,6 +485,7 @@ modules =
     tests.formatters
     tests.workflow_utils
     tests.checks
+    tests.icoder
 # Allowed: Importing shared fixtures from tests.utils.conftest
 # TODO: Refactor to use pytest's conftest discovery instead of explicit imports
 ignore_imports =
