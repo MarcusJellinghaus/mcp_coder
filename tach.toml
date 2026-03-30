@@ -64,6 +64,7 @@ depends_on = [
     { path = "mcp_coder.config" },        # Configuration management
     { path = "mcp_coder.constants" },     # Shared constants
     { path = "mcp_coder.mcp_tools_py" }, # MCP code checking tools
+    { path = "mcp_coder.icoder" },       # Interactive TUI
 ]
 
 [[modules]]

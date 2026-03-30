@@ -34,6 +34,11 @@ type = layers
 layers =
     mcp_coder.cli | mcp_coder.icoder
     mcp_coder.workflows
+ignore_imports =
+    mcp_coder.cli.commands.icoder -> mcp_coder.icoder.ui.app
+    mcp_coder.cli.commands.icoder -> mcp_coder.icoder.services.llm_service
+    mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.app_core
+    mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.event_log
     mcp_coder.checks
     mcp_coder.workflow_utils
     mcp_coder.llm | mcp_coder.formatters | mcp_coder.prompt_manager
