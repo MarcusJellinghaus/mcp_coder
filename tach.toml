@@ -403,6 +403,7 @@ depends_on = [
     { path = "mcp_coder.config" },
     { path = "mcp_coder.constants" },
     { path = "mcp_coder.mcp_tools_py" },
+    { path = "mcp_coder.icoder" },
 ]
 
 # -----------------------------------------------------------------------------
