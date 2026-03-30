@@ -165,8 +165,6 @@ mcp-coder icoder [OPTIONS]
 
 **Description:** Launch an interactive Textual TUI for conversational coding with LLMs. Provides a terminal-based chat interface with streaming responses, slash commands, and session persistence across restarts.
 
-**Requires:** `pip install mcp-coder[tui]` (installs Textual dependency)
-
 **Options:**
 - `--llm-method METHOD` - LLM provider: `claude` (default) or `langchain`
 - `--mcp-config PATH` - Path to MCP configuration file
