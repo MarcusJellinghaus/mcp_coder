@@ -202,6 +202,47 @@ def format_raw_response(response_data: Dict[str, Any]) -> str:
     return "\n".join(formatted_parts)
 
 
+_RENDERED_TRUNCATION_LIMIT = 5
+
+
+def _render_tool_output(output: str) -> tuple[list[str], int]:
+    """Render tool output into display lines with truncation.
+
+    1. If output is empty, return ([], 0)
+    2. Try json.loads: if dict, expand top-level keys as "key: value" lines.
+       For string values containing newlines, indent continuation lines.
+    3. If json.loads fails, split output into plain text lines.
+    4. Truncate to _RENDERED_TRUNCATION_LIMIT lines.
+
+    Returns:
+        (display_lines, total_line_count) — display_lines may be shorter
+        than total_line_count if truncated.
+    """
+    if not output:
+        return ([], 0)
+    try:
+        parsed = json.loads(output)
+        if isinstance(parsed, dict):
+            lines: list[str] = []
+            for key, value in parsed.items():
+                if isinstance(value, str) and "\n" in value:
+                    lines.append(f"{key}:")
+                    for subline in value.splitlines():
+                        lines.append(f"  {subline}")
+                else:
+                    if isinstance(value, str):
+                        lines.append(f"{key}: {value}")
+                    else:
+                        lines.append(f"{key}: {json.dumps(value)}")
+        else:
+            lines = str(parsed).splitlines()
+    except (json.JSONDecodeError, ValueError):
+        lines = output.splitlines()
+    total = len(lines)
+    truncated = lines[:_RENDERED_TRUNCATION_LIMIT]
+    return (truncated, total)
+
+
 def _format_tool_name(name: str) -> str:
     """Format tool name for rendered display.
 

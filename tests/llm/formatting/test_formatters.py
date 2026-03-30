@@ -298,6 +298,82 @@ class TestFormatToolName:
         assert _format_tool_name("mcp__something") == "something"
 
 
+class TestRenderToolOutput:
+    """Tests for _render_tool_output() helper."""
+
+    def test_empty_output(self) -> None:
+        """Empty output returns ([], 0)."""
+        from mcp_coder.llm.formatting.formatters import _render_tool_output
+
+        assert _render_tool_output("") == ([], 0)
+
+    def test_short_plain_text(self) -> None:
+        """Short plain text returns all lines."""
+        from mcp_coder.llm.formatting.formatters import _render_tool_output
+
+        lines, total = _render_tool_output("line one\nline two")
+        assert lines == ["line one", "line two"]
+        assert total == 2
+
+    def test_long_plain_text_truncated(self) -> None:
+        """Plain text longer than limit is truncated."""
+        from mcp_coder.llm.formatting.formatters import _render_tool_output
+
+        text = "\n".join(f"line {i}" for i in range(10))
+        lines, total = _render_tool_output(text)
+        assert len(lines) == 5
+        assert total == 10
+        assert lines[0] == "line 0"
+        assert lines[4] == "line 4"
+
+    def test_json_dict_simple_values(self) -> None:
+        """JSON dict with simple values expands to key: value lines."""
+        import json
+
+        from mcp_coder.llm.formatting.formatters import _render_tool_output
+
+        data = {"success": True, "count": 42}
+        lines, total = _render_tool_output(json.dumps(data))
+        assert lines == ["success: true", "count: 42"]
+        assert total == 2
+
+    def test_json_dict_multiline_string(self) -> None:
+        """JSON dict with multiline string value indents continuation lines."""
+        import json
+
+        from mcp_coder.llm.formatting.formatters import _render_tool_output
+
+        data = {"success": True, "diff": "@@ -1 @@\n-foo\n+bar"}
+        lines, total = _render_tool_output(json.dumps(data))
+        assert lines == [
+            "success: true",
+            "diff:",
+            "  @@ -1 @@",
+            "  -foo",
+            "  +bar",
+        ]
+        assert total == 5
+
+    def test_non_dict_json(self) -> None:
+        """Non-dict JSON (array) falls back to str().splitlines()."""
+        import json
+
+        from mcp_coder.llm.formatting.formatters import _render_tool_output
+
+        data = [1, 2, 3]
+        lines, total = _render_tool_output(json.dumps(data))
+        assert lines == ["[1, 2, 3]"]
+        assert total == 1
+
+    def test_invalid_json(self) -> None:
+        """Invalid JSON falls back to plain text splitting."""
+        from mcp_coder.llm.formatting.formatters import _render_tool_output
+
+        lines, total = _render_tool_output("not json at all\nsecond line")
+        assert lines == ["not json at all", "second line"]
+        assert total == 2
+
+
 class TestPrintStreamEvent:
     """Tests for print_stream_event() function."""
 

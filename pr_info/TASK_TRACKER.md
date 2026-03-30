@@ -42,9 +42,22 @@ Part of #642 (rendered output format) - Step 1/4.
 ### Step 2: Tool output rendering helper (`_render_tool_output`)
 > [Detail](./steps/step_2.md) — `formatters.py`, `test_formatters.py`
 
-- [ ] Implementation: add `_render_tool_output()` + `_RENDERED_TRUNCATION_LIMIT` constant + unit tests (TestRenderToolOutput)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `_render_tool_output()` + `_RENDERED_TRUNCATION_LIMIT` constant + unit tests (TestRenderToolOutput)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
+
+**Commit message:**
+```
+feat: add _render_tool_output() helper with truncation support
+
+Add _render_tool_output() and _RENDERED_TRUNCATION_LIMIT constant to
+formatters.py. The helper renders tool output into display lines:
+JSON dicts expand top-level keys as key: value with indented
+multiline string values; non-dict JSON and plain text fall back to
+splitlines(). Output is truncated to 5 lines. Includes 7 unit tests.
+
+Part of #642 (rendered output format) - Step 2/4.
+```
 
 ### Step 3: Rendered format branch in `print_stream_event`
 > [Detail](./steps/step_3.md) — `formatters.py`, `test_formatters.py`
