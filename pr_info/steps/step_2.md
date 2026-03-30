@@ -64,6 +64,8 @@ diff:
   +bar
 ```
 
+Nested dicts/lists are serialized as a single-line JSON string via `json.dumps(value)`.
+
 ## DATA
 
 - **Input**: `output` string from `StreamEvent["output"]`

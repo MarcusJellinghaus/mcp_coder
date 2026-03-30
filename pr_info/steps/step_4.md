@@ -13,8 +13,12 @@ assert on the old default.
 - **Modify**: `src/mcp_coder/cli/parsers.py`
 - **Modify**: `src/mcp_coder/cli/commands/prompt.py`
 - **Modify**: `tests/llm/formatting/test_formatters.py` (if any tests depend on default format)
-- **Check**: `tests/cli/commands/test_prompt.py`, `tests/cli/commands/test_prompt_streaming.py`,
-  `tests/cli/test_parsers.py` for tests that may assert on default output format
+- **Modify**: `tests/cli/commands/test_prompt_streaming.py` (update docstring/default references)
+- **Modify**: `tests/cli/commands/test_prompt.py` (update docstring/default references)
+- **Check**: `tests/cli/test_parsers.py` for tests that may assert on default output format
+
+> The test_prompt_streaming.py and test_prompt.py changes are likely just updating a
+> docstring reference or explicit format value to reflect the new default.
 
 ## WHAT — parsers.py (2 edits)
 

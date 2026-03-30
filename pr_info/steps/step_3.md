@@ -25,13 +25,13 @@ No new imports needed — just `json` (already imported).
 
 ```
 display_name = _format_tool_name(name)
-if len(args) <= 2:
-    args_str = ", ".join(f'{k}="{v}"' for k,v in args.items())  # reuse _format_tool_args
+if len(args) <= _RENDERED_INLINE_ARG_LIMIT:
+    args_str = _format_tool_args(args)  # existing helper from formatters.py
     print(f"┌ {display_name}({args_str})")
 else:  # block format
     print(f"┌ {display_name}")
     for key, value in args.items():
-        print(f"│  {key}: {json.dumps(value) if not isinstance(value, str) else json.dumps(value)}")
+        print(f"│  {key}: {json.dumps(value)}")
 ```
 
 ## ALGORITHM — tool_result
@@ -55,6 +55,12 @@ error:       print(message, file=stderr)   # same as text format
 done:        print()                       # final newline
 ```
 
+## CONSTANTS
+
+```python
+_RENDERED_INLINE_ARG_LIMIT = 2  # max args for inline format; more switches to block format
+```
+
 ## DATA
 
 - **Input**: `StreamEvent` dict + `output_format="rendered"`
@@ -74,6 +80,10 @@ All tests use `io.StringIO` buffer passed as `file` to `print_stream_event()`.
 8. **Blank line after `└`** — output ends with `\n` after `└ done`
 9. **Error to stderr** — same behavior as text format
 10. **Done event** — prints newline
+
+**Note:** Use `@pytest.mark.parametrize` to group related cases:
+- Tests 1/9/10 (non-tool events: text_delta, error, done) as parametrized
+- Tests 4/5/6/7 (result variations: short, long, JSON, empty) as parametrized
 
 ## LLM Prompt
 
