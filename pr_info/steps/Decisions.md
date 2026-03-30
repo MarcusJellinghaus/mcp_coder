@@ -33,3 +33,9 @@
 
 ## Decision 7: Use EventLog as context manager in execute_icoder
 - The algorithm in step 6 uses `with EventLog(...) as event_log:` instead of manual close()
+
+## Decision 8: OutputLog exposes a `lines` property for test assertions
+- `OutputLog` maintains an internal `_lines: list[str]` buffer
+- `append_text()` and `append_tool_use()` append to `self._lines`
+- Read-only `lines` property exposes the buffer
+- Gives Step 8 pilot tests a clean way to assert on content (e.g., `assert "> hello world" in output.lines`)

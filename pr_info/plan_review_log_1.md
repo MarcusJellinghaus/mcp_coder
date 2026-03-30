@@ -41,3 +41,33 @@
 
 **Status**: Committing changes
 
+
+## Round 2 — 2026-03-30 (Verification Pass)
+
+**Findings**:
+- All 7 Round 1 fixes verified as properly applied
+- (CRITICAL) Step 8: Pilot tests reference `output.lines` which doesn't exist on Textual's `RichLog`
+- (ACCEPT) Step dependencies correct after renumbering (1→9 chain verified)
+- (ACCEPT) summary.md accurately reflects all 9 steps
+- (ACCEPT) Step 4 StreamEvent type reference is correct
+- (ACCEPT) Step 9 snapshot test pattern acceptable as guide
+- (ACCEPT) No docs/ update needed yet (initial setup, follow-up issue)
+
+**Decisions**:
+- Accept critical finding: add `OutputLog.lines` property in Step 7 for test assertions
+- All other findings acceptable as-is
+
+**User decisions**: None needed
+
+**Changes**:
+- step_7.md: Added `_lines: list[str]` + `lines` property to OutputLog; added test
+- Decisions.md: Added Decision 8 (OutputLog.lines property)
+
+**Status**: Committing changes
+
+## Final Status
+
+**Rounds**: 2
+**Commits**: 2 (Round 1 fixes + Round 2 fix)
+**Plan status**: Ready for approval — all critical findings resolved, 9-step plan is coherent and complete
+**Note**: Branch is behind main — recommend running `/rebase` before starting implementation

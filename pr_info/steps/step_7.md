@@ -32,12 +32,18 @@ CSS: str = """
 ```python
 class OutputLog(RichLog):
     """Scrollable output area for conversation display."""
-    
+    # Internal line buffer for testability
+    _lines: list[str]
+
+    @property
+    def lines(self) -> list[str]:
+        """Return recorded output lines (for testing/assertions)."""
+
     def append_text(self, text: str) -> None:
-        """Write text to the output log."""
+        """Write text to the output log. Also appends to self._lines."""
 
     def append_tool_use(self, name: str, args: str, result: str) -> None:
-        """Write compact tool use line: ⚙ name(args) → result"""
+        """Write compact tool use line: ⚙ name(args) → result. Also appends to self._lines."""
 ```
 
 ### `ui/widgets/input_area.py`
@@ -83,6 +89,17 @@ async def test_output_log_append_text():
         output = app.query_one(OutputLog)
         output.append_text("hello")
         # Verify content was added (line count > 0)
+
+# Test OutputLog.lines property tracks appended content
+async def test_output_log_lines_property():
+    app = WidgetTestApp()
+    async with app.run_test() as pilot:
+        output = app.query_one(OutputLog)
+        assert output.lines == []
+        output.append_text("> hello world")
+        assert "> hello world" in output.lines
+        output.append_tool_use("read_file", "path.py", "ok")
+        assert len(output.lines) == 2
 
 # Test OutputLog append_tool_use formats correctly
 async def test_output_log_append_tool_use():
