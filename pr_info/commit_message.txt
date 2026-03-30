@@ -1,7 +1,0 @@
-feat(icoder): wire CLI command with parser and routing (#617)
-
-Register `mcp-coder icoder` as a new CLI subcommand with standard flags
-(--llm-method, --mcp-config, --project-dir, --execution-dir). Add
-execute_icoder() following the same parameter resolution pattern as
-existing commands, with lazy Textual import for the optional TUI
-dependency. Wire parser registration and command routing in main.py.
