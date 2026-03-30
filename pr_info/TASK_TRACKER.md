@@ -66,8 +66,8 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 7: UI Widgets (styles, OutputLog, InputArea)
 > [step_7.md](./steps/step_7.md) — Implement Textual UI widgets: CSS styles, OutputLog(RichLog), InputArea(TextArea) with Enter=submit
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
 - [ ] Commit message prepared
 
 ### Step 8: ICoderApp + Pilot Integration Tests
