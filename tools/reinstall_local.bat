@@ -1,14 +1,14 @@
 @echo off
 setlocal enabledelayedexpansion
-REM Reinstall mcp-coder package (non-editable, from PyPI)
-REM For end-users. Developers should use tools\reinstall_local.bat instead.
-REM Usage: call tools\reinstall.bat  (from project root)
+REM Reinstall mcp-coder package in development mode (editable install)
+REM For developers. End-users should use tools\reinstall.bat instead.
+REM Usage: call tools\reinstall_local.bat  (from project root)
 echo =============================================
-echo MCP-Coder Package Reinstallation (PyPI)
+echo MCP-Coder Package Reinstallation (Developer)
 echo =============================================
 echo.
-echo NOTE: This installs from PyPI (non-editable).
-echo       Developers should use tools\reinstall_local.bat instead.
+echo NOTE: This installs in editable mode from local source.
+echo       End-users should use tools\reinstall.bat instead.
 echo.
 
 REM Determine project root (parent of tools directory)
@@ -19,7 +19,7 @@ popd
 
 set "VENV_DIR=!PROJECT_DIR!\.venv"
 set "VENV_SCRIPTS=!VENV_DIR!\Scripts"
-echo [0/5] Checking Python environment...
+echo [0/7] Checking Python environment...
 
 REM Guard: if a venv is active, it must be the project-local .venv
 if defined VIRTUAL_ENV (
@@ -52,21 +52,53 @@ if not exist "!VENV_SCRIPTS!\activate.bat" (
 echo [OK] Target environment: !VENV_DIR!
 echo.
 
-echo [1/5] Uninstalling existing packages...
+echo [1/7] Uninstalling existing packages...
 uv pip uninstall mcp-coder mcp-tools-py mcp-config mcp-workspace --python "!VENV_SCRIPTS!\python.exe" 2>nul
 echo [OK] Packages uninstalled
 
 echo.
-echo [2/5] Installing mcp-coder from PyPI (non-editable)...
-uv pip install "mcp-coder[dev]" --python "!VENV_SCRIPTS!\python.exe"
+echo [2/7] Installing mcp-coder (this project) in editable mode...
+REM Editable install pulls all deps (including mcp-tools-py, mcp-workspace,
+REM mcp-config) from PyPI first.
+pushd "!PROJECT_DIR!"
+uv pip install -e ".[dev]" --python "!VENV_SCRIPTS!\python.exe"
 if !ERRORLEVEL! NEQ 0 (
-    echo [FAIL] Installation failed!
+    echo [FAIL] Editable installation failed!
+    popd
     exit /b 1
 )
-echo [OK] Package and dev dependencies installed
+popd
+echo [OK] Package and dev dependencies installed (editable)
 
 echo.
-echo [3/5] Verifying CLI entry points in venv...
+echo [3/7] Overriding dependencies with GitHub versions...
+REM Reinstall mcp-workspace and mcp-config from GitHub (with deps — picks up new external deps)
+uv pip install "mcp-config-tool @ git+https://github.com/MarcusJellinghaus/mcp-config.git" "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git" --python "!VENV_SCRIPTS!\python.exe"
+if !ERRORLEVEL! NEQ 0 (
+    echo [FAIL] GitHub dependency override failed (with deps)!
+    exit /b 1
+)
+echo [OK] mcp-workspace, mcp-config overridden from GitHub (with deps)
+
+REM Reinstall mcp-tools-py from GitHub (no deps — depends on siblings, avoid downgrading)
+uv pip install --no-deps "mcp-tools-py @ git+https://github.com/MarcusJellinghaus/mcp-tools-py.git" --python "!VENV_SCRIPTS!\python.exe"
+if !ERRORLEVEL! NEQ 0 (
+    echo [FAIL] GitHub dependency override failed (no deps)!
+    exit /b 1
+)
+echo [OK] mcp-tools-py overridden from GitHub (no deps)
+
+echo.
+echo [4/7] Installing LangChain and MLflow dependencies...
+uv pip install langchain langchain-anthropic mlflow --python "!VENV_SCRIPTS!\python.exe"
+if !ERRORLEVEL! NEQ 0 (
+    echo [FAIL] LangChain/MLflow installation failed!
+    exit /b 1
+)
+echo [OK] langchain, langchain-anthropic, mlflow installed
+
+echo.
+echo [5/7] Verifying CLI entry points in venv...
 
 if not exist "!VENV_SCRIPTS!\mcp-tools-py.exe" (
     echo [FAIL] mcp-tools-py.exe not found in !VENV_SCRIPTS!
@@ -90,7 +122,7 @@ if not exist "!VENV_SCRIPTS!\mcp-coder.exe" (
 echo [OK] mcp-coder.exe found in !VENV_SCRIPTS!
 
 echo.
-echo [4/5] Verifying CLI functionality...
+echo [6/7] Verifying CLI functionality...
 "!VENV_SCRIPTS!\mcp-tools-py.exe" --help >nul 2>&1
 if !ERRORLEVEL! NEQ 0 (
     echo [FAIL] mcp-tools-py CLI verification failed!
@@ -114,7 +146,7 @@ echo [OK] mcp-coder CLI works
 
 echo.
 echo =============================================
-echo [5/5] Reinstallation completed successfully!
+echo [7/7] Reinstallation completed successfully!
 echo.
 echo Entry points installed in: !VENV_SCRIPTS!
 echo   - mcp-tools-py.exe

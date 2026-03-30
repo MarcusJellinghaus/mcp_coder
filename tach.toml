@@ -10,7 +10,7 @@
 # - Dependencies point inward toward the core
 # =============================================================================
 
-exclude = ["**/__pycache__", "build/", "dist/", ".venv/", "*.egg-info/"]
+exclude = ["**/__pycache__", "build/", "dist/", ".venv/", "*.egg-info/", "src/mcp_coder/__main__.py"]
 source_roots = ["src", "."]
 # Note: exact = false because tach checks only direct package files, not submodules.
 # With exact = true, we'd need separate [[modules]] entries for every subpackage

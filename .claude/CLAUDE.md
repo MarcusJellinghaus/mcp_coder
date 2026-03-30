@@ -190,6 +190,8 @@ mcp-coder git-tool compact-diff
 mcp-coder check branch-status
 ```
 
+**Calling mcp-coder:** Bare `mcp-coder` uses the tool env (stable install). To test local source changes, use `.venv\Scripts\python -m mcp_coder <args>`. See [`docs/environments/environments.md`](../docs/environments/environments.md#calling-mcp-coder-explicitly).
+
 **Compact diff for code review:**
 
 Use `mcp-coder git-tool compact-diff` instead of `git diff` when reviewing branch changes. It detects moved code, collapses unchanged blocks, and separates committed vs uncommitted changes. Supports `--exclude PATTERN` to filter files.
