@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Add stdout confirmation on success + update tests
-- [ ] Implementation: add `print()` to `execute_set_status()` success path + update 4 success-path tests with `capsys` assertion
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `print()` to `execute_set_status()` success path + update 4 success-path tests with `capsys` assertion
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review

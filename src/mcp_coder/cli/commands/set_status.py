@@ -265,6 +265,7 @@ def execute_set_status(args: argparse.Namespace) -> int:
             return 1
 
         logger.info(f"Updated issue #{issue_number} to {args.status_label}")
+        print(f"Updated issue #{issue_number} to {args.status_label}")
         return 0
 
     except ValueError as e:
