@@ -103,6 +103,17 @@ Discovers the tool environment via `MCP_CODER_VENV_PATH` (if set) or PATH lookup
 
 For local development: discovers the tool environment the same way as `claude.bat`, then activates the project `.venv`. Verifies that mcp-coder is editable-installed (pip `-e` mode) so local source changes take effect immediately.
 
+## Calling mcp-coder Explicitly
+
+After `claude.bat` or `claude_local.bat` sets up PATH, bare `mcp-coder` resolves to the **tool env** (Jenkins) copy — the stable installed version.
+
+| Target | Command |
+|--------|---------|
+| Tool env (stable) | `mcp-coder <args>` or `%MCP_CODER_VENV_PATH%\mcp-coder.exe <args>` |
+| Local source (dev) | `.venv\Scripts\python -m mcp_coder <args>` |
+
+The `python -m` form always runs the local source code, regardless of PATH order. Use it to test changes before they are installed.
+
 ## Which Environment Runs What?
 
 | Operation | Environment | Why |
