@@ -1,6 +1,0 @@
-Render detailed MCP tool listing with --list-mcp-tools flag (#639)
-
-Add formatted output for MCP tool details in the verify command. When
---list-mcp-tools is passed, the verify output now renders each server's
-tools with their descriptions in a readable format. The orchestrator
-passes the flag through to the verify subcommand.
