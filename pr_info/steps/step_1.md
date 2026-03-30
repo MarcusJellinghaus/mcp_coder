@@ -55,13 +55,17 @@ class EventEntry:
 ### `pyproject.toml` changes
 
 ```toml
-# In [project] dependencies:
-"textual>=1.0.0",
+# In [project.optional-dependencies]:
+tui = [
+    "textual>=1.0.0",
+    "textual-dev>=1.0.0",
+]
 
-# In dev dependencies:
-"textual-dev>=1.0.0",
-"pytest-textual-snapshot>=1.0.0",
+# Add "tui" to the dev extras so local development still works:
+# e.g. dev = [..., "mcp-coder[tui]"]
 ```
+
+> **Note:** `pytest-textual-snapshot` is added later in step 8 (snapshot tests) where it is actually used.
 
 ## HOW — Integration Points
 
@@ -122,8 +126,8 @@ You are implementing Step 1 of the iCoder TUI feature (#617).
 Read pr_info/steps/summary.md for full context, then implement this step.
 
 Tasks:
-1. Add `textual>=1.0.0` to pyproject.toml dependencies
-2. Add `textual-dev>=1.0.0` and `pytest-textual-snapshot>=1.0.0` to dev dependencies
+1. Add `textual>=1.0.0` and `textual-dev>=1.0.0` to a `tui` optional-dependency group in pyproject.toml
+2. Add `tui` to the dev extras so local development still works
 3. Create the icoder package skeleton (all __init__.py files as listed)
 4. Implement core/types.py with Response, Command, EventEntry dataclasses
 5. Write tests in tests/icoder/test_types.py

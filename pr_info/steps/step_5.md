@@ -204,9 +204,8 @@ def fake_llm():
 
 @pytest.fixture
 def event_log(tmp_path):
-    log = EventLog(logs_dir=tmp_path)
-    yield log
-    log.close()
+    with EventLog(logs_dir=tmp_path) as log:
+        yield log
 
 @pytest.fixture
 def app_core(fake_llm, event_log):

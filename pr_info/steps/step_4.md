@@ -153,6 +153,21 @@ def test_real_service_satisfies_protocol():
     assert hasattr(service, "stream")
     assert hasattr(service, "session_id")
 
+# Test RealLLMService.stream() delegates to prompt_llm_stream
+def test_real_service_delegates_to_prompt_llm_stream(monkeypatch):
+    """Patch prompt_llm_stream and verify RealLLMService.stream() calls it correctly."""
+    fake_events = [{"type": "text_delta", "text": "hi"}, {"type": "done"}]
+    def mock_stream(question, **kwargs):
+        assert question == "hello"
+        assert kwargs["provider"] == "claude"
+        yield from fake_events
+    monkeypatch.setattr(
+        "mcp_coder.icoder.services.llm_service.prompt_llm_stream", mock_stream
+    )
+    service = RealLLMService(provider="claude")
+    events = list(service.stream("hello"))
+    assert events == fake_events
+
 # Test FakeLLMService satisfies LLMService protocol
 def test_fake_service_satisfies_protocol():
     service = FakeLLMService()

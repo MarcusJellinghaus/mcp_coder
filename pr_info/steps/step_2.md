@@ -46,6 +46,12 @@ class EventLog:
 
     def close(self) -> None:
         """Flush and close the JSONL file handle."""
+
+    def __enter__(self) -> "EventLog":
+        """Support context manager usage."""
+
+    def __exit__(self, *exc: object) -> None:
+        """Close on context manager exit."""
 ```
 
 ## HOW — Integration Points
@@ -129,6 +135,15 @@ def test_creates_logs_dir(tmp_path):
     log.close()
     assert new_dir.exists()
 
+# Test context manager usage
+def test_context_manager(tmp_path):
+    with EventLog(logs_dir=tmp_path) as log:
+        log.emit("test_event", key="value")
+        assert len(log.entries) == 1
+    # File should be closed after exiting context
+    jsonl_files = list(tmp_path.glob("icoder_*.jsonl"))
+    assert len(jsonl_files) == 1
+
 # Test multiple events produce multiple JSONL lines
 def test_multiple_events_multiple_lines(tmp_path):
     log = EventLog(logs_dir=tmp_path)
@@ -153,6 +168,7 @@ Tasks:
 3. Run pylint, mypy, pytest to verify all checks pass
 
 Key details:
+- EventLog supports context manager (`with EventLog(...) as log:`): `__enter__` returns self, `__exit__` calls close()
 - EventLog uses time.monotonic() for relative timestamps
 - JSONL filename: icoder_<ISO_timestamp>.jsonl (e.g. icoder_2026-03-29T14-30-00.jsonl)
 - emit() writes one JSON line per call and flushes immediately
