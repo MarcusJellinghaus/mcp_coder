@@ -82,31 +82,33 @@ tests/icoder/
 ├── test_types.py             # Step 1: dataclass tests
 ├── test_event_log.py         # Step 2: event log tests
 ├── test_command_registry.py  # Step 3: registry + command tests
-├── test_app_core.py          # Step 4: AppCore routing tests
-├── test_llm_service.py       # Step 5: LLM service protocol tests
+├── test_llm_service.py       # Step 4: LLM service protocol tests
+├── test_app_core.py          # Step 5: AppCore routing tests
 ├── test_cli_icoder.py        # Step 6: CLI parser + wiring tests
-├── test_app_pilot.py         # Step 7: Textual headless integration tests
-└── test_snapshots.py         # Step 8: SVG snapshot tests (Windows-only)
+├── test_widgets.py           # Step 7: widget unit/integration tests
+├── test_app_pilot.py         # Step 8: Textual headless integration tests
+└── test_snapshots.py         # Step 9: SVG snapshot tests (Windows-only)
 ```
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `pyproject.toml` | Add `textual` dependency, `textual-dev` + `pytest-textual-snapshot` dev deps |
+| `pyproject.toml` | Add `tui` optional-dependency group (`textual`, `textual-dev`); add `pytest-textual-snapshot` in step 9 |
 | `src/mcp_coder/cli/parsers.py` | Add `add_icoder_parser()` function |
 | `src/mcp_coder/cli/main.py` | Add import + route for `icoder` command |
 | `src/mcp_coder/cli/commands/icoder.py` | New: `execute_icoder(args)` command handler |
 
 ## Implementation Steps
 
-8 steps, each producing one commit (tests + implementation + checks passing):
+9 steps, each producing one commit (tests + implementation + checks passing):
 
-1. **Dependencies + package skeleton + types** — Foundation
-2. **Event log** — Core structured logging
+1. **Dependencies + package skeleton + types** — Foundation (textual as optional `tui` dependency)
+2. **Event log** — Core structured logging (with context manager support)
 3. **Command registry + built-in commands** — Slash command infrastructure
 4. **LLM service protocol** — Service abstraction layer
 5. **AppCore** — Central input routing (wires steps 2-4 together)
-6. **CLI wiring** — `mcp-coder icoder` command registration
-7. **UI layer + pilot integration tests** — Textual app shell
-8. **Snapshot tests** — SVG visual regression (Windows-only)
+6. **CLI wiring** — `mcp-coder icoder` command registration (lazy textual import)
+7. **UI widgets** — styles.py, OutputLog, InputArea + widget unit tests
+8. **ICoderApp + pilot integration tests** — Textual app shell with async bridging
+9. **Snapshot tests** — SVG visual regression (Windows-only)

@@ -63,12 +63,13 @@ def execute_icoder(args: argparse.Namespace) -> int:
   2. `prepare_llm_environment(project_dir)`
   3. `resolve_llm_method(args.llm_method)` → `parse_llm_method_from_args()`
   4. `resolve_mcp_config_path(args.mcp_config, args.project_dir)`
-  5. Find latest session via `find_latest_session(provider=provider)`
+  5. Find latest session: `find_latest_session(provider=provider)` → file path, then `extract_session_id(file_path)` → session ID string
   6. Create `RealLLMService(provider, session_id, execution_dir, mcp_config, env_vars)`
   7. Create `EventLog(logs_dir=project_dir / "logs")`
   8. Create `AppCore(llm_service, event_log)`
   9. Launch `ICoderApp(app_core).run()` ← **import deferred to step 7; step 6 just validates wiring**
 - Import of `add_icoder_parser` added to the imports in `main.py`
+- **Textual import must be lazy** in `execute_icoder()` with a clear error if not installed (textual is an optional dependency in the `tui` extras group)
 
 ## ALGORITHM — Core Logic
 
@@ -79,12 +80,12 @@ execute_icoder(args):
     env_vars = prepare_llm_environment(project_dir)
     provider = parse_llm_method_from_args(resolve_llm_method(args.llm_method)[0])
     mcp_config = resolve_mcp_config_path(args.mcp_config, args.project_dir)
-    session_id = find_latest_session_id(provider)  # helper that extracts ID
+    session_file = find_latest_session(provider=provider)  # → file path or None
+    session_id = extract_session_id(session_file) if session_file else None
     llm_service = RealLLMService(provider, session_id, str(execution_dir), mcp_config, env_vars)
-    event_log = EventLog(logs_dir=project_dir / "logs")
-    app_core = AppCore(llm_service, event_log)
-    ICoderApp(app_core).run()  # Textual app blocks until exit
-    event_log.close()
+    with EventLog(logs_dir=project_dir / "logs") as event_log:
+        app_core = AppCore(llm_service, event_log)
+        ICoderApp(app_core).run()  # Textual app blocks until exit
     return 0
 ```
 
@@ -180,8 +181,10 @@ Tasks:
 Key details:
 - Parser follows EXACT same pattern as add_implement_parser()
 - execute_icoder() follows same resolution chain as execute_prompt()
-- Session auto-resume: find_latest_session(provider=provider) on launch
-- The actual Textual app launch will be added in step 7
+- Session auto-resume: find_latest_session(provider=provider) → file path, then extract_session_id(file_path) → session ID
+- Use EventLog as context manager: `with EventLog(...) as event_log:`
+- Textual import must be lazy with clear error if not installed (optional `tui` dependency)
+- The actual Textual app launch will be added in step 8
 
 Use MCP tools for all file operations. Run all three code quality checks after changes.
 ```
