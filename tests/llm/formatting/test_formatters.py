@@ -3,7 +3,7 @@
 import argparse
 import io
 import json
-from typing import Any, Dict, Iterator, List
+from typing import Iterator, List
 from unittest.mock import Mock, patch
 
 import pytest
