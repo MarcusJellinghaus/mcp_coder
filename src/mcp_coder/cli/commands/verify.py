@@ -84,34 +84,72 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
     return "\n".join(lines)
 
 
-def _format_mcp_section(mcp_results: dict[str, Any], symbols: dict[str, str]) -> str:
+def _format_mcp_section(
+    mcp_results: dict[str, Any],
+    symbols: dict[str, str],
+    *,
+    list_mcp_tools: bool = False,
+) -> str:
     """Format MCP server health check results.
 
     Args:
         mcp_results: Dict containing server health check results.
         symbols: Dict with 'success', 'failure', 'warning' keys.
+        list_mcp_tools: When True, render each tool on its own indented line
+            with descriptions aligned globally across all servers.
 
     Returns:
         Formatted multi-line string for the MCP servers section.
     """
     lines: list[str] = ["\n=== MCP SERVERS (via langchain-mcp-adapters) ==="]
-    for name, entry in mcp_results["servers"].items():
-        ok = entry.get("ok")
-        value = entry.get("value", "")
-        symbol = symbols["success"] if ok else symbols["failure"]
-        tool_names = entry.get("tool_names")
-        if tool_names:
-            prefix = f"  {name:<20s} {symbol} "
-            tools_text = f"{len(tool_names)} tools: {', '.join(tool_names)}"
-            wrapped = textwrap.wrap(
-                tools_text,
-                width=80,
-                initial_indent=prefix,
-                subsequent_indent=" " * len(prefix),
-            )
-            lines.extend(wrapped)
-        else:
-            lines.append(f"  {name:<20s} {symbol} {value}")
+    servers = mcp_results["servers"]
+
+    if list_mcp_tools:
+        # Compute global max tool name width across ALL servers
+        max_name = max(
+            (
+                len(name)
+                for srv in servers.values()
+                if srv.get("tool_names")
+                for name, _ in srv["tool_names"]
+            ),
+            default=0,
+        )
+        for name, entry in servers.items():
+            ok = entry.get("ok")
+            value = entry.get("value", "")
+            symbol = symbols["success"] if ok else symbols["failure"]
+            tool_names = entry.get("tool_names")
+            if tool_names:
+                lines.append(
+                    f"  {name:<20s} {symbol} {len(tool_names)} tools available"
+                )
+                for tool_name, desc in tool_names:
+                    if desc:
+                        lines.append(f"    {tool_name:<{max_name + 2}s} {desc}")
+                    else:
+                        lines.append(f"    {tool_name}")
+            else:
+                lines.append(f"  {name:<20s} {symbol} {value}")
+    else:
+        for name, entry in servers.items():
+            ok = entry.get("ok")
+            value = entry.get("value", "")
+            symbol = symbols["success"] if ok else symbols["failure"]
+            tool_names = entry.get("tool_names")
+            if tool_names:
+                prefix = f"  {name:<20s} {symbol} "
+                names_only = [n for n, _d in tool_names]
+                tools_text = f"{len(tool_names)} tools: {', '.join(names_only)}"
+                wrapped = textwrap.wrap(
+                    tools_text,
+                    width=80,
+                    initial_indent=prefix,
+                    subsequent_indent=" " * len(prefix),
+                )
+                lines.extend(wrapped)
+            else:
+                lines.append(f"  {name:<20s} {symbol} {value}")
     return "\n".join(lines)
 
 
@@ -300,7 +338,10 @@ def execute_verify(args: argparse.Namespace) -> int:
             from ...llm.providers.langchain.verification import verify_mcp_servers
 
             mcp_result = verify_mcp_servers(mcp_config_resolved)
-            print(_format_mcp_section(mcp_result, symbols))
+            list_mcp_tools = getattr(args, "list_mcp_tools", False)
+            print(
+                _format_mcp_section(mcp_result, symbols, list_mcp_tools=list_mcp_tools)
+            )
         except ImportError:
             print("\n=== MCP SERVERS (via langchain-mcp-adapters) ===")
             print(

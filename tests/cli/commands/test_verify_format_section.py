@@ -87,7 +87,7 @@ class TestFormatMcpSection:
                     "ok": True,
                     "value": "2 tools available",
                     "tools": 2,
-                    "tool_names": ["alpha", "beta"],
+                    "tool_names": [("alpha", "Alpha tool"), ("beta", "Beta tool")],
                 },
             },
             "overall_ok": True,
@@ -98,7 +98,9 @@ class TestFormatMcpSection:
 
     def test_tool_names_wrap_at_80_columns(self) -> None:
         """Long tool name lists wrap at 80 columns with indented continuation."""
-        long_names = [f"very_long_tool_name_{i}" for i in range(10)]
+        long_names = [
+            (f"very_long_tool_name_{i}", f"Description {i}") for i in range(10)
+        ]
         mcp_results: dict[str, Any] = {
             "servers": {
                 "tools-py": {
@@ -168,6 +170,152 @@ class TestFormatMcpSection:
         }
         output = _format_mcp_section(mcp_results, self._symbols())
         assert "0 tools available" in output
+
+    def test_list_mcp_tools_shows_per_tool_lines(self) -> None:
+        """list_mcp_tools=True renders each tool on its own line."""
+        mcp_results: dict[str, Any] = {
+            "servers": {
+                "srv": {
+                    "ok": True,
+                    "value": "2 tools available",
+                    "tools": 2,
+                    "tool_names": [("alpha", "Alpha tool"), ("beta", "Beta tool")],
+                },
+            },
+            "overall_ok": True,
+        }
+        output = _format_mcp_section(mcp_results, self._symbols(), list_mcp_tools=True)
+        assert "alpha" in output
+        assert "Alpha tool" in output
+        assert "beta" in output
+        assert "Beta tool" in output
+        # Each tool should be on its own indented line
+        lines = output.split("\n")
+        tool_lines = [l for l in lines if "alpha" in l or "beta" in l]
+        assert len(tool_lines) == 2
+        for line in tool_lines:
+            assert line.startswith("    ")
+
+    def test_list_mcp_tools_global_alignment(self) -> None:
+        """Tool names across servers are aligned to the longest name globally."""
+        mcp_results: dict[str, Any] = {
+            "servers": {
+                "srv1": {
+                    "ok": True,
+                    "value": "1 tools available",
+                    "tools": 1,
+                    "tool_names": [("ab", "Short name tool")],
+                },
+                "srv2": {
+                    "ok": True,
+                    "value": "1 tools available",
+                    "tools": 1,
+                    "tool_names": [("a_long_tool_name", "Long name tool")],
+                },
+            },
+            "overall_ok": True,
+        }
+        output = _format_mcp_section(mcp_results, self._symbols(), list_mcp_tools=True)
+        lines = output.split("\n")
+        # Find the description start positions — they should be aligned
+        desc_positions = []
+        for line in lines:
+            if "Short name tool" in line:
+                desc_positions.append(line.index("Short name tool"))
+            if "Long name tool" in line:
+                desc_positions.append(line.index("Long name tool"))
+        assert len(desc_positions) == 2
+        assert desc_positions[0] == desc_positions[1]
+
+    def test_list_mcp_tools_missing_description_shows_name_only(self) -> None:
+        """Tools with empty description show name only, no placeholder."""
+        mcp_results: dict[str, Any] = {
+            "servers": {
+                "srv": {
+                    "ok": True,
+                    "value": "2 tools available",
+                    "tools": 2,
+                    "tool_names": [
+                        ("tool_with_desc", "Has description"),
+                        ("tool_no_desc", ""),
+                    ],
+                },
+            },
+            "overall_ok": True,
+        }
+        output = _format_mcp_section(mcp_results, self._symbols(), list_mcp_tools=True)
+        lines = output.split("\n")
+        no_desc_line = [l for l in lines if "tool_no_desc" in l][0]
+        # Should end with the tool name (stripped), no trailing spaces or placeholder
+        assert no_desc_line == no_desc_line.rstrip()
+        assert "Has description" not in no_desc_line
+
+    def test_list_mcp_tools_failed_server_shows_error(self) -> None:
+        """Failed server shows error line; healthy server still lists tools."""
+        mcp_results: dict[str, Any] = {
+            "servers": {
+                "healthy": {
+                    "ok": True,
+                    "value": "1 tools available",
+                    "tools": 1,
+                    "tool_names": [("good_tool", "Works fine")],
+                },
+                "broken": {
+                    "ok": False,
+                    "value": "connection refused",
+                    "error": "ConnectionError",
+                },
+            },
+            "overall_ok": False,
+        }
+        output = _format_mcp_section(mcp_results, self._symbols(), list_mcp_tools=True)
+        assert "good_tool" in output
+        assert "Works fine" in output
+        assert "connection refused" in output
+        assert "[!!]" in output
+
+    def test_list_mcp_tools_false_still_shows_comma_format(self) -> None:
+        """Default mode with tuple data still produces comma-separated output."""
+        mcp_results: dict[str, Any] = {
+            "servers": {
+                "srv": {
+                    "ok": True,
+                    "value": "2 tools available",
+                    "tools": 2,
+                    "tool_names": [("alpha", "Alpha tool"), ("beta", "Beta tool")],
+                },
+            },
+            "overall_ok": True,
+        }
+        output = _format_mcp_section(mcp_results, self._symbols(), list_mcp_tools=False)
+        assert "2 tools: alpha, beta" in output
+
+    def test_list_mcp_tools_all_servers_failed(self) -> None:
+        """All servers failed — no crash, no tool lines rendered."""
+        mcp_results: dict[str, Any] = {
+            "servers": {
+                "srv1": {
+                    "ok": False,
+                    "value": "timeout",
+                    "error": "TimeoutError",
+                },
+                "srv2": {
+                    "ok": False,
+                    "value": "connection refused",
+                    "error": "ConnectionError",
+                },
+            },
+            "overall_ok": False,
+        }
+        output = _format_mcp_section(mcp_results, self._symbols(), list_mcp_tools=True)
+        assert "timeout" in output
+        assert "connection refused" in output
+        # No tool detail lines (lines starting with 4 spaces of indentation for tools)
+        lines = output.split("\n")
+        tool_detail_lines = [
+            l for l in lines if l.startswith("    ") and not l.strip().startswith("[")
+        ]
+        assert len(tool_detail_lines) == 0
 
 
 class TestCollectInstallHints:

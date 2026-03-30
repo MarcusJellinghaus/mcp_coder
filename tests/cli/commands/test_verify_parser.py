@@ -53,3 +53,15 @@ class TestVerifyParser:
         parser = create_parser()
         args = parser.parse_args(["verify", "--project-dir", "/some/path"])
         assert args.project_dir == "/some/path"
+
+    def test_list_mcp_tools_flag_default_false(self) -> None:
+        """--list-mcp-tools defaults to False."""
+        parser = create_parser()
+        args = parser.parse_args(["verify"])
+        assert args.list_mcp_tools is False
+
+    def test_list_mcp_tools_flag_set(self) -> None:
+        """--list-mcp-tools sets attribute to True."""
+        parser = create_parser()
+        args = parser.parse_args(["verify", "--list-mcp-tools"])
+        assert args.list_mcp_tools is True
