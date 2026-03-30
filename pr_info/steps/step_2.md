@@ -53,7 +53,7 @@ The resulting startup script for these statuses will use `INTERACTIVE_ONLY_SECTI
 
 **Function**: `test_error_statuses_have_vscodeclaude_commands()`
 
-**Logic**: Load bundled labels.json. For each of the 5 error status internal_ids, assert that `vscodeclaude.commands` exists and is a non-empty list. Also assert `status-10:pr-created` does NOT have commands (intentional).
+**Logic**: Use `@pytest.mark.parametrize` over the 5 error status internal_ids for clearer per-status failure messages. For each, assert that `vscodeclaude.commands` equals `["/check_branch_status"]`. Also test (as a separate case or negative parametrize) that `status-10:pr-created` (internal_id: `pr_created`) does NOT have commands (intentional).
 
 ## LLM Prompt
 
@@ -63,8 +63,9 @@ Read pr_info/steps/summary.md and pr_info/steps/step_2.md for full context.
 Implement Step 2: Add commands to error statuses in labels.json.
 
 1. First, add a test to tests/workflows/test_label_config.py:
-   - test_error_statuses_have_vscodeclaude_commands: load bundled labels config, verify these 5 internal_ids have vscodeclaude.commands set to ["/check_branch_status"]:
-     planning_failed, implementing_failed, ci_fix_needed, llm_timeout, pr_creating_failed
+   - test_error_statuses_have_vscodeclaude_commands: use @pytest.mark.parametrize over the 5 internal_ids
+     (planning_failed, implementing_failed, ci_fix_needed, llm_timeout, pr_creating_failed).
+     For each, assert vscodeclaude.commands equals ["/check_branch_status"].
    - Also verify status-10:pr-created (internal_id: pr_created) does NOT have commands
 
 2. Then edit src/mcp_coder/config/labels.json:

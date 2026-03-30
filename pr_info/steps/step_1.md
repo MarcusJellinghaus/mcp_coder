@@ -20,10 +20,11 @@ Reorder the `VENV_SECTION_WINDOWS` template so that:
 1. `echo Setting up environments...` (keep as-is)
 2. **Move here**: The `MCP_CODER_VENV_PATH` assignment block (the `if "{mcp_coder_install_path}" NEQ ""` block with error handling)
 3. **Move here**: `set "PATH=%MCP_CODER_VENV_PATH%;%PATH%"` (currently near the bottom)
-4. **Move here**: `echo MCP-Coder environment: %MCP_CODER_VENV_PATH%` (for visibility)
+4. The `echo MCP-Coder environment: %MCP_CODER_VENV_PATH%` line stays inside the `if "{mcp_coder_install_path}" NEQ ""` block — it moves with the block, not separately
 5. `mcp-coder --version` (now works because PATH is set)
 6. `echo   MCP-Coder install:` and `echo   Project directory:` lines
-7. Rest of the template (MCP env vars, venv setup, editable install) — but **remove** the duplicate `set "PATH=%MCP_CODER_VENV_PATH%;%PATH%"` line that was near the bottom
+7. `MCP_CODER_PROJECT_DIR` and `MCP_CODER_VENV_DIR` assignments (stay after `mcp-coder --version`, keeping their current relative position)
+8. Venv creation/activation block and editable install (unchanged) — but **remove** the duplicate `set "PATH=%MCP_CODER_VENV_PATH%;%PATH%"` line that was near the bottom
 
 ## HOW
 
@@ -56,7 +57,7 @@ No return values or data structures change. This is a template string edit only.
 
 **Function**: `test_venv_section_path_set_before_mcp_coder_version()`
 
-**Logic**: In `VENV_SECTION_WINDOWS`, find the line index of `set "PATH=%MCP_CODER_VENV_PATH%;%PATH%"` and the line index of `mcp-coder --version`. Assert PATH line comes first.
+**Logic**: In `VENV_SECTION_WINDOWS`, find lines by substring (e.g., search for `PATH=%MCP_CODER_VENV_PATH%` and `mcp-coder --version`) rather than exact full-line matching. Assert the PATH line comes before the `mcp-coder --version` line. Substring matching is more robust and consistent with existing tests.
 
 ### Test: No duplicate PATH assignment
 
@@ -72,7 +73,7 @@ Read pr_info/steps/summary.md and pr_info/steps/step_1.md for full context.
 Implement Step 1: Fix PATH ordering in VENV_SECTION_WINDOWS.
 
 1. First, add two tests to tests/workflows/vscodeclaude/test_templates.py:
-   - test_venv_section_path_set_before_mcp_coder_version: assert PATH assignment appears before mcp-coder --version
+   - test_venv_section_path_set_before_mcp_coder_version: find lines by substring (PATH=%MCP_CODER_VENV_PATH% and mcp-coder --version), assert PATH assignment appears first
    - test_venv_section_no_duplicate_path_assignment: assert PATH=%MCP_CODER_VENV_PATH% appears exactly once
 
 2. Then edit VENV_SECTION_WINDOWS in src/mcp_coder/workflows/vscodeclaude/templates.py:
