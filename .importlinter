@@ -536,3 +536,4 @@ ignore_imports =
     mcp_coder.utils.subprocess_runner -> subprocess
     mcp_coder.utils.subprocess_streaming -> subprocess
     tests.utils.test_subprocess_runner -> subprocess
+    tests.utils.test_subprocess_runner_real -> subprocess
