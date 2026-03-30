@@ -454,6 +454,45 @@ class TestVerifyOrchestration:
         assert call_kwargs["mcp_config"] == "/fake/.mcp.json"
         assert "execution_dir" in call_kwargs
 
+    @patch(
+        f"{_VERIFY}._run_mcp_edit_smoke_test",
+        return_value="  MCP edit smoke test  [OK]",
+    )
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value="/fake/.mcp.json")
+    @patch(f"{_LC_VERIFY}.verify_mcp_servers")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_LC_VERIFY}.verify_langchain")
+    @patch(f"{_VERIFY}.find_claude_executable", return_value=None)
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    def test_list_mcp_tools_flag_passed_to_format(
+        self,
+        mock_provider: MagicMock,
+        mock_find_claude: MagicMock,
+        mock_lc: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_mcp_servers: MagicMock,
+        mock_resolve_mcp: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        mock_smoke_test: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """--list-mcp-tools flag flows from args to _format_mcp_section."""
+        mock_provider.return_value = ("langchain", "config.toml")
+        mock_lc.return_value = _langchain_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+        mock_mcp_servers.return_value = _mcp_servers_ok()
+
+        with patch(f"{_VERIFY}._format_mcp_section") as mock_fmt:
+            mock_fmt.return_value = "mocked"
+            execute_verify(_make_args(list_mcp_tools=True, mcp_config=".mcp.json"))
+            mock_fmt.assert_called_once()
+            call_kwargs = mock_fmt.call_args
+            assert call_kwargs.kwargs.get("list_mcp_tools") is True
+
 
 class TestVerifyTestPromptFailure:
     """Tests for improved test prompt failure output (Step 5A)."""
@@ -750,7 +789,11 @@ def _mcp_servers_ok() -> dict[str, Any]:
             "tools-py": {
                 "ok": True,
                 "value": "3 tools",
-                "tool_names": ["read_file", "save_file", "edit_file"],
+                "tool_names": [
+                    ("read_file", "Read file contents"),
+                    ("save_file", "Write content to a file"),
+                    ("edit_file", "Edit a file"),
+                ],
             }
         },
         "overall_ok": True,
