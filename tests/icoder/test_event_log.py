@@ -9,26 +9,23 @@ from mcp_coder.icoder.core.event_log import EventLog
 
 
 def test_emit_records_event(tmp_path: Path) -> None:
-    log = EventLog(logs_dir=tmp_path)
-    log.emit("input_received", text="/help")
-    assert len(log.entries) == 1
-    assert log.entries[0].event == "input_received"
-    assert log.entries[0].data["text"] == "/help"
-    log.close()
+    with EventLog(logs_dir=tmp_path) as log:
+        log.emit("input_received", text="/help")
+        assert len(log.entries) == 1
+        assert log.entries[0].event == "input_received"
+        assert log.entries[0].data["text"] == "/help"
 
 
 def test_timestamps_monotonic(tmp_path: Path) -> None:
-    log = EventLog(logs_dir=tmp_path)
-    log.emit("first")
-    log.emit("second")
-    assert log.entries[1].t >= log.entries[0].t
-    log.close()
+    with EventLog(logs_dir=tmp_path) as log:
+        log.emit("first")
+        log.emit("second")
+        assert log.entries[1].t >= log.entries[0].t
 
 
 def test_jsonl_file_written(tmp_path: Path) -> None:
-    log = EventLog(logs_dir=tmp_path)
-    log.emit("input_received", text="hello")
-    log.close()
+    with EventLog(logs_dir=tmp_path) as log:
+        log.emit("input_received", text="hello")
     jsonl_files = list(tmp_path.glob("icoder_*.jsonl"))
     assert len(jsonl_files) == 1
     lines = jsonl_files[0].read_text(encoding="utf-8").strip().split("\n")
@@ -40,8 +37,8 @@ def test_jsonl_file_written(tmp_path: Path) -> None:
 
 
 def test_jsonl_filename_format(tmp_path: Path) -> None:
-    log = EventLog(logs_dir=tmp_path)
-    log.close()
+    with EventLog(logs_dir=tmp_path) as _log:
+        pass
     jsonl_files = list(tmp_path.glob("icoder_*.jsonl"))
     assert len(jsonl_files) == 1
     name = jsonl_files[0].stem  # e.g. "icoder_2026-03-29T14-30-00"
@@ -50,9 +47,8 @@ def test_jsonl_filename_format(tmp_path: Path) -> None:
 
 def test_creates_logs_dir(tmp_path: Path) -> None:
     new_dir = tmp_path / "subdir" / "logs"
-    log = EventLog(logs_dir=new_dir)
-    log.emit("test")
-    log.close()
+    with EventLog(logs_dir=new_dir) as log:
+        log.emit("test")
     assert new_dir.exists()
 
 
@@ -66,11 +62,10 @@ def test_context_manager(tmp_path: Path) -> None:
 
 
 def test_multiple_events_multiple_lines(tmp_path: Path) -> None:
-    log = EventLog(logs_dir=tmp_path)
-    log.emit("first")
-    log.emit("second")
-    log.emit("third")
-    log.close()
+    with EventLog(logs_dir=tmp_path) as log:
+        log.emit("first")
+        log.emit("second")
+        log.emit("third")
     jsonl_files = list(tmp_path.glob("icoder_*.jsonl"))
     lines = jsonl_files[0].read_text(encoding="utf-8").strip().split("\n")
     assert len(lines) == 3
