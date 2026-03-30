@@ -247,7 +247,7 @@ class TestFormatMcpSection:
         lines = output.split("\n")
         no_desc_line = [l for l in lines if "tool_no_desc" in l][0]
         # Should end with the tool name (stripped), no trailing spaces or placeholder
-        assert no_desc_line.rstrip() == no_desc_line.rstrip()
+        assert no_desc_line == no_desc_line.rstrip()
         assert "Has description" not in no_desc_line
 
     def test_list_mcp_tools_failed_server_shows_error(self) -> None:
