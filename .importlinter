@@ -352,6 +352,7 @@ forbidden_modules =
     requests
 ignore_imports =
     mcp_coder.utils.github_operations.** -> requests
+    mcp_coder.utils.jenkins_operations.client -> requests
 
 # -----------------------------------------------------------------------------
 # Contract: Structlog Library Isolation
