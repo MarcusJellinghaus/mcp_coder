@@ -8,7 +8,27 @@ and improves maintainability.
 from __future__ import annotations
 
 import argparse
-from typing import Any
+import sys
+from typing import Any, NoReturn
+
+
+class HelpHintArgumentParser(argparse.ArgumentParser):
+    """ArgumentParser subclass that appends a help hint on errors.
+
+    On parse errors, prints a GNU-style hint:
+        Try '<prog> --help' for more information.
+
+    Subparsers automatically inherit this class via argparse internals.
+    """
+
+    def error(self, message: str) -> NoReturn:
+        """Print usage, error message, and help hint, then exit with code 2."""
+        self.print_usage(sys.stderr)
+        self._print_message(f"{self.prog}: error: {message}\n", sys.stderr)
+        self._print_message(
+            f"Try '{self.prog} --help' for more information.\n", sys.stderr
+        )
+        self.exit(2)
 
 
 class WideHelpFormatter(argparse.RawDescriptionHelpFormatter):

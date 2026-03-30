@@ -26,6 +26,7 @@ from .commands.init import execute_init
 from .commands.prompt import execute_prompt
 from .commands.verify import execute_verify
 from .parsers import (
+    HelpHintArgumentParser,
     WideHelpFormatter,
     add_check_parsers,
     add_commit_parsers,
@@ -73,7 +74,7 @@ def create_parser() -> argparse.ArgumentParser:
     Returns:
         Configured ArgumentParser for the mcp-coder CLI.
     """
-    parser = argparse.ArgumentParser(
+    parser = HelpHintArgumentParser(
         prog="mcp-coder",
         description="AI-powered software development automation toolkit",
         formatter_class=WideHelpFormatter,
@@ -141,9 +142,17 @@ def _handle_coordinator_command(args: argparse.Namespace) -> int:
         # Validate dry-run args
         if not args.repo:
             print("Error: --dry-run requires --repo NAME", file=sys.stderr)
+            print(
+                "Try 'mcp-coder coordinator --help' for more information.",
+                file=sys.stderr,
+            )
             return 1
         if not args.branch_name:
             print("Error: --dry-run requires --branch-name BRANCH", file=sys.stderr)
+            print(
+                "Try 'mcp-coder coordinator --help' for more information.",
+                file=sys.stderr,
+            )
             return 1
         # Map args to what execute_coordinator_test expects
         args.repo_name = args.repo
@@ -153,6 +162,10 @@ def _handle_coordinator_command(args: argparse.Namespace) -> int:
         # Validate run args
         if not args.all and not args.repo:
             print("Error: Either --all or --repo must be specified", file=sys.stderr)
+            print(
+                "Try 'mcp-coder coordinator --help' for more information.",
+                file=sys.stderr,
+            )
             return 1
         return execute_coordinator_run(args)
 
@@ -170,15 +183,14 @@ def _handle_check_command(args: argparse.Namespace) -> int:
             return execute_check_branch_status(args)
         elif args.check_subcommand == "file-size":
             return execute_check_file_sizes(args)
-        else:
-            logger.error(f"Unknown check subcommand: {args.check_subcommand}")
-            print(f"Error: Unknown check subcommand '{args.check_subcommand}'")
-            return 1
+        return 1  # unreachable: argparse validates subcommand choices
     else:
-        logger.error("Check subcommand required")
+        logger.debug("Check subcommand required")
         print(
-            "Error: Please specify a check subcommand (e.g., 'branch-status', 'file-size')"
+            "Error: Please specify a check subcommand (e.g., 'branch-status', 'file-size')",
+            file=sys.stderr,
         )
+        print("Try 'mcp-coder check --help' for more information.", file=sys.stderr)
         return 1
 
 
@@ -199,16 +211,15 @@ def _handle_gh_tool_command(args: argparse.Namespace) -> int:
             from .commands.set_status import execute_set_status
 
             return execute_set_status(args)
-        else:
-            logger.error(f"Unknown gh-tool subcommand: {args.gh_tool_subcommand}")
-            print(f"Error: Unknown gh-tool subcommand '{args.gh_tool_subcommand}'")
-            return 1
+        return 1  # unreachable: argparse validates subcommand choices
     else:
-        logger.error("gh-tool subcommand required")
+        logger.debug("gh-tool subcommand required")
         print(
             "Error: Please specify a gh-tool subcommand"
-            " (e.g., 'get-base-branch', 'define-labels', 'issue-stats', 'set-status')"
+            " (e.g., 'get-base-branch', 'define-labels', 'issue-stats', 'set-status')",
+            file=sys.stderr,
         )
+        print("Try 'mcp-coder gh-tool --help' for more information.", file=sys.stderr)
         return 1
 
 
@@ -223,17 +234,16 @@ def _handle_vscodeclaude_command(args: argparse.Namespace) -> int:
             return execute_coordinator_vscodeclaude(args)
         elif args.vscodeclaude_subcommand == "status":
             return execute_coordinator_vscodeclaude_status(args)
-        else:
-            logger.error(
-                f"Unknown vscodeclaude subcommand: {args.vscodeclaude_subcommand}"
-            )
-            print(
-                f"Error: Unknown vscodeclaude subcommand '{args.vscodeclaude_subcommand}'"
-            )
-            return 1
+        return 1  # unreachable: argparse validates subcommand choices
     else:
-        logger.error("vscodeclaude subcommand required")
-        print("Error: Please specify a subcommand (e.g., 'launch', 'status')")
+        logger.debug("vscodeclaude subcommand required")
+        print(
+            "Error: Please specify a subcommand (e.g., 'launch', 'status')",
+            file=sys.stderr,
+        )
+        print(
+            "Try 'mcp-coder vscodeclaude --help' for more information.", file=sys.stderr
+        )
         return 1
 
 
@@ -246,13 +256,14 @@ def _handle_git_tool_command(args: argparse.Namespace) -> int:
     if hasattr(args, "git_tool_subcommand") and args.git_tool_subcommand:
         if args.git_tool_subcommand == "compact-diff":
             return execute_compact_diff(args)
-        else:
-            logger.error(f"Unknown git-tool subcommand: {args.git_tool_subcommand}")
-            print(f"Error: Unknown git-tool subcommand '{args.git_tool_subcommand}'")
-            return 1
+        return 1  # unreachable: argparse validates subcommand choices
     else:
-        logger.error("git-tool subcommand required")
-        print("Error: Please specify a git-tool subcommand (e.g., 'compact-diff')")
+        logger.debug("git-tool subcommand required")
+        print(
+            "Error: Please specify a git-tool subcommand (e.g., 'compact-diff')",
+            file=sys.stderr,
+        )
+        print("Try 'mcp-coder git-tool --help' for more information.", file=sys.stderr)
         return 1
 
 
@@ -267,8 +278,12 @@ def _handle_commit_command(args: argparse.Namespace) -> int:
     elif args.commit_mode == "clipboard":
         return execute_commit_clipboard(args)
     else:
-        logger.error(f"Commit mode '{args.commit_mode}' not yet implemented")
-        print(f"Error: Commit mode '{args.commit_mode}' is not yet implemented.")
+        logger.debug(f"Commit mode '{args.commit_mode}' not yet implemented")
+        print(
+            f"Error: Commit mode '{args.commit_mode}' is not yet implemented.",
+            file=sys.stderr,
+        )
+        print("Try 'mcp-coder commit --help' for more information.", file=sys.stderr)
         return 1
 
 
@@ -331,11 +346,7 @@ def main() -> int:
         elif args.command == "vscodeclaude":
             return _handle_vscodeclaude_command(args)
 
-        # Other commands will be implemented in later steps
-        logger.error(f"Command '{args.command}' not yet implemented")
-        print(f"Error: Command '{args.command}' is not yet implemented.")
-        print("Available commands will be added in upcoming implementation steps.")
-        return 1
+        return 1  # unreachable: argparse validates command choices
 
     except KeyboardInterrupt:
         logger.info("CLI interrupted by user")

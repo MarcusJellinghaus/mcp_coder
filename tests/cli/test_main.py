@@ -212,25 +212,6 @@ class TestMain:
 
     @patch("mcp_coder.cli.main.setup_logging")
     @patch("mcp_coder.cli.main.create_parser")
-    @patch("builtins.print")
-    def test_main_unknown_command_returns_error(
-        self, mock_print: Mock, mock_create_parser: Mock, mock_setup_logging: Mock
-    ) -> None:
-        """Test that main returns error for unknown commands."""
-        mock_parser = Mock()
-        mock_parser.parse_args.return_value = argparse.Namespace(
-            command="unknown", log_level="INFO", help=False
-        )
-        mock_create_parser.return_value = mock_parser
-
-        result = main()
-
-        assert result == 1
-        mock_print.assert_called()
-        mock_setup_logging.assert_called_once_with("INFO")
-
-    @patch("mcp_coder.cli.main.setup_logging")
-    @patch("mcp_coder.cli.main.create_parser")
     def test_main_keyboard_interrupt_returns_1(
         self, mock_create_parser: Mock, mock_setup_logging: Mock
     ) -> None:
@@ -788,18 +769,136 @@ class TestCheckBranchStatusCommand:
             )
 
     @patch("mcp_coder.cli.main.logger")
-    @patch("builtins.print")
     def test_check_no_subcommand_shows_error(
-        self, mock_print: Mock, mock_logger: Mock
+        self, mock_logger: Mock, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        """Test that check without subcommand shows error."""
-        # Execute
+        """Test that check without subcommand shows error and help hint."""
         with patch("sys.argv", ["mcp-coder", "check"]):
             result = main()
 
-        # Verify
         assert result == 1
-        mock_logger.error.assert_called_with("Check subcommand required")
-        mock_print.assert_called_with(
-            "Error: Please specify a check subcommand (e.g., 'branch-status', 'file-size')"
+        mock_logger.debug.assert_called_with("Check subcommand required")
+        captured = capsys.readouterr()
+        assert "Error: Please specify a check subcommand" in captured.err
+        assert "Try 'mcp-coder check --help' for more information." in captured.err
+
+
+class TestHelpHintIntegration:
+    """Tests for help hint display on argument errors and manual error paths."""
+
+    def test_unrecognized_arg_shows_help_hint(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test that unrecognized top-level args show help hint on stderr."""
+        with patch("sys.argv", ["mcp-coder", "--resume-session"]):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+
+        assert exc_info.value.code == 2
+        captured = capsys.readouterr()
+        assert "unrecognized arguments: --resume-session" in captured.err
+        assert "Try 'mcp-coder --help' for more information." in captured.err
+
+    def test_subcommand_unrecognized_arg_shows_help_hint(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test that unrecognized subcommand args show help hint."""
+        with patch(
+            "sys.argv", ["mcp-coder", "check", "branch-status", "--nonexistent"]
+        ):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+
+        assert exc_info.value.code == 2
+        captured = capsys.readouterr()
+        assert "unrecognized arguments: --nonexistent" in captured.err
+        assert "--help' for more information." in captured.err
+
+    def test_gh_tool_no_subcommand_shows_help_hint(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test that gh-tool without subcommand shows help hint."""
+        with patch("sys.argv", ["mcp-coder", "gh-tool"]):
+            result = main()
+
+        assert result == 1
+        captured = capsys.readouterr()
+        assert "Error: Please specify a gh-tool subcommand" in captured.err
+        assert "Try 'mcp-coder gh-tool --help' for more information." in captured.err
+
+    def test_vscodeclaude_no_subcommand_shows_help_hint(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test that vscodeclaude without subcommand shows help hint."""
+        with patch("sys.argv", ["mcp-coder", "vscodeclaude"]):
+            result = main()
+
+        assert result == 1
+        captured = capsys.readouterr()
+        assert "Error: Please specify a subcommand" in captured.err
+        assert (
+            "Try 'mcp-coder vscodeclaude --help' for more information." in captured.err
         )
+
+    def test_git_tool_no_subcommand_shows_help_hint(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test that git-tool without subcommand shows help hint."""
+        with patch("sys.argv", ["mcp-coder", "git-tool"]):
+            result = main()
+
+        assert result == 1
+        captured = capsys.readouterr()
+        assert "Error: Please specify a git-tool subcommand" in captured.err
+        assert "Try 'mcp-coder git-tool --help' for more information." in captured.err
+
+    @pytest.mark.parametrize(
+        "argv,expected_error",
+        [
+            (
+                ["mcp-coder", "coordinator", "--dry-run", "--branch-name", "feat-x"],
+                "Error: --dry-run requires --repo NAME",
+            ),
+            (
+                ["mcp-coder", "coordinator", "--dry-run", "--repo", "mcp_coder"],
+                "Error: --dry-run requires --branch-name BRANCH",
+            ),
+            (
+                ["mcp-coder", "coordinator"],
+                "Error: Either --all or --repo must be specified",
+            ),
+        ],
+        ids=[
+            "dry-run-requires-repo",
+            "dry-run-requires-branch-name",
+            "either-all-or-repo",
+        ],
+    )
+    def test_coordinator_no_flags_shows_help_hint(
+        self,
+        argv: list[str],
+        expected_error: str,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Test that coordinator error paths show help hint."""
+        with patch("sys.argv", argv):
+            result = main()
+
+        assert result == 1
+        captured = capsys.readouterr()
+        assert expected_error in captured.err
+        assert (
+            "Try 'mcp-coder coordinator --help' for more information." in captured.err
+        )
+
+    def test_commit_no_subcommand_shows_help_hint(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test that commit without subcommand shows help hint."""
+        with patch("sys.argv", ["mcp-coder", "commit"]):
+            result = main()
+
+        assert result == 1
+        captured = capsys.readouterr()
+        assert "Error: Commit mode 'None' is not yet implemented." in captured.err
+        assert "Try 'mcp-coder commit --help' for more information." in captured.err
