@@ -602,6 +602,18 @@ def execute_subprocess(
     if command is None:
         raise TypeError("Command cannot be None")
 
+    if not command:
+        return CommandResult(
+            return_code=1,
+            stdout="",
+            stderr="",
+            timed_out=False,
+            execution_error="Command list must not be empty",
+            command=command,
+            runner_type="subprocess",
+            execution_time_ms=0,
+        )
+
     if options is None:
         options = CommandOptions()
 
