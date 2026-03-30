@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Dependencies + Package Skeleton + Types
 > [step_1.md](./steps/step_1.md) — Add Textual dependencies, create icoder package skeleton, implement core type definitions (Response, Command, EventEntry)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Event Log
 > [step_2.md](./steps/step_2.md) — Implement structured event log with in-memory list + JSONL file output (EventLog class with context manager)
