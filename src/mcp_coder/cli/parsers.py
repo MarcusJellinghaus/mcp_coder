@@ -655,6 +655,40 @@ def add_vscodeclaude_parsers(subparsers: Any) -> None:
     )
 
 
+def add_icoder_parser(subparsers: Any) -> None:
+    """Add the icoder command parser."""
+    icoder_parser = subparsers.add_parser(
+        "icoder",
+        help="Launch interactive TUI for conversational coding",
+        formatter_class=WideHelpFormatter,
+    )
+    icoder_parser.add_argument(
+        "--llm-method",
+        choices=["claude", "langchain"],
+        default=None,
+        metavar="METHOD",
+        help="LLM method override. If omitted, uses config default_provider or claude",
+    )
+    icoder_parser.add_argument(
+        "--mcp-config",
+        type=str,
+        default=None,
+        help="Path to MCP configuration file (e.g., .mcp.linux.json)",
+    )
+    icoder_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
+    )
+    icoder_parser.add_argument(
+        "--execution-dir",
+        type=str,
+        default=None,
+        help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
+    )
+
+
 def add_git_tool_parsers(subparsers: Any) -> None:
     """Add git-tool command parsers."""
     git_tool_parser = subparsers.add_parser("git-tool", help="Git tool commands")

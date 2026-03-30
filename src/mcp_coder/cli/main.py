@@ -21,6 +21,7 @@ from .commands.define_labels import execute_define_labels
 from .commands.gh_tool import execute_get_base_branch
 from .commands.git_tool import execute_compact_diff
 from .commands.help import get_help_text
+from .commands.icoder import execute_icoder
 from .commands.implement import execute_implement
 from .commands.init import execute_init
 from .commands.prompt import execute_prompt
@@ -35,6 +36,7 @@ from .parsers import (
     add_create_pr_parser,
     add_gh_tool_parsers,
     add_git_tool_parsers,
+    add_icoder_parser,
     add_implement_parser,
     add_prompt_parser,
     add_verify_parser,
@@ -121,6 +123,7 @@ def create_parser() -> argparse.ArgumentParser:
     add_prompt_parser(subparsers)
     add_commit_parsers(subparsers)
     add_implement_parser(subparsers)
+    add_icoder_parser(subparsers)
     add_create_plan_parser(subparsers)
     add_create_pr_parser(subparsers)
     add_coordinator_parsers(subparsers)
@@ -331,6 +334,8 @@ def main() -> int:
             return _handle_commit_command(args)
         elif args.command == "implement":
             return execute_implement(args)
+        elif args.command == "icoder":
+            return execute_icoder(args)
         elif args.command == "create-plan":
             return execute_create_plan(args)
         elif args.command == "create-pr":

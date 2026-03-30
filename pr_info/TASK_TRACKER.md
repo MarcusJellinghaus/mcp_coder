@@ -59,9 +59,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 6: CLI Wiring
 > [step_6.md](./steps/step_6.md) — Register `mcp-coder icoder` CLI command with standard flags, wire parser and routing in main.py
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: UI Widgets (styles, OutputLog, InputArea)
 > [step_7.md](./steps/step_7.md) — Implement Textual UI widgets: CSS styles, OutputLog(RichLog), InputArea(TextArea) with Enter=submit
