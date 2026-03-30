@@ -11,11 +11,11 @@ These complement the existing mock-based tests in `tests/utils/test_subprocess_r
 
 ## Architectural / Design Changes
 
-**None.** This is a test-only change. No production code is added or modified.
+**Minimal.** One small production fix was included alongside the tests:
 
-- No new modules, classes, or functions in `src/`
-- No changes to imports, APIs, or dependencies
-- The existing `subprocess_runner.py` module is tested as-is
+- `src/mcp_coder/utils/subprocess_runner.py`: Added early guard in `execute_subprocess()` for empty command lists — returns `CommandResult(return_code=1, execution_error="Command list must not be empty")` instead of allowing an unhandled `IndexError` from `subprocess.Popen`.
+
+No new modules, classes, or public API changes. The existing `subprocess_runner.py` module is tested as-is (with the above fix).
 
 ## Approach
 
@@ -32,8 +32,7 @@ Mechanical port from `p_tools` reference with minimal adaptations:
 | Action | Path |
 |--------|------|
 | **CREATE** | `tests/utils/test_subprocess_runner_real.py` |
-
-No other files are created or modified.
+| **MODIFY** | `src/mcp_coder/utils/subprocess_runner.py` |
 
 ## What is NOT ported (per issue)
 

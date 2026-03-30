@@ -590,6 +590,7 @@ class TestErrorHandlingReal:
 
         assert result.return_code == 1
         assert result.execution_error is not None
+        assert "empty" in result.execution_error.lower()
 
     def test_execution_time_tracking(self) -> None:
         """Test that execution time is tracked."""
