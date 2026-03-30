@@ -35,14 +35,6 @@ BENEFITS:
 
 # Venv setup section for Windows
 VENV_SECTION_WINDOWS = r"""echo Setting up environments...
-mcp-coder --version
-echo   MCP-Coder install:    {mcp_coder_install_path}
-echo   Project directory:    %CD%
-echo.
-
-REM Set MCP environment variables (for MCP server configuration)
-set "MCP_CODER_PROJECT_DIR={session_folder_path}"
-set "MCP_CODER_VENV_DIR={session_folder_path}\.venv"
 
 REM Store the MCP-Coder environment path (from installation, not session)
 if "{mcp_coder_install_path}" NEQ "" (
@@ -54,6 +46,18 @@ if "{mcp_coder_install_path}" NEQ "" (
     pause
     exit /b 1
 )
+
+REM Add MCP-Coder tools to PATH so they're available in project context
+set "PATH=%MCP_CODER_VENV_PATH%;%PATH%"
+
+mcp-coder --version
+echo   MCP-Coder install:    {mcp_coder_install_path}
+echo   Project directory:    %CD%
+echo.
+
+REM Set MCP environment variables (for MCP server configuration)
+set "MCP_CODER_PROJECT_DIR={session_folder_path}"
+set "MCP_CODER_VENV_DIR={session_folder_path}\.venv"
 
 REM Set up the project environment (current directory)
 echo Project directory: %CD%
@@ -103,9 +107,6 @@ if not exist .venv\Scripts\activate.bat (
         exit /b 1
     )
 )
-
-REM Add MCP-Coder tools to PATH so they're available in project context
-set "PATH=%MCP_CODER_VENV_PATH%;%PATH%"
 
 REM Install project in editable mode (ensures current code is always used)
 uv pip install -e . --no-deps
