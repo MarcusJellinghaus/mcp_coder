@@ -203,6 +203,7 @@ def format_raw_response(response_data: Dict[str, Any]) -> str:
 
 
 _RENDERED_TRUNCATION_LIMIT = 5
+_RENDERED_INLINE_ARG_LIMIT = 2
 
 
 def _render_tool_output(output: str) -> tuple[list[str], int]:
@@ -371,15 +372,49 @@ def print_stream_event(
             print(json.dumps(ndjson), file=file, flush=True)
         return
 
+    if output_format == "rendered":
+        if event_type == "text_delta":
+            print(event.get("text", ""), end="", file=file, flush=True)
+        elif event_type == "tool_use_start":
+            name = str(event.get("name", ""))
+            args = event.get("args", {})
+            display_name = _format_tool_name(name)
+            if isinstance(args, dict) and len(args) <= _RENDERED_INLINE_ARG_LIMIT:
+                args_str = _format_tool_args(args)
+                print(f"\u250c {display_name}({args_str})", file=file)
+            else:
+                print(f"\u250c {display_name}", file=file)
+                if isinstance(args, dict):
+                    for key, value in args.items():
+                        print(f"\u2502  {key}: {json.dumps(value)}", file=file)
+        elif event_type == "tool_result":
+            output: str = str(event.get("output", ""))
+            lines, total = _render_tool_output(output)
+            for line in lines:
+                print(f"\u2502  {line}", file=file)
+            if total > _RENDERED_TRUNCATION_LIMIT:
+                print(
+                    f"\u2514 done ({total} lines, truncated to {_RENDERED_TRUNCATION_LIMIT})",
+                    file=file,
+                )
+            else:
+                print("\u2514 done", file=file)
+            print(file=file)
+        elif event_type == "error":
+            print(event.get("message", ""), file=err_file)
+        elif event_type == "done":
+            print(file=file)
+        return
+
     # text format
     if event_type == "text_delta":
         print(event.get("text", ""), end="", file=file, flush=True)
     elif event_type == "tool_use_start":
-        name = event.get("name", "")
+        name = str(event.get("name", ""))
         args_str = _format_tool_args(event.get("args"))
         print(f"\n── tool: {name}({args_str}) ──", file=file)
     elif event_type == "tool_result":
-        output = event.get("output", "")
+        output = str(event.get("output", ""))
         print(f"{output}\n{'─' * 26}", file=file)
     elif event_type == "error":
         print(event.get("message", ""), file=err_file)

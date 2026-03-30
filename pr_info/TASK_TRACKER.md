@@ -62,9 +62,23 @@ Part of #642 (rendered output format) - Step 2/4.
 ### Step 3: Rendered format branch in `print_stream_event`
 > [Detail](./steps/step_3.md) — `formatters.py`, `test_formatters.py`
 
-- [ ] Implementation: add `rendered` branch in `print_stream_event()` + `_RENDERED_INLINE_ARG_LIMIT` constant + unit tests (TestRenderedStreamFormat)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `rendered` branch in `print_stream_event()` + `_RENDERED_INLINE_ARG_LIMIT` constant + unit tests (TestRenderedStreamFormat)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
+
+**Commit message:**
+```
+feat: add rendered output format branch in print_stream_event()
+
+Add _RENDERED_INLINE_ARG_LIMIT constant and "rendered" branch to
+print_stream_event(). Tool calls with ≤2 args render inline as
+┌ server > tool(args); 3+ args use block format with │ lines.
+Tool results use _render_tool_output() with truncation and └ done
+footer. Includes 10 unit tests in TestRenderedStreamFormat. Also
+fixes pre-existing mypy type errors in the text format branch.
+
+Part of #642 (rendered output format) - Step 3/4.
+```
 
 ### Step 4: CLI wiring — parser + prompt command + test updates
 > [Detail](./steps/step_4.md) — `parsers.py`, `prompt.py`, test files

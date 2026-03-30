@@ -1,0 +1,14 @@
+feat: add rendered output format branch in print_stream_event()
+
+Add _RENDERED_INLINE_ARG_LIMIT constant and "rendered" branch to
+print_stream_event(). Tool calls with ≤2 args render inline as
+┌ server > tool(args); 3+ args use block format with │ lines.
+Tool results use _render_tool_output() with truncation and └ done
+footer. Includes 10 unit tests in TestRenderedStreamFormat covering
+text_delta, inline/block params, result variations, JSON expansion,
+blank line after footer, error to stderr, and done event.
+
+Also fixes pre-existing mypy type errors in the text format branch
+by adding str() casts to event.get() calls.
+
+Part of #642 (rendered output format) - Step 3/4.
