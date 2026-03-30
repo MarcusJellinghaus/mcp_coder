@@ -67,7 +67,11 @@ class EventLog:
             self._file.close()
 
     def __enter__(self) -> EventLog:
-        """Support context manager usage."""
+        """Support context manager usage.
+
+        Returns:
+            Self for use in with-statements.
+        """
         return self
 
     def __exit__(self, *exc: object) -> None:
