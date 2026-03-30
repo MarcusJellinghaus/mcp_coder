@@ -396,6 +396,7 @@ class TestExecuteSetStatus:
         tmp_path: Path,
         full_labels_config: Dict[str, Any],
         mock_issue_manager: MagicMock,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test successful execution with auto-detected issue."""
         # Setup mocks
@@ -419,6 +420,8 @@ class TestExecuteSetStatus:
         result = execute_set_status(args)
 
         assert result == 0
+        captured = capsys.readouterr()
+        assert "Updated issue #123 to status-05:plan-ready" in captured.out
         mock_extract_issue.assert_called_once_with("123-feature-name")
         mock_issue_manager.get_issue.assert_called_once_with(123)
         mock_issue_manager.set_labels.assert_called_once()
@@ -438,6 +441,7 @@ class TestExecuteSetStatus:
         tmp_path: Path,
         full_labels_config: Dict[str, Any],
         mock_issue_manager: MagicMock,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test successful execution with --issue flag."""
         # Setup mocks
@@ -459,6 +463,8 @@ class TestExecuteSetStatus:
         result = execute_set_status(args)
 
         assert result == 0
+        captured = capsys.readouterr()
+        assert "Updated issue #123 to status-05:plan-ready" in captured.out
         # Should use explicit issue number, not branch detection
         mock_issue_manager.get_issue.assert_called_once_with(123)
         mock_issue_manager.set_labels.assert_called_once()
@@ -592,6 +598,7 @@ class TestExecuteSetStatus:
         tmp_path: Path,
         full_labels_config: Dict[str, Any],
         mock_issue_manager: MagicMock,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test that set-status succeeds with --force even when directory is dirty."""
         # Setup mocks
@@ -613,6 +620,8 @@ class TestExecuteSetStatus:
         result = execute_set_status(args)
 
         assert result == 0
+        captured = capsys.readouterr()
+        assert "Updated issue #123 to status-05:plan-ready" in captured.out
         # With force=True, is_working_directory_clean should NOT be called
         mock_is_working_directory_clean.assert_not_called()
         mock_issue_manager.get_issue.assert_called_once_with(123)
@@ -633,6 +642,7 @@ class TestExecuteSetStatus:
         tmp_path: Path,
         full_labels_config: Dict[str, Any],
         mock_issue_manager: MagicMock,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test that set-status succeeds when working directory is clean."""
         # Setup mocks
@@ -654,6 +664,8 @@ class TestExecuteSetStatus:
         result = execute_set_status(args)
 
         assert result == 0
+        captured = capsys.readouterr()
+        assert "Updated issue #123 to status-05:plan-ready" in captured.out
         # With clean directory, is_working_directory_clean should be called
         mock_is_working_directory_clean.assert_called_once()
         mock_issue_manager.get_issue.assert_called_once_with(123)

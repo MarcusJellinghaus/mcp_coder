@@ -264,6 +264,7 @@ def execute_set_status(args: argparse.Namespace) -> int:
             print(f"Error: {update_error}", file=sys.stderr)
             return 1
 
+        print(f"Updated issue #{issue_number} to {args.status_label}")
         logger.info(f"Updated issue #{issue_number} to {args.status_label}")
         return 0
 
