@@ -93,6 +93,36 @@ def test_interactive_resume_section_no_hardcoded_llm_method() -> None:
     ), "INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS must not hardcode '--llm-method'"
 
 
+def test_venv_section_path_set_before_mcp_coder_version() -> None:
+    """Test that PATH is set before mcp-coder --version is called.
+
+    The mcp-coder executable lives in MCP_CODER_VENV_PATH, so PATH must
+    include that directory before the first mcp-coder invocation (issue #643).
+    """
+    lines = VENV_SECTION_WINDOWS.splitlines()
+    path_line = next(
+        i for i, line in enumerate(lines) if "PATH=%MCP_CODER_VENV_PATH%" in line
+    )
+    version_line = next(
+        i for i, line in enumerate(lines) if "mcp-coder --version" in line
+    )
+    assert path_line < version_line, (
+        f"PATH assignment (line {path_line}) must come before "
+        f"mcp-coder --version (line {version_line})"
+    )
+
+
+def test_venv_section_no_duplicate_path_assignment() -> None:
+    """Test that PATH=%MCP_CODER_VENV_PATH% appears exactly once.
+
+    A duplicate PATH assignment is unnecessary and confusing (issue #643).
+    """
+    count = VENV_SECTION_WINDOWS.count("PATH=%MCP_CODER_VENV_PATH%")
+    assert (
+        count == 1
+    ), f"Expected exactly 1 PATH=%MCP_CODER_VENV_PATH% assignment, found {count}"
+
+
 def test_venv_section_runs_editable_install() -> None:
     """Test that VENV_SECTION_WINDOWS runs editable install on every launch.
 

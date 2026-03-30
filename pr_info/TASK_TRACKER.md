@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Fix PATH ordering in VENV_SECTION_WINDOWS
-- [ ] Implementation: reorder VENV_SECTION_WINDOWS template + add tests (`templates.py`, `test_templates.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: reorder VENV_SECTION_WINDOWS template + add tests (`templates.py`, `test_templates.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Add commands to error statuses in labels.json
 - [ ] Implementation: add commands to 5 error statuses + add test (`labels.json`, `test_label_config.py`)
