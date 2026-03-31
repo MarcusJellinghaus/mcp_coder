@@ -97,7 +97,7 @@ Follow the exact pattern of existing `get-base-branch` registration for parser a
 
 ```
 1. resolve_project_dir(args.project_dir)
-2. subprocess.run(["git", "fetch"], cwd=project_dir)
+2. subprocess.run(["git", "fetch"], cwd=project_dir)  # best-effort, no check=True
 3. issue_data = IssueManager(project_dir).get_issue(issue_number)
 4. if issue_data["number"] == 0: print error to stderr; return 1
 5. branches = IssueBranchManager(project_dir).get_linked_branches(issue_number)

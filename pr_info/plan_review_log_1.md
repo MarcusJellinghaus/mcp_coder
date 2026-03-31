@@ -1,76 +1,47 @@
 # Plan Review Log — Issue #647 (implement_direct)
 
-## Review Summary
+## Round 1 — 2026-03-31
+**Findings**:
+- Merge Steps 1 and 2 — tightly coupled, step 1 unreachable without step 2 (MEDIUM)
+- Algorithm missing `number == 0` guard after `get_issue()` (LOW)
+- Settings needs Bash permission entry for new `checkout-issue-branch` command (LOW)
 
-**Overall assessment**: The plan is well-structured and follows codebase conventions closely. Three findings below, two of which are actionable.
+**Decisions**:
+- Accept all three — straightforward improvements per planning principles
+- No user escalation needed
 
----
+**User decisions**: None required
 
-## Findings
+**Changes**:
+- Merged step_1.md and step_2.md into single step_1.md
+- Renumbered step_3.md → step_2.md, deleted old step_3.md
+- Added `number == 0` guard at algorithm step 4
+- Added wildcard `Bash(mcp-coder gh-tool:*)` note in step_2.md
+- Updated summary.md for 2-step structure
+- Created Decisions.md
 
-### 1. Steps 1 and 2 should be merged (Severity: MEDIUM)
+**Status**: Committed (8add0d3)
 
-**Problem**: Step 1 creates `execute_checkout_issue_branch()` in `gh_tool.py` with tests, and Step 2 wires it into the parser and dispatcher. These are tightly coupled — the handler function cannot be exercised through the CLI until Step 2 is done. Splitting them creates a commit where the function exists but is unreachable. Per planning principles: "Merge tiny or intertwined steps."
+## Round 2 — 2026-03-31
+**Findings**:
+- Wildcard syntax difference between skill frontmatter and settings — intentional, different systems (LOW)
+- `git fetch` best-effort intent not explicit in algorithm (LOW)
+- No test for fetch failure scenario (LOW)
 
-Additionally, Step 2 is small (one subparser block in `parsers.py`, one `elif` + import in `main.py`, three parser tests). Combined with Step 1, the total is still a manageable single commit — one new function in `gh_tool.py`, one parser block, one dispatch route, and ~13 tests.
+**Decisions**:
+- Skip finding 1 — issue spec defines skill syntax, different from settings syntax
+- Accept finding 2 — added clarifying comment in pseudocode
+- Skip finding 3 — fetch is best-effort by design, existing tests sufficient
 
-**Recommendation**: Merge Steps 1 and 2 into a single step: "Add `checkout-issue-branch` subcommand (handler + parser + tests)." This matches how `get-base-branch` was originally added (handler + wiring together).
+**User decisions**: None required
 
----
+**Changes**:
+- Added `# best-effort, no check=True` comment to fetch line in algorithm
 
-### 2. Missing edge case: `get_issue` returns empty issue with `base_branch` absent (Severity: LOW)
+**Status**: Committed
 
-**Problem**: The algorithm in Step 1 calls `IssueManager.get_issue(issue_number)` and then uses `issue_data["base_branch"]`. However, `IssueData` has `base_branch` as `NotRequired[Optional[str]]`. When `get_issue` fails (e.g., API error), it returns `create_empty_issue_data()` which does NOT include `base_branch` at all. The plan's test `test_checkout_issue_not_found` checks for `number == 0`, which is correct, but the algorithm description in Step 1 doesn't show checking for `number == 0` before accessing `base_branch`.
+## Final Status
 
-The plan's algorithm should be explicit:
-```
-3. issue_data = IssueManager(project_dir).get_issue(issue_number)
-4. if issue_data["number"] == 0: return 1  # issue not found
-5. branches = ...
-```
-
-This is already implied by the test cases but should be stated in the algorithm section for clarity.
-
-**Recommendation**: Update the ALGORITHM section in Step 1 to check `issue_data["number"] == 0` immediately after `get_issue`, before accessing `base_branch`. The implementing LLM will likely figure this out from the test cases, so this is low severity.
-
----
-
-### 3. Settings permission entry may need a Bash wildcard (Severity: LOW)
-
-**Problem**: Step 3 adds `"Skill(implement_direct)"` to settings. But the existing settings already have an entry `"Bash(mcp-coder gh-tool get-base-branch)"` (specific, no wildcard). The new `checkout-issue-branch` command will also need a Bash permission for direct CLI invocation. The skill's `allowed-tools` has `Bash(mcp-coder gh-tool *)` but `settings.local.json` only allows the specific `get-base-branch` command.
-
-Looking more carefully: `"Bash(mcp-coder git-tool:*)"` already exists with a wildcard for `git-tool`. The `gh-tool` entry is inconsistent — it only allows `get-base-branch` specifically. This is a pre-existing inconsistency, but the new command will need permission too.
-
-**Recommendation**: Step 3 should also update the Bash permission from `"Bash(mcp-coder gh-tool get-base-branch)"` to `"Bash(mcp-coder gh-tool:*)"` (wildcard, matching the `git-tool` pattern). This covers both existing and new subcommands. Alternatively, add a second specific entry `"Bash(mcp-coder gh-tool checkout-issue-branch:*)"`. The wildcard approach is cleaner.
-
----
-
-## Step Granularity Assessment
-
-| Original Step | Verdict | Reasoning |
-|---------------|---------|-----------|
-| Step 1 (handler + tests) | Merge with Step 2 | Tightly coupled, unreachable code without parser wiring |
-| Step 2 (parser + dispatch) | Merge with Step 1 | Too small standalone, depends on Step 1 |
-| Step 3 (skill + settings) | Keep as-is | Independent, no Python code, distinct concern |
-
-**Proposed revised steps:**
-- **Step 1**: Add `checkout-issue-branch` subcommand — handler in `gh_tool.py`, parser in `parsers.py`, dispatch in `main.py`, all tests
-- **Step 2**: Skill file + settings update (current Step 3)
-
----
-
-## Items That Look Good
-
-- Handler follows the existing `execute_get_base_branch()` pattern exactly (exit codes 0/1/2, ValueError handling, broad-exception-caught)
-- Test structure mirrors src structure (`tests/cli/commands/test_gh_tool.py`)
-- Correct use of `IssueManager` and `IssueBranchManager` APIs — the TypedDict fields and method signatures match the actual code
-- `subprocess.run` for git operations is consistent with how other CLI commands work
-- Skill frontmatter uses the newer skills format correctly
-- No unnecessary abstractions — direct calls to existing managers
-- Test coverage is thorough with both exit-code tests and behavioral tests
-
----
-
-## Questions
-
-None — the plan is clear and the design decisions are sound.
+**Rounds**: 2
+**Commits**: 2
+**Plan status**: Ready for approval — no open issues remain
