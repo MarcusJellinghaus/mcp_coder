@@ -8,16 +8,23 @@ Contains utility functions for:
 """
 
 from datetime import datetime, timezone
+from pathlib import Path
 
 from ...utils.github_operations.issues import IssueData
 from .config import get_vscodeclaude_config
 from .types import VSCodeClaudeSession
 
+TO_BE_DELETED_FILENAME = ".to_be_deleted"
+
 __all__ = [
+    "TO_BE_DELETED_FILENAME",
+    "add_to_be_deleted",
     "build_session",
     "get_issue_status",
     "get_repo_short_name_from_full",
     "get_stage_display_name",
+    "load_to_be_deleted",
+    "remove_from_to_be_deleted",
     "truncate_title",
 ]
 
@@ -113,3 +120,53 @@ def truncate_title(title: str, max_length: int = 50) -> str:
         return title
     # Subtract 3 for the ellipsis
     return title[: max_length - 3] + "..."
+
+
+def load_to_be_deleted(workspace_base: str) -> set[str]:
+    """Load soft-delete registry.
+
+    Args:
+        workspace_base: Path to workspace directory.
+
+    Returns:
+        Set of folder names listed in the registry.
+    """
+    path = Path(workspace_base) / TO_BE_DELETED_FILENAME
+    if not path.exists():
+        return set()
+    return {line.strip() for line in path.read_text().splitlines() if line.strip()}
+
+
+def add_to_be_deleted(workspace_base: str, folder_name: str) -> None:
+    """Add folder name to soft-delete registry.
+
+    No-op if already present.
+
+    Args:
+        workspace_base: Path to workspace directory.
+        folder_name: Folder name to add.
+    """
+    existing = load_to_be_deleted(workspace_base)
+    if folder_name in existing:
+        return
+    path = Path(workspace_base) / TO_BE_DELETED_FILENAME
+    with path.open("a") as f:
+        f.write(folder_name + "\n")
+
+
+def remove_from_to_be_deleted(workspace_base: str, folder_name: str) -> None:
+    """Remove folder name from registry.
+
+    Deletes the file if the registry becomes empty.
+
+    Args:
+        workspace_base: Path to workspace directory.
+        folder_name: Folder name to remove.
+    """
+    existing = load_to_be_deleted(workspace_base)
+    existing.discard(folder_name)
+    path = Path(workspace_base) / TO_BE_DELETED_FILENAME
+    if not existing:
+        path.unlink(missing_ok=True)
+        return
+    path.write_text("\n".join(sorted(existing)) + "\n")

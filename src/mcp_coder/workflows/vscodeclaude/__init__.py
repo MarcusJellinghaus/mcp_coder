@@ -253,7 +253,14 @@ from .config import (
 )
 
 # Helpers (re-exported for backward compatibility)
-from .helpers import get_stage_display_name, truncate_title
+from .helpers import (
+    TO_BE_DELETED_FILENAME,
+    add_to_be_deleted,
+    get_stage_display_name,
+    load_to_be_deleted,
+    remove_from_to_be_deleted,
+    truncate_title,
+)
 
 # Issue filtering
 from .issues import (
@@ -384,7 +391,11 @@ __all__ = [
     "restart_closed_sessions",
     "handle_pr_created_issues",
     # Helpers
+    "TO_BE_DELETED_FILENAME",
+    "add_to_be_deleted",
     "get_stage_display_name",
+    "load_to_be_deleted",
+    "remove_from_to_be_deleted",
     "truncate_title",
     # Status
     "get_issue_current_status",
