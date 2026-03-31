@@ -18,7 +18,7 @@ from .commands.coordinator.issue_stats import execute_coordinator_issue_stats
 from .commands.create_plan import execute_create_plan
 from .commands.create_pr import execute_create_pr
 from .commands.define_labels import execute_define_labels
-from .commands.gh_tool import execute_get_base_branch
+from .commands.gh_tool import execute_checkout_issue_branch, execute_get_base_branch
 from .commands.git_tool import execute_compact_diff
 from .commands.help import get_help_text
 from .commands.icoder import execute_icoder
@@ -26,6 +26,7 @@ from .commands.implement import execute_implement
 from .commands.init import execute_init
 from .commands.prompt import execute_prompt
 from .commands.verify import execute_verify
+from .gh_parsers import add_gh_tool_parsers, add_git_tool_parsers
 from .parsers import (
     HelpHintArgumentParser,
     WideHelpFormatter,
@@ -34,8 +35,6 @@ from .parsers import (
     add_coordinator_parsers,
     add_create_plan_parser,
     add_create_pr_parser,
-    add_gh_tool_parsers,
-    add_git_tool_parsers,
     add_icoder_parser,
     add_implement_parser,
     add_prompt_parser,
@@ -214,12 +213,15 @@ def _handle_gh_tool_command(args: argparse.Namespace) -> int:
             from .commands.set_status import execute_set_status
 
             return execute_set_status(args)
+        elif args.gh_tool_subcommand == "checkout-issue-branch":
+            return execute_checkout_issue_branch(args)
         return 1  # unreachable: argparse validates subcommand choices
     else:
         logger.debug("gh-tool subcommand required")
         print(
             "Error: Please specify a gh-tool subcommand"
-            " (e.g., 'get-base-branch', 'define-labels', 'issue-stats', 'set-status')",
+            " (e.g., 'get-base-branch', 'define-labels', 'issue-stats',"
+            " 'set-status', 'checkout-issue-branch')",
             file=sys.stderr,
         )
         print("Try 'mcp-coder gh-tool --help' for more information.", file=sys.stderr)
