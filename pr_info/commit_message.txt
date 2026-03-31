@@ -1,5 +1,0 @@
-refactor(cli): extract gh/git tool parsers to fix file-size CI check
-
-Move add_gh_tool_parsers and add_git_tool_parsers from parsers.py
-into a new gh_parsers.py module. The checkout-issue-branch subparser
-addition pushed parsers.py to 753 lines (over the 750-line CI limit).
