@@ -1,0 +1,4 @@
+feat: migrate issue_create, issue_update, plan_update to skills format
+
+Add argument-hint for issue_create and issue_update.
+Convert allowed-tools to strict format with MCP workspace tools.
