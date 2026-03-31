@@ -325,7 +325,7 @@ Interactive terminal chat for LLM-assisted coding. Three-layer architecture maxi
 - **MCP Servers**: Deployed as separate services
 - **Configuration**: User config in `~/.mcp_coder/config.toml`
 - **Project Configuration**: `.claude/CLAUDE.md` for project-specific instructions
-- **Slash Commands**: `.claude/commands/` contains workflow slash commands for Claude Code interactive sessions (e.g., `/plan_review`, `/implementation_review`, `/implementation_review_supervisor`, `/commit_push`). See [Claude Code Cheat Sheet](../processes-prompts/claude_cheat_sheet.md) for quick reference.
+- **Skills**: `.claude/skills/` contains workflow skills for Claude Code interactive sessions (e.g., `/plan_review`, `/implementation_review`, `/implementation_review_supervisor`, `/commit_push`). See [Claude Code Cheat Sheet](../processes-prompts/claude_cheat_sheet.md) for quick reference.
 
 ### Integration Testing
 - **Separate Repository**: `mcpy_coder_integration_test` for external testing
