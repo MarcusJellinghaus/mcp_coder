@@ -1,4 +1,5 @@
-feat: migrate issue_create, issue_update, plan_update to skills format
+feat: migrate skills with dynamic context injection
 
-Add argument-hint for issue_create and issue_update.
-Convert allowed-tools to strict format with MCP workspace tools.
+Migrate issue_analyse, issue_approve, check_branch_status with
+dynamic context injection (!`command $ARGUMENTS`).
+Remove redundant fetch instructions from body (Decision #12).
