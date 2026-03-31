@@ -21,6 +21,23 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Add `checkout-issue-branch` subcommand ([step_1.md](./steps/step_1.md))
+
+Handler function, parser wiring, dispatch, and all tests (unit + integration).
+
+- [ ] Implementation: add `execute_checkout_issue_branch()` to `gh_tool.py`, subparser in `parsers.py`, dispatch + import in `main.py`, all tests in `test_gh_tool.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Skill file + settings update ([step_2.md](./steps/step_2.md))
+
+Create `implement_direct` skill and add permissions to settings.
+
+- [ ] Implementation: create `.claude/skills/implement_direct/SKILL.md`, add `Skill(implement_direct)` to settings, update `gh-tool` permission to wildcard
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: verify all steps implemented correctly
+- [ ] PR summary prepared
