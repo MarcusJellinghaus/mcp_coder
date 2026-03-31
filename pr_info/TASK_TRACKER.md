@@ -45,9 +45,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 4: Batch Files — icoder.bat + icoder_local.bat
 > [Detail](./steps/step_4.md) — Create Windows launchers following `claude.bat` / `claude_local.bat` pattern
 
-- [ ] Implementation: create `icoder.bat` and `icoder_local.bat`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `icoder: add icoder.bat and icoder_local.bat launchers`
+- [x] Implementation: create `icoder.bat` and `icoder_local.bat`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `icoder: add icoder.bat and icoder_local.bat launchers`
 
 ### Step 5: /exit Alias for /quit
 > [Detail](./steps/step_5.md) — Register `/exit` as second command pointing to same handler
