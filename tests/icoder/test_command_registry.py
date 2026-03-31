@@ -50,12 +50,28 @@ def test_non_command_returns_none() -> None:
     assert response is None
 
 
+def test_exit_command() -> None:
+    """Test /exit returns quit=True."""
+    registry = create_default_registry()
+    response = registry.dispatch("/exit")
+    assert response is not None
+    assert response.quit is True
+
+
+def test_exit_in_help() -> None:
+    """Test /exit appears in /help output."""
+    registry = create_default_registry()
+    response = registry.dispatch("/help")
+    assert response is not None
+    assert "/exit" in response.text
+
+
 def test_all_commands_registered() -> None:
     """Test all built-in commands are registered."""
     registry = create_default_registry()
     commands = registry.get_all()
     names = {c.name for c in commands}
-    assert names == {"/help", "/clear", "/quit"}
+    assert names == {"/help", "/clear", "/quit", "/exit"}
 
 
 def test_dispatch_case_insensitive() -> None:

@@ -12,6 +12,9 @@ from mcp_coder.icoder.ui.widgets.input_area import InputArea
 from mcp_coder.icoder.ui.widgets.output_log import OutputLog
 from mcp_coder.llm.types import StreamEvent
 
+STYLE_USER_INPUT = "white on grey23"
+STYLE_TOOL_OUTPUT = "white on #0a0a2e"
+
 
 class ICoderApp(App[None]):
     """Interactive coding TUI. Thin shell over AppCore."""
@@ -45,7 +48,7 @@ class ICoderApp(App[None]):
         """Handle submitted input: route through AppCore."""
         text = message.text
         output = self.query_one(OutputLog)
-        output.append_text(f"> {text}")
+        output.append_text(f"> {text}", style=STYLE_USER_INPUT)
 
         response = self._core.handle_input(text)
         if response.quit:
@@ -56,6 +59,7 @@ class ICoderApp(App[None]):
         elif response.text:
             output.append_text(response.text)
         elif response.send_to_llm:
+            output.write("")
             self.run_worker(lambda: self._stream_llm(text), thread=True)
 
     def _stream_llm(self, text: str) -> None:
@@ -69,8 +73,13 @@ class ICoderApp(App[None]):
         try:
             for event in self._core.stream_llm(text):
                 self.call_from_thread(self._handle_stream_event, event)
+            self.call_from_thread(self._append_blank_line)
         except Exception as exc:  # pylint: disable=broad-exception-caught
             self.call_from_thread(self._show_error, str(exc))
+
+    def _append_blank_line(self) -> None:
+        """Write an empty line to the output log for visual spacing."""
+        self.query_one(OutputLog).write("")
 
     def _handle_stream_event(self, event: StreamEvent) -> None:
         """Render a single stream event in the output log.
@@ -87,10 +96,10 @@ class ICoderApp(App[None]):
         elif event_type == "tool_use_start":
             name = str(event.get("name", ""))
             args = str(event.get("args", {}))
-            output.append_tool_use(name, args, "...")
+            output.append_tool_use(name, args, "...", style=STYLE_TOOL_OUTPUT)
         elif event_type == "tool_result":
             name = str(event.get("name", ""))
-            output.append_tool_use(name, "", "done")
+            output.append_tool_use(name, "", "done", style=STYLE_TOOL_OUTPUT)
         elif event_type == "error":
             msg = event.get("message", "Unknown error")
             output.append_text(f"Error: {msg}")

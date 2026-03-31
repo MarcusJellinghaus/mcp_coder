@@ -11,8 +11,10 @@ if TYPE_CHECKING:
 
 
 def register_quit(registry: CommandRegistry) -> None:
-    """Register the /quit command."""
+    """Register the /quit and /exit commands."""
 
     @registry.register("/quit", "Exit iCoder")
     def handle_quit(args: list[str]) -> Response:  # noqa: ARG001
         return Response(quit=True)
+
+    registry.register("/exit", "Exit iCoder")(handle_quit)

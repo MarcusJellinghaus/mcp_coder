@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from rich.text import Text
 from textual.widgets import RichLog
 
 
@@ -28,19 +29,35 @@ class OutputLog(RichLog):
         """
         return list(self._recorded)
 
-    def append_text(self, text: str) -> None:
-        """Write text to the output log.
+    def append_text(self, text: str, style: str | None = None) -> None:
+        """Write text to the output log, optionally styled.
 
-        Also appends to internal line buffer.
+        Args:
+            text: Content to display.
+            style: Optional Rich style string.
         """
         self._recorded.append(text)
-        self.write(text)
+        if style:
+            self.write(Text(text, style=style))
+        else:
+            self.write(text)
 
-    def append_tool_use(self, name: str, args: str, result: str) -> None:
-        """Write compact tool use line.
+    def append_tool_use(
+        self, name: str, args: str, result: str, style: str | None = None
+    ) -> None:
+        """Write compact tool use line, optionally styled.
 
         Format: gear name(args) arrow result
+
+        Args:
+            name: Tool name.
+            args: Tool arguments.
+            result: Tool result summary.
+            style: Optional Rich style string.
         """
         line = f"\u2699 {name}({args}) \u2192 {result}"
         self._recorded.append(line)
-        self.write(line)
+        if style:
+            self.write(Text(line, style=style))
+        else:
+            self.write(line)
