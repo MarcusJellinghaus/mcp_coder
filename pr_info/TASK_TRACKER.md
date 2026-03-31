@@ -68,7 +68,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 - [x] Implementation: tests (`tests/icoder/test_widgets.py`) + production code (`src/mcp_coder/icoder/ui/widgets/output_log.py`, `src/mcp_coder/icoder/ui/app.py`)
 - [x] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `icoder: Rich color coding for user input, tool output, and LLM text`
+- [x] Commit: `icoder: Rich color coding for user input, tool output, and LLM text`
 
 ## Pull Request
 - [ ] PR review: verify all steps complete and checks green
