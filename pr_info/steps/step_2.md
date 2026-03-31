@@ -18,7 +18,7 @@ stalled LangChain model connection raises `TimeoutError` instead of hanging fore
 
 ```python
 # PSEUDOCODE — inside _ask_text_stream(), around the existing chunk loop
-last_activity = time.time()
+last_activity = time.time()  # initialize BEFORE the loop to avoid false timeouts on slow initial connections
 for chunk in chat_model.stream(lc_messages):
     if time.time() - last_activity > timeout:
         raise TimeoutError(f"No LLM output for {timeout}s")
@@ -28,6 +28,13 @@ for chunk in chat_model.stream(lc_messages):
 
 **Note:** The timeout check happens *before* processing the chunk (catching gaps
 between chunks). `time` is already imported in this module.
+
+**Note:** `last_activity` must be initialized to `time.time()` **before** the loop
+starts (not after the first chunk), to avoid false timeouts on slow initial connections.
+
+**Note:** This inter-chunk timeout is a secondary safety net for gaps between received
+chunks. Truly hung/stalled connections are caught by the SDK-level HTTP timeout
+already wired through `_create_chat_model()`.
 
 **Function signature unchanged:** `_ask_text_stream(question, config, backend, session_id, timeout) -> Iterator[StreamEvent]`
 

@@ -11,8 +11,6 @@ Add blank lines between conversation sections for readability:
 ## WHERE
 
 - **Modify:** `src/mcp_coder/icoder/ui/app.py`
-- **Modify:** `tests/icoder/test_app_pilot.py` — update assertions for new blank lines
-- **Modify:** `tests/icoder/test_widgets.py` — if any assertions affected
 
 ## WHAT
 
@@ -53,14 +51,6 @@ def _append_blank_line(self) -> None:
 **Note:** Use `output.write("")` directly (not `append_text("")`) so blank lines
 don't pollute the `_recorded` buffer used for testing. Tests check `recorded_lines`
 for content, not spacing.
-
-### `test_app_pilot.py` — Update spacing expectations
-
-The `test_submit_text` and `test_llm_streaming` tests check `recorded_lines` which
-won't include `write("")` calls (only `append_text` records). So existing tests
-should still pass without changes.
-
-Verify this is the case. If any test assertions need updating, update them.
 
 ## HOW
 

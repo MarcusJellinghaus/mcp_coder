@@ -53,6 +53,11 @@ Also update the error message to reference the actual timeout value.
 Remove `_AGENT_NO_PROGRESS_TIMEOUT` constant (now unused). Keep `_AGENT_OVERALL_TIMEOUT`
 (still used for overall elapsed check).
 
+Also raise the default `timeout` parameter in `ask_langchain_stream()` from 30s to
+**600s** to preserve backward compatibility for non-icoder callers (matching the old
+`_AGENT_NO_PROGRESS_TIMEOUT` value). iCoder's `RealLLMService` still passes
+`ICODER_LLM_TIMEOUT_SECONDS = 300` explicitly.
+
 ### `test_llm_service.py` — Add tests to existing file
 
 New tests (append to `tests/icoder/test_llm_service.py`):

@@ -66,6 +66,8 @@ Tests:
 - The watchdog thread is a plain `threading.Thread(daemon=True)`.
 - `last_activity` is a plain `float` — no lock needed since only one writer (main
   thread) and one reader (watchdog), and float assignment is atomic in CPython.
+- Include a brief code comment noting that the lock-free float access relies on
+  CPython's GIL for atomicity.
 - `stop_event` is a `threading.Event` used to cleanly exit the watchdog.
 - The `finally` block sets `stop_event` and joins the watchdog (same as current timer cancel).
 

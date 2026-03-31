@@ -25,7 +25,9 @@ inter-chunk timeout. The agent path hardcodes `_AGENT_NO_PROGRESS_TIMEOUT = 600`
   chunks; raise `TimeoutError` on inactivity gap.
 - `langchain/__init__.py` agent path: The existing `q.get(timeout=...)` already IS an
   inactivity timeout by nature (resets on each event). Simply pass the caller's `timeout`
-  instead of the hardcoded constant. `_AGENT_NO_PROGRESS_TIMEOUT` is removed.
+  instead of the hardcoded constant. `_AGENT_NO_PROGRESS_TIMEOUT` is removed. The
+  default `timeout` in `ask_langchain_stream()` is raised from 30s to 600s to preserve
+  backward compatibility for non-icoder callers.
 - `llm_service.py`: New constant `ICODER_LLM_TIMEOUT_SECONDS = 300`, passed through
   to `prompt_llm_stream()`.
 
@@ -78,8 +80,8 @@ No new classes, no new widgets. Styles are terminal-only (ANSI), no impact on co
 | `tests/icoder/test_command_registry.py` | 5 | Add `/exit` tests |
 | `src/mcp_coder/icoder/ui/app.py` | 6, 7 | Blank lines + style params |
 | `src/mcp_coder/icoder/ui/widgets/output_log.py` | 7 | Optional `style` param |
-| `tests/icoder/test_widgets.py` | 6, 7 | Spacing + style tests |
-| `tests/icoder/test_app_pilot.py` | 6 | Update expected recorded_lines for spacing |
+| `tests/icoder/test_widgets.py` | 7 | Style tests |
+| `tests/icoder/test_app_pilot.py` | — | No changes needed |
 
 ## Step Sequence
 
@@ -90,5 +92,5 @@ No new classes, no new widgets. Styles are terminal-only (ANSI), no impact on co
 | 3 | LLM service timeout constant + agent timeout passthrough | `llm_service.py`, `langchain/__init__.py`, new test file | Tests + impl |
 | 4 | Batch files `icoder.bat` + `icoder_local.bat` | 2 new `.bat` files | New files |
 | 5 | `/exit` alias for `/quit` | `quit.py`, `test_command_registry.py` | Tests + impl |
-| 6 | UI spacing (blank lines) | `app.py`, `test_widgets.py`, `test_app_pilot.py` | Tests + impl |
+| 6 | UI spacing (blank lines) | `app.py` | Impl only |
 | 7 | UI color coding | `output_log.py`, `app.py`, `test_widgets.py` | Tests + impl |
