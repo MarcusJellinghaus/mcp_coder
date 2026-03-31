@@ -1,1 +1,0 @@
-chore: update config and docs for skills migration
