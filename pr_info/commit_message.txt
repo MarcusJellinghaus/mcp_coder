@@ -1,4 +1,5 @@
-feat: migrate review and finalise skills to skills format
+feat: migrate rebase skill with design document
 
-Migrate plan_review, implementation_review, implementation_finalise.
-Replace Read/Glob/Grep with MCP workspace tools in allowed-tools.
+Move rebase_design.md.txt into skill directory as rebase_design.md.
+Add !`git status` dynamic injection. Keep all operational content
+(workflow, conflict table, abort rules) inline in SKILL.md.
