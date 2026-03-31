@@ -1,11 +1,11 @@
-icoder: inactivity watchdog timeout for stream_subprocess
+icoder: langchain text stream inactivity timeout
 
-Replace one-shot threading.Timer with a watchdog daemon thread that
-tracks last_activity time and kills the process when idle beyond
-timeout_seconds. The timeout now resets on each yielded stdout line,
-making it an inactivity timeout rather than a total-elapsed timeout.
+Add inter-chunk inactivity timeout to _ask_text_stream() so that a
+stalled LangChain model connection raises TimeoutError instead of
+hanging forever. The timeout check runs before processing each chunk,
+with last_activity initialized before the loop to avoid false timeouts
+on slow initial connections.
 
-- Add watchdog thread with stop_event for clean shutdown
-- Reset last_activity on each yielded line in the output loop
-- Create tests/utils/test_subprocess_streaming.py with real-process tests
-- Update mock-based timeout test to work with watchdog pattern
+Also add a `except TimeoutError: raise` clause before the general
+exception handler to prevent TimeoutError (a subclass of OSError)
+from being misclassified as a connection error.

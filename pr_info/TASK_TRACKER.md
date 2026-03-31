@@ -31,9 +31,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 2: LangChain Text Stream Inactivity Timeout
 > [Detail](./steps/step_2.md) — Add inactivity timeout between chunks in `_ask_text_stream()`
 
-- [ ] Implementation: tests (`tests/llm/providers/langchain/test_langchain_streaming_timeout.py`) + production code (`src/mcp_coder/llm/providers/langchain/__init__.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `icoder: langchain text stream inactivity timeout`
+- [x] Implementation: tests (`tests/llm/providers/langchain/test_langchain_streaming_timeout.py`) + production code (`src/mcp_coder/llm/providers/langchain/__init__.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `icoder: langchain text stream inactivity timeout`
 
 ### Step 3: LLM Service Timeout Constant + Agent Timeout Passthrough
 > [Detail](./steps/step_3.md) — Define `ICODER_LLM_TIMEOUT_SECONDS = 300`, pass to `prompt_llm_stream()`, replace `_AGENT_NO_PROGRESS_TIMEOUT` with caller's timeout

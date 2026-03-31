@@ -604,7 +604,11 @@ def _ask_text_stream(
 
     try:
         all_text_parts: list[str] = []
+        last_activity = time.time()
         for chunk in chat_model.stream(lc_messages):
+            if time.time() - last_activity > timeout:
+                raise TimeoutError(f"No LLM output for {timeout}s")
+            last_activity = time.time()
             chunk_dict = (
                 chunk.model_dump() if hasattr(chunk, "model_dump") else chunk.dict()
             )
@@ -632,6 +636,8 @@ def _ask_text_stream(
         store_langchain_history(session_id, serialized)
 
         yield {"type": "done", "session_id": session_id, "usage": {}}
+    except TimeoutError:
+        raise
     except Exception as exc:
         _handle_provider_error(exc, backend)
         # Handle 404/model-not-found errors (mirrors _ask_text() path)
