@@ -518,6 +518,26 @@ def add_gh_tool_parsers(subparsers: Any) -> None:
         help="Project directory. Default: current directory",
     )
 
+    # gh-tool checkout-issue-branch command
+    checkout_branch_parser = gh_tool_subparsers.add_parser(
+        "checkout-issue-branch",
+        help="Checkout or create a branch linked to a GitHub issue",
+        formatter_class=WideHelpFormatter,
+        epilog="""Exit codes:
+  0  Success - branch checked out
+  1  Could not find or create branch
+  2  Error (not a git repo, API failure)""",
+    )
+    checkout_branch_parser.add_argument(
+        "issue_number", type=int, help="GitHub issue number"
+    )
+    checkout_branch_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Project directory: where source code lives. Default: current directory",
+    )
+
     # gh-tool set-status command
     from .commands.set_status import build_set_status_epilog
 

@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Handler function, parser wiring, dispatch, and all tests (unit + integration).
 
-- [ ] Implementation: add `execute_checkout_issue_branch()` to `gh_tool.py`, subparser in `parsers.py`, dispatch + import in `main.py`, all tests in `test_gh_tool.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `execute_checkout_issue_branch()` to `gh_tool.py`, subparser in `parsers.py`, dispatch + import in `main.py`, all tests in `test_gh_tool.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Skill file + settings update ([step_2.md](./steps/step_2.md))
 
