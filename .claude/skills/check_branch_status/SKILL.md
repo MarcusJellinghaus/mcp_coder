@@ -5,7 +5,7 @@ allowed-tools:
   - "Bash(mcp-coder check branch-status *)"
 ---
 
-!`mcp-coder check branch-status --llm-truncate`
+!`mcp-coder check branch-status --ci-timeout 180 --llm-truncate`
 
 # Check Branch Status
 

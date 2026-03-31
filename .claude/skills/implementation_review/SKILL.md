@@ -9,6 +9,8 @@ allowed-tools:
   - "Bash(mcp-coder check branch-status *)"
   - mcp__workspace__read_file
   - mcp__workspace__list_directory
+  - Glob
+  - Grep
 ---
 
 # Implementation Review (Code Review)

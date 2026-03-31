@@ -5,6 +5,7 @@ argument-hint: "<issue-number>"
 allowed-tools:
   - "Bash(gh issue comment *)"
   - "Bash(MSYS_NO_PATHCONV=1 gh issue comment *)"
+  - Read
 ---
 
 !`gh issue view $ARGUMENTS`

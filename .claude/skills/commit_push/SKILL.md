@@ -10,6 +10,9 @@ allowed-tools:
   - "Bash(git log *)"
   - "Bash(./tools/format_all.sh *)"
   - "Bash(tools/format_all.bat *)"
+  - Read
+  - Glob
+  - Grep
 ---
 
 # Commit and Push Changes

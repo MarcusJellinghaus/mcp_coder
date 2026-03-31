@@ -1,7 +1,6 @@
 ---
 description: Step-by-step discussion of open questions and suggestions
 disable-model-invocation: true
-allowed-tools: []
 ---
 
 # Step-by-step Discussion

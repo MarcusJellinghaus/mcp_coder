@@ -7,6 +7,9 @@ allowed-tools:
   - "Bash(gh issue view *)"
   - mcp__workspace__save_file
   - mcp__workspace__delete_this_file
+  - Read
+  - Glob
+  - Grep
 ---
 
 # Update GitHub Issue
