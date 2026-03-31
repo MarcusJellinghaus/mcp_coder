@@ -24,7 +24,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] [Step 1](./steps/step_1.md) — Migrate simple skills: discuss, plan_approve, implementation_approve, implementation_needs_rework
 - [x] [Step 2](./steps/step_2.md) — Migrate issue_create, issue_update, plan_update
 - [x] [Step 3](./steps/step_3.md) — Migrate skills with dynamic context injection: issue_analyse, issue_approve, check_branch_status
-- [ ] [Step 4](./steps/step_4.md) — Migrate plan_review, implementation_review, implementation_finalise
+- [x] [Step 4](./steps/step_4.md) — Migrate plan_review, implementation_review, implementation_finalise
 - [ ] [Step 5](./steps/step_5.md) — Migrate implementation_new_tasks, commit_push
 - [ ] [Step 6](./steps/step_6.md) — Migrate rebase + move rebase_design.md
 - [ ] [Step 7](./steps/step_7.md) — Migrate plan_review_supervisor + extract supervisor_workflow.md

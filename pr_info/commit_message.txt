@@ -1,5 +1,4 @@
-feat: migrate skills with dynamic context injection
+feat: migrate review and finalise skills to skills format
 
-Migrate issue_analyse, issue_approve, check_branch_status with
-dynamic context injection (!`command $ARGUMENTS`).
-Remove redundant fetch instructions from body (Decision #12).
+Migrate plan_review, implementation_review, implementation_finalise.
+Replace Read/Glob/Grep with MCP workspace tools in allowed-tools.
