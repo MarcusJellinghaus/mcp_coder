@@ -39,7 +39,14 @@ def delete_session_folder(
 ### Caller update in `commands.py`
 
 ```python
-# In execute_coordinator_vscodeclaude():
+# In execute_coordinator_vscodeclaude(), TWO call sites:
+# 1. dry_run=True call:
+cleanup_stale_sessions(
+    dry_run=True,
+    cached_issues_by_repo=cached_issues_by_repo,
+    workspace_base=vscodeclaude_config["workspace_base"],  # NEW
+)
+# 2. dry_run=False call:
 cleanup_stale_sessions(
     dry_run=False,
     cached_issues_by_repo=cached_issues_by_repo,
@@ -72,21 +79,28 @@ if workspace_base and not dry_run:
             log INFO "Retry-deleted soft-deleted folder: {folder_name}"
 ```
 
+### Always delete `.code-workspace` (in `delete_session_folder`)
+
+Delete the `.code-workspace` file **before** attempting folder deletion. The workspace file should always be cleaned up regardless of folder deletion outcome.
+
+```
+# Before folder deletion attempt:
+workspace_file = Path(session["folder"]).with_suffix(".code-workspace")
+if workspace_file.exists():
+    workspace_file.unlink()
+```
+
 ### Soft-delete on failure (in `delete_session_folder`, when folder deletion fails)
 
 ```
 # Current: return False on failure
 # New: if was_clean and workspace_base:
-#   1. Always delete .code-workspace file
-#   2. add_to_be_deleted(workspace_base, folder_name)
-#   3. remove_session(session["folder"])
-#   4. log INFO "Soft-deleted: {folder_name}"
+#   1. add_to_be_deleted(workspace_base, folder_name)
+#   2. remove_session(session["folder"])
+#   3. log INFO "Soft-deleted: {folder_name}"
 #   (still return False — folder wasn't actually deleted)
+# (.code-workspace already deleted above)
 ```
-
-### Always delete `.code-workspace` (in `delete_session_folder`)
-
-Move workspace file deletion **before** folder deletion attempt, or make it happen regardless of folder deletion success. The workspace file should always be cleaned up.
 
 ## DATA
 
@@ -112,6 +126,8 @@ Move workspace file deletion **before** folder deletion attempt, or make it happ
     → backward compat: was_clean=True but no workspace_base, no entry added
 - test_delete_session_folder_always_deletes_workspace_file()
     → workspace file deleted even when folder deletion fails
+- test_delete_session_folder_handles_workspace_file_deletion_failure()
+    → workspace file deletion raises OSError, folder deletion still attempted
 ```
 
 ## COMMIT MESSAGE

@@ -1,23 +1,18 @@
-# Step 4: Status Filtering + Session Lookup Safety Check
+# Step 4: Status Filtering
 
 ## LLM Prompt
 
 > Read `pr_info/steps/summary.md` for overall context.
 > Implement Step 4: filter soft-deleted folders from `display_status_table()` in `status.py`,
-> add `.to_be_deleted` exclusion in `get_session_for_issue()` in `sessions.py`,
-> and update CLI callers to pass `workspace_base`.
+> and update the CLI caller to pass `workspace_base`.
 > Follow TDD — write tests first, then implement.
 > Run all three code quality checks (pylint, pytest, mypy) after implementation.
 
 ## WHERE
 
 - **Modify**: `src/mcp_coder/workflows/vscodeclaude/status.py`
-- **Modify**: `src/mcp_coder/workflows/vscodeclaude/sessions.py`
-- **Modify**: `src/mcp_coder/cli/commands/coordinator/commands.py`
-- **Modify**: `src/mcp_coder/workflows/vscodeclaude/session_launch.py` (pass `workspace_base` to `get_session_for_issue`)
-- **Modify**: `src/mcp_coder/workflows/vscodeclaude/__init__.py` (if signature changes need re-export updates)
+- **Modify**: `src/mcp_coder/cli/commands/coordinator/commands.py` (pass `workspace_base` to `display_status_table`)
 - **Modify**: `tests/workflows/vscodeclaude/test_status_display.py`
-- **Modify**: `tests/workflows/vscodeclaude/test_sessions.py`
 
 ## WHAT
 
@@ -34,21 +29,11 @@ def display_status_table(
 ) -> None:
 ```
 
-### `get_session_for_issue()` — new optional parameter
-
-```python
-def get_session_for_issue(
-    repo_full_name: str,
-    issue_number: int,
-    workspace_base: str | None = None,  # NEW
-) -> VSCodeClaudeSession | None:
-```
-
 ## HOW
 
-- Import `load_to_be_deleted` from `.helpers` in both `status.py` and `sessions.py`
+- Import `load_to_be_deleted` from `.helpers` in `status.py`
 - `workspace_base` is optional (`None`) for backward compatibility
-- CLI callers load config and pass `workspace_base`
+- CLI caller loads config and passes `workspace_base`
 
 ## ALGORITHM
 
@@ -65,39 +50,13 @@ if folder_path.name in to_be_deleted:
     continue  # skip soft-deleted sessions
 ```
 
-### `get_session_for_issue` exclusion
+### Caller update in `commands.py`
 
 ```python
-to_be_deleted: set[str] = set()
-if workspace_base:
-    to_be_deleted = load_to_be_deleted(workspace_base)
-
-matches = []
-for session in store["sessions"]:
-    if session["repo"] == repo_full_name and session["issue_number"] == issue_number:
-        if Path(session["folder"]).name not in to_be_deleted:
-            matches.append(session)
-
-if len(matches) > 1:
-    logger.error("Multiple active folders for %s #%d", repo_full_name, issue_number)
-    return None
-return matches[0] if matches else None
-```
-
-### Caller updates
-
-```python
-# In execute_coordinator_vscodeclaude_status() in commands.py:
+# In execute_coordinator_vscodeclaude_status():
 vscodeclaude_config = load_vscodeclaude_config()
 display_status_table(
     ...,
-    workspace_base=vscodeclaude_config["workspace_base"],
-)
-
-# In process_eligible_issues() in session_launch.py:
-existing = get_session_for_issue(
-    repo_full_name,
-    issue["number"],
     workspace_base=vscodeclaude_config["workspace_base"],
 )
 ```
@@ -108,9 +67,7 @@ existing = get_session_for_issue(
 - Return values unchanged
 - No new data structures
 
-## TESTS
-
-### `test_status_display.py` additions
+## TESTS (`test_status_display.py`)
 
 ```python
 - test_display_status_table_hides_soft_deleted_sessions(tmp_path)
@@ -121,25 +78,11 @@ existing = get_session_for_issue(
     → backward compat: workspace_base=None shows all sessions
 ```
 
-### `test_sessions.py` additions
-
-```python
-- test_get_session_for_issue_excludes_soft_deleted(tmp_path)
-    → session found in JSON but folder in .to_be_deleted → returns None
-- test_get_session_for_issue_returns_non_deleted(tmp_path)
-    → session found, folder not in .to_be_deleted → returns session
-- test_get_session_for_issue_multiple_active_returns_none(tmp_path)
-    → two sessions for same issue, neither deleted → log error, return None
-- test_get_session_for_issue_works_without_workspace_base()
-    → backward compat: workspace_base=None returns first match (existing behavior)
-```
-
 ## COMMIT MESSAGE
 
 ```
-feat(vscodeclaude): hide soft-deleted folders from status and session lookup
+feat(vscodeclaude): hide soft-deleted folders from status
 
-Filter .to_be_deleted entries from display_status_table() and
-get_session_for_issue(). Pass workspace_base from CLI entry points.
-Log error if multiple active folders found for same issue.
+Filter .to_be_deleted entries from display_status_table(). Pass
+workspace_base from CLI entry point.
 ```

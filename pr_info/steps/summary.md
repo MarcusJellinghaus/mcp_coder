@@ -42,9 +42,10 @@ When the base folder name is occupied (on disk or in `.to_be_deleted`), new sess
 | `src/mcp_coder/workflows/vscodeclaude/cleanup.py` | Retry `.to_be_deleted` entries, soft-delete on failure, always delete `.code-workspace`, pass `workspace_base` |
 | `src/mcp_coder/workflows/vscodeclaude/workspace.py` | Suffix-aware `get_working_folder_path()` with `-folder2` to `-folder9` |
 | `src/mcp_coder/workflows/vscodeclaude/status.py` | Filter `.to_be_deleted` folders from `display_status_table()` |
-| `src/mcp_coder/workflows/vscodeclaude/sessions.py` | Add `.to_be_deleted` exclusion in `get_session_for_issue()` |
+| `src/mcp_coder/workflows/vscodeclaude/sessions.py` | Add `.to_be_deleted` exclusion in `get_session_for_issue()`, add `warn_orphan_folders()` |
 | `src/mcp_coder/workflows/vscodeclaude/__init__.py` | Re-export new helpers |
 | `src/mcp_coder/cli/commands/coordinator/commands.py` | Pass `workspace_base` to `cleanup_stale_sessions()` and `display_status_table()` |
+| `src/mcp_coder/workflows/vscodeclaude/session_launch.py` | Pass `workspace_base` to `get_session_for_issue()` |
 
 ## Files Created
 
@@ -59,4 +60,5 @@ When the base folder name is occupied (on disk or in `.to_be_deleted`), new sess
 | 1 | `helpers.py` — three soft-delete I/O functions + tests | `feat(vscodeclaude): add soft-delete file helpers` |
 | 2 | `cleanup.py` — retry logic + soft-delete on failure + caller update + tests | `feat(vscodeclaude): soft-delete on cleanup failure, retry on next run` |
 | 3 | `workspace.py` — suffix-aware folder path + tests | `feat(vscodeclaude): suffix-aware folder naming for soft-deleted folders` |
-| 4 | `status.py` + `sessions.py` — filtering + safety check + caller updates + tests | `feat(vscodeclaude): hide soft-deleted folders from status and session lookup` |
+| 4 | `status.py` — filter soft-deleted from status display + tests | `feat(vscodeclaude): hide soft-deleted folders from status` |
+| 5 | `sessions.py` — session lookup exclusion + orphan folder detection + tests | `feat(vscodeclaude): session lookup excludes soft-deleted, detect orphan folders` |

@@ -32,7 +32,7 @@ def remove_from_to_be_deleted(workspace_base: str, folder_name: str) -> None:
 
 ## HOW
 
-- Import `Path` from `pathlib` (already imported in helpers.py context)
+- Import `Path` from `pathlib` (must be added to helpers.py)
 - Add to `__all__` in `helpers.py`
 - Re-export from `__init__.py`
 - No new dependencies

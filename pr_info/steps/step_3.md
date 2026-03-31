@@ -94,6 +94,8 @@ raise ValueError(f"All folder slots exhausted for {base_name} (max: -folder9)")
 # Existing behavior preserved
 - test_get_working_folder_path_unchanged_when_no_conflicts()
     → clean workspace, returns same as before (no .to_be_deleted file)
+- test_get_working_folder_path_with_sanitized_repo_name(tmp_path)
+    → repo name with special chars sanitized, suffix logic still works correctly
 ```
 
 ## COMMIT MESSAGE
