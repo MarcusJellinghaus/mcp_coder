@@ -82,12 +82,16 @@ def execute_checkout_issue_branch(args: argparse.Namespace) -> int:
         project_dir = resolve_project_dir(args.project_dir)
 
         # Best-effort git fetch
-        subprocess.run(
+        fetch_result = subprocess.run(
             ["git", "fetch"],
             cwd=project_dir,
             capture_output=True,
             check=False,
         )
+        if fetch_result.returncode != 0:
+            logger.debug(
+                "git fetch failed (continuing): %s", fetch_result.stderr.decode()
+            )
 
         # Get issue data
         issue_number: int = args.issue_number
