@@ -11,36 +11,13 @@ Remove the old `.claude/commands/` directory after verifying all 18 skills have 
 ```
 Read summary.md and this step file.
 
-1. Verify all 18 skill directories exist under .claude/skills/ with valid SKILL.md files
-2. Verify the 3 supporting files exist (rebase/rebase_design.md, 2x supervisor_workflow.md)
-3. Delete the entire .claude/commands/ directory (18 .md files + rebase_design.md.txt)
+Delete the .claude/commands/ directory and all its contents.
 ```
 
 ## WHERE
 
 | Action | Path |
 |--------|------|
-| Verify exists | `.claude/skills/discuss/SKILL.md` |
-| Verify exists | `.claude/skills/implementation_approve/SKILL.md` |
-| Verify exists | `.claude/skills/implementation_needs_rework/SKILL.md` |
-| Verify exists | `.claude/skills/plan_approve/SKILL.md` |
-| Verify exists | `.claude/skills/issue_create/SKILL.md` |
-| Verify exists | `.claude/skills/issue_update/SKILL.md` |
-| Verify exists | `.claude/skills/plan_update/SKILL.md` |
-| Verify exists | `.claude/skills/issue_analyse/SKILL.md` |
-| Verify exists | `.claude/skills/issue_approve/SKILL.md` |
-| Verify exists | `.claude/skills/check_branch_status/SKILL.md` |
-| Verify exists | `.claude/skills/plan_review/SKILL.md` |
-| Verify exists | `.claude/skills/implementation_review/SKILL.md` |
-| Verify exists | `.claude/skills/implementation_finalise/SKILL.md` |
-| Verify exists | `.claude/skills/implementation_new_tasks/SKILL.md` |
-| Verify exists | `.claude/skills/commit_push/SKILL.md` |
-| Verify exists | `.claude/skills/rebase/SKILL.md` |
-| Verify exists | `.claude/skills/rebase/rebase_design.md` |
-| Verify exists | `.claude/skills/plan_review_supervisor/SKILL.md` |
-| Verify exists | `.claude/skills/plan_review_supervisor/supervisor_workflow.md` |
-| Verify exists | `.claude/skills/implementation_review_supervisor/SKILL.md` |
-| Verify exists | `.claude/skills/implementation_review_supervisor/supervisor_workflow.md` |
 | **Delete** | `.claude/commands/` (entire directory) |
 
 ## WHAT — Files to Delete
@@ -68,26 +45,13 @@ All 19 files in `.claude/commands/`:
 
 ## HOW
 
-1. List `.claude/skills/` to verify all 18 directories exist
-2. Spot-check a few SKILL.md files for valid YAML frontmatter
-3. Delete `.claude/commands/` directory and all contents
-4. Run `git status` to verify only the expected deletions appear
+1. Delete `.claude/commands/` directory and all contents
+2. Run `git status` to verify only the expected deletions appear
 
 ## ALGORITHM
 
 ```
-# Verification
-expected_skills = [list of 18 skill names]
-for skill in expected_skills:
-    assert exists(.claude/skills/{skill}/SKILL.md)
-assert exists(.claude/skills/rebase/rebase_design.md)
-assert exists(.claude/skills/plan_review_supervisor/supervisor_workflow.md)
-assert exists(.claude/skills/implementation_review_supervisor/supervisor_workflow.md)
-
-# Deletion
 delete_directory(.claude/commands/)
-
-# Post-check
 git status  # should show 19 deleted files
 ```
 

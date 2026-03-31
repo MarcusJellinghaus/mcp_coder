@@ -37,9 +37,9 @@ Read summary.md and this step file.
 description: Autonomous code review — supervisor delegates to engineer subagents with knowledge base
 disable-model-invocation: true
 allowed-tools:
-  - "Bash(gh issue view:*)"
-  - "Bash(mcp-coder git-tool:*)"
-  - "Bash(mcp-coder check branch-status:*)"
+  - "Bash(gh issue view *)"
+  - "Bash(mcp-coder git-tool *)"
+  - "Bash(mcp-coder check branch-status *)"
   - mcp__workspace__read_file
   - mcp__workspace__save_file
   - mcp__workspace__edit_file
@@ -53,19 +53,11 @@ allowed-tools:
 ### Content Split
 
 **SKILL.md keeps:**
-- Title and role introduction
-- Setup section (read issue, knowledge base, determine run number)
-- Your Role section (Delegate, Triage, Guide, Scope)
-- Pre-flight: Task Tracker Check
-- Prerequisites (code must exist)
-- Additional context note
-- Reference line: `For the detailed workflow steps, see supervisor_workflow.md in this skill directory.`
+- Everything before the `**Workflow:**` heading (title, role introduction, setup, Your Role, pre-flight task tracker check, prerequisites, additional context)
+- A reference line at the end: `For the detailed workflow steps, see supervisor_workflow.md in this skill directory.`
 
 **supervisor_workflow.md gets:**
-- The numbered Workflow steps (1-10)
-- Review Log Format template
-- Subagent instructions
-- Escalation rules
+- Everything from the `**Workflow:**` heading through the end of the file (numbered workflow steps 1-10, review log format, subagent instructions, escalation rules)
 
 ## HOW
 
@@ -89,6 +81,11 @@ write .claude/skills/implementation_review_supervisor/supervisor_workflow.md = w
 
 - Input: 1 command file
 - Output: 2 files (SKILL.md + supervisor_workflow.md)
+
+## Acceptance Criteria
+
+- SKILL.md and supervisor_workflow.md both created
+- **Content verification**: The combined content of SKILL.md + supervisor_workflow.md must be equivalent to the original `.claude/commands/implementation_review_supervisor.md` body. Only frontmatter changes and the split itself are expected — no content should be added, removed, or reworded.
 
 ## Commit Message
 

@@ -14,7 +14,7 @@ For each of the 3 skills listed below, read the existing command from .claude/co
 then create .claude/skills/{name}/SKILL.md with the new frontmatter format.
 
 - issue_create and issue_update take an argument (issue number or title) — add argument-hint
-- Convert allowed-tools to strict colon-separated format
+- Convert allowed-tools to strict space-separated format
 - Keep body content unchanged
 ```
 
@@ -39,9 +39,11 @@ description: Create a new GitHub issue from discussion context
 disable-model-invocation: true
 argument-hint: "<title>"
 allowed-tools:
-  - "Bash(gh issue create:*)"
-  - "Bash(git ls-remote:*)"
+  - "Bash(gh issue create *)"
+  - "Bash(git ls-remote *)"
 ```
+
+Note: `Bash(git ls-remote *)` is intentionally added -- not in the original command's allowed-tools, but needed by the body to detect remote repository details.
 
 ### issue_update
 ```yaml
@@ -54,8 +56,8 @@ description: Update GitHub issue with refined content from analysis discussion
 disable-model-invocation: true
 argument-hint: "<issue-number>"
 allowed-tools:
-  - "Bash(gh issue edit:*)"
-  - "Bash(gh issue view:*)"
+  - "Bash(gh issue edit *)"
+  - "Bash(gh issue view *)"
   - mcp__workspace__save_file
   - mcp__workspace__delete_this_file
 ```
@@ -75,6 +77,7 @@ allowed-tools:
   - mcp__workspace__read_file
   - mcp__workspace__save_file
   - mcp__workspace__edit_file
+  - mcp__workspace__list_directory
 ```
 
 ## HOW
@@ -98,6 +101,13 @@ for each skill in [issue_create, issue_update, plan_update]:
 
 - Input: 3 existing `.md` command files
 - Output: 3 new `SKILL.md` files in skill directories
+
+## Acceptance Criteria
+
+- All 3 SKILL.md files have valid YAML frontmatter
+- **Content verification**: Compare each migrated SKILL.md body against the original `.claude/commands/<name>.md` body. The content must be equivalent — only these changes are expected:
+  - Frontmatter fields changed (`workflow-stage`/`suggested-next` removed, `description`/`disable-model-invocation`/`allowed-tools` added)
+  - No other content should be added, removed, or reworded
 
 ## Commit Message
 

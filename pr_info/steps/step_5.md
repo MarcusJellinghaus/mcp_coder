@@ -51,14 +51,14 @@ workflow-stage: utility
 description: Format code, review changes, commit, and push to remote
 disable-model-invocation: true
 allowed-tools:
-  - "Bash(git status:*)"
-  - "Bash(git diff:*)"
-  - "Bash(git add:*)"
-  - "Bash(git commit:*)"
-  - "Bash(git push:*)"
-  - "Bash(git log:*)"
-  - "Bash(./tools/format_all.sh:*)"
-  - "Bash(tools/format_all.bat:*)"
+  - "Bash(git status *)"
+  - "Bash(git diff *)"
+  - "Bash(git add *)"
+  - "Bash(git commit *)"
+  - "Bash(git push *)"
+  - "Bash(git log *)"
+  - "Bash(./tools/format_all.sh *)"
+  - "Bash(tools/format_all.bat *)"
 ```
 
 Note: `Read`, `Glob`, `Grep` dropped — commit_push doesn't need file reading tools; it operates on git state.
@@ -82,6 +82,13 @@ for each skill in [implementation_new_tasks, commit_push]:
 
 - Input: 2 existing `.md` command files
 - Output: 2 new `SKILL.md` files
+
+## Acceptance Criteria
+
+- Both SKILL.md files have valid YAML frontmatter
+- **Content verification**: Compare each migrated SKILL.md body against the original `.claude/commands/<name>.md` body. The content must be equivalent — only these changes are expected:
+  - Frontmatter fields changed (`workflow-stage`/`suggested-next` removed, `description`/`disable-model-invocation`/`allowed-tools` added)
+  - No other content should be added, removed, or reworded
 
 ## Commit Message
 

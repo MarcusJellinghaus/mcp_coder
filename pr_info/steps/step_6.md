@@ -33,28 +33,28 @@ Read summary.md and this step file.
 description: Rebase feature branch onto base branch with conflict resolution
 disable-model-invocation: true
 allowed-tools:
-  - "Bash(git status:*)"
-  - "Bash(git log:*)"
-  - "Bash(git branch:*)"
-  - "Bash(git ls-files:*)"
-  - "Bash(git fetch:*)"
-  - "Bash(git rebase:*)"
-  - "Bash(git add:*)"
-  - "Bash(git rm:*)"
-  - "Bash(git commit:*)"
-  - "Bash(git checkout --ours:*)"
-  - "Bash(git checkout --theirs:*)"
-  - "Bash(git remote get-url:*)"
-  - "Bash(git restore:*)"
-  - "Bash(git stash:*)"
-  - "Bash(git push --force-with-lease:*)"
-  - "Bash(git diff:*)"
-  - "Bash(git rev-parse:*)"
-  - "Bash(gh run view:*)"
-  - "Bash(gh issue view:*)"
-  - "Bash(./tools/format_all.sh:*)"
-  - "Bash(tools/format_all.bat:*)"
-  - "Bash(mcp-coder gh-tool get-base-branch:*)"
+  - "Bash(git status *)"
+  - "Bash(git log *)"
+  - "Bash(git branch *)"
+  - "Bash(git ls-files *)"
+  - "Bash(git fetch *)"
+  - "Bash(git rebase *)"
+  - "Bash(git add *)"
+  - "Bash(git rm *)"
+  - "Bash(git commit *)"
+  - "Bash(git checkout --ours *)"
+  - "Bash(git checkout --theirs *)"
+  - "Bash(git remote get-url *)"
+  - "Bash(git restore *)"
+  - "Bash(git stash *)"
+  - "Bash(git push --force-with-lease *)"
+  - "Bash(git diff *)"
+  - "Bash(git rev-parse *)"
+  - "Bash(gh run view *)"
+  - "Bash(gh issue view *)"
+  - "Bash(./tools/format_all.sh *)"
+  - "Bash(tools/format_all.bat *)"
+  - "Bash(mcp-coder gh-tool get-base-branch *)"
   - mcp__tools-py__run_pylint_check
   - mcp__tools-py__run_pytest_check
   - mcp__tools-py__run_mypy_check
@@ -102,6 +102,15 @@ write .claude/skills/rebase/rebase_design.md = design_doc
 
 - Input: 2 files (`rebase.md`, `rebase_design.md.txt`)
 - Output: 2 files (`SKILL.md`, `rebase_design.md`)
+
+## Acceptance Criteria
+
+- SKILL.md has valid YAML frontmatter and dynamic injection line
+- `rebase_design.md` copied with content unchanged
+- **Content verification**: Compare the migrated SKILL.md body against the original `.claude/commands/rebase.md` body. The content must be equivalent — only these changes are expected:
+  - Frontmatter fields changed (`workflow-stage`/`suggested-next` removed, `description`/`disable-model-invocation`/`allowed-tools` added)
+  - Dynamic injection line added (replaces manual git status instruction per Decision #12)
+  - No other content should be added, removed, or reworded
 
 ## Commit Message
 

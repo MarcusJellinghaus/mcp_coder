@@ -15,7 +15,7 @@ then create .claude/skills/{name}/SKILL.md with the new frontmatter format.
 
 Transform the frontmatter:
 - Replace workflow-stage/suggested-next with: description, disable-model-invocation: true
-- Convert allowed-tools to strict format (colon separator, only tools actually used)
+- Convert allowed-tools to strict format (space separator, only tools actually used)
 - Drop workflow-stage and suggested-next (not supported in skills format)
 - Keep the body content unchanged
 
@@ -49,41 +49,45 @@ allowed-tools: []
 ### plan_approve
 ```yaml
 # FROM:
-allowed-tools: Bash(mcp-coder set-status:*)
+allowed-tools: Bash(mcp-coder set-status *)
 workflow-stage: plan-review
 
 # TO:
 description: Approve implementation plan and transition to plan-ready status
 disable-model-invocation: true
 allowed-tools:
-  - "Bash(mcp-coder set-status:*)"
+  - "Bash(mcp-coder gh-tool set-status *)"
 ```
+
+Note: The original command's allowed-tools said `Bash(mcp-coder set-status *)` but the body calls `mcp-coder gh-tool set-status`. Fixed to match actual usage.
 
 ### implementation_approve
 ```yaml
 # FROM:
-allowed-tools: Bash(mcp-coder gh-tool set-status:*)
+allowed-tools: Bash(mcp-coder gh-tool set-status *)
 workflow-stage: code-review
 
 # TO:
 description: Approve implementation and transition issue to PR-ready state
 disable-model-invocation: true
 allowed-tools:
-  - "Bash(mcp-coder gh-tool set-status:*)"
+  - "Bash(mcp-coder gh-tool set-status *)"
 ```
 
 ### implementation_needs_rework
 ```yaml
 # FROM:
-allowed-tools: Bash(mcp-coder set-status:*)
+allowed-tools: Bash(mcp-coder set-status *)
 workflow-stage: code-review
 
 # TO:
 description: Return issue to plan-ready status for re-implementation after major review issues
 disable-model-invocation: true
 allowed-tools:
-  - "Bash(mcp-coder set-status:*)"
+  - "Bash(mcp-coder gh-tool set-status *)"
 ```
+
+Note: Same fix as plan_approve -- the original allowed-tools said `Bash(mcp-coder set-status *)` but the body calls `mcp-coder gh-tool set-status`.
 
 ## HOW
 
@@ -106,6 +110,14 @@ for each skill in [discuss, plan_approve, implementation_approve, implementation
 - Input: 4 existing `.md` command files
 - Output: 4 new `SKILL.md` files in skill directories
 - No return values or data structures (file operation only)
+
+## Acceptance Criteria
+
+- All 4 SKILL.md files have valid YAML frontmatter
+- **Content verification**: Compare each migrated SKILL.md body against the original `.claude/commands/<name>.md` body. The content must be equivalent — only these changes are expected:
+  - Frontmatter fields changed (`workflow-stage`/`suggested-next` removed, `description`/`disable-model-invocation`/`allowed-tools` added)
+  - Allowed-tools bug fixes (`plan_approve`/`implementation_needs_rework` — `set-status` corrected to `gh-tool set-status`)
+  - No other content should be added, removed, or reworded
 
 ## Commit Message
 

@@ -37,8 +37,8 @@ workflow-stage: plan-review
 description: Review implementation plan for completeness, simplicity, and risks
 disable-model-invocation: true
 allowed-tools:
-  - "Bash(git fetch:*)"
-  - "Bash(git status:*)"
+  - "Bash(git fetch *)"
+  - "Bash(git status *)"
   - mcp__workspace__read_file
   - mcp__workspace__list_directory
 ```
@@ -53,11 +53,11 @@ workflow-stage: code-review
 description: Code review of implementation with compact diff analysis
 disable-model-invocation: true
 allowed-tools:
-  - "Bash(git fetch:*)"
-  - "Bash(git status:*)"
-  - "Bash(git diff:*)"
-  - "Bash(mcp-coder git-tool:*)"
-  - "Bash(mcp-coder check branch-status:*)"
+  - "Bash(git fetch *)"
+  - "Bash(git status *)"
+  - "Bash(git diff *)"
+  - "Bash(mcp-coder git-tool *)"
+  - "Bash(mcp-coder check branch-status *)"
   - mcp__workspace__read_file
   - mcp__workspace__list_directory
 ```
@@ -71,14 +71,7 @@ workflow-stage: utility
 # TO:
 description: Complete remaining unchecked tasks in the task tracker
 disable-model-invocation: true
-allowed-tools:
-  - mcp__tools-py__run_pylint_check
-  - mcp__tools-py__run_pytest_check
-  - mcp__tools-py__run_mypy_check
-  - mcp__workspace__read_file
-  - mcp__workspace__save_file
-  - mcp__workspace__edit_file
-  - mcp__workspace__list_directory
+# No allowed-tools — intentionally unrestricted because this skill performs arbitrary implementation work.
 ```
 
 ## HOW
@@ -101,6 +94,13 @@ for each skill in [plan_review, implementation_review, implementation_finalise]:
 
 - Input: 3 existing `.md` command files
 - Output: 3 new `SKILL.md` files
+
+## Acceptance Criteria
+
+- All 3 SKILL.md files have valid YAML frontmatter
+- **Content verification**: Compare each migrated SKILL.md body against the original `.claude/commands/<name>.md` body. The content must be equivalent — only these changes are expected:
+  - Frontmatter fields changed (`workflow-stage`/`suggested-next` removed, `description`/`disable-model-invocation`/`allowed-tools` added)
+  - No other content should be added, removed, or reworded
 
 ## Commit Message
 

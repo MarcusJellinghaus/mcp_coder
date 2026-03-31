@@ -108,9 +108,5 @@ for each doc in [claude-code.md, claude_cheat_sheet.md, development-process.md]:
 ## Commit Message
 
 ```
-docs: update references from commands to skills format
-
-Add Skill(plan_review_supervisor) to settings.local.json.
-Update claude-code.md, cheat sheet, and development process
-to reference .claude/skills/ instead of .claude/commands/.
+chore: update config and docs for skills migration
 ```

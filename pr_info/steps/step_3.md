@@ -41,8 +41,8 @@ description: Analyse GitHub issue requirements, feasibility, and implementation 
 disable-model-invocation: true
 argument-hint: "<issue-number>"
 allowed-tools:
-  - "Bash(gh issue view:*)"
-  - "Bash(git ls-remote:*)"
+  - "Bash(gh issue view *)"
+  - "Bash(git ls-remote *)"
   - mcp__workspace__read_file
   - mcp__workspace__list_directory
 ---
@@ -59,8 +59,8 @@ description: Approve issue to transition to next workflow status
 disable-model-invocation: true
 argument-hint: "<issue-number>"
 allowed-tools:
-  - "Bash(gh issue comment:*)"
-  - "Bash(MSYS_NO_PATHCONV=1 gh issue comment:*)"
+  - "Bash(gh issue comment *)"
+  - "Bash(MSYS_NO_PATHCONV=1 gh issue comment *)"
 ---
 
 !`gh issue view $ARGUMENTS`
@@ -74,7 +74,7 @@ allowed-tools:
 description: Check branch readiness including CI, rebase needs, tasks, and labels
 disable-model-invocation: true
 allowed-tools:
-  - "Bash(mcp-coder check branch-status:*)"
+  - "Bash(mcp-coder check branch-status *)"
 ---
 
 !`mcp-coder check branch-status --llm-truncate`
@@ -106,6 +106,14 @@ for each skill in [issue_analyse, issue_approve, check_branch_status]:
 
 - Input: 3 existing `.md` command files
 - Output: 3 new `SKILL.md` files with dynamic injection
+
+## Acceptance Criteria
+
+- All 3 SKILL.md files have valid YAML frontmatter and dynamic injection lines
+- **Content verification**: Compare each migrated SKILL.md body against the original `.claude/commands/<name>.md` body. The content must be equivalent — only these changes are expected:
+  - Frontmatter fields changed (`workflow-stage`/`suggested-next` removed, `description`/`disable-model-invocation`/`allowed-tools` added)
+  - Dynamic injection line added (replaces manual fetch instruction per Decision #12)
+  - No other content should be added, removed, or reworded
 
 ## Commit Message
 
