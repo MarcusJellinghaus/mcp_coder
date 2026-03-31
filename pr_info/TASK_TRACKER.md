@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Subprocess Inactivity Watchdog Timeout
 > [Detail](./steps/step_1.md) — Replace `threading.Timer` with watchdog daemon thread in `stream_subprocess()`
 
-- [ ] Implementation: tests (`tests/utils/test_subprocess_streaming.py`) + production code (`src/mcp_coder/utils/subprocess_streaming.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `icoder: inactivity watchdog timeout for stream_subprocess`
+- [x] Implementation: tests (`tests/utils/test_subprocess_streaming.py`) + production code (`src/mcp_coder/utils/subprocess_streaming.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `icoder: inactivity watchdog timeout for stream_subprocess`
 
 ### Step 2: LangChain Text Stream Inactivity Timeout
 > [Detail](./steps/step_2.md) — Add inactivity timeout between chunks in `_ask_text_stream()`

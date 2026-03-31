@@ -133,16 +133,25 @@ def stream_subprocess(
         proc.stdin.write(options.input_data)
         proc.stdin.close()
 
-    def _on_timeout() -> None:
-        nonlocal timed_out
-        timed_out = True
-        try:
-            proc.kill()
-        except OSError:
-            pass
+    # Inactivity watchdog: resets on each yielded line, kills on silence.
+    # Lock-free float access relies on CPython's GIL for atomicity
+    # (single writer in main thread, single reader in watchdog thread).
+    last_activity = time.time()
+    stop_event = threading.Event()
 
-    timer = threading.Timer(options.timeout_seconds, _on_timeout)
-    timer.start()
+    def _watchdog() -> None:
+        nonlocal timed_out
+        while not stop_event.wait(timeout=1):
+            if time.time() - last_activity > options.timeout_seconds:
+                timed_out = True
+                try:
+                    proc.kill()
+                except OSError:
+                    pass
+                return
+
+    watchdog_thread = threading.Thread(target=_watchdog, daemon=True)
+    watchdog_thread.start()
 
     # Collect stderr in a background thread to avoid pipe-buffer deadlock
     stderr_chunks: list[str] = []
@@ -157,6 +166,7 @@ def stream_subprocess(
     try:
         assert proc.stdout is not None  # guaranteed by stdout=PIPE  # noqa: S101
         for line in proc.stdout:
+            last_activity = time.time()  # Reset inactivity timer
             yield line.rstrip("\n")
         proc.wait()
     except GeneratorExit:
@@ -167,7 +177,8 @@ def stream_subprocess(
         proc.wait()
         raise
     finally:
-        timer.cancel()
+        stop_event.set()
+        watchdog_thread.join(timeout=5)
         stderr_thread.join(timeout=5)
 
     stderr = stderr_chunks[0] if stderr_chunks else ""

@@ -256,43 +256,33 @@ class TestStreamSubprocess:
     def test_stream_subprocess_timeout(self) -> None:
         """Timed-out process sets timed_out=True in result."""
         mock_proc = MagicMock()
-        # Simulate a blocking read that gets interrupted when process is killed
-        mock_proc.stdout = iter([])  # No output before timeout
+        kill_event = threading.Event()
+
+        class _BlockingStdout:
+            """Iterator that blocks until the process is killed."""
+
+            def __iter__(self) -> "_BlockingStdout":
+                return self
+
+            def __next__(self) -> str:
+                kill_event.wait()
+                raise StopIteration
+
+        mock_proc.stdout = _BlockingStdout()
         mock_proc.stderr = MagicMock()
         mock_proc.stderr.read.return_value = ""
         mock_proc.wait.return_value = -9
         mock_proc.returncode = -9
         mock_proc.pid = 999
         mock_proc.poll.return_value = -9
-        mock_proc.kill.return_value = None
+        mock_proc.kill.side_effect = kill_event.set
 
-        # Patch Timer to call the callback immediately
-        def instant_timer(
-            _interval: float, function: object, args: object = None
-        ) -> MagicMock:
-            """Timer that fires the callback immediately on start."""
-            timer = MagicMock()
-
-            def start() -> None:
-                if callable(function):
-                    function()
-
-            timer.start = start
-            timer.cancel = MagicMock()
-            return timer
-
-        with (
-            patch(
-                "mcp_coder.utils.subprocess_streaming.subprocess.Popen",
-                return_value=mock_proc,
-            ),
-            patch(
-                "mcp_coder.utils.subprocess_streaming.threading.Timer",
-                side_effect=instant_timer,
-            ),
+        with patch(
+            "mcp_coder.utils.subprocess_streaming.subprocess.Popen",
+            return_value=mock_proc,
         ):
             stream = StreamResult(
-                stream_subprocess(["sleep", "999"], CommandOptions(timeout_seconds=1))
+                stream_subprocess(["sleep", "999"], CommandOptions(timeout_seconds=0))
             )
             for _ in stream:
                 pass
