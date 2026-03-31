@@ -18,6 +18,7 @@ See [summary.md](summary.md) for full context. This is the sole implementation s
 > 1. Update `test_build_cli_command_without_session` — add `"--tools", ""` to the expected list.
 > 2. Update `test_build_cli_command_with_stream_json_disabled` — add `"--tools", ""` to the expected list.
 > 3. Add `test_build_cli_command_always_includes_tools_flag` — verify the flag is present across multiple command variants.
+> 4. Update `test_build_cli_command_without_mcp_config` in `tests/llm/providers/claude/test_claude_mcp_config.py` — add `"--tools", ""` to the expected list.
 >
 > Run all three code quality checks (pylint, pytest, mypy) and fix any issues before committing.
 
@@ -27,6 +28,7 @@ See [summary.md](summary.md) for full context. This is the sole implementation s
 |------|--------|
 | `src/mcp_coder/llm/providers/claude/claude_code_cli.py` | Modify |
 | `tests/llm/providers/claude/test_claude_code_cli.py` | Modify |
+| `tests/llm/providers/claude/test_claude_mcp_config.py` | Modify |
 
 ## WHAT
 
@@ -56,12 +58,15 @@ def build_cli_command(
 **Updated tests** (exact list assertions gain `"--tools", ""`):
 - `test_build_cli_command_without_session`
 - `test_build_cli_command_with_stream_json_disabled`
+- `test_build_cli_command_without_mcp_config` (in `test_claude_mcp_config.py`)
 
 **New test:**
 
 ```python
 def test_build_cli_command_always_includes_tools_flag(self) -> None:
     """Test that --tools "" is always present regardless of options."""
+    # Test multiple variants: with/without session, with/without mcp_config, stream_json on/off
+    # For each, assert "--tools" and "" appear consecutively in the result list
 ```
 
 ## HOW

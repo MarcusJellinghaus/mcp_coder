@@ -19,7 +19,8 @@ When `mcp-coder` launches Claude Code as a subprocess (via `prompt` or `icoder` 
 | File | Change |
 |------|--------|
 | `src/mcp_coder/llm/providers/claude/claude_code_cli.py` | Add `CLAUDE_BUILTIN_TOOLS` constant; add `--tools` flag to `build_cli_command()` |
-| `tests/llm/providers/claude/test_claude_code_cli.py` | Update 2 existing exact-match tests; add 1 new test for `--tools` presence |
+| `tests/llm/providers/claude/test_claude_code_cli.py` | Update 3 existing exact-match tests; add 1 new test for `--tools` presence |
+| `tests/llm/providers/claude/test_claude_mcp_config.py` | Update 1 existing exact-match test to include `--tools ""` |
 
 ## Implementation Steps
 
@@ -29,4 +30,4 @@ When `mcp-coder` launches Claude Code as a subprocess (via `prompt` or `icoder` 
 
 ## Why One Step
 
-The entire change is ~15 lines across 2 files. Splitting into multiple steps would add process overhead without value. The test updates and new test are tightly coupled to the single production code change — they should ship together.
+The entire change is ~15 lines across 3 files. Splitting into multiple steps would add process overhead without value. The test updates and new test are tightly coupled to the single production code change — they should ship together.
