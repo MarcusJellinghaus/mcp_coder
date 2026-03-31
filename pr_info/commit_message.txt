@@ -1,8 +1,0 @@
-icoder: 5-minute inactivity timeout for LLM calls
-
-Add ICODER_LLM_TIMEOUT_SECONDS=300 constant in llm_service.py and pass
-it to prompt_llm_stream(). In langchain _ask_agent_stream(), replace
-the hardcoded _AGENT_NO_PROGRESS_TIMEOUT with the caller's timeout
-parameter. Raise ask_langchain_stream() default timeout from 30s to
-600s for backward compatibility. Update existing timeout tests to use
-the timeout parameter directly instead of patching the removed constant.
