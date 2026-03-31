@@ -5,7 +5,6 @@ Detection logic tests are in tests/workflow_utils/test_base_branch.py.
 """
 
 import argparse
-import subprocess
 from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -386,9 +385,18 @@ def mock_branch_manager() -> Generator[MagicMock, None, None]:
 
 
 @pytest.fixture
-def mock_subprocess_run() -> Generator[MagicMock, None, None]:
-    """Mock subprocess.run for git commands."""
-    with patch("mcp_coder.cli.commands.gh_tool.subprocess.run") as mock:
+def mock_fetch_remote() -> Generator[MagicMock, None, None]:
+    """Mock fetch_remote for git fetch."""
+    with patch("mcp_coder.cli.commands.gh_tool.fetch_remote") as mock:
+        mock.return_value = True
+        yield mock
+
+
+@pytest.fixture
+def mock_checkout_branch() -> Generator[MagicMock, None, None]:
+    """Mock checkout_branch for git checkout."""
+    with patch("mcp_coder.cli.commands.gh_tool.checkout_branch") as mock:
+        mock.return_value = True
         yield mock
 
 
@@ -405,7 +413,8 @@ class TestCheckoutIssueBranchExitCodes:
         mock_resolve_project_dir: MagicMock,
         mock_issue_manager: MagicMock,
         mock_branch_manager: MagicMock,
-        mock_subprocess_run: MagicMock,
+        mock_fetch_remote: MagicMock,
+        mock_checkout_branch: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Linked branch exists, checkout succeeds -> exit 0, branch name on stdout."""
@@ -432,7 +441,8 @@ class TestCheckoutIssueBranchExitCodes:
         mock_resolve_project_dir: MagicMock,
         mock_issue_manager: MagicMock,
         mock_branch_manager: MagicMock,
-        mock_subprocess_run: MagicMock,
+        mock_fetch_remote: MagicMock,
+        mock_checkout_branch: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """No linked branches, creation succeeds, checkout succeeds -> exit 0."""
@@ -463,7 +473,7 @@ class TestCheckoutIssueBranchExitCodes:
         mock_resolve_project_dir: MagicMock,
         mock_issue_manager: MagicMock,
         mock_branch_manager: MagicMock,
-        mock_subprocess_run: MagicMock,
+        mock_fetch_remote: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """No linked branches, creation fails -> exit 1."""
@@ -494,7 +504,8 @@ class TestCheckoutIssueBranchExitCodes:
         mock_resolve_project_dir: MagicMock,
         mock_issue_manager: MagicMock,
         mock_branch_manager: MagicMock,
-        mock_subprocess_run: MagicMock,
+        mock_fetch_remote: MagicMock,
+        mock_checkout_branch: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Branch found but git checkout fails -> exit 2."""
@@ -508,11 +519,7 @@ class TestCheckoutIssueBranchExitCodes:
         mock_branch_manager.return_value.get_linked_branches.return_value = [
             "123-test-issue"
         ]
-        # First call is git fetch (succeeds), second is git checkout (fails)
-        mock_subprocess_run.side_effect = [
-            MagicMock(),  # git fetch
-            subprocess.CalledProcessError(1, ["git", "checkout", "123-test-issue"]),
-        ]
+        mock_checkout_branch.return_value = False
 
         args = argparse.Namespace(issue_number=123, project_dir=None)
         result = execute_checkout_issue_branch(args)
@@ -525,7 +532,7 @@ class TestCheckoutIssueBranchExitCodes:
         self,
         mock_resolve_project_dir: MagicMock,
         mock_issue_manager: MagicMock,
-        mock_subprocess_run: MagicMock,
+        mock_fetch_remote: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """get_issue returns empty issue (number=0) -> exit 1."""
@@ -563,7 +570,7 @@ class TestCheckoutIssueBranchExitCodes:
         self,
         mock_resolve_project_dir: MagicMock,
         mock_issue_manager: MagicMock,
-        mock_subprocess_run: MagicMock,
+        mock_fetch_remote: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Unexpected exception -> exit 2."""
@@ -594,7 +601,8 @@ class TestCheckoutIssueBranchBehavior:
         mock_resolve_project_dir: MagicMock,
         mock_issue_manager: MagicMock,
         mock_branch_manager: MagicMock,
-        mock_subprocess_run: MagicMock,
+        mock_fetch_remote: MagicMock,
+        mock_checkout_branch: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """When multiple branches linked, uses first."""
@@ -622,7 +630,8 @@ class TestCheckoutIssueBranchBehavior:
         mock_resolve_project_dir: MagicMock,
         mock_issue_manager: MagicMock,
         mock_branch_manager: MagicMock,
-        mock_subprocess_run: MagicMock,
+        mock_fetch_remote: MagicMock,
+        mock_checkout_branch: MagicMock,
     ) -> None:
         """Verifies base_branch from issue data is passed to create_remote_branch_for_issue."""
         project_dir = Path("/test/project")
@@ -652,7 +661,8 @@ class TestCheckoutIssueBranchBehavior:
         mock_resolve_project_dir: MagicMock,
         mock_issue_manager: MagicMock,
         mock_branch_manager: MagicMock,
-        mock_subprocess_run: MagicMock,
+        mock_fetch_remote: MagicMock,
+        mock_checkout_branch: MagicMock,
     ) -> None:
         """Verifies git fetch is called."""
         project_dir = Path("/test/project")
@@ -667,10 +677,7 @@ class TestCheckoutIssueBranchBehavior:
         args = argparse.Namespace(issue_number=123, project_dir=None)
         execute_checkout_issue_branch(args)
 
-        # First subprocess.run call should be git fetch
-        first_call = mock_subprocess_run.call_args_list[0]
-        assert first_call[0][0] == ["git", "fetch"]
-        assert first_call[1]["cwd"] == project_dir
+        mock_fetch_remote.assert_called_once_with(project_dir)
 
 
 # ============================================================================

@@ -5,9 +5,10 @@ This module provides the gh-tool command group for GitHub-related operations.
 
 import argparse
 import logging
-import subprocess
 import sys
 
+from ...utils.git_operations.branches import checkout_branch
+from ...utils.git_operations.remotes import fetch_remote
 from ...utils.github_operations.issues.branch_manager import IssueBranchManager
 from ...utils.github_operations.issues.manager import IssueManager
 from ...workflow_utils.base_branch import detect_base_branch
@@ -82,16 +83,8 @@ def execute_checkout_issue_branch(args: argparse.Namespace) -> int:
         project_dir = resolve_project_dir(args.project_dir)
 
         # Best-effort git fetch
-        fetch_result = subprocess.run(
-            ["git", "fetch"],
-            cwd=project_dir,
-            capture_output=True,
-            check=False,
-        )
-        if fetch_result.returncode != 0:
-            logger.debug(
-                "git fetch failed (continuing): %s", fetch_result.stderr.decode()
-            )
+        if not fetch_remote(project_dir):
+            logger.debug("git fetch failed (continuing)")
 
         # Get issue data
         issue_number: int = args.issue_number
@@ -123,11 +116,13 @@ def execute_checkout_issue_branch(args: argparse.Namespace) -> int:
             branch_name = result["branch_name"]
 
         # Checkout the branch
-        subprocess.run(
-            ["git", "checkout", branch_name],
-            cwd=project_dir,
-            check=True,
-        )
+        if not checkout_branch(branch_name, project_dir):
+            logger.error(f"Git checkout failed for branch '{branch_name}'")
+            print(
+                f"Error: git checkout failed for branch '{branch_name}'",
+                file=sys.stderr,
+            )
+            return 2
 
         print(branch_name)
         return 0
@@ -136,10 +131,6 @@ def execute_checkout_issue_branch(args: argparse.Namespace) -> int:
         # resolve_project_dir raises ValueError for invalid directories
         logger.error(f"Error: {e}")
         print(f"Error: {e}", file=sys.stderr)
-        return 2
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Git checkout failed: {e}")
-        print(f"Error: git checkout failed: {e}", file=sys.stderr)
         return 2
     except (
         Exception
