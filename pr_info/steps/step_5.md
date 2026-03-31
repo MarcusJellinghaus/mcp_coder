@@ -32,12 +32,15 @@ def get_session_for_issue(
 ### `warn_orphan_folders()` — new helper function
 
 ```python
-def warn_orphan_folders(workspace_base: str, repo_name: str, issue_number: int) -> None:
+def warn_orphan_folders(workspace_base: str, repo_full_name: str, issue_number: int) -> None:
     """Scan disk for folders matching the issue that aren't tracked.
     
     Checks for {base} and {base}-folder\d+ folders on disk that are
     not in sessions.json and not in .to_be_deleted. Logs a warning
     for each orphan found.
+    
+    Note: repo_full_name is "owner/repo" format. The short repo name
+    is extracted via split("/")[-1] before calling sanitize_folder_name.
     """
 ```
 
@@ -75,19 +78,33 @@ Called from `cleanup_stale_sessions()` in `cleanup.py`. It runs after the retry 
 
 ```python
 # In cleanup_stale_sessions(), after retry loop:
+# Note: sessions_by_repo must be constructed from the session store.
+# It doesn't exist in cleanup_stale_sessions currently — build it:
+store = load_sessions()
+sessions_by_repo: dict[str, set[int]] = {}
+for session in store["sessions"]:
+    repo = session["repo"]
+    sessions_by_repo.setdefault(repo, set()).add(session["issue_number"])
+
 if not dry_run:
     # Run orphan detection for all repos with active sessions
-    for repo_name, issues in sessions_by_repo.items():
+    # Note: repo_full_name is "owner/repo" format (keyed from session["repo"])
+    for repo_full_name, issues in sessions_by_repo.items():
         for issue_number in issues:
-            warn_orphan_folders(workspace_base, repo_name, issue_number)
+            warn_orphan_folders(workspace_base, repo_full_name, issue_number)
 ```
 
 ```python
-sanitized_repo = sanitize_folder_name(repo_name)
+# Extract short repo name from "owner/repo" format
+short_repo_name = repo_full_name.split("/")[-1]
+sanitized_repo = sanitize_folder_name(short_repo_name)
 base_name = f"{sanitized_repo}_{issue_number}"
 pattern = re.compile(rf"^{re.escape(base_name)}(-folder\d+)?$")
 to_be_deleted = load_to_be_deleted(workspace_base)
 session_folders = {Path(s["folder"]).name for s in load_sessions()["sessions"]}
+# Note: load_sessions() and load_to_be_deleted() are called per invocation.
+# This is acceptable for the small number of repos/issues expected.
+# If performance matters, the caller could load once and pass data in.
 
 for entry in Path(workspace_base).iterdir():
     if entry.is_dir() and pattern.match(entry.name):

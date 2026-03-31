@@ -62,3 +62,5 @@ When the base folder name is occupied (on disk or in `.to_be_deleted`), new sess
 | 3 | `workspace.py` — suffix-aware folder path + tests | `feat(vscodeclaude): suffix-aware folder naming for soft-deleted folders` |
 | 4 | `status.py` — filter soft-deleted from status display + tests | `feat(vscodeclaude): hide soft-deleted folders from status` |
 | 5 | `sessions.py` — session lookup exclusion + orphan folder detection + tests | `feat(vscodeclaude): session lookup excludes soft-deleted, detect orphan folders` |
+
+**Note**: Each step must update existing tests to pass the new `workspace_base` parameter to any modified function signatures. When a function gains a required `workspace_base` parameter, all existing test call sites for that function must be updated in the same step.

@@ -20,9 +20,9 @@
 
 ```python
 def cleanup_stale_sessions(
+    workspace_base: str,  # NEW — required, before optional params
     dry_run: bool = True,
     cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
-    workspace_base: str,  # NEW — needed for .to_be_deleted
 ) -> dict[str, list[str]]:
 ```
 
@@ -31,7 +31,7 @@ def cleanup_stale_sessions(
 ```python
 def delete_session_folder(
     session: VSCodeClaudeSession,
-    workspace_base: str,  # NEW
+    workspace_base: str,  # NEW — required, before optional params
     was_clean: bool = False,            # NEW — caller knows pre-deletion git status
 ) -> bool:
 ```
@@ -87,7 +87,8 @@ Delete the `.code-workspace` file **before** attempting folder deletion. The wor
 
 ```
 # Before folder deletion attempt:
-workspace_file = Path(session["folder"]).with_suffix(".code-workspace")
+# Note: construct workspace file path using workspace_base for consistency
+workspace_file = Path(workspace_base) / (Path(session["folder"]).name + ".code-workspace")
 if workspace_file.exists():
     workspace_file.unlink()
 ```
