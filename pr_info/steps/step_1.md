@@ -25,6 +25,7 @@ def find_pull_request_by_head(self, head_branch: str) -> List[PullRequestData]:
 - Decorators: `@log_function_call`, `@_handle_github_errors(lambda: [])`
 - Import: Already available — `log_function_call`, `_handle_github_errors` from base_manager
 - Get owner from `self.repository_name` property (returns `"owner/repo"`, split on `/`)
+- Use only the `@_handle_github_errors` decorator for error handling. Do NOT add an inner try/except block — the decorator already catches `GithubException` and returns the default.
 
 ## ALGORITHM
 ```

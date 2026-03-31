@@ -50,29 +50,29 @@ if args.ci_timeout == 0 and report.ci_status == "PENDING":
 Pass PR fields when constructing report (replace `collect_branch_status` return with modified copy).
 
 ## HOW
-- Import `PullRequestManager` and `subprocess` in check_branch_status.py
-- Remote tracking check: `git rev-parse --abbrev-ref @{u}` via subprocess (returns non-zero if no upstream)
+- Import `PullRequestManager` and `has_remote_tracking_branch` from `mcp_coder.utils.git_operations.branch_queries` in check_branch_status.py
+- Remote tracking check: Use existing `git_operations` utilities (e.g., add a `has_remote_tracking_branch(project_dir)` helper to `src/mcp_coder/utils/git_operations/branch_queries.py`) instead of raw `subprocess`. This is more testable and consistent with codebase patterns.
 - PR polling: simple while loop with `time.sleep(20)` between iterations
 - Use `dataclasses.replace()` to add PR fields to the frozen report returned by `collect_branch_status()`
 
 ## ALGORITHM (PR discovery in execute_check_branch_status)
 ```
 1. If not args.wait_for_pr: skip to existing flow
-2. Check remote tracking: run "git rev-parse --abbrev-ref @{u}"
-   - If fails: print error message, return exit code 2
+2. Check remote tracking: call `has_remote_tracking_branch(project_dir)`
+   - If False: print error message, return exit code 2
 3. Create PullRequestManager(project_dir)
-4. Poll loop (max iterations = pr_timeout // 20):
+4. Poll loop (deadline = time.monotonic() + pr_timeout, loop while time.monotonic() < deadline):
    a. Call manager.find_pull_request_by_head(current_branch)
    b. If PRs found: store first PR's number/url, warn if multiple, break
-   c. Sleep 20 seconds
-5. If timeout: print timeout message, return exit code 1
+   c. Sleep 20 seconds (only if time.monotonic() < deadline)
+5. If no PR found after deadline: print timeout message, return exit code 1
 6. After collect_branch_status(): use dataclasses.replace() to add pr_number, pr_url, pr_found
 ```
 
 ## ALGORITHM (CI pending hint)
 ```
 1. After printing the report output
-2. If args.ci_timeout == 0 and report.ci_status == "PENDING":
+2. If args.ci_timeout == 0 and report.ci_status == CI_PENDING (import `CI_PENDING` from `branch_status.py`):
 3. Print "CI pending. Use --ci-timeout to wait for completion."
 ```
 
@@ -92,6 +92,12 @@ Pass PR fields when constructing report (replace `collect_branch_status` return 
 | `test_pr_timeout_default` | Default is 600 |
 | `test_pr_timeout_custom` | `--pr-timeout 300` sets to 300 |
 | `test_pr_timeout_negative_rejected` | `--pr-timeout -1` raises error |
+
+### `has_remote_tracking_branch` helper test:
+| Test | Description |
+|------|-------------|
+| `test_has_remote_tracking_branch_true` | Branch with upstream returns True |
+| `test_has_remote_tracking_branch_false` | Branch without upstream returns False |
 
 ### Remote tracking guard tests:
 | Test | Description |
@@ -117,7 +123,15 @@ Pass PR fields when constructing report (replace `collect_branch_status` return 
 ### Existing behavior preservation:
 | Test | Description |
 |------|-------------|
-| `test_no_wait_for_pr_skips_polling` | `wait_for_pr=False` → no PR manager created, normal flow |
+| `test_no_wait_for_pr_skips_polling` | wait_for_pr=False → no PR manager created, normal flow, report.pr_found is None |
+
+## STATUS MESSAGES
+- "Branch '{branch}' has no remote tracking branch. Push first."
+- "Waiting for PR creation on branch '{branch}' (timeout: {pr_timeout}s)..."
+- "PR #{number} found ({url}). Proceeding with branch-status check."
+- "Warning: Multiple PRs found for branch '{branch}'. Using PR #{number}."
+- "No PR found for branch '{branch}' within timeout ({pr_timeout}s)."
+- "CI pending. Use --ci-timeout to wait for completion."
 
 ## COMMIT
 `feat(check_branch_status): add --wait-for-pr polling with remote guard and CI hint`

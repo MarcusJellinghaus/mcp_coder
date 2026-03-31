@@ -15,12 +15,16 @@
 - Document the new flags in the "What This Command Does" section
 
 ### `implementation_approve/SKILL.md`:
+- Update the skill's `allowed-tools` configuration to include the `mcp-coder check branch-status` command, since the skill now needs to run it as a prerequisite.
 - Change instructions to gate label change on branch-status check:
   ```bash
   mcp-coder check branch-status --ci-timeout 400 --pr-timeout 600 --llm-truncate --wait-for-pr
   ```
 - Only set `status-08:ready-pr` label if check passes (exit code 0)
 - Add step: "Run branch-status check with `--wait-for-pr` first"
+
+## NOTES
+- The default invocation command in `check_branch_status/SKILL.md` should NOT include `--wait-for-pr` — it remains opt-in. Only document the new flags in the description section.
 
 ## ALGORITHM
 N/A — documentation changes only.
