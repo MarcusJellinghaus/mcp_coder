@@ -31,6 +31,7 @@ from .helpers import (
 )
 from .issues import (
     _filter_eligible_vscodeclaude_issues,
+    is_status_eligible_for_session,
     status_requires_linked_branch,
 )
 from .sessions import (
@@ -327,11 +328,11 @@ def process_eligible_issues(
         all_cached_issues, github_username
     )
 
-    # Filter out pr-created issues (they don't need sessions)
+    # Filter to statuses that are eligible for sessions (config-driven)
     actionable_issues: list[IssueData] = [
         issue
         for issue in eligible_issues
-        if get_issue_status(issue) != "status-10:pr-created"
+        if is_status_eligible_for_session(get_issue_status(issue))
     ]
 
     # Filter out issues that already have sessions

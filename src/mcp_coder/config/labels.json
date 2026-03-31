@@ -38,7 +38,8 @@
         "emoji": "📋",
         "display_name": "PLAN REVIEW",
         "stage_short": "plan",
-        "commands": ["/plan_review_supervisor"]
+        "commands": ["/plan_review_supervisor"],
+        "requires_branch": true
       }
     },
     {
@@ -66,7 +67,8 @@
         "emoji": "🔍",
         "display_name": "CODE REVIEW",
         "stage_short": "review",
-        "commands": ["/implementation_review_supervisor"]
+        "commands": ["/implementation_review_supervisor"],
+        "requires_branch": true
       }
     },
     {
