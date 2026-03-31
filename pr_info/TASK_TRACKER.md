@@ -28,7 +28,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] [Step 5](./steps/step_5.md) — Migrate implementation_new_tasks, commit_push
 - [x] [Step 6](./steps/step_6.md) — Migrate rebase + move rebase_design.md
 - [x] [Step 7](./steps/step_7.md) — Migrate plan_review_supervisor + extract supervisor_workflow.md
-- [ ] [Step 8](./steps/step_8.md) — Migrate implementation_review_supervisor + extract supervisor_workflow.md
+- [x] [Step 8](./steps/step_8.md) — Migrate implementation_review_supervisor + extract supervisor_workflow.md
 - [ ] [Step 9](./steps/step_9.md) — Update settings.local.json + documentation
 - [ ] [Step 10](./steps/step_10.md) — Delete old .claude/commands/ directory
 
