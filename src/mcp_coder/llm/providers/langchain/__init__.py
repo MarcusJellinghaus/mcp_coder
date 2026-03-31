@@ -44,7 +44,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Agent streaming timeout constants (seconds)
-_AGENT_NO_PROGRESS_TIMEOUT = 600  # 10 minutes
 _AGENT_OVERALL_TIMEOUT = 3600  # 60 minutes
 
 _BACKEND_ERROR_PARAMS: dict[str, tuple[str, str, str]] = {
@@ -494,12 +493,10 @@ def _ask_agent_stream(
     try:
         while True:
             try:
-                event = q.get(timeout=_AGENT_NO_PROGRESS_TIMEOUT)
+                event = q.get(timeout=timeout)
             except queue.Empty as exc:
                 cancel.set()
-                raise TimeoutError(
-                    f"Agent produced no output for {_AGENT_NO_PROGRESS_TIMEOUT}s"
-                ) from exc
+                raise TimeoutError(f"Agent produced no output for {timeout}s") from exc
             if event is None:
                 break
             if time.monotonic() - start > _AGENT_OVERALL_TIMEOUT:
@@ -526,7 +523,7 @@ def _ask_agent_stream(
 def ask_langchain_stream(
     question: str,
     session_id: str | None = None,
-    timeout: int = 30,
+    timeout: int = 600,
     mcp_config: str | None = None,
     execution_dir: str | None = None,
     env_vars: dict[str, str] | None = None,

@@ -1,11 +1,8 @@
-icoder: langchain text stream inactivity timeout
+icoder: 5-minute inactivity timeout for LLM calls
 
-Add inter-chunk inactivity timeout to _ask_text_stream() so that a
-stalled LangChain model connection raises TimeoutError instead of
-hanging forever. The timeout check runs before processing each chunk,
-with last_activity initialized before the loop to avoid false timeouts
-on slow initial connections.
-
-Also add a `except TimeoutError: raise` clause before the general
-exception handler to prevent TimeoutError (a subclass of OSError)
-from being misclassified as a connection error.
+Add ICODER_LLM_TIMEOUT_SECONDS=300 constant in llm_service.py and pass
+it to prompt_llm_stream(). In langchain _ask_agent_stream(), replace
+the hardcoded _AGENT_NO_PROGRESS_TIMEOUT with the caller's timeout
+parameter. Raise ask_langchain_stream() default timeout from 30s to
+600s for backward compatibility. Update existing timeout tests to use
+the timeout parameter directly instead of patching the removed constant.

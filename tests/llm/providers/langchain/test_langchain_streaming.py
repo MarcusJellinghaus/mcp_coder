@@ -341,7 +341,7 @@ class TestAskLangchainStreamAgentTimeouts:
     """Timeout and cancellation behavior for agent streaming."""
 
     def test_no_progress_timeout_raises(self) -> None:
-        """If agent produces no events for NO_PROGRESS_TIMEOUT, TimeoutError raised."""
+        """If agent produces no events for timeout seconds, TimeoutError raised."""
 
         async def _blocking_stream(
             **kwargs: object,
@@ -359,12 +359,12 @@ class TestAskLangchainStreamAgentTimeouts:
                 f"{_MOD_LC}.agent.run_agent_stream",
                 side_effect=_blocking_stream,
             ),
-            patch(f"{_MOD_LC}._AGENT_NO_PROGRESS_TIMEOUT", 0.3),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain_stream
 
             with pytest.raises(TimeoutError, match="no output"):
-                list(ask_langchain_stream("Hi", mcp_config="/tmp/mcp.json"))
+                # Pass a very short timeout so the test completes quickly
+                list(ask_langchain_stream("Hi", mcp_config="/tmp/mcp.json", timeout=1))
 
     def test_overall_timeout_raises(self) -> None:
         """If total time exceeds OVERALL_TIMEOUT, TimeoutError raised."""
@@ -384,13 +384,13 @@ class TestAskLangchainStreamAgentTimeouts:
                 f"{_MOD_LC}.agent.run_agent_stream",
                 side_effect=_slow_stream,
             ),
-            patch(f"{_MOD_LC}._AGENT_NO_PROGRESS_TIMEOUT", 5),
             patch(f"{_MOD_LC}._AGENT_OVERALL_TIMEOUT", 0.5),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain_stream
 
             with pytest.raises(TimeoutError, match="overall timeout"):
-                list(ask_langchain_stream("Hi", mcp_config="/tmp/mcp.json"))
+                # Use a long per-event timeout so overall timeout triggers first
+                list(ask_langchain_stream("Hi", mcp_config="/tmp/mcp.json", timeout=5))
 
     def test_generator_exit_sets_cancel(self) -> None:
         """When consumer stops iterating, cancel_event is set."""

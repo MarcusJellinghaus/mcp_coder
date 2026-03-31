@@ -7,6 +7,8 @@ from typing import Iterator, Protocol, runtime_checkable
 from mcp_coder.llm.interface import prompt_llm_stream
 from mcp_coder.llm.types import StreamEvent
 
+ICODER_LLM_TIMEOUT_SECONDS = 300  # 5-minute inactivity timeout for interactive use
+
 
 @runtime_checkable
 class LLMService(Protocol):
@@ -47,6 +49,7 @@ class RealLLMService:
             question,
             provider=self._provider,
             session_id=self._session_id,
+            timeout=ICODER_LLM_TIMEOUT_SECONDS,
             execution_dir=self._execution_dir,
             mcp_config=self._mcp_config,
             env_vars=self._env_vars,

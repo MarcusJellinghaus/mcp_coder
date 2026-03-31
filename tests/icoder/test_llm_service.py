@@ -7,6 +7,7 @@ from typing import Iterator
 import pytest
 
 from mcp_coder.icoder.services.llm_service import (
+    ICODER_LLM_TIMEOUT_SECONDS,
     FakeLLMService,
     LLMService,
     RealLLMService,
@@ -120,6 +121,31 @@ def test_real_service_updates_session_id(
     assert service.session_id is None
     list(service.stream("hello"))
     assert service.session_id == "new-session-42"
+
+
+def test_icoder_timeout_constant_value() -> None:
+    """ICODER_LLM_TIMEOUT_SECONDS is 300 (5 minutes)."""
+    assert ICODER_LLM_TIMEOUT_SECONDS == 300
+
+
+def test_real_llm_service_passes_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RealLLMService.stream() passes timeout=ICODER_LLM_TIMEOUT_SECONDS to prompt_llm_stream."""
+    captured_kwargs: dict[str, object] = {}
+    fake_events: list[StreamEvent] = [{"type": "done"}]
+
+    def mock_stream(question: str, **kwargs: object) -> Iterator[StreamEvent]:
+        captured_kwargs.update(kwargs)
+        yield from fake_events
+
+    monkeypatch.setattr(
+        "mcp_coder.icoder.services.llm_service.prompt_llm_stream",
+        mock_stream,
+    )
+    service = RealLLMService(provider="claude")
+    list(service.stream("hello"))
+    assert captured_kwargs["timeout"] == ICODER_LLM_TIMEOUT_SECONDS
 
 
 def test_fake_falls_back_to_default_after_canned_exhausted() -> None:

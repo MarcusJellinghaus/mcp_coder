@@ -38,9 +38,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 3: LLM Service Timeout Constant + Agent Timeout Passthrough
 > [Detail](./steps/step_3.md) — Define `ICODER_LLM_TIMEOUT_SECONDS = 300`, pass to `prompt_llm_stream()`, replace `_AGENT_NO_PROGRESS_TIMEOUT` with caller's timeout
 
-- [ ] Implementation: tests (`tests/icoder/test_llm_service.py`) + production code (`src/mcp_coder/icoder/services/llm_service.py`, `src/mcp_coder/llm/providers/langchain/__init__.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `icoder: 5-minute inactivity timeout for LLM calls`
+- [x] Implementation: tests (`tests/icoder/test_llm_service.py`) + production code (`src/mcp_coder/icoder/services/llm_service.py`, `src/mcp_coder/llm/providers/langchain/__init__.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `icoder: 5-minute inactivity timeout for LLM calls`
 
 ### Step 4: Batch Files — icoder.bat + icoder_local.bat
 > [Detail](./steps/step_4.md) — Create Windows launchers following `claude.bat` / `claude_local.bat` pattern
