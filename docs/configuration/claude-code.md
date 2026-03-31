@@ -91,9 +91,11 @@ your-project/
 ├── .claude/
 │   ├── CLAUDE.md              # Project instructions (mandatory)
 │   ├── settings.local.json    # Local settings (optional)
-│   └── commands/              # Slash commands (optional)
-│       ├── commit_push.md
-│       ├── plan_review.md
+│   └── skills/                # Skills (optional)
+│       ├── commit_push/
+│       │   └── SKILL.md
+│       ├── plan_review/
+│       │   └── SKILL.md
 │       └── ...
 ├── .mcp.json                  # MCP server config (see repository-setup.md)
 └── ...
@@ -164,11 +166,11 @@ This file configures Claude Code permissions and MCP server settings for your lo
 
 > **Note:** In the mcp-coder repository itself, this file is tracked as a reference template for users.
 
-### `.claude/commands/` - Slash Commands
+### `.claude/skills/` - Skills
 
-Slash commands provide structured workflows for common tasks. They appear as `/command_name` in Claude Code.
+Skills provide structured workflows for common tasks. They appear as `/skill_name` in Claude Code.
 
-For the MCP Coder and its processes, a number of slash commands have been defined.
+For the MCP Coder and its processes, a number of skills have been defined.
 
 **Available commands** (see [Claude Code Cheat Sheet](../processes-prompts/claude_cheat_sheet.md) for full list):
 

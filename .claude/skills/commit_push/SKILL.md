@@ -1,7 +1,18 @@
 ---
-allowed-tools: Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git push *), Bash(git log *), Bash(./tools/format_all.sh), Bash(tools/format_all.bat), Read, Glob, Grep
-workflow-stage: utility
-suggested-next: (context-dependent)
+description: Format code, review changes, commit, and push to remote
+disable-model-invocation: true
+allowed-tools:
+  - "Bash(git status *)"
+  - "Bash(git diff *)"
+  - "Bash(git add *)"
+  - "Bash(git commit *)"
+  - "Bash(git push *)"
+  - "Bash(git log *)"
+  - "Bash(./tools/format_all.sh *)"
+  - "Bash(tools/format_all.bat *)"
+  - Read
+  - Glob
+  - Grep
 ---
 
 # Commit and Push Changes

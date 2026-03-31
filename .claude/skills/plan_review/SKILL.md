@@ -1,7 +1,13 @@
 ---
-allowed-tools: Bash(git fetch *), Bash(git status *), Read, Glob, Grep
-workflow-stage: plan-review
-suggested-next: discuss -> plan_update -> commit_push -> plan_approve
+description: Review implementation plan for completeness, simplicity, and risks
+disable-model-invocation: true
+allowed-tools:
+  - "Bash(git fetch *)"
+  - "Bash(git status *)"
+  - mcp__workspace__read_file
+  - mcp__workspace__list_directory
+  - Glob
+  - Grep
 ---
 
 # Review Implementation Plan

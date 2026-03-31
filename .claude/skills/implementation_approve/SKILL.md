@@ -1,7 +1,8 @@
 ---
-allowed-tools: Bash(mcp-coder gh-tool set-status *)
-workflow-stage: code-review
-suggested-next: (bot runs create_pr) -> merge in GitHub
+description: Approve implementation and transition issue to PR-ready state
+disable-model-invocation: true
+allowed-tools:
+  - "Bash(mcp-coder gh-tool set-status *)"
 ---
 
 # Approve Implementation

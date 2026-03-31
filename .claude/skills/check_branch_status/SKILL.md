@@ -1,20 +1,15 @@
 ---
-allowed-tools: Bash(mcp-coder check branch-status *)
-workflow-stage: quality-check
-suggested-next: commit_push, rebase
+description: Check branch readiness including CI, rebase needs, tasks, and labels
+disable-model-invocation: true
+allowed-tools:
+  - "Bash(mcp-coder check branch-status *)"
 ---
+
+!`mcp-coder check branch-status --ci-timeout 180 --llm-truncate`
 
 # Check Branch Status
 
 Check comprehensive branch readiness including CI status, rebase requirements, task completion, and GitHub labels.
-
-## Usage
-
-Call the underlying CLI command with LLM-optimized output and CI waiting:
-
-```bash
-mcp-coder check branch-status --ci-timeout 180 --llm-truncate
-```
 
 ## What This Command Does
 

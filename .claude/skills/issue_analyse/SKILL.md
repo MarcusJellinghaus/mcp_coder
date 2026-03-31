@@ -1,18 +1,21 @@
 ---
-workflow-stage: issue-discussion
-suggested-next: discuss -> issue_update -> issue_approve
+description: Analyse GitHub issue requirements, feasibility, and implementation approaches
+disable-model-invocation: true
+argument-hint: "<issue-number>"
+allowed-tools:
+  - "Bash(gh issue view *)"
+  - "Bash(git ls-remote *)"
+  - mcp__workspace__read_file
+  - mcp__workspace__list_directory
 ---
+
+!`gh issue view $ARGUMENTS`
 
 # Analyse GitHub Issue
 
 Fetch a GitHub issue and analyze its requirements, feasibility, and potential implementation approaches.
 
 ## Instructions
-
-First, fetch the issue details:
-```bash
-gh issue view $ARGUMENTS
-```
 
 If no issue number is provided via `$ARGUMENTS`, check `.vscodeclaude_status.txt` for the current issue number.
 

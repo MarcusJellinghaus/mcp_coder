@@ -1,7 +1,15 @@
 ---
-allowed-tools: Bash(gh issue edit *), Bash(gh issue view *), Read, Glob, Grep, mcp__workspace__save_file, mcp__workspace__delete_this_file
-workflow-stage: issue-discussion
-suggested-next: issue_approve
+description: Update GitHub issue with refined content from analysis discussion
+disable-model-invocation: true
+argument-hint: "<issue-number>"
+allowed-tools:
+  - "Bash(gh issue edit *)"
+  - "Bash(gh issue view *)"
+  - mcp__workspace__save_file
+  - mcp__workspace__delete_this_file
+  - Read
+  - Glob
+  - Grep
 ---
 
 # Update GitHub Issue

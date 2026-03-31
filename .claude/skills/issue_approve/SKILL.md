@@ -1,8 +1,14 @@
 ---
-allowed-tools: Bash(gh issue comment *), Read, Bash(MSYS_NO_PATHCONV=1 gh issue comment *)
-workflow-stage: issue-discussion
-suggested-next: (bot runs create_plan) -> /clear -> plan_review
+description: Approve issue to transition to next workflow status
+disable-model-invocation: true
+argument-hint: "<issue-number>"
+allowed-tools:
+  - "Bash(gh issue comment *)"
+  - "Bash(MSYS_NO_PATHCONV=1 gh issue comment *)"
+  - Read
 ---
+
+!`gh issue view $ARGUMENTS`
 
 # Approve Issue
 

@@ -189,7 +189,7 @@ flowchart LR
 <details>
 <summary>📋 Initiate discussion (click to expand and copy)</summary>
 
-> **Slash Command:** `/issue_analyse <issue_number>` ([`.claude/commands/issue_analyse.md`](../../.claude/commands/issue_analyse.md))
+> **Slash Command:** `/issue_analyse <issue_number>` ([`.claude/skills/issue_analyse/SKILL.md`](../../.claude/skills/issue_analyse/SKILL.md))
 > 
 > **Additional capability:** Automatically fetches issue details via `gh issue view` before analysis.
 
@@ -205,7 +205,7 @@ At the end of our discussion, I want to have an even better issue description.
 <details>
 <summary>📋 For simplicity, go for a simple step-by-step discussion</summary>
 
-> **Slash Command:** `/discuss` ([`.claude/commands/discuss.md`](../../.claude/commands/discuss.md))
+> **Slash Command:** `/discuss` ([`.claude/skills/discuss/SKILL.md`](../../.claude/skills/discuss/SKILL.md))
 
 ```
 Can we go through all open suggested changes and questions step by step?
@@ -222,7 +222,7 @@ Always just ask ONE question
 <details>
 <summary>📋 Draft Issue Text (click to expand and copy)</summary>
 
-> **Slash Command:** `/issue_update` ([`.claude/commands/issue_update.md`](../../.claude/commands/issue_update.md))
+> **Slash Command:** `/issue_update` ([`.claude/skills/issue_update/SKILL.md`](../../.claude/skills/issue_update/SKILL.md))
 >
 > **Additional capability:** Updates issue directly on GitHub, preserves original content.
 
@@ -237,7 +237,7 @@ Please provide the issue text (with issue header!) as markdown artifact, so that
 <details>
 <summary>📋 Create GitHub Issue from discussion</summary>
 
-> **Slash Command:** `/issue_create` ([`.claude/commands/issue_create.md`](../../.claude/commands/issue_create.md))
+> **Slash Command:** `/issue_create` ([`.claude/skills/issue_create/SKILL.md`](../../.claude/skills/issue_create/SKILL.md))
 >
 > **Additional capability:** Creates issue directly on GitHub via `gh issue create`.
 
@@ -248,7 +248,7 @@ Use this command after discussing a new feature or bug to create a GitHub issue 
 <details>
 <summary>📋 Approve Issue</summary>
 
-> **Slash Command:** `/issue_approve` ([`.claude/commands/issue_approve.md`](../../.claude/commands/issue_approve.md))
+> **Slash Command:** `/issue_approve` ([`.claude/skills/issue_approve/SKILL.md`](../../.claude/skills/issue_approve/SKILL.md))
 >
 > **Additional capability:** Comments `/approve` on the issue to trigger status promotion via GitHub Actions.
 
@@ -347,7 +347,7 @@ flowchart LR
    <details>
    <summary>📋 Review the implementation plan</summary>
 
-   > **Slash Command:** `/plan_review` ([`.claude/commands/plan_review.md`](../../.claude/commands/plan_review.md))
+   > **Slash Command:** `/plan_review` ([`.claude/skills/plan_review/SKILL.md`](../../.claude/skills/plan_review/SKILL.md))
    >
    > **Additional capability:** Checks git status and confirms branch before review.
 
@@ -367,7 +367,7 @@ flowchart LR
    <details>
    <summary>📋 For simplicity, go for a simple step-by-step discussion</summary>
 
-   > **Slash Command:** `/discuss` ([`.claude/commands/discuss.md`](../../.claude/commands/discuss.md))
+   > **Slash Command:** `/discuss` ([`.claude/skills/discuss/SKILL.md`](../../.claude/skills/discuss/SKILL.md))
 
    ```
    Can we go through all open suggested changes and questions step by step?
@@ -385,7 +385,7 @@ flowchart LR
    <details>
    <summary>📋 Update Plan Files</summary>
 
-   > **Slash Command:** `/plan_update` ([`.claude/commands/plan_update.md`](../../.claude/commands/plan_update.md))
+   > **Slash Command:** `/plan_update` ([`.claude/skills/plan_update/SKILL.md`](../../.claude/skills/plan_update/SKILL.md))
 
    ```
    Can you update the plan by updating the different files in folder `pr_info/steps`
@@ -414,7 +414,7 @@ flowchart LR
    <details>
    <summary>📋 Approve Implementation Plan</summary>
 
-   > **Slash Command:** `/plan_approve` ([`.claude/commands/plan_approve.md`](../../.claude/commands/plan_approve.md))
+   > **Slash Command:** `/plan_approve` ([`.claude/skills/plan_approve/SKILL.md`](../../.claude/skills/plan_approve/SKILL.md))
    >
    > **Additional capability:** Sets issue status to `status-05:plan-ready` via `mcp-coder gh-tool set-status`.
 
@@ -725,7 +725,7 @@ This could benefit from `format_and_commit` tool.
 - `mcp-coder commit clipboard` - to commit all changes with a commit message from the clipboard
 - `mcp-coder commit auto` - to commit all changes with a commit message generated via LLM from the git diff
 
-> **Slash Command:** `/commit_push` ([`.claude/commands/commit_push.md`](../../.claude/commands/commit_push.md))
+> **Slash Command:** `/commit_push` ([`.claude/skills/commit_push/SKILL.md`](../../.claude/skills/commit_push/SKILL.md))
 >
 > **Additional capability:** Formats code, reviews changes, commits, and pushes in one command.
 
@@ -808,7 +808,7 @@ Or use the code review prompt directly:
 <details>
 <summary>📋 Code Review Prompt (click to expand and copy)</summary>
 
-> **Slash Command:** `/implementation_review` ([`.claude/commands/implementation_review.md`](../../.claude/commands/implementation_review.md))
+> **Slash Command:** `/implementation_review` ([`.claude/skills/implementation_review/SKILL.md`](../../.claude/skills/implementation_review/SKILL.md))
 >
 > **Additional capability:** Checks git status and confirms branch before review.
 
@@ -867,7 +867,7 @@ We will use the discussion later to add more tasks to the implementation plan fi
   <details>
   <summary>📋 Approve Implementation</summary>
 
-  > **Slash Command:** `/implementation_approve` ([`.claude/commands/implementation_approve.md`](../../.claude/commands/implementation_approve.md))
+  > **Slash Command:** `/implementation_approve` ([`.claude/skills/implementation_approve/SKILL.md`](../../.claude/skills/implementation_approve/SKILL.md))
   >
   > **Additional capability:** Sets issue status to `status-08:ready-pr` via `mcp-coder gh-tool set-status`.
 
@@ -896,7 +896,7 @@ We will use the discussion later to add more tasks to the implementation plan fi
   <details>
   <summary>📋 Create further implementation tasks (click to expand and copy)</summary>
 
-  > **Slash Command:** `/implementation_new_tasks` ([`.claude/commands/implementation_new_tasks.md`](../../.claude/commands/implementation_new_tasks.md))
+  > **Slash Command:** `/implementation_new_tasks` ([`.claude/skills/implementation_new_tasks/SKILL.md`](../../.claude/skills/implementation_new_tasks/SKILL.md))
   
   ```
   ## Request to append new implementation tasks to Python Project Implementation Plan

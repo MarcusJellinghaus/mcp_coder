@@ -371,7 +371,7 @@ MCP Coder currently uses Claude Code as the LLM backend. This section covers the
 | File | Purpose |
 |------|---------|
 | `.claude/CLAUDE.md` | Project-specific instructions for Claude |
-| `.claude/commands/` | Slash commands for workflow stages |
+| `.claude/skills/` | Skills for workflow stages |
 | `.mcp.json` | MCP server configuration |
 
 ### `.claude/CLAUDE.md` - Project Instructions
@@ -382,9 +382,9 @@ This file contains mandatory instructions that Claude follows when working on yo
 - [Claude Code Configuration Guide](configuration/claude-code.md#claudeclaudemd---project-instructions) for detailed examples
 - mcp-coder's own [CLAUDE.md](https://github.com/MarcusJellinghaus/mcp_coder/blob/main/.claude/CLAUDE.md) for a comprehensive example
 
-### `.claude/commands/` - Slash Commands
+### `.claude/skills/` - Skills
 
-Slash commands provide structured workflows for common tasks. Copy the commands from mcp-coder or create your own.
+Skills provide structured workflows for common tasks. Copy the skills from mcp-coder or create your own.
 
 **Available commands** (see [Claude Code Cheat Sheet](processes-prompts/claude_cheat_sheet.md) for details):
 
