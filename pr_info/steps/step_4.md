@@ -25,14 +25,14 @@ def display_status_table(
     repo_filter: str | None = None,
     cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
     issues_without_branch: set[tuple[str, int]] | None = None,
-    workspace_base: str | None = None,  # NEW
+    workspace_base: str,  # NEW
 ) -> None:
 ```
 
 ## HOW
 
 - Import `load_to_be_deleted` from `.helpers` in `status.py`
-- `workspace_base` is optional (`None`) for backward compatibility
+- `workspace_base` is required (always passed by caller)
 - CLI caller loads config and passes `workspace_base`
 
 ## ALGORITHM
@@ -41,14 +41,14 @@ def display_status_table(
 
 ```python
 # At top of function, after cache refresh:
-to_be_deleted: set[str] = set()
-if workspace_base:
-    to_be_deleted = load_to_be_deleted(workspace_base)
+to_be_deleted = load_to_be_deleted(workspace_base)
 
 # In session loop, after folder_path assignment:
 if folder_path.name in to_be_deleted:
     continue  # skip soft-deleted sessions
 ```
+
+> **Note**: Soft-deleted sessions are intentionally excluded from `session_keys`. This makes their issues appear as available for new sessions, which is correct — the old folder is soft-deleted, and `get_working_folder_path` (step 3) will pick a suffix name for the new session.
 
 ### Caller update in `commands.py`
 
@@ -63,7 +63,7 @@ display_status_table(
 
 ## DATA
 
-- `workspace_base: str | None` — optional for backward compat
+- `workspace_base: str` — required, path to workspace directory
 - Return values unchanged
 - No new data structures
 
@@ -74,8 +74,6 @@ display_status_table(
     → session with folder in .to_be_deleted not shown in output
 - test_display_status_table_shows_non_deleted_sessions(tmp_path)
     → session with folder NOT in .to_be_deleted still shown
-- test_display_status_table_works_without_workspace_base()
-    → backward compat: workspace_base=None shows all sessions
 ```
 
 ## COMMIT MESSAGE

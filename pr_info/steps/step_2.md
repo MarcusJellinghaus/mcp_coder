@@ -22,7 +22,7 @@
 def cleanup_stale_sessions(
     dry_run: bool = True,
     cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
-    workspace_base: str | None = None,  # NEW — needed for .to_be_deleted
+    workspace_base: str,  # NEW — needed for .to_be_deleted
 ) -> dict[str, list[str]]:
 ```
 
@@ -31,7 +31,7 @@ def cleanup_stale_sessions(
 ```python
 def delete_session_folder(
     session: VSCodeClaudeSession,
-    workspace_base: str | None = None,  # NEW
+    workspace_base: str,  # NEW
     was_clean: bool = False,            # NEW — caller knows pre-deletion git status
 ) -> bool:
 ```
@@ -58,14 +58,14 @@ cleanup_stale_sessions(
 
 - Import `load_to_be_deleted`, `add_to_be_deleted`, `remove_from_to_be_deleted` from `.helpers`
 - Import `safe_delete_folder` (already imported)
-- `workspace_base` is optional (`None`) for backward compatibility with existing tests
+- `workspace_base` is required (always passed by caller)
 
 ## ALGORITHM
 
 ### Retry logic (at start of `cleanup_stale_sessions`, before stale session processing)
 
 ```
-if workspace_base and not dry_run:
+if not dry_run:
     to_delete = load_to_be_deleted(workspace_base)
     for folder_name in list(to_delete):
         folder_path = Path(workspace_base) / folder_name
@@ -83,6 +83,8 @@ if workspace_base and not dry_run:
 
 Delete the `.code-workspace` file **before** attempting folder deletion. The workspace file should always be cleaned up regardless of folder deletion outcome.
 
+> **Note**: This applies to ALL deletion paths (not just soft-delete). Even if `was_clean=False`, the workspace file is removed. This matches requirement 1: always delete `.code-workspace`.
+
 ```
 # Before folder deletion attempt:
 workspace_file = Path(session["folder"]).with_suffix(".code-workspace")
@@ -94,7 +96,7 @@ if workspace_file.exists():
 
 ```
 # Current: return False on failure
-# New: if was_clean and workspace_base:
+# New: if was_clean:
 #   1. add_to_be_deleted(workspace_base, folder_name)
 #   2. remove_session(session["folder"])
 #   3. log INFO "Soft-deleted: {folder_name}"
@@ -102,9 +104,15 @@ if workspace_file.exists():
 # (.code-workspace already deleted above)
 ```
 
+> **Note**: The existing `remove_session` call on the success path inside `delete_session_folder` is preserved. The new soft-delete path adds a second `remove_session` call on the failure+clean path only.
+
+### Second call site: `cleanup_stale_sessions` empty-directory case
+
+In `cleanup_stale_sessions`, there is a second call to `delete_session_folder` for folders with "No Git" / "Error" status (empty directories). This call passes `was_clean=False` (the default), so empty folders are NOT soft-deleted on failure — they simply fail and are left as-is.
+
 ## DATA
 
-- `workspace_base: str | None` — optional for backward compat
+- `workspace_base: str` — required, path to workspace directory
 - `was_clean: bool` — True when caller verified git status was "Clean" before calling
 - Return values unchanged
 
@@ -115,19 +123,18 @@ if workspace_file.exists():
 - test_cleanup_retries_to_be_deleted_entries() → folder deleted, entry removed
 - test_cleanup_retry_removes_stale_entry_if_folder_missing() → entry removed when folder gone
 - test_cleanup_retry_skipped_in_dry_run() → no retry when dry_run=True
-- test_cleanup_retry_skipped_when_no_workspace_base() → backward compat
-
 # Soft-delete on failure
 - test_delete_session_folder_soft_deletes_on_failure_when_clean()
     → folder deletion fails, workspace file deleted, entry added, session removed
 - test_delete_session_folder_no_soft_delete_when_dirty()
     → folder deletion fails but was_clean=False, no .to_be_deleted entry
-- test_delete_session_folder_no_soft_delete_without_workspace_base()
-    → backward compat: was_clean=True but no workspace_base, no entry added
 - test_delete_session_folder_always_deletes_workspace_file()
     → workspace file deleted even when folder deletion fails
 - test_delete_session_folder_handles_workspace_file_deletion_failure()
     → workspace file deletion raises OSError, folder deletion still attempted
+- test_cleanup_soft_delete_then_retry_succeeds(tmp_path)
+    → First call: folder deletion fails for clean session, entry added to .to_be_deleted.
+      Second call: retry succeeds, entry removed from .to_be_deleted.
 ```
 
 ## COMMIT MESSAGE

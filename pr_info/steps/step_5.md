@@ -13,6 +13,7 @@
 
 - **Modify**: `src/mcp_coder/workflows/vscodeclaude/sessions.py`
 - **Modify**: `src/mcp_coder/workflows/vscodeclaude/session_launch.py` (pass `workspace_base` to `get_session_for_issue`)
+- **Modify**: `src/mcp_coder/workflows/vscodeclaude/cleanup.py` (call `warn_orphan_folders` from `cleanup_stale_sessions`)
 - **Modify**: `src/mcp_coder/workflows/vscodeclaude/__init__.py` (if signature changes need re-export updates)
 - **Modify**: `tests/workflows/vscodeclaude/test_sessions.py`
 
@@ -24,7 +25,7 @@
 def get_session_for_issue(
     repo_full_name: str,
     issue_number: int,
-    workspace_base: str | None = None,  # NEW
+    workspace_base: str,  # NEW
 ) -> VSCodeClaudeSession | None:
 ```
 
@@ -44,16 +45,15 @@ def warn_orphan_folders(workspace_base: str, repo_name: str, issue_number: int) 
 
 - Import `load_to_be_deleted` from `.helpers` in `sessions.py`
 - Import `re` for orphan folder pattern matching
-- `workspace_base` is optional (`None`) for backward compatibility
+- Import `sanitize_folder_name` from `.config` (or wherever the repo name sanitization lives) for `warn_orphan_folders`
+- `workspace_base` is required (always passed by caller)
 
 ## ALGORITHM
 
 ### `get_session_for_issue` exclusion
 
 ```python
-to_be_deleted: set[str] = set()
-if workspace_base:
-    to_be_deleted = load_to_be_deleted(workspace_base)
+to_be_deleted = load_to_be_deleted(workspace_base)
 
 matches = []
 for session in store["sessions"]:
@@ -67,9 +67,23 @@ if len(matches) > 1:
 return matches[0] if matches else None
 ```
 
+> **Note**: The multi-match detection always applies. If >1 active (non-soft-deleted) session matches, it returns `None` with an error log.
+
 ### `warn_orphan_folders`
 
+Called from `cleanup_stale_sessions()` in `cleanup.py`. It runs after the retry loop (after retrying `.to_be_deleted` entries) and before processing stale sessions:
+
 ```python
+# In cleanup_stale_sessions(), after retry loop:
+if not dry_run:
+    # Run orphan detection for all repos with active sessions
+    for repo_name, issues in sessions_by_repo.items():
+        for issue_number in issues:
+            warn_orphan_folders(workspace_base, repo_name, issue_number)
+```
+
+```python
+sanitized_repo = sanitize_folder_name(repo_name)
 base_name = f"{sanitized_repo}_{issue_number}"
 pattern = re.compile(rf"^{re.escape(base_name)}(-folder\d+)?$")
 to_be_deleted = load_to_be_deleted(workspace_base)
@@ -94,7 +108,7 @@ existing = get_session_for_issue(
 
 ## DATA
 
-- `workspace_base: str | None` — optional for backward compat
+- `workspace_base: str` — required, path to workspace directory
 - Return values unchanged for `get_session_for_issue`
 - `warn_orphan_folders` returns `None`, side effect is logging
 
@@ -109,8 +123,6 @@ existing = get_session_for_issue(
     → session found, folder not in .to_be_deleted → returns session
 - test_get_session_for_issue_multiple_active_returns_none(tmp_path)
     → two sessions for same issue, neither deleted → log error, return None
-- test_get_session_for_issue_works_without_workspace_base()
-    → backward compat: workspace_base=None returns first match (existing behavior)
 ```
 
 ### Orphan folder detection tests
