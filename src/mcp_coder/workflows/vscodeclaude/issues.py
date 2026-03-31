@@ -95,16 +95,15 @@ def _get_status_priority(label: str) -> int:
 def is_status_eligible_for_session(status: str) -> bool:
     """Check if status should have a VSCodeClaude session.
 
-    Returns True only for human_action statuses with commands:
-    - status-01:created
-    - status-04:plan-review
-    - status-07:code-review
+    Config-driven: returns True for any status that has a ``vscodeclaude``
+    block with a non-empty ``commands`` list in labels.json.  This covers
+    both happy-path human_action statuses (e.g. created, plan-review,
+    code-review) and failure statuses (e.g. implementing-failed,
+    ci-fix-needed).
 
-    Returns False for:
-    - bot_pickup statuses (02, 05, 08)
-    - bot_busy statuses (03, 06, 09)
-    - status-10:pr-created (no commands)
-    - Unknown/invalid status strings
+    Returns False for bot_pickup / bot_busy statuses (no vscodeclaude
+    config), statuses without commands (e.g. pr-created), and unknown
+    status strings.
 
     Args:
         status: Status label like "status-07:code-review"
@@ -121,14 +120,20 @@ def is_status_eligible_for_session(status: str) -> bool:
 def status_requires_linked_branch(status: str) -> bool:
     """Check if status requires a linked branch to start/restart session.
 
+    Config-driven: reads ``requires_branch`` from the vscodeclaude block
+    in labels.json.  Statuses without a vscodeclaude config or without
+    ``requires_branch: true`` return False.
+
     Args:
         status: Status label like "status-04:plan-review"
 
     Returns:
-        True if status requires linked branch (status-04, status-07)
-        False for status-01 and all other statuses
+        True if the status config has ``requires_branch: true``
     """
-    return status in ("status-04:plan-review", "status-07:code-review")
+    config = get_vscodeclaude_config(status)
+    if config is None:
+        return False
+    return bool(config.get("requires_branch", False))
 
 
 def _is_issue_eligible(
