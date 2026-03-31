@@ -1,5 +1,1 @@
-feat: migrate rebase skill with design document
-
-Move rebase_design.md.txt into skill directory as rebase_design.md.
-Add !`git status` dynamic injection. Keep all operational content
-(workflow, conflict table, abort rules) inline in SKILL.md.
+chore: update config and docs for skills migration
