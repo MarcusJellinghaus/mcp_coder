@@ -26,6 +26,7 @@ from .commands.implement import execute_implement
 from .commands.init import execute_init
 from .commands.prompt import execute_prompt
 from .commands.verify import execute_verify
+from .gh_parsers import add_gh_tool_parsers, add_git_tool_parsers
 from .parsers import (
     HelpHintArgumentParser,
     WideHelpFormatter,
@@ -34,8 +35,6 @@ from .parsers import (
     add_coordinator_parsers,
     add_create_plan_parser,
     add_create_pr_parser,
-    add_gh_tool_parsers,
-    add_git_tool_parsers,
     add_icoder_parser,
     add_implement_parser,
     add_prompt_parser,

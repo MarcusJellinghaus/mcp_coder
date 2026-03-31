@@ -1,6 +1,5 @@
-Add implement_direct skill and update gh-tool permission
+refactor(cli): extract gh/git tool parsers to fix file-size CI check
 
-Create .claude/skills/implement_direct/SKILL.md for streamlined
-single-shot issue implementation. Add Skill(implement_direct) to
-settings.local.json permissions and update gh-tool permission from
-specific subcommand to wildcard pattern (Bash(mcp-coder gh-tool:*)).
+Move add_gh_tool_parsers and add_git_tool_parsers from parsers.py
+into a new gh_parsers.py module. The checkout-issue-branch subparser
+addition pushed parsers.py to 753 lines (over the 750-line CI limit).
