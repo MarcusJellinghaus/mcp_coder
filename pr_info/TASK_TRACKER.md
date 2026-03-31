@@ -52,9 +52,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 5: /exit Alias for /quit
 > [Detail](./steps/step_5.md) — Register `/exit` as second command pointing to same handler
 
-- [ ] Implementation: tests (`tests/icoder/test_command_registry.py`) + production code (`src/mcp_coder/icoder/core/commands/quit.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `icoder: add /exit alias for /quit`
+- [x] Implementation: tests (`tests/icoder/test_command_registry.py`) + production code (`src/mcp_coder/icoder/core/commands/quit.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `icoder: add /exit alias for /quit`
 
 ### Step 6: UI Spacing — Blank Lines Between Conversation Turns
 > [Detail](./steps/step_6.md) — Add `write("")` blank lines after user input and after LLM response
