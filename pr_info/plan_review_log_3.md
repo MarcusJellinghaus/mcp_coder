@@ -20,4 +20,28 @@
 - Step 5: Fixed repo name extraction (`split("/")[-1]`), added `sessions_by_repo` construction, added I/O note
 - Summary: Added note about updating existing tests for new `workspace_base` parameter
 
-**Status**: Changes applied, committing next
+**Status**: Committed (87119d2)
+
+## Round 3b — 2026-03-31
+**Findings**:
+- [accept] Step 4: `workspace_base: str` (required) placed after defaulted params in `display_status_table` — same bug as Step 2, missed in 3a
+- [accept] Step 5: Missing import note for `warn_orphan_folders` in `cleanup.py`
+- [accept] Step 2: Existing post-deletion `.code-workspace` cleanup code must be removed — not mentioned
+- [skip] Step 5: Redundant `load_sessions()` / per-loop I/O — already acknowledged
+
+**Decisions**: All straightforward — no user escalation needed.
+**User decisions**: None required.
+**Changes**:
+- Step 4: Moved `workspace_base` before first defaulted parameter
+- Step 5: Added import note for `warn_orphan_folders` in `cleanup.py`
+- Step 2: Added note to remove existing post-deletion workspace file cleanup
+
+**Status**: Committed (0ae7995)
+
+## Round 3c — 2026-03-31
+**Findings**: None — plan is clean.
+**Status**: No changes needed.
+
+## Final Status
+
+Round 3 complete (3 sub-rounds: 3a, 3b, 3c). 1 critical fix (repo name extraction), 6 accepted improvements applied across 2 commits. Plan is clean and ready for implementation.
