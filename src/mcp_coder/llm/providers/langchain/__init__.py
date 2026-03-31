@@ -589,6 +589,7 @@ def _ask_text_stream(
 
     Raises:
         ValueError: If the model is not found (404/NOT_FOUND in error).
+        TimeoutError: If no LLM output is received within the timeout period.
     """
     from langchain_core.messages import AIMessage, HumanMessage, messages_from_dict
 
