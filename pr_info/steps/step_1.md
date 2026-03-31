@@ -1,14 +1,16 @@
-# Step 1: Tests + Handler for `execute_checkout_issue_branch`
+# Step 1: Add `checkout-issue-branch` subcommand
 
 > **Context**: See `pr_info/steps/summary.md` for full overview of issue #647.
 
 ## Goal
 
-Implement `execute_checkout_issue_branch()` in `gh_tool.py` with tests. This is the core logic — parser wiring comes in Step 2.
+Implement the full `checkout-issue-branch` subcommand: handler function, parser wiring, dispatch, and all tests (unit + integration).
 
 ## WHERE
 
 - **Modify**: `src/mcp_coder/cli/commands/gh_tool.py`
+- **Modify**: `src/mcp_coder/cli/parsers.py` — in `add_gh_tool_parsers()`
+- **Modify**: `src/mcp_coder/cli/main.py` — in `_handle_gh_tool_command()` + imports
 - **Modify**: `tests/cli/commands/test_gh_tool.py`
 
 ## WHAT
@@ -35,6 +37,45 @@ def execute_checkout_issue_branch(args: argparse.Namespace) -> int:
 - `args.issue_number: int` — positional argument
 - `args.project_dir: Optional[str]` — optional `--project-dir`
 
+### Parser addition in `parsers.py` (`add_gh_tool_parsers()`):
+
+```python
+# gh-tool checkout-issue-branch command
+checkout_branch_parser = gh_tool_subparsers.add_parser(
+    "checkout-issue-branch",
+    help="Checkout or create a branch linked to a GitHub issue",
+    formatter_class=WideHelpFormatter,
+    epilog="""Exit codes:
+  0  Success - branch checked out
+  1  Could not find or create branch
+  2  Error (not a git repo, API failure)""",
+)
+checkout_branch_parser.add_argument(
+    "issue_number", type=int, help="GitHub issue number"
+)
+checkout_branch_parser.add_argument(
+    "--project-dir",
+    type=str,
+    default=None,
+    help="Project directory: where source code lives. Default: current directory",
+)
+```
+
+### Dispatch addition in `main.py` (`_handle_gh_tool_command()`):
+
+```python
+elif args.gh_tool_subcommand == "checkout-issue-branch":
+    return execute_checkout_issue_branch(args)
+```
+
+### Import addition in `main.py`:
+
+```python
+from .commands.gh_tool import execute_get_base_branch, execute_checkout_issue_branch
+```
+
+Update error message in `_handle_gh_tool_command()` to include `'checkout-issue-branch'` in the subcommand list.
+
 ## HOW
 
 ### Imports to add in `gh_tool.py`:
@@ -50,19 +91,22 @@ from ...utils.github_operations.issues.branch_manager import IssueBranchManager
 - `IssueBranchManager(project_dir).create_remote_branch_for_issue(issue_number, base_branch=...)` — returns `BranchCreationResult` TypedDict with `success`, `branch_name`, `error`, `existing_branches`
 - `subprocess.run(["git", "fetch"], ...)` and `subprocess.run(["git", "checkout", branch_name], ...)`
 
+Follow the exact pattern of existing `get-base-branch` registration for parser and dispatch.
+
 ## ALGORITHM
 
 ```
 1. resolve_project_dir(args.project_dir)
 2. subprocess.run(["git", "fetch"], cwd=project_dir)
 3. issue_data = IssueManager(project_dir).get_issue(issue_number)
-4. branches = IssueBranchManager(project_dir).get_linked_branches(issue_number)
-5. if branches: branch_name = branches[0]
+4. if issue_data["number"] == 0: print error to stderr; return 1
+5. branches = IssueBranchManager(project_dir).get_linked_branches(issue_number)
+6. if branches: branch_name = branches[0]
    else: result = create_remote_branch_for_issue(issue_number, base_branch=issue_data["base_branch"])
          if not result["success"]: return 1
          branch_name = result["branch_name"]
-6. subprocess.run(["git", "checkout", branch_name], cwd=project_dir, check=True)
-7. print(branch_name); return 0
+7. subprocess.run(["git", "checkout", branch_name], cwd=project_dir, check=True)
+8. print(branch_name); return 0
 ```
 
 ## DATA
@@ -114,15 +158,49 @@ def mock_subprocess_run():
 - `test_checkout_passes_base_branch_to_create` — verifies `base_branch` from issue data is passed to `create_remote_branch_for_issue`
 - `test_checkout_git_fetch_called_before_operations` — verifies `git fetch` is called
 
+### Test class `TestGhToolCheckoutIssueBranchIntegration`:
+
+```python
+class TestGhToolCheckoutIssueBranchIntegration:
+    """Test gh-tool checkout-issue-branch CLI integration."""
+
+    def test_checkout_issue_branch_command_exists(self):
+        """checkout-issue-branch is registered under gh-tool."""
+        parser = create_parser()
+        args = parser.parse_args(["gh-tool", "checkout-issue-branch", "123"])
+        assert args.command == "gh-tool"
+        assert args.gh_tool_subcommand == "checkout-issue-branch"
+        assert args.issue_number == 123
+
+    def test_checkout_issue_branch_with_project_dir(self):
+        """--project-dir is parsed."""
+        parser = create_parser()
+        args = parser.parse_args([
+            "gh-tool", "checkout-issue-branch", "456",
+            "--project-dir", "/my/project"
+        ])
+        assert args.issue_number == 456
+        assert args.project_dir == "/my/project"
+
+    def test_checkout_issue_branch_help_shows_exit_codes(self):
+        """Epilog documents exit codes."""
+        # Navigate to checkout-issue-branch parser and verify epilog
+        ...
+```
+
 ## LLM Prompt
 
 ```
 Read pr_info/steps/summary.md and pr_info/steps/step_1.md.
 
-Implement Step 1: Add `execute_checkout_issue_branch()` to `src/mcp_coder/cli/commands/gh_tool.py`
-and its tests to `tests/cli/commands/test_gh_tool.py`.
+Implement Step 1: Add the `checkout-issue-branch` subcommand.
 
-Follow TDD: write the tests first, then implement the function.
-Follow the existing pattern of `execute_get_base_branch()` in the same file.
+1. Add `execute_checkout_issue_branch()` to `src/mcp_coder/cli/commands/gh_tool.py`
+2. Add subparser in `add_gh_tool_parsers()` in `src/mcp_coder/cli/parsers.py`
+3. Add dispatch + import in `src/mcp_coder/cli/main.py`
+4. Add all tests (unit + integration) to `tests/cli/commands/test_gh_tool.py`
+
+Follow TDD: write the tests first, then implement.
+Follow the existing pattern of `get-base-branch` for parser, dispatch, and handler.
 Run pylint, pytest, and mypy after implementation.
 ```

@@ -35,7 +35,7 @@ This lives under `gh-tool` (not `git-tool`) because it's fundamentally a GitHub 
 | `src/mcp_coder/cli/main.py` | **Modify** | Add dispatch route + import |
 | `src/mcp_coder/cli/commands/gh_tool.py` | **Modify** | Add `execute_checkout_issue_branch()` |
 | `tests/cli/commands/test_gh_tool.py` | **Modify** | Add tests for new subcommand |
-| `.claude/settings.local.json` | **Modify** | Add `Skill(implement_direct)` permission |
+| `.claude/settings.local.json` | **Modify** | Add `Skill(implement_direct)` permission + wildcard `gh-tool:*` |
 
 ## Modules / Packages Involved
 
@@ -50,6 +50,5 @@ This lives under `gh-tool` (not `git-tool`) because it's fundamentally a GitHub 
 
 | Step | Description | Commit |
 |------|-------------|--------|
-| 1 | Tests + handler: `execute_checkout_issue_branch()` in `gh_tool.py` | tests + implementation |
-| 2 | Parser + dispatch wiring for `checkout-issue-branch` | parser + main.py + CLI integration tests |
-| 3 | Skill file + settings update | SKILL.md + settings.local.json |
+| 1 | Add `checkout-issue-branch` subcommand: handler, parser, dispatch, all tests | handler + parser + wiring + tests |
+| 2 | Skill file + settings update | SKILL.md + settings.local.json + gh-tool wildcard |

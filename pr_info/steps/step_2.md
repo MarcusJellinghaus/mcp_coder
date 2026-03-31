@@ -1,112 +1,86 @@
-# Step 2: Parser + Dispatch Wiring for `checkout-issue-branch`
+# Step 2: Skill File + Settings Update
 
 > **Context**: See `pr_info/steps/summary.md` for full overview of issue #647.
-> **Depends on**: Step 1 (handler function exists).
+> **Depends on**: Step 1 (CLI command exists and is wired).
 
 ## Goal
 
-Wire `checkout-issue-branch` into the CLI parser and dispatcher so it's callable as `mcp-coder gh-tool checkout-issue-branch <number>`.
+Create the `implement_direct` skill and add its permission to settings.
 
 ## WHERE
 
-- **Modify**: `src/mcp_coder/cli/parsers.py` — in `add_gh_tool_parsers()`
-- **Modify**: `src/mcp_coder/cli/main.py` — in `_handle_gh_tool_command()` + imports
-- **Modify**: `tests/cli/commands/test_gh_tool.py` — CLI integration tests
+- **Create**: `.claude/skills/implement_direct/SKILL.md`
+- **Modify**: `.claude/settings.local.json`
 
 ## WHAT
 
-### Parser addition in `parsers.py` (`add_gh_tool_parsers()`):
+### Skill file `.claude/skills/implement_direct/SKILL.md`:
 
-```python
-# gh-tool checkout-issue-branch command
-checkout_branch_parser = gh_tool_subparsers.add_parser(
-    "checkout-issue-branch",
-    help="Checkout or create a branch linked to a GitHub issue",
-    formatter_class=WideHelpFormatter,
-    epilog="""Exit codes:
-  0  Success - branch checked out
-  1  Could not find or create branch
-  2  Error (not a git repo, API failure)""",
-)
-checkout_branch_parser.add_argument(
-    "issue_number", type=int, help="GitHub issue number"
-)
-checkout_branch_parser.add_argument(
-    "--project-dir",
-    type=str,
-    default=None,
-    help="Project directory: where source code lives. Default: current directory",
-)
+**Frontmatter** (as specified in issue):
+```yaml
+---
+name: implement-direct
+disable-model-invocation: true
+argument-hint: [issue-number]
+allowed-tools: Bash(mcp-coder gh-tool *)
+---
 ```
 
-### Dispatch addition in `main.py` (`_handle_gh_tool_command()`):
+Note: Other tool permissions (MCP workspace, pylint, pytest, mypy) come from `settings.local.json` — they don't need to be in the skill's `allowed-tools`.
 
-```python
-elif args.gh_tool_subcommand == "checkout-issue-branch":
-    return execute_checkout_issue_branch(args)
+**Prompt body** instructs Claude to:
+
+1. Fetch issue details via `gh issue view $ARGUMENTS`
+2. Checkout/create issue branch via `mcp-coder gh-tool checkout-issue-branch <number>`
+3. Read relevant code, understand context
+4. Implement changes directly (no `pr_info/`, no `TASK_TRACKER.md`)
+5. Run quality checks: pylint, pytest, mypy, ruff
+6. Run `./tools/format_all.sh`
+7. Suggest follow-up steps:
+   - `/commit_push`
+   - `mcp-coder gh-tool set-status status-07:code-review`
+   - `/check_branch_status`
+   - `/implementation_review`
+
+Include scope guidance: recommend `/create_plan` → `/implement` workflow for complex features.
+
+### Settings update `.claude/settings.local.json`:
+
+Add to `permissions.allow` array:
+```json
+"Skill(implement_direct)"
 ```
 
-### Import addition in `main.py`:
-
-```python
-from .commands.gh_tool import execute_get_base_branch, execute_checkout_issue_branch
+Also update the existing `gh-tool` permission to use a wildcard pattern (matching the existing `git-tool` pattern):
 ```
-
-### Update error message in `_handle_gh_tool_command()`:
-Add `'checkout-issue-branch'` to the subcommand list in the error message.
+"Bash(mcp-coder gh-tool get-base-branch)" → "Bash(mcp-coder gh-tool:*)"
+```
+This covers all current and future `gh-tool` subcommands (including `checkout-issue-branch`) with a single entry.
 
 ## HOW
 
-Follow the exact pattern of existing `get-base-branch` registration:
-1. Subparser with `WideHelpFormatter` and exit code epilog
-2. Positional arg + optional `--project-dir`
-3. Dispatch via `elif` in `_handle_gh_tool_command()`
+- The skill file is pure markdown — no code, no tests needed
+- Settings is a JSON edit — add one line to the allow list, update one existing line
+- Place the new permission near the other `Skill(...)` entries for readability
 
 ## TESTS
 
-Add to `tests/cli/commands/test_gh_tool.py`:
-
-### Test class `TestGhToolCheckoutIssueBranchIntegration`:
-
-```python
-class TestGhToolCheckoutIssueBranchIntegration:
-    """Test gh-tool checkout-issue-branch CLI integration."""
-
-    def test_checkout_issue_branch_command_exists(self):
-        """checkout-issue-branch is registered under gh-tool."""
-        parser = create_parser()
-        args = parser.parse_args(["gh-tool", "checkout-issue-branch", "123"])
-        assert args.command == "gh-tool"
-        assert args.gh_tool_subcommand == "checkout-issue-branch"
-        assert args.issue_number == 123
-
-    def test_checkout_issue_branch_with_project_dir(self):
-        """--project-dir is parsed."""
-        parser = create_parser()
-        args = parser.parse_args([
-            "gh-tool", "checkout-issue-branch", "456",
-            "--project-dir", "/my/project"
-        ])
-        assert args.issue_number == 456
-        assert args.project_dir == "/my/project"
-
-    def test_checkout_issue_branch_help_shows_exit_codes(self):
-        """Epilog documents exit codes."""
-        # Navigate to checkout-issue-branch parser and verify epilog
-        ...
-```
+No automated tests for this step — it's a markdown skill file and a JSON config entry. Verify manually:
+- Skill file has correct frontmatter fields
+- Settings file is valid JSON after edit
 
 ## LLM Prompt
 
 ```
 Read pr_info/steps/summary.md and pr_info/steps/step_2.md.
 
-Implement Step 2: Wire `checkout-issue-branch` into the CLI.
+Implement Step 2:
 
-1. Add subparser in `add_gh_tool_parsers()` in `src/mcp_coder/cli/parsers.py`
-2. Add dispatch + import in `src/mcp_coder/cli/main.py`
-3. Add CLI integration tests in `tests/cli/commands/test_gh_tool.py`
+1. Create `.claude/skills/implement_direct/SKILL.md` with the frontmatter and prompt
+   as described in the step file and the original issue #647.
+2. Add `Skill(implement_direct)` to `.claude/settings.local.json` permissions.
+3. Update `"Bash(mcp-coder gh-tool get-base-branch)"` to `"Bash(mcp-coder gh-tool:*)"` in settings.
 
-Follow the existing pattern of `get-base-branch` registration.
-Run pylint, pytest, and mypy after implementation.
+No code quality checks needed for this step (no Python changes).
+Verify the settings JSON is valid after editing.
 ```
