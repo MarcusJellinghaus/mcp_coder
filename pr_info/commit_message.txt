@@ -1,11 +1,6 @@
-Add checkout-issue-branch subcommand to gh-tool
+Add implement_direct skill and update gh-tool permission
 
-Implement `mcp-coder gh-tool checkout-issue-branch <number>` which
-fetches issue data, finds or creates a linked branch via GitHub API,
-and checks it out locally. Exit codes follow the existing pattern:
-0 (success), 1 (branch not found/created), 2 (error).
-
-- Add execute_checkout_issue_branch() handler in gh_tool.py
-- Register checkout-issue-branch subparser in parsers.py
-- Wire dispatch and import in main.py
-- Add unit tests (exit codes, behavior) and CLI integration tests
+Create .claude/skills/implement_direct/SKILL.md for streamlined
+single-shot issue implementation. Add Skill(implement_direct) to
+settings.local.json permissions and update gh-tool permission from
+specific subcommand to wildcard pattern (Bash(mcp-coder gh-tool:*)).

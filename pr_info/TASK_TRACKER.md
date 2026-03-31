@@ -33,9 +33,9 @@ Handler function, parser wiring, dispatch, and all tests (unit + integration).
 
 Create `implement_direct` skill and add permissions to settings.
 
-- [ ] Implementation: create `.claude/skills/implement_direct/SKILL.md`, add `Skill(implement_direct)` to settings, update `gh-tool` permission to wildcard
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `.claude/skills/implement_direct/SKILL.md`, add `Skill(implement_direct)` to settings, update `gh-tool` permission to wildcard
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
