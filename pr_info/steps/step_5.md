@@ -49,6 +49,7 @@ def warn_orphan_folders(workspace_base: str, repo_full_name: str, issue_number: 
 - Import `load_to_be_deleted` from `.helpers` in `sessions.py`
 - Import `re` for orphan folder pattern matching
 - Import `sanitize_folder_name` from `.config` (or wherever the repo name sanitization lives) for `warn_orphan_folders`
+- In `cleanup.py`, import `warn_orphan_folders` from `.sessions`
 - `workspace_base` is required (always passed by caller)
 
 ## ALGORITHM

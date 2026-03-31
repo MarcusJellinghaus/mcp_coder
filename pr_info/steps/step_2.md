@@ -85,6 +85,8 @@ Delete the `.code-workspace` file **before** attempting folder deletion. The wor
 
 > **Note**: This applies to ALL deletion paths (not just soft-delete). Even if `was_clean=False`, the workspace file is removed. This matches requirement 1: always delete `.code-workspace`.
 
+> **Note**: The existing post-deletion `.code-workspace` cleanup code in `delete_session_folder` must be **removed** to avoid double-delete. The new pre-deletion code above replaces it entirely.
+
 ```
 # Before folder deletion attempt:
 # Note: construct workspace file path using workspace_base for consistency

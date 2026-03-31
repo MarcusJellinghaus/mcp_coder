@@ -22,10 +22,10 @@
 def display_status_table(
     sessions: list[VSCodeClaudeSession],
     eligible_issues: list[tuple[str, IssueData]],
+    workspace_base: str,  # NEW — required, before optional params
     repo_filter: str | None = None,
     cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
     issues_without_branch: set[tuple[str, int]] | None = None,
-    workspace_base: str,  # NEW
 ) -> None:
 ```
 
