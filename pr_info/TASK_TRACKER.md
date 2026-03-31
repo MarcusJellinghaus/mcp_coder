@@ -66,8 +66,8 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 7: UI Color Coding with Rich Text Styles
 > [Detail](./steps/step_7.md) — Add optional `style` parameter to `OutputLog` methods, define style constants in `app.py`
 
-- [ ] Implementation: tests (`tests/icoder/test_widgets.py`) + production code (`src/mcp_coder/icoder/ui/widgets/output_log.py`, `src/mcp_coder/icoder/ui/app.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Implementation: tests (`tests/icoder/test_widgets.py`) + production code (`src/mcp_coder/icoder/ui/widgets/output_log.py`, `src/mcp_coder/icoder/ui/app.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
 - [ ] Commit: `icoder: Rich color coding for user input, tool output, and LLM text`
 
 ## Pull Request

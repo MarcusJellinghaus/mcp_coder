@@ -58,6 +58,36 @@ async def test_output_log_append_tool_use() -> None:
 
 
 @pytest.mark.asyncio
+async def test_output_log_append_text_with_style() -> None:
+    """append_text with style still records plain text."""
+    app = WidgetTestApp()
+    async with app.run_test():
+        output = app.query_one(OutputLog)
+        output.append_text("hello", style="bold")
+        assert output.recorded_lines == ["hello"]
+
+
+@pytest.mark.asyncio
+async def test_output_log_append_tool_use_with_style() -> None:
+    """append_tool_use with style still records plain formatted line."""
+    app = WidgetTestApp()
+    async with app.run_test():
+        output = app.query_one(OutputLog)
+        output.append_tool_use("read", "x", "ok", style="bold")
+        assert output.recorded_lines == ["\u2699 read(x) \u2192 ok"]
+
+
+@pytest.mark.asyncio
+async def test_output_log_append_text_no_style() -> None:
+    """append_text without style works (backward compatibility)."""
+    app = WidgetTestApp()
+    async with app.run_test():
+        output = app.query_one(OutputLog)
+        output.append_text("hello")
+        assert output.recorded_lines == ["hello"]
+
+
+@pytest.mark.asyncio
 async def test_input_area_enter_submits() -> None:
     """InputArea Enter posts InputSubmitted and clears input."""
     messages: list[InputArea.InputSubmitted] = []

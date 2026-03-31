@@ -12,6 +12,9 @@ from mcp_coder.icoder.ui.widgets.input_area import InputArea
 from mcp_coder.icoder.ui.widgets.output_log import OutputLog
 from mcp_coder.llm.types import StreamEvent
 
+STYLE_USER_INPUT = "white on grey23"
+STYLE_TOOL_OUTPUT = "white on #0a0a2e"
+
 
 class ICoderApp(App[None]):
     """Interactive coding TUI. Thin shell over AppCore."""
@@ -45,7 +48,7 @@ class ICoderApp(App[None]):
         """Handle submitted input: route through AppCore."""
         text = message.text
         output = self.query_one(OutputLog)
-        output.append_text(f"> {text}")
+        output.append_text(f"> {text}", style=STYLE_USER_INPUT)
 
         response = self._core.handle_input(text)
         if response.quit:
@@ -93,10 +96,10 @@ class ICoderApp(App[None]):
         elif event_type == "tool_use_start":
             name = str(event.get("name", ""))
             args = str(event.get("args", {}))
-            output.append_tool_use(name, args, "...")
+            output.append_tool_use(name, args, "...", style=STYLE_TOOL_OUTPUT)
         elif event_type == "tool_result":
             name = str(event.get("name", ""))
-            output.append_tool_use(name, "", "done")
+            output.append_tool_use(name, "", "done", style=STYLE_TOOL_OUTPUT)
         elif event_type == "error":
             msg = event.get("message", "Unknown error")
             output.append_text(f"Error: {msg}")
