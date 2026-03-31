@@ -202,6 +202,68 @@ def format_raw_response(response_data: Dict[str, Any]) -> str:
     return "\n".join(formatted_parts)
 
 
+_RENDERED_TRUNCATION_LIMIT = 5
+_RENDERED_INLINE_ARG_LIMIT = 2
+
+
+def _render_tool_output(output: str) -> tuple[list[str], int]:
+    """Render tool output into display lines with truncation.
+
+    1. If output is empty, return ([], 0)
+    2. Try json.loads: if dict, expand top-level keys as "key: value" lines.
+       For string values containing newlines, indent continuation lines.
+    3. If json.loads fails, split output into plain text lines.
+    4. Truncate to _RENDERED_TRUNCATION_LIMIT lines.
+
+    Returns:
+        (display_lines, total_line_count) — display_lines may be shorter
+        than total_line_count if truncated.
+    """
+    if not output:
+        return ([], 0)
+    try:
+        parsed = json.loads(output)
+        if isinstance(parsed, dict):
+            lines: list[str] = []
+            for key, value in parsed.items():
+                if isinstance(value, str) and "\n" in value:
+                    lines.append(f"{key}:")
+                    for subline in value.splitlines():
+                        lines.append(f"  {subline}")
+                else:
+                    if isinstance(value, str):
+                        lines.append(f"{key}: {value}")
+                    else:
+                        lines.append(f"{key}: {json.dumps(value)}")
+        else:
+            lines = str(parsed).splitlines()
+    except (json.JSONDecodeError, ValueError):
+        lines = output.splitlines()
+    total = len(lines)
+    truncated = lines[:_RENDERED_TRUNCATION_LIMIT]
+    return (truncated, total)
+
+
+def _format_tool_name(name: str) -> str:
+    """Format tool name for rendered display.
+
+    Strip 'mcp__' prefix, split on first remaining '__':
+      mcp__workspace__read_file  → workspace > read_file
+      mcp__tools-py__run_pytest  → tools-py > run_pytest
+      Bash                       → Bash (unchanged)
+
+    Returns:
+        Shortened display name for the tool.
+    """
+    if name.startswith("mcp__"):
+        rest = name[5:]
+        server, _, tool = rest.partition("__")
+        if tool:
+            return f"{server} > {tool}"
+        return server
+    return name
+
+
 def _format_tool_args(args: object) -> str:
     """Format tool arguments for text display.
 
@@ -286,11 +348,13 @@ def print_stream_event(
 
     Args:
         event: StreamEvent dict to print
-        output_format: One of "text", "ndjson", "json-raw"
+        output_format: One of "rendered", "text", "ndjson", "json-raw"
         file: Output stream for normal output (default: stdout)
         err_file: Output stream for errors (default: stderr)
 
     Behavior by format:
+        - rendered: Human-friendly output with box-drawing characters for
+          tool calls and truncated tool results.
         - text: Print text_delta content inline (no newline between deltas).
           Tool calls shown with bordered sections.
         - ndjson: Print normalized NDJSON line (Claude CLI schema).
@@ -313,15 +377,49 @@ def print_stream_event(
             print(json.dumps(ndjson), file=file, flush=True)
         return
 
+    if output_format == "rendered":
+        if event_type == "text_delta":
+            print(event.get("text", ""), end="", file=file, flush=True)
+        elif event_type == "tool_use_start":
+            name = str(event.get("name", ""))
+            args = event.get("args", {})
+            display_name = _format_tool_name(name)
+            if isinstance(args, dict) and len(args) <= _RENDERED_INLINE_ARG_LIMIT:
+                args_str = _format_tool_args(args)
+                print(f"\u250c {display_name}({args_str})", file=file)
+            else:
+                print(f"\u250c {display_name}", file=file)
+                if isinstance(args, dict):
+                    for key, value in args.items():
+                        print(f"\u2502  {key}: {json.dumps(value)}", file=file)
+        elif event_type == "tool_result":
+            output: str = str(event.get("output", ""))
+            lines, total = _render_tool_output(output)
+            for line in lines:
+                print(f"\u2502  {line}", file=file)
+            if total > _RENDERED_TRUNCATION_LIMIT:
+                print(
+                    f"\u2514 done ({total} lines, truncated to {_RENDERED_TRUNCATION_LIMIT})",
+                    file=file,
+                )
+            else:
+                print("\u2514 done", file=file)
+            print(file=file)
+        elif event_type == "error":
+            print(event.get("message", ""), file=err_file)
+        elif event_type == "done":
+            print(file=file)
+        return
+
     # text format
     if event_type == "text_delta":
         print(event.get("text", ""), end="", file=file, flush=True)
     elif event_type == "tool_use_start":
-        name = event.get("name", "")
+        name = str(event.get("name", ""))
         args_str = _format_tool_args(event.get("args"))
         print(f"\n── tool: {name}({args_str}) ──", file=file)
     elif event_type == "tool_result":
-        output = event.get("output", "")
+        output = str(event.get("output", ""))
         print(f"{output}\n{'─' * 26}", file=file)
     elif event_type == "error":
         print(event.get("message", ""), file=err_file)

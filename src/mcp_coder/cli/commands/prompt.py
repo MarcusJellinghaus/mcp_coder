@@ -130,7 +130,7 @@ def execute_prompt(
         )
 
         # Streaming formats use prompt_llm_stream()
-        if output_format in ("text", "ndjson", "json-raw"):
+        if output_format in ("rendered", "text", "ndjson", "json-raw"):
             branch_name = get_branch_name_for_logging(project_dir)
             assembler = ResponseAssembler(provider)
             for event in prompt_llm_stream(

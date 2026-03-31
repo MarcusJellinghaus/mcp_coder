@@ -1,13 +1,19 @@
 """Tests for response formatting functions."""
 
 import argparse
+import io
 import json
-from typing import Any, Dict, Iterator, List
+from typing import Iterator, List
 from unittest.mock import Mock, patch
 
 import pytest
 
 from mcp_coder.cli.commands.prompt import execute_prompt
+from mcp_coder.llm.formatting.formatters import (
+    _format_tool_name,
+    _render_tool_output,
+    print_stream_event,
+)
 from mcp_coder.llm.types import StreamEvent
 
 
@@ -267,15 +273,242 @@ class TestStreamFormatComparison:
         assert "Hello" not in raw_output
 
 
+class TestFormatToolName:
+    """Tests for _format_tool_name() helper."""
+
+    def test_mcp_name_two_segments(self) -> None:
+        """MCP name with two segments formats as 'server > tool'."""
+        assert _format_tool_name("mcp__workspace__read_file") == "workspace > read_file"
+
+    def test_mcp_name_hyphenated_server(self) -> None:
+        """MCP name with hyphenated server preserves hyphen."""
+        assert (
+            _format_tool_name("mcp__tools-py__run_pytest_check")
+            == "tools-py > run_pytest_check"
+        )
+
+    def test_builtin_tool_name(self) -> None:
+        """Built-in tool name passes through unchanged."""
+        assert _format_tool_name("Bash") == "Bash"
+
+    def test_mcp_name_single_segment(self) -> None:
+        """MCP name with only one segment returns just the server name."""
+        assert _format_tool_name("mcp__something") == "something"
+
+
+class TestRenderToolOutput:
+    """Tests for _render_tool_output() helper."""
+
+    def test_empty_output(self) -> None:
+        """Empty output returns ([], 0)."""
+        assert _render_tool_output("") == ([], 0)
+
+    def test_short_plain_text(self) -> None:
+        """Short plain text returns all lines."""
+        lines, total = _render_tool_output("line one\nline two")
+        assert lines == ["line one", "line two"]
+        assert total == 2
+
+    def test_long_plain_text_truncated(self) -> None:
+        """Plain text longer than limit is truncated."""
+        text = "\n".join(f"line {i}" for i in range(10))
+        lines, total = _render_tool_output(text)
+        assert len(lines) == 5
+        assert total == 10
+        assert lines[0] == "line 0"
+        assert lines[4] == "line 4"
+
+    def test_json_dict_simple_values(self) -> None:
+        """JSON dict with simple values expands to key: value lines."""
+        data = {"success": True, "count": 42}
+        lines, total = _render_tool_output(json.dumps(data))
+        assert lines == ["success: true", "count: 42"]
+        assert total == 2
+
+    def test_json_dict_multiline_string(self) -> None:
+        """JSON dict with multiline string value indents continuation lines."""
+        data = {"success": True, "diff": "@@ -1 @@\n-foo\n+bar"}
+        lines, total = _render_tool_output(json.dumps(data))
+        assert lines == [
+            "success: true",
+            "diff:",
+            "  @@ -1 @@",
+            "  -foo",
+            "  +bar",
+        ]
+        assert total == 5
+
+    def test_non_dict_json(self) -> None:
+        """Non-dict JSON (array) falls back to str().splitlines()."""
+        data = [1, 2, 3]
+        lines, total = _render_tool_output(json.dumps(data))
+        assert lines == ["[1, 2, 3]"]
+        assert total == 1
+
+    def test_invalid_json(self) -> None:
+        """Invalid JSON falls back to plain text splitting."""
+        lines, total = _render_tool_output("not json at all\nsecond line")
+        assert lines == ["not json at all", "second line"]
+        assert total == 2
+
+
+class TestRenderedStreamFormat:
+    """Tests for rendered output format in print_stream_event()."""
+
+    @pytest.mark.parametrize(
+        "event,expected_output,use_stderr",
+        [
+            pytest.param(
+                {"type": "text_delta", "text": "Hello world"},
+                "Hello world",
+                False,
+                id="text_delta",
+            ),
+            pytest.param(
+                {"type": "error", "message": "Something failed"},
+                "Something failed",
+                True,
+                id="error_to_stderr",
+            ),
+            pytest.param(
+                {"type": "done", "usage": {}},
+                "\n",
+                False,
+                id="done_newline",
+            ),
+        ],
+    )
+    def test_non_tool_events(
+        self, event: StreamEvent, expected_output: str, use_stderr: bool
+    ) -> None:
+        """Non-tool events: text_delta, error, done."""
+        out = io.StringIO()
+        err = io.StringIO()
+        print_stream_event(event, output_format="rendered", file=out, err_file=err)
+        if use_stderr:
+            assert expected_output in err.getvalue()
+            assert out.getvalue() == ""
+        else:
+            assert out.getvalue() == expected_output
+
+    def test_inline_params(self) -> None:
+        """Tool with 1-2 args renders inline: ┌ server > tool(args)."""
+        buf = io.StringIO()
+        print_stream_event(
+            {
+                "type": "tool_use_start",
+                "name": "mcp__workspace__read_file",
+                "args": {"file_path": "x.py"},
+            },
+            output_format="rendered",
+            file=buf,
+        )
+        output = buf.getvalue()
+        assert output.startswith("\u250c")
+        assert "workspace > read_file" in output
+        assert "file_path='x.py'" in output
+        # Should be single line (inline)
+        assert output.strip().count("\n") == 0
+
+    def test_block_params(self) -> None:
+        """Tool with 3+ args renders block format with │ lines."""
+        buf = io.StringIO()
+        print_stream_event(
+            {
+                "type": "tool_use_start",
+                "name": "mcp__workspace__edit_file",
+                "args": {"file_path": "a.py", "old_text": "foo", "new_text": "bar"},
+            },
+            output_format="rendered",
+            file=buf,
+        )
+        output = buf.getvalue()
+        lines = output.strip().split("\n")
+        assert lines[0].startswith("\u250c")
+        assert "workspace > edit_file" in lines[0]
+        # Block lines with │
+        assert any("\u2502" in line for line in lines[1:])
+        assert any("file_path" in line for line in lines[1:])
+        assert any("old_text" in line for line in lines[1:])
+        assert any("new_text" in line for line in lines[1:])
+
+    @pytest.mark.parametrize(
+        "output_str,expected_lines,expected_footer",
+        [
+            pytest.param(
+                "line one\nline two",
+                ["\u2502  line one", "\u2502  line two"],
+                "\u2514 done",
+                id="short_result",
+            ),
+            pytest.param(
+                "\n".join(f"line {i}" for i in range(10)),
+                [f"\u2502  line {i}" for i in range(5)],
+                "\u2514 done (10 lines, truncated to 5)",
+                id="long_result_truncated",
+            ),
+            pytest.param(
+                "",
+                [],
+                "\u2514 done",
+                id="empty_result",
+            ),
+        ],
+    )
+    def test_result_variations(
+        self,
+        output_str: str,
+        expected_lines: list[str],
+        expected_footer: str,
+    ) -> None:
+        """Result rendering: short, long (truncated), empty."""
+        buf = io.StringIO()
+        print_stream_event(
+            {"type": "tool_result", "output": output_str},
+            output_format="rendered",
+            file=buf,
+        )
+        output = buf.getvalue()
+        all_lines = output.split("\n")
+        # Check expected │ lines
+        for exp in expected_lines:
+            assert exp in all_lines
+        # Check footer
+        assert expected_footer in output
+
+    def test_json_result_expanded(self) -> None:
+        """JSON dict result expands keys with indented multiline strings."""
+        data = json.dumps({"success": True, "diff": "@@ -1 @@\n-foo\n+bar"})
+        buf = io.StringIO()
+        print_stream_event(
+            {"type": "tool_result", "output": data},
+            output_format="rendered",
+            file=buf,
+        )
+        output = buf.getvalue()
+        assert "\u2502  success: true" in output
+        assert "\u2502  diff:" in output
+        assert "\u2502    @@ -1 @@" in output
+        assert "\u2514 done" in output
+
+    def test_blank_line_after_footer(self) -> None:
+        """Output ends with blank line after └ done."""
+        buf = io.StringIO()
+        print_stream_event(
+            {"type": "tool_result", "output": "ok"},
+            output_format="rendered",
+            file=buf,
+        )
+        output = buf.getvalue()
+        # Should end with └ done\n\n (footer + blank line)
+        assert output.endswith("\n\n")
+
+
 class TestPrintStreamEvent:
     """Tests for print_stream_event() function."""
 
     def test_print_stream_event_text_delta(self) -> None:
         """text_delta prints text with no newline."""
-        import io
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         buf = io.StringIO()
         print_stream_event(
             {"type": "text_delta", "text": "Hello"},
@@ -286,10 +519,6 @@ class TestPrintStreamEvent:
 
     def test_print_stream_event_tool_use_bordered(self) -> None:
         """tool_use_start prints bordered header."""
-        import io
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         buf = io.StringIO()
         print_stream_event(
             {"type": "tool_use_start", "name": "read_file", "args": {"path": "x.py"}},
@@ -303,10 +532,6 @@ class TestPrintStreamEvent:
 
     def test_print_stream_event_tool_result_bordered(self) -> None:
         """tool_result prints result + border close."""
-        import io
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         buf = io.StringIO()
         print_stream_event(
             {"type": "tool_result", "name": "read_file", "output": "file content"},
@@ -319,10 +544,6 @@ class TestPrintStreamEvent:
 
     def test_print_stream_event_error_to_stderr(self) -> None:
         """error event goes to stderr."""
-        import io
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         out = io.StringIO()
         err = io.StringIO()
         print_stream_event(
@@ -336,10 +557,6 @@ class TestPrintStreamEvent:
 
     def test_print_stream_event_done_newline(self) -> None:
         """done event prints a final newline."""
-        import io
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         buf = io.StringIO()
         print_stream_event(
             {"type": "done", "usage": {}},
@@ -350,11 +567,6 @@ class TestPrintStreamEvent:
 
     def test_print_stream_event_ndjson_text(self) -> None:
         """ndjson format outputs JSON line with Claude schema."""
-        import io
-        import json
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         buf = io.StringIO()
         print_stream_event(
             {"type": "text_delta", "text": "Hello"},
@@ -372,11 +584,6 @@ class TestPrintStreamEvent:
 
     def test_print_stream_event_ndjson_tool_use(self) -> None:
         """ndjson format maps tool_use_start to assistant message with tool_use."""
-        import io
-        import json
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         buf = io.StringIO()
         print_stream_event(
             {"type": "tool_use_start", "name": "sleep", "args": {"seconds": 2}},
@@ -392,11 +599,6 @@ class TestPrintStreamEvent:
 
     def test_print_stream_event_ndjson_done(self) -> None:
         """ndjson format maps done to result message."""
-        import io
-        import json
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         buf = io.StringIO()
         print_stream_event(
             {"type": "done", "session_id": "abc", "usage": {"input_tokens": 10}},
@@ -410,10 +612,6 @@ class TestPrintStreamEvent:
 
     def test_print_stream_event_json_raw(self) -> None:
         """json-raw format prints raw_line content as-is."""
-        import io
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         buf = io.StringIO()
         print_stream_event(
             {"type": "raw_line", "line": '{"type":"assistant","message":{}}'},
@@ -424,10 +622,6 @@ class TestPrintStreamEvent:
 
     def test_print_stream_event_json_raw_ignores_non_raw_line(self) -> None:
         """json-raw format ignores events that are not raw_line."""
-        import io
-
-        from mcp_coder.llm.formatting.formatters import print_stream_event
-
         buf = io.StringIO()
         print_stream_event(
             {"type": "text_delta", "text": "Hello"},
