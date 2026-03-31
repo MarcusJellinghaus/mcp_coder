@@ -59,9 +59,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 6: UI Spacing — Blank Lines Between Conversation Turns
 > [Detail](./steps/step_6.md) — Add `write("")` blank lines after user input and after LLM response
 
-- [ ] Implementation: production code (`src/mcp_coder/icoder/ui/app.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `icoder: blank line spacing between conversation turns`
+- [x] Implementation: production code (`src/mcp_coder/icoder/ui/app.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `icoder: blank line spacing between conversation turns`
 
 ### Step 7: UI Color Coding with Rich Text Styles
 > [Detail](./steps/step_7.md) — Add optional `style` parameter to `OutputLog` methods, define style constants in `app.py`

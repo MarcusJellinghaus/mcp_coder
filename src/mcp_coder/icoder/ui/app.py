@@ -56,6 +56,7 @@ class ICoderApp(App[None]):
         elif response.text:
             output.append_text(response.text)
         elif response.send_to_llm:
+            output.write("")
             self.run_worker(lambda: self._stream_llm(text), thread=True)
 
     def _stream_llm(self, text: str) -> None:
@@ -69,8 +70,13 @@ class ICoderApp(App[None]):
         try:
             for event in self._core.stream_llm(text):
                 self.call_from_thread(self._handle_stream_event, event)
+            self.call_from_thread(self._append_blank_line)
         except Exception as exc:  # pylint: disable=broad-exception-caught
             self.call_from_thread(self._show_error, str(exc))
+
+    def _append_blank_line(self) -> None:
+        """Write an empty line to the output log for visual spacing."""
+        self.query_one(OutputLog).write("")
 
     def _handle_stream_event(self, event: StreamEvent) -> None:
         """Render a single stream event in the output log.
