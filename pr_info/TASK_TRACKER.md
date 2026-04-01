@@ -62,9 +62,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 4C: Docs — add MCP alternatives in refactoring-guide.md
-- [ ] Implementation: add MCP alternatives in standard checks section
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add MCP alternatives in standard checks section
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4D: Docs — add MCP column in dependencies/readme.md
 - [ ] Implementation: add MCP Tool column to tools table, add Claude Code alternative block
