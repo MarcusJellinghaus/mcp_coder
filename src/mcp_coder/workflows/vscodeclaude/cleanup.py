@@ -265,6 +265,10 @@ def delete_session_folder(
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error("Failed to delete session folder %s: %s", folder_path, e)
+        if was_clean and workspace_base is not None:
+            add_to_be_deleted(workspace_base, folder_path.name)
+            remove_session(session["folder"])
+            logger.info("Soft-deleted (exception path): %s", folder_path.name)
         return False
 
 
@@ -310,6 +314,8 @@ def cleanup_stale_sessions(
     # Run orphan detection for all repos with active sessions
     if not dry_run:
         store = load_sessions()
+        session_folders = {Path(s["folder"]).name for s in store["sessions"]}
+        to_be_deleted_set = load_to_be_deleted(workspace_base)
         sessions_by_repo: dict[str, set[int]] = {}
         for session in store["sessions"]:
             repo = session["repo"]
@@ -317,7 +323,13 @@ def cleanup_stale_sessions(
 
         for repo_full_name, issues in sessions_by_repo.items():
             for issue_number in issues:
-                warn_orphan_folders(workspace_base, repo_full_name, issue_number)
+                warn_orphan_folders(
+                    workspace_base,
+                    repo_full_name,
+                    issue_number,
+                    session_folders=session_folders,
+                    to_be_deleted=to_be_deleted_set,
+                )
 
     stale_sessions = get_stale_sessions(cached_issues_by_repo=cached_issues_by_repo)
 

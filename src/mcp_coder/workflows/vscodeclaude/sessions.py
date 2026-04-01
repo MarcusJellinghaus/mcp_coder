@@ -413,7 +413,11 @@ def get_session_for_issue(
 
 
 def warn_orphan_folders(
-    workspace_base: str, repo_full_name: str, issue_number: int
+    workspace_base: str,
+    repo_full_name: str,
+    issue_number: int,
+    session_folders: set[str],
+    to_be_deleted: set[str],
 ) -> None:
     r"""Scan disk for folders matching the issue that aren't tracked.
 
@@ -428,13 +432,13 @@ def warn_orphan_folders(
         workspace_base: Path to workspace directory
         repo_full_name: "owner/repo" format
         issue_number: GitHub issue number
+        session_folders: Set of folder names from active sessions
+        to_be_deleted: Set of folder names from soft-delete registry
     """
     short_repo_name = repo_full_name.split("/")[-1]
     sanitized_repo = sanitize_folder_name(short_repo_name)
     base_name = f"{sanitized_repo}_{issue_number}"
     pattern = re.compile(rf"^{re.escape(base_name)}(-folder\d+)?$")
-    to_be_deleted = load_to_be_deleted(workspace_base)
-    session_folders = {Path(s["folder"]).name for s in load_sessions()["sessions"]}
 
     workspace_path = Path(workspace_base)
     if not workspace_path.exists():

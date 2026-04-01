@@ -932,7 +932,13 @@ class TestWarnOrphanFolders:
         with caplog.at_level(
             logging.WARNING, logger="mcp_coder.workflows.vscodeclaude.sessions"
         ):
-            warn_orphan_folders(str(workspace_base), "owner/repo", 42)
+            warn_orphan_folders(
+                str(workspace_base),
+                "owner/repo",
+                42,
+                session_folders=set(),
+                to_be_deleted=set(),
+            )
 
         assert any(
             "Orphan folder detected" in record.message for record in caplog.records
@@ -972,7 +978,13 @@ class TestWarnOrphanFolders:
         with caplog.at_level(
             logging.WARNING, logger="mcp_coder.workflows.vscodeclaude.sessions"
         ):
-            warn_orphan_folders(str(workspace_base), "owner/repo", 42)
+            warn_orphan_folders(
+                str(workspace_base),
+                "owner/repo",
+                42,
+                session_folders={folder_name},
+                to_be_deleted=set(),
+            )
 
         assert not any(
             "Orphan folder detected" in record.message for record in caplog.records
@@ -1002,7 +1014,13 @@ class TestWarnOrphanFolders:
         with caplog.at_level(
             logging.WARNING, logger="mcp_coder.workflows.vscodeclaude.sessions"
         ):
-            warn_orphan_folders(str(workspace_base), "owner/repo", 42)
+            warn_orphan_folders(
+                str(workspace_base),
+                "owner/repo",
+                42,
+                session_folders=set(),
+                to_be_deleted={folder_name},
+            )
 
         assert not any(
             "Orphan folder detected" in record.message for record in caplog.records
@@ -1032,7 +1050,13 @@ class TestWarnOrphanFolders:
         with caplog.at_level(
             logging.WARNING, logger="mcp_coder.workflows.vscodeclaude.sessions"
         ):
-            warn_orphan_folders(str(workspace_base), "owner/repo", 42)
+            warn_orphan_folders(
+                str(workspace_base),
+                "owner/repo",
+                42,
+                session_folders=set(),
+                to_be_deleted=set(),
+            )
 
         assert not any(
             "Orphan folder detected" in record.message for record in caplog.records

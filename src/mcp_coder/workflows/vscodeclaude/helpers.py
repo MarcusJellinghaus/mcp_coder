@@ -7,6 +7,7 @@ Contains utility functions for:
 - Display formatting (stage names, title truncation)
 """
 
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -135,6 +136,9 @@ def load_to_be_deleted(workspace_base: str) -> set[str]:
     try:
         return {line.strip() for line in path.read_text().splitlines() if line.strip()}
     except FileNotFoundError:
+        return set()
+    except (OSError, UnicodeDecodeError) as e:
+        logging.getLogger(__name__).warning("Failed to read %s: %s", path, e)
         return set()
 
 
