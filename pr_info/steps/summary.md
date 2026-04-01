@@ -39,18 +39,19 @@ Replace three Bash-invoked shell scripts (`format_all.sh`, `lint_imports.sh`, `v
 | `docs/processes-prompts/refactoring-guide.md` | Add MCP alternatives in standard checks |
 | `docs/architecture/dependencies/readme.md` | Add MCP column to tools table |
 
-### Tests (1 file)
+### Tests (2 files)
 | File | Change |
 |------|--------|
 | `tests/checks/test_ci_log_parser.py` | Replace real tool names with fictional names |
+| `tests/checks/test_branch_status.py` | Replace vulture references with fictional names in TestExtractFailedStepLog |
 
-**No files created. No files deleted. 10 files modified total.**
+**No files created. No files deleted. 11 files modified total.**
 
 ## Steps Overview
 
 | Step | Scope | Files |
 |------|-------|-------|
-| 1 | Test fixture cleanup | `tests/checks/test_ci_log_parser.py` |
+| 1 | Test fixture cleanup | `tests/checks/test_ci_log_parser.py`, `tests/checks/test_branch_status.py` |
 | 2 | Config: settings + CLAUDE.md | `settings.local.json`, `CLAUDE.md` |
 | 3 | Skills: commit_push, implement_direct, rebase | 3 SKILL.md files |
 | 4 | Docs: audience-split updates | 4 docs files |

@@ -30,12 +30,17 @@ After the "Examples" code block showing shell scripts, add:
 ```
 
 ### "Enhanced Claude Permissions" bullet
-Update the "Architecture Tools" sub-bullet to mention MCP tools as the preferred approach for Claude.
+Update the "Architecture Tools" sub-bullet to mention MCP tools as the preferred approach for Claude. Also mention `get_library_source` here as a new permission.
+
+> **Note:** The "Development Tools" section (which describes shell scripts for human developers) is intentionally left unchanged. Only add MCP-focused audience-split notes where Claude Code guidance is needed.
 
 ## WHAT — docs/configuration/claude-code.md
 
 ### settings.local.json example
 The current example shows `"Bash(./tools/format_all.sh:*)"`. Replace with `"mcp__tools-py__run_format_code"`. Add the other 3 new MCP permissions to the example.
+
+### settings.local.json — include `get_library_source`
+The updated settings example should include `mcp__tools-py__get_library_source` alongside the other new MCP permissions.
 
 ### "Allow formatting tools" security note
 Update from `Bash(./tools/format_all.sh:*)` to reference MCP tool.

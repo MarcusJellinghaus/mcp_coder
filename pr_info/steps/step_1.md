@@ -10,6 +10,7 @@ This step modifies existing test data — the tests themselves verify CI log par
 
 ## WHERE
 - `tests/checks/test_ci_log_parser.py`
+- `tests/checks/test_branch_status.py`
 
 ## WHAT
 No new functions. Modify two test data constants:
@@ -38,6 +39,22 @@ Update the test method that asserts against the renamed content:
 | `test_captures_output_between_endgroup_and_error` | `"vulture 2.15" in lines` | `"tool-alpha 2.15" in lines` |
 | `test_vulture_real_log_structure` | step name `"Run vulture --version && ./tools/vulture_check.sh"` | `"Run tool-alpha --version && ./tools/tool_alpha.sh"` |
 | `test_vulture_real_log_structure` | `"vulture 2.15" in result` | `"tool-alpha 2.15" in result` |
+| `test_error_fallback_with_outside_output` | `"vulture 2.15" in result` | `"tool-alpha 2.15" in result` |
+
+### Replacements in test_branch_status.py
+
+The `TestExtractFailedStepLog` class uses `vulture` / `vulture_check.sh` in test log strings and assertions.
+
+| Location | Old | New |
+|----------|-----|-----|
+| `test_prefix_match` log string | `Run vulture --version && ./tools/vulture_check.sh` | `Run tool-alpha --version && ./tools/tool_alpha.sh` |
+| `test_prefix_match` log string | `vulture output here` | `tool-alpha output here` |
+| `test_prefix_match` call | `_extract_failed_step_log(log, "Run vulture")` | `_extract_failed_step_log(log, "Run tool-alpha")` |
+| `test_prefix_match` assertion | `"vulture output here" in result` | `"tool-alpha output here" in result` |
+| `test_contains_match` log string | `Step 3: Run vulture check` | `Step 3: Run tool-alpha check` |
+| `test_contains_match` log string | `vulture found issues` | `tool-alpha found issues` |
+| `test_contains_match` call | `_extract_failed_step_log(log, "vulture check")` | `_extract_failed_step_log(log, "tool-alpha check")` |
+| `test_contains_match` assertion | `"vulture found issues" in result` | `"tool-alpha found issues" in result` |
 
 ### Update docstring
 Remove reference to specific CI run number if desired, or keep for traceability. The module docstring mentions "CI run 23438818570" — this is fine to keep as historical context.
@@ -47,8 +64,8 @@ Remove reference to specific CI run number if desired, or keep for traceability.
 1. In VULTURE_LOG, replace "vulture" tool references with "tool-alpha" equivalents
 2. Update test assertions that match against VULTURE_LOG content
 3. Leave FILE_SIZE_LOG and its tests unchanged
-4. Leave test_error_fallback_with_outside_output unchanged (it uses both logs, assertions are generic enough)
-5. Run pytest on this file to verify all tests pass
+4. In test_branch_status.py, replace vulture/vulture_check.sh references with tool-alpha/tool_alpha.sh in TestExtractFailedStepLog
+5. Run pytest on both files to verify all tests pass
 6. Run pylint, mypy checks
 ```
 
@@ -57,7 +74,7 @@ No data structure changes. Constants remain strings. Test assertions remain bool
 
 ## Verification
 ```
-mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-k", "test_ci_log_parser"])
+mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-k", "test_ci_log_parser or test_branch_status"])
 mcp__tools-py__run_pylint_check()
 mcp__tools-py__run_mypy_check()
 ```
@@ -72,6 +89,8 @@ Implement step 1: Replace real tool names with fictional names in test_ci_log_pa
 2. In VULTURE_LOG constant: replace vulture/vulture_check.sh references with tool-alpha/tool_alpha.sh
 3. Update test assertions that match against the renamed content
 4. Leave FILE_SIZE_LOG and its tests unchanged
-5. Run all three quality checks (pytest, pylint, mypy)
-6. Commit: "test: decouple CI log parser fixtures from real tool names (#672)"
+5. Read tests/checks/test_branch_status.py
+6. In TestExtractFailedStepLog: replace vulture/vulture_check.sh references with tool-alpha/tool_alpha.sh
+7. Run all three quality checks (pytest, pylint, mypy)
+8. Commit: "test: decouple test fixtures from real tool names (#672)"
 ```
