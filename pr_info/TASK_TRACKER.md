@@ -21,6 +21,21 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: CommandHistory Class + Unit Tests
+- [ ] Implementation: create `tests/icoder/test_command_history.py` and `src/mcp_coder/icoder/core/command_history.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: InputArea Up/Down Integration + Widget Key Tests
+- [ ] Implementation: modify `src/mcp_coder/icoder/ui/widgets/input_area.py` and add history key tests to `tests/icoder/test_widgets.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Wire history.add() in ICoderApp Submit Handler
+- [ ] Implementation: add `history.add(text)` call in `src/mcp_coder/icoder/ui/app.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review completed
+- [ ] PR summary prepared
