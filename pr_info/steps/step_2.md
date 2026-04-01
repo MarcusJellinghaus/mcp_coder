@@ -1,111 +1,114 @@
-# Step 2: Migrate formatters.py "rendered" branch to use StreamEventRenderer
+# Step 2: Migrate iCoder app.py + remove append_tool_use() from output_log.py
 
 ## Context
 See `pr_info/steps/summary.md` for full issue context and architecture.
 
-Step 1 created the new modules. This step wires the CLI "rendered" format to use the renderer and removes the now-duplicated helpers from `formatters.py`. Existing tests must continue to pass.
+Step 1 created the new modules and wired the CLI "rendered" format. This step makes iCoder the primary consumer, gaining formatted tool names, truncated output, JSON expansion, and box-drawing characters.
 
 ## LLM Prompt
-> Implement Step 2 of issue #680. Read `pr_info/steps/summary.md` and this step file fully. Migrate the "rendered" branch of `print_stream_event()` in `formatters.py` to use `StreamEventRenderer`, remove the old helpers, and fix test imports. All existing tests must pass.
+> Implement Step 2 of issue #680. Read `pr_info/steps/summary.md` and this step file fully. Rewrite iCoder's `_handle_stream_event` to use `StreamEventRenderer`, remove `append_tool_use()` from `output_log.py`, and apply specific test updates listed below. All tests must pass.
 
 ---
 
-## Part A: Modify formatters.py
+## Part A: Modify app.py
 
 ### WHERE
-`src/mcp_coder/llm/formatting/formatters.py`
+`src/mcp_coder/icoder/ui/app.py`
 
-### WHAT — Remove
-- Delete `_RENDERED_TRUNCATION_LIMIT` constant
-- Delete `_RENDERED_INLINE_ARG_LIMIT` constant
-- Delete `_render_tool_output()` function
-- Delete `_format_tool_name()` function
-- Delete `_format_tool_args()` function
-
-### WHAT — Add
+### WHAT — Add imports
 ```python
-from .stream_renderer import StreamEventRenderer
-from .render_actions import ToolStart, ToolResult, TextChunk, ErrorMessage, StreamDone
+from mcp_coder.llm.formatting.stream_renderer import StreamEventRenderer
+from mcp_coder.llm.formatting.render_actions import (
+    TextChunk, ToolStart, ToolResult, ErrorMessage, StreamDone,
+)
 ```
 
-### WHAT — Rewrite
-Rewrite the `if output_format == "rendered":` branch to:
-
+### WHAT — Store renderer instance
+In `__init__` or `on_mount`, add:
 ```python
-if output_format == "rendered":
-    renderer = StreamEventRenderer()
-    action = renderer.render(event)
+self._renderer = StreamEventRenderer()
+```
+This reuses a single instance since the renderer is stateless but avoids per-event allocation.
+
+### WHAT — Rewrite `_handle_stream_event`
+```python
+def _handle_stream_event(self, event: StreamEvent) -> None:
+    output = self.query_one(OutputLog)
+    action = self._renderer.render(event)
     if action is None:
         return
     if isinstance(action, TextChunk):
-        print(action.text, end="", file=file, flush=True)
+        output.append_text(action.text)
     elif isinstance(action, ToolStart):
         if action.inline_args is not None:
-            print(f"┌ {action.display_name}({action.inline_args})", file=file)
+            line = f"┌ {action.display_name}({action.inline_args})"
         else:
-            print(f"┌ {action.display_name}", file=file)
+            parts = [f"┌ {action.display_name}"]
             for key, value in action.block_args:
-                print(f"│  {key}: {value}", file=file)
+                parts.append(f"│  {key}: {value}")
+            line = "\n".join(parts)
+        output.append_text(line, style=STYLE_TOOL_OUTPUT)
     elif isinstance(action, ToolResult):
-        for line in action.output_lines:
-            print(f"│  {line}", file=file)
+        parts = [f"│  {ln}" for ln in action.output_lines]
         if action.truncated:
-            print(f"└ done ({action.total_lines} lines, truncated to {len(action.output_lines)})", file=file)
+            parts.append(f"└ done ({action.total_lines} lines, truncated to {len(action.output_lines)})")
         else:
-            print("└ done", file=file)
-        print(file=file)
+            parts.append("└ done")
+        output.append_text("\n".join(parts), style=STYLE_TOOL_OUTPUT)
     elif isinstance(action, ErrorMessage):
-        print(action.message, file=err_file)
-    elif isinstance(action, StreamDone):
-        print(file=file)
-    return
+        output.append_text(f"Error: {action.message}")
 ```
 
-### HOW
-- The "text" / "ndjson" / "json-raw" branches remain **completely unchanged**
-- `_normalize_event_to_ndjson()` stays in `formatters.py` (not part of this refactor)
-- The `__all__` list stays the same (public API unchanged)
+### WHAT — Remove unused import
+- Remove `StreamEvent` import if no longer used directly (check — it's still used as type hint for the method parameter, so keep it)
 
-### ALGORITHM
-The isinstance dispatch matches the old if/elif chain exactly — same print calls, same box-drawing chars, same truncation message format.
+### HOW
+- `StreamDone` is intentionally not handled — `_append_blank_line()` already runs after the stream loop in `_stream_llm`
+- iCoder now shows: `┌ workspace > read_file(file_path='x.py')` instead of `⚙ mcp__workspace__read_file({...}) → ...`
+- `action.name` is available on `ToolResult` for consumers that need the tool name at result time
+
+### BEFORE vs AFTER (iCoder output)
+| Before | After |
+|--------|-------|
+| `⚙ mcp__workspace__read_file({'file_path': 'x.py'}) → ...` | `┌ workspace > read_file(file_path='x.py')` |
+| `⚙ mcp__workspace__read_file() → done` | `└ done` |
+| Raw output, unlimited | JSON-expanded, truncated to 5 lines |
 
 ---
 
-## Part B: Fix test imports in test_formatters.py
+## Part B: Remove append_tool_use() from output_log.py
 
 ### WHERE
-`tests/llm/formatting/test_formatters.py`
+`src/mcp_coder/icoder/ui/widgets/output_log.py`
 
 ### WHAT
-Update two import paths:
+Delete the entire `append_tool_use()` method (~18 lines). No other code calls it after Part A.
 
-```python
-# Before
-from mcp_coder.llm.formatting.formatters import (
-    _format_tool_name,
-    _render_tool_output,
-    print_stream_event,
-)
+---
 
-# After
-from mcp_coder.llm.formatting.formatters import print_stream_event
-from mcp_coder.llm.formatting.stream_renderer import (
-    _format_tool_name,
-    _render_tool_output,
-)
-```
+## Part C: Update tests (specific changes)
 
-### HOW
-- `TestFormatToolName` and `TestRenderToolOutput` classes remain unchanged, just the import source changes
-- All `TestRenderedStreamFormat` and `TestPrintStreamEvent` tests pass without modification (output is identical)
+### WHERE
+`tests/icoder/test_widgets.py`
+
+### WHAT — Delete these tests
+- `test_output_log_append_tool_use` — tests the removed method directly
+- `test_output_log_append_tool_use_with_style` — tests the removed method with style arg
+
+### WHAT — Update this test
+- `test_output_log_recorded_lines_property` — if it calls `append_tool_use`, change the call to use `append_text` instead with equivalent text content
+
+### WHAT — No changes needed
+- Do NOT touch `tests/icoder/test_app_pilot.py` — it does not reference `append_tool_use`
+- Do NOT touch `tests/icoder/test_snapshots.py` — it does not reference `append_tool_use`
 
 ---
 
 ## Verification
-- All `TestRenderedStreamFormat` tests pass (exact same output as before)
-- All `TestPrintStreamEvent` tests pass
-- All `TestFormatToolName` and `TestRenderToolOutput` tests pass (same logic, new import path)
+- All iCoder tests pass
+- All formatter tests still pass (no regression)
 - pylint, mypy, pytest all green
+- `append_tool_use` no longer exists anywhere in the codebase (grep to confirm)
 
 ## Commit
-One commit: "refactor(formatting): migrate rendered format to use StreamEventRenderer"
+One commit: "refactor(icoder): use StreamEventRenderer for tool call display"
