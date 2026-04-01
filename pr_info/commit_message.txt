@@ -1,4 +1,5 @@
-chore: replace format_all.sh with MCP tool in commit_push skill (#672)
+chore: replace format_all.sh with MCP tool in implement_direct skill (#672)
 
-Replace Bash-invoked format_all.sh/.bat with mcp__tools-py__run_format_code
-in commit_push/SKILL.md allowed-tools and step 1 instructions.
+Add mcp__tools-py__run_format_code to allowed-tools and replace
+the ./tools/format_all.sh bash command in step 6 with the MCP tool
+invocation for consistent formatting across skills.

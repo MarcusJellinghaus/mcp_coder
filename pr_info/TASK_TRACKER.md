@@ -42,9 +42,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3B: Skills — replace format_all.sh with MCP tool in implement_direct
-- [ ] Implementation: add MCP tool to allowed-tools and update step 6 in `implement_direct/SKILL.md`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add MCP tool to allowed-tools and update step 6 in `implement_direct/SKILL.md`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3C: Skills — replace format_all.sh with MCP tool in rebase
 - [ ] Implementation: swap allowed-tools entries in `rebase/SKILL.md`
