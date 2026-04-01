@@ -1,6 +1,5 @@
-feat(vscodeclaude): soft-delete on cleanup failure, retry on next run
+feat(vscodeclaude): suffix-aware folder naming for soft-deleted folders
 
-When folder deletion fails for a clean session, add it to
-.to_be_deleted registry and remove from sessions.json. Always delete
-the .code-workspace file. Retry soft-deleted entries at the start
-of each --cleanup run.
+When creating a session folder, check both disk and .to_be_deleted
+for name collisions. Use -folder2 through -folder9 suffixes when
+the base name is unavailable. Raise ValueError if all slots exhausted.

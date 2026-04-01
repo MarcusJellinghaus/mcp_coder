@@ -344,3 +344,91 @@ class TestWorkspaceSetup:
         assert status_file.exists()
         content = status_file.read_text(encoding="utf-8")
         assert "INTERVENTION" in content
+
+
+class TestGetWorkingFolderPathSuffixAware:
+    """Test suffix-aware folder naming in get_working_folder_path."""
+
+    def test_returns_base_when_available(self, tmp_path: Path) -> None:
+        """No conflict, returns workspace_base/repo_123."""
+        path = get_working_folder_path(
+            workspace_base=str(tmp_path),
+            repo_name="repo",
+            issue_number=123,
+        )
+        assert path == tmp_path / "repo_123"
+
+    def test_suffix_when_base_exists_on_disk(self, tmp_path: Path) -> None:
+        """Base folder exists on disk, returns -folder2 suffix."""
+        (tmp_path / "repo_123").mkdir()
+        path = get_working_folder_path(
+            workspace_base=str(tmp_path),
+            repo_name="repo",
+            issue_number=123,
+        )
+        assert path == tmp_path / "repo_123-folder2"
+
+    def test_suffix_when_base_in_to_be_deleted(self, tmp_path: Path) -> None:
+        """Base name in .to_be_deleted file, returns -folder2 suffix."""
+        (tmp_path / ".to_be_deleted").write_text("repo_123\n")
+        path = get_working_folder_path(
+            workspace_base=str(tmp_path),
+            repo_name="repo",
+            issue_number=123,
+        )
+        assert path == tmp_path / "repo_123-folder2"
+
+    def test_skips_occupied_suffixes(self, tmp_path: Path) -> None:
+        """Base + folder2 occupied, returns -folder3."""
+        (tmp_path / "repo_123").mkdir()
+        (tmp_path / "repo_123-folder2").mkdir()
+        path = get_working_folder_path(
+            workspace_base=str(tmp_path),
+            repo_name="repo",
+            issue_number=123,
+        )
+        assert path == tmp_path / "repo_123-folder3"
+
+    def test_checks_both_disk_and_registry(self, tmp_path: Path) -> None:
+        """Base on disk, folder2 in .to_be_deleted, returns folder3."""
+        (tmp_path / "repo_123").mkdir()
+        (tmp_path / ".to_be_deleted").write_text("repo_123-folder2\n")
+        path = get_working_folder_path(
+            workspace_base=str(tmp_path),
+            repo_name="repo",
+            issue_number=123,
+        )
+        assert path == tmp_path / "repo_123-folder3"
+
+    def test_raises_when_all_slots_exhausted(self, tmp_path: Path) -> None:
+        """Base + folder2-9 all occupied, raises ValueError."""
+        (tmp_path / "repo_123").mkdir()
+        for i in range(2, 10):
+            (tmp_path / f"repo_123-folder{i}").mkdir()
+        with pytest.raises(ValueError, match="All folder slots exhausted"):
+            get_working_folder_path(
+                workspace_base=str(tmp_path),
+                repo_name="repo",
+                issue_number=123,
+            )
+
+    def test_unchanged_when_no_conflicts(self) -> None:
+        """Clean workspace with no .to_be_deleted file returns base name."""
+        path = get_working_folder_path(
+            workspace_base="/nonexistent/workspace",
+            repo_name="mcp-coder",
+            issue_number=42,
+        )
+        assert str(path).endswith("mcp-coder_42")
+
+    def test_with_sanitized_repo_name(self, tmp_path: Path) -> None:
+        """Repo name with special chars sanitized, suffix logic works."""
+        # sanitize_folder_name turns "my repo!@#$" into "my-repo"
+        sanitized = "my-repo"
+        (tmp_path / f"{sanitized}_456").mkdir()
+        path = get_working_folder_path(
+            workspace_base=str(tmp_path),
+            repo_name="my repo!@#$",
+            issue_number=456,
+        )
+        assert path == tmp_path / f"{sanitized}_456-folder2"

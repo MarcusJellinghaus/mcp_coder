@@ -21,6 +21,7 @@ from ...utils.subprocess_runner import (
     execute_subprocess,
 )
 from .config import get_vscodeclaude_config, sanitize_folder_name
+from .helpers import load_to_be_deleted
 from .types import DEFAULT_PROMPT_TIMEOUT
 
 logger = logging.getLogger(__name__)
@@ -142,6 +143,10 @@ def get_working_folder_path(
 ) -> Path:
     """Get full path for working folder.
 
+    If the base name exists on disk or is in .to_be_deleted, tries
+    suffixes -folder2 through -folder9. Raises ValueError if all
+    slots are exhausted.
+
     Args:
         workspace_base: Base directory from config
         repo_name: Repository short name (sanitized)
@@ -149,10 +154,26 @@ def get_working_folder_path(
 
     Returns:
         Path like: workspace_base/mcp-coder_123
+
+    Raises:
+        ValueError: If all folder slots (base + folder2-9) are exhausted.
     """
     sanitized_repo = sanitize_folder_name(repo_name)
-    folder_name = f"{sanitized_repo}_{issue_number}"
-    return Path(workspace_base) / folder_name
+    base_name = f"{sanitized_repo}_{issue_number}"
+    to_be_deleted = load_to_be_deleted(workspace_base)
+    base_path = Path(workspace_base)
+
+    # Try base name first
+    if not (base_path / base_name).exists() and base_name not in to_be_deleted:
+        return base_path / base_name
+
+    # Try suffixes -folder2 through -folder9
+    for i in range(2, 10):
+        candidate = f"{base_name}-folder{i}"
+        if not (base_path / candidate).exists() and candidate not in to_be_deleted:
+            return base_path / candidate
+
+    raise ValueError(f"All folder slots exhausted for {base_name} (max: -folder9)")
 
 
 def create_working_folder(folder_path: Path) -> bool:
