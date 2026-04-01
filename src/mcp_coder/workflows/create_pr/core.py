@@ -26,7 +26,10 @@ from mcp_coder.utils.git_operations.branch_queries import (
 )
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.github_operations.issues import IssueBranchManager
-from mcp_coder.utils.github_operations.pr_manager import PullRequestManager
+from mcp_coder.utils.github_operations.pr_manager import (
+    PullRequestData,
+    PullRequestManager,
+)
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerFileNotFoundError,
@@ -394,7 +397,9 @@ def cleanup_repository(project_dir: Path) -> bool:
     return success
 
 
-def create_pull_request(project_dir: Path, title: str, body: str) -> bool:
+def create_pull_request(
+    project_dir: Path, title: str, body: str
+) -> PullRequestData | None:
     """Create GitHub pull request using PullRequestManager.
 
     Args:
@@ -403,7 +408,7 @@ def create_pull_request(project_dir: Path, title: str, body: str) -> bool:
         body: PR body/description
 
     Returns:
-        True if PR created successfully, False otherwise
+        PullRequestData dict with 'number', 'url' etc. on success, None on failure.
     """
     logger.info("Creating GitHub pull request...")
 
@@ -412,7 +417,7 @@ def create_pull_request(project_dir: Path, title: str, body: str) -> bool:
         current_branch = get_current_branch_name(project_dir)
         if current_branch is None:
             logger.error("Could not determine current branch")
-            return False
+            return None
 
         base_branch = detect_base_branch(project_dir, current_branch=current_branch)
         if base_branch is None:
@@ -420,7 +425,7 @@ def create_pull_request(project_dir: Path, title: str, body: str) -> bool:
                 "Could not detect base branch for PR creation.\n"
                 "Tip: Add '### Base Branch' section to your GitHub issue."
             )
-            return False
+            return None
 
         # Create PR using PullRequestManager
         pr_manager = PullRequestManager(project_dir)
@@ -433,22 +438,15 @@ def create_pull_request(project_dir: Path, title: str, body: str) -> bool:
 
         if not pr_result or not pr_result.get("number"):
             logger.error("Failed to create pull request")
-            return False
+            return None
 
-        pr_number = pr_result["number"]
-        pr_url = pr_result.get("url", "")
-
-        logger.info(f"Pull request created successfully: #{pr_number}")
-        if pr_url:
-            logger.info(f"PR URL: {pr_url}")
-
-        return True
+        return pr_result
 
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error creating pull request: {e}")
-        return False
+        return None
 
 
 def validate_branch_issue_linkage(project_dir: Path) -> Optional[int]:
@@ -564,9 +562,14 @@ def run_create_pr_workflow(
 
     # Step 4: Create pull request
     log_step("Step 4/5: Creating pull request...")
-    if not create_pull_request(project_dir, title, body):
+    pr_result = create_pull_request(project_dir, title, body)
+    if pr_result is None:
         logger.error("Failed to create pull request")
         return 1
+
+    pr_number = pr_result["number"]
+    pr_url = pr_result.get("url", "")
+    log_step(f"Pull request created: #{pr_number} ({pr_url})")
 
     # Step 5: Clean up repository
     log_step("Step 5/5: Cleaning up repository...")

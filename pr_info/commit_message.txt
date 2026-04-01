@@ -1,9 +1,9 @@
-Refactor implement workflow to use shared failure handling utilities
+Change create_pull_request() to return PullRequestData instead of bool
 
-Replace private _get_diff_stat() and _format_elapsed_time() in
-implement/core.py with shared imports from workflow_utils.failure_handling.
-Simplify _handle_workflow_failure() to a thin wrapper that builds the
-implement-specific comment and delegates to the shared handle_workflow_failure().
-
-Update tests to verify delegation to shared handler rather than testing
-internal label/comment logic (now covered by shared module tests).
+- Update create_pull_request() return type from bool to PullRequestData | None
+- Import PullRequestData from pr_manager module
+- Return pr_result dict on success, None on failure (instead of True/False)
+- Move PR number/url logging from create_pull_request() to caller
+- Update run_create_pr_workflow() to use pr_result for logging
+- Update all test mocks across test_workflow.py, test_repository.py,
+  and test_create_pr_integration.py to use new return type
