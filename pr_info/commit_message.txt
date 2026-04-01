@@ -1,0 +1,6 @@
+feat(icoder): add CommandHistory class with unit tests
+
+Add in-session command history for Up/Down arrow navigation in iCoder TUI.
+CommandHistory is a pure Python class in core/ with no Textual dependency,
+supporting draft preservation, consecutive duplicate suppression, and
+multi-line entries. Includes 13 comprehensive unit tests.

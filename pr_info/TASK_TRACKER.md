@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: CommandHistory Class + Unit Tests
-- [ ] Implementation: create `tests/icoder/test_command_history.py` and `src/mcp_coder/icoder/core/command_history.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `tests/icoder/test_command_history.py` and `src/mcp_coder/icoder/core/command_history.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: InputArea Up/Down Integration + Widget Key Tests
 - [ ] Implementation: modify `src/mcp_coder/icoder/ui/widgets/input_area.py` and add history key tests to `tests/icoder/test_widgets.py`
