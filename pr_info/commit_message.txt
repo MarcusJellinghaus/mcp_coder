@@ -1,5 +1,5 @@
-feat(vscodeclaude): suffix-aware folder naming for soft-deleted folders
+feat(vscodeclaude): hide soft-deleted folders from status
 
-When creating a session folder, check both disk and .to_be_deleted
-for name collisions. Use -folder2 through -folder9 suffixes when
-the base name is unavailable. Raise ValueError if all slots exhausted.
+Filter .to_be_deleted entries from display_status_table(). Pass
+workspace_base from CLI entry point. Add defensive FileNotFoundError
+handling in load_to_be_deleted for race conditions.

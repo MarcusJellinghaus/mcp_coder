@@ -7,7 +7,7 @@ from tabulate import tabulate
 
 from ...utils.github_operations.issues import IssueData, IssueManager
 from ...utils.subprocess_runner import CommandOptions, execute_subprocess
-from .helpers import get_issue_status
+from .helpers import get_issue_status, load_to_be_deleted
 from .issues import is_status_eligible_for_session, status_requires_linked_branch
 from .sessions import (
     clear_vscode_process_cache,
@@ -249,6 +249,7 @@ def get_next_action(
 def display_status_table(
     sessions: list[VSCodeClaudeSession],
     eligible_issues: list[tuple[str, IssueData]],
+    workspace_base: str,
     repo_filter: str | None = None,
     cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
     issues_without_branch: set[tuple[str, int]] | None = None,
@@ -258,6 +259,7 @@ def display_status_table(
     Args:
         sessions: Current sessions from JSON
         eligible_issues: Eligible issues not yet in sessions (repo_name, issue)
+        workspace_base: Path to workspace directory (for soft-delete filtering)
         repo_filter: Optional repo name filter
         cached_issues_by_repo: Dict mapping repo_full_name to issues dict.
                                If provided, avoids API calls for staleness checks.
@@ -278,6 +280,9 @@ def display_status_table(
     clear_vscode_window_cache()
     clear_vscode_process_cache()
 
+    # Load soft-delete registry to filter out deleted sessions
+    to_be_deleted = load_to_be_deleted(workspace_base)
+
     # Build table rows
     headers = ["Repo", "Issue", "Status", "Folder", "Git", "VSCode", "Next Action"]
     rows: list[list[str]] = []
@@ -296,6 +301,11 @@ def display_status_table(
 
         # Check closed state and folder existence
         folder_path = Path(session["folder"])
+
+        # Skip soft-deleted sessions
+        if folder_path.name in to_be_deleted:
+            continue
+
         is_closed = is_issue_closed(session, cached_issues=repo_cached_issues)
 
         # Skip closed issues if folder doesn't exist (nothing to clean up)

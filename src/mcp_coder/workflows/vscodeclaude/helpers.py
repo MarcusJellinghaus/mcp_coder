@@ -132,9 +132,10 @@ def load_to_be_deleted(workspace_base: str) -> set[str]:
         Set of folder names listed in the registry.
     """
     path = Path(workspace_base) / TO_BE_DELETED_FILENAME
-    if not path.exists():
+    try:
+        return {line.strip() for line in path.read_text().splitlines() if line.strip()}
+    except FileNotFoundError:
         return set()
-    return {line.strip() for line in path.read_text().splitlines() if line.strip()}
 
 
 def add_to_be_deleted(workspace_base: str, folder_name: str) -> None:

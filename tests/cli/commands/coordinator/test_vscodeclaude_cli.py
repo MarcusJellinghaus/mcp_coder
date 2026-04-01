@@ -391,6 +391,12 @@ class TestCommandHandlers:
             lambda: {"coordinator": {"repos": {}}},
         )
 
+        # Mock load_vscodeclaude_config for workspace_base
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.coordinator.commands.load_vscodeclaude_config",
+            lambda: {"workspace_base": "/tmp/test", "max_sessions": 3},
+        )
+
         # Mock build_eligible_issues_with_branch_check to return empty
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.build_eligible_issues_with_branch_check",
