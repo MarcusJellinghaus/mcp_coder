@@ -415,9 +415,9 @@ def get_session_for_issue(
 def warn_orphan_folders(
     workspace_base: str, repo_full_name: str, issue_number: int
 ) -> None:
-    """Scan disk for folders matching the issue that aren't tracked.
+    r"""Scan disk for folders matching the issue that aren't tracked.
 
-    Checks for {base} and {base}-folder\\d+ folders on disk that are
+    Checks for {base} and {base}-folder\d+ folders on disk that are
     not in sessions.json and not in .to_be_deleted. Logs a warning
     for each orphan found.
 
