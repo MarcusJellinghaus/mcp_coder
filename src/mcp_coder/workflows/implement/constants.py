@@ -38,6 +38,7 @@ class FailureCategory(Enum):
     GENERAL = "implementing_failed"
     CI_FIX_EXHAUSTED = "ci_fix_needed"
     LLM_TIMEOUT = "llm_timeout"
+    TASK_TRACKER_PREP_FAILED = "task_tracker_prep_failed"
 
 
 @dataclass(frozen=True)

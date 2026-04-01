@@ -161,6 +161,7 @@ ERROR_STATUS_IDS = [
     "ci_fix_needed",
     "llm_timeout",
     "pr_creating_failed",
+    "task_tracker_prep_failed",
 ]
 
 

@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Add dedicated failure label for task tracker preparation
 > See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: add label, enum member, core.py wiring, and tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add label, enum member, core.py wiring, and tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

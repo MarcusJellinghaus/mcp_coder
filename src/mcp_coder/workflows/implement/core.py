@@ -1074,7 +1074,7 @@ def run_implement_workflow(
         if not prepare_task_tracker(project_dir, provider, mcp_config, execution_dir):
             _handle_workflow_failure(
                 WorkflowFailure(
-                    category=FailureCategory.GENERAL,
+                    category=FailureCategory.TASK_TRACKER_PREP_FAILED,
                     stage="Task tracker preparation",
                     message="Failed to prepare task tracker",
                     build_url=build_url,
