@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Test fixture cleanup — decouple from real tool names
-- [ ] Implementation: replace real tool names with fictional names in test fixtures (`test_ci_log_parser.py`, `test_branch_status.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: replace real tool names with fictional names in test fixtures (`test_ci_log_parser.py`, `test_branch_status.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2A: Config — update settings.local.json with MCP permissions
 - [ ] Implementation: add 4 MCP permissions, remove 3 Bash permissions in `settings.local.json`

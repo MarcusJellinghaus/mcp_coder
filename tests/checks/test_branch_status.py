@@ -358,22 +358,22 @@ class TestExtractFailedStepLog:
     def test_prefix_match(self) -> None:
         """Should match when step_name is a prefix of the group label."""
         log = (
-            "##[group]Run vulture --version && ./tools/vulture_check.sh\n"
-            "vulture output here\n"
+            "##[group]Run tool-alpha --version && ./tools/tool_alpha.sh\n"
+            "tool-alpha output here\n"
             "##[endgroup]"
         )
-        result = _extract_failed_step_log(log, "Run vulture")
-        assert "vulture output here" in result
+        result = _extract_failed_step_log(log, "Run tool-alpha")
+        assert "tool-alpha output here" in result
 
     def test_contains_match(self) -> None:
         """Should match when step_name is contained in the group label."""
         log = (
-            "##[group]Step 3: Run vulture check\n"
-            "vulture found issues\n"
+            "##[group]Step 3: Run tool-alpha check\n"
+            "tool-alpha found issues\n"
             "##[endgroup]"
         )
-        result = _extract_failed_step_log(log, "vulture check")
-        assert "vulture found issues" in result
+        result = _extract_failed_step_log(log, "tool-alpha check")
+        assert "tool-alpha found issues" in result
 
     def test_captures_error_lines_after_endgroup(self) -> None:
         """Should include ##[error] lines after ##[endgroup]."""

@@ -14,13 +14,13 @@ from mcp_coder.checks.ci_log_parser import _extract_failed_step_log, _parse_grou
 # ---------------------------------------------------------------------------
 
 VULTURE_LOG = (
-    "##[group]Run vulture --version && ./tools/vulture_check.sh\n"
-    "vulture --version && ./tools/vulture_check.sh\n"
+    "##[group]Run tool-alpha --version && ./tools/tool_alpha.sh\n"
+    "tool-alpha --version && ./tools/tool_alpha.sh\n"
     "shell: /usr/bin/bash -e {0}\n"
     "env:\n"
     "  UV_CACHE_DIR: /home/runner/work/_temp/setup-uv-cache\n"
     "##[endgroup]\n"
-    "vulture 2.15\n"
+    "tool-alpha 2.15\n"
     "Checking for dead code...\n"
     "tests/cli/commands/test_verify_exit_codes.py:120: "
     "unused function '_mcp_fail' (60% confidence)\n"
@@ -76,8 +76,8 @@ class TestParseGroupsCapturesOutput:
 
         assert len(groups) == 1
         label, lines = groups[0]
-        assert label.startswith("Run vulture")
-        assert "vulture 2.15" in lines
+        assert label.startswith("Run tool-alpha")
+        assert "tool-alpha 2.15" in lines
         assert "Checking for dead code..." in lines
         assert any("unused function" in ln for ln in lines)
         assert any(ln.startswith("##[error]") for ln in lines)
@@ -122,10 +122,10 @@ class TestExtractFailedStepLogRealStructure:
         """Vulture failure log includes command output from outside the group."""
         result = _extract_failed_step_log(
             VULTURE_LOG,
-            "Run vulture --version && ./tools/vulture_check.sh",
+            "Run tool-alpha --version && ./tools/tool_alpha.sh",
         )
 
-        assert "vulture 2.15" in result
+        assert "tool-alpha 2.15" in result
         assert "Checking for dead code..." in result
         assert "unused function '_mcp_fail'" in result
         assert "##[error]Process completed with exit code 3." in result
@@ -151,5 +151,5 @@ class TestExtractFailedStepLogRealStructure:
         result = _extract_failed_step_log(combined, "nonexistent-step")
 
         # Fallback collects groups that contain ##[error] lines
-        assert "vulture 2.15" in result
+        assert "tool-alpha 2.15" in result
         assert "File size check failed" in result
