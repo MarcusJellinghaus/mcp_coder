@@ -157,3 +157,67 @@ async def test_input_area_empty_enter_does_not_submit() -> None:
         await pilot.press("enter")
         await pilot.pause()
         assert len(messages) == 0
+
+
+# --- History key integration tests ---
+
+
+@pytest.mark.asyncio
+async def test_input_area_up_recalls_history() -> None:
+    """Up arrow on first line recalls the last history entry."""
+    app = WidgetTestApp()
+    async with app.run_test() as pilot:
+        input_area = app.query_one(InputArea)
+        input_area.focus()
+        await pilot.pause()
+        input_area.command_history.add("first")
+        input_area.command_history.add("second")
+        await pilot.press("up")
+        await pilot.pause()
+        assert input_area.text == "second"
+
+
+@pytest.mark.asyncio
+async def test_input_area_up_down_cycle() -> None:
+    """Up then Down cycles through history and back to draft."""
+    app = WidgetTestApp()
+    async with app.run_test() as pilot:
+        input_area = app.query_one(InputArea)
+        input_area.focus()
+        await pilot.pause()
+        input_area.command_history.add("cmd1")
+        input_area.insert("draft")
+        await pilot.pause()
+        await pilot.press("up")
+        await pilot.pause()
+        assert input_area.text == "cmd1"
+        await pilot.press("down")
+        await pilot.pause()
+        assert input_area.text == "draft"
+
+
+@pytest.mark.asyncio
+async def test_input_area_up_no_history_no_change() -> None:
+    """Up arrow with no history does not change the text."""
+    app = WidgetTestApp()
+    async with app.run_test() as pilot:
+        input_area = app.query_one(InputArea)
+        input_area.focus()
+        await pilot.pause()
+        input_area.insert("current")
+        await pilot.pause()
+        await pilot.press("up")
+        await pilot.pause()
+        assert input_area.text == "current"
+
+
+@pytest.mark.asyncio
+async def test_input_area_has_history_attribute() -> None:
+    """InputArea exposes a CommandHistory instance."""
+    app = WidgetTestApp()
+    async with app.run_test():
+        input_area = app.query_one(InputArea)
+        assert hasattr(input_area, "command_history")
+        from mcp_coder.icoder.core.command_history import CommandHistory
+
+        assert isinstance(input_area.command_history, CommandHistory)
