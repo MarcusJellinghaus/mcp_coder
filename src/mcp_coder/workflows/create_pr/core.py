@@ -508,7 +508,11 @@ def _format_failure_comment(
     pr_number: int | None = None,
     is_cleanup_failure: bool = False,
 ) -> str:
-    """Format a GitHub comment for a create-pr workflow failure."""
+    """Format a GitHub comment for a create-pr workflow failure.
+
+    Returns:
+        Formatted GitHub comment string.
+    """
     lines = [
         "## PR Creation Failed",
         f"**Stage:** {stage}",

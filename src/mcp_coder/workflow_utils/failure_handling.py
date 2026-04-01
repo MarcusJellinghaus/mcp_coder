@@ -38,7 +38,8 @@ class WorkflowFailure:
 def get_diff_stat(project_dir: Path) -> str:
     """Get git diff --stat for uncommitted changes.
 
-    Returns empty string on error.
+    Returns:
+        Diff stat output, or empty string on error.
     """
     try:
         with _safe_repo_context(project_dir) as repo:
@@ -48,7 +49,11 @@ def get_diff_stat(project_dir: Path) -> str:
 
 
 def format_elapsed_time(seconds: float) -> str:
-    """Format seconds into human-readable string like '12m 34s' or '1h 5m 30s'."""
+    """Format seconds into human-readable string like '12m 34s' or '1h 5m 30s'.
+
+    Returns:
+        Human-readable time string.
+    """
     total = int(seconds)
     hours, remainder = divmod(total, 3600)
     minutes, secs = divmod(remainder, 60)
