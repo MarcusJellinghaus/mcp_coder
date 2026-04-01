@@ -188,7 +188,10 @@ git ls-tree
 ./tools/ruff_check.sh
 mcp-coder git-tool compact-diff
 mcp-coder check branch-status
+mcp-coder gh-tool set-status <label>
 ```
+
+**Status labels:** Use `mcp-coder gh-tool set-status` to change issue workflow status — never use raw `gh issue edit` with label flags.
 
 **Calling mcp-coder:** Bare `mcp-coder` uses the tool env (stable install). To test local source changes, use `.venv\Scripts\python -m mcp_coder <args>`. See [`docs/environments/environments.md`](../docs/environments/environments.md#calling-mcp-coder-explicitly).
 
