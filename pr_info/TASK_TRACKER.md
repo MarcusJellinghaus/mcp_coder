@@ -67,9 +67,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 4D: Docs — add MCP column in dependencies/readme.md
-- [ ] Implementation: add MCP Tool column to tools table, add Claude Code alternative block
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add MCP Tool column to tools table, add Claude Code alternative block
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: verify all steps complete and checks pass
