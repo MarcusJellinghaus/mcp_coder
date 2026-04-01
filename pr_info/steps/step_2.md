@@ -53,11 +53,9 @@ It still receives the implement-local `WorkflowFailure` (which has `tasks_comple
 
 ## HOW
 - Add imports: `from mcp_coder.workflow_utils.failure_handling import (WorkflowFailure as SharedWorkflowFailure, handle_workflow_failure, get_diff_stat, format_elapsed_time)`
-- The implement-local `WorkflowFailure` in constants.py is removed; a new local
-  version is created as a dataclass with implement-specific fields + the shared fields
-Keep `WorkflowFailure` in `implement/constants.py` unchanged (it has
-implement-specific fields). Import the shared one with an alias. The wrapper
-function maps from implement's dataclass to the shared one for the handler call.
+- Keep `WorkflowFailure` in `implement/constants.py` unchanged (it has
+  implement-specific fields). Import the shared one with an alias. The wrapper
+  function maps from implement's dataclass to the shared one for the handler call.
 
 ## ALGORITHM — refactored `_handle_workflow_failure`:
 ```

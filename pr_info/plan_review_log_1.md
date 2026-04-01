@@ -39,4 +39,15 @@
 
 **User decisions**: None needed.
 **Changes**: Fixed step_2.md and summary.md
+**Status**: Committed (a4b16d7)
+
+## Round 3 — 2026-04-01
+**Findings**:
+- Stale contradictory text remained in step 2 HOW section (old "removed" text alongside new "keep" text)
+
+**Decisions**:
+- Accept: Remove stale sentence, keep only corrected text
+
+**User decisions**: None needed.
+**Changes**: Cleaned up step_2.md HOW section
 **Status**: Pending commit
