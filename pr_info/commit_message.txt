@@ -1,9 +1,9 @@
-Change create_pull_request() to return PullRequestData instead of bool
+Add failure handling to create-pr workflow with safety net
 
-- Update create_pull_request() return type from bool to PullRequestData | None
-- Import PullRequestData from pr_manager module
-- Return pr_result dict on success, None on failure (instead of True/False)
-- Move PR number/url logging from create_pull_request() to caller
-- Update run_create_pr_workflow() to use pr_result for logging
-- Update all test mocks across test_workflow.py, test_repository.py,
-  and test_create_pr_integration.py to use new return type
+- Add _format_failure_comment() and _handle_create_pr_failure() helpers
+- Wire up all 7 failure points with label transition and GitHub comments
+- Make pre-PR git_push() fatal (was warning-only before)
+- Broaden generate_pr_summary exception catch to Exception
+- Add try/finally safety net with reached_terminal_state flag
+- Create test_failure_handling.py with 11 tests covering all paths
+- Update existing test_workflow.py tests for new failure handler calls

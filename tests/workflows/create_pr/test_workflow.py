@@ -57,8 +57,11 @@ class TestRunCreatePrWorkflow:
         # git_push should be called twice: once after generate_pr_summary and once after commit
         assert mock_push.call_count == 2
 
+    @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
-    def test_workflow_prerequisites_fail(self, mock_prereqs: MagicMock) -> None:
+    def test_workflow_prerequisites_fail(
+        self, mock_prereqs: MagicMock, mock_handle_failure: MagicMock
+    ) -> None:
         """Test workflow exits when prerequisites fail."""
         mock_prereqs.return_value = False
 
@@ -66,7 +69,10 @@ class TestRunCreatePrWorkflow:
 
         assert result == 1
         mock_prereqs.assert_called_once_with(Path("/test"))
+        mock_handle_failure.assert_called_once()
+        assert mock_handle_failure.call_args.kwargs["stage"] == "prerequisites"
 
+    @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
     @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
     @patch("mcp_coder.workflows.create_pr.core.git_push")
@@ -77,6 +83,7 @@ class TestRunCreatePrWorkflow:
         mock_push: MagicMock,
         mock_generate: MagicMock,
         mock_prereqs: MagicMock,
+        mock_handle_failure: MagicMock,
     ) -> None:
         """Test workflow exits when PR creation fails."""
         mock_prereqs.return_value = True
@@ -88,11 +95,17 @@ class TestRunCreatePrWorkflow:
 
         assert result == 1
         mock_create_pr.assert_called_once_with(Path("/test"), "Title", "Body")
+        mock_handle_failure.assert_called_once()
+        assert mock_handle_failure.call_args.kwargs["stage"] == "pr_creation"
 
+    @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
     @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
     def test_workflow_generate_summary_exception(
-        self, mock_generate: MagicMock, mock_prereqs: MagicMock
+        self,
+        mock_generate: MagicMock,
+        mock_prereqs: MagicMock,
+        mock_handle_failure: MagicMock,
     ) -> None:
         """Test workflow handles generate_pr_summary exceptions."""
         mock_prereqs.return_value = True
@@ -102,6 +115,8 @@ class TestRunCreatePrWorkflow:
 
         assert result == 1
         mock_generate.assert_called_once_with(Path("/test"), "claude", None, None)
+        mock_handle_failure.assert_called_once()
+        assert mock_handle_failure.call_args.kwargs["stage"] == "summary_generation"
 
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
     @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")

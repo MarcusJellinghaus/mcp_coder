@@ -7,6 +7,7 @@ PR creation workflow.
 
 import logging
 import shutil
+import time
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -31,6 +32,11 @@ from mcp_coder.utils.github_operations.pr_manager import (
     PullRequestManager,
 )
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
+from mcp_coder.workflow_utils.failure_handling import (
+    WorkflowFailure,
+    format_elapsed_time,
+    handle_workflow_failure,
+)
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerFileNotFoundError,
     get_incomplete_tasks,
@@ -494,6 +500,65 @@ def validate_branch_issue_linkage(project_dir: Path) -> Optional[int]:
         return None
 
 
+def _format_failure_comment(
+    stage: str,
+    message: str,
+    elapsed_time: float | None = None,
+    pr_url: str | None = None,
+    pr_number: int | None = None,
+    is_cleanup_failure: bool = False,
+) -> str:
+    """Format a GitHub comment for a create-pr workflow failure."""
+    lines = [
+        "## PR Creation Failed",
+        f"**Stage:** {stage}",
+        f"**Error:** {message}",
+    ]
+    if elapsed_time is not None:
+        lines.append(f"**Elapsed:** {format_elapsed_time(elapsed_time)}")
+    if pr_url:
+        lines.append(f"**PR:** [{pr_number}]({pr_url})")
+    if is_cleanup_failure:
+        lines.append("\n> **Note:** pr_info/ directory may still exist on the branch")
+    return "\n".join(lines)
+
+
+def _handle_create_pr_failure(
+    stage: str,
+    message: str,
+    project_dir: Path,
+    update_labels: bool,
+    elapsed_time: float | None = None,
+    issue_number: int | None = None,
+    pr_url: str | None = None,
+    pr_number: int | None = None,
+    is_cleanup_failure: bool = False,
+) -> None:
+    """Convenience wrapper: format comment + call shared handler."""
+    comment = _format_failure_comment(
+        stage=stage,
+        message=message,
+        elapsed_time=elapsed_time,
+        pr_url=pr_url,
+        pr_number=pr_number,
+        is_cleanup_failure=is_cleanup_failure,
+    )
+    failure = WorkflowFailure(
+        category="pr_creating_failed",
+        stage=stage,
+        message=message,
+        elapsed_time=elapsed_time,
+    )
+    handle_workflow_failure(
+        failure=failure,
+        comment_body=comment,
+        project_dir=project_dir,
+        from_label_id="pr_creating",
+        update_labels=update_labels,
+        issue_number=issue_number,
+    )
+
+
 def log_step(message: str) -> None:
     """Log step with structured logging instead of print."""
     logger.info(message)
@@ -521,6 +586,9 @@ def run_create_pr_workflow(
     log_step("Starting create PR workflow...")
     log_step(f"Using project directory: {project_dir}")
 
+    start_time = time.time()
+    reached_terminal_state = False
+
     # Cache branch-issue linkage BEFORE PR creation.
     # GitHub automatically removes linkedBranches when a PR is created from a branch
     # (the link transfers to the PR). If we query linkedBranches after PR creation,
@@ -536,105 +604,205 @@ def run_create_pr_workflow(
                 "Branch not linked to any issue, label update will be skipped"
             )
 
-    # Step 1: Check prerequisites
-    log_step("Step 1/4: Checking prerequisites...")
-    if not check_prerequisites(project_dir):
-        logger.error("Prerequisites check failed")
-        return 1
-
-    # Step 2: Generate PR summary
-    log_step("Step 2/5: Generating PR summary...")
     try:
-        title, body = generate_pr_summary(
-            project_dir, provider, mcp_config, execution_dir
-        )
-    except (ValueError, FileNotFoundError) as e:
-        logger.error(f"Failed to generate PR summary: {e}")
-        return 1
+        # Step 1: Check prerequisites
+        log_step("Step 1/4: Checking prerequisites...")
+        if not check_prerequisites(project_dir):
+            logger.error("Prerequisites check failed")
+            elapsed = time.time() - start_time
+            _handle_create_pr_failure(
+                stage="prerequisites",
+                message="Prerequisites check failed",
+                project_dir=project_dir,
+                update_labels=update_labels,
+                elapsed_time=elapsed,
+                issue_number=cached_issue_number,
+            )
+            reached_terminal_state = True
+            return 1
 
-    # Step 3: Push any existing commits
-    log_step("Step 3/5: Pushing commits...")
-    push_result = git_push(project_dir)
-    if not push_result["success"]:
-        logger.warning(f"Failed to push commits: {push_result['error']}")
-    else:
+        # Step 2: Generate PR summary
+        log_step("Step 2/5: Generating PR summary...")
+        try:
+            title, body = generate_pr_summary(
+                project_dir, provider, mcp_config, execution_dir
+            )
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.error(f"Failed to generate PR summary: {e}")
+            elapsed = time.time() - start_time
+            _handle_create_pr_failure(
+                stage="summary_generation",
+                message=str(e),
+                project_dir=project_dir,
+                update_labels=update_labels,
+                elapsed_time=elapsed,
+                issue_number=cached_issue_number,
+            )
+            reached_terminal_state = True
+            return 1
+
+        # Step 3: Push any existing commits
+        log_step("Step 3/5: Pushing commits...")
+        push_result = git_push(project_dir)
+        if not push_result["success"]:
+            logger.error(f"Failed to push commits: {push_result['error']}")
+            elapsed = time.time() - start_time
+            _handle_create_pr_failure(
+                stage="push",
+                message=push_result.get("error", "Unknown push error"),
+                project_dir=project_dir,
+                update_labels=update_labels,
+                elapsed_time=elapsed,
+                issue_number=cached_issue_number,
+            )
+            reached_terminal_state = True
+            return 1
         log_step("Commits pushed successfully")
 
-    # Step 4: Create pull request
-    log_step("Step 4/5: Creating pull request...")
-    pr_result = create_pull_request(project_dir, title, body)
-    if pr_result is None:
-        logger.error("Failed to create pull request")
-        return 1
+        # Step 4: Create pull request
+        log_step("Step 4/5: Creating pull request...")
+        pr_result = create_pull_request(project_dir, title, body)
+        if pr_result is None:
+            logger.error("Failed to create pull request")
+            elapsed = time.time() - start_time
+            _handle_create_pr_failure(
+                stage="pr_creation",
+                message="Failed to create pull request",
+                project_dir=project_dir,
+                update_labels=update_labels,
+                elapsed_time=elapsed,
+                issue_number=cached_issue_number,
+            )
+            reached_terminal_state = True
+            return 1
 
-    pr_number = pr_result["number"]
-    pr_url = pr_result.get("url", "")
-    log_step(f"Pull request created: #{pr_number} ({pr_url})")
+        pr_number = pr_result["number"]
+        pr_url = pr_result.get("url", "")
+        log_step(f"Pull request created: #{pr_number} ({pr_url})")
 
-    # Step 5: Clean up repository
-    log_step("Step 5/5: Cleaning up repository...")
-    if not cleanup_repository(project_dir):
-        logger.error("Repository cleanup failed")
-        return 1
+        # Step 5: Clean up repository
+        log_step("Step 5/5: Cleaning up repository...")
+        if not cleanup_repository(project_dir):
+            logger.error("Repository cleanup failed")
+            elapsed = time.time() - start_time
+            _handle_create_pr_failure(
+                stage="cleanup",
+                message="Repository cleanup failed",
+                project_dir=project_dir,
+                update_labels=update_labels,
+                elapsed_time=elapsed,
+                issue_number=cached_issue_number,
+                pr_url=pr_url,
+                pr_number=pr_number,
+                is_cleanup_failure=True,
+            )
+            reached_terminal_state = True
+            return 1
 
-    # Check if there are changes to commit
-    if not is_working_directory_clean(
-        project_dir, ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
-    ):
-        # Commit cleanup changes
-        log_step("Committing cleanup changes...")
-        commit_result = commit_all_changes(
-            "Clean up pr_info temporary folders", project_dir
-        )
+        # Check if there are changes to commit
+        if not is_working_directory_clean(
+            project_dir, ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
+        ):
+            # Commit cleanup changes
+            log_step("Committing cleanup changes...")
+            commit_result = commit_all_changes(
+                "Clean up pr_info temporary folders", project_dir
+            )
 
-        if not commit_result["success"]:
-            # Ignore "No staged files" - this is expected when cleanup had no effect
-            error_msg = commit_result.get("error") or ""
-            if "No staged files" not in error_msg:
-                logger.error(
-                    f"Failed to commit cleanup changes: {commit_result['error']}"
+            if not commit_result["success"]:
+                # Ignore "No staged files" - this is expected when cleanup had no effect
+                error_msg = commit_result.get("error") or ""
+                if "No staged files" not in error_msg:
+                    logger.error(
+                        f"Failed to commit cleanup changes: {commit_result['error']}"
+                    )
+                    elapsed = time.time() - start_time
+                    _handle_create_pr_failure(
+                        stage="cleanup",
+                        message=f"Failed to commit cleanup: {commit_result['error']}",
+                        project_dir=project_dir,
+                        update_labels=update_labels,
+                        elapsed_time=elapsed,
+                        issue_number=cached_issue_number,
+                        pr_url=pr_url,
+                        pr_number=pr_number,
+                        is_cleanup_failure=True,
+                    )
+                    reached_terminal_state = True
+                    return 1
+                log_step("No cleanup changes to commit (files were already clean)")
+            else:
+                log_step(f"Cleanup committed: {commit_result['commit_hash']}")
+
+                # Push cleanup commit
+                log_step("Pushing cleanup changes...")
+                push_result = git_push(project_dir)
+
+                if not push_result["success"]:
+                    logger.error(
+                        f"Failed to push cleanup changes: {push_result['error']}"
+                    )
+                    elapsed = time.time() - start_time
+                    _handle_create_pr_failure(
+                        stage="cleanup",
+                        message=f"Failed to push cleanup: {push_result['error']}",
+                        project_dir=project_dir,
+                        update_labels=update_labels,
+                        elapsed_time=elapsed,
+                        issue_number=cached_issue_number,
+                        pr_url=pr_url,
+                        pr_number=pr_number,
+                        is_cleanup_failure=True,
+                    )
+                    reached_terminal_state = True
+                    return 1
+                log_step("Cleanup changes pushed successfully")
+        else:
+            log_step("No cleanup changes to commit")
+
+        # Update GitHub issue label if requested
+        if update_labels:
+            if cached_issue_number is None:
+                logger.warning(
+                    "Skipping label update: branch was not linked to an issue"
                 )
-                return 1
-            log_step("No cleanup changes to commit (files were already clean)")
-        else:
-            log_step(f"Cleanup committed: {commit_result['commit_hash']}")
+            else:
+                log_step("Updating GitHub issue label...")
+                try:
+                    from mcp_coder.utils.github_operations.issues import IssueManager
 
-            # Push cleanup commit
-            log_step("Pushing cleanup changes...")
-            push_result = git_push(project_dir)
+                    issue_manager = IssueManager(project_dir)
+                    success = issue_manager.update_workflow_label(
+                        from_label_id="pr_creating",
+                        to_label_id="pr_created",
+                        validated_issue_number=cached_issue_number,
+                    )
 
-            if not push_result["success"]:
-                logger.error(f"Failed to push cleanup changes: {push_result['error']}")
-                return 1
-            log_step("Cleanup changes pushed successfully")
-    else:
-        log_step("No cleanup changes to commit")
+                    if success:
+                        log_step("✓ Issue label updated: pr-creating → pr-created")
+                    else:
+                        logger.warning("✗ Failed to update issue label (non-blocking)")
 
-    # Update GitHub issue label if requested
-    if update_labels:
-        if cached_issue_number is None:
-            logger.warning("Skipping label update: branch was not linked to an issue")
-        else:
-            log_step("Updating GitHub issue label...")
+                except (
+                    Exception
+                ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+                    logger.error(f"Error updating issue label (non-blocking): {e}")
+
+        log_step("Create PR workflow completed successfully!")
+        reached_terminal_state = True
+        return 0
+
+    finally:
+        if not reached_terminal_state:
+            elapsed = time.time() - start_time
             try:
-                from mcp_coder.utils.github_operations.issues import IssueManager
-
-                issue_manager = IssueManager(project_dir)
-                success = issue_manager.update_workflow_label(
-                    from_label_id="pr_creating",
-                    to_label_id="pr_created",
-                    validated_issue_number=cached_issue_number,  # Use cached value
+                _handle_create_pr_failure(
+                    stage="unexpected",
+                    message="Workflow exited unexpectedly",
+                    project_dir=project_dir,
+                    update_labels=update_labels,
+                    elapsed_time=elapsed,
+                    issue_number=cached_issue_number,
                 )
-
-                if success:
-                    log_step("✓ Issue label updated: pr-creating → pr-created")
-                else:
-                    logger.warning("✗ Failed to update issue label (non-blocking)")
-
-            except (
-                Exception
-            ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-                logger.error(f"Error updating issue label (non-blocking): {e}")
-
-    log_step("Create PR workflow completed successfully!")
-    return 0
+            except Exception:  # pylint: disable=broad-exception-caught
+                logger.error("Safety net failure handler also failed")
