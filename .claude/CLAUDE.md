@@ -20,6 +20,10 @@
 | Run pytest | `Bash("pytest ...")` | `mcp__tools-py__run_pytest_check()` |
 | Run pylint | `Bash("pylint ...")` | `mcp__tools-py__run_pylint_check()` |
 | Run mypy | `Bash("mypy ...")` | `mcp__tools-py__run_mypy_check()` |
+| Format code | `Bash("./tools/format_all.sh")` | `mcp__tools-py__run_format_code()` |
+| Lint imports | `Bash("./tools/lint_imports.sh")` | `mcp__tools-py__run_lint_imports_check()` |
+| Vulture check | `Bash("./tools/vulture_check.sh")` | `mcp__tools-py__run_vulture_check()` |
+| Get library source | _(new capability)_ | `mcp__tools-py__get_library_source()` |
 | Run ruff | `Bash("ruff ...")` | ✅ `Bash("./tools/ruff_check.sh")` |
 | Git operations | ✅ `Bash("git ...")` | ✅ `Bash("git ...")` (allowed) |
 | View diff (compact) | `Bash("git diff")` | ✅ `Bash("mcp-coder git-tool compact-diff")` |
@@ -116,12 +120,14 @@ Read(file_path="src/example.py")
 Edit(file_path="src/example.py", old_string="...", new_string="...")
 Write(file_path="src/new.py", content="...")
 Bash("pytest tests/")
+Bash("./tools/format_all.sh")
 
 # ✅ CORRECT - MCP tools
 mcp__workspace__read_file(file_path="src/example.py")
 mcp__workspace__edit_file(file_path="src/example.py", edits=[...])
 mcp__workspace__save_file(file_path="src/new.py", content="...")
 mcp__tools-py__run_pytest_check(extra_args=["-n", "auto"])
+mcp__tools-py__run_format_code()
 ```
 
 **WHY MCP TOOLS ARE MANDATORY:**
@@ -161,9 +167,9 @@ mcp__tools-py__run_pytest_check(extra_args=["-n", "auto"])
 
 **MANDATORY: Before ANY commit:**
 
-```bash
-# ALWAYS run format_all before committing
-./tools/format_all.sh
+```
+# ALWAYS format code before committing
+mcp__tools-py__run_format_code
 
 # Then verify formatting worked
 git diff  # Should show formatting changes if any
@@ -171,7 +177,7 @@ git diff  # Should show formatting changes if any
 
 **Format all code before committing:**
 
-- Run `./tools/format_all.sh` to format with black and isort
+- Run `mcp__tools-py__run_format_code` to format with black and isort
 - Review the changes to ensure they're formatting-only
 - Stage the formatted files
 - Then commit

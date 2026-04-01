@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2B: Config — update CLAUDE.md with MCP tool references
-- [ ] Implementation: update tool mapping table, git operations section, and quick examples in `CLAUDE.md`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: update tool mapping table, git operations section, and quick examples in `CLAUDE.md`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3A: Skills — replace format_all.sh with MCP tool in commit_push
 - [ ] Implementation: swap allowed-tools entries and update step 1 in `commit_push/SKILL.md`
