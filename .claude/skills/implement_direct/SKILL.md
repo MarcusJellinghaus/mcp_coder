@@ -2,24 +2,34 @@
 name: implement-direct
 disable-model-invocation: true
 argument-hint: [issue-number]
-allowed-tools: Bash(mcp-coder gh-tool *)
+allowed-tools:
+  - "Bash(gh issue view *)"
+  - "Bash(mcp-coder gh-tool *)"
+  - mcp__workspace__read_file
 ---
 
 # Implement Direct
 
 Implement a small, well-defined issue directly — no planning phase, no task tracker.
 
+## Resolve Issue Number
+
+The user may provide an issue number as the argument (available as `$ARGUMENTS`).
+If no issue number is provided:
+1. Read `.vscodeclaude_status.txt` and extract the issue number from the `Issue #NNN` line
+2. If the file doesn't exist or has no issue number, ask the user
+
 ## Steps
 
 1. **Fetch issue details**
    ```bash
-   gh issue view $ARGUMENTS
+   gh issue view <issue_number>
    ```
    Read the issue title, description, and acceptance criteria carefully.
 
 2. **Checkout/create issue branch**
    ```bash
-   mcp-coder gh-tool checkout-issue-branch $ARGUMENTS
+   mcp-coder gh-tool checkout-issue-branch <issue_number>
    ```
 
 3. **Understand context**
