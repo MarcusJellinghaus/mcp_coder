@@ -265,7 +265,7 @@ def delete_session_folder(
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error("Failed to delete session folder %s: %s", folder_path, e)
-        if was_clean and workspace_base is not None:
+        if was_clean:
             add_to_be_deleted(workspace_base, folder_path.name)
             remove_session(session["folder"])
             logger.info("Soft-deleted (exception path): %s", folder_path.name)
