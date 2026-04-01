@@ -1,83 +1,104 @@
-# Step 2: Update CLAUDE.md tool mapping and commit instructions
+# Step 2: Add MCP tool references to documentation
 
 ## References
 - [Summary](summary.md)
 - Issue #672
 
 ## WHERE
-- `.claude/CLAUDE.md`
+- `docs/repository-setup.md`
+- `docs/configuration/claude-code.md`
+- `docs/processes-prompts/refactoring-guide.md`
+- `docs/architecture/dependencies/readme.md`
 
 ## WHAT
 
-### "Before ANY commit" section
+Add brief inline MCP tool notes. No subsection restructuring — keep changes minimal.
 
-Replace:
-```bash
-# ALWAYS run format_all before committing
-./tools/format_all.sh
+### docs/repository-setup.md
+
+**"Running Architecture Tools" section** — After the "Recommended Approach: Use Tools Scripts" paragraph, add a note:
+
+```markdown
+> **Claude Code users:** MCP equivalents are available — `mcp__tools-py__run_format_code`, `mcp__tools-py__run_lint_imports_check`, `mcp__tools-py__run_vulture_check`. See `.claude/CLAUDE.md` for the full tool mapping.
+```
+
+**Formatting Tools table** — Add a note after the `format_all.sh/bat` row or in the description:
+
+```markdown
+> **Claude Code:** Use `mcp__tools-py__run_format_code` instead of the shell script.
+```
+
+### docs/configuration/claude-code.md
+
+**Permissions JSON example** — Replace:
+```json
+"Bash(./tools/format_all.sh:*)",
+```
+With:
+```json
+"mcp__tools-py__run_format_code",
+```
+
+**Security considerations bullet** — Replace:
+```
+- **Allow formatting tools**: `Bash(./tools/format_all.sh:*)` for code formatting
 ```
 With:
 ```
-# ALWAYS run mcp__tools-py__run_format_code before committing
-```
-(Plain text MCP tool reference, matching existing pylint/pytest/mypy pattern.)
-
-### "Format all code before committing" section
-
-Replace:
-```
-- Run `./tools/format_all.sh` to format with black and isort
-```
-With:
-```
-- Run `mcp__tools-py__run_format_code` to format with black and isort
+- **Allow formatting tools**: `mcp__tools-py__run_format_code` for code formatting
 ```
 
-### Code Quality Requirements section
+### docs/processes-prompts/refactoring-guide.md
 
-Update the count from "ALL THREE" to "ALL FIVE". Add two new descriptive bullets for `mcp__tools-py__run_lint_imports_check` and `mcp__tools-py__run_vulture_check` alongside the existing pylint/pytest/mypy bullets. Also add the 2 new tools to the code block listing the MCP tool names.
+**"Standard Checks" section** — Add MCP equivalents inline:
 
-### Refactoring row in Tool Mapping Table
+```markdown
+# Import structure
+./tools/lint_imports.sh          # humans/CI
+./tools/tach_check.sh
 
-Add `get_library_source()` to the existing Refactoring row (which already lists `move_symbol()`, `list_symbols()`, `find_references()`).
+# Functionality (Claude Code MCP tools)
+mcp__tools-py__run_pytest_check
+mcp__tools-py__run_pylint_check
+mcp__tools-py__run_mypy_check
+mcp__tools-py__run_lint_imports_check   # MCP equivalent of lint_imports.sh
+mcp__tools-py__run_vulture_check        # MCP equivalent of vulture_check.sh
+```
 
-### Tool Mapping Table — no new rows
+### docs/architecture/dependencies/readme.md
 
-The table is for "don't use X, use Y" replacements. Claude wouldn't naturally run these shell scripts via Bash, so no "NEVER USE" entries are needed. No new rows added.
+**Tools table** — Add a note after the table:
 
-### Git Operations "ALLOWED" list
-
-No changes needed — `format_all.sh` is not in that list.
+```markdown
+> **Claude Code users:** MCP equivalents exist for `lint_imports.sh` (`mcp__tools-py__run_lint_imports_check`) and `vulture_check.sh` (`mcp__tools-py__run_vulture_check`). See `.claude/CLAUDE.md`.
+```
 
 ## HOW
 
-Edit markdown instruction text and table. Match existing formatting conventions.
+Edit markdown files. Add blockquote notes or inline comments — no structural changes.
 
 ## DATA
 
-No code logic — markdown only.
+No code logic — documentation only.
 
 ## Verification
 
-- No remaining references to `format_all.sh` in CLAUDE.md
-- `ruff_check.sh` row is unchanged
-- `mcp__tools-py__run_lint_imports_check` and `mcp__tools-py__run_vulture_check` appear in the Code Quality Requirements section
-- `get_library_source()` appears in the Refactoring row of the tool mapping table
-- "Before ANY commit" and "Format all code" sections reference `mcp__tools-py__run_format_code`
+- All 4 files edited
+- MCP tool names are spelled correctly
+- Existing content is preserved
+- Shell script references remain for humans/CI
+- No broken markdown formatting
 
 ## LLM Prompt
 
 ```
 Read pr_info/steps/summary.md and pr_info/steps/step_2.md for context.
 
-Edit `.claude/CLAUDE.md`:
-1. Update "Before ANY commit" section — replace the content inside the code block with mcp__tools-py__run_format_code (keep the code block wrapper for consistency with the quality checks section above)
-2. Update "Format all code before committing" bullet — same replacement
-3. In Code Quality Requirements section: change "ALL THREE" to "ALL FIVE", add descriptive bullets for lint_imports_check and vulture_check alongside existing pylint/pytest/mypy bullets, and add the 2 new tools to the code block listing MCP tool names
-4. In the tool mapping table Refactoring row, add get_library_source() alongside existing move_symbol(), list_symbols(), find_references()
-5. Do NOT add new rows to the tool mapping table for format_code, lint_imports, or vulture_check
-6. Leave ruff_check.sh references unchanged
-7. Leave Git Operations "ALLOWED" list unchanged
+Edit 4 documentation files to add brief MCP tool references:
+1. `docs/repository-setup.md` — Add note after "Running Architecture Tools" section and formatting tools table
+2. `docs/configuration/claude-code.md` — Update permissions example and security bullet (format_all.sh → MCP tool)
+3. `docs/processes-prompts/refactoring-guide.md` — Add MCP equivalents to "Standard Checks" section
+4. `docs/architecture/dependencies/readme.md` — Add note after tools table
 
-Use plain text MCP tool references matching the existing pylint/pytest/mypy pattern. Run code quality checks. Commit as: "docs: update CLAUDE.md tool mapping and commit instructions"
+Find the closest matching section if exact section names differ slightly from what's listed here. Keep changes minimal — inline notes, not subsection restructuring. Shell script references stay for humans/CI. Run code quality checks. Commit as: "docs: add MCP tool references to documentation"
 ```
