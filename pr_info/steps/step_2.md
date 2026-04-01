@@ -1,85 +1,83 @@
-# Step 2: Replace format_all.sh with MCP tool in skills
+# Step 2: Update CLAUDE.md tool mapping and commit instructions
 
 ## References
 - [Summary](summary.md)
 - Issue #672
 
 ## WHERE
-- `.claude/skills/commit_push/SKILL.md`
-- `.claude/skills/implement_direct/SKILL.md`
-- `.claude/skills/rebase/SKILL.md`
+- `.claude/CLAUDE.md`
 
 ## WHAT
 
-### commit_push/SKILL.md
+### "Before ANY commit" section
 
-**allowed-tools** — Remove:
-```
-- "Bash(./tools/format_all.sh *)"
-- "Bash(tools/format_all.bat *)"
-```
-Add:
-```
-- mcp__tools-py__run_format_code
-```
-
-**Step 1 instructions** — Replace the bash block `./tools/format_all.sh` with:
-```
-Run `mcp__tools-py__run_format_code` to format all code.
-```
-
-### implement_direct/SKILL.md
-
-**allowed-tools** — Add (was missing entirely — issue decision #6):
-```
-- mcp__tools-py__run_format_code
-```
-
-**Step 6** — Replace:
+Replace:
 ```bash
+# ALWAYS run format_all before committing
 ./tools/format_all.sh
 ```
-With reference to `mcp__tools-py__run_format_code`.
+With:
+```
+# ALWAYS run mcp__tools-py__run_format_code before committing
+```
+(Plain text MCP tool reference, matching existing pylint/pytest/mypy pattern.)
 
-### rebase/SKILL.md
+### "Format all code before committing" section
 
-**allowed-tools** — Remove:
+Replace:
 ```
-- "Bash(./tools/format_all.sh *)"
-- "Bash(tools/format_all.bat *)"
+- Run `./tools/format_all.sh` to format with black and isort
 ```
-Add:
+With:
 ```
-- mcp__tools-py__run_format_code
+- Run `mcp__tools-py__run_format_code` to format with black and isort
 ```
 
-No instruction text changes needed — format_all.sh is only in allowed-tools, not in the workflow text.
+### Code Quality Requirements section
+
+Update the count from "ALL THREE" to "ALL FIVE". Add two new descriptive bullets for `mcp__tools-py__run_lint_imports_check` and `mcp__tools-py__run_vulture_check` alongside the existing pylint/pytest/mypy bullets. Also add the 2 new tools to the code block listing the MCP tool names.
+
+### Refactoring row in Tool Mapping Table
+
+Add `get_library_source()` to the existing Refactoring row (which already lists `move_symbol()`, `list_symbols()`, `find_references()`).
+
+### Tool Mapping Table — no new rows
+
+The table is for "don't use X, use Y" replacements. Claude wouldn't naturally run these shell scripts via Bash, so no "NEVER USE" entries are needed. No new rows added.
+
+### Git Operations "ALLOWED" list
+
+No changes needed — `format_all.sh` is not in that list.
 
 ## HOW
 
-Edit YAML frontmatter `allowed-tools` lists and markdown instruction text.
+Edit markdown instruction text and table. Match existing formatting conventions.
 
 ## DATA
 
-No code logic — SKILL.md configuration only.
+No code logic — markdown only.
 
 ## Verification
 
-- YAML frontmatter parses correctly (no broken `---` boundaries)
-- `mcp__tools-py__run_format_code` appears in all 3 skills' allowed-tools
-- No references to `format_all.sh` or `format_all.bat` remain in any skill
-- `ruff_check.sh` reference in implement_direct step 5 is unchanged
+- No remaining references to `format_all.sh` in CLAUDE.md
+- `ruff_check.sh` row is unchanged
+- `mcp__tools-py__run_lint_imports_check` and `mcp__tools-py__run_vulture_check` appear in the Code Quality Requirements section
+- `get_library_source()` appears in the Refactoring row of the tool mapping table
+- "Before ANY commit" and "Format all code" sections reference `mcp__tools-py__run_format_code`
 
 ## LLM Prompt
 
 ```
 Read pr_info/steps/summary.md and pr_info/steps/step_2.md for context.
 
-Edit 3 skill files to replace format_all.sh/.bat with mcp__tools-py__run_format_code:
+Edit `.claude/CLAUDE.md`:
+1. Update "Before ANY commit" section — replace the content inside the code block with mcp__tools-py__run_format_code (keep the code block wrapper for consistency with the quality checks section above)
+2. Update "Format all code before committing" bullet — same replacement
+3. In Code Quality Requirements section: change "ALL THREE" to "ALL FIVE", add descriptive bullets for lint_imports_check and vulture_check alongside existing pylint/pytest/mypy bullets, and add the 2 new tools to the code block listing MCP tool names
+4. In the tool mapping table Refactoring row, add get_library_source() alongside existing move_symbol(), list_symbols(), find_references()
+5. Do NOT add new rows to the tool mapping table for format_code, lint_imports, or vulture_check
+6. Leave ruff_check.sh references unchanged
+7. Leave Git Operations "ALLOWED" list unchanged
 
-1. `.claude/skills/commit_push/SKILL.md` — Update allowed-tools (remove 2 Bash entries, add MCP tool) and update step 1 instructions
-2. `.claude/skills/implement_direct/SKILL.md` — Add MCP tool to allowed-tools (it was missing), update step 6 instructions
-3. `.claude/skills/rebase/SKILL.md` — Update allowed-tools only (remove 2 Bash entries, add MCP tool)
-
-Keep ruff_check.sh references unchanged. Run code quality checks. Commit as: "chore: replace format_all.sh with MCP tool in skills"
+Use plain text MCP tool references matching the existing pylint/pytest/mypy pattern. Run code quality checks. Commit as: "docs: update CLAUDE.md tool mapping and commit instructions"
 ```

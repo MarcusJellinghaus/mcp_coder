@@ -1,104 +1,98 @@
-# Step 4: Add MCP tool references to documentation
+# Step 4: Decouple CI log parser test fixtures from real tool names
 
 ## References
 - [Summary](summary.md)
 - Issue #672
 
 ## WHERE
-- `docs/repository-setup.md`
-- `docs/configuration/claude-code.md`
-- `docs/processes-prompts/refactoring-guide.md`
-- `docs/architecture/dependencies/readme.md`
+- `tests/checks/test_ci_log_parser.py`
 
 ## WHAT
 
-Add brief inline MCP tool notes. No subsection restructuring — keep changes minimal.
+Replace real tool command names in test fixture data with realistic-but-fictional names. This decouples test data from actual tool names so future tool renames don't require test updates.
 
-### docs/repository-setup.md
+### VULTURE_LOG fixture
 
-**"Running Architecture Tools" section** — After the "Recommended Approach: Use Tools Scripts" paragraph, add a note:
-
-```markdown
-> **Claude Code users:** MCP equivalents are available — `mcp__tools-py__run_format_code`, `mcp__tools-py__run_lint_imports_check`, `mcp__tools-py__run_vulture_check`. See `.claude/CLAUDE.md` for the full tool mapping.
-```
-
-**Formatting Tools table** — Add a note after the `format_all.sh/bat` row or in the description:
-
-```markdown
-> **Claude Code:** Use `mcp__tools-py__run_format_code` instead of the shell script.
-```
-
-### docs/configuration/claude-code.md
-
-**Permissions JSON example** — Replace:
-```json
-"Bash(./tools/format_all.sh:*)",
+Replace:
+```python
+"##[group]Run vulture --version && ./tools/vulture_check.sh\n"
+"vulture --version && ./tools/vulture_check.sh\n"
 ```
 With:
-```json
-"mcp__tools-py__run_format_code",
+```python
+"##[group]Run tool-alpha --version && ./tools/tool_alpha.sh\n"
+"tool-alpha --version && ./tools/tool_alpha.sh\n"
 ```
 
-**Security considerations bullet** — Replace:
-```
-- **Allow formatting tools**: `Bash(./tools/format_all.sh:*)` for code formatting
-```
-With:
-```
-- **Allow formatting tools**: `mcp__tools-py__run_format_code` for code formatting
+Update tool output to match fictional name:
+```python
+"tool-alpha 2.15\n"           # was "vulture 2.15\n"
+"Checking for dead code...\n"  # keep — describes behavior, not tool name
 ```
 
-### docs/processes-prompts/refactoring-guide.md
+### Assertions in test methods
 
-**"Standard Checks" section** — Add MCP equivalents inline:
+Update all string matches that reference the old command/tool names:
 
-```markdown
-# Import structure
-./tools/lint_imports.sh          # humans/CI
-./tools/tach_check.sh
+- `"Run vulture"` → `"Run tool-alpha"`
+- `"vulture 2.15"` → `"tool-alpha 2.15"`
+- `"Run vulture --version && ./tools/vulture_check.sh"` → `"Run tool-alpha --version && ./tools/tool_alpha.sh"`
 
-# Functionality (Claude Code MCP tools)
-mcp__tools-py__run_pytest_check
-mcp__tools-py__run_pylint_check
-mcp__tools-py__run_mypy_check
-mcp__tools-py__run_lint_imports_check   # MCP equivalent of lint_imports.sh
-mcp__tools-py__run_vulture_check        # MCP equivalent of vulture_check.sh
-```
+### FILE_SIZE_LOG fixture
 
-### docs/architecture/dependencies/readme.md
+**No changes** — `mcp-coder check file-size` is not a replaced tool.
 
-**Tools table** — Add a note after the table:
+### test_branch_status.py
 
-```markdown
-> **Claude Code users:** MCP equivalents exist for `lint_imports.sh` (`mcp__tools-py__run_lint_imports_check`) and `vulture_check.sh` (`mcp__tools-py__run_vulture_check`). See `.claude/CLAUDE.md`.
-```
+**No changes** — confirmed no references to the three scripts.
 
 ## HOW
 
-Edit markdown files. Add blockquote notes or inline comments — no structural changes.
+Edit string literals in test file. Keep log structure (GitHub Actions `##[group]`/`##[endgroup]`/`##[error]` markers) identical.
+
+## ALGORITHM
+
+```
+1. Replace tool name strings in VULTURE_LOG constant
+2. Update version string to match fictional name
+3. Update assertion strings in test_vulture_real_log_structure
+4. Update assertion strings in test_captures_output_between_endgroup_and_error
+5. Update assertion strings in test_error_fallback_with_outside_output
+6. Run pytest to verify all tests still pass
+```
 
 ## DATA
 
-No code logic — documentation only.
+**Input**: Test fixture strings with real tool names
+**Output**: Test fixture strings with fictional names, same log format
+
+Fictional naming convention:
+- CLI command: `tool-alpha` (hyphenated, like real CLI tools)
+- Script: `./tools/tool_alpha.sh` (underscored, like real scripts)
 
 ## Verification
 
-- All 4 files edited
-- MCP tool names are spelled correctly
-- Existing content is preserved
-- Shell script references remain for humans/CI
-- No broken markdown formatting
+- All tests in `tests/checks/test_ci_log_parser.py` pass
+- No references to `vulture_check.sh` or plain `vulture` remain in the file (except in test method names, which are kept unchanged)
+- `FILE_SIZE_LOG` fixture is unchanged
+- Log format markers (`##[group]`, `##[endgroup]`, `##[error]`) are preserved
+- Test logic is identical — only string literals changed
 
 ## LLM Prompt
 
 ```
 Read pr_info/steps/summary.md and pr_info/steps/step_4.md for context.
 
-Edit 4 documentation files to add brief MCP tool references:
-1. `docs/repository-setup.md` — Add note after "Running Architecture Tools" section and formatting tools table
-2. `docs/configuration/claude-code.md` — Update permissions example and security bullet (format_all.sh → MCP tool)
-3. `docs/processes-prompts/refactoring-guide.md` — Add MCP equivalents to "Standard Checks" section
-4. `docs/architecture/dependencies/readme.md` — Add note after tools table
+Edit `tests/checks/test_ci_log_parser.py`:
+1. Replace real tool names in VULTURE_LOG fixture with fictional "tool-alpha" / "tool_alpha.sh"
+2. Update version string: "vulture 2.15" → "tool-alpha 2.15"
+3. Update all assertion strings that match against the old names
+4. Keep log format structure identical (##[group], ##[endgroup], ##[error] markers)
+5. Do NOT modify FILE_SIZE_LOG or any other fixture
 
-Keep changes minimal — inline notes, not subsection restructuring. Shell script references stay for humans/CI. Run code quality checks. Commit as: "docs: add MCP tool references to documentation"
+Do NOT rename test methods or functions — only change string literals in fixtures and assertions.
+
+Run pytest to verify: mcp__tools-py__run_pytest_check with extra_args ["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration and not textual_integration"]
+
+Run all quality checks. Commit as: "test: decouple CI log parser fixtures from real tool names"
 ```
