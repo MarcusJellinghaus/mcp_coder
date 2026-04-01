@@ -619,6 +619,11 @@ pycycle --here
 vulture src tests vulture_whitelist.py --min-confidence 60
 ```
 
+**For Claude Code**, use MCP tools instead of shell scripts:
+- `mcp__tools-py__run_format_code` (replaces `format_all.sh`)
+- `mcp__tools-py__run_lint_imports_check` (replaces `lint_imports.sh`)
+- `mcp__tools-py__run_vulture_check` (replaces `vulture_check.sh`)
+
 ### Import Architecture Enforcement
 
 **Tool: import-linter**
@@ -690,7 +695,7 @@ mcp-coder check file-size --max-lines 750
 - **Purpose:** Pre-approve safe tools while maintaining security
 - **Principles:** Only allow tools that change project folder (git-tracked) or read-only commands
 - **Security:** No system-wide edits, no file deletion outside project
-- **Architecture Tools:** Use `./tools/` scripts for consistent UX and error handling
+- **Architecture Tools:** Use `./tools/` scripts for consistent UX and error handling. **For Claude Code**, prefer MCP tools: `mcp__tools-py__run_format_code`, `mcp__tools-py__run_lint_imports_check`, `mcp__tools-py__run_vulture_check`, `mcp__tools-py__get_library_source`
 - **Reference:** See `.claude/settings.local.json` in this repository
 
 **4. Automated Dependency Management**
@@ -709,6 +714,9 @@ Convenience scripts for local development. Create a `tools/` directory with thes
 | `format_all.sh/bat` | Run black + isort on src/tests | **Mandatory** before commits |
 | `black.bat` | Run black formatter only | Optional |
 | `iSort.bat` | Run isort only | Optional |
+
+> **For Claude Code:** Use `mcp__tools-py__run_format_code` (runs both isort and black).
+> Shell scripts are for human developers and CI pipelines.
 
 **format_all.sh:**
 ```bash

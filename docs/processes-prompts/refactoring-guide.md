@@ -119,16 +119,24 @@ When splitting a module into sub-modules, the new files may have internal depend
 
 #### Standard Checks
 
+**For humans / CI:**
+
 ```bash
 # Import structure
 ./tools/lint_imports.sh
 ./tools/tach_check.sh
+```
 
-# Functionality (Claude Code MCP tools)
+**For Claude Code (MCP tools):**
+
+```
+mcp__tools-py__run_lint_imports_check
 mcp__tools-py__run_pytest_check
 mcp__tools-py__run_pylint_check
 mcp__tools-py__run_mypy_check
 ```
+
+> `tach_check.sh` has no MCP equivalent — run it via Bash when needed.
 
 ## Common Patterns
 

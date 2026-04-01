@@ -15,6 +15,9 @@ class TestFailureCategory:
         assert FailureCategory.GENERAL.value == "implementing_failed"
         assert FailureCategory.CI_FIX_EXHAUSTED.value == "ci_fix_needed"
         assert FailureCategory.LLM_TIMEOUT.value == "llm_timeout"
+        assert (
+            FailureCategory.TASK_TRACKER_PREP_FAILED.value == "task_tracker_prep_failed"
+        )
 
 
 class TestWorkflowFailure:

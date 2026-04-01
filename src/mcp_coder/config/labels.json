@@ -125,6 +125,19 @@
       }
     },
     {
+      "internal_id": "task_tracker_prep_failed",
+      "name": "status-06f-prep:task-tracker-prep-failed",
+      "color": "b60205",
+      "description": "Task tracker preparation failed",
+      "category": "human_action",
+      "vscodeclaude": {
+        "emoji": "❌",
+        "display_name": "TASK TRACKER PREP FAILED",
+        "stage_short": "prep-fail",
+        "commands": ["/check_branch_status"]
+      }
+    },
+    {
       "internal_id": "ci_fix_needed",
       "name": "status-06f-ci:ci-fix-needed",
       "color": "d93f0b",

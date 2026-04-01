@@ -126,11 +126,13 @@ This file configures Claude Code permissions and MCP server settings for your lo
 {
   "permissions": {
     "allow": [
-      "mcp__tools-py__*",
       "mcp__workspace__*",
+      "mcp__tools-py__run_format_code",
+      "mcp__tools-py__run_lint_imports_check",
+      "mcp__tools-py__run_vulture_check",
+      "mcp__tools-py__get_library_source",
       "Bash(git diff:*)",
       "Bash(git status:*)",
-      "Bash(./tools/format_all.sh:*)",
       "Skill(commit_push)",
       "Skill(plan_review)"
     ]
@@ -153,9 +155,9 @@ This file configures Claude Code permissions and MCP server settings for your lo
 
 **Security considerations:**
 
-- **Allow MCP servers**: Enable `mcp__tools-py__*` and `mcp__workspace__*` for development workflows
+- **Allow MCP servers**: Enable `mcp__workspace__*` and specific `mcp__tools-py__` tools for development workflows
 - **Allow read-only commands**: `Bash(git diff:*)`, `Bash(git status:*)` are safe
-- **Allow formatting tools**: `Bash(./tools/format_all.sh:*)` for code formatting
+- **Allow formatting tools**: `mcp__tools-py__run_format_code` for code formatting via MCP
 - **Restrict dangerous commands**: Do NOT allow unrestricted `Bash(*)` - this could modify files outside the project or execute arbitrary commands
 
 **Gitignore:** For your own projects, add to `.gitignore`:
