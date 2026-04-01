@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Update CLAUDE.md — remaining sections
-- [ ] Implementation: update Code Quality Requirements (THREE→FIVE, add lint_imports/vulture bullets and tool names) and add `get_library_source()` to Refactoring row
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `docs: update CLAUDE.md quality checks section and refactoring row`
+- [x] Implementation: update Code Quality Requirements (THREE→FIVE, add lint_imports/vulture bullets and tool names) and add `get_library_source()` to Refactoring row
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `docs: update CLAUDE.md quality checks section and refactoring row`
 
 ### Step 2: Add MCP tool references to documentation
 - [ ] Implementation: add inline MCP tool notes to `docs/repository-setup.md`, `docs/configuration/claude-code.md`, `docs/processes-prompts/refactoring-guide.md`, `docs/architecture/dependencies/readme.md`
