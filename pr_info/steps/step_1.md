@@ -97,12 +97,11 @@ down():
 6. `test_down_restores_entries_then_draft` — navigate up fully, then `down()` walks forward, final `down()` returns draft
 7. `test_down_at_newest_returns_none` — without navigating up, `down()` returns `None`
 8. `test_draft_preservation` — type "draft text", up, then down past newest restores "draft text"
-9. `test_consecutive_duplicate_suppressed` — add same text twice, only one entry stored
-10. `test_non_consecutive_duplicate_allowed` — add A, B, A; all three stored
-11. `test_whitespace_only_rejected` — `add("  ")` does nothing
-12. `test_multiline_entry` — multi-line string stored and returned intact
-13. `test_reset_cursor` — after navigating up, `reset_cursor()` puts cursor back at end
-14. `test_add_resets_cursor` — navigating up then adding new entry resets position
+9. `test_duplicate_handling` — parameterized: `("consecutive", ["A", "A"], 1)` expects dedup; `("non_consecutive", ["A", "B", "A"], 3)` expects all stored
+10. `test_blank_input_rejected` — parameterized over `"  "`, `"\t"`, `"\n"`, `""`: each is rejected by `add()`
+11. `test_multiline_entry` — multi-line string stored and returned intact
+12. `test_reset_cursor` — after navigating up, `reset_cursor()` puts cursor back at end
+13. `test_add_resets_cursor` — navigating up then adding new entry resets position
 
 ## LLM Prompt
 

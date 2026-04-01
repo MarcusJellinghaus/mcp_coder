@@ -38,9 +38,9 @@ if event.key == "up":
     row, _col = self.cursor_location
     if row == 0:  # cursor on first line
         result = self.history.up(self.text)
+        event.stop()
+        event.prevent_default()
         if result is not None:
-            event.stop()
-            event.prevent_default()
             self.clear()
             self.insert(result)
         return
@@ -50,9 +50,9 @@ if event.key == "down":
     last_row = self.document.line_count - 1
     if row == last_row:  # cursor on last line
         result = self.history.down()
+        event.stop()
+        event.prevent_default()
         if result is not None:
-            event.stop()
-            event.prevent_default()
             self.clear()
             self.insert(result)
         return
@@ -64,14 +64,16 @@ if event.key == "down":
 on_key(up):
     if cursor_row != 0: delegate to parent (normal cursor movement)
     result = history.up(current_text)
-    if result is None: return (at boundary, do nothing)
-    replace text area content with result
+    stop event propagation (prevent TextArea default behavior)
+    if result is not None: replace text area content with result
+    return
 
 on_key(down):
     if cursor_row != last_row: delegate to parent (normal cursor movement)
     result = history.down()
-    if result is None: return (at boundary, do nothing)
-    replace text area content with result
+    stop event propagation (prevent TextArea default behavior)
+    if result is not None: replace text area content with result
+    return
 ```
 
 ## DATA — No New Types
@@ -92,7 +94,7 @@ Use existing `WidgetTestApp` pattern. Tests:
 1. **`test_input_area_up_arrow_restores_history`** — Submit "hello" via insert+enter, press Up, verify text becomes "hello"
 2. **`test_input_area_down_arrow_restores_draft`** — Submit "cmd", type "draft", press Up (see "cmd"), press Down (see "draft")
 3. **`test_input_area_up_arrow_no_history_does_nothing`** — Press Up on empty history, text stays empty
-4. **`test_input_area_up_down_multiline_cursor_movement`** — Insert multi-line text, put cursor on line 1 (not first/last), press Up — cursor moves normally (not history)
+4. **`test_input_area_up_down_multiline_cursor_movement`** — Insert `"line1\nline2\nline3"` (cursor ends at last line, line 2). Press Up to move cursor to line 1 (middle line) — normal cursor movement, not history. Press Up again to move to line 0 — still normal cursor movement. Verify text content is unchanged (no history substitution occurred).
 
 Note: These tests need a `SubmitApp` that captures `InputSubmitted` messages AND calls `history.add()` to simulate the full flow (since in production the app calls `history.add()`). Alternatively, directly call `input_area.history.add()` in the test setup.
 
