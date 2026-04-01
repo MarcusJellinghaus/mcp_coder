@@ -24,27 +24,7 @@ created in Step 1.
   1. Builds implement-specific comment via `_format_failure_comment()`
   2. Calls shared `handle_workflow_failure()` with the formatted comment
 
-### Updated `_handle_workflow_failure` signature (implement-specific wrapper):
-```python
-def _handle_workflow_failure(
-    failure: WorkflowFailure,
-    project_dir: Path,
-    update_labels: bool = False,
-    # implement-specific context for comment formatting:
-    tasks_completed: int = 0,
-    tasks_total: int = 0,
-    build_url: str | None = None,
-) -> None:
-```
-
-**Wait — simpler approach:** Keep the existing `_handle_workflow_failure` signature
-but adapt its internals. The function already receives a `WorkflowFailure`. We just
-need to:
-1. Change it to call `get_diff_stat` and `format_elapsed_time` from the shared module
-2. Call `handle_workflow_failure()` from shared module for label + comment posting
-3. Keep `_format_failure_comment()` local for implement-specific comment body
-
-### Actual minimal change to `_handle_workflow_failure`:
+### Minimal change to `_handle_workflow_failure`:
 ```python
 def _handle_workflow_failure(
     failure: WorkflowFailure,
@@ -75,11 +55,8 @@ It still receives the implement-local `WorkflowFailure` (which has `tasks_comple
 - Add imports: `from mcp_coder.workflow_utils.failure_handling import (WorkflowFailure as SharedWorkflowFailure, handle_workflow_failure, get_diff_stat, format_elapsed_time)`
 - The implement-local `WorkflowFailure` in constants.py is removed; a new local
   version is created as a dataclass with implement-specific fields + the shared fields
-- OR simpler: keep the implement `WorkflowFailure` as-is in constants.py but rename to
-  `ImplementWorkflowFailure` to avoid confusion
-
-**Simplest approach:** Keep `WorkflowFailure` in `implement/constants.py` unchanged
-(it has implement-specific fields). Import the shared one with an alias. The wrapper
+Keep `WorkflowFailure` in `implement/constants.py` unchanged (it has
+implement-specific fields). Import the shared one with an alias. The wrapper
 function maps from implement's dataclass to the shared one for the handler call.
 
 ## ALGORITHM — refactored `_handle_workflow_failure`:

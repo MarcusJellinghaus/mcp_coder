@@ -71,6 +71,8 @@ def _handle_create_pr_failure(
 | 6 | Commit cleanup changes fails | `cleanup` | pr_url, pr_number, is_cleanup=True |
 | 7 | Push cleanup changes fails | `cleanup` | pr_url, pr_number, is_cleanup=True |
 
+**Note on failure point #2:** The current code catches `(ValueError, FileNotFoundError)` from `generate_pr_summary()`. Broaden to `except Exception` so all failure types get the informative `summary_generation` stage rather than falling through to the safety net as "Unexpected exit".
+
 ### `test_failure_handling.py` — Test classes:
 ```python
 class TestFormatFailureComment:

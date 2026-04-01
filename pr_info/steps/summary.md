@@ -46,7 +46,7 @@ three things: log banner, set label (respects `update_labels`), post comment
 
 ### 2. `create_pull_request()` return type change
 
-Changes from `bool` to `dict | None`. Returns the `PullRequestData` dict (which
+Changes from `bool` to `PullRequestData | None`. Returns the `PullRequestData` dict (which
 has `number` and `url` fields) on success, `None` on failure. This enables
 cleanup-stage failure comments to include a link to the already-created PR.
 

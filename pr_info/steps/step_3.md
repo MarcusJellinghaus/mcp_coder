@@ -9,7 +9,7 @@ enabling cleanup failure comments to include a PR link.
 - **Modify:** `src/mcp_coder/workflows/create_pr/core.py` — `create_pull_request()` function
 - **Modify:** `src/mcp_coder/workflows/create_pr/core.py` — `run_create_pr_workflow()` caller site
 - **Modify:** `tests/workflows/create_pr/test_workflow.py` — update mocks for new return type
-- **Modify:** `tests/workflows/create_pr/test_repository.py` — update if it tests `create_pull_request()`
+- **Modify (check):** `tests/workflows/create_pr/test_repository.py` — read file to check if it mocks `create_pull_request()` return values; update if needed
 
 ## WHAT
 
@@ -31,6 +31,7 @@ def create_pull_request(project_dir: Path, title: str, body: str) -> PullRequest
 ### Changes inside `create_pull_request()`:
 - Instead of `return True` → `return pr_result`
 - Instead of `return False` → `return None`
+- Note: `PullRequestManager.create_pull_request()` returns an empty dict `{}` on failure (not None). The existing check `if not pr_result or not pr_result.get("number")` already handles this — change its `return False` to `return None`.
 - Remove the local logging of pr_number/pr_url (caller can do it if needed)
 
 ### Changes in `run_create_pr_workflow()` caller:
