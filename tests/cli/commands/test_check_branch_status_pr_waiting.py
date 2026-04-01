@@ -385,16 +385,19 @@ class TestPRPolling:
 class TestCIPendingHint:
     """Tests for the CI pending hint after report display."""
 
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
     def test_ci_pending_hint_when_timeout_zero(
         self,
         mock_collect: Mock,
         mock_resolve: Mock,
+        mock_branch: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """CI pending + ci_timeout=0 → hint printed."""
         mock_resolve.return_value = Path("/test/project")
+        mock_branch.return_value = "feature/xyz"
         mock_collect.return_value = _make_report(
             ci_status=CI_PENDING,
             recommendations=["Wait for CI to complete"],
@@ -407,25 +410,24 @@ class TestCIPendingHint:
         captured = capsys.readouterr()
         assert "CI pending. Use --ci-timeout to wait for completion." in captured.out
 
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
     def test_no_ci_hint_when_timeout_nonzero(
         self,
         mock_collect: Mock,
         mock_resolve: Mock,
+        mock_branch: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """CI pending + ci_timeout>0 → no hint."""
         mock_resolve.return_value = Path("/test/project")
+        mock_branch.return_value = "feature/xyz"
         mock_collect.return_value = _make_report(ci_status=CI_PENDING)
 
         # Need to mock CI waiting path too since ci_timeout > 0
         with (
             patch("mcp_coder.cli.commands.check_branch_status.CIResultsManager"),
-            patch(
-                "mcp_coder.cli.commands.check_branch_status.get_current_branch_name",
-                return_value="feature/xyz",
-            ),
             patch(
                 "mcp_coder.cli.commands.check_branch_status._wait_for_ci_completion",
                 return_value=(None, True),
@@ -439,16 +441,19 @@ class TestCIPendingHint:
             "CI pending. Use --ci-timeout to wait for completion." not in captured.out
         )
 
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
     def test_no_ci_hint_when_ci_passed(
         self,
         mock_collect: Mock,
         mock_resolve: Mock,
+        mock_branch: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """CI passed + ci_timeout=0 → no hint."""
         mock_resolve.return_value = Path("/test/project")
+        mock_branch.return_value = "feature/xyz"
         mock_collect.return_value = _make_report(ci_status="PASSED")
 
         args = _make_base_args(ci_timeout=0)
@@ -472,15 +477,18 @@ class TestCIPendingHint:
 class TestNoPRWaitingSkipsPolling:
     """Verify that wait_for_pr=False preserves existing behaviour."""
 
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
     def test_no_wait_for_pr_skips_polling(
         self,
         mock_collect: Mock,
         mock_resolve: Mock,
+        mock_branch: Mock,
     ) -> None:
         """wait_for_pr=False → no PR manager created, normal flow, report.pr_found is None."""
         mock_resolve.return_value = Path("/test/project")
+        mock_branch.return_value = "feature/xyz"
         report = _make_report()
         mock_collect.return_value = report
 

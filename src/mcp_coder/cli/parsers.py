@@ -445,7 +445,7 @@ def add_check_parsers(subparsers: Any) -> None:
         type=_validate_pr_timeout,
         default=600,
         metavar="SECONDS",
-        help="Max seconds to wait for PR to appear (default: 600)",
+        help="Max seconds to wait for PR to appear (default: 600) (only used with --wait-for-pr)",
     )
 
     # check file-size command

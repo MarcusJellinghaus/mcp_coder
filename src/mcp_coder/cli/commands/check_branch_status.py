@@ -157,12 +157,12 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
         pr_url: Optional[str] = None
         pr_found: Optional[bool] = None
 
-        if getattr(args, "wait_for_pr", False):
-            current_branch = get_current_branch_name(project_dir)
-            if not current_branch:
-                logger.error("Could not determine current branch")
-                return 2
+        current_branch = get_current_branch_name(project_dir)
+        if not current_branch:
+            logger.error("Could not determine current branch")
+            return 2
 
+        if getattr(args, "wait_for_pr", False):
             # Guard: check remote tracking branch
             if not has_remote_tracking_branch(project_dir):
                 print(
@@ -198,6 +198,8 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
                 # Sleep only if still within deadline
                 if time.monotonic() < deadline:
                     time.sleep(20)
+            else:
+                pr_found = False
 
             if not pr_found:
                 print(
@@ -211,11 +213,6 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
             logger.debug(f"CI timeout specified: {args.ci_timeout}s")
             try:
                 ci_manager = CIResultsManager(project_dir)
-                current_branch = get_current_branch_name(project_dir)
-
-                if not current_branch:
-                    logger.error("Could not determine current branch")
-                    return 2  # Technical error
 
                 ci_status, ci_success = _wait_for_ci_completion(
                     ci_manager,

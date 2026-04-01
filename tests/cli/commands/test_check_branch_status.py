@@ -77,12 +77,14 @@ class TestExecuteCheckBranchStatus:
     This follows test-first development - tests are written before implementation.
     """
 
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
     def test_execute_check_branch_status_read_only_success(
         self,
         mock_collect: Mock,
         mock_resolve_dir: Mock,
+        mock_branch: Mock,
         sample_report: BranchStatusReport,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -90,6 +92,7 @@ class TestExecuteCheckBranchStatus:
         # Setup mocks
         project_dir = Path("/test/project")
         mock_resolve_dir.return_value = project_dir
+        mock_branch.return_value = "feature/test-branch"
         mock_collect.return_value = sample_report
 
         args = argparse.Namespace(
@@ -113,12 +116,14 @@ class TestExecuteCheckBranchStatus:
         assert "Branch Status Report" in captured.out
         assert "CI Status: ✅ PASSED" in captured.out
 
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
     def test_execute_check_branch_status_llm_mode(
         self,
         mock_collect: Mock,
         mock_resolve_dir: Mock,
+        mock_branch: Mock,
         sample_report: BranchStatusReport,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -126,6 +131,7 @@ class TestExecuteCheckBranchStatus:
         # Setup mocks
         project_dir = Path("/test/project")
         mock_resolve_dir.return_value = project_dir
+        mock_branch.return_value = "feature/test-branch"
         mock_collect.return_value = sample_report
 
         args = argparse.Namespace(
@@ -148,6 +154,7 @@ class TestExecuteCheckBranchStatus:
         captured = capsys.readouterr()
         assert "Branch Status: CI=PASSED" in captured.out
 
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
     @patch("mcp_coder.cli.commands.check_branch_status._run_auto_fixes")
@@ -162,6 +169,7 @@ class TestExecuteCheckBranchStatus:
         mock_run_fixes: Mock,
         mock_collect: Mock,
         mock_resolve_dir: Mock,
+        mock_branch: Mock,
         failed_ci_report: BranchStatusReport,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -170,6 +178,7 @@ class TestExecuteCheckBranchStatus:
         project_dir = Path("/test/project")
         exec_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
+        mock_branch.return_value = "feature/test-branch"
         mock_resolve_exec.return_value = exec_dir
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
@@ -202,6 +211,7 @@ class TestExecuteCheckBranchStatus:
             llm_truncate=False,
         )
 
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
     @patch("mcp_coder.cli.commands.check_branch_status._run_auto_fixes")
@@ -216,6 +226,7 @@ class TestExecuteCheckBranchStatus:
         mock_run_fixes: Mock,
         mock_collect: Mock,
         mock_resolve_dir: Mock,
+        mock_branch: Mock,
         failed_ci_report: BranchStatusReport,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -224,6 +235,7 @@ class TestExecuteCheckBranchStatus:
         project_dir = Path("/test/project")
         exec_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
+        mock_branch.return_value = "feature/test-branch"
         mock_resolve_exec.return_value = exec_dir
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
@@ -271,18 +283,21 @@ class TestExecuteCheckBranchStatus:
         assert exc_info.value.code == 1
         mock_resolve_dir.assert_called_once_with("/invalid/path")
 
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
     def test_execute_check_branch_status_collection_exception(
         self,
         mock_collect: Mock,
         mock_resolve_dir: Mock,
+        mock_branch: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test check_branch_status execution with status collection failure."""
         # Setup mocks
         project_dir = Path("/test/project")
         mock_resolve_dir.return_value = project_dir
+        mock_branch.return_value = "feature/test-branch"
         mock_collect.side_effect = Exception("Git error")
 
         args = argparse.Namespace(
@@ -301,6 +316,7 @@ class TestExecuteCheckBranchStatus:
         captured = capsys.readouterr()
         assert "Error collecting branch status: Git error" in captured.err
 
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_llm_method")
@@ -311,6 +327,7 @@ class TestExecuteCheckBranchStatus:
         mock_resolve_llm: Mock,
         mock_collect: Mock,
         mock_resolve_dir: Mock,
+        mock_branch: Mock,
         sample_report: BranchStatusReport,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -318,6 +335,7 @@ class TestExecuteCheckBranchStatus:
         # Setup mocks
         project_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
+        mock_branch.return_value = "feature/test-branch"
         mock_collect.return_value = sample_report
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
