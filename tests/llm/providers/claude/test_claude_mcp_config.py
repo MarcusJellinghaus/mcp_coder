@@ -31,6 +31,8 @@ class TestClaudeMcpConfig:
             "",
             "--output-format",
             "stream-json",
+            "--tools",
+            "",
             "--verbose",
             "--input-format",
             "stream-json",

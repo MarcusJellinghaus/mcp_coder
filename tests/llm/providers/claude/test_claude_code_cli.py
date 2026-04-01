@@ -264,6 +264,8 @@ class TestPureFunctions:
             "",
             "--output-format",
             "stream-json",
+            "--tools",
+            "",
             "--verbose",
             "--input-format",
             "stream-json",
@@ -275,8 +277,23 @@ class TestPureFunctions:
         """Test command building with stream-json disabled."""
         cmd = build_cli_command(None, "claude", use_stream_json=False)
 
-        assert cmd == ["claude", "-p", "", "--output-format", "json"]
+        assert cmd == ["claude", "-p", "", "--output-format", "json", "--tools", ""]
         assert "--verbose" not in cmd  # verbose only needed for stream-json
+
+    def test_build_cli_command_always_includes_tools_flag(self) -> None:
+        """Test that --tools "" is always present regardless of options."""
+        variants = [
+            build_cli_command(None, "claude"),
+            build_cli_command("session-1", "claude"),
+            build_cli_command(None, "claude", use_stream_json=False),
+            build_cli_command(None, "claude", mcp_config=".mcp.json"),
+            build_cli_command(
+                "session-1", "claude", mcp_config=".mcp.json", use_stream_json=False
+            ),
+        ]
+        for cmd in variants:
+            tools_idx = cmd.index("--tools")
+            assert cmd[tools_idx + 1] == ""
 
     def test_build_cli_command_with_session(self) -> None:
         """Test command building with session ID (uses stdin)."""
