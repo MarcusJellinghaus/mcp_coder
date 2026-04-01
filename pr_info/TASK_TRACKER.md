@@ -21,6 +21,56 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Test fixture cleanup — decouple from real tool names
+- [ ] Implementation: replace real tool names with fictional names in test fixtures (`test_ci_log_parser.py`, `test_branch_status.py`)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2A: Config — update settings.local.json with MCP permissions
+- [ ] Implementation: add 4 MCP permissions, remove 3 Bash permissions in `settings.local.json`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2B: Config — update CLAUDE.md with MCP tool references
+- [ ] Implementation: update tool mapping table, git operations section, and quick examples in `CLAUDE.md`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3A: Skills — replace format_all.sh with MCP tool in commit_push
+- [ ] Implementation: swap allowed-tools entries and update step 1 in `commit_push/SKILL.md`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3B: Skills — replace format_all.sh with MCP tool in implement_direct
+- [ ] Implementation: add MCP tool to allowed-tools and update step 6 in `implement_direct/SKILL.md`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3C: Skills — replace format_all.sh with MCP tool in rebase
+- [ ] Implementation: swap allowed-tools entries in `rebase/SKILL.md`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4A: Docs — audience-split updates in repository-setup.md
+- [ ] Implementation: add MCP tool notes after formatting tools table and architecture tools examples
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4B: Docs — update settings example in claude-code.md
+- [ ] Implementation: replace format_all.sh in settings example with MCP tools, update security note
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4C: Docs — add MCP alternatives in refactoring-guide.md
+- [ ] Implementation: add MCP alternatives in standard checks section
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4D: Docs — add MCP column in dependencies/readme.md
+- [ ] Implementation: add MCP Tool column to tools table, add Claude Code alternative block
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review: verify all steps complete and checks pass
+- [ ] PR summary prepared
