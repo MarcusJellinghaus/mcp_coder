@@ -28,7 +28,6 @@ from mcp_coder.utils.git_operations.branch_queries import (
     extract_issue_number_from_branch,
 )
 from mcp_coder.utils.git_operations.commits import get_latest_commit_sha
-from mcp_coder.utils.git_operations.core import _safe_repo_context
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.github_operations.ci_results_manager import (
     CIResultsManager,
@@ -37,6 +36,14 @@ from mcp_coder.utils.github_operations.ci_results_manager import (
 from mcp_coder.utils.github_operations.issues import IssueManager
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.commit_operations import generate_commit_message_with_llm
+from mcp_coder.workflow_utils.failure_handling import (
+    WorkflowFailure as SharedWorkflowFailure,
+)
+from mcp_coder.workflow_utils.failure_handling import (
+    format_elapsed_time,
+    get_diff_stat,
+    handle_workflow_failure,
+)
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerFileNotFoundError,
     get_step_progress,
@@ -120,38 +127,6 @@ def _short_sha(sha: str) -> str:
     return sha[:7]
 
 
-def _get_diff_stat(project_dir: Path) -> str:
-    """Get git diff --stat for uncommitted changes.
-
-    Args:
-        project_dir: Path to the project directory
-
-    Returns:
-        Git diff stat output as a string, or empty string on error.
-    """
-    try:
-        with _safe_repo_context(project_dir) as repo:
-            return str(repo.git.diff("HEAD", "--stat"))
-    except Exception:  # pylint: disable=broad-exception-caught
-        return ""
-
-
-def _format_elapsed_time(seconds: float) -> str:
-    """Format seconds into human-readable string like '12m 34s' or '1h 5m 30s'.
-
-    Returns:
-        Formatted time string in human-readable format.
-    """
-    total = int(seconds)
-    hours, remainder = divmod(total, 3600)
-    minutes, secs = divmod(remainder, 60)
-    if hours > 0:
-        return f"{hours}h {minutes}m {secs}s"
-    if minutes > 0:
-        return f"{minutes}m {secs}s"
-    return f"{secs}s"
-
-
 def _format_failure_comment(failure: WorkflowFailure, diff_stat: str) -> str:
     """Format a GitHub comment for a workflow failure.
 
@@ -173,7 +148,7 @@ def _format_failure_comment(failure: WorkflowFailure, diff_stat: str) -> str:
             f"**Progress:** {failure.tasks_completed}/{failure.tasks_total} tasks completed"
         )
     if failure.elapsed_time is not None:
-        lines.append(f"**Elapsed:** {_format_elapsed_time(failure.elapsed_time)}")
+        lines.append(f"**Elapsed:** {format_elapsed_time(failure.elapsed_time)}")
     if failure.build_url:
         lines.append(f"**Build:** {failure.build_url}")
     lines.append("")
@@ -183,50 +158,25 @@ def _format_failure_comment(failure: WorkflowFailure, diff_stat: str) -> str:
 
 
 def _handle_workflow_failure(
-    failure: WorkflowFailure, project_dir: Path, update_labels: bool = False
+    failure: WorkflowFailure,
+    project_dir: Path,
+    update_labels: bool = False,
 ) -> None:
     """Handle workflow failure: set label, post comment, log banner."""
-    # 1. Log failure banner
-    logger.info("=" * 60)
-    logger.info("IMPLEMENTATION FAILED")
-    logger.info("Category: %s", failure.category.name)
-    logger.info("Stage: %s", failure.stage)
-    logger.info("Error: %s", failure.message)
-    if failure.tasks_total > 0:
-        logger.info(
-            "Progress: %d/%d tasks",
-            failure.tasks_completed,
-            failure.tasks_total,
-        )
-    diff_stat = _get_diff_stat(project_dir)
-    if diff_stat:
-        logger.info("Uncommitted changes:")
-        logger.info(diff_stat)
-    logger.info("=" * 60)
-
-    # 2. Set failure label (non-blocking)
-    if update_labels:
-        try:
-            issue_manager = IssueManager(project_dir)
-            issue_manager.update_workflow_label(
-                from_label_id="implementing",
-                to_label_id=failure.category.value,
-            )
-        except Exception as exc:  # pylint: disable=broad-exception-caught
-            logger.warning("Failed to update issue label: %s", exc)
-
-    # 3. Post GitHub comment (non-blocking)
-    try:
-        branch_name = get_current_branch_name(project_dir)
-        issue_number = (
-            extract_issue_number_from_branch(branch_name) if branch_name else None
-        )
-        if issue_number:
-            comment_body = _format_failure_comment(failure, diff_stat)
-            issue_manager = IssueManager(project_dir)
-            issue_manager.add_comment(issue_number, comment_body)
-    except Exception as exc:  # pylint: disable=broad-exception-caught
-        logger.warning("Failed to post failure comment: %s", exc)
+    diff_stat = get_diff_stat(project_dir)
+    comment_body = _format_failure_comment(failure, diff_stat)
+    handle_workflow_failure(
+        failure=SharedWorkflowFailure(
+            category=failure.category.value,
+            stage=failure.stage,
+            message=failure.message,
+            elapsed_time=failure.elapsed_time,
+        ),
+        comment_body=comment_body,
+        project_dir=project_dir,
+        from_label_id="implementing",
+        update_labels=update_labels,
+    )
 
 
 def _run_ci_analysis(

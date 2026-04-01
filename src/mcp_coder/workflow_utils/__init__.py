@@ -12,6 +12,12 @@ Note: commit_operations is imported lazily to avoid circular imports.
 from typing import TYPE_CHECKING, Any
 
 from .base_branch import detect_base_branch
+from .failure_handling import (
+    WorkflowFailure,
+    format_elapsed_time,
+    get_diff_stat,
+    handle_workflow_failure,
+)
 from .task_tracker import (
     TaskInfo,
     TaskTrackerError,
@@ -33,6 +39,11 @@ if TYPE_CHECKING:
 __all__ = [
     # Base branch detection
     "detect_base_branch",
+    # Failure handling
+    "WorkflowFailure",
+    "format_elapsed_time",
+    "get_diff_stat",
+    "handle_workflow_failure",
     # Task tracker operations
     "get_incomplete_tasks",
     "has_incomplete_work",

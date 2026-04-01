@@ -399,7 +399,7 @@ class TestWorkflowMainFunction:
         mock_check_prereqs.return_value = True
         mock_generate_summary.return_value = ("Test PR", "Test body")
         mock_git_push.return_value = {"success": True}  # Push succeeds
-        mock_create_pr.return_value = False  # PR creation fails
+        mock_create_pr.return_value = None  # PR creation fails
 
         from mcp_coder.workflows.create_pr.core import run_create_pr_workflow
 

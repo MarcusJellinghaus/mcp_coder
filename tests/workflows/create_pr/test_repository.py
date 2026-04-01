@@ -142,7 +142,9 @@ class TestCreatePullRequest:
             Path("/test/project"), "Test PR Title", "Test PR Body"
         )
 
-        assert result is True
+        assert result is not None
+        assert result["number"] == 123
+        assert result["url"] == "https://github.com/owner/repo/pull/123"
         mock_pr_manager.assert_called_once_with(Path("/test/project"))
         mock_manager_instance.create_pull_request.assert_called_once_with(
             title="Test PR Title",
@@ -162,7 +164,7 @@ class TestCreatePullRequest:
             Path("/test/project"), "Test PR Title", "Test PR Body"
         )
 
-        assert result is False
+        assert result is None
 
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
@@ -179,7 +181,7 @@ class TestCreatePullRequest:
             Path("/test/project"), "Test PR Title", "Test PR Body"
         )
 
-        assert result is False
+        assert result is None
 
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
@@ -204,7 +206,7 @@ class TestCreatePullRequest:
             Path("/test/project"), "Test PR Title", "Test PR Body"
         )
 
-        assert result is False
+        assert result is None
 
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
@@ -230,7 +232,7 @@ class TestCreatePullRequest:
             Path("/test/project"), "Test PR Title", "Test PR Body"
         )
 
-        assert result is False
+        assert result is None
 
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
@@ -251,7 +253,7 @@ class TestCreatePullRequest:
             Path("/test/project"), "Test PR Title", "Test PR Body"
         )
 
-        assert result is False
+        assert result is None
 
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
@@ -277,7 +279,8 @@ class TestCreatePullRequest:
             Path("/test/project"), "feat: Amazing feature", "Detailed description"
         )
 
-        assert result is True
+        assert result is not None
+        assert result["number"] == 456
         mock_manager_instance.create_pull_request.assert_called_once_with(
             title="feat: Amazing feature",
             head_branch="feature-branch",
@@ -309,4 +312,5 @@ class TestCreatePullRequest:
             Path("/test/project"), "fix: Bug fix", "Fixed the bug"
         )
 
-        assert result is True
+        assert result is not None
+        assert result["number"] == 789
