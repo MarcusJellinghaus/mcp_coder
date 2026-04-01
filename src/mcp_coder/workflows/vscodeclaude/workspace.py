@@ -559,7 +559,7 @@ def create_startup_script(
             session_folder_path=str(session_path),
         )
 
-        # Inject GitHub override install commands when from_github is True
+        # Inject GitHub override install commands when install_from_github is True
         if install_from_github:
             github_install_section = _build_github_install_section(folder_path)
             venv_section = venv_section + github_install_section
