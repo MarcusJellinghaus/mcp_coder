@@ -1,0 +1,10 @@
+Add shared workflow failure handling utilities with tests
+
+Extract reusable failure handling logic into workflow_utils/failure_handling.py:
+- WorkflowFailure frozen dataclass with category, stage, message, elapsed_time
+- get_diff_stat() for git diff --stat of uncommitted changes
+- format_elapsed_time() for human-readable time formatting
+- handle_workflow_failure() for logging, label transitions, and comment posting
+
+All GitHub operations are wrapped in broad try/except to never raise.
+Comment posting is always attempted regardless of update_labels flag.
