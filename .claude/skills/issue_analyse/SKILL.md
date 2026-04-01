@@ -49,3 +49,5 @@ If the issue contains a `### Base Branch` section:
 - Potential implementation approaches
 - Questions that need clarification
 - Impact on existing code
+
+**Note:** This skill has `disable-model-invocation` — it can only be run by the user typing `/issue_analyse`.

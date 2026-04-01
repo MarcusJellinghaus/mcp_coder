@@ -69,3 +69,5 @@ This skill is designed for **small, well-defined issues** that can be implemente
 
 1. `/create_plan` — create a detailed implementation plan
 2. `/implement` — implement the plan step by step
+
+**Note:** This skill has `disable-model-invocation` — it can only be run by the user typing `/implement_direct`.
