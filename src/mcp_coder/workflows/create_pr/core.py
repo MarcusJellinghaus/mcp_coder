@@ -42,9 +42,7 @@ from mcp_coder.workflows.create_pr.helpers import (
 from mcp_coder.workflows.create_pr.helpers import (
     handle_create_pr_failure as _handle_create_pr_failure_impl,
 )
-from mcp_coder.workflows.create_pr.helpers import (
-    parse_pr_summary,
-)
+from mcp_coder.workflows.create_pr.helpers import parse_pr_summary as parse_pr_summary
 
 # Note: PROMPTS_FILE_PATH imported from constants
 
