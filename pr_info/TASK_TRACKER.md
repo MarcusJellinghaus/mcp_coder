@@ -22,7 +22,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 - [x] [Step 1: Add find_pull_request_by_head() to PullRequestManager](./steps/step_1.md)
-- [ ] [Step 2: Extend BranchStatusReport with PR fields](./steps/step_2.md)
+- [x] [Step 2: Extend BranchStatusReport with PR fields](./steps/step_2.md)
 - [ ] [Step 3: Add CLI arguments and PR discovery polling to command](./steps/step_3.md)
 - [ ] [Step 4: Update skill documentation files](./steps/step_4.md)
 
