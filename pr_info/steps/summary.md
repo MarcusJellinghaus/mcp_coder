@@ -74,7 +74,7 @@ instead of defining its own private functions. `FailureCategory` enum stays in
 |------|--------|-------------|
 | `src/mcp_coder/workflow_utils/failure_handling.py` | **CREATE** | Shared `WorkflowFailure`, `handle_workflow_failure()`, `get_diff_stat()`, `format_elapsed_time()` |
 | `src/mcp_coder/workflow_utils/__init__.py` | MODIFY | Export new failure handling symbols |
-| `src/mcp_coder/workflows/implement/constants.py` | MODIFY | Remove `WorkflowFailure` (use shared), keep `FailureCategory` |
+| `src/mcp_coder/workflows/implement/constants.py` | UNCHANGED | Keep implement-specific `WorkflowFailure` (has extra fields); keep `FailureCategory` |
 | `src/mcp_coder/workflows/implement/core.py` | MODIFY | Import shared utilities, remove moved functions, adapt call sites |
 | `src/mcp_coder/workflows/create_pr/core.py` | MODIFY | Change `create_pull_request()` return, add failure handling to all paths, safety net |
 | `tests/workflow_utils/test_failure_handling.py` | **CREATE** | Tests for shared failure handling module |

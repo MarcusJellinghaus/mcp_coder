@@ -26,4 +26,17 @@
 
 **User decisions**: None needed — all findings were straightforward improvements.
 **Changes**: Fixed summary.md, step_2.md, step_3.md, step_4.md
+**Status**: Committed (0e8e88d)
+
+## Round 2 — 2026-04-01
+**Findings**:
+- Step 2 contradicts itself: WHAT says "Remove WorkflowFailure" but HOW/DATA/code say "Keep it"
+- Summary table lists constants.py as MODIFY with "Remove WorkflowFailure" — conflicts with chosen approach
+
+**Decisions**:
+- Accept: Fix step 2 WHAT to say "Keep" instead of "Remove"
+- Accept: Fix summary table to say UNCHANGED for constants.py
+
+**User decisions**: None needed.
+**Changes**: Fixed step_2.md and summary.md
 **Status**: Pending commit

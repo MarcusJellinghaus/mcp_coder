@@ -12,7 +12,7 @@ created in Step 1.
 ## WHAT
 
 ### `constants.py` changes:
-- **Remove** the `WorkflowFailure` dataclass (replaced by shared `workflow_utils.failure_handling.WorkflowFailure`)
+- **Keep** the `WorkflowFailure` dataclass unchanged (has implement-specific fields: `tasks_completed`, `tasks_total`, `build_url`, `category: FailureCategory`). The shared `WorkflowFailure` is imported with alias `SharedWorkflowFailure` in `core.py`.
 - **Keep** `FailureCategory` enum (implement-specific, maps to 3 different failure labels)
 - **Keep** all other constants unchanged
 
