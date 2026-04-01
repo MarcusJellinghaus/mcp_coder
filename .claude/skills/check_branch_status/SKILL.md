@@ -13,11 +13,21 @@ Check comprehensive branch readiness including CI status, rebase requirements, t
 
 ## What This Command Does
 
-1. **CI Status Check**: Analyzes latest workflow run and retrieves error logs
-2. **Rebase Detection**: Checks if branch needs rebasing onto main
-3. **Task Validation**: Verifies all implementation tasks are complete
-4. **GitHub Labels**: Reports current workflow status label
-5. **Recommendations**: Provides actionable next steps
+1. **PR Discovery** (optional): When `--wait-for-pr` is set, polls GitHub for an open PR matching the current branch before proceeding. Requires a remote tracking branch. Use `--pr-timeout <seconds>` to control how long to wait (default: 600s).
+2. **CI Status Check**: Analyzes latest workflow run and retrieves error logs
+3. **Rebase Detection**: Checks if branch needs rebasing onto main
+4. **Task Validation**: Verifies all implementation tasks are complete
+5. **GitHub Labels**: Reports current workflow status label
+6. **Recommendations**: Provides actionable next steps
+
+## Optional Flags
+
+| Flag | Description |
+|------|-------------|
+| `--wait-for-pr` | Enable PR discovery phase — poll GitHub until an open PR is found for the current branch before running checks |
+| `--pr-timeout <seconds>` | Maximum time to wait for PR discovery (default: 600). Only used with `--wait-for-pr` |
+| `--ci-timeout <seconds>` | Maximum time to wait for CI to complete (default: 180) |
+| `--llm-truncate` | Truncate CI error logs for LLM-friendly output |
 
 ## Follow-Up Actions
 

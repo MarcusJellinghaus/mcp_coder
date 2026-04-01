@@ -1,0 +1,7 @@
+docs(skills): document --wait-for-pr in check_branch_status and implementation_approve
+
+- Add --wait-for-pr and --pr-timeout flag documentation to
+  check_branch_status/SKILL.md with new Optional Flags table
+- Update implementation_approve/SKILL.md to gate label change on
+  branch-status check with --wait-for-pr
+- Add branch-status command to implementation_approve allowed-tools
