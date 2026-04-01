@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2A: Config — update settings.local.json with MCP permissions
-- [ ] Implementation: add 4 MCP permissions, remove 3 Bash permissions in `settings.local.json`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add 4 MCP permissions, remove 3 Bash permissions in `settings.local.json`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2B: Config — update CLAUDE.md with MCP tool references
 - [ ] Implementation: update tool mapping table, git operations section, and quick examples in `CLAUDE.md`
