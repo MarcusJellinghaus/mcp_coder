@@ -49,6 +49,9 @@ class BranchStatusReport:
     tasks_complete: bool  # True if all tracker tasks done
     current_github_label: str  # Current workflow status label
     recommendations: List[str]  # List of suggested actions
+    pr_number: Optional[int] = None  # PR number if found
+    pr_url: Optional[str] = None  # PR URL if found
+    pr_found: Optional[bool] = None  # None=not checked, True=found, False=not found
 
     def format_for_human(self) -> str:
         """Format report for human consumption.
@@ -77,8 +80,17 @@ class BranchStatusReport:
             "",
             "Branch Status Report",
             "",
-            f"CI Status: {ci_icon} {self.ci_status}",
         ]
+
+        # PR section (only when pr_found is not None)
+        if self.pr_found is not None:
+            if self.pr_found:
+                lines.append(f"PR: \u2705 #{self.pr_number} ({self.pr_url})")
+            else:
+                lines.append("PR: \u274c No PR found")
+            lines.append("")
+
+        lines.append(f"CI Status: {ci_icon} {self.ci_status}")
 
         # Add CI details if they exist
         if self.ci_details:
@@ -128,6 +140,10 @@ class BranchStatusReport:
             f"Branch Status: CI={self.ci_status}, Rebase={rebase_status}, "
             f"Tasks={tasks_status}"
         )
+        if self.pr_found is True:
+            status_summary += f", PR=#{self.pr_number}"
+        elif self.pr_found is False:
+            status_summary += ", PR=NOT_FOUND"
         recommendations_text = ", ".join(self.recommendations)
 
         # Branch info on first line
@@ -171,6 +187,9 @@ def create_empty_report() -> BranchStatusReport:
         tasks_complete=False,
         current_github_label=DEFAULT_LABEL,
         recommendations=EMPTY_RECOMMENDATIONS,
+        pr_number=None,
+        pr_url=None,
+        pr_found=None,
     )
 
 

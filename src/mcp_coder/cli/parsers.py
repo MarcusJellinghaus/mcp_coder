@@ -355,6 +355,24 @@ def _validate_ci_timeout(value: str) -> int:
         raise argparse.ArgumentTypeError("--ci-timeout must be an integer") from exc
 
 
+def _validate_pr_timeout(value: str) -> int:
+    """Validate pr-timeout argument is non-negative integer.
+
+    Returns:
+        Validated non-negative integer value.
+
+    Raises:
+        ArgumentTypeError: If value is not a non-negative integer.
+    """
+    try:
+        ivalue = int(value)
+        if ivalue < 0:
+            raise argparse.ArgumentTypeError("--pr-timeout must be non-negative")
+        return ivalue
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("--pr-timeout must be an integer") from exc
+
+
 def add_check_parsers(subparsers: Any) -> None:
     """Add check command parsers (branch-status, file-size)."""
     check_parser = subparsers.add_parser(
@@ -416,6 +434,18 @@ def add_check_parsers(subparsers: Any) -> None:
         type=str,
         default=None,
         help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
+    )
+    branch_status_parser.add_argument(
+        "--wait-for-pr",
+        action="store_true",
+        help="Wait for PR creation, then proceed with normal branch-status check",
+    )
+    branch_status_parser.add_argument(
+        "--pr-timeout",
+        type=_validate_pr_timeout,
+        default=600,
+        metavar="SECONDS",
+        help="Max seconds to wait for PR to appear (default: 600) (only used with --wait-for-pr)",
     )
 
     # check file-size command

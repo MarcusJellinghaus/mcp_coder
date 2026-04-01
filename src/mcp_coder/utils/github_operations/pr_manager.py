@@ -335,6 +335,54 @@ class PullRequestManager(BaseGitHubManager):
             return []
 
     @log_function_call
+    @_handle_github_errors([])
+    def find_pull_request_by_head(self, head_branch: str) -> List[PullRequestData]:
+        """Find open pull requests by head branch name.
+
+        Args:
+            head_branch: Branch name (e.g., "feature/xyz") — method constructs
+                        "owner:branch" internally for the GitHub API query.
+
+        Returns:
+            List of PullRequestData for matching open PRs, or empty list on error/not found.
+        """
+        if not self._validate_branch_name(head_branch):
+            return []
+
+        repo = self._get_repository()
+        if repo is None:
+            return []
+
+        owner = self.repository_name.split("/")[0]
+        prs = repo.get_pulls(state="open", head=f"{owner}:{head_branch}")
+
+        return [
+            cast(
+                PullRequestData,
+                {
+                    "number": pr.number,
+                    "title": pr.title,
+                    "body": pr.body,
+                    "state": pr.state,
+                    "head_branch": pr.head.ref,
+                    "base_branch": pr.base.ref,
+                    "url": pr.html_url,
+                    "created_at": (
+                        pr.created_at.isoformat() if pr.created_at else None
+                    ),
+                    "updated_at": (
+                        pr.updated_at.isoformat() if pr.updated_at else None
+                    ),
+                    "user": pr.user.login if pr.user else None,
+                    "mergeable": pr.mergeable,
+                    "merged": pr.merged,
+                    "draft": pr.draft,
+                },
+            )
+            for pr in prs
+        ]
+
+    @log_function_call
     @_handle_github_errors(lambda: cast(PullRequestData, {}))
     def close_pull_request(self, pr_number: int) -> PullRequestData:
         """Close a pull request.

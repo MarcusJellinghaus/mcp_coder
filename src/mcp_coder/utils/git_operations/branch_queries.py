@@ -276,6 +276,42 @@ def get_current_branch_name(project_dir: Path) -> Optional[str]:
         return None
 
 
+def has_remote_tracking_branch(project_dir: Path) -> bool:
+    """Check if the current branch has a remote tracking branch.
+
+    Args:
+        project_dir: Path to the project directory containing git repository
+
+    Returns:
+        True if the current branch has a remote tracking branch, False otherwise.
+    """
+    logger.debug("Checking remote tracking branch for %s", project_dir)
+
+    if not is_git_repository(project_dir):
+        logger.debug("Not a git repository: %s", project_dir)
+        return False
+
+    try:
+        with _safe_repo_context(project_dir) as repo:
+            tracking = repo.active_branch.tracking_branch()
+            has_tracking = tracking is not None
+            logger.debug("Has remote tracking branch: %s", has_tracking)
+            return has_tracking
+
+    except TypeError:
+        # Detached HEAD state
+        logger.debug("Repository is in detached HEAD state")
+        return False
+    except (InvalidGitRepositoryError, GitCommandError) as e:
+        logger.debug("Git error checking remote tracking branch: %s", e)
+        return False
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to GitCommandError
+        logger.warning("Unexpected error checking remote tracking branch: %s", e)
+        return False
+
+
 def validate_branch_name(branch_name: str) -> bool:
     """Validate branch name against git naming rules.
 
