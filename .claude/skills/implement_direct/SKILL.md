@@ -53,9 +53,13 @@ If no issue number is provided:
    ./tools/format_all.sh
    ```
 
-7. **Suggest follow-up steps**
+7. **Update issue status**
+   ```bash
+   mcp-coder gh-tool set-status status-07:code-review
+   ```
+
+8. **Suggest follow-up steps**
    - `/commit_push` — commit and push changes
-   - `mcp-coder gh-tool set-status status-07:code-review` — update issue status
    - `/check_branch_status` — verify branch is clean
    - `/implementation_review` — request a review of the implementation
 
