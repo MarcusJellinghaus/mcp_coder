@@ -212,6 +212,23 @@ async def test_input_area_up_no_history_no_change() -> None:
 
 
 @pytest.mark.asyncio
+async def test_input_area_up_down_multiline_cursor_movement() -> None:
+    """Up/Down in middle of multiline text moves cursor, not history."""
+    app = WidgetTestApp()
+    async with app.run_test() as pilot:
+        input_area = app.query_one(InputArea)
+        input_area.focus()
+        await pilot.pause()
+        input_area.command_history.add("old cmd")
+        input_area.load_text("line1\nline2\nline3")
+        input_area.move_cursor(input_area.document.end)
+        await pilot.pause()
+        await pilot.press("up")
+        await pilot.pause()
+        assert input_area.text == "line1\nline2\nline3"
+
+
+@pytest.mark.asyncio
 async def test_input_area_has_history_attribute() -> None:
     """InputArea exposes a CommandHistory instance."""
     app = WidgetTestApp()

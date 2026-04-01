@@ -53,21 +53,21 @@ class InputArea(TextArea):
             cursor_row, _ = self.cursor_location
             if cursor_row == 0:
                 entry = self.command_history.up(self.text)
+                event.stop()
+                event.prevent_default()
                 if entry is not None:
-                    event.stop()
-                    event.prevent_default()
                     self.load_text(entry)
                     self.move_cursor(self.document.end)
-                    return
+                return
         if event.key == "down":
             cursor_row, _ = self.cursor_location
             last_row = self.document.line_count - 1
             if cursor_row == last_row:
                 entry = self.command_history.down()
+                event.stop()
+                event.prevent_default()
                 if entry is not None:
-                    event.stop()
-                    event.prevent_default()
                     self.load_text(entry)
                     self.move_cursor(self.document.end)
-                    return
+                return
         await super()._on_key(event)
