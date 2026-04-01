@@ -52,9 +52,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 4A: Docs — audience-split updates in repository-setup.md
-- [ ] Implementation: add MCP tool notes after formatting tools table and architecture tools examples
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add MCP tool notes after formatting tools table and architecture tools examples
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4B: Docs — update settings example in claude-code.md
 - [ ] Implementation: replace format_all.sh in settings example with MCP tools, update security note

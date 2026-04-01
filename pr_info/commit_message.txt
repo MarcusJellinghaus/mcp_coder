@@ -1,4 +1,8 @@
-chore: replace format_all.sh with MCP tool in rebase skill (#672)
+docs: add MCP tool audience-split notes in repository-setup.md
 
-Replace Bash-invoked format_all.sh/.bat with mcp__tools-py__run_format_code
-in rebase/SKILL.md allowed-tools frontmatter.
+Add MCP tool references for Claude Code users in three locations:
+- After Formatting Tools table: note to use mcp__tools-py__run_format_code
+- After Running Architecture Tools examples: MCP alternatives for
+  format_all.sh, lint_imports.sh, and vulture_check.sh
+- Enhanced Claude Permissions bullet: mention MCP tools as preferred
+  approach for Claude Code, including get_library_source
