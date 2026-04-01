@@ -299,6 +299,7 @@ from .sessions import (
     remove_session,
     save_sessions,
     update_session_pid,
+    warn_orphan_folders,
 )
 
 # Status
@@ -360,6 +361,7 @@ __all__ = [
     "remove_session",
     "get_active_session_count",
     "update_session_pid",
+    "warn_orphan_folders",
     # Configuration
     "load_vscodeclaude_config",
     "load_repo_vscodeclaude_config",

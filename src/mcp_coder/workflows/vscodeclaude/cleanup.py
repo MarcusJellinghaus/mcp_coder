@@ -25,6 +25,7 @@ from .sessions import (
     is_session_active,
     load_sessions,
     remove_session,
+    warn_orphan_folders,
 )
 from .status import get_folder_git_status, is_session_stale
 from .types import VSCodeClaudeSession
@@ -305,6 +306,18 @@ def cleanup_stale_sessions(
             if deletion.success:
                 remove_from_to_be_deleted(workspace_base, folder_name)
                 logger.info("Retry-deleted soft-deleted folder: %s", folder_name)
+
+    # Run orphan detection for all repos with active sessions
+    if not dry_run:
+        store = load_sessions()
+        sessions_by_repo: dict[str, set[int]] = {}
+        for session in store["sessions"]:
+            repo = session["repo"]
+            sessions_by_repo.setdefault(repo, set()).add(session["issue_number"])
+
+        for repo_full_name, issues in sessions_by_repo.items():
+            for issue_number in issues:
+                warn_orphan_folders(workspace_base, repo_full_name, issue_number)
 
     stale_sessions = get_stale_sessions(cached_issues_by_repo=cached_issues_by_repo)
 

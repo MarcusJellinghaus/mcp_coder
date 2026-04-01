@@ -25,6 +25,6 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] [Step 2: Cleanup — Retry + Soft-Delete on Failure](./steps/step_2.md) — `cleanup.py` + caller + tests
 - [x] [Step 3: Suffix-Aware Folder Naming](./steps/step_3.md) — `workspace.py` + tests
 - [x] [Step 4: Status Filtering](./steps/step_4.md) — `status.py` + caller + tests
-- [ ] [Step 5: Session Lookup + Orphan Detection](./steps/step_5.md) — `sessions.py` + caller + tests
+- [x] [Step 5: Session Lookup + Orphan Detection](./steps/step_5.md) — `sessions.py` + caller + tests
 
 ## Pull Request

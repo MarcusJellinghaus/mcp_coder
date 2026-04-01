@@ -1,5 +1,5 @@
-feat(vscodeclaude): hide soft-deleted folders from status
+feat(vscodeclaude): session lookup excludes soft-deleted, detect orphan folders
 
-Filter .to_be_deleted entries from display_status_table(). Pass
-workspace_base from CLI entry point. Add defensive FileNotFoundError
-handling in load_to_be_deleted for race conditions.
+Filter .to_be_deleted entries from get_session_for_issue(). Add
+warn_orphan_folders() to detect untracked folders on disk. Log
+error if multiple active sessions found for same issue.
