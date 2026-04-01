@@ -29,6 +29,10 @@ DEFAULT_LOGS_DIR = "logs"
 LLM_HEARTBEAT_INTERVAL_SECONDS = 120
 CLAUDE_SESSIONS_SUBDIR = "claude-sessions"
 
+# Built-in tools override: empty string disables all built-in tools
+# Forces Claude to use only MCP-provided tools
+CLAUDE_BUILTIN_TOOLS = ""
+
 
 class StreamMessage(TypedDict, total=False):
     """A single message from Claude CLI stream-json output."""
@@ -419,6 +423,9 @@ def build_cli_command(
     # Use -p "" to read prompt from stdin (avoids command-line length limits)
     output_format = "stream-json" if use_stream_json else "json"
     command = [claude_cmd, "-p", "", "--output-format", output_format]
+
+    # Disable all built-in tools, forcing use of MCP-provided tools only
+    command.extend(["--tools", CLAUDE_BUILTIN_TOOLS])
 
     # stream-json output requires additional flags for complete logging
     if use_stream_json:
