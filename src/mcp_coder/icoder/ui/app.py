@@ -47,6 +47,7 @@ class ICoderApp(App[None]):
     def on_input_area_input_submitted(self, message: InputArea.InputSubmitted) -> None:
         """Handle submitted input: route through AppCore."""
         text = message.text
+        self.query_one(InputArea).command_history.add(text)
         output = self.query_one(OutputLog)
         output.append_text(f"> {text}", style=STYLE_USER_INPUT)
 

@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: Wire history.add() in ICoderApp Submit Handler
-- [ ] Implementation: add `history.add(text)` call in `src/mcp_coder/icoder/ui/app.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `history.add(text)` call in `src/mcp_coder/icoder/ui/app.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review completed
