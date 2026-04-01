@@ -9,17 +9,25 @@ allowed-tools:
   - mcp__workspace__list_directory
 ---
 
-!`gh issue view $ARGUMENTS`
-
 # Analyse GitHub Issue
 
 Fetch a GitHub issue and analyze its requirements, feasibility, and potential implementation approaches.
 
+## Resolve Issue Number
+
+The user may provide an issue number as the argument (available as `$ARGUMENTS`).
+If no issue number is provided:
+1. Read `.vscodeclaude_status.txt` and extract the issue number from the `Issue #NNN` line
+2. If the file doesn't exist or has no issue number, ask the user
+
+Fetch the issue:
+```bash
+gh issue view <issue_number>
+```
+
 ## Instructions
 
-If no issue number is provided via `$ARGUMENTS`, check `.vscodeclaude_status.txt` for the current issue number.
-
-Then analyze the issue:
+Analyze the issue:
 
 Can we discuss this requirement / implementation idea and its feasibility?
 Please also look at the code base to understand the context (using the different tools with access to the project directory).
@@ -41,3 +49,5 @@ If the issue contains a `### Base Branch` section:
 - Potential implementation approaches
 - Questions that need clarification
 - Impact on existing code
+
+**Note:** This skill has `disable-model-invocation` — it can only be run by the user typing `/issue_analyse`.
