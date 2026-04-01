@@ -29,7 +29,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 2: Rename from_github → install_from_github across all source and config
 - [x] Implementation: rename in `pyproject.toml`, 7 source files, and 14 test files (see [step_2.md](./steps/step_2.md))
 - [x] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `rename from-github to install-from-github across all layers (#684)`
+- [x] Commit: `rename from-github to install-from-github across all layers (#684)`
 
 ## Pull Request
 - [ ] PR review: verify all changes are consistent and no old references remain
