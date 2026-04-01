@@ -1,5 +1,5 @@
-feat(vscodeclaude): session lookup excludes soft-deleted, detect orphan folders
+fix(test): update get_session_for_issue mock to accept workspace_base kwarg
 
-Filter .to_be_deleted entries from get_session_for_issue(). Add
-warn_orphan_folders() to detect untracked folders on disk. Log
-error if multiple active sessions found for same issue.
+The test mock used `lambda _repo, _num: None` which crashed with
+TypeError when production code passed `workspace_base` as a keyword
+argument. Added `**_kwargs` to the lambda to accept the parameter.
