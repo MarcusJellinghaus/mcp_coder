@@ -1,6 +1,0 @@
-refactor: extract helpers from create_pr/core.py to fix file-size CI check
-
-Move parse_pr_summary, _format_failure_comment, and _handle_create_pr_failure
-into a new create_pr/helpers.py module to bring core.py back under the 750-line
-limit. Backward-compatible aliases are kept in core.py so existing test patches
-and imports continue to work unchanged.
