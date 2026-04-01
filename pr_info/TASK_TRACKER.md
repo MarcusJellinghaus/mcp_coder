@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `docs: add MCP tool references to documentation`
 
 ### Step 3: Decouple CI log parser test fixtures from real tool names
-- [ ] Implementation: replace real tool names in VULTURE_LOG fixture and assertions with fictional `tool-alpha` / `tool_alpha.sh` in `tests/checks/test_ci_log_parser.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `test: decouple CI log parser fixtures from real tool names`
+- [x] Implementation: replace real tool names in VULTURE_LOG fixture and assertions with fictional `tool-alpha` / `tool_alpha.sh` in `tests/checks/test_ci_log_parser.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `test: decouple CI log parser fixtures from real tool names`
 
 ## Pull Request
 - [ ] PR review: verify all steps completed, no regressions
