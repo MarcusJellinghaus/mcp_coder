@@ -80,7 +80,9 @@ class TestHandleWorkflowFailure:
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         _mock_branch.return_value = None
-        with caplog.at_level("INFO"):
+        with caplog.at_level(
+            "INFO", logger="mcp_coder.workflow_utils.failure_handling"
+        ):
             handle_workflow_failure(
                 failure=failure,
                 comment_body="Test comment",
