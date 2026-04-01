@@ -34,7 +34,9 @@ class CommandHistory:
         """Navigate to older history entry.
 
         On first call (cursor at end), saves current_text as draft.
-        Returns the older entry, or None if empty or already at oldest.
+
+        Returns:
+            The older entry, or None if empty or already at oldest.
         """
         if not self._entries:
             return None
@@ -48,8 +50,9 @@ class CommandHistory:
     def down(self) -> str | None:
         """Navigate to newer history entry.
 
-        Returns the newer entry, the saved draft when passing the newest,
-        or None if already at the draft position.
+        Returns:
+            The newer entry, the saved draft when passing the newest,
+            or None if already at the draft position.
         """
         if self._cursor >= len(self._entries):
             return None
