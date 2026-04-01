@@ -1,0 +1,7 @@
+rename from-github to install-from-github across all layers (#684)
+
+Rename `from_github` → `install_from_github` in TypedDict field, function
+parameters, session dict keys, CLI flag (`--install-from-github`), and
+TOML config section (`[tool.mcp-coder.install-from-github]`).
+
+Updated 8 source files and 14 test files with mechanical rename.

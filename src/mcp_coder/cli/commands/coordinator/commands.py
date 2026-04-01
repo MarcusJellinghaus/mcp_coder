@@ -546,7 +546,7 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
             return 1
 
         # Step 4: Process each repository
-        from_github = getattr(args, "from_github", False)
+        install_from_github = getattr(args, "install_from_github", False)
         total_started: List[VSCodeClaudeSession] = []
         for repo_name in repo_names:
             # Apply repo filter if specified
@@ -586,7 +586,7 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
                 vscodeclaude_config=vscodeclaude_config,
                 max_sessions=max_sessions,
                 all_cached_issues=all_cached_issues,
-                from_github=from_github,
+                install_from_github=install_from_github,
             )
             total_started.extend(started)
 
@@ -728,7 +728,7 @@ def _handle_intervention_mode(
     print("!" * 60 + "\n")
 
     # Prepare and launch session
-    from_github = getattr(args, "from_github", False)
+    install_from_github = getattr(args, "install_from_github", False)
     session = prepare_and_launch_session(
         issue=issue,
         repo_config=validated_config,
@@ -736,7 +736,7 @@ def _handle_intervention_mode(
         repo_vscodeclaude_config=repo_vscodeclaude_config,
         branch_name=branch_name,
         is_intervention=True,
-        from_github=from_github,
+        install_from_github=install_from_github,
     )
 
     print(f"Started intervention session: #{session['issue_number']}")

@@ -27,8 +27,8 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `test: expect install-from-github config key (#684)`
 
 ### Step 2: Rename from_github → install_from_github across all source and config
-- [ ] Implementation: rename in `pyproject.toml`, 7 source files, and 14 test files (see [step_2.md](./steps/step_2.md))
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Implementation: rename in `pyproject.toml`, 7 source files, and 14 test files (see [step_2.md](./steps/step_2.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
 - [ ] Commit: `rename from-github to install-from-github across all layers (#684)`
 
 ## Pull Request

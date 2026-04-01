@@ -178,11 +178,11 @@ class TestDisplayHelpers:
         assert result == "A" * 47 + "..."
 
 
-class TestBuildSessionFromGithub:
-    """Test build_session from_github parameter."""
+class TestBuildSessionInstallFromGithub:
+    """Test build_session install_from_github parameter."""
 
-    def test_build_session_with_from_github_true(self) -> None:
-        """build_session with from_github=True sets the field."""
+    def test_build_session_with_install_from_github_true(self) -> None:
+        """build_session with install_from_github=True sets the field."""
         session = build_session(
             folder="/test",
             repo="owner/repo",
@@ -190,12 +190,12 @@ class TestBuildSessionFromGithub:
             status="status-01:created",
             vscode_pid=1234,
             is_intervention=False,
-            from_github=True,
+            install_from_github=True,
         )
-        assert session["from_github"] is True
+        assert session["install_from_github"] is True
 
-    def test_build_session_with_from_github_false(self) -> None:
-        """build_session with from_github=False sets the field."""
+    def test_build_session_with_install_from_github_false(self) -> None:
+        """build_session with install_from_github=False sets the field."""
         session = build_session(
             folder="/test",
             repo="owner/repo",
@@ -203,12 +203,12 @@ class TestBuildSessionFromGithub:
             status="status-01:created",
             vscode_pid=1234,
             is_intervention=False,
-            from_github=False,
+            install_from_github=False,
         )
-        assert session["from_github"] is False
+        assert session["install_from_github"] is False
 
-    def test_build_session_default_from_github(self) -> None:
-        """build_session without from_github defaults to False."""
+    def test_build_session_default_install_from_github(self) -> None:
+        """build_session without install_from_github defaults to False."""
         session = build_session(
             folder="/test",
             repo="owner/repo",
@@ -217,4 +217,4 @@ class TestBuildSessionFromGithub:
             vscode_pid=1234,
             is_intervention=False,
         )
-        assert session["from_github"] is False
+        assert session["install_from_github"] is False

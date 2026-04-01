@@ -175,13 +175,13 @@ class TestLaunch:
         assert captured_env is None
 
 
-class TestFromGithubThreading:
-    """Tests for from_github parameter threading through session launch functions."""
+class TestInstallFromGithubThreading:
+    """Tests for install_from_github parameter threading through session launch functions."""
 
-    def test_prepare_and_launch_session_passes_from_github_to_startup_script(
+    def test_prepare_and_launch_session_passes_install_from_github_to_startup_script(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """prepare_and_launch_session passes from_github=True to create_startup_script."""
+        """prepare_and_launch_session passes install_from_github=True to create_startup_script."""
         from unittest.mock import patch
 
         folder_path = tmp_path / "repo_42"
@@ -263,16 +263,16 @@ class TestFromGithubThreading:
             vscodeclaude_config={"workspace_base": str(tmp_path), "max_sessions": 3},
             repo_vscodeclaude_config={},
             branch_name=None,
-            from_github=True,
+            install_from_github=True,
         )
 
         mock_create_startup.assert_called_once()
-        assert mock_create_startup.call_args.kwargs["from_github"] is True
+        assert mock_create_startup.call_args.kwargs["install_from_github"] is True
 
-    def test_prepare_and_launch_session_stores_from_github_in_session(
+    def test_prepare_and_launch_session_stores_install_from_github_in_session(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """prepare_and_launch_session stores from_github=True in session dict."""
+        """prepare_and_launch_session stores install_from_github=True in session dict."""
         folder_path = tmp_path / "repo_42"
         folder_path.mkdir()
 
@@ -349,15 +349,15 @@ class TestFromGithubThreading:
             vscodeclaude_config={"workspace_base": str(tmp_path), "max_sessions": 3},
             repo_vscodeclaude_config={},
             branch_name=None,
-            from_github=True,
+            install_from_github=True,
         )
 
-        assert session["from_github"] is True
+        assert session["install_from_github"] is True
 
-    def test_process_eligible_issues_passes_from_github(
+    def test_process_eligible_issues_passes_install_from_github(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """process_eligible_issues passes from_github=True to prepare_and_launch_session."""
+        """process_eligible_issues passes install_from_github=True to prepare_and_launch_session."""
         mock_issue: IssueData = {
             "number": 123,
             "title": "Test Issue",
@@ -420,16 +420,16 @@ class TestFromGithubThreading:
             repo_config={"repo_url": "https://github.com/owner/repo"},
             vscodeclaude_config={"workspace_base": "/tmp", "max_sessions": 3},
             max_sessions=3,
-            from_github=True,
+            install_from_github=True,
         )
 
         mock_launch.assert_called_once()
-        assert mock_launch.call_args.kwargs["from_github"] is True
+        assert mock_launch.call_args.kwargs["install_from_github"] is True
 
-    def test_regenerate_session_files_reads_from_github_from_session(
+    def test_regenerate_session_files_reads_install_from_github_from_session(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """regenerate_session_files reads from_github=True from session and passes to create_startup_script."""
+        """regenerate_session_files reads install_from_github=True from session and passes to create_startup_script."""
         folder_path = tmp_path / "repo_42"
         folder_path.mkdir()
         (folder_path / ".git").mkdir()
@@ -442,7 +442,7 @@ class TestFromGithubThreading:
             "vscode_pid": 1234,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
-            "from_github": True,
+            "install_from_github": True,
         }
 
         issue: IssueData = {
@@ -488,12 +488,12 @@ class TestFromGithubThreading:
         regenerate_session_files(session, issue)
 
         mock_create_startup.assert_called_once()
-        assert mock_create_startup.call_args.kwargs["from_github"] is True
+        assert mock_create_startup.call_args.kwargs["install_from_github"] is True
 
-    def test_regenerate_session_files_with_from_github_false(
+    def test_regenerate_session_files_with_install_from_github_false(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """regenerate_session_files passes from_github=False when session has it False."""
+        """regenerate_session_files passes install_from_github=False when session has it False."""
         folder_path = tmp_path / "repo_42"
         folder_path.mkdir()
         (folder_path / ".git").mkdir()
@@ -506,7 +506,7 @@ class TestFromGithubThreading:
             "vscode_pid": 1234,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
-            "from_github": False,
+            "install_from_github": False,
         }
 
         issue: IssueData = {
@@ -551,4 +551,4 @@ class TestFromGithubThreading:
         regenerate_session_files(session, issue)
 
         mock_create_startup.assert_called_once()
-        assert mock_create_startup.call_args.kwargs["from_github"] is False
+        assert mock_create_startup.call_args.kwargs["install_from_github"] is False

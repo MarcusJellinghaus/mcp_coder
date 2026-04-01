@@ -432,7 +432,7 @@ def _escape_batch_title(text: str) -> str:
 
 
 def _build_github_install_section(folder_path: Path) -> str:
-    """Read [tool.mcp-coder.from-github] from pyproject.toml and build install commands.
+    """Read [tool.mcp-coder.install-from-github] from pyproject.toml and build install commands.
 
     Args:
         folder_path: Path to the cloned repo containing pyproject.toml.
@@ -450,7 +450,9 @@ def _build_github_install_section(folder_path: Path) -> str:
     with pyproject_path.open("rb") as f:
         config = tomllib.load(f)
 
-    gh_config = config.get("tool", {}).get("mcp-coder", {}).get("from-github", {})
+    gh_config = (
+        config.get("tool", {}).get("mcp-coder", {}).get("install-from-github", {})
+    )
     packages = gh_config.get("packages", [])
     packages_no_deps = gh_config.get("packages-no-deps", [])
 
@@ -481,7 +483,7 @@ def create_startup_script(
     timeout: int = DEFAULT_PROMPT_TIMEOUT,
     mcp_coder_install_path: Path | None = None,
     session_folder_path: Path | None = None,
-    from_github: bool = False,
+    install_from_github: bool = False,
 ) -> Path:
     """Create platform-specific startup script.
 
@@ -498,7 +500,7 @@ def create_startup_script(
             (for finding the executable, separate from session folder)
         session_folder_path: Path to session folder for MCP environment variables
             (overrides folder_path if provided, used for MCP_CODER_PROJECT_DIR)
-        from_github: If True, read [tool.mcp-coder.from-github] from the repo's
+        install_from_github: If True, read [tool.mcp-coder.install-from-github] from the repo's
             pyproject.toml and inject uv pip install commands for GitHub packages.
 
     Returns:
@@ -558,7 +560,7 @@ def create_startup_script(
         )
 
         # Inject GitHub override install commands when from_github is True
-        if from_github:
+        if install_from_github:
             github_install_section = _build_github_install_section(folder_path)
             venv_section = venv_section + github_install_section
 

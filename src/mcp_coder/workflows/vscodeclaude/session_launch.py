@@ -103,7 +103,7 @@ def prepare_and_launch_session(
     repo_vscodeclaude_config: RepoVSCodeClaudeConfig,
     branch_name: str | None,
     is_intervention: bool = False,
-    from_github: bool = False,
+    install_from_github: bool = False,
 ) -> VSCodeClaudeSession:
     """Full session preparation and launch.
 
@@ -114,7 +114,7 @@ def prepare_and_launch_session(
         repo_vscodeclaude_config: Per-repo setup commands
         branch_name: Branch to checkout (None = main)
         is_intervention: If True, intervention mode
-        from_github: If True, install packages from GitHub instead of PyPI
+        install_from_github: If True, install packages from GitHub instead of PyPI
 
     Returns:
         Created session data
@@ -193,7 +193,7 @@ def prepare_and_launch_session(
             is_intervention=is_intervention,
             timeout=DEFAULT_PROMPT_TIMEOUT,
             session_folder_path=folder_path,
-            from_github=from_github,
+            install_from_github=install_from_github,
         )
 
         # Create VSCode task
@@ -224,7 +224,7 @@ def prepare_and_launch_session(
             status=status,
             vscode_pid=pid,
             is_intervention=is_intervention,
-            from_github=from_github,
+            install_from_github=install_from_github,
         )
         add_session(session)
 
@@ -262,7 +262,7 @@ def process_eligible_issues(
     vscodeclaude_config: VSCodeClaudeConfig,
     max_sessions: int,
     all_cached_issues: list[IssueData] | None = None,
-    from_github: bool = False,
+    install_from_github: bool = False,
 ) -> list[VSCodeClaudeSession]:
     """Process eligible issues for a repository.
 
@@ -275,7 +275,7 @@ def process_eligible_issues(
             ``get_all_cached_issues`` is not called, avoiding a duplicate-protection
             cache miss. Defaults to ``None``, in which case issues are fetched from
             cache as before (backward-compatible).
-        from_github: If True, install packages from GitHub instead of PyPI.
+        install_from_github: If True, install packages from GitHub instead of PyPI.
 
     Returns:
         List of sessions that were started during this call.
@@ -381,7 +381,7 @@ def process_eligible_issues(
                 repo_vscodeclaude_config=repo_vscodeclaude_config,
                 branch_name=branch_name,
                 is_intervention=False,
-                from_github=from_github,
+                install_from_github=install_from_github,
             )
             started_sessions.append(session)
             current_count += 1
@@ -425,7 +425,7 @@ def regenerate_session_files(
     issue_url = issue.get("url", "")
     status = get_issue_status(issue)
     is_intervention = session.get("is_intervention", False)
-    from_github = session.get("from_github", False)
+    install_from_github = session.get("install_from_github", False)
 
     # Get current branch from git
     try:
@@ -449,7 +449,7 @@ def regenerate_session_files(
         is_intervention=is_intervention,
         timeout=DEFAULT_PROMPT_TIMEOUT,
         session_folder_path=folder_path,
-        from_github=from_github,
+        install_from_github=install_from_github,
     )
 
     # Regenerate VSCode task

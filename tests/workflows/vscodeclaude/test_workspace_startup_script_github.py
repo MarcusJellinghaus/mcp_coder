@@ -8,7 +8,7 @@ from mcp_coder.workflows.vscodeclaude.workspace import create_startup_script
 
 
 class TestCreateStartupScriptFromGithub:
-    """Test from_github parameter for GitHub override installs."""
+    """Test install_from_github parameter for GitHub override installs."""
 
     @staticmethod
     def _write_pyproject(
@@ -16,10 +16,10 @@ class TestCreateStartupScriptFromGithub:
         packages: list[str] | None = None,
         packages_no_deps: list[str] | None = None,
     ) -> None:
-        """Write a pyproject.toml with [tool.mcp-coder.from-github] section."""
+        """Write a pyproject.toml with [tool.mcp-coder.install-from-github] section."""
         lines = ['[project]\nname = "test-project"\nversion = "0.1.0"\n']
         if packages is not None or packages_no_deps is not None:
-            lines.append("[tool.mcp-coder.from-github]\n")
+            lines.append("[tool.mcp-coder.install-from-github]\n")
             if packages is not None:
                 items = ", ".join(f'"{p}"' for p in packages)
                 lines.append(f"packages = [{items}]\n")
@@ -34,7 +34,7 @@ class TestCreateStartupScriptFromGithub:
         monkeypatch: pytest.MonkeyPatch,
         mock_vscodeclaude_config: None,
     ) -> None:
-        """from_github=True injects uv pip install commands from pyproject.toml."""
+        """install_from_github=True injects uv pip install commands from pyproject.toml."""
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: "Windows",
@@ -56,7 +56,7 @@ class TestCreateStartupScriptFromGithub:
             repo_name="test-repo",
             issue_url="https://github.com/test/repo/issues/1",
             is_intervention=False,
-            from_github=True,
+            install_from_github=True,
         )
 
         content = script_path.read_text(encoding="utf-8")
@@ -81,7 +81,7 @@ class TestCreateStartupScriptFromGithub:
         monkeypatch: pytest.MonkeyPatch,
         mock_vscodeclaude_config: None,
     ) -> None:
-        """from_github=False does not inject GitHub install commands."""
+        """install_from_github=False does not inject GitHub install commands."""
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: "Windows",
@@ -95,7 +95,7 @@ class TestCreateStartupScriptFromGithub:
             repo_name="test-repo",
             issue_url="https://github.com/test/repo/issues/1",
             is_intervention=False,
-            from_github=False,
+            install_from_github=False,
         )
 
         content = script_path.read_text(encoding="utf-8")
@@ -107,7 +107,7 @@ class TestCreateStartupScriptFromGithub:
         monkeypatch: pytest.MonkeyPatch,
         mock_vscodeclaude_config: None,
     ) -> None:
-        """from_github=True with no [tool.mcp-coder.from-github] degrades gracefully."""
+        """install_from_github=True with no [tool.mcp-coder.install-from-github] degrades gracefully."""
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: "Windows",
@@ -125,7 +125,7 @@ class TestCreateStartupScriptFromGithub:
             repo_name="test-repo",
             issue_url="https://github.com/test/repo/issues/1",
             is_intervention=False,
-            from_github=True,
+            install_from_github=True,
         )
 
         content = script_path.read_text(encoding="utf-8")
@@ -137,7 +137,7 @@ class TestCreateStartupScriptFromGithub:
         monkeypatch: pytest.MonkeyPatch,
         mock_vscodeclaude_config: None,
     ) -> None:
-        """from_github=True with empty package lists produces no install commands."""
+        """install_from_github=True with empty package lists produces no install commands."""
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: "Windows",
@@ -152,7 +152,7 @@ class TestCreateStartupScriptFromGithub:
             repo_name="test-repo",
             issue_url="https://github.com/test/repo/issues/1",
             is_intervention=False,
-            from_github=True,
+            install_from_github=True,
         )
 
         content = script_path.read_text(encoding="utf-8")
@@ -182,7 +182,7 @@ class TestCreateStartupScriptFromGithub:
             repo_name="test-repo",
             issue_url="https://github.com/test/repo/issues/1",
             is_intervention=False,
-            from_github=True,
+            install_from_github=True,
         )
 
         content = script_path.read_text(encoding="utf-8")
@@ -216,7 +216,7 @@ class TestCreateStartupScriptFromGithub:
             repo_name="test-repo",
             issue_url="https://github.com/test/repo/issues/1",
             is_intervention=False,
-            from_github=True,
+            install_from_github=True,
         )
 
         content = script_path.read_text(encoding="utf-8")
@@ -234,7 +234,7 @@ class TestCreateStartupScriptFromGithub:
         monkeypatch: pytest.MonkeyPatch,
         mock_vscodeclaude_config: None,
     ) -> None:
-        """from_github=True with no pyproject.toml at all degrades gracefully."""
+        """install_from_github=True with no pyproject.toml at all degrades gracefully."""
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: "Windows",
@@ -249,7 +249,7 @@ class TestCreateStartupScriptFromGithub:
             repo_name="test-repo",
             issue_url="https://github.com/test/repo/issues/1",
             is_intervention=False,
-            from_github=True,
+            install_from_github=True,
         )
 
         content = script_path.read_text(encoding="utf-8")

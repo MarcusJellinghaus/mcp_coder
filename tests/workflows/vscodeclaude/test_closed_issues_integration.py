@@ -1,6 +1,6 @@
 """Integration tests for closed issues fix.
 
-Tests the complete flow from cache → orchestrator → status display,
+Tests the complete flow from cache -> orchestrator -> status display,
 ensuring closed issues are properly handled throughout the system.
 """
 
@@ -53,7 +53,7 @@ class TestClosedIssueIntegration:
                 "vscode_pid": 9999,  # Non-existent PID
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
-                "from_github": False,
+                "install_from_github": False,
             }
         ]
 
@@ -190,7 +190,7 @@ class TestClosedIssueIntegration:
                 "vscode_pid": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
-                "from_github": False,
+                "install_from_github": False,
             }
         ]
 
@@ -262,7 +262,7 @@ class TestClosedIssueIntegration:
                 "vscode_pid": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
-                "from_github": False,
+                "install_from_github": False,
             },
             {
                 "folder": "/path/to/owner-repo-408",
@@ -272,7 +272,7 @@ class TestClosedIssueIntegration:
                 "vscode_pid": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
-                "from_github": False,
+                "install_from_github": False,
             },
             {
                 "folder": "/path/to/owner-repo-100",
@@ -282,7 +282,7 @@ class TestClosedIssueIntegration:
                 "vscode_pid": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
-                "from_github": False,
+                "install_from_github": False,
             },
         ]
 
@@ -369,7 +369,7 @@ class TestClosedIssueIntegration:
     def test_end_to_end_closed_issue_workflow(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Test complete workflow from session creation → close → cleanup.
+        """Test complete workflow from session creation -> close -> cleanup.
 
         Given:
         - Initial state: Issue #414 is open with session
@@ -405,7 +405,7 @@ class TestClosedIssueIntegration:
                 "vscode_pid": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
-                "from_github": False,
+                "install_from_github": False,
             }
         ]
 
