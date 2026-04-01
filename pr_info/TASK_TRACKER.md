@@ -21,6 +21,16 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Update test to expect new config name (TDD red)
+- [ ] Implementation: rename test function and references in `tests/test_pyproject_config.py` to expect `install-from-github`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit: `test: expect install-from-github config key (#684)`
+
+### Step 2: Rename from_github → install_from_github across all source and config
+- [ ] Implementation: rename in `pyproject.toml`, 7 source files, and 14 test files (see [step_2.md](./steps/step_2.md))
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit: `rename from-github to install-from-github across all layers (#684)`
 
 ## Pull Request
+- [ ] PR review: verify all changes are consistent and no old references remain
+- [ ] PR summary prepared
