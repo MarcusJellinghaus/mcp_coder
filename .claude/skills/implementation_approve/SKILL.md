@@ -16,7 +16,9 @@ Approve the implementation and transition the issue to PR-ready state.
 mcp-coder check branch-status --ci-timeout 400 --pr-timeout 600 --llm-truncate
 ```
 
-2. Only if the branch-status check passes (exit code 0), run the set-status command and confirm it succeeded:
+2. If `branch-status` reports a base branch other than `main`, ask the user to confirm this is intentional before proceeding.
+
+3. Only if the branch-status check passes (exit code 0), run the set-status command and confirm it succeeded:
 ```bash
 mcp-coder gh-tool set-status status-08:ready-pr
 ```
@@ -25,6 +27,7 @@ mcp-coder gh-tool set-status status-08:ready-pr
 
 **Effect:** Changes issue status from `status-07:code-review` to `status-08:ready-pr`.
 
-3. After the label is set, poll for the PR to be created and pass CI. This runs in the background — the background process creates the PR while it polls (up to 600s):
+4. After the label is set, poll for the PR to be created and pass CI. This runs in the background — the background process creates the PR while it polls (up to 600s):
 ```bash
 mcp-coder check branch-status --ci-timeout 400 --pr-timeout 600 --llm-truncate --wait-for-pr
+```
