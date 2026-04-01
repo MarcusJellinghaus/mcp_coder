@@ -1,10 +1,9 @@
-Add shared workflow failure handling utilities with tests
+Refactor implement workflow to use shared failure handling utilities
 
-Extract reusable failure handling logic into workflow_utils/failure_handling.py:
-- WorkflowFailure frozen dataclass with category, stage, message, elapsed_time
-- get_diff_stat() for git diff --stat of uncommitted changes
-- format_elapsed_time() for human-readable time formatting
-- handle_workflow_failure() for logging, label transitions, and comment posting
+Replace private _get_diff_stat() and _format_elapsed_time() in
+implement/core.py with shared imports from workflow_utils.failure_handling.
+Simplify _handle_workflow_failure() to a thin wrapper that builds the
+implement-specific comment and delegates to the shared handle_workflow_failure().
 
-All GitHub operations are wrapped in broad try/except to never raise.
-Comment posting is always attempted regardless of update_labels flag.
+Update tests to verify delegation to shared handler rather than testing
+internal label/comment logic (now covered by shared module tests).

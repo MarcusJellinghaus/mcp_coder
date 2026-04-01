@@ -13,9 +13,7 @@ import pytest
 from mcp_coder.workflow_utils.task_tracker import TaskTrackerFileNotFoundError
 from mcp_coder.workflows.implement.constants import FailureCategory, WorkflowFailure
 from mcp_coder.workflows.implement.core import (
-    _format_elapsed_time,
     _format_failure_comment,
-    _get_diff_stat,
     _get_rebase_target_branch,
     _handle_workflow_failure,
     _poll_for_ci_completion,
@@ -1419,32 +1417,6 @@ class TestIntegration:
         log_progress_summary(tmp_path)  # Should not raise exception
 
 
-class TestGetDiffStat:
-    """Tests for _get_diff_stat."""
-
-    @patch("mcp_coder.workflows.implement.core._safe_repo_context")
-    def test_returns_diff_stat(self, mock_ctx: MagicMock) -> None:
-        """Returns git diff --stat output."""
-        mock_repo = MagicMock()
-        mock_repo.git.diff.return_value = "file.py | 3 +++"
-        mock_ctx.return_value.__enter__ = MagicMock(return_value=mock_repo)
-        mock_ctx.return_value.__exit__ = MagicMock(return_value=False)
-
-        result = _get_diff_stat(Path("/project"))
-
-        assert result == "file.py | 3 +++"
-        mock_repo.git.diff.assert_called_once_with("HEAD", "--stat")
-
-    @patch("mcp_coder.workflows.implement.core._safe_repo_context")
-    def test_returns_empty_on_error(self, mock_ctx: MagicMock) -> None:
-        """Returns empty string when git fails."""
-        mock_ctx.side_effect = Exception("git error")
-
-        result = _get_diff_stat(Path("/project"))
-
-        assert result == ""
-
-
 class TestFormatFailureComment:
     """Tests for _format_failure_comment."""
 
@@ -1492,20 +1464,15 @@ class TestFormatFailureComment:
 class TestHandleWorkflowFailure:
     """Tests for _handle_workflow_failure."""
 
-    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.implement.core.IssueManager")
-    @patch("mcp_coder.workflows.implement.core._get_diff_stat")
+    @patch("mcp_coder.workflows.implement.core.handle_workflow_failure")
+    @patch("mcp_coder.workflows.implement.core.get_diff_stat")
     def test_sets_failure_label(
         self,
         mock_diff: MagicMock,
-        mock_issue_cls: MagicMock,
-        mock_branch: MagicMock,
+        mock_handle: MagicMock,
     ) -> None:
-        """Failure handler sets the correct label."""
+        """Failure handler delegates to shared handler with correct category."""
         mock_diff.return_value = ""
-        mock_branch.return_value = None
-        mock_manager = MagicMock()
-        mock_issue_cls.return_value = mock_manager
 
         failure = WorkflowFailure(
             category=FailureCategory.GENERAL,
@@ -1514,28 +1481,21 @@ class TestHandleWorkflowFailure:
         )
         _handle_workflow_failure(failure, Path("/project"), update_labels=True)
 
-        mock_manager.update_workflow_label.assert_called_once_with(
-            from_label_id="implementing",
-            to_label_id="implementing_failed",
-        )
+        mock_handle.assert_called_once()
+        call_kwargs = mock_handle.call_args[1]
+        assert call_kwargs["failure"].category == "implementing_failed"
+        assert call_kwargs["from_label_id"] == "implementing"
+        assert call_kwargs["update_labels"] is True
 
-    @patch("mcp_coder.workflows.implement.core.extract_issue_number_from_branch")
-    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.implement.core.IssueManager")
-    @patch("mcp_coder.workflows.implement.core._get_diff_stat")
+    @patch("mcp_coder.workflows.implement.core.handle_workflow_failure")
+    @patch("mcp_coder.workflows.implement.core.get_diff_stat")
     def test_posts_github_comment(
         self,
         mock_diff: MagicMock,
-        mock_issue_cls: MagicMock,
-        mock_branch: MagicMock,
-        mock_extract: MagicMock,
+        mock_handle: MagicMock,
     ) -> None:
-        """Failure handler posts comment with failure details."""
-        mock_branch.return_value = "189-feature"
-        mock_extract.return_value = 189
+        """Failure handler passes formatted comment to shared handler."""
         mock_diff.return_value = "file.py | 3 +++"
-        mock_manager = MagicMock()
-        mock_issue_cls.return_value = mock_manager
 
         failure = WorkflowFailure(
             category=FailureCategory.LLM_TIMEOUT,
@@ -1546,51 +1506,42 @@ class TestHandleWorkflowFailure:
         )
         _handle_workflow_failure(failure, Path("/project"), update_labels=True)
 
-        mock_manager.add_comment.assert_called_once()
-        comment = mock_manager.add_comment.call_args[0][1]
+        mock_handle.assert_called_once()
+        call_kwargs = mock_handle.call_args[1]
+        comment = call_kwargs["comment_body"]
         assert "Implementation Failed" in comment
         assert "Llm Timeout" in comment
         assert "2/5" in comment
         assert "file.py" in comment
 
-    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.implement.core.IssueManager")
-    @patch("mcp_coder.workflows.implement.core._get_diff_stat")
+    @patch("mcp_coder.workflows.implement.core.handle_workflow_failure")
+    @patch("mcp_coder.workflows.implement.core.get_diff_stat")
     def test_label_error_non_blocking(
         self,
         mock_diff: MagicMock,
-        mock_issue_cls: MagicMock,
-        mock_branch: MagicMock,
+        mock_handle: MagicMock,
     ) -> None:
-        """Label update failure should not raise."""
+        """Shared handler is called; error handling is its responsibility."""
         mock_diff.return_value = ""
-        mock_branch.return_value = None
-        mock_manager = MagicMock()
-        mock_manager.update_workflow_label.side_effect = Exception("API error")
-        mock_issue_cls.return_value = mock_manager
 
         failure = WorkflowFailure(
             category=FailureCategory.GENERAL,
             stage="test",
             message="failed",
         )
-        # Should not raise
         _handle_workflow_failure(failure, Path("/project"), update_labels=True)
 
-    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.implement.core.IssueManager")
-    @patch("mcp_coder.workflows.implement.core._get_diff_stat")
+        mock_handle.assert_called_once()
+
+    @patch("mcp_coder.workflows.implement.core.handle_workflow_failure")
+    @patch("mcp_coder.workflows.implement.core.get_diff_stat")
     def test_ci_exhaustion_sets_ci_fix_needed_label(
         self,
         mock_diff: MagicMock,
-        mock_issue_cls: MagicMock,
-        mock_branch: MagicMock,
+        mock_handle: MagicMock,
     ) -> None:
-        """CI fix exhaustion sets ci_fix_needed label."""
+        """CI fix exhaustion passes ci_fix_needed category to shared handler."""
         mock_diff.return_value = ""
-        mock_branch.return_value = None
-        mock_manager = MagicMock()
-        mock_issue_cls.return_value = mock_manager
 
         failure = WorkflowFailure(
             category=FailureCategory.CI_FIX_EXHAUSTED,
@@ -1599,25 +1550,19 @@ class TestHandleWorkflowFailure:
         )
         _handle_workflow_failure(failure, Path("/project"), update_labels=True)
 
-        mock_manager.update_workflow_label.assert_called_once_with(
-            from_label_id="implementing",
-            to_label_id="ci_fix_needed",
-        )
+        mock_handle.assert_called_once()
+        call_kwargs = mock_handle.call_args[1]
+        assert call_kwargs["failure"].category == "ci_fix_needed"
 
-    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.implement.core.IssueManager")
-    @patch("mcp_coder.workflows.implement.core._get_diff_stat")
+    @patch("mcp_coder.workflows.implement.core.handle_workflow_failure")
+    @patch("mcp_coder.workflows.implement.core.get_diff_stat")
     def test_timeout_sets_llm_timeout_label(
         self,
         mock_diff: MagicMock,
-        mock_issue_cls: MagicMock,
-        mock_branch: MagicMock,
+        mock_handle: MagicMock,
     ) -> None:
-        """LLM timeout sets llm_timeout label."""
+        """LLM timeout passes llm_timeout category to shared handler."""
         mock_diff.return_value = ""
-        mock_branch.return_value = None
-        mock_manager = MagicMock()
-        mock_issue_cls.return_value = mock_manager
 
         failure = WorkflowFailure(
             category=FailureCategory.LLM_TIMEOUT,
@@ -1626,30 +1571,30 @@ class TestHandleWorkflowFailure:
         )
         _handle_workflow_failure(failure, Path("/project"), update_labels=True)
 
-        mock_manager.update_workflow_label.assert_called_once_with(
-            from_label_id="implementing",
-            to_label_id="llm_timeout",
-        )
+        mock_handle.assert_called_once()
+        call_kwargs = mock_handle.call_args[1]
+        assert call_kwargs["failure"].category == "llm_timeout"
 
-    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.implement.core._get_diff_stat")
+    @patch("mcp_coder.workflows.implement.core.handle_workflow_failure")
+    @patch("mcp_coder.workflows.implement.core.get_diff_stat")
     def test_handle_workflow_failure_skips_label_when_update_labels_disabled(
         self,
         mock_diff: MagicMock,
-        mock_branch: MagicMock,
+        mock_handle: MagicMock,
     ) -> None:
-        """When update_labels=False, label update is skipped."""
+        """When update_labels=False, flag is passed to shared handler."""
         mock_diff.return_value = ""
-        mock_branch.return_value = None
 
         failure = WorkflowFailure(
             category=FailureCategory.GENERAL,
             stage="test",
             message="failed",
         )
-        with patch("mcp_coder.workflows.implement.core.IssueManager") as mock_issue_cls:
-            _handle_workflow_failure(failure, Path("/project"), update_labels=False)
-            mock_issue_cls.return_value.update_workflow_label.assert_not_called()
+        _handle_workflow_failure(failure, Path("/project"), update_labels=False)
+
+        mock_handle.assert_called_once()
+        call_kwargs = mock_handle.call_args[1]
+        assert call_kwargs["update_labels"] is False
 
 
 class TestRunImplementWorkflowLabelTransitions:
@@ -1869,26 +1814,6 @@ class TestNoPostErrorProgressDisplay:
         # NOT called again after error (post-error display removed)
         mock_progress.assert_called_once()
         mock_handle_failure.assert_called_once()
-
-
-class TestFormatElapsedTime:
-    """Tests for _format_elapsed_time."""
-
-    def test_seconds_only(self) -> None:
-        """Formats sub-minute durations as seconds only."""
-        assert _format_elapsed_time(45.7) == "45s"
-
-    def test_minutes_and_seconds(self) -> None:
-        """Formats durations with minutes and seconds."""
-        assert _format_elapsed_time(754.0) == "12m 34s"
-
-    def test_hours_minutes_seconds(self) -> None:
-        """Formats durations with hours, minutes, and seconds."""
-        assert _format_elapsed_time(3661.0) == "1h 1m 1s"
-
-    def test_zero(self) -> None:
-        """Formats zero seconds."""
-        assert _format_elapsed_time(0.0) == "0s"
 
 
 class TestFormatFailureCommentElapsedAndBuildUrl:
