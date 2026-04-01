@@ -17,14 +17,11 @@
       "Bash(git diff:*)",
       "Bash(gh run view:*)",
       "Bash(gh issue view:*)",
-      "Bash(./tools/format_all.sh:*)",
-      "Bash(./tools/lint_imports.sh:*)",
       "Bash(./tools/tach_check.sh:*)",
       "Bash(tach check:*)",
       "Bash(start docs/architecture/dependency_graph.html)",
       "Bash(./tools/pycycle_check.sh:*)",
       "Bash(python -m pytest:*)",
-      "Bash(./tools/vulture_check.sh:*)",
       "Bash(./tools/ruff_check.sh:*)",
       "Skill(commit_push)",
       "Skill(discuss)",
@@ -61,7 +58,11 @@
       "mcp__tools-py__find_references",
       "mcp__tools-py__move_symbol",
       "mcp__tools-py__rename_symbol",
-      "mcp__tools-py__move_module"
+      "mcp__tools-py__move_module",
+      "mcp__tools-py__run_format_code",
+      "mcp__tools-py__run_lint_imports_check",
+      "mcp__tools-py__run_vulture_check",
+      "mcp__tools-py__get_library_source"
     ]
   },
   "enableAllProjectMcpServers": true,

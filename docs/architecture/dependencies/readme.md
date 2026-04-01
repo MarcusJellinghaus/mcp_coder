@@ -11,13 +11,13 @@ Tools for enforcing architectural boundaries and detecting dependency issues.
 
 ## Tools
 
-| Tool | Purpose | Config | Script |
-|------|---------|--------|--------|
-| **import-linter** | Enforce import rules (layers, isolation, forbidden) | `.importlinter` | `tools/lint_imports.sh` / `.bat` |
-| **tach** | Module boundaries & layer enforcement | `tach.toml` | `tools/tach_check.sh` / `.bat` |
-| **pycycle** | Detect circular imports | - | `tools/pycycle_check.sh` / `.bat` |
-| **pydeps** | Visualize dependencies | - | `tools/pydeps_graph.sh` / `.bat` |
-| **vulture** | Dead code detection | `vulture_whitelist.py` | `tools/vulture_check.sh` / `.bat` |
+| Tool | Purpose | Config | Script | MCP Tool |
+|------|---------|--------|--------|----------|
+| **import-linter** | Enforce import rules (layers, isolation, forbidden) | `.importlinter` | `tools/lint_imports.sh` / `.bat` | `mcp__tools-py__run_lint_imports_check` |
+| **tach** | Module boundaries & layer enforcement | `tach.toml` | `tools/tach_check.sh` / `.bat` | — |
+| **pycycle** | Detect circular imports | - | `tools/pycycle_check.sh` / `.bat` | — |
+| **pydeps** | Visualize dependencies | - | `tools/pydeps_graph.sh` / `.bat` | — |
+| **vulture** | Dead code detection | `vulture_whitelist.py` | `tools/vulture_check.sh` / `.bat` | `mcp__tools-py__run_vulture_check` |
 
 ## Why Both import-linter and tach?
 
@@ -43,6 +43,10 @@ tach check            # Layer violations
 pycycle --here        # Circular imports
 vulture src tests vulture_whitelist.py --min-confidence 60  # Dead code
 ```
+
+**For Claude Code**, use MCP tools:
+- `mcp__tools-py__run_lint_imports_check`
+- `mcp__tools-py__run_vulture_check`
 
 ## Vulture - Dead Code Detection
 

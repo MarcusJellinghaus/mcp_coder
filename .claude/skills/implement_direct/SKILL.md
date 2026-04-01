@@ -6,6 +6,7 @@ allowed-tools:
   - "Bash(gh issue view *)"
   - "Bash(mcp-coder gh-tool *)"
   - mcp__workspace__read_file
+  - mcp__tools-py__run_format_code
 ---
 
 # Implement Direct
@@ -49,9 +50,7 @@ If no issue number is provided:
    - `./tools/ruff_check.sh` — fix all issues
 
 6. **Format code**
-   ```bash
-   ./tools/format_all.sh
-   ```
+   Use `mcp__tools-py__run_format_code` to format all code (black + isort).
 
 7. **Update issue status**
    ```bash

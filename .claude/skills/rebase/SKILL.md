@@ -21,8 +21,7 @@ allowed-tools:
   - "Bash(git rev-parse *)"
   - "Bash(gh run view *)"
   - "Bash(gh issue view *)"
-  - "Bash(./tools/format_all.sh *)"
-  - "Bash(tools/format_all.bat *)"
+  - mcp__tools-py__run_format_code
   - "Bash(mcp-coder gh-tool get-base-branch *)"
   - mcp__tools-py__run_pylint_check
   - mcp__tools-py__run_pytest_check
