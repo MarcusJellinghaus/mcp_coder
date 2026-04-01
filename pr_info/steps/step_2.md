@@ -13,7 +13,7 @@
 
 ## WHERE
 
-9 files to edit (in dependency order — types first, consumers last):
+23 files to edit (in dependency order — types first, consumers last):
 
 1. `pyproject.toml`
 2. `src/mcp_coder/workflows/vscodeclaude/types.py`
@@ -23,6 +23,23 @@
 6. `src/mcp_coder/workflows/vscodeclaude/session_restart.py`
 7. `src/mcp_coder/cli/parsers.py`
 8. `src/mcp_coder/cli/commands/coordinator/commands.py`
+
+**14 test files** (mechanical rename of references):
+
+9. `tests/workflows/vscodeclaude/test_cleanup.py`
+10. `tests/workflows/vscodeclaude/test_status_display.py`
+11. `tests/workflows/vscodeclaude/test_orchestrator_launch.py`
+12. `tests/workflows/vscodeclaude/test_orchestrator_sessions.py`
+13. `tests/workflows/vscodeclaude/test_workspace_startup_script_github.py`
+14. `tests/workflows/vscodeclaude/test_sessions.py`
+15. `tests/workflows/vscodeclaude/test_helpers.py`
+16. `tests/cli/commands/coordinator/test_commands.py`
+17. `tests/cli/commands/coordinator/test_vscodeclaude_cli.py`
+18. `tests/workflows/vscodeclaude/test_types.py`
+19. `tests/workflows/vscodeclaude/test_orchestrator_cache.py`
+20. `tests/workflows/vscodeclaude/test_closed_issues_integration.py`
+21. `tests/workflows/vscodeclaude/test_cache_aware.py`
+22. `tests/workflows/vscodeclaude/test_orchestrator_regenerate.py`
 
 ## WHAT — Per-file changes
 
@@ -91,6 +108,10 @@ install_from_github = getattr(args, "install_from_github", False)
 ```
 Plus corresponding keyword arg changes when passing to `process_eligible_issues()` and `prepare_and_launch_session()`.
 
+### 9–22. Test files (14 files)
+
+All test files: mechanical rename of `from_github` → `install_from_github` and `from-github` → `install-from-github` in string literals, variable names, dict keys, and function call arguments.
+
 ## HOW
 
 - Each file: use `edit_file` with exact old_text → new_text replacements
@@ -108,7 +129,8 @@ Plus corresponding keyword arg changes when passing to `process_eligible_issues(
 6. Edit session_restart.py (dict key + session.get)
 7. Edit parsers.py (CLI flag string)
 8. Edit commands.py (getattr + variable + keyword args)
-9. Run pylint, mypy, pytest — all must pass
+9. Rename `from_github` → `install_from_github` and `from-github` → `install-from-github` in all 14 test files (mechanical find-and-replace)
+10. Run pylint, mypy, pytest — all must pass
 ```
 
 ## DATA

@@ -28,6 +28,7 @@ The only change is the identifier name at each point in this chain.
 | `src/mcp_coder/workflows/vscodeclaude/session_restart.py` | Dict key in `restart_closed_sessions()` |
 | `src/mcp_coder/cli/commands/coordinator/commands.py` | `getattr(args, ...)` calls + keyword args (2 occurrences) |
 | `tests/test_pyproject_config.py` | Config key reference in test assertion |
+| `tests/workflows/vscodeclaude/test_*.py` (10 files), `tests/cli/commands/coordinator/test_commands.py`, `test_vscodeclaude_cli.py` | Mechanical rename of `from_github` → `install_from_github` in all references |
 
 ## Files to Create
 
@@ -39,5 +40,7 @@ None.
 
 1. **Step 1** — Update the test to expect the new name (TDD: test goes red)
 2. **Step 2** — Rename everything in source + config (test goes green)
+
+Step 2 covers 23 files total (8 source + pyproject.toml + 14 test files). All test file changes are mechanical find-and-replace.
 
 This keeps it simple: one test commit, one implementation commit.
