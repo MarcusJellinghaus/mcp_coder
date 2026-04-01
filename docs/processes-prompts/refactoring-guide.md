@@ -130,13 +130,16 @@ When splitting a module into sub-modules, the new files may have internal depend
 **For Claude Code (MCP tools):**
 
 ```
+mcp__tools-py__run_format_code
 mcp__tools-py__run_lint_imports_check
+mcp__tools-py__run_vulture_check
 mcp__tools-py__run_pytest_check
 mcp__tools-py__run_pylint_check
 mcp__tools-py__run_mypy_check
 ```
 
-> `tach_check.sh` has no MCP equivalent — run it via Bash when needed.
+> `tach_check.sh` and `pycycle_check.sh` have no MCP equivalents — run them via Bash when needed.
+> Use `mcp__tools-py__get_library_source` to inspect third-party library APIs when planning refactors.
 
 ## Common Patterns
 

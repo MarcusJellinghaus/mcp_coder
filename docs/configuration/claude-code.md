@@ -109,7 +109,7 @@ This file contains **mandatory instructions** that Claude follows when working o
 
 - Define code quality requirements
 - Set project-specific conventions
-- Specify mandatory tool usage (e.g., MCP tools)
+- Specify mandatory tool usage (e.g., MCP tools for quality checks: `run_pylint_check`, `run_pytest_check`, `run_mypy_check`, `run_lint_imports_check`, `run_vulture_check`, `run_format_code`)
 - Configure workflow behaviors
 
 **See mcp-coder's own [CLAUDE.md](https://github.com/MarcusJellinghaus/mcp_coder/blob/main/.claude/CLAUDE.md) for a comprehensive example.**

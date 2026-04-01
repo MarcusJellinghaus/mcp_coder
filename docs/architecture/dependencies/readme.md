@@ -45,8 +45,9 @@ vulture src tests vulture_whitelist.py --min-confidence 60  # Dead code
 ```
 
 **For Claude Code**, use MCP tools:
-- `mcp__tools-py__run_lint_imports_check`
-- `mcp__tools-py__run_vulture_check`
+- `mcp__tools-py__run_lint_imports_check` (replaces `lint_imports.sh`)
+- `mcp__tools-py__run_vulture_check` (replaces `vulture_check.sh`)
+- `mcp__tools-py__get_library_source` — inspect third-party library source to understand dependency APIs
 
 ## Vulture - Dead Code Detection
 

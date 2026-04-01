@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `docs: update CLAUDE.md quality checks section and refactoring row`
 
 ### Step 2: Add MCP tool references to documentation
-- [ ] Implementation: add inline MCP tool notes to `docs/repository-setup.md`, `docs/configuration/claude-code.md`, `docs/processes-prompts/refactoring-guide.md`, `docs/architecture/dependencies/readme.md`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `docs: add MCP tool references to documentation`
+- [x] Implementation: add inline MCP tool notes to `docs/repository-setup.md`, `docs/configuration/claude-code.md`, `docs/processes-prompts/refactoring-guide.md`, `docs/architecture/dependencies/readme.md`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `docs: add MCP tool references to documentation`
 
 ### Step 3: Decouple CI log parser test fixtures from real tool names
 - [ ] Implementation: replace real tool names in VULTURE_LOG fixture and assertions with fictional `tool-alpha` / `tool_alpha.sh` in `tests/checks/test_ci_log_parser.py`

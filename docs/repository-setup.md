@@ -740,6 +740,9 @@ echo "Formatting complete!"
 | `pylint_check_for_errors.bat` | Run pylint errors only | Optional (CI runs it) |
 | `mypy.bat` | Run type checking | Optional (CI runs it) |
 
+> **For Claude Code:** Use MCP tools where available: `mcp__tools-py__run_lint_imports_check` (replaces `lint_imports.sh`), `mcp__tools-py__run_vulture_check` (replaces `vulture_check.sh`), `mcp__tools-py__run_pylint_check`, `mcp__tools-py__run_mypy_check`.
+> Shell scripts are for human developers and CI pipelines. `tach_check.sh` and `pycycle_check.sh` have no MCP equivalents — run them via Bash when needed.
+
 ### Utility Tools
 
 | Script | Purpose | Category |
