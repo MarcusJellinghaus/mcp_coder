@@ -1,8 +1,8 @@
-# Step 1: Add label, enum member, and tests
+# Step 1: Add dedicated failure label for task tracker preparation
 
 ## LLM Prompt
 
-> Read `pr_info/steps/summary.md` for context. Implement Step 1: Add the `task_tracker_prep_failed` label to `labels.json`, add the `TASK_TRACKER_PREP_FAILED` enum member to `FailureCategory`, and update the tests. Follow TDD — update tests first, then production code. Run all three code quality checks after changes. Commit as a single commit.
+> Read `pr_info/steps/summary.md` for context. Implement Step 1: Add the `task_tracker_prep_failed` label to `labels.json`, add the `TASK_TRACKER_PREP_FAILED` enum member to `FailureCategory`, wire it up in `core.py`, and update the tests. Follow TDD — update tests first, then production code. Run all three code quality checks after changes. Commit as a single commit.
 
 ## WHERE
 
@@ -10,6 +10,7 @@
 - `tests/workflows/test_label_config.py` — add to `ERROR_STATUS_IDS` list (test first)
 - `src/mcp_coder/config/labels.json` — add label entry
 - `src/mcp_coder/workflows/implement/constants.py` — add enum member
+- `src/mcp_coder/workflows/implement/core.py` — change failure category for task tracker prep
 
 ## WHAT
 
@@ -64,19 +65,57 @@ Add one member:
 TASK_TRACKER_PREP_FAILED = "task_tracker_prep_failed"
 ```
 
+### 5. Production: `core.py` — wire up the new failure category
+
+Change the `WorkflowFailure` construction at the task tracker prep failure site.
+
+**Before:**
+
+```python
+if not prepare_task_tracker(project_dir, provider, mcp_config, execution_dir):
+    _handle_workflow_failure(
+        WorkflowFailure(
+            category=FailureCategory.GENERAL,
+            stage="Task tracker preparation",
+            message="Failed to prepare task tracker",
+            ...
+        ),
+        ...
+    )
+```
+
+**After:**
+
+```python
+if not prepare_task_tracker(project_dir, provider, mcp_config, execution_dir):
+    _handle_workflow_failure(
+        WorkflowFailure(
+            category=FailureCategory.TASK_TRACKER_PREP_FAILED,
+            stage="Task tracker preparation",
+            message="Failed to prepare task tracker",
+            ...
+        ),
+        ...
+    )
+```
+
+No new imports needed — `FailureCategory` is already imported from `.constants`.
+
 ## HOW
 
 - No new imports, no new files, no integration changes.
 - The enum value must exactly match the `internal_id` in `labels.json`.
+- Only the `category=` argument changes in `core.py`. All other arguments stay the same.
 
 ## DATA
 
 - `FailureCategory.TASK_TRACKER_PREP_FAILED.value` → `"task_tracker_prep_failed"`
 - Label name: `"status-06f-prep:task-tracker-prep-failed"`
+- When task tracker prep fails, the issue now gets label `status-06f-prep:task-tracker-prep-failed` instead of `status-06f:implementing-failed`.
 
 ## Verification
 
 Run all three checks:
 - `mcp__tools-py__run_pylint_check`
-- `mcp__tools-py__run_pytest_check` (with `-m "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"`)
+- `mcp__tools-py__run_pytest_check` (with `-m "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration and not llm_integration and not textual_integration"`)
 - `mcp__tools-py__run_mypy_check`

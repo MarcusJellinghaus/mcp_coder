@@ -30,5 +30,4 @@ Add a dedicated failure label `status-06f-prep:task-tracker-prep-failed` and cor
 
 ## Commits
 
-- **Step 1:** Add label + enum member + tests (TDD: tests first, then production code)
-- **Step 2:** Wire up the new failure category in `core.py`
+- **Step 1:** Add dedicated failure label, enum member, core.py wiring, and tests
