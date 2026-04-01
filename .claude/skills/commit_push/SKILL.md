@@ -8,8 +8,7 @@ allowed-tools:
   - "Bash(git commit *)"
   - "Bash(git push *)"
   - "Bash(git log *)"
-  - "Bash(./tools/format_all.sh *)"
-  - "Bash(tools/format_all.bat *)"
+  - mcp__tools-py__run_format_code
   - Read
   - Glob
   - Grep
@@ -20,9 +19,7 @@ allowed-tools:
 Follow this process to commit and push your changes:
 
 ## 1. Format Code
-```bash
-./tools/format_all.sh
-```
+Use `mcp__tools-py__run_format_code` to format all code (black + isort).
 
 ## 2. Review Changes
 ```bash

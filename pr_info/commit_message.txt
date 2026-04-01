@@ -1,5 +1,4 @@
-test: decouple test fixtures from real tool names (#672)
+chore: replace format_all.sh with MCP tool in commit_push skill (#672)
 
-Replace vulture/vulture_check.sh references with fictional tool-alpha/tool_alpha.sh
-in test_ci_log_parser.py and test_branch_status.py to decouple test data from
-actual tool names being modified in this PR.
+Replace Bash-invoked format_all.sh/.bat with mcp__tools-py__run_format_code
+in commit_push/SKILL.md allowed-tools and step 1 instructions.
