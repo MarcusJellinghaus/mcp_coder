@@ -1,5 +1,0 @@
-fix(test): update get_session_for_issue mock to accept workspace_base kwarg
-
-The test mock used `lambda _repo, _num: None` which crashed with
-TypeError when production code passed `workspace_base` as a keyword
-argument. Added `**_kwargs` to the lambda to accept the parameter.
