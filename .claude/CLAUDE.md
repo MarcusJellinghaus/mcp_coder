@@ -185,6 +185,8 @@ git commit
 git log
 git fetch
 git ls-tree
+gh issue view
+gh run view
 ./tools/ruff_check.sh
 mcp-coder git-tool compact-diff
 mcp-coder check branch-status
