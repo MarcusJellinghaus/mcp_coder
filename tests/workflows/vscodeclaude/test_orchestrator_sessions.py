@@ -2002,7 +2002,7 @@ class TestBranchHandlingIntegration:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_session_for_issue",
-            lambda _repo, _num: None,
+            lambda _repo, _num, **_kwargs: None,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.load_repo_vscodeclaude_config",

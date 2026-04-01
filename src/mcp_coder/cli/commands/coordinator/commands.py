@@ -520,11 +520,15 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         # - This ensures users always see what's cleanable
         if args.cleanup:
             cleanup_stale_sessions(
-                dry_run=False, cached_issues_by_repo=cached_issues_by_repo
+                workspace_base=vscodeclaude_config["workspace_base"],
+                dry_run=False,
+                cached_issues_by_repo=cached_issues_by_repo,
             )
         else:
             cleanup_stale_sessions(
-                dry_run=True, cached_issues_by_repo=cached_issues_by_repo
+                workspace_base=vscodeclaude_config["workspace_base"],
+                dry_run=True,
+                cached_issues_by_repo=cached_issues_by_repo,
             )
 
         # Step 2: Restart closed sessions (pass cache for staleness checks)
@@ -637,6 +641,9 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
     repos_section = config_data.get("coordinator", {}).get("repos", {})
     repo_names = list(repos_section.keys())
 
+    # Load vscodeclaude config for workspace_base
+    vscodeclaude_config = load_vscodeclaude_config()
+
     # Build cached issues for staleness checks, including session issues
     # to ensure closed issues from existing sessions are properly detected
     cached_issues_by_repo, _ = _build_cached_issues_by_repo(repo_names, sessions)
@@ -650,6 +657,7 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
     display_status_table(
         sessions=sessions,
         eligible_issues=eligible_issues,
+        workspace_base=vscodeclaude_config["workspace_base"],
         repo_filter=args.repo,
         cached_issues_by_repo=cached_issues_by_repo,
         issues_without_branch=issues_without_branch,

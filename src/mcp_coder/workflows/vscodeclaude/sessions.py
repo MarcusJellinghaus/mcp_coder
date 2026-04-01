@@ -6,12 +6,15 @@ Handles JSON file I/O for session tracking and VSCode process checking.
 import json
 import logging
 import platform
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, cast
 
 import psutil
 
+from .config import sanitize_folder_name
+from .helpers import load_to_be_deleted
 from .types import VSCodeClaudeSession, VSCodeClaudeSessionStore
 
 # Optional Windows-only imports for window title detection
@@ -376,24 +379,75 @@ def is_vscode_open_for_folder(folder_path: str) -> tuple[bool, int | None]:
 def get_session_for_issue(
     repo_full_name: str,
     issue_number: int,
+    workspace_base: str,
 ) -> VSCodeClaudeSession | None:
     """Find existing session for an issue.
+
+    Excludes sessions whose folder is in the .to_be_deleted registry.
+    Returns None with an error log if multiple active sessions match.
 
     Args:
         repo_full_name: "owner/repo" format
         issue_number: GitHub issue number
+        workspace_base: Path to workspace directory
 
     Returns:
         Session dict if found, None otherwise
     """
     store = load_sessions()
+    to_be_deleted = load_to_be_deleted(workspace_base)
+
+    matches: list[VSCodeClaudeSession] = []
     for session in store["sessions"]:
         if (
             session["repo"] == repo_full_name
             and session["issue_number"] == issue_number
         ):
-            return session
-    return None
+            if Path(session["folder"]).name not in to_be_deleted:
+                matches.append(session)
+
+    if len(matches) > 1:
+        logger.error("Multiple active folders for %s #%d", repo_full_name, issue_number)
+        return None
+    return matches[0] if matches else None
+
+
+def warn_orphan_folders(
+    workspace_base: str,
+    repo_full_name: str,
+    issue_number: int,
+    session_folders: set[str],
+    to_be_deleted: set[str],
+) -> None:
+    r"""Scan disk for folders matching the issue that aren't tracked.
+
+    Checks for {base} and {base}-folder\d+ folders on disk that are
+    not in sessions.json and not in .to_be_deleted. Logs a warning
+    for each orphan found.
+
+    Note: repo_full_name is "owner/repo" format. The short repo name
+    is extracted via split("/")[-1] before calling sanitize_folder_name.
+
+    Args:
+        workspace_base: Path to workspace directory
+        repo_full_name: "owner/repo" format
+        issue_number: GitHub issue number
+        session_folders: Set of folder names from active sessions
+        to_be_deleted: Set of folder names from soft-delete registry
+    """
+    short_repo_name = repo_full_name.split("/")[-1]
+    sanitized_repo = sanitize_folder_name(short_repo_name)
+    base_name = f"{sanitized_repo}_{issue_number}"
+    pattern = re.compile(rf"^{re.escape(base_name)}(-folder\d+)?$")
+
+    workspace_path = Path(workspace_base)
+    if not workspace_path.exists():
+        return
+
+    for entry in workspace_path.iterdir():
+        if entry.is_dir() and pattern.match(entry.name):
+            if entry.name not in to_be_deleted and entry.name not in session_folders:
+                logger.warning("Orphan folder detected: %s", entry.name)
 
 
 def add_session(session: VSCodeClaudeSession) -> None:

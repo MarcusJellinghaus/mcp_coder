@@ -167,7 +167,7 @@ class TestClosedIssueIntegration:
         # Verify closed issue was filtered out
         assert all(issue["number"] != 414 for issue in filtered)
 
-    def test_status_display_shows_closed_correctly(self) -> None:
+    def test_status_display_shows_closed_correctly(self, tmp_path: Path) -> None:
         """Test that status display shows closed sessions correctly.
 
         Given:
@@ -220,6 +220,7 @@ class TestClosedIssueIntegration:
             display_status_table(
                 sessions=sessions,
                 eligible_issues=eligible_issues,
+                workspace_base=str(tmp_path),
                 cached_issues_by_repo=cached_issues,
             )
 
@@ -366,7 +367,7 @@ class TestClosedIssueIntegration:
             # (in this mock setup, it won't actually restart due to other conditions)
 
     def test_end_to_end_closed_issue_workflow(
-        self, caplog: pytest.LogCaptureFixture
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test complete workflow from session creation → close → cleanup.
 
@@ -468,6 +469,7 @@ class TestClosedIssueIntegration:
             display_status_table(
                 sessions=sessions,
                 eligible_issues=eligible_issues,
+                workspace_base=str(tmp_path),
                 cached_issues_by_repo=cached_issues,
             )
 

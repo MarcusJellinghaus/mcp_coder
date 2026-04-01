@@ -338,7 +338,11 @@ def process_eligible_issues(
     # Filter out issues that already have sessions
     issues_to_start: list[IssueData] = []
     for issue in actionable_issues:
-        existing = get_session_for_issue(repo_full_name, issue["number"])
+        existing = get_session_for_issue(
+            repo_full_name,
+            issue["number"],
+            workspace_base=vscodeclaude_config["workspace_base"],
+        )
         if existing is None:
             issues_to_start.append(issue)
 

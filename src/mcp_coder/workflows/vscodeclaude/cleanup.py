@@ -11,6 +11,11 @@ from ...utils.folder_deletion import (
 from ...utils.github_operations.issues import IssueData, IssueManager
 from ...utils.github_operations.issues.cache import get_all_cached_issues
 from .config import _get_configured_repos, get_github_username
+from .helpers import (
+    add_to_be_deleted,
+    load_to_be_deleted,
+    remove_from_to_be_deleted,
+)
 from .issues import (
     get_ignore_labels,
     get_matching_ignore_label,
@@ -20,6 +25,7 @@ from .sessions import (
     is_session_active,
     load_sessions,
     remove_session,
+    warn_orphan_folders,
 )
 from .status import get_folder_git_status, is_session_stale
 from .types import VSCodeClaudeSession
@@ -190,20 +196,39 @@ def get_stale_sessions(
     return stale_sessions
 
 
-def delete_session_folder(session: VSCodeClaudeSession) -> bool:
+def delete_session_folder(
+    session: VSCodeClaudeSession,
+    workspace_base: str,
+    was_clean: bool = False,
+) -> bool:
     """Delete session folder and remove from session store.
 
     Args:
         session: Session to delete
+        workspace_base: Path to workspace directory
+        was_clean: True when caller verified git status was "Clean" before calling
 
     Returns:
         True if folder was successfully deleted and session removed, False on error.
 
     Uses safe_delete_folder for robust folder deletion.
+    When folder deletion fails and was_clean is True, the folder is soft-deleted
+    (added to .to_be_deleted registry) and the session is removed.
+    The .code-workspace file is always deleted before attempting folder deletion.
     """
     folder_path = Path(session["folder"])
+    folder_name = folder_path.name
 
     try:
+        # Always delete the workspace file before attempting folder deletion
+        workspace_file = Path(workspace_base) / f"{folder_name}.code-workspace"
+        if workspace_file.exists():
+            try:
+                workspace_file.unlink()
+                logger.info("Deleted workspace file: %s", workspace_file)
+            except OSError:
+                logger.warning("Failed to delete workspace file: %s", workspace_file)
+
         # Use safe_delete_folder for robust folder deletion
         if folder_path.exists():
             deletion = safe_delete_folder(folder_path)
@@ -224,15 +249,13 @@ def delete_session_folder(session: VSCodeClaudeSession) -> bool:
                         reason_label,
                         deletion.detail or folder_path,
                     )
+                # Soft-delete on failure when folder was clean
+                if was_clean:
+                    add_to_be_deleted(workspace_base, folder_name)
+                    remove_session(session["folder"])
+                    logger.info("Soft-deleted: %s", folder_name)
                 return False
             logger.info("Deleted folder: %s", folder_path)
-
-        # Also delete the workspace file if it exists
-        workspace_base = folder_path.parent
-        workspace_file = workspace_base / f"{folder_path.name}.code-workspace"
-        if workspace_file.exists():
-            workspace_file.unlink()
-            logger.info("Deleted workspace file: %s", workspace_file)
 
         # Remove session from store
         remove_session(session["folder"])
@@ -242,16 +265,22 @@ def delete_session_folder(session: VSCodeClaudeSession) -> bool:
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error("Failed to delete session folder %s: %s", folder_path, e)
+        if was_clean:
+            add_to_be_deleted(workspace_base, folder_path.name)
+            remove_session(session["folder"])
+            logger.info("Soft-deleted (exception path): %s", folder_path.name)
         return False
 
 
 def cleanup_stale_sessions(
+    workspace_base: str,
     dry_run: bool = True,
     cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
 ) -> dict[str, list[str]]:
     """Clean up stale session folders.
 
     Args:
+        workspace_base: Path to workspace directory
         dry_run: If True, only report what would be deleted
         cached_issues_by_repo: Optional cache for blocked detection
 
@@ -263,8 +292,44 @@ def cleanup_stale_sessions(
     - Dirty: skip with warning (uncommitted changes)
     - Missing: remove session only (folder already gone)
     - No Git / Error: skip with warning (investigate manually)
+
+    Retry logic: on non-dry-run, retries .to_be_deleted entries first.
     """
     result: dict[str, list[str]] = {"deleted": [], "skipped": []}
+
+    # Retry .to_be_deleted entries before processing stale sessions
+    if not dry_run:
+        to_delete = load_to_be_deleted(workspace_base)
+        for folder_name in list(to_delete):
+            folder_path = Path(workspace_base) / folder_name
+            if not folder_path.exists():
+                remove_from_to_be_deleted(workspace_base, folder_name)
+                logger.info("Removed stale .to_be_deleted entry: %s", folder_name)
+                continue
+            deletion = safe_delete_folder(folder_path)
+            if deletion.success:
+                remove_from_to_be_deleted(workspace_base, folder_name)
+                logger.info("Retry-deleted soft-deleted folder: %s", folder_name)
+
+    # Run orphan detection for all repos with active sessions
+    if not dry_run:
+        store = load_sessions()
+        session_folders = {Path(s["folder"]).name for s in store["sessions"]}
+        to_be_deleted_set = load_to_be_deleted(workspace_base)
+        sessions_by_repo: dict[str, set[int]] = {}
+        for session in store["sessions"]:
+            repo = session["repo"]
+            sessions_by_repo.setdefault(repo, set()).add(session["issue_number"])
+
+        for repo_full_name, issues in sessions_by_repo.items():
+            for issue_number in issues:
+                warn_orphan_folders(
+                    workspace_base,
+                    repo_full_name,
+                    issue_number,
+                    session_folders=session_folders,
+                    to_be_deleted=to_be_deleted_set,
+                )
 
     stale_sessions = get_stale_sessions(cached_issues_by_repo=cached_issues_by_repo)
 
@@ -277,7 +342,9 @@ def cleanup_stale_sessions(
                 print(f"Add --cleanup to delete: {folder}")
                 # Don't add to deleted list in dry run - it wasn't actually deleted
             else:
-                if delete_session_folder(session):
+                if delete_session_folder(
+                    session, workspace_base=workspace_base, was_clean=True
+                ):
                     print(f"Deleted: {folder}")
                     result["deleted"].append(folder)
                 else:
@@ -308,7 +375,7 @@ def cleanup_stale_sessions(
                         f"Add --cleanup to delete (empty, {git_status.lower()}): {folder}"
                     )
                 else:
-                    if delete_session_folder(session):
+                    if delete_session_folder(session, workspace_base=workspace_base):
                         print(f"Deleted: {folder}")
                         result["deleted"].append(folder)
                     else:

@@ -386,10 +386,15 @@ class TestStatusDisplay:
         assert "Manual" in action
 
     def test_display_status_table_empty(
-        self, capsys: pytest.CaptureFixture[str]
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """Handles empty sessions and issues."""
-        display_status_table(sessions=[], eligible_issues=[], repo_filter=None)
+        display_status_table(
+            sessions=[],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            repo_filter=None,
+        )
 
         captured = capsys.readouterr()
         assert "No sessions" in captured.out or "Folder" in captured.out
@@ -416,7 +421,12 @@ class TestStatusDisplay:
             "from_github": False,
         }
 
-        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            repo_filter=None,
+        )
 
         captured = capsys.readouterr()
         assert "#123" in captured.out
@@ -424,6 +434,7 @@ class TestStatusDisplay:
 
     def test_display_status_table_with_eligible_issue(
         self,
+        tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -445,7 +456,10 @@ class TestStatusDisplay:
         eligible_issues: list[tuple[str, IssueData]] = [("myrepo", issue)]
 
         display_status_table(
-            sessions=[], eligible_issues=eligible_issues, repo_filter=None
+            sessions=[],
+            eligible_issues=eligible_issues,
+            workspace_base=str(tmp_path),
+            repo_filter=None,
         )
 
         captured = capsys.readouterr()
@@ -454,6 +468,7 @@ class TestStatusDisplay:
 
     def test_pr_created_eligible_issue_shows_awaiting_merge(
         self,
+        tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Eligible issue with status-10:pr-created shows (awaiting merge) action."""
@@ -474,7 +489,10 @@ class TestStatusDisplay:
         eligible_issues: list[tuple[str, IssueData]] = [("owner/repo", issue)]
 
         display_status_table(
-            sessions=[], eligible_issues=eligible_issues, repo_filter=None
+            sessions=[],
+            eligible_issues=eligible_issues,
+            workspace_base=str(tmp_path),
+            repo_filter=None,
         )
 
         captured = capsys.readouterr()
@@ -509,7 +527,12 @@ class TestClosedIssuePrefixDisplay:
             "from_github": False,
         }
 
-        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            repo_filter=None,
+        )
 
         captured = capsys.readouterr()
         # Verify session is shown
@@ -541,7 +564,12 @@ class TestClosedIssuePrefixDisplay:
             "from_github": False,
         }
 
-        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            repo_filter=None,
+        )
 
         captured = capsys.readouterr()
         # Should show both (Closed) prefix and status info
@@ -572,7 +600,12 @@ class TestClosedIssuePrefixDisplay:
             "from_github": False,
         }
 
-        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            repo_filter=None,
+        )
 
         captured = capsys.readouterr()
         # Should show delete action for closed issue
@@ -602,7 +635,12 @@ class TestClosedIssuePrefixDisplay:
             "from_github": False,
         }
 
-        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            repo_filter=None,
+        )
 
         captured = capsys.readouterr()
         # Should show (Closed) prefix
@@ -634,7 +672,12 @@ class TestClosedIssuePrefixDisplay:
             "from_github": False,
         }
 
-        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            repo_filter=None,
+        )
 
         captured = capsys.readouterr()
         # Session with closed issue and missing folder should be SKIPPED
@@ -666,7 +709,12 @@ class TestClosedIssuePrefixDisplay:
             "from_github": False,
         }
 
-        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            repo_filter=None,
+        )
 
         captured = capsys.readouterr()
         # Session with closed issue and EXISTING folder should be shown
@@ -698,7 +746,12 @@ class TestClosedIssuePrefixDisplay:
             "from_github": False,
         }
 
-        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            repo_filter=None,
+        )
 
         captured = capsys.readouterr()
         # Should show the session
@@ -772,6 +825,7 @@ class TestClosedIssuePrefixDisplay:
         display_status_table(
             sessions=[session],
             eligible_issues=[],
+            workspace_base=str(tmp_path),
             repo_filter=None,
             cached_issues_by_repo=cached_issues_by_repo,
         )
@@ -819,7 +873,12 @@ class TestBotStageSessionsDeleteAction:
             "from_github": False,
         }
 
-        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            repo_filter=None,
+        )
 
         captured = capsys.readouterr()
         # Should show the session
@@ -853,7 +912,12 @@ class TestBotStageSessionsDeleteAction:
             "from_github": False,
         }
 
-        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            repo_filter=None,
+        )
 
         captured = capsys.readouterr()
         assert "#456" in captured.out
@@ -883,7 +947,12 @@ class TestBotStageSessionsDeleteAction:
             "from_github": False,
         }
 
-        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            repo_filter=None,
+        )
 
         captured = capsys.readouterr()
         assert "#789" in captured.out
@@ -913,7 +982,12 @@ class TestBotStageSessionsDeleteAction:
             "from_github": False,
         }
 
-        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            repo_filter=None,
+        )
 
         captured = capsys.readouterr()
         assert "#101" in captured.out
@@ -943,7 +1017,12 @@ class TestBotStageSessionsDeleteAction:
             "from_github": False,
         }
 
-        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            repo_filter=None,
+        )
 
         captured = capsys.readouterr()
         assert "#202" in captured.out
@@ -973,7 +1052,12 @@ class TestBotStageSessionsDeleteAction:
             "from_github": False,
         }
 
-        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            repo_filter=None,
+        )
 
         captured = capsys.readouterr()
         assert "#303" in captured.out
@@ -1003,7 +1087,12 @@ class TestBotStageSessionsDeleteAction:
             "from_github": False,
         }
 
-        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            repo_filter=None,
+        )
 
         captured = capsys.readouterr()
         assert "#404" in captured.out
@@ -1035,7 +1124,12 @@ class TestBotStageSessionsDeleteAction:
             "from_github": False,
         }
 
-        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            repo_filter=None,
+        )
 
         captured = capsys.readouterr()
         assert "#505" in captured.out
@@ -1078,7 +1172,12 @@ class TestPrCreatedSessionsDeleteAction:
             "from_github": False,
         }
 
-        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            repo_filter=None,
+        )
 
         captured = capsys.readouterr()
         # Should show the session
@@ -1112,7 +1211,12 @@ class TestPrCreatedSessionsDeleteAction:
             "from_github": False,
         }
 
-        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            repo_filter=None,
+        )
 
         captured = capsys.readouterr()
         assert "#456" in captured.out
@@ -1143,7 +1247,12 @@ class TestPrCreatedSessionsDeleteAction:
             "from_github": False,
         }
 
-        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            repo_filter=None,
+        )
 
         captured = capsys.readouterr()
         assert "#789" in captured.out
@@ -1174,7 +1283,12 @@ class TestPrCreatedSessionsDeleteAction:
             "from_github": False,
         }
 
-        display_status_table(sessions=[session], eligible_issues=[], repo_filter=None)
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            repo_filter=None,
+        )
 
         captured = capsys.readouterr()
         assert "#999" in captured.out
@@ -1184,11 +1298,95 @@ class TestPrCreatedSessionsDeleteAction:
         assert "Delete" in captured.out
 
 
+class TestDisplayStatusTableSoftDelete:
+    """Tests for soft-delete filtering in display_status_table."""
+
+    def test_display_status_table_hides_soft_deleted_sessions(
+        self,
+        tmp_path: Path,
+        mock_status_checks: Any,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Session with folder in .to_be_deleted is not shown in output."""
+        mock_status_checks(
+            is_closed=False, is_running=False, is_dirty=False, is_stale=True
+        )
+
+        folder = tmp_path / "deleted_folder"
+        folder.mkdir()
+
+        # Add folder to .to_be_deleted registry
+        to_be_deleted_file = tmp_path / ".to_be_deleted"
+        to_be_deleted_file.write_text("deleted_folder\n")
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 42,
+            "status": "status-04:implementation",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+            "from_github": False,
+        }
+
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            repo_filter=None,
+        )
+
+        captured = capsys.readouterr()
+        assert "#42" not in captured.out
+        assert "deleted_folder" not in captured.out
+
+    def test_display_status_table_shows_non_deleted_sessions(
+        self,
+        tmp_path: Path,
+        mock_status_checks: Any,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Session with folder NOT in .to_be_deleted is still shown."""
+        mock_status_checks(
+            is_closed=False, is_running=False, is_dirty=False, is_stale=True
+        )
+
+        folder = tmp_path / "active_folder"
+        folder.mkdir()
+
+        # Add a DIFFERENT folder to .to_be_deleted registry
+        to_be_deleted_file = tmp_path / ".to_be_deleted"
+        to_be_deleted_file.write_text("other_folder\n")
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 99,
+            "status": "status-04:implementation",
+            "vscode_pid": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+            "from_github": False,
+        }
+
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            repo_filter=None,
+        )
+
+        captured = capsys.readouterr()
+        assert "#99" in captured.out
+        assert "active_folder" in captured.out
+
+
 class TestDisplayStatusTableBranchIndicators:
     """Tests for branch-related indicators in status table."""
 
     def test_eligible_issue_without_branch_shows_needs_branch(
-        self, capsys: pytest.CaptureFixture[str]
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """Eligible issue without linked branch shows '-> Needs branch'."""
         mock_issue: IssueData = {
@@ -1211,6 +1409,7 @@ class TestDisplayStatusTableBranchIndicators:
         display_status_table(
             sessions=[],
             eligible_issues=eligible_issues,
+            workspace_base=str(tmp_path),
             issues_without_branch=issues_without_branch,
         )
 
@@ -1219,7 +1418,7 @@ class TestDisplayStatusTableBranchIndicators:
         assert "#123" in captured.out
 
     def test_eligible_issue_with_branch_shows_create_and_start(
-        self, capsys: pytest.CaptureFixture[str]
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """Eligible issue with linked branch shows '-> Create and start'."""
         mock_issue: IssueData = {
@@ -1242,6 +1441,7 @@ class TestDisplayStatusTableBranchIndicators:
         display_status_table(
             sessions=[],
             eligible_issues=eligible_issues,
+            workspace_base=str(tmp_path),
             issues_without_branch=issues_without_branch,
         )
 
@@ -1250,7 +1450,7 @@ class TestDisplayStatusTableBranchIndicators:
         assert "#456" in captured.out
 
     def test_status_01_without_branch_shows_create_and_start(
-        self, capsys: pytest.CaptureFixture[str]
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """Status-01 issue without branch still shows '-> Create and start'."""
         mock_issue: IssueData = {
@@ -1274,6 +1474,7 @@ class TestDisplayStatusTableBranchIndicators:
         display_status_table(
             sessions=[],
             eligible_issues=eligible_issues,
+            workspace_base=str(tmp_path),
             issues_without_branch=issues_without_branch,
         )
 
@@ -1294,7 +1495,7 @@ class TestDisplayStatusTableBranchIndicators:
         assert result == "!! No branch"
 
     def test_none_issues_without_branch_uses_default_behavior(
-        self, capsys: pytest.CaptureFixture[str]
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """None issues_without_branch uses default '-> Create and start'."""
         mock_issue: IssueData = {
@@ -1316,6 +1517,7 @@ class TestDisplayStatusTableBranchIndicators:
         display_status_table(
             sessions=[],
             eligible_issues=eligible_issues,
+            workspace_base=str(tmp_path),
             issues_without_branch=None,  # Not provided
         )
 
@@ -1324,7 +1526,7 @@ class TestDisplayStatusTableBranchIndicators:
         assert "-> Create and start" in captured.out
 
     def test_status_07_without_branch_shows_needs_branch(
-        self, capsys: pytest.CaptureFixture[str]
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """Status-07:code-review without branch shows '-> Needs branch'."""
         mock_issue: IssueData = {
@@ -1347,6 +1549,7 @@ class TestDisplayStatusTableBranchIndicators:
         display_status_table(
             sessions=[],
             eligible_issues=eligible_issues,
+            workspace_base=str(tmp_path),
             issues_without_branch=issues_without_branch,
         )
 
