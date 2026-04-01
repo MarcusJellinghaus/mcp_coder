@@ -35,6 +35,7 @@ These are populated by the caller (command layer), not by `collect_branch_status
 | `src/mcp_coder/checks/branch_status.py` | Extend `BranchStatusReport` with PR fields + display |
 | `src/mcp_coder/cli/commands/check_branch_status.py` | PR discovery polling, remote guard, CI pending hint |
 | `.claude/skills/check_branch_status/SKILL.md` | Document new flags |
+| `src/mcp_coder/utils/git_operations/branch_queries.py` | Add `has_remote_tracking_branch()` helper |
 | `.claude/skills/implementation_approve/SKILL.md` | Gate on `--wait-for-pr` branch-status check |
 
 ## Files Created (Tests)

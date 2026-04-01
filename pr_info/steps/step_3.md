@@ -52,6 +52,7 @@ Pass PR fields when constructing report (replace `collect_branch_status` return 
 ## HOW
 - Import `PullRequestManager` and `has_remote_tracking_branch` from `mcp_coder.utils.git_operations.branch_queries` in check_branch_status.py
 - Remote tracking check: Use existing `git_operations` utilities (e.g., add a `has_remote_tracking_branch(project_dir)` helper to `src/mcp_coder/utils/git_operations/branch_queries.py`) instead of raw `subprocess`. This is more testable and consistent with codebase patterns.
+- Update `src/mcp_coder/utils/git_operations/__init__.py` to import and export `has_remote_tracking_branch` from `branch_queries`, following the pattern of the other exported functions.
 - PR polling: simple while loop with `time.sleep(20)` between iterations
 - Use `dataclasses.replace()` to add PR fields to the frozen report returned by `collect_branch_status()`
 
