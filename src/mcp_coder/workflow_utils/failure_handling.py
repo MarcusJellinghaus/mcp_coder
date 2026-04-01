@@ -94,18 +94,7 @@ def handle_workflow_failure(
     logger.info("Error: %s", failure.message)
     logger.info("=" * 60)
 
-    # 2. Set failure label (non-blocking)
-    if update_labels:
-        try:
-            issue_manager = IssueManager(project_dir)
-            issue_manager.update_workflow_label(
-                from_label_id=from_label_id,
-                to_label_id=failure.category,
-            )
-        except Exception as exc:  # pylint: disable=broad-exception-caught
-            logger.warning("Failed to update issue label: %s", exc)
-
-    # 3. Resolve issue number
+    # 2. Resolve issue number
     resolved_issue_number = issue_number
     if resolved_issue_number is None:
         try:
@@ -116,10 +105,29 @@ def handle_workflow_failure(
         except Exception as exc:  # pylint: disable=broad-exception-caught
             logger.warning("Failed to extract issue number from branch: %s", exc)
 
-    # 4. Post GitHub comment (non-blocking)
-    if resolved_issue_number is not None:
+    # 3. Create shared IssueManager if needed for label update or comment
+    needs_label_update = update_labels
+    needs_comment = resolved_issue_number is not None
+    if needs_label_update or needs_comment:
         try:
-            mgr = IssueManager(project_dir)
-            mgr.add_comment(resolved_issue_number, comment_body)
+            issue_manager = IssueManager(project_dir)
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            logger.warning("Failed to post failure comment: %s", exc)
+            logger.warning("Failed to create IssueManager: %s", exc)
+            return
+
+        # 4. Set failure label (non-blocking)
+        if needs_label_update:
+            try:
+                issue_manager.update_workflow_label(
+                    from_label_id=from_label_id,
+                    to_label_id=failure.category,
+                )
+            except Exception as exc:  # pylint: disable=broad-exception-caught
+                logger.warning("Failed to update issue label: %s", exc)
+
+        # 5. Post GitHub comment (non-blocking)
+        if needs_comment:
+            try:
+                issue_manager.add_comment(resolved_issue_number, comment_body)
+            except Exception as exc:  # pylint: disable=broad-exception-caught
+                logger.warning("Failed to post failure comment: %s", exc)

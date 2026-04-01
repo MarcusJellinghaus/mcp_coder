@@ -106,7 +106,7 @@ def format_failure_comment(
     ]
     if elapsed_time is not None:
         lines.append(f"**Elapsed:** {format_elapsed_time(elapsed_time)}")
-    if pr_url:
+    if pr_url and pr_number:
         lines.append(f"**PR:** [{pr_number}]({pr_url})")
     if is_cleanup_failure:
         lines.append("\n> **Note:** pr_info/ directory may still exist on the branch")

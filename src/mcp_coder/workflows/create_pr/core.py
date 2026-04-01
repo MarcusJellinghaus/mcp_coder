@@ -491,7 +491,7 @@ def run_create_pr_workflow(
 
     try:
         # Step 1: Check prerequisites
-        log_step("Step 1/4: Checking prerequisites...")
+        log_step("Step 1/5: Checking prerequisites...")
         if not check_prerequisites(project_dir):
             logger.error("Prerequisites check failed")
             elapsed = time.time() - start_time
