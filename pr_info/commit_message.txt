@@ -1,9 +1,6 @@
-Add failure handling to create-pr workflow with safety net
+refactor: extract helpers from create_pr/core.py to fix file-size CI check
 
-- Add _format_failure_comment() and _handle_create_pr_failure() helpers
-- Wire up all 7 failure points with label transition and GitHub comments
-- Make pre-PR git_push() fatal (was warning-only before)
-- Broaden generate_pr_summary exception catch to Exception
-- Add try/finally safety net with reached_terminal_state flag
-- Create test_failure_handling.py with 11 tests covering all paths
-- Update existing test_workflow.py tests for new failure handler calls
+Move parse_pr_summary, _format_failure_comment, and _handle_create_pr_failure
+into a new create_pr/helpers.py module to bring core.py back under the 750-line
+limit. Backward-compatible aliases are kept in core.py so existing test patches
+and imports continue to work unchanged.
