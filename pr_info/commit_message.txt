@@ -1,8 +1,7 @@
-docs: add MCP tool audience-split notes in repository-setup.md
+docs: replace format_all.sh with MCP tools in claude-code.md settings example (#672)
 
-Add MCP tool references for Claude Code users in three locations:
-- After Formatting Tools table: note to use mcp__tools-py__run_format_code
-- After Running Architecture Tools examples: MCP alternatives for
-  format_all.sh, lint_imports.sh, and vulture_check.sh
-- Enhanced Claude Permissions bullet: mention MCP tools as preferred
-  approach for Claude Code, including get_library_source
+Update the settings.local.json example and security note in
+docs/configuration/claude-code.md to reference MCP tools instead of
+the shell script Bash(./tools/format_all.sh:*). Added explicit MCP
+permissions for run_format_code, run_lint_imports_check,
+run_vulture_check, and get_library_source.

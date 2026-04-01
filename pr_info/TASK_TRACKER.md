@@ -57,9 +57,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 4B: Docs — update settings example in claude-code.md
-- [ ] Implementation: replace format_all.sh in settings example with MCP tools, update security note
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: replace format_all.sh in settings example with MCP tools, update security note
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4C: Docs — add MCP alternatives in refactoring-guide.md
 - [ ] Implementation: add MCP alternatives in standard checks section
