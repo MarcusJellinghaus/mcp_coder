@@ -179,7 +179,7 @@ class TestCleanup:
             ],  # Clean status
         )
 
-        result = cleanup_stale_sessions(dry_run=True)
+        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=True)
 
         # Folder should still exist
         assert (tmp_path / "stale_folder").exists()
@@ -210,7 +210,7 @@ class TestCleanup:
             ],  # Dirty status
         )
 
-        result = cleanup_stale_sessions(dry_run=False)
+        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=False)
 
         # Folder should still exist (dirty)
         assert (tmp_path / "dirty_folder").exists()
@@ -241,10 +241,10 @@ class TestCleanup:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.delete_session_folder",
-            lambda s: True,
+            lambda s, workspace_base="", was_clean=False: True,
         )
 
-        result = cleanup_stale_sessions(dry_run=False)
+        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=False)
 
         assert str(tmp_path / "clean_folder") in result.get("deleted", [])
 
@@ -276,7 +276,7 @@ class TestCleanup:
             lambda f: True,
         )
 
-        result = delete_session_folder(session)
+        result = delete_session_folder(session, workspace_base=str(tmp_path))
 
         assert result is True
         assert not folder.exists()
@@ -303,7 +303,7 @@ class TestCleanup:
             lambda f: True,
         )
 
-        result = delete_session_folder(session)
+        result = delete_session_folder(session, workspace_base=str(tmp_path))
 
         assert result is True  # Still succeeds - removes session from store
 
@@ -343,14 +343,17 @@ class TestCleanup:
             "from_github": False,
         }
 
-        result = delete_session_folder(session)
+        result = delete_session_folder(session, workspace_base=str(tmp_path))
 
         assert result is True
         assert len(safe_delete_called) == 1
         assert safe_delete_called[0] == folder
 
     def test_cleanup_stale_sessions_empty(
-        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Reports when no stale sessions."""
         monkeypatch.setattr(
@@ -358,7 +361,7 @@ class TestCleanup:
             lambda cached_issues_by_repo=None: [],
         )
 
-        result = cleanup_stale_sessions(dry_run=True)
+        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=True)
 
         assert result == {"deleted": [], "skipped": []}
         captured = capsys.readouterr()
@@ -390,7 +393,7 @@ class TestCleanup:
             lambda f: True,
         )
 
-        result = cleanup_stale_sessions(dry_run=False)
+        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=False)
 
         assert str(tmp_path / "missing_folder") in result.get("deleted", [])
 
@@ -421,7 +424,7 @@ class TestCleanup:
             lambda cached_issues_by_repo=None: [(no_git_session, "No Git", "closed")],
         )
 
-        result = cleanup_stale_sessions(dry_run=False)
+        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=False)
 
         # Folder should still exist
         assert (tmp_path / "no_git_folder").exists()
@@ -455,7 +458,7 @@ class TestCleanup:
             lambda cached_issues_by_repo=None: [(error_session, "Error", "blocked")],
         )
 
-        result = cleanup_stale_sessions(dry_run=False)
+        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=False)
 
         # Folder should still exist
         assert (tmp_path / "error_folder").exists()
@@ -485,10 +488,10 @@ class TestCleanup:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.delete_session_folder",
-            lambda s: True,
+            lambda s, workspace_base="", was_clean=False: True,
         )
 
-        result = cleanup_stale_sessions(dry_run=False)
+        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=False)
 
         assert str(tmp_path / "no_git_folder") in result.get("deleted", [])
         assert str(tmp_path / "no_git_folder") not in result.get("skipped", [])
@@ -518,7 +521,7 @@ class TestCleanup:
             lambda cached_issues_by_repo=None: [(no_git_session, "No Git", "closed")],
         )
 
-        result = cleanup_stale_sessions(dry_run=True)
+        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=True)
 
         assert result["deleted"] == []
         assert "Add --cleanup to delete" in capsys.readouterr().out
@@ -546,10 +549,10 @@ class TestCleanup:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.delete_session_folder",
-            lambda s: True,
+            lambda s, workspace_base="", was_clean=False: True,
         )
 
-        result = cleanup_stale_sessions(dry_run=False)
+        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=False)
 
         assert str(tmp_path / "error_folder") in result.get("deleted", [])
         assert str(tmp_path / "error_folder") not in result.get("skipped", [])
@@ -581,7 +584,7 @@ class TestCleanup:
             ],
         )
 
-        result = cleanup_stale_sessions(dry_run=True)
+        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=True)
 
         assert result["deleted"] == []
         assert "Add --cleanup to delete" in capsys.readouterr().out
@@ -1863,3 +1866,343 @@ class TestGetStaleSessions:
         assert session["issue_number"] == 463
         assert git_status == "Clean"
         assert reason == "unassigned"
+
+
+class TestSoftDeleteAndRetry:
+    """Tests for soft-delete on failure and retry logic."""
+
+    def test_cleanup_retries_to_be_deleted_entries(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Retry-deletes folder listed in .to_be_deleted, removes entry on success."""
+        from mcp_coder.workflows.vscodeclaude.helpers import (
+            TO_BE_DELETED_FILENAME,
+            load_to_be_deleted,
+        )
+
+        # Create a folder that's in .to_be_deleted
+        folder = tmp_path / "old-session"
+        folder.mkdir()
+        (folder / "somefile.txt").write_text("data")
+        registry = tmp_path / TO_BE_DELETED_FILENAME
+        registry.write_text("old-session\n")
+
+        # Mock get_stale_sessions to return nothing (we only test retry)
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
+            lambda cached_issues_by_repo=None: [],
+        )
+
+        # Mock safe_delete_folder to succeed
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.safe_delete_folder",
+            lambda path: DeletionResult(success=True),
+        )
+
+        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=False)
+
+        # Entry should be removed from registry
+        assert load_to_be_deleted(str(tmp_path)) == set()
+        assert result == {"deleted": [], "skipped": []}
+
+    def test_cleanup_retry_removes_stale_entry_if_folder_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Removes .to_be_deleted entry when folder no longer exists."""
+        from mcp_coder.workflows.vscodeclaude.helpers import (
+            TO_BE_DELETED_FILENAME,
+            load_to_be_deleted,
+        )
+
+        # Entry exists but folder does not
+        registry = tmp_path / TO_BE_DELETED_FILENAME
+        registry.write_text("gone-session\n")
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
+            lambda cached_issues_by_repo=None: [],
+        )
+
+        cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=False)
+
+        assert load_to_be_deleted(str(tmp_path)) == set()
+
+    def test_cleanup_retry_skipped_in_dry_run(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """No retry when dry_run=True."""
+        from mcp_coder.workflows.vscodeclaude.helpers import (
+            TO_BE_DELETED_FILENAME,
+            load_to_be_deleted,
+        )
+
+        folder = tmp_path / "pending-session"
+        folder.mkdir()
+        registry = tmp_path / TO_BE_DELETED_FILENAME
+        registry.write_text("pending-session\n")
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
+            lambda cached_issues_by_repo=None: [],
+        )
+
+        cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=True)
+
+        # Entry should still be there — not retried in dry run
+        assert load_to_be_deleted(str(tmp_path)) == {"pending-session"}
+
+    def test_delete_session_folder_soft_deletes_on_failure_when_clean(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Folder deletion fails, workspace file deleted, entry added, session removed."""
+        from mcp_coder.workflows.vscodeclaude.helpers import load_to_be_deleted
+
+        folder = tmp_path / "locked-session"
+        folder.mkdir()
+        workspace_file = tmp_path / "locked-session.code-workspace"
+        workspace_file.write_text("{}")
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 42,
+            "status": "status-01:created",
+            "vscode_pid": 0,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+            "from_github": False,
+        }
+
+        # Mock safe_delete_folder to fail
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.safe_delete_folder",
+            lambda path: DeletionResult(success=False),
+        )
+
+        removed_sessions: list[str] = []
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.remove_session",
+            removed_sessions.append,
+        )
+
+        result = delete_session_folder(
+            session, workspace_base=str(tmp_path), was_clean=True
+        )
+
+        assert result is False
+        # Workspace file should be deleted
+        assert not workspace_file.exists()
+        # Entry should be added to .to_be_deleted
+        assert "locked-session" in load_to_be_deleted(str(tmp_path))
+        # Session should be removed
+        assert str(folder) in removed_sessions
+
+    def test_delete_session_folder_no_soft_delete_when_dirty(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Folder deletion fails but was_clean=False, no .to_be_deleted entry."""
+        from mcp_coder.workflows.vscodeclaude.helpers import load_to_be_deleted
+
+        folder = tmp_path / "dirty-session"
+        folder.mkdir()
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 43,
+            "status": "status-01:created",
+            "vscode_pid": 0,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+            "from_github": False,
+        }
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.safe_delete_folder",
+            lambda path: DeletionResult(success=False),
+        )
+
+        removed_sessions: list[str] = []
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.remove_session",
+            removed_sessions.append,
+        )
+
+        result = delete_session_folder(
+            session, workspace_base=str(tmp_path), was_clean=False
+        )
+
+        assert result is False
+        # No soft-delete entry
+        assert load_to_be_deleted(str(tmp_path)) == set()
+        # Session should NOT be removed
+        assert removed_sessions == []
+
+    def test_delete_session_folder_always_deletes_workspace_file(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Workspace file deleted even when folder deletion fails."""
+        folder = tmp_path / "session-ws"
+        folder.mkdir()
+        workspace_file = tmp_path / "session-ws.code-workspace"
+        workspace_file.write_text("{}")
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 44,
+            "status": "status-01:created",
+            "vscode_pid": 0,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+            "from_github": False,
+        }
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.safe_delete_folder",
+            lambda path: DeletionResult(success=False),
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.remove_session",
+            lambda f: None,
+        )
+
+        delete_session_folder(session, workspace_base=str(tmp_path))
+
+        assert not workspace_file.exists()
+
+    def test_delete_session_folder_handles_workspace_file_deletion_failure(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Workspace file deletion raises OSError, folder deletion still attempted."""
+        folder = tmp_path / "session-oserr"
+        folder.mkdir()
+        workspace_file = tmp_path / "session-oserr.code-workspace"
+        workspace_file.write_text("{}")
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 45,
+            "status": "status-01:created",
+            "vscode_pid": 0,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+            "from_github": False,
+        }
+
+        # Make workspace file unlink raise OSError
+        original_unlink = Path.unlink
+
+        def mock_unlink(self_path: Path, missing_ok: bool = False) -> None:
+            if self_path == workspace_file:
+                raise OSError("Permission denied")
+            original_unlink(self_path, missing_ok=missing_ok)
+
+        monkeypatch.setattr(Path, "unlink", mock_unlink)
+
+        safe_delete_called: list[Path] = []
+
+        def mock_safe_delete(path: Path) -> DeletionResult:
+            safe_delete_called.append(path)
+            shutil.rmtree(path)
+            return DeletionResult(success=True)
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.safe_delete_folder",
+            mock_safe_delete,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.remove_session",
+            lambda f: None,
+        )
+
+        result = delete_session_folder(session, workspace_base=str(tmp_path))
+
+        # Folder deletion was still attempted despite workspace file failure
+        assert result is True
+        assert len(safe_delete_called) == 1
+        assert safe_delete_called[0] == folder
+
+    def test_cleanup_soft_delete_then_retry_succeeds(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """First call: folder deletion fails for clean session, entry added.
+        Second call: retry succeeds, entry removed."""
+        from mcp_coder.workflows.vscodeclaude.helpers import (
+            TO_BE_DELETED_FILENAME,
+            load_to_be_deleted,
+        )
+
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        folder = tmp_path / "retry-session"
+        folder.mkdir()
+        (folder / "file.txt").write_text("content")
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 50,
+            "status": "status-01:created",
+            "vscode_pid": 0,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+            "from_github": False,
+        }
+
+        # First call: deletion fails, session is stale+clean
+        call_count = 0
+
+        def fail_then_succeed(path: Path) -> DeletionResult:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return DeletionResult(success=False)
+            shutil.rmtree(path)
+            return DeletionResult(success=True)
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.safe_delete_folder",
+            fail_then_succeed,
+        )
+
+        # First pass: stale session with clean status, deletion fails
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
+            lambda cached_issues_by_repo=None: [(session, "Clean", "stale")],
+        )
+
+        sessions_file.write_text(
+            json.dumps(
+                {
+                    "sessions": [session],
+                    "last_updated": "2024-01-01T00:00:00Z",
+                }
+            )
+        )
+
+        cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=False)
+
+        # Entry should be in .to_be_deleted
+        assert "retry-session" in load_to_be_deleted(str(tmp_path))
+
+        # Second pass: no new stale sessions, retry should pick up the entry
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
+            lambda cached_issues_by_repo=None: [],
+        )
+
+        # Re-create folder to simulate it still existing
+        folder.mkdir(exist_ok=True)
+        (folder / "file.txt").write_text("content")
+
+        cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=False)
+
+        # Entry should be removed after successful retry
+        assert load_to_be_deleted(str(tmp_path)) == set()
+        assert not folder.exists()

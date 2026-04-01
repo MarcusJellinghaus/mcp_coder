@@ -22,7 +22,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 - [x] [Step 1: Soft-Delete File I/O Helpers](./steps/step_1.md) — `helpers.py` + tests
-- [ ] [Step 2: Cleanup — Retry + Soft-Delete on Failure](./steps/step_2.md) — `cleanup.py` + caller + tests
+- [x] [Step 2: Cleanup — Retry + Soft-Delete on Failure](./steps/step_2.md) — `cleanup.py` + caller + tests
 - [ ] [Step 3: Suffix-Aware Folder Naming](./steps/step_3.md) — `workspace.py` + tests
 - [ ] [Step 4: Status Filtering](./steps/step_4.md) — `status.py` + caller + tests
 - [ ] [Step 5: Session Lookup + Orphan Detection](./steps/step_5.md) — `sessions.py` + caller + tests

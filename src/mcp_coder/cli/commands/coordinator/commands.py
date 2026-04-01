@@ -520,11 +520,15 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         # - This ensures users always see what's cleanable
         if args.cleanup:
             cleanup_stale_sessions(
-                dry_run=False, cached_issues_by_repo=cached_issues_by_repo
+                workspace_base=vscodeclaude_config["workspace_base"],
+                dry_run=False,
+                cached_issues_by_repo=cached_issues_by_repo,
             )
         else:
             cleanup_stale_sessions(
-                dry_run=True, cached_issues_by_repo=cached_issues_by_repo
+                workspace_base=vscodeclaude_config["workspace_base"],
+                dry_run=True,
+                cached_issues_by_repo=cached_issues_by_repo,
             )
 
         # Step 2: Restart closed sessions (pass cache for staleness checks)
