@@ -8,15 +8,24 @@ import argparse
 import logging
 import sys
 import time
+from dataclasses import replace
 from pathlib import Path
 from typing import Optional, Tuple
 
-from ...checks.branch_status import BranchStatusReport, collect_branch_status
-from ...utils.git_operations.branch_queries import get_current_branch_name
+from ...checks.branch_status import (
+    CI_PENDING,
+    BranchStatusReport,
+    collect_branch_status,
+)
+from ...utils.git_operations.branch_queries import (
+    get_current_branch_name,
+    has_remote_tracking_branch,
+)
 from ...utils.github_operations.ci_results_manager import (
     CIResultsManager,
     CIStatusData,
 )
+from ...utils.github_operations.pr_manager import PullRequestManager
 from ...workflows.implement.core import check_and_fix_ci
 from ...workflows.utils import resolve_project_dir
 from ..utils import (
@@ -143,6 +152,60 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
         # Resolve project directory with validation
         project_dir = resolve_project_dir(args.project_dir)
 
+        # PR discovery phase (before CI waiting)
+        pr_number: Optional[int] = None
+        pr_url: Optional[str] = None
+        pr_found: Optional[bool] = None
+
+        if getattr(args, "wait_for_pr", False):
+            current_branch = get_current_branch_name(project_dir)
+            if not current_branch:
+                logger.error("Could not determine current branch")
+                return 2
+
+            # Guard: check remote tracking branch
+            if not has_remote_tracking_branch(project_dir):
+                print(
+                    f"Branch '{current_branch}' has no remote tracking branch."
+                    " Push first."
+                )
+                return 2
+
+            print(
+                f"Waiting for PR creation on branch '{current_branch}'"
+                f" (timeout: {args.pr_timeout}s)..."
+            )
+
+            pr_manager = PullRequestManager(project_dir)
+            deadline = time.monotonic() + args.pr_timeout
+
+            while time.monotonic() < deadline:
+                prs = pr_manager.find_pull_request_by_head(current_branch)
+                if prs:
+                    pr_number = prs[0]["number"]
+                    pr_url = prs[0]["url"]
+                    pr_found = True
+                    print(
+                        f"PR #{pr_number} found ({pr_url})."
+                        " Proceeding with branch-status check."
+                    )
+                    if len(prs) > 1:
+                        print(
+                            f"Warning: Multiple PRs found for branch"
+                            f" '{current_branch}'. Using PR #{pr_number}."
+                        )
+                    break
+                # Sleep only if still within deadline
+                if time.monotonic() < deadline:
+                    time.sleep(20)
+
+            if not pr_found:
+                print(
+                    f"No PR found for branch '{current_branch}'"
+                    f" within timeout ({args.pr_timeout}s)."
+                )
+                return 1
+
         # NEW: Wait for CI completion if timeout specified
         if args.ci_timeout > 0:
             logger.debug(f"CI timeout specified: {args.ci_timeout}s")
@@ -176,6 +239,12 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
         logger.debug("Collecting branch status information")
         report = collect_branch_status(project_dir)
 
+        # Enrich report with PR fields if PR discovery was performed
+        if pr_found is not None:
+            report = replace(
+                report, pr_number=pr_number, pr_url=pr_url, pr_found=pr_found
+            )
+
         # Display status report
         # Use errors='replace' to handle emoji encoding issues on Windows
         output = (
@@ -186,6 +255,10 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
         except UnicodeEncodeError:
             # Fallback for terminals that can't display Unicode
             print(output.encode("ascii", errors="replace").decode("ascii"))
+
+        # CI pending hint
+        if getattr(args, "ci_timeout", 0) == 0 and report.ci_status == CI_PENDING:
+            print("CI pending. Use --ci-timeout to wait for completion.")
 
         # Run auto-fixes if requested
         if args.fix > 0:

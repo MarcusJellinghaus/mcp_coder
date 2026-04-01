@@ -5,6 +5,7 @@ from .branch_queries import (
     extract_issue_number_from_branch,
     get_current_branch_name,
     get_default_branch_name,
+    has_remote_tracking_branch,
     remote_branch_exists,
     validate_branch_name,
 )
@@ -47,6 +48,7 @@ __all__ = [
     "extract_issue_number_from_branch",
     "get_current_branch_name",
     "get_default_branch_name",
+    "has_remote_tracking_branch",
     "MERGE_BASE_DISTANCE_THRESHOLD",
     "needs_rebase",
     "rebase_onto_branch",
