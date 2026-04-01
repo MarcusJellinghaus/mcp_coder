@@ -1,5 +1,0 @@
-docs: add MCP tool column to dependencies readme (#672)
-
-Add MCP Tool column to the tools table in docs/architecture/dependencies/readme.md
-showing which tools have MCP equivalents (import-linter, vulture). Add a Claude Code
-alternative block in the Running Checks section pointing to the MCP tools.
