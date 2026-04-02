@@ -76,7 +76,7 @@ class TestCreateParser:
         """Test log level validates choices."""
         parser = create_parser()
         # Valid choices should work
-        for level in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
+        for level in ["DEBUG", "INFO", "OUTPUT", "WARNING", "ERROR", "CRITICAL"]:
             args = parser.parse_args(["--log-level", level, "init"])
             assert args.log_level == level
 
@@ -94,18 +94,17 @@ class TestLogLevelResolution:
         args = parser.parse_args(["help"])
         assert args.log_level is None
 
-    def test_resolve_log_level_workflow_commands_default_info(self) -> None:
-        """Test that workflow commands default to INFO."""
-        for cmd in ["create-plan", "implement", "create-pr", "coordinator"]:
-            args = argparse.Namespace(command=cmd, log_level=None)
-            assert _resolve_log_level(args) == "INFO", f"Expected INFO for {cmd}"
+    def test_resolve_log_level_coordinator_defaults_info(self) -> None:
+        """Test that coordinator command defaults to INFO."""
+        args = argparse.Namespace(command="coordinator", log_level=None)
+        assert _resolve_log_level(args) == "INFO"
 
-    def test_resolve_log_level_vscodeclaude_launch_default_info(self) -> None:
-        """Test that vscodeclaude launch defaults to INFO."""
+    def test_resolve_log_level_vscodeclaude_launch_default_output(self) -> None:
+        """Test that vscodeclaude launch defaults to OUTPUT."""
         args = argparse.Namespace(
             command="vscodeclaude", log_level=None, vscodeclaude_subcommand="launch"
         )
-        assert _resolve_log_level(args) == "INFO"
+        assert _resolve_log_level(args) == "OUTPUT"
 
     def test_resolve_log_level_vscodeclaude_status_default_output(self) -> None:
         """Test that vscodeclaude status defaults to OUTPUT."""
@@ -125,6 +124,10 @@ class TestLogLevelResolution:
             "commit",
             "init",
             "prompt",
+            "create-plan",
+            "implement",
+            "create-pr",
+            "vscodeclaude",
         ]:
             args = argparse.Namespace(command=cmd, log_level=None)
             assert _resolve_log_level(args) == "OUTPUT", f"Expected OUTPUT for {cmd}"

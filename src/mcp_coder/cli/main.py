@@ -45,13 +45,14 @@ from .parsers import (
 # Logger will be initialized in main()
 logger = logging.getLogger(__name__)
 
-_INFO_COMMANDS = frozenset({"create-plan", "implement", "create-pr", "coordinator"})
+_INFO_COMMANDS = frozenset({"coordinator"})
 
 
 def _resolve_log_level(args: argparse.Namespace) -> str:
     """Resolve the effective log level based on command and explicit flag.
 
-    Workflow commands default to INFO; other commands default to OUTPUT.
+    Coordinator defaults to INFO (it sets --log-level INFO for sub-commands).
+    All other commands default to OUTPUT for clean CLI output.
     An explicit --log-level always wins.
 
     Returns:
@@ -60,11 +61,6 @@ def _resolve_log_level(args: argparse.Namespace) -> str:
     if args.log_level is not None:
         return str(args.log_level)
     if args.command in _INFO_COMMANDS:
-        return "INFO"
-    if (
-        args.command == "vscodeclaude"
-        and getattr(args, "vscodeclaude_subcommand", None) == "launch"
-    ):
         return "INFO"
     return "OUTPUT"
 
@@ -100,9 +96,9 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--log-level",
         type=str.upper,
-        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        choices=["DEBUG", "INFO", "OUTPUT", "WARNING", "ERROR", "CRITICAL"],
         default=None,
-        help="Set the logging level (default: OUTPUT, or INFO for workflow commands)",
+        help="Set the logging level (default: OUTPUT, or INFO for coordinator)",
         metavar="LEVEL",
     )
 

@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: CLI Defaults — --log-level choices, _resolve_log_level(), _INFO_COMMANDS
-- [ ] Implementation: add OUTPUT to --log-level choices, shrink _INFO_COMMANDS to coordinator, update _resolve_log_level() default, update tests ([step_2.md](./steps/step_2.md))
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add OUTPUT to --log-level choices, shrink _INFO_COMMANDS to coordinator, update _resolve_log_level() default, update tests ([step_2.md](./steps/step_2.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: create-pr Workflow — Remove log_step(), Add PR Summary Fields
 - [ ] Implementation: remove log_step(), replace call sites with logger.log(OUTPUT, ...), add PR summary fields, update tests ([step_3.md](./steps/step_3.md))

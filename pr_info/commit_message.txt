@@ -1,7 +1,6 @@
-refactor(logging): rename NOTICE→OUTPUT, add CleanFormatter
+feat(cli): default all commands to OUTPUT threshold
 
-- Rename NOTICE constant to OUTPUT (level 25, no alias)
-- New CleanFormatter: bare messages at OUTPUT, prefixed at WARNING+
-- setup_logging() selects formatter based on threshold
-- Update _resolve_log_level() default from NOTICE to OUTPUT
-- Update exports and tests for OUTPUT level and CleanFormatter
+- Add OUTPUT to --log-level choices
+- Shrink _INFO_COMMANDS to coordinator only
+- Remove vscodeclaude launch INFO special case
+- All commands now default to clean OUTPUT formatting
