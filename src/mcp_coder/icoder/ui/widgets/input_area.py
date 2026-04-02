@@ -35,7 +35,7 @@ class InputArea(TextArea):
             return
         line_count = self.document.line_count
         max_lines = max(1, self.screen.size.height // 3)
-        self.styles.height = min(line_count, max_lines)
+        self.styles.height = min(line_count + 2, max_lines)
 
     async def _on_key(self, event: events.Key) -> None:
         """Intercept Enter vs Shift-Enter.
