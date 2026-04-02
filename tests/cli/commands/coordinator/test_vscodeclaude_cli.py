@@ -332,34 +332,34 @@ class TestCLI:
         assert args.vscodeclaude_subcommand == "status"
         assert args.repo == "myrepo"
 
-    def test_vscodeclaude_launch_from_github_flag(self) -> None:
-        """--from-github flag sets from_github to True."""
+    def test_vscodeclaude_launch_install_from_github_flag(self) -> None:
+        """--install-from-github flag sets install_from_github to True."""
         from mcp_coder.cli.main import create_parser
 
         parser = create_parser()
 
-        args = parser.parse_args(["vscodeclaude", "launch", "--from-github"])
-        assert args.from_github is True
+        args = parser.parse_args(["vscodeclaude", "launch", "--install-from-github"])
+        assert args.install_from_github is True
 
-    def test_vscodeclaude_launch_no_from_github_flag(self) -> None:
-        """Default from_github is False when flag not provided."""
+    def test_vscodeclaude_launch_no_install_from_github_flag(self) -> None:
+        """Default install_from_github is False when flag not provided."""
         from mcp_coder.cli.main import create_parser
 
         parser = create_parser()
 
         args = parser.parse_args(["vscodeclaude", "launch"])
-        assert args.from_github is False
+        assert args.install_from_github is False
 
-    def test_vscodeclaude_launch_from_github_with_repo(self) -> None:
-        """--from-github works together with --repo."""
+    def test_vscodeclaude_launch_install_from_github_with_repo(self) -> None:
+        """--install-from-github works together with --repo."""
         from mcp_coder.cli.main import create_parser
 
         parser = create_parser()
 
         args = parser.parse_args(
-            ["vscodeclaude", "launch", "--from-github", "--repo", "mcp_coder"]
+            ["vscodeclaude", "launch", "--install-from-github", "--repo", "mcp_coder"]
         )
-        assert args.from_github is True
+        assert args.install_from_github is True
         assert args.repo == "mcp_coder"
 
 

@@ -13,7 +13,7 @@ class VSCodeClaudeSession(TypedDict):
     vscode_pid: int | None
     started_at: str  # ISO 8601
     is_intervention: bool
-    from_github: bool
+    install_from_github: bool
 
 
 class VSCodeClaudeSessionStore(TypedDict):

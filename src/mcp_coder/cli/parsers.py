@@ -564,7 +564,7 @@ def add_vscodeclaude_parsers(subparsers: Any) -> None:
         help="Issue number for intervention mode (requires --intervene)",
     )
     launch_parser.add_argument(
-        "--from-github",
+        "--install-from-github",
         action="store_true",
         help="Install MCP packages from GitHub repos instead of PyPI (latest main)",
     )
