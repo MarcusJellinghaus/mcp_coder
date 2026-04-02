@@ -31,9 +31,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 2: InputArea Auto-Grow
 > [Detail](./steps/step_2.md) — Make InputArea grow dynamically with content, capped at 1/3 screen height.
 
-- [ ] Implementation: remove `max-height` from CSS, add `on_text_area_changed` handler in `input_area.py`, add test in `test_widgets.py`
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(icoder): auto-grow input area with content up to 1/3 screen height`
+- [x] Implementation: remove `max-height` from CSS, add `on_text_area_changed` handler in `input_area.py`, add test in `test_widgets.py`
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(icoder): auto-grow input area with content up to 1/3 screen height`
 
 ### Step 3: Snapshot Regeneration + Documentation
 > [Detail](./steps/step_3.md) — Regenerate snapshot baselines, verify no secrets in SVGs, add documentation comments.

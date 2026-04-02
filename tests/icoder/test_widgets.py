@@ -139,6 +139,27 @@ async def test_input_area_empty_enter_does_not_submit() -> None:
         assert len(messages) == 0
 
 
+# --- Auto-grow tests ---
+
+
+@pytest.mark.asyncio
+async def test_input_area_grows_with_multiline() -> None:
+    """InputArea height increases when multiline text is entered."""
+    app = WidgetTestApp()
+    async with app.run_test() as pilot:
+        input_area = app.query_one(InputArea)
+        input_area.focus()
+        await pilot.pause()
+        initial_height = input_area.styles.height
+        input_area.insert("line1")
+        await pilot.press("shift+enter")
+        input_area.insert("line2")
+        await pilot.press("shift+enter")
+        input_area.insert("line3")
+        await pilot.pause()
+        assert input_area.styles.height != initial_height
+
+
 # --- History key integration tests ---
 
 

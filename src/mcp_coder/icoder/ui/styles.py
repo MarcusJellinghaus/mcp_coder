@@ -9,7 +9,6 @@ OutputLog {
 
 InputArea {
     height: auto;
-    max-height: 5;
     background: #1e1e1e;
     color: #d4d4d4;
 }
