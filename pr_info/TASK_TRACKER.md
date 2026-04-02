@@ -23,7 +23,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Create new modules + migrate formatters.py + update exports
 - [x] 1A: Implementation — render_actions.py dataclasses
-- [ ] 1B: Implementation — stream_renderer.py with StreamEventRenderer class
+- [x] 1B: Implementation — stream_renderer.py with StreamEventRenderer class
 - [ ] 1C: Implementation — migrate formatters.py rendered branch
 - [ ] 1D: Implementation — update __init__.py exports
 - [ ] 1E: Implementation — fix test imports in test_formatters.py
