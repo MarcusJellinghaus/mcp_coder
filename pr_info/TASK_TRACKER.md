@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Logging Infrastructure — NOTICE→OUTPUT, CleanFormatter, setup_logging()
-- [ ] Implementation: rename NOTICE→OUTPUT, add CleanFormatter, update setup_logging() formatter selection, update exports and tests ([step_1.md](./steps/step_1.md))
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: rename NOTICE→OUTPUT, add CleanFormatter, update setup_logging() formatter selection, update exports and tests ([step_1.md](./steps/step_1.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: CLI Defaults — --log-level choices, _resolve_log_level(), _INFO_COMMANDS
 - [ ] Implementation: add OUTPUT to --log-level choices, shrink _INFO_COMMANDS to coordinator, update _resolve_log_level() default, update tests ([step_2.md](./steps/step_2.md))

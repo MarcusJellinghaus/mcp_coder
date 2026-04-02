@@ -107,15 +107,15 @@ class TestLogLevelResolution:
         )
         assert _resolve_log_level(args) == "INFO"
 
-    def test_resolve_log_level_vscodeclaude_status_default_notice(self) -> None:
-        """Test that vscodeclaude status defaults to NOTICE."""
+    def test_resolve_log_level_vscodeclaude_status_default_output(self) -> None:
+        """Test that vscodeclaude status defaults to OUTPUT."""
         args = argparse.Namespace(
             command="vscodeclaude", log_level=None, vscodeclaude_subcommand="status"
         )
-        assert _resolve_log_level(args) == "NOTICE"
+        assert _resolve_log_level(args) == "OUTPUT"
 
-    def test_resolve_log_level_other_commands_default_notice(self) -> None:
-        """Test that non-workflow commands default to NOTICE."""
+    def test_resolve_log_level_other_commands_default_output(self) -> None:
+        """Test that non-workflow commands default to OUTPUT."""
         for cmd in [
             "help",
             "verify",
@@ -127,7 +127,7 @@ class TestLogLevelResolution:
             "prompt",
         ]:
             args = argparse.Namespace(command=cmd, log_level=None)
-            assert _resolve_log_level(args) == "NOTICE", f"Expected NOTICE for {cmd}"
+            assert _resolve_log_level(args) == "OUTPUT", f"Expected OUTPUT for {cmd}"
 
     def test_resolve_log_level_explicit_overrides_default(self) -> None:
         """Test that explicit --log-level always wins."""
@@ -138,9 +138,9 @@ class TestLogLevelResolution:
         assert _resolve_log_level(args) == "WARNING"
 
     def test_resolve_log_level_none_command(self) -> None:
-        """Test that None command (no command provided) defaults to NOTICE."""
+        """Test that None command (no command provided) defaults to OUTPUT."""
         args = argparse.Namespace(command=None, log_level=None)
-        assert _resolve_log_level(args) == "NOTICE"
+        assert _resolve_log_level(args) == "OUTPUT"
 
 
 class TestNoCommandShowsHelp:

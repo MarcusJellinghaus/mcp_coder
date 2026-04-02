@@ -38,11 +38,13 @@ from typing import Any, Callable, Optional, TypeVar, cast, overload
 import structlog
 from pythonjsonlogger.json import JsonFormatter
 
-# Custom NOTICE log level (between INFO=20 and WARNING=30)
-# NOTICE is a threshold-only level for CLI output filtering — never log at this level.
-# Use logger.info() for messages; they will be hidden when threshold is NOTICE.
-NOTICE = 25
-logging.addLevelName(NOTICE, "NOTICE")
+# Custom OUTPUT log level (between INFO=20 and WARNING=30)
+# OUTPUT is the default CLI threshold. At this threshold, CleanFormatter
+# produces bare messages; at INFO/DEBUG, ExtraFieldsFormatter produces
+# verbose timestamped output. Use logger.log(OUTPUT, ...) for user-facing
+# CLI messages that should be clean at default verbosity.
+OUTPUT = 25
+logging.addLevelName(OUTPUT, "OUTPUT")
 
 # Type variable for function return types
 T = TypeVar("T")
@@ -83,6 +85,45 @@ STANDARD_LOG_FIELDS: frozenset[str] = frozenset(
         "message",
     }
 )
+
+
+class CleanFormatter(logging.Formatter):
+    """Formatter for clean CLI output.
+
+    Used when log threshold is OUTPUT. Produces:
+    - OUTPUT-level records: bare message (no prefix)
+    - WARNING/ERROR/CRITICAL: "LEVEL: message"
+
+    Extra fields (passed via extra={}) are appended as JSON,
+    independently of ExtraFieldsFormatter.
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        """Format the log record for clean CLI output.
+
+        Args:
+            record: The log record to format.
+
+        Returns:
+            The formatted log message.
+        """
+        message = record.getMessage()
+
+        if record.levelno > OUTPUT:
+            message = f"{record.levelname}: {message}"
+
+        # Extract extra fields (attributes not in standard LogRecord fields)
+        extra_fields = {
+            key: value
+            for key, value in record.__dict__.items()
+            if key not in STANDARD_LOG_FIELDS
+        }
+
+        if extra_fields:
+            suffix = json.dumps(extra_fields, default=str)
+            return f"{message} {suffix}"
+
+        return message
 
 
 class ExtraFieldsFormatter(logging.Formatter):
@@ -251,9 +292,12 @@ def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
 
         console_handler = logging.StreamHandler()
         console_handler.setLevel(numeric_level)
-        console_formatter = ExtraFieldsFormatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
+        if numeric_level >= OUTPUT:
+            console_formatter: logging.Formatter = CleanFormatter()
+        else:
+            console_formatter = ExtraFieldsFormatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
         console_handler.setFormatter(console_formatter)
         root_logger.addHandler(console_handler)
 

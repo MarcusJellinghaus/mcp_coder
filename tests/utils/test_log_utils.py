@@ -8,30 +8,31 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.utils.log_utils import (
-    NOTICE,
+    OUTPUT,
+    CleanFormatter,
     ExtraFieldsFormatter,
     log_function_call,
     setup_logging,
 )
 
 
-class TestNoticeLevel:
-    """Tests for the custom NOTICE log level."""
+class TestOutputLevel:
+    """Tests for the custom OUTPUT log level."""
 
-    def test_notice_level_is_registered(self) -> None:
-        """Test that NOTICE level name is registered with logging."""
-        assert logging.getLevelName(25) == "NOTICE"
+    def test_output_level_is_registered(self) -> None:
+        """Test that OUTPUT level name is registered with logging."""
+        assert logging.getLevelName(25) == "OUTPUT"
 
-    def test_notice_level_value(self) -> None:
-        """Test that NOTICE constant has the expected value."""
-        assert NOTICE == 25
+    def test_output_level_value(self) -> None:
+        """Test that OUTPUT constant has the expected value."""
+        assert OUTPUT == 25
 
-    def test_notice_between_info_and_warning(self) -> None:
-        """Test that NOTICE sits between INFO and WARNING."""
-        assert logging.INFO < NOTICE < logging.WARNING
+    def test_output_between_info_and_warning(self) -> None:
+        """Test that OUTPUT sits between INFO and WARNING."""
+        assert logging.INFO < OUTPUT < logging.WARNING
 
-    def test_setup_logging_accepts_notice(self) -> None:
-        """Test that setup_logging works with NOTICE level."""
+    def test_setup_logging_accepts_output(self) -> None:
+        """Test that setup_logging works with OUTPUT level."""
         root_logger = logging.getLogger()
         initial_handlers = root_logger.handlers[:]
         initial_level = root_logger.level
@@ -40,7 +41,7 @@ class TestNoticeLevel:
             for handler in root_logger.handlers[:]:
                 root_logger.removeHandler(handler)
 
-            setup_logging("NOTICE")
+            setup_logging("OUTPUT")
 
             assert root_logger.level == 25
         finally:
@@ -508,3 +509,134 @@ class TestLogFunctionCallLoggerName:
 
             # Verify the function-specific logger was used for error calls
             assert func_logger.error.called, "Function logger should have error calls"
+
+
+class TestCleanFormatter:
+    """Tests for CleanFormatter class."""
+
+    def test_output_level_no_prefix(self) -> None:
+        """OUTPUT-level messages have no prefix."""
+        formatter = CleanFormatter()
+        record = logging.LogRecord(
+            name="test_logger",
+            level=OUTPUT,
+            pathname="test.py",
+            lineno=1,
+            msg="Test message",
+            args=(),
+            exc_info=None,
+        )
+        result = formatter.format(record)
+        assert result == "Test message"
+
+    def test_warning_level_has_prefix(self) -> None:
+        """WARNING-level messages get 'WARNING: ' prefix."""
+        formatter = CleanFormatter()
+        record = logging.LogRecord(
+            name="test_logger",
+            level=logging.WARNING,
+            pathname="test.py",
+            lineno=1,
+            msg="Test message",
+            args=(),
+            exc_info=None,
+        )
+        result = formatter.format(record)
+        assert result == "WARNING: Test message"
+
+    def test_error_level_has_prefix(self) -> None:
+        """ERROR-level messages get 'ERROR: ' prefix."""
+        formatter = CleanFormatter()
+        record = logging.LogRecord(
+            name="test_logger",
+            level=logging.ERROR,
+            pathname="test.py",
+            lineno=1,
+            msg="Test message",
+            args=(),
+            exc_info=None,
+        )
+        result = formatter.format(record)
+        assert result == "ERROR: Test message"
+
+    def test_extra_fields_appended_as_json(self) -> None:
+        """Extra fields are appended as JSON."""
+        formatter = CleanFormatter()
+        record = logging.LogRecord(
+            name="test_logger",
+            level=OUTPUT,
+            pathname="test.py",
+            lineno=1,
+            msg="Test message",
+            args=(),
+            exc_info=None,
+        )
+        record.custom_field = "custom_value"
+        result = formatter.format(record)
+        assert "Test message" in result
+        assert "custom_field" in result
+        assert "custom_value" in result
+
+    def test_no_extra_fields_no_json(self) -> None:
+        """No JSON suffix when no extra fields."""
+        formatter = CleanFormatter()
+        record = logging.LogRecord(
+            name="test_logger",
+            level=OUTPUT,
+            pathname="test.py",
+            lineno=1,
+            msg="Test message",
+            args=(),
+            exc_info=None,
+        )
+        result = formatter.format(record)
+        assert "{" not in result
+
+
+class TestSetupLoggingFormatterSelection:
+    """Tests for formatter selection based on threshold."""
+
+    def _get_console_formatter(self, log_level: str) -> logging.Formatter:
+        """Helper to get the console formatter after setup_logging."""
+        root_logger = logging.getLogger()
+        initial_handlers = root_logger.handlers[:]
+        initial_level = root_logger.level
+
+        try:
+            for handler in root_logger.handlers[:]:
+                root_logger.removeHandler(handler)
+
+            setup_logging(log_level)
+
+            stream_handlers = [
+                h
+                for h in root_logger.handlers
+                if isinstance(h, logging.StreamHandler)
+                and not isinstance(h, logging.FileHandler)
+            ]
+            assert len(stream_handlers) == 1
+            formatter = stream_handlers[0].formatter
+            assert formatter is not None
+            return formatter
+        finally:
+            for handler in root_logger.handlers[:]:
+                handler.close()
+                root_logger.removeHandler(handler)
+            for handler in initial_handlers:
+                root_logger.addHandler(handler)
+            root_logger.setLevel(initial_level)
+
+    def test_output_threshold_uses_clean_formatter(self) -> None:
+        """OUTPUT threshold should use CleanFormatter."""
+        formatter = self._get_console_formatter("OUTPUT")
+        assert isinstance(formatter, CleanFormatter)
+
+    def test_info_threshold_uses_extra_fields_formatter(self) -> None:
+        """INFO threshold should use ExtraFieldsFormatter."""
+        formatter = self._get_console_formatter("INFO")
+        assert isinstance(formatter, ExtraFieldsFormatter)
+
+    def test_debug_threshold_uses_extra_fields_formatter(self) -> None:
+        """DEBUG threshold should use ExtraFieldsFormatter."""
+        formatter = self._get_console_formatter("DEBUG")
+        assert isinstance(formatter, ExtraFieldsFormatter)

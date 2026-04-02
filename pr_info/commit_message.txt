@@ -1,0 +1,7 @@
+refactor(logging): rename NOTICE→OUTPUT, add CleanFormatter
+
+- Rename NOTICE constant to OUTPUT (level 25, no alias)
+- New CleanFormatter: bare messages at OUTPUT, prefixed at WARNING+
+- setup_logging() selects formatter based on threshold
+- Update _resolve_log_level() default from NOTICE to OUTPUT
+- Update exports and tests for OUTPUT level and CleanFormatter

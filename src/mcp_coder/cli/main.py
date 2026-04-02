@@ -51,7 +51,7 @@ _INFO_COMMANDS = frozenset({"create-plan", "implement", "create-pr", "coordinato
 def _resolve_log_level(args: argparse.Namespace) -> str:
     """Resolve the effective log level based on command and explicit flag.
 
-    Workflow commands default to INFO; other commands default to NOTICE.
+    Workflow commands default to INFO; other commands default to OUTPUT.
     An explicit --log-level always wins.
 
     Returns:
@@ -66,7 +66,7 @@ def _resolve_log_level(args: argparse.Namespace) -> str:
         and getattr(args, "vscodeclaude_subcommand", None) == "launch"
     ):
         return "INFO"
-    return "NOTICE"
+    return "OUTPUT"
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -102,7 +102,7 @@ def create_parser() -> argparse.ArgumentParser:
         type=str.upper,
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         default=None,
-        help="Set the logging level (default: NOTICE, or INFO for workflow commands)",
+        help="Set the logging level (default: OUTPUT, or INFO for workflow commands)",
         metavar="LEVEL",
     )
 
