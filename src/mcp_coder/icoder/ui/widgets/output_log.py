@@ -41,23 +41,3 @@ class OutputLog(RichLog):
             self.write(Text(text, style=style))
         else:
             self.write(text)
-
-    def append_tool_use(
-        self, name: str, args: str, result: str, style: str | None = None
-    ) -> None:
-        """Write compact tool use line, optionally styled.
-
-        Format: gear name(args) arrow result
-
-        Args:
-            name: Tool name.
-            args: Tool arguments.
-            result: Tool result summary.
-            style: Optional Rich style string.
-        """
-        line = f"\u2699 {name}({args}) \u2192 {result}"
-        self._recorded.append(line)
-        if style:
-            self.write(Text(line, style=style))
-        else:
-            self.write(line)

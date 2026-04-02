@@ -32,11 +32,11 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: Migrate iCoder app.py + remove append_tool_use()
-- [ ] 2A: Implementation — rewrite _handle_stream_event in app.py to use StreamEventRenderer
-- [ ] 2B: Implementation — remove append_tool_use() from output_log.py
-- [ ] 2C: Implementation — update tests in test_widgets.py
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] 2A: Implementation — rewrite _handle_stream_event in app.py to use StreamEventRenderer
+- [x] 2B: Implementation — remove append_tool_use() from output_log.py
+- [x] 2C: Implementation — update tests in test_widgets.py
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: verify all tests pass and no regressions

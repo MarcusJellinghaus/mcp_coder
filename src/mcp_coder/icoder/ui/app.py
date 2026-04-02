@@ -10,6 +10,13 @@ from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.ui.styles import CSS
 from mcp_coder.icoder.ui.widgets.input_area import InputArea
 from mcp_coder.icoder.ui.widgets.output_log import OutputLog
+from mcp_coder.llm.formatting.render_actions import (
+    ErrorMessage,
+    TextChunk,
+    ToolResult,
+    ToolStart,
+)
+from mcp_coder.llm.formatting.stream_renderer import StreamEventRenderer
 from mcp_coder.llm.types import StreamEvent
 
 STYLE_USER_INPUT = "white on grey23"
@@ -30,6 +37,7 @@ class ICoderApp(App[None]):
         """
         super().__init__(**kwargs)
         self._core = app_core
+        self._renderer = StreamEventRenderer()
 
     def compose(self) -> ComposeResult:
         """Vertical layout: OutputLog on top, InputArea at bottom.
@@ -89,21 +97,32 @@ class ICoderApp(App[None]):
             event: StreamEvent dict with a "type" key.
         """
         output = self.query_one(OutputLog)
-        event_type = event.get("type")
-        if event_type == "text_delta":
-            text = event.get("text", "")
-            if isinstance(text, str) and text:
-                output.append_text(text)
-        elif event_type == "tool_use_start":
-            name = str(event.get("name", ""))
-            args = str(event.get("args", {}))
-            output.append_tool_use(name, args, "...", style=STYLE_TOOL_OUTPUT)
-        elif event_type == "tool_result":
-            name = str(event.get("name", ""))
-            output.append_tool_use(name, "", "done", style=STYLE_TOOL_OUTPUT)
-        elif event_type == "error":
-            msg = event.get("message", "Unknown error")
-            output.append_text(f"Error: {msg}")
+        action = self._renderer.render(event)
+        if action is None:
+            return
+        if isinstance(action, TextChunk):
+            output.append_text(action.text)
+        elif isinstance(action, ToolStart):
+            if action.inline_args is not None:
+                line = f"┌ {action.display_name}({action.inline_args})"
+            else:
+                parts = [f"┌ {action.display_name}"]
+                for key, value in action.block_args:
+                    parts.append(f"│  {key}: {value}")
+                line = "\n".join(parts)
+            output.append_text(line, style=STYLE_TOOL_OUTPUT)
+        elif isinstance(action, ToolResult):
+            parts = [f"│  {ln}" for ln in action.output_lines]
+            if action.truncated:
+                parts.append(
+                    f"└ done ({action.total_lines} lines, "
+                    f"truncated to {len(action.output_lines)})"
+                )
+            else:
+                parts.append("└ done")
+            output.append_text("\n".join(parts), style=STYLE_TOOL_OUTPUT)
+        elif isinstance(action, ErrorMessage):
+            output.append_text(f"Error: {action.message}")
 
     def _show_error(self, message: str) -> None:
         """Display error message in output log.
