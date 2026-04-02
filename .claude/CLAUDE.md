@@ -27,16 +27,18 @@
 | Run ruff | `Bash("ruff ...")` | ✅ `Bash("./tools/ruff_check.sh")` |
 | Git operations | ✅ `Bash("git ...")` | ✅ `Bash("git ...")` (allowed) |
 | View diff (compact) | `Bash("git diff")` | ✅ `Bash("mcp-coder git-tool compact-diff")` |
-| Refactoring | Manual copy-paste | `mcp__tools-py__move_symbol()`, `list_symbols()`, `find_references()` |
+| Refactoring | Manual copy-paste | `mcp__tools-py__move_symbol()`, `list_symbols()`, `find_references()`, `get_library_source()` |
 
 ## 🔴 CRITICAL: Code Quality Requirements
 
-**MANDATORY**: After making ANY code changes (after EACH edit), you MUST run ALL THREE code quality checks using the EXACT MCP tool names below:
+**MANDATORY**: After making ANY code changes (after EACH edit), you MUST run ALL FIVE code quality checks using the EXACT MCP tool names below:
 
 ```
 mcp__tools-py__run_pylint_check
 mcp__tools-py__run_pytest_check
 mcp__tools-py__run_mypy_check
+mcp__tools-py__run_lint_imports_check
+mcp__tools-py__run_vulture_check
 ```
 
 This runs:
@@ -44,6 +46,8 @@ This runs:
 - **Pylint** - Code quality and style analysis
 - **Pytest** - All unit and integration tests
 - **Mypy** - Static type checking
+- **Lint imports** - Import dependency enforcement
+- **Vulture** - Dead code detection
 
 **⚠️ ALL CHECKS MUST PASS** - If ANY issues are found, you MUST fix them immediately before proceeding.
 
