@@ -225,6 +225,7 @@ _.handle_quit
 _.compose
 _.on_mount
 _.on_input_area_input_submitted
+_.on_text_area_changed
 
 # tests/icoder/test_command_registry.py - Test command handler
 _.handle_test

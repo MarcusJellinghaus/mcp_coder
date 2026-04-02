@@ -29,6 +29,14 @@ class InputArea(TextArea):
             self.text = text
             super().__init__()
 
+    def on_text_area_changed(self) -> None:
+        """Resize height to match content, capped at 1/3 of screen."""
+        if not self.screen:
+            return
+        line_count = self.document.line_count
+        max_lines = max(1, self.screen.size.height // 3)
+        self.styles.height = min(line_count + 2, max_lines)
+
     async def _on_key(self, event: events.Key) -> None:
         """Intercept Enter vs Shift-Enter.
 

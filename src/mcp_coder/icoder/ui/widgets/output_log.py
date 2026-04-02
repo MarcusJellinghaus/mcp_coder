@@ -13,7 +13,7 @@ class OutputLog(RichLog):
 
     def __init__(self, **kwargs: Any) -> None:
         """Initialize with internal line buffer for testability."""
-        super().__init__(**kwargs)
+        super().__init__(wrap=True, **kwargs)
         self._recorded: list[str] = []
 
     def clear_recorded(self) -> None:

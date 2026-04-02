@@ -1,4 +1,14 @@
-"""SVG snapshot tests for iCoder TUI (Windows-only)."""
+"""SVG snapshot tests for iCoder TUI (Windows-only).
+
+Snapshot tests compare rendered TUI output against golden SVG baselines
+stored in __snapshots__/. When the UI changes intentionally, regenerate
+baselines with:
+
+    pytest tests/icoder/test_snapshots.py --snapshot-update
+
+Baselines are Windows-only to avoid cross-platform rendering drift.
+Verify regenerated SVGs contain no secrets, env vars, or local paths.
+"""
 
 from __future__ import annotations
 
@@ -66,3 +76,35 @@ def test_snapshot_after_conversation(snap_compare: Any, icoder_app: ICoderApp) -
         await pilot.pause(delay=0.5)
 
     assert snap_compare(icoder_app, run_before=send_message)
+
+
+def test_snapshot_long_line_wraps(snap_compare: Any, icoder_app: ICoderApp) -> None:
+    """Snapshot: long user message wraps instead of scrolling horizontally."""
+
+    async def send_long_message(pilot: Any) -> None:
+        input_area = icoder_app.query_one(InputArea)
+        input_area.focus()
+        await pilot.pause()
+        input_area.insert(
+            "This is a very long message that should wrap across multiple"
+            " lines in the output log instead of requiring horizontal"
+            " scrolling to read the content"
+        )
+        await pilot.pause()
+        await pilot.press("enter")
+        await pilot.pause(delay=0.5)
+
+    assert snap_compare(icoder_app, run_before=send_long_message)
+
+
+def test_snapshot_input_area_grows(snap_compare: Any, icoder_app: ICoderApp) -> None:
+    """Snapshot: input area grows taller as multi-line text is inserted."""
+
+    async def insert_multiline(pilot: Any) -> None:
+        input_area = icoder_app.query_one(InputArea)
+        input_area.focus()
+        await pilot.pause()
+        input_area.insert("line1\nline2\nline3\nline4\nline5")
+        await pilot.pause()
+
+    assert snap_compare(icoder_app, run_before=insert_multiline)
