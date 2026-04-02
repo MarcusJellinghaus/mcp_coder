@@ -68,6 +68,24 @@ class TestLogCommandStartup:
         assert "branch: (unknown)" in caplog.text
         assert "mcp-coder v2.0.0" in caplog.text
 
+    @patch(
+        "mcp_coder.utils.git_operations.branch_queries.get_current_branch_name",
+        side_effect=OSError("git not found"),
+    )
+    @patch("mcp_coder.__version__", new="3.0.0")
+    def test_branch_query_exception_falls_back(
+        self,
+        mock_branch: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Branch query raising OSError falls back to '(unknown)'."""
+        with caplog.at_level(logging.DEBUG, logger="mcp_coder.cli.utils"):
+            log_command_startup("implement", project_dir=Path("/tmp/repo"))
+
+        assert "branch: (unknown)" in caplog.text
+        assert "mcp-coder v3.0.0" in caplog.text
+        assert "Failed to query branch name" in caplog.text
+
 
 class TestParseLLMMethodFromArgs:
     """Test cases for parse_llm_method_from_args function."""

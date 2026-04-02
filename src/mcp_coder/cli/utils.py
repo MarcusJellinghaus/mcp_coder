@@ -36,7 +36,11 @@ def log_command_startup(command_name: str, project_dir: Path | None = None) -> N
     if project_dir is not None:
         from ..utils.git_operations.branch_queries import get_current_branch_name
 
-        branch = get_current_branch_name(project_dir) or "(unknown)"
+        try:
+            branch = get_current_branch_name(project_dir) or "(unknown)"
+        except Exception:
+            logger.debug("Failed to query branch name", exc_info=True)
+            branch = "(unknown)"
         logger.info(
             "mcp-coder v%s — %s, branch: %s, project: %s",
             __version__,
