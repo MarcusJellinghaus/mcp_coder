@@ -112,15 +112,35 @@ def test_venv_section_path_set_before_mcp_coder_version() -> None:
     )
 
 
-def test_venv_section_no_duplicate_path_assignment() -> None:
-    """Test that PATH=%MCP_CODER_VENV_PATH% appears exactly once.
+def test_venv_section_path_set_twice() -> None:
+    """Test that PATH=%MCP_CODER_VENV_PATH% appears exactly twice.
 
-    A duplicate PATH assignment is unnecessary and confusing (issue #643).
+    First: before mcp-coder --version (so the executable is found).
+    Second: after activate.bat (which overwrites PATH, see #651/#694).
     """
     count = VENV_SECTION_WINDOWS.count("PATH=%MCP_CODER_VENV_PATH%")
     assert (
-        count == 1
-    ), f"Expected exactly 1 PATH=%MCP_CODER_VENV_PATH% assignment, found {count}"
+        count == 2
+    ), f"Expected exactly 2 PATH=%MCP_CODER_VENV_PATH% assignments, found {count}"
+
+
+def test_venv_section_path_restored_after_activation() -> None:
+    """Test that PATH is re-set after activate.bat call.
+
+    activate.bat overwrites PATH, so MCP_CODER_VENV_PATH must be
+    re-added afterwards to keep mcp-coder reachable (#694).
+    """
+    lines = VENV_SECTION_WINDOWS.splitlines()
+    activate_lines = [i for i, line in enumerate(lines) if "activate.bat" in line]
+    path_lines = [
+        i for i, line in enumerate(lines) if "PATH=%MCP_CODER_VENV_PATH%" in line
+    ]
+    last_activate = max(activate_lines)
+    last_path = max(path_lines)
+    assert last_path > last_activate, (
+        f"Last PATH assignment (line {last_path}) must come after "
+        f"last activate.bat call (line {last_activate})"
+    )
 
 
 def test_venv_section_runs_editable_install() -> None:
