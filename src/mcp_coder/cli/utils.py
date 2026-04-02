@@ -38,14 +38,14 @@ def log_command_startup(command_name: str, project_dir: Path | None = None) -> N
 
         branch = get_current_branch_name(project_dir) or "(unknown)"
         logger.info(
-            "mcp-coder %s — %s, branch: %s, project: %s",
+            "mcp-coder v%s — %s, branch: %s, project: %s",
             __version__,
             command_name,
             branch,
             project_dir,
         )
     else:
-        logger.info("mcp-coder %s — %s", __version__, command_name)
+        logger.info("mcp-coder v%s — %s", __version__, command_name)
 
 
 def _get_status_symbols() -> dict[str, str]:
