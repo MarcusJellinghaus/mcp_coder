@@ -38,9 +38,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 3: Snapshot Regeneration + Documentation
 > [Detail](./steps/step_3.md) — Regenerate snapshot baselines, verify no secrets in SVGs, add documentation comments.
 
-- [ ] Implementation: regenerate snapshots with `--snapshot-update`, verify SVGs are clean, add docstring to `test_snapshots.py` and comment in `pyproject.toml`
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `test(icoder): regenerate snapshot baselines and add snapshot docs`
+- [x] Implementation: regenerate snapshots with `--snapshot-update`, verify SVGs are clean, add docstring to `test_snapshots.py` and comment in `pyproject.toml`
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit: `test(icoder): regenerate snapshot baselines and add snapshot docs`
 
 ## Pull Request
 

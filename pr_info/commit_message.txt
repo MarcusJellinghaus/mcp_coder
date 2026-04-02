@@ -1,6 +1,9 @@
-feat(icoder): auto-grow input area with content up to 1/3 screen height
+test(icoder): regenerate snapshot baselines and add snapshot docs
 
-- Remove max-height: 5 from InputArea CSS to allow dynamic sizing
-- Add on_text_area_changed handler that sets height to
-  min(line_count, screen_height // 3)
-- Add test verifying input area height changes with multiline input
+- Regenerate all 3 SVG snapshot baselines after visual changes from
+  steps 1-2 (line wrapping, explicit colors, auto-grow input)
+- Verify regenerated SVGs contain no secrets, env vars, or local paths
+- Expand module docstring in test_snapshots.py explaining snapshot
+  workflow and --snapshot-update usage
+- Add comment in pyproject.toml near textual_integration marker
+  documenting snapshot regeneration command

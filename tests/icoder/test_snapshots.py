@@ -1,4 +1,14 @@
-"""SVG snapshot tests for iCoder TUI (Windows-only)."""
+"""SVG snapshot tests for iCoder TUI (Windows-only).
+
+Snapshot tests compare rendered TUI output against golden SVG baselines
+stored in __snapshots__/. When the UI changes intentionally, regenerate
+baselines with:
+
+    pytest tests/icoder/test_snapshots.py --snapshot-update
+
+Baselines are Windows-only to avoid cross-platform rendering drift.
+Verify regenerated SVGs contain no secrets, env vars, or local paths.
+"""
 
 from __future__ import annotations
 
