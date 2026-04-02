@@ -38,6 +38,7 @@ from ....workflows.vscodeclaude import (
     process_eligible_issues,
     restart_closed_sessions,
 )
+from ...utils import log_command_startup
 from .command_templates import TEST_COMMAND_TEMPLATES
 from .core import (
     dispatch_workflow,
@@ -191,6 +192,8 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
 
     """
     try:
+        log_command_startup("coordinator run")
+
         # Step 1: Auto-create config on first run
         created = create_default_config()
         if created:
@@ -479,6 +482,8 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         Exit code (0 success, 1 error)
     """
     try:
+        log_command_startup("coordinator vscodeclaude")
+
         # Auto-create config if needed
         created = create_default_config()
         if created:

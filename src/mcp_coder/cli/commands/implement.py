@@ -11,6 +11,7 @@ import sys
 from ...workflows.implement.core import run_implement_workflow
 from ...workflows.utils import resolve_project_dir
 from ..utils import (
+    log_command_startup,
     parse_llm_method_from_args,
     resolve_execution_dir,
     resolve_llm_method,
@@ -33,10 +34,9 @@ def execute_implement(args: argparse.Namespace) -> int:
         int: Exit code (0 for success, 1 for error)
     """
     try:
-        logger.info("Starting implement command execution")
-
         # Resolve project directory with validation
         project_dir = resolve_project_dir(args.project_dir)
+        log_command_startup("implement", project_dir)
 
         # Resolve execution directory
         execution_dir = resolve_execution_dir(args.execution_dir)
