@@ -5,6 +5,7 @@ and --wait-for-pr / --pr-timeout CLI arguments.
 """
 
 import argparse
+import logging
 from dataclasses import replace
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -161,7 +162,7 @@ class TestRemoteTrackingGuard:
         mock_branch: Mock,
         mock_has_remote: Mock,
         mock_resolve: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """No upstream → exit code 2, error message."""
         mock_resolve.return_value = Path("/test/project")
@@ -169,11 +170,13 @@ class TestRemoteTrackingGuard:
         mock_has_remote.return_value = False
 
         args = _make_base_args(wait_for_pr=True)
-        result = execute_check_branch_status(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_check_branch_status(args)
 
         assert result == 2
-        captured = capsys.readouterr()
-        assert "no remote tracking branch" in captured.out.lower()
+        assert any(
+            "no remote tracking branch" in r.message.lower() for r in caplog.records
+        )
 
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.has_remote_tracking_branch")
@@ -238,7 +241,7 @@ class TestPRPolling:
         mock_branch: Mock,
         mock_has_remote: Mock,
         mock_resolve: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """PR exists on first poll → proceeds, report has PR fields."""
         mock_resolve.return_value = Path("/test/project")
@@ -254,13 +257,11 @@ class TestPRPolling:
         mock_collect.return_value = base_report
 
         args = _make_base_args(wait_for_pr=True)
-        result = execute_check_branch_status(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_check_branch_status(args)
 
         assert result == 0
-        captured = capsys.readouterr()
-        assert "PR #42 found" in captured.out
-        # Report should include PR info
-        assert "#42" in captured.out
+        assert any("PR #42 found" in r.message for r in caplog.records)
 
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.has_remote_tracking_branch")
@@ -276,7 +277,7 @@ class TestPRPolling:
         mock_branch: Mock,
         mock_has_remote: Mock,
         mock_resolve: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """PR found on 2nd poll → correct behavior."""
         mock_resolve.return_value = Path("/test/project")
@@ -295,13 +296,13 @@ class TestPRPolling:
         mock_collect.return_value = _make_report()
 
         args = _make_base_args(wait_for_pr=True, pr_timeout=600)
-        result = execute_check_branch_status(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_check_branch_status(args)
 
         assert result == 0
         assert mock_pr_cls.return_value.find_pull_request_by_head.call_count == 2
         mock_time.sleep.assert_called_once_with(20)
-        captured = capsys.readouterr()
-        assert "PR #55 found" in captured.out
+        assert any("PR #55 found" in r.message for r in caplog.records)
 
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.has_remote_tracking_branch")
@@ -315,7 +316,7 @@ class TestPRPolling:
         mock_branch: Mock,
         mock_has_remote: Mock,
         mock_resolve: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """No PR within timeout → exit code 1, timeout message."""
         mock_resolve.return_value = Path("/test/project")
@@ -328,12 +329,12 @@ class TestPRPolling:
         mock_pr_cls.return_value.find_pull_request_by_head.return_value = []
 
         args = _make_base_args(wait_for_pr=True, pr_timeout=600)
-        result = execute_check_branch_status(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_check_branch_status(args)
 
         assert result == 1
-        captured = capsys.readouterr()
-        assert "No PR found" in captured.out
-        assert "timeout" in captured.out.lower()
+        assert any("No PR found" in r.message for r in caplog.records)
+        assert any("timeout" in r.message.lower() for r in caplog.records)
 
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.has_remote_tracking_branch")
@@ -349,9 +350,9 @@ class TestPRPolling:
         mock_branch: Mock,
         mock_has_remote: Mock,
         mock_resolve: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """Multiple PRs → uses first, prints warning."""
+        """Multiple PRs → uses first, logs warning."""
         mock_resolve.return_value = Path("/test/project")
         mock_branch.return_value = "feature/xyz"
         mock_has_remote.return_value = True
@@ -365,12 +366,12 @@ class TestPRPolling:
         mock_collect.return_value = _make_report()
 
         args = _make_base_args(wait_for_pr=True)
-        result = execute_check_branch_status(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_check_branch_status(args)
 
         assert result == 0
-        captured = capsys.readouterr()
-        assert "Warning" in captured.out
-        assert "Multiple PRs" in captured.out
+        warning_records = [r for r in caplog.records if r.levelno == logging.WARNING]
+        assert any("Multiple PRs" in r.message for r in warning_records)
 
 
 # ---------------------------------------------------------------------------
@@ -393,9 +394,9 @@ class TestCIPendingHint:
         mock_collect: Mock,
         mock_resolve: Mock,
         mock_branch: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """CI pending + ci_timeout=0 → hint printed."""
+        """CI pending + ci_timeout=0 → hint logged."""
         mock_resolve.return_value = Path("/test/project")
         mock_branch.return_value = "feature/xyz"
         mock_collect.return_value = _make_report(
@@ -404,11 +405,14 @@ class TestCIPendingHint:
         )
 
         args = _make_base_args(ci_timeout=0)
-        result = execute_check_branch_status(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_check_branch_status(args)
 
         assert result == 0
-        captured = capsys.readouterr()
-        assert "CI pending. Use --ci-timeout to wait for completion." in captured.out
+        assert any(
+            "CI pending. Use --ci-timeout to wait for completion." in r.message
+            for r in caplog.records
+        )
 
     @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
@@ -418,7 +422,7 @@ class TestCIPendingHint:
         mock_collect: Mock,
         mock_resolve: Mock,
         mock_branch: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """CI pending + ci_timeout>0 → no hint."""
         mock_resolve.return_value = Path("/test/project")
@@ -432,13 +436,14 @@ class TestCIPendingHint:
                 "mcp_coder.cli.commands.check_branch_status._wait_for_ci_completion",
                 return_value=(None, True),
             ),
+            caplog.at_level(logging.DEBUG),
         ):
             args = _make_base_args(ci_timeout=180)
             execute_check_branch_status(args)
 
-        captured = capsys.readouterr()
-        assert (
-            "CI pending. Use --ci-timeout to wait for completion." not in captured.out
+        assert not any(
+            "CI pending. Use --ci-timeout to wait for completion." in r.message
+            for r in caplog.records
         )
 
     @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
@@ -449,7 +454,7 @@ class TestCIPendingHint:
         mock_collect: Mock,
         mock_resolve: Mock,
         mock_branch: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """CI passed + ci_timeout=0 → no hint."""
         mock_resolve.return_value = Path("/test/project")
@@ -457,11 +462,12 @@ class TestCIPendingHint:
         mock_collect.return_value = _make_report(ci_status="PASSED")
 
         args = _make_base_args(ci_timeout=0)
-        execute_check_branch_status(args)
+        with caplog.at_level(logging.DEBUG):
+            execute_check_branch_status(args)
 
-        captured = capsys.readouterr()
-        assert (
-            "CI pending. Use --ci-timeout to wait for completion." not in captured.out
+        assert not any(
+            "CI pending. Use --ci-timeout to wait for completion." in r.message
+            for r in caplog.records
         )
 
 

@@ -13,6 +13,7 @@ Note: Additional tests are split into separate modules:
 """
 
 import argparse
+import logging
 import re
 from pathlib import Path
 from typing import Any
@@ -324,7 +325,7 @@ class TestExecuteDefineLabels:
     def test_execute_define_labels_invalid_dir_returns_one(
         self,
         mock_resolve_dir: MagicMock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test invalid project dir returns 1."""
         # Setup mock to raise ValueError (invalid directory)
@@ -335,9 +336,8 @@ class TestExecuteDefineLabels:
             dry_run=False,
         )
 
-        result = execute_define_labels(args)
+        with caplog.at_level(logging.ERROR):
+            result = execute_define_labels(args)
 
         assert result == 1
-        captured = capsys.readouterr()
-        assert "Error" in captured.err
-        assert "does not exist" in captured.err
+        assert "does not exist" in caplog.text

@@ -7,6 +7,7 @@ This module contains tests for:
 """
 
 import argparse
+import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -68,7 +69,7 @@ class TestExecuteCoordinatorTest:
         mock_load_repo: MagicMock,
         mock_get_creds: MagicMock,
         mock_jenkins_class: MagicMock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test successful command execution."""
         # Setup
@@ -104,7 +105,8 @@ class TestExecuteCoordinatorTest:
         )
 
         # Execute
-        result = execute_coordinator_test(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_coordinator_test(args)
 
         # Verify
         assert result == 0
@@ -125,10 +127,9 @@ class TestExecuteCoordinatorTest:
             },
         )
 
-        # Verify output printed
-        captured = capsys.readouterr()
-        assert "Job triggered: MCP/test-job - test - queue: 12345" in captured.out
-        assert "https://jenkins:8080/queue/item/12345/" in captured.out
+        # Verify output logged
+        assert "Job triggered: MCP/test-job - test - queue: 12345" in caplog.text
+        assert "https://jenkins:8080/queue/item/12345/" in caplog.text
 
 
 class TestExecuteCoordinatorRun:
@@ -242,7 +243,7 @@ class TestExecuteCoordinatorRun:
 
     @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
     def test_execute_coordinator_run_creates_config_if_missing(
-        self, mock_create_config: MagicMock, capsys: pytest.CaptureFixture[str]
+        self, mock_create_config: MagicMock, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test config file is auto-created on first run."""
         # Setup
@@ -250,15 +251,15 @@ class TestExecuteCoordinatorRun:
         mock_create_config.return_value = True  # Config was created
 
         # Execute
-        result = execute_coordinator_test(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_coordinator_test(args)
 
         # Verify
         assert result == 1  # Exit to let user configure
         mock_create_config.assert_called_once()
 
-        # Verify message printed
-        captured = capsys.readouterr()
-        assert "Created default config file" in captured.out
+        # Verify message logged
+        assert "Created default config file" in caplog.text
 
 
 class TestInstallFromGithubWiring:

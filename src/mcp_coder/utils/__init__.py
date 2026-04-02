@@ -19,7 +19,7 @@ from .clipboard import (
     parse_commit_message,
     validate_commit_message,
 )
-from .log_utils import NOTICE, log_function_call, setup_logging
+from .log_utils import OUTPUT, log_function_call, setup_logging
 from .subprocess_runner import (
     CommandOptions,
     CommandResult,
@@ -93,7 +93,7 @@ __all__ = [
     "stage_all_changes",
     "stage_specific_files",
     # Logging utilities
-    "NOTICE",
+    "OUTPUT",
     "log_function_call",
     "setup_logging",
     # User configuration

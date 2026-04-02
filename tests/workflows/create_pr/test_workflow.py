@@ -21,8 +21,12 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.commit_all_changes")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     def test_workflow_complete_success(
         self,
+        mock_detect_base: MagicMock,
+        mock_get_branch: MagicMock,
         mock_commit: MagicMock,
         mock_clean: MagicMock,
         mock_cleanup: MagicMock,
@@ -43,6 +47,8 @@ class TestRunCreatePrWorkflow:
         mock_cleanup.return_value = True
         mock_clean.return_value = False  # Has changes to commit
         mock_commit.return_value = {"success": True, "commit_hash": "abc123"}
+        mock_get_branch.return_value = "feature-branch"
+        mock_detect_base.return_value = "main"
 
         # Execute
         result = run_create_pr_workflow(Path("/test"), "claude")
@@ -125,8 +131,12 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.commit_all_changes")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     def test_workflow_execution_dir_passed_to_generate_summary(
         self,
+        mock_detect_base: MagicMock,
+        mock_get_branch: MagicMock,
         mock_commit: MagicMock,
         mock_clean: MagicMock,
         mock_cleanup: MagicMock,
@@ -151,6 +161,8 @@ class TestRunCreatePrWorkflow:
         }
         mock_cleanup.return_value = True
         mock_clean.return_value = True  # Clean directory, no commit needed
+        mock_get_branch.return_value = "feature-branch"
+        mock_detect_base.return_value = "main"
 
         # Execute with execution_dir
         result = run_create_pr_workflow(tmp_path, "claude", None, exec_dir)
@@ -169,8 +181,12 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.commit_all_changes")
     @patch("mcp_coder.utils.github_operations.issues.IssueManager")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     def test_workflow_caches_issue_number_before_pr_creation(
         self,
+        mock_detect_base: MagicMock,
+        mock_get_branch: MagicMock,
         mock_issue_manager_class: MagicMock,
         mock_commit: MagicMock,
         mock_clean: MagicMock,
@@ -193,6 +209,8 @@ class TestRunCreatePrWorkflow:
         }
         mock_cleanup.return_value = True
         mock_clean.return_value = True  # Clean directory, no commit needed
+        mock_get_branch.return_value = "feature-branch"
+        mock_detect_base.return_value = "main"
 
         # Setup IssueManager mock
         mock_issue_manager = MagicMock()
@@ -220,8 +238,12 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.commit_all_changes")
     @patch("mcp_coder.utils.github_operations.issues.IssueManager")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     def test_workflow_skips_label_update_when_not_linked(
         self,
+        mock_detect_base: MagicMock,
+        mock_get_branch: MagicMock,
         mock_issue_manager_class: MagicMock,
         mock_commit: MagicMock,
         mock_clean: MagicMock,
@@ -244,6 +266,8 @@ class TestRunCreatePrWorkflow:
         }
         mock_cleanup.return_value = True
         mock_clean.return_value = True  # Clean directory, no commit needed
+        mock_get_branch.return_value = "feature-branch"
+        mock_detect_base.return_value = "main"
 
         # Setup IssueManager mock
         mock_issue_manager = MagicMock()

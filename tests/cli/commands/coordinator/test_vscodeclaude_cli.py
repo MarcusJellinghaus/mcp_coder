@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import logging
 from pathlib import Path
 
 import pytest
@@ -412,7 +413,7 @@ class TestCommandHandlers:
         assert "No sessions or eligible issues found." in captured.out
 
     def test_execute_vscodeclaude_intervene_requires_issue(
-        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Intervention mode requires --issue."""
         from mcp_coder.cli.commands.coordinator.commands import (
@@ -437,14 +438,14 @@ class TestCommandHandlers:
             issue=None,  # Missing issue
         )
 
-        result = execute_coordinator_vscodeclaude(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_coordinator_vscodeclaude(args)
 
         assert result == 1
-        captured = capsys.readouterr()
-        assert "--issue" in captured.err
+        assert "--issue" in caplog.text
 
     def test_execute_vscodeclaude_creates_config(
-        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Creates config file on first run."""
         from mcp_coder.cli.commands.coordinator.commands import (
@@ -465,8 +466,8 @@ class TestCommandHandlers:
             repo=None, max_sessions=None, cleanup=False, intervene=False, issue=None
         )
 
-        result = execute_coordinator_vscodeclaude(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_coordinator_vscodeclaude(args)
 
         assert result == 1  # Exit to let user configure
-        captured = capsys.readouterr()
-        assert "config" in captured.out.lower()
+        assert "config" in caplog.text.lower()

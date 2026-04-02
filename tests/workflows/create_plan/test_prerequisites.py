@@ -161,14 +161,14 @@ class TestCheckPrerequisites:
                 with patch("mcp_coder.workflows.create_plan.logger") as mock_logger:
                     success, issue_data = check_prerequisites(tmp_path, 456)
 
-                    # Verify logging calls (some promoted to NOTICE via logger.log)
+                    # Verify logging calls (some promoted to OUTPUT via logger.log)
                     info_calls = [
                         call[0][0] for call in mock_logger.info.call_args_list
                     ]
-                    notice_calls = [
+                    output_calls = [
                         str(call[0][1]) for call in mock_logger.log.call_args_list
                     ]
-                    all_calls = info_calls + notice_calls
+                    all_calls = info_calls + output_calls
                     assert any("Checking prerequisites" in call for call in all_calls)
                     assert any(
                         "✓ Git working directory is clean" in call for call in all_calls
@@ -421,10 +421,10 @@ class TestCreatePrInfoStructure:
 
             # Assert: success was logged
             assert result is True
-            # Check for success message in info or log (NOTICE) calls
+            # Check for success message in info or log (OUTPUT) calls
             info_calls = [call[0][0] for call in mock_logger.info.call_args_list]
-            notice_calls = [str(call[0][1]) for call in mock_logger.log.call_args_list]
-            all_calls = info_calls + notice_calls
+            output_calls = [str(call[0][1]) for call in mock_logger.log.call_args_list]
+            all_calls = info_calls + output_calls
             assert len(all_calls) > 0
             assert any(
                 "pr_info" in call.lower() or "created" in call.lower()

@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import logging
 from typing import Any, Dict
 from unittest.mock import Mock, mock_open, patch
 
@@ -72,7 +73,7 @@ class TestSessionPriority:
         mock_llm: Mock,
         mock_env: Mock,
         mock_mcp: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test --session-id takes priority over --continue-session-from."""
         mock_prompt_llm_stream.return_value = iter(_stream_events("explicit-123"))
@@ -87,13 +88,13 @@ class TestSessionPriority:
             project_dir=None,
         )
 
-        execute_prompt(args)
+        with caplog.at_level(logging.DEBUG):
+            execute_prompt(args)
 
         mock_prompt_llm_stream.assert_called_once()
         assert mock_prompt_llm_stream.call_args[1]["session_id"] == "explicit-123"
 
-        captured = capsys.readouterr()
-        assert "Using explicit session ID" in captured.out
+        assert "Using explicit session ID" in caplog.text
 
     @patch(_RESOLVE_MCP, return_value=None)
     @patch(_PREPARE_ENV, return_value={"MCP_CODER_PROJECT_DIR": "/test"})
@@ -113,7 +114,7 @@ class TestSessionPriority:
         mock_llm: Mock,
         mock_env: Mock,
         mock_mcp: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test --session-id takes priority over --continue-session."""
         mock_prompt_llm_stream.return_value = iter(_stream_events("explicit-123"))
@@ -129,13 +130,13 @@ class TestSessionPriority:
             project_dir=None,
         )
 
-        execute_prompt(args)
+        with caplog.at_level(logging.DEBUG):
+            execute_prompt(args)
 
         mock_prompt_llm_stream.assert_called_once()
         assert mock_prompt_llm_stream.call_args[1]["session_id"] == "explicit-123"
 
-        captured = capsys.readouterr()
-        assert "Using explicit session ID" in captured.out
+        assert "Using explicit session ID" in caplog.text
 
     @patch(_RESOLVE_MCP, return_value=None)
     @patch(_PREPARE_ENV, return_value={"MCP_CODER_PROJECT_DIR": "/test"})
@@ -153,7 +154,7 @@ class TestSessionPriority:
         mock_llm: Mock,
         mock_env: Mock,
         mock_mcp: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test --continue-session-from works when --session-id not provided."""
         mock_prompt_llm_stream.return_value = iter(_stream_events("file-456"))
@@ -168,13 +169,13 @@ class TestSessionPriority:
             project_dir=None,
         )
 
-        execute_prompt(args)
+        with caplog.at_level(logging.DEBUG):
+            execute_prompt(args)
 
         mock_prompt_llm_stream.assert_called_once()
         assert mock_prompt_llm_stream.call_args[1]["session_id"] == "file-456"
 
-        captured = capsys.readouterr()
-        assert "Resuming session" in captured.out
+        assert "Resuming session" in caplog.text
 
     @patch(_RESOLVE_MCP, return_value=None)
     @patch(_PREPARE_ENV, return_value={"MCP_CODER_PROJECT_DIR": "/test"})
@@ -194,7 +195,7 @@ class TestSessionPriority:
         mock_llm: Mock,
         mock_env: Mock,
         mock_mcp: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test --continue-session works when --session-id not provided."""
         mock_prompt_llm_stream.return_value = iter(_stream_events("file-789"))
@@ -212,14 +213,13 @@ class TestSessionPriority:
             project_dir=None,
         )
 
-        execute_prompt(args)
+        with caplog.at_level(logging.DEBUG):
+            execute_prompt(args)
 
         mock_prompt_llm_stream.assert_called_once()
         assert mock_prompt_llm_stream.call_args[1]["session_id"] == "file-789"
 
-        # Should show resumption message
-        captured = capsys.readouterr()
-        assert "Resuming session" in captured.out
+        assert "Resuming session" in caplog.text
 
     @patch(_RESOLVE_MCP, return_value=None)
     @patch(_PREPARE_ENV, return_value={"MCP_CODER_PROJECT_DIR": "/test"})
@@ -233,7 +233,7 @@ class TestSessionPriority:
         mock_llm: Mock,
         mock_env: Mock,
         mock_mcp: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Verify the message includes --store-response guidance."""
         mock_prompt_llm_stream.return_value = iter(_stream_events())
@@ -248,8 +248,8 @@ class TestSessionPriority:
             project_dir=None,
         )
 
-        result = execute_prompt(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_prompt(args)
 
         assert result == 0
-        captured = capsys.readouterr()
-        assert "Save conversations with --store-response" in captured.out
+        assert "Save conversations with --store-response" in caplog.text

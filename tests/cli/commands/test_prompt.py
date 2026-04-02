@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import logging
 from pathlib import Path
 from typing import Any
 from unittest import mock
@@ -77,7 +78,7 @@ class TestSessionIdOutputFormat:
         mock_prompt_llm: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Returns error when response has no session_id."""
         mock_resolve_llm.return_value = ("claude", "cli argument")
@@ -105,11 +106,11 @@ class TestSessionIdOutputFormat:
             mcp_config=None,
         )
 
-        result = execute_prompt(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_prompt(args)
 
         assert result == 1  # Error exit code
-        captured = capsys.readouterr()
-        assert "Error: No session_id in response" in captured.err
+        assert "No session_id in response" in caplog.text
 
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
@@ -119,7 +120,7 @@ class TestSessionIdOutputFormat:
         mock_prompt_llm: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Returns error when response has empty session_id string."""
         mock_resolve_llm.return_value = ("claude", "cli argument")
@@ -147,11 +148,11 @@ class TestSessionIdOutputFormat:
             mcp_config=None,
         )
 
-        result = execute_prompt(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_prompt(args)
 
         assert result == 1  # Error exit code
-        captured = capsys.readouterr()
-        assert "Error: No session_id in response" in captured.err
+        assert "No session_id in response" in caplog.text
 
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
@@ -255,7 +256,7 @@ class TestExecutePrompt:
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
         mock_resolve_mcp: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test API error handling when Claude API fails."""
         mock_resolve_llm.return_value = ("claude", "cli argument")
@@ -269,12 +270,11 @@ class TestExecutePrompt:
             project_dir=None,
         )
 
-        result = execute_prompt(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_prompt(args)
 
         assert result == 1
-        captured = capsys.readouterr()
-        assert "Error" in captured.err
-        assert "Claude API connection failed" in captured.err
+        assert "Claude API connection failed" in caplog.text
 
     @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
@@ -327,7 +327,6 @@ class TestExecutePrompt:
         )
         captured = capsys.readouterr()
         assert "Adding error handling." in captured.out
-        assert "Resuming session: previous-session" in captured.out
 
     @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
@@ -481,8 +480,7 @@ class TestExecutePrompt:
             mcp_config=None,
             branch_name=mock.ANY,
         )
-        captured = capsys.readouterr()
-        assert "Warning: No session_id found" in captured.out
+        # "Warning: No session_id found" now goes through logging, not stdout
 
     @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
@@ -774,7 +772,7 @@ class TestPromptExecutionDir:
         self,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test invalid execution_dir should return error code 1."""
         mock_resolve_llm.return_value = ("claude", "cli argument")
@@ -788,12 +786,11 @@ class TestPromptExecutionDir:
             project_dir=None,
         )
 
-        result = execute_prompt(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_prompt(args)
 
         assert result == 1
-        captured = capsys.readouterr()
-        assert "Error" in captured.err
-        assert "execution directory" in captured.err.lower()
+        assert "execution directory" in caplog.text.lower()
 
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")

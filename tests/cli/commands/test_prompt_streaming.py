@@ -6,6 +6,7 @@ verifying events flow through ResponseAssembler and print_stream_event.
 
 import argparse
 import json
+import logging
 from typing import Any
 from unittest import mock
 from unittest.mock import Mock, patch
@@ -365,7 +366,7 @@ class TestStreamingErrorHandling:
         mock_env: Mock,
         mock_llm: Mock,
         mock_mcp: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Exception during streaming returns exit code 1."""
         mock_llm.return_value = ("claude", "cli")
@@ -373,11 +374,11 @@ class TestStreamingErrorHandling:
         mock_env.return_value = {"MCP_CODER_PROJECT_DIR": "/t"}
         mock_stream.side_effect = Exception("stream failed")
 
-        result = execute_prompt(_make_args(output_format="ndjson"))
+        with caplog.at_level(logging.DEBUG):
+            result = execute_prompt(_make_args(output_format="ndjson"))
 
         assert result == 1
-        captured = capsys.readouterr()
-        assert "stream failed" in captured.err
+        assert "stream failed" in caplog.text
 
     @patch(_RESOLVE_MCP)
     @patch(_RESOLVE_LLM)

@@ -6,7 +6,6 @@ This module provides the git-tool command group for Git-related operations.
 import argparse
 import fnmatch
 import logging
-import sys
 
 from ...utils.git_operations.compact_diffs import get_compact_diff
 from ...utils.git_operations.diffs import get_git_diff_for_commit
@@ -138,8 +137,7 @@ def execute_compact_diff(args: argparse.Namespace) -> int:
         )
 
         if base_branch is None:
-            logger.warning("Could not detect base branch")
-            print("Error: Could not detect base branch", file=sys.stderr)
+            logger.error("Could not detect base branch")
             return 1
 
         # Get committed changes
@@ -170,13 +168,11 @@ def execute_compact_diff(args: argparse.Namespace) -> int:
 
     except ValueError as e:
         # resolve_project_dir raises ValueError for invalid directories
-        logger.error(f"Error: {e}")
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error("%s", e)
         return 2
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
-        logger.error(f"Error generating compact diff: {e}")
+        logger.error("Error generating compact diff: %s", e)
         logger.debug("Exception details:", exc_info=True)
-        print(f"Error: {e}", file=sys.stderr)
         return 2

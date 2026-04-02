@@ -2,7 +2,6 @@
 
 import argparse
 import logging
-import sys
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -17,6 +16,7 @@ from ...utils.git_operations import (
     is_git_repository,
     stage_all_changes,
 )
+from ...utils.log_utils import OUTPUT
 from ...workflow_utils.commit_operations import generate_commit_message_with_llm
 from ..utils import (
     parse_llm_method_from_args,
@@ -41,7 +41,6 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
         logger.debug(f"Execution directory: {execution_dir}")
     except ValueError as e:
         logger.error(f"Invalid execution directory: {e}")
-        print(f"Error: {e}", file=sys.stderr)
         return 1
 
     project_dir = Path(args.project_dir) if args.project_dir else Path.cwd()
@@ -49,7 +48,7 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
     # 1. Validate git repository
     success, error = validate_git_repository(project_dir)
     if not success:
-        print(f"Error: {error}", file=sys.stderr)
+        logger.error("%s", error)
         return 1
 
     # 2. Parse LLM method and generate commit message
@@ -62,7 +61,7 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
     # and produces a commit message as output. No MCP tool use is involved,
     # so --mcp-config is not applicable here.
     if not success:
-        print(f"Error: {error}", file=sys.stderr)
+        logger.error("%s", error)
         return 2
 
     # 3. Preview mode - simple inline confirmation
@@ -75,14 +74,14 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
         response = input("\nProceed with commit? (Y/n): ").strip().lower()
         # Handle case-insensitive input, check first letter, only check for non-default (n/no)
         if response.startswith("n"):  # 'n', 'no', 'nope', etc.
-            print("Commit cancelled.")
+            logger.log(OUTPUT, "Commit cancelled.")
             return 0
         # Everything else (empty, 'y', 'yes', 'yeah', etc.) proceeds as default
 
     # 4. Create commit
     commit_result = commit_staged_files(commit_message, project_dir)
     if not commit_result["success"]:
-        print(f"Error: {commit_result['error']}", file=sys.stderr)
+        logger.error("%s", commit_result["error"])
         return 2
 
     # Show commit message summary in output
@@ -90,11 +89,11 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
     first_line = commit_lines[0].strip()
     total_lines = len([line for line in commit_lines if line.strip()])
 
-    print(f"SUCCESS: Commit created: {commit_result['commit_hash']}")
+    logger.log(OUTPUT, "SUCCESS: Commit created: %s", commit_result["commit_hash"])
     if total_lines == 1:
-        print(f"Message: {first_line}")
+        logger.log(OUTPUT, "Message: %s", first_line)
     else:
-        print(f"Message: {first_line} ({total_lines} lines)")
+        logger.log(OUTPUT, "Message: %s (%s lines)", first_line, total_lines)
     return 0
 
 
@@ -148,31 +147,31 @@ def execute_commit_clipboard(args: argparse.Namespace) -> int:
     # 1. Validate git repository
     success, error = validate_git_repository(project_dir)
     if not success:
-        print(f"Error: {error}", file=sys.stderr)
+        logger.error("%s", error)
         return 1
 
     # 2. Get and validate commit message from clipboard
     success, commit_message, error = get_commit_message_from_clipboard()
     if not success:
-        print(f"Error: {error}", file=sys.stderr)
+        logger.error("%s", error)
         return 1
 
     # 3. Stage all changes
     if not stage_all_changes(project_dir):
-        print("Error: Failed to stage changes", file=sys.stderr)
+        logger.error("Failed to stage changes")
         return 2
 
     # 4. Create commit
     commit_result = commit_staged_files(commit_message, project_dir)
     if not commit_result["success"]:
-        print(f"Error: {commit_result['error']}", file=sys.stderr)
+        logger.error("%s", commit_result["error"])
         return 2
 
     # Parse commit message to get summary for user feedback
     summary, _ = parse_commit_message(commit_message)
-    print(f"SUCCESS: Successfully committed with message: {summary}")
+    logger.log(OUTPUT, "SUCCESS: Successfully committed with message: %s", summary)
     if commit_result["commit_hash"]:
-        print(f"COMMIT: {commit_result['commit_hash']}")
+        logger.log(OUTPUT, "COMMIT: %s", commit_result["commit_hash"])
 
     return 0
 

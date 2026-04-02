@@ -6,6 +6,7 @@ run independently (like CLI integration checks) are always executed.
 """
 
 import argparse
+import logging
 import sys
 from pathlib import Path
 from unittest import mock
@@ -259,7 +260,7 @@ class TestExecuteImplement:
         mock_resolve_llm: Mock,
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test implement execution with unexpected exception."""
         # Setup mocks
@@ -277,12 +278,11 @@ class TestExecuteImplement:
             update_labels=False,
         )
 
-        result = execute_implement(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_implement(args)
 
         assert result == 1
-        captured = capsys.readouterr()
-        captured_err: str = captured.err or ""
-        assert "Error during workflow execution: Unexpected error" in captured_err
+        assert "Unexpected error" in caplog.text
 
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
     @patch("mcp_coder.cli.commands.implement.run_implement_workflow")
@@ -294,7 +294,7 @@ class TestExecuteImplement:
         mock_resolve_llm: Mock,
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test implement execution with keyboard interrupt."""
         # Setup mocks
@@ -312,12 +312,11 @@ class TestExecuteImplement:
             update_labels=False,
         )
 
-        result = execute_implement(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_implement(args)
 
         assert result == 1
-        captured = capsys.readouterr()
-        captured_out: str = captured.out or ""
-        assert "Operation cancelled by user." in captured_out
+        assert "Operation cancelled by user." in caplog.text
 
     @patch("mcp_coder.cli.commands.implement.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
@@ -504,7 +503,7 @@ class TestImplementExecutionDir:
         self,
         mock_resolve_project: Mock,
         mock_resolve_exec: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test invalid execution_dir should return error code 1."""
         project_dir = Path("/test/project")
@@ -519,9 +518,8 @@ class TestImplementExecutionDir:
             update_labels=False,
         )
 
-        result = execute_implement(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_implement(args)
 
         assert result == 1
-        captured = capsys.readouterr()
-        assert "Error" in captured.err
-        assert "Directory does not exist" in captured.err
+        assert "Directory does not exist" in caplog.text

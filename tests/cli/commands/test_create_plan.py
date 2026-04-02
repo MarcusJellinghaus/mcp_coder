@@ -185,9 +185,11 @@ class TestCreatePlanExecutionDir:
         self,
         mock_resolve_project: MagicMock,
         mock_resolve_exec: MagicMock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test invalid execution_dir should return error code 1."""
+        import logging
+
         project_dir = Path("/test/project")
         mock_resolve_project.return_value = project_dir
         mock_resolve_exec.side_effect = ValueError("Directory does not exist")
@@ -199,9 +201,8 @@ class TestCreatePlanExecutionDir:
         args.llm_method = "claude"
         args.mcp_config = None
 
-        result = execute_create_plan(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_create_plan(args)
 
         assert result == 1
-        captured = capsys.readouterr()
-        assert "Error" in captured.err
-        assert "Directory does not exist" in captured.err
+        assert "Directory does not exist" in caplog.text

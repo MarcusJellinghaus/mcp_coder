@@ -5,7 +5,6 @@ This module provides the gh-tool command group for GitHub-related operations.
 
 import argparse
 import logging
-import sys
 
 from ...utils.git_operations.branches import checkout_branch
 from ...utils.git_operations.remotes import fetch_remote
@@ -51,15 +50,13 @@ def execute_get_base_branch(args: argparse.Namespace) -> int:
 
     except ValueError as e:
         # resolve_project_dir raises ValueError for invalid directories
-        logger.error(f"Error: {e}")
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error("%s", e)
         return 2
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
-        logger.error(f"Error detecting base branch: {e}")
+        logger.error("Error detecting base branch: %s", e)
         logger.debug("Exception details:", exc_info=True)
-        print(f"Error: {e}", file=sys.stderr)
         return 2
 
 
@@ -91,10 +88,7 @@ def execute_checkout_issue_branch(args: argparse.Namespace) -> int:
         issue_data = IssueManager(project_dir).get_issue(issue_number)
 
         if issue_data["number"] == 0:
-            print(
-                f"Error: Could not find issue #{issue_number}",
-                file=sys.stderr,
-            )
+            logger.error("Could not find issue #%s", issue_number)
             return 1
 
         # Find or create linked branch
@@ -108,20 +102,17 @@ def execute_checkout_issue_branch(args: argparse.Namespace) -> int:
                 issue_number, base_branch=issue_data.get("base_branch")
             )
             if not result["success"]:
-                print(
-                    f"Error: Could not create branch for issue #{issue_number}: {result['error']}",
-                    file=sys.stderr,
+                logger.error(
+                    "Could not create branch for issue #%s: %s",
+                    issue_number,
+                    result["error"],
                 )
                 return 1
             branch_name = result["branch_name"]
 
         # Checkout the branch
         if not checkout_branch(branch_name, project_dir):
-            logger.error(f"Git checkout failed for branch '{branch_name}'")
-            print(
-                f"Error: git checkout failed for branch '{branch_name}'",
-                file=sys.stderr,
-            )
+            logger.error("git checkout failed for branch '%s'", branch_name)
             return 2
 
         print(branch_name)
@@ -129,13 +120,11 @@ def execute_checkout_issue_branch(args: argparse.Namespace) -> int:
 
     except ValueError as e:
         # resolve_project_dir raises ValueError for invalid directories
-        logger.error(f"Error: {e}")
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error("%s", e)
         return 2
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
-        logger.error(f"Error during checkout-issue-branch: {e}")
+        logger.error("Error during checkout-issue-branch: %s", e)
         logger.debug("Exception details:", exc_info=True)
-        print(f"Error: {e}", file=sys.stderr)
         return 2

@@ -1,6 +1,7 @@
 """Tests for CLI main entry point."""
 
 import argparse
+import logging
 import sys
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -76,7 +77,7 @@ class TestCreateParser:
         """Test log level validates choices."""
         parser = create_parser()
         # Valid choices should work
-        for level in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
+        for level in ["DEBUG", "INFO", "OUTPUT", "WARNING", "ERROR", "CRITICAL"]:
             args = parser.parse_args(["--log-level", level, "init"])
             assert args.log_level == level
 
@@ -94,28 +95,27 @@ class TestLogLevelResolution:
         args = parser.parse_args(["help"])
         assert args.log_level is None
 
-    def test_resolve_log_level_workflow_commands_default_info(self) -> None:
-        """Test that workflow commands default to INFO."""
-        for cmd in ["create-plan", "implement", "create-pr", "coordinator"]:
-            args = argparse.Namespace(command=cmd, log_level=None)
-            assert _resolve_log_level(args) == "INFO", f"Expected INFO for {cmd}"
+    def test_resolve_log_level_coordinator_defaults_info(self) -> None:
+        """Test that coordinator command defaults to INFO."""
+        args = argparse.Namespace(command="coordinator", log_level=None)
+        assert _resolve_log_level(args) == "INFO"
 
-    def test_resolve_log_level_vscodeclaude_launch_default_info(self) -> None:
-        """Test that vscodeclaude launch defaults to INFO."""
+    def test_resolve_log_level_vscodeclaude_launch_default_output(self) -> None:
+        """Test that vscodeclaude launch defaults to OUTPUT."""
         args = argparse.Namespace(
             command="vscodeclaude", log_level=None, vscodeclaude_subcommand="launch"
         )
-        assert _resolve_log_level(args) == "INFO"
+        assert _resolve_log_level(args) == "OUTPUT"
 
-    def test_resolve_log_level_vscodeclaude_status_default_notice(self) -> None:
-        """Test that vscodeclaude status defaults to NOTICE."""
+    def test_resolve_log_level_vscodeclaude_status_default_output(self) -> None:
+        """Test that vscodeclaude status defaults to OUTPUT."""
         args = argparse.Namespace(
             command="vscodeclaude", log_level=None, vscodeclaude_subcommand="status"
         )
-        assert _resolve_log_level(args) == "NOTICE"
+        assert _resolve_log_level(args) == "OUTPUT"
 
-    def test_resolve_log_level_other_commands_default_notice(self) -> None:
-        """Test that non-workflow commands default to NOTICE."""
+    def test_resolve_log_level_other_commands_default_output(self) -> None:
+        """Test that non-workflow commands default to OUTPUT."""
         for cmd in [
             "help",
             "verify",
@@ -125,9 +125,13 @@ class TestLogLevelResolution:
             "commit",
             "init",
             "prompt",
+            "create-plan",
+            "implement",
+            "create-pr",
+            "vscodeclaude",
         ]:
             args = argparse.Namespace(command=cmd, log_level=None)
-            assert _resolve_log_level(args) == "NOTICE", f"Expected NOTICE for {cmd}"
+            assert _resolve_log_level(args) == "OUTPUT", f"Expected OUTPUT for {cmd}"
 
     def test_resolve_log_level_explicit_overrides_default(self) -> None:
         """Test that explicit --log-level always wins."""
@@ -138,9 +142,9 @@ class TestLogLevelResolution:
         assert _resolve_log_level(args) == "WARNING"
 
     def test_resolve_log_level_none_command(self) -> None:
-        """Test that None command (no command provided) defaults to NOTICE."""
+        """Test that None command (no command provided) defaults to OUTPUT."""
         args = argparse.Namespace(command=None, log_level=None)
-        assert _resolve_log_level(args) == "NOTICE"
+        assert _resolve_log_level(args) == "OUTPUT"
 
 
 class TestNoCommandShowsHelp:
@@ -768,19 +772,17 @@ class TestCheckBranchStatusCommand:
                 ["check", "branch-status", "--llm-method", "invalid_method"]
             )
 
-    @patch("mcp_coder.cli.main.logger")
     def test_check_no_subcommand_shows_error(
-        self, mock_logger: Mock, capsys: pytest.CaptureFixture[str]
+        self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test that check without subcommand shows error and help hint."""
-        with patch("sys.argv", ["mcp-coder", "check"]):
-            result = main()
+        with caplog.at_level(logging.DEBUG):
+            with patch("sys.argv", ["mcp-coder", "check"]):
+                result = main()
 
         assert result == 1
-        mock_logger.debug.assert_called_with("Check subcommand required")
-        captured = capsys.readouterr()
-        assert "Error: Please specify a check subcommand" in captured.err
-        assert "Try 'mcp-coder check --help' for more information." in captured.err
+        assert "Please specify a check subcommand" in caplog.text
+        assert "Try 'mcp-coder check --help' for more information." in caplog.text
 
 
 class TestHelpHintIntegration:
@@ -815,57 +817,57 @@ class TestHelpHintIntegration:
         assert "--help' for more information." in captured.err
 
     def test_gh_tool_no_subcommand_shows_help_hint(
-        self, capsys: pytest.CaptureFixture[str]
+        self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test that gh-tool without subcommand shows help hint."""
-        with patch("sys.argv", ["mcp-coder", "gh-tool"]):
-            result = main()
+        with caplog.at_level(logging.DEBUG):
+            with patch("sys.argv", ["mcp-coder", "gh-tool"]):
+                result = main()
 
         assert result == 1
-        captured = capsys.readouterr()
-        assert "Error: Please specify a gh-tool subcommand" in captured.err
-        assert "Try 'mcp-coder gh-tool --help' for more information." in captured.err
+        assert "Please specify a gh-tool subcommand" in caplog.text
+        assert "Try 'mcp-coder gh-tool --help' for more information." in caplog.text
 
     def test_vscodeclaude_no_subcommand_shows_help_hint(
-        self, capsys: pytest.CaptureFixture[str]
+        self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test that vscodeclaude without subcommand shows help hint."""
-        with patch("sys.argv", ["mcp-coder", "vscodeclaude"]):
-            result = main()
+        with caplog.at_level(logging.DEBUG):
+            with patch("sys.argv", ["mcp-coder", "vscodeclaude"]):
+                result = main()
 
         assert result == 1
-        captured = capsys.readouterr()
-        assert "Error: Please specify a subcommand" in captured.err
+        assert "Please specify a subcommand" in caplog.text
         assert (
-            "Try 'mcp-coder vscodeclaude --help' for more information." in captured.err
+            "Try 'mcp-coder vscodeclaude --help' for more information." in caplog.text
         )
 
     def test_git_tool_no_subcommand_shows_help_hint(
-        self, capsys: pytest.CaptureFixture[str]
+        self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test that git-tool without subcommand shows help hint."""
-        with patch("sys.argv", ["mcp-coder", "git-tool"]):
-            result = main()
+        with caplog.at_level(logging.DEBUG):
+            with patch("sys.argv", ["mcp-coder", "git-tool"]):
+                result = main()
 
         assert result == 1
-        captured = capsys.readouterr()
-        assert "Error: Please specify a git-tool subcommand" in captured.err
-        assert "Try 'mcp-coder git-tool --help' for more information." in captured.err
+        assert "Please specify a git-tool subcommand" in caplog.text
+        assert "Try 'mcp-coder git-tool --help' for more information." in caplog.text
 
     @pytest.mark.parametrize(
         "argv,expected_error",
         [
             (
                 ["mcp-coder", "coordinator", "--dry-run", "--branch-name", "feat-x"],
-                "Error: --dry-run requires --repo NAME",
+                "--dry-run requires --repo NAME",
             ),
             (
                 ["mcp-coder", "coordinator", "--dry-run", "--repo", "mcp_coder"],
-                "Error: --dry-run requires --branch-name BRANCH",
+                "--dry-run requires --branch-name BRANCH",
             ),
             (
                 ["mcp-coder", "coordinator"],
-                "Error: Either --all or --repo must be specified",
+                "Either --all or --repo must be specified",
             ),
         ],
         ids=[
@@ -878,27 +880,25 @@ class TestHelpHintIntegration:
         self,
         argv: list[str],
         expected_error: str,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test that coordinator error paths show help hint."""
-        with patch("sys.argv", argv):
-            result = main()
+        with caplog.at_level(logging.DEBUG):
+            with patch("sys.argv", argv):
+                result = main()
 
         assert result == 1
-        captured = capsys.readouterr()
-        assert expected_error in captured.err
-        assert (
-            "Try 'mcp-coder coordinator --help' for more information." in captured.err
-        )
+        assert expected_error in caplog.text
+        assert "Try 'mcp-coder coordinator --help' for more information." in caplog.text
 
     def test_commit_no_subcommand_shows_help_hint(
-        self, capsys: pytest.CaptureFixture[str]
+        self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test that commit without subcommand shows help hint."""
-        with patch("sys.argv", ["mcp-coder", "commit"]):
-            result = main()
+        with caplog.at_level(logging.DEBUG):
+            with patch("sys.argv", ["mcp-coder", "commit"]):
+                result = main()
 
         assert result == 1
-        captured = capsys.readouterr()
-        assert "Error: Commit mode 'None' is not yet implemented." in captured.err
-        assert "Try 'mcp-coder commit --help' for more information." in captured.err
+        assert "is not yet implemented" in caplog.text
+        assert "Try 'mcp-coder commit --help' for more information." in caplog.text

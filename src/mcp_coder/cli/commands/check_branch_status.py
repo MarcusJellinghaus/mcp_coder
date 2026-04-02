@@ -6,7 +6,6 @@ branch status information and can automatically fix CI failures when requested.
 
 import argparse
 import logging
-import sys
 import time
 from dataclasses import replace
 from pathlib import Path
@@ -26,6 +25,7 @@ from ...utils.github_operations.ci_results_manager import (
     CIStatusData,
 )
 from ...utils.github_operations.pr_manager import PullRequestManager
+from ...utils.log_utils import OUTPUT
 from ...workflows.implement.core import check_and_fix_ci
 from ...workflows.utils import resolve_project_dir
 from ..utils import (
@@ -36,17 +36,6 @@ from ..utils import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-def _show_progress(show: bool) -> None:
-    """Print a progress dot if show is True.
-
-    Args:
-        show: Whether to show progress (False in LLM mode)
-    """
-    if not show:
-        return
-    print(".", end="", flush=True)
 
 
 def _wait_for_ci_completion(
@@ -74,23 +63,23 @@ def _wait_for_ci_completion(
     if timeout_seconds <= 0:
         return None, True  # Graceful exit, no wait requested
 
-    show_progress = not llm_mode
     poll_interval = 15  # seconds
     max_attempts = timeout_seconds // poll_interval
+    log_every_n = 4  # Log every 4 polls = ~60 seconds
 
-    if show_progress:
-        print(f"Waiting for CI completion (timeout: {timeout_seconds}s)...", end="")
+    if not llm_mode:
+        logger.log(
+            OUTPUT, "Waiting for CI completion (timeout: %ds)...", timeout_seconds
+        )
 
+    ci_status: Optional[CIStatusData] = None
     for attempt in range(max_attempts):
         try:
             ci_status = ci_manager.get_latest_ci_status(branch)
         except (
             Exception
         ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific GitHub/CI exceptions
-            logger.error(f"CI API error during polling: {e}")
-            if show_progress:
-                print()  # Newline after dots
-            # Return special marker for API errors to be handled as exit code 2
+            logger.error("CI API error during polling: %s", e)
             raise RuntimeError(f"API error during CI polling: {e}") from e
 
         run_info = ci_status.get("run", {})
@@ -98,34 +87,32 @@ def _wait_for_ci_completion(
         # No CI run found yet
         if len(run_info) == 0:
             if attempt == max_attempts - 1:
-                if show_progress:
-                    print()
                 logger.info("No CI run found within timeout")
                 return None, True  # Graceful exit
-            _show_progress(show_progress)
+            # Periodic progress (every ~60s)
+            if not llm_mode and attempt > 0 and attempt % log_every_n == 0:
+                elapsed = (attempt + 1) * poll_interval
+                logger.log(OUTPUT, "Still waiting for CI... (%ds elapsed)", elapsed)
             time.sleep(poll_interval)
             continue
 
         # Check if CI completed
         if run_info.get("status") == "completed":
-            if show_progress:
-                print()  # Newline after dots
-
             conclusion = run_info.get("conclusion")
             if conclusion == "success":
                 logger.info("CI passed")
                 return ci_status, True
             else:
-                logger.info(f"CI completed with conclusion: {conclusion}")
+                logger.info("CI completed with conclusion: %s", conclusion)
                 return ci_status, False
 
-        # CI still running, continue polling
-        _show_progress(show_progress)
+        # CI still running — periodic progress
+        if not llm_mode and attempt > 0 and attempt % log_every_n == 0:
+            elapsed = (attempt + 1) * poll_interval
+            logger.log(OUTPUT, "Still waiting for CI... (%ds elapsed)", elapsed)
         time.sleep(poll_interval)
 
     # Timeout reached
-    if show_progress:
-        print()
     logger.info("CI polling timeout reached")
     return ci_status, False
 
@@ -165,15 +152,18 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
         if getattr(args, "wait_for_pr", False):
             # Guard: check remote tracking branch
             if not has_remote_tracking_branch(project_dir):
-                print(
-                    f"Branch '{current_branch}' has no remote tracking branch."
-                    " Push first."
+                logger.log(
+                    OUTPUT,
+                    "Branch '%s' has no remote tracking branch. Push first.",
+                    current_branch,
                 )
                 return 2
 
-            print(
-                f"Waiting for PR creation on branch '{current_branch}'"
-                f" (timeout: {args.pr_timeout}s)..."
+            logger.log(
+                OUTPUT,
+                "Waiting for PR creation on branch '%s' (timeout: %ds)...",
+                current_branch,
+                args.pr_timeout,
             )
 
             pr_manager = PullRequestManager(project_dir)
@@ -185,14 +175,17 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
                     pr_number = prs[0]["number"]
                     pr_url = prs[0]["url"]
                     pr_found = True
-                    print(
-                        f"PR #{pr_number} found ({pr_url})."
-                        " Proceeding with branch-status check."
+                    logger.log(
+                        OUTPUT,
+                        "PR #%s found (%s). Proceeding with branch-status check.",
+                        pr_number,
+                        pr_url,
                     )
                     if len(prs) > 1:
-                        print(
-                            f"Warning: Multiple PRs found for branch"
-                            f" '{current_branch}'. Using PR #{pr_number}."
+                        logger.warning(
+                            "Multiple PRs found for branch '%s'. Using PR #%s.",
+                            current_branch,
+                            pr_number,
                         )
                     break
                 # Sleep only if still within deadline
@@ -202,9 +195,11 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
                 pr_found = False
 
             if not pr_found:
-                print(
-                    f"No PR found for branch '{current_branch}'"
-                    f" within timeout ({args.pr_timeout}s)."
+                logger.log(
+                    OUTPUT,
+                    "No PR found for branch '%s' within timeout (%ds).",
+                    current_branch,
+                    args.pr_timeout,
                 )
                 return 1
 
@@ -255,7 +250,7 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
 
         # CI pending hint
         if getattr(args, "ci_timeout", 0) == 0 and report.ci_status == CI_PENDING:
-            print("CI pending. Use --ci-timeout to wait for completion.")
+            logger.log(OUTPUT, "CI pending. Use --ci-timeout to wait for completion.")
 
         # Run auto-fixes if requested
         if args.fix > 0:
@@ -300,9 +295,8 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific GitHub/CI exceptions
-        print(f"Error collecting branch status: {e}", file=sys.stderr)
         logger.error(
-            f"Unexpected error in check_branch_status command: {e}", exc_info=True
+            "Unexpected error in check_branch_status command: %s", e, exc_info=True
         )
         return 2  # Technical error
 

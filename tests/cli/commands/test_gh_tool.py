@@ -5,6 +5,7 @@ Detection logic tests are in tests/workflow_utils/test_base_branch.py.
 """
 
 import argparse
+import logging
 from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -79,23 +80,23 @@ class TestGetBaseBranchExitCodes:
     def test_get_base_branch_exit_code_error_not_git_repo(
         self,
         mock_resolve_project_dir: MagicMock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test exit code 2 when not a git repository."""
         mock_resolve_project_dir.side_effect = ValueError("Not a git repository")
 
         args = argparse.Namespace(project_dir="/not/a/repo")
-        result = execute_get_base_branch(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_get_base_branch(args)
 
         assert result == 2
-        captured = capsys.readouterr()
-        assert "Error" in captured.err
+        assert "Not a git repository" in caplog.text
 
     def test_get_base_branch_exit_code_error_unexpected_exception(
         self,
         mock_detect_base_branch: MagicMock,
         mock_resolve_project_dir: MagicMock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test exit code 2 on unexpected exception."""
         project_dir = Path("/test/project")
@@ -103,11 +104,11 @@ class TestGetBaseBranchExitCodes:
         mock_detect_base_branch.side_effect = Exception("Unexpected error")
 
         args = argparse.Namespace(project_dir=None)
-        result = execute_get_base_branch(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_get_base_branch(args)
 
         assert result == 2
-        captured = capsys.readouterr()
-        assert "Error" in captured.err
+        assert "Unexpected error" in caplog.text
 
 
 # ============================================================================
@@ -474,7 +475,7 @@ class TestCheckoutIssueBranchExitCodes:
         mock_issue_manager: MagicMock,
         mock_branch_manager: MagicMock,
         mock_fetch_remote: MagicMock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """No linked branches, creation fails -> exit 1."""
         project_dir = Path("/test/project")
@@ -493,11 +494,11 @@ class TestCheckoutIssueBranchExitCodes:
         }
 
         args = argparse.Namespace(issue_number=789, project_dir=None)
-        result = execute_checkout_issue_branch(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_checkout_issue_branch(args)
 
         assert result == 1
-        captured = capsys.readouterr()
-        assert "Error" in captured.err
+        assert "API failure" in caplog.text
 
     def test_checkout_git_checkout_fails(
         self,
@@ -506,7 +507,7 @@ class TestCheckoutIssueBranchExitCodes:
         mock_branch_manager: MagicMock,
         mock_fetch_remote: MagicMock,
         mock_checkout_branch: MagicMock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Branch found but git checkout fails -> exit 2."""
         project_dir = Path("/test/project")
@@ -522,18 +523,18 @@ class TestCheckoutIssueBranchExitCodes:
         mock_checkout_branch.return_value = False
 
         args = argparse.Namespace(issue_number=123, project_dir=None)
-        result = execute_checkout_issue_branch(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_checkout_issue_branch(args)
 
         assert result == 2
-        captured = capsys.readouterr()
-        assert "Error" in captured.err
+        assert "checkout failed" in caplog.text.lower()
 
     def test_checkout_issue_not_found(
         self,
         mock_resolve_project_dir: MagicMock,
         mock_issue_manager: MagicMock,
         mock_fetch_remote: MagicMock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """get_issue returns empty issue (number=0) -> exit 1."""
         project_dir = Path("/test/project")
@@ -545,33 +546,33 @@ class TestCheckoutIssueBranchExitCodes:
         }
 
         args = argparse.Namespace(issue_number=999, project_dir=None)
-        result = execute_checkout_issue_branch(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_checkout_issue_branch(args)
 
         assert result == 1
-        captured = capsys.readouterr()
-        assert "Error" in captured.err
+        assert "Could not find issue" in caplog.text
 
     def test_checkout_invalid_project_dir(
         self,
         mock_resolve_project_dir: MagicMock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """resolve_project_dir raises ValueError -> exit 2."""
         mock_resolve_project_dir.side_effect = ValueError("Not a git repository")
 
         args = argparse.Namespace(issue_number=123, project_dir="/invalid/path")
-        result = execute_checkout_issue_branch(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_checkout_issue_branch(args)
 
         assert result == 2
-        captured = capsys.readouterr()
-        assert "Error" in captured.err
+        assert "Not a git repository" in caplog.text
 
     def test_checkout_unexpected_error(
         self,
         mock_resolve_project_dir: MagicMock,
         mock_issue_manager: MagicMock,
         mock_fetch_remote: MagicMock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Unexpected exception -> exit 2."""
         project_dir = Path("/test/project")
@@ -581,11 +582,11 @@ class TestCheckoutIssueBranchExitCodes:
         )
 
         args = argparse.Namespace(issue_number=123, project_dir=None)
-        result = execute_checkout_issue_branch(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_checkout_issue_branch(args)
 
         assert result == 2
-        captured = capsys.readouterr()
-        assert "Error" in captured.err
+        assert "Unexpected" in caplog.text
 
 
 # ============================================================================

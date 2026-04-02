@@ -6,7 +6,6 @@ label on GitHub issues through the workflow system.
 
 import argparse
 import logging
-import sys
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
@@ -21,6 +20,7 @@ from ...utils.github_operations.label_config import (
     get_labels_config_path,
     load_labels_config,
 )
+from ...utils.log_utils import OUTPUT
 from ...workflows.utils import resolve_project_dir
 
 logger = logging.getLogger(__name__)
@@ -230,14 +230,13 @@ def execute_set_status(args: argparse.Namespace) -> int:
                 if not is_working_directory_clean(
                     project_dir, ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
                 ):
-                    print(
-                        "Error: Working directory has uncommitted changes. "
-                        "Commit/stash first or use --force.",
-                        file=sys.stderr,
+                    logger.error(
+                        "Working directory has uncommitted changes. "
+                        "Commit/stash first or use --force."
                     )
                     return 1
             except ValueError as e:
-                print(f"Error: {e}", file=sys.stderr)
+                logger.error("%s", e)
                 return 1
 
         # Step 2: Load and validate label
@@ -246,13 +245,13 @@ def execute_set_status(args: argparse.Namespace) -> int:
         status_labels = {lbl["name"] for lbl in labels_config["workflow_labels"]}
         is_valid, error_msg = validate_status_label(args.status_label, labels_config)
         if not is_valid:
-            print(f"Error: {error_msg}", file=sys.stderr)
+            logger.error("%s", error_msg)
             return 1
 
         # Step 3: Get issue number
         issue_number, resolve_error = _resolve_issue_number(args, project_dir)
         if issue_number is None:
-            print(f"Error: {resolve_error}", file=sys.stderr)
+            logger.error("%s", resolve_error)
             return 1
 
         # Step 4: Get current issue, compute new labels, and apply
@@ -261,21 +260,18 @@ def execute_set_status(args: argparse.Namespace) -> int:
             manager, issue_number, args.status_label, status_labels
         )
         if not success:
-            print(f"Error: {update_error}", file=sys.stderr)
+            logger.error("%s", update_error)
             return 1
 
-        print(f"Updated issue #{issue_number} to {args.status_label}")
-        logger.info(f"Updated issue #{issue_number} to {args.status_label}")
+        logger.log(OUTPUT, "Updated issue #%s to %s", issue_number, args.status_label)
         return 0
 
     except ValueError as e:
-        logger.error(str(e))
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error("%s", e)
         return 1
 
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         logger.error(f"Unexpected error: {e}", exc_info=True)
-        print(f"Error: {e}", file=sys.stderr)
         return 1

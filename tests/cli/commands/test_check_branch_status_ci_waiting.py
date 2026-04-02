@@ -1,6 +1,7 @@
 """Tests for check_branch_status CI waiting functionality."""
 
 import argparse
+import logging
 from pathlib import Path
 from unittest import mock
 from unittest.mock import Mock, patch
@@ -89,10 +90,10 @@ class TestCIWaitingLogic:
         assert mock_sleep.call_count == 3
 
     @patch("mcp_coder.cli.commands.check_branch_status.time.sleep")
-    def test_wait_for_ci_shows_progress_in_human_mode(
-        self, mock_sleep: Mock, capsys: pytest.CaptureFixture[str]
+    def test_wait_for_ci_logs_progress_in_human_mode(
+        self, mock_sleep: Mock, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Should show progress dots in human mode."""
+        """Should log progress messages in human mode."""
         from mcp_coder.cli.commands.check_branch_status import (
             _wait_for_ci_completion,
         )
@@ -106,20 +107,20 @@ class TestCIWaitingLogic:
             },
         ]
 
-        _wait_for_ci_completion(mock_manager, "branch", 30, llm_mode=False)
+        with caplog.at_level(logging.DEBUG):
+            _wait_for_ci_completion(mock_manager, "branch", 30, llm_mode=False)
 
-        captured = capsys.readouterr()
-        assert "Waiting for CI" in captured.out
-        assert "." in captured.out  # Progress dots
+        assert any("Waiting for CI" in r.message for r in caplog.records)
 
     @patch("mcp_coder.cli.commands.check_branch_status.time.sleep")
     def test_wait_for_ci_silent_in_llm_mode(
-        self, mock_sleep: Mock, capsys: pytest.CaptureFixture[str]
+        self, mock_sleep: Mock, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Should be silent in LLM mode."""
+        """Should not log OUTPUT messages in LLM mode."""
         from mcp_coder.cli.commands.check_branch_status import (
             _wait_for_ci_completion,
         )
+        from mcp_coder.utils.log_utils import OUTPUT
 
         mock_manager = Mock()
         mock_manager.get_latest_ci_status.return_value = {
@@ -127,10 +128,11 @@ class TestCIWaitingLogic:
             "jobs": [],
         }
 
-        _wait_for_ci_completion(mock_manager, "branch", 30, llm_mode=True)
+        with caplog.at_level(logging.DEBUG):
+            _wait_for_ci_completion(mock_manager, "branch", 30, llm_mode=True)
 
-        captured = capsys.readouterr()
-        assert captured.out == ""  # No output in LLM mode
+        output_records = [r for r in caplog.records if r.levelno == OUTPUT]
+        assert len(output_records) == 0  # No OUTPUT messages in LLM mode
 
     @patch("mcp_coder.cli.commands.check_branch_status.time.sleep")
     def test_wait_for_ci_early_exit_on_completion(self, mock_sleep: Mock) -> None:
