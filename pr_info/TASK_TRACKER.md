@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: OutputLog Wrap + Explicit Color Scheme
 > [Detail](./steps/step_1.md) — Enable line wrapping in OutputLog, add explicit background/foreground colors to OutputLog and InputArea CSS.
 
-- [ ] Implementation: add `wrap=True` to OutputLog constructor, add explicit colors in `styles.py`
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `fix(icoder): enable line wrapping and explicit colors in TUI widgets`
+- [x] Implementation: add `wrap=True` to OutputLog constructor, add explicit colors in `styles.py`
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit: `fix(icoder): enable line wrapping and explicit colors in TUI widgets`
 
 ### Step 2: InputArea Auto-Grow
 > [Detail](./steps/step_2.md) — Make InputArea grow dynamically with content, capped at 1/3 screen height.

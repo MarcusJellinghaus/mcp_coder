@@ -1,0 +1,7 @@
+fix(icoder): enable line wrapping and explicit colors in TUI widgets
+
+- Add wrap=True to OutputLog constructor so long lines wrap instead of
+  requiring horizontal scrolling
+- Add explicit background (#1e1e1e) and foreground (#d4d4d4) colors to
+  OutputLog and InputArea CSS rules, fixing invisible text in VS Code
+  terminal themes that override defaults
