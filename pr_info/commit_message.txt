@@ -1,6 +1,9 @@
-feat(cli): default all commands to OUTPUT threshold
+refactor(create-pr): remove log_step, use OUTPUT level logging
 
-- Add OUTPUT to --log-level choices
-- Shrink _INFO_COMMANDS to coordinator only
-- Remove vscodeclaude launch INFO special case
-- All commands now default to clean OUTPUT formatting
+- Remove log_step() wrapper function
+- Replace ~20 call sites with logger.log(OUTPUT, ...)
+- Use lazy %s formatting instead of f-strings for logger calls
+- Add per-field PR summary output (PR Number, URL, Title, Base/Head Branch)
+- Detail messages stay at INFO (hidden at OUTPUT threshold)
+- Update tests to mock get_current_branch_name and detect_base_branch
+  for PR summary field logging

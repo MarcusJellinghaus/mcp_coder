@@ -31,6 +31,7 @@ from mcp_coder.utils.github_operations.pr_manager import (
     PullRequestData,
     PullRequestManager,
 )
+from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerFileNotFoundError,
@@ -444,11 +445,6 @@ _format_failure_comment = _format_failure_comment_impl
 _handle_create_pr_failure = _handle_create_pr_failure_impl
 
 
-def log_step(message: str) -> None:
-    """Log step with structured logging instead of print."""
-    logger.info(message)
-
-
 def run_create_pr_workflow(
     project_dir: Path,
     provider: str,
@@ -468,8 +464,8 @@ def run_create_pr_workflow(
     Returns:
         int: Exit code (0 for success, 1 for failure)
     """
-    log_step("Starting create PR workflow...")
-    log_step(f"Using project directory: {project_dir}")
+    logger.log(OUTPUT, "Starting create PR workflow...")
+    logger.log(OUTPUT, "Using project directory: %s", project_dir)
 
     start_time = time.time()
     reached_terminal_state = False
@@ -483,7 +479,7 @@ def run_create_pr_workflow(
     if update_labels:
         cached_issue_number = validate_branch_issue_linkage(project_dir)
         if cached_issue_number:
-            log_step(f"Branch linked to issue #{cached_issue_number}")
+            logger.log(OUTPUT, "Branch linked to issue #%s", cached_issue_number)
         else:
             logger.warning(
                 "Branch not linked to any issue, label update will be skipped"
@@ -491,7 +487,7 @@ def run_create_pr_workflow(
 
     try:
         # Step 1: Check prerequisites
-        log_step("Step 1/5: Checking prerequisites...")
+        logger.log(OUTPUT, "Step 1/5: Checking prerequisites...")
         if not check_prerequisites(project_dir):
             logger.error("Prerequisites check failed")
             elapsed = time.time() - start_time
@@ -507,7 +503,7 @@ def run_create_pr_workflow(
             return 1
 
         # Step 2: Generate PR summary
-        log_step("Step 2/5: Generating PR summary...")
+        logger.log(OUTPUT, "Step 2/5: Generating PR summary...")
         try:
             title, body = generate_pr_summary(
                 project_dir, provider, mcp_config, execution_dir
@@ -527,7 +523,7 @@ def run_create_pr_workflow(
             return 1
 
         # Step 3: Push any existing commits
-        log_step("Step 3/5: Pushing commits...")
+        logger.log(OUTPUT, "Step 3/5: Pushing commits...")
         push_result = git_push(project_dir)
         if not push_result["success"]:
             logger.error(f"Failed to push commits: {push_result['error']}")
@@ -542,10 +538,10 @@ def run_create_pr_workflow(
             )
             reached_terminal_state = True
             return 1
-        log_step("Commits pushed successfully")
+        logger.log(OUTPUT, "Commits pushed successfully")
 
         # Step 4: Create pull request
-        log_step("Step 4/5: Creating pull request...")
+        logger.log(OUTPUT, "Step 4/5: Creating pull request...")
         pr_result = create_pull_request(project_dir, title, body)
         if pr_result is None:
             logger.error("Failed to create pull request")
@@ -563,10 +559,17 @@ def run_create_pr_workflow(
 
         pr_number = pr_result["number"]
         pr_url = pr_result.get("url", "")
-        log_step(f"Pull request created: #{pr_number} ({pr_url})")
+        pr_title = title
+        current_branch = get_current_branch_name(project_dir)
+        base_branch = detect_base_branch(project_dir, current_branch=current_branch)
+        logger.log(OUTPUT, "PR Number: #%s", pr_number)
+        logger.log(OUTPUT, "PR URL: %s", pr_url)
+        logger.log(OUTPUT, "PR Title: %s", pr_title)
+        logger.log(OUTPUT, "Base Branch: %s", base_branch)
+        logger.log(OUTPUT, "Head Branch: %s", current_branch)
 
         # Step 5: Clean up repository
-        log_step("Step 5/5: Cleaning up repository...")
+        logger.log(OUTPUT, "Step 5/5: Cleaning up repository...")
         if not cleanup_repository(project_dir):
             logger.error("Repository cleanup failed")
             elapsed = time.time() - start_time
@@ -589,7 +592,7 @@ def run_create_pr_workflow(
             project_dir, ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
         ):
             # Commit cleanup changes
-            log_step("Committing cleanup changes...")
+            logger.log(OUTPUT, "Committing cleanup changes...")
             commit_result = commit_all_changes(
                 "Clean up pr_info temporary folders", project_dir
             )
@@ -615,12 +618,16 @@ def run_create_pr_workflow(
                     )
                     reached_terminal_state = True
                     return 1
-                log_step("No cleanup changes to commit (files were already clean)")
+                logger.log(
+                    OUTPUT, "No cleanup changes to commit (files were already clean)"
+                )
             else:
-                log_step(f"Cleanup committed: {commit_result['commit_hash']}")
+                logger.log(
+                    OUTPUT, "Cleanup committed: %s", commit_result["commit_hash"]
+                )
 
                 # Push cleanup commit
-                log_step("Pushing cleanup changes...")
+                logger.log(OUTPUT, "Pushing cleanup changes...")
                 push_result = git_push(project_dir)
 
                 if not push_result["success"]:
@@ -641,9 +648,9 @@ def run_create_pr_workflow(
                     )
                     reached_terminal_state = True
                     return 1
-                log_step("Cleanup changes pushed successfully")
+                logger.log(OUTPUT, "Cleanup changes pushed successfully")
         else:
-            log_step("No cleanup changes to commit")
+            logger.log(OUTPUT, "No cleanup changes to commit")
 
         # Update GitHub issue label if requested
         if update_labels:
@@ -652,7 +659,7 @@ def run_create_pr_workflow(
                     "Skipping label update: branch was not linked to an issue"
                 )
             else:
-                log_step("Updating GitHub issue label...")
+                logger.log(OUTPUT, "Updating GitHub issue label...")
                 try:
                     from mcp_coder.utils.github_operations.issues import IssueManager
 
@@ -664,7 +671,9 @@ def run_create_pr_workflow(
                     )
 
                     if success:
-                        log_step("✓ Issue label updated: pr-creating → pr-created")
+                        logger.log(
+                            OUTPUT, "✓ Issue label updated: pr-creating → pr-created"
+                        )
                     else:
                         logger.warning("✗ Failed to update issue label (non-blocking)")
 
@@ -673,7 +682,7 @@ def run_create_pr_workflow(
                 ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                     logger.error(f"Error updating issue label (non-blocking): {e}")
 
-        log_step("Create PR workflow completed successfully!")
+        logger.log(OUTPUT, "Create PR workflow completed successfully!")
         reached_terminal_state = True
         return 0
 

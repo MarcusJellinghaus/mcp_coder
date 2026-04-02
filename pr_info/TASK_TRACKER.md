@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: create-pr Workflow — Remove log_step(), Add PR Summary Fields
-- [ ] Implementation: remove log_step(), replace call sites with logger.log(OUTPUT, ...), add PR summary fields, update tests ([step_3.md](./steps/step_3.md))
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: remove log_step(), replace call sites with logger.log(OUTPUT, ...), add PR summary fields, update tests ([step_3.md](./steps/step_3.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: CI Wait Progress and check_branch_status Print Migration
 - [ ] Implementation: replace dot progress with periodic OUTPUT log messages, migrate print() calls to logging, update tests ([step_4.md](./steps/step_4.md))
