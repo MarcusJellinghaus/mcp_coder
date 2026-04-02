@@ -6,7 +6,6 @@ labels. Use --dry-run to trigger Jenkins integration tests instead.
 
 import argparse
 import logging
-import sys
 from typing import Any, List, Optional
 
 from ....utils.github_operations.github_utils import RepoIdentifier
@@ -18,6 +17,7 @@ from ....utils.github_operations.issues import (
     update_issue_labels_in_cache,
 )
 from ....utils.jenkins_operations.client import JenkinsClient
+from ....utils.log_utils import OUTPUT
 from ....utils.user_config import (
     create_default_config,
     get_cache_refresh_minutes,
@@ -102,8 +102,10 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
             logger.info(
                 "Created default config file. Please update with your credentials.",
             )
-            print(f"Created default config file at {config_path}")
-            print("Please update it with your Jenkins and repository information.")
+            logger.log(OUTPUT, "Created default config file at %s", config_path)
+            logger.log(
+                OUTPUT, "Please update it with your Jenkins and repository information."
+            )
             return 1  # Exit to let user configure
 
         # Load and validate repository config
@@ -160,13 +162,12 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
         output = format_job_output(
             validated_config["executor_job_path"], queue_id, job_url
         )
-        print(output)
+        logger.log(OUTPUT, "%s", output)
 
         return 0
 
     except ValueError as e:
-        # User-facing errors (config issues) - print only, no logging
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error("%s", e)
         return 1
 
     except (
@@ -198,8 +199,10 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
             logger.info(
                 "Created default config file. Please update with your credentials.",
             )
-            print(f"Created default config file at {config_path}")
-            print("Please update it with your Jenkins and repository information.")
+            logger.log(OUTPUT, "Created default config file at %s", config_path)
+            logger.log(
+                OUTPUT, "Please update it with your Jenkins and repository information."
+            )
             return 1  # Exit to let user configure
 
         # Step 2: Determine repository list
@@ -214,12 +217,11 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
             repo_names = list(repos_section.keys())
 
             if not repo_names:
-                print("No repositories configured in config file", file=sys.stderr)
-                logger.warning("No repositories found in config")
+                logger.error("No repositories configured in config file")
                 return 1
         else:
             # Should not reach here due to argparse mutually exclusive group
-            print("Error: Either --all or --repo must be specified", file=sys.stderr)
+            logger.error("Either --all or --repo must be specified")
             return 1
 
         # Step 3: Get Jenkins credentials (shared across all repos)
@@ -338,10 +340,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                         f"Failed processing issue #{issue['number']}: {e}",
                         exc_info=True,
                     )
-                    print(
-                        f"Error: Failed to process issue #{issue['number']}: {e}",
-                        file=sys.stderr,
-                    )
+                    logger.error("Failed to process issue #%s: %s", issue["number"], e)
                     return 1
 
             logger.info(f"Successfully processed all issues in {repo_name}")
@@ -350,8 +349,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
         return 0
 
     except ValueError as e:
-        # User-facing errors (config issues) - print only, no logging
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error("%s", e)
         return 1
 
     except (
@@ -483,8 +481,8 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         created = create_default_config()
         if created:
             config_path = get_config_file_path()
-            print(f"Created default config at {config_path}")
-            print("Please configure [vscodeclaude] section.")
+            logger.log(OUTPUT, "Created default config at %s", config_path)
+            logger.log(OUTPUT, "Please configure [vscodeclaude] section.")
             return 1
 
         # Load vscodeclaude config
@@ -493,7 +491,7 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         # Handle intervention mode
         if args.intervene:
             if not args.issue:
-                print("Error: --intervene requires --issue NUMBER", file=sys.stderr)
+                logger.error("--intervene requires --issue NUMBER")
                 return 1
             return _handle_intervention_mode(args, vscodeclaude_config)
 
@@ -535,14 +533,18 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         restarted = restart_closed_sessions(cached_issues_by_repo=cached_issues_by_repo)
         for session in restarted:
             repo_short = session["repo"].split("/")[-1]
-            print(
-                f"Restarted: {repo_short} #{session['issue_number']} "
-                f"({session['status']}) PID:{session['vscode_pid']}"
+            logger.log(
+                OUTPUT,
+                "Restarted: %s #%s (%s) PID:%s",
+                repo_short,
+                session["issue_number"],
+                session["status"],
+                session["vscode_pid"],
             )
 
         # Step 3: Check repo list (already loaded above)
         if not repo_names:
-            print("No repositories configured in config file", file=sys.stderr)
+            logger.error("No repositories configured in config file")
             return 1
 
         # Step 4: Process each repository
@@ -592,21 +594,26 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
 
         # Print summary
         if total_started:
-            print(f"\nStarted {len(total_started)} new session(s):")
+            logger.log(OUTPUT, "Started %d new session(s):", len(total_started))
             for session in total_started:
                 repo_short = session["repo"].split("/")[-1]
-                print(
-                    f"  {repo_short} - #{session['issue_number']}: {session['status']}"
+                logger.log(
+                    OUTPUT,
+                    "  %s - #%s: %s",
+                    repo_short,
+                    session["issue_number"],
+                    session["status"],
                 )
         else:
             current = get_active_session_count()
-            print(f"\nNo new sessions started (active: {current}/{max_sessions})")
+            logger.log(
+                OUTPUT, "No new sessions started (active: %d/%d)", current, max_sessions
+            )
 
         return 0
 
     except ValueError as e:
-        # User-facing errors (config issues) - print only, no logging
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error("%s", e)
         return 1
 
     except (
@@ -681,7 +688,7 @@ def _handle_intervention_mode(
     """
     # Get the repo (required for intervention)
     if not args.repo:
-        print("Error: --intervene requires --repo NAME", file=sys.stderr)
+        logger.error("--intervene requires --repo NAME")
         return 1
 
     # Load repo config
@@ -698,13 +705,13 @@ def _handle_intervention_mode(
     # Get issue
     issue = issue_manager.get_issue(args.issue)
     if issue["number"] == 0:
-        print(f"Error: Issue #{args.issue} not found", file=sys.stderr)
+        logger.error("Issue #%s not found", args.issue)
         return 1
 
     # Get linked branch
     repo_full_name = _get_repo_full_name_from_url(repo_url)
     if not repo_full_name:
-        print(f"Error: Could not parse repo URL: {repo_url}", file=sys.stderr)
+        logger.error("Could not parse repo URL: %s", repo_url)
         return 1
     repo_owner, repo_name_str = repo_full_name.split("/", 1)
     branch_name = branch_manager.get_branch_with_pr_fallback(
@@ -720,12 +727,12 @@ def _handle_intervention_mode(
     repo_vscodeclaude_config = load_repo_vscodeclaude_config(args.repo)
 
     # Print warning
-    print("\n" + "!" * 60)
-    print("INTERVENTION MODE - Automation disabled")
-    print("!" * 60)
-    print(f"Issue: #{args.issue}")
-    print(f"Branch: {branch_name or 'main'}")
-    print("!" * 60 + "\n")
+    logger.log(OUTPUT, "!" * 60)
+    logger.log(OUTPUT, "INTERVENTION MODE - Automation disabled")
+    logger.log(OUTPUT, "!" * 60)
+    logger.log(OUTPUT, "Issue: #%s", args.issue)
+    logger.log(OUTPUT, "Branch: %s", branch_name or "main")
+    logger.log(OUTPUT, "!" * 60)
 
     # Prepare and launch session
     install_from_github = getattr(args, "install_from_github", False)
@@ -739,5 +746,5 @@ def _handle_intervention_mode(
         install_from_github=install_from_github,
     )
 
-    print(f"Started intervention session: #{session['issue_number']}")
+    logger.log(OUTPUT, "Started intervention session: #%s", session["issue_number"])
     return 0

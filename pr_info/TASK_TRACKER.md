@@ -47,9 +47,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 6: Print Migration — Coordinator and vscodeclaude Commands
-- [ ] Implementation: migrate coordinator/vscodeclaude prints to logging, grep and fix all remaining NOTICE references across codebase ([step_6.md](./steps/step_6.md))
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: migrate coordinator/vscodeclaude prints to logging, grep and fix all remaining NOTICE references across codebase ([step_6.md](./steps/step_6.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: verify all steps complete, no remaining NOTICE refs, no stray print() calls

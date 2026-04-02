@@ -1,8 +1,7 @@
-refactor(cli): migrate status/error prints to logging
+refactor(coordinator): migrate prints to logging, remove NOTICE refs
 
-- Error prints → logger.error()
-- Status prints → logger.log(OUTPUT, ...)
-- Keep data-producing prints (help, diffs, reports, JSON)
-- Consistent logging across all CLI commands
-- Update tests to use caplog instead of capsys for log assertions
-- Remove unused sys imports where no longer needed
+- Coordinator command prints → logger.log(OUTPUT, ...) / logger.error()
+- vscodeclaude command prints → logging
+- Remove all remaining NOTICE references across codebase
+- Update test assertions from capsys to caplog for migrated prints
+- Final cleanup pass for unused imports (sys)
