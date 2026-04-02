@@ -11,6 +11,7 @@ Note: This file focuses on the main execution logic. Related test files:
 """
 
 import argparse
+import logging
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -291,7 +292,7 @@ class TestExecuteCheckBranchStatus:
         mock_collect: Mock,
         mock_resolve_dir: Mock,
         mock_branch: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test check_branch_status execution with status collection failure."""
         # Setup mocks
@@ -310,11 +311,14 @@ class TestExecuteCheckBranchStatus:
             execution_dir=None,
         )
 
-        result = execute_check_branch_status(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_check_branch_status(args)
 
         assert result == 2
-        captured = capsys.readouterr()
-        assert "Error collecting branch status: Git error" in captured.err
+        assert any(
+            "Error collecting branch status: Git error" in r.message
+            for r in caplog.records
+        )
 
     @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")

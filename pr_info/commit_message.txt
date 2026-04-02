@@ -1,9 +1,9 @@
-refactor(create-pr): remove log_step, use OUTPUT level logging
+refactor(ci-wait): replace dot progress with periodic log messages
 
-- Remove log_step() wrapper function
-- Replace ~20 call sites with logger.log(OUTPUT, ...)
-- Use lazy %s formatting instead of f-strings for logger calls
-- Add per-field PR summary output (PR Number, URL, Title, Base/Head Branch)
-- Detail messages stay at INFO (hidden at OUTPUT threshold)
-- Update tests to mock get_current_branch_name and detect_base_branch
-  for PR summary field logging
+- Remove _show_progress() helper and print-based dot progress
+- Log periodic OUTPUT-level messages every ~60s during CI polling
+- Keep 15s poll interval unchanged
+- Migrate PR-wait print() calls to logger.log(OUTPUT, ...)
+- Migrate error/warning prints to logger.error()/logger.warning()
+- Keep data-output print() for branch status report display
+- Update tests to use caplog instead of capsys for log assertions
