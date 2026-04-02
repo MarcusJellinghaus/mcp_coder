@@ -9,10 +9,10 @@ from unittest.mock import Mock, patch
 import pytest
 
 from mcp_coder.cli.commands.prompt import execute_prompt
-from mcp_coder.llm.formatting.formatters import (
+from mcp_coder.llm.formatting.formatters import print_stream_event
+from mcp_coder.llm.formatting.stream_renderer import (
     _format_tool_name,
     _render_tool_output,
-    print_stream_event,
 )
 from mcp_coder.llm.types import StreamEvent
 

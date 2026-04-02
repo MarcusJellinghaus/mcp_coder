@@ -6,6 +6,14 @@ from .formatters import (
     format_verbose_response,
     print_stream_event,
 )
+from .render_actions import (
+    ErrorMessage,
+    RenderAction,
+    StreamDone,
+    TextChunk,
+    ToolResult,
+    ToolStart,
+)
 from .sdk_serialization import (
     extract_tool_interactions,
     get_message_role,
@@ -13,6 +21,7 @@ from .sdk_serialization import (
     is_sdk_message,
     serialize_message_for_json,
 )
+from .stream_renderer import StreamEventRenderer
 
 __all__ = [
     # Formatters
@@ -26,4 +35,12 @@ __all__ = [
     "get_message_tool_calls",
     "serialize_message_for_json",
     "extract_tool_interactions",
+    # Renderer
+    "StreamEventRenderer",
+    "RenderAction",
+    "TextChunk",
+    "ToolStart",
+    "ToolResult",
+    "ErrorMessage",
+    "StreamDone",
 ]

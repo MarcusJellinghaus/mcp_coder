@@ -10,7 +10,9 @@ import sys
 from typing import IO, Any, Dict
 
 from ..types import StreamEvent
+from .render_actions import ErrorMessage, StreamDone, TextChunk, ToolResult, ToolStart
 from .sdk_serialization import extract_tool_interactions, serialize_message_for_json
+from .stream_renderer import StreamEventRenderer, _format_tool_args
 
 logger = logging.getLogger(__name__)
 
@@ -202,80 +204,6 @@ def format_raw_response(response_data: Dict[str, Any]) -> str:
     return "\n".join(formatted_parts)
 
 
-_RENDERED_TRUNCATION_LIMIT = 5
-_RENDERED_INLINE_ARG_LIMIT = 2
-
-
-def _render_tool_output(output: str) -> tuple[list[str], int]:
-    """Render tool output into display lines with truncation.
-
-    1. If output is empty, return ([], 0)
-    2. Try json.loads: if dict, expand top-level keys as "key: value" lines.
-       For string values containing newlines, indent continuation lines.
-    3. If json.loads fails, split output into plain text lines.
-    4. Truncate to _RENDERED_TRUNCATION_LIMIT lines.
-
-    Returns:
-        (display_lines, total_line_count) — display_lines may be shorter
-        than total_line_count if truncated.
-    """
-    if not output:
-        return ([], 0)
-    try:
-        parsed = json.loads(output)
-        if isinstance(parsed, dict):
-            lines: list[str] = []
-            for key, value in parsed.items():
-                if isinstance(value, str) and "\n" in value:
-                    lines.append(f"{key}:")
-                    for subline in value.splitlines():
-                        lines.append(f"  {subline}")
-                else:
-                    if isinstance(value, str):
-                        lines.append(f"{key}: {value}")
-                    else:
-                        lines.append(f"{key}: {json.dumps(value)}")
-        else:
-            lines = str(parsed).splitlines()
-    except (json.JSONDecodeError, ValueError):
-        lines = output.splitlines()
-    total = len(lines)
-    truncated = lines[:_RENDERED_TRUNCATION_LIMIT]
-    return (truncated, total)
-
-
-def _format_tool_name(name: str) -> str:
-    """Format tool name for rendered display.
-
-    Strip 'mcp__' prefix, split on first remaining '__':
-      mcp__workspace__read_file  → workspace > read_file
-      mcp__tools-py__run_pytest  → tools-py > run_pytest
-      Bash                       → Bash (unchanged)
-
-    Returns:
-        Shortened display name for the tool.
-    """
-    if name.startswith("mcp__"):
-        rest = name[5:]
-        server, _, tool = rest.partition("__")
-        if tool:
-            return f"{server} > {tool}"
-        return server
-    return name
-
-
-def _format_tool_args(args: object) -> str:
-    """Format tool arguments for text display.
-
-    Returns:
-        Formatted string of tool arguments.
-    """
-    if isinstance(args, dict):
-        parts = [f"{k}={v!r}" for k, v in args.items()]
-        return ", ".join(parts)
-    return str(args) if args else ""
-
-
 def _normalize_event_to_ndjson(event: StreamEvent) -> dict[str, object] | None:
     """Map a StreamEvent to Claude CLI stream-json compatible NDJSON dict.
 
@@ -378,36 +306,33 @@ def print_stream_event(
         return
 
     if output_format == "rendered":
-        if event_type == "text_delta":
-            print(event.get("text", ""), end="", file=file, flush=True)
-        elif event_type == "tool_use_start":
-            name = str(event.get("name", ""))
-            args = event.get("args", {})
-            display_name = _format_tool_name(name)
-            if isinstance(args, dict) and len(args) <= _RENDERED_INLINE_ARG_LIMIT:
-                args_str = _format_tool_args(args)
-                print(f"\u250c {display_name}({args_str})", file=file)
+        renderer = StreamEventRenderer()
+        action = renderer.render(event)
+        if action is None:
+            return
+        if isinstance(action, TextChunk):
+            print(action.text, end="", file=file, flush=True)
+        elif isinstance(action, ToolStart):
+            if action.inline_args is not None:
+                print(f"\u250c {action.display_name}({action.inline_args})", file=file)
             else:
-                print(f"\u250c {display_name}", file=file)
-                if isinstance(args, dict):
-                    for key, value in args.items():
-                        print(f"\u2502  {key}: {json.dumps(value)}", file=file)
-        elif event_type == "tool_result":
-            output: str = str(event.get("output", ""))
-            lines, total = _render_tool_output(output)
-            for line in lines:
+                print(f"\u250c {action.display_name}", file=file)
+                for key, value in action.block_args:
+                    print(f"\u2502  {key}: {value}", file=file)
+        elif isinstance(action, ToolResult):
+            for line in action.output_lines:
                 print(f"\u2502  {line}", file=file)
-            if total > _RENDERED_TRUNCATION_LIMIT:
+            if action.truncated:
                 print(
-                    f"\u2514 done ({total} lines, truncated to {_RENDERED_TRUNCATION_LIMIT})",
+                    f"\u2514 done ({action.total_lines} lines, truncated to {len(action.output_lines)})",
                     file=file,
                 )
             else:
                 print("\u2514 done", file=file)
             print(file=file)
-        elif event_type == "error":
-            print(event.get("message", ""), file=err_file)
-        elif event_type == "done":
+        elif isinstance(action, ErrorMessage):
+            print(action.message, file=err_file)
+        elif isinstance(action, StreamDone):
             print(file=file)
         return
 

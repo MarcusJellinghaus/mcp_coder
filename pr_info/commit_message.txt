@@ -1,0 +1,11 @@
+refactor(formatting): add StreamEventRenderer and migrate rendered format
+
+- Add render_actions.py with 5 frozen dataclasses (TextChunk, ToolStart,
+  ToolResult, ErrorMessage, StreamDone) and RenderAction type alias
+- Add stream_renderer.py with StreamEventRenderer class and private
+  helpers (_format_tool_name, _format_tool_args, _render_tool_output)
+- Migrate formatters.py "rendered" branch to use StreamEventRenderer,
+  removing duplicated helper functions and constants
+- Update __init__.py to export renderer class and all action types
+- Fix test imports in test_formatters.py for moved helpers
+- Add test_stream_renderer.py with full coverage of renderer and helpers

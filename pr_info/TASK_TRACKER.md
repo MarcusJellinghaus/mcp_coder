@@ -24,12 +24,12 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Create new modules + migrate formatters.py + update exports
 - [x] 1A: Implementation — render_actions.py dataclasses
 - [x] 1B: Implementation — stream_renderer.py with StreamEventRenderer class
-- [ ] 1C: Implementation — migrate formatters.py rendered branch
-- [ ] 1D: Implementation — update __init__.py exports
-- [ ] 1E: Implementation — fix test imports in test_formatters.py
-- [ ] 1F: Implementation — tests for new modules (test_stream_renderer.py)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] 1C: Implementation — migrate formatters.py rendered branch
+- [x] 1D: Implementation — update __init__.py exports
+- [x] 1E: Implementation — fix test imports in test_formatters.py
+- [x] 1F: Implementation — tests for new modules (test_stream_renderer.py)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Migrate iCoder app.py + remove append_tool_use()
 - [ ] 2A: Implementation — rewrite _handle_stream_event in app.py to use StreamEventRenderer
