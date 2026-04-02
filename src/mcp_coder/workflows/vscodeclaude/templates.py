@@ -47,7 +47,8 @@ if "{mcp_coder_install_path}" NEQ "" (
     exit /b 1
 )
 
-REM Add MCP-Coder tools to PATH so they're available in project context
+REM Add MCP-Coder tools to PATH (needed for the version check below;
+REM activate.bat will overwrite PATH, so a second set is required after activation)
 set "PATH=%MCP_CODER_VENV_PATH%;%PATH%"
 
 mcp-coder --version
@@ -107,6 +108,10 @@ if not exist .venv\Scripts\activate.bat (
         exit /b 1
     )
 )
+
+REM Re-ensure MCP-Coder tools remain in PATH after venv activation
+REM (activate.bat overwrites PATH — do NOT remove this line, see #651/#694)
+set "PATH=%MCP_CODER_VENV_PATH%;%PATH%"
 
 REM Install project in editable mode (ensures current code is always used)
 uv pip install -e . --no-deps
