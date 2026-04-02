@@ -340,7 +340,6 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                         f"Failed processing issue #{issue['number']}: {e}",
                         exc_info=True,
                     )
-                    logger.error("Failed to process issue #%s: %s", issue["number"], e)
                     return 1
 
             logger.info(f"Successfully processed all issues in {repo_name}")

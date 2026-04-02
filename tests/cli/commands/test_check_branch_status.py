@@ -316,7 +316,7 @@ class TestExecuteCheckBranchStatus:
 
         assert result == 2
         assert any(
-            "Error collecting branch status: Git error" in r.message
+            "Unexpected error in check_branch_status command: Git error" in r.message
             for r in caplog.records
         )
 

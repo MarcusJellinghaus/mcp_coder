@@ -295,7 +295,6 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific GitHub/CI exceptions
-        logger.error("Error collecting branch status: %s", e)
         logger.error(
             "Unexpected error in check_branch_status command: %s", e, exc_info=True
         )

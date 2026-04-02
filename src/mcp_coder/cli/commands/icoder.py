@@ -6,6 +6,7 @@ from pathlib import Path
 
 from ...llm.env import prepare_llm_environment
 from ...llm.storage import extract_session_id, find_latest_session
+from ...utils.log_utils import OUTPUT
 from ..utils import (
     parse_llm_method_from_args,
     resolve_execution_dir,
@@ -87,7 +88,7 @@ def execute_icoder(args: argparse.Namespace) -> int:
         return 0
 
     except KeyboardInterrupt:
-        logger.error("Operation cancelled by user.")
+        logger.log(OUTPUT, "Operation cancelled by user.")
         return 1
 
     except (

@@ -137,7 +137,6 @@ def execute_compact_diff(args: argparse.Namespace) -> int:
         )
 
         if base_branch is None:
-            logger.warning("Could not detect base branch")
             logger.error("Could not detect base branch")
             return 1
 
