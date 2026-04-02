@@ -6,6 +6,7 @@ run independently (like CLI integration checks) are always executed.
 """
 
 import argparse
+import logging
 from pathlib import Path
 from unittest import mock
 from unittest.mock import Mock, patch
@@ -298,7 +299,7 @@ class TestExecuteCreatePr:
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
         mock_resolve_exec: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test graceful handling of keyboard interrupt."""
         # Setup mocks
@@ -317,12 +318,11 @@ class TestExecuteCreatePr:
             mcp_config=None,
         )
 
-        result = execute_create_pr(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_create_pr(args)
 
         assert result == 1
-        captured = capsys.readouterr()
-        captured_out: str = captured.out or ""
-        assert "Operation cancelled by user." in captured_out
+        assert "Operation cancelled by user." in caplog.text
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
@@ -336,7 +336,7 @@ class TestExecuteCreatePr:
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
         mock_resolve_exec: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test handling of unexpected errors."""
         # Setup mocks
@@ -355,12 +355,11 @@ class TestExecuteCreatePr:
             mcp_config=None,
         )
 
-        result = execute_create_pr(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_create_pr(args)
 
         assert result == 1
-        captured = capsys.readouterr()
-        captured_err: str = captured.err or ""
-        assert "Error during workflow execution: Unexpected error" in captured_err
+        assert "Unexpected error" in caplog.text
 
 
 class TestCreatePrCliIntegration:
@@ -485,7 +484,7 @@ class TestCreatePrExecutionDir:
         self,
         mock_resolve_project: Mock,
         mock_resolve_exec: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test invalid execution_dir should return error code 1."""
         project_dir = Path("/test/project")
@@ -499,9 +498,8 @@ class TestCreatePrExecutionDir:
             mcp_config=None,
         )
 
-        result = execute_create_pr(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_create_pr(args)
 
         assert result == 1
-        captured = capsys.readouterr()
-        assert "Error" in captured.err
-        assert "Directory does not exist" in captured.err
+        assert "Directory does not exist" in caplog.text

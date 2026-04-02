@@ -1,6 +1,7 @@
 """Tests for commit command functionality."""
 
 import argparse
+import logging
 import sys
 from io import StringIO
 from pathlib import Path
@@ -84,7 +85,7 @@ class TestExecuteCommitAuto:
         mock_generate: Mock,
         mock_parse_llm: Mock,
         mock_validate: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test successful commit auto execution."""
         # Setup mocks
@@ -99,12 +100,11 @@ class TestExecuteCommitAuto:
 
         args = argparse.Namespace(preview=False, llm_method="claude", project_dir=None)
 
-        result = execute_commit_auto(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_commit_auto(args)
 
         assert result == 0
-        captured = capsys.readouterr()
-        captured_out: str = captured.out or ""
-        assert "SUCCESS: Commit created: abc1234" in captured_out
+        assert "SUCCESS: Commit created: abc1234" in caplog.text
 
         # Verify function calls
         mock_validate.assert_called_once()
@@ -127,6 +127,7 @@ class TestExecuteCommitAuto:
         mock_parse_llm: Mock,
         mock_validate: Mock,
         capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test commit auto with preview mode - user confirms."""
         # Setup mocks
@@ -142,14 +143,17 @@ class TestExecuteCommitAuto:
 
         args = argparse.Namespace(preview=True, llm_method="claude", project_dir=None)
 
-        result = execute_commit_auto(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_commit_auto(args)
 
         assert result == 0
         captured = capsys.readouterr()
         captured_out: str = captured.out or ""
+        # Preview display still uses print()
         assert "Generated commit message:" in captured_out
         assert "feat: add new feature" in captured_out
-        assert "SUCCESS: Commit created: abc1234" in captured_out
+        # Success message now goes through logging
+        assert "SUCCESS: Commit created: abc1234" in caplog.text
 
         # Verify input was called
         mock_input.assert_called_once_with("\nProceed with commit? (Y/n): ")
@@ -167,6 +171,7 @@ class TestExecuteCommitAuto:
         mock_parse_llm: Mock,
         mock_validate: Mock,
         capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test commit auto with preview mode - empty input proceeds as default."""
         # Setup mocks
@@ -182,15 +187,16 @@ class TestExecuteCommitAuto:
 
         args = argparse.Namespace(preview=True, llm_method="claude", project_dir=None)
 
-        result = execute_commit_auto(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_commit_auto(args)
 
         assert result == 0
         captured = capsys.readouterr()
         captured_out: str = captured.out or ""
         assert "Generated commit message:" in captured_out
-        assert "SUCCESS: Commit created: abc1234" in captured_out
+        assert "SUCCESS: Commit created: abc1234" in caplog.text
         # Should NOT see "Commit cancelled"
-        assert "Commit cancelled" not in captured_out
+        assert "Commit cancelled" not in caplog.text
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
     @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
@@ -203,6 +209,7 @@ class TestExecuteCommitAuto:
         mock_parse_llm: Mock,
         mock_validate: Mock,
         capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test commit auto with preview mode - user cancels."""
         # Setup mocks
@@ -213,13 +220,14 @@ class TestExecuteCommitAuto:
 
         args = argparse.Namespace(preview=True, llm_method="claude", project_dir=None)
 
-        result = execute_commit_auto(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_commit_auto(args)
 
         assert result == 0
         captured = capsys.readouterr()
         captured_out: str = captured.out or ""
         assert "Generated commit message:" in captured_out
-        assert "Commit cancelled." in captured_out
+        assert "Commit cancelled." in caplog.text
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
     @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
@@ -284,19 +292,18 @@ class TestExecuteCommitAuto:
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
     def test_execute_commit_auto_not_git_repo(
-        self, mock_validate: Mock, capsys: pytest.CaptureFixture[str]
+        self, mock_validate: Mock, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test commit auto in non-git directory."""
         mock_validate.return_value = (False, "Not a git repository")
 
         args = argparse.Namespace(preview=False, llm_method="claude", project_dir=None)
 
-        result = execute_commit_auto(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_commit_auto(args)
 
         assert result == 1
-        captured = capsys.readouterr()
-        captured_err: str = captured.err or ""
-        assert "Error: Not a git repository" in captured_err
+        assert "Not a git repository" in caplog.text
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
     @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
@@ -306,7 +313,7 @@ class TestExecuteCommitAuto:
         mock_generate: Mock,
         mock_parse_llm: Mock,
         mock_validate: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test commit auto with no staged changes."""
         mock_validate.return_value = (True, None)
@@ -319,12 +326,11 @@ class TestExecuteCommitAuto:
 
         args = argparse.Namespace(preview=False, llm_method="claude", project_dir=None)
 
-        result = execute_commit_auto(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_commit_auto(args)
 
         assert result == 2
-        captured = capsys.readouterr()
-        captured_err: str = captured.err or ""
-        assert "Error: No changes to commit" in captured_err
+        assert "No changes to commit" in caplog.text
 
 
 class TestPreviewModeLogic:
@@ -824,7 +830,7 @@ class TestCommitAutoExecutionDir:
         mock_parse_llm: Mock,
         mock_validate: Mock,
         tmp_path: Path,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test explicit execution_dir should be validated and used."""
         # Setup mocks
@@ -848,18 +854,17 @@ class TestCommitAutoExecutionDir:
             execution_dir=str(execution_dir),
         )
 
-        result = execute_commit_auto(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_commit_auto(args)
 
         assert result == 0
-        captured = capsys.readouterr()
-        captured_out: str = captured.out or ""
-        assert "SUCCESS: Commit created: abc1234" in captured_out
+        assert "SUCCESS: Commit created: abc1234" in caplog.text
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
     def test_invalid_execution_dir_returns_error(
         self,
         mock_validate: Mock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test invalid execution_dir should return error code 1."""
         mock_validate.return_value = (True, None)
@@ -871,12 +876,11 @@ class TestCommitAutoExecutionDir:
             execution_dir="/nonexistent/invalid/path",
         )
 
-        result = execute_commit_auto(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_commit_auto(args)
 
         assert result == 1
-        captured = capsys.readouterr()
-        assert "Error" in captured.err
-        assert "execution directory" in captured.err.lower()
+        assert "execution directory" in caplog.text.lower()
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
     @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
@@ -892,6 +896,7 @@ class TestCommitAutoExecutionDir:
         mock_validate: Mock,
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test execution_dir works with preview mode (no conflicts)."""
         # Setup mocks
@@ -916,10 +921,11 @@ class TestCommitAutoExecutionDir:
             execution_dir=str(execution_dir),
         )
 
-        result = execute_commit_auto(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_commit_auto(args)
 
         assert result == 0
         captured = capsys.readouterr()
         captured_out: str = captured.out or ""
         assert "Generated commit message:" in captured_out
-        assert "SUCCESS: Commit created: abc1234" in captured_out
+        assert "SUCCESS: Commit created: abc1234" in caplog.text

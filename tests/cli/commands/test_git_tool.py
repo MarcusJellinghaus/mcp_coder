@@ -5,6 +5,7 @@ Core compact diff logic tests are in tests/utils/git_operations/test_compact_dif
 """
 
 import argparse
+import logging
 from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -82,7 +83,7 @@ class TestCompactDiffExitCodes:
         self,
         mock_detect_base_branch: MagicMock,
         mock_resolve_project_dir: MagicMock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test exit code 1 when detect_base_branch returns None."""
         project_dir = Path("/test/project")
@@ -92,16 +93,16 @@ class TestCompactDiffExitCodes:
         args = argparse.Namespace(
             project_dir=None, base_branch=None, exclude=None, committed_only=False
         )
-        result = execute_compact_diff(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_compact_diff(args)
 
         assert result == 1
-        captured = capsys.readouterr()
-        assert "Error" in captured.err
+        assert "Could not detect base branch" in caplog.text
 
     def test_exit_code_invalid_repo(
         self,
         mock_resolve_project_dir: MagicMock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test exit code 2 when resolve_project_dir raises ValueError."""
         mock_resolve_project_dir.side_effect = ValueError("Not a git repository")
@@ -112,18 +113,18 @@ class TestCompactDiffExitCodes:
             exclude=None,
             committed_only=False,
         )
-        result = execute_compact_diff(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_compact_diff(args)
 
         assert result == 2
-        captured = capsys.readouterr()
-        assert "Error" in captured.err
+        assert "Not a git repository" in caplog.text
 
     def test_exit_code_unexpected_exception(
         self,
         mock_get_compact_diff: MagicMock,
         mock_detect_base_branch: MagicMock,
         mock_resolve_project_dir: MagicMock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test exit code 2 on unexpected exception from get_compact_diff."""
         project_dir = Path("/test/project")
@@ -134,11 +135,11 @@ class TestCompactDiffExitCodes:
         args = argparse.Namespace(
             project_dir=None, base_branch=None, exclude=None, committed_only=False
         )
-        result = execute_compact_diff(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_compact_diff(args)
 
         assert result == 2
-        captured = capsys.readouterr()
-        assert "Error" in captured.err
+        assert "Unexpected error" in caplog.text
 
 
 # ============================================================================

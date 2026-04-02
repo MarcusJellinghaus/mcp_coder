@@ -1,9 +1,8 @@
-refactor(ci-wait): replace dot progress with periodic log messages
+refactor(cli): migrate status/error prints to logging
 
-- Remove _show_progress() helper and print-based dot progress
-- Log periodic OUTPUT-level messages every ~60s during CI polling
-- Keep 15s poll interval unchanged
-- Migrate PR-wait print() calls to logger.log(OUTPUT, ...)
-- Migrate error/warning prints to logger.error()/logger.warning()
-- Keep data-output print() for branch status report display
+- Error prints → logger.error()
+- Status prints → logger.log(OUTPUT, ...)
+- Keep data-producing prints (help, diffs, reports, JSON)
+- Consistent logging across all CLI commands
 - Update tests to use caplog instead of capsys for log assertions
+- Remove unused sys imports where no longer needed

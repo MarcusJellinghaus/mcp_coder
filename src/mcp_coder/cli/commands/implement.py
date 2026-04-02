@@ -6,8 +6,8 @@ which processes implementation tasks from the task tracker.
 
 import argparse
 import logging
-import sys
 
+from ...utils.log_utils import OUTPUT
 from ...workflows.implement.core import run_implement_workflow
 from ...workflows.utils import resolve_project_dir
 from ..utils import (
@@ -65,16 +65,16 @@ def execute_implement(args: argparse.Namespace) -> int:
     except ValueError as e:
         # Handle invalid execution_dir
         logger.error(f"Invalid execution directory: {e}")
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error("%s", e)
         return 1
 
     except KeyboardInterrupt:
-        print("Operation cancelled by user.")
+        logger.log(OUTPUT, "Operation cancelled by user.")
         return 1
 
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
-        print(f"Error during workflow execution: {e}", file=sys.stderr)
         logger.error(f"Unexpected error in implement command: {e}", exc_info=True)
+        logger.error("Error during workflow execution: %s", e)
         return 1

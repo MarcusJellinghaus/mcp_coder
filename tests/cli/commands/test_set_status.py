@@ -7,6 +7,7 @@ Tests cover:
 """
 
 import argparse
+import logging
 from pathlib import Path
 from typing import Any, Dict
 from unittest.mock import MagicMock, patch
@@ -396,7 +397,7 @@ class TestExecuteSetStatus:
         tmp_path: Path,
         full_labels_config: Dict[str, Any],
         mock_issue_manager: MagicMock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test successful execution with auto-detected issue."""
         # Setup mocks
@@ -417,11 +418,11 @@ class TestExecuteSetStatus:
             force=False,
         )
 
-        result = execute_set_status(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_set_status(args)
 
         assert result == 0
-        captured = capsys.readouterr()
-        assert "Updated issue #123 to status-05:plan-ready" in captured.out
+        assert "Updated issue #123 to status-05:plan-ready" in caplog.text
         mock_extract_issue.assert_called_once_with("123-feature-name")
         mock_issue_manager.get_issue.assert_called_once_with(123)
         mock_issue_manager.set_labels.assert_called_once()
@@ -441,7 +442,7 @@ class TestExecuteSetStatus:
         tmp_path: Path,
         full_labels_config: Dict[str, Any],
         mock_issue_manager: MagicMock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test successful execution with --issue flag."""
         # Setup mocks
@@ -460,11 +461,11 @@ class TestExecuteSetStatus:
             force=False,
         )
 
-        result = execute_set_status(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_set_status(args)
 
         assert result == 0
-        captured = capsys.readouterr()
-        assert "Updated issue #123 to status-05:plan-ready" in captured.out
+        assert "Updated issue #123 to status-05:plan-ready" in caplog.text
         # Should use explicit issue number, not branch detection
         mock_issue_manager.get_issue.assert_called_once_with(123)
         mock_issue_manager.set_labels.assert_called_once()
@@ -481,7 +482,7 @@ class TestExecuteSetStatus:
         mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
         full_labels_config: Dict[str, Any],
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test invalid label name returns exit code 1."""
         # Setup mocks
@@ -499,11 +500,11 @@ class TestExecuteSetStatus:
             force=False,
         )
 
-        result = execute_set_status(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_set_status(args)
 
         assert result == 1
-        captured = capsys.readouterr()
-        assert "Error" in captured.err or "invalid" in captured.err.lower()
+        assert "invalid-label" in caplog.text.lower()
 
     @patch("mcp_coder.cli.commands.set_status.is_working_directory_clean")
     @patch("mcp_coder.cli.commands.set_status.load_labels_config")
@@ -521,7 +522,7 @@ class TestExecuteSetStatus:
         mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
         full_labels_config: Dict[str, Any],
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test returns 1 when branch doesn't match pattern."""
         # Setup mocks
@@ -541,11 +542,11 @@ class TestExecuteSetStatus:
             force=False,
         )
 
-        result = execute_set_status(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_set_status(args)
 
         assert result == 1
-        captured = capsys.readouterr()
-        assert "Error" in captured.err or "issue" in captured.err.lower()
+        assert "issue" in caplog.text.lower()
 
     @patch("mcp_coder.cli.commands.set_status.is_working_directory_clean")
     @patch("mcp_coder.cli.commands.set_status.load_labels_config")
@@ -559,7 +560,7 @@ class TestExecuteSetStatus:
         mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
         full_labels_config: Dict[str, Any],
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test that set-status fails when working directory has uncommitted changes."""
         # Setup mocks
@@ -577,11 +578,11 @@ class TestExecuteSetStatus:
             force=False,
         )
 
-        result = execute_set_status(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_set_status(args)
 
         assert result == 1
-        captured = capsys.readouterr()
-        assert "uncommitted changes" in captured.err.lower()
+        assert "uncommitted changes" in caplog.text.lower()
 
     @patch("mcp_coder.cli.commands.set_status.is_working_directory_clean")
     @patch("mcp_coder.cli.commands.set_status.IssueManager")
@@ -598,7 +599,7 @@ class TestExecuteSetStatus:
         tmp_path: Path,
         full_labels_config: Dict[str, Any],
         mock_issue_manager: MagicMock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test that set-status succeeds with --force even when directory is dirty."""
         # Setup mocks
@@ -617,11 +618,11 @@ class TestExecuteSetStatus:
             force=True,  # Force flag bypasses dirty check
         )
 
-        result = execute_set_status(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_set_status(args)
 
         assert result == 0
-        captured = capsys.readouterr()
-        assert "Updated issue #123 to status-05:plan-ready" in captured.out
+        assert "Updated issue #123 to status-05:plan-ready" in caplog.text
         # With force=True, is_working_directory_clean should NOT be called
         mock_is_working_directory_clean.assert_not_called()
         mock_issue_manager.get_issue.assert_called_once_with(123)
@@ -642,7 +643,7 @@ class TestExecuteSetStatus:
         tmp_path: Path,
         full_labels_config: Dict[str, Any],
         mock_issue_manager: MagicMock,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test that set-status succeeds when working directory is clean."""
         # Setup mocks
@@ -661,11 +662,11 @@ class TestExecuteSetStatus:
             force=False,  # No force flag
         )
 
-        result = execute_set_status(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_set_status(args)
 
         assert result == 0
-        captured = capsys.readouterr()
-        assert "Updated issue #123 to status-05:plan-ready" in captured.out
+        assert "Updated issue #123 to status-05:plan-ready" in caplog.text
         # With clean directory, is_working_directory_clean should be called
         mock_is_working_directory_clean.assert_called_once()
         mock_issue_manager.get_issue.assert_called_once_with(123)
@@ -685,7 +686,7 @@ class TestExecuteSetStatus:
         mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
         full_labels_config: Dict[str, Any],
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test returns 1 on GitHub API error."""
         # Setup mocks
@@ -720,8 +721,8 @@ class TestExecuteSetStatus:
             force=False,
         )
 
-        result = execute_set_status(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_set_status(args)
 
         assert result == 1
-        captured = capsys.readouterr()
-        assert "Error" in captured.err or "failed" in captured.err.lower()
+        assert "failed" in caplog.text.lower()

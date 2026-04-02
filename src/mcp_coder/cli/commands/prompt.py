@@ -3,7 +3,6 @@
 import argparse
 import json
 import logging
-import sys
 from pathlib import Path
 
 from ...llm.env import prepare_llm_environment
@@ -18,6 +17,7 @@ from ...llm.storage import (
 )
 from ...llm.types import ResponseAssembler
 from ...utils.git_utils import get_branch_name_for_logging
+from ...utils.log_utils import OUTPUT
 from ..utils import (
     parse_llm_method_from_args,
     resolve_execution_dir,
@@ -48,7 +48,7 @@ def execute_prompt(
             logger.debug(f"Execution directory: {execution_dir}")
         except ValueError as e:
             logger.error(f"Invalid execution directory: {e}")
-            print(f"Error: {e}", file=sys.stderr)
+            logger.error("%s", e)
             return 1
         # Prepare environment variables for LLM subprocess
         try:
@@ -58,16 +58,10 @@ def execute_prompt(
                 project_dir = Path(project_dir_arg).resolve()
                 # Validate it exists and is accessible (no git requirement)
                 if not project_dir.exists():
-                    print(
-                        f"Error: Project directory does not exist: {project_dir}",
-                        file=sys.stderr,
-                    )
+                    logger.error("Project directory does not exist: %s", project_dir)
                     return 1
                 if not project_dir.is_dir():
-                    print(
-                        f"Error: Project path is not a directory: {project_dir}",
-                        file=sys.stderr,
-                    )
+                    logger.error("Project path is not a directory: %s", project_dir)
                     return 1
             else:
                 project_dir = Path.cwd()
@@ -96,8 +90,9 @@ def execute_prompt(
                 # Find latest session file (provider-aware)
                 continue_file_path = find_latest_session(provider=provider)
                 if continue_file_path is None:
-                    print(
-                        "No previous response files found, starting new conversation. Save conversations with --store-response"
+                    logger.log(
+                        OUTPUT,
+                        "No previous response files found, starting new conversation. Save conversations with --store-response",
                     )
                     # Continue execution without session resumption
 
@@ -110,17 +105,23 @@ def execute_prompt(
                     if extracted_session_id:
                         resume_session_id = extracted_session_id
                 if resume_session_id:
-                    print(f"Resuming session: {resume_session_id[:16]}...")
+                    logger.log(
+                        OUTPUT, "Resuming session: %s...", resume_session_id[:16]
+                    )
                 else:
-                    print(
-                        "Warning: No session_id found in stored response, starting new conversation"
+                    logger.log(
+                        OUTPUT,
+                        "Warning: No session_id found in stored response, starting new conversation",
                     )
         else:
             # User provided explicit --session-id, inform them it takes priority
             if getattr(args, "continue_session_from", None) or getattr(
                 args, "continue_session", False
             ):
-                print("Using explicit session ID (ignoring file-based continuation)")
+                logger.log(
+                    OUTPUT,
+                    "Using explicit session ID (ignoring file-based continuation)",
+                )
 
         # Get user-specified timeout, output_format, and mcp_config
         timeout = getattr(args, "timeout", 30)
@@ -179,7 +180,7 @@ def execute_prompt(
 
             session_id = response_dict.get("session_id", "")
             if not session_id:
-                print("Error: No session_id in response", file=sys.stderr)
+                logger.error("No session_id in response")
                 return 1
 
             print(session_id)
@@ -216,5 +217,5 @@ def execute_prompt(
     ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         # Handle API errors
         logger.error("Prompt command failed: %s", str(e))
-        print(f"Error: {str(e)}", file=sys.stderr)
+        logger.error("%s", e)
         return 1

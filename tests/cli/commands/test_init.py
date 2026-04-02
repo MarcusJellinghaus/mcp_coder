@@ -1,6 +1,7 @@
 """Tests for init command functionality."""
 
 import argparse
+import logging
 import tomllib
 from unittest.mock import patch
 
@@ -18,22 +19,22 @@ class TestInitCommand:
         self,
         mock_create: object,
         mock_path: object,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test successful config creation prints instructions."""
         mock_create.return_value = True  # type: ignore[attr-defined]
         mock_path.return_value = "/fake/path/config.toml"  # type: ignore[attr-defined]
         args = argparse.Namespace(command="init")
 
-        result = execute_init(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_init(args)
 
         assert result == 0
-        captured = capsys.readouterr()
-        assert "Created default config at:" in captured.out
-        assert "Please update it" in captured.out
-        assert "Next steps:" in captured.out
-        assert "mcp-coder verify" in captured.out
-        assert "mcp-coder gh-tool define-labels" in captured.out
+        assert "Created default config at:" in caplog.text
+        assert "Please update it" in caplog.text
+        assert "Next steps:" in caplog.text
+        assert "mcp-coder verify" in caplog.text
+        assert "mcp-coder gh-tool define-labels" in caplog.text
 
     @patch("mcp_coder.cli.commands.init.get_config_file_path")
     @patch("mcp_coder.cli.commands.init.create_default_config")
@@ -41,18 +42,18 @@ class TestInitCommand:
         self,
         mock_create: object,
         mock_path: object,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test existing config prints already-exists message."""
         mock_create.return_value = False  # type: ignore[attr-defined]
         mock_path.return_value = "/fake/path/config.toml"  # type: ignore[attr-defined]
         args = argparse.Namespace(command="init")
 
-        result = execute_init(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_init(args)
 
         assert result == 0
-        captured = capsys.readouterr()
-        assert "Config already exists:" in captured.out
+        assert "Config already exists:" in caplog.text
 
     @patch("mcp_coder.cli.commands.init.get_config_file_path")
     @patch("mcp_coder.cli.commands.init.create_default_config")
@@ -60,19 +61,19 @@ class TestInitCommand:
         self,
         mock_create: object,
         mock_path: object,
-        capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test write failure returns exit code 1 with error message."""
         mock_create.side_effect = OSError("Permission denied")  # type: ignore[attr-defined]
         mock_path.return_value = "/fake/path/config.toml"  # type: ignore[attr-defined]
         args = argparse.Namespace(command="init")
 
-        result = execute_init(args)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_init(args)
 
         assert result == 1
-        captured = capsys.readouterr()
-        assert "Error: Failed to write config to" in captured.out
-        assert "Permission denied" in captured.out
+        assert "Failed to write config to" in caplog.text
+        assert "Permission denied" in caplog.text
 
     def test_init_template_content_valid_toml_with_sections(
         self,

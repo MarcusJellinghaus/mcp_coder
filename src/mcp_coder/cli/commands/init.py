@@ -3,6 +3,7 @@
 import argparse
 import logging
 
+from ...utils.log_utils import OUTPUT
 from ...utils.user_config import create_default_config, get_config_file_path
 
 logger = logging.getLogger(__name__)
@@ -23,18 +24,21 @@ def execute_init(_args: argparse.Namespace) -> int:
     try:
         created = create_default_config()
     except OSError as e:
-        print(f"Error: Failed to write config to {path}: {e}")
+        logger.error("Failed to write config to %s: %s", path, e)
         return 1
 
     if created:
-        print(f"Created default config at: {path}")
-        print("Please update it with your actual credentials and settings.")
-        print("\nNext steps:")
-        print("  mcp-coder verify          Check your setup")
-        print(
-            "  mcp-coder gh-tool define-labels   Sync workflow labels to your GitHub repo"
+        logger.log(OUTPUT, "Created default config at: %s", path)
+        logger.log(
+            OUTPUT, "Please update it with your actual credentials and settings."
+        )
+        logger.log(OUTPUT, "\nNext steps:")
+        logger.log(OUTPUT, "  mcp-coder verify          Check your setup")
+        logger.log(
+            OUTPUT,
+            "  mcp-coder gh-tool define-labels   Sync workflow labels to your GitHub repo",
         )
     else:
-        print(f"Config already exists: {path}")
+        logger.log(OUTPUT, "Config already exists: %s", path)
 
     return 0

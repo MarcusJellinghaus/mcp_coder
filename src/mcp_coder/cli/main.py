@@ -5,7 +5,7 @@ import logging
 import sys
 
 from .. import __version__
-from ..utils.log_utils import setup_logging
+from ..utils.log_utils import OUTPUT, setup_logging
 from .commands.check_file_sizes import execute_check_file_sizes
 from .commands.commit import execute_commit_auto, execute_commit_clipboard
 from .commands.coordinator import (
@@ -139,17 +139,17 @@ def _handle_coordinator_command(args: argparse.Namespace) -> int:
     if args.dry_run:
         # Validate dry-run args
         if not args.repo:
-            print("Error: --dry-run requires --repo NAME", file=sys.stderr)
-            print(
+            logger.error("--dry-run requires --repo NAME")
+            logger.log(
+                OUTPUT,
                 "Try 'mcp-coder coordinator --help' for more information.",
-                file=sys.stderr,
             )
             return 1
         if not args.branch_name:
-            print("Error: --dry-run requires --branch-name BRANCH", file=sys.stderr)
-            print(
+            logger.error("--dry-run requires --branch-name BRANCH")
+            logger.log(
+                OUTPUT,
                 "Try 'mcp-coder coordinator --help' for more information.",
-                file=sys.stderr,
             )
             return 1
         # Map args to what execute_coordinator_test expects
@@ -159,10 +159,10 @@ def _handle_coordinator_command(args: argparse.Namespace) -> int:
     else:
         # Validate run args
         if not args.all and not args.repo:
-            print("Error: Either --all or --repo must be specified", file=sys.stderr)
-            print(
+            logger.error("Either --all or --repo must be specified")
+            logger.log(
+                OUTPUT,
                 "Try 'mcp-coder coordinator --help' for more information.",
-                file=sys.stderr,
             )
             return 1
         return execute_coordinator_run(args)
@@ -184,11 +184,10 @@ def _handle_check_command(args: argparse.Namespace) -> int:
         return 1  # unreachable: argparse validates subcommand choices
     else:
         logger.debug("Check subcommand required")
-        print(
-            "Error: Please specify a check subcommand (e.g., 'branch-status', 'file-size')",
-            file=sys.stderr,
+        logger.error(
+            "Please specify a check subcommand (e.g., 'branch-status', 'file-size')"
         )
-        print("Try 'mcp-coder check --help' for more information.", file=sys.stderr)
+        logger.log(OUTPUT, "Try 'mcp-coder check --help' for more information.")
         return 1
 
 
@@ -214,13 +213,12 @@ def _handle_gh_tool_command(args: argparse.Namespace) -> int:
         return 1  # unreachable: argparse validates subcommand choices
     else:
         logger.debug("gh-tool subcommand required")
-        print(
-            "Error: Please specify a gh-tool subcommand"
+        logger.error(
+            "Please specify a gh-tool subcommand"
             " (e.g., 'get-base-branch', 'define-labels', 'issue-stats',"
-            " 'set-status', 'checkout-issue-branch')",
-            file=sys.stderr,
+            " 'set-status', 'checkout-issue-branch')"
         )
-        print("Try 'mcp-coder gh-tool --help' for more information.", file=sys.stderr)
+        logger.log(OUTPUT, "Try 'mcp-coder gh-tool --help' for more information.")
         return 1
 
 
@@ -238,12 +236,10 @@ def _handle_vscodeclaude_command(args: argparse.Namespace) -> int:
         return 1  # unreachable: argparse validates subcommand choices
     else:
         logger.debug("vscodeclaude subcommand required")
-        print(
-            "Error: Please specify a subcommand (e.g., 'launch', 'status')",
-            file=sys.stderr,
-        )
-        print(
-            "Try 'mcp-coder vscodeclaude --help' for more information.", file=sys.stderr
+        logger.error("Please specify a subcommand (e.g., 'launch', 'status')")
+        logger.log(
+            OUTPUT,
+            "Try 'mcp-coder vscodeclaude --help' for more information.",
         )
         return 1
 
@@ -260,11 +256,8 @@ def _handle_git_tool_command(args: argparse.Namespace) -> int:
         return 1  # unreachable: argparse validates subcommand choices
     else:
         logger.debug("git-tool subcommand required")
-        print(
-            "Error: Please specify a git-tool subcommand (e.g., 'compact-diff')",
-            file=sys.stderr,
-        )
-        print("Try 'mcp-coder git-tool --help' for more information.", file=sys.stderr)
+        logger.error("Please specify a git-tool subcommand (e.g., 'compact-diff')")
+        logger.log(OUTPUT, "Try 'mcp-coder git-tool --help' for more information.")
         return 1
 
 
@@ -280,11 +273,8 @@ def _handle_commit_command(args: argparse.Namespace) -> int:
         return execute_commit_clipboard(args)
     else:
         logger.debug(f"Commit mode '{args.commit_mode}' not yet implemented")
-        print(
-            f"Error: Commit mode '{args.commit_mode}' is not yet implemented.",
-            file=sys.stderr,
-        )
-        print("Try 'mcp-coder commit --help' for more information.", file=sys.stderr)
+        logger.error("Commit mode '%s' is not yet implemented.", args.commit_mode)
+        logger.log(OUTPUT, "Try 'mcp-coder commit --help' for more information.")
         return 1
 
 
@@ -353,14 +343,14 @@ def main() -> int:
 
     except KeyboardInterrupt:
         logger.info("CLI interrupted by user")
-        print("\nOperation cancelled by user.")
+        logger.log(OUTPUT, "\nOperation cancelled by user.")
         return 1
 
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         logger.error(f"Unexpected error in CLI: {e}", exc_info=True)
-        print(f"Error: {e}")
+        logger.error("%s", e)
         return 2
 
 
