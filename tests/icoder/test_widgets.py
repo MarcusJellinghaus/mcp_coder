@@ -43,18 +43,8 @@ async def test_output_log_recorded_lines_property() -> None:
         assert output.recorded_lines == []
         output.append_text("> hello world")
         assert "> hello world" in output.recorded_lines
-        output.append_tool_use("read_file", "path.py", "ok")
+        output.append_text("\u250c read_file(path.py)")
         assert len(output.recorded_lines) == 2
-
-
-@pytest.mark.asyncio
-async def test_output_log_append_tool_use() -> None:
-    """OutputLog.append_tool_use formats with gear and arrow."""
-    app = WidgetTestApp()
-    async with app.run_test():
-        output = app.query_one(OutputLog)
-        output.append_tool_use("read_file", "path.py", "ok")
-        assert output.recorded_lines == ["\u2699 read_file(path.py) \u2192 ok"]
 
 
 @pytest.mark.asyncio
@@ -65,16 +55,6 @@ async def test_output_log_append_text_with_style() -> None:
         output = app.query_one(OutputLog)
         output.append_text("hello", style="bold")
         assert output.recorded_lines == ["hello"]
-
-
-@pytest.mark.asyncio
-async def test_output_log_append_tool_use_with_style() -> None:
-    """append_tool_use with style still records plain formatted line."""
-    app = WidgetTestApp()
-    async with app.run_test():
-        output = app.query_one(OutputLog)
-        output.append_tool_use("read", "x", "ok", style="bold")
-        assert output.recorded_lines == ["\u2699 read(x) \u2192 ok"]
 
 
 @pytest.mark.asyncio
