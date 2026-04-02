@@ -1,7 +1,7 @@
-# Step 4: CI Wait Progress — Replace Dot Pattern with Periodic OUTPUT Messages
+# Step 4: CI Wait Progress and check_branch_status Print Migration
 
 ## LLM Prompt
-> Read `pr_info/steps/summary.md` for full context. Implement Step 4: Replace the print-based dot progress pattern in check_branch_status.py with periodic logger.log(OUTPUT, ...) messages. Run all three code quality checks after changes.
+> Read `pr_info/steps/summary.md` for full context. Implement Step 4: Replace the print-based dot progress in check_branch_status.py with periodic OUTPUT log messages, and migrate all remaining print() calls in the file to logging. Run all code quality checks after changes.
 
 ## WHERE
 - `src/mcp_coder/cli/commands/check_branch_status.py` — main changes
@@ -124,9 +124,18 @@ logger.log(OUTPUT, "Branch '%s' has no remote tracking branch. Push first.", cur
 logger.warning("Multiple PRs found for branch '%s'. Using PR #%s.", current_branch, pr_number)
 ```
 
+Also migrate the outer exception handler error print:
+```python
+# BEFORE
+print(f"Error collecting branch status: {e}", file=sys.stderr)
+
+# AFTER
+logger.error("Error collecting branch status: %s", e)
+```
+
 **Keep as print():** The `print(output)` for the branch status report (`format_for_human()` / `format_for_llm()`) — this is data output.
 
-Also keep: `print("CI pending. Use --ci-timeout to wait for completion.")` — migrate to `logger.log(OUTPUT, ...)`.
+Also migrate: `print("CI pending. Use --ci-timeout to wait for completion.")` → `logger.log(OUTPUT, "CI pending. Use --ci-timeout to wait for completion.")`.
 
 ### 4e. Update tests
 

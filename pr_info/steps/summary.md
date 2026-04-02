@@ -34,7 +34,7 @@ Rename the existing `NOTICE` (25) custom log level to `OUTPUT` (25) and introduc
 - `print("Error: ...", file=sys.stderr)` → `logger.error(...)`
 - `print("status message")` → `logger.log(OUTPUT, ...)`
 - **Keep `print()` for data output**: help text, compact-diff, branch-status report tables, JSON output, `verify` command formatted sections, `vscodeclaude status` table.
-- Scope: `cli/main.py`, `cli/commands/*.py`, `workflows/vscodeclaude/` (status print statements that aren't data tables).
+- Scope: `cli/main.py`, `cli/commands/*.py` (including `coordinator/commands.py` for vscodeclaude prints).
 
 ### 5. CI wait progress (`check_branch_status.py`)
 - Replace `print(".", end="", flush=True)` dot pattern with periodic `logger.log(OUTPUT, ...)` messages (~60s interval).
@@ -72,6 +72,6 @@ Rename the existing `NOTICE` (25) custom log level to `OUTPUT` (25) and introduc
 1. **Step 1**: Logging infrastructure — NOTICE→OUTPUT rename, `CleanFormatter`, `setup_logging()` update, tests
 2. **Step 2**: CLI defaults — `--log-level` choices, `_resolve_log_level()`, `_INFO_COMMANDS`
 3. **Step 3**: `create-pr` workflow — remove `log_step()`, add PR summary fields
-4. **Step 4**: CI wait progress — replace dot pattern with periodic OUTPUT messages
+4. **Step 4**: CI wait progress and check_branch_status print migration
 5. **Step 5**: Print migration across CLI commands — status/error prints to logging
 6. **Step 6**: Print migration for coordinator and remaining commands

@@ -100,6 +100,8 @@ Common places to check:
 - `tests/cli/commands/test_check_branch_status.py` — may reference `NOTICE`
 - Any test file importing `NOTICE` from `mcp_coder.utils`
 - Comments or docstrings mentioning NOTICE
+- `tests/workflows/create_plan/test_prerequisites.py` — NOTICE in comments (lines ~164, ~424)
+- `tests/workflows/create_plan/test_branch_management.py` — NOTICE in comments (lines ~149, ~189)
 
 **Fix pattern:**
 ```python
@@ -112,12 +114,7 @@ from mcp_coder.utils import OUTPUT
 from mcp_coder.utils.log_utils import OUTPUT
 ```
 
-### 6c. Verify completeness
-
-After all changes:
-1. Run `grep -r "NOTICE" src/ tests/` — should return zero results (except possibly in unrelated string content)
-2. Run all three code quality checks
-3. Verify no `import sys` left unused after print migrations
+After fixing all NOTICE references, verify with `grep -r "NOTICE" src/ tests/` — should return zero results (except unrelated string content).
 
 ## DATA
 - No new data structures

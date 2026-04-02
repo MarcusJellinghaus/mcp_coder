@@ -64,7 +64,7 @@ logger.log(OUTPUT, "Base Branch: %s", base_branch)
 logger.log(OUTPUT, "Head Branch: %s", current_branch)
 ```
 
-Note: `current_branch` and `base_branch` are already computed earlier in the workflow and may need to be captured in local variables, OR re-fetched here. Check the existing code — `create_pull_request()` already computes these internally. The simplest approach is to use `title` (already in scope) and extract from `pr_result` dict or re-derive.
+**Approach:** Call `get_current_branch_name(project_dir)` and `detect_base_branch(project_dir, current_branch=current_branch)` at the summary logging site. Both functions are already imported. `title` is already in scope from `generate_pr_summary()`. This avoids modifying function signatures to thread variables through.
 
 ### 3e. Keep detail messages at INFO
 

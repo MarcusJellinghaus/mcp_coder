@@ -12,6 +12,8 @@
 
 ### 1a. Rename NOTICE → OUTPUT (`log_utils.py`)
 
+**Note:** This is not just a rename — the semantics change. NOTICE was documented as "never log at this level" (threshold-only). OUTPUT is actively logged at via `logger.log(OUTPUT, ...)`. The new comment block reflects this intentional change.
+
 **Constant and level registration:**
 ```python
 # BEFORE
