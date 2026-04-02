@@ -264,7 +264,6 @@ def execute_set_status(args: argparse.Namespace) -> int:
             return 1
 
         logger.log(OUTPUT, "Updated issue #%s to %s", issue_number, args.status_label)
-        logger.info(f"Updated issue #{issue_number} to {args.status_label}")
         return 0
 
     except ValueError as e:
@@ -275,5 +274,4 @@ def execute_set_status(args: argparse.Namespace) -> int:
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         logger.error(f"Unexpected error: {e}", exc_info=True)
-        logger.error("%s", e)
         return 1

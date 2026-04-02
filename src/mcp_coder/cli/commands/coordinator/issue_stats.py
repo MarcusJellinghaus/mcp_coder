@@ -9,7 +9,6 @@ CLI functionality into the cli/commands structure.
 
 import argparse
 import logging
-import sys
 from typing import Any
 
 from ....utils.git_operations.remotes import get_github_repository_url
@@ -342,13 +341,11 @@ def execute_coordinator_issue_stats(args: argparse.Namespace) -> int:
         return 0
 
     except ValueError as e:
-        logger.error(str(e))
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error("%s", e)
         return 1
 
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         logger.error(f"Unexpected error: {e}", exc_info=True)
-        print(f"Error: {e}", file=sys.stderr)
         return 1

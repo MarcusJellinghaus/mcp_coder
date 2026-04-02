@@ -7,7 +7,6 @@ workflow status labels to a GitHub repository.
 import argparse
 import json
 import logging
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, TypedDict
@@ -583,18 +582,15 @@ def execute_define_labels(args: argparse.Namespace) -> int:
         return 0
 
     except ValueError as e:
-        logger.error(str(e))
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error("%s", e)
         return 1
 
     except RuntimeError as e:
-        logger.error(str(e))
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error("%s", e)
         return 1
 
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         logger.error(f"Unexpected error: {e}", exc_info=True)
-        print(f"Error: {e}", file=sys.stderr)
         return 1

@@ -48,7 +48,6 @@ def execute_prompt(
             logger.debug(f"Execution directory: {execution_dir}")
         except ValueError as e:
             logger.error(f"Invalid execution directory: {e}")
-            logger.error("%s", e)
             return 1
         # Prepare environment variables for LLM subprocess
         try:
@@ -217,5 +216,4 @@ def execute_prompt(
     ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         # Handle API errors
         logger.error("Prompt command failed: %s", str(e))
-        logger.error("%s", e)
         return 1

@@ -41,7 +41,6 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
         logger.debug(f"Execution directory: {execution_dir}")
     except ValueError as e:
         logger.error(f"Invalid execution directory: {e}")
-        logger.error("%s", e)
         return 1
 
     project_dir = Path(args.project_dir) if args.project_dir else Path.cwd()

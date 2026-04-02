@@ -343,14 +343,13 @@ def main() -> int:
 
     except KeyboardInterrupt:
         logger.info("CLI interrupted by user")
-        logger.log(OUTPUT, "\nOperation cancelled by user.")
+        logger.log(OUTPUT, "Operation cancelled by user.")
         return 1
 
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         logger.error(f"Unexpected error in CLI: {e}", exc_info=True)
-        logger.error("%s", e)
         return 2
 
 

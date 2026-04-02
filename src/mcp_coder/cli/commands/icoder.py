@@ -2,7 +2,6 @@
 
 import argparse
 import logging
-import sys
 from pathlib import Path
 
 from ...llm.env import prepare_llm_environment
@@ -31,7 +30,6 @@ def execute_icoder(args: argparse.Namespace) -> int:
             execution_dir = resolve_execution_dir(getattr(args, "execution_dir", None))
         except ValueError as e:
             logger.error(f"Invalid execution directory: {e}")
-            print(f"Error: {e}", file=sys.stderr)
             return 1
 
         # Resolve project directory
@@ -39,16 +37,10 @@ def execute_icoder(args: argparse.Namespace) -> int:
         if project_dir_arg:
             project_dir = Path(project_dir_arg).resolve()
             if not project_dir.exists():
-                print(
-                    f"Error: Project directory does not exist: {project_dir}",
-                    file=sys.stderr,
-                )
+                logger.error("Project directory does not exist: %s", project_dir)
                 return 1
             if not project_dir.is_dir():
-                print(
-                    f"Error: Project path is not a directory: {project_dir}",
-                    file=sys.stderr,
-                )
+                logger.error("Project path is not a directory: %s", project_dir)
                 return 1
         else:
             project_dir = Path.cwd()
@@ -95,12 +87,11 @@ def execute_icoder(args: argparse.Namespace) -> int:
         return 0
 
     except KeyboardInterrupt:
-        print("\nOperation cancelled by user.")
+        logger.error("Operation cancelled by user.")
         return 1
 
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         logger.error(f"Unexpected error in icoder command: {e}", exc_info=True)
-        print(f"Error: {e}", file=sys.stderr)
         return 1

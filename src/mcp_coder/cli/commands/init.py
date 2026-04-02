@@ -32,7 +32,7 @@ def execute_init(_args: argparse.Namespace) -> int:
         logger.log(
             OUTPUT, "Please update it with your actual credentials and settings."
         )
-        logger.log(OUTPUT, "\nNext steps:")
+        logger.log(OUTPUT, "Next steps:")
         logger.log(OUTPUT, "  mcp-coder verify          Check your setup")
         logger.log(
             OUTPUT,
