@@ -1,7 +1,0 @@
-refactor(coordinator): migrate prints to logging, remove NOTICE refs
-
-- Coordinator command prints → logger.log(OUTPUT, ...) / logger.error()
-- vscodeclaude command prints → logging
-- Remove all remaining NOTICE references across codebase
-- Update test assertions from capsys to caplog for migrated prints
-- Final cleanup pass for unused imports (sys)
