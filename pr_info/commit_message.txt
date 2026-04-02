@@ -1,9 +1,0 @@
-test(icoder): regenerate snapshot baselines and add snapshot docs
-
-- Regenerate all 3 SVG snapshot baselines after visual changes from
-  steps 1-2 (line wrapping, explicit colors, auto-grow input)
-- Verify regenerated SVGs contain no secrets, env vars, or local paths
-- Expand module docstring in test_snapshots.py explaining snapshot
-  workflow and --snapshot-update usage
-- Add comment in pyproject.toml near textual_integration marker
-  documenting snapshot regeneration command
