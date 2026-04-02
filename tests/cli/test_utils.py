@@ -1,16 +1,90 @@
 """Tests for CLI utility functions."""
 
+import logging
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from mcp_coder.cli.utils import (
+    log_command_startup,
     parse_llm_method_from_args,
     resolve_llm_method,
     resolve_mcp_config_path,
 )
 from mcp_coder.utils.user_config import _get_standard_env_var
+
+
+class TestLogCommandStartup:
+    """Test cases for log_command_startup function."""
+
+    @patch(
+        "mcp_coder.utils.git_operations.branch_queries.get_current_branch_name",
+        return_value="feat/my-branch",
+    )
+    @patch("mcp_coder.__version__", new="1.2.3")
+    def test_happy_path_with_project_dir(
+        self,
+        mock_branch: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Version, command, branch, and project_dir all present."""
+        with caplog.at_level(logging.INFO, logger="mcp_coder.cli.utils"):
+            log_command_startup("implement", project_dir=Path("/tmp/myproject"))
+
+        assert "mcp-coder v1.2.3" in caplog.text
+        assert "implement" in caplog.text
+        assert "branch: feat/my-branch" in caplog.text
+        assert "project:" in caplog.text
+        assert "myproject" in caplog.text
+
+    @patch("mcp_coder.__version__", new="0.9.0")
+    def test_no_project_dir(
+        self,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Coordinator case: no project_dir, only version and command."""
+        with caplog.at_level(logging.INFO, logger="mcp_coder.cli.utils"):
+            log_command_startup("coordinator")
+
+        assert "mcp-coder v0.9.0 \u2014 coordinator" in caplog.text
+        assert "branch" not in caplog.text
+        assert "project" not in caplog.text
+
+    @patch(
+        "mcp_coder.utils.git_operations.branch_queries.get_current_branch_name",
+        return_value=None,
+    )
+    @patch("mcp_coder.__version__", new="2.0.0")
+    def test_unknown_branch(
+        self,
+        mock_branch: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """get_current_branch_name returns None -> '(unknown)' appears."""
+        with caplog.at_level(logging.INFO, logger="mcp_coder.cli.utils"):
+            log_command_startup("create-pr", project_dir=Path("/tmp/repo"))
+
+        assert "branch: (unknown)" in caplog.text
+        assert "mcp-coder v2.0.0" in caplog.text
+
+    @patch(
+        "mcp_coder.utils.git_operations.branch_queries.get_current_branch_name",
+        side_effect=OSError("git not found"),
+    )
+    @patch("mcp_coder.__version__", new="3.0.0")
+    def test_branch_query_exception_falls_back(
+        self,
+        mock_branch: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Branch query raising OSError falls back to '(unknown)'."""
+        with caplog.at_level(logging.DEBUG, logger="mcp_coder.cli.utils"):
+            log_command_startup("implement", project_dir=Path("/tmp/repo"))
+
+        assert "branch: (unknown)" in caplog.text
+        assert "mcp-coder v3.0.0" in caplog.text
+        assert "Failed to query branch name" in caplog.text
 
 
 class TestParseLLMMethodFromArgs:

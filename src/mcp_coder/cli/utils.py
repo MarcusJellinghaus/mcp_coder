@@ -16,11 +16,40 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "_get_status_symbols",
+    "log_command_startup",
     "parse_llm_method_from_args",
     "resolve_llm_method",
     "resolve_mcp_config_path",
     "resolve_execution_dir",
 ]
+
+
+def log_command_startup(command_name: str, project_dir: Path | None = None) -> None:
+    """Log version, branch, and project dir at command startup.
+
+    Args:
+        command_name: CLI command name (e.g. 'implement', 'create-pr')
+        project_dir: Resolved project directory path (None for multi-repo commands)
+    """
+    from .. import __version__
+
+    if project_dir is not None:
+        from ..utils.git_operations.branch_queries import get_current_branch_name
+
+        try:
+            branch = get_current_branch_name(project_dir) or "(unknown)"
+        except Exception:
+            logger.debug("Failed to query branch name", exc_info=True)
+            branch = "(unknown)"
+        logger.info(
+            "mcp-coder v%s — %s, branch: %s, project: %s",
+            __version__,
+            command_name,
+            branch,
+            project_dir,
+        )
+    else:
+        logger.info("mcp-coder v%s — %s", __version__, command_name)
 
 
 def _get_status_symbols() -> dict[str, str]:
