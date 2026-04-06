@@ -1,0 +1,7 @@
+refactor: extract branch naming symbols to branch_naming.py (#538)
+
+Move BranchCreationResult and generate_branch_name_from_issue from
+branch_manager.py to a new branch_naming.py in the same package.
+Update __init__.py re-exports to source from branch_naming.
+
+No behavioral changes - pure move-only refactoring.

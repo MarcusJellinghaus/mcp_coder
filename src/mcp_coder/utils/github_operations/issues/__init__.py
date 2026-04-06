@@ -12,11 +12,8 @@ This package provides:
 from .base import parse_base_branch
 
 # Branch manager and utilities
-from .branch_manager import (
-    BranchCreationResult,
-    IssueBranchManager,
-    generate_branch_name_from_issue,
-)
+from .branch_manager import IssueBranchManager
+from .branch_naming import BranchCreationResult, generate_branch_name_from_issue
 
 # Cache functions and types
 from .cache import (

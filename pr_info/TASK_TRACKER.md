@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Move symbols to branch_naming.py and update imports
-- [ ] Implementation: move `BranchCreationResult` and `generate_branch_name_from_issue` to `branch_naming.py`, update `__init__.py` re-exports
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move `BranchCreationResult` and `generate_branch_name_from_issue` to `branch_naming.py`, update `__init__.py` re-exports
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Move branch naming tests and update allowlist
 - [ ] Implementation: move `TestBranchNameGeneration` to `test_branch_naming.py`, remove allowlist entry
