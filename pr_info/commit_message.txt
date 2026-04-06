@@ -1,6 +1,5 @@
-feat: coordinator config keys + remove --update-labels from templates (#661)
+Split test_user_config.py to fix file-size CI check
 
-Extend load_repo_config() to include update_issue_labels and
-post_issue_comments (default False). Remove --update-labels flag
-from all 6 Jenkins command templates — executors now resolve
-settings from config.toml via repo URL matching.
+Extract TestFindRepoSectionByUrl tests into a new
+test_user_config_repo_matching.py module, bringing the original
+file under the 750-line limit.
