@@ -12,9 +12,17 @@ Remove the obsolete PyPI (non-editable) reinstall script. It is not part of the 
 
 Delete the entire file.
 
+### MODIFY: `tools/reinstall_local.bat`
+
+Lines 4 and 11 contain comments referencing "End-users should use tools\reinstall.bat instead". Remove these stale references since `reinstall.bat` no longer exists.
+
+### MODIFY: `docs/repository-setup.md`
+
+Remove the `reinstall.bat` row from the tools table.
+
 ## Verification
 
-- No other file references `reinstall.bat` (only `reinstall_local.bat` is referenced from `claude_local.bat` and `icoder_local.bat`)
+- No remaining references to `reinstall.bat` in the codebase
 - All quality checks pass (pylint, pytest, mypy)
 
 ## Commit
@@ -30,6 +38,8 @@ chore: delete obsolete PyPI reinstall script (#640)
 ```
 Read pr_info/steps/summary.md and pr_info/steps/step_1.md.
 
-Delete tools/reinstall.bat. Verify no other files reference it (search for "reinstall.bat" 
-excluding reinstall_local.bat references). Run all quality checks.
+Delete tools/reinstall.bat. Remove stale references to reinstall.bat in 
+tools/reinstall_local.bat (lines 4 and 11) and remove the reinstall.bat row from 
+the tools table in docs/repository-setup.md. Search for any remaining references. 
+Run all quality checks.
 ```

@@ -77,12 +77,12 @@ class GitHubInstallConfig:
 #### Function: `get_formatter_config`
 
 ```python
-def get_formatter_config(project_dir: Path) -> dict[str, Any]:
+def get_formatter_config(project_dir: Path, filename: str = "pyproject.toml") -> dict[str, Any]:
 ```
 
 **ALGORITHM:**
 ```
-1. path = project_dir / "pyproject.toml"
+1. path = project_dir / filename
 2. if not path.exists(): return {}
 3. data = tomllib.load(path)
 4. tool = data.get("tool", {})

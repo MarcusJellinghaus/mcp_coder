@@ -4,7 +4,7 @@
 
 ## Goal
 
-Add docstring notes about the two config systems and update documentation to reflect the changes made in steps 1-6.
+Add docstring notes about the two config systems and update documentation to reflect the changes made in steps 1-6. This is the final implementation step.
 
 ## Changes
 

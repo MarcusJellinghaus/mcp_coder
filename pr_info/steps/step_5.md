@@ -80,7 +80,7 @@ uv pip install --no-deps "mcp-tools-py @ git+https://github.com/MarcusJellinghau
 ```batch
 echo [3/7] Overriding dependencies with GitHub versions...
 REM Read GitHub dependency overrides from pyproject.toml
-for /f "delims=" %%C in ('python tools\read_github_deps.py') do (
+for /f "delims=" %%C in ('"!VENV_SCRIPTS!\python.exe" tools\read_github_deps.py') do (
     echo   %%C
     %%C --python "!VENV_SCRIPTS!\python.exe"
     if !ERRORLEVEL! NEQ 0 (

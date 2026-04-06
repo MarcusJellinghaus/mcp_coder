@@ -49,7 +49,7 @@ Both modules now carry docstring notes explaining this distinction, and `docs/co
 | `src/mcp_coder/formatters/__init__.py` | Use pyproject_config for line-length check |
 | `src/mcp_coder/workflows/vscodeclaude/workspace.py` | Use get_github_install_config() |
 | `src/mcp_coder/utils/user_config.py` | Add docstring note about config systems |
-| `tests/formatters/test_config_reader.py` | Ensure tests still pass (no changes expected) |
+
 | `tests/test_pyproject_config.py` | May need updates if overlapping with new tests |
 | `claude.bat` | Add version printing |
 | `claude_local.bat` | Add version printing |
@@ -69,11 +69,10 @@ Both modules now carry docstring notes explaining this distinction, and `docs/co
 
 | Step | Description | Commit |
 |------|-------------|--------|
-| 1 | Delete `tools/reinstall.bat` | `chore: delete obsolete PyPI reinstall script` |
+| 1 | Delete `tools/reinstall.bat`, clean stale refs in `reinstall_local.bat` and `docs/repository-setup.md` | `chore: delete obsolete PyPI reinstall script` |
 | 2 | Create `pyproject_config.py` with tests | `feat: add shared pyproject.toml config reader` |
 | 3 | Refactor `config_reader.py` to thin wrapper | `refactor: delegate config_reader to pyproject_config` |
 | 4 | Refactor `_build_github_install_section()` + regression test | `refactor: use get_github_install_config in workspace` |
 | 5 | Create `read_github_deps.py` + improve `reinstall_local.bat` | `feat: dynamic GitHub deps in reinstall_local.bat` |
-| 6 | Add version printing to all four launchers | `feat: print MCP server versions in launcher scripts` |
+| 6 | Add version printing to all four launchers + `.mcp.json` consistency verification | `feat: print MCP server versions in launcher scripts` |
 | 7 | Documentation updates + config system docstrings | `docs: document config systems, update environments` |
-| 8 | `.mcp.json` consistency verification (manual, no code) | (no commit — PR description item) |
