@@ -29,4 +29,20 @@ Date: 2026-04-06
 - `pr_info/steps/step_1.md`: updated HOW section, ALGORITHM comment, and LLM prompt with full check list and format_code
 - `pr_info/steps/step_2.md`: updated WHERE (allowlist add), ALGORITHM, DATA section, and LLM prompt with allowlist, full checks, format_code
 
-**Status**: ready to commit
+**Status**: committed (6ed7865)
+
+## Round 2 — 2026-04-06
+**Findings**:
+- Summary allowlist table only mentioned removing old entry, not adding new one
+- Step 2 LLM prompt said "~955 lines" but DATA section said "~980 lines" — inconsistent
+
+**Decisions**:
+- Both: **accept** — minor documentation consistency fixes
+
+**User decisions**: none needed
+
+**Changes**:
+- `pr_info/steps/summary.md`: updated allowlist row to include both remove and add
+- `pr_info/steps/step_2.md`: unified line count to "~980 lines" in LLM prompt
+
+**Status**: committed

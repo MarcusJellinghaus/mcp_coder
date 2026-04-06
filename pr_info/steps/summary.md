@@ -41,7 +41,7 @@ Rename and restructure orchestrator test files to mirror the source structure cr
 | `tests/workflows/vscodeclaude/test_session_restart_prepare_branch.py` | Create (from TestPrepareRestartBranch class) |
 | `tests/workflows/vscodeclaude/test_session_restart_closed_sessions.py` | Create (from TestRestartClosedSessionsBranchHandling class) |
 | `tests/workflows/vscodeclaude/test_session_restart_branch_integration.py` | Create (from TestBranchHandlingIntegration class) |
-| `.large-files-allowlist` | Remove `test_orchestrator_sessions.py` entry |
+| `.large-files-allowlist` | Remove `test_orchestrator_sessions.py`, add `test_session_restart.py` |
 
 ## Constraints
 

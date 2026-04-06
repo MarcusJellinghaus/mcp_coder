@@ -68,7 +68,7 @@ For each new file:
 
 After creating all 4 files:
 - Delete test_orchestrator_sessions.py
-- Update `.large-files-allowlist`: remove `test_orchestrator_sessions.py`, add `test_session_restart.py` (class is ~955 lines, further splitting is a separate issue)
+- Update `.large-files-allowlist`: remove `test_orchestrator_sessions.py`, add `test_session_restart.py` (~980 lines with imports, further splitting is a separate issue)
 
 Run format_code before committing. Run all code quality checks per CLAUDE.md (pytest, pylint, mypy, lint_imports, vulture, ruff, format_code). All checks must pass.
 ```
