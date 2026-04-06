@@ -47,7 +47,7 @@ def generate_branch_name_from_issue(
 2. Update `__init__.py`: change the import source for these two symbols from `.branch_manager` to `.branch_naming`.
 3. Verify `branch_manager.py` now imports `BranchCreationResult` and `generate_branch_name_from_issue`
    from `.branch_naming` (the `move_symbol` tool should handle this).
-4. Run format, pylint, mypy, pytest to confirm no breakage.
+4. Run format, then all 5 quality checks (pylint, pytest, mypy, lint_imports, vulture) and `mcp-coder check file-size --max-lines 750`.
 
 ## DATA
 

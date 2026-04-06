@@ -46,12 +46,12 @@ class TestBranchNameGeneration:
 3. Remove unused imports from `test_issue_branch_manager.py` (if `generate_branch_name_from_issue`
    is no longer referenced there, drop it from the import).
 4. Check `branch_manager.py` line count. If < 750, remove its entry from `.large-files-allowlist`.
-5. Run format, pylint, mypy, pytest.
+5. Run format, then all 5 quality checks (pylint, pytest, mypy, lint_imports, vulture) and `mcp-coder check file-size --max-lines 750`.
 
 ## DATA
 
 - `test_branch_naming.py` imports: `pytest`, `generate_branch_name_from_issue` from the package
-- `test_issue_branch_manager.py` may still import `BranchCreationResult` (used by `TestCreateRemoteBranchForIssue`) — keep that import if needed
+- `test_issue_branch_manager.py`: remove `BranchCreationResult` from imports (unused after move)
 - No `BranchCreationResult` import needed in `test_branch_naming.py` (the test class doesn't test it)
 
 ## Verification
