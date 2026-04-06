@@ -217,8 +217,10 @@ class TestRunCreatePrWorkflow:
         mock_issue_manager_class.return_value = mock_issue_manager
         mock_issue_manager.update_workflow_label.return_value = True
 
-        # Call: run_create_pr_workflow(..., update_labels=True)
-        result = run_create_pr_workflow(Path("/test"), "claude", update_labels=True)
+        # Call: run_create_pr_workflow(..., update_issue_labels=True)
+        result = run_create_pr_workflow(
+            Path("/test"), "claude", update_issue_labels=True
+        )
 
         # Assert: update_workflow_label called with validated_issue_number=123
         assert result == 0
@@ -273,8 +275,10 @@ class TestRunCreatePrWorkflow:
         mock_issue_manager = MagicMock()
         mock_issue_manager_class.return_value = mock_issue_manager
 
-        # Call: run_create_pr_workflow(..., update_labels=True)
-        result = run_create_pr_workflow(Path("/test"), "claude", update_labels=True)
+        # Call: run_create_pr_workflow(..., update_issue_labels=True)
+        result = run_create_pr_workflow(
+            Path("/test"), "claude", update_issue_labels=True
+        )
 
         # Assert: update_workflow_label NOT called
         assert result == 0

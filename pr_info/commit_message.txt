@@ -1,5 +1,6 @@
-feat: add resolve_issue_interaction_flags helper (#661)
+feat: failure handling + workflow cores: split into two flags (#661)
 
-Shared CLI helper that resolves update_issue_labels and post_issue_comments
-from CLI flags > config.toml repo section > default (False). Uses git
-remote URL to find matching [coordinator.repos.*] config section.
+Rename update_labels → update_issue_labels in handle_workflow_failure(),
+handle_create_pr_failure(), and all workflow functions. Add
+post_issue_comments parameter that gates comment posting. Update all
+internal wrappers and call sites.

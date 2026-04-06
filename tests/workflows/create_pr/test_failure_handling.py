@@ -67,13 +67,15 @@ class TestCreatePrFailureHandling:
         """Test prerequisites failure calls failure handler."""
         mock_prereqs.return_value = False
 
-        result = run_create_pr_workflow(Path("/test"), "claude", update_labels=True)
+        result = run_create_pr_workflow(
+            Path("/test"), "claude", update_issue_labels=True
+        )
 
         assert result == 1
         mock_handle_failure.assert_called_once()
         call_kwargs = mock_handle_failure.call_args.kwargs
         assert call_kwargs["stage"] == "prerequisites"
-        assert call_kwargs["update_labels"] is True
+        assert call_kwargs["update_issue_labels"] is True
 
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
@@ -299,38 +301,42 @@ class TestCreatePrFailureHandling:
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
-    def test_comment_posted_even_when_update_labels_false(
+    def test_comment_posted_even_when_update_issue_labels_false(
         self,
         mock_prereqs: MagicMock,
         mock_validate: MagicMock,
         mock_handle_failure: MagicMock,
     ) -> None:
-        """Test failure handler is called even when update_labels=False."""
+        """Test failure handler is called even when update_issue_labels=False."""
         mock_prereqs.return_value = False
 
-        result = run_create_pr_workflow(Path("/test"), "claude", update_labels=False)
+        result = run_create_pr_workflow(
+            Path("/test"), "claude", update_issue_labels=False
+        )
 
         assert result == 1
         mock_handle_failure.assert_called_once()
         call_kwargs = mock_handle_failure.call_args.kwargs
-        assert call_kwargs["update_labels"] is False
+        assert call_kwargs["update_issue_labels"] is False
 
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
-    def test_label_not_set_when_update_labels_false(
+    def test_label_not_set_when_update_issue_labels_false(
         self,
         mock_prereqs: MagicMock,
         mock_validate: MagicMock,
         mock_handle_failure: MagicMock,
     ) -> None:
-        """Test update_labels=False is passed through to handler."""
+        """Test update_issue_labels=False is passed through to handler."""
         mock_validate.return_value = 123
         mock_prereqs.return_value = False
 
-        result = run_create_pr_workflow(Path("/test"), "claude", update_labels=False)
+        result = run_create_pr_workflow(
+            Path("/test"), "claude", update_issue_labels=False
+        )
 
         assert result == 1
         mock_handle_failure.assert_called_once()
         call_kwargs = mock_handle_failure.call_args.kwargs
-        assert call_kwargs["update_labels"] is False
+        assert call_kwargs["update_issue_labels"] is False

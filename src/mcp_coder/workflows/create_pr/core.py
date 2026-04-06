@@ -450,7 +450,8 @@ def run_create_pr_workflow(
     provider: str,
     mcp_config: str | None = None,
     execution_dir: Optional[Path] = None,
-    update_labels: bool = False,
+    update_issue_labels: bool = False,
+    post_issue_comments: bool = False,
 ) -> int:
     """Main workflow orchestration function - creates PR and cleans up repository.
 
@@ -459,7 +460,8 @@ def run_create_pr_workflow(
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional path to MCP configuration file
         execution_dir: Optional working directory for Claude subprocess
-        update_labels: If True, update GitHub issue labels on success
+        update_issue_labels: If True, update GitHub issue labels on success
+        post_issue_comments: If True, post comments on the issue on failure
 
     Returns:
         int: Exit code (0 for success, 1 for failure)
@@ -476,7 +478,7 @@ def run_create_pr_workflow(
     # it returns empty, causing label updates to fail. By validating early and caching
     # the issue number, we can still update labels after PR creation succeeds.
     cached_issue_number: Optional[int] = None
-    if update_labels:
+    if update_issue_labels:
         cached_issue_number = validate_branch_issue_linkage(project_dir)
         if cached_issue_number:
             logger.log(OUTPUT, "Branch linked to issue #%s", cached_issue_number)
@@ -495,7 +497,8 @@ def run_create_pr_workflow(
                 stage="prerequisites",
                 message="Prerequisites check failed",
                 project_dir=project_dir,
-                update_labels=update_labels,
+                update_issue_labels=update_issue_labels,
+                post_issue_comments=post_issue_comments,
                 elapsed_time=elapsed,
                 issue_number=cached_issue_number,
             )
@@ -515,7 +518,8 @@ def run_create_pr_workflow(
                 stage="summary_generation",
                 message=str(e),
                 project_dir=project_dir,
-                update_labels=update_labels,
+                update_issue_labels=update_issue_labels,
+                post_issue_comments=post_issue_comments,
                 elapsed_time=elapsed,
                 issue_number=cached_issue_number,
             )
@@ -532,7 +536,8 @@ def run_create_pr_workflow(
                 stage="push",
                 message=push_result.get("error", "Unknown push error"),
                 project_dir=project_dir,
-                update_labels=update_labels,
+                update_issue_labels=update_issue_labels,
+                post_issue_comments=post_issue_comments,
                 elapsed_time=elapsed,
                 issue_number=cached_issue_number,
             )
@@ -550,7 +555,8 @@ def run_create_pr_workflow(
                 stage="pr_creation",
                 message="Failed to create pull request",
                 project_dir=project_dir,
-                update_labels=update_labels,
+                update_issue_labels=update_issue_labels,
+                post_issue_comments=post_issue_comments,
                 elapsed_time=elapsed,
                 issue_number=cached_issue_number,
             )
@@ -577,7 +583,8 @@ def run_create_pr_workflow(
                 stage="cleanup",
                 message="Repository cleanup failed",
                 project_dir=project_dir,
-                update_labels=update_labels,
+                update_issue_labels=update_issue_labels,
+                post_issue_comments=post_issue_comments,
                 elapsed_time=elapsed,
                 issue_number=cached_issue_number,
                 pr_url=pr_url,
@@ -609,7 +616,8 @@ def run_create_pr_workflow(
                         stage="cleanup",
                         message=f"Failed to commit cleanup: {commit_result['error']}",
                         project_dir=project_dir,
-                        update_labels=update_labels,
+                        update_issue_labels=update_issue_labels,
+                        post_issue_comments=post_issue_comments,
                         elapsed_time=elapsed,
                         issue_number=cached_issue_number,
                         pr_url=pr_url,
@@ -639,7 +647,8 @@ def run_create_pr_workflow(
                         stage="cleanup",
                         message=f"Failed to push cleanup: {push_result['error']}",
                         project_dir=project_dir,
-                        update_labels=update_labels,
+                        update_issue_labels=update_issue_labels,
+                        post_issue_comments=post_issue_comments,
                         elapsed_time=elapsed,
                         issue_number=cached_issue_number,
                         pr_url=pr_url,
@@ -653,7 +662,7 @@ def run_create_pr_workflow(
             logger.log(OUTPUT, "No cleanup changes to commit")
 
         # Update GitHub issue label if requested
-        if update_labels:
+        if update_issue_labels:
             if cached_issue_number is None:
                 logger.warning(
                     "Skipping label update: branch was not linked to an issue"
@@ -694,7 +703,8 @@ def run_create_pr_workflow(
                     stage="unexpected",
                     message="Workflow exited unexpectedly",
                     project_dir=project_dir,
-                    update_labels=update_labels,
+                    update_issue_labels=update_issue_labels,
+                    post_issue_comments=post_issue_comments,
                     elapsed_time=elapsed,
                     issue_number=cached_issue_number,
                 )

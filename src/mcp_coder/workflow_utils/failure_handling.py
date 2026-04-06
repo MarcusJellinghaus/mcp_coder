@@ -69,20 +69,22 @@ def handle_workflow_failure(
     comment_body: str,
     project_dir: Path,
     from_label_id: str,
-    update_labels: bool = False,
+    update_issue_labels: bool = False,
+    post_issue_comments: bool = False,
     issue_number: int | None = None,
 ) -> None:
     """Handle workflow failure: log banner, set label, post comment.
 
-    Label update respects the ``update_labels`` flag.  The comment is
-    always posted regardless of ``update_labels``.
+    Label update respects the ``update_issue_labels`` flag.  The comment is
+    only posted when ``post_issue_comments`` is *True*.
 
     Args:
         failure: Structured failure information.
         comment_body: Pre-formatted comment body to post on the issue.
         project_dir: Path to the project git repository.
         from_label_id: Current workflow label ID to transition from.
-        update_labels: Whether to attempt a label transition.
+        update_issue_labels: Whether to attempt a label transition.
+        post_issue_comments: Whether to post a comment on the issue.
         issue_number: Caller-provided issue number; falls back to branch
             name extraction when *None*.
     """
@@ -106,8 +108,8 @@ def handle_workflow_failure(
             logger.warning("Failed to extract issue number from branch: %s", exc)
 
     # 3. Create shared IssueManager if needed for label update or comment
-    needs_label_update = update_labels
-    needs_comment = resolved_issue_number is not None
+    needs_label_update = update_issue_labels
+    needs_comment = post_issue_comments and resolved_issue_number is not None
     if needs_label_update or needs_comment:
         try:
             issue_manager = IssueManager(project_dir)
