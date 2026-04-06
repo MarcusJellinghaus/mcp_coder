@@ -546,7 +546,11 @@ def find_repo_section_by_url(repo_url: str) -> str | None:
     """
 
     def _normalize_url(url: str) -> str:
-        """Strip trailing .git and slash from URL."""
+        """Strip trailing .git and slash from URL.
+
+        Returns:
+            Normalized URL string.
+        """
         if url.endswith(".git"):
             url = url[:-4]
         return url.rstrip("/")

@@ -1,5 +1,5 @@
-Split test_user_config.py to fix file-size CI check
+fix: add Returns docstring section to _normalize_url for ruff DOC201
 
-Extract TestFindRepoSectionByUrl tests into a new
-test_user_config_repo_matching.py module, bringing the original
-file under the 750-line limit.
+The nested _normalize_url function in find_repo_section_by_url returned
+a str but lacked a Returns section in its docstring, triggering ruff's
+DOC201 rule in CI.
