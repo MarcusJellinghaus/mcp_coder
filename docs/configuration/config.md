@@ -326,11 +326,13 @@ Each repository needs its own nested section: `[coordinator.repos.repo_name]`
 
 **Note:** These are nested TOML sections using dot notation. The configuration system supports accessing nested sections like `coordinator.repos.mcp_coder` to retrieve values from the `[coordinator.repos.mcp_coder]` section
 
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| `repo_url` | string | Git repository HTTPS URL | Yes |
-| `executor_test_path` | string | Jenkins job path (folder/job-name) | Yes |
-| `github_credentials_id` | string | Jenkins GitHub credentials ID (see setup below) | Yes |
+| Field | Type | Description | Required | Default |
+|-------|------|-------------|----------|---------|
+| `repo_url` | string | Git repository HTTPS URL | Yes | — |
+| `executor_test_path` | string | Jenkins job path (folder/job-name) | Yes | — |
+| `github_credentials_id` | string | Jenkins GitHub credentials ID (see setup below) | Yes | — |
+| `update_issue_labels` | boolean | Update GitHub issue labels on workflow success/failure | No | `false` |
+| `post_issue_comments` | boolean | Post GitHub comments on workflow failure | No | `false` |
 
 **Example:**
 ```toml
@@ -338,6 +340,8 @@ Each repository needs its own nested section: `[coordinator.repos.repo_name]`
 repo_url = "https://github.com/myorg/my_project.git"
 executor_test_path = "MyProject/integration-tests"
 github_credentials_id = "github-pat-token"
+update_issue_labels = true
+post_issue_comments = true
 ```
 
 **Repository naming:**

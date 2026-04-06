@@ -261,7 +261,8 @@ mcp-coder implement [OPTIONS]
 - `--llm-method METHOD` - LLM provider method: `claude` (default) or `langchain`
 - `--mcp-config PATH` - Path to MCP configuration file
 - `--execution-dir PATH` - Working directory for Claude subprocess
-- `--update-labels` - Automatically update GitHub issue labels on successful completion
+- `--update-issue-labels` / `--no-update-issue-labels` - Update GitHub issue labels on success/failure (default: from config.toml, or false)
+- `--post-issue-comments` / `--no-post-issue-comments` - Post GitHub comments on workflow failure (default: from config.toml, or false)
 
 **Description:** Execute the implementation workflow based on the task tracker. Reads tasks from `pr_info/TASK_TRACKER.md` and implements them step by step.
 
@@ -270,8 +271,8 @@ mcp-coder implement [OPTIONS]
 # Run implementation workflow
 mcp-coder implement
 
-# Update GitHub labels on completion
-mcp-coder implement --update-labels
+# Update GitHub labels and post comments on failure
+mcp-coder implement --update-issue-labels --post-issue-comments
 
 # Use langchain provider with MCP config
 mcp-coder implement --llm-method langchain --mcp-config .mcp.linux.json
@@ -295,7 +296,8 @@ mcp-coder create-plan ISSUE_NUMBER [OPTIONS]
 - `--llm-method METHOD` - LLM provider method: `claude` (default) or `langchain`
 - `--mcp-config PATH` - Path to MCP configuration file
 - `--execution-dir PATH` - Working directory for Claude subprocess
-- `--update-labels` - Automatically update GitHub issue labels on successful completion
+- `--update-issue-labels` / `--no-update-issue-labels` - Update GitHub issue labels on success/failure (default: from config.toml, or false)
+- `--post-issue-comments` / `--no-post-issue-comments` - Post GitHub comments on workflow failure (default: from config.toml, or false)
 
 **Description:** Generate a detailed implementation plan for a GitHub issue, including step-by-step tasks and technical approach.
 
@@ -304,8 +306,8 @@ mcp-coder create-plan ISSUE_NUMBER [OPTIONS]
 # Create plan for issue #123
 mcp-coder create-plan 123
 
-# Create plan with label updates
-mcp-coder create-plan 456 --update-labels
+# Create plan with label updates and comments
+mcp-coder create-plan 456 --update-issue-labels --post-issue-comments
 
 # Use specific project directory
 mcp-coder create-plan 789 --project-dir /path/to/project
@@ -326,7 +328,8 @@ mcp-coder create-pr [OPTIONS]
 - `--llm-method METHOD` - LLM provider method: `claude` (default) or `langchain`
 - `--mcp-config PATH` - Path to MCP configuration file
 - `--execution-dir PATH` - Working directory for Claude subprocess
-- `--update-labels` - Automatically update GitHub issue labels on successful completion
+- `--update-issue-labels` / `--no-update-issue-labels` - Update GitHub issue labels on success/failure (default: from config.toml, or false)
+- `--post-issue-comments` / `--no-post-issue-comments` - Post GitHub comments on workflow failure (default: from config.toml, or false)
 
 **Description:** Create a pull request with AI-generated summary based on the changes made. Requires clean working directory and completed tasks.
 
@@ -341,8 +344,8 @@ mcp-coder create-pr [OPTIONS]
 # Create PR with auto-generated summary
 mcp-coder create-pr
 
-# Update labels after PR creation
-mcp-coder create-pr --update-labels
+# Update labels and post comments after PR creation
+mcp-coder create-pr --update-issue-labels --post-issue-comments
 ```
 
 ---
@@ -912,11 +915,11 @@ mcp-coder coordinator --repo repo_name --dry-run
 # 1. Create implementation plan
 mcp-coder create-plan 123
 
-# 2. Execute implementation
-mcp-coder implement --update-labels
+# 2. Execute implementation (with explicit flags)
+mcp-coder implement --update-issue-labels --post-issue-comments
 
 # 3. Create pull request
-mcp-coder create-pr --update-labels
+mcp-coder create-pr --update-issue-labels --post-issue-comments
 ```
 
 **Session Continuation:**

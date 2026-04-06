@@ -306,12 +306,16 @@ github_credentials_id = "github-general-pat"
 # executor_os: "windows" or "linux" (default: "linux", case-insensitive)
 # Use "windows" for Windows Jenkins executors, "linux" for Linux/container executors
 executor_os = "linux"
+update_issue_labels = true
+post_issue_comments = true
 
 [coordinator.repos.mcp_workspace]
 repo_url = "https://github.com/your-org/mcp-workspace.git"
 executor_job_path = "Tests/mcp-workspace-coordinator-test"
 github_credentials_id = "github-general-pat"
 executor_os = "linux"
+update_issue_labels = true
+post_issue_comments = true
 
 # Example Windows executor configuration:
 # [coordinator.repos.windows_project]
@@ -319,6 +323,8 @@ executor_os = "linux"
 # executor_job_path = "Windows/Executor/Test"
 # github_credentials_id = "github-general-pat"
 # executor_os = "windows"
+# update_issue_labels = true
+# post_issue_comments = true
 
 # Add more repositories as needed:
 # [coordinator.repos.your_repo_name]
