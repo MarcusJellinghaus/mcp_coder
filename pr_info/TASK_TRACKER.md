@@ -42,9 +42,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 5: CLI commands — use `resolve_issue_interaction_flags()` ([detail](./steps/step_5.md))
-- [ ] Implementation: tests + wire up shared helper in 3 CLI commands
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + wire up shared helper in 3 CLI commands
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: Coordinator — extend config + remove template flags ([detail](./steps/step_6.md))
 - [ ] Implementation: tests + extend `load_repo_config()`, remove `--update-labels` from templates

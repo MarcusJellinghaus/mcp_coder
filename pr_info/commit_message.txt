@@ -1,6 +1,5 @@
-feat: failure handling + workflow cores: split into two flags (#661)
+feat: CLI commands use resolve_issue_interaction_flags (#661)
 
-Rename update_labels → update_issue_labels in handle_workflow_failure(),
-handle_create_pr_failure(), and all workflow functions. Add
-post_issue_comments parameter that gates comment posting. Update all
-internal wrappers and call sites.
+Replace getattr(args, "update_labels", False) with shared
+resolve_issue_interaction_flags() helper in implement, create-pr,
+and create-plan CLI commands.

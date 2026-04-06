@@ -20,6 +20,7 @@ __all__ = [
     "_get_status_symbols",
     "log_command_startup",
     "parse_llm_method_from_args",
+    "resolve_issue_interaction_flags",
     "resolve_llm_method",
     "resolve_mcp_config_path",
     "resolve_execution_dir",
