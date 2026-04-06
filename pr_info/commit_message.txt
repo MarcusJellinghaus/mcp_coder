@@ -1,9 +1,9 @@
-chore: delete obsolete PyPI reinstall script (#640)
+feat: add shared pyproject.toml config reader (#640)
 
-Remove tools/reinstall.bat (non-editable PyPI install script) which is
-not part of the developer workflow and causes confusion alongside
-reinstall_local.bat.
+Add pyproject_config.py with typed functions for reading pyproject.toml:
+- GitHubInstallConfig dataclass for install-from-github section
+- get_github_install_config() reads [tool.mcp-coder.install-from-github]
+- get_formatter_config() reads [tool.black] and [tool.isort]
+- check_line_length_conflicts() detects black/isort line-length mismatches
 
-- Delete tools/reinstall.bat
-- Remove stale references in tools/reinstall_local.bat
-- Remove reinstall.bat row from docs/repository-setup.md tools table
+Full test coverage in tests/utils/test_pyproject_config.py.

@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `chore: delete obsolete PyPI reinstall script (#640)`
 
 ### Step 2: Create `pyproject_config.py` with tests ([detail](./steps/step_2.md))
-- [ ] Implementation: create `tests/utils/test_pyproject_config.py` and `src/mcp_coder/utils/pyproject_config.py` with `GitHubInstallConfig`, `get_github_install_config`, `get_formatter_config`, `check_line_length_conflicts`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat: add shared pyproject.toml config reader (#640)`
+- [x] Implementation: create `tests/utils/test_pyproject_config.py` and `src/mcp_coder/utils/pyproject_config.py` with `GitHubInstallConfig`, `get_github_install_config`, `get_formatter_config`, `check_line_length_conflicts`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat: add shared pyproject.toml config reader (#640)`
 
 ### Step 3: Refactor `config_reader.py` to thin wrapper ([detail](./steps/step_3.md))
 - [ ] Implementation: delegate `config_reader.py` to `pyproject_config.py`, refactor `formatters/__init__.py` to use `get_formatter_config`
