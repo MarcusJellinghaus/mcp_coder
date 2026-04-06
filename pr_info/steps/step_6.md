@@ -1,75 +1,96 @@
-# Step 6: CLI commands — use resolve_issue_interaction_flags()
+# Step 6: Coordinator — extend config + remove template flags
 
 ## References
 - See `pr_info/steps/summary.md` for overall architecture and design changes
 
 ## WHERE
-
-### Source files (3 files):
-- `src/mcp_coder/cli/commands/implement.py` — use `resolve_issue_interaction_flags()`
-- `src/mcp_coder/cli/commands/create_pr.py` — use `resolve_issue_interaction_flags()`
-- `src/mcp_coder/cli/commands/create_plan.py` — use `resolve_issue_interaction_flags()`
-
-### Test files (3 files):
-- `tests/cli/commands/test_implement.py`
-- `tests/cli/commands/test_create_pr.py`
-- `tests/cli/commands/test_create_plan.py`
+- `src/mcp_coder/cli/commands/coordinator/core.py` — extend `load_repo_config()`
+- `src/mcp_coder/cli/commands/coordinator/command_templates.py` — remove `--update-labels` from templates
+- `tests/cli/commands/coordinator/test_core.py` — update tests
+- Tests for command templates (if any exist, or add assertions)
 
 ## WHAT
 
-### CLI command changes (all three)
+### Changes to `load_repo_config()` in `core.py`
 
-Replace:
+**Update return type:** Change `dict[str, Optional[str]]` to `dict[str, str | bool | None]` since the new keys return `bool` values.
+
+Add two extra keys to the `get_config_values()` batch call:
+
 ```python
-update_labels = getattr(args, "update_labels", False)
-return run_*_workflow(..., update_labels)
+config = get_config_values(
+    [
+        (section, "repo_url", None),
+        (section, "executor_job_path", None),
+        (section, "github_credentials_id", None),
+        (section, "executor_os", None),
+        (section, "update_issue_labels", None),      # NEW
+        (section, "post_issue_comments", None),       # NEW
+    ]
+)
 ```
 
-With:
+Add to return dict:
 ```python
-from ..utils import resolve_issue_interaction_flags
-
-update_issue_labels, post_issue_comments = resolve_issue_interaction_flags(args, project_dir)
-return run_*_workflow(..., update_issue_labels, post_issue_comments)
+return {
+    "repo_url": repo_url,
+    "executor_job_path": executor_job_path,
+    "github_credentials_id": github_credentials_id,
+    "executor_os": executor_os,
+    "update_issue_labels": config[(section, "update_issue_labels")] == "True",
+    "post_issue_comments": config[(section, "post_issue_comments")] == "True",
+}
 ```
+
+Note: `get_config_values()` returns strings (TOML booleans become `"True"`/`"False"`). Compare with `== "True"` to get bool. Missing values return `None` which is `!= "True"` → `False` (correct default).
+
+### Changes to `command_templates.py`
+
+Remove `--update-labels` from all 6 command template strings:
+
+- `CREATE_PLAN_COMMAND_TEMPLATE` — remove `--update-labels`
+- `IMPLEMENT_COMMAND_TEMPLATE` — remove `--update-labels`
+- `CREATE_PR_COMMAND_TEMPLATE` — remove `--update-labels`
+- `CREATE_PLAN_COMMAND_WINDOWS` — remove `--update-labels`
+- `IMPLEMENT_COMMAND_WINDOWS` — remove `--update-labels`
+- `CREATE_PR_COMMAND_WINDOWS` — remove `--update-labels`
 
 ## HOW
-- Import `resolve_issue_interaction_flags` from `..utils` in each CLI command
-- Remove `getattr(args, "update_labels", False)` pattern
-- Pass two bools as keyword args to workflow functions
+- No new imports needed in core.py
+- Template changes are pure string edits (remove ` --update-labels` from each mcp-coder command line)
 
 ## ALGORITHM
-No new algorithm — wiring only.
+No algorithm — config extension and string removal.
 
 ## DATA
-- **CLI commands:** now pass `(update_issue_labels: bool, post_issue_comments: bool)` to workflows
+- `load_repo_config()` return type gains two bool keys: `update_issue_labels` and `post_issue_comments`
+- Both default to `False` when not present in config
 
 ## TESTS
 
-### Update CLI command tests:
+### Update `tests/cli/commands/coordinator/test_core.py`:
 
-In `test_implement.py`, `test_create_pr.py`, `test_create_plan.py`:
-- Change `args = argparse.Namespace(..., update_labels=False)` → `args = argparse.Namespace(..., update_issue_labels=None, post_issue_comments=None)`
-- Update `mock_run_workflow.assert_called_once_with(...)` assertions to expect the two resolved bools
-- Mock `resolve_issue_interaction_flags` to return `(False, False)` or `(True, True)` as needed
-- Add test for `update_issue_labels=True` being passed through correctly
+1. **`test_load_repo_config_includes_issue_interaction_flags`** — config has both `true` → returned dict has `update_issue_labels=True, post_issue_comments=True`
+2. **`test_load_repo_config_defaults_flags_when_missing`** — config has no flags → `update_issue_labels=False, post_issue_comments=False`
+
+### Template tests (assertions in existing or new test file):
+
+3. **`test_templates_do_not_contain_update_labels_flag`** — assert `--update-labels` not in any of the 6 template strings
 
 ## LLM PROMPT
 
 ```
 Read pr_info/steps/summary.md and pr_info/steps/step_6.md.
 
-Implement Step 6: update CLI commands to use resolve_issue_interaction_flags().
+Implement Step 6: extend coordinator config and clean up templates.
 
-1. Update tests FIRST:
-   - tests/cli/commands/test_implement.py — update args namespace, mock resolve_issue_interaction_flags
-   - tests/cli/commands/test_create_pr.py — same
-   - tests/cli/commands/test_create_plan.py — same
+1. Write/update tests FIRST:
+   - tests/cli/commands/coordinator/test_core.py — test load_repo_config returns new flags
+   - Add test asserting --update-labels is absent from all templates
 
 2. Modify source files:
-   - src/mcp_coder/cli/commands/implement.py — use resolve_issue_interaction_flags()
-   - src/mcp_coder/cli/commands/create_pr.py — same
-   - src/mcp_coder/cli/commands/create_plan.py — same
+   - src/mcp_coder/cli/commands/coordinator/core.py — extend load_repo_config() with 2 new keys
+   - src/mcp_coder/cli/commands/coordinator/command_templates.py — remove --update-labels from all 6 templates
 
 3. Run all code quality checks (pylint, pytest, mypy)
 4. Fix any issues until all checks pass
@@ -77,9 +98,10 @@ Implement Step 6: update CLI commands to use resolve_issue_interaction_flags().
 
 ## COMMIT MESSAGE
 ```
-feat: CLI commands use resolve_issue_interaction_flags (#661)
+feat: coordinator config keys + remove --update-labels from templates (#661)
 
-Replace getattr(args, "update_labels", False) with shared
-resolve_issue_interaction_flags() helper in implement, create-pr,
-and create-plan CLI commands.
+Extend load_repo_config() to include update_issue_labels and
+post_issue_comments (default False). Remove --update-labels flag
+from all 6 Jenkins command templates — executors now resolve
+settings from config.toml via repo URL matching.
 ```

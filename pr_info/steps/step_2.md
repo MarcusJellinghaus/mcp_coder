@@ -80,7 +80,7 @@ Implement Step 2: replace --update-labels with BooleanOptionalAction flags in pa
 5. Fix any issues until all checks pass
 
 NOTE: This step only changes parser definitions. CLI command tests (test_implement.py, etc.)
-construct argparse.Namespace manually and won't break until Step 6b changes the CLI command code.
+construct argparse.Namespace manually and won't break until Step 5 changes the CLI command code.
 All checks should stay green after this step.
 ```
 
