@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat: add shared pyproject.toml config reader (#640)`
 
 ### Step 3: Refactor `config_reader.py` to thin wrapper ([detail](./steps/step_3.md))
-- [ ] Implementation: delegate `config_reader.py` to `pyproject_config.py`, refactor `formatters/__init__.py` to use `get_formatter_config`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `refactor: delegate config_reader to pyproject_config (#640)`
+- [x] Implementation: delegate `config_reader.py` to `pyproject_config.py`, refactor `formatters/__init__.py` to use `get_formatter_config`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `refactor: delegate config_reader to pyproject_config (#640)`
 
 ### Step 4: Refactor `_build_github_install_section()` + regression test ([detail](./steps/step_4.md))
 - [ ] Implementation: create `tests/workflows/vscodeclaude/test_build_github_install_section.py`, refactor `workspace.py` to use `get_github_install_config()`

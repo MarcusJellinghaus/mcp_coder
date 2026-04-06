@@ -1,9 +1,8 @@
-feat: add shared pyproject.toml config reader (#640)
+refactor: delegate config_reader to pyproject_config (#640)
 
-Add pyproject_config.py with typed functions for reading pyproject.toml:
-- GitHubInstallConfig dataclass for install-from-github section
-- get_github_install_config() reads [tool.mcp-coder.install-from-github]
-- get_formatter_config() reads [tool.black] and [tool.isort]
-- check_line_length_conflicts() detects black/isort line-length mismatches
-
-Full test coverage in tests/utils/test_pyproject_config.py.
+- Replace config_reader.py with thin wrapper that delegates to
+  pyproject_config.get_formatter_config and re-exports
+  check_line_length_conflicts
+- Refactor formatters/__init__.py to use get_formatter_config instead
+  of direct tomllib reads, switch from print to logger.warning
+- All existing tests pass without modification
