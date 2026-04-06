@@ -1,5 +1,0 @@
-fix: add Returns docstring section to _normalize_url for ruff DOC201
-
-The nested _normalize_url function in find_repo_section_by_url returned
-a str but lacked a Returns section in its docstring, triggering ruff's
-DOC201 rule in CI.
