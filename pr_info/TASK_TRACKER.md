@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Config layer — add `find_repo_section_by_url()` ([detail](./steps/step_1.md))
-- [ ] Implementation: tests + production code in `user_config.py`
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + production code in `user_config.py`
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: CLI parsers — replace `--update-labels` with granular flags ([detail](./steps/step_2.md))
 - [ ] Implementation: tests + `BooleanOptionalAction` flags in `parsers.py`
