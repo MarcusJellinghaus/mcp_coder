@@ -1,14 +1,12 @@
 @echo off
 setlocal enabledelayedexpansion
 REM Reinstall mcp-coder package in development mode (editable install)
-REM For developers. End-users should use tools\reinstall.bat instead.
 REM Usage: call tools\reinstall_local.bat  (from project root)
 echo =============================================
 echo MCP-Coder Package Reinstallation (Developer)
 echo =============================================
 echo.
 echo NOTE: This installs in editable mode from local source.
-echo       End-users should use tools\reinstall.bat instead.
 echo.
 
 REM Determine project root (parent of tools directory)

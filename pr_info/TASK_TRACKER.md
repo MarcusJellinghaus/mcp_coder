@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Delete `tools/reinstall.bat` ([detail](./steps/step_1.md))
-- [ ] Implementation: delete file, remove stale references in `reinstall_local.bat` and `docs/repository-setup.md`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `chore: delete obsolete PyPI reinstall script (#640)`
+- [x] Implementation: delete file, remove stale references in `reinstall_local.bat` and `docs/repository-setup.md`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `chore: delete obsolete PyPI reinstall script (#640)`
 
 ### Step 2: Create `pyproject_config.py` with tests ([detail](./steps/step_2.md))
 - [ ] Implementation: create `tests/utils/test_pyproject_config.py` and `src/mcp_coder/utils/pyproject_config.py` with `GitHubInstallConfig`, `get_github_install_config`, `get_formatter_config`, `check_line_length_conflicts`

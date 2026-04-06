@@ -747,7 +747,6 @@ echo "Formatting complete!"
 
 | Script | Purpose | Category |
 |--------|---------|----------|
-| `reinstall.bat` | Quick `pip install -e .` | Optional convenience |
 | `checks2clipboard.bat` | Copy quality check output to clipboard | Optional, useful for LLM assistance |
 
 ### Performance Analysis Tools

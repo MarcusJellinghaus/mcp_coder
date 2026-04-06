@@ -1,0 +1,9 @@
+chore: delete obsolete PyPI reinstall script (#640)
+
+Remove tools/reinstall.bat (non-editable PyPI install script) which is
+not part of the developer workflow and causes confusion alongside
+reinstall_local.bat.
+
+- Delete tools/reinstall.bat
+- Remove stale references in tools/reinstall_local.bat
+- Remove reinstall.bat row from docs/repository-setup.md tools table
