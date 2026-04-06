@@ -1,9 +1,10 @@
-feat: print MCP server versions in launcher scripts (#640)
+docs: document config systems, update environments (#640)
 
-Add `mcp-workspace --version` and `mcp-tools-py --version` calls to all
-four launcher scripts (claude.bat, claude_local.bat, icoder.bat,
-icoder_local.bat) after MCP tool verification succeeds.
-
-Verified .mcp.json env var consistency: all env vars (MCP_CODER_VENV_PATH,
-MCP_CODER_PROJECT_DIR, VIRTUAL_ENV, MCP_CODER_VENV_DIR) are set by all
-four launchers before launch.
+- Update user_config.py module docstring to reference both config
+  systems (config.toml for user settings, pyproject.toml for project
+  settings)
+- Add Configuration Systems section to docs/configuration/config.md
+  with comparison table of config.toml vs pyproject.toml
+- Update docs/environments/environments.md: add version printing note
+  for launcher scripts, document reinstall_local.bat reading GitHub
+  deps from pyproject.toml via read_github_deps.py

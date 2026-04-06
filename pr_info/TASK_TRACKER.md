@@ -52,9 +52,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat: print MCP server versions in launcher scripts (#640)`
 
 ### Step 7: Documentation updates + config system docstrings ([detail](./steps/step_7.md))
-- [ ] Implementation: update `user_config.py` docstring, add config systems section to `docs/configuration/config.md`, update `docs/environments/environments.md`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `docs: document config systems, update environments (#640)`
+- [x] Implementation: update `user_config.py` docstring, add config systems section to `docs/configuration/config.md`, update `docs/environments/environments.md`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `docs: document config systems, update environments (#640)`
 
 ## Pull Request
 - [ ] PR review: verify all steps complete and quality checks pass

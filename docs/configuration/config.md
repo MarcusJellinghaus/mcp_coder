@@ -13,6 +13,20 @@ Complete configuration documentation for MCP Coder, covering user configuration 
 | **Repository Setup** | [Repository Setup Guide](../repository-setup.md) |
 | **CLI Commands** | [CLI Reference](../cli-reference.md) |
 
+## Configuration Systems
+
+MCP Coder uses two separate configuration files for different purposes:
+
+| File | Scope | Module | Contents |
+|------|-------|--------|----------|
+| `config.toml` | Per-user | `utils/user_config.py` | API tokens, Jenkins credentials, coordinator settings, LLM provider |
+| `pyproject.toml` | Per-project | `utils/pyproject_config.py` | Formatter settings (`[tool.black]`, `[tool.isort]`), GitHub dependency overrides (`[tool.mcp-coder.install-from-github]`) |
+
+**Priority:** Environment variables > config file values (for both systems).
+
+`config.toml` lives in the user's home directory and is never committed to git.
+`pyproject.toml` lives in the project root and is committed to git.
+
 ## Configuration File Locations
 
 ### Windows

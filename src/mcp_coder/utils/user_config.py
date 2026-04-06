@@ -1,7 +1,12 @@
 """User configuration utilities for MCP Coder.
 
-This module provides functions to read user configuration from TOML files
-located in user-specific configuration directories.
+This module reads user-level configuration from config.toml files located
+in user-specific configuration directories (e.g. ~/.mcp_coder/config.toml).
+
+    config.toml  — user config (API tokens, Jenkins, coordinator settings)
+    pyproject.toml — project config (formatter settings, GitHub deps)
+
+For project-level configuration from pyproject.toml, see pyproject_config.py.
 """
 
 import logging
