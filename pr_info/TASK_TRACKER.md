@@ -47,9 +47,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat: dynamic GitHub deps in reinstall_local.bat (#640)`
 
 ### Step 6: Add version printing to all four launchers ([detail](./steps/step_6.md))
-- [ ] Implementation: add `mcp-workspace --version` and `mcp-tools-py --version` to `claude.bat`, `claude_local.bat`, `icoder.bat`, `icoder_local.bat`; verify `.mcp.json` env var consistency
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat: print MCP server versions in launcher scripts (#640)`
+- [x] Implementation: add `mcp-workspace --version` and `mcp-tools-py --version` to `claude.bat`, `claude_local.bat`, `icoder.bat`, `icoder_local.bat`; verify `.mcp.json` env var consistency
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat: print MCP server versions in launcher scripts (#640)`
 
 ### Step 7: Documentation updates + config system docstrings ([detail](./steps/step_7.md))
 - [ ] Implementation: update `user_config.py` docstring, add config systems section to `docs/configuration/config.md`, update `docs/environments/environments.md`

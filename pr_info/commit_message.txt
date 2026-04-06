@@ -1,9 +1,9 @@
-feat: dynamic GitHub deps in reinstall_local.bat (#640)
+feat: print MCP server versions in launcher scripts (#640)
 
-Add tools/read_github_deps.py bootstrap helper that reads GitHub
-dependency overrides from pyproject.toml and prints uv pip install
-commands. Update reinstall_local.bat to:
+Add `mcp-workspace --version` and `mcp-tools-py --version` calls to all
+four launcher scripts (claude.bat, claude_local.bat, icoder.bat,
+icoder_local.bat) after MCP tool verification succeeds.
 
-- Replace hardcoded GitHub URLs with dynamic reading via
-  read_github_deps.py
-- Replace wrong-venv guard with silent deactivate at startup
+Verified .mcp.json env var consistency: all env vars (MCP_CODER_VENV_PATH,
+MCP_CODER_PROJECT_DIR, VIRTUAL_ENV, MCP_CODER_VENV_DIR) are set by all
+four launchers before launch.
