@@ -114,7 +114,7 @@ class TestHandleWorkflowFailure:
             comment_body="Test comment",
             project_dir=Path("/fake"),
             from_label_id="pr_creating",
-            update_labels=True,
+            update_issue_labels=True,
         )
 
         mock_mgr.update_workflow_label.assert_called_once_with(
@@ -141,7 +141,7 @@ class TestHandleWorkflowFailure:
             comment_body="Test comment",
             project_dir=Path("/fake"),
             from_label_id="pr_creating",
-            update_labels=False,
+            update_issue_labels=False,
         )
 
         mock_mgr.update_workflow_label.assert_not_called()
@@ -149,14 +149,14 @@ class TestHandleWorkflowFailure:
     @patch("mcp_coder.workflow_utils.failure_handling.IssueManager")
     @patch("mcp_coder.workflow_utils.failure_handling.get_current_branch_name")
     @patch("mcp_coder.workflow_utils.failure_handling.extract_issue_number_from_branch")
-    def test_posts_comment_always(
+    def test_posts_comment_when_post_issue_comments_true(
         self,
         mock_extract: MagicMock,
         mock_branch: MagicMock,
         mock_issue_mgr_cls: MagicMock,
         failure: WorkflowFailure,
     ) -> None:
-        """Comment is posted even when update_labels=False."""
+        """Comment is posted when post_issue_comments=True."""
         mock_branch.return_value = "42-feature"
         mock_extract.return_value = 42
         mock_mgr = MagicMock()
@@ -167,7 +167,8 @@ class TestHandleWorkflowFailure:
             comment_body="Failure details here",
             project_dir=Path("/fake"),
             from_label_id="pr_creating",
-            update_labels=False,
+            update_issue_labels=False,
+            post_issue_comments=True,
         )
 
         mock_mgr.add_comment.assert_called_once_with(42, "Failure details here")
@@ -175,14 +176,14 @@ class TestHandleWorkflowFailure:
     @patch("mcp_coder.workflow_utils.failure_handling.IssueManager")
     @patch("mcp_coder.workflow_utils.failure_handling.get_current_branch_name")
     @patch("mcp_coder.workflow_utils.failure_handling.extract_issue_number_from_branch")
-    def test_posts_comment_with_provided_issue_number(
+    def test_posts_comment_with_provided_issue_number_when_enabled(
         self,
         mock_extract: MagicMock,
         mock_branch: MagicMock,
         mock_issue_mgr_cls: MagicMock,
         failure: WorkflowFailure,
     ) -> None:
-        """When issue_number is provided, it's used directly (no branch extraction)."""
+        """When issue_number is provided and posting enabled, comment is posted."""
         mock_mgr = MagicMock()
         mock_issue_mgr_cls.return_value = mock_mgr
 
@@ -191,6 +192,7 @@ class TestHandleWorkflowFailure:
             comment_body="Comment body",
             project_dir=Path("/fake"),
             from_label_id="pr_creating",
+            post_issue_comments=True,
             issue_number=99,
         )
 
@@ -219,6 +221,7 @@ class TestHandleWorkflowFailure:
             comment_body="Comment body",
             project_dir=Path("/fake"),
             from_label_id="pr_creating",
+            post_issue_comments=True,
         )
 
         mock_branch.assert_called_once_with(Path("/fake"))
@@ -246,7 +249,7 @@ class TestHandleWorkflowFailure:
             comment_body="Test",
             project_dir=Path("/fake"),
             from_label_id="pr_creating",
-            update_labels=True,
+            update_issue_labels=True,
         )
 
     @patch("mcp_coder.workflow_utils.failure_handling.IssueManager")
@@ -271,4 +274,80 @@ class TestHandleWorkflowFailure:
             comment_body="Test",
             project_dir=Path("/fake"),
             from_label_id="pr_creating",
+            post_issue_comments=True,
         )
+
+    @patch("mcp_coder.workflow_utils.failure_handling.IssueManager")
+    @patch("mcp_coder.workflow_utils.failure_handling.get_current_branch_name")
+    @patch("mcp_coder.workflow_utils.failure_handling.extract_issue_number_from_branch")
+    def test_skips_comment_when_post_issue_comments_false(
+        self,
+        mock_extract: MagicMock,
+        mock_branch: MagicMock,
+        mock_issue_mgr_cls: MagicMock,
+        failure: WorkflowFailure,
+    ) -> None:
+        """Comment is NOT posted when post_issue_comments=False."""
+        mock_branch.return_value = "42-feature"
+        mock_extract.return_value = 42
+        mock_mgr = MagicMock()
+        mock_issue_mgr_cls.return_value = mock_mgr
+
+        handle_workflow_failure(
+            failure=failure,
+            comment_body="Failure details here",
+            project_dir=Path("/fake"),
+            from_label_id="pr_creating",
+            post_issue_comments=False,
+        )
+
+        mock_mgr.add_comment.assert_not_called()
+
+    @patch("mcp_coder.workflow_utils.failure_handling.IssueManager")
+    @patch("mcp_coder.workflow_utils.failure_handling.get_current_branch_name")
+    @patch("mcp_coder.workflow_utils.failure_handling.extract_issue_number_from_branch")
+    def test_skips_comment_when_post_issue_comments_default(
+        self,
+        mock_extract: MagicMock,
+        mock_branch: MagicMock,
+        mock_issue_mgr_cls: MagicMock,
+        failure: WorkflowFailure,
+    ) -> None:
+        """Comment is NOT posted when post_issue_comments defaults to False."""
+        mock_branch.return_value = "42-feature"
+        mock_extract.return_value = 42
+        mock_mgr = MagicMock()
+        mock_issue_mgr_cls.return_value = mock_mgr
+
+        handle_workflow_failure(
+            failure=failure,
+            comment_body="Failure details here",
+            project_dir=Path("/fake"),
+            from_label_id="pr_creating",
+        )
+
+        mock_mgr.add_comment.assert_not_called()
+
+    @patch("mcp_coder.workflow_utils.failure_handling.IssueManager")
+    @patch("mcp_coder.workflow_utils.failure_handling.get_current_branch_name")
+    @patch("mcp_coder.workflow_utils.failure_handling.extract_issue_number_from_branch")
+    def test_no_issue_manager_when_both_flags_false(
+        self,
+        mock_extract: MagicMock,
+        mock_branch: MagicMock,
+        mock_issue_mgr_cls: MagicMock,
+        failure: WorkflowFailure,
+    ) -> None:
+        """IssueManager is not created when both flags are False and no issue."""
+        mock_branch.return_value = None
+
+        handle_workflow_failure(
+            failure=failure,
+            comment_body="Test",
+            project_dir=Path("/fake"),
+            from_label_id="pr_creating",
+            update_issue_labels=False,
+            post_issue_comments=False,
+        )
+
+        mock_issue_mgr_cls.assert_not_called()

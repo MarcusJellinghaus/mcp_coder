@@ -14,6 +14,7 @@ from ..utils import (
     log_command_startup,
     parse_llm_method_from_args,
     resolve_execution_dir,
+    resolve_issue_interaction_flags,
     resolve_llm_method,
     resolve_mcp_config_path,
 )
@@ -54,12 +55,19 @@ def execute_implement(args: argparse.Namespace) -> int:
             args.mcp_config, project_dir=args.project_dir
         )
 
-        # Extract update_labels flag from args
-        update_labels = getattr(args, "update_labels", False)
+        # Resolve issue interaction flags (CLI > config > default)
+        update_issue_labels, post_issue_comments = resolve_issue_interaction_flags(
+            args, project_dir
+        )
 
         # Run the implement workflow
         return run_implement_workflow(
-            project_dir, provider, mcp_config, execution_dir, update_labels
+            project_dir,
+            provider,
+            mcp_config,
+            execution_dir,
+            update_issue_labels,
+            post_issue_comments,
         )
 
     except ValueError as e:

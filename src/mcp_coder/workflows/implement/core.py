@@ -160,7 +160,8 @@ def _format_failure_comment(failure: WorkflowFailure, diff_stat: str) -> str:
 def _handle_workflow_failure(
     failure: WorkflowFailure,
     project_dir: Path,
-    update_labels: bool = False,
+    update_issue_labels: bool = False,
+    post_issue_comments: bool = False,
 ) -> None:
     """Handle workflow failure: set label, post comment, log banner."""
     diff_stat = get_diff_stat(project_dir)
@@ -175,7 +176,8 @@ def _handle_workflow_failure(
         comment_body=comment_body,
         project_dir=project_dir,
         from_label_id="implementing",
-        update_labels=update_labels,
+        update_issue_labels=update_issue_labels,
+        post_issue_comments=post_issue_comments,
     )
 
 
@@ -1014,7 +1016,8 @@ def run_implement_workflow(
     provider: str,
     mcp_config: Optional[str] = None,
     execution_dir: Optional[Path] = None,
-    update_labels: bool = False,
+    update_issue_labels: bool = False,
+    post_issue_comments: bool = False,
 ) -> int:
     """Main workflow orchestration function - processes all implementation tasks in sequence.
 
@@ -1023,7 +1026,8 @@ def run_implement_workflow(
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional path to MCP configuration file
         execution_dir: Optional working directory for Claude subprocess
-        update_labels: If True, update GitHub issue labels on success/failure
+        update_issue_labels: If True, update GitHub issue labels on success/failure
+        post_issue_comments: If True, post comments on the issue on failure
 
     Returns:
         int: Exit code (0 for success, 1 for error)
@@ -1081,7 +1085,8 @@ def run_implement_workflow(
                     elapsed_time=time.time() - start_time,
                 ),
                 project_dir,
-                update_labels=update_labels,
+                update_issue_labels=update_issue_labels,
+                post_issue_comments=post_issue_comments,
             )
             reached_terminal_state = True
             return 1
@@ -1122,7 +1127,8 @@ def run_implement_workflow(
                             elapsed_time=time.time() - start_time,
                         ),
                         project_dir,
-                        update_labels=update_labels,
+                        update_issue_labels=update_issue_labels,
+                        post_issue_comments=post_issue_comments,
                     )
                     reached_terminal_state = True
                     return 1
@@ -1139,7 +1145,8 @@ def run_implement_workflow(
                             elapsed_time=time.time() - start_time,
                         ),
                         project_dir,
-                        update_labels=update_labels,
+                        update_issue_labels=update_issue_labels,
+                        post_issue_comments=post_issue_comments,
                     )
                     reached_terminal_state = True
                     return 1
@@ -1182,7 +1189,8 @@ def run_implement_workflow(
                         elapsed_time=time.time() - start_time,
                     ),
                     project_dir,
-                    update_labels=update_labels,
+                    update_issue_labels=update_issue_labels,
+                    post_issue_comments=post_issue_comments,
                 )
                 reached_terminal_state = True
                 return 1
@@ -1206,7 +1214,8 @@ def run_implement_workflow(
                             elapsed_time=time.time() - start_time,
                         ),
                         project_dir,
-                        update_labels=update_labels,
+                        update_issue_labels=update_issue_labels,
+                        post_issue_comments=post_issue_comments,
                     )
                     reached_terminal_state = True
                     return 1
@@ -1224,7 +1233,8 @@ def run_implement_workflow(
                             elapsed_time=time.time() - start_time,
                         ),
                         project_dir,
-                        update_labels=update_labels,
+                        update_issue_labels=update_issue_labels,
+                        post_issue_comments=post_issue_comments,
                     )
                     reached_terminal_state = True
                     return 1
@@ -1265,7 +1275,8 @@ def run_implement_workflow(
                         elapsed_time=time.time() - start_time,
                     ),
                     project_dir,
-                    update_labels=update_labels,
+                    update_issue_labels=update_issue_labels,
+                    post_issue_comments=post_issue_comments,
                 )
                 reached_terminal_state = True
                 return 1
@@ -1273,7 +1284,7 @@ def run_implement_workflow(
             logger.error("Could not determine current branch - skipping CI check")
 
         # Step 6: Success label transition
-        if update_labels:
+        if update_issue_labels:
             try:
                 issue_manager = IssueManager(project_dir)
                 issue_manager.update_workflow_label(
@@ -1329,7 +1340,8 @@ def run_implement_workflow(
                         elapsed_time=elapsed,
                     ),
                     project_dir,
-                    update_labels=update_labels,
+                    update_issue_labels=update_issue_labels,
+                    post_issue_comments=post_issue_comments,
                 )
             except Exception:  # pylint: disable=broad-exception-caught
                 logger.error("Safety net failure handling also failed", exc_info=True)

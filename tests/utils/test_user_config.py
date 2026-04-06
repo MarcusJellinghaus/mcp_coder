@@ -530,6 +530,12 @@ class TestCreateDefaultConfig:
         assert "mcp_coder" in config["coordinator"]["repos"]
         assert "mcp_workspace" in config["coordinator"]["repos"]
 
+        # Check new issue interaction keys exist in repo sections
+        for repo_name in ("mcp_coder", "mcp_workspace"):
+            repo = config["coordinator"]["repos"][repo_name]
+            assert "update_issue_labels" in repo
+            assert "post_issue_comments" in repo
+
     def test_create_default_config_content_has_example_repos(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -554,12 +560,16 @@ class TestCreateDefaultConfig:
         assert "repo_url" in mcp_coder_repo
         assert "executor_job_path" in mcp_coder_repo
         assert "github_credentials_id" in mcp_coder_repo
+        assert "update_issue_labels" in mcp_coder_repo
+        assert "post_issue_comments" in mcp_coder_repo
 
         # Check mcp_workspace repo config
         filesystem_repo = config["coordinator"]["repos"]["mcp_workspace"]
         assert "repo_url" in filesystem_repo
         assert "executor_job_path" in filesystem_repo
         assert "github_credentials_id" in filesystem_repo
+        assert "update_issue_labels" in filesystem_repo
+        assert "post_issue_comments" in filesystem_repo
 
     def test_create_default_config_has_llm_section(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

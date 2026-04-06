@@ -4,13 +4,15 @@ This module provides utilities that are shared across CLI commands
 for parameter parsing and conversion.
 """
 
+import argparse
 import logging
 import os
 import sys
 from pathlib import Path
 
 from ..llm.session import parse_llm_method
-from ..utils.user_config import get_config_values
+from ..utils.git_operations.remotes import get_github_repository_url
+from ..utils.user_config import find_repo_section_by_url, get_config_values
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +20,7 @@ __all__ = [
     "_get_status_symbols",
     "log_command_startup",
     "parse_llm_method_from_args",
+    "resolve_issue_interaction_flags",
     "resolve_llm_method",
     "resolve_mcp_config_path",
     "resolve_execution_dir",
@@ -50,6 +53,50 @@ def log_command_startup(command_name: str, project_dir: Path | None = None) -> N
         )
     else:
         logger.info("mcp-coder v%s — %s", __version__, command_name)
+
+
+def resolve_issue_interaction_flags(
+    args: argparse.Namespace, project_dir: Path
+) -> tuple[bool, bool]:
+    """Resolve update_issue_labels and post_issue_comments settings.
+
+    Priority: CLI flag (if not None) > config.toml repo section > default (False).
+
+    Looks up the local git remote URL, finds matching [coordinator.repos.*]
+    section in config.toml, and merges with CLI flags.
+
+    Args:
+        args: Parsed CLI args with update_issue_labels and post_issue_comments
+              (both bool | None from BooleanOptionalAction)
+        project_dir: Project directory for git remote URL detection
+
+    Returns:
+        Tuple of (update_issue_labels: bool, post_issue_comments: bool)
+    """
+    cli_labels: bool | None = getattr(args, "update_issue_labels", None)
+    cli_comments: bool | None = getattr(args, "post_issue_comments", None)
+
+    # Get config values (default False)
+    cfg_labels = False
+    cfg_comments = False
+    repo_url = get_github_repository_url(project_dir)
+    if repo_url:
+        section = find_repo_section_by_url(repo_url)
+        if section:
+            config = get_config_values(
+                [
+                    (section, "update_issue_labels", None),
+                    (section, "post_issue_comments", None),
+                ]
+            )
+            cfg_labels = config[(section, "update_issue_labels")] == "True"
+            cfg_comments = config[(section, "post_issue_comments")] == "True"
+
+    # Merge: CLI wins if not None, else config, else False
+    return (
+        cli_labels if cli_labels is not None else cfg_labels,
+        cli_comments if cli_comments is not None else cfg_comments,
+    )
 
 
 def _get_status_symbols() -> dict[str, str]:

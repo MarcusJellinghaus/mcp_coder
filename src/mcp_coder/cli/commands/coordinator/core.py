@@ -34,7 +34,7 @@ from .workflow_constants import WORKFLOW_MAPPING
 logger = logging.getLogger(__name__)
 
 
-def load_repo_config(repo_name: str) -> dict[str, Optional[str]]:
+def load_repo_config(repo_name: str) -> dict[str, str | bool | None]:
     """Load repository configuration from config file.
 
     Args:
@@ -53,6 +53,8 @@ def load_repo_config(repo_name: str) -> dict[str, Optional[str]]:
             (section, "executor_job_path", None),
             (section, "github_credentials_id", None),
             (section, "executor_os", None),
+            (section, "update_issue_labels", None),
+            (section, "post_issue_comments", None),
         ]
     )
 
@@ -67,16 +69,18 @@ def load_repo_config(repo_name: str) -> dict[str, Optional[str]]:
     else:
         executor_os = "linux"  # Default
 
-    # Always return dict with field values (may be None except executor_os)
+    # Always return dict with field values (may be None except executor_os and bool flags)
     return {
         "repo_url": repo_url,
         "executor_job_path": executor_job_path,
         "github_credentials_id": github_credentials_id,
         "executor_os": executor_os,
+        "update_issue_labels": config[(section, "update_issue_labels")] == "True",
+        "post_issue_comments": config[(section, "post_issue_comments")] == "True",
     }
 
 
-def validate_repo_config(repo_name: str, config: dict[str, Optional[str]]) -> None:
+def validate_repo_config(repo_name: str, config: dict[str, str | bool | None]) -> None:
     """Validate repository configuration has all required fields.
 
     Args:

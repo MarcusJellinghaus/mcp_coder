@@ -37,6 +37,7 @@ class TestExecuteImplement:
     This follows test-first development - tests are written before implementation.
     """
 
+    @patch("mcp_coder.cli.commands.implement.resolve_issue_interaction_flags")
     @patch("mcp_coder.cli.commands.implement.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
     @patch("mcp_coder.cli.commands.implement.run_implement_workflow")
@@ -49,6 +50,7 @@ class TestExecuteImplement:
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
         mock_resolve_exec: Mock,
+        mock_resolve_flags: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test successful implement execution."""
@@ -59,6 +61,7 @@ class TestExecuteImplement:
         mock_resolve_exec.return_value = str(execution_dir)
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
+        mock_resolve_flags.return_value = (False, False)
         mock_run_workflow.return_value = 0
 
         args = argparse.Namespace(
@@ -66,7 +69,8 @@ class TestExecuteImplement:
             llm_method="claude",
             execution_dir=None,
             mcp_config=None,
-            update_labels=False,
+            update_issue_labels=None,
+            post_issue_comments=None,
         )
 
         result = execute_implement(args)
@@ -75,10 +79,12 @@ class TestExecuteImplement:
         mock_resolve_dir.assert_called_once_with("/test/project")
         mock_resolve_exec.assert_called_once_with(None)
         mock_parse_llm.assert_called_once_with("claude")
+        mock_resolve_flags.assert_called_once_with(args, project_dir)
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, str(execution_dir), False
+            project_dir, "claude", None, str(execution_dir), False, False
         )
 
+    @patch("mcp_coder.cli.commands.implement.resolve_issue_interaction_flags")
     @patch("mcp_coder.cli.commands.implement.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
     @patch("mcp_coder.cli.commands.implement.run_implement_workflow")
@@ -91,6 +97,7 @@ class TestExecuteImplement:
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
         mock_resolve_exec: Mock,
+        mock_resolve_flags: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test implement execution with workflow failure."""
@@ -101,6 +108,7 @@ class TestExecuteImplement:
         mock_resolve_exec.return_value = str(execution_dir)
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
+        mock_resolve_flags.return_value = (False, False)
         mock_run_workflow.return_value = 1
 
         args = argparse.Namespace(
@@ -108,7 +116,8 @@ class TestExecuteImplement:
             llm_method="claude",
             execution_dir=None,
             mcp_config=None,
-            update_labels=False,
+            update_issue_labels=None,
+            post_issue_comments=None,
         )
 
         result = execute_implement(args)
@@ -118,7 +127,7 @@ class TestExecuteImplement:
         mock_resolve_exec.assert_called_once_with(None)
         mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, str(execution_dir), False
+            project_dir, "claude", None, str(execution_dir), False, False
         )
 
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
@@ -134,7 +143,8 @@ class TestExecuteImplement:
             llm_method="claude",
             execution_dir=None,
             mcp_config=None,
-            update_labels=False,
+            update_issue_labels=None,
+            post_issue_comments=None,
         )
 
         with pytest.raises(SystemExit) as exc_info:
@@ -143,6 +153,7 @@ class TestExecuteImplement:
         assert exc_info.value.code == 1
         mock_resolve_dir.assert_called_once_with("/invalid/path")
 
+    @patch("mcp_coder.cli.commands.implement.resolve_issue_interaction_flags")
     @patch("mcp_coder.cli.commands.implement.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
     @patch("mcp_coder.cli.commands.implement.run_implement_workflow")
@@ -157,6 +168,7 @@ class TestExecuteImplement:
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
         mock_resolve_exec: Mock,
+        mock_resolve_flags: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test implement execution with None project directory (uses current dir)."""
@@ -168,6 +180,7 @@ class TestExecuteImplement:
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_resolve_mcp.return_value = None
+        mock_resolve_flags.return_value = (False, False)
         mock_run_workflow.return_value = 0
 
         args = argparse.Namespace(
@@ -175,7 +188,8 @@ class TestExecuteImplement:
             llm_method="claude",
             execution_dir=None,
             mcp_config=None,
-            update_labels=False,
+            update_issue_labels=None,
+            post_issue_comments=None,
         )
 
         result = execute_implement(args)
@@ -185,9 +199,10 @@ class TestExecuteImplement:
         mock_resolve_exec.assert_called_once_with(None)
         mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, str(execution_dir), False
+            project_dir, "claude", None, str(execution_dir), False, False
         )
 
+    @patch("mcp_coder.cli.commands.implement.resolve_issue_interaction_flags")
     @patch("mcp_coder.cli.commands.implement.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
     @patch("mcp_coder.cli.commands.implement.run_implement_workflow")
@@ -200,6 +215,7 @@ class TestExecuteImplement:
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
         mock_resolve_exec: Mock,
+        mock_resolve_flags: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test implement execution with different LLM methods."""
@@ -208,6 +224,7 @@ class TestExecuteImplement:
         execution_dir = str(Path.cwd())
         mock_resolve_dir.return_value = project_dir
         mock_resolve_exec.return_value = execution_dir
+        mock_resolve_flags.return_value = (False, False)
         mock_run_workflow.return_value = 0
 
         # Test with claude
@@ -218,13 +235,14 @@ class TestExecuteImplement:
             llm_method="claude",
             execution_dir=None,
             mcp_config=None,
-            update_labels=False,
+            update_issue_labels=None,
+            post_issue_comments=None,
         )
         result = execute_implement(args_cli)
         assert result == 0
         mock_parse_llm.assert_called_with("claude")
         mock_run_workflow.assert_called_with(
-            project_dir, "claude", None, execution_dir, False
+            project_dir, "claude", None, execution_dir, False, False
         )
 
         # Reset mocks
@@ -232,22 +250,25 @@ class TestExecuteImplement:
         mock_run_workflow.reset_mock()
         mock_parse_llm.reset_mock()
         mock_resolve_llm.reset_mock()
+        mock_resolve_flags.reset_mock()
 
         # Test with langchain
         mock_resolve_llm.return_value = ("langchain", "cli argument")
         mock_parse_llm.return_value = "langchain"
+        mock_resolve_flags.return_value = (False, False)
         args_lc = argparse.Namespace(
             project_dir="/test/project",
             llm_method="langchain",
             execution_dir=None,
             mcp_config=None,
-            update_labels=False,
+            update_issue_labels=None,
+            post_issue_comments=None,
         )
         result = execute_implement(args_lc)
         assert result == 0
         mock_parse_llm.assert_called_with("langchain")
         mock_run_workflow.assert_called_with(
-            project_dir, "langchain", None, execution_dir, False
+            project_dir, "langchain", None, execution_dir, False, False
         )
 
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
@@ -275,7 +296,8 @@ class TestExecuteImplement:
             llm_method="claude",
             execution_dir=None,
             mcp_config=None,
-            update_labels=False,
+            update_issue_labels=None,
+            post_issue_comments=None,
         )
 
         with caplog.at_level(logging.DEBUG):
@@ -309,7 +331,8 @@ class TestExecuteImplement:
             llm_method="claude",
             execution_dir=None,
             mcp_config=None,
-            update_labels=False,
+            update_issue_labels=None,
+            post_issue_comments=None,
         )
 
         with caplog.at_level(logging.DEBUG):
@@ -318,26 +341,29 @@ class TestExecuteImplement:
         assert result == 1
         assert "Operation cancelled by user." in caplog.text
 
+    @patch("mcp_coder.cli.commands.implement.resolve_issue_interaction_flags")
     @patch("mcp_coder.cli.commands.implement.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
     @patch("mcp_coder.cli.commands.implement.run_implement_workflow")
     @patch("mcp_coder.cli.commands.implement.resolve_llm_method")
     @patch("mcp_coder.cli.commands.implement.parse_llm_method_from_args")
-    def test_execute_implement_passes_update_labels_true(
+    def test_execute_implement_passes_update_issue_labels_true(
         self,
         mock_parse_llm: Mock,
         mock_resolve_llm: Mock,
         mock_run_workflow: Mock,
         mock_resolve_dir: Mock,
         mock_resolve_exec: Mock,
+        mock_resolve_flags: Mock,
     ) -> None:
-        """Test that update_labels=True is forwarded to the workflow."""
+        """Test that update_issue_labels=True is forwarded to the workflow."""
         project_dir = Path("/test/project")
         execution_dir = str(Path.cwd())
         mock_resolve_dir.return_value = project_dir
         mock_resolve_exec.return_value = execution_dir
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
+        mock_resolve_flags.return_value = (True, True)
         mock_run_workflow.return_value = 0
 
         args = argparse.Namespace(
@@ -345,14 +371,16 @@ class TestExecuteImplement:
             llm_method="claude",
             execution_dir=None,
             mcp_config=None,
-            update_labels=True,
+            update_issue_labels=True,
+            post_issue_comments=True,
         )
 
         result = execute_implement(args)
 
         assert result == 0
+        mock_resolve_flags.assert_called_once_with(args, project_dir)
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, execution_dir, True
+            project_dir, "claude", None, execution_dir, True, True
         )
 
 
@@ -418,6 +446,7 @@ class TestImplementCommandError:
 class TestImplementExecutionDir:
     """Tests for execution_dir handling in implement command."""
 
+    @patch("mcp_coder.cli.commands.implement.resolve_issue_interaction_flags")
     @patch("mcp_coder.cli.commands.implement.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
     @patch("mcp_coder.cli.commands.implement.run_implement_workflow")
@@ -430,6 +459,7 @@ class TestImplementExecutionDir:
         mock_run_workflow: Mock,
         mock_resolve_project: Mock,
         mock_resolve_exec: Mock,
+        mock_resolve_flags: Mock,
     ) -> None:
         """Test default execution_dir should use current working directory."""
         project_dir = Path("/test/project")
@@ -438,6 +468,7 @@ class TestImplementExecutionDir:
         mock_resolve_exec.return_value = str(execution_dir)
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
+        mock_resolve_flags.return_value = (False, False)
         mock_run_workflow.return_value = 0
 
         args = argparse.Namespace(
@@ -445,7 +476,8 @@ class TestImplementExecutionDir:
             execution_dir=None,  # No explicit execution_dir
             llm_method="claude",
             mcp_config=None,
-            update_labels=False,
+            update_issue_labels=None,
+            post_issue_comments=None,
         )
 
         result = execute_implement(args)
@@ -453,9 +485,10 @@ class TestImplementExecutionDir:
         assert result == 0
         mock_resolve_exec.assert_called_once_with(None)
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, str(execution_dir), False
+            project_dir, "claude", None, str(execution_dir), False, False
         )
 
+    @patch("mcp_coder.cli.commands.implement.resolve_issue_interaction_flags")
     @patch("mcp_coder.cli.commands.implement.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
     @patch("mcp_coder.cli.commands.implement.run_implement_workflow")
@@ -468,6 +501,7 @@ class TestImplementExecutionDir:
         mock_run_workflow: Mock,
         mock_resolve_project: Mock,
         mock_resolve_exec: Mock,
+        mock_resolve_flags: Mock,
         tmp_path: Path,
     ) -> None:
         """Test explicit absolute execution_dir should be validated and used."""
@@ -479,6 +513,7 @@ class TestImplementExecutionDir:
         mock_resolve_exec.return_value = str(execution_dir)
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
+        mock_resolve_flags.return_value = (False, False)
         mock_run_workflow.return_value = 0
 
         args = argparse.Namespace(
@@ -486,7 +521,8 @@ class TestImplementExecutionDir:
             execution_dir=str(execution_dir),
             llm_method="claude",
             mcp_config=None,
-            update_labels=False,
+            update_issue_labels=None,
+            post_issue_comments=None,
         )
 
         result = execute_implement(args)
@@ -494,7 +530,7 @@ class TestImplementExecutionDir:
         assert result == 0
         mock_resolve_exec.assert_called_once_with(str(execution_dir))
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, str(execution_dir), False
+            project_dir, "claude", None, str(execution_dir), False, False
         )
 
     @patch("mcp_coder.cli.commands.implement.resolve_execution_dir")
@@ -515,7 +551,8 @@ class TestImplementExecutionDir:
             execution_dir="/nonexistent/invalid/path",
             llm_method="claude",
             mcp_config=None,
-            update_labels=False,
+            update_issue_labels=None,
+            post_issue_comments=None,
         )
 
         with caplog.at_level(logging.DEBUG):

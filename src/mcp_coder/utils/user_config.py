@@ -306,12 +306,16 @@ github_credentials_id = "github-general-pat"
 # executor_os: "windows" or "linux" (default: "linux", case-insensitive)
 # Use "windows" for Windows Jenkins executors, "linux" for Linux/container executors
 executor_os = "linux"
+update_issue_labels = true
+post_issue_comments = true
 
 [coordinator.repos.mcp_workspace]
 repo_url = "https://github.com/your-org/mcp-workspace.git"
 executor_job_path = "Tests/mcp-workspace-coordinator-test"
 github_credentials_id = "github-general-pat"
 executor_os = "linux"
+update_issue_labels = true
+post_issue_comments = true
 
 # Example Windows executor configuration:
 # [coordinator.repos.windows_project]
@@ -319,6 +323,8 @@ executor_os = "linux"
 # executor_job_path = "Windows/Executor/Test"
 # github_credentials_id = "github-general-pat"
 # executor_os = "windows"
+# update_issue_labels = true
+# post_issue_comments = true
 
 # Add more repositories as needed:
 # [coordinator.repos.your_repo_name]
@@ -525,6 +531,40 @@ def verify_config() -> dict[str, Any]:
         )
 
     return {"entries": entries, "has_error": False}
+
+
+def find_repo_section_by_url(repo_url: str) -> str | None:
+    """Scan all [coordinator.repos.*] sections for matching repo_url.
+
+    Normalizes URLs before comparison (strips trailing .git and slash).
+
+    Args:
+        repo_url: Repository URL to match (e.g., "https://github.com/org/repo")
+
+    Returns:
+        Section name like "coordinator.repos.mcp_coder", or None if no match.
+    """
+
+    def _normalize_url(url: str) -> str:
+        """Strip trailing .git and slash from URL.
+
+        Returns:
+            Normalized URL string.
+        """
+        if url.endswith(".git"):
+            url = url[:-4]
+        return url.rstrip("/")
+
+    normalized_input = _normalize_url(repo_url)
+    config = load_config()
+    repos = config.get("coordinator", {}).get("repos", {})
+    for repo_name, repo_data in repos.items():
+        if not isinstance(repo_data, dict):
+            continue
+        config_url = repo_data.get("repo_url", "")
+        if _normalize_url(config_url) == normalized_input:
+            return f"coordinator.repos.{repo_name}"
+    return None
 
 
 # Module-level logger for configuration functions

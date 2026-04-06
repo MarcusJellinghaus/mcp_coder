@@ -117,7 +117,8 @@ def handle_create_pr_failure(
     stage: str,
     message: str,
     project_dir: Path,
-    update_labels: bool,
+    update_issue_labels: bool,
+    post_issue_comments: bool = False,
     elapsed_time: float | None = None,
     issue_number: int | None = None,
     pr_url: str | None = None,
@@ -144,6 +145,7 @@ def handle_create_pr_failure(
         comment_body=comment,
         project_dir=project_dir,
         from_label_id="pr_creating",
-        update_labels=update_labels,
+        update_issue_labels=update_issue_labels,
+        post_issue_comments=post_issue_comments,
         issue_number=issue_number,
     )

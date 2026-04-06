@@ -538,7 +538,8 @@ def run_create_plan_workflow(
     provider: str,
     mcp_config: Optional[str] = None,
     execution_dir: Optional[Path] = None,
-    update_labels: bool = False,
+    update_issue_labels: bool = False,
+    post_issue_comments: bool = False,
 ) -> int:
     """Main workflow orchestration function - creates implementation plan for GitHub issue.
 
@@ -548,7 +549,8 @@ def run_create_plan_workflow(
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional path to MCP configuration file
         execution_dir: Optional working directory for Claude subprocess
-        update_labels: If True, update GitHub issue labels on success
+        update_issue_labels: If True, update GitHub issue labels on success
+        post_issue_comments: If True, post comments on the issue (unused currently)
 
     Returns:
         int: Exit code (0 for success, 1 for error)
@@ -634,7 +636,7 @@ def run_create_plan_workflow(
         logger.info("Successfully pushed changes to remote")
 
     # Update GitHub issue label if requested
-    if update_labels:
+    if update_issue_labels:
         logger.info("Updating GitHub issue label...")
         try:
             issue_manager = IssueManager(project_dir)
