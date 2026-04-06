@@ -59,6 +59,13 @@ echo [OK] Package and dev dependencies installed (editable)
 
 echo.
 echo [3/7] Overriding dependencies with GitHub versions...
+REM Validate read_github_deps.py succeeds before parsing its output
+"!VENV_SCRIPTS!\python.exe" tools\read_github_deps.py > nul 2>&1
+if !ERRORLEVEL! NEQ 0 (
+    echo [FAIL] read_github_deps.py failed!
+    "!VENV_SCRIPTS!\python.exe" tools\read_github_deps.py
+    exit /b 1
+)
 REM Read GitHub dependency overrides from pyproject.toml
 for /f "delims=" %%C in ('"!VENV_SCRIPTS!\python.exe" tools\read_github_deps.py') do (
     echo   %%C

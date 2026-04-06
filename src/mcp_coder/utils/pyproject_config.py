@@ -32,8 +32,11 @@ def get_github_install_config(project_dir: Path) -> GitHubInstallConfig:
     if not path.exists():
         return GitHubInstallConfig(packages=[], packages_no_deps=[])
 
-    with open(path, "rb") as f:
-        data = tomllib.load(f)
+    try:
+        with open(path, "rb") as f:
+            data = tomllib.load(f)
+    except (tomllib.TOMLDecodeError, OSError):
+        return GitHubInstallConfig(packages=[], packages_no_deps=[])
 
     gh = data.get("tool", {}).get("mcp-coder", {}).get("install-from-github", {})
     return GitHubInstallConfig(

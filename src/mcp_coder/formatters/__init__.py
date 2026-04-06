@@ -65,6 +65,10 @@ def format_code(
 def _check_line_length_conflict(project_root: Path) -> None:
     """Warn about most common config conflict identified in analysis (~10 lines).
 
+    Applies tool defaults (88) so we catch the common case where only one tool
+    has an explicit setting. check_line_length_conflicts() only warns when both
+    are explicitly configured.
+
     Args:
         project_root: Root directory to check for pyproject.toml
     """
