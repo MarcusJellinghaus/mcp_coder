@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: CLI parsers — replace `--update-labels` with granular flags ([detail](./steps/step_2.md))
-- [ ] Implementation: tests + `BooleanOptionalAction` flags in `parsers.py`
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + `BooleanOptionalAction` flags in `parsers.py`
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: CLI utils — add `resolve_issue_interaction_flags()` ([detail](./steps/step_3.md))
 - [ ] Implementation: tests + production code in `cli/utils.py`

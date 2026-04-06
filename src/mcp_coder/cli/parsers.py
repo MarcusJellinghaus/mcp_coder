@@ -202,9 +202,16 @@ def add_implement_parser(subparsers: Any) -> None:
         help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
     )
     implement_parser.add_argument(
-        "--update-labels",
-        action="store_true",
-        help="Automatically update GitHub issue labels on success/failure",
+        "--update-issue-labels",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Update GitHub issue labels on success/failure (default: from config)",
+    )
+    implement_parser.add_argument(
+        "--post-issue-comments",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Post GitHub comments on workflow failure (default: from config)",
     )
 
 
@@ -243,9 +250,16 @@ def add_create_plan_parser(subparsers: Any) -> None:
         help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
     )
     create_plan_parser.add_argument(
-        "--update-labels",
-        action="store_true",
-        help="Automatically update GitHub issue labels on successful completion",
+        "--update-issue-labels",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Update GitHub issue labels on success/failure (default: from config)",
+    )
+    create_plan_parser.add_argument(
+        "--post-issue-comments",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Post GitHub comments on workflow failure (default: from config)",
     )
 
 
@@ -281,9 +295,16 @@ def add_create_pr_parser(subparsers: Any) -> None:
         help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
     )
     create_pr_parser.add_argument(
-        "--update-labels",
-        action="store_true",
-        help="Automatically update GitHub issue labels on successful completion",
+        "--update-issue-labels",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Update GitHub issue labels on success/failure (default: from config)",
+    )
+    create_pr_parser.add_argument(
+        "--post-issue-comments",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Post GitHub comments on workflow failure (default: from config)",
     )
 
 

@@ -1,5 +1,8 @@
-feat: add find_repo_section_by_url to user_config (#661)
+feat: replace --update-labels with granular CLI flags (#661)
 
-Add helper that scans [coordinator.repos.*] sections in config.toml
-to find a repo section matching a given URL. Normalizes URLs by
-stripping trailing .git and slash before comparison.
+Replace --update-labels (store_true) with two BooleanOptionalAction flags:
+- --update-issue-labels / --no-update-issue-labels
+- --post-issue-comments / --no-post-issue-comments
+
+All default to None (three-state), enabling CLI > config > default priority.
+Breaking change: --update-labels is removed with no alias.
