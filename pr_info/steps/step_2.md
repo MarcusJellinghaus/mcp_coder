@@ -79,10 +79,9 @@ Implement Step 2: replace --update-labels with BooleanOptionalAction flags in pa
 4. Run all code quality checks (pylint, pytest, mypy)
 5. Fix any issues until all checks pass
 
-NOTE: This step will cause test failures in test_implement.py, test_create_pr.py, test_create_plan.py
-because they reference args.update_labels. Those will be fixed in Step 6. For now, just ensure
-the parser tests pass and the parsers themselves are correct. Use -k to run only relevant tests
-if needed.
+NOTE: This step only changes parser definitions. CLI command tests (test_implement.py, etc.)
+construct argparse.Namespace manually and won't break until Step 6b changes the CLI command code.
+All checks should stay green after this step.
 ```
 
 ## COMMIT MESSAGE

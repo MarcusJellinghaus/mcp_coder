@@ -52,6 +52,10 @@ Update existing tests in `tests/workflows/create_pr/test_failure_handling.py`:
 2. Add `post_issue_comments=True` where tests verify comment posting behavior
 3. Verify the mock of `handle_workflow_failure` receives both renamed/new kwargs
 
+**Note:** The assertions in `test_failure_handling.py` that check `call_kwargs["update_labels"]`
+from `core.py` call sites won't break in this step (mocks intercept at the module level).
+Those assertions update in step 6a when the call sites themselves change kwarg names.
+
 ## LLM PROMPT
 
 ```

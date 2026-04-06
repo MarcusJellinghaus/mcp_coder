@@ -90,6 +90,7 @@ handle_workflow_failure(update_issue_labels=..., post_issue_comments=...)
 | 3 | `resolve_issue_interaction_flags()` in cli/utils.py + tests | CLI: add resolve_issue_interaction_flags helper |
 | 4 | `failure_handling.py`: rename + add `post_issue_comments` gating + tests | Failure handling: split into two flags |
 | 5 | `create_pr/helpers.py`: rename + add param + tests | Create-pr helpers: update failure params |
-| 6 | Workflow cores: rename params + pass both flags + update CLI commands + tests | Workflows + CLI commands: wire up both flags |
+| 6a | Workflow cores: rename params + add `post_issue_comments` + update internal wrappers + tests | Workflows: rename update_labels, add post_issue_comments |
+| 6b | CLI commands: use `resolve_issue_interaction_flags()` + tests | CLI commands: use resolve_issue_interaction_flags |
 | 7 | Coordinator: extend `load_repo_config()` + remove `--update-labels` from templates + tests | Coordinator: config keys + remove template flags |
 | 8 | Default config template + documentation | Docs: update config template and references |
