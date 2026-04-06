@@ -268,10 +268,7 @@ class TestAPIExportsAndImports:
 class TestLineLengthConflictIntegration:
     """Test line-length conflict integration (1 test)."""
 
-    @patch("builtins.print")
-    def test_format_code_shows_line_length_conflict_warning(
-        self, mock_print: Mock
-    ) -> None:
+    def test_format_code_shows_line_length_conflict_warning(self, caplog: Any) -> None:
         """Test that format_code() shows warning when Black/isort line lengths differ."""
         with tempfile.TemporaryDirectory() as temp_dir:
             project_root = Path(temp_dir)
@@ -299,17 +296,18 @@ line_length = 88
                     # Import and call format_code
                     from mcp_coder.formatters import format_code
 
-                    format_code(project_root)
+                    with caplog.at_level(
+                        logging.WARNING, logger="mcp_coder.formatters"
+                    ):
+                        format_code(project_root)
 
-                    # Verify warning was printed
-                    warning_calls = [
-                        call
-                        for call in mock_print.call_args_list
-                        if "Line length mismatch" in str(call)
+                    # Verify warning was logged
+                    warning_records = [
+                        r for r in caplog.records if "line-length mismatch" in r.message
                     ]
-                    assert len(warning_calls) > 0
+                    assert len(warning_records) > 0
 
                     # Check specific warning content
-                    warning_text = str(mock_print.call_args_list)
-                    assert "Black=100" in warning_text
+                    warning_text = warning_records[0].message
+                    assert "black=100" in warning_text
                     assert "isort=88" in warning_text
