@@ -23,7 +23,9 @@ from .task_tracker import (
     TaskTrackerError,
     TaskTrackerFileNotFoundError,
     TaskTrackerSectionNotFoundError,
+    TaskTrackerStatus,
     get_incomplete_tasks,
+    get_task_counts,
     has_incomplete_work,
     is_task_done,
 )
@@ -46,9 +48,11 @@ __all__ = [
     "handle_workflow_failure",
     # Task tracker operations
     "get_incomplete_tasks",
+    "get_task_counts",
     "has_incomplete_work",
     "is_task_done",
     "TaskInfo",
+    "TaskTrackerStatus",
     # Exception types
     "TaskTrackerError",
     "TaskTrackerFileNotFoundError",

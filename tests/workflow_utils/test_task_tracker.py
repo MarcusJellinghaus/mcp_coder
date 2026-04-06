@@ -11,6 +11,7 @@ from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerError,
     TaskTrackerFileNotFoundError,
     TaskTrackerSectionNotFoundError,
+    TaskTrackerStatus,
     _find_implementation_section,
     _get_incomplete_tasks,
     _normalize_task_name,
@@ -18,6 +19,7 @@ from mcp_coder.workflow_utils.task_tracker import (
     _read_task_tracker,
     get_incomplete_tasks,
     get_step_progress,
+    get_task_counts,
     has_incomplete_work,
     is_task_done,
     validate_task_tracker,
@@ -1672,3 +1674,79 @@ class TestTaskTrackerTemplate:
 
             # Call validate_task_tracker() - should not raise
             validate_task_tracker(temp_dir)
+
+
+# ============================================================================
+# TaskTrackerStatus enum tests
+# ============================================================================
+
+
+class TestTaskTrackerStatusEnum:
+    """Tests for the TaskTrackerStatus enum."""
+
+    def test_task_tracker_status_enum_values(self) -> None:
+        """Verify all 4 enum values exist and are strings."""
+        assert TaskTrackerStatus.COMPLETE == "COMPLETE"
+        assert TaskTrackerStatus.INCOMPLETE == "INCOMPLETE"
+        assert TaskTrackerStatus.N_A == "N_A"
+        assert TaskTrackerStatus.ERROR == "ERROR"
+        assert len(TaskTrackerStatus) == 4
+
+    def test_task_tracker_status_is_str(self) -> None:
+        """Verify TaskTrackerStatus members are strings."""
+        for status in TaskTrackerStatus:
+            assert isinstance(status, str)
+
+
+# ============================================================================
+# get_task_counts() tests
+# ============================================================================
+
+
+class TestGetTaskCounts:
+    """Tests for the get_task_counts() function."""
+
+    def test_get_task_counts_all_complete(self) -> None:
+        """Tracker with all [x] returns (N, N)."""
+        content = create_test_tracker_content(
+            [("Task A", True), ("Task B", True), ("Task C", True)]
+        )
+        with TemporaryDirectory() as tmpdir:
+            Path(tmpdir, "TASK_TRACKER.md").write_text(content, encoding="utf-8")
+            total, completed = get_task_counts(tmpdir)
+            assert total == 3
+            assert completed == 3
+
+    def test_get_task_counts_some_incomplete(self) -> None:
+        """Mixed tasks return (total, completed) where completed < total."""
+        content = create_test_tracker_content(
+            [("Task A", True), ("Task B", False), ("Task C", True), ("Task D", False)]
+        )
+        with TemporaryDirectory() as tmpdir:
+            Path(tmpdir, "TASK_TRACKER.md").write_text(content, encoding="utf-8")
+            total, completed = get_task_counts(tmpdir)
+            assert total == 4
+            assert completed == 2
+
+    def test_get_task_counts_empty_section(self) -> None:
+        """Tasks section with no checkboxes returns (0, 0)."""
+        content = "# Tracker\n\n## Tasks\n\nNo tasks here.\n\n## Pull Request\n"
+        with TemporaryDirectory() as tmpdir:
+            Path(tmpdir, "TASK_TRACKER.md").write_text(content, encoding="utf-8")
+            total, completed = get_task_counts(tmpdir)
+            assert total == 0
+            assert completed == 0
+
+    def test_get_task_counts_file_not_found(self) -> None:
+        """Raises TaskTrackerFileNotFoundError when file missing."""
+        with TemporaryDirectory() as tmpdir:
+            with pytest.raises(TaskTrackerFileNotFoundError):
+                get_task_counts(tmpdir)
+
+    def test_get_task_counts_section_not_found(self) -> None:
+        """Raises TaskTrackerSectionNotFoundError when Tasks section missing."""
+        content = "# Tracker\n\n## Some Other Section\n\nNo tasks section.\n"
+        with TemporaryDirectory() as tmpdir:
+            Path(tmpdir, "TASK_TRACKER.md").write_text(content, encoding="utf-8")
+            with pytest.raises(TaskTrackerSectionNotFoundError):
+                get_task_counts(tmpdir)

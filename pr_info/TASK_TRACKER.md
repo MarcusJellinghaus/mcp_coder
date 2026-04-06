@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Add `TaskTrackerStatus` enum and `get_task_counts()` to task_tracker.py
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Update `BranchStatusReport` and `_collect_task_status()`, add `CIStatus` enum, fix all test references
 - [ ] Implementation (tests + production code)

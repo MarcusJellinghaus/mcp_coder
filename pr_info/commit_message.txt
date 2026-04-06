@@ -1,0 +1,11 @@
+feat(task-tracker): add TaskTrackerStatus enum and get_task_counts()
+
+Part of #676 — provides richer task status reporting. The enum
+replaces boolean task status, and get_task_counts() exposes
+total/completed counts for formatted output.
+
+Changes:
+- Add TaskTrackerStatus(str, Enum) with COMPLETE/INCOMPLETE/N_A/ERROR values
+- Add get_task_counts() returning (total, completed) tuple
+- Export new symbols from workflow_utils.__init__
+- Add 8 tests covering enum values, count scenarios, and error cases
