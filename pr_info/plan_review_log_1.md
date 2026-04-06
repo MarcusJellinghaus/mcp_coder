@@ -54,13 +54,40 @@
 **Findings**: None — both fixes verified correct, formatting clean.
 **Status**: no changes needed
 
+## Round 4 — 2026-04-06
+**Findings**:
+- [CRITICAL] Steps 4→5 (old numbering) break mypy between commits — `helpers.py` calls `handle_workflow_failure(update_labels=...)` which would be a wrong keyword after step 4 renames the parameter
+- [ACCEPT] Summary "Before" says comments are posted "always" — actually conditional on issue number, just not gated by a flag
+- [ACCEPT] Step 7 `load_repo_config` return type `dict[str, Optional[str]]` needs updating to `dict[str, str | bool | None]` for new bool values
+- [SKIP] `create_pr/core.py` backward-compat aliases — function references, signature-independent
+- [SKIP] `load_repo_config` returning unused keys — acceptable for config validation
+
+**Decisions**:
+- Accept: Merge steps 4+5 into single step 4 (failure_handling.py + create_pr/helpers.py)
+- Accept: Fix summary "Before" wording
+- Accept: Add return type note to step 7
+
+**User decisions**:
+- Q: Merge steps 4+5? → **A: Agreed**
+
+**Changes**:
+- `step_4.md`: Merged old steps 4+5 (failure_handling + create_pr/helpers)
+- `step_5.md`: Deleted old step 5, replaced with old step 6a (workflow cores) renumbered
+- `step_6.md`: Replaced with old step 6b (CLI commands) renumbered
+- `step_6b.md`: Deleted (content moved to step_6.md)
+- `step_7.md`: Added return type note
+- `summary.md`: Fixed "Before" wording, updated step table (8 steps → 8 files, 7 steps)
+
+**Status**: changes applied, proceeding to round 5
+
 ## Final Status
 
-Review complete. 3 rounds, 2 rounds with changes. Plan is ready for approval.
+Review complete. 4 rounds, 3 rounds with changes. Plan is ready for approval.
 
 Changes across all rounds:
 - `pr_info/steps/step_2.md` — fixed inaccurate NOTE
-- `pr_info/steps/step_5.md` — added test ownership clarification
-- `pr_info/steps/step_6.md` — converted to step 6a, added implementation detail
-- `pr_info/steps/step_6b.md` — new file for CLI command step
-- `pr_info/steps/summary.md` — updated step table with 6a/6b split
+- `pr_info/steps/step_4.md` — merged old steps 4+5 (failure handling + create-pr helpers)
+- `pr_info/steps/step_5.md` — renumbered from old step 6a (workflow cores)
+- `pr_info/steps/step_6.md` — renumbered from old step 6b (CLI commands)
+- `pr_info/steps/step_7.md` — added return type note
+- `pr_info/steps/summary.md` — fixed wording, updated step table

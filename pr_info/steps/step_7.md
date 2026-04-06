@@ -42,6 +42,8 @@ return {
 
 Note: `get_config_values()` returns strings (TOML booleans become `"True"`/`"False"`). Compare with `== "True"` to get bool. Missing values return `None` which is `!= "True"` → `False` (correct default).
 
+**Return type:** The current annotation `dict[str, Optional[str]]` must be updated to `dict[str, str | bool | None]` since the new keys return `bool` values.
+
 ### Changes to `command_templates.py`
 
 Remove `--update-labels` from all 6 command template strings:

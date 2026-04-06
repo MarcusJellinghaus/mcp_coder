@@ -9,7 +9,7 @@ Replace the single `--update-labels` CLI flag with two independent, granular con
 ### Before
 - Single `--update-labels` boolean flag (`store_true`) on `implement`, `create-plan`, `create-pr` CLI commands
 - Coordinator templates hardcode `--update-labels` in Jenkins command strings
-- `handle_workflow_failure()` always posts GitHub comments regardless of `update_labels` flag
+- `handle_workflow_failure()` posts GitHub comments whenever an issue number is resolved (not gated by any flag)
 - No per-repo configuration for issue interaction behavior
 - Single `update_labels: bool` parameter flows through workflows → failure handling
 
@@ -88,9 +88,8 @@ handle_workflow_failure(update_issue_labels=..., post_issue_comments=...)
 | 1 | `find_repo_section_by_url()` in user_config.py + tests | Config layer: add find_repo_section_by_url |
 | 2 | CLI parsers: replace `--update-labels` with two `BooleanOptionalAction` flags + tests | CLI: replace --update-labels with granular flags |
 | 3 | `resolve_issue_interaction_flags()` in cli/utils.py + tests | CLI: add resolve_issue_interaction_flags helper |
-| 4 | `failure_handling.py`: rename + add `post_issue_comments` gating + tests | Failure handling: split into two flags |
-| 5 | `create_pr/helpers.py`: rename + add param + tests | Create-pr helpers: update failure params |
-| 6a | Workflow cores: rename params + add `post_issue_comments` + update internal wrappers + tests | Workflows: rename update_labels, add post_issue_comments |
-| 6b | CLI commands: use `resolve_issue_interaction_flags()` + tests | CLI commands: use resolve_issue_interaction_flags |
+| 4 | `failure_handling.py` + `create_pr/helpers.py`: rename + add `post_issue_comments` gating + tests | Failure handling + create-pr helpers: split into two flags |
+| 5 | Workflow cores: rename params + add `post_issue_comments` + update internal wrappers + tests | Workflows: rename update_labels, add post_issue_comments |
+| 6 | CLI commands: use `resolve_issue_interaction_flags()` + tests | CLI commands: use resolve_issue_interaction_flags |
 | 7 | Coordinator: extend `load_repo_config()` + remove `--update-labels` from templates + tests | Coordinator: config keys + remove template flags |
 | 8 | Default config template + documentation | Docs: update config template and references |
