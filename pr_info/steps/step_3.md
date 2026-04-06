@@ -16,19 +16,14 @@
 Replace the boolean-based icon/text with status-aware logic:
 
 ```python
-# Icon mapping based on status and blocker context
-# N/A has two icons: ➖ (non-blocking) or ⚠️ (blocking — steps exist)
+# Icon mapping based on status and tasks_is_blocking
 tasks_icon_map = {
     TaskTrackerStatus.COMPLETE: "✅",
     TaskTrackerStatus.INCOMPLETE: "❌",
     TaskTrackerStatus.ERROR: "⚠️",
 }
-# For N_A, determine if blocking (steps files exist → reason will hint at this)
 if self.tasks_status == TaskTrackerStatus.N_A:
-    # Blocking N/A reasons contain keywords from step-exists scenarios
-    blocking_keywords = ["implementation plan exists", "no Tasks section", "tracker empty", "tracker incomplete"]
-    is_blocking = any(kw in self.tasks_reason.lower() for kw in blocking_keywords)
-    tasks_icon = "⚠️" if is_blocking else "➖"
+    tasks_icon = "⚠️" if self.tasks_is_blocking else "➖"
 else:
     tasks_icon = tasks_icon_map.get(self.tasks_status, "❓")
 
@@ -49,40 +44,22 @@ tasks_line = f"Tasks={self.tasks_status.value} ({self.tasks_reason})"
 ```python
 tasks_status = report_data.get("tasks_status")
 tasks_reason = report_data.get("tasks_reason", "")
+tasks_is_blocking = report_data.get("tasks_is_blocking", False)
 
 if tasks_status == TaskTrackerStatus.INCOMPLETE:
     recommendations.append(f"Complete remaining tasks ({tasks_reason})")
-elif tasks_status == TaskTrackerStatus.N_A:
-    # N/A is a blocker only when implementation plan exists
-    blocking_keywords = ["implementation plan exists", "no Tasks section", "tracker empty", "tracker incomplete"]
-    is_blocking = any(kw in tasks_reason.lower() for kw in blocking_keywords)
-    if is_blocking:
-        recommendations.append(f"Fix task tracker: {tasks_reason}")
+elif tasks_status == TaskTrackerStatus.N_A and tasks_is_blocking:
+    recommendations.append(f"Fix task tracker: {tasks_reason}")
 elif tasks_status == TaskTrackerStatus.ERROR:
     recommendations.append(f"Fix task tracker error: {tasks_reason}")
 
 # Update the "ready to merge" check
-tasks_ok = tasks_status in (TaskTrackerStatus.COMPLETE, TaskTrackerStatus.N_A)
-# For N/A, only "ok" if non-blocking
-if tasks_status == TaskTrackerStatus.N_A:
-    blocking_keywords = [...]
-    tasks_ok = not any(kw in tasks_reason.lower() for kw in blocking_keywords)
+tasks_ok = not tasks_is_blocking
 ```
-
-### Pseudocode (blocker detection helper)
-
-```
-BLOCKING_KEYWORDS = ["implementation plan exists", "no tasks section", "tracker empty", "tracker incomplete"]
-
-def _is_blocking_na(reason: str) -> bool:
-    return any(kw in reason.lower() for kw in BLOCKING_KEYWORDS)
-```
-
-This is a small private helper to avoid duplicating the keyword list across formatters and recommendations.
 
 ## HOW
 
-- Add `_is_blocking_na(reason: str) -> bool` private helper near top of module
+- Use `self.tasks_is_blocking` / `report_data.get("tasks_is_blocking")` directly for icon selection and recommendation logic (no keyword-based detection needed)
 - Update `format_for_human()` method in `BranchStatusReport`
 - Update `format_for_llm()` method in `BranchStatusReport`
 - Update `_generate_recommendations()` function
@@ -91,7 +68,7 @@ This is a small private helper to avoid duplicating the keyword list across form
 ## DATA
 
 - No new data structures
-- `_is_blocking_na()` returns `bool`
+- `tasks_is_blocking` field used directly (no helper needed)
 - Formatter output strings change as described in issue's expected behavior table
 
 ## TESTS
@@ -113,6 +90,10 @@ This is a small private helper to avoid duplicating the keyword list across form
 10. **`test_recommendations_tasks_na_blocking`** — includes "Fix task tracker: ..."
 11. **`test_recommendations_tasks_error`** — includes "Fix task tracker error: ..."
 12. **`test_recommendations_ready_to_merge_with_na_non_blocking`** — N/A + CI passed + no rebase → "Ready to merge"
+
+### Parameterized scenario test
+
+Recommended: add a parameterized test that maps all 8 scenarios from the issue's expected behavior table to expected `(status, reason, is_blocking, icon)` tuples. This ensures every row in the table is covered and makes it easy to add new scenarios.
 
 ## COMMIT
 
