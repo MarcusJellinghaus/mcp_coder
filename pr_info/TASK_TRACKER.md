@@ -21,6 +21,16 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Move symbols to branch_naming.py and update imports
+- [ ] Implementation: move `BranchCreationResult` and `generate_branch_name_from_issue` to `branch_naming.py`, update `__init__.py` re-exports
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Move branch naming tests and update allowlist
+- [ ] Implementation: move `TestBranchNameGeneration` to `test_branch_naming.py`, remove allowlist entry
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review completed
+- [ ] PR summary prepared
