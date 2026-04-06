@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: CLI utils — add `resolve_issue_interaction_flags()` ([detail](./steps/step_3.md))
-- [ ] Implementation: tests + production code in `cli/utils.py`
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + production code in `cli/utils.py`
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Failure handling + workflow cores — split into two flags ([detail](./steps/step_4.md))
 - [ ] Implementation: tests + rename params, add `post_issue_comments` gating across 5 source files

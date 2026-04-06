@@ -1,8 +1,5 @@
-feat: replace --update-labels with granular CLI flags (#661)
+feat: add resolve_issue_interaction_flags helper (#661)
 
-Replace --update-labels (store_true) with two BooleanOptionalAction flags:
-- --update-issue-labels / --no-update-issue-labels
-- --post-issue-comments / --no-post-issue-comments
-
-All default to None (three-state), enabling CLI > config > default priority.
-Breaking change: --update-labels is removed with no alias.
+Shared CLI helper that resolves update_issue_labels and post_issue_comments
+from CLI flags > config.toml repo section > default (False). Uses git
+remote URL to find matching [coordinator.repos.*] config section.
