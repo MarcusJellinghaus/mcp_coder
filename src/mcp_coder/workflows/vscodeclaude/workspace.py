@@ -8,13 +8,13 @@ import platform
 import shutil
 import stat
 import sys
-import tomllib
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from ...utils.git_operations import checkout_branch, fetch_remote
+from ...utils.pyproject_config import get_github_install_config
 from ...utils.subprocess_runner import (
     CalledProcessError,
     CommandOptions,
@@ -440,21 +440,9 @@ def _build_github_install_section(folder_path: Path) -> str:
     Returns:
         Batch script lines to inject, or empty string if no packages configured.
     """
-    pyproject_path = folder_path / "pyproject.toml"
-    if not pyproject_path.exists():
-        logger.warning(
-            "pyproject.toml not found at %s, skipping GitHub installs", folder_path
-        )
-        return ""
-
-    with pyproject_path.open("rb") as f:
-        config = tomllib.load(f)
-
-    gh_config = (
-        config.get("tool", {}).get("mcp-coder", {}).get("install-from-github", {})
-    )
-    packages = gh_config.get("packages", [])
-    packages_no_deps = gh_config.get("packages-no-deps", [])
+    gh_config = get_github_install_config(folder_path)
+    packages = gh_config.packages
+    packages_no_deps = gh_config.packages_no_deps
 
     if not packages and not packages_no_deps:
         logger.info("No GitHub override packages configured in pyproject.toml")

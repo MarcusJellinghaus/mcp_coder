@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `refactor: delegate config_reader to pyproject_config (#640)`
 
 ### Step 4: Refactor `_build_github_install_section()` + regression test ([detail](./steps/step_4.md))
-- [ ] Implementation: create `tests/workflows/vscodeclaude/test_build_github_install_section.py`, refactor `workspace.py` to use `get_github_install_config()`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `refactor: use get_github_install_config in workspace (#640)`
+- [x] Implementation: create `tests/workflows/vscodeclaude/test_build_github_install_section.py`, refactor `workspace.py` to use `get_github_install_config()`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `refactor: use get_github_install_config in workspace (#640)`
 
 ### Step 5: Create `read_github_deps.py` + improve `reinstall_local.bat` ([detail](./steps/step_5.md))
 - [ ] Implementation: create `tools/read_github_deps.py`, update `reinstall_local.bat` with silent deactivate and dynamic GitHub deps

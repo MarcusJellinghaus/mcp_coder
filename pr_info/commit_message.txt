@@ -1,8 +1,9 @@
-refactor: delegate config_reader to pyproject_config (#640)
+refactor: use get_github_install_config in workspace (#640)
 
-- Replace config_reader.py with thin wrapper that delegates to
-  pyproject_config.get_formatter_config and re-exports
-  check_line_length_conflicts
-- Refactor formatters/__init__.py to use get_formatter_config instead
-  of direct tomllib reads, switch from print to logger.warning
-- All existing tests pass without modification
+Replace inline tomllib reading in _build_github_install_section() with
+a call to get_github_install_config() from pyproject_config module.
+Add focused regression tests for the function's output format.
+
+- Create tests/workflows/vscodeclaude/test_build_github_install_section.py
+- Remove tomllib import from workspace.py (no longer needed)
+- Import and use get_github_install_config for GitHub install config
