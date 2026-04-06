@@ -21,6 +21,41 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Config layer — add `find_repo_section_by_url()` ([detail](./steps/step_1.md))
+- [ ] Implementation: tests + production code in `user_config.py`
+- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: CLI parsers — replace `--update-labels` with granular flags ([detail](./steps/step_2.md))
+- [ ] Implementation: tests + `BooleanOptionalAction` flags in `parsers.py`
+- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: CLI utils — add `resolve_issue_interaction_flags()` ([detail](./steps/step_3.md))
+- [ ] Implementation: tests + production code in `cli/utils.py`
+- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Failure handling + workflow cores — split into two flags ([detail](./steps/step_4.md))
+- [ ] Implementation: tests + rename params, add `post_issue_comments` gating across 5 source files
+- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: CLI commands — use `resolve_issue_interaction_flags()` ([detail](./steps/step_5.md))
+- [ ] Implementation: tests + wire up shared helper in 3 CLI commands
+- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 6: Coordinator — extend config + remove template flags ([detail](./steps/step_6.md))
+- [ ] Implementation: tests + extend `load_repo_config()`, remove `--update-labels` from templates
+- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 7: Default config template + documentation ([detail](./steps/step_7.md))
+- [ ] Implementation: tests + update config template and docs
+- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review: all steps complete, all checks green
+- [ ] PR summary prepared
