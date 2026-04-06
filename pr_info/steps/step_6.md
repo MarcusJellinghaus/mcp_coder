@@ -4,7 +4,7 @@
 - See `pr_info/steps/summary.md` for overall architecture and design changes
 
 ## WHERE
-- `src/mcp_coder/cli/commands/coordinator/core.py` — extend `load_repo_config()`
+- `src/mcp_coder/cli/commands/coordinator/core.py` — extend `load_repo_config()`, update `validate_repo_config()` type
 - `src/mcp_coder/cli/commands/coordinator/command_templates.py` — remove `--update-labels` from templates
 - `tests/cli/commands/coordinator/test_core.py` — update tests
 - Tests for command templates (if any exist, or add assertions)
@@ -54,6 +54,10 @@ Remove `--update-labels` from all 6 command template strings:
 - `CREATE_PLAN_COMMAND_WINDOWS` — remove `--update-labels`
 - `IMPLEMENT_COMMAND_WINDOWS` — remove `--update-labels`
 - `CREATE_PR_COMMAND_WINDOWS` — remove `--update-labels`
+
+### Changes to `validate_repo_config()` in `core.py`
+
+**Update parameter type:** Change `config: dict[str, Optional[str]]` to `config: dict[str, str | bool | None]` to match the updated `load_repo_config()` return type. This is required because `dict` is invariant in its value type — passing `dict[str, str | bool | None]` where `dict[str, Optional[str]]` is expected causes a mypy error.
 
 ## HOW
 - No new imports needed in core.py

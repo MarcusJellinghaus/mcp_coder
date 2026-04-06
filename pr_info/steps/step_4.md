@@ -80,10 +80,25 @@ def run_implement_workflow(
 - All internal calls to `handle_workflow_failure()` pass both flags
 - Success-path label update uses `update_issue_labels`
 
-**Internal wrapper `_handle_workflow_failure` (~line 160):** This wrapper accepts `update_labels` and
-forwards it to the shared `handle_workflow_failure`. It MUST be renamed to `update_issue_labels` and
-gain `post_issue_comments: bool = False`. There are ~9 call sites inside `run_implement_workflow`
-that all pass `update_labels=update_labels` — each must be updated to pass both flags.
+**Internal wrapper `_handle_workflow_failure` (~line 160 in `implement/core.py`):**
+
+This is a local helper inside `run_implement_workflow`, distinct from both:
+- `handle_workflow_failure()` in `workflow_utils/failure_handling.py` (the shared function)
+- `handle_create_pr_failure()` in `workflows/create_pr/helpers.py`
+
+New signature:
+```python
+def _handle_workflow_failure(
+    failure: WorkflowFailure,
+    project_dir: Path,
+    update_issue_labels: bool = False,     # renamed from update_labels
+    post_issue_comments: bool = False,     # NEW
+) -> None:
+```
+
+It MUST forward `post_issue_comments` to the shared `handle_workflow_failure()` call inside it.
+All ~8 call sites within `run_implement_workflow` that invoke `_handle_workflow_failure` must
+pass `post_issue_comments` through (in addition to the renamed `update_issue_labels`).
 
 **`run_create_pr_workflow()`:**
 ```python
@@ -171,8 +186,9 @@ if needs_label_update or needs_comment:
 1. All calls to `handle_create_pr_failure()` that pass `update_labels=...` → rename to `update_issue_labels=...`
 2. Add `post_issue_comments=True` where tests verify comment posting behavior
 3. Verify the mock of `handle_workflow_failure` receives both renamed/new kwargs
-4. Update `run_create_pr_workflow(update_labels=...)` calls to use `update_issue_labels=...`
-5. Update `call_kwargs["update_labels"]` assertions to use `call_kwargs["update_issue_labels"]`
+4. Update `call_kwargs["update_labels"]` assertions to use `call_kwargs["update_issue_labels"]`
+
+Note: `run_create_pr_workflow` is NOT tested in this file — those calls live in `test_workflow.py`.
 
 ### Update workflow tests:
 

@@ -54,7 +54,7 @@ handle_workflow_failure(update_issue_labels=..., post_issue_comments=...)
 | `src/mcp_coder/cli/commands/implement.py` | Use shared helper, pass two bools to workflow |
 | `src/mcp_coder/cli/commands/create_pr.py` | Use shared helper, pass two bools to workflow |
 | `src/mcp_coder/cli/commands/create_plan.py` | Use shared helper, pass two bools to workflow |
-| `src/mcp_coder/cli/commands/coordinator/core.py` | Extend `load_repo_config()` with 2 extra keys |
+| `src/mcp_coder/cli/commands/coordinator/core.py` | Extend `load_repo_config()` with 2 extra keys; update `validate_repo_config()` param type to `dict[str, str \| bool \| None]` |
 | `src/mcp_coder/cli/commands/coordinator/command_templates.py` | Remove `--update-labels` from all 6 templates |
 | `src/mcp_coder/workflow_utils/failure_handling.py` | Rename `update_labels` → `update_issue_labels`, add `post_issue_comments`, gate comments |
 | `src/mcp_coder/workflows/create_pr/helpers.py` | Rename `update_labels` → `update_issue_labels`, add `post_issue_comments` |
