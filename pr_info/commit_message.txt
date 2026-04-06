@@ -1,13 +1,11 @@
-refactor(branch-status): replace tasks_complete bool with TaskTrackerStatus enum
+feat(branch-status): add N/A blocker logic to formatters and recommendations
 
-- Add CIStatus(str, Enum) replacing CI_PASSED/CI_FAILED/CI_NOT_CONFIGURED/CI_PENDING
-  string constants (backward-compatible aliases kept)
-- Replace BranchStatusReport.tasks_complete: bool with tasks_status: TaskTrackerStatus,
-  tasks_reason: str, and tasks_is_blocking: bool
-- Rewrite _collect_task_status() to return (TaskTrackerStatus, str, bool) tuple,
-  using get_task_counts() with proper N/A/ERROR/COMPLETE/INCOMPLETE mapping
-- Update _generate_recommendations() to use TaskTrackerStatus enum
-- Update format_for_human() and format_for_llm() for new task status fields
-- Update create_empty_report() with TaskTrackerStatus.N_A default
-- Update CLI check_branch_status.py to import CIStatus
-- Fix all test references across 6 test files to use new dataclass fields
+Part of #676 — formatters now show context-dependent icons (➖ for
+non-blocking N/A, ⚠️ for blocking N/A/ERROR) and inline reasons.
+Recommendations distinguish blocking vs non-blocking N/A states.
+
+Changes:
+- format_for_human() shows reason inline with status-dependent icons
+- format_for_llm() includes reason in Tasks= line
+- _generate_recommendations() uses tasks_is_blocking for merge readiness
+- Added 19 new tests covering all formatter and recommendation scenarios

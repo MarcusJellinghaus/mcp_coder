@@ -89,12 +89,15 @@ class BranchStatusReport:
         rebase_icon = "✅" if not self.rebase_needed else "⚠️"
         rebase_status_text = "UP TO DATE" if not self.rebase_needed else "BEHIND"
 
-        tasks_icon = {
+        tasks_icon_map = {
             TaskTrackerStatus.COMPLETE: "✅",
             TaskTrackerStatus.INCOMPLETE: "❌",
-            TaskTrackerStatus.N_A: "➖",
             TaskTrackerStatus.ERROR: "⚠️",
-        }.get(self.tasks_status, "❓")
+        }
+        if self.tasks_status == TaskTrackerStatus.N_A:
+            tasks_icon = "⚠️" if self.tasks_is_blocking else "➖"
+        else:
+            tasks_icon = tasks_icon_map.get(self.tasks_status, "❓")
         tasks_status_text = self.tasks_status.value
 
         # Build the report sections - Branch info first
@@ -132,7 +135,7 @@ class BranchStatusReport:
                 f"Rebase Status: {rebase_icon} {rebase_status_text}",
                 f"- {self.rebase_reason}",
                 "",
-                f"Task Tracker: {tasks_icon} {tasks_status_text}",
+                f"Task Tracker: {tasks_icon} {tasks_status_text} ({self.tasks_reason})",
                 "",
                 f"GitHub Status: {self.current_github_label}",
                 "",
@@ -157,12 +160,11 @@ class BranchStatusReport:
         """
         # Convert rebase_needed to status string
         rebase_status = "BEHIND" if self.rebase_needed else "UP_TO_DATE"
-        tasks_status = self.tasks_status.value
 
         # Build status summary line
         status_summary = (
             f"Branch Status: CI={self.ci_status}, Rebase={rebase_status}, "
-            f"Tasks={tasks_status}"
+            f"Tasks={self.tasks_status.value} ({self.tasks_reason})"
         )
         if self.pr_found is True:
             status_summary += f", PR=#{self.pr_number}"
@@ -342,6 +344,8 @@ def collect_branch_status(
             "ci_status": ci_status,
             "rebase_needed": rebase_needed,
             "tasks_status": tasks_status,
+            "tasks_reason": tasks_reason,
+            "tasks_is_blocking": tasks_is_blocking,
             "ci_details": ci_details,
         }
 
@@ -728,10 +732,9 @@ def _generate_recommendations(report_data: Dict[str, Any]) -> List[str]:
     ci_status = report_data.get("ci_status")
     rebase_needed = report_data.get("rebase_needed", False)
     tasks_status = report_data.get("tasks_status", TaskTrackerStatus.N_A)
-    tasks_ok = tasks_status in (
-        TaskTrackerStatus.COMPLETE,
-        TaskTrackerStatus.N_A,
-    )
+    tasks_reason = report_data.get("tasks_reason", "")
+    tasks_is_blocking = report_data.get("tasks_is_blocking", False)
+    tasks_ok = not tasks_is_blocking
 
     if ci_status == CI_FAILED:
         recommendations.append("Fix CI test failures")
@@ -743,9 +746,11 @@ def _generate_recommendations(report_data: Dict[str, Any]) -> List[str]:
         recommendations.append("Configure CI pipeline")
 
     if tasks_status == TaskTrackerStatus.INCOMPLETE:
-        recommendations.append("Complete remaining tasks")
+        recommendations.append(f"Complete remaining tasks ({tasks_reason})")
+    elif tasks_status == TaskTrackerStatus.N_A and tasks_is_blocking:
+        recommendations.append(f"Fix task tracker: {tasks_reason}")
     elif tasks_status == TaskTrackerStatus.ERROR:
-        recommendations.append("Fix task tracker errors")
+        recommendations.append(f"Fix task tracker error: {tasks_reason}")
 
     if rebase_needed and tasks_ok and ci_status != CI_FAILED:
         recommendations.append("Rebase onto origin/main")

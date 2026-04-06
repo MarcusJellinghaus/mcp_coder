@@ -801,7 +801,9 @@ def test_collect_branch_status_tasks_incomplete() -> None:
         assert result.ci_status == "PASSED"
         assert result.rebase_needed is False
         assert result.tasks_status == TaskTrackerStatus.INCOMPLETE
-        assert "Complete remaining tasks" in result.recommendations
+        assert any(
+            r.startswith("Complete remaining tasks") for r in result.recommendations
+        )
 
 
 def test_collect_branch_status_with_truncation() -> None:
@@ -1158,7 +1160,7 @@ def test_generate_recommendations_logic() -> None:
     }
     recommendations = _generate_recommendations(report_data)
     assert "Fix CI test failures" == recommendations[0]
-    assert "Complete remaining tasks" == recommendations[1]
+    assert recommendations[1].startswith("Complete remaining tasks")
     # Rebase is NOT added here because CI is FAILED and tasks are incomplete
     assert len(recommendations) == 2
 
@@ -1169,7 +1171,7 @@ def test_generate_recommendations_logic() -> None:
         "tasks_status": TaskTrackerStatus.INCOMPLETE,
     }
     recommendations = _generate_recommendations(report_data)
-    assert "Complete remaining tasks" == recommendations[0]
+    assert recommendations[0].startswith("Complete remaining tasks")
 
     # Test rebase needed only (tasks complete, CI passed)
     report_data = {
@@ -1692,3 +1694,232 @@ def test_collect_branch_status_shares_issue_data() -> None:
         assert label_call_args[0][0] == project_dir
         # Second arg should be the issue_data dict
         assert label_call_args[0][1] == mock_issue
+
+
+# =============================================================================
+# Step 3: Formatter and recommendation tests for TaskTrackerStatus
+# =============================================================================
+
+
+def _make_report(**kwargs: object) -> BranchStatusReport:
+    """Helper to build a BranchStatusReport with sensible defaults."""
+    defaults = {
+        "branch_name": "feature/123-test",
+        "base_branch": "main",
+        "ci_status": CI_PASSED,
+        "ci_details": None,
+        "rebase_needed": False,
+        "rebase_reason": "Up to date with origin/main",
+        "tasks_status": TaskTrackerStatus.COMPLETE,
+        "tasks_reason": "5 of 5 tasks complete",
+        "tasks_is_blocking": False,
+        "current_github_label": "status-03:implementing",
+        "recommendations": [],
+    }
+    defaults.update(kwargs)
+    return BranchStatusReport(**defaults)  # type: ignore[arg-type]
+
+
+# --- format_for_human tests ---
+
+
+def test_format_human_tasks_complete() -> None:
+    """Complete tasks show green check and reason inline."""
+    report = _make_report(
+        tasks_status=TaskTrackerStatus.COMPLETE,
+        tasks_reason="all 5 tasks complete",
+        tasks_is_blocking=False,
+    )
+    output = report.format_for_human()
+    assert "Task Tracker: \u2705 COMPLETE (all 5 tasks complete)" in output
+
+
+def test_format_human_tasks_incomplete() -> None:
+    """Incomplete tasks show red X and reason inline."""
+    report = _make_report(
+        tasks_status=TaskTrackerStatus.INCOMPLETE,
+        tasks_reason="3 of 5 tasks complete",
+        tasks_is_blocking=True,
+    )
+    output = report.format_for_human()
+    assert "Task Tracker: \u274c INCOMPLETE (3 of 5 tasks complete)" in output
+
+
+def test_format_human_tasks_na_non_blocking() -> None:
+    """Non-blocking N/A shows dash icon."""
+    report = _make_report(
+        tasks_status=TaskTrackerStatus.N_A,
+        tasks_reason="no pr_info folder",
+        tasks_is_blocking=False,
+    )
+    output = report.format_for_human()
+    assert "Task Tracker: \u2796 N_A (no pr_info folder)" in output
+
+
+def test_format_human_tasks_na_blocking() -> None:
+    """Blocking N/A shows warning icon."""
+    report = _make_report(
+        tasks_status=TaskTrackerStatus.N_A,
+        tasks_reason="implementation plan exists but no TASK_TRACKER.md",
+        tasks_is_blocking=True,
+    )
+    output = report.format_for_human()
+    assert (
+        "Task Tracker: \u26a0\ufe0f N_A (implementation plan exists but no TASK_TRACKER.md)"
+        in output
+    )
+
+
+def test_format_human_tasks_error() -> None:
+    """Error status shows warning icon and reason."""
+    report = _make_report(
+        tasks_status=TaskTrackerStatus.ERROR,
+        tasks_reason="could not read task tracker: permission denied",
+        tasks_is_blocking=True,
+    )
+    output = report.format_for_human()
+    assert (
+        "Task Tracker: \u26a0\ufe0f ERROR (could not read task tracker: permission denied)"
+        in output
+    )
+
+
+# --- format_for_llm tests ---
+
+
+def test_format_llm_tasks_with_reason() -> None:
+    """LLM format includes tasks status and reason."""
+    report = _make_report(
+        tasks_status=TaskTrackerStatus.INCOMPLETE,
+        tasks_reason="3 of 5 tasks complete",
+        tasks_is_blocking=True,
+    )
+    output = report.format_for_llm()
+    assert "Tasks=INCOMPLETE (3 of 5 tasks complete)" in output
+
+
+def test_format_llm_tasks_na() -> None:
+    """LLM format shows N_A with reason."""
+    report = _make_report(
+        tasks_status=TaskTrackerStatus.N_A,
+        tasks_reason="no pr_info folder",
+        tasks_is_blocking=False,
+    )
+    output = report.format_for_llm()
+    assert "Tasks=N_A (no pr_info folder)" in output
+
+
+# --- _generate_recommendations tests ---
+
+
+def test_recommendations_tasks_incomplete() -> None:
+    """Incomplete tasks recommend completing them with reason."""
+    report_data = {
+        "ci_status": CI_PASSED,
+        "rebase_needed": False,
+        "tasks_status": TaskTrackerStatus.INCOMPLETE,
+        "tasks_reason": "3 of 5 tasks complete",
+        "tasks_is_blocking": True,
+    }
+    recs = _generate_recommendations(report_data)
+    assert "Complete remaining tasks (3 of 5 tasks complete)" in recs
+    assert "Ready to merge" not in recs
+
+
+def test_recommendations_tasks_na_non_blocking() -> None:
+    """Non-blocking N/A generates no task recommendation; can be ready to merge."""
+    report_data = {
+        "ci_status": CI_PASSED,
+        "rebase_needed": False,
+        "tasks_status": TaskTrackerStatus.N_A,
+        "tasks_reason": "no pr_info folder",
+        "tasks_is_blocking": False,
+    }
+    recs = _generate_recommendations(report_data)
+    # No task-related recommendation
+    assert not any("task" in r.lower() for r in recs)
+    assert "Ready to merge" in recs
+
+
+def test_recommendations_tasks_na_blocking() -> None:
+    """Blocking N/A recommends fixing the task tracker."""
+    report_data = {
+        "ci_status": CI_PASSED,
+        "rebase_needed": False,
+        "tasks_status": TaskTrackerStatus.N_A,
+        "tasks_reason": "No TASK_TRACKER.md",
+        "tasks_is_blocking": True,
+    }
+    recs = _generate_recommendations(report_data)
+    assert "Fix task tracker: No TASK_TRACKER.md" in recs
+    assert "Ready to merge" not in recs
+
+
+def test_recommendations_tasks_error() -> None:
+    """Error status recommends fixing the error with reason."""
+    report_data = {
+        "ci_status": CI_PASSED,
+        "rebase_needed": False,
+        "tasks_status": TaskTrackerStatus.ERROR,
+        "tasks_reason": "permission denied",
+        "tasks_is_blocking": True,
+    }
+    recs = _generate_recommendations(report_data)
+    assert "Fix task tracker error: permission denied" in recs
+    assert "Ready to merge" not in recs
+
+
+def test_recommendations_ready_to_merge_with_na_non_blocking() -> None:
+    """N/A non-blocking + CI passed + no rebase = ready to merge."""
+    report_data = {
+        "ci_status": CI_PASSED,
+        "rebase_needed": False,
+        "tasks_status": TaskTrackerStatus.N_A,
+        "tasks_reason": "No pr_info directory",
+        "tasks_is_blocking": False,
+    }
+    recs = _generate_recommendations(report_data)
+    assert "Ready to merge" in recs
+
+
+@pytest.mark.parametrize(
+    "status, reason, is_blocking, expected_icon",
+    [
+        (TaskTrackerStatus.COMPLETE, "5 of 5 tasks complete", False, "\u2705"),
+        (TaskTrackerStatus.INCOMPLETE, "3 of 5 tasks complete", True, "\u274c"),
+        (TaskTrackerStatus.N_A, "No pr_info directory", False, "\u2796"),
+        (TaskTrackerStatus.N_A, "No TASK_TRACKER.md", True, "\u26a0\ufe0f"),
+        (TaskTrackerStatus.N_A, "No tasks in tracker", False, "\u2796"),
+        (TaskTrackerStatus.N_A, "No Tasks section in tracker", False, "\u2796"),
+        (
+            TaskTrackerStatus.ERROR,
+            "Error reading task tracker: X",
+            True,
+            "\u26a0\ufe0f",
+        ),
+    ],
+    ids=[
+        "complete",
+        "incomplete",
+        "na-no-pr-info",
+        "na-no-tracker-blocking",
+        "na-no-tasks",
+        "na-no-section",
+        "error",
+    ],
+)
+def test_format_human_tasks_icon_parametrized(
+    status: TaskTrackerStatus,
+    reason: str,
+    is_blocking: bool,
+    expected_icon: str,
+) -> None:
+    """Parametrized test covering all task status icon scenarios."""
+    report = _make_report(
+        tasks_status=status,
+        tasks_reason=reason,
+        tasks_is_blocking=is_blocking,
+    )
+    output = report.format_for_human()
+    expected = f"Task Tracker: {expected_icon} {status.value} ({reason})"
+    assert expected in output
