@@ -1,9 +1,9 @@
-refactor: use get_github_install_config in workspace (#640)
+feat: dynamic GitHub deps in reinstall_local.bat (#640)
 
-Replace inline tomllib reading in _build_github_install_section() with
-a call to get_github_install_config() from pyproject_config module.
-Add focused regression tests for the function's output format.
+Add tools/read_github_deps.py bootstrap helper that reads GitHub
+dependency overrides from pyproject.toml and prints uv pip install
+commands. Update reinstall_local.bat to:
 
-- Create tests/workflows/vscodeclaude/test_build_github_install_section.py
-- Remove tomllib import from workspace.py (no longer needed)
-- Import and use get_github_install_config for GitHub install config
+- Replace hardcoded GitHub URLs with dynamic reading via
+  read_github_deps.py
+- Replace wrong-venv guard with silent deactivate at startup

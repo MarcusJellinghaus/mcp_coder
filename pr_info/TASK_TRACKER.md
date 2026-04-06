@@ -42,9 +42,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `refactor: use get_github_install_config in workspace (#640)`
 
 ### Step 5: Create `read_github_deps.py` + improve `reinstall_local.bat` ([detail](./steps/step_5.md))
-- [ ] Implementation: create `tools/read_github_deps.py`, update `reinstall_local.bat` with silent deactivate and dynamic GitHub deps
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat: dynamic GitHub deps in reinstall_local.bat (#640)`
+- [x] Implementation: create `tools/read_github_deps.py`, update `reinstall_local.bat` with silent deactivate and dynamic GitHub deps
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat: dynamic GitHub deps in reinstall_local.bat (#640)`
 
 ### Step 6: Add version printing to all four launchers ([detail](./steps/step_6.md))
 - [ ] Implementation: add `mcp-workspace --version` and `mcp-tools-py --version` to `claude.bat`, `claude_local.bat`, `icoder.bat`, `icoder_local.bat`; verify `.mcp.json` env var consistency
