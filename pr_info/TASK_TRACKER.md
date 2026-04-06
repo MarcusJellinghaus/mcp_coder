@@ -47,9 +47,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 6: Coordinator — extend config + remove template flags ([detail](./steps/step_6.md))
-- [ ] Implementation: tests + extend `load_repo_config()`, remove `--update-labels` from templates
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + extend `load_repo_config()`, remove `--update-labels` from templates
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: Default config template + documentation ([detail](./steps/step_7.md))
 - [ ] Implementation: tests + update config template and docs

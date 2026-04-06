@@ -27,6 +27,14 @@ from mcp_coder.cli.commands.coordinator import (
     load_repo_config,
     validate_repo_config,
 )
+from mcp_coder.cli.commands.coordinator.command_templates import (
+    CREATE_PLAN_COMMAND_TEMPLATE,
+    CREATE_PLAN_COMMAND_WINDOWS,
+    CREATE_PR_COMMAND_TEMPLATE,
+    CREATE_PR_COMMAND_WINDOWS,
+    IMPLEMENT_COMMAND_TEMPLATE,
+    IMPLEMENT_COMMAND_WINDOWS,
+)
 from mcp_coder.utils.github_operations.issues import (
     CacheData,
     IssueData,
@@ -53,6 +61,8 @@ class TestLoadRepoConfig:
             ("coordinator.repos.mcp_coder", "executor_job_path"): "Folder/job-name",
             ("coordinator.repos.mcp_coder", "github_credentials_id"): "github-pat",
             ("coordinator.repos.mcp_coder", "executor_os"): None,
+            ("coordinator.repos.mcp_coder", "update_issue_labels"): None,
+            ("coordinator.repos.mcp_coder", "post_issue_comments"): None,
         }
 
         # Execute
@@ -74,6 +84,8 @@ class TestLoadRepoConfig:
             ("coordinator.repos.nonexistent_repo", "executor_job_path"): None,
             ("coordinator.repos.nonexistent_repo", "github_credentials_id"): None,
             ("coordinator.repos.nonexistent_repo", "executor_os"): None,
+            ("coordinator.repos.nonexistent_repo", "update_issue_labels"): None,
+            ("coordinator.repos.nonexistent_repo", "post_issue_comments"): None,
         }
 
         # Execute
@@ -100,6 +112,8 @@ class TestLoadRepoConfig:
             ("coordinator.repos.test_repo", "executor_job_path"): "Tests/test",
             ("coordinator.repos.test_repo", "github_credentials_id"): "cred-id",
             ("coordinator.repos.test_repo", "executor_os"): None,  # Not in config
+            ("coordinator.repos.test_repo", "update_issue_labels"): None,
+            ("coordinator.repos.test_repo", "post_issue_comments"): None,
         }
 
         # Execute
@@ -122,6 +136,8 @@ class TestLoadRepoConfig:
             ("coordinator.repos.test_repo", "executor_job_path"): "Tests/test",
             ("coordinator.repos.test_repo", "github_credentials_id"): "cred-id",
             ("coordinator.repos.test_repo", "executor_os"): "Windows",  # Mixed case
+            ("coordinator.repos.test_repo", "update_issue_labels"): None,
+            ("coordinator.repos.test_repo", "post_issue_comments"): None,
         }
 
         # Execute
@@ -130,6 +146,46 @@ class TestLoadRepoConfig:
         # Verify
         assert config["executor_os"] == "windows"  # Normalized to lowercase
 
+    @patch("mcp_coder.cli.commands.coordinator.core.get_config_values")
+    def test_load_repo_config_includes_issue_interaction_flags(
+        self, mock_get_config: MagicMock
+    ) -> None:
+        """Test config includes update_issue_labels and post_issue_comments when set to True."""
+        section = "coordinator.repos.test_repo"
+        mock_get_config.return_value = {
+            (section, "repo_url"): "https://github.com/test/repo.git",
+            (section, "executor_job_path"): "Tests/test",
+            (section, "github_credentials_id"): "cred-id",
+            (section, "executor_os"): "linux",
+            (section, "update_issue_labels"): "True",
+            (section, "post_issue_comments"): "True",
+        }
+
+        config = load_repo_config("test_repo")
+
+        assert config["update_issue_labels"] is True
+        assert config["post_issue_comments"] is True
+
+    @patch("mcp_coder.cli.commands.coordinator.core.get_config_values")
+    def test_load_repo_config_defaults_flags_when_missing(
+        self, mock_get_config: MagicMock
+    ) -> None:
+        """Test flags default to False when not present in config."""
+        section = "coordinator.repos.test_repo"
+        mock_get_config.return_value = {
+            (section, "repo_url"): "https://github.com/test/repo.git",
+            (section, "executor_job_path"): "Tests/test",
+            (section, "github_credentials_id"): "cred-id",
+            (section, "executor_os"): None,
+            (section, "update_issue_labels"): None,
+            (section, "post_issue_comments"): None,
+        }
+
+        config = load_repo_config("test_repo")
+
+        assert config["update_issue_labels"] is False
+        assert config["post_issue_comments"] is False
+
 
 class TestValidateRepoConfig:
     """Tests for validate_repo_config function."""
@@ -137,7 +193,7 @@ class TestValidateRepoConfig:
     def test_validate_repo_config_complete(self) -> None:
         """Test validation passes for complete configuration."""
         # Setup
-        config: dict[str, Optional[str]] = {
+        config: dict[str, str | bool | None] = {
             "repo_url": "https://github.com/user/repo.git",
             "executor_job_path": "Folder/job-name",
             "github_credentials_id": "github-pat",
@@ -150,7 +206,7 @@ class TestValidateRepoConfig:
     def test_validate_repo_config_missing_repo_url(self) -> None:
         """Test validation fails when repo_url is missing."""
         # Setup
-        config = {
+        config: dict[str, str | bool | None] = {
             "repo_url": None,
             "executor_job_path": "Folder/job-name",
             "github_credentials_id": "github-pat",
@@ -165,7 +221,7 @@ class TestValidateRepoConfig:
     def test_validate_repo_config_missing_executor_job_path(self) -> None:
         """Test validation fails when executor_job_path is missing."""
         # Setup
-        config = {
+        config: dict[str, str | bool | None] = {
             "repo_url": "https://github.com/user/repo.git",
             "executor_job_path": None,
             "github_credentials_id": "github-pat",
@@ -181,7 +237,7 @@ class TestValidateRepoConfig:
     def test_validate_repo_config_missing_github_credentials_id(self) -> None:
         """Test validation fails when github_credentials_id is missing."""
         # Setup
-        config = {
+        config: dict[str, str | bool | None] = {
             "repo_url": "https://github.com/user/repo.git",
             "executor_job_path": "Folder/job-name",
             "github_credentials_id": None,
@@ -197,7 +253,7 @@ class TestValidateRepoConfig:
     def test_validate_repo_config_invalid_executor_os(self) -> None:
         """Test validation fails for invalid executor_os values."""
         # Setup
-        config: dict[str, Optional[str]] = {
+        config: dict[str, str | bool | None] = {
             "repo_url": "https://github.com/test/repo.git",
             "executor_job_path": "Tests/test",
             "github_credentials_id": "cred-id",
@@ -216,7 +272,7 @@ class TestValidateRepoConfig:
         # Test both lowercase (normalized) values
         for os_value in ["windows", "linux"]:
             # Setup
-            config: dict[str, Optional[str]] = {
+            config: dict[str, str | bool | None] = {
                 "repo_url": "https://github.com/test/repo.git",
                 "executor_job_path": "Tests/test",
                 "github_credentials_id": "cred-id",
@@ -980,3 +1036,22 @@ class TestGetCachedEligibleIssues:
             # Should fall back to get_eligible_issues
             assert result == []
             mock_fallback.assert_called_once_with(mock_issue_manager)
+
+
+class TestCommandTemplates:
+    """Tests for command template strings."""
+
+    def test_templates_do_not_contain_update_labels_flag(self) -> None:
+        """Assert --update-labels is absent from all 6 command templates."""
+        templates = [
+            ("CREATE_PLAN_COMMAND_TEMPLATE", CREATE_PLAN_COMMAND_TEMPLATE),
+            ("IMPLEMENT_COMMAND_TEMPLATE", IMPLEMENT_COMMAND_TEMPLATE),
+            ("CREATE_PR_COMMAND_TEMPLATE", CREATE_PR_COMMAND_TEMPLATE),
+            ("CREATE_PLAN_COMMAND_WINDOWS", CREATE_PLAN_COMMAND_WINDOWS),
+            ("IMPLEMENT_COMMAND_WINDOWS", IMPLEMENT_COMMAND_WINDOWS),
+            ("CREATE_PR_COMMAND_WINDOWS", CREATE_PR_COMMAND_WINDOWS),
+        ]
+        for name, template in templates:
+            assert (
+                "--update-labels" not in template
+            ), f"{name} still contains --update-labels"

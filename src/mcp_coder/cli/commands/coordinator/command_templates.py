@@ -116,7 +116,7 @@ export DISABLE_AUTOUPDATER=1
 which mcp-coder && mcp-coder --version
 which claude && claude --version
 uv sync --extra types
-mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir /workspace/repo --mcp-config .mcp.json --update-labels
+mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir /workspace/repo --mcp-config .mcp.json
 echo "archive after execution ======================================="
 ls -la .mcp-coder/create_plan_sessions
 ls -la logs
@@ -128,7 +128,7 @@ export DISABLE_AUTOUPDATER=1
 which mcp-coder && mcp-coder --version
 which claude && claude --version
 uv sync --extra types
-mcp-coder --log-level {log_level} implement --project-dir /workspace/repo --mcp-config .mcp.json --update-labels
+mcp-coder --log-level {log_level} implement --project-dir /workspace/repo --mcp-config .mcp.json
 echo "archive after execution ======================================="
 ls -la .mcp-coder/create_plan_sessions
 ls -la logs
@@ -140,7 +140,7 @@ export DISABLE_AUTOUPDATER=1
 which mcp-coder && mcp-coder --version
 which claude && claude --version
 uv sync --extra types
-mcp-coder --log-level {log_level} create-pr --project-dir /workspace/repo --mcp-config .mcp.json --update-labels
+mcp-coder --log-level {log_level} create-pr --project-dir /workspace/repo --mcp-config .mcp.json
 echo "archive after execution ======================================="
 ls -la .mcp-coder/create_plan_sessions
 ls -la logs
@@ -172,7 +172,7 @@ echo Install type stubs in project environment ====================
 uv sync --project %WORKSPACE%\repo --extra types
 
 echo command execution  =====================================
-mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir %WORKSPACE%\repo --mcp-config .mcp.json --update-labels
+mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
 
 echo archive after execution =======================================
 dir .mcp-coder\create_plan_sessions
@@ -203,7 +203,7 @@ echo Install type stubs in project environment ====================
 uv sync --project %WORKSPACE%\repo --extra types
 
 echo command execution  =====================================
-mcp-coder --log-level {log_level} implement --project-dir %WORKSPACE%\repo --mcp-config .mcp.json --update-labels
+mcp-coder --log-level {log_level} implement --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
 
 echo archive after execution =======================================
 dir .mcp-coder\create_plan_sessions
@@ -234,7 +234,7 @@ echo Install type stubs in project environment ====================
 uv sync --project %WORKSPACE%\repo --extra types
 
 echo command execution  =====================================
-mcp-coder --log-level {log_level} create-pr --project-dir %WORKSPACE%\repo --mcp-config .mcp.json --update-labels
+mcp-coder --log-level {log_level} create-pr --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
 
 echo archive after execution =======================================
 dir .mcp-coder\create_plan_sessions
