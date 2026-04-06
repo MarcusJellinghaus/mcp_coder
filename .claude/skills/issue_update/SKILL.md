@@ -53,4 +53,5 @@ The base branch must be a single line. Multiple lines will cause an error during
 **The updated issue should include:**
 - Summary of the requirement
 - Discussed implementation approach (concise)
-- Any constraints or considerations identified
+- `## Constraints & Rationale` — non-obvious gotchas and the "why" behind decisions. Skip if none identified.
+- `## Decisions` table — decided topics so `/issue_analyse` won't re-ask. Skip if none yet.

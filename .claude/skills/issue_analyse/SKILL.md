@@ -35,6 +35,14 @@ Do not provide code yet!
 
 At the end of our discussion, I want to have an even better issue description.
 
+**Decision-awareness:**
+If the issue contains a `## Decisions` section, read it carefully:
+- Do NOT re-ask topics that are already decided. Focus on aspects not yet covered.
+- If any existing decision seems risky or questionable given what you see in the code, briefly note the concern — but don't block on it.
+
+**Constraints identification:**
+During the discussion, actively identify constraints and rationale — the "why" behind decisions, non-obvious gotchas, things that downstream steps (`/create_plan`, `/implement`) need to know. These will be captured in the issue via `/issue_update`.
+
 **Base Branch Handling:**
 If the issue contains a `### Base Branch` section:
 - Display the specified base branch prominently
