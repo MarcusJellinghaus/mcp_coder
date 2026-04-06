@@ -9,6 +9,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from mcp_coder.checks.branch_status import BranchStatusReport
+from mcp_coder.workflow_utils.task_tracker import TaskTrackerStatus
 
 # Test-first approach: Try to import the module, skip dependent tests if not available
 try:
@@ -200,7 +201,9 @@ class TestCIWaitingLogic:
             ci_details=None,
             rebase_needed=False,
             rebase_reason="Branch is up to date with main",
-            tasks_complete=True,
+            tasks_status=TaskTrackerStatus.COMPLETE,
+            tasks_reason="All tasks complete",
+            tasks_is_blocking=False,
             current_github_label="status-implementation",
             recommendations=["Branch is ready for next workflow step"],
         )

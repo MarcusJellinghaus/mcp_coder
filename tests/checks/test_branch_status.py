@@ -18,6 +18,7 @@ from mcp_coder.checks.branch_status import (
     DEFAULT_LABEL,
     EMPTY_RECOMMENDATIONS,
     BranchStatusReport,
+    CIStatus,
     _build_ci_error_details,
     _collect_ci_status,
     _collect_github_label,
@@ -30,6 +31,7 @@ from mcp_coder.checks.branch_status import (
     truncate_ci_details,
 )
 from mcp_coder.utils.github_operations.issues import IssueData
+from mcp_coder.workflow_utils.task_tracker import TaskTrackerStatus
 
 
 def test_branch_status_report_creation() -> None:
@@ -41,7 +43,9 @@ def test_branch_status_report_creation() -> None:
         ci_details=None,
         rebase_needed=False,
         rebase_reason="Up to date with origin/main",
-        tasks_complete=True,
+        tasks_status=TaskTrackerStatus.COMPLETE,
+        tasks_reason="All tasks complete",
+        tasks_is_blocking=False,
         current_github_label="status-03:implementing",
         recommendations=["Ready to merge"],
     )
@@ -52,7 +56,7 @@ def test_branch_status_report_creation() -> None:
     assert report.ci_details is None
     assert report.rebase_needed is False
     assert report.rebase_reason == "Up to date with origin/main"
-    assert report.tasks_complete is True
+    assert report.tasks_status == TaskTrackerStatus.COMPLETE
     assert report.current_github_label == "status-03:implementing"
     assert report.recommendations == ["Ready to merge"]
 
@@ -68,7 +72,9 @@ def test_branch_status_report_failed_ci() -> None:
         ci_details=ci_error,
         rebase_needed=True,
         rebase_reason="3 commits behind origin/main",
-        tasks_complete=False,
+        tasks_status=TaskTrackerStatus.INCOMPLETE,
+        tasks_reason="Tasks incomplete",
+        tasks_is_blocking=True,
         current_github_label="status-02:planning",
         recommendations=["Fix CI test failures", "Rebase onto origin/main"],
     )
@@ -77,7 +83,7 @@ def test_branch_status_report_failed_ci() -> None:
     assert report.ci_details == ci_error
     assert report.rebase_needed is True
     assert report.rebase_reason == "3 commits behind origin/main"
-    assert report.tasks_complete is False
+    assert report.tasks_status == TaskTrackerStatus.INCOMPLETE
     assert report.current_github_label == "status-02:planning"
     assert len(report.recommendations) == 2
 
@@ -91,7 +97,9 @@ def test_format_for_human_passed_status() -> None:
         ci_details=None,
         rebase_needed=False,
         rebase_reason="Up to date with origin/main",
-        tasks_complete=True,
+        tasks_status=TaskTrackerStatus.COMPLETE,
+        tasks_reason="All tasks complete",
+        tasks_is_blocking=False,
         current_github_label="status-03:implementing",
         recommendations=["Ready to merge"],
     )
@@ -127,7 +135,9 @@ def test_format_for_human_failed_status() -> None:
         ci_details=ci_error,
         rebase_needed=True,
         rebase_reason="3 commits behind origin/main",
-        tasks_complete=False,
+        tasks_status=TaskTrackerStatus.INCOMPLETE,
+        tasks_reason="Tasks incomplete",
+        tasks_is_blocking=True,
         current_github_label="status-02:planning",
         recommendations=[
             "Fix CI test failures",
@@ -158,7 +168,9 @@ def test_format_for_human_pending_status() -> None:
         ci_details="CI pipeline running...",
         rebase_needed=False,
         rebase_reason="Up to date with origin/main",
-        tasks_complete=True,
+        tasks_status=TaskTrackerStatus.COMPLETE,
+        tasks_reason="All tasks complete",
+        tasks_is_blocking=False,
         current_github_label="status-03:implementing",
         recommendations=["Wait for CI to complete"],
     )
@@ -178,7 +190,9 @@ def test_format_for_human_not_configured() -> None:
         ci_details=None,
         rebase_needed=False,
         rebase_reason="Up to date with origin/main",
-        tasks_complete=True,
+        tasks_status=TaskTrackerStatus.COMPLETE,
+        tasks_reason="All tasks complete",
+        tasks_is_blocking=False,
         current_github_label="status-03:implementing",
         recommendations=["Configure CI pipeline"],
     )
@@ -197,7 +211,9 @@ def test_format_for_llm_basic() -> None:
         ci_details=None,
         rebase_needed=False,
         rebase_reason="Up to date",
-        tasks_complete=True,
+        tasks_status=TaskTrackerStatus.COMPLETE,
+        tasks_reason="All tasks complete",
+        tasks_is_blocking=False,
         current_github_label="status-03:implementing",
         recommendations=["Ready to merge"],
     )
@@ -226,7 +242,9 @@ def test_format_for_llm_truncation() -> None:
         ci_details=long_ci_details,
         rebase_needed=True,
         rebase_reason="Behind",
-        tasks_complete=False,
+        tasks_status=TaskTrackerStatus.INCOMPLETE,
+        tasks_reason="Tasks incomplete",
+        tasks_is_blocking=True,
         current_github_label="status-02:planning",
         recommendations=["Fix errors"],
     )
@@ -253,7 +271,9 @@ def test_format_for_llm_no_truncation() -> None:
         ci_details=short_ci_details,
         rebase_needed=False,
         rebase_reason="Up to date",
-        tasks_complete=True,
+        tasks_status=TaskTrackerStatus.COMPLETE,
+        tasks_reason="All tasks complete",
+        tasks_is_blocking=False,
         current_github_label="status-03:implementing",
         recommendations=["Fix error"],
     )
@@ -276,7 +296,7 @@ def test_create_empty_report() -> None:
     assert report.ci_details is None
     assert report.rebase_needed is False
     assert report.rebase_reason == "Unknown"
-    assert report.tasks_complete is False
+    assert report.tasks_status == TaskTrackerStatus.N_A
     assert report.current_github_label == "unknown"
     assert report.recommendations == []
 
@@ -601,7 +621,9 @@ def test_dataclass_immutability() -> None:
         ci_details=None,
         rebase_needed=False,
         rebase_reason="Up to date",
-        tasks_complete=True,
+        tasks_status=TaskTrackerStatus.COMPLETE,
+        tasks_reason="All tasks complete",
+        tasks_is_blocking=False,
         current_github_label="status-03:implementing",
         recommendations=[],
     )
@@ -636,7 +658,11 @@ def test_collect_branch_status_all_good() -> None:
         mock_base.return_value = "origin/main"
         mock_ci.return_value = ("PASSED", None)
         mock_rebase.return_value = (False, "Up to date with origin/main")
-        mock_tasks.return_value = True
+        mock_tasks.return_value = (
+            TaskTrackerStatus.COMPLETE,
+            "5 of 5 tasks complete",
+            False,
+        )
         mock_label.return_value = "status-04:reviewing"
 
         result = collect_branch_status(project_dir)
@@ -648,7 +674,7 @@ def test_collect_branch_status_all_good() -> None:
         assert result.ci_details is None
         assert result.rebase_needed is False
         assert result.rebase_reason == "Up to date with origin/main"
-        assert result.tasks_complete is True
+        assert result.tasks_status == TaskTrackerStatus.COMPLETE
         assert result.current_github_label == "status-04:reviewing"
         assert "Ready to merge" in result.recommendations
 
@@ -681,7 +707,11 @@ def test_collect_branch_status_ci_failed() -> None:
         mock_base.return_value = "main"
         mock_ci.return_value = ("FAILED", ci_error)
         mock_rebase.return_value = (False, "Up to date with origin/main")
-        mock_tasks.return_value = True
+        mock_tasks.return_value = (
+            TaskTrackerStatus.COMPLETE,
+            "5 of 5 tasks complete",
+            False,
+        )
         mock_label.return_value = "status-03:implementing"
 
         result = collect_branch_status(project_dir)
@@ -692,7 +722,7 @@ def test_collect_branch_status_ci_failed() -> None:
         assert result.ci_status == "FAILED"
         assert result.ci_details == ci_error
         assert result.rebase_needed is False
-        assert result.tasks_complete is True
+        assert result.tasks_status == TaskTrackerStatus.COMPLETE
         assert "Fix CI test failures" in result.recommendations
 
 
@@ -717,7 +747,11 @@ def test_collect_branch_status_rebase_needed() -> None:
         mock_base.return_value = "main"
         mock_ci.return_value = ("PASSED", None)
         mock_rebase.return_value = (True, "5 commits behind origin/main")
-        mock_tasks.return_value = True
+        mock_tasks.return_value = (
+            TaskTrackerStatus.COMPLETE,
+            "5 of 5 tasks complete",
+            False,
+        )
         mock_label.return_value = "status-03:implementing"
 
         result = collect_branch_status(project_dir)
@@ -752,7 +786,11 @@ def test_collect_branch_status_tasks_incomplete() -> None:
         mock_base.return_value = "main"
         mock_ci.return_value = ("PASSED", None)
         mock_rebase.return_value = (False, "Up to date with origin/main")
-        mock_tasks.return_value = False
+        mock_tasks.return_value = (
+            TaskTrackerStatus.INCOMPLETE,
+            "3 of 5 tasks complete",
+            True,
+        )
         mock_label.return_value = "status-03:implementing"
 
         result = collect_branch_status(project_dir)
@@ -762,7 +800,7 @@ def test_collect_branch_status_tasks_incomplete() -> None:
         assert result.base_branch == "main"
         assert result.ci_status == "PASSED"
         assert result.rebase_needed is False
-        assert result.tasks_complete is False
+        assert result.tasks_status == TaskTrackerStatus.INCOMPLETE
         assert "Complete remaining tasks" in result.recommendations
 
 
@@ -788,7 +826,11 @@ def test_collect_branch_status_with_truncation() -> None:
         mock_base.return_value = "origin/main"
         mock_ci.return_value = ("FAILED", long_ci_error)
         mock_rebase.return_value = (False, "Up to date")
-        mock_tasks.return_value = True
+        mock_tasks.return_value = (
+            TaskTrackerStatus.COMPLETE,
+            "5 of 5 tasks complete",
+            False,
+        )
         mock_label.return_value = "status-03:implementing"
 
         result = collect_branch_status(project_dir, max_log_lines=50)
@@ -823,7 +865,11 @@ def test_collect_branch_status_all_failed() -> None:
         mock_base.return_value = "main"
         mock_ci.return_value = ("FAILED", ci_error)
         mock_rebase.return_value = (True, "3 commits behind origin/main")
-        mock_tasks.return_value = False
+        mock_tasks.return_value = (
+            TaskTrackerStatus.INCOMPLETE,
+            "3 of 5 tasks complete",
+            True,
+        )
         mock_label.return_value = "status-02:planning"
 
         result = collect_branch_status(project_dir)
@@ -835,12 +881,12 @@ def test_collect_branch_status_all_failed() -> None:
         assert result.ci_details == ci_error
         assert result.rebase_needed is True
         assert result.rebase_reason == "3 commits behind origin/main"
-        assert result.tasks_complete is False
+        assert result.tasks_status == TaskTrackerStatus.INCOMPLETE
         assert result.current_github_label == "status-02:planning"
 
         # Should have recommendations in priority order
         # Note: Rebase recommendation is NOT added when CI is FAILED and tasks are incomplete
-        # (per _generate_recommendations logic: rebase only when tasks_complete AND ci_status != FAILED)
+        # (per _generate_recommendations logic: rebase only when tasks_ok AND ci_status != FAILED)
         recommendations = result.recommendations
         assert len(recommendations) >= 2
         assert "Fix CI test failures" in recommendations[0]  # CI first priority
@@ -952,45 +998,52 @@ def test_collect_task_status() -> None:
     with patch("pathlib.Path.exists") as mock_exists:
         mock_exists.return_value = False
 
-        result = _collect_task_status(project_dir)
+        status, reason, is_blocking = _collect_task_status(project_dir)
 
-        assert result is True  # No pr_info dir means no tracking, so complete
+        assert status == TaskTrackerStatus.N_A
+        assert is_blocking is False
 
-    # Test tasks complete - pr_info exists with no incomplete work
+    # Test tasks complete - pr_info exists with all tasks done
     with (
-        patch("pathlib.Path.exists") as mock_exists,
-        patch("mcp_coder.checks.branch_status.has_incomplete_work") as mock_incomplete,
+        patch("pathlib.Path.exists", return_value=True),
+        patch(
+            "mcp_coder.checks.branch_status.get_task_counts",
+            return_value=(5, 5),
+        ) as mock_counts,
     ):
-        mock_exists.return_value = True
-        mock_incomplete.return_value = False
+        status, reason, is_blocking = _collect_task_status(project_dir)
 
-        result = _collect_task_status(project_dir)
-
-        assert result is True  # No incomplete work means tasks complete
+        assert status == TaskTrackerStatus.COMPLETE
+        assert is_blocking is False  # No incomplete work means tasks complete
 
     # Test tasks incomplete
     with (
-        patch("pathlib.Path.exists") as mock_exists,
-        patch("mcp_coder.checks.branch_status.has_incomplete_work") as mock_incomplete,
+        patch("pathlib.Path.exists", return_value=True),
+        patch(
+            "mcp_coder.checks.branch_status.get_task_counts",
+            return_value=(5, 3),
+        ),
     ):
-        mock_exists.return_value = True
-        mock_incomplete.return_value = True
+        status, reason, is_blocking = _collect_task_status(project_dir)
 
-        result = _collect_task_status(project_dir)
-
-        assert result is False  # Has incomplete work means tasks not complete
+        assert status == TaskTrackerStatus.INCOMPLETE
+        assert is_blocking is True
+        assert "3 of 5" in reason  # Has incomplete work means tasks not complete
 
     # Test error case
     with (
         patch("pathlib.Path.exists") as mock_exists,
-        patch("mcp_coder.checks.branch_status.has_incomplete_work") as mock_incomplete,
+        patch(
+            "mcp_coder.checks.branch_status.get_task_counts",
+            side_effect=Exception("Task tracker error"),
+        ),
     ):
         mock_exists.return_value = True
-        mock_incomplete.side_effect = Exception("Task tracker error")
 
-        result = _collect_task_status(project_dir)
+        status, reason, is_blocking = _collect_task_status(project_dir)
 
-        assert result is False  # Default to incomplete on error
+        assert status == TaskTrackerStatus.ERROR
+        assert is_blocking is True  # Default to incomplete on error
 
 
 def test_collect_github_label() -> None:
@@ -1082,7 +1135,7 @@ def test_generate_recommendations_logic() -> None:
     report_data = {
         "ci_status": "PASSED",
         "rebase_needed": False,
-        "tasks_complete": True,
+        "tasks_status": TaskTrackerStatus.COMPLETE,
     }
     recommendations = _generate_recommendations(report_data)
     assert "Ready to merge" in recommendations[0]
@@ -1091,17 +1144,17 @@ def test_generate_recommendations_logic() -> None:
     report_data = {
         "ci_status": "FAILED",
         "rebase_needed": False,
-        "tasks_complete": True,
+        "tasks_status": TaskTrackerStatus.COMPLETE,
     }
     recommendations = _generate_recommendations(report_data)
     assert "Fix CI test failures" == recommendations[0]
 
     # Test multiple issues - should prioritize CI first
-    # Note: rebase recommendation only added when tasks_complete AND ci_status != FAILED
+    # Note: rebase recommendation only added when tasks_ok AND ci_status != FAILED
     report_data = {
         "ci_status": "FAILED",
         "rebase_needed": True,
-        "tasks_complete": False,
+        "tasks_status": TaskTrackerStatus.INCOMPLETE,
     }
     recommendations = _generate_recommendations(report_data)
     assert "Fix CI test failures" == recommendations[0]
@@ -1113,7 +1166,7 @@ def test_generate_recommendations_logic() -> None:
     report_data = {
         "ci_status": "PASSED",
         "rebase_needed": False,
-        "tasks_complete": False,
+        "tasks_status": TaskTrackerStatus.INCOMPLETE,
     }
     recommendations = _generate_recommendations(report_data)
     assert "Complete remaining tasks" == recommendations[0]
@@ -1122,7 +1175,7 @@ def test_generate_recommendations_logic() -> None:
     report_data = {
         "ci_status": "PASSED",
         "rebase_needed": True,
-        "tasks_complete": True,
+        "tasks_status": TaskTrackerStatus.COMPLETE,
     }
     recommendations = _generate_recommendations(report_data)
     assert "Rebase onto origin/main" == recommendations[0]
@@ -1131,7 +1184,7 @@ def test_generate_recommendations_logic() -> None:
     report_data = {
         "ci_status": "PENDING",
         "rebase_needed": False,
-        "tasks_complete": True,
+        "tasks_status": TaskTrackerStatus.COMPLETE,
     }
     recommendations = _generate_recommendations(report_data)
     assert "Wait for CI to complete" == recommendations[0]
@@ -1141,7 +1194,7 @@ def test_generate_recommendations_logic() -> None:
     report_data = {
         "ci_status": "NOT_CONFIGURED",
         "rebase_needed": False,
-        "tasks_complete": True,
+        "tasks_status": TaskTrackerStatus.COMPLETE,
     }
     recommendations = _generate_recommendations(report_data)
     assert "Configure CI pipeline" == recommendations[0]
@@ -1575,7 +1628,11 @@ def test_collect_branch_status_includes_branch_info() -> None:
         mock_base.return_value = "develop"
         mock_ci.return_value = ("PASSED", None)
         mock_rebase.return_value = (False, "Up to date")
-        mock_tasks.return_value = True
+        mock_tasks.return_value = (
+            TaskTrackerStatus.COMPLETE,
+            "5 of 5 tasks complete",
+            False,
+        )
         mock_label.return_value = "status-03:implementing"
 
         result = collect_branch_status(project_dir)
@@ -1617,7 +1674,11 @@ def test_collect_branch_status_shares_issue_data() -> None:
         mock_base.return_value = "main"
         mock_ci.return_value = ("PASSED", None)
         mock_rebase.return_value = (False, "Up to date")
-        mock_tasks.return_value = True
+        mock_tasks.return_value = (
+            TaskTrackerStatus.COMPLETE,
+            "5 of 5 tasks complete",
+            False,
+        )
         mock_label.return_value = "status-04:reviewing"
 
         collect_branch_status(project_dir)

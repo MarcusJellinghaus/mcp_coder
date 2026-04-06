@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: Update `BranchStatusReport` and `_collect_task_status()`, add `CIStatus` enum, fix all test references
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Update formatters and recommendations with N/A blocker logic
 - [ ] Implementation (tests + production code)

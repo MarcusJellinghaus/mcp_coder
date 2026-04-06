@@ -14,6 +14,7 @@ from typing import Optional, Tuple
 from ...checks.branch_status import (
     CI_PENDING,
     BranchStatusReport,
+    CIStatus,
     collect_branch_status,
 )
 from ...utils.git_operations.branch_queries import (

@@ -6,6 +6,7 @@ status of branches, including CI status, rebase requirements, and task completio
 
 import logging
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
@@ -23,13 +24,29 @@ from mcp_coder.utils.git_operations.branch_queries import (
 from mcp_coder.utils.github_operations.ci_results_manager import CIResultsManager
 from mcp_coder.utils.github_operations.issues import IssueData, IssueManager
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
-from mcp_coder.workflow_utils.task_tracker import has_incomplete_work
+from mcp_coder.workflow_utils.task_tracker import (
+    TaskTrackerFileNotFoundError,
+    TaskTrackerSectionNotFoundError,
+    TaskTrackerStatus,
+    get_task_counts,
+    has_incomplete_work,
+)
 
-# Status Constants
-CI_PASSED = "PASSED"
-CI_FAILED = "FAILED"
-CI_NOT_CONFIGURED = "NOT_CONFIGURED"
-CI_PENDING = "PENDING"
+
+class CIStatus(str, Enum):
+    """CI pipeline status."""
+
+    PASSED = "PASSED"
+    FAILED = "FAILED"
+    NOT_CONFIGURED = "NOT_CONFIGURED"
+    PENDING = "PENDING"
+
+
+# Backward-compatible aliases
+CI_PASSED = CIStatus.PASSED
+CI_FAILED = CIStatus.FAILED
+CI_NOT_CONFIGURED = CIStatus.NOT_CONFIGURED
+CI_PENDING = CIStatus.PENDING
 
 # Default Values
 DEFAULT_LABEL = "unknown"
@@ -46,7 +63,9 @@ class BranchStatusReport:
     ci_details: Optional[str]  # Error logs or None
     rebase_needed: bool  # True if rebase required
     rebase_reason: str  # Reason for rebase status
-    tasks_complete: bool  # True if all tracker tasks done
+    tasks_status: TaskTrackerStatus  # Task tracker status
+    tasks_reason: str  # Reason for task status
+    tasks_is_blocking: bool  # Whether task status blocks merging
     current_github_label: str  # Current workflow status label
     recommendations: List[str]  # List of suggested actions
     pr_number: Optional[int] = None  # PR number if found
@@ -61,17 +80,22 @@ class BranchStatusReport:
         """
         # Determine status icons
         ci_icon = {
-            CI_PASSED: "✅",
-            CI_FAILED: "❌",
-            CI_PENDING: "⏳",
-            CI_NOT_CONFIGURED: "⚙️",
+            "PASSED": "✅",
+            "FAILED": "❌",
+            "PENDING": "⏳",
+            "NOT_CONFIGURED": "⚙️",
         }.get(self.ci_status, "❓")
 
         rebase_icon = "✅" if not self.rebase_needed else "⚠️"
         rebase_status_text = "UP TO DATE" if not self.rebase_needed else "BEHIND"
 
-        tasks_icon = "✅" if self.tasks_complete else "❌"
-        tasks_status_text = "COMPLETE" if self.tasks_complete else "INCOMPLETE"
+        tasks_icon = {
+            TaskTrackerStatus.COMPLETE: "✅",
+            TaskTrackerStatus.INCOMPLETE: "❌",
+            TaskTrackerStatus.N_A: "➖",
+            TaskTrackerStatus.ERROR: "⚠️",
+        }.get(self.tasks_status, "❓")
+        tasks_status_text = self.tasks_status.value
 
         # Build the report sections - Branch info first
         lines = [
@@ -133,7 +157,7 @@ class BranchStatusReport:
         """
         # Convert rebase_needed to status string
         rebase_status = "BEHIND" if self.rebase_needed else "UP_TO_DATE"
-        tasks_status = "COMPLETE" if self.tasks_complete else "INCOMPLETE"
+        tasks_status = self.tasks_status.value
 
         # Build status summary line
         status_summary = (
@@ -184,7 +208,9 @@ def create_empty_report() -> BranchStatusReport:
         ci_details=None,
         rebase_needed=False,
         rebase_reason="Unknown",
-        tasks_complete=False,
+        tasks_status=TaskTrackerStatus.N_A,
+        tasks_reason="Unknown",
+        tasks_is_blocking=False,
         current_github_label=DEFAULT_LABEL,
         recommendations=EMPTY_RECOMMENDATIONS,
         pr_number=None,
@@ -307,13 +333,15 @@ def collect_branch_status(
             project_dir, branch_name, max_log_lines
         )
         rebase_needed, rebase_reason = _collect_rebase_status(project_dir)
-        tasks_complete = _collect_task_status(project_dir)
+        tasks_status, tasks_reason, tasks_is_blocking = _collect_task_status(
+            project_dir
+        )
 
         # Prepare data for recommendation generation
         report_data = {
             "ci_status": ci_status,
             "rebase_needed": rebase_needed,
-            "tasks_complete": tasks_complete,
+            "tasks_status": tasks_status,
             "ci_details": ci_details,
         }
 
@@ -326,7 +354,9 @@ def collect_branch_status(
             ci_details=ci_details,
             rebase_needed=rebase_needed,
             rebase_reason=rebase_reason,
-            tasks_complete=tasks_complete,
+            tasks_status=tasks_status,
+            tasks_reason=tasks_reason,
+            tasks_is_blocking=tasks_is_blocking,
             current_github_label=current_label,
             recommendations=recommendations,
         )
@@ -602,37 +632,48 @@ def _collect_rebase_status(project_dir: Path) -> Tuple[bool, str]:
         return False, f"Error checking rebase status: {e}"
 
 
-def _collect_task_status(project_dir: Path) -> bool:
+def _collect_task_status(
+    project_dir: Path,
+) -> Tuple[TaskTrackerStatus, str, bool]:
     """Collect task tracker completion status.
 
     Returns:
-        True if all tasks are complete, False otherwise.
+        Tuple of (status, reason, is_blocking).
     """
     logger = logging.getLogger(__name__)
+    pr_info_path = project_dir / "pr_info"
+
+    if not pr_info_path.exists():
+        logger.info("No pr_info directory — tasks N/A")
+        return TaskTrackerStatus.N_A, "No pr_info directory", False
 
     try:
-        # Use the project directory's pr_info folder for task tracking
-        pr_info_path = project_dir / "pr_info"
-        if pr_info_path.exists():
-            incomplete_work = has_incomplete_work(str(pr_info_path))
-        else:
-            # If no pr_info directory, assume no tasks are tracked
-            incomplete_work = False
-
-        tasks_complete = not incomplete_work
-
-        if tasks_complete:
-            logger.info("All tasks complete")
-        else:
-            logger.info("Incomplete tasks found")
-
-        return tasks_complete
-
+        total, completed = get_task_counts(str(pr_info_path))
+        if total == 0:
+            steps_dir = pr_info_path / "steps"
+            has_steps = steps_dir.exists() and any(steps_dir.iterdir())
+            logger.info("No tasks in tracker — N/A (has_steps=%s)", has_steps)
+            return TaskTrackerStatus.N_A, "No tasks in tracker", has_steps
+        if completed == total:
+            reason = f"{completed} of {total} tasks complete"
+            logger.info("All tasks complete: %s", reason)
+            return TaskTrackerStatus.COMPLETE, reason, False
+        reason = f"{completed} of {total} tasks complete"
+        logger.info("Incomplete tasks: %s", reason)
+        return TaskTrackerStatus.INCOMPLETE, reason, True
+    except TaskTrackerFileNotFoundError:
+        steps_dir = pr_info_path / "steps"
+        has_steps = steps_dir.exists() and any(steps_dir.iterdir())
+        logger.info("No TASK_TRACKER.md — N/A (has_steps=%s)", has_steps)
+        return TaskTrackerStatus.N_A, "No TASK_TRACKER.md", has_steps
+    except TaskTrackerSectionNotFoundError:
+        logger.info("No Tasks section in tracker — N/A")
+        return TaskTrackerStatus.N_A, "No Tasks section in tracker", False
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow when GitHub/CI exception types are stable
-        logger.warning(f"Failed to collect task status: {e}")
-        return False
+        logger.warning("Failed to collect task status: %s", e)
+        return TaskTrackerStatus.ERROR, f"Error reading task tracker: {e}", True
 
 
 def _collect_github_label(
@@ -686,7 +727,11 @@ def _generate_recommendations(report_data: Dict[str, Any]) -> List[str]:
 
     ci_status = report_data.get("ci_status")
     rebase_needed = report_data.get("rebase_needed", False)
-    tasks_complete = report_data.get("tasks_complete", False)
+    tasks_status = report_data.get("tasks_status", TaskTrackerStatus.N_A)
+    tasks_ok = tasks_status in (
+        TaskTrackerStatus.COMPLETE,
+        TaskTrackerStatus.N_A,
+    )
 
     if ci_status == CI_FAILED:
         recommendations.append("Fix CI test failures")
@@ -697,17 +742,15 @@ def _generate_recommendations(report_data: Dict[str, Any]) -> List[str]:
     elif ci_status == CI_NOT_CONFIGURED:
         recommendations.append("Configure CI pipeline")
 
-    if not tasks_complete:
+    if tasks_status == TaskTrackerStatus.INCOMPLETE:
         recommendations.append("Complete remaining tasks")
+    elif tasks_status == TaskTrackerStatus.ERROR:
+        recommendations.append("Fix task tracker errors")
 
-    if rebase_needed and tasks_complete and ci_status != CI_FAILED:
+    if rebase_needed and tasks_ok and ci_status != CI_FAILED:
         recommendations.append("Rebase onto origin/main")
 
-    if (
-        ci_status in [CI_PASSED, CI_NOT_CONFIGURED]
-        and tasks_complete
-        and not rebase_needed
-    ):
+    if ci_status in [CI_PASSED, CI_NOT_CONFIGURED] and tasks_ok and not rebase_needed:
         recommendations.append("Ready to merge")
 
     if not recommendations:
