@@ -47,7 +47,7 @@ Rename and restructure orchestrator test files to mirror the source structure cr
 
 - **Move, don't change**: Tests are moved as-is, no logic changes.
 - **Only adjust imports and class names**: Per refactoring guide.
-- **750-line threshold**: All resulting files must be under 750 lines.
+- **750-line threshold**: All resulting files must be under 750 lines, except `test_session_restart.py` (~980 lines) which is added to `.large-files-allowlist` (further splitting is a separate issue).
 - **No duplicates**: Original files deleted after move.
 
 ## Implementation steps

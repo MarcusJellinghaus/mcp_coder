@@ -18,7 +18,7 @@ Source: `tests/workflows/vscodeclaude/test_orchestrator_sessions.py`
 | `TestRestartClosedSessionsBranchHandling` (~562 lines) | `test_session_restart_closed_sessions.py` | No |
 | `TestBranchHandlingIntegration` (~456 lines) | `test_session_restart_branch_integration.py` | No |
 
-Also modify: `.large-files-allowlist` — remove `tests/workflows/vscodeclaude/test_orchestrator_sessions.py`
+Also modify: `.large-files-allowlist` — remove `test_orchestrator_sessions.py`, add `test_session_restart.py`
 
 ## WHAT — Operations per new file
 - Module docstring
@@ -39,12 +39,12 @@ for each class:
     create new file with: docstring + needed imports + class body
     if class is TestOrchestration: rename to TestSessionRestart
 delete test_orchestrator_sessions.py
-remove entry from .large-files-allowlist
-run_checks()  # pytest, pylint, mypy
+update .large-files-allowlist: remove test_orchestrator_sessions.py, add test_session_restart.py
+run_checks()  # all code quality checks per CLAUDE.md
 ```
 
 ## DATA — Expected result
-- 4 new files, each under 750 lines
+- 4 new files (3 under 750 lines; `test_session_restart.py` ~980 lines, added to allowlist)
 - 0 original orchestrator test files remaining
 - All tests pass (same count as before)
 
@@ -68,7 +68,7 @@ For each new file:
 
 After creating all 4 files:
 - Delete test_orchestrator_sessions.py
-- Remove its entry from .large-files-allowlist
+- Update `.large-files-allowlist`: remove `test_orchestrator_sessions.py`, add `test_session_restart.py` (class is ~955 lines, further splitting is a separate issue)
 
-Run pytest (with -n auto, excluding integration markers), pylint, and mypy. All checks must pass.
+Run format_code before committing. Run all code quality checks per CLAUDE.md (pytest, pylint, mypy, lint_imports, vulture, ruff, format_code). All checks must pass.
 ```
