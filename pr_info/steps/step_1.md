@@ -29,23 +29,15 @@ def filter_by_input(self, input_text: str) -> list[Command]:
 
 ## ALGORITHM
 
-```
+```python
 def filter_by_input(self, input_text: str) -> list[Command]:
     if not input_text.startswith("/"):
         return []
-    prefix = input_text.split()[0].lower()  # first word, lowered
-    return [cmd for cmd in self._commands.values()
-            if cmd.name.lower().startswith(prefix)]
-```
-
-Note: use `input_text.split()[0]` to handle cases like `/he ` (with trailing space) — only match on the first word. But actually, for autocomplete the user types `/he` and hasn't submitted yet, so the full `input_text` might be just `/he`. We should match the prefix of the first word: extract everything from `/` up to the first space (or end of string), lowercase it, and prefix-match against command names.
-
-Refined:
-```
-prefix = input_text.split()[0].lower() if input_text.strip() else ""
-if not prefix.startswith("/"):
-    return []
-return sorted matching commands by name
+    prefix = input_text.split()[0].lower()  # safe: startswith("/") implies non-empty
+    return sorted(
+        [c for c in self._commands.values() if c.name.lower().startswith(prefix)],
+        key=lambda c: c.name,
+    )
 ```
 
 ## DATA
@@ -64,7 +56,7 @@ def test_filter_by_input_slash_returns_all() -> None:
     registry = create_default_registry()
     result = registry.filter_by_input("/")
     names = {c.name for c in result}
-    assert names == {"/help", "/clear", "/quit", "/exit"}
+    assert names == {"/help", "/clear", "/quit"}
 
 def test_filter_by_input_prefix_match() -> None:
     """filter_by_input('/he') returns [/help]."""

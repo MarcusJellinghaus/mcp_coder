@@ -1,124 +1,187 @@
-# Step 4: Pilot Integration Tests for Autocomplete Behavior
+# Step 4: Wire Autocomplete into `InputArea`
 
-> **Context:** See `pr_info/steps/summary.md` for full issue context and architecture.
+> **Context:** See `pr_info/steps/summary.md` and `Decisions.md` (D1, D2, D5).
 
 ## Goal
 
-Write Textual pilot tests that verify the full autocomplete behavior end-to-end: visibility, filtering, key routing, event emission, and no regression on existing behavior.
+Make `InputArea` hold the current `AutocompleteState`, recompute on every text change, drive the `CommandAutocomplete` widget, route navigation keys when the dropdown is visible, and emit transition events.
 
 ## WHERE
 
 | Action | File |
 |--------|------|
-| Create | `tests/icoder/test_autocomplete_pilot.py` |
+| Modify | `src/mcp_coder/icoder/ui/widgets/input_area.py` |
 
 ## WHAT
 
-Full pilot integration tests using `ICoderApp` with `FakeLLMService`. These tests exercise the complete stack: typing in `InputArea` → `CommandRegistry.filter_by_input` → `CommandAutocomplete` show/hide → event log emissions.
-
-## Tests
-
 ```python
-pytestmark = pytest.mark.textual_integration
+class InputArea(TextArea):
+    def __init__(
+        self,
+        *args: Any,
+        registry: CommandRegistry | None = None,
+        event_log: EventLog | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Accept optional registry and event_log for autocomplete.
 
-# --- Visibility tests ---
-
-async def test_typing_slash_shows_dropdown():
-    """Type '/' → CommandAutocomplete becomes visible with all commands."""
-
-async def test_typing_slash_cl_filters_to_clear():
-    """Type '/cl' → dropdown shows only /clear."""
-
-async def test_typing_slash_xyz_shows_no_matching():
-    """Type '/xyz' → dropdown visible with '(no matching commands)' row."""
-
-async def test_backspace_past_slash_hides_dropdown():
-    """Type '/' then backspace → dropdown hidden."""
-
-async def test_empty_input_no_dropdown():
-    """Empty input → dropdown not visible."""
-
-async def test_non_slash_input_no_dropdown():
-    """Type 'hello' → dropdown not visible."""
-
-# --- Key routing tests ---
-
-async def test_tab_selects_and_inserts_command():
-    """Type '/cl', press Tab → input contains '/clear ', dropdown hidden."""
-
-async def test_escape_hides_dropdown_preserves_input():
-    """Type '/he', press Escape → dropdown hidden, input still '/he'."""
-
-async def test_enter_submits_with_slash_input():
-    """Type '/help', press Enter → command executes (existing behavior), dropdown hidden."""
-
-async def test_up_down_navigate_dropdown_when_visible():
-    """With dropdown visible, Up/Down navigate highlight (not command history)."""
-
-async def test_up_down_navigate_history_when_hidden():
-    """With dropdown hidden, Up/Down still navigate command history (no regression)."""
-
-async def test_tab_does_nothing_when_dropdown_hidden():
-    """With no leading '/', Tab does not intercept (no regression)."""
-
-# --- Event log tests ---
-
-async def test_event_sequence_type_and_tab_select():
-    """Type '/', '/h', '/he', Tab → events: shown, filtered(×2), selected, hidden(reason=selected)."""
-
-async def test_event_sequence_type_and_escape():
-    """Type '/', Escape → events: shown, hidden(reason=escape)."""
-
-async def test_event_sequence_type_and_enter():
-    """Type '/help', Enter → events: shown, filtered(×N), hidden(reason=submit)."""
-
-async def test_event_sequence_backspace_past_slash():
-    """Type '/', backspace → events: shown, hidden(reason=prefix_removed)."""
+        Both default to None for backward compatibility — existing tests that
+        construct InputArea() with no args must keep working (constraint I7).
+        """
+        super().__init__(*args, **kwargs)
+        self._registry: CommandRegistry | None = registry
+        self._event_log: EventLog | None = event_log
+        self._ac_state: AutocompleteState = AutocompleteState(
+            visible=False, matches=(), highlighted_index=-1
+        )
 ```
 
-## HOW
+## HOW — `on_text_area_changed`
 
-Each test:
-1. Creates `ICoderApp` with `FakeLLMService` + `EventLog(tmp_path)`
-2. Uses `async with app.run_test() as pilot`
-3. Inserts text into `InputArea` and presses keys via `pilot.press()`
-4. Asserts on `CommandAutocomplete.is_visible`, option list contents, `InputArea.text`, and `EventLog.entries`
-
-### Fixture pattern (same as existing `test_app_pilot.py`):
+After the existing resize logic, append the autocomplete block:
 
 ```python
-@pytest.fixture
-def icoder_app(fake_llm, event_log):
-    app_core = AppCore(llm_service=fake_llm, event_log=event_log)
-    return ICoderApp(app_core)
+if self._registry is None:
+    return
+
+prev = self._ac_state
+new = compute_next_state(self.text, self._registry)
+self._ac_state = new
+
+try:
+    dropdown = self.screen.query_one(CommandAutocomplete)
+except NoMatches:
+    return  # dropdown not mounted yet (e.g. initial load) — skip silently
+
+if new.visible:
+    dropdown.update_matches(list(new.matches))
+    dropdown.show_dropdown()
+else:
+    dropdown.hide_dropdown()
+
+if self._event_log is not None:
+    self._emit_ac_event(prev, new)
 ```
 
-Use the shared `fake_llm` and `event_log` fixtures from `tests/icoder/conftest.py`.
+## HOW — `_emit_ac_event(prev, new)`
 
-### Event log assertion helper:
+Maps the (prev, new) state diff to event log entries:
+
+| prev.visible | new.visible | Condition | Event emitted |
+|-------------|------------|-----------|---------------|
+| False | True  | (always)                          | `autocomplete_shown` with `matches=[names]` |
+| True  | True  | `prev.matches != new.matches`     | `autocomplete_filtered` with `query=text`, `matches=[names]` |
+| True  | True  | `prev.matches == new.matches`     | (no event) |
+| True  | False | (always)                          | `autocomplete_hidden` with `reason="prefix_removed"` |
+| False | False | (always)                          | (no event) |
+
+`autocomplete_selected` and `autocomplete_hidden(reason="escape"/"selected"/"submit")` are emitted from the key handler (below), not from `_emit_ac_event`.
+
+## HOW — `_on_key` extensions (BEFORE existing handlers)
+
+When `self._ac_state.visible` is True, intercept Escape / Up / Down / Tab / Enter:
 
 ```python
-def event_names(event_log: EventLog) -> list[str]:
-    return [e.event for e in event_log.entries]
+if self._ac_state.visible:
+    dropdown = self.screen.query_one(CommandAutocomplete)
 
-def ac_events(event_log: EventLog) -> list[EventEntry]:
-    return [e for e in event_log.entries if e.event.startswith("autocomplete_")]
+    if event.key == "escape":
+        event.stop()
+        event.prevent_default()
+        dropdown.hide_dropdown()
+        self._ac_state = AutocompleteState(visible=False, matches=(), highlighted_index=-1)
+        if self._event_log is not None:
+            self._event_log.log("autocomplete_hidden", reason="escape")
+            self._event_log.log("autocomplete_key_routed", key="escape")
+        return
+
+    if event.key == "up":
+        event.stop()
+        event.prevent_default()
+        dropdown.highlight_previous()
+        if self._event_log is not None:
+            self._event_log.log("autocomplete_key_routed", key="up")
+        return
+
+    if event.key == "down":
+        event.stop()
+        event.prevent_default()
+        dropdown.highlight_next()
+        if self._event_log is not None:
+            self._event_log.log("autocomplete_key_routed", key="down")
+        return
+
+    if event.key == "tab":
+        event.stop()
+        event.prevent_default()
+        name = dropdown.select_highlighted()
+        if name:
+            self.load_text(name + " ")
+            self.move_cursor(self.document.end)
+            if self._event_log is not None:
+                self._event_log.log("autocomplete_selected", command=name)
+        dropdown.hide_dropdown()
+        self._ac_state = AutocompleteState(visible=False, matches=(), highlighted_index=-1)
+        if self._event_log is not None:
+            self._event_log.log("autocomplete_hidden", reason="selected")
+            self._event_log.log("autocomplete_key_routed", key="tab")
+        return
+```
+
+### Enter branch — explicit
+
+The existing Enter handler must hide the dropdown (if visible) but **always submit**:
+
+```python
+if event.key == "enter":
+    if self._ac_state.visible:
+        dropdown = self.screen.query_one(CommandAutocomplete)
+        # Note: per Decision D2, Enter does NOT auto-select. It always submits.
+        # The dropdown is hidden as a side effect of submission.
+        dropdown.hide_dropdown()
+        self._ac_state = AutocompleteState(visible=False, matches=(), highlighted_index=-1)
+        if self._event_log is not None:
+            self._event_log.log("autocomplete_hidden", reason="submit")
+    # ... existing Enter handling continues unchanged (submit the input)
+```
+
+**Important:** Use `self.load_text(name + " ")` + `self.move_cursor(self.document.end)` for Tab-insert — NOT `self.insert(...)`. This avoids the ambiguity around the `TextArea.insert()` signature.
+
+## DATA
+
+- `self._registry: CommandRegistry | None`
+- `self._event_log: EventLog | None`
+- `self._ac_state: AutocompleteState`
+
+## Backward compatibility (constraint I7)
+
+`InputArea()` (no args) must still work. Tests constructing `InputArea()` with no registry must mount and handle text changes without crashing.
+
+Add a unit/pilot test enforcing this:
+
+```python
+async def test_input_area_no_registry_backward_compat():
+    """InputArea() with no registry mounts and accepts text changes (no autocomplete behavior)."""
 ```
 
 ## Commit
 
-`test(icoder): add autocomplete pilot integration tests`
+`feat(icoder): wire autocomplete into InputArea`
 
 ## LLM Prompt
 
 ```
-Read pr_info/steps/summary.md for full context, then implement Step 4.
+Read pr_info/steps/summary.md and pr_info/steps/Decisions.md (D1, D2, D5) for context, then implement Step 4.
 
-1. Create tests/icoder/test_autocomplete_pilot.py with all the pilot tests listed in step_4.md
-2. Use the existing conftest fixtures (fake_llm, event_log) and create an icoder_app fixture
-3. Each test should use async with app.run_test() as pilot
-4. Verify dropdown visibility via CommandAutocomplete.is_visible property
-5. Verify event emissions via event_log.entries
-6. Run all three quality checks (pylint, pytest, mypy) — all must pass
-7. Commit: "test(icoder): add autocomplete pilot integration tests"
+1. Modify src/mcp_coder/icoder/ui/widgets/input_area.py:
+   - Add registry, event_log kwargs to __init__ (both default None — I7).
+   - Add self._ac_state: AutocompleteState field.
+   - Extend on_text_area_changed to call compute_next_state, drive dropdown, emit events.
+   - Implement _emit_ac_event(prev, new) per the table in step_4.md.
+   - Extend _on_key to route Escape/Up/Down/Tab when self._ac_state.visible (BEFORE existing handlers).
+   - Use load_text(name + " ") + move_cursor(self.document.end) for Tab-insert (NOT insert()).
+   - Update Enter handler to hide dropdown on submit (still always submits).
+2. Add backward-compat test that InputArea() with no args mounts cleanly.
+3. Run all five quality checks — all must pass.
+4. Commit: "feat(icoder): wire autocomplete into InputArea"
 ```

@@ -1,10 +1,10 @@
 # Step 2: Create `CommandAutocomplete` Widget
 
-> **Context:** See `pr_info/steps/summary.md` for full issue context and architecture.
+> **Context:** See `pr_info/steps/summary.md` for full issue context. See `Decisions.md` D3 for the base-class choice.
 
 ## Goal
 
-Create a thin `OptionList` wrapper widget that displays autocomplete suggestions. This is a dumb view — no business logic, no filtering, just show/hide/update what it's told to show.
+Create the autocomplete dropdown widget by **extending `OptionList` directly** (Decision D3 — no `Static` wrapper, no inner `compose()`). This is a dumb view: no filter logic, no transition tracking — just show/hide and update what it's told to show.
 
 ## WHERE
 
@@ -17,19 +17,20 @@ Create a thin `OptionList` wrapper widget that displays autocomplete suggestions
 ## WHAT
 
 ```python
-class CommandAutocomplete(Static):
-    """Autocomplete dropdown for slash commands. Thin OptionList wrapper."""
+from textual.widgets import OptionList
+from textual.widgets.option_list import Option
 
-    class CommandSelected(Message):
-        """Posted when user Tab-selects a command."""
-        def __init__(self, command_name: str) -> None: ...
+from mcp_coder.icoder.core.types import Command
 
-    def compose(self) -> ComposeResult:
-        """Yield an OptionList widget."""
+
+class CommandAutocomplete(OptionList):
+    """Autocomplete dropdown for slash commands. Subclass of OptionList."""
 
     def update_matches(self, matches: list[Command]) -> None:
         """Replace option list contents with given matches.
-        If matches is empty, show a single disabled '(no matching commands)' row."""
+
+        If `matches` is empty, show a single disabled '(no matching commands)' row.
+        """
 
     def show_dropdown(self) -> None:
         """Make the dropdown visible (set display=True)."""
@@ -42,45 +43,45 @@ class CommandAutocomplete(Static):
         """Whether the dropdown is currently displayed."""
 
     def highlight_next(self) -> None:
-        """Move highlight down one item in the OptionList."""
+        """Move highlight down one item."""
 
     def highlight_previous(self) -> None:
-        """Move highlight up one item in the OptionList."""
+        """Move highlight up one item."""
 
     def select_highlighted(self) -> str | None:
-        """Return the command name of the highlighted item, or None."""
+        """Return the command name (option id) of the highlighted item, or None."""
 ```
+
+**No `CommandSelected` Message class** (Decision D2 — dropped).
 
 ## HOW
 
-- `CommandAutocomplete` extends `Static` (container) and composes an `OptionList` inside
-- Uses `self.display = True/False` for show/hide
-- `OptionList` from `textual.widgets` provides highlight navigation out of the box
-- `update_matches` calls `option_list.clear_options()` then adds new ones
-- For empty matches, add a single `Option("(no matching commands)", disabled=True)`
-- Each option's prompt shows `"/name — description"` format
-- Store command names in option IDs for retrieval on select
-- Hidden by default (CSS: `display: none`)
+- `CommandAutocomplete` IS an `OptionList` — no inner widget, no `compose()`.
+- Uses `self.display = True/False` for show/hide.
+- `OptionList` provides highlight/navigation methods natively; `highlight_next`/`highlight_previous` are thin wrappers (or just call the inherited `action_cursor_down` / `action_cursor_up`).
+- `update_matches` calls `self.clear_options()` then adds new ones.
+- For empty matches, add a single `Option("(no matching commands)", disabled=True)`.
+- Each option: prompt is `f"{cmd.name} — {cmd.description}"`, `id` is `cmd.name`.
+- Hidden by default (CSS `display: none`).
+- `select_highlighted()` returns `self.get_option_at_index(self.highlighted).id` (or `None` if no highlight or disabled row).
 
 ## ALGORITHM
 
 ```python
 def update_matches(self, matches: list[Command]) -> None:
-    option_list = self.query_one(OptionList)
-    option_list.clear_options()
+    self.clear_options()
     if not matches:
-        option_list.add_option(Option("(no matching commands)", disabled=True))
+        self.add_option(Option("(no matching commands)", disabled=True))
         return
     for cmd in matches:
-        option_list.add_option(Option(f"{cmd.name} — {cmd.description}", id=cmd.name))
-    option_list.highlighted = 0  # auto-highlight first item
+        self.add_option(Option(f"{cmd.name} — {cmd.description}", id=cmd.name))
+    self.highlighted = 0  # auto-highlight first item
 ```
 
 ## DATA
 
-- `CommandSelected.command_name: str` — e.g. `"/help"`
-- `update_matches` takes `list[Command]` from `core.types`
-- `select_highlighted()` returns `str | None` — the command name string
+- `update_matches` takes `list[Command]` from `core.types`.
+- `select_highlighted()` returns `str | None` — the command name string (option id).
 
 ## CSS Addition (styles.py)
 
@@ -96,33 +97,31 @@ CommandAutocomplete {
 
 ## Tests
 
-`tests/icoder/test_command_autocomplete.py` — widget tests using a minimal Textual app:
+`tests/icoder/test_command_autocomplete.py` — widget tests using a minimal Textual app harness. Note: since `CommandAutocomplete` IS an `OptionList`, queries use `query_one(CommandAutocomplete)` directly — no inner `query_one(OptionList)`.
 
 ```python
-@pytest.mark.textual_integration
+pytestmark = pytest.mark.textual_integration
+
 async def test_dropdown_hidden_by_default():
-    """CommandAutocomplete is not displayed initially."""
+    """CommandAutocomplete is not displayed initially (display=False)."""
 
-@pytest.mark.textual_integration
-async def test_show_hide():
-    """show_dropdown/hide_dropdown toggle display."""
+async def test_show_hide_toggles_display():
+    """show_dropdown/hide_dropdown toggle display + is_visible reflects it."""
 
-@pytest.mark.textual_integration
 async def test_update_matches_shows_commands():
-    """update_matches populates the OptionList with command entries."""
+    """update_matches populates options with '/name — description' labels and id=name."""
 
-@pytest.mark.textual_integration
 async def test_update_matches_empty_shows_no_matching():
-    """Empty matches list shows '(no matching commands)' disabled row."""
+    """Empty matches list shows a single disabled '(no matching commands)' row."""
 
-@pytest.mark.textual_integration
 async def test_select_highlighted_returns_command_name():
-    """select_highlighted returns the command name of the highlighted option."""
+    """select_highlighted returns the option id (command name) of the highlighted row."""
 
-@pytest.mark.textual_integration
 async def test_highlight_navigation():
-    """highlight_next/highlight_previous cycle through options."""
+    """highlight_next / highlight_previous move the highlight through the options."""
 ```
+
+No `CommandSelected` assertions (Decision D2 — message class dropped).
 
 ## Commit
 
@@ -131,11 +130,11 @@ async def test_highlight_navigation():
 ## LLM Prompt
 
 ```
-Read pr_info/steps/summary.md for full context, then implement Step 2.
+Read pr_info/steps/summary.md and pr_info/steps/Decisions.md for context, then implement Step 2.
 
-1. Create tests/icoder/test_command_autocomplete.py with the widget tests listed in step_2.md
-2. Create src/mcp_coder/icoder/ui/widgets/command_autocomplete.py with the CommandAutocomplete widget
-3. Add CSS for CommandAutocomplete to src/mcp_coder/icoder/ui/styles.py
-4. Run all three quality checks (pylint, pytest, mypy) — all must pass
+1. Create tests/icoder/test_command_autocomplete.py with the 6 widget tests listed above.
+2. Create src/mcp_coder/icoder/ui/widgets/command_autocomplete.py with CommandAutocomplete extending OptionList directly.
+3. Add CSS for CommandAutocomplete to src/mcp_coder/icoder/ui/styles.py.
+4. Run all five quality checks — all must pass.
 5. Commit: "feat(icoder): add CommandAutocomplete widget"
 ```

@@ -1,190 +1,119 @@
-# Step 3: Wire Autocomplete into InputArea and ICoderApp
+# Step 3: Pure `core/autocomplete_state.py` Module
 
-> **Context:** See `pr_info/steps/summary.md` for full issue context and architecture.
+> **Context:** See `pr_info/steps/summary.md` for full context. See `Decisions.md` D1 for the state-representation choice.
 
 ## Goal
 
-Integrate the autocomplete dropdown into the app. InputArea drives visibility and event emission. ICoderApp composes the widget and wires the selection message.
+Create a pure (no Textual) module that defines the autocomplete state and a function to compute the next state from raw input. This is the "state machine" referenced in the issue, expressed as a frozen dataclass + pure function (Decision D1).
+
+The InputArea (Step 4) calls `compute_next_state()` on every text change and diffs the previous vs new state to drive the dropdown and emit events. Because this module is pure, it is unit-testable without a Textual pilot.
 
 ## WHERE
 
 | Action | File |
 |--------|------|
-| Modify | `src/mcp_coder/icoder/ui/widgets/input_area.py` |
-| Modify | `src/mcp_coder/icoder/ui/app.py` |
+| Create | `src/mcp_coder/icoder/core/autocomplete_state.py` |
+| Create | `tests/icoder/core/test_autocomplete_state.py` |
 
-## WHAT — InputArea Changes
-
-```python
-class InputArea(TextArea):
-    def __init__(
-        self,
-        registry: CommandRegistry | None = None,
-        event_log: EventLog | None = None,
-        **kwargs: Any,
-    ) -> None:
-        """Accept optional registry and event_log for autocomplete."""
-        # New fields for autocomplete tracking:
-        # self._ac_visible: bool = False
-        # self._ac_matches: list[Command] = []
-        # self._registry: CommandRegistry | None = registry
-        # self._event_log: EventLog | None = event_log
-
-    def on_text_area_changed(self) -> None:
-        """Extended: drive autocomplete dropdown + emit transition events."""
-
-    async def _on_key(self, event: events.Key) -> None:
-        """Extended: forward Up/Down/Tab/Escape to dropdown when visible."""
-```
-
-## WHAT — ICoderApp Changes
+## WHAT
 
 ```python
-class ICoderApp(App[None]):
-    def compose(self) -> ComposeResult:
-        yield OutputLog()
-        yield CommandAutocomplete()   # NEW: between OutputLog and InputArea
-        yield InputArea(
-            registry=self._core._registry,
-            event_log=self._core._event_log,
-        )
+from dataclasses import dataclass
 
-    def on_command_autocomplete_command_selected(
-        self, message: CommandAutocomplete.CommandSelected
-    ) -> None:
-        """Insert selected command into InputArea, hide dropdown."""
+from mcp_coder.icoder.core.command_registry import CommandRegistry
+from mcp_coder.icoder.core.types import Command
+
+
+@dataclass(frozen=True)
+class AutocompleteState:
+    """Snapshot of autocomplete state for a given input text."""
+
+    visible: bool
+    matches: tuple[Command, ...]
+    highlighted_index: int  # 0 when matches non-empty, -1 when empty
+
+
+def compute_next_state(
+    input_text: str,
+    registry: CommandRegistry,
+) -> AutocompleteState:
+    """Compute the autocomplete state for the given input text.
+
+    Pure function — no I/O, no Textual dependency.
+    """
 ```
 
-## HOW — InputArea autocomplete integration
-
-InputArea gets the `CommandAutocomplete` sibling via `self.screen.query_one(CommandAutocomplete)`.
-
-### `on_text_area_changed` additions (after existing resize logic):
+## ALGORITHM
 
 ```python
-# Autocomplete logic
-if self._registry is None:
-    return
-dropdown = self.screen.query_one(CommandAutocomplete)
-matches = self._registry.filter_by_input(self.text)
-should_show = self.text.startswith("/")
-
-if should_show and not self._ac_visible:
-    # hidden → visible
-    dropdown.update_matches(matches)
-    dropdown.show_dropdown()
-    self._ac_visible = True
-    self._ac_matches = matches
-    self._emit_ac_event("autocomplete_shown", matches=_names(matches))
-elif should_show and matches != self._ac_matches:
-    # still visible, matches changed
-    dropdown.update_matches(matches)
-    self._ac_matches = matches
-    self._emit_ac_event("autocomplete_filtered", query=self.text, matches=_names(matches))
-elif not should_show and self._ac_visible:
-    # visible → hidden
-    dropdown.hide_dropdown()
-    self._ac_visible = False
-    self._ac_matches = []
-    self._emit_ac_event("autocomplete_hidden", reason="prefix_removed")
+def compute_next_state(input_text, registry):
+    if not input_text.startswith("/"):
+        return AutocompleteState(visible=False, matches=(), highlighted_index=-1)
+    matches = tuple(registry.filter_by_input(input_text))
+    return AutocompleteState(
+        visible=True,
+        matches=matches,
+        highlighted_index=0 if matches else -1,
+    )
 ```
-
-### `_on_key` additions (BEFORE existing Enter/Up/Down logic):
-
-```python
-# When dropdown visible, intercept navigation keys
-if self._ac_visible:
-    dropdown = self.screen.query_one(CommandAutocomplete)
-    if event.key == "escape":
-        event.stop()
-        event.prevent_default()
-        dropdown.hide_dropdown()
-        self._ac_visible = False
-        self._ac_matches = []
-        self._emit_ac_event("autocomplete_hidden", reason="escape")
-        return
-    if event.key == "up":
-        event.stop()
-        event.prevent_default()
-        dropdown.highlight_previous()
-        return
-    if event.key == "down":
-        event.stop()
-        event.prevent_default()
-        dropdown.highlight_next()
-        return
-    if event.key == "tab":
-        event.stop()
-        event.prevent_default()
-        name = dropdown.select_highlighted()
-        if name:
-            self.clear()
-            self.insert(name + " ")
-            self._emit_ac_event("autocomplete_selected", command=name)
-        dropdown.hide_dropdown()
-        self._ac_visible = False
-        self._ac_matches = []
-        self._emit_ac_event("autocomplete_hidden", reason="selected")
-        return
-
-# Existing Enter handling — UNCHANGED
-if event.key == "enter":
-    ...  # existing submit logic
-    # Add: hide dropdown on submit if visible
-    if self._ac_visible:
-        dropdown.hide_dropdown()
-        self._ac_visible = False
-        self._ac_matches = []
-        self._emit_ac_event("autocomplete_hidden", reason="submit")
-```
-
-## HOW — ICoderApp `CommandSelected` handler
-
-```python
-def on_command_autocomplete_command_selected(
-    self, message: CommandAutocomplete.CommandSelected
-) -> None:
-    input_area = self.query_one(InputArea)
-    input_area.clear()
-    input_area.insert(message.command_name + " ")
-```
-
-Note: The `CommandSelected` message is posted by `CommandAutocomplete` but in the simplified approach, `InputArea` handles Tab directly (calling `select_highlighted()` and inserting text itself). The `CommandSelected` message may not be needed if `InputArea` handles everything. **Decide at implementation time:** if `InputArea` does the insertion directly in `_on_key`, the `CommandSelected` message on the widget becomes unused and can be omitted. Keep it simple.
 
 ## DATA
 
-- `self._ac_visible: bool` — current dropdown visibility
-- `self._ac_matches: list[Command]` — current match set (for change detection)
-- `self._registry: CommandRegistry | None` — injected registry
-- `self._event_log: EventLog | None` — injected event log
+- **Input:** `input_text: str`, `registry: CommandRegistry`.
+- **Output:** `AutocompleteState` (frozen dataclass).
+- Invariant: `visible == input_text.startswith("/")`.
+- Invariant: `highlighted_index == 0` iff `matches` is non-empty, else `-1`.
+- The dropdown is **visible even when matches is empty** (for the `/xyz` "no matching commands" case).
 
-## Important: Backward Compatibility
+## Tests (write first)
 
-- `InputArea` must still work without `registry`/`event_log` (both `None`). Existing tests create `InputArea()` with no args — they must not break.
-- When `registry is None`, `on_text_area_changed` skips autocomplete logic entirely.
-- All existing `InputArea` and `ICoderApp` tests must continue to pass without modification. If any existing test constructs `InputArea()` or `ICoderApp(app_core)` without the new params, it must work as before.
+`tests/icoder/core/test_autocomplete_state.py` — pure unit tests, no Textual:
+
+```python
+def test_hidden_when_text_does_not_start_with_slash() -> None:
+    """Empty string and non-slash text → visible=False, no matches."""
+
+def test_visible_with_all_commands_when_text_is_slash() -> None:
+    """'/' → visible=True, matches contains all 3 commands, highlighted_index=0."""
+
+def test_visible_with_filtered_matches_on_he_prefix() -> None:
+    """'/he' → visible=True, matches=(/help,), highlighted_index=0."""
+
+def test_visible_with_empty_matches_on_unknown_prefix() -> None:
+    """'/xyz' → visible=True, matches=(), highlighted_index=-1."""
+
+def test_highlighted_index_zero_when_matches_present() -> None:
+    """Any state with non-empty matches has highlighted_index == 0."""
+
+def test_highlighted_index_minus_one_when_no_matches() -> None:
+    """Any state with empty matches has highlighted_index == -1."""
+
+def test_state_is_frozen_and_replaced_not_mutated() -> None:
+    """AutocompleteState is frozen — replacement is via new instance, not mutation."""
+```
+
+Use `create_default_registry()` to build the registry fixture.
+
+## Caller usage (preview, implemented in Step 4)
+
+```python
+prev = self._ac_state
+new = compute_next_state(text, registry)
+self._ac_state = new
+# Diff prev vs new to emit autocomplete_shown / hidden / filtered events.
+```
 
 ## Commit
 
-`feat(icoder): integrate autocomplete into InputArea and app`
+`feat(icoder): add autocomplete state module`
 
 ## LLM Prompt
 
 ```
-Read pr_info/steps/summary.md for full context, then implement Step 3.
+Read pr_info/steps/summary.md and pr_info/steps/Decisions.md (D1) for context, then implement Step 3.
 
-1. Modify src/mcp_coder/icoder/ui/widgets/input_area.py:
-   - Add registry and event_log optional params to __init__
-   - Add _ac_visible, _ac_matches tracking fields
-   - Extend on_text_area_changed with autocomplete logic
-   - Extend _on_key with dropdown key routing (before existing handlers)
-   - Add _emit_ac_event helper method
-2. Modify src/mcp_coder/icoder/ui/app.py:
-   - Import CommandAutocomplete
-   - Add it to compose() between OutputLog and InputArea
-   - Pass registry and event_log to InputArea constructor
-   - Access registry and event_log from self._core (add properties to AppCore if needed)
-3. Run all three quality checks (pylint, pytest, mypy) — all must pass
-4. Verify existing tests still pass unchanged
-5. Commit: "feat(icoder): integrate autocomplete into InputArea and app"
+1. Create tests/icoder/core/test_autocomplete_state.py with the 7 tests above (TDD).
+2. Create src/mcp_coder/icoder/core/autocomplete_state.py with AutocompleteState frozen dataclass and compute_next_state() pure function.
+3. Run all five quality checks — all must pass.
+4. Commit: "feat(icoder): add autocomplete state module"
 ```

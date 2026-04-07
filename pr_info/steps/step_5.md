@@ -1,80 +1,83 @@
-# Step 5: Snapshot Tests for Dropdown Visual States
+# Step 5: Wire `CommandAutocomplete` into `ICoderApp` + `AppCore` Properties
 
-> **Context:** See `pr_info/steps/summary.md` for full issue context and architecture.
+> **Context:** See `pr_info/steps/summary.md` and `Decisions.md` (D4).
 
 ## Goal
 
-Add SVG snapshot tests for the three key dropdown visual states. These tests capture visual regressions in the autocomplete UI.
+Compose the `CommandAutocomplete` widget in the app, pass `registry` and `event_log` from `AppCore` into `InputArea` via new public properties (Decision D4 — avoids private-attribute access).
 
 ## WHERE
 
 | Action | File |
 |--------|------|
-| Modify | `tests/icoder/test_snapshots.py` |
+| Modify | `src/mcp_coder/icoder/core/app_core.py` |
+| Modify | `src/mcp_coder/icoder/ui/app.py` |
 
-## WHAT
-
-Three new snapshot tests added to the existing snapshot test file:
+## WHAT — `AppCore` public properties (D4)
 
 ```python
-def test_snapshot_autocomplete_all_commands(snap_compare, icoder_app):
-    """Snapshot: dropdown visible with all commands (user typed '/')."""
-    async def type_slash(pilot):
-        input_area = icoder_app.query_one(InputArea)
-        input_area.focus()
-        await pilot.pause()
-        input_area.insert("/")
-        await pilot.pause()
-    assert snap_compare(icoder_app, run_before=type_slash)
+class AppCore:
+    @property
+    def registry(self) -> CommandRegistry:
+        """Public read-only access to the command registry."""
+        return self._registry
 
-def test_snapshot_autocomplete_filtered(snap_compare, icoder_app):
-    """Snapshot: dropdown filtered to single match (user typed '/he')."""
-    async def type_prefix(pilot):
-        input_area = icoder_app.query_one(InputArea)
-        input_area.focus()
-        await pilot.pause()
-        input_area.insert("/he")
-        await pilot.pause()
-    assert snap_compare(icoder_app, run_before=type_prefix)
-
-def test_snapshot_autocomplete_no_match(snap_compare, icoder_app):
-    """Snapshot: dropdown showing '(no matching commands)' (user typed '/xyz')."""
-    async def type_bad_prefix(pilot):
-        input_area = icoder_app.query_one(InputArea)
-        input_area.focus()
-        await pilot.pause()
-        input_area.insert("/xyz")
-        await pilot.pause()
-    assert snap_compare(icoder_app, run_before=type_bad_prefix)
+    @property
+    def event_log(self) -> EventLog:
+        """Public read-only access to the event log."""
+        return self._event_log
 ```
+
+One-line `@property` each — no setters, no logic.
+
+## WHAT — `ICoderApp.compose()`
+
+```python
+def compose(self) -> ComposeResult:
+    yield OutputLog()
+    yield CommandAutocomplete()  # NEW: between OutputLog and InputArea
+    yield InputArea(
+        registry=self._core.registry,
+        event_log=self._core.event_log,
+    )
+```
+
+`CommandAutocomplete` is yielded **above** `InputArea` per the issue's UX sketch (dropdown appears above the input). The CSS from Step 2 keeps it `display: none` until `show_dropdown()` is called.
+
+No `on_command_autocomplete_command_selected` handler — Decision D2 dropped the `CommandSelected` Message; `InputArea` handles Tab-select inline (Step 4).
 
 ## HOW
 
-- Follow the existing pattern in `test_snapshots.py`
-- Use the existing `icoder_app` fixture (may need adjustment since InputArea now takes registry/event_log — the fixture creates `ICoderApp(app_core)` which handles this internally)
-- Windows-only (`sys.platform == "win32"` skip marker already on the module)
-- May need to adjust terminal size if the dropdown doesn't fit — check the existing `snap_compare` configuration
+- `AppCore` already constructs a default `CommandRegistry` and `EventLog` in `__init__`. The properties simply expose them.
+- `ICoderApp(app_core)` constructor signature is unchanged — backward compat preserved.
+- The widget is queryable via `self.screen.query_one(CommandAutocomplete)` from `InputArea` (Step 4 already does this).
 
-## Notes
+## DATA
 
-- Run with `--snapshot-update` first to generate baselines
-- Verify generated SVGs contain no secrets, env vars, or local paths
-- The dropdown height may require adjusting the `max-height` CSS or the snapshot app size
+- `AppCore.registry: CommandRegistry`
+- `AppCore.event_log: EventLog`
+
+## Backward compatibility
+
+- `ICoderApp(app_core)` still works because `AppCore` always provides the defaults.
+- Existing snapshot/pilot tests that construct `ICoderApp(app_core)` without changes must keep passing. Step 7 (snapshot tests) explicitly verifies this.
 
 ## Commit
 
-`test(icoder): add autocomplete snapshot tests`
+`feat(icoder): integrate autocomplete into ICoderApp`
 
 ## LLM Prompt
 
 ```
-Read pr_info/steps/summary.md for full context, then implement Step 5.
+Read pr_info/steps/summary.md and pr_info/steps/Decisions.md (D4) for context, then implement Step 5.
 
-1. Add three snapshot tests to tests/icoder/test_snapshots.py following the existing pattern
-2. Each test types into InputArea and pauses for the dropdown to render
-3. Generate baselines with: pytest tests/icoder/test_snapshots.py --snapshot-update -k autocomplete
-4. Verify the generated SVGs look correct and contain no sensitive data
-5. If the dropdown is cut off, adjust the terminal size or max-height CSS
-6. Run all three quality checks (pylint, pytest, mypy) — all must pass
-7. Commit: "test(icoder): add autocomplete snapshot tests"
+1. Modify src/mcp_coder/icoder/core/app_core.py:
+   - Add public @property registry returning self._registry.
+   - Add public @property event_log returning self._event_log.
+2. Modify src/mcp_coder/icoder/ui/app.py:
+   - Import CommandAutocomplete.
+   - Yield CommandAutocomplete() in compose() above InputArea.
+   - Construct InputArea(registry=self._core.registry, event_log=self._core.event_log).
+3. Run all five quality checks — all must pass. Existing pilot/snapshot tests must keep passing.
+4. Commit: "feat(icoder): integrate autocomplete into ICoderApp"
 ```
