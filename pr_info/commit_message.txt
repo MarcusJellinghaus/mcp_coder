@@ -1,16 +1,5 @@
-feat(create_plan): add failure handling with comment + label updates
+fix: add Returns section to _format_failure_comment docstring
 
-Add _format_failure_comment() and _handle_workflow_failure() helpers
-to create_plan/core.py mirroring implement's pattern. Wire them into
-run_create_plan_workflow() and run_planning_prompts() at every failure
-point with the exact stage labels from issue #336 §4.
-
-Change run_planning_prompts() return type to tuple[bool, Optional[WorkflowFailure]]
-to preserve prompt-stage information for LLM failures. Use
-dataclasses.replace to override elapsed_time when promoting failures
-returned from run_planning_prompts.
-
-Promote commit/push failures from warnings to hard errors. Wire the
-post_issue_comments parameter through to failure comment posting.
-
-Update CLI help text for create-plan to mention failure handling.
+Add missing Returns section to the _format_failure_comment docstring
+in create_plan/core.py to satisfy ruff DOC201 rule, which requires
+functions with return type annotations to document their return value.

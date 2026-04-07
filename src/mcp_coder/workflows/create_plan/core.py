@@ -54,7 +54,11 @@ def _format_failure_comment(
     failure: WorkflowFailure,
     diff_stat: str,
 ) -> str:
-    """Format GitHub comment for planning failure."""
+    """Format GitHub comment for planning failure.
+
+    Returns:
+        Formatted GitHub comment string describing the planning failure.
+    """
     lines = [
         "## Planning Failed",
         f"**Category:** {failure.category.name.replace('_', ' ').title()}",
