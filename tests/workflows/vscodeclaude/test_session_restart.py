@@ -14,7 +14,6 @@ from mcp_coder.workflows.vscodeclaude.session_launch import (
 )
 from mcp_coder.workflows.vscodeclaude.session_restart import (
     BranchPrepResult,
-    _prepare_restart_branch,
     handle_pr_created_issues,
     restart_closed_sessions,
 )
