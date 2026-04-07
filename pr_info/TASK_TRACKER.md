@@ -21,6 +21,30 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Add FailureCategory enum value, label entry, retry constant, and static prompt change
+See [step_1.md](./steps/step_1.md)
+- [ ] Implementation: enum value, constant, label entry, prompt rule, and test updates
+- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Change `process_single_task` return contract and add `attempt` parameter
+See [step_2.md](./steps/step_2.md)
+- [ ] Implementation: signature change, dynamic retry reminder, zero-changes return change, and test updates
+- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Add `process_task_with_retry` wrapper function
+See [step_3.md](./steps/step_3.md)
+- [ ] Implementation: retry wrapper function and TestProcessTaskWithRetry test class
+- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Wire `process_task_with_retry` into `core.py` and add failure routing
+See [step_4.md](./steps/step_4.md)
+- [ ] Implementation: import change, call site change, reason routing, and test in test_core.py
+- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review: all steps complete, all checks green
+- [ ] PR summary prepared
