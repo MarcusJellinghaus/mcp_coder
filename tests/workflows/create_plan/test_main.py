@@ -37,38 +37,38 @@ class TestMain:
         (tmp_path / ".git").mkdir()
 
         with patch(
-            "mcp_coder.workflows.create_plan.check_prerequisites",
+            "mcp_coder.workflows.create_plan.core.check_prerequisites",
             return_value=(True, mock_issue_data),
         ):
             with patch(
-                "mcp_coder.workflows.create_plan.manage_branch",
+                "mcp_coder.workflows.create_plan.core.manage_branch",
                 return_value="feature-branch",
             ):
                 with patch(
-                    "mcp_coder.workflows.create_plan.check_pr_info_not_exists",
+                    "mcp_coder.workflows.create_plan.core.check_pr_info_not_exists",
                     return_value=True,
                 ):
                     with patch(
-                        "mcp_coder.workflows.create_plan.create_pr_info_structure",
+                        "mcp_coder.workflows.create_plan.core.create_pr_info_structure",
                         return_value=True,
                     ):
                         with patch(
-                            "mcp_coder.workflows.create_plan.run_planning_prompts",
+                            "mcp_coder.workflows.create_plan.core.run_planning_prompts",
                             return_value=True,
                         ):
                             with patch(
-                                "mcp_coder.workflows.create_plan.validate_output_files",
+                                "mcp_coder.workflows.create_plan.core.validate_output_files",
                                 return_value=True,
                             ):
                                 with patch(
-                                    "mcp_coder.workflows.create_plan.commit_all_changes",
+                                    "mcp_coder.workflows.create_plan.core.commit_all_changes",
                                     return_value={
                                         "success": True,
                                         "commit_hash": "abc123",
                                     },
                                 ):
                                     with patch(
-                                        "mcp_coder.workflows.create_plan.git_push",
+                                        "mcp_coder.workflows.create_plan.core.git_push",
                                         return_value={"success": True},
                                     ):
                                         result = run_create_plan_workflow(
@@ -89,38 +89,38 @@ class TestMain:
         exec_dir.mkdir()
 
         with patch(
-            "mcp_coder.workflows.create_plan.check_prerequisites",
+            "mcp_coder.workflows.create_plan.core.check_prerequisites",
             return_value=(True, mock_issue_data),
         ):
             with patch(
-                "mcp_coder.workflows.create_plan.manage_branch",
+                "mcp_coder.workflows.create_plan.core.manage_branch",
                 return_value="feature-branch",
             ):
                 with patch(
-                    "mcp_coder.workflows.create_plan.check_pr_info_not_exists",
+                    "mcp_coder.workflows.create_plan.core.check_pr_info_not_exists",
                     return_value=True,
                 ):
                     with patch(
-                        "mcp_coder.workflows.create_plan.create_pr_info_structure",
+                        "mcp_coder.workflows.create_plan.core.create_pr_info_structure",
                         return_value=True,
                     ):
                         with patch(
-                            "mcp_coder.workflows.create_plan.run_planning_prompts",
+                            "mcp_coder.workflows.create_plan.core.run_planning_prompts",
                             return_value=True,
                         ) as mock_prompts:
                             with patch(
-                                "mcp_coder.workflows.create_plan.validate_output_files",
+                                "mcp_coder.workflows.create_plan.core.validate_output_files",
                                 return_value=True,
                             ):
                                 with patch(
-                                    "mcp_coder.workflows.create_plan.commit_all_changes",
+                                    "mcp_coder.workflows.create_plan.core.commit_all_changes",
                                     return_value={
                                         "success": True,
                                         "commit_hash": "abc123",
                                     },
                                 ):
                                     with patch(
-                                        "mcp_coder.workflows.create_plan.git_push",
+                                        "mcp_coder.workflows.create_plan.core.git_push",
                                         return_value={"success": True},
                                     ):
                                         result = run_create_plan_workflow(
@@ -157,7 +157,7 @@ class TestMain:
         )
 
         with patch(
-            "mcp_coder.workflows.create_plan.check_prerequisites",
+            "mcp_coder.workflows.create_plan.core.check_prerequisites",
             return_value=(False, empty_issue_data),
         ):
             result = run_create_plan_workflow(123, tmp_path, "claude")
@@ -172,11 +172,11 @@ class TestMain:
         (tmp_path / ".git").mkdir()
 
         with patch(
-            "mcp_coder.workflows.create_plan.check_prerequisites",
+            "mcp_coder.workflows.create_plan.core.check_prerequisites",
             return_value=(True, mock_issue_data),
         ):
             with patch(
-                "mcp_coder.workflows.create_plan.manage_branch", return_value=None
+                "mcp_coder.workflows.create_plan.core.manage_branch", return_value=None
             ):
                 result = run_create_plan_workflow(123, tmp_path, "claude")
 
@@ -190,15 +190,15 @@ class TestMain:
         (tmp_path / ".git").mkdir()
 
         with patch(
-            "mcp_coder.workflows.create_plan.check_prerequisites",
+            "mcp_coder.workflows.create_plan.core.check_prerequisites",
             return_value=(True, mock_issue_data),
         ):
             with patch(
-                "mcp_coder.workflows.create_plan.manage_branch",
+                "mcp_coder.workflows.create_plan.core.manage_branch",
                 return_value="feature-branch",
             ):
                 with patch(
-                    "mcp_coder.workflows.create_plan.check_pr_info_not_exists",
+                    "mcp_coder.workflows.create_plan.core.check_pr_info_not_exists",
                     return_value=False,
                 ):
                     result = run_create_plan_workflow(123, tmp_path, "claude")
@@ -213,19 +213,19 @@ class TestMain:
         (tmp_path / ".git").mkdir()
 
         with patch(
-            "mcp_coder.workflows.create_plan.check_prerequisites",
+            "mcp_coder.workflows.create_plan.core.check_prerequisites",
             return_value=(True, mock_issue_data),
         ):
             with patch(
-                "mcp_coder.workflows.create_plan.manage_branch",
+                "mcp_coder.workflows.create_plan.core.manage_branch",
                 return_value="feature-branch",
             ):
                 with patch(
-                    "mcp_coder.workflows.create_plan.check_pr_info_not_exists",
+                    "mcp_coder.workflows.create_plan.core.check_pr_info_not_exists",
                     return_value=True,
                 ):
                     with patch(
-                        "mcp_coder.workflows.create_plan.create_pr_info_structure",
+                        "mcp_coder.workflows.create_plan.core.create_pr_info_structure",
                         return_value=False,
                     ):
                         result = run_create_plan_workflow(123, tmp_path, "claude")
@@ -240,23 +240,23 @@ class TestMain:
         (tmp_path / ".git").mkdir()
 
         with patch(
-            "mcp_coder.workflows.create_plan.check_prerequisites",
+            "mcp_coder.workflows.create_plan.core.check_prerequisites",
             return_value=(True, mock_issue_data),
         ):
             with patch(
-                "mcp_coder.workflows.create_plan.manage_branch",
+                "mcp_coder.workflows.create_plan.core.manage_branch",
                 return_value="feature-branch",
             ):
                 with patch(
-                    "mcp_coder.workflows.create_plan.check_pr_info_not_exists",
+                    "mcp_coder.workflows.create_plan.core.check_pr_info_not_exists",
                     return_value=True,
                 ):
                     with patch(
-                        "mcp_coder.workflows.create_plan.create_pr_info_structure",
+                        "mcp_coder.workflows.create_plan.core.create_pr_info_structure",
                         return_value=True,
                     ):
                         with patch(
-                            "mcp_coder.workflows.create_plan.run_planning_prompts",
+                            "mcp_coder.workflows.create_plan.core.run_planning_prompts",
                             return_value=False,
                         ):
                             result = run_create_plan_workflow(123, tmp_path, "claude")
@@ -271,27 +271,27 @@ class TestMain:
         (tmp_path / ".git").mkdir()
 
         with patch(
-            "mcp_coder.workflows.create_plan.check_prerequisites",
+            "mcp_coder.workflows.create_plan.core.check_prerequisites",
             return_value=(True, mock_issue_data),
         ):
             with patch(
-                "mcp_coder.workflows.create_plan.manage_branch",
+                "mcp_coder.workflows.create_plan.core.manage_branch",
                 return_value="feature-branch",
             ):
                 with patch(
-                    "mcp_coder.workflows.create_plan.check_pr_info_not_exists",
+                    "mcp_coder.workflows.create_plan.core.check_pr_info_not_exists",
                     return_value=True,
                 ):
                     with patch(
-                        "mcp_coder.workflows.create_plan.create_pr_info_structure",
+                        "mcp_coder.workflows.create_plan.core.create_pr_info_structure",
                         return_value=True,
                     ):
                         with patch(
-                            "mcp_coder.workflows.create_plan.run_planning_prompts",
+                            "mcp_coder.workflows.create_plan.core.run_planning_prompts",
                             return_value=True,
                         ):
                             with patch(
-                                "mcp_coder.workflows.create_plan.validate_output_files",
+                                "mcp_coder.workflows.create_plan.core.validate_output_files",
                                 return_value=False,
                             ):
                                 result = run_create_plan_workflow(
@@ -308,38 +308,38 @@ class TestMain:
         (tmp_path / ".git").mkdir()
 
         with patch(
-            "mcp_coder.workflows.create_plan.check_prerequisites",
+            "mcp_coder.workflows.create_plan.core.check_prerequisites",
             return_value=(True, mock_issue_data),
         ):
             with patch(
-                "mcp_coder.workflows.create_plan.manage_branch",
+                "mcp_coder.workflows.create_plan.core.manage_branch",
                 return_value="feature-branch",
             ):
                 with patch(
-                    "mcp_coder.workflows.create_plan.check_pr_info_not_exists",
+                    "mcp_coder.workflows.create_plan.core.check_pr_info_not_exists",
                     return_value=True,
                 ):
                     with patch(
-                        "mcp_coder.workflows.create_plan.create_pr_info_structure",
+                        "mcp_coder.workflows.create_plan.core.create_pr_info_structure",
                         return_value=True,
                     ):
                         with patch(
-                            "mcp_coder.workflows.create_plan.run_planning_prompts",
+                            "mcp_coder.workflows.create_plan.core.run_planning_prompts",
                             return_value=True,
                         ):
                             with patch(
-                                "mcp_coder.workflows.create_plan.validate_output_files",
+                                "mcp_coder.workflows.create_plan.core.validate_output_files",
                                 return_value=True,
                             ):
                                 with patch(
-                                    "mcp_coder.workflows.create_plan.commit_all_changes"
+                                    "mcp_coder.workflows.create_plan.core.commit_all_changes"
                                 ) as mock_commit:
                                     mock_commit.return_value = {
                                         "success": True,
                                         "commit_hash": "abc123",
                                     }
                                     with patch(
-                                        "mcp_coder.workflows.create_plan.git_push",
+                                        "mcp_coder.workflows.create_plan.core.git_push",
                                         return_value={"success": True},
                                     ):
                                         result = run_create_plan_workflow(
@@ -360,38 +360,38 @@ class TestMain:
         (tmp_path / ".git").mkdir()
 
         with patch(
-            "mcp_coder.workflows.create_plan.check_prerequisites",
+            "mcp_coder.workflows.create_plan.core.check_prerequisites",
             return_value=(True, mock_issue_data),
         ):
             with patch(
-                "mcp_coder.workflows.create_plan.manage_branch",
+                "mcp_coder.workflows.create_plan.core.manage_branch",
                 return_value="feature-branch",
             ):
                 with patch(
-                    "mcp_coder.workflows.create_plan.check_pr_info_not_exists",
+                    "mcp_coder.workflows.create_plan.core.check_pr_info_not_exists",
                     return_value=True,
                 ):
                     with patch(
-                        "mcp_coder.workflows.create_plan.create_pr_info_structure",
+                        "mcp_coder.workflows.create_plan.core.create_pr_info_structure",
                         return_value=True,
                     ):
                         with patch(
-                            "mcp_coder.workflows.create_plan.run_planning_prompts",
+                            "mcp_coder.workflows.create_plan.core.run_planning_prompts",
                             return_value=True,
                         ):
                             with patch(
-                                "mcp_coder.workflows.create_plan.validate_output_files",
+                                "mcp_coder.workflows.create_plan.core.validate_output_files",
                                 return_value=True,
                             ):
                                 with patch(
-                                    "mcp_coder.workflows.create_plan.commit_all_changes",
+                                    "mcp_coder.workflows.create_plan.core.commit_all_changes",
                                     return_value={
                                         "success": False,
                                         "error": "Commit failed",
                                     },
                                 ):
                                     with patch(
-                                        "mcp_coder.workflows.create_plan.git_push"
+                                        "mcp_coder.workflows.create_plan.core.git_push"
                                     ) as mock_push:
                                         mock_push.return_value = {"success": True}
                                         result = run_create_plan_workflow(
@@ -411,38 +411,38 @@ class TestMain:
         (tmp_path / ".git").mkdir()
 
         with patch(
-            "mcp_coder.workflows.create_plan.check_prerequisites",
+            "mcp_coder.workflows.create_plan.core.check_prerequisites",
             return_value=(True, mock_issue_data),
         ):
             with patch(
-                "mcp_coder.workflows.create_plan.manage_branch",
+                "mcp_coder.workflows.create_plan.core.manage_branch",
                 return_value="feature-branch",
             ):
                 with patch(
-                    "mcp_coder.workflows.create_plan.check_pr_info_not_exists",
+                    "mcp_coder.workflows.create_plan.core.check_pr_info_not_exists",
                     return_value=True,
                 ):
                     with patch(
-                        "mcp_coder.workflows.create_plan.create_pr_info_structure",
+                        "mcp_coder.workflows.create_plan.core.create_pr_info_structure",
                         return_value=True,
                     ):
                         with patch(
-                            "mcp_coder.workflows.create_plan.run_planning_prompts",
+                            "mcp_coder.workflows.create_plan.core.run_planning_prompts",
                             return_value=True,
                         ):
                             with patch(
-                                "mcp_coder.workflows.create_plan.validate_output_files",
+                                "mcp_coder.workflows.create_plan.core.validate_output_files",
                                 return_value=True,
                             ):
                                 with patch(
-                                    "mcp_coder.workflows.create_plan.commit_all_changes",
+                                    "mcp_coder.workflows.create_plan.core.commit_all_changes",
                                     return_value={
                                         "success": True,
                                         "commit_hash": "abc123",
                                     },
                                 ):
                                     with patch(
-                                        "mcp_coder.workflows.create_plan.git_push",
+                                        "mcp_coder.workflows.create_plan.core.git_push",
                                         return_value={
                                             "success": False,
                                             "error": "Push failed",
@@ -465,38 +465,38 @@ class TestMain:
         (custom_dir / ".git").mkdir()
 
         with patch(
-            "mcp_coder.workflows.create_plan.check_prerequisites",
+            "mcp_coder.workflows.create_plan.core.check_prerequisites",
             return_value=(True, mock_issue_data),
         ):
             with patch(
-                "mcp_coder.workflows.create_plan.manage_branch",
+                "mcp_coder.workflows.create_plan.core.manage_branch",
                 return_value="feature-branch",
             ):
                 with patch(
-                    "mcp_coder.workflows.create_plan.check_pr_info_not_exists",
+                    "mcp_coder.workflows.create_plan.core.check_pr_info_not_exists",
                     return_value=True,
                 ):
                     with patch(
-                        "mcp_coder.workflows.create_plan.create_pr_info_structure",
+                        "mcp_coder.workflows.create_plan.core.create_pr_info_structure",
                         return_value=True,
                     ):
                         with patch(
-                            "mcp_coder.workflows.create_plan.run_planning_prompts",
+                            "mcp_coder.workflows.create_plan.core.run_planning_prompts",
                             return_value=True,
                         ):
                             with patch(
-                                "mcp_coder.workflows.create_plan.validate_output_files",
+                                "mcp_coder.workflows.create_plan.core.validate_output_files",
                                 return_value=True,
                             ):
                                 with patch(
-                                    "mcp_coder.workflows.create_plan.commit_all_changes",
+                                    "mcp_coder.workflows.create_plan.core.commit_all_changes",
                                     return_value={
                                         "success": True,
                                         "commit_hash": "xyz789",
                                     },
                                 ):
                                     with patch(
-                                        "mcp_coder.workflows.create_plan.git_push",
+                                        "mcp_coder.workflows.create_plan.core.git_push",
                                         return_value={"success": True},
                                     ):
                                         result = run_create_plan_workflow(
@@ -513,38 +513,38 @@ class TestMain:
         (tmp_path / ".git").mkdir()
 
         with patch(
-            "mcp_coder.workflows.create_plan.check_prerequisites",
+            "mcp_coder.workflows.create_plan.core.check_prerequisites",
             return_value=(True, mock_issue_data),
         ) as mock_check:
             with patch(
-                "mcp_coder.workflows.create_plan.manage_branch",
+                "mcp_coder.workflows.create_plan.core.manage_branch",
                 return_value="feature-branch",
             ) as mock_manage:
                 with patch(
-                    "mcp_coder.workflows.create_plan.check_pr_info_not_exists",
+                    "mcp_coder.workflows.create_plan.core.check_pr_info_not_exists",
                     return_value=True,
                 ):
                     with patch(
-                        "mcp_coder.workflows.create_plan.create_pr_info_structure",
+                        "mcp_coder.workflows.create_plan.core.create_pr_info_structure",
                         return_value=True,
                     ):
                         with patch(
-                            "mcp_coder.workflows.create_plan.run_planning_prompts",
+                            "mcp_coder.workflows.create_plan.core.run_planning_prompts",
                             return_value=True,
                         ) as mock_prompts:
                             with patch(
-                                "mcp_coder.workflows.create_plan.validate_output_files",
+                                "mcp_coder.workflows.create_plan.core.validate_output_files",
                                 return_value=True,
                             ):
                                 with patch(
-                                    "mcp_coder.workflows.create_plan.commit_all_changes",
+                                    "mcp_coder.workflows.create_plan.core.commit_all_changes",
                                     return_value={
                                         "success": True,
                                         "commit_hash": "abc123",
                                     },
                                 ):
                                     with patch(
-                                        "mcp_coder.workflows.create_plan.git_push",
+                                        "mcp_coder.workflows.create_plan.core.git_push",
                                         return_value={"success": True},
                                     ):
                                         result = run_create_plan_workflow(

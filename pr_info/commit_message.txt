@@ -1,0 +1,12 @@
+refactor(create_plan): convert to package, add failure labels
+
+Convert workflows/create_plan.py to workflows/create_plan/ package
+mirroring implement's structure (core.py, constants.py, prerequisites.py).
+Re-export all public symbols in __init__.py.
+
+Add planning_llm_timeout and planning_prereq_failed labels to labels.json.
+Add FailureCategory enum and WorkflowFailure dataclass in constants.py.
+
+Update test patch paths from ...create_plan.* to submodule paths.
+Update label count assertions in test_define_labels, test_types.
+Fix test_module_exports for LLMTimeoutError (from Step 1).

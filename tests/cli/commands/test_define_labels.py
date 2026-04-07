@@ -46,8 +46,8 @@ class TestWorkflowLabelsFromConfig:
 
         # Verify we have exactly 15 labels
         assert (
-            len(labels_config["workflow_labels"]) == 16
-        ), "Config should contain exactly 16 workflow labels"
+            len(labels_config["workflow_labels"]) == 18
+        ), "Config should contain exactly 18 workflow labels"
 
         # Verify each label has correct structure
         for i, label in enumerate(labels_config["workflow_labels"], start=1):
@@ -94,6 +94,8 @@ class TestWorkflowLabelsFromConfig:
             "status-08:ready-pr",
             "status-09:pr-creating",
             "status-10:pr-created",
+            "status-03f-timeout:planning-llm-timeout",
+            "status-03f-prereq:planning-prereq-failed",
             "status-03f:planning-failed",
             "status-06f:implementing-failed",
             "status-06f-prep:task-tracker-prep-failed",
