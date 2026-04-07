@@ -334,6 +334,8 @@ git push
 
 Add comprehensive CI checks to your GitHub Actions workflow.
 
+> **Note:** The example below uses Python tools (black, pytest, mypy, etc.). For Python-specific matrix details, see [python.md](python.md#ci-workflow-for-python).
+
 ### CI Workflow Example
 
 Create `.github/workflows/ci.yml`:

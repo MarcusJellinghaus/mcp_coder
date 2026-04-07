@@ -1,17 +1,26 @@
 # Repo Conventions
 
-Repo-level files and conventions: line endings, `pyproject.toml`, and centralized `.gitignore` entries.
+Generic, language-agnostic repo-level files and conventions.
 
 ## Line Endings (`.gitattributes`)
 
 - **Why:** Prevents git conflicts and ensures consistent file formats
 - **Reference:** See `.gitattributes` in this repository
 
-## `pyproject.toml`
+## File Size Management
 
-**Principle:** Include architecture tools in development dependencies.
+**Principle:** Keep files within LLM context limits for optimal reasoning.
 
-**Reference:** See `pyproject.toml` in this repository for complete dependency setup including version constraints and optional dependency groups.
+**Why critical:**
+- Large files consume LLM context budget
+- Smaller files enable more focused analysis
+- Better context utilization for reasoning
+
+**Tool: mcp-coder file size check**
+```bash
+mcp-coder check file-size --max-lines 750
+```
+- **Example config:** See `.large-files-allowlist` in this repository
 
 ## `.gitignore` Entries
 

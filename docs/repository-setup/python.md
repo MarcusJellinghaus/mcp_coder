@@ -1,28 +1,16 @@
-# Code Quality & Architecture
+# Python Setup
 
-Local code quality, architecture enforcement, and developer tooling.
+Python-specific configuration and tooling. Only relevant if your downstream project is a Python project.
 
-## Architecture Documentation
+## `pyproject.toml`
 
-The `/implementation_review` and `/implementation_review_supervisor` commands check code against `docs/architecture/architecture.md`. This file must exist for code reviews to work. Architecture documentation also enables LLM-assisted codebase navigation.
+**Principle:** Include architecture and quality tools in development dependencies.
 
-### Recommended Structure
+**Reference:** See `pyproject.toml` in this repository for complete dependency setup including version constraints and optional dependency groups.
 
-```
-docs/
-├── README.md                              (optional)
-├── architecture/
-│   ├── architecture.md                    (mandatory - used by /implementation_review)
-│   ├── architecture-maintenance.md
-│   └── dependencies/
-│       ├── readme.md
-│       ├── dependency_graph.html          (generated)
-│       ├── pydeps_graph.html              (generated)
-│       └── pydeps_graph.dot               (generated)
-└── [project-specific docs]
-```
+## `.python-version`
 
-**Reference:** See this repository's own [`docs/`](..) folder for a working example of this structure.
+Pins the Python version used for the repo. Tools like `pyenv` and `uv` read this file.
 
 ## Architecture Enforcement
 
@@ -104,24 +92,21 @@ vulture src tests vulture_whitelist.py --min-confidence 60
 - **Documentation:** [vulture docs](https://github.com/jendrikseipp/vulture)
 - **Example config:** See `vulture_whitelist.py` in this repository
 
-### File Size Management
+## CI Workflow for Python
 
-**Principle:** Keep files within LLM context limits for optimal reasoning.
+The general CI workflow structure is documented in [github.md](github.md#code-quality-ci). The matrix items are Python-specific:
 
-**Why critical:**
-- Large files consume LLM context budget
-- Smaller files enable more focused analysis
-- Better context utilization for reasoning
-
-**Tool: mcp-coder file size check**
-```bash
-mcp-coder check file-size --max-lines 750
-```
-- **Example config:** See `.large-files-allowlist` in this repository
-
-### Dependencies
-
-**Principle:** Include architecture tools in development dependencies. See [repo.md](repo.md#pyprojecttoml) for `pyproject.toml` reference.
+| Matrix item | Tool |
+|---|---|
+| `black` | Code formatter (check mode) |
+| `isort` | Import sorter (check mode) |
+| `pylint` | Static analysis (errors only) |
+| `pytest` | Test runner |
+| `mypy` | Static type checker (strict mode) |
+| `import-linter` | Import contract validator |
+| `tach` | Architectural boundary check |
+| `pycycle` | Circular dependency detection |
+| `vulture` | Dead code detection |
 
 ## Development Tools
 
@@ -134,6 +119,7 @@ Convenience scripts for local development. Create a `tools/` directory with thes
 | `format_all.sh/bat` | Run black + isort on src/tests | **Mandatory** before commits |
 | `black.bat` | Run black formatter only | Optional |
 | `iSort.bat` | Run isort only | Optional |
+| `ruff_check.sh/bat` | Run ruff (docstring checks) | Optional |
 
 > **For Claude Code:** Use `mcp__tools-py__run_format_code` (runs both isort and black).
 > Shell scripts are for human developers and CI pipelines.
@@ -179,13 +165,6 @@ echo "Formatting complete!"
 | `pydeps_graph.sh/bat` | Generate dependency visualization | Optional |
 | `tach_docs.sh/bat/py` | Generate architecture documentation | Optional |
 
-### Legacy Tools (Keep for Reference)
+## Knowledge Base
 
-These tools are no longer actively used but kept for reference:
-
-| Script | Status |
-|--------|--------|
-| `commit_summary.bat` | Legacy |
-| `pr_summary.bat` | Legacy |
-| `pr_review.bat` | Legacy |
-| `pr_review_highlevel.bat` | Legacy |
+`.claude/knowledge_base/python.md` provides Python-specific knowledge that the code review skills (`/implementation_review`, `/implementation_review_supervisor`) consult during reviews.

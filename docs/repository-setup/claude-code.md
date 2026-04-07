@@ -119,3 +119,25 @@ For `mcp-coder vscodeclaude launch`, the session status file `.vscodeclaude_stat
 - **Security:** No system-wide edits, no file deletion outside project
 - **Architecture Tools:** Use `./tools/` scripts for consistent UX and error handling. **For Claude Code**, prefer MCP tools: `mcp__tools-py__run_format_code`, `mcp__tools-py__run_lint_imports_check`, `mcp__tools-py__run_vulture_check`, `mcp__tools-py__get_library_source`
 - **Reference:** See `.claude/settings.local.json` in this repository
+
+## Architecture Documentation
+
+The `/implementation_review` and `/implementation_review_supervisor` commands check code against `docs/architecture/architecture.md`. This file must exist for code reviews to work. Architecture documentation also enables LLM-assisted codebase navigation.
+
+### Recommended Structure
+
+```
+docs/
+├── README.md                              (optional)
+├── architecture/
+│   ├── architecture.md                    (mandatory - used by /implementation_review)
+│   ├── architecture-maintenance.md
+│   └── dependencies/
+│       ├── readme.md
+│       ├── dependency_graph.html          (generated)
+│       ├── pydeps_graph.html              (generated)
+│       └── pydeps_graph.dot               (generated)
+└── [project-specific docs]
+```
+
+**Reference:** See this repository's own [`docs/`](..) folder for a working example of this structure.
