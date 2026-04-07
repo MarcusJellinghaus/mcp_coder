@@ -1,14 +1,6 @@
-feat(set-status): add --from-status precondition flag to gh-tool set-status (#713)
+refactor: split test_set_status.py to fix file-size CI check
 
-Add --from-status LABEL flag that makes set-status a conditional operation:
-only applies the new label if the issue's current status matches --from-status.
-On mismatch, exits 0 with an OUTPUT-level skip message.
+Extract TestFromStatusFlag class into test_set_status_from_status.py
+to bring test_set_status.py under the 750-line limit.
 
-Changes:
-- gh_parsers.py: add --from-status argument to set-status parser
-- set_status.py: validate --from-status against labels.json, precondition
-  check in _update_issue_labels (return shape changes from 2-tuple to 3-tuple
-  to surface skip state), reject --from-status without positional label (exit 2)
-- test_set_status.py: add TestFromStatusFlag with 9 tests covering match,
-  mismatch, no-label, invalid value, combined flags, no extra API call,
-  skip message suppression, missing positional, and force+dirty+mismatch
+No test logic changed — only moved between files.

@@ -1,0 +1,5 @@
+The CI `file-size` job failed because `tests/cli/commands/test_set_status.py` has grown to 1176 lines, exceeding the 750-line maximum enforced by `mcp-coder check file-size --max-lines 750 --allowlist-file .large-files-allowlist`. This file is not listed in `.large-files-allowlist`, so the check fails.
+
+This file contains tests for the `--from-status` flag added in Step 1 of the implementation plan. The new tests pushed the file well past the 750-line threshold. Since this is a test file that was previously under the limit, the growth is a direct result of the current PR's changes.
+
+The preferred fix is to split `tests/cli/commands/test_set_status.py` into smaller, focused test modules — for example, extracting the `--from-status` tests into a dedicated file like `tests/cli/commands/test_set_status_from_status.py`. This keeps each file within the size limit and improves test organization. Adding the file to `.large-files-allowlist` is a fallback option but should be avoided since the allowlist is meant to be reduced over time (per #353), not grown.
