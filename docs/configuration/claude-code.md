@@ -10,7 +10,7 @@ Claude Code CLI is the primary LLM interface for MCP Coder's automated workflows
 - Project configuration files (`.claude/` folder)
 - Integration with mcp-coder commands
 
-> **Note:** For MCP server configuration (`.mcp.json`), see [Repository Setup Guide](../repository-setup.md#mcp-json---mcp-server-configuration).
+> **Note:** For MCP server configuration (`.mcp.json`), see [Repository Setup Guide](../repository-setup/claude-code.md#mcpjson---mcp-server-configuration).
 
 ## Installation
 
@@ -19,7 +19,7 @@ Claude Code CLI is the primary LLM interface for MCP Coder's automated workflows
 - **Anthropic API Key**: Required for Claude API access
 - **Python 3.11+**: For MCP server compatibility
 - **Git**: For repository operations
-- **GitHub Token**: Required for issue/PR workflows - configure in `~/.mcp_coder/config.toml` (see [Repository Setup](../repository-setup.md#github-token-configuration))
+- **GitHub Token**: Required for issue/PR workflows - configure in `~/.mcp_coder/config.toml` (see [Repository Setup](../repository-setup/github.md#github-token-configuration))
 
 ### Claude Code CLI Installation
 
@@ -230,7 +230,7 @@ These are used in `.mcp.json` to configure MCP servers with correct paths:
 
 ## Related Documentation
 
-- **[Repository Setup](../repository-setup.md)** - Complete project setup including MCP configuration
+- **[Repository Setup](../repository-setup/README.md)** - Complete project setup including MCP configuration
 - **[Claude Desktop Configuration](claude-desktop.md)** - Alternative Claude interface
 - **[Configuration Guide](config.md)** - General mcp-coder configuration
 - **[Claude Code Cheat Sheet](../processes-prompts/claude_cheat_sheet.md)** - Slash command reference
