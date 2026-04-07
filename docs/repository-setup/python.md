@@ -40,18 +40,7 @@ Enforce module boundaries and prevent architectural drift with automated tools. 
 
 ### Why Architecture Enforcement?
 
-**Critical for LLM-assisted development workflows:**
-
-**Context Window Management:**
-
-- **File size limits**: LLMs have finite context windows - large files reduce available context for reasoning
-- **Architecture enforcement**: LLMs may not grasp the full codebase - rules enforce following a testable architecture plan with clear boundaries, separation of concerns, and clean code that improves LLM comprehension and prevents technical debt
-
-**CI Integration Strategy:**
-
-- **Matrix execution with fail-fast disabled**: Get complete feedback on all checks simultaneously
-- **PR-only validation**: Expensive architecture checks run only when needed
-- **Comprehensive monitoring**: Use `mcp-coder check branch-status` for complete CI pipeline visibility
+Large files consume LLM context budget, and architecture rules with clear boundaries enable more focused analysis and prevent technical debt. CI matrix execution with fail-fast disabled gives complete feedback on all checks at once.
 
 ### Running Architecture Tools
 
@@ -80,11 +69,7 @@ pycycle --here
 vulture src tests vulture_whitelist.py --min-confidence 60
 ```
 
-**For Claude Code**, use MCP tools instead of shell scripts:
-
-- `mcp__tools-py__run_format_code` (replaces `format_all.sh`)
-- `mcp__tools-py__run_lint_imports_check` (replaces `lint_imports.sh`)
-- `mcp__tools-py__run_vulture_check` (replaces `vulture_check.sh`)
+(For Claude Code MCP tool equivalents, see the Quality Check Tools section below.)
 
 ### Import Architecture Enforcement
 

@@ -4,6 +4,8 @@ GitHub-side configuration: tokens, labels, actions, CI, and automated dependency
 
 ## GitHub Token Configuration
 
+> **Note:** This is **user-level** configuration in your home directory, not a project file. See the [Configuration Guide](../configuration/config.md) for the full user config schema.
+
 The workflow automation requires a GitHub token configured in your user config file.
 
 **Config file locations:**
@@ -382,7 +384,7 @@ jobs:
 
 ### Monitor CI Results
 
-Use `mcp-coder check branch-status` to monitor CI pipeline results and get comprehensive feedback on code quality checks.
+Use [`mcp-coder check branch-status`](../cli-reference.md) to monitor CI pipeline results and get comprehensive feedback on code quality checks.
 
 ## Automated Dependency Management
 

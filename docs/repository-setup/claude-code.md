@@ -1,7 +1,6 @@
 # Claude Code Setup
 
-MCP Coder currently uses Claude Code as the LLM backend. This file covers the required configuration files and Claude-related repo conventions.
-It also uses langchain as LLM backend and allows to connect to various LLMs.
+MCP Coder currently uses Claude Code as the primary LLM backend, with optional langchain support for connecting to other LLM providers. This file covers the required configuration files and Claude-related repo conventions.
 
 **See [Claude Code Configuration Guide](../configuration/claude-code.md)** for detailed setup including installation, CLI commands, and troubleshooting.
 
@@ -78,6 +77,16 @@ Skills provide structured workflows for common tasks. Copy the skills from mcp-c
 | Command | Purpose |
 |---------|---------|
 | `/discuss` | Step-by-step discussion of open questions and suggestions |
+
+## Knowledge Base & Agents
+
+Supporting files referenced by skills. Copy as-is to downstream repos:
+
+- `.claude/knowledge_base/planning_principles.md` — Used by plan review skills
+- `.claude/knowledge_base/refactoring_principles.md` — Used by code review skills
+- `.claude/knowledge_base/software_engineering_principles.md` — Used by code review skills
+- `.claude/knowledge_base/python.md` — Python-specific knowledge for code review (see [python.md](python.md))
+- `.claude/agents/commit-pusher.md` — Workflow agent referenced by `/commit_push`
 
 ## `.mcp.json` - MCP Server Configuration
 
@@ -160,17 +169,14 @@ Provides workspace file MCP tools (`read_file`, `save_file`, `edit_file`, `list_
 mcp-coder prompt "Analyze code" --mcp-config .mcp.json
 ```
 
-## VSCodeClaude Setup
-
-For `mcp-coder vscodeclaude launch`, the session status file `.vscodeclaude_status.txt` should be gitignored to prevent working folders from appearing "dirty". See [repo.md](repo.md) for the centralized `.gitignore` list.
-
-## Local Development Launchers
+## Launcher Scripts
 
 > **To be adjusted / customized:** Path to `claude.exe` if installed in a non-standard location.
 
-- **Purpose:** Use current repo's Python environment for immediate testing
-- **Benefits:** Test code changes immediately, auto-activate venv, set MCP environment variables
-- **Reference:** See `claude_local.bat` in this repository
+Two launcher scripts are provided. Both auto-activate the venv and set the MCP environment variables before starting Claude Code:
+
+- **`claude.bat`** — Standard launcher using the installed mcp-coder package (recommended for general use)
+- **`claude_local.bat`** — Development launcher using local source, for testing changes to mcp-coder itself
 
 ## Enhanced Claude Permissions
 
@@ -179,7 +185,6 @@ For `mcp-coder vscodeclaude launch`, the session status file `.vscodeclaude_stat
 - **Purpose:** Pre-approve safe tools while maintaining security
 - **Principles:** Only allow tools that change project folder (git-tracked) or read-only commands
 - **Security:** No system-wide edits, no file deletion outside project
-- **Architecture Tools:** Use `./tools/` scripts for consistent UX and error handling. **For Claude Code**, prefer MCP tools: `mcp__tools-py__run_format_code`, `mcp__tools-py__run_lint_imports_check`, `mcp__tools-py__run_vulture_check`, `mcp__tools-py__get_library_source`
 - **Reference:** See `.claude/settings.local.json` in this repository
 
 ## Architecture Documentation
