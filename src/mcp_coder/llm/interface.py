@@ -19,7 +19,13 @@ logger = logging.getLogger(__name__)
 # Constants
 LLM_DEFAULT_TIMEOUT_SECONDS = 30  # Default timeout for LLM requests
 
+
+class LLMTimeoutError(TimeoutError):
+    """Normalized timeout error for all LLM providers."""
+
+
 __all__ = [
+    "LLMTimeoutError",
     "prompt_llm",
     "prompt_llm_stream",
 ]
@@ -65,8 +71,8 @@ def prompt_llm(
 
     Raises:
         ValueError: If the provider is not supported, or if input validation fails
-        TimeoutExpired: If the Claude CLI subprocess times out
-        TimeoutError: If the LangChain provider times out (asyncio.TimeoutError)
+        LLMTimeoutError: If any LLM provider times out (normalizes TimeoutExpired
+            and asyncio.TimeoutError). Subclasses TimeoutError for backward compatibility.
 
     Examples:
         >>> # Start new conversation
@@ -123,7 +129,7 @@ def prompt_llm(
                     execution_dir=execution_dir,
                     env_vars=env_vars,
                 )
-            except asyncio.TimeoutError:
+            except asyncio.TimeoutError as e:
                 logger.error("LLM request timed out after %ds", timeout)
                 logger.error(
                     "Prompt length: %d characters (%d words)",
@@ -134,7 +140,7 @@ def prompt_llm(
                 logger.error(
                     "Consider: checking network, simplifying prompt, increasing timeout"
                 )
-                raise
+                raise LLMTimeoutError(f"LLM request timed out after {timeout}s") from e
         else:
             # Claude provider — always uses CLI
             # Derive logs_dir from env_vars to store logs in mcp-coder's project dir
@@ -153,7 +159,7 @@ def prompt_llm(
                     branch_name=branch_name,
                     logs_dir=logs_dir,
                 )
-            except TimeoutExpired:
+            except TimeoutExpired as e:
                 logger.error("LLM request timed out after %ds", timeout)
                 logger.error(
                     "Prompt length: %d characters (%d words)",
@@ -164,7 +170,7 @@ def prompt_llm(
                 logger.error(
                     "Consider: checking network, simplifying prompt, increasing timeout"
                 )
-                raise
+                raise LLMTimeoutError(f"LLM request timed out after {timeout}s") from e
 
         mlflow_ctx["response_data"] = response
 

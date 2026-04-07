@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: LLMTimeoutError + implement latent bug fix
-- [ ] Implementation: add `LLMTimeoutError` to `llm/interface.py`, normalize timeouts in `prompt_llm()`, update `implement/task_processing.py` to catch it, add/update tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `LLMTimeoutError` to `llm/interface.py`, normalize timeouts in `prompt_llm()`, update `implement/task_processing.py` to catch it, add/update tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Add failure labels + refactor create_plan.py → package
 - [ ] Implementation: add 2 labels to `labels.json`, create `create_plan/` package (`__init__.py`, `core.py`, `constants.py`, `prerequisites.py`), delete old `create_plan.py`, update all test patch paths

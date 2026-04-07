@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
-from mcp_coder.llm.interface import prompt_llm, prompt_llm_stream
+from mcp_coder.llm.interface import LLMTimeoutError, prompt_llm, prompt_llm_stream
 from mcp_coder.utils.subprocess_runner import TimeoutExpired
 
 
@@ -227,21 +227,57 @@ class TestPromptLLMRouting:
     def test_prompt_llm_timeout_expired_reraised(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
-        """Test that TimeoutExpired is re-raised as-is (not wrapped) from prompt_llm."""
+        """Test that TimeoutExpired is re-raised as LLMTimeoutError from prompt_llm."""
         mock_ask_claude_code_cli.side_effect = TimeoutExpired(cmd="claude", timeout=30)
 
-        with pytest.raises(TimeoutExpired):
+        with pytest.raises(LLMTimeoutError):
             prompt_llm("Test question", provider="claude", timeout=30)
 
     @patch("mcp_coder.llm.providers.langchain.ask_langchain")
     def test_prompt_llm_asyncio_timeout_reraised_for_langchain(
         self, mock_ask_langchain: MagicMock
     ) -> None:
-        """asyncio.TimeoutError from langchain provider is re-raised."""
+        """asyncio.TimeoutError from langchain provider is re-raised as LLMTimeoutError."""
         mock_ask_langchain.side_effect = asyncio.TimeoutError()
 
-        with pytest.raises(asyncio.TimeoutError):
+        with pytest.raises(LLMTimeoutError):
             prompt_llm("Test question", provider="langchain", timeout=30)
+
+
+class TestLLMTimeoutErrorNormalization:
+    """Tests for LLMTimeoutError normalization in prompt_llm."""
+
+    @patch("mcp_coder.llm.interface.ask_claude_code_cli")
+    def test_prompt_llm_claude_timeout_raises_llm_timeout_error(
+        self, mock_ask_claude_code_cli: MagicMock
+    ) -> None:
+        """TimeoutExpired from claude is normalized to LLMTimeoutError (also a TimeoutError)."""
+        mock_ask_claude_code_cli.side_effect = TimeoutExpired(cmd="claude", timeout=30)
+
+        with pytest.raises(LLMTimeoutError) as exc_info:
+            prompt_llm("Test question", provider="claude", timeout=30)
+
+        # LLMTimeoutError is also a TimeoutError
+        assert isinstance(exc_info.value, TimeoutError)
+        assert "30s" in str(exc_info.value)
+        # Original exception is chained
+        assert isinstance(exc_info.value.__cause__, TimeoutExpired)
+
+    @patch("mcp_coder.llm.providers.langchain.ask_langchain")
+    def test_prompt_llm_langchain_timeout_raises_llm_timeout_error(
+        self, mock_ask_langchain: MagicMock
+    ) -> None:
+        """asyncio.TimeoutError from langchain is normalized to LLMTimeoutError."""
+        mock_ask_langchain.side_effect = asyncio.TimeoutError()
+
+        with pytest.raises(LLMTimeoutError) as exc_info:
+            prompt_llm("Test question", provider="langchain", timeout=60)
+
+        # LLMTimeoutError is also a TimeoutError
+        assert isinstance(exc_info.value, TimeoutError)
+        assert "60s" in str(exc_info.value)
+        # Original exception is chained
+        assert isinstance(exc_info.value.__cause__, asyncio.TimeoutError)
 
 
 class TestPromptLLMExecutionDirRouting:
@@ -618,20 +654,20 @@ class TestPromptLLM:
     def test_prompt_llm_timeout_expired_logged_and_reraised(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
-        """Test that TimeoutExpired is re-raised as-is (not wrapped) from prompt_llm."""
+        """Test that TimeoutExpired is re-raised as LLMTimeoutError from prompt_llm."""
         mock_ask_claude_code_cli.side_effect = TimeoutExpired(cmd="claude", timeout=30)
 
-        with pytest.raises(TimeoutExpired):
+        with pytest.raises(LLMTimeoutError):
             prompt_llm("Test question", provider="claude", timeout=30)
 
     @patch("mcp_coder.llm.providers.langchain.ask_langchain")
     def test_prompt_llm_asyncio_timeout_logged_and_reraised(
         self, mock_ask_langchain: MagicMock
     ) -> None:
-        """asyncio.TimeoutError from langchain is re-raised with logging."""
+        """asyncio.TimeoutError from langchain is re-raised as LLMTimeoutError."""
         mock_ask_langchain.side_effect = asyncio.TimeoutError()
 
-        with pytest.raises(asyncio.TimeoutError):
+        with pytest.raises(LLMTimeoutError):
             prompt_llm("Test question", provider="langchain", timeout=30)
 
 
@@ -1042,13 +1078,13 @@ class TestMlflowConversationIntegration:
         mock_mlflow_cm.return_value.__exit__ = MagicMock(return_value=False)
         mock_cli.side_effect = TimeoutExpired(cmd="claude", timeout=30)
 
-        with pytest.raises(TimeoutExpired):
+        with pytest.raises(LLMTimeoutError):
             prompt_llm("hello", provider="claude", timeout=30)
 
         # Context manager __exit__ was called (exception propagated through it)
         mock_mlflow_cm.return_value.__exit__.assert_called_once()
         exit_args = mock_mlflow_cm.return_value.__exit__.call_args[0]
-        assert exit_args[0] is TimeoutExpired
+        assert exit_args[0] is LLMTimeoutError
 
     @patch("mcp_coder.llm.interface.mlflow_conversation")
     def test_mlflow_conversation_not_called_for_unsupported_provider(
