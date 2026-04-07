@@ -147,6 +147,9 @@ All test patches change from `mcp_coder.workflows.create_plan.<name>` to the sub
 
 **Important**: `core.py` imports `check_prerequisites`, `manage_branch`, etc. from `.prerequisites`. Patches for `test_main.py` must target `mcp_coder.workflows.create_plan.core.<name>` because that's where `run_create_plan_workflow` looks them up.
 
+### Sub-task: catch missed patch paths
+After the refactor, grep `tests/workflows/create_plan/` for any remaining `mcp_coder\.workflows\.create_plan\.` references to catch any missed patch paths. All remaining references should resolve to `create_plan.core.*` or `create_plan.prerequisites.*` (i.e., none should target the bare `create_plan.<name>` path).
+
 ## ALGORITHM
 ```
 1. Add 2 new label entries to labels.json (after planning_failed)
@@ -161,7 +164,10 @@ All test patches change from `mcp_coder.workflows.create_plan.<name>` to the sub
 ```
 
 ## DATA
-No new return types or data structures beyond `FailureCategory` and `WorkflowFailure` (defined but not yet used — that's step 3-4).
+No new return types or data structures beyond `FailureCategory` and `WorkflowFailure` (defined but not yet used — that's step 3).
+
+### Label config test assertion
+Verify the existing label-config test (e.g. `tests/config/test_labels.py` or wherever the labels.json schema is validated) covers the 2 new label internal IDs (`planning_llm_timeout`, `planning_prereq_failed`). If no such assertion exists, add a minimal one verifying both IDs load correctly with the expected `category="human_action"`.
 
 ## Commit message
 ```

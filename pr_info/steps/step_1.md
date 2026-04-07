@@ -73,15 +73,18 @@ except LLMTimeoutError:
 
 ## Tests
 
-### `tests/llm/test_interface.py` — 2 new tests
+### `tests/llm/test_interface.py` — 2 new + 2 updated tests
 1. `test_prompt_llm_claude_timeout_raises_llm_timeout_error` — mock `ask_claude_code_cli` to raise `TimeoutExpired`, assert `LLMTimeoutError` is raised (and is also a `TimeoutError`)
 2. `test_prompt_llm_langchain_timeout_raises_llm_timeout_error` — mock `ask_langchain` to raise `asyncio.TimeoutError`, assert `LLMTimeoutError` is raised
 
 ### `tests/workflows/implement/test_task_processing.py` — 1 new test
 3. `test_process_single_task_llm_timeout_error` — mock `prompt_llm` to raise `LLMTimeoutError`, assert result is `(False, "timeout")`. Proves the latent bug fix works.
 
-### Existing tests
-- `test_prompt_llm_timeout_expired_reraised` and `test_prompt_llm_asyncio_timeout_reraised_for_langchain` — these currently assert the native exceptions are raised. They need updating to assert `LLMTimeoutError` instead. The `LLMTimeoutError` is still a `TimeoutError`, so any `except TimeoutError` callers still work.
+### Existing tests (2 updated)
+- `test_prompt_llm_timeout_expired_reraised` — currently asserts `TimeoutExpired` is raised; update to assert `LLMTimeoutError`.
+- `test_prompt_llm_asyncio_timeout_reraised_for_langchain` — currently asserts `asyncio.TimeoutError` is raised; update to assert `LLMTimeoutError`.
+
+`LLMTimeoutError` is still a `TimeoutError`, so any `except TimeoutError` callers still work.
 
 ## Commit message
 ```

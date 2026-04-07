@@ -74,7 +74,5 @@ Add failure handling to the create-plan workflow, mirroring the implement workfl
 
 ## Implementation Steps Overview
 1. **LLMTimeoutError + implement fix** — standalone, no dependencies on other steps
-2. **Labels + package refactor** — mechanical restructuring, no logic changes
-3. **Failure handling constants + helpers** — `constants.py`, `_format_failure_comment`, `_handle_workflow_failure`
-4. **Wire failure handling into orchestration** — modify `run_create_plan_workflow` and `run_planning_prompts`
-5. **Failure handling tests + CLI help** — test coverage for all failure paths, minor CLI update
+2. **Labels + package refactor** — mechanical restructuring, no logic changes; adds `FailureCategory` + `WorkflowFailure` to `constants.py`
+3. **Failure handling helpers + orchestration wiring + CLI help** — add `_format_failure_comment`/`_handle_workflow_failure`, wire them into `run_create_plan_workflow`/`run_planning_prompts` (with exact stage labels from issue §4), promote commit/push to hard errors, update CLI help text. Merged into a single commit because the helpers are dead code (vulture-flagged) until the orchestrator wires them in, and the CLI help is a one-liner too small to stand alone.
