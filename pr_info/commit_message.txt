@@ -1,0 +1,12 @@
+feat: change process_single_task return contract and add attempt parameter
+
+- Add `attempt` parameter (default=1) to `process_single_task` signature
+- Define module-level `RETRY_REMINDER` constant appended to prompt when
+  attempt > 1, nudging the LLM to produce file changes
+- Change zero-changes return from `(True, "completed")` to
+  `(False, "no_changes")` so the retry wrapper (Step 3) can detect idle runs
+- Update `test_process_single_task_no_changes` assertions to match new contract
+- Add `test_process_single_task_attempt_appends_reminder` (attempt=2 includes reminder)
+- Add `test_process_single_task_attempt_1_no_reminder` (attempt=1 excludes reminder)
+
+Refs: #711

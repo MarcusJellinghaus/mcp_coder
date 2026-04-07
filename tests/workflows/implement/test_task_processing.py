@@ -6,6 +6,7 @@ from unittest.mock import ANY, MagicMock, patch
 import pytest
 
 from mcp_coder.workflows.implement.task_processing import (
+    RETRY_REMINDER,
     _cleanup_commit_message_file,
     check_and_fix_mypy,
     commit_changes,
@@ -642,8 +643,8 @@ class TestProcessSingleTask:
 
         success, reason = process_single_task(Path("/test/project"), "claude")
 
-        assert success is True
-        assert reason == "completed"
+        assert success is False
+        assert reason == "no_changes"
         # store_session still called even with no changes
         mock_store_session.assert_called_once()
         # Should not continue to formatting/commit/push when no changes
@@ -684,6 +685,62 @@ class TestProcessSingleTask:
 
         assert success is False
         assert reason == "error"
+
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    def test_process_single_task_attempt_appends_reminder(
+        self,
+        mock_get_next_task: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
+    ) -> None:
+        """When attempt=2, the prompt passed to prompt_llm contains the retry reminder."""
+        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_prompt.return_value = "Template"
+        mock_prompt_llm.return_value = _make_llm_response("Response")
+
+        # Force LLM error after capturing the prompt so we don't need full mocking
+        # Actually, let prompt_llm succeed but then raise on get_full_status
+        with patch(
+            "mcp_coder.workflows.implement.task_processing.get_full_status",
+            side_effect=Exception("stop here"),
+        ):
+            process_single_task(Path("/test/project"), "claude", attempt=2)
+
+        # Verify the prompt passed to prompt_llm contains the reminder
+        call_args = mock_prompt_llm.call_args
+        prompt_sent = call_args[0][0] if call_args[0] else call_args[1]["prompt"]
+        assert RETRY_REMINDER in prompt_sent
+
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    def test_process_single_task_attempt_1_no_reminder(
+        self,
+        mock_get_next_task: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
+    ) -> None:
+        """When attempt=1 (default), the prompt does NOT contain the retry reminder."""
+        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_prompt.return_value = "Template"
+        mock_prompt_llm.return_value = _make_llm_response("Response")
+
+        with patch(
+            "mcp_coder.workflows.implement.task_processing.get_full_status",
+            side_effect=Exception("stop here"),
+        ):
+            process_single_task(Path("/test/project"), "claude", attempt=1)
+
+        # Verify the prompt does NOT contain the reminder
+        call_args = mock_prompt_llm.call_args
+        prompt_sent = call_args[0][0] if call_args[0] else call_args[1]["prompt"]
+        assert RETRY_REMINDER not in prompt_sent
 
 
 class TestIntegration:
