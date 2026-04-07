@@ -61,6 +61,7 @@ from .constants import (
     LLM_FINALISATION_TIMEOUT_SECONDS,
     LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
     LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS,
+    MAX_NO_CHANGE_RETRIES,
     PR_INFO_DIR,
     RUN_MYPY_AFTER_EACH_TASK,
     FailureCategory,
@@ -75,7 +76,7 @@ from .prerequisites import (
 from .task_processing import (
     check_and_fix_mypy,
     commit_changes,
-    process_single_task,
+    process_task_with_retry,
     push_changes,
     run_formatters,
 )
@@ -1106,7 +1107,7 @@ def run_implement_workflow(
 
         # Step 4: Process all incomplete tasks in a loop
         while True:
-            success, reason = process_single_task(
+            success, reason = process_task_with_retry(
                 project_dir, provider, mcp_config, execution_dir
             )
 
@@ -1121,6 +1122,27 @@ def run_implement_workflow(
                             category=FailureCategory.LLM_TIMEOUT,
                             stage="Task implementation",
                             message="LLM timed out during task processing",
+                            tasks_completed=completed_tasks,
+                            tasks_total=total_tasks,
+                            build_url=build_url,
+                            elapsed_time=time.time() - start_time,
+                        ),
+                        project_dir,
+                        update_issue_labels=update_issue_labels,
+                        post_issue_comments=post_issue_comments,
+                    )
+                    reached_terminal_state = True
+                    return 1
+                if reason == "no_changes_after_retries":
+                    # Task produced no changes after all retry attempts
+                    _handle_workflow_failure(
+                        WorkflowFailure(
+                            category=FailureCategory.NO_CHANGES_AFTER_RETRIES,
+                            stage="Task implementation",
+                            message=(
+                                f"Task produced no file changes after"
+                                f" {MAX_NO_CHANGE_RETRIES} retry attempts"
+                            ),
                             tasks_completed=completed_tasks,
                             tasks_total=total_tasks,
                             build_url=build_url,

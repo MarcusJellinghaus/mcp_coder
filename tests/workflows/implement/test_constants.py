@@ -18,6 +18,9 @@ class TestFailureCategory:
         assert (
             FailureCategory.TASK_TRACKER_PREP_FAILED.value == "task_tracker_prep_failed"
         )
+        assert (
+            FailureCategory.NO_CHANGES_AFTER_RETRIES.value == "no_changes_after_retries"
+        )
 
 
 class TestWorkflowFailure:

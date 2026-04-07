@@ -22,6 +22,11 @@ LLM_FINALISATION_TIMEOUT_SECONDS = 600  # 10 minutes
 # Mypy checking behavior
 RUN_MYPY_AFTER_EACH_TASK = False  # If False, mypy runs once after all tasks complete
 
+# Used by the `implement` workflow's task-processing retry loop
+# (process_task_with_retry in task_processing.py) to bound retries
+# when an LLM call produces zero file changes for a task.
+MAX_NO_CHANGE_RETRIES = 3  # Max LLM calls per task when zero changes detected
+
 # CI check constants
 LLM_CI_ANALYSIS_TIMEOUT_SECONDS = 300  # 5 minutes for CI failure analysis
 CI_POLL_INTERVAL_SECONDS = 15  # Poll CI status every 15 seconds
@@ -39,6 +44,7 @@ class FailureCategory(Enum):
     CI_FIX_EXHAUSTED = "ci_fix_needed"
     LLM_TIMEOUT = "llm_timeout"
     TASK_TRACKER_PREP_FAILED = "task_tracker_prep_failed"
+    NO_CHANGES_AFTER_RETRIES = "no_changes_after_retries"
 
 
 @dataclass(frozen=True)

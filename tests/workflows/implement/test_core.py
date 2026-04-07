@@ -1132,7 +1132,7 @@ class TestRunFinalisation:
 class TestRunImplementWorkflow:
     """Test run_implement_workflow function."""
 
-    @patch("mcp_coder.workflows.implement.core.process_single_task")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
@@ -1242,7 +1242,7 @@ class TestRunImplementWorkflow:
         assert result == 1
         mock_prepare_tracker.assert_called_once()
 
-    @patch("mcp_coder.workflows.implement.core.process_single_task")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
@@ -1269,7 +1269,7 @@ class TestRunImplementWorkflow:
         assert result == 1
         mock_process_task.assert_called_once()
 
-    @patch("mcp_coder.workflows.implement.core.process_single_task")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
@@ -1305,7 +1305,7 @@ class TestIntegration:
         reason="Log capture behaves differently on Linux",
     )
     @patch("mcp_coder.workflows.implement.core.RUN_MYPY_AFTER_EACH_TASK", True)
-    @patch("mcp_coder.workflows.implement.core.process_single_task")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.get_step_progress")
     @patch("mcp_coder.workflows.implement.core.commit_all_changes")
     @patch("mcp_coder.workflows.implement.core.has_implementation_tasks")
@@ -1604,7 +1604,7 @@ class TestRunImplementWorkflowLabelTransitions:
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci")
     @patch("mcp_coder.workflows.implement.core.run_finalisation")
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
-    @patch("mcp_coder.workflows.implement.core.process_single_task")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
     @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
@@ -1652,7 +1652,7 @@ class TestRunImplementWorkflowLabelTransitions:
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci")
     @patch("mcp_coder.workflows.implement.core.run_finalisation")
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
-    @patch("mcp_coder.workflows.implement.core.process_single_task")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
     @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
@@ -1712,7 +1712,7 @@ class TestRunImplementWorkflowLabelTransitions:
 
     @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
-    @patch("mcp_coder.workflows.implement.core.process_single_task")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
     @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
@@ -1747,7 +1747,42 @@ class TestRunImplementWorkflowLabelTransitions:
 
     @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
-    @patch("mcp_coder.workflows.implement.core.process_single_task")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    def test_no_changes_after_retries_routes_to_failure(
+        self,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_process: MagicMock,
+        mock_progress: MagicMock,
+        mock_handle_failure: MagicMock,
+    ) -> None:
+        """No changes after retries routes to NO_CHANGES_AFTER_RETRIES failure."""
+        mock_git_clean.return_value = True
+        mock_main_branch.return_value = True
+        mock_prereq.return_value = True
+        mock_rebase.return_value = True
+        mock_prepare.return_value = True
+        mock_process.return_value = (False, "no_changes_after_retries")
+
+        result = run_implement_workflow(Path("/project"), "claude")
+
+        assert result == 1
+        mock_handle_failure.assert_called_once()
+        failure_arg = mock_handle_failure.call_args[0][0]
+        assert failure_arg.category == FailureCategory.NO_CHANGES_AFTER_RETRIES
+        assert failure_arg.stage == "Task implementation"
+
+    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
     @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
@@ -1786,7 +1821,7 @@ class TestNoPostErrorProgressDisplay:
 
     @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
-    @patch("mcp_coder.workflows.implement.core.process_single_task")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
     @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
@@ -1886,7 +1921,7 @@ class TestExistingFailuresIncludeNewFields:
     @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
     @patch("mcp_coder.workflows.implement.core.run_finalisation")
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
-    @patch("mcp_coder.workflows.implement.core.process_single_task")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
     @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
@@ -1929,7 +1964,7 @@ class TestExistingFailuresIncludeNewFields:
     @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
     @patch("mcp_coder.workflows.implement.core.run_finalisation")
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
-    @patch("mcp_coder.workflows.implement.core.process_single_task")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
     @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
@@ -1968,7 +2003,7 @@ class TestExistingFailuresIncludeNewFields:
     @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
     @patch("mcp_coder.workflows.implement.core.run_finalisation")
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
-    @patch("mcp_coder.workflows.implement.core.process_single_task")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
     @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
@@ -2049,7 +2084,7 @@ class TestWorkflowSafetyNet:
     )
     @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
     @patch(
-        "mcp_coder.workflows.implement.core.process_single_task",
+        "mcp_coder.workflows.implement.core.process_task_with_retry",
         return_value=(False, "no_tasks"),
     )
     @patch("mcp_coder.workflows.implement.core.get_step_progress", return_value={})

@@ -6,11 +6,13 @@ from unittest.mock import ANY, MagicMock, patch
 import pytest
 
 from mcp_coder.workflows.implement.task_processing import (
+    RETRY_REMINDER,
     _cleanup_commit_message_file,
     check_and_fix_mypy,
     commit_changes,
     get_next_task,
     process_single_task,
+    process_task_with_retry,
     push_changes,
     run_formatters,
 )
@@ -642,8 +644,8 @@ class TestProcessSingleTask:
 
         success, reason = process_single_task(Path("/test/project"), "claude")
 
-        assert success is True
-        assert reason == "completed"
+        assert success is False
+        assert reason == "no_changes"
         # store_session still called even with no changes
         mock_store_session.assert_called_once()
         # Should not continue to formatting/commit/push when no changes
@@ -684,6 +686,62 @@ class TestProcessSingleTask:
 
         assert success is False
         assert reason == "error"
+
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    def test_process_single_task_attempt_appends_reminder(
+        self,
+        mock_get_next_task: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
+    ) -> None:
+        """When attempt=2, the prompt passed to prompt_llm contains the retry reminder."""
+        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_prompt.return_value = "Template"
+        mock_prompt_llm.return_value = _make_llm_response("Response")
+
+        # Force LLM error after capturing the prompt so we don't need full mocking
+        # Actually, let prompt_llm succeed but then raise on get_full_status
+        with patch(
+            "mcp_coder.workflows.implement.task_processing.get_full_status",
+            side_effect=Exception("stop here"),
+        ):
+            process_single_task(Path("/test/project"), "claude", attempt=2)
+
+        # Verify the prompt passed to prompt_llm contains the reminder
+        call_args = mock_prompt_llm.call_args
+        prompt_sent = call_args[0][0] if call_args[0] else call_args[1]["prompt"]
+        assert RETRY_REMINDER in prompt_sent
+
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    def test_process_single_task_attempt_1_no_reminder(
+        self,
+        mock_get_next_task: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
+    ) -> None:
+        """When attempt=1 (default), the prompt does NOT contain the retry reminder."""
+        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_prompt.return_value = "Template"
+        mock_prompt_llm.return_value = _make_llm_response("Response")
+
+        with patch(
+            "mcp_coder.workflows.implement.task_processing.get_full_status",
+            side_effect=Exception("stop here"),
+        ):
+            process_single_task(Path("/test/project"), "claude", attempt=1)
+
+        # Verify the prompt does NOT contain the reminder
+        call_args = mock_prompt_llm.call_args
+        prompt_sent = call_args[0][0] if call_args[0] else call_args[1]["prompt"]
+        assert RETRY_REMINDER not in prompt_sent
 
 
 class TestIntegration:
@@ -808,3 +866,97 @@ Please implement this task step by step."""
         ):
             push_result = push_changes(project_dir)
             assert push_result is False
+
+
+class TestProcessTaskWithRetry:
+    """Test process_task_with_retry wrapper function."""
+
+    @patch("mcp_coder.workflows.implement.task_processing.process_single_task")
+    def test_retry_succeeds_on_second_attempt(self, mock_process: MagicMock) -> None:
+        """First call returns no_changes, second returns completed."""
+        mock_process.side_effect = [
+            (False, "no_changes"),
+            (True, "completed"),
+        ]
+
+        success, reason = process_task_with_retry(Path("/test/project"), "claude")
+
+        assert success is True
+        assert reason == "completed"
+        assert mock_process.call_count == 2
+        # Verify attempt numbers
+        assert mock_process.call_args_list[0].kwargs["attempt"] == 1
+        assert mock_process.call_args_list[1].kwargs["attempt"] == 2
+
+    @patch("mcp_coder.workflows.implement.task_processing.process_single_task")
+    def test_retry_exhausted_returns_no_changes_after_retries(
+        self, mock_process: MagicMock
+    ) -> None:
+        """All 3 calls return no_changes."""
+        mock_process.return_value = (False, "no_changes")
+
+        success, reason = process_task_with_retry(Path("/test/project"), "claude")
+
+        assert success is False
+        assert reason == "no_changes_after_retries"
+        assert mock_process.call_count == 3
+
+    @patch("mcp_coder.workflows.implement.task_processing.process_single_task")
+    def test_timeout_propagates_immediately(self, mock_process: MagicMock) -> None:
+        """First call returns timeout — no retry."""
+        mock_process.return_value = (False, "timeout")
+
+        success, reason = process_task_with_retry(Path("/test/project"), "claude")
+
+        assert success is False
+        assert reason == "timeout"
+        assert mock_process.call_count == 1
+
+    @patch("mcp_coder.workflows.implement.task_processing.process_single_task")
+    def test_error_propagates_immediately(self, mock_process: MagicMock) -> None:
+        """First call returns error — no retry."""
+        mock_process.return_value = (False, "error")
+
+        success, reason = process_task_with_retry(Path("/test/project"), "claude")
+
+        assert success is False
+        assert reason == "error"
+        assert mock_process.call_count == 1
+
+    @patch("mcp_coder.workflows.implement.task_processing.process_single_task")
+    def test_no_tasks_propagates_immediately(self, mock_process: MagicMock) -> None:
+        """First call returns no_tasks — no retry."""
+        mock_process.return_value = (False, "no_tasks")
+
+        success, reason = process_task_with_retry(Path("/test/project"), "claude")
+
+        assert success is False
+        assert reason == "no_tasks"
+        assert mock_process.call_count == 1
+
+    @patch("mcp_coder.workflows.implement.task_processing.process_single_task")
+    def test_success_on_first_attempt_no_retry(self, mock_process: MagicMock) -> None:
+        """First call returns completed — no retry."""
+        mock_process.return_value = (True, "completed")
+
+        success, reason = process_task_with_retry(Path("/test/project"), "claude")
+
+        assert success is True
+        assert reason == "completed"
+        assert mock_process.call_count == 1
+
+    @patch("mcp_coder.workflows.implement.task_processing.process_single_task")
+    def test_timeout_on_second_attempt_propagates(
+        self, mock_process: MagicMock
+    ) -> None:
+        """First call no_changes, second call timeout — propagates immediately."""
+        mock_process.side_effect = [
+            (False, "no_changes"),
+            (False, "timeout"),
+        ]
+
+        success, reason = process_task_with_retry(Path("/test/project"), "claude")
+
+        assert success is False
+        assert reason == "timeout"
+        assert mock_process.call_count == 2

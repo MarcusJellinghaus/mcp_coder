@@ -190,6 +190,19 @@
       }
     },
     {
+      "internal_id": "no_changes_after_retries",
+      "name": "status-06f-nochange:no-changes-after-retries",
+      "color": "d93f0b",
+      "description": "LLM produced no file changes after multiple retry attempts",
+      "category": "human_action",
+      "vscodeclaude": {
+        "emoji": "🔄",
+        "display_name": "NO CHANGES AFTER RETRIES",
+        "stage_short": "no-change",
+        "commands": ["/check_branch_status"]
+      }
+    },
+    {
       "internal_id": "pr_creating_failed",
       "name": "status-09f:pr-creating-failed",
       "color": "b60205",

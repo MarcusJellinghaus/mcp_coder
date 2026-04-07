@@ -162,6 +162,7 @@ ERROR_STATUS_IDS = [
     "llm_timeout",
     "pr_creating_failed",
     "task_tracker_prep_failed",
+    "no_changes_after_retries",
 ]
 
 
