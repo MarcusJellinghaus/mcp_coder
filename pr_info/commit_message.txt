@@ -1,13 +1,14 @@
-feat(icoder): wire autocomplete into InputArea
+feat(icoder): integrate autocomplete into ICoderApp
 
-- Add registry, event_log kwargs to InputArea.__init__ (both default
-  None for backward compatibility)
-- Hold AutocompleteState, recompute on every text change via
-  compute_next_state()
-- Drive CommandAutocomplete dropdown (show/hide/update_matches)
-- Implement _emit_ac_event() for transition-based event logging:
-  autocomplete_shown, autocomplete_filtered, autocomplete_hidden
-- Route Escape/Up/Down/Tab keys to dropdown when visible
-- Tab-select inserts command name + trailing space via load_text()
-- Enter always submits (hides dropdown as side effect if visible)
-- Add backward-compat test: InputArea() with no args still works
+Add public read-only properties to AppCore for registry and event_log,
+exposing dependencies needed by InputArea's autocomplete behavior.
+
+Wire CommandAutocomplete widget into ICoderApp.compose() between
+OutputLog and InputArea. Pass registry and event_log from AppCore
+into InputArea constructor so autocomplete state management works
+end-to-end.
+
+Changes:
+- AppCore: add registry and event_log @property accessors
+- ICoderApp: yield CommandAutocomplete() in compose()
+- ICoderApp: construct InputArea with registry and event_log kwargs

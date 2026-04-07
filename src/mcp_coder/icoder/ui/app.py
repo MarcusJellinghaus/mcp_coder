@@ -8,6 +8,7 @@ from textual.app import App, ComposeResult
 
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.ui.styles import CSS
+from mcp_coder.icoder.ui.widgets.command_autocomplete import CommandAutocomplete
 from mcp_coder.icoder.ui.widgets.input_area import InputArea
 from mcp_coder.icoder.ui.widgets.output_log import OutputLog
 from mcp_coder.llm.formatting.render_actions import (
@@ -46,7 +47,11 @@ class ICoderApp(App[None]):
             OutputLog and InputArea widgets.
         """
         yield OutputLog()
-        yield InputArea()
+        yield CommandAutocomplete()
+        yield InputArea(
+            registry=self._core.registry,
+            event_log=self._core.event_log,
+        )
 
     def on_mount(self) -> None:
         """Focus input area on startup."""
