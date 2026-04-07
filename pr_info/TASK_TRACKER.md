@@ -21,6 +21,21 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: LLMTimeoutError + implement latent bug fix
+- [ ] Implementation: add `LLMTimeoutError` to `llm/interface.py`, normalize timeouts in `prompt_llm()`, update `implement/task_processing.py` to catch it, add/update tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Add failure labels + refactor create_plan.py → package
+- [ ] Implementation: add 2 labels to `labels.json`, create `create_plan/` package (`__init__.py`, `core.py`, `constants.py`, `prerequisites.py`), delete old `create_plan.py`, update all test patch paths
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Failure handling helpers + orchestration wiring + CLI help
+- [ ] Implementation: add `_format_failure_comment()` and `_handle_workflow_failure()` to `core.py`, wire into `run_create_plan_workflow()` and `run_planning_prompts()`, promote commit/push to hard errors, update CLI help text, add/update tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review: verify all steps implemented correctly
+- [ ] PR summary prepared
