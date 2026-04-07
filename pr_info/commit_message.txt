@@ -1,14 +1,18 @@
-feat(icoder): integrate autocomplete into ICoderApp
+test(icoder): add autocomplete pilot integration tests
 
-Add public read-only properties to AppCore for registry and event_log,
-exposing dependencies needed by InputArea's autocomplete behavior.
+Add 18 Textual pilot integration tests covering full autocomplete
+behavior end-to-end: visibility, filtering, key routing, event
+emission, and no regression on existing behavior.
 
-Wire CommandAutocomplete widget into ICoderApp.compose() between
-OutputLog and InputArea. Pass registry and event_log from AppCore
-into InputArea constructor so autocomplete state management works
-end-to-end.
+Tests cover:
+- Dropdown visibility: slash shows, filtering, no-match state,
+  backspace past slash hides, empty/non-slash input hidden
+- Key routing: Tab selects and inserts command, Escape hides
+  preserving input, Enter submits, Up/Down navigate dropdown
+  when visible vs history when hidden, Tab no-op when hidden
+- Event sequences: type+tab, type+escape, type+enter,
+  backspace past slash
 
-Changes:
-- AppCore: add registry and event_log @property accessors
-- ICoderApp: yield CommandAutocomplete() in compose()
-- ICoderApp: construct InputArea with registry and event_log kwargs
+Fix wiring bug in InputArea: suppress autocomplete recomputation
+during tab-insert to prevent dropdown from re-showing when
+load_text() triggers on_text_area_changed.

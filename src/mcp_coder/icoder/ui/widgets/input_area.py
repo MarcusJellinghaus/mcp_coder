@@ -40,6 +40,7 @@ class InputArea(TextArea):
         self._ac_state: AutocompleteState = AutocompleteState(
             visible=False, matches=(), highlighted_index=-1
         )
+        self._suppress_ac_recompute: bool = False
 
     class InputSubmitted(Message):
         """Posted when user presses Enter to submit input."""
@@ -57,6 +58,9 @@ class InputArea(TextArea):
         self.styles.height = min(line_count + 2, max_lines)
 
         if self._registry is None:
+            return
+        if self._suppress_ac_recompute:
+            self._suppress_ac_recompute = False
             return
 
         prev = self._ac_state
@@ -141,6 +145,7 @@ class InputArea(TextArea):
                     event.prevent_default()
                     name = dropdown.select_highlighted()
                     if name:
+                        self._suppress_ac_recompute = True
                         self.load_text(name + " ")
                         self.move_cursor(self.document.end)
                         if self._event_log is not None:
