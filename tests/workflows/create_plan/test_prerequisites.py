@@ -129,9 +129,7 @@ class TestCheckPrerequisites:
                 success, issue_data = check_prerequisites(tmp_path, 456)
 
                 # Verify logging calls (some promoted to OUTPUT via logger.log)
-                info_calls = [
-                    call[0][0] for call in mock_logger.info.call_args_list
-                ]
+                info_calls = [call[0][0] for call in mock_logger.info.call_args_list]
                 output_calls = [
                     str(call[0][1]) for call in mock_logger.log.call_args_list
                 ]
