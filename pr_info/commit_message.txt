@@ -1,13 +1,18 @@
-Handle API failure in get_all_cached_issues() with snapshot restore
+feat: add last_full_refresh field to decouple full refresh threshold from last_checked
 
-- Change _fetch_and_merge_issues to call _list_issues_no_error_handling
-  instead of list_issues so exceptions propagate to the caller
-- Add snapshot/try-except in get_all_cached_issues(): save a shallow
-  copy of cache_data["issues"] before fetch, restore on failure
-- On API failure: log warning, do not advance last_checked, do not
-  save cache, return stale cached issues from snapshot
-- Update mock_cache_issue_manager fixture to share list_issues Mock
-  with _list_issues_no_error_handling for backward compatibility
-- Add 4 tests: API failure does not advance last_checked, returns
-  stale issues, restores snapshot on full refresh, and sanity check
-  that successful fetch still advances last_checked
+Add `last_full_refresh` to CacheData to track when the last successful
+full refresh occurred, independently from `last_checked`. The 24-hour
+full refresh threshold now uses `last_full_refresh` instead of
+`last_checked`, ensuring periodic full refreshes fire regardless of
+how frequently incremental refreshes run.
+
+Changes:
+- Add `last_full_refresh` (NotRequired[Optional[str]]) to CacheData TypedDict
+- Update `_load_cache_file()` to read `last_full_refresh` with `.get()` default None
+- Change `_fetch_and_merge_issues()` to accept `last_full_refresh` param and
+  return `Tuple[List[IssueData], bool]` (issues, was_full_refresh)
+- Update `get_all_cached_issues()` to parse, pass, and conditionally update
+  `last_full_refresh` only after successful full refreshes
+- Add 5 tests: persistence, full refresh update, incremental no-update,
+  old last_full_refresh triggers full refresh, backward compatibility
+- Fix existing tests for new CacheData shape

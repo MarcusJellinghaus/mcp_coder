@@ -13,7 +13,16 @@ import json
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypedDict
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    NotRequired,
+    Optional,
+    Tuple,
+    TypedDict,
+)
 
 from ....constants import DUPLICATE_PROTECTION_SECONDS
 from ...timezone_utils import (
@@ -36,10 +45,12 @@ class CacheData(TypedDict):
 
     Attributes:
         last_checked: ISO 8601 timestamp of last cache refresh, or None if never checked
+        last_full_refresh: ISO 8601 timestamp of last successful full refresh, or None
         issues: Dictionary mapping issue number (as string) to IssueData
     """
 
     last_checked: Optional[str]
+    last_full_refresh: NotRequired[Optional[str]]
     issues: Dict[str, IssueData]
 
 
@@ -54,7 +65,7 @@ def _load_cache_file(cache_file_path: Path) -> CacheData:
     """
     try:
         if not cache_file_path.exists():
-            return {"last_checked": None, "issues": {}}
+            return {"last_checked": None, "last_full_refresh": None, "issues": {}}
 
         with cache_file_path.open("r") as f:
             data = json.load(f)
@@ -62,14 +73,18 @@ def _load_cache_file(cache_file_path: Path) -> CacheData:
         # Validate structure
         if not isinstance(data, dict) or "issues" not in data:
             logger.warning(f"Invalid cache structure in {cache_file_path}, recreating")
-            return {"last_checked": None, "issues": {}}
+            return {"last_checked": None, "last_full_refresh": None, "issues": {}}
 
         # Return as CacheData since we validated the structure
-        return {"last_checked": data.get("last_checked"), "issues": data["issues"]}
+        return {
+            "last_checked": data.get("last_checked"),
+            "last_full_refresh": data.get("last_full_refresh"),
+            "issues": data["issues"],
+        }
 
     except (json.JSONDecodeError, OSError, PermissionError) as e:
         logger.warning(f"Cache load error for {cache_file_path}: {e}, starting fresh")
-        return {"last_checked": None, "issues": {}}
+        return {"last_checked": None, "last_full_refresh": None, "issues": {}}
 
 
 def _log_cache_metrics(action: str, repo_name: str, **kwargs: Any) -> None:
@@ -314,7 +329,8 @@ def _fetch_and_merge_issues(  # pylint: disable=too-many-arguments,too-many-posi
     last_checked: Optional[datetime],
     now: datetime,
     cache_refresh_minutes: int,
-) -> List[IssueData]:
+    last_full_refresh: Optional[datetime] = None,
+) -> Tuple[List[IssueData], bool]:
     """Fetch fresh issues and merge into cache.
 
     Args:
@@ -325,15 +341,17 @@ def _fetch_and_merge_issues(  # pylint: disable=too-many-arguments,too-many-posi
         last_checked: Last cache check timestamp (or None)
         now: Current UTC timestamp
         cache_refresh_minutes: Full refresh threshold in minutes
+        last_full_refresh: Last full refresh timestamp (or None)
 
     Returns:
-        List of fresh issues fetched from API
+        Tuple of (fresh issues fetched from API, whether a full refresh was performed)
     """
     # Determine refresh strategy
     is_full_refresh = (
         force_refresh
         or not last_checked
-        or (now - last_checked) > timedelta(minutes=cache_refresh_minutes)
+        or not last_full_refresh
+        or (now - last_full_refresh) > timedelta(minutes=cache_refresh_minutes)
     )
 
     # Fetch issues using appropriate method
@@ -374,7 +392,7 @@ def _fetch_and_merge_issues(  # pylint: disable=too-many-arguments,too-many-posi
             issue_count=len(fresh_issues),
         )
 
-    return fresh_issues
+    return fresh_issues, is_full_refresh
 
 
 def get_all_cached_issues(  # pylint: disable=too-many-locals
@@ -433,6 +451,17 @@ def get_all_cached_issues(  # pylint: disable=too-many-locals
                 f"Invalid timestamp in cache: {cache_data['last_checked']}, error: {e}"
             )
 
+    # Parse last_full_refresh timestamp
+    last_full_refresh = None
+    last_full_refresh_str = cache_data.get("last_full_refresh")
+    if last_full_refresh_str:
+        try:
+            last_full_refresh = parse_iso_timestamp(last_full_refresh_str)
+        except ValueError as e:
+            logger.debug(
+                f"Invalid last_full_refresh in cache: {last_full_refresh_str}, error: {e}"
+            )
+
     # Step 2: Fetch additional issues BEFORE duplicate protection check
     # This ensures specific issues are fetched even if cache is recent
     additional_dict: dict[str, IssueData] = {}
@@ -476,7 +505,7 @@ def get_all_cached_issues(  # pylint: disable=too-many-locals
         # Step 4: Fetch and merge issues
         # Note: _fetch_and_merge_issues may clear cache on full refresh
         # So we need to preserve and restore additional_dict after
-        fresh_issues = _fetch_and_merge_issues(
+        fresh_issues, was_full_refresh = _fetch_and_merge_issues(
             issue_manager,
             cache_data,
             repo_name,
@@ -484,6 +513,7 @@ def get_all_cached_issues(  # pylint: disable=too-many-locals
             last_checked,
             now,
             cache_refresh_minutes,
+            last_full_refresh,
         )
 
         # Step 5: Update cache with fresh data
@@ -495,6 +525,8 @@ def get_all_cached_issues(  # pylint: disable=too-many-locals
             cache_data["issues"].update(additional_dict)
 
         cache_data["last_checked"] = format_for_cache(now)
+        if was_full_refresh:
+            cache_data["last_full_refresh"] = format_for_cache(now)
 
         # Step 6: Save cache
         if _save_cache_file(_get_cache_file_path(repo_identifier), cache_data):

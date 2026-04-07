@@ -736,7 +736,11 @@ class TestCacheFileOperations:
             cache_path = Path(tmpdir) / "nonexistent.json"
             result = _load_cache_file(cache_path)
 
-            assert result == {"last_checked": None, "issues": {}}
+            assert result == {
+                "last_checked": None,
+                "last_full_refresh": None,
+                "issues": {},
+            }
 
     def test_load_cache_file_valid(self) -> None:
         """Test loading valid cache file."""
@@ -764,7 +768,9 @@ class TestCacheFileOperations:
             cache_path.write_text(json.dumps(sample_cache_data))
 
             result = _load_cache_file(cache_path)
-            assert result == sample_cache_data
+            # Loaded cache gains last_full_refresh=None when not in file
+            expected = {**sample_cache_data, "last_full_refresh": None}
+            assert result == expected
 
     def test_load_cache_file_invalid_json(self) -> None:
         """Test loading corrupted JSON file returns empty structure."""
@@ -773,7 +779,11 @@ class TestCacheFileOperations:
             cache_path.write_text("invalid json content")
 
             result = _load_cache_file(cache_path)
-            assert result == {"last_checked": None, "issues": {}}
+            assert result == {
+                "last_checked": None,
+                "last_full_refresh": None,
+                "issues": {},
+            }
 
     def test_save_cache_file_success(self) -> None:
         """Test successful cache file save with atomic write."""

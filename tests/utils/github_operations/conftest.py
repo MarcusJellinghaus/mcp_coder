@@ -81,6 +81,7 @@ def sample_cache_data() -> CacheData:
     """Sample cache data structure."""
     return {
         "last_checked": "2025-12-31T10:30:00Z",
+        "last_full_refresh": "2025-12-31T10:30:00Z",
         "issues": {
             "123": {
                 "number": 123,

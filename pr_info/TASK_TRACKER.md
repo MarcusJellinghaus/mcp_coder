@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: Add `last_full_refresh` field and use it for full refresh threshold
-- [ ] Implementation: add `last_full_refresh` to `CacheData`, update `_load_cache_file`, change `_fetch_and_merge_issues` return to `tuple[List[IssueData], bool]`, update `get_all_cached_issues()`, add 5 tests in `test_issue_cache.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `last_full_refresh` to `CacheData`, update `_load_cache_file`, change `_fetch_and_merge_issues` return to `tuple[List[IssueData], bool]`, update `get_all_cached_issues()`, add 5 tests in `test_issue_cache.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: verify all steps integrated correctly
