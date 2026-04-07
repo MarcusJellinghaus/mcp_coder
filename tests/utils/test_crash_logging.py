@@ -1,6 +1,5 @@
 """Tests for crash_logging utility."""
 
-import subprocess
 import sys
 import textwrap
 from collections.abc import Generator
@@ -14,6 +13,7 @@ from mcp_coder.utils.crash_logging import (
     _state,
     enable_crash_logging,
 )
+from mcp_coder.utils.subprocess_runner import execute_subprocess
 
 
 @pytest.fixture(autouse=True)
@@ -127,13 +127,9 @@ def test_crash_log_captures_real_segfault(tmp_path: Path) -> None:
         faulthandler._sigsegv()
     """)
 
-    result = subprocess.run(
-        [sys.executable, "-c", script],
-        capture_output=True,
-        check=False,
-    )
+    result = execute_subprocess([sys.executable, "-c", script])
 
-    assert result.returncode != 0
+    assert result.return_code != 0
 
     crash_dir = tmp_path / "logs" / "faulthandler"
     crash_files = list(crash_dir.glob("crash_test_*.log"))
