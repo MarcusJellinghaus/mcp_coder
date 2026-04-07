@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: Failure handling helpers + orchestration wiring + CLI help
-- [ ] Implementation: add `_format_failure_comment()` and `_handle_workflow_failure()` to `core.py`, wire into `run_create_plan_workflow()` and `run_planning_prompts()`, promote commit/push to hard errors, update CLI help text, add/update tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `_format_failure_comment()` and `_handle_workflow_failure()` to `core.py`, wire into `run_create_plan_workflow()` and `run_planning_prompts()`, promote commit/push to hard errors, update CLI help text, add/update tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: verify all steps implemented correctly

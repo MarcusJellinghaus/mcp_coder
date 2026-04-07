@@ -6,22 +6,34 @@ output validation, and helper functions.
 
 import logging
 import sys
+import time
+from dataclasses import replace
 from pathlib import Path
 from typing import Optional
 
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
-from mcp_coder.llm.interface import prompt_llm
+from mcp_coder.llm.interface import LLMTimeoutError, prompt_llm
 from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_operations.remotes import git_push
+from mcp_coder.utils.git_operations.repository_status import is_working_directory_clean
 from mcp_coder.utils.git_operations.workflows import commit_all_changes
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.github_operations.issues import (
     IssueData,
     IssueManager,
 )
+from mcp_coder.workflow_utils.failure_handling import (
+    WorkflowFailure as SharedWorkflowFailure,
+)
+from mcp_coder.workflow_utils.failure_handling import (
+    format_elapsed_time,
+    get_diff_stat,
+    handle_workflow_failure,
+)
 
+from .constants import FailureCategory, WorkflowFailure
 from .prerequisites import (
     check_pr_info_not_exists,
     check_prerequisites,
@@ -36,6 +48,53 @@ logger = logging.getLogger(__name__)
 # This prompt requires more time than the standard 600s timeout used by other prompts
 # because it generates detailed multi-file implementation plans with pseudocode and algorithms.
 PROMPT_3_TIMEOUT = 900  # 15 minutes
+
+
+def _format_failure_comment(
+    failure: WorkflowFailure,
+    diff_stat: str,
+) -> str:
+    """Format GitHub comment for planning failure."""
+    lines = [
+        "## Planning Failed",
+        f"**Category:** {failure.category.name.replace('_', ' ').title()}",
+        f"**Stage:** {failure.stage}",
+        f"**Error:** {failure.message}",
+    ]
+    if failure.prompt_stage is not None:
+        lines.append(f"**Prompt stage:** {failure.prompt_stage}")
+    if failure.elapsed_time is not None:
+        lines.append(f"**Elapsed:** {format_elapsed_time(failure.elapsed_time)}")
+    if diff_stat:
+        lines.append("")
+        lines.append("### Uncommitted Changes")
+        lines.append(f"```\n{diff_stat}\n```")
+    return "\n".join(lines)
+
+
+def _handle_workflow_failure(
+    failure: WorkflowFailure,
+    project_dir: Path,
+    update_issue_labels: bool,
+    post_issue_comments: bool,
+) -> None:
+    """Convert local WorkflowFailure to shared and delegate to shared handler."""
+    diff_stat = get_diff_stat(project_dir)
+    comment_body = _format_failure_comment(failure, diff_stat)
+    shared = SharedWorkflowFailure(
+        category=failure.category.value,
+        stage=failure.stage,
+        message=failure.message,
+        elapsed_time=failure.elapsed_time,
+    )
+    handle_workflow_failure(
+        failure=shared,
+        comment_body=comment_body,
+        project_dir=project_dir,
+        from_label_id="planning",
+        update_issue_labels=update_issue_labels,
+        post_issue_comments=post_issue_comments,
+    )
 
 
 def _load_prompt_or_exit(header: str) -> str:
@@ -87,7 +146,7 @@ def run_planning_prompts(
     provider: str,
     mcp_config: Optional[str] = None,
     execution_dir: Optional[Path] = None,
-) -> bool:
+) -> tuple[bool, WorkflowFailure | None]:
     """Execute three planning prompts with session continuation.
 
     Args:
@@ -98,7 +157,8 @@ def run_planning_prompts(
         execution_dir: Optional working directory for Claude subprocess
 
     Returns:
-        True if all prompts succeed, False on error
+        Tuple of (success, failure). On success: (True, None).
+        On failure: (False, WorkflowFailure with category and stage info).
     """
     logger.info("Starting planning prompt execution...")
 
@@ -155,12 +215,28 @@ def run_planning_prompts(
 
         if not response_1 or not response_1.get("text"):
             logger.error("Prompt 1 returned empty response")
-            return False
+            return (
+                False,
+                WorkflowFailure(
+                    category=FailureCategory.GENERAL,
+                    stage="Prompt 1 (empty response)",
+                    message="Prompt returned empty response",
+                    prompt_stage=1,
+                ),
+            )
 
         session_id = response_1.get("session_id")
         if not session_id:
             logger.error("Prompt 1 did not return session_id")
-            return False
+            return (
+                False,
+                WorkflowFailure(
+                    category=FailureCategory.GENERAL,
+                    stage="Prompt 1 (empty response)",
+                    message="Prompt 1 did not return session_id",
+                    prompt_stage=1,
+                ),
+            )
 
         logger.info(f"Prompt 1 completed (session: {session_id})")
 
@@ -176,11 +252,30 @@ def run_planning_prompts(
         ) as storage_error:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.warning(f"Failed to store prompt 1 conversation: {storage_error}")
 
+    except LLMTimeoutError as e:
+        logger.error(f"Prompt 1 timed out: {e}")
+        return (
+            False,
+            WorkflowFailure(
+                category=FailureCategory.LLM_TIMEOUT,
+                stage="Prompt 1 (timeout)",
+                message=str(e),
+                prompt_stage=1,
+            ),
+        )
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error executing prompt 1: {e}")
-        return False
+        return (
+            False,
+            WorkflowFailure(
+                category=FailureCategory.GENERAL,
+                stage="Prompt 1",
+                message=str(e),
+                prompt_stage=1,
+            ),
+        )
 
     # Execute second prompt with session continuation
     logger.info("Executing prompt 2: Simplification Review...")
@@ -201,7 +296,15 @@ def run_planning_prompts(
 
         if not response_2 or not response_2.get("text"):
             logger.error("Prompt 2 returned empty response")
-            return False
+            return (
+                False,
+                WorkflowFailure(
+                    category=FailureCategory.GENERAL,
+                    stage="Prompt 2 (empty response)",
+                    message="Prompt returned empty response",
+                    prompt_stage=2,
+                ),
+            )
 
         logger.info("Prompt 2 completed")
 
@@ -217,11 +320,30 @@ def run_planning_prompts(
         ) as storage_error:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.warning(f"Failed to store prompt 2 conversation: {storage_error}")
 
+    except LLMTimeoutError as e:
+        logger.error(f"Prompt 2 timed out: {e}")
+        return (
+            False,
+            WorkflowFailure(
+                category=FailureCategory.LLM_TIMEOUT,
+                stage="Prompt 2 (timeout)",
+                message=str(e),
+                prompt_stage=2,
+            ),
+        )
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error executing prompt 2: {e}")
-        return False
+        return (
+            False,
+            WorkflowFailure(
+                category=FailureCategory.GENERAL,
+                stage="Prompt 2",
+                message=str(e),
+                prompt_stage=2,
+            ),
+        )
 
     # Execute third prompt with session continuation
     logger.info("Executing prompt 3: Implementation Plan Creation...")
@@ -242,7 +364,15 @@ def run_planning_prompts(
 
         if not response_3 or not response_3.get("text"):
             logger.error("Prompt 3 returned empty response")
-            return False
+            return (
+                False,
+                WorkflowFailure(
+                    category=FailureCategory.GENERAL,
+                    stage="Prompt 3 (empty response)",
+                    message="Prompt returned empty response",
+                    prompt_stage=3,
+                ),
+            )
 
         logger.info("Prompt 3 completed")
 
@@ -260,16 +390,35 @@ def run_planning_prompts(
         ) as storage_error:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.warning(f"Failed to store prompt 3 conversation: {storage_error}")
 
+    except LLMTimeoutError as e:
+        logger.error(f"Prompt 3 timed out: {e}")
+        return (
+            False,
+            WorkflowFailure(
+                category=FailureCategory.LLM_TIMEOUT,
+                stage="Prompt 3 (timeout)",
+                message=str(e),
+                prompt_stage=3,
+            ),
+        )
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error executing prompt 3: {e}")
-        return False
+        return (
+            False,
+            WorkflowFailure(
+                category=FailureCategory.GENERAL,
+                stage="Prompt 3",
+                message=str(e),
+                prompt_stage=3,
+            ),
+        )
 
     logger.info("All planning prompts executed successfully")
     logger.info(f"Full conversation session ID: {session_id}")
     logger.info(f"Conversation logs stored in: {session_storage_path}/")
-    return True
+    return (True, None)
 
 
 def validate_output_files(project_dir: Path) -> bool:
@@ -324,15 +473,52 @@ def run_create_plan_workflow(
     # Note: Logging already setup by CLI layer
     # Note: project_dir already resolved and validated by CLI layer
 
+    start_time = time.time()
+
     logger.info(f"Starting create plan workflow for project: {project_dir}")
     logger.info(f"GitHub issue number: {issue_number}")
     logger.info(f"LLM provider: {provider}")
 
     # Step 1: Validate prerequisites
     logger.info("Step 1/7: Validating prerequisites...")
+
+    # Check git working directory first (separate from check_prerequisites)
+    try:
+        if not is_working_directory_clean(project_dir):
+            failure = WorkflowFailure(
+                category=FailureCategory.PREREQ_FAILED,
+                stage="Prerequisites (git working directory not clean)",
+                message="Git working directory is not clean",
+                elapsed_time=time.time() - start_time,
+            )
+            _handle_workflow_failure(
+                failure, project_dir, update_issue_labels, post_issue_comments
+            )
+            return 1
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        failure = WorkflowFailure(
+            category=FailureCategory.PREREQ_FAILED,
+            stage="Prerequisites (git working directory not clean)",
+            message=str(e),
+            elapsed_time=time.time() - start_time,
+        )
+        _handle_workflow_failure(
+            failure, project_dir, update_issue_labels, post_issue_comments
+        )
+        return 1
+
     success, issue_data = check_prerequisites(project_dir, issue_number)
     if not success:
         logger.error("Prerequisites validation failed")
+        failure = WorkflowFailure(
+            category=FailureCategory.PREREQ_FAILED,
+            stage="Prerequisites (issue not found)",
+            message=f"Issue #{issue_number} not found or prerequisites failed",
+            elapsed_time=time.time() - start_time,
+        )
+        _handle_workflow_failure(
+            failure, project_dir, update_issue_labels, post_issue_comments
+        )
         return 1
 
     # Step 2: Manage branch
@@ -348,6 +534,15 @@ def run_create_plan_workflow(
     )
     if branch_name is None:
         logger.error("Branch management failed")
+        failure = WorkflowFailure(
+            category=FailureCategory.PREREQ_FAILED,
+            stage="Branch management (branch creation failed)",
+            message="Failed to create or checkout branch",
+            elapsed_time=time.time() - start_time,
+        )
+        _handle_workflow_failure(
+            failure, project_dir, update_issue_labels, post_issue_comments
+        )
         return 1
 
     # Step 3: Check pr_info/ doesn't exist and create structure
@@ -356,10 +551,28 @@ def run_create_plan_workflow(
         logger.error(
             "pr_info/ directory already exists. Please clean up before creating a new plan."
         )
+        failure = WorkflowFailure(
+            category=FailureCategory.PREREQ_FAILED,
+            stage="Workspace setup (pr_info/ already exists)",
+            message="pr_info/ directory already exists",
+            elapsed_time=time.time() - start_time,
+        )
+        _handle_workflow_failure(
+            failure, project_dir, update_issue_labels, post_issue_comments
+        )
         return 1
 
     if not create_pr_info_structure(project_dir):
         logger.error("Failed to create pr_info/ directory structure")
+        failure = WorkflowFailure(
+            category=FailureCategory.PREREQ_FAILED,
+            stage="Workspace setup (directory creation failed)",
+            message="Failed to create pr_info/ directory structure",
+            elapsed_time=time.time() - start_time,
+        )
+        _handle_workflow_failure(
+            failure, project_dir, update_issue_labels, post_issue_comments
+        )
         return 1
 
     # Step 4: Run initial analysis
@@ -372,16 +585,31 @@ def run_create_plan_workflow(
 
     # Step 6: Generate implementation plan
     logger.info("Step 6/7: Generating implementation plan...")
-    if not run_planning_prompts(
+    prompt_success, prompt_failure = run_planning_prompts(
         project_dir, issue_data, provider, mcp_config, execution_dir
-    ):
+    )
+    if not prompt_success:
         logger.error("Planning prompts execution failed")
+        assert prompt_failure is not None
+        prompt_failure = replace(prompt_failure, elapsed_time=time.time() - start_time)
+        _handle_workflow_failure(
+            prompt_failure, project_dir, update_issue_labels, post_issue_comments
+        )
         return 1
 
     # Step 7: Validate output files
     logger.info("Step 7/7: Validating output files...")
     if not validate_output_files(project_dir):
         logger.error("Output files validation failed")
+        failure = WorkflowFailure(
+            category=FailureCategory.GENERAL,
+            stage="Output validation",
+            message="Required output files not found",
+            elapsed_time=time.time() - start_time,
+        )
+        _handle_workflow_failure(
+            failure, project_dir, update_issue_labels, post_issue_comments
+        )
         return 1
 
     # Commit changes
@@ -389,17 +617,35 @@ def run_create_plan_workflow(
     commit_message = f"Initial plan generated for issue #{issue_number}"
     commit_result = commit_all_changes(commit_message, project_dir)
     if not commit_result["success"]:
-        logger.warning(f"Commit failed: {commit_result.get('error')}")
-    else:
-        logger.info(f"Committed with hash: {commit_result['commit_hash']}")
+        logger.error(f"Commit failed: {commit_result.get('error')}")
+        failure = WorkflowFailure(
+            category=FailureCategory.GENERAL,
+            stage="Commit & push",
+            message=f"Commit failed: {commit_result.get('error')}",
+            elapsed_time=time.time() - start_time,
+        )
+        _handle_workflow_failure(
+            failure, project_dir, update_issue_labels, post_issue_comments
+        )
+        return 1
+    logger.info(f"Committed with hash: {commit_result['commit_hash']}")
 
     # Push changes
     logger.info("Pushing changes to remote...")
     push_result = git_push(project_dir)
     if not push_result["success"]:
-        logger.warning(f"Push failed: {push_result.get('error')}")
-    else:
-        logger.info("Successfully pushed changes to remote")
+        logger.error(f"Push failed: {push_result.get('error')}")
+        failure = WorkflowFailure(
+            category=FailureCategory.GENERAL,
+            stage="Commit & push",
+            message=f"Push failed: {push_result.get('error')}",
+            elapsed_time=time.time() - start_time,
+        )
+        _handle_workflow_failure(
+            failure, project_dir, update_issue_labels, post_issue_comments
+        )
+        return 1
+    logger.info("Successfully pushed changes to remote")
 
     # Update GitHub issue label if requested
     if update_issue_labels:

@@ -219,7 +219,7 @@ def add_create_plan_parser(subparsers: Any) -> None:
     """Add the create-plan command parser."""
     create_plan_parser = subparsers.add_parser(
         "create-plan",
-        help="Generate implementation plan for a GitHub issue",
+        help="Generate implementation plan for a GitHub issue (sets failure labels and posts comments on error)",
         formatter_class=WideHelpFormatter,
     )
     create_plan_parser.add_argument(

@@ -1,12 +1,16 @@
-refactor(create_plan): convert to package, add failure labels
+feat(create_plan): add failure handling with comment + label updates
 
-Convert workflows/create_plan.py to workflows/create_plan/ package
-mirroring implement's structure (core.py, constants.py, prerequisites.py).
-Re-export all public symbols in __init__.py.
+Add _format_failure_comment() and _handle_workflow_failure() helpers
+to create_plan/core.py mirroring implement's pattern. Wire them into
+run_create_plan_workflow() and run_planning_prompts() at every failure
+point with the exact stage labels from issue #336 §4.
 
-Add planning_llm_timeout and planning_prereq_failed labels to labels.json.
-Add FailureCategory enum and WorkflowFailure dataclass in constants.py.
+Change run_planning_prompts() return type to tuple[bool, Optional[WorkflowFailure]]
+to preserve prompt-stage information for LLM failures. Use
+dataclasses.replace to override elapsed_time when promoting failures
+returned from run_planning_prompts.
 
-Update test patch paths from ...create_plan.* to submodule paths.
-Update label count assertions in test_define_labels, test_types.
-Fix test_module_exports for LLMTimeoutError (from Step 1).
+Promote commit/push failures from warnings to hard errors. Wire the
+post_issue_comments parameter through to failure comment posting.
+
+Update CLI help text for create-plan to mention failure handling.
