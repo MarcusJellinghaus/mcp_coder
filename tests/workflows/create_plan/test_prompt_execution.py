@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
+from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.utils.github_operations.issues import IssueData
 from mcp_coder.workflows.create_plan import (
     _load_prompt_or_exit,
@@ -12,6 +13,9 @@ from mcp_coder.workflows.create_plan import (
     run_planning_prompts,
     validate_output_files,
 )
+from mcp_coder.workflows.create_plan.constants import FailureCategory
+
+_CORE = "mcp_coder.workflows.create_plan.core"
 
 
 class TestLoadPromptOrExit:
@@ -21,9 +25,7 @@ class TestLoadPromptOrExit:
         """Test _load_prompt_or_exit with successful prompt loading."""
         mock_prompt = "This is a test prompt template"
 
-        with patch(
-            "mcp_coder.workflows.create_plan.get_prompt", return_value=mock_prompt
-        ):
+        with patch(f"{_CORE}.get_prompt", return_value=mock_prompt):
             result = _load_prompt_or_exit("Test Header")
 
         assert result == mock_prompt
@@ -31,7 +33,7 @@ class TestLoadPromptOrExit:
     def test_load_prompt_or_exit_file_not_found(self) -> None:
         """Test _load_prompt_or_exit when prompt file is not found."""
         with patch(
-            "mcp_coder.workflows.create_plan.get_prompt",
+            f"{_CORE}.get_prompt",
             side_effect=FileNotFoundError("Prompt file not found"),
         ):
             with pytest.raises(SystemExit) as exc_info:
@@ -42,7 +44,7 @@ class TestLoadPromptOrExit:
     def test_load_prompt_or_exit_value_error(self) -> None:
         """Test _load_prompt_or_exit when prompt header is invalid."""
         with patch(
-            "mcp_coder.workflows.create_plan.get_prompt",
+            f"{_CORE}.get_prompt",
             side_effect=ValueError("Invalid prompt header"),
         ):
             with pytest.raises(SystemExit) as exc_info:
@@ -53,7 +55,7 @@ class TestLoadPromptOrExit:
     def test_load_prompt_or_exit_unexpected_error(self) -> None:
         """Test _load_prompt_or_exit with unexpected error."""
         with patch(
-            "mcp_coder.workflows.create_plan.get_prompt",
+            f"{_CORE}.get_prompt",
             side_effect=RuntimeError("Unexpected error"),
         ):
             with pytest.raises(SystemExit) as exc_info:
@@ -137,43 +139,46 @@ class TestFormatInitialPrompt:
         assert "**Description:**" in result
 
 
+def _make_issue_data() -> IssueData:
+    """Create standard issue data for tests."""
+    return IssueData(
+        number=123,
+        title="Test Issue",
+        body="Test body",
+        state="open",
+        labels=[],
+        assignees=[],
+        user="author",
+        created_at="2024-01-01T00:00:00",
+        updated_at="2024-01-02T00:00:00",
+        url="https://github.com/test/repo/issues/123",
+        locked=False,
+    )
+
+
 class TestRunPlanningPrompts:
     """Test run_planning_prompts function."""
 
     def test_run_planning_prompts_success(self, tmp_path: Path) -> None:
         """Test run_planning_prompts with successful execution of all prompts."""
-        issue_data = IssueData(
-            number=123,
-            title="Test Issue",
-            body="Test body",
-            state="open",
-            labels=[],
-            assignees=[],
-            user="author",
-            created_at="2024-01-01T00:00:00",
-            updated_at="2024-01-02T00:00:00",
-            url="https://github.com/test/repo/issues/123",
-            locked=False,
-        )
+        issue_data = _make_issue_data()
 
-        # Mock prompts
         mock_prompts = {
             "Initial Analysis": "Prompt 1",
             "Simplification Review": "Prompt 2",
             "Implementation Plan Creation": "Prompt 3",
         }
 
-        # Mock responses
         mock_response_1 = {"text": "Response 1", "session_id": "test-session-123"}
         mock_response_2 = {"text": "Response 2", "session_id": "test-session-123"}
         mock_response_3 = {"text": "Response 3", "session_id": "test-session-123"}
 
-        with patch("mcp_coder.workflows.create_plan.get_prompt") as mock_get_prompt:
+        with patch(f"{_CORE}.get_prompt") as mock_get_prompt:
             mock_get_prompt.side_effect = lambda _, header: mock_prompts[header]
 
-            with patch("mcp_coder.workflows.create_plan.prompt_llm") as mock_prompt_llm:
+            with patch(f"{_CORE}.prompt_llm") as mock_prompt_llm:
                 with patch(
-                    "mcp_coder.workflows.create_plan.store_session",
+                    f"{_CORE}.store_session",
                     return_value="/fake/path.json",
                 ):
                     mock_prompt_llm.side_effect = [
@@ -184,7 +189,7 @@ class TestRunPlanningPrompts:
 
                     result = run_planning_prompts(tmp_path, issue_data, "claude")
 
-        assert result is True
+        assert result == (True, None)
         assert mock_prompt_llm.call_count == 3
 
         # Verify first call includes formatted prompt
@@ -201,58 +206,51 @@ class TestRunPlanningPrompts:
 
     def test_run_planning_prompts_first_fails(self, tmp_path: Path) -> None:
         """Test run_planning_prompts when first prompt fails."""
-        issue_data = IssueData(
-            number=123,
-            title="Test Issue",
-            body="Test body",
-            state="open",
-            labels=[],
-            assignees=[],
-            user="author",
-            created_at="2024-01-01T00:00:00",
-            updated_at="2024-01-02T00:00:00",
-            url="https://github.com/test/repo/issues/123",
-            locked=False,
-        )
+        issue_data = _make_issue_data()
 
-        with patch(
-            "mcp_coder.workflows.create_plan.get_prompt", return_value="Test prompt"
-        ):
+        with patch(f"{_CORE}.get_prompt", return_value="Test prompt"):
             with patch(
-                "mcp_coder.workflows.create_plan.prompt_llm",
+                f"{_CORE}.prompt_llm",
                 side_effect=Exception("LLM error"),
             ):
                 result = run_planning_prompts(tmp_path, issue_data, "claude")
 
-        assert result is False
+        assert result[0] is False
+        assert result[1] is not None
+        assert result[1].category == FailureCategory.GENERAL
+        assert result[1].stage == "Prompt 1"
+        assert result[1].prompt_stage == 1
+
+    def test_run_planning_prompts_first_timeout(self, tmp_path: Path) -> None:
+        """Test run_planning_prompts when first prompt times out."""
+        issue_data = _make_issue_data()
+
+        with patch(f"{_CORE}.get_prompt", return_value="Test prompt"):
+            with patch(
+                f"{_CORE}.prompt_llm",
+                side_effect=LLMTimeoutError("LLM request timed out after 600s"),
+            ):
+                result = run_planning_prompts(tmp_path, issue_data, "claude")
+
+        assert result[0] is False
+        assert result[1] is not None
+        assert result[1].category == FailureCategory.LLM_TIMEOUT
+        assert result[1].stage == "Prompt 1 (timeout)"
+        assert result[1].prompt_stage == 1
 
     def test_run_planning_prompts_session_continuation(self, tmp_path: Path) -> None:
         """Test run_planning_prompts properly continues session across prompts."""
-        issue_data = IssueData(
-            number=123,
-            title="Test Issue",
-            body="Test body",
-            state="open",
-            labels=[],
-            assignees=[],
-            user="author",
-            created_at="2024-01-01T00:00:00",
-            updated_at="2024-01-02T00:00:00",
-            url="https://github.com/test/repo/issues/123",
-            locked=False,
-        )
+        issue_data = _make_issue_data()
 
         mock_session_id = "unique-session-456"
         mock_response_1 = {"text": "Response 1", "session_id": mock_session_id}
         mock_response_2 = {"text": "Response 2", "session_id": mock_session_id}
         mock_response_3 = {"text": "Response 3", "session_id": mock_session_id}
 
-        with patch(
-            "mcp_coder.workflows.create_plan.get_prompt", return_value="Test prompt"
-        ):
-            with patch("mcp_coder.workflows.create_plan.prompt_llm") as mock_prompt_llm:
+        with patch(f"{_CORE}.get_prompt", return_value="Test prompt"):
+            with patch(f"{_CORE}.prompt_llm") as mock_prompt_llm:
                 with patch(
-                    "mcp_coder.workflows.create_plan.store_session",
+                    f"{_CORE}.store_session",
                     return_value="/fake/path.json",
                 ):
                     mock_prompt_llm.side_effect = [
@@ -263,7 +261,7 @@ class TestRunPlanningPrompts:
 
                     result = run_planning_prompts(tmp_path, issue_data, "claude")
 
-        assert result is True
+        assert result == (True, None)
 
         # Verify session_id is passed correctly
         call_args = mock_prompt_llm.call_args_list
@@ -273,113 +271,65 @@ class TestRunPlanningPrompts:
 
     def test_run_planning_prompts_empty_response(self, tmp_path: Path) -> None:
         """Test run_planning_prompts when response is empty."""
-        issue_data = IssueData(
-            number=123,
-            title="Test Issue",
-            body="Test body",
-            state="open",
-            labels=[],
-            assignees=[],
-            user="author",
-            created_at="2024-01-01T00:00:00",
-            updated_at="2024-01-02T00:00:00",
-            url="https://github.com/test/repo/issues/123",
-            locked=False,
-        )
+        issue_data = _make_issue_data()
 
         mock_response = {"text": "", "session_id": "test-session"}
 
-        with patch(
-            "mcp_coder.workflows.create_plan.get_prompt", return_value="Test prompt"
-        ):
+        with patch(f"{_CORE}.get_prompt", return_value="Test prompt"):
             with patch(
-                "mcp_coder.workflows.create_plan.prompt_llm",
+                f"{_CORE}.prompt_llm",
                 return_value=mock_response,
             ):
                 result = run_planning_prompts(tmp_path, issue_data, "claude")
 
-        assert result is False
+        assert result[0] is False
+        assert result[1] is not None
+        assert result[1].stage == "Prompt 1 (empty response)"
+        assert result[1].prompt_stage == 1
 
     def test_run_planning_prompts_no_session_id(self, tmp_path: Path) -> None:
         """Test run_planning_prompts when first response has no session_id."""
-        issue_data = IssueData(
-            number=123,
-            title="Test Issue",
-            body="Test body",
-            state="open",
-            labels=[],
-            assignees=[],
-            user="author",
-            created_at="2024-01-01T00:00:00",
-            updated_at="2024-01-02T00:00:00",
-            url="https://github.com/test/repo/issues/123",
-            locked=False,
-        )
+        issue_data = _make_issue_data()
 
         mock_response = {"text": "Response text"}  # Missing session_id
 
-        with patch(
-            "mcp_coder.workflows.create_plan.get_prompt", return_value="Test prompt"
-        ):
+        with patch(f"{_CORE}.get_prompt", return_value="Test prompt"):
             with patch(
-                "mcp_coder.workflows.create_plan.prompt_llm",
+                f"{_CORE}.prompt_llm",
                 return_value=mock_response,
             ):
                 result = run_planning_prompts(tmp_path, issue_data, "claude")
 
-        assert result is False
+        assert result[0] is False
+        assert result[1] is not None
+        assert result[1].stage == "Prompt 1 (no session_id)"
+        assert "session_id" in result[1].message
 
     def test_run_planning_prompts_invalid_llm_method(self, tmp_path: Path) -> None:
         """Test run_planning_prompts with invalid LLM method."""
-        issue_data = IssueData(
-            number=123,
-            title="Test Issue",
-            body="Test body",
-            state="open",
-            labels=[],
-            assignees=[],
-            user="author",
-            created_at="2024-01-01T00:00:00",
-            updated_at="2024-01-02T00:00:00",
-            url="https://github.com/test/repo/issues/123",
-            locked=False,
-        )
+        issue_data = _make_issue_data()
 
-        with patch(
-            "mcp_coder.workflows.create_plan.get_prompt", return_value="Test prompt"
-        ):
+        with patch(f"{_CORE}.get_prompt", return_value="Test prompt"):
             with patch(
-                "mcp_coder.workflows.create_plan.prompt_llm",
+                f"{_CORE}.prompt_llm",
                 side_effect=ValueError("Unsupported provider: invalid_method"),
             ):
                 result = run_planning_prompts(tmp_path, issue_data, "invalid_method")
 
-        assert result is False
+        assert result[0] is False
+        assert result[1] is not None
+        assert result[1].category == FailureCategory.GENERAL
 
     def test_run_planning_prompts_second_prompt_fails(self, tmp_path: Path) -> None:
         """Test run_planning_prompts when second prompt fails."""
-        issue_data = IssueData(
-            number=123,
-            title="Test Issue",
-            body="Test body",
-            state="open",
-            labels=[],
-            assignees=[],
-            user="author",
-            created_at="2024-01-01T00:00:00",
-            updated_at="2024-01-02T00:00:00",
-            url="https://github.com/test/repo/issues/123",
-            locked=False,
-        )
+        issue_data = _make_issue_data()
 
         mock_response_1 = {"text": "Response 1", "session_id": "test-session"}
 
-        with patch(
-            "mcp_coder.workflows.create_plan.get_prompt", return_value="Test prompt"
-        ):
-            with patch("mcp_coder.workflows.create_plan.prompt_llm") as mock_prompt_llm:
+        with patch(f"{_CORE}.get_prompt", return_value="Test prompt"):
+            with patch(f"{_CORE}.prompt_llm") as mock_prompt_llm:
                 with patch(
-                    "mcp_coder.workflows.create_plan.store_session",
+                    f"{_CORE}.store_session",
                     return_value="/fake/path.json",
                 ):
                     mock_prompt_llm.side_effect = [
@@ -389,33 +339,47 @@ class TestRunPlanningPrompts:
 
                     result = run_planning_prompts(tmp_path, issue_data, "claude")
 
-        assert result is False
+        assert result[0] is False
+        assert result[1] is not None
+        assert result[1].stage == "Prompt 2"
+        assert result[1].prompt_stage == 2
+
+    def test_run_planning_prompts_second_prompt_timeout(self, tmp_path: Path) -> None:
+        """Test run_planning_prompts when second prompt times out."""
+        issue_data = _make_issue_data()
+
+        mock_response_1 = {"text": "Response 1", "session_id": "test-session"}
+
+        with patch(f"{_CORE}.get_prompt", return_value="Test prompt"):
+            with patch(f"{_CORE}.prompt_llm") as mock_prompt_llm:
+                with patch(
+                    f"{_CORE}.store_session",
+                    return_value="/fake/path.json",
+                ):
+                    mock_prompt_llm.side_effect = [
+                        mock_response_1,
+                        LLMTimeoutError("Timed out"),
+                    ]
+
+                    result = run_planning_prompts(tmp_path, issue_data, "claude")
+
+        assert result[0] is False
+        assert result[1] is not None
+        assert result[1].category == FailureCategory.LLM_TIMEOUT
+        assert result[1].stage == "Prompt 2 (timeout)"
+        assert result[1].prompt_stage == 2
 
     def test_run_planning_prompts_third_prompt_fails(self, tmp_path: Path) -> None:
         """Test run_planning_prompts when third prompt fails."""
-        issue_data = IssueData(
-            number=123,
-            title="Test Issue",
-            body="Test body",
-            state="open",
-            labels=[],
-            assignees=[],
-            user="author",
-            created_at="2024-01-01T00:00:00",
-            updated_at="2024-01-02T00:00:00",
-            url="https://github.com/test/repo/issues/123",
-            locked=False,
-        )
+        issue_data = _make_issue_data()
 
         mock_response_1 = {"text": "Response 1", "session_id": "test-session"}
         mock_response_2 = {"text": "Response 2", "session_id": "test-session"}
 
-        with patch(
-            "mcp_coder.workflows.create_plan.get_prompt", return_value="Test prompt"
-        ):
-            with patch("mcp_coder.workflows.create_plan.prompt_llm") as mock_prompt_llm:
+        with patch(f"{_CORE}.get_prompt", return_value="Test prompt"):
+            with patch(f"{_CORE}.prompt_llm") as mock_prompt_llm:
                 with patch(
-                    "mcp_coder.workflows.create_plan.store_session",
+                    f"{_CORE}.store_session",
                     return_value="/fake/path.json",
                 ):
                     mock_prompt_llm.side_effect = [
@@ -426,7 +390,37 @@ class TestRunPlanningPrompts:
 
                     result = run_planning_prompts(tmp_path, issue_data, "claude")
 
-        assert result is False
+        assert result[0] is False
+        assert result[1] is not None
+        assert result[1].stage == "Prompt 3"
+        assert result[1].prompt_stage == 3
+
+    def test_run_planning_prompts_third_prompt_timeout(self, tmp_path: Path) -> None:
+        """Test run_planning_prompts when third prompt times out."""
+        issue_data = _make_issue_data()
+
+        mock_response_1 = {"text": "Response 1", "session_id": "test-session"}
+        mock_response_2 = {"text": "Response 2", "session_id": "test-session"}
+
+        with patch(f"{_CORE}.get_prompt", return_value="Test prompt"):
+            with patch(f"{_CORE}.prompt_llm") as mock_prompt_llm:
+                with patch(
+                    f"{_CORE}.store_session",
+                    return_value="/fake/path.json",
+                ):
+                    mock_prompt_llm.side_effect = [
+                        mock_response_1,
+                        mock_response_2,
+                        LLMTimeoutError("Timed out"),
+                    ]
+
+                    result = run_planning_prompts(tmp_path, issue_data, "claude")
+
+        assert result[0] is False
+        assert result[1] is not None
+        assert result[1].category == FailureCategory.LLM_TIMEOUT
+        assert result[1].stage == "Prompt 3 (timeout)"
+        assert result[1].prompt_stage == 3
 
 
 class TestValidateOutputFiles:
@@ -434,7 +428,6 @@ class TestValidateOutputFiles:
 
     def test_validate_output_files_both_exist(self, tmp_path: Path) -> None:
         """Test validate_output_files when both required files exist."""
-        # Create required directories and files
         steps_dir = tmp_path / "pr_info" / "steps"
         steps_dir.mkdir(parents=True)
 
@@ -450,7 +443,6 @@ class TestValidateOutputFiles:
 
     def test_validate_output_files_missing_summary(self, tmp_path: Path) -> None:
         """Test validate_output_files when summary.md is missing."""
-        # Create directory and only step_1.md
         steps_dir = tmp_path / "pr_info" / "steps"
         steps_dir.mkdir(parents=True)
 
@@ -463,7 +455,6 @@ class TestValidateOutputFiles:
 
     def test_validate_output_files_missing_step_1(self, tmp_path: Path) -> None:
         """Test validate_output_files when step_1.md is missing."""
-        # Create directory and only summary.md
         steps_dir = tmp_path / "pr_info" / "steps"
         steps_dir.mkdir(parents=True)
 
@@ -476,7 +467,6 @@ class TestValidateOutputFiles:
 
     def test_validate_output_files_both_missing(self, tmp_path: Path) -> None:
         """Test validate_output_files when both files are missing."""
-        # Create directory but no files
         steps_dir = tmp_path / "pr_info" / "steps"
         steps_dir.mkdir(parents=True)
 

@@ -15,7 +15,7 @@ class TestManageBranch:
         """Test manage_branch with existing linked branch."""
         # Mock IssueBranchManager to return existing branch
         with patch(
-            "mcp_coder.workflows.create_plan.IssueBranchManager"
+            "mcp_coder.workflows.create_plan.prerequisites.IssueBranchManager"
         ) as mock_manager_class:
             mock_manager = MagicMock()
             mock_manager.get_linked_branches.return_value = ["123-test-feature"]
@@ -23,7 +23,8 @@ class TestManageBranch:
 
             # Mock checkout_branch to succeed
             with patch(
-                "mcp_coder.workflows.create_plan.checkout_branch", return_value=True
+                "mcp_coder.workflows.create_plan.prerequisites.checkout_branch",
+                return_value=True,
             ):
                 branch_name = manage_branch(tmp_path, 123, "Test Feature")
 
@@ -35,7 +36,7 @@ class TestManageBranch:
         """Test manage_branch creates new branch when none exist."""
         # Mock IssueBranchManager with no existing branches
         with patch(
-            "mcp_coder.workflows.create_plan.IssueBranchManager"
+            "mcp_coder.workflows.create_plan.prerequisites.IssueBranchManager"
         ) as mock_manager_class:
             mock_manager = MagicMock()
             mock_manager.get_linked_branches.return_value = []
@@ -49,7 +50,8 @@ class TestManageBranch:
 
             # Mock checkout_branch to succeed
             with patch(
-                "mcp_coder.workflows.create_plan.checkout_branch", return_value=True
+                "mcp_coder.workflows.create_plan.prerequisites.checkout_branch",
+                return_value=True,
             ):
                 branch_name = manage_branch(tmp_path, 123, "Test Feature")
 
@@ -63,7 +65,7 @@ class TestManageBranch:
         """Test manage_branch when branch creation fails."""
         # Mock IssueBranchManager with no existing branches
         with patch(
-            "mcp_coder.workflows.create_plan.IssueBranchManager"
+            "mcp_coder.workflows.create_plan.prerequisites.IssueBranchManager"
         ) as mock_manager_class:
             mock_manager = MagicMock()
             mock_manager.get_linked_branches.return_value = []
@@ -87,7 +89,7 @@ class TestManageBranch:
         """Test manage_branch when checkout fails."""
         # Mock IssueBranchManager to return existing branch
         with patch(
-            "mcp_coder.workflows.create_plan.IssueBranchManager"
+            "mcp_coder.workflows.create_plan.prerequisites.IssueBranchManager"
         ) as mock_manager_class:
             mock_manager = MagicMock()
             mock_manager.get_linked_branches.return_value = ["123-test-feature"]
@@ -95,7 +97,8 @@ class TestManageBranch:
 
             # Mock checkout_branch to fail
             with patch(
-                "mcp_coder.workflows.create_plan.checkout_branch", return_value=False
+                "mcp_coder.workflows.create_plan.prerequisites.checkout_branch",
+                return_value=False,
             ):
                 branch_name = manage_branch(tmp_path, 123, "Test Feature")
 
@@ -106,7 +109,7 @@ class TestManageBranch:
         """Test manage_branch when IssueBranchManager initialization fails."""
         # Mock IssueBranchManager initialization to raise exception
         with patch(
-            "mcp_coder.workflows.create_plan.IssueBranchManager",
+            "mcp_coder.workflows.create_plan.prerequisites.IssueBranchManager",
             side_effect=ValueError("Invalid configuration"),
         ):
             branch_name = manage_branch(tmp_path, 123, "Test Feature")
@@ -117,7 +120,7 @@ class TestManageBranch:
         """Test manage_branch when get_linked_branches throws error."""
         # Mock IssueBranchManager with get_linked_branches raising exception
         with patch(
-            "mcp_coder.workflows.create_plan.IssueBranchManager"
+            "mcp_coder.workflows.create_plan.prerequisites.IssueBranchManager"
         ) as mock_manager_class:
             mock_manager = MagicMock()
             mock_manager.get_linked_branches.side_effect = Exception("API error")
@@ -132,7 +135,7 @@ class TestManageBranch:
         """Test manage_branch logs when using existing branch."""
         # Mock IssueBranchManager to return existing branch
         with patch(
-            "mcp_coder.workflows.create_plan.IssueBranchManager"
+            "mcp_coder.workflows.create_plan.prerequisites.IssueBranchManager"
         ) as mock_manager_class:
             mock_manager = MagicMock()
             mock_manager.get_linked_branches.return_value = ["123-existing-branch"]
@@ -140,10 +143,13 @@ class TestManageBranch:
 
             # Mock checkout_branch to succeed
             with patch(
-                "mcp_coder.workflows.create_plan.checkout_branch", return_value=True
+                "mcp_coder.workflows.create_plan.prerequisites.checkout_branch",
+                return_value=True,
             ):
                 # Capture logger output
-                with patch("mcp_coder.workflows.create_plan.logger") as mock_logger:
+                with patch(
+                    "mcp_coder.workflows.create_plan.prerequisites.logger"
+                ) as mock_logger:
                     branch_name = manage_branch(tmp_path, 123, "Test Feature")
 
                     # Verify logging calls (some promoted to OUTPUT via logger.log)
@@ -166,7 +172,7 @@ class TestManageBranch:
         """Test manage_branch logs when creating new branch."""
         # Mock IssueBranchManager with no existing branches
         with patch(
-            "mcp_coder.workflows.create_plan.IssueBranchManager"
+            "mcp_coder.workflows.create_plan.prerequisites.IssueBranchManager"
         ) as mock_manager_class:
             mock_manager = MagicMock()
             mock_manager.get_linked_branches.return_value = []
@@ -180,10 +186,13 @@ class TestManageBranch:
 
             # Mock checkout_branch to succeed
             with patch(
-                "mcp_coder.workflows.create_plan.checkout_branch", return_value=True
+                "mcp_coder.workflows.create_plan.prerequisites.checkout_branch",
+                return_value=True,
             ):
                 # Capture logger output
-                with patch("mcp_coder.workflows.create_plan.logger") as mock_logger:
+                with patch(
+                    "mcp_coder.workflows.create_plan.prerequisites.logger"
+                ) as mock_logger:
                     branch_name = manage_branch(tmp_path, 123, "Test Feature")
 
                     # Verify logging calls (some promoted to OUTPUT via logger.log)
@@ -204,8 +213,8 @@ class TestManageBranch:
 class TestManageBranchBaseBranch:
     """Tests for base_branch parameter in manage_branch()."""
 
-    @patch("mcp_coder.workflows.create_plan.IssueBranchManager")
-    @patch("mcp_coder.workflows.create_plan.checkout_branch")
+    @patch("mcp_coder.workflows.create_plan.prerequisites.IssueBranchManager")
+    @patch("mcp_coder.workflows.create_plan.prerequisites.checkout_branch")
     def test_manage_branch_passes_base_branch_to_create(
         self, mock_checkout: MagicMock, mock_manager_class: MagicMock, tmp_path: Path
     ) -> None:
@@ -235,8 +244,8 @@ class TestManageBranchBaseBranch:
         )
         assert result == "123-test-issue"
 
-    @patch("mcp_coder.workflows.create_plan.IssueBranchManager")
-    @patch("mcp_coder.workflows.create_plan.checkout_branch")
+    @patch("mcp_coder.workflows.create_plan.prerequisites.IssueBranchManager")
+    @patch("mcp_coder.workflows.create_plan.prerequisites.checkout_branch")
     def test_manage_branch_without_base_branch_uses_default(
         self, mock_checkout: MagicMock, mock_manager_class: MagicMock, tmp_path: Path
     ) -> None:
@@ -266,8 +275,8 @@ class TestManageBranchBaseBranch:
         )
         assert result == "123-test-issue"
 
-    @patch("mcp_coder.workflows.create_plan.IssueBranchManager")
-    @patch("mcp_coder.workflows.create_plan.checkout_branch")
+    @patch("mcp_coder.workflows.create_plan.prerequisites.IssueBranchManager")
+    @patch("mcp_coder.workflows.create_plan.prerequisites.checkout_branch")
     def test_manage_branch_existing_branch_ignores_base_branch(
         self, mock_checkout: MagicMock, mock_manager_class: MagicMock, tmp_path: Path
     ) -> None:

@@ -99,6 +99,32 @@
       }
     },
     {
+      "internal_id": "planning_llm_timeout",
+      "name": "status-03f-timeout:planning-llm-timeout",
+      "color": "e99695",
+      "description": "LLM timed out during planning",
+      "category": "human_action",
+      "vscodeclaude": {
+        "emoji": "⏱️",
+        "display_name": "PLANNING LLM TIMEOUT",
+        "stage_short": "plan-timeout",
+        "commands": ["/check_branch_status"]
+      }
+    },
+    {
+      "internal_id": "planning_prereq_failed",
+      "name": "status-03f-prereq:planning-prereq-failed",
+      "color": "b60205",
+      "description": "Planning prerequisites failed",
+      "category": "human_action",
+      "vscodeclaude": {
+        "emoji": "❌",
+        "display_name": "PLANNING PREREQ FAILED",
+        "stage_short": "plan-prereq-fail",
+        "commands": ["/check_branch_status"]
+      }
+    },
+    {
       "internal_id": "planning_failed",
       "name": "status-03f:planning-failed",
       "color": "b60205",

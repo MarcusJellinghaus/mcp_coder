@@ -123,6 +123,7 @@ def handle_workflow_failure(
                 issue_manager.update_workflow_label(
                     from_label_id=from_label_id,
                     to_label_id=failure.category,
+                    validated_issue_number=resolved_issue_number,
                 )
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 logger.warning("Failed to update issue label: %s", exc)
