@@ -1,6 +1,0 @@
-refactor: split test_set_status.py to fix file-size CI check
-
-Extract TestFromStatusFlag class into test_set_status_from_status.py
-to bring test_set_status.py under the 750-line limit.
-
-No test logic changed — only moved between files.
