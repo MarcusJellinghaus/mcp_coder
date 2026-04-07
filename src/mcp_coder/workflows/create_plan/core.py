@@ -81,6 +81,7 @@ def _handle_workflow_failure(
     project_dir: Path,
     update_issue_labels: bool,
     post_issue_comments: bool,
+    issue_number: int,
 ) -> None:
     """Convert local WorkflowFailure to shared and delegate to shared handler."""
     diff_stat = get_diff_stat(project_dir)
@@ -98,6 +99,7 @@ def _handle_workflow_failure(
         from_label_id="planning",
         update_issue_labels=update_issue_labels,
         post_issue_comments=post_issue_comments,
+        issue_number=issue_number,
     )
 
 
@@ -498,7 +500,11 @@ def run_create_plan_workflow(
                 elapsed_time=time.time() - start_time,
             )
             _handle_workflow_failure(
-                failure, project_dir, update_issue_labels, post_issue_comments
+                failure,
+                project_dir,
+                update_issue_labels,
+                post_issue_comments,
+                issue_number=issue_number,
             )
             return 1
     except ValueError as e:
@@ -509,7 +515,11 @@ def run_create_plan_workflow(
             elapsed_time=time.time() - start_time,
         )
         _handle_workflow_failure(
-            failure, project_dir, update_issue_labels, post_issue_comments
+            failure,
+            project_dir,
+            update_issue_labels,
+            post_issue_comments,
+            issue_number=issue_number,
         )
         return 1
 
@@ -523,7 +533,11 @@ def run_create_plan_workflow(
             elapsed_time=time.time() - start_time,
         )
         _handle_workflow_failure(
-            failure, project_dir, update_issue_labels, post_issue_comments
+            failure,
+            project_dir,
+            update_issue_labels,
+            post_issue_comments,
+            issue_number=issue_number,
         )
         return 1
 
@@ -547,7 +561,11 @@ def run_create_plan_workflow(
             elapsed_time=time.time() - start_time,
         )
         _handle_workflow_failure(
-            failure, project_dir, update_issue_labels, post_issue_comments
+            failure,
+            project_dir,
+            update_issue_labels,
+            post_issue_comments,
+            issue_number=issue_number,
         )
         return 1
 
@@ -564,7 +582,11 @@ def run_create_plan_workflow(
             elapsed_time=time.time() - start_time,
         )
         _handle_workflow_failure(
-            failure, project_dir, update_issue_labels, post_issue_comments
+            failure,
+            project_dir,
+            update_issue_labels,
+            post_issue_comments,
+            issue_number=issue_number,
         )
         return 1
 
@@ -577,7 +599,11 @@ def run_create_plan_workflow(
             elapsed_time=time.time() - start_time,
         )
         _handle_workflow_failure(
-            failure, project_dir, update_issue_labels, post_issue_comments
+            failure,
+            project_dir,
+            update_issue_labels,
+            post_issue_comments,
+            issue_number=issue_number,
         )
         return 1
 
@@ -599,7 +625,11 @@ def run_create_plan_workflow(
         assert prompt_failure is not None
         prompt_failure = replace(prompt_failure, elapsed_time=time.time() - start_time)
         _handle_workflow_failure(
-            prompt_failure, project_dir, update_issue_labels, post_issue_comments
+            prompt_failure,
+            project_dir,
+            update_issue_labels,
+            post_issue_comments,
+            issue_number=issue_number,
         )
         return 1
 
@@ -614,7 +644,11 @@ def run_create_plan_workflow(
             elapsed_time=time.time() - start_time,
         )
         _handle_workflow_failure(
-            failure, project_dir, update_issue_labels, post_issue_comments
+            failure,
+            project_dir,
+            update_issue_labels,
+            post_issue_comments,
+            issue_number=issue_number,
         )
         return 1
 
@@ -631,7 +665,11 @@ def run_create_plan_workflow(
             elapsed_time=time.time() - start_time,
         )
         _handle_workflow_failure(
-            failure, project_dir, update_issue_labels, post_issue_comments
+            failure,
+            project_dir,
+            update_issue_labels,
+            post_issue_comments,
+            issue_number=issue_number,
         )
         return 1
     logger.info(f"Committed with hash: {commit_result['commit_hash']}")
@@ -648,7 +686,11 @@ def run_create_plan_workflow(
             elapsed_time=time.time() - start_time,
         )
         _handle_workflow_failure(
-            failure, project_dir, update_issue_labels, post_issue_comments
+            failure,
+            project_dir,
+            update_issue_labels,
+            post_issue_comments,
+            issue_number=issue_number,
         )
         return 1
     logger.info("Successfully pushed changes to remote")

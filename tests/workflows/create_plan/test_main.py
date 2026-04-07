@@ -441,7 +441,7 @@ class TestHandleWorkflowFailure:
             patch(f"{_CORE}.get_diff_stat", return_value=""),
             patch(f"{_CORE}.handle_workflow_failure") as mock_shared,
         ):
-            _handle_workflow_failure(failure, tmp_path, True, True)
+            _handle_workflow_failure(failure, tmp_path, True, True, issue_number=42)
 
         mock_shared.assert_called_once()
         call_kwargs = mock_shared.call_args[1]
@@ -450,8 +450,9 @@ class TestHandleWorkflowFailure:
         assert call_kwargs["from_label_id"] == "planning"
         assert call_kwargs["update_issue_labels"] is True
         assert call_kwargs["post_issue_comments"] is True
-        # No issue_number kwarg passed (auto-resolved by shared)
-        assert "issue_number" not in call_kwargs
+        # issue_number is now forwarded so label/comment can target the issue
+        # even when the caller is not on the issue branch.
+        assert call_kwargs["issue_number"] == 42
 
     def test_respects_flags(self, tmp_path: Path) -> None:
         """Test flags are passed through correctly."""
@@ -465,11 +466,12 @@ class TestHandleWorkflowFailure:
             patch(f"{_CORE}.get_diff_stat", return_value=""),
             patch(f"{_CORE}.handle_workflow_failure") as mock_shared,
         ):
-            _handle_workflow_failure(failure, tmp_path, False, False)
+            _handle_workflow_failure(failure, tmp_path, False, False, issue_number=7)
 
         call_kwargs = mock_shared.call_args[1]
         assert call_kwargs["update_issue_labels"] is False
         assert call_kwargs["post_issue_comments"] is False
+        assert call_kwargs["issue_number"] == 7
 
 
 class TestFailureHandling:
@@ -507,6 +509,7 @@ class TestFailureHandling:
         failure = mock_handler.call_args[0][0]
         assert failure.category == FailureCategory.PREREQ_FAILED
         assert failure.stage == "Prerequisites (git working directory not clean)"
+        assert mock_handler.call_args.kwargs["issue_number"] == 123
 
     def test_prerequisites_issue_not_found_failure(
         self, mock_issue_data: IssueData, tmp_path: Path
@@ -538,6 +541,7 @@ class TestFailureHandling:
         failure = mock_handler.call_args[0][0]
         assert failure.category == FailureCategory.PREREQ_FAILED
         assert failure.stage == "Prerequisites (issue not found)"
+        assert mock_handler.call_args.kwargs["issue_number"] == 123
 
     def test_branch_failure(self, mock_issue_data: IssueData, tmp_path: Path) -> None:
         """Test failure handling when branch creation fails."""
@@ -555,6 +559,7 @@ class TestFailureHandling:
         failure = mock_handler.call_args[0][0]
         assert failure.category == FailureCategory.PREREQ_FAILED
         assert failure.stage == "Branch management (branch creation failed)"
+        assert mock_handler.call_args.kwargs["issue_number"] == 123
 
     def test_pr_info_exists_failure(
         self, mock_issue_data: IssueData, tmp_path: Path
@@ -575,6 +580,7 @@ class TestFailureHandling:
         failure = mock_handler.call_args[0][0]
         assert failure.category == FailureCategory.PREREQ_FAILED
         assert failure.stage == "Workspace setup (pr_info/ already exists)"
+        assert mock_handler.call_args.kwargs["issue_number"] == 123
 
     def test_pr_info_create_failure(
         self, mock_issue_data: IssueData, tmp_path: Path
@@ -596,6 +602,7 @@ class TestFailureHandling:
         failure = mock_handler.call_args[0][0]
         assert failure.category == FailureCategory.PREREQ_FAILED
         assert failure.stage == "Workspace setup (directory creation failed)"
+        assert mock_handler.call_args.kwargs["issue_number"] == 123
 
     def test_planning_timeout_failure(
         self, mock_issue_data: IssueData, tmp_path: Path

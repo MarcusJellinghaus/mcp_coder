@@ -120,6 +120,7 @@ class TestHandleWorkflowFailure:
         mock_mgr.update_workflow_label.assert_called_once_with(
             from_label_id="pr_creating",
             to_label_id="pr_creating_failed",
+            validated_issue_number=None,
         )
 
     @patch("mcp_coder.workflow_utils.failure_handling.IssueManager")
