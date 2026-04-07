@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: Wire `enable_crash_logging` into long-running CLI commands
-- [ ] Implementation: modify `implement.py`, `create_plan.py`, `create_pr.py` and add wiring tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: modify `implement.py`, `create_plan.py`, `create_pr.py` and add wiring tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Add subprocess integration test for real crash capture
 - [ ] Implementation: add `test_crash_log_captures_real_segfault` to `tests/utils/test_crash_logging.py`

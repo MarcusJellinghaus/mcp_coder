@@ -7,6 +7,7 @@ which generates implementation plans for GitHub issues.
 import argparse
 import logging
 
+from ...utils.crash_logging import enable_crash_logging
 from ...utils.log_utils import OUTPUT
 from ...workflows.utils import resolve_project_dir
 from ..utils import (
@@ -38,6 +39,7 @@ def execute_create_plan(args: argparse.Namespace) -> int:
         # Resolve project directory with validation
         project_dir = resolve_project_dir(args.project_dir)
         log_command_startup("create-plan", project_dir)
+        enable_crash_logging(project_dir, "create-plan")
 
         # Resolve execution directory
         execution_dir = resolve_execution_dir(args.execution_dir)

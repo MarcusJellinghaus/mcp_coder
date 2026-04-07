@@ -48,7 +48,6 @@ from .parsers import (
 faulthandler.enable(file=sys.stderr, all_threads=True)
 
 
-
 # Logger will be initialized in main()
 logger = logging.getLogger(__name__)
 
