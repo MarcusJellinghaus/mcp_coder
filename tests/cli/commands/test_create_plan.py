@@ -107,6 +107,37 @@ class TestExecuteCreatePlan:
         result = execute_create_plan(mock_args)
         assert result == 1
 
+    @patch("mcp_coder.cli.commands.create_plan.enable_crash_logging")
+    @patch("mcp_coder.workflows.create_plan.run_create_plan_workflow")
+    @patch("mcp_coder.cli.commands.create_plan.resolve_issue_interaction_flags")
+    @patch("mcp_coder.cli.commands.create_plan.parse_llm_method_from_args")
+    @patch("mcp_coder.cli.commands.create_plan.resolve_llm_method")
+    @patch("mcp_coder.cli.commands.create_plan.resolve_execution_dir")
+    @patch("mcp_coder.cli.commands.create_plan.resolve_project_dir")
+    def test_enable_crash_logging_called(
+        self,
+        mock_resolve: MagicMock,
+        mock_resolve_exec: MagicMock,
+        mock_resolve_llm: MagicMock,
+        mock_parse: MagicMock,
+        mock_resolve_flags: MagicMock,
+        mock_workflow: MagicMock,
+        mock_crash_logging: MagicMock,
+        mock_args: MagicMock,
+    ) -> None:
+        """Test that enable_crash_logging is called with project_dir and command name."""
+        test_project_dir = Path("/test/project")
+        mock_resolve.return_value = test_project_dir
+        mock_resolve_exec.return_value = str(Path.cwd())
+        mock_resolve_llm.return_value = ("claude", "cli argument")
+        mock_parse.return_value = "claude"
+        mock_resolve_flags.return_value = (False, False)
+        mock_workflow.return_value = 0
+
+        execute_create_plan(mock_args)
+
+        mock_crash_logging.assert_called_once_with(test_project_dir, "create-plan")
+
 
 class TestCreatePlanExecutionDir:
     """Tests for execution_dir handling in create-plan command."""

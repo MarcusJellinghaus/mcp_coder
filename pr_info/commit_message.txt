@@ -1,0 +1,6 @@
+test: add subprocess integration test for faulthandler crash capture
+
+Add test_crash_log_captures_real_segfault to tests/utils/test_crash_logging.py.
+Spawns a child process that calls enable_crash_logging() then triggers a real
+segfault via faulthandler._sigsegv(). Asserts the crash log file is created
+and contains a Python traceback (Fatal Python error / Current thread).

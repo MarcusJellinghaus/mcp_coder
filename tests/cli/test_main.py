@@ -13,6 +13,7 @@ from mcp_coder.cli.main import (
     create_parser,
     main,
 )
+from mcp_coder.utils.subprocess_runner import execute_subprocess
 
 
 class TestCreateParser:
@@ -902,3 +903,20 @@ class TestHelpHintIntegration:
         assert result == 1
         assert "is not yet implemented" in caplog.text
         assert "Try 'mcp-coder commit --help' for more information." in caplog.text
+
+
+class TestFaulthandlerSafetyNet:
+    """Tests for faulthandler stderr safety net."""
+
+    def test_faulthandler_enabled_on_import(self) -> None:
+        """Importing mcp_coder.cli.main enables faulthandler in a clean process."""
+        result = execute_subprocess(
+            [
+                sys.executable,
+                "-c",
+                "import mcp_coder.cli.main; import faulthandler; "
+                "assert faulthandler.is_enabled(); print('OK')",
+            ],
+        )
+        assert result.return_code == 0
+        assert "OK" in result.stdout

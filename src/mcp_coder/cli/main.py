@@ -1,8 +1,16 @@
-"""Main CLI entry point for MCP Coder."""
+"""Main CLI entry point for MCP Coder.
+
+isort:skip_file
+"""
 
 import argparse
+import faulthandler
 import logging
 import sys
+
+# Enable faulthandler early to capture tracebacks on crashes (e.g. segfaults)
+# before heavy imports. Zero cost, writes to stderr.
+faulthandler.enable(file=sys.stderr, all_threads=True)
 
 from .. import __version__
 from ..utils.log_utils import OUTPUT, setup_logging

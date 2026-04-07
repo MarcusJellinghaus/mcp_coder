@@ -7,6 +7,7 @@ which generates PR summaries and cleans up repository state.
 import argparse
 import logging
 
+from ...utils.crash_logging import enable_crash_logging
 from ...utils.log_utils import OUTPUT
 from ...workflows.create_pr.core import run_create_pr_workflow
 from ...workflows.utils import resolve_project_dir
@@ -38,6 +39,7 @@ def execute_create_pr(args: argparse.Namespace) -> int:
         # Resolve project directory with validation
         project_dir = resolve_project_dir(args.project_dir)
         log_command_startup("create-pr", project_dir)
+        enable_crash_logging(project_dir, "create-pr")
 
         # Resolve execution directory
         execution_dir = resolve_execution_dir(args.execution_dir)

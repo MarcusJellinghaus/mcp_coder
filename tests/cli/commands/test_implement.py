@@ -383,6 +383,45 @@ class TestExecuteImplement:
             project_dir, "claude", None, execution_dir, True, True
         )
 
+    @patch("mcp_coder.cli.commands.implement.enable_crash_logging")
+    @patch("mcp_coder.cli.commands.implement.resolve_issue_interaction_flags")
+    @patch("mcp_coder.cli.commands.implement.resolve_execution_dir")
+    @patch("mcp_coder.cli.commands.implement.resolve_project_dir")
+    @patch("mcp_coder.cli.commands.implement.run_implement_workflow")
+    @patch("mcp_coder.cli.commands.implement.resolve_llm_method")
+    @patch("mcp_coder.cli.commands.implement.parse_llm_method_from_args")
+    def test_enable_crash_logging_called(
+        self,
+        mock_parse_llm: Mock,
+        mock_resolve_llm: Mock,
+        mock_run_workflow: Mock,
+        mock_resolve_dir: Mock,
+        mock_resolve_exec: Mock,
+        mock_resolve_flags: Mock,
+        mock_crash_logging: Mock,
+    ) -> None:
+        """Test that enable_crash_logging is called with project_dir and command name."""
+        project_dir = Path("/test/project")
+        mock_resolve_dir.return_value = project_dir
+        mock_resolve_exec.return_value = str(Path.cwd())
+        mock_resolve_llm.return_value = ("claude", "cli argument")
+        mock_parse_llm.return_value = "claude"
+        mock_resolve_flags.return_value = (False, False)
+        mock_run_workflow.return_value = 0
+
+        args = argparse.Namespace(
+            project_dir="/test/project",
+            llm_method="claude",
+            execution_dir=None,
+            mcp_config=None,
+            update_issue_labels=None,
+            post_issue_comments=None,
+        )
+
+        execute_implement(args)
+
+        mock_crash_logging.assert_called_once_with(project_dir, "implement")
+
 
 class TestImplementCommandError:
     """Test error handling scenarios for implement command."""
