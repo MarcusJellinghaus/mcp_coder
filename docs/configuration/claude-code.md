@@ -97,7 +97,7 @@ your-project/
 │       ├── plan_review/
 │       │   └── SKILL.md
 │       └── ...
-├── .mcp.json                  # MCP server config (see repository-setup.md)
+├── .mcp.json                  # MCP server config (see repository-setup/README.md)
 └── ...
 ```
 

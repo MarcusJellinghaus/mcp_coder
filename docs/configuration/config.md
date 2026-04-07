@@ -10,7 +10,7 @@ Complete configuration documentation for MCP Coder, covering user configuration 
 | **Environment Variables** | `JENKINS_URL`, `JENKINS_USER`, `JENKINS_TOKEN` |
 | **LLM Provider** | `[llm]` section in `config.toml` |
 | **MCP Config** | `[mcp]` section in `config.toml` |
-| **Repository Setup** | [Repository Setup Guide](../repository-setup.md) |
+| **Repository Setup** | [Repository Setup Guide](../repository-setup/README.md) |
 | **CLI Commands** | [CLI Reference](../cli-reference.md) |
 
 ## Configuration Systems
@@ -916,7 +916,7 @@ docker run -v ~/.config/mcp_coder:/root/.config/mcp_coder my-container
 ## Related Documentation
 
 ### Setup and Usage
-- **[Repository Setup](../repository-setup.md)** - GitHub Actions, labels, and repository configuration
+- **[Repository Setup](../repository-setup/README.md)** - GitHub Actions, labels, and repository configuration
 - **[CLI Reference](../cli-reference.md)** - Complete command documentation
 - **[Development Process](../processes-prompts/development-process.md)** - Detailed workflow methodology
 

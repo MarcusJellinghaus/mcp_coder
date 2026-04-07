@@ -41,7 +41,7 @@ max_sessions = 3
 
 ### 3. Repository Setup
 
-Each repository needs a `.mcp.json` file for Claude Code integration. See [repository-setup.md](repository-setup.md) for details.
+Each repository needs a `.mcp.json` file for Claude Code integration. See [repository-setup/README.md](repository-setup/README.md) for details.
 
 ## Usage
 
@@ -181,5 +181,5 @@ Follow the [one-time trust setup](#1-trust-the-workspace-folder-one-time-setup) 
 ## See Also
 
 - [CLI Reference](cli-reference.md) - All mcp-coder commands
-- [Repository Setup](repository-setup.md) - Configuring repositories for automation
+- [Repository Setup](repository-setup/README.md) - Configuring repositories for automation
 - [Configuration](configuration/config.md) - Full configuration reference

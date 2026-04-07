@@ -38,4 +38,4 @@ tests/workflows/vscodeclaude/test_sessions.py
 tests/workflows/vscodeclaude/test_issues.py
 tests/workflows/vscodeclaude/test_session_restart.py
 tests/workflows/vscodeclaude/test_status_display.py
-docs/repository-setup.md
+docs/repository-setup/README.md

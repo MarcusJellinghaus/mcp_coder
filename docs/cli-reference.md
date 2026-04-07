@@ -944,6 +944,6 @@ mcp-coder coordinator --all --dry-run
 
 ## See Also
 
-- **[Repository Setup](repository-setup.md)** - GitHub Actions, labels, and repository configuration
+- **[Repository Setup](repository-setup/README.md)** - GitHub Actions, labels, and repository configuration
 - **[Configuration Guide](configuration/config.md)** - User config files and environment setup
 - **[Development Process](processes-prompts/development-process.md)** - Workflow methodology and best practices

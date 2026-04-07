@@ -399,7 +399,7 @@ MCP Coder currently uses Claude Code as the LLM backend. This section covers the
 
 > **Note:** Future versions may support additional LLM providers.
 > 
-> **See [Claude Code Configuration Guide](configuration/claude-code.md)** for detailed setup including installation, CLI commands, and troubleshooting.
+> **See [Claude Code Configuration Guide](../configuration/claude-code.md)** for detailed setup including installation, CLI commands, and troubleshooting.
 
 ### Required Files
 
@@ -414,14 +414,14 @@ MCP Coder currently uses Claude Code as the LLM backend. This section covers the
 This file contains mandatory instructions that Claude follows when working on your project. Create `.claude/CLAUDE.md` with project-specific rules.
 
 **See:**
-- [Claude Code Configuration Guide](configuration/claude-code.md#claudeclaudemd---project-instructions) for detailed examples
+- [Claude Code Configuration Guide](../configuration/claude-code.md#claudeclaudemd---project-instructions) for detailed examples
 - mcp-coder's own [CLAUDE.md](https://github.com/MarcusJellinghaus/mcp_coder/blob/main/.claude/CLAUDE.md) for a comprehensive example
 
 ### `.claude/skills/` - Skills
 
 Skills provide structured workflows for common tasks. Copy the skills from mcp-coder or create your own.
 
-**Available commands** (see [Claude Code Cheat Sheet](processes-prompts/claude_cheat_sheet.md) for details):
+**Available commands** (see [Claude Code Cheat Sheet](../processes-prompts/claude_cheat_sheet.md) for details):
 
 | Command | Purpose |
 |---------|---------|
@@ -535,7 +535,7 @@ docs/
 └── [project-specific docs]
 ```
 
-**Reference:** See this repository's own [`docs/`](.) folder for a working example of this structure.
+**Reference:** See this repository's own [`docs/`](..) folder for a working example of this structure.
 
 ---
 
@@ -854,8 +854,8 @@ mcp-coder prompt "List files in src/" --mcp-config .mcp.json
 
 # Related Documentation
 
-- **[Claude Code Configuration](configuration/claude-code.md)** - Detailed Claude Code setup, CLI commands, troubleshooting
-- **[CLI Reference](cli-reference.md)** - Complete mcp-coder command documentation
-- **[Configuration Guide](configuration/config.md)** - User and system configuration
-- **[Development Process](processes-prompts/development-process.md)** - Complete workflow methodology
-- **[Claude Code Cheat Sheet](processes-prompts/claude_cheat_sheet.md)** - Slash command reference
+- **[Claude Code Configuration](../configuration/claude-code.md)** - Detailed Claude Code setup, CLI commands, troubleshooting
+- **[CLI Reference](../cli-reference.md)** - Complete mcp-coder command documentation
+- **[Configuration Guide](../configuration/config.md)** - User and system configuration
+- **[Development Process](../processes-prompts/development-process.md)** - Complete workflow methodology
+- **[Claude Code Cheat Sheet](../processes-prompts/claude_cheat_sheet.md)** - Slash command reference
