@@ -21,6 +21,26 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Create `crash_logging.py` module with unit tests
+- [ ] Implementation: create `src/mcp_coder/utils/crash_logging.py` and `tests/utils/test_crash_logging.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Add stderr faulthandler safety net to CLI entry point
+- [ ] Implementation: modify `src/mcp_coder/cli/main.py` and add test in `tests/cli/test_main.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Wire `enable_crash_logging` into long-running CLI commands
+- [ ] Implementation: modify `implement.py`, `create_plan.py`, `create_pr.py` and add wiring tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Add subprocess integration test for real crash capture
+- [ ] Implementation: add `test_crash_log_captures_real_segfault` to `tests/utils/test_crash_logging.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review completed
+- [ ] PR summary prepared
