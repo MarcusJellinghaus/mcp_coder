@@ -36,7 +36,7 @@ def test_branch_status_report_creation() -> None:
     report = BranchStatusReport(
         branch_name="feature/123-test",
         base_branch="main",
-        ci_status="PASSED",
+        ci_status=CIStatus.PASSED,
         ci_details=None,
         rebase_needed=False,
         rebase_reason="Up to date with origin/main",
@@ -65,7 +65,7 @@ def test_branch_status_report_failed_ci() -> None:
     report = BranchStatusReport(
         branch_name="feature/456-bugfix",
         base_branch="develop",
-        ci_status="FAILED",
+        ci_status=CIStatus.FAILED,
         ci_details=ci_error,
         rebase_needed=True,
         rebase_reason="3 commits behind origin/main",
@@ -90,7 +90,7 @@ def test_format_for_human_passed_status() -> None:
     report = BranchStatusReport(
         branch_name="feature/123-test",
         base_branch="main",
-        ci_status="PASSED",
+        ci_status=CIStatus.PASSED,
         ci_details=None,
         rebase_needed=False,
         rebase_reason="Up to date with origin/main",
@@ -128,7 +128,7 @@ def test_format_for_human_failed_status() -> None:
     report = BranchStatusReport(
         branch_name="feature/456-bugfix",
         base_branch="develop",
-        ci_status="FAILED",
+        ci_status=CIStatus.FAILED,
         ci_details=ci_error,
         rebase_needed=True,
         rebase_reason="3 commits behind origin/main",
@@ -161,7 +161,7 @@ def test_format_for_human_pending_status() -> None:
     report = BranchStatusReport(
         branch_name="feature/789-pending",
         base_branch="main",
-        ci_status="PENDING",
+        ci_status=CIStatus.PENDING,
         ci_details="CI pipeline running...",
         rebase_needed=False,
         rebase_reason="Up to date with origin/main",
@@ -183,7 +183,7 @@ def test_format_for_human_not_configured() -> None:
     report = BranchStatusReport(
         branch_name="feature/101-no-ci",
         base_branch="main",
-        ci_status="NOT_CONFIGURED",
+        ci_status=CIStatus.NOT_CONFIGURED,
         ci_details=None,
         rebase_needed=False,
         rebase_reason="Up to date with origin/main",
@@ -204,7 +204,7 @@ def test_format_for_llm_basic() -> None:
     report = BranchStatusReport(
         branch_name="feature/123-test",
         base_branch="main",
-        ci_status="PASSED",
+        ci_status=CIStatus.PASSED,
         ci_details=None,
         rebase_needed=False,
         rebase_reason="Up to date",
@@ -235,7 +235,7 @@ def test_format_for_llm_truncation() -> None:
     report = BranchStatusReport(
         branch_name="feature/456-errors",
         base_branch="main",
-        ci_status="FAILED",
+        ci_status=CIStatus.FAILED,
         ci_details=long_ci_details,
         rebase_needed=True,
         rebase_reason="Behind",
@@ -264,7 +264,7 @@ def test_format_for_llm_no_truncation() -> None:
     report = BranchStatusReport(
         branch_name="feature/789-short",
         base_branch="main",
-        ci_status="FAILED",
+        ci_status=CIStatus.FAILED,
         ci_details=short_ci_details,
         rebase_needed=False,
         rebase_reason="Up to date",
@@ -614,7 +614,7 @@ def test_dataclass_immutability() -> None:
     report = BranchStatusReport(
         branch_name="feature/123-test",
         base_branch="main",
-        ci_status="PASSED",
+        ci_status=CIStatus.PASSED,
         ci_details=None,
         rebase_needed=False,
         rebase_reason="Up to date",
@@ -628,7 +628,7 @@ def test_dataclass_immutability() -> None:
     # Should raise FrozenInstanceError when trying to modify frozen dataclass
     # via normal attribute assignment
     with pytest.raises(FrozenInstanceError):
-        report.ci_status = "FAILED"  # type: ignore[misc]
+        report.ci_status = CIStatus.FAILED  # type: ignore[misc]
 
 
 # Tests for collect_branch_status() function

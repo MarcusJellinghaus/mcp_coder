@@ -46,7 +46,7 @@ def _make_report(**overrides: object) -> BranchStatusReport:
     kwargs: dict[str, object] = dict(
         branch_name="feature/test-branch",
         base_branch="main",
-        ci_status="PASSED",
+        ci_status=CIStatus.PASSED,
         ci_details=None,
         rebase_needed=False,
         rebase_reason="Branch is up to date with main",
@@ -462,7 +462,7 @@ class TestCIPendingHint:
         """CI passed + ci_timeout=0 → no hint."""
         mock_resolve.return_value = Path("/test/project")
         mock_branch.return_value = "feature/xyz"
-        mock_collect.return_value = _make_report(ci_status="PASSED")
+        mock_collect.return_value = _make_report(ci_status=CIStatus.PASSED)
 
         args = _make_base_args(ci_timeout=0)
         with caplog.at_level(logging.DEBUG):

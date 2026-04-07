@@ -287,7 +287,7 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
             return 0
 
         # NEW: Determine exit code based on CI status (only when no fixes attempted)
-        if report.ci_status == "FAILED":
+        if report.ci_status == CIStatus.FAILED:
             return 1  # CI failed
 
         return 0
@@ -334,7 +334,7 @@ def _run_auto_fixes(
         return True  # Success when no fixes requested
 
     # Only auto-fix CI failures - other issues are informational only
-    if report.ci_status != "FAILED":
+    if report.ci_status != CIStatus.FAILED:
         logger.info(
             "No auto-fixable issues found - all fixes require manual intervention"
         )

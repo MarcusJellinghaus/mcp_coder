@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from mcp_coder.checks.branch_status import BranchStatusReport
+from mcp_coder.checks.branch_status import BranchStatusReport, CIStatus
 from mcp_coder.workflow_utils.task_tracker import TaskTrackerStatus
 
 # Test-first approach: Try to import the module, skip dependent tests if not available
@@ -197,7 +197,7 @@ class TestCIWaitingLogic:
         sample_report = BranchStatusReport(
             branch_name="feature/test-branch",
             base_branch="main",
-            ci_status="PASSED",
+            ci_status=CIStatus.PASSED,
             ci_details=None,
             rebase_needed=False,
             rebase_reason="Branch is up to date with main",

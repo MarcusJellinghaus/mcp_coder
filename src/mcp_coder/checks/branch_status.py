@@ -55,7 +55,7 @@ class BranchStatusReport:
 
     branch_name: str  # Current git branch name
     base_branch: str  # Detected parent/base branch
-    ci_status: str  # CIStatus value: PASSED, FAILED, NOT_CONFIGURED, or PENDING
+    ci_status: CIStatus  # CI pipeline status
     ci_details: Optional[str]  # Error logs or None
     rebase_needed: bool  # True if rebase required
     rebase_reason: str  # Reason for rebase status
@@ -81,10 +81,7 @@ class BranchStatusReport:
             CIStatus.PENDING: "⏳",
             CIStatus.NOT_CONFIGURED: "⚙️",
         }
-        try:
-            ci_icon = ci_icon_map.get(CIStatus(self.ci_status), "❓")
-        except ValueError:
-            ci_icon = "❓"
+        ci_icon = ci_icon_map.get(self.ci_status, "❓")
 
         rebase_icon = "✅" if not self.rebase_needed else "⚠️"
         rebase_status_text = "UP TO DATE" if not self.rebase_needed else "BEHIND"
@@ -117,7 +114,7 @@ class BranchStatusReport:
                 lines.append("PR: \u274c No PR found")
             lines.append("")
 
-        lines.append(f"CI Status: {ci_icon} {self.ci_status}")
+        lines.append(f"CI Status: {ci_icon} {self.ci_status.value}")
 
         # Add CI details if they exist
         if self.ci_details:
@@ -163,7 +160,7 @@ class BranchStatusReport:
 
         # Build status summary line
         status_summary = (
-            f"Branch Status: CI={self.ci_status}, Rebase={rebase_status}, "
+            f"Branch Status: CI={self.ci_status.value}, Rebase={rebase_status}, "
             f"Tasks={self.tasks_status.value} ({self.tasks_reason})"
         )
         if self.pr_found is True:
@@ -374,7 +371,7 @@ def collect_branch_status(
 
 def _collect_ci_status(
     project_dir: Path, branch: str, max_lines: int
-) -> Tuple[str, Optional[str]]:
+) -> Tuple[CIStatus, Optional[str]]:
     """Collect CI status and error details.
 
     When CI has failed, produces a structured output:
