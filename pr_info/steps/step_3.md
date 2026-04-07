@@ -57,16 +57,14 @@ is_full_refresh = (
 ```
 
 #### 4. Update `get_all_cached_issues()` to parse and pass `last_full_refresh`
+> **Note:** Update the `_fetch_and_merge_issues(...)` call inside the try/except block (added in step 2) to unpack the new tuple return value.
 - Parse `last_full_refresh` from `cache_data` (same pattern as `last_checked`)
 - Pass it to `_fetch_and_merge_issues()`
 - After a successful fetch, determine if it was a full refresh and set `cache_data["last_full_refresh"] = format_for_cache(now)` only for full refreshes
 
 **ALGORITHM for determining if full refresh occurred:**
 ```
-# _fetch_and_merge_issues returns (fresh_issues, was_full_refresh) 
-# OR: check the same condition used inside _fetch_and_merge_issues
-# Simplest: make _fetch_and_merge_issues return a bool alongside the issues
-
+# _fetch_and_merge_issues returns (fresh_issues, was_full_refresh)
 fresh_issues, was_full_refresh = _fetch_and_merge_issues(...)
 if was_full_refresh:
     cache_data["last_full_refresh"] = format_for_cache(now)
@@ -95,7 +93,7 @@ Add tests in `tests/utils/github_operations/test_issue_cache.py`:
 **`test_full_refresh_triggers_when_last_full_refresh_is_old`**
 - Set up cache with recent `last_checked` (1 minute ago) but old `last_full_refresh` (25 hours ago)
 - Call `get_all_cached_issues()`
-- Verify `list_issues()` was called with `state="open"` (full refresh), not `state="all"` (incremental)
+- Verify `_list_issues_no_error_handling()` was called with `state="open"` (full refresh fetches only open issues) not `state="all"` with `since=` (incremental fetches all states since last check)
 
 **`test_load_cache_without_last_full_refresh_field`**
 - Load a cache file that doesn't have the `last_full_refresh` field (backward compatibility)
@@ -119,7 +117,7 @@ Read pr_info/steps/summary.md for full context, then implement pr_info/steps/ste
 In src/mcp_coder/utils/github_operations/issues/cache.py:
 1. Add last_full_refresh to CacheData TypedDict
 2. Update _load_cache_file() to read last_full_refresh (default None)
-3. Update _fetch_and_merge_issues() to accept last_full_refresh param, use it for 
+3. Update _fetch_and_merge_issues() to accept last_full_refresh param, use it for
    the full refresh threshold, and return tuple[List[IssueData], bool]
 4. Update get_all_cached_issues() to parse/pass/update last_full_refresh
 
@@ -130,5 +128,5 @@ Add tests in tests/utils/github_operations/test_issue_cache.py:
 4. test_full_refresh_triggers_when_last_full_refresh_is_old
 5. test_load_cache_without_last_full_refresh_field
 
-Run all three quality checks after changes. Commit as one unit.
+Run all quality checks after changes. Commit as one unit.
 ```
