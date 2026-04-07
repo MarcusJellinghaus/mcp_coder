@@ -17,6 +17,8 @@ In the future, these files will also be used by iCoder.
 
 ## `.claude/CLAUDE.md` - Project Instructions
 
+> **To be adjusted / customized:** Tool list, project conventions, and allowed bash commands.
+
 This file contains mandatory instructions that Claude follows when working on your project. Create `.claude/CLAUDE.md` with project-specific rules.
 
 **See:**
@@ -25,6 +27,8 @@ This file contains mandatory instructions that Claude follows when working on yo
 - mcp-coder's own [CLAUDE.md](https://github.com/MarcusJellinghaus/mcp_coder/blob/main/.claude/CLAUDE.md) for a comprehensive example
 
 ## `.claude/skills/` - Skills
+
+> **To be adjusted / customized:** Repo-specific paths and commands inside individual `SKILL.md` files.
 
 Skills provide structured workflows for common tasks. Copy the skills from mcp-coder or create your own.
 
@@ -76,6 +80,8 @@ Skills provide structured workflows for common tasks. Copy the skills from mcp-c
 | `/discuss` | Step-by-step discussion of open questions and suggestions |
 
 ## `.mcp.json` - MCP Server Configuration
+
+> **To be adjusted / customized:** Server paths, project name, `--test-folder`, reference projects.
 
 **Model Context Protocol (MCP)** enables Claude Code to use specialized servers. mcp-coder ships with two MCP servers:
 
@@ -160,11 +166,15 @@ For `mcp-coder vscodeclaude launch`, the session status file `.vscodeclaude_stat
 
 ## Local Development Launchers
 
+> **To be adjusted / customized:** Path to `claude.exe` if installed in a non-standard location.
+
 - **Purpose:** Use current repo's Python environment for immediate testing
 - **Benefits:** Test code changes immediately, auto-activate venv, set MCP environment variables
 - **Reference:** See `claude_local.bat` in this repository
 
 ## Enhanced Claude Permissions
+
+> **To be adjusted / customized:** Permissions list (`.claude/settings.local.json`) — gitignore this file in downstream repos.
 
 - **Purpose:** Pre-approve safe tools while maintaining security
 - **Principles:** Only allow tools that change project folder (git-tracked) or read-only commands
@@ -173,6 +183,8 @@ For `mcp-coder vscodeclaude launch`, the session status file `.vscodeclaude_stat
 - **Reference:** See `.claude/settings.local.json` in this repository
 
 ## Architecture Documentation
+
+> **To be adjusted / customized:** Write your own `docs/architecture/architecture.md` — required by `/implementation_review`.
 
 The `/implementation_review` and `/implementation_review_supervisor` commands check code against `docs/architecture/architecture.md`. This file must exist for code reviews to work. Architecture documentation also enables LLM-assisted codebase navigation.
 

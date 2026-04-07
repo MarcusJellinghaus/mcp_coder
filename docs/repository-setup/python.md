@@ -4,6 +4,8 @@ Python-specific configuration and tooling. Only relevant if your downstream proj
 
 ## `pyproject.toml`
 
+> **To be adjusted / customized:** Use as a reference, not a direct copy. Adapt sections to your project's package name, dependencies, and tool configs.
+
 **Principle:** Include architecture and quality tools in development dependencies.
 
 **Reference:** See `pyproject.toml` in this repository for complete dependency setup including version constraints and optional dependency groups.
@@ -27,6 +29,8 @@ The following `pyproject.toml` sections are read by the Python MCP tools and/or 
 **Other sections** (`[tool.setuptools.*]`, `[tool.setuptools_scm]`, etc.) are standard Python packaging configuration and not specifically used by mcp-coder workflows.
 
 ## `.python-version`
+
+> **To be adjusted / customized:** Pin to your project's Python version.
 
 Pins the Python version used for the repo. Tools like `pyenv` and `uv` read this file.
 
@@ -84,6 +88,8 @@ vulture src tests vulture_whitelist.py --min-confidence 60
 
 ### Import Architecture Enforcement
 
+> **To be adjusted / customized (`.importlinter`):** Package names and contract definitions.
+
 **Tool: import-linter**
 
 - **Purpose:** Contract-based import validation
@@ -93,6 +99,8 @@ vulture src tests vulture_whitelist.py --min-confidence 60
 - **Example config:** See `.importlinter` in this repository
 
 ### Dependency Architecture Validation
+
+> **To be adjusted / customized (`tach.toml`):** Module boundaries for your package.
 
 **Tool: tach**
 
@@ -110,6 +118,8 @@ vulture src tests vulture_whitelist.py --min-confidence 60
 - **Documentation:** [pycycle PyPI](https://pypi.org/project/pycycle/)
 
 ### Dead Code Elimination
+
+> **To be adjusted / customized (`vulture_whitelist.py`):** Project-specific false positives.
 
 **Tool: vulture**
 
