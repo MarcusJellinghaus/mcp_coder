@@ -302,11 +302,18 @@ def get_cached_eligible_vscodeclaude_issues(
 
 def build_eligible_issues_with_branch_check(
     repo_names: list[str],
+    cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
 ) -> tuple[list[tuple[str, IssueData]], set[tuple[str, int]]]:
     """Build eligible issues list with branch requirement checking.
 
     Args:
         repo_names: List of repo config names from coordinator.repos
+        cached_issues_by_repo: Optional pre-fetched issues keyed by
+            ``repo_full_name`` -> ``{issue_number: IssueData}``. When provided,
+            issues are filtered from this dict instead of re-calling
+            ``get_cached_eligible_vscodeclaude_issues()`` per repo. This avoids
+            duplicate cache traversals in the coordinator status flow where
+            ``_build_cached_issues_by_repo()`` has already fetched everything.
 
     Returns:
         Tuple of:
@@ -317,7 +324,8 @@ def build_eligible_issues_with_branch_check(
     This function:
     1. Loops through each repo
     2. Loads repo config and GitHub username
-    3. Gets eligible vscodeclaude issues (cached)
+    3. Gets eligible vscodeclaude issues (from pre-fetched dict when available,
+       otherwise via ``get_cached_eligible_vscodeclaude_issues``)
     4. For status-04/07 issues, checks for linked branch
     5. Adds to issues_without_branch set if branch missing/multiple
     """
@@ -356,15 +364,25 @@ def build_eligible_issues_with_branch_check(
                 logger.warning(f"Failed to get GitHub username for {repo_name}: {e}")
                 continue
 
-            # Get eligible issues using cache
+            # Get eligible issues - prefer pre-fetched dict to avoid
+            # re-traversing the cache (see issue #701 Fix #3).
             issue_manager = IssueManager(repo_url=repo_url)
-            eligible_issues = get_cached_eligible_vscodeclaude_issues(
-                repo_full_name=repo_full_name,
-                issue_manager=issue_manager,
-                github_username=github_username,
-                force_refresh=False,
-                cache_refresh_minutes=get_cache_refresh_minutes(),
-            )
+            if (
+                cached_issues_by_repo is not None
+                and repo_full_name in cached_issues_by_repo
+            ):
+                all_issues = list(cached_issues_by_repo[repo_full_name].values())
+                eligible_issues = _filter_eligible_vscodeclaude_issues(
+                    all_issues, github_username
+                )
+            else:
+                eligible_issues = get_cached_eligible_vscodeclaude_issues(
+                    repo_full_name=repo_full_name,
+                    issue_manager=issue_manager,
+                    github_username=github_username,
+                    force_refresh=False,
+                    cache_refresh_minutes=get_cache_refresh_minutes(),
+                )
 
             # Create branch manager for linked branch checks
             branch_manager = IssueBranchManager(repo_url=repo_url)

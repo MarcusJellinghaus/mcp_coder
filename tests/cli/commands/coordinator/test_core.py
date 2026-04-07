@@ -1065,3 +1065,141 @@ class TestCommandTemplates:
             assert (
                 "--update-labels" not in template
             ), f"{name} still contains --update-labels"
+
+
+class TestBuildEligibleIssuesPrefetched:
+    """Tests for issue #701 Fix #3: build_eligible_issues_with_branch_check
+    must use pre-fetched cached_issues_by_repo when provided and NOT re-call
+    get_cached_eligible_vscodeclaude_issues / get_all_cached_issues."""
+
+    def _make_issue(self, number: int, assignee: str) -> Dict[str, object]:
+        return {
+            "number": number,
+            "title": f"Issue {number}",
+            "body": "",
+            "state": "open",
+            "labels": ["status-01:created"],
+            "assignees": [assignee],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": f"https://github.com/owner/repo/issues/{number}",
+            "locked": False,
+        }
+
+    def test_prefetched_cache_skips_redundant_lookup(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When cached_issues_by_repo is provided, the builder must filter
+        from it directly and never re-call get_cached_eligible_vscodeclaude_issues
+        or get_all_cached_issues."""
+        from mcp_coder.workflows.vscodeclaude.issues import (
+            build_eligible_issues_with_branch_check,
+        )
+
+        # Mock config
+        mock_config = {
+            "coordinator": {
+                "repos": {
+                    "test-repo": {"repo_url": "https://github.com/owner/repo.git"},
+                },
+            }
+        }
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.load_config",
+            lambda: mock_config,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_github_username",
+            lambda: "testuser",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
+            lambda **kwargs: Mock(),
+        )
+        mock_branch_manager = Mock()
+        mock_branch_manager.get_branch_with_pr_fallback = Mock(return_value="main")
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_issue_status",
+            lambda issue: "status-01:created",
+        )
+
+        # Spy on the slow path: these MUST NOT be called
+        slow_path_spy = Mock()
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_cached_eligible_vscodeclaude_issues",
+            slow_path_spy,
+        )
+
+        # Pre-fetched issues (mimicking _build_cached_issues_by_repo output)
+        issue = self._make_issue(1, "testuser")
+        cached_issues_by_repo: Dict[str, Dict[int, Dict[str, object]]] = {
+            "owner/repo": {1: issue},
+        }
+
+        eligible, without_branch = build_eligible_issues_with_branch_check(
+            ["test-repo"],
+            cached_issues_by_repo=cached_issues_by_repo,  # type: ignore[arg-type]
+        )
+
+        assert len(eligible) == 1
+        assert eligible[0][0] == "owner/repo"
+        assert eligible[0][1]["number"] == 1
+        assert without_branch == set()
+        # The slow path must not be invoked when pre-fetched data is provided
+        slow_path_spy.assert_not_called()
+
+    def test_no_prefetch_falls_back_to_cache_lookup(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When cached_issues_by_repo is None, the builder retains backward-
+        compatible behavior and calls get_cached_eligible_vscodeclaude_issues."""
+        from mcp_coder.workflows.vscodeclaude.issues import (
+            build_eligible_issues_with_branch_check,
+        )
+
+        mock_config = {
+            "coordinator": {
+                "repos": {
+                    "test-repo": {"repo_url": "https://github.com/owner/repo.git"},
+                },
+            }
+        }
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.load_config",
+            lambda: mock_config,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_github_username",
+            lambda: "testuser",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
+            lambda **kwargs: Mock(),
+        )
+        mock_branch_manager = Mock()
+        mock_branch_manager.get_branch_with_pr_fallback = Mock(return_value="main")
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.IssueBranchManager",
+            lambda **kwargs: mock_branch_manager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_issue_status",
+            lambda issue: "status-01:created",
+        )
+
+        fallback_spy = Mock(return_value=[self._make_issue(42, "testuser")])
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.issues.get_cached_eligible_vscodeclaude_issues",
+            fallback_spy,
+        )
+
+        eligible, _ = build_eligible_issues_with_branch_check(["test-repo"])
+
+        assert len(eligible) == 1
+        assert eligible[0][1]["number"] == 42
+        fallback_spy.assert_called_once()

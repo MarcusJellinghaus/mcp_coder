@@ -1830,6 +1830,52 @@ class TestApiFailureHandling:
     @patch("mcp_coder.utils.github_operations.issues.cache.now_utc")
     @patch("mcp_coder.utils.github_operations.issues.cache._load_cache_file")
     @patch("mcp_coder.utils.github_operations.issues.cache._get_cache_file_path")
+    def test_repo_lookup_failure_does_not_advance_last_checked(
+        self,
+        mock_get_path: Mock,
+        mock_load: Mock,
+        mock_now: Mock,
+        mock_save: Mock,
+        mock_cache_issue_manager: Mock,
+        tmp_path: Path,
+    ) -> None:
+        """Repo lookup failure (RuntimeError from _list_issues_no_error_handling
+        when _get_repository() returns None) must be treated the same as any
+        other API failure: stale cache returned, last_checked not advanced."""
+        original_last_checked = "2025-12-31T10:00:00Z"
+        cache_data: CacheData = {
+            "last_checked": original_last_checked,
+            "issues": {
+                "1": self._make_issue(1),
+            },
+        }
+        mock_get_path.return_value = tmp_path / "cache.json"
+        mock_load.return_value = cache_data
+        mock_now.return_value = datetime(2025, 12, 31, 12, 0, 0, tzinfo=timezone.utc)
+
+        # Simulate the exact failure raised by _list_issues_no_error_handling
+        # when _get_repository() returns None.
+        mock_cache_issue_manager._list_issues_no_error_handling.side_effect = (
+            RuntimeError("Failed to get repository")
+        )
+
+        result = get_all_cached_issues(
+            "test/repo", mock_cache_issue_manager, force_refresh=True
+        )
+
+        # last_checked must NOT have been advanced (no save)
+        mock_save.assert_not_called()
+        # Stale cache issue should still be returned
+        assert len(result) == 1
+        assert result[0]["number"] == 1
+
+    @patch(
+        "mcp_coder.utils.github_operations.issues.cache._save_cache_file",
+        return_value=True,
+    )
+    @patch("mcp_coder.utils.github_operations.issues.cache.now_utc")
+    @patch("mcp_coder.utils.github_operations.issues.cache._load_cache_file")
+    @patch("mcp_coder.utils.github_operations.issues.cache._get_cache_file_path")
     def test_successful_fetch_still_advances_last_checked(
         self,
         mock_get_path: Mock,

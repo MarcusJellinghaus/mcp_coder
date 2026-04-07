@@ -513,3 +513,13 @@ class TestIssueManagerCore:
         result = mock_issue_manager.list_issues()
 
         assert result == []
+
+    def test_list_issues_no_error_handling_raises_when_repo_is_none(
+        self, mock_issue_manager: IssueManager
+    ) -> None:
+        """_list_issues_no_error_handling() must raise (not return []) when
+        the repository cannot be resolved, so the cache snapshot/restore path
+        sees the failure instead of treating it as an empty repo."""
+        with patch.object(mock_issue_manager, "_get_repository", return_value=None):
+            with pytest.raises(RuntimeError, match="Failed to get repository"):
+                mock_issue_manager._list_issues_no_error_handling()

@@ -191,12 +191,16 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
 
         Returns:
             List of IssueData dictionaries with issue information.
+
+        Raises:
+            RuntimeError: If the repository cannot be resolved. Propagating the
+                failure lets callers (e.g. the cache snapshot/restore path)
+                detect it instead of silently treating it as an empty repo.
         """
         # Get repository
         repo = self._get_repository()
         if repo is None:
-            logger.error("Failed to get repository")
-            return []
+            raise RuntimeError("Failed to get repository")
 
         # Get issues with pagination support (PyGithub handles this automatically)
         # Pass since parameter to PyGithub's get_issues() when provided
