@@ -71,7 +71,7 @@ mcp-coder gh-tool define-labels            # Create/update labels
 
 ### Customizing Labels
 
-> **To be adjusted / customized (`workflows/config/labels.json`):** Only needed if you want to override the default labels.
+> **Customize (`workflows/config/labels.json`):** Only needed if you want to override the default labels.
 
 **Default label source:** `mcp_coder/config/labels.json`, deployed with the package.
 
@@ -320,7 +320,7 @@ git push
 
 ## Code Quality CI
 
-> **To be adjusted / customized (`.github/workflows/ci.yml`):** Python version, package name, and test paths.
+> **Customize (`.github/workflows/ci.yml`):** Python version, package name, and test paths.
 
 Add comprehensive CI checks to your GitHub Actions workflow.
 

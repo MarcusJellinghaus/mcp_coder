@@ -9,7 +9,7 @@ Generic, language-agnostic repo-level files and conventions.
 
 ## File Size Management
 
-> **To be adjusted / customized (`.large-files-allowlist`):** List files exempt from size limits.
+> **Customize (`.large-files-allowlist`):** List files exempt from size limits.
 
 **Principle:** Keep files within LLM context limits for optimal reasoning.
 

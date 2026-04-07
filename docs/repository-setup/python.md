@@ -4,7 +4,7 @@ Python-specific configuration and tooling. Only relevant if your downstream proj
 
 ## `pyproject.toml`
 
-> **To be adjusted / customized:** Use as a reference, not a direct copy. Adapt sections to your project's package name, dependencies, and tool configs.
+> **Customize:** Use as a reference, not a direct copy. Adapt sections to your project's package name, dependencies, and tool configs.
 
 **Principle:** Include architecture and quality tools in development dependencies.
 
@@ -30,7 +30,7 @@ The following `pyproject.toml` sections are read by the Python MCP tools and/or 
 
 ## `.python-version`
 
-> **To be adjusted / customized:** Pin to your project's Python version.
+> **Customize:** Pin to your project's Python version.
 
 Pins the Python version used for the repo. Tools like `pyenv` and `uv` read this file.
 
@@ -73,7 +73,7 @@ vulture src tests vulture_whitelist.py --min-confidence 60
 
 ### Import Architecture Enforcement
 
-> **To be adjusted / customized (`.importlinter`):** Package names and contract definitions.
+> **Customize (`.importlinter`):** Package names and contract definitions.
 
 **Tool: import-linter**
 
@@ -85,7 +85,7 @@ vulture src tests vulture_whitelist.py --min-confidence 60
 
 ### Dependency Architecture Validation
 
-> **To be adjusted / customized (`tach.toml`):** Module boundaries for your package.
+> **Customize (`tach.toml`):** Module boundaries for your package.
 
 **Tool: tach**
 
@@ -104,7 +104,7 @@ vulture src tests vulture_whitelist.py --min-confidence 60
 
 ### Dead Code Elimination
 
-> **To be adjusted / customized (`vulture_whitelist.py`):** Project-specific false positives.
+> **Customize (`vulture_whitelist.py`):** Project-specific false positives.
 
 **Tool: vulture**
 

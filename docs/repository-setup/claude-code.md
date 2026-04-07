@@ -16,7 +16,7 @@ In the future, these files will also be used by iCoder.
 
 ## `.claude/CLAUDE.md` - Project Instructions
 
-> **To be adjusted / customized:** Tool list, project conventions, and allowed bash commands.
+> **Customize:** Tool list, project conventions, and allowed bash commands.
 
 This file contains mandatory instructions that Claude follows when working on your project. Create `.claude/CLAUDE.md` with project-specific rules.
 
@@ -27,7 +27,7 @@ This file contains mandatory instructions that Claude follows when working on yo
 
 ## `.claude/skills/` - Skills
 
-> **To be adjusted / customized:** Repo-specific paths and commands inside individual `SKILL.md` files.
+> **Customize:** Repo-specific paths and commands inside individual `SKILL.md` files.
 
 Skills provide structured workflows for common tasks. Copy the skills from mcp-coder or create your own.
 
@@ -90,7 +90,7 @@ Supporting files referenced by skills. Copy as-is to downstream repos:
 
 ## `.mcp.json` - MCP Server Configuration
 
-> **To be adjusted / customized:** Server paths, project name, `--test-folder`, reference projects.
+> **Customize:** Server paths, project name, `--test-folder`, reference projects.
 
 **Model Context Protocol (MCP)** enables Claude Code to use specialized servers. mcp-coder ships with two MCP servers:
 
@@ -171,7 +171,7 @@ mcp-coder prompt "Analyze code" --mcp-config .mcp.json
 
 ## Launcher Scripts
 
-> **To be adjusted / customized:** Path to `claude.exe` if installed in a non-standard location.
+> **Customize:** Path to `claude.exe` if installed in a non-standard location.
 
 Two launcher scripts are provided. Both auto-activate the venv and set the MCP environment variables before starting Claude Code:
 
@@ -180,7 +180,7 @@ Two launcher scripts are provided. Both auto-activate the venv and set the MCP e
 
 ## Enhanced Claude Permissions
 
-> **To be adjusted / customized:** Permissions list (`.claude/settings.local.json`) — gitignore this file in downstream repos.
+> **Customize:** Permissions list (`.claude/settings.local.json`) — gitignore this file in downstream repos.
 
 - **Purpose:** Pre-approve safe tools while maintaining security
 - **Principles:** Only allow tools that change project folder (git-tracked) or read-only commands
@@ -189,7 +189,7 @@ Two launcher scripts are provided. Both auto-activate the venv and set the MCP e
 
 ## Architecture Documentation
 
-> **To be adjusted / customized:** Write your own `docs/architecture/architecture.md` — required by `/implementation_review`.
+> **Customize:** Write your own `docs/architecture/architecture.md` — required by `/implementation_review`.
 
 The `/implementation_review` and `/implementation_review_supervisor` commands check code against `docs/architecture/architecture.md`. This file must exist for code reviews to work. Architecture documentation also enables LLM-assisted codebase navigation.
 
