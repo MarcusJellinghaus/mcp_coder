@@ -8,6 +8,24 @@ Python-specific configuration and tooling. Only relevant if your downstream proj
 
 **Reference:** See `pyproject.toml` in this repository for complete dependency setup including version constraints and optional dependency groups.
 
+### Key Sections
+
+The following `pyproject.toml` sections are read by the Python MCP tools and/or by mcp-coder itself:
+
+| Section | Read by | Purpose |
+|---|---|---|
+| `[tool.black]` | `mcp__tools-py__run_format_code`, `tools/black.bat`, `pyproject_config.py` | Black formatter config |
+| `[tool.isort]` | `mcp__tools-py__run_format_code`, `tools/iSort.bat`, `pyproject_config.py` | isort config |
+| `[tool.pytest.ini_options]` | `mcp__tools-py__run_pytest_check`, pytest CLI | Pytest config (markers, options) |
+| `[tool.mypy]` | `mcp__tools-py__run_mypy_check`, mypy CLI | Mypy strict-mode config |
+| `[tool.pylint.main]` / `[tool.pylint.messages_control]` | `mcp__tools-py__run_pylint_check`, pylint CLI | Pylint config |
+| `[tool.ruff]` / `[tool.ruff.lint]` | `tools/ruff_check.sh` / `.bat` | Ruff lint + format config |
+| `[tool.mcp-coder.install-from-github]` | mcp-coder install process (`pyproject_config.py`) | GitHub-based dependency packages (`packages`, `packages-no-deps`) |
+
+**mcp-coder-specific behavior:** [`src/mcp_coder/utils/pyproject_config.py`](../../src/mcp_coder/utils/pyproject_config.py) reads `[tool.black]` and `[tool.isort]` and warns if their `line-length` settings disagree. It also reads `[tool.mcp-coder.install-from-github]` to find packages mcp-coder should install from GitHub source.
+
+**Other sections** (`[tool.setuptools.*]`, `[tool.setuptools_scm]`, etc.) are standard Python packaging configuration and not specifically used by mcp-coder workflows.
+
 ## `.python-version`
 
 Pins the Python version used for the repo. Tools like `pyenv` and `uv` read this file.
@@ -144,7 +162,7 @@ black src tests
 echo "Formatting complete!"
 ```
 
-TODO - explain key project configuration items.
+For the `[tool.black]` and `[tool.isort]` config items these tools read, see [Key Sections](#key-sections).
 
 ### Quality Check Tools
 

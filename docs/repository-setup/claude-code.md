@@ -30,65 +30,120 @@ Skills provide structured workflows for common tasks. Copy the skills from mcp-c
 
 **Available commands** (see [Claude Code Cheat Sheet](../processes-prompts/claude_cheat_sheet.md) for details):
 
+**Issue stage:**
+
 | Command | Purpose |
 |---------|---------|
-| `/issue_analyse` | Analyze GitHub issue requirements |
-| `/plan_review` | Review implementation plan |
-| `/plan_approve` | Approve plan for implementation |
-| `/implementation_review` | Code review (human-supervised) |
-| `/implementation_review_supervisor` | Code review (autonomous agent-driven) |
+| `/issue_create` | Create a new GitHub issue from discussion context |
+| `/issue_analyse` | Analyse issue requirements, feasibility, and approaches |
+| `/issue_requirements` | Refocus discussion on open requirements |
+| `/issue_update` | Update issue with refined content from analysis |
+| `/issue_approve` | Approve issue and transition to next status |
+
+**Plan stage:**
+
+| Command | Purpose |
+|---------|---------|
+| `/plan_review` | Review implementation plan for completeness, simplicity, risks |
+| `/plan_review_supervisor` | Autonomous plan review (delegates to subagents) |
+| `/plan_update` | Update plan files based on discussion |
+| `/plan_approve` | Approve plan and transition to plan-ready |
+
+**Implementation stage:**
+
+| Command | Purpose |
+|---------|---------|
+| `/implement_direct` | Implement an issue directly |
+| `/implementation_review` | Code review with compact diff analysis |
+| `/implementation_review_supervisor` | Autonomous code review (delegates to engineer subagents) |
+| `/implementation_needs_rework` | Return issue to plan-ready after major review issues |
+| `/implementation_new_tasks` | Add implementation steps after review findings |
+| `/implementation_finalise` | Complete remaining unchecked tasks in tracker |
+| `/implementation_approve` | Approve implementation, transition to PR-ready |
+
+**Branch operations:**
+
+| Command | Purpose |
+|---------|---------|
+| `/check_branch_status` | Check CI, rebase needs, tasks, labels |
 | `/commit_push` | Format, commit, and push changes |
-| `/rebase` | Rebase branch onto main |
-TO BE UPDATED
+| `/rebase` | Rebase feature branch onto base branch with conflict resolution |
+
+**Meta:**
+
+| Command | Purpose |
+|---------|---------|
+| `/discuss` | Step-by-step discussion of open questions and suggestions |
 
 ## `.mcp.json` - MCP Server Configuration
 
-**Model Context Protocol (MCP)** enables Claude Code to use specialized servers for enhanced functionality:
+**Model Context Protocol (MCP)** enables Claude Code to use specialized servers. mcp-coder ships with two MCP servers:
 
-- **tools-py**: Pylint, pytest, mypy integration
-- **filesystem**: Enhanced file operations
-- **Custom servers**: Project-specific tools
-
-TODO EXPLAIN environment variables (and where they are set claude.bat / icoder.bat)
+- **`mcp-tools-py`** — Python code-quality tools (pylint, pytest, mypy, vulture, isort+black, etc.)
+- **`mcp-workspace`** — Workspace file operations (read, write, edit, list) for the project plus optional reference projects
 
 ### Platform-Specific Configuration
 
 MCP Coder supports platform-specific MCP configuration files:
 
-**File location:** Project root directory
+| Platform | Config File |
+|----------|-------------|
+| **Linux** | `.mcp.linux.json` |
+| **Windows** | `.mcp.windows.json` |
+| **macOS** | `.mcp.macos.json` |
+| **Generic** | `.mcp.json` |
 
-### MCP Configuration Essentials
+**File location:** Project root directory.
 
 **Reference Implementation:** See this repository's `.mcp.json` for a complete working configuration.
 
-**Key Configuration Aspects:**
+**Path conventions:**
 
-1. **Platform-Specific Paths**:
-   - **Windows**: Use double backslashes (`\\`) and `.exe` extensions
-   - **Unix**: Use forward slashes, no extensions needed
-   - **Environment variables**: `${MCP_CODER_PROJECT_DIR}` and `${MCP_CODER_VENV_DIR}` are set by mcp-coder
+- **Windows**: Use double backslashes (`\\`) and `.exe` extensions
+- **Unix**: Use forward slashes, no extensions
 
-2. **Essential `mcp-tools-py` Arguments** (these apply to the `mcp-tools-py` server only):
-   - `--project-dir`: Points to your project root
-   - `--python-executable`: Specific Python executable in your venv
-   - `--venv-path`: Virtual environment location
-   - `--test-folder`: Test directory (usually "tests")
-   - `--log-level`: For debugging MCP server issues
+### Environment Variables
 
-3. **Reference Projects** (filesystem server):
-   - Enable access to related codebases for comprehensive LLM context
-   - Useful for cross-repository development and learning from examples
-   - Format: `--reference-project "name=${PATH_TO_REPO}"`
+Set by the launcher scripts (`claude.bat`, `claude_local.bat`, `icoder.bat`, `icoder_local.bat`) before Claude Code starts:
 
-4. **Environment Variables**:
-   - `PYTHONPATH`: Ensures Python modules are discoverable
-   - Critical for proper import resolution in MCP servers
+| Variable | Set by launcher | Purpose |
+|---|---|---|
+| `MCP_CODER_PROJECT_DIR` | `%CD%` (current dir) | Absolute path to your project directory |
+| `MCP_CODER_VENV_PATH` | Yes | Path to the venv `Scripts/` directory containing `mcp-tools-py.exe` and `mcp-workspace.exe` |
+| `MCP_CODER_VENV_DIR` | Parent of `MCP_CODER_VENV_PATH` | The venv root |
+| `VIRTUAL_ENV` | Set if no venv was active | Standard Python venv variable |
 
-TODO: rewrite it into three sections
+Without a launcher (e.g., running Claude Code directly), set these manually before launch.
 
-- env variables
-- mcp server mcp-tools-py
-- mcp server mcp-workspace
+### `mcp-tools-py` Server
+
+Provides Python code-quality MCP tools.
+
+**Arguments:**
+
+- `--project-dir`: Project root (typically `${MCP_CODER_PROJECT_DIR}`)
+- `--python-executable`: Python interpreter in your venv
+- `--venv-path`: Virtual environment root
+- `--test-folder`: Test directory (usually `tests`)
+- `--log-level`: Log verbosity (`DEBUG`, `INFO`)
+
+**Required env:**
+
+- `PYTHONPATH`: `${MCP_CODER_PROJECT_DIR}/src` — needed for src-layout imports
+
+### `mcp-workspace` Server
+
+Provides workspace file MCP tools (`read_file`, `save_file`, `edit_file`, `list_directory`, etc.) for files in your project, plus optional read-only access to reference projects.
+
+**Arguments:**
+
+- `--project-dir`: Project root (typically `${MCP_CODER_PROJECT_DIR}`)
+- `--log-level`: Log verbosity
+- `--reference-project name=<path>` (repeatable): Make additional repositories readable from MCP. Useful for cross-repository development and learning from examples.
+
+**Required env:**
+
+- `PYTHONPATH`: `${MCP_CODER_VENV_DIR}\Lib\` — for finding installed packages
 
 ### Example for using MCP Configuration
 
