@@ -1,0 +1,10 @@
+refactor: extract _list_issues_no_error_handling() from list_issues()
+
+Split list_issues() into two functions so the cache can call the raw
+version that raises on API failure, while all other callers keep the
+existing error-swallowing behavior via @_handle_github_errors.
+
+- Extract body of list_issues() into _list_issues_no_error_handling()
+- list_issues() delegates to the private method (decorators unchanged)
+- Add 3 tests: server error raises, network error raises, list_issues
+  still returns [] on error

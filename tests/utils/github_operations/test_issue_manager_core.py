@@ -479,3 +479,37 @@ class TestIssueManagerCore:
         result = mock_issue_manager.list_issues()
 
         assert len(result) == 1
+
+    def test_list_issues_no_error_handling_server_error_raises(
+        self, mock_issue_manager: IssueManager
+    ) -> None:
+        """Test that _list_issues_no_error_handling raises on server errors."""
+        mock_issue_manager._repository.get_issues.side_effect = GithubException(
+            500, {"message": "Internal Server Error"}, None
+        )
+
+        with pytest.raises(GithubException):
+            mock_issue_manager._list_issues_no_error_handling()
+
+    def test_list_issues_no_error_handling_network_error_raises(
+        self, mock_issue_manager: IssueManager
+    ) -> None:
+        """Test that _list_issues_no_error_handling raises on network errors."""
+        mock_issue_manager._repository.get_issues.side_effect = ConnectionError(
+            "Connection refused"
+        )
+
+        with pytest.raises(ConnectionError):
+            mock_issue_manager._list_issues_no_error_handling()
+
+    def test_list_issues_still_returns_empty_on_error(
+        self, mock_issue_manager: IssueManager
+    ) -> None:
+        """Test that list_issues() returns [] on server error (existing behavior)."""
+        mock_issue_manager._repository.get_issues.side_effect = GithubException(
+            500, {"message": "Internal Server Error"}, None
+        )
+
+        result = mock_issue_manager.list_issues()
+
+        assert result == []

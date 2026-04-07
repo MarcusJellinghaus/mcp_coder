@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Extract `_list_issues_no_error_handling()` from `list_issues()`
-- [ ] Implementation: extract private method + delegation in `manager.py`, add 3 tests in `test_issue_manager_core.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: extract private method + delegation in `manager.py`, add 3 tests in `test_issue_manager_core.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Handle API failure in `get_all_cached_issues()` with snapshot restore
 - [ ] Implementation: call `_list_issues_no_error_handling` in `_fetch_and_merge_issues`, add snapshot/try-except in `get_all_cached_issues()`, update `mock_cache_issue_manager` fixture, add 4 tests in `test_issue_cache.py`
