@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: Coordinator template watchdog lines ([step_2.md](./steps/step_2.md))
-- [ ] Implementation: tests (`TestTemplateWatchdogLines` in `test_commands.py`) + production code (`command_templates.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests (`TestTemplateWatchdogLines` in `test_commands.py`) + production code (`command_templates.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: verify all steps implemented and checks pass
