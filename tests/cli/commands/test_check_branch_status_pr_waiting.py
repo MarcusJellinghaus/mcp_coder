@@ -12,7 +12,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from mcp_coder.checks.branch_status import CI_PENDING, BranchStatusReport
+from mcp_coder.checks.branch_status import BranchStatusReport, CIStatus
+from mcp_coder.workflow_utils.task_tracker import TaskTrackerStatus
 
 # Test-first approach: Try to import the module, skip dependent tests if not available
 try:
@@ -45,11 +46,13 @@ def _make_report(**overrides: object) -> BranchStatusReport:
     kwargs: dict[str, object] = dict(
         branch_name="feature/test-branch",
         base_branch="main",
-        ci_status="PASSED",
+        ci_status=CIStatus.PASSED,
         ci_details=None,
         rebase_needed=False,
         rebase_reason="Branch is up to date with main",
-        tasks_complete=True,
+        tasks_status=TaskTrackerStatus.COMPLETE,
+        tasks_reason="All tasks complete",
+        tasks_is_blocking=False,
         current_github_label="status-implementation",
         recommendations=["Ready to merge"],
     )
@@ -400,7 +403,7 @@ class TestCIPendingHint:
         mock_resolve.return_value = Path("/test/project")
         mock_branch.return_value = "feature/xyz"
         mock_collect.return_value = _make_report(
-            ci_status=CI_PENDING,
+            ci_status=CIStatus.PENDING,
             recommendations=["Wait for CI to complete"],
         )
 
@@ -427,7 +430,7 @@ class TestCIPendingHint:
         """CI pending + ci_timeout>0 → no hint."""
         mock_resolve.return_value = Path("/test/project")
         mock_branch.return_value = "feature/xyz"
-        mock_collect.return_value = _make_report(ci_status=CI_PENDING)
+        mock_collect.return_value = _make_report(ci_status=CIStatus.PENDING)
 
         # Need to mock CI waiting path too since ci_timeout > 0
         with (
@@ -459,7 +462,7 @@ class TestCIPendingHint:
         """CI passed + ci_timeout=0 → no hint."""
         mock_resolve.return_value = Path("/test/project")
         mock_branch.return_value = "feature/xyz"
-        mock_collect.return_value = _make_report(ci_status="PASSED")
+        mock_collect.return_value = _make_report(ci_status=CIStatus.PASSED)
 
         args = _make_base_args(ci_timeout=0)
         with caplog.at_level(logging.DEBUG):

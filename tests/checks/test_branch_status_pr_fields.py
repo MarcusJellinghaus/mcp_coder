@@ -5,10 +5,11 @@ BranchStatusReport, and their display in format_for_human() and format_for_llm()
 """
 
 from mcp_coder.checks.branch_status import (
-    CI_PASSED,
     BranchStatusReport,
+    CIStatus,
     create_empty_report,
 )
+from mcp_coder.workflow_utils.task_tracker import TaskTrackerStatus
 
 
 def _make_report(
@@ -20,11 +21,13 @@ def _make_report(
     return BranchStatusReport(
         branch_name="feature/42-thing",
         base_branch="main",
-        ci_status=CI_PASSED,
+        ci_status=CIStatus.PASSED,
         ci_details=None,
         rebase_needed=False,
         rebase_reason="Up to date",
-        tasks_complete=True,
+        tasks_status=TaskTrackerStatus.COMPLETE,
+        tasks_reason="All tasks complete",
+        tasks_is_blocking=False,
         current_github_label="status-03:implementing",
         recommendations=["Ready to merge"],
         pr_found=pr_found,
