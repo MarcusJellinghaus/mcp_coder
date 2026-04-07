@@ -31,3 +31,13 @@ Resolved decisions from plan-review discussion. Each entry is one line of ration
 **Decision:** Tab-selection inserts `"/help "` (command name + trailing space).
 
 **Rationale:** Standard autocomplete UX — saves a keystroke for commands that take arguments.
+
+## Round 2 plan corrections
+
+- **C1 (blocker):** `EventLog` exposes `emit(event, **data)`, not `log(...)`. Step 4 pseudocode updated to call `self._event_log.emit(...)` everywhere.
+- **S1:** Tests use the flat `tests/icoder/` layout — moved `test_autocomplete_state.py` out of the non-existent `tests/icoder/core/` subdirectory.
+- **S2:** Step 4 now lists the explicit imports to add to `input_area.py` (`compute_next_state`, `AutocompleteState`, `CommandRegistry`, `EventLog`, `CommandAutocomplete`, `NoMatches`).
+- **S3:** Step 4 Enter branch clarified — the dropdown-hide block lives **inside** the existing `if event.key == "enter":` branch, before the existing submit sequence.
+- **S4:** Backward-compat `InputArea()` test goes in the existing `tests/icoder/test_widgets.py` file.
+- **S5:** `autocomplete_key_routed(key=...)` added to the events row in `summary.md`.
+- **S6:** Step 6 LLM prompt now starts with a one-line check that the `textual_integration` marker is registered in `pyproject.toml`.

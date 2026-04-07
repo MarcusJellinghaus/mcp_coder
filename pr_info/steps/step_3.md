@@ -13,7 +13,7 @@ The InputArea (Step 4) calls `compute_next_state()` on every text change and dif
 | Action | File |
 |--------|------|
 | Create | `src/mcp_coder/icoder/core/autocomplete_state.py` |
-| Create | `tests/icoder/core/test_autocomplete_state.py` |
+| Create | `tests/icoder/test_autocomplete_state.py` |
 
 ## WHAT
 
@@ -67,7 +67,7 @@ def compute_next_state(input_text, registry):
 
 ## Tests (write first)
 
-`tests/icoder/core/test_autocomplete_state.py` — pure unit tests, no Textual:
+`tests/icoder/test_autocomplete_state.py` — pure unit tests, no Textual:
 
 ```python
 def test_hidden_when_text_does_not_start_with_slash() -> None:
@@ -112,7 +112,7 @@ self._ac_state = new
 ```
 Read pr_info/steps/summary.md and pr_info/steps/Decisions.md (D1) for context, then implement Step 3.
 
-1. Create tests/icoder/core/test_autocomplete_state.py with the 7 tests above (TDD).
+1. Create tests/icoder/test_autocomplete_state.py with the 7 tests above (TDD).
 2. Create src/mcp_coder/icoder/core/autocomplete_state.py with AutocompleteState frozen dataclass and compute_next_state() pure function.
 3. Run all five quality checks — all must pass.
 4. Commit: "feat(icoder): add autocomplete state module"

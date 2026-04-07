@@ -120,6 +120,7 @@ def ac_events(event_log: EventLog) -> list[EventEntry]:
 ```
 Read pr_info/steps/summary.md and pr_info/steps/Decisions.md for full context, then implement Step 6.
 
+0. Verify `textual_integration` marker is registered in `pyproject.toml` before running tests.
 1. Create tests/icoder/test_autocomplete_pilot.py with all the pilot tests listed in step_6.md (including I4 and I5).
 2. Use the existing conftest fixtures (fake_llm, event_log) and create an icoder_app fixture
 3. Each test should use async with app.run_test() as pilot

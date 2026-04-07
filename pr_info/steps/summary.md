@@ -52,7 +52,7 @@ core/app_core.py             ──► public properties: registry, event_log
 | -- | Key routing | Dropdown visible → Up/Down/Tab/Escape go to dropdown; hidden → all keys behave as today. |
 | -- | Enter | Always submits, regardless of dropdown state. |
 | -- | Empty matches | Show disabled `(no matching commands)` row (dropdown stays visible). |
-| -- | Events | Transition-based: `autocomplete_shown`, `autocomplete_filtered`, `autocomplete_selected`, `autocomplete_hidden(reason=...)`. |
+| -- | Events | Transition-based: `autocomplete_shown`, `autocomplete_filtered`, `autocomplete_selected`, `autocomplete_hidden(reason=...)`, `autocomplete_key_routed(key=...)`. |
 
 ### Visibility invariant
 
@@ -67,7 +67,7 @@ Single rule, enforced by `compute_next_state()`. No per-key state machine.
 |------|---------|
 | `src/mcp_coder/icoder/core/autocomplete_state.py` | Frozen `AutocompleteState` + pure `compute_next_state()` |
 | `src/mcp_coder/icoder/ui/widgets/command_autocomplete.py` | `OptionList` subclass for the dropdown |
-| `tests/icoder/core/test_autocomplete_state.py` | Pure unit tests (no Textual) for state module |
+| `tests/icoder/test_autocomplete_state.py` | Pure unit tests (no Textual) for state module |
 | `tests/icoder/test_command_autocomplete.py` | Widget tests under `textual_integration` marker |
 | `tests/icoder/test_autocomplete_pilot.py` | Pilot integration tests for full autocomplete behavior |
 

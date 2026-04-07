@@ -43,3 +43,28 @@
 - Updated `summary.md` file list, step count, decisions table
 
 **Status**: committed
+
+
+## Round 2 — 2026-04-07
+
+**Findings**:
+- C1 (BLOCKER): step_4.md used non-existent `EventLog.log()` — actual API is `emit()`
+- S1: new state-module tests placed in `tests/icoder/core/` but project uses flat `tests/icoder/`
+- S2: step_4.md lacked explicit imports-to-add list
+- S3: step_4.md Enter-branch ordering ambiguous (dropdown-hide placement vs submit sequence)
+- S4: backward-compat test file not named
+- S5: `autocomplete_key_routed` missing from summary events list
+- S6: step_6 didn't pin the `textual_integration` marker registration check
+
+**Decisions**: All 7 findings → Accept (all mechanical fixes, no design impact).
+
+**User decisions**: None — no design/scope questions this round.
+
+**Changes**:
+- step_4.md: 7x `log(` → `emit(`; added imports-to-add block; clarified Enter-branch ordering; named backward-compat test file (`tests/icoder/test_widgets.py`)
+- step_3.md + summary.md: test path `tests/icoder/core/test_autocomplete_state.py` → `tests/icoder/test_autocomplete_state.py`
+- summary.md: added `autocomplete_key_routed(key=...)` to events row
+- step_6.md: added marker-registration check note to LLM prompt
+- Decisions.md: appended Round 2 corrections log
+
+**Status**: committed

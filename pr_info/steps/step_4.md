@@ -12,6 +12,16 @@ Make `InputArea` hold the current `AutocompleteState`, recompute on every text c
 |--------|------|
 | Modify | `src/mcp_coder/icoder/ui/widgets/input_area.py` |
 
+## Imports to add
+
+In `src/mcp_coder/icoder/ui/widgets/input_area.py`:
+
+- `from ..core.autocomplete_state import compute_next_state, AutocompleteState`
+- `from ..core.command_registry import CommandRegistry`
+- `from ..core.event_log import EventLog`
+- `from .command_autocomplete import CommandAutocomplete`
+- `from textual.css.query import NoMatches`
+
 ## WHAT
 
 ```python
@@ -91,8 +101,8 @@ if self._ac_state.visible:
         dropdown.hide_dropdown()
         self._ac_state = AutocompleteState(visible=False, matches=(), highlighted_index=-1)
         if self._event_log is not None:
-            self._event_log.log("autocomplete_hidden", reason="escape")
-            self._event_log.log("autocomplete_key_routed", key="escape")
+            self._event_log.emit("autocomplete_hidden", reason="escape")
+            self._event_log.emit("autocomplete_key_routed", key="escape")
         return
 
     if event.key == "up":
@@ -100,7 +110,7 @@ if self._ac_state.visible:
         event.prevent_default()
         dropdown.highlight_previous()
         if self._event_log is not None:
-            self._event_log.log("autocomplete_key_routed", key="up")
+            self._event_log.emit("autocomplete_key_routed", key="up")
         return
 
     if event.key == "down":
@@ -108,7 +118,7 @@ if self._ac_state.visible:
         event.prevent_default()
         dropdown.highlight_next()
         if self._event_log is not None:
-            self._event_log.log("autocomplete_key_routed", key="down")
+            self._event_log.emit("autocomplete_key_routed", key="down")
         return
 
     if event.key == "tab":
@@ -119,16 +129,18 @@ if self._ac_state.visible:
             self.load_text(name + " ")
             self.move_cursor(self.document.end)
             if self._event_log is not None:
-                self._event_log.log("autocomplete_selected", command=name)
+                self._event_log.emit("autocomplete_selected", command=name)
         dropdown.hide_dropdown()
         self._ac_state = AutocompleteState(visible=False, matches=(), highlighted_index=-1)
         if self._event_log is not None:
-            self._event_log.log("autocomplete_hidden", reason="selected")
-            self._event_log.log("autocomplete_key_routed", key="tab")
+            self._event_log.emit("autocomplete_hidden", reason="selected")
+            self._event_log.emit("autocomplete_key_routed", key="tab")
         return
 ```
 
 ### Enter branch — explicit
+
+The dropdown-hide block below is inserted **inside** the existing `if event.key == "enter":` branch, BEFORE the existing `event.stop() / text = self.text.strip() / post_message / clear()` sequence. Do not create a new Enter handler — extend the existing one.
 
 The existing Enter handler must hide the dropdown (if visible) but **always submit**:
 
@@ -141,7 +153,7 @@ if event.key == "enter":
         dropdown.hide_dropdown()
         self._ac_state = AutocompleteState(visible=False, matches=(), highlighted_index=-1)
         if self._event_log is not None:
-            self._event_log.log("autocomplete_hidden", reason="submit")
+            self._event_log.emit("autocomplete_hidden", reason="submit")
     # ... existing Enter handling continues unchanged (submit the input)
 ```
 
@@ -157,7 +169,7 @@ if event.key == "enter":
 
 `InputArea()` (no args) must still work. Tests constructing `InputArea()` with no registry must mount and handle text changes without crashing.
 
-Add a unit/pilot test enforcing this:
+Add a unit/pilot test enforcing this in `tests/icoder/test_widgets.py` (where the existing `InputArea` widget tests live):
 
 ```python
 async def test_input_area_no_registry_backward_compat():
