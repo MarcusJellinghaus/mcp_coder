@@ -15,6 +15,7 @@ Files marked for replacement, removal, or review. Not recommended for use in dow
 | `tools/docstring_stats.sh` | To review |
 | `tools/debug_vscode_sessions.py` | To review |
 | `tools/debug_windows.py` | To review |
+| `tools/checks2clipboard.bat` | To review (clipboard helper for LLM assistance) |
 
 ## Other
 

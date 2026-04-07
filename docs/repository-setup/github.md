@@ -21,10 +21,12 @@ token = "ghp_your_github_token_here"
 ```
 
 **Required permissions:**
+
 - `repo` scope (for private repositories)
 - `public_repo` scope (for public repositories)
 
 **How to create a GitHub token:**
+
 1. Go to GitHub → Settings → Developer settings → Personal access tokens
 2. Generate new token (classic) with appropriate repo permissions
 3. Copy token and add to config file
@@ -40,6 +42,7 @@ status-01:created → status-02:awaiting-planning → ... → status-10:pr-creat
 ```
 
 **Benefits:**
+
 - Visual pipeline tracking in GitHub Issues
 - Automated status progression with `/approve` command
 - No issues lost without status tracking
@@ -48,47 +51,32 @@ status-01:created → status-02:awaiting-planning → ... → status-10:pr-creat
 ### Setting Up Labels
 
 **1. Preview labels:**
+
 ```bash
 mcp-coder gh-tool define-labels --dry-run  # Preview changes
 ```
 
 **2. Apply labels:**
+
 ```bash
 mcp-coder gh-tool define-labels            # Create/update labels
 ```
 
 **3. Verify in GitHub:**
+
 - Go to your repository → Issues → Labels
 - Confirm status labels are created with correct colors
 
 ### Customizing Labels
 
-**Default label source:** Uses `mcp_coder/config/labels.json` from the package.
+**Default label source:** `mcp_coder/config/labels.json`, deployed with the package.
 
-**Custom labels:** Create `workflows/config/labels.json` in your project:
+**Custom labels:** Place a `labels.json` file at `workflows/config/labels.json` in your project to override the defaults. See [`labels_schema.md`](https://github.com/MarcusJellinghaus/mcp_coder/blob/main/src/mcp_coder/config/labels_schema.md) for the schema.
 
-```bash
-# Create config directory
-mkdir -p workflows/config
-
-# Create custom labels file
-cat > workflows/config/labels.json << 'EOF'
-[
-  {
-    "name": "status-01:created", 
-    "color": "d4c5f9",
-    "description": "Issue created, awaiting triage"
-  },
-  {
-    "name": "status-02:awaiting-planning",
-    "color": "c5def5", 
-    "description": "Ready for planning phase"
-  }
-]
-EOF
-```
+> **See also:** Issue [#726](https://github.com/MarcusJellinghaus/mcp_coder/issues/726) tracks improving cross-references for label setup docs.
 
 **Test custom config:**
+
 ```bash
 mcp-coder gh-tool define-labels --dry-run  # Preview your custom labels
 ```
@@ -98,23 +86,14 @@ mcp-coder gh-tool define-labels --dry-run  # Preview your custom labels
 The `gh-tool define-labels` command now includes automatic issue validation:
 
 **Automatic initialization:**
+
 - Issues without any workflow status label are initialized with `status-01:created`
 - Use `--dry-run` to preview which issues would be initialized
 
 **Validation checks:**
+
 - **Errors:** Issues with multiple status labels (requires manual fix)
 - **Warnings:** Bot processes exceeding their stale timeout threshold
-
-**Example output:**
-```
-Summary:
-  Labels synced: Created=0, Updated=0, Deleted=0, Unchanged=10
-  Issues initialized: 3
-  Errors (multiple status labels): 1
-    - Issue #45: status-01:created, status-03:planning
-  Warnings (stale bot processes): 1
-    - Issue #78: status-06:implementing for 150 minutes (threshold: 120)
-```
 
 ### Stale Timeout Configuration
 
@@ -130,6 +109,7 @@ Bot-busy labels can have configurable timeout thresholds in `labels.json`:
 ```
 
 Default timeouts:
+
 | Label | Timeout |
 |-------|---------|
 | status-03:planning | 15 minutes |
@@ -141,6 +121,7 @@ Default timeouts:
 ### Overview
 
 Issues can specify a base branch to start work from a branch other than the repository default. This is useful for:
+
 - **Hotfixes**: Starting from a release branch
 - **Feature chains**: Building on existing feature work
 - **Release preparation**: Working from release branches
@@ -170,6 +151,7 @@ The actual issue content...
 ### Validation
 
 The base branch is validated at branch creation time:
+
 - If the branch doesn't exist, branch creation fails with a clear error
 - The `/issue_analyse` command will warn if the specified branch doesn't exist
 
@@ -180,6 +162,7 @@ Existing issues without a `### Base Branch` section continue to work as before, 
 ### Example Issues
 
 **Issue with base branch:**
+
 ```markdown
 ### Base Branch
 
@@ -196,6 +179,7 @@ Fix critical bug in release 2.0
 ```
 
 **Issue without base branch (uses default):**
+
 ```markdown
 ### Description
 

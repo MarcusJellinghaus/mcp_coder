@@ -1,10 +1,9 @@
 # Claude Code Setup
 
 MCP Coder currently uses Claude Code as the LLM backend. This file covers the required configuration files and Claude-related repo conventions.
+It also uses langchain as LLM backend and allows to connect to various LLMs.
 
-> **Note:** Future versions may support additional LLM providers.
-> 
-> **See [Claude Code Configuration Guide](../configuration/claude-code.md)** for detailed setup including installation, CLI commands, and troubleshooting.
+**See [Claude Code Configuration Guide](../configuration/claude-code.md)** for detailed setup including installation, CLI commands, and troubleshooting.
 
 ## Required Files
 
@@ -14,11 +13,14 @@ MCP Coder currently uses Claude Code as the LLM backend. This file covers the re
 | `.claude/skills/` | Skills for workflow stages |
 | `.mcp.json` | MCP server configuration |
 
+In the future, these files will also be used by iCoder.
+
 ## `.claude/CLAUDE.md` - Project Instructions
 
 This file contains mandatory instructions that Claude follows when working on your project. Create `.claude/CLAUDE.md` with project-specific rules.
 
 **See:**
+
 - [Claude Code Configuration Guide](../configuration/claude-code.md#claudeclaudemd---project-instructions) for detailed examples
 - mcp-coder's own [CLAUDE.md](https://github.com/MarcusJellinghaus/mcp_coder/blob/main/.claude/CLAUDE.md) for a comprehensive example
 
@@ -37,6 +39,7 @@ Skills provide structured workflows for common tasks. Copy the skills from mcp-c
 | `/implementation_review_supervisor` | Code review (autonomous agent-driven) |
 | `/commit_push` | Format, commit, and push changes |
 | `/rebase` | Rebase branch onto main |
+TO BE UPDATED
 
 ## `.mcp.json` - MCP Server Configuration
 
@@ -46,16 +49,11 @@ Skills provide structured workflows for common tasks. Copy the skills from mcp-c
 - **filesystem**: Enhanced file operations
 - **Custom servers**: Project-specific tools
 
+TODO EXPLAIN environment variables (and where they are set claude.bat / icoder.bat)
+
 ### Platform-Specific Configuration
 
 MCP Coder supports platform-specific MCP configuration files:
-
-| Platform | Config File |
-|----------|-------------|
-| **Linux** | `.mcp.linux.json` |
-| **Windows** | `.mcp.windows.json` |
-| **macOS** | `.mcp.macos.json` |
-| **Generic** | `.mcp.json` |
 
 **File location:** Project root directory
 
@@ -70,7 +68,7 @@ MCP Coder supports platform-specific MCP configuration files:
    - **Unix**: Use forward slashes, no extensions needed
    - **Environment variables**: `${MCP_CODER_PROJECT_DIR}` and `${MCP_CODER_VENV_DIR}` are set by mcp-coder
 
-2. **Essential Arguments**:
+2. **Essential `mcp-tools-py` Arguments** (these apply to the `mcp-tools-py` server only):
    - `--project-dir`: Points to your project root
    - `--python-executable`: Specific Python executable in your venv
    - `--venv-path`: Virtual environment location
@@ -86,21 +84,20 @@ MCP Coder supports platform-specific MCP configuration files:
    - `PYTHONPATH`: Ensures Python modules are discoverable
    - Critical for proper import resolution in MCP servers
 
-### Using MCP Configuration
+TODO: rewrite it into three sections
+
+- env variables
+- mcp server mcp-tools-py
+- mcp server mcp-workspace
+
+### Example for using MCP Configuration
 
 **With mcp-coder commands:**
+
 ```bash
 # Use specific MCP config
-mcp-coder prompt "Analyze code" --mcp-config .mcp.linux.json
-mcp-coder implement --mcp-config .mcp.linux.json
-mcp-coder create-plan 123 --mcp-config .mcp.linux.json
+mcp-coder prompt "Analyze code" --mcp-config .mcp.json
 ```
-
-**Benefits:**
-- Enables strict mode (only configured servers)
-- Consistent environment across team
-- Platform-specific optimizations
-- Reference projects for filesystem server (access to related codebases)
 
 ## VSCodeClaude Setup
 

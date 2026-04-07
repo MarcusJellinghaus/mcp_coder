@@ -112,7 +112,6 @@ Working document for assigning every file/folder to a category. **This file is f
 | `tools/test_profiler_generate_only.bat` | P | new  | pytest profiler reports                      |
 | `tools/test_profiler.md`            | P   | new    | Documents test_profiler.bat                  |
 | `tools/test_profiler_plugin/`       | P   | new    | pytest plugin code                           |
-| `tools/checks2clipboard.bat`        | P   | new    | Copies Python check output to clipboard      |
 
 ---
 
@@ -142,6 +141,7 @@ Working document for assigning every file/folder to a category. **This file is f
 | `tools/docstring_stats.sh`      | L   | ok     |                                    |
 | `tools/debug_vscode_sessions.py`| L   | ok     |                                    |
 | `tools/debug_windows.py`        | L   | ok     |                                    |
+| `tools/checks2clipboard.bat`    | L   | ok     | Moved from Python — to review      |
 | `tools/commit_summary.bat`      | L   | new    | Already labeled "Legacy"           |
 | `tools/pr_summary.bat`          | L   | new    | Already labeled "Legacy"           |
 | `tools/pr_review.bat`           | L   | new    | Already labeled "Legacy"           |

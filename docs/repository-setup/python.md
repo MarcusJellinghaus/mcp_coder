@@ -21,10 +21,12 @@ Enforce module boundaries and prevent architectural drift with automated tools. 
 **Critical for LLM-assisted development workflows:**
 
 **Context Window Management:**
+
 - **File size limits**: LLMs have finite context windows - large files reduce available context for reasoning
 - **Architecture enforcement**: LLMs may not grasp the full codebase - rules enforce following a testable architecture plan with clear boundaries, separation of concerns, and clean code that improves LLM comprehension and prevents technical debt
 
 **CI Integration Strategy:**
+
 - **Matrix execution with fail-fast disabled**: Get complete feedback on all checks simultaneously
 - **PR-only validation**: Expensive architecture checks run only when needed
 - **Comprehensive monitoring**: Use `mcp-coder check branch-status` for complete CI pipeline visibility
@@ -34,12 +36,14 @@ Enforce module boundaries and prevent architectural drift with automated tools. 
 **Recommended Approach: Use Tools Scripts**
 
 All architecture tools have corresponding scripts in the `tools/` directory that provide:
+
 - **Better UX**: Informative status messages and progress indicators
 - **Error handling**: Check if tools are installed and provide helpful installation guidance
 - **Consistency**: Standardized output format and argument handling
 - **Cross-platform**: Both `.sh` (Linux/macOS) and `.bat` (Windows) versions
 
 **Examples:**
+
 ```bash
 # Use these (recommended)
 ./tools/lint_imports.sh
@@ -55,6 +59,7 @@ vulture src tests vulture_whitelist.py --min-confidence 60
 ```
 
 **For Claude Code**, use MCP tools instead of shell scripts:
+
 - `mcp__tools-py__run_format_code` (replaces `format_all.sh`)
 - `mcp__tools-py__run_lint_imports_check` (replaces `lint_imports.sh`)
 - `mcp__tools-py__run_vulture_check` (replaces `vulture_check.sh`)
@@ -62,6 +67,7 @@ vulture src tests vulture_whitelist.py --min-confidence 60
 ### Import Architecture Enforcement
 
 **Tool: import-linter**
+
 - **Purpose:** Contract-based import validation
 - **Execution:** `./tools/lint_imports.sh` (Linux/macOS) or `tools\lint_imports.bat` (Windows)
 - **Direct:** `lint-imports`
@@ -71,6 +77,7 @@ vulture src tests vulture_whitelist.py --min-confidence 60
 ### Dependency Architecture Validation
 
 **Tool: tach**
+
 - **Purpose:** Architectural boundary enforcement
 - **Execution:** `./tools/tach_check.sh` (Linux/macOS) or `tools\tach_check.bat` (Windows)
 - **Direct:** `tach check`
@@ -78,6 +85,7 @@ vulture src tests vulture_whitelist.py --min-confidence 60
 - **Example config:** See `tach.toml` in this repository
 
 **Tool: pycycle**
+
 - **Purpose:** Circular dependency detection
 - **Execution:** `./tools/pycycle_check.sh` (Linux/macOS) or `tools\pycycle_check.bat` (Windows)
 - **Direct:** `pycycle --here`
@@ -86,6 +94,7 @@ vulture src tests vulture_whitelist.py --min-confidence 60
 ### Dead Code Elimination
 
 **Tool: vulture**
+
 - **Purpose:** Unused code detection
 - **Execution:** `./tools/vulture_check.sh` (Linux/macOS) or `tools\vulture_check.bat` (Windows)
 - **Direct:** `vulture src tests vulture_whitelist.py --min-confidence 60`
@@ -114,6 +123,8 @@ Convenience scripts for local development. Create a `tools/` directory with thes
 
 ### Formatting Tools
 
+> **Note:** These shell scripts are being phased out in favor of the `mcp__tools-py__run_format_code` MCP tool, which runs both isort and black. Prefer the MCP tool for new workflows. Shell scripts are kept for human developers and CI pipelines.
+
 | Script | Purpose | Category |
 |--------|---------|----------|
 | `format_all.sh/bat` | Run black + isort on src/tests | **Mandatory** before commits |
@@ -121,10 +132,8 @@ Convenience scripts for local development. Create a `tools/` directory with thes
 | `iSort.bat` | Run isort only | Optional |
 | `ruff_check.sh/bat` | Run ruff (docstring checks) | Optional |
 
-> **For Claude Code:** Use `mcp__tools-py__run_format_code` (runs both isort and black).
-> Shell scripts are for human developers and CI pipelines.
-
 **format_all.sh:**
+
 ```bash
 #!/bin/bash
 set -e
@@ -134,6 +143,8 @@ echo "Running black..."
 black src tests
 echo "Formatting complete!"
 ```
+
+TODO - explain key project configuration items.
 
 ### Quality Check Tools
 
@@ -148,12 +159,6 @@ echo "Formatting complete!"
 
 > **For Claude Code:** Use MCP tools where available: `mcp__tools-py__run_lint_imports_check` (replaces `lint_imports.sh`), `mcp__tools-py__run_vulture_check` (replaces `vulture_check.sh`), `mcp__tools-py__run_pylint_check`, `mcp__tools-py__run_mypy_check`.
 > Shell scripts are for human developers and CI pipelines. `tach_check.sh` and `pycycle_check.sh` have no MCP equivalents — run them via Bash when needed.
-
-### Utility Tools
-
-| Script | Purpose | Category |
-|--------|---------|----------|
-| `checks2clipboard.bat` | Copy quality check output to clipboard | Optional, useful for LLM assistance |
 
 ### Performance Analysis Tools
 
