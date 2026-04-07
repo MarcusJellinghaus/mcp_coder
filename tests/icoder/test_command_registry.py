@@ -109,3 +109,53 @@ def test_command_with_args() -> None:
     response = registry.dispatch("/help extra args")
     assert response is not None
     assert "/help" in response.text
+
+
+def test_filter_by_input_slash_returns_all() -> None:
+    """filter_by_input('/') returns all registered commands."""
+    registry = create_default_registry()
+    result = registry.filter_by_input("/")
+    names = {c.name for c in result}
+    assert names == {"/help", "/clear", "/quit", "/exit"}
+
+
+def test_filter_by_input_prefix_match() -> None:
+    """filter_by_input('/he') returns [/help]."""
+    registry = create_default_registry()
+    result = registry.filter_by_input("/he")
+    assert len(result) == 1
+    assert result[0].name == "/help"
+
+
+def test_filter_by_input_case_insensitive() -> None:
+    """filter_by_input('/HE') returns [/help] (case-insensitive)."""
+    registry = create_default_registry()
+    result = registry.filter_by_input("/HE")
+    assert len(result) == 1
+    assert result[0].name == "/help"
+
+
+def test_filter_by_input_no_match() -> None:
+    """filter_by_input('/xyz') returns []."""
+    registry = create_default_registry()
+    assert registry.filter_by_input("/xyz") == []
+
+
+def test_filter_by_input_empty_string() -> None:
+    """filter_by_input('') returns [] (not a command prefix)."""
+    registry = create_default_registry()
+    assert registry.filter_by_input("") == []
+
+
+def test_filter_by_input_no_slash() -> None:
+    """filter_by_input('hello') returns [] (doesn't start with '/')."""
+    registry = create_default_registry()
+    assert registry.filter_by_input("hello") == []
+
+
+def test_filter_by_input_sorted() -> None:
+    """filter_by_input results are sorted by command name."""
+    registry = create_default_registry()
+    result = registry.filter_by_input("/")
+    names = [c.name for c in result]
+    assert names == sorted(names)

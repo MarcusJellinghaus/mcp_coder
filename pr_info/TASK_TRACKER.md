@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Add `filter_by_input()` to `CommandRegistry`
 > [Detail](./steps/step_1.md) | Commit: `feat(icoder): add filter_by_input to CommandRegistry`
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Create `CommandAutocomplete` Widget
 > [Detail](./steps/step_2.md) | Commit: `feat(icoder): add CommandAutocomplete widget`

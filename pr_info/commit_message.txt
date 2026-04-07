@@ -1,0 +1,13 @@
+feat(icoder): add filter_by_input to CommandRegistry
+
+Add filter_by_input() method to CommandRegistry that returns matching
+commands for autocomplete. The method:
+
+- Returns commands whose name starts with the given prefix
+- Is case-insensitive
+- Returns empty list if input doesn't start with '/'
+- Returns results sorted by command name
+
+Includes 7 unit tests covering: all-match, prefix-match,
+case-insensitivity, no-match, empty input, no-slash input, and
+sort order.

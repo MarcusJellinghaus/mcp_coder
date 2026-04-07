@@ -58,6 +58,21 @@ class CommandRegistry:
             text=f"Unknown command: {name}. Type /help for available commands."
         )
 
+    def filter_by_input(self, input_text: str) -> list[Command]:
+        """Return commands matching input_text for autocomplete.
+
+        Returns:
+            Matching commands sorted by name, or empty list if input
+            doesn't start with '/'.
+        """
+        if not input_text.startswith("/"):
+            return []
+        prefix = input_text.split()[0].lower()
+        return sorted(
+            [c for c in self._commands.values() if c.name.lower().startswith(prefix)],
+            key=lambda c: c.name,
+        )
+
     def get_all(self) -> list[Command]:
         """Return all registered commands (for /help display)."""
         return list(self._commands.values())
