@@ -1,7 +1,0 @@
-refactor: move branch naming tests to test_branch_naming.py (#538)
-
-Move TestBranchNameGeneration class from test_issue_branch_manager.py
-to a dedicated test_branch_naming.py file. Remove branch_manager.py
-from .large-files-allowlist since it is now under the 750-line limit.
-
-No logic changes — only file moves and import adjustments.
