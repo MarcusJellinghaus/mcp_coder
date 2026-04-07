@@ -11,7 +11,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Optional
 
-from mcp_coder.constants import PROMPTS_FILE_PATH
+from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS, PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import LLMTimeoutError, prompt_llm
 from mcp_coder.llm.storage.session_storage import store_session
@@ -488,7 +488,9 @@ def run_create_plan_workflow(
 
     # Check git working directory first (separate from check_prerequisites)
     try:
-        if not is_working_directory_clean(project_dir):
+        if not is_working_directory_clean(
+            project_dir, ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
+        ):
             failure = WorkflowFailure(
                 category=FailureCategory.PREREQ_FAILED,
                 stage="Prerequisites (git working directory not clean)",
@@ -499,7 +501,7 @@ def run_create_plan_workflow(
                 failure, project_dir, update_issue_labels, post_issue_comments
             )
             return 1
-    except Exception as e:  # pylint: disable=broad-exception-caught
+    except ValueError as e:
         failure = WorkflowFailure(
             category=FailureCategory.PREREQ_FAILED,
             stage="Prerequisites (git working directory not clean)",
