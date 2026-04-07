@@ -21,6 +21,48 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Add `filter_by_input()` to `CommandRegistry`
+> [Detail](./steps/step_1.md) | Commit: `feat(icoder): add filter_by_input to CommandRegistry`
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Create `CommandAutocomplete` Widget
+> [Detail](./steps/step_2.md) | Commit: `feat(icoder): add CommandAutocomplete widget`
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Pure `core/autocomplete_state.py` Module
+> [Detail](./steps/step_3.md) | Commit: `feat(icoder): add autocomplete state module`
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Wire Autocomplete into `InputArea`
+> [Detail](./steps/step_4.md) | Commit: `feat(icoder): wire autocomplete into InputArea`
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: Wire `CommandAutocomplete` into `ICoderApp` + `AppCore` Properties
+> [Detail](./steps/step_5.md) | Commit: `feat(icoder): integrate autocomplete into ICoderApp`
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 6: Pilot Integration Tests for Autocomplete Behavior
+> [Detail](./steps/step_6.md) | Commit: `test(icoder): add autocomplete pilot integration tests`
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 7: Snapshot Tests for Dropdown Visual States
+> [Detail](./steps/step_7.md) | Commit: `test(icoder): add autocomplete snapshot tests`
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review: all steps complete, all checks green
+- [ ] PR summary prepared
