@@ -46,5 +46,5 @@ See [step_4.md](./steps/step_4.md)
 - [x] Commit message prepared
 
 ## Pull Request
-- [ ] PR review: all steps complete, all checks green
+- [x] PR review: all steps complete, all checks green
 - [ ] PR summary prepared
