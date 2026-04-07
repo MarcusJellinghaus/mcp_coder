@@ -12,10 +12,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.checks.branch_status import (
-    CI_FAILED,
-    CI_NOT_CONFIGURED,
-    CI_PASSED,
-    CI_PENDING,
     DEFAULT_LABEL,
     EMPTY_RECOMMENDATIONS,
     BranchStatusReport,
@@ -605,10 +601,10 @@ class TestExtractFailedStepLog:
 
 def test_branch_status_constants() -> None:
     """Test that required constants are defined."""
-    assert CI_PASSED == "PASSED"
-    assert CI_FAILED == "FAILED"
-    assert CI_NOT_CONFIGURED == "NOT_CONFIGURED"
-    assert CI_PENDING == "PENDING"
+    assert CIStatus.PASSED == "PASSED"
+    assert CIStatus.FAILED == "FAILED"
+    assert CIStatus.NOT_CONFIGURED == "NOT_CONFIGURED"
+    assert CIStatus.PENDING == "PENDING"
     assert DEFAULT_LABEL == "unknown"
     assert EMPTY_RECOMMENDATIONS == []
 
@@ -993,60 +989,114 @@ def test_collect_rebase_status_edge_cases() -> None:
         assert "Error checking rebase status: Git error" in reason
 
 
-def test_collect_task_status() -> None:
-    """Test _collect_task_status function."""
-    project_dir = Path("/test/repo")
+def test_collect_task_status(tmp_path: Path) -> None:
+    """Test _collect_task_status function with real filesystem."""
+    from mcp_coder.workflow_utils.task_tracker import (
+        TaskTrackerFileNotFoundError,
+        TaskTrackerSectionNotFoundError,
+    )
 
-    # Test tasks complete - pr_info doesn't exist so no incomplete work
-    with patch("pathlib.Path.exists") as mock_exists:
-        mock_exists.return_value = False
+    # Case 1: No pr_info folder
+    status, reason, is_blocking = _collect_task_status(tmp_path)
+    assert status == TaskTrackerStatus.N_A
+    assert reason == "No pr_info folder found"
+    assert is_blocking is False
 
-        status, reason, is_blocking = _collect_task_status(project_dir)
+    # Case 2: pr_info exists but no steps files
+    (tmp_path / "pr_info").mkdir()
+    status, reason, is_blocking = _collect_task_status(tmp_path)
+    assert status == TaskTrackerStatus.N_A
+    assert reason == "No implementation plan found"
+    assert is_blocking is False
 
-        assert status == TaskTrackerStatus.N_A
-        assert is_blocking is False
+    # Case 3: steps dir exists but empty (no files)
+    (tmp_path / "pr_info" / "steps").mkdir()
+    status, reason, is_blocking = _collect_task_status(tmp_path)
+    assert status == TaskTrackerStatus.N_A
+    assert reason == "No implementation plan found"
+    assert is_blocking is False
 
-    # Test tasks complete - pr_info exists with all tasks done
-    with (
-        patch("pathlib.Path.exists", return_value=True),
-        patch(
-            "mcp_coder.checks.branch_status.get_task_counts",
-            return_value=(5, 5),
-        ) as _mock_counts,
+    # Case 4: steps has files, no TASK_TRACKER.md → blocking
+    (tmp_path / "pr_info" / "steps" / "step_1.md").write_text("# Step 1")
+    with patch(
+        "mcp_coder.checks.branch_status.get_task_counts",
+        side_effect=TaskTrackerFileNotFoundError("missing"),
     ):
-        status, reason, is_blocking = _collect_task_status(project_dir)
+        status, reason, is_blocking = _collect_task_status(tmp_path)
+    assert status == TaskTrackerStatus.N_A
+    assert "Create task tracker" in reason
+    assert "implementation plan exists but no TASK_TRACKER.md" in reason
+    assert is_blocking is True
 
-        assert status == TaskTrackerStatus.COMPLETE
-        assert is_blocking is False  # No incomplete work means tasks complete
-
-    # Test tasks incomplete
-    with (
-        patch("pathlib.Path.exists", return_value=True),
-        patch(
-            "mcp_coder.checks.branch_status.get_task_counts",
-            return_value=(5, 3),
-        ),
+    # Case 5: TASK_TRACKER.md exists but no Tasks section (steps files exist → blocking)
+    with patch(
+        "mcp_coder.checks.branch_status.get_task_counts",
+        side_effect=TaskTrackerSectionNotFoundError("no section"),
     ):
-        status, reason, is_blocking = _collect_task_status(project_dir)
+        status, reason, is_blocking = _collect_task_status(tmp_path)
+    assert status == TaskTrackerStatus.N_A
+    assert reason == "TASK_TRACKER.md has no Tasks section"
+    assert is_blocking is True
 
-        assert status == TaskTrackerStatus.INCOMPLETE
-        assert is_blocking is True
-        assert "3 of 5" in reason  # Has incomplete work means tasks not complete
-
-    # Test error case
-    with (
-        patch("pathlib.Path.exists") as mock_exists,
-        patch(
-            "mcp_coder.checks.branch_status.get_task_counts",
-            side_effect=Exception("Task tracker error"),
-        ),
+    # Case 6: Empty Tasks section (total == 0) → blocking
+    with patch(
+        "mcp_coder.checks.branch_status.get_task_counts",
+        return_value=(0, 0),
     ):
-        mock_exists.return_value = True
+        status, reason, is_blocking = _collect_task_status(tmp_path)
+    assert status == TaskTrackerStatus.N_A
+    assert reason == "Task tracker is empty"
+    assert is_blocking is True
 
-        status, reason, is_blocking = _collect_task_status(project_dir)
+    # Case 7: All tasks complete
+    with patch(
+        "mcp_coder.checks.branch_status.get_task_counts",
+        return_value=(5, 5),
+    ):
+        status, reason, is_blocking = _collect_task_status(tmp_path)
+    assert status == TaskTrackerStatus.COMPLETE
+    assert reason == "All 5 tasks complete"
+    assert is_blocking is False
 
-        assert status == TaskTrackerStatus.ERROR
-        assert is_blocking is True  # Default to incomplete on error
+    # Case 8: Tasks incomplete
+    with patch(
+        "mcp_coder.checks.branch_status.get_task_counts",
+        return_value=(5, 3),
+    ):
+        status, reason, is_blocking = _collect_task_status(tmp_path)
+    assert status == TaskTrackerStatus.INCOMPLETE
+    assert reason == "3 of 5 tasks complete"
+    assert is_blocking is True
+
+    # Case 9: Unexpected exception
+    with patch(
+        "mcp_coder.checks.branch_status.get_task_counts",
+        side_effect=RuntimeError("boom"),
+    ):
+        status, reason, is_blocking = _collect_task_status(tmp_path)
+    assert status == TaskTrackerStatus.ERROR
+    assert reason.startswith("Could not read task tracker: ")
+    assert "boom" in reason
+    assert is_blocking is True
+
+
+def test_collect_task_status_no_tasks_section_without_steps_files(
+    tmp_path: Path,
+) -> None:
+    """No Tasks section with no steps files should never reach this branch.
+
+    Sanity check: when steps dir is empty, we bail out with 'No implementation plan
+    found' before ever calling get_task_counts, so SectionNotFoundError is unreachable.
+    """
+    (tmp_path / "pr_info").mkdir()
+    (tmp_path / "pr_info" / "steps").mkdir()
+    # Directory contains only a sub-directory, no files
+    (tmp_path / "pr_info" / "steps" / "subdir").mkdir()
+
+    status, reason, is_blocking = _collect_task_status(tmp_path)
+    assert status == TaskTrackerStatus.N_A
+    assert reason == "No implementation plan found"
+    assert is_blocking is False
 
 
 def test_collect_github_label() -> None:
@@ -1193,7 +1243,7 @@ def test_generate_recommendations_logic() -> None:
     assert "Wait for CI to complete" == recommendations[0]
 
     # Test CI not configured case (with tasks complete)
-    # NOT_CONFIGURED is in [CI_PASSED, CI_NOT_CONFIGURED] so "Ready to merge" is added
+    # NOT_CONFIGURED is in [CIStatus.PASSED, CIStatus.NOT_CONFIGURED] so "Ready to merge" is added
     report_data = {
         "ci_status": "NOT_CONFIGURED",
         "rebase_needed": False,
@@ -1707,7 +1757,7 @@ def _make_report(**kwargs: object) -> BranchStatusReport:
     defaults: dict[str, Any] = {
         "branch_name": "feature/123-test",
         "base_branch": "main",
-        "ci_status": CI_PASSED,
+        "ci_status": CIStatus.PASSED,
         "ci_details": None,
         "rebase_needed": False,
         "rebase_reason": "Up to date with origin/main",
@@ -1816,7 +1866,7 @@ def test_format_llm_tasks_na() -> None:
 def test_recommendations_tasks_incomplete() -> None:
     """Incomplete tasks recommend completing them with reason."""
     report_data = {
-        "ci_status": CI_PASSED,
+        "ci_status": CIStatus.PASSED,
         "rebase_needed": False,
         "tasks_status": TaskTrackerStatus.INCOMPLETE,
         "tasks_reason": "3 of 5 tasks complete",
@@ -1830,7 +1880,7 @@ def test_recommendations_tasks_incomplete() -> None:
 def test_recommendations_tasks_na_non_blocking() -> None:
     """Non-blocking N/A generates no task recommendation; can be ready to merge."""
     report_data = {
-        "ci_status": CI_PASSED,
+        "ci_status": CIStatus.PASSED,
         "rebase_needed": False,
         "tasks_status": TaskTrackerStatus.N_A,
         "tasks_reason": "no pr_info folder",
@@ -1845,21 +1895,24 @@ def test_recommendations_tasks_na_non_blocking() -> None:
 def test_recommendations_tasks_na_blocking() -> None:
     """Blocking N/A recommends fixing the task tracker."""
     report_data = {
-        "ci_status": CI_PASSED,
+        "ci_status": CIStatus.PASSED,
         "rebase_needed": False,
         "tasks_status": TaskTrackerStatus.N_A,
-        "tasks_reason": "No TASK_TRACKER.md",
+        "tasks_reason": "Create task tracker \u2014 implementation plan exists but no TASK_TRACKER.md",
         "tasks_is_blocking": True,
     }
     recs = _generate_recommendations(report_data)
-    assert "Fix task tracker: No TASK_TRACKER.md" in recs
+    assert (
+        "Fix task tracker: Create task tracker \u2014 implementation plan exists but no TASK_TRACKER.md"
+        in recs
+    )
     assert "Ready to merge" not in recs
 
 
 def test_recommendations_tasks_error() -> None:
     """Error status recommends fixing the error with reason."""
     report_data = {
-        "ci_status": CI_PASSED,
+        "ci_status": CIStatus.PASSED,
         "rebase_needed": False,
         "tasks_status": TaskTrackerStatus.ERROR,
         "tasks_reason": "permission denied",
@@ -1873,10 +1926,10 @@ def test_recommendations_tasks_error() -> None:
 def test_recommendations_ready_to_merge_with_na_non_blocking() -> None:
     """N/A non-blocking + CI passed + no rebase = ready to merge."""
     report_data = {
-        "ci_status": CI_PASSED,
+        "ci_status": CIStatus.PASSED,
         "rebase_needed": False,
         "tasks_status": TaskTrackerStatus.N_A,
-        "tasks_reason": "No pr_info directory",
+        "tasks_reason": "No pr_info folder found",
         "tasks_is_blocking": False,
     }
     recs = _generate_recommendations(report_data)
@@ -1886,15 +1939,26 @@ def test_recommendations_ready_to_merge_with_na_non_blocking() -> None:
 @pytest.mark.parametrize(
     "status, reason, is_blocking, expected_icon",
     [
-        (TaskTrackerStatus.COMPLETE, "5 of 5 tasks complete", False, "\u2705"),
+        (TaskTrackerStatus.COMPLETE, "All 5 tasks complete", False, "\u2705"),
         (TaskTrackerStatus.INCOMPLETE, "3 of 5 tasks complete", True, "\u274c"),
-        (TaskTrackerStatus.N_A, "No pr_info directory", False, "\u2796"),
-        (TaskTrackerStatus.N_A, "No TASK_TRACKER.md", True, "\u26a0\ufe0f"),
-        (TaskTrackerStatus.N_A, "No tasks in tracker", False, "\u2796"),
-        (TaskTrackerStatus.N_A, "No Tasks section in tracker", False, "\u2796"),
+        (TaskTrackerStatus.N_A, "No pr_info folder found", False, "\u2796"),
+        (TaskTrackerStatus.N_A, "No implementation plan found", False, "\u2796"),
+        (
+            TaskTrackerStatus.N_A,
+            "Create task tracker \u2014 implementation plan exists but no TASK_TRACKER.md",
+            True,
+            "\u26a0\ufe0f",
+        ),
+        (
+            TaskTrackerStatus.N_A,
+            "TASK_TRACKER.md has no Tasks section",
+            True,
+            "\u26a0\ufe0f",
+        ),
+        (TaskTrackerStatus.N_A, "Task tracker is empty", True, "\u26a0\ufe0f"),
         (
             TaskTrackerStatus.ERROR,
-            "Error reading task tracker: X",
+            "Could not read task tracker: X",
             True,
             "\u26a0\ufe0f",
         ),
@@ -1903,9 +1967,10 @@ def test_recommendations_ready_to_merge_with_na_non_blocking() -> None:
         "complete",
         "incomplete",
         "na-no-pr-info",
+        "na-no-implementation-plan",
         "na-no-tracker-blocking",
-        "na-no-tasks",
-        "na-no-section",
+        "na-no-section-blocking",
+        "na-empty-tasks",
         "error",
     ],
 )

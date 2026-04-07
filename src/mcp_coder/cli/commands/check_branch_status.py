@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 from ...checks.branch_status import (
-    CI_PENDING,
     BranchStatusReport,
     CIStatus,
     collect_branch_status,
@@ -250,7 +249,7 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
             print(output.encode("ascii", errors="replace").decode("ascii"))
 
         # CI pending hint
-        if getattr(args, "ci_timeout", 0) == 0 and report.ci_status == CI_PENDING:
+        if getattr(args, "ci_timeout", 0) == 0 and report.ci_status == CIStatus.PENDING:
             logger.log(OUTPUT, "CI pending. Use --ci-timeout to wait for completion.")
 
         # Run auto-fixes if requested

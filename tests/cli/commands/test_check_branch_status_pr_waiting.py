@@ -12,7 +12,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from mcp_coder.checks.branch_status import CI_PENDING, BranchStatusReport
+from mcp_coder.checks.branch_status import BranchStatusReport, CIStatus
 from mcp_coder.workflow_utils.task_tracker import TaskTrackerStatus
 
 # Test-first approach: Try to import the module, skip dependent tests if not available
@@ -403,7 +403,7 @@ class TestCIPendingHint:
         mock_resolve.return_value = Path("/test/project")
         mock_branch.return_value = "feature/xyz"
         mock_collect.return_value = _make_report(
-            ci_status=CI_PENDING,
+            ci_status=CIStatus.PENDING,
             recommendations=["Wait for CI to complete"],
         )
 
@@ -430,7 +430,7 @@ class TestCIPendingHint:
         """CI pending + ci_timeout>0 → no hint."""
         mock_resolve.return_value = Path("/test/project")
         mock_branch.return_value = "feature/xyz"
-        mock_collect.return_value = _make_report(ci_status=CI_PENDING)
+        mock_collect.return_value = _make_report(ci_status=CIStatus.PENDING)
 
         # Need to mock CI waiting path too since ci_timeout > 0
         with (
