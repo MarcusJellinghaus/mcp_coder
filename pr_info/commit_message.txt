@@ -1,11 +1,10 @@
-feat(branch-status): add N/A blocker logic to formatters and recommendations
+fix: remove undocumented Raises section from get_task_counts docstring
 
-Part of #676 — formatters now show context-dependent icons (➖ for
-non-blocking N/A, ⚠️ for blocking N/A/ERROR) and inline reasons.
-Recommendations distinguish blocking vs non-blocking N/A states.
+Remove the Raises section from get_task_counts() that documented
+TaskTrackerFileNotFoundError and TaskTrackerSectionNotFoundError.
+These exceptions are only raised indirectly by called helper functions,
+not explicitly in the function body, triggering Ruff DOC502.
 
-Changes:
-- format_for_human() shows reason inline with status-dependent icons
-- format_for_llm() includes reason in Tasks= line
-- _generate_recommendations() uses tasks_is_blocking for merge readiness
-- Added 19 new tests covering all formatter and recommendation scenarios
+Other public functions in task_tracker.py that call the same helpers
+already follow this pattern of not documenting indirectly-raised
+exceptions.

@@ -393,10 +393,6 @@ def get_task_counts(folder_path: str = "pr_info") -> tuple[int, int]:
 
     Returns:
         Tuple of (total_tasks, completed_tasks)
-
-    Raises:
-        TaskTrackerFileNotFoundError: If TASK_TRACKER.md doesn't exist
-        TaskTrackerSectionNotFoundError: If Tasks section not found
     """
     content = _read_task_tracker(folder_path)
     section = _find_implementation_section(content)
