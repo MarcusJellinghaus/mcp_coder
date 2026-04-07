@@ -238,7 +238,7 @@ def run_planning_prompts(
                 False,
                 WorkflowFailure(
                     category=FailureCategory.GENERAL,
-                    stage="Prompt 1 (empty response)",
+                    stage="Prompt 1 (no session_id)",
                     message="Prompt 1 did not return session_id",
                     prompt_stage=1,
                 ),
@@ -471,7 +471,8 @@ def run_create_plan_workflow(
         mcp_config: Optional path to MCP configuration file
         execution_dir: Optional working directory for Claude subprocess
         update_issue_labels: If True, update GitHub issue labels on success
-        post_issue_comments: If True, post comments on the issue (unused currently)
+        post_issue_comments: If True, post failure comments on the issue when
+            the workflow fails
 
     Returns:
         int: Exit code (0 for success, 1 for error)
@@ -657,11 +658,12 @@ def run_create_plan_workflow(
     commit_message = f"Initial plan generated for issue #{issue_number}"
     commit_result = commit_all_changes(commit_message, project_dir)
     if not commit_result["success"]:
-        logger.error(f"Commit failed: {commit_result.get('error')}")
+        commit_error = commit_result.get("error") or "unknown error"
+        logger.error(f"Commit failed: {commit_error}")
         failure = WorkflowFailure(
             category=FailureCategory.GENERAL,
             stage="Commit & push",
-            message=f"Commit failed: {commit_result.get('error')}",
+            message=f"Commit failed: {commit_error}",
             elapsed_time=time.time() - start_time,
         )
         _handle_workflow_failure(
@@ -678,11 +680,12 @@ def run_create_plan_workflow(
     logger.info("Pushing changes to remote...")
     push_result = git_push(project_dir)
     if not push_result["success"]:
-        logger.error(f"Push failed: {push_result.get('error')}")
+        push_error = push_result.get("error") or "unknown error"
+        logger.error(f"Push failed: {push_error}")
         failure = WorkflowFailure(
             category=FailureCategory.GENERAL,
             stage="Commit & push",
-            message=f"Push failed: {push_result.get('error')}",
+            message=f"Push failed: {push_error}",
             elapsed_time=time.time() - start_time,
         )
         _handle_workflow_failure(
@@ -703,6 +706,7 @@ def run_create_plan_workflow(
             success = issue_manager.update_workflow_label(
                 from_label_id="planning",
                 to_label_id="plan_review",
+                validated_issue_number=issue_number,
             )
 
             if success:

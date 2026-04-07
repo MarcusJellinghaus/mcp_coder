@@ -18,7 +18,7 @@ class TestCheckPrerequisites:
     """Test check_prerequisites function."""
 
     def test_check_prerequisites_success(self, tmp_path: Path) -> None:
-        """Test check_prerequisites with clean repo and valid issue."""
+        """Test check_prerequisites with valid issue."""
         # Create mock issue data
         mock_issue_data = IssueData(
             number=123,
@@ -34,41 +34,21 @@ class TestCheckPrerequisites:
             locked=False,
         )
 
-        # Mock is_working_directory_clean to return True
+        # Mock IssueManager
         with patch(
-            "mcp_coder.workflows.create_plan.prerequisites.is_working_directory_clean",
-            return_value=True,
-        ):
-            # Mock IssueManager
-            with patch(
-                "mcp_coder.workflows.create_plan.prerequisites.IssueManager"
-            ) as mock_manager_class:
-                mock_manager = MagicMock()
-                mock_manager.get_issue.return_value = mock_issue_data
-                mock_manager_class.return_value = mock_manager
+            "mcp_coder.workflows.create_plan.prerequisites.IssueManager"
+        ) as mock_manager_class:
+            mock_manager = MagicMock()
+            mock_manager.get_issue.return_value = mock_issue_data
+            mock_manager_class.return_value = mock_manager
 
-                success, issue_data = check_prerequisites(tmp_path, 123)
+            success, issue_data = check_prerequisites(tmp_path, 123)
 
         assert success is True
         assert issue_data["number"] == 123
         assert issue_data["title"] == "Test Issue"
         assert issue_data["body"] == "Test issue body"
         assert issue_data["state"] == "open"
-
-    def test_check_prerequisites_dirty_repo(self, tmp_path: Path) -> None:
-        """Test check_prerequisites with dirty repository."""
-        # Mock is_working_directory_clean to return False
-        with patch(
-            "mcp_coder.workflows.create_plan.prerequisites.is_working_directory_clean",
-            return_value=False,
-        ):
-            success, issue_data = check_prerequisites(tmp_path, 123)
-
-        assert success is False
-        assert issue_data["number"] == 0
-        assert issue_data["title"] == ""
-        assert issue_data["body"] == ""
-        assert issue_data["state"] == ""
 
     def test_check_prerequisites_issue_not_found(self, tmp_path: Path) -> None:
         """Test check_prerequisites when issue is not found."""
@@ -87,20 +67,15 @@ class TestCheckPrerequisites:
             locked=False,
         )
 
-        # Mock is_working_directory_clean to return True
+        # Mock IssueManager to return empty issue data
         with patch(
-            "mcp_coder.workflows.create_plan.prerequisites.is_working_directory_clean",
-            return_value=True,
-        ):
-            # Mock IssueManager to return empty issue data
-            with patch(
-                "mcp_coder.workflows.create_plan.prerequisites.IssueManager"
-            ) as mock_manager_class:
-                mock_manager = MagicMock()
-                mock_manager.get_issue.return_value = empty_issue_data
-                mock_manager_class.return_value = mock_manager
+            "mcp_coder.workflows.create_plan.prerequisites.IssueManager"
+        ) as mock_manager_class:
+            mock_manager = MagicMock()
+            mock_manager.get_issue.return_value = empty_issue_data
+            mock_manager_class.return_value = mock_manager
 
-                success, issue_data = check_prerequisites(tmp_path, 999)
+            success, issue_data = check_prerequisites(tmp_path, 999)
 
         assert success is False
         assert issue_data["number"] == 0
@@ -108,20 +83,15 @@ class TestCheckPrerequisites:
 
     def test_check_prerequisites_github_api_error(self, tmp_path: Path) -> None:
         """Test check_prerequisites when GitHub API throws an error."""
-        # Mock is_working_directory_clean to return True
+        # Mock IssueManager to raise an exception
         with patch(
-            "mcp_coder.workflows.create_plan.prerequisites.is_working_directory_clean",
-            return_value=True,
-        ):
-            # Mock IssueManager to raise an exception
-            with patch(
-                "mcp_coder.workflows.create_plan.prerequisites.IssueManager"
-            ) as mock_manager_class:
-                mock_manager = MagicMock()
-                mock_manager.get_issue.side_effect = Exception("GitHub API error")
-                mock_manager_class.return_value = mock_manager
+            "mcp_coder.workflows.create_plan.prerequisites.IssueManager"
+        ) as mock_manager_class:
+            mock_manager = MagicMock()
+            mock_manager.get_issue.side_effect = Exception("GitHub API error")
+            mock_manager_class.return_value = mock_manager
 
-                success, issue_data = check_prerequisites(tmp_path, 123)
+            success, issue_data = check_prerequisites(tmp_path, 123)
 
         assert success is False
         assert issue_data["number"] == 0
@@ -144,86 +114,49 @@ class TestCheckPrerequisites:
             locked=False,
         )
 
-        # Mock is_working_directory_clean to return True
+        # Mock IssueManager
         with patch(
-            "mcp_coder.workflows.create_plan.prerequisites.is_working_directory_clean",
-            return_value=True,
-        ):
-            # Mock IssueManager
+            "mcp_coder.workflows.create_plan.prerequisites.IssueManager"
+        ) as mock_manager_class:
+            mock_manager = MagicMock()
+            mock_manager.get_issue.return_value = mock_issue_data
+            mock_manager_class.return_value = mock_manager
+
+            # Capture logger output
             with patch(
-                "mcp_coder.workflows.create_plan.prerequisites.IssueManager"
-            ) as mock_manager_class:
-                mock_manager = MagicMock()
-                mock_manager.get_issue.return_value = mock_issue_data
-                mock_manager_class.return_value = mock_manager
+                "mcp_coder.workflows.create_plan.prerequisites.logger"
+            ) as mock_logger:
+                success, issue_data = check_prerequisites(tmp_path, 456)
 
-                # Capture logger output
-                with patch(
-                    "mcp_coder.workflows.create_plan.prerequisites.logger"
-                ) as mock_logger:
-                    success, issue_data = check_prerequisites(tmp_path, 456)
-
-                    # Verify logging calls (some promoted to OUTPUT via logger.log)
-                    info_calls = [
-                        call[0][0] for call in mock_logger.info.call_args_list
-                    ]
-                    output_calls = [
-                        str(call[0][1]) for call in mock_logger.log.call_args_list
-                    ]
-                    all_calls = info_calls + output_calls
-                    assert any("Checking prerequisites" in call for call in all_calls)
-                    assert any(
-                        "✓ Git working directory is clean" in call for call in all_calls
-                    )
-                    assert any(
-                        "✓ Issue #456 exists: 'Feature Request: Add logging'" in call
-                        for call in all_calls
-                    )
-                    assert any("All prerequisites passed" in call for call in all_calls)
+                # Verify logging calls (some promoted to OUTPUT via logger.log)
+                info_calls = [
+                    call[0][0] for call in mock_logger.info.call_args_list
+                ]
+                output_calls = [
+                    str(call[0][1]) for call in mock_logger.log.call_args_list
+                ]
+                all_calls = info_calls + output_calls
+                assert any("Checking prerequisites" in call for call in all_calls)
+                assert any(
+                    "✓ Issue #456 exists: 'Feature Request: Add logging'" in call
+                    for call in all_calls
+                )
+                assert any("All prerequisites passed" in call for call in all_calls)
 
         assert success is True
         assert issue_data["number"] == 456
         assert issue_data["title"] == "Feature Request: Add logging"
 
-    def test_check_prerequisites_git_value_error(self, tmp_path: Path) -> None:
-        """Test check_prerequisites when is_working_directory_clean raises ValueError."""
-        # Mock is_working_directory_clean to raise ValueError
-        with patch(
-            "mcp_coder.workflows.create_plan.prerequisites.is_working_directory_clean",
-            side_effect=ValueError("Not a git repository"),
-        ):
-            success, issue_data = check_prerequisites(tmp_path, 123)
-
-        assert success is False
-        assert issue_data["number"] == 0
-
-    def test_check_prerequisites_git_unexpected_error(self, tmp_path: Path) -> None:
-        """Test check_prerequisites when is_working_directory_clean raises unexpected error."""
-        # Mock is_working_directory_clean to raise unexpected error
-        with patch(
-            "mcp_coder.workflows.create_plan.prerequisites.is_working_directory_clean",
-            side_effect=RuntimeError("Unexpected error"),
-        ):
-            success, issue_data = check_prerequisites(tmp_path, 123)
-
-        assert success is False
-        assert issue_data["number"] == 0
-
     def test_check_prerequisites_issue_manager_initialization_error(
         self, tmp_path: Path
     ) -> None:
         """Test check_prerequisites when IssueManager initialization fails."""
-        # Mock is_working_directory_clean to return True
+        # Mock IssueManager initialization to raise an exception
         with patch(
-            "mcp_coder.workflows.create_plan.prerequisites.is_working_directory_clean",
-            return_value=True,
+            "mcp_coder.workflows.create_plan.prerequisites.IssueManager",
+            side_effect=ValueError("Invalid configuration"),
         ):
-            # Mock IssueManager initialization to raise an exception
-            with patch(
-                "mcp_coder.workflows.create_plan.prerequisites.IssueManager",
-                side_effect=ValueError("Invalid configuration"),
-            ):
-                success, issue_data = check_prerequisites(tmp_path, 123)
+            success, issue_data = check_prerequisites(tmp_path, 123)
 
         assert success is False
         assert issue_data["number"] == 0
@@ -247,20 +180,15 @@ class TestCheckPrerequisites:
             locked=False,
         )
 
-        # Mock is_working_directory_clean to return True
+        # Mock IssueManager
         with patch(
-            "mcp_coder.workflows.create_plan.prerequisites.is_working_directory_clean",
-            return_value=True,
-        ):
-            # Mock IssueManager
-            with patch(
-                "mcp_coder.workflows.create_plan.prerequisites.IssueManager"
-            ) as mock_manager_class:
-                mock_manager = MagicMock()
-                mock_manager.get_issue.return_value = mock_issue_data
-                mock_manager_class.return_value = mock_manager
+            "mcp_coder.workflows.create_plan.prerequisites.IssueManager"
+        ) as mock_manager_class:
+            mock_manager = MagicMock()
+            mock_manager.get_issue.return_value = mock_issue_data
+            mock_manager_class.return_value = mock_manager
 
-                success, issue_data = check_prerequisites(tmp_path, 789)
+            success, issue_data = check_prerequisites(tmp_path, 789)
 
         # Verify all fields are correctly returned
         assert success is True
@@ -280,10 +208,10 @@ class TestCheckPrerequisites:
         self, tmp_path: Path
     ) -> None:
         """Test check_prerequisites returns correctly structured empty IssueData on failure."""
-        # Mock is_working_directory_clean to return False
+        # Mock IssueManager to raise an exception (simulating a failure)
         with patch(
-            "mcp_coder.workflows.create_plan.prerequisites.is_working_directory_clean",
-            return_value=False,
+            "mcp_coder.workflows.create_plan.prerequisites.IssueManager",
+            side_effect=Exception("API failure"),
         ):
             success, issue_data = check_prerequisites(tmp_path, 123)
 

@@ -9,9 +9,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS
 from mcp_coder.utils.git_operations.branches import checkout_branch
-from mcp_coder.utils.git_operations.repository_status import is_working_directory_clean
 from mcp_coder.utils.github_operations.issues import (
     IssueBranchManager,
     IssueData,
@@ -26,8 +24,11 @@ logger = logging.getLogger(__name__)
 def check_prerequisites(project_dir: Path, issue_number: int) -> tuple[bool, IssueData]:
     """Validate prerequisites for plan creation workflow.
 
-    Validates that the git working directory is clean and that the specified
-    GitHub issue exists and is accessible.
+    Validates that the specified GitHub issue exists and is accessible.
+
+    Note: Git working directory cleanliness is checked by the orchestrator
+    in ``run_create_plan_workflow`` before this function runs, so this
+    function does not re-check it.
 
     Args:
         project_dir: Path to the project directory containing git repository
@@ -54,26 +55,6 @@ def check_prerequisites(project_dir: Path, issue_number: int) -> tuple[bool, Iss
         url="",
         locked=False,
     )
-
-    # Check if git working directory is clean
-    try:
-        if not is_working_directory_clean(
-            project_dir, ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
-        ):
-            logger.error(
-                "✗ Git working directory is not clean. "
-                "Please commit or stash your changes before creating a plan."
-            )
-            return (False, empty_issue_data)
-        logger.info("✓ Git working directory is clean")
-    except ValueError as e:
-        logger.error(f"✗ Error checking git status: {e}")
-        return (False, empty_issue_data)
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-        logger.error(f"✗ Unexpected error checking git status: {e}")
-        return (False, empty_issue_data)
 
     # Fetch and validate GitHub issue
     try:

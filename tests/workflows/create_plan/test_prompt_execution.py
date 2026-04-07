@@ -302,7 +302,7 @@ class TestRunPlanningPrompts:
 
         assert result[0] is False
         assert result[1] is not None
-        assert result[1].stage == "Prompt 1 (empty response)"
+        assert result[1].stage == "Prompt 1 (no session_id)"
         assert "session_id" in result[1].message
 
     def test_run_planning_prompts_invalid_llm_method(self, tmp_path: Path) -> None:
