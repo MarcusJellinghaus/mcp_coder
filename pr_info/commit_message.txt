@@ -1,5 +1,0 @@
-fix: add Returns section to _format_failure_comment docstring
-
-Add missing Returns section to the _format_failure_comment docstring
-in create_plan/core.py to satisfy ruff DOC201 rule, which requires
-functions with return type annotations to document their return value.
