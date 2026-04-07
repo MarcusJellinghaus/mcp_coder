@@ -40,7 +40,19 @@ The existing `import sys` further down becomes a harmless duplicate (Python dedu
 
 | Test | What it verifies |
 |------|-----------------|
-| `test_faulthandler_enabled_on_import` | After importing `mcp_coder.cli.main`, assert `faulthandler.is_enabled()` is `True` |
+| `test_faulthandler_enabled_on_import` | Spawn a clean subprocess that imports `mcp_coder.cli.main` and asserts `faulthandler.is_enabled()` is `True`. A subprocess is required because `mcp_coder.cli.main` is likely already imported by other tests in the suite, making an in-process assertion unreliable. |
+
+### Test implementation
+
+```python
+result = subprocess.run(
+    [sys.executable, "-c", "import mcp_coder.cli.main; import faulthandler; assert faulthandler.is_enabled(); print('OK')"],
+    capture_output=True, text=True, check=True,
+)
+assert "OK" in result.stdout
+```
+
+This guarantees a clean interpreter state for the assertion.
 
 ## DATA
 

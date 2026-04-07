@@ -50,6 +50,8 @@ For each of the three commands, add one test that:
 - Calls the execute function with minimal valid args
 - Asserts `enable_crash_logging` was called with `(project_dir, "<command_name>")`
 
+**Important**: When mocking `enable_crash_logging`, patch the *importing module's* binding (e.g., `mcp_coder.cli.commands.implement.enable_crash_logging`), not `mcp_coder.utils.crash_logging.enable_crash_logging`, because the command modules use `from ... import enable_crash_logging`.
+
 | Test file | Test name |
 |-----------|-----------|
 | `test_implement.py` | `test_enable_crash_logging_called` |

@@ -20,7 +20,7 @@ Add a lightweight crash diagnostics utility so that long-running CLI commands (`
 - **Module-level `_state` dict** instead of multiple globals — avoids `global` statements and simplifies `_reset_for_testing()`.
 - **Never raises** — all errors swallowed and logged at WARNING.
 - **Idempotent** — second call returns existing path.
-- **Timestamp format** reuses the pattern from `session_storage.py:62` for consistency across project artifacts.
+- **Timestamp format** reuses the pattern from `src/mcp_coder/llm/storage/session_storage.py` for consistency across project artifacts.
 
 ## Files Created
 

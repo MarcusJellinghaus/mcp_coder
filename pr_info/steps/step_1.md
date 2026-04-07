@@ -39,12 +39,14 @@ _state: dict[str, Any] = {"path": None, "handle": None}
 ## HOW
 
 - Import `faulthandler`, `logging`, `os` from stdlib
-- Timestamp format: `datetime.now().isoformat().replace(":", "-").split(".")[0]` (matches `session_storage.py:62`)
+- Timestamp format: `datetime.now().isoformat().replace(":", "-").split(".")[0]` (matches `src/mcp_coder/llm/storage/session_storage.py`)
 - Log directory: `{project_dir}/logs/faulthandler/`
+- Directory creation: use `os.makedirs(..., exist_ok=True)` (matches `session_storage.py:55`)
 - Filename: `crash_{command_name}_{timestamp}_{pid}.log`
 - File opened with `open(..., "w", buffering=1)` (line-buffered)
 - Handle stored in `_state["handle"]`, path in `_state["path"]`
 - `faulthandler.enable(file=_state["handle"], all_threads=True)`
+- Use the `_state` dict pattern; do NOT use the `global` keyword (avoids needing pylint disable)
 
 ## ALGORITHM — `enable_crash_logging`
 
@@ -84,6 +86,6 @@ Use `tmp_path` fixture. Call `_reset_for_testing()` in a fixture's teardown to i
 | `test_enable_calls_faulthandler` | Mock `faulthandler.enable`, verify called with `file=<handle>, all_threads=True` |
 | `test_enable_returns_path` | Return value is a `Path` instance |
 | `test_enable_logs_debug` | DEBUG log message contains the crash log path |
-| `test_enable_idempotent` | Second call returns same path, `faulthandler.enable` called only once |
-| `test_enable_swallows_error` | Mock `os.makedirs` to raise `OSError`, verify returns `None` and logs WARNING |
+| `test_enable_idempotent` | Second call returns same path, `faulthandler.enable` called only once, and verify `_state['handle']` is the same object (no second file open) |
+| `test_enable_swallows_error` | Mock `os.makedirs` (matching `session_storage.py:55`) to raise `OSError`, verify returns `None` and logs WARNING |
 | `test_reset_clears_state` | After `_reset_for_testing()`, a new call creates a new file |

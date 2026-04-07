@@ -35,6 +35,7 @@ One new test: `test_crash_log_captures_real_segfault`
 
 ```
 script = textwrap.dedent("""
+    import sys
     from pathlib import Path
     import faulthandler
     from mcp_coder.utils.crash_logging import enable_crash_logging
@@ -59,3 +60,4 @@ assert "Fatal Python error" in content or "Current thread" in content
 
 - No new pytest marker needed — this is a standard test that happens to use subprocess
 - The child process will crash (expected), so `check=False` on `subprocess.run`
+- If the `_sigsegv()` subprocess test proves flaky on Windows during implementation, fall back to asserting the crash log file exists and is non-empty (rather than asserting traceback content). Strong assertion is preferred since faulthandler is designed for cross-platform crash capture.
