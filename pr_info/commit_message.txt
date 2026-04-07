@@ -1,7 +1,0 @@
-fix: resolve mypy strict mode errors in branch_status and tests
-
-- Add explicit re-export of _build_ci_error_details using `as` pattern
-  in branch_status.py to satisfy mypy --strict attr-defined check
-- Add type annotation `dict[str, Any]` to defaults variable in
-  test_branch_status.py _make_report helper
-- Remove now-unnecessary `type: ignore[arg-type]` comment
