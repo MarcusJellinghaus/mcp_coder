@@ -131,6 +131,12 @@ def add_gh_tool_parsers(subparsers: Any) -> None:
         action="store_true",
         help="Bypass clean working directory check",
     )
+    set_status_parser.add_argument(
+        "--from-status",
+        type=str,
+        default=None,
+        help="Only update if current status matches this label (precondition guard)",
+    )
 
 
 def add_git_tool_parsers(subparsers: Any) -> None:

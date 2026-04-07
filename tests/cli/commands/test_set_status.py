@@ -299,6 +299,7 @@ class TestExecuteSetStatus:
             issue=None,
             project_dir=str(project_dir),
             force=False,
+            from_status=None,
         )
 
         result = execute_set_status(args)
@@ -337,6 +338,7 @@ class TestExecuteSetStatus:
             issue=None,
             project_dir=str(project_dir),
             force=False,
+            from_status=None,
         )
 
         result = execute_set_status(args)
@@ -368,6 +370,7 @@ class TestExecuteSetStatus:
             issue=None,
             project_dir=None,
             force=False,
+            from_status=None,
         )
 
         result = execute_set_status(args)
@@ -416,6 +419,7 @@ class TestExecuteSetStatus:
             issue=None,
             project_dir=str(project_dir),
             force=False,
+            from_status=None,
         )
 
         with caplog.at_level(logging.DEBUG):
@@ -459,6 +463,7 @@ class TestExecuteSetStatus:
             issue=123,
             project_dir=str(project_dir),
             force=False,
+            from_status=None,
         )
 
         with caplog.at_level(logging.DEBUG):
@@ -498,6 +503,7 @@ class TestExecuteSetStatus:
             issue=123,
             project_dir=str(project_dir),
             force=False,
+            from_status=None,
         )
 
         with caplog.at_level(logging.DEBUG):
@@ -540,6 +546,7 @@ class TestExecuteSetStatus:
             issue=None,  # No explicit issue
             project_dir=str(project_dir),
             force=False,
+            from_status=None,
         )
 
         with caplog.at_level(logging.DEBUG):
@@ -576,6 +583,7 @@ class TestExecuteSetStatus:
             issue=123,
             project_dir=str(project_dir),
             force=False,
+            from_status=None,
         )
 
         with caplog.at_level(logging.DEBUG):
@@ -616,6 +624,7 @@ class TestExecuteSetStatus:
             issue=123,
             project_dir=str(project_dir),
             force=True,  # Force flag bypasses dirty check
+            from_status=None,
         )
 
         with caplog.at_level(logging.DEBUG):
@@ -660,6 +669,7 @@ class TestExecuteSetStatus:
             issue=123,
             project_dir=str(project_dir),
             force=False,  # No force flag
+            from_status=None,
         )
 
         with caplog.at_level(logging.DEBUG):
@@ -719,6 +729,7 @@ class TestExecuteSetStatus:
             issue=123,
             project_dir=str(project_dir),
             force=False,
+            from_status=None,
         )
 
         with caplog.at_level(logging.DEBUG):
