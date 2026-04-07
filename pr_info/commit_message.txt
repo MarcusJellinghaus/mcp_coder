@@ -1,5 +1,0 @@
-fix: add missing Returns section to _list_issues_no_error_handling docstring
-
-Add Google-style Returns section to the _list_issues_no_error_handling
-method docstring to satisfy ruff rule DOC201, which requires documented
-return types when a return type annotation is present.
