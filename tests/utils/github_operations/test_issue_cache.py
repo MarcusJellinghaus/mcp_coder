@@ -7,7 +7,7 @@ for proper cache storage, duplicate protection, and incremental fetching.
 import json
 import logging
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List
 from unittest.mock import Mock, patch
@@ -30,6 +30,7 @@ from mcp_coder.utils.github_operations.issues.cache import (
     _log_cache_metrics,
     _log_stale_cache_entries,
     _save_cache_file,
+    get_all_cached_issues,
 )
 
 
@@ -113,7 +114,11 @@ class TestCacheFileOperations:
             cache_path = Path(tmpdir) / "nonexistent.json"
             result = _load_cache_file(cache_path)
 
-            assert result == {"last_checked": None, "issues": {}}
+            assert result == {
+                "last_checked": None,
+                "last_full_refresh": None,
+                "issues": {},
+            }
 
     def test_load_cache_file_valid(self, sample_cache_data: CacheData) -> None:
         """Test loading valid cache file."""
@@ -131,7 +136,11 @@ class TestCacheFileOperations:
             cache_path.write_text("invalid json content")
 
             result = _load_cache_file(cache_path)
-            assert result == {"last_checked": None, "issues": {}}
+            assert result == {
+                "last_checked": None,
+                "last_full_refresh": None,
+                "issues": {},
+            }
 
     def test_load_cache_file_invalid_structure(self) -> None:
         """Test loading file with invalid structure returns empty structure."""
@@ -140,7 +149,11 @@ class TestCacheFileOperations:
             cache_path.write_text('{"wrong_key": "value"}')
 
             result = _load_cache_file(cache_path)
-            assert result == {"last_checked": None, "issues": {}}
+            assert result == {
+                "last_checked": None,
+                "last_full_refresh": None,
+                "issues": {},
+            }
 
     def test_save_cache_file_success(self, sample_cache_data: CacheData) -> None:
         """Test successful cache file save with atomic write."""
@@ -489,7 +502,11 @@ class TestGetCachedEligibleIssues:
         ):
 
             mock_path.return_value = Path("/fake/cache.json")
-            mock_load.return_value = {"last_checked": None, "issues": {}}
+            mock_load.return_value = {
+                "last_checked": None,
+                "last_full_refresh": None,
+                "issues": {},
+            }
             mock_save.return_value = True
             mock_filter.return_value = [sample_issue]
 
@@ -528,6 +545,7 @@ class TestGetCachedEligibleIssues:
             mock_path.return_value = Path("/fake/cache.json")
             mock_load.return_value = {
                 "last_checked": cache_time.isoformat(),
+                "last_full_refresh": cache_time.isoformat(),
                 "issues": {"123": sample_issue},
             }
             mock_save.return_value = True
@@ -1656,3 +1674,413 @@ class TestAdditionalIssuesParameter:
             # Verify only open issues returned
             assert len(result) == 1
             assert result[0]["number"] == 100
+
+
+class TestApiFailureHandling:
+    """Tests for API failure handling with snapshot restore in get_all_cached_issues()."""
+
+    def _make_issue(self, number: int, title: str = "Test issue") -> IssueData:
+        """Create a minimal IssueData for testing."""
+        return IssueData(
+            number=number,
+            state="open",
+            labels=["bug"],
+            updated_at="2025-12-31T09:00:00Z",
+            url=f"https://github.com/test/repo/issues/{number}",
+            title=title,
+            body="body",
+            assignees=[],
+            user="testuser",
+            created_at="2025-12-31T08:00:00Z",
+            locked=False,
+        )
+
+    @patch(
+        "mcp_coder.utils.github_operations.issues.cache._save_cache_file",
+        return_value=True,
+    )
+    @patch("mcp_coder.utils.github_operations.issues.cache.now_utc")
+    @patch("mcp_coder.utils.github_operations.issues.cache._load_cache_file")
+    @patch("mcp_coder.utils.github_operations.issues.cache._get_cache_file_path")
+    def test_api_failure_does_not_advance_last_checked(
+        self,
+        mock_get_path: Mock,
+        mock_load: Mock,
+        mock_now: Mock,
+        mock_save: Mock,
+        mock_cache_issue_manager: Mock,
+        tmp_path: Path,
+    ) -> None:
+        """API failure should not advance last_checked in cache."""
+        original_last_checked = "2025-12-31T10:00:00Z"
+        cache_data: CacheData = {
+            "last_checked": original_last_checked,
+            "issues": {
+                "1": self._make_issue(1),
+            },
+        }
+        mock_get_path.return_value = tmp_path / "cache.json"
+        mock_load.return_value = cache_data
+        mock_now.return_value = datetime(2025, 12, 31, 12, 0, 0, tzinfo=timezone.utc)
+
+        # Simulate API failure
+        from github import GithubException
+
+        mock_cache_issue_manager._list_issues_no_error_handling.side_effect = (
+            GithubException(500, "Server Error", headers={})
+        )
+
+        result = get_all_cached_issues(
+            "test/repo", mock_cache_issue_manager, force_refresh=True
+        )
+
+        # last_checked should NOT have been advanced (no save call with new timestamp)
+        # The function returns stale data without saving
+        mock_save.assert_not_called()
+        # Should still return the stale issue
+        assert len(result) == 1
+        assert result[0]["number"] == 1
+
+    @patch(
+        "mcp_coder.utils.github_operations.issues.cache._save_cache_file",
+        return_value=True,
+    )
+    @patch("mcp_coder.utils.github_operations.issues.cache.now_utc")
+    @patch("mcp_coder.utils.github_operations.issues.cache._load_cache_file")
+    @patch("mcp_coder.utils.github_operations.issues.cache._get_cache_file_path")
+    def test_api_failure_returns_stale_cached_issues(
+        self,
+        mock_get_path: Mock,
+        mock_load: Mock,
+        mock_now: Mock,
+        mock_save: Mock,
+        mock_cache_issue_manager: Mock,
+        tmp_path: Path,
+    ) -> None:
+        """API failure should return all stale cached issues."""
+        cache_data: CacheData = {
+            "last_checked": "2025-12-31T10:00:00Z",
+            "issues": {
+                "1": self._make_issue(1, "Issue one"),
+                "2": self._make_issue(2, "Issue two"),
+                "3": self._make_issue(3, "Issue three"),
+            },
+        }
+        mock_get_path.return_value = tmp_path / "cache.json"
+        mock_load.return_value = cache_data
+        mock_now.return_value = datetime(2025, 12, 31, 12, 0, 0, tzinfo=timezone.utc)
+
+        mock_cache_issue_manager._list_issues_no_error_handling.side_effect = (
+            ConnectionError("Network failure")
+        )
+
+        result = get_all_cached_issues(
+            "test/repo", mock_cache_issue_manager, force_refresh=True
+        )
+
+        assert len(result) == 3
+        returned_numbers = {issue["number"] for issue in result}
+        assert returned_numbers == {1, 2, 3}
+
+    @patch(
+        "mcp_coder.utils.github_operations.issues.cache._save_cache_file",
+        return_value=True,
+    )
+    @patch("mcp_coder.utils.github_operations.issues.cache.now_utc")
+    @patch("mcp_coder.utils.github_operations.issues.cache._load_cache_file")
+    @patch("mcp_coder.utils.github_operations.issues.cache._get_cache_file_path")
+    def test_api_failure_restores_snapshot_on_full_refresh(
+        self,
+        mock_get_path: Mock,
+        mock_load: Mock,
+        mock_now: Mock,
+        mock_save: Mock,
+        mock_cache_issue_manager: Mock,
+        tmp_path: Path,
+    ) -> None:
+        """Full refresh clears issues before API call; snapshot must restore them on failure."""
+        cache_data: CacheData = {
+            "last_checked": None,  # Triggers full refresh
+            "issues": {
+                "10": self._make_issue(10, "Cached issue A"),
+                "20": self._make_issue(20, "Cached issue B"),
+            },
+        }
+        mock_get_path.return_value = tmp_path / "cache.json"
+        mock_load.return_value = cache_data
+        mock_now.return_value = datetime(2025, 12, 31, 12, 0, 0, tzinfo=timezone.utc)
+
+        # _fetch_and_merge_issues will clear cache_data["issues"] = {} on full refresh
+        # THEN call the API which raises — snapshot must restore the original issues
+        mock_cache_issue_manager._list_issues_no_error_handling.side_effect = (
+            RuntimeError("API unavailable")
+        )
+
+        result = get_all_cached_issues("test/repo", mock_cache_issue_manager)
+
+        # Despite full refresh clearing cache, snapshot should restore original issues
+        assert len(result) == 2
+        returned_numbers = {issue["number"] for issue in result}
+        assert returned_numbers == {10, 20}
+
+    @patch(
+        "mcp_coder.utils.github_operations.issues.cache._save_cache_file",
+        return_value=True,
+    )
+    @patch("mcp_coder.utils.github_operations.issues.cache.now_utc")
+    @patch("mcp_coder.utils.github_operations.issues.cache._load_cache_file")
+    @patch("mcp_coder.utils.github_operations.issues.cache._get_cache_file_path")
+    def test_repo_lookup_failure_does_not_advance_last_checked(
+        self,
+        mock_get_path: Mock,
+        mock_load: Mock,
+        mock_now: Mock,
+        mock_save: Mock,
+        mock_cache_issue_manager: Mock,
+        tmp_path: Path,
+    ) -> None:
+        """Repo lookup failure (RuntimeError from _list_issues_no_error_handling
+        when _get_repository() returns None) must be treated the same as any
+        other API failure: stale cache returned, last_checked not advanced."""
+        original_last_checked = "2025-12-31T10:00:00Z"
+        cache_data: CacheData = {
+            "last_checked": original_last_checked,
+            "issues": {
+                "1": self._make_issue(1),
+            },
+        }
+        mock_get_path.return_value = tmp_path / "cache.json"
+        mock_load.return_value = cache_data
+        mock_now.return_value = datetime(2025, 12, 31, 12, 0, 0, tzinfo=timezone.utc)
+
+        # Simulate the exact failure raised by _list_issues_no_error_handling
+        # when _get_repository() returns None.
+        mock_cache_issue_manager._list_issues_no_error_handling.side_effect = (
+            RuntimeError("Failed to get repository")
+        )
+
+        result = get_all_cached_issues(
+            "test/repo", mock_cache_issue_manager, force_refresh=True
+        )
+
+        # last_checked must NOT have been advanced (no save)
+        mock_save.assert_not_called()
+        # Stale cache issue should still be returned
+        assert len(result) == 1
+        assert result[0]["number"] == 1
+
+    @patch(
+        "mcp_coder.utils.github_operations.issues.cache._save_cache_file",
+        return_value=True,
+    )
+    @patch("mcp_coder.utils.github_operations.issues.cache.now_utc")
+    @patch("mcp_coder.utils.github_operations.issues.cache._load_cache_file")
+    @patch("mcp_coder.utils.github_operations.issues.cache._get_cache_file_path")
+    def test_successful_fetch_still_advances_last_checked(
+        self,
+        mock_get_path: Mock,
+        mock_load: Mock,
+        mock_now: Mock,
+        mock_save: Mock,
+        mock_cache_issue_manager: Mock,
+        tmp_path: Path,
+    ) -> None:
+        """Successful fetch should advance last_checked and save cache."""
+        original_last_checked = "2025-12-31T10:00:00Z"
+        cache_data: CacheData = {
+            "last_checked": original_last_checked,
+            "issues": {"1": self._make_issue(1)},
+        }
+        mock_get_path.return_value = tmp_path / "cache.json"
+        mock_load.return_value = cache_data
+        now_time = datetime(2025, 12, 31, 12, 0, 0, tzinfo=timezone.utc)
+        mock_now.return_value = now_time
+
+        new_issue = self._make_issue(2, "New issue")
+        mock_cache_issue_manager._list_issues_no_error_handling.return_value = [
+            new_issue
+        ]
+
+        result = get_all_cached_issues(
+            "test/repo", mock_cache_issue_manager, force_refresh=True
+        )
+
+        # Cache should be saved with updated last_checked
+        mock_save.assert_called_once()
+        saved_data = mock_save.call_args[0][1]
+        assert saved_data["last_checked"] != original_last_checked
+        # New issue should be in results
+        returned_numbers = {issue["number"] for issue in result}
+        assert 2 in returned_numbers
+
+
+class TestLastFullRefresh:
+    """Tests for the last_full_refresh field in CacheData."""
+
+    def test_last_full_refresh_in_cache_data(self, tmp_path: Path) -> None:
+        """Test that last_full_refresh field persists through save/load cycle."""
+        cache_file = tmp_path / "test.json"
+        cache_data: CacheData = {
+            "last_checked": "2025-12-31T10:30:00Z",
+            "last_full_refresh": "2025-12-31T09:00:00Z",
+            "issues": {},
+        }
+        _save_cache_file(cache_file, cache_data)
+
+        loaded = _load_cache_file(cache_file)
+        assert loaded["last_full_refresh"] == "2025-12-31T09:00:00Z"
+        assert loaded["last_checked"] == "2025-12-31T10:30:00Z"
+
+    @patch(
+        "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path",
+    )
+    @patch("mcp_coder.utils.github_operations.issues.cache.now_utc")
+    def test_full_refresh_updates_last_full_refresh(
+        self,
+        mock_now: Mock,
+        mock_cache_path: Mock,
+        tmp_path: Path,
+        mock_cache_issue_manager: Mock,
+    ) -> None:
+        """Test that a full refresh updates last_full_refresh in saved cache."""
+        now = datetime(2025, 12, 31, 12, 0, 0, tzinfo=timezone.utc)
+        mock_now.return_value = now
+
+        cache_file = tmp_path / "test.json"
+        mock_cache_path.return_value = cache_file
+
+        # Start with empty cache (no last_checked) → triggers full refresh
+        cache_data: CacheData = {
+            "last_checked": None,
+            "last_full_refresh": None,
+            "issues": {},
+        }
+        _save_cache_file(cache_file, cache_data)
+
+        mock_cache_issue_manager._list_issues_no_error_handling.return_value = []
+
+        get_all_cached_issues("test/repo", mock_cache_issue_manager, force_refresh=True)
+
+        # Verify saved cache has last_full_refresh set
+        with cache_file.open("r") as f:
+            saved = json.load(f)
+        assert saved["last_full_refresh"] == "2025-12-31T12:00:00+00:00"
+
+    @patch(
+        "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path",
+    )
+    @patch("mcp_coder.utils.github_operations.issues.cache.now_utc")
+    def test_incremental_refresh_does_not_update_last_full_refresh(
+        self,
+        mock_now: Mock,
+        mock_cache_path: Mock,
+        tmp_path: Path,
+        mock_cache_issue_manager: Mock,
+    ) -> None:
+        """Test that an incremental refresh does not update last_full_refresh."""
+        now = datetime(2025, 12, 31, 12, 0, 0, tzinfo=timezone.utc)
+        mock_now.return_value = now
+
+        cache_file = tmp_path / "test.json"
+        mock_cache_path.return_value = cache_file
+
+        # Set up cache with recent last_checked and recent last_full_refresh
+        # so incremental refresh triggers (not full)
+        recent_time = "2025-12-31T11:58:00+00:00"  # 2 min ago
+        original_full_refresh = "2025-12-31T10:00:00+00:00"  # 2 hours ago, < 24h
+        cache_data: CacheData = {
+            "last_checked": recent_time,
+            "last_full_refresh": original_full_refresh,
+            "issues": {
+                "1": {
+                    "number": 1,
+                    "state": "open",
+                    "labels": [],
+                    "updated_at": "2025-12-31T09:00:00Z",
+                    "url": "https://github.com/test/repo/issues/1",
+                    "title": "Test",
+                    "body": "",
+                    "assignees": [],
+                    "user": "testuser",
+                    "created_at": "2025-12-31T08:00:00Z",
+                    "locked": False,
+                }
+            },
+        }
+        _save_cache_file(cache_file, cache_data)
+
+        mock_cache_issue_manager._list_issues_no_error_handling.return_value = []
+
+        get_all_cached_issues("test/repo", mock_cache_issue_manager)
+
+        # Verify last_full_refresh is unchanged
+        with cache_file.open("r") as f:
+            saved = json.load(f)
+        assert saved["last_full_refresh"] == original_full_refresh
+        # But last_checked should be updated
+        assert saved["last_checked"] == "2025-12-31T12:00:00+00:00"
+
+    @patch(
+        "mcp_coder.utils.github_operations.issues.cache._get_cache_file_path",
+    )
+    @patch("mcp_coder.utils.github_operations.issues.cache.now_utc")
+    def test_full_refresh_triggers_when_last_full_refresh_is_old(
+        self,
+        mock_now: Mock,
+        mock_cache_path: Mock,
+        tmp_path: Path,
+        mock_cache_issue_manager: Mock,
+    ) -> None:
+        """Test that full refresh triggers when last_full_refresh is older than threshold."""
+        now = datetime(2025, 12, 31, 12, 0, 0, tzinfo=timezone.utc)
+        mock_now.return_value = now
+
+        cache_file = tmp_path / "test.json"
+        mock_cache_path.return_value = cache_file
+
+        # Recent last_checked (1 min ago) but old last_full_refresh (25 hours ago)
+        cache_data: CacheData = {
+            "last_checked": "2025-12-31T11:59:00+00:00",
+            "last_full_refresh": "2025-12-30T11:00:00+00:00",  # 25 hours ago
+            "issues": {
+                "1": {
+                    "number": 1,
+                    "state": "open",
+                    "labels": [],
+                    "updated_at": "2025-12-31T09:00:00Z",
+                    "url": "https://github.com/test/repo/issues/1",
+                    "title": "Test",
+                    "body": "",
+                    "assignees": [],
+                    "user": "testuser",
+                    "created_at": "2025-12-31T08:00:00Z",
+                    "locked": False,
+                }
+            },
+        }
+        _save_cache_file(cache_file, cache_data)
+
+        mock_cache_issue_manager._list_issues_no_error_handling.return_value = []
+
+        get_all_cached_issues("test/repo", mock_cache_issue_manager)
+
+        # Full refresh should have been called with state="open" (not state="all" with since=)
+        mock_cache_issue_manager._list_issues_no_error_handling.assert_called_once_with(
+            state="open", include_pull_requests=False
+        )
+
+    def test_load_cache_without_last_full_refresh_field(self, tmp_path: Path) -> None:
+        """Test backward compatibility: loading cache without last_full_refresh field."""
+        cache_file = tmp_path / "test.json"
+        # Write a cache file without the last_full_refresh field (old format)
+        old_cache = {
+            "last_checked": "2025-12-31T10:30:00Z",
+            "issues": {"1": {"number": 1, "state": "open", "labels": []}},
+        }
+        with cache_file.open("w") as f:
+            json.dump(old_cache, f)
+
+        loaded = _load_cache_file(cache_file)
+        assert loaded["last_full_refresh"] is None
+        assert loaded["last_checked"] == "2025-12-31T10:30:00Z"
+        assert "1" in loaded["issues"]

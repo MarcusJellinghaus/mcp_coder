@@ -664,9 +664,12 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
     # to ensure closed issues from existing sessions are properly detected
     cached_issues_by_repo, _ = _build_cached_issues_by_repo(repo_names, sessions)
 
-    # Build eligible issues list and issues_without_branch set
+    # Build eligible issues list and issues_without_branch set.
+    # Pass the pre-fetched cached_issues_by_repo so build_eligible_issues_with_branch_check
+    # does not re-traverse the cache via get_cached_eligible_vscodeclaude_issues()
+    # (issue #701 Fix #3).
     eligible_issues, issues_without_branch = build_eligible_issues_with_branch_check(
-        repo_names
+        repo_names, cached_issues_by_repo=cached_issues_by_repo
     )
 
     # Use display_status_table from status.py

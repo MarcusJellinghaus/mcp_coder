@@ -383,7 +383,7 @@ class TestCommandHandlers:
         # Mock build_eligible_issues to return empty list (no eligible issues)
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.build_eligible_issues_with_branch_check",
-            lambda repo_names: ([], set()),
+            lambda repo_names, cached_issues_by_repo=None: ([], set()),
         )
 
         # Mock load_config to return empty repos
@@ -401,7 +401,7 @@ class TestCommandHandlers:
         # Mock build_eligible_issues_with_branch_check to return empty
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.build_eligible_issues_with_branch_check",
-            lambda repo_names: ([], set()),
+            lambda repo_names, cached_issues_by_repo=None: ([], set()),
         )
 
         args = argparse.Namespace(repo=None)
