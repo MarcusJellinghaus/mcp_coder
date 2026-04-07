@@ -8,6 +8,7 @@ This module contains tests for:
 
 import argparse
 import logging
+import re
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -545,7 +546,10 @@ class TestTemplateWatchdogLines:
     ) -> None:
         """Each template formats without KeyError using only its declared kwargs."""
         result = template.format(**kwargs)
-        assert "{" not in result or "%" in result  # No unresolved Python placeholders
+        # After formatting, no unresolved Python format placeholders should remain.
+        assert not re.search(
+            r"\{[a-zA-Z_][a-zA-Z0-9_]*\}", result
+        ), f"Unresolved placeholder in formatted template: {result!r}"
 
     # -- Recovery matrix comment --
 

@@ -228,7 +228,10 @@ def execute_set_status(args: argparse.Namespace) -> int:
             - project_dir: Optional project directory
 
     Returns:
-        Exit code (0=success, 1=error)
+        Exit code:
+          0 = success (labels updated, or skipped due to --from-status mismatch)
+          1 = error
+          2 = usage error (--from-status without positional status_label)
     """
     try:
         # Reject --from-status without positional status_label
