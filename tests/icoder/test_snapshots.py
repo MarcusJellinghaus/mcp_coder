@@ -108,3 +108,48 @@ def test_snapshot_input_area_grows(snap_compare: Any, icoder_app: ICoderApp) -> 
         await pilot.pause()
 
     assert snap_compare(icoder_app, run_before=insert_multiline)
+
+
+def test_snapshot_autocomplete_all_commands(
+    snap_compare: Any, icoder_app: ICoderApp
+) -> None:
+    """Snapshot: dropdown visible with all commands (user typed '/')."""
+
+    async def type_slash(pilot: Any) -> None:
+        input_area = icoder_app.query_one(InputArea)
+        input_area.focus()
+        await pilot.pause()
+        input_area.insert("/")
+        await pilot.pause()
+
+    assert snap_compare(icoder_app, run_before=type_slash)
+
+
+def test_snapshot_autocomplete_filtered(
+    snap_compare: Any, icoder_app: ICoderApp
+) -> None:
+    """Snapshot: dropdown filtered to single match (user typed '/he')."""
+
+    async def type_prefix(pilot: Any) -> None:
+        input_area = icoder_app.query_one(InputArea)
+        input_area.focus()
+        await pilot.pause()
+        input_area.insert("/he")
+        await pilot.pause()
+
+    assert snap_compare(icoder_app, run_before=type_prefix)
+
+
+def test_snapshot_autocomplete_no_match(
+    snap_compare: Any, icoder_app: ICoderApp
+) -> None:
+    """Snapshot: dropdown showing '(no matching commands)' (user typed '/xyz')."""
+
+    async def type_bad_prefix(pilot: Any) -> None:
+        input_area = icoder_app.query_one(InputArea)
+        input_area.focus()
+        await pilot.pause()
+        input_area.insert("/xyz")
+        await pilot.pause()
+
+    assert snap_compare(icoder_app, run_before=type_bad_prefix)

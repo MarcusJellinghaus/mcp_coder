@@ -77,6 +77,16 @@ class AppCore:
         self._event_log.emit("llm_request_end")
 
     @property
+    def registry(self) -> CommandRegistry:
+        """Public read-only access to the command registry."""
+        return self._registry
+
+    @property
+    def event_log(self) -> EventLog:
+        """Public read-only access to the event log."""
+        return self._event_log
+
+    @property
     def session_id(self) -> str | None:
         """Current session ID from LLM service."""
         return self._llm_service.session_id
