@@ -90,7 +90,10 @@ if from_status is not None:
 ```
 if args.from_status is not None and args.status_label is None:
     # Positional is nargs="?" so argparse does not catch this combo.
-    parser.error("--from-status requires a positional status_label")
+    # `execute_set_status` has no `parser` in scope — use the same
+    # logger.error + non-zero return style as the other error paths.
+    logger.error("--from-status requires a positional status_label")
+    return 2
 
 if args.from_status is not None:
     is_valid, error_msg = validate_status_label(args.from_status, labels_config)
@@ -109,9 +112,25 @@ if success and not skipped:
 # _update_issue_labels; do NOT log "Updated" here.
 ```
 
+## INVARIANTS
+
+- **Dirty-wd ordering.** The dirty working directory check runs *before* `_update_issue_labels`. Callers using `--from-status` must therefore pass `--force` for the skip path to be reachable at all — otherwise an un-clean working directory aborts with exit 1 before the precondition check runs. The Jenkins watchdog templates already pass `--force`, by design.
+
 ## DATA
 
 ### Skip message format (OUTPUT level)
+
+The f-string is constructed at the skip point inside `_update_issue_labels`, using the `<none>` sentinel for a missing current label:
+
+```
+current_display = current_status_label or "<none>"
+skip_message = (
+    f"Skipped set-status to '{target_label}': "
+    f"current label is '{current_display}', expected '{from_status}'"
+)
+```
+
+Rendered examples:
 
 ```
 Skipped set-status to 'status-06f:implementing-failed': current label is 'status-07:implemented', expected 'status-06:implementing'
@@ -138,7 +157,7 @@ New class `TestFromStatusFlag` with these test methods:
 5. **`test_from_status_combined_with_force_and_issue`** — `--from-status` + `--force` + `--issue` all work together
 6. **`test_from_status_no_extra_api_call`** — verify `get_issue` is called exactly once (reuses existing fetch)
 7. **`test_skip_does_not_log_updated_message`** — on the skip path, capture stdout/log (`caplog` + the OUTPUT level) and assert the "Updated issue #X to Y" line is NOT emitted, only the skip message is
-8. **`test_from_status_without_positional_label_errors`** — invoking `set-status --from-status foo` with no positional `status_label` exits non-zero with an argparse-style error
+8. **`test_from_status_without_positional_label_errors`** — invoking `set-status --from-status foo` with no positional `status_label` exits with code 2; the error message `"--from-status requires a positional status_label"` is emitted via `logger.error` and asserted through `caplog` (matching the existing error-path tests in `test_set_status.py`, which all use `caplog` for error-message assertions)
 9. **`test_from_status_force_dirty_wd_mismatch_skips_silently`** — `--from-status` + `--force` + dirty working directory + mismatched current label → exit 0, skip message printed, and NO dirty-working-directory warning is emitted (the skip path short-circuits before any dirty-wd check)
 
 Existing tests that exercise the success path of `_update_issue_labels` must be updated for the new 3-tuple return shape (`success, error, skipped`).

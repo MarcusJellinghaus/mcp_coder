@@ -30,4 +30,25 @@ Coordinator template watchdog + `set-status --from-status` for silent-death reco
 - `step_2.md`: parameterized per-template placeholder test; new `test_recovery_matrix_comment_present`; `feat(coordinator):` scope; "all five" prompt
 - `summary.md`: unchanged (scope unchanged)
 
-**Status**: changes applied to `step_1.md` and `step_2.md`; ready to commit and re-review
+**Status**: changes applied to `step_1.md` and `step_2.md`; committed (946a5d1)
+
+## Round 2 — 2026-04-07
+
+**Findings**:
+- BLOCKER: `parser.error(...)` pseudocode unreachable from `execute_set_status(args)` — no `parser` in scope
+- Dirty-wd check runs before `_update_issue_labels` — invariant should be documented (callers need `--force`)
+- Skip-message f-string implied but not inlined in ALGORITHM — LLM could render `None` instead of `<none>`
+- Step 2: Windows has no `|| true` analog — safe because RC captured before watchdog, but worth a one-line note
+- Step 2 test #10 wording "or equivalent" should be tightened to exact strings
+- summary.md doesn't mention 3-tuple return shape change
+- Round-1 changes all verified present and correct; acceptance criteria fully covered
+
+**Decisions**: All findings accepted as straightforward; no user input needed.
+
+**Changes**:
+- `step_1.md`: replaced `parser.error` with `logger.error` + `return 2`; added INVARIANTS section for dirty-wd ordering; inlined skip-message f-string with `<none>` sentinel; tightened test #8 to assert exit code 2 via caplog
+- `step_2.md`: Windows RC-safety note; tightened test #10 to exact strings; added KeyError rationale to test #9
+- `summary.md`: noted return-shape change for `set_status.py`
+- `Decisions.md`: created (engineer logged round-2 decisions)
+
+**Status**: changes applied; ready to commit and re-review

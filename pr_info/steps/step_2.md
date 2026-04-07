@@ -109,6 +109,8 @@ No runtime algorithm — this is a template content change. The "algorithm" is t
 
 No new data structures. Templates are `str` constants, same as before.
 
+- **Windows RC-safety:** RC is captured into a variable (`set RC=%ERRORLEVEL%`) *before* the watchdog runs, so `exit /b %RC%` re-emits the original captured value. The Windows template intentionally has no `|| true` analog — the explicit RC capture makes one unnecessary.
+
 ## TESTS (`tests/cli/commands/coordinator/test_commands.py`)
 
 New class `TestTemplateWatchdogLines`:
@@ -121,7 +123,7 @@ New class `TestTemplateWatchdogLines`:
 6. **`test_windows_templates_exit_with_captured_rc`** — all 3 Windows templates end with `exit /b %RC%`
 7. **`test_create_plan_templates_pass_issue_number`** — both create-plan templates include `--issue {issue_number}` in the watchdog line
 8. **`test_implement_and_pr_templates_no_issue_flag`** — implement/create-pr watchdog lines do NOT contain `--issue`
-9. **`test_templates_placeholders_still_resolve`** — parameterized per template; each template is formatted with ONLY the kwargs it actually declares, and the call must succeed without `KeyError`. Matrix:
+9. **`test_templates_placeholders_still_resolve`** — parameterized per template; each template is formatted with ONLY the kwargs it actually declares, and the call must succeed without `KeyError`. Rationale: missing required placeholders raise `KeyError` and would be caught. Matrix:
 
     | Template | Placeholders used |
     |---|---|
@@ -134,4 +136,4 @@ New class `TestTemplateWatchdogLines`:
 
     Note: `create_plan` templates do NOT use `{branch_name}`; `implement` and `create_pr` templates do NOT use `{issue_number}`. Passing an extra kwarg that the template does not reference is fine with `str.format`, but the test should be strict and only pass the kwargs each template declares so a future stray placeholder is caught.
 
-10. **`test_recovery_matrix_comment_present`** — read the `command_templates.py` source (module `__file__` / `inspect.getsource`) and assert the inline comment block near the Linux template group contains the key phrases `"Recovery matrix"`, `"Silent death"`, and `"Hard kill"` (or clearly equivalent wording). Acceptance criteria requires the inline comment block be present in the source.
+10. **`test_recovery_matrix_comment_present`** — read the `command_templates.py` source (module `__file__` / `inspect.getsource`) and assert the inline comment block near the Linux template group contains the exact strings `"Recovery matrix"`, `"Silent death"`, and `"Hard kill"`. The implementer copies the comment block verbatim, so the test asserts the exact phrases (no fuzzy matching). Acceptance criteria requires the inline comment block be present in the source.

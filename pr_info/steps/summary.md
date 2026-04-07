@@ -41,7 +41,7 @@ An **outer watchdog** in the Jenkins shell templates that runs `set-status` unco
 | File | Change |
 |---|---|
 | `src/mcp_coder/cli/gh_parsers.py` | Add `--from-status` argument to set-status parser |
-| `src/mcp_coder/cli/commands/set_status.py` | Validate `--from-status`, precondition check in `_update_issue_labels` |
+| `src/mcp_coder/cli/commands/set_status.py` | Validate `--from-status`, precondition check in `_update_issue_labels` (return shape changes to surface skip state) |
 | `src/mcp_coder/cli/commands/coordinator/command_templates.py` | Update all 6 templates + inline recovery matrix comment |
 | `tests/cli/commands/test_set_status.py` | Tests for `--from-status` flag |
 | `tests/cli/commands/coordinator/test_commands.py` | Tests for template watchdog lines |
