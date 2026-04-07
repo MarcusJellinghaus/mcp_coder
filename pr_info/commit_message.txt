@@ -1,5 +1,7 @@
-fix: prefix unused mock variable to resolve pylint W0612
+fix: resolve mypy strict mode errors in branch_status and tests
 
-Rename `mock_counts` to `_mock_counts` in test_collect_task_status
-to indicate the context manager variable is intentionally unused.
-This fixes the CI pipeline failure caused by pylint W0612.
+- Add explicit re-export of _build_ci_error_details using `as` pattern
+  in branch_status.py to satisfy mypy --strict attr-defined check
+- Add type annotation `dict[str, Any]` to defaults variable in
+  test_branch_status.py _make_report helper
+- Remove now-unnecessary `type: ignore[arg-type]` comment

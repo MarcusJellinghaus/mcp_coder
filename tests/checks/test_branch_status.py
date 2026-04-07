@@ -6,6 +6,7 @@ for reporting the readiness status of branches.
 
 from dataclasses import FrozenInstanceError
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -1703,7 +1704,7 @@ def test_collect_branch_status_shares_issue_data() -> None:
 
 def _make_report(**kwargs: object) -> BranchStatusReport:
     """Helper to build a BranchStatusReport with sensible defaults."""
-    defaults = {
+    defaults: dict[str, Any] = {
         "branch_name": "feature/123-test",
         "base_branch": "main",
         "ci_status": CI_PASSED,
@@ -1717,7 +1718,7 @@ def _make_report(**kwargs: object) -> BranchStatusReport:
         "recommendations": [],
     }
     defaults.update(kwargs)
-    return BranchStatusReport(**defaults)  # type: ignore[arg-type]
+    return BranchStatusReport(**defaults)
 
 
 # --- format_for_human tests ---

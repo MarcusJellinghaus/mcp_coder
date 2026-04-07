@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from mcp_coder.checks.ci_log_parser import (
-    _build_ci_error_details,
+    _build_ci_error_details as _build_ci_error_details,
 )
 from mcp_coder.checks.ci_log_parser import (
     _extract_failed_step_log as _extract_failed_step_log,
