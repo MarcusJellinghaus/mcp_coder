@@ -24,6 +24,9 @@ def compute_next_state(
     """Compute the autocomplete state for the given input text.
 
     Pure function — no I/O, no Textual dependency.
+
+    Returns:
+        AutocompleteState with matches and visibility based on input text.
     """
     if not input_text.startswith("/"):
         return AutocompleteState(visible=False, matches=(), highlighted_index=-1)
