@@ -35,9 +35,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: Pure `core/autocomplete_state.py` Module
 > [Detail](./steps/step_3.md) | Commit: `feat(icoder): add autocomplete state module`
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Wire Autocomplete into `InputArea`
 > [Detail](./steps/step_4.md) | Commit: `feat(icoder): wire autocomplete into InputArea`

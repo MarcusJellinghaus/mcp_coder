@@ -1,9 +1,13 @@
-feat(icoder): add CommandAutocomplete widget
+feat(icoder): add autocomplete state module
 
-Create OptionList-based dropdown widget for slash command autocomplete.
+Add pure autocomplete state module with no Textual dependency:
 
-- Add CommandAutocomplete extending OptionList directly (Decision D3)
-- Implement update_matches(), show/hide, highlight navigation, select
-- Empty matches show disabled "(no matching commands)" row
-- Add CSS styles for the dropdown in styles.py (hidden by default)
-- Add 6 widget tests covering all public methods
+- AutocompleteState frozen dataclass capturing visible, matches, and
+  highlighted_index
+- compute_next_state() pure function that derives state from input text
+  and command registry
+- Dropdown visible whenever input starts with '/', even with no matches
+- highlighted_index is 0 when matches exist, -1 when empty
+
+Add 7 unit tests covering visibility, filtering, highlighting, and
+frozen immutability invariants.
