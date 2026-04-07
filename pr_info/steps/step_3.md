@@ -142,7 +142,7 @@ if not success:
 | `commit_all_changes` returns `success=False` | `"Commit & push"` | `GENERAL` |
 | `git_push` returns `success=False` | `"Commit & push"` | `GENERAL` |
 
-The two `check_prerequisites` failure modes need to be distinguished by inspecting why the call failed (the return tuple's IssueData being empty vs git-clean check). If `check_prerequisites` only signals one bool, the orchestrator must pre-check `is_working_directory_clean` separately so the two stage strings can be assigned correctly. (Implementer: confirm by reading the function and split the check if needed.)
+**Split `check_prerequisites` failure detection at the orchestrator level**: In `run_create_plan_workflow`, call `is_working_directory_clean(project_dir)` BEFORE `check_prerequisites()`. If the working directory is dirty, emit `WorkflowFailure(category=PREREQ_FAILED, stage="Prerequisites (git working directory not clean)", ...)`. Then call `check_prerequisites()` — if it returns `(False, _)`, emit `WorkflowFailure(category=PREREQ_FAILED, stage="Prerequisites (issue not found)", ...)`. This avoids modifying `check_prerequisites`'s signature.
 
 ### `run_planning_prompts()` failure detection
 

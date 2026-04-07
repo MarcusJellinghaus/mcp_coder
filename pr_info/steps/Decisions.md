@@ -39,3 +39,7 @@ Decisions made during plan refinement after initial draft.
 ## `import time` placement
 
 - `import time` is module-level in `core.py`; `start_time = time.time()` is function-local inside `run_create_plan_workflow()`. Called out explicitly to avoid confusion.
+
+## `check_prerequisites` failure bifurcation
+
+- `check_prerequisites` failure bifurcation: orchestrator pre-checks `is_working_directory_clean` before calling `check_prerequisites`, so each call site maps 1:1 to a specific stage label. Avoids changing the helper's return type.
