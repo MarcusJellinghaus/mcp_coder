@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: Move branch naming tests and update allowlist
-- [ ] Implementation: move `TestBranchNameGeneration` to `test_branch_naming.py`, remove allowlist entry
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move `TestBranchNameGeneration` to `test_branch_naming.py`, remove allowlist entry
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review completed
