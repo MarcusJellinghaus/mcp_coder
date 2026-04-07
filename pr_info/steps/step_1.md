@@ -23,8 +23,11 @@ Add to `FailureCategory` enum:
 NO_CHANGES_AFTER_RETRIES = "no_changes_after_retries"
 ```
 
-Add module-level constant:
+Add module-level constant **adjacent to `RUN_MYPY_AFTER_EACH_TASK`** (the task-processing knobs section, NOT next to the CI retry constants below):
 ```python
+# Used by the `implement` workflow's task-processing retry loop
+# (process_task_with_retry in task_processing.py) to bound retries
+# when an LLM call produces zero file changes for a task.
 MAX_NO_CHANGE_RETRIES = 3  # Max LLM calls per task when zero changes detected
 ```
 
@@ -69,7 +72,7 @@ Add `"no_changes_after_retries"` to the `ERROR_STATUS_IDS` list so the existing 
 
 - Enum value follows existing pattern (string value = `labels.json` `internal_id`)
 - Label follows existing failure label pattern (`status-06f-*`, `human_action` category, `commands: ["/check_branch_status"]`)
-- Constant `MAX_NO_CHANGE_RETRIES` placed next to existing CI retry constants for discoverability
+- Constant `MAX_NO_CHANGE_RETRIES` placed next to `RUN_MYPY_AFTER_EACH_TASK` (other task-processing knobs), with a comment noting it is consumed by the `implement` workflow's `process_task_with_retry` loop in `task_processing.py`
 
 ## DATA
 

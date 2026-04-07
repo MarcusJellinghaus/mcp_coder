@@ -2,6 +2,10 @@
 
 **References:** [summary.md](summary.md), Issue #711
 
+## Pre-flight
+
+- Run a workspace search for `process_single_task(` to confirm `core.py` is the only caller; update any other call sites or test mocks that depend on the old `(True, "completed")` no-changes return.
+
 ## Overview
 
 Modify `process_single_task` to: (a) accept an `attempt` parameter, (b) append a dynamic retry reminder when `attempt > 1`, and (c) return `(False, "no_changes")` instead of `(True, "completed")` when zero files change. Update existing tests in lock-step.

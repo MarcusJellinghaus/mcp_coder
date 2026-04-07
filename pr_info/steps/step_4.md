@@ -79,8 +79,8 @@ if not success:
 ## DATA
 
 - `"no_changes_after_retries"` reason → `FailureCategory.NO_CHANGES_AFTER_RETRIES` → label `"no_changes_after_retries"` in labels.json
-- WorkflowFailure stage: `"task_implementation"` (same as existing task failures)
-- WorkflowFailure message: descriptive text about retry exhaustion
+- WorkflowFailure stage: **copy verbatim** from the existing `"timeout"` reason branch in `core.py` — it is `"Task implementation"` (note the capital T and the space). Do NOT invent a new stage string.
+- WorkflowFailure message: a clear, descriptive string such as `"Task produced no file changes after N retry attempts"` (substitute the actual retry count from `MAX_NO_CHANGE_RETRIES`). Do not invent new field values; mirror the existing `"timeout"` branch's `WorkflowFailure(...)` construction shape exactly (same `tasks_completed` / `tasks_total` fields).
 
 ## LLM Prompt
 
