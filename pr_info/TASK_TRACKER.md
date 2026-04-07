@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: `--from-status` flag on `gh-tool set-status` ([step_1.md](./steps/step_1.md))
-- [ ] Implementation: tests (`TestFromStatusFlag` in `test_set_status.py`) + production code (`gh_parsers.py`, `set_status.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests (`TestFromStatusFlag` in `test_set_status.py`) + production code (`gh_parsers.py`, `set_status.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Coordinator template watchdog lines ([step_2.md](./steps/step_2.md))
 - [ ] Implementation: tests (`TestTemplateWatchdogLines` in `test_commands.py`) + production code (`command_templates.py`)

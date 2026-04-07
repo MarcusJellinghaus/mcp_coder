@@ -151,7 +151,8 @@ def _update_issue_labels(
     issue_number: int,
     status_label: str,
     status_labels: set[str],
-) -> Tuple[bool, Optional[str]]:
+    from_status: Optional[str] = None,
+) -> Tuple[bool, Optional[str], bool]:
     """Get issue, compute new labels, and apply them.
 
     Args:
@@ -159,22 +160,42 @@ def _update_issue_labels(
         issue_number: Issue number to update
         status_label: New status label to set
         status_labels: All valid status label names
+        from_status: If set, only update when current status matches this label
 
     Returns:
-        Tuple of (success, error_message)
-        - (True, None) if successful
-        - (False, error_message) if failed
+        Tuple of (success, error_message, skipped)
+        - (True, None, False) if successful
+        - (True, None, True) if skipped (precondition mismatch)
+        - (False, error_message, False) if failed
     """
     issue_data = manager.get_issue(issue_number)
 
     # Check for error (number=0 indicates error)
     if issue_data["number"] == 0:
-        return False, (
-            f"Failed to get issue #{issue_number}. "
-            "Issue may not exist or there may be a GitHub API error."
+        return (
+            False,
+            (
+                f"Failed to get issue #{issue_number}. "
+                "Issue may not exist or there may be a GitHub API error."
+            ),
+            False,
         )
 
     current_labels = set(issue_data["labels"])
+
+    # Precondition check: only update if current status matches --from-status
+    if from_status is not None:
+        current_status_labels = current_labels & status_labels
+        current = next(iter(current_status_labels), None)
+        current_display = current if current else "<none>"
+        if current != from_status:
+            skip_message = (
+                f"Skipped set-status to '{status_label}': "
+                f"current label is '{current_display}', expected '{from_status}'"
+            )
+            logger.log(OUTPUT, "%s", skip_message)
+            return True, None, True
+
     new_labels = compute_new_labels(current_labels, status_label, status_labels)
 
     # Apply new labels
@@ -182,13 +203,17 @@ def _update_issue_labels(
 
     # Check for error (number=0 indicates error)
     if result["number"] == 0:
-        return False, (
-            f"Failed to update labels for issue #{issue_number}.\n"
-            f"Label '{status_label}' may not exist on GitHub.\n"
-            "Run `mcp-coder gh-tool define-labels` to create workflow labels."
+        return (
+            False,
+            (
+                f"Failed to update labels for issue #{issue_number}.\n"
+                f"Label '{status_label}' may not exist on GitHub.\n"
+                "Run `mcp-coder gh-tool define-labels` to create workflow labels."
+            ),
+            False,
         )
 
-    return True, None
+    return True, None, False
 
 
 def execute_set_status(args: argparse.Namespace) -> int:
@@ -206,6 +231,11 @@ def execute_set_status(args: argparse.Namespace) -> int:
         Exit code (0=success, 1=error)
     """
     try:
+        # Reject --from-status without positional status_label
+        if args.from_status is not None and args.status_label is None:
+            logger.error("--from-status requires a positional status_label")
+            return 2
+
         # No-args: print available labels and exit
         if args.status_label is None:
             try:
@@ -248,6 +278,13 @@ def execute_set_status(args: argparse.Namespace) -> int:
             logger.error("%s", error_msg)
             return 1
 
+        # Validate --from-status against labels.json
+        if args.from_status is not None:
+            is_valid, error_msg = validate_status_label(args.from_status, labels_config)
+            if not is_valid:
+                logger.error("%s", error_msg)
+                return 1
+
         # Step 3: Get issue number
         issue_number, resolve_error = _resolve_issue_number(args, project_dir)
         if issue_number is None:
@@ -256,14 +293,21 @@ def execute_set_status(args: argparse.Namespace) -> int:
 
         # Step 4: Get current issue, compute new labels, and apply
         manager = IssueManager(project_dir)
-        success, update_error = _update_issue_labels(
-            manager, issue_number, args.status_label, status_labels
+        success, update_error, skipped = _update_issue_labels(
+            manager,
+            issue_number,
+            args.status_label,
+            status_labels,
+            from_status=args.from_status,
         )
         if not success:
             logger.error("%s", update_error)
             return 1
 
-        logger.log(OUTPUT, "Updated issue #%s to %s", issue_number, args.status_label)
+        if not skipped:
+            logger.log(
+                OUTPUT, "Updated issue #%s to %s", issue_number, args.status_label
+            )
         return 0
 
     except ValueError as e:
