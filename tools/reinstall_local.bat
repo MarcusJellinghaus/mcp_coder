@@ -1,14 +1,12 @@
 @echo off
 setlocal enabledelayedexpansion
 REM Reinstall mcp-coder package in development mode (editable install)
-REM For developers. End-users should use tools\reinstall.bat instead.
 REM Usage: call tools\reinstall_local.bat  (from project root)
 echo =============================================
 echo MCP-Coder Package Reinstallation (Developer)
 echo =============================================
 echo.
 echo NOTE: This installs in editable mode from local source.
-echo       End-users should use tools\reinstall.bat instead.
 echo.
 
 REM Determine project root (parent of tools directory)
@@ -21,19 +19,8 @@ set "VENV_DIR=!PROJECT_DIR!\.venv"
 set "VENV_SCRIPTS=!VENV_DIR!\Scripts"
 echo [0/7] Checking Python environment...
 
-REM Guard: if a venv is active, it must be the project-local .venv
-if defined VIRTUAL_ENV (
-    if /I not "!VIRTUAL_ENV!"=="!VENV_DIR!" (
-        echo [FAIL] Wrong virtual environment is active!
-        echo.
-        echo   Active venv:   !VIRTUAL_ENV!
-        echo   Expected venv: !VENV_DIR!
-        echo.
-        echo   Deactivate the current venv first, or activate the correct one:
-        echo     !VENV_DIR!\Scripts\activate
-        exit /b 1
-    )
-)
+REM Silently deactivate any active venv
+call deactivate 2>nul
 
 REM Check if uv is available
 where uv >nul 2>&1
@@ -72,21 +59,23 @@ echo [OK] Package and dev dependencies installed (editable)
 
 echo.
 echo [3/7] Overriding dependencies with GitHub versions...
-REM Reinstall mcp-workspace and mcp-config from GitHub (with deps — picks up new external deps)
-uv pip install "mcp-config-tool @ git+https://github.com/MarcusJellinghaus/mcp-config.git" "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git" --python "!VENV_SCRIPTS!\python.exe"
+REM Validate read_github_deps.py succeeds before parsing its output
+"!VENV_SCRIPTS!\python.exe" tools\read_github_deps.py > nul 2>&1
 if !ERRORLEVEL! NEQ 0 (
-    echo [FAIL] GitHub dependency override failed (with deps)!
+    echo [FAIL] read_github_deps.py failed!
+    "!VENV_SCRIPTS!\python.exe" tools\read_github_deps.py
     exit /b 1
 )
-echo [OK] mcp-workspace, mcp-config overridden from GitHub (with deps)
-
-REM Reinstall mcp-tools-py from GitHub (no deps — depends on siblings, avoid downgrading)
-uv pip install --no-deps "mcp-tools-py @ git+https://github.com/MarcusJellinghaus/mcp-tools-py.git" --python "!VENV_SCRIPTS!\python.exe"
-if !ERRORLEVEL! NEQ 0 (
-    echo [FAIL] GitHub dependency override failed (no deps)!
-    exit /b 1
+REM Read GitHub dependency overrides from pyproject.toml
+for /f "delims=" %%C in ('"!VENV_SCRIPTS!\python.exe" tools\read_github_deps.py') do (
+    echo   %%C
+    %%C --python "!VENV_SCRIPTS!\python.exe"
+    if !ERRORLEVEL! NEQ 0 (
+        echo [FAIL] GitHub dependency override failed!
+        exit /b 1
+    )
 )
-echo [OK] mcp-tools-py overridden from GitHub (no deps)
+echo [OK] GitHub dependencies overridden from pyproject.toml
 
 echo.
 echo [4/7] Installing LangChain and MLflow dependencies...

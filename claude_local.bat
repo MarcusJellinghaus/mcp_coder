@@ -96,6 +96,10 @@ if not exist "!MCP_CODER_VENV_PATH!\mcp-workspace.exe" (
     exit /b 1
 )
 
+REM === Step 5b: Print MCP server versions ===
+"!MCP_CODER_VENV_PATH!\mcp-workspace.exe" --version
+"!MCP_CODER_VENV_PATH!\mcp-tools-py.exe" --version
+
 REM === Step 6: Set env vars and launch ===
 set "MCP_CODER_PROJECT_DIR=%CD%"
 set "DISABLE_AUTOUPDATER=1"

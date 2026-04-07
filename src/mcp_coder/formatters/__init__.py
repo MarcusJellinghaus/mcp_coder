@@ -1,10 +1,10 @@
 """Formatters package providing code formatting utilities."""
 
 import logging
-import tomllib
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from ..utils.pyproject_config import get_formatter_config
 from .black_formatter import format_with_black
 from .config_reader import check_line_length_conflicts, read_formatter_config
 from .isort_formatter import format_with_isort
@@ -65,26 +65,25 @@ def format_code(
 def _check_line_length_conflict(project_root: Path) -> None:
     """Warn about most common config conflict identified in analysis (~10 lines).
 
+    Applies tool defaults (88) so we catch the common case where only one tool
+    has an explicit setting. check_line_length_conflicts() only warns when both
+    are explicitly configured.
+
     Args:
         project_root: Root directory to check for pyproject.toml
     """
-    try:
-        with open(project_root / "pyproject.toml", "rb") as f:
-            data = tomllib.load(f)
+    config = get_formatter_config(project_root)
+    black_length = config.get("black", {}).get("line-length", 88)  # Black default
+    isort_length = config.get("isort", {}).get(
+        "line_length", 88
+    )  # isort uses underscore
 
-        black_config = data.get("tool", {}).get("black", {})
-        isort_config = data.get("tool", {}).get("isort", {})
-
-        black_length = black_config.get("line-length", 88)  # Black default
-        isort_length = isort_config.get("line_length", 88)  # isort uses underscore
-
-        if black_length != isort_length:
-            print(
-                f"⚠️  Line length mismatch: Black={black_length}, isort={isort_length}"
-            )
-            print("   Consider setting isort.line_length to match Black's line-length")
-    except (FileNotFoundError, tomllib.TOMLDecodeError):
-        pass  # No warning if config can't be read
+    if black_length != isort_length:
+        logger.warning(
+            "line-length mismatch: black=%s, isort=%s",
+            black_length,
+            isort_length,
+        )
 
 
 __all__ = [

@@ -60,6 +60,8 @@ There are two paths that set up environment variables: batch launchers (for inte
 | `claude_local.bat` | Discovers tool env via `MCP_CODER_VENV_PATH` or PATH lookup; verifies editable install | activates `.venv`, sets `VIRTUAL_ENV` | **Yes** |
 | `env.py` (`prepare_llm_environment()`) | Sets `MCP_CODER_VENV_DIR` from `VIRTUAL_ENV` / `CONDA_PREFIX` / `sys.prefix` | Sets `MCP_CODER_PROJECT_DIR` from `project_dir` arg | **Partial** — reads whatever venv is active |
 
+> All launcher scripts (`claude.bat`, `claude_local.bat`, `icoder.bat`, `icoder_local.bat`) print MCP server versions (`mcp-workspace --version`, `mcp-tools-py --version`) at startup after tool verification.
+
 ### How `.vscodeclaude_start.bat` Does It (Coordinator)
 
 This is the most complete implementation. It already separates the two environments:
@@ -102,6 +104,10 @@ Discovers the tool environment via `MCP_CODER_VENV_PATH` (if set) or PATH lookup
 ### How `claude_local.bat` Does It
 
 For local development: discovers the tool environment the same way as `claude.bat`, then activates the project `.venv`. Verifies that mcp-coder is editable-installed (pip `-e` mode) so local source changes take effect immediately.
+
+### How `reinstall_local.bat` Does It
+
+`reinstall_local.bat` reads GitHub dependency URLs from `pyproject.toml` via `tools/read_github_deps.py` instead of hardcoding them. This ensures reinstallation always uses the dependencies declared in the project configuration.
 
 ## Calling mcp-coder Explicitly
 
