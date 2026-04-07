@@ -19,7 +19,7 @@ This guide covers the **mandatory** and **optional** components for integrating 
 
 ## Quick Setup Checklist
 
-- [ ] Configure GitHub token in user config
+- [ ] Configure GitHub token in user config (`~/.mcp_coder/config.toml` — see [Configuration Guide](../configuration/config.md))
 - [ ] Set up workflow labels with `mcp-coder gh-tool define-labels`
 - [ ] Install GitHub Actions workflows
 - [ ] Configure Claude Code files (`.claude/`, `.mcp.json`)
@@ -112,28 +112,6 @@ mcp-coder gh-tool define-labels --dry-run
 ```bash
 mcp-coder prompt "List files in src/" --mcp-config .mcp.json
 ```
-
-### Troubleshooting
-
-**Labels not appearing:**
-- Check GitHub token permissions
-- Verify config file location and format
-- Run with `--dry-run` first
-
-**GitHub Actions not working:**
-- Check repository permissions (Settings → Actions → General)
-- Verify YAML syntax in workflow files
-- Check Actions tab for error messages
-
-**MCP servers not working:**
-- Verify server installation (`pip list | grep mcp`)
-- Check file paths in configuration
-- Test servers independently
-
-**Claude Code not following instructions:**
-- Verify `.claude/CLAUDE.md` exists and is readable
-- Check for syntax errors in the file
-- Ensure instructions are clear and unambiguous
 
 ## Related Documentation
 
