@@ -1,6 +1,0 @@
-fix(tests): use caplog instead of mock print for line-length warning test
-
-The test_format_code_shows_line_length_conflict_warning test was
-patching builtins.print but the implementation uses logger.warning().
-Replace print mock with pytest caplog fixture and update assertions
-to match the actual log message format.
