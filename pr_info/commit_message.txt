@@ -1,9 +1,0 @@
-test(icoder): add autocomplete snapshot tests
-
-Add three SVG snapshot tests for autocomplete dropdown visual states:
-- All commands visible (user typed '/')
-- Filtered to matching commands (user typed '/he')
-- No matching commands message (user typed '/xyz')
-
-Existing snapshot baselines regenerated to account for the new
-(hidden) CommandAutocomplete widget in the layout.
