@@ -30,6 +30,41 @@ This guide covers the **mandatory** and **optional** components for integrating 
 - [ ] Test workflow with a sample issue
 - [ ] Create `docs/architecture/architecture.md` (required by `/implementation_review` and `/implementation_review_supervisor`)
 
+## Files Shared With Other Projects
+
+The following files in this repository serve as references/templates for other projects adopting MCP Coder workflows. Use this as a quick map of what to copy and what to adjust.
+
+| File / Folder | Mandatory? | Copy as-is? | What to adjust |
+|---|---|---|---|
+| `.claude/CLAUDE.md` | Yes | No | Project conventions, tool list, allowed commands |
+| `.claude/skills/` | Yes | Mostly | Repo-specific paths/commands inside individual SKILL.md files |
+| `.mcp.json` (+ `.mcp.{linux,windows,macos}.json`) | Yes | No | Server paths, project name, `--test-folder`, reference projects |
+| `.github/workflows/label-new-issues.yml` | Yes | Yes | — |
+| `.github/workflows/approve-command.yml` | Yes | Yes | — |
+| `docs/architecture/architecture.md` | Yes | No | Write your own — required by `/implementation_review` |
+| `workflows/config/labels.json` | No | No | Only if customizing default labels |
+| `.github/workflows/ci.yml` | No | No | Python version, package name, test paths |
+| `.importlinter` | No | No | Package names, contract definitions |
+| `tach.toml` | No | No | Module boundaries for your package |
+| `vulture_whitelist.py` | No | No | Project-specific false positives |
+| `.large-files-allowlist` | No | No | Files exempt from size limits |
+| `pyproject.toml` | No | No | Use as a dependency/config reference, not a copy |
+| `.gitattributes` | No | Yes | — |
+| `.github/dependabot.yml` | No | Yes | — |
+| `claude_local.bat` / `claude.bat` | No | Mostly | Path to `claude.exe` if non-standard |
+| `.claude/settings.local.json` | No | Mostly | Permissions list — gitignored in downstream projects |
+| `tools/format_all.{sh,bat}` | No | Yes | — |
+| `tools/lint_imports.{sh,bat}`, `tach_check.*`, `pycycle_check.*`, `vulture_check.*` | No | Yes | — |
+| `tools/ruff_check.{sh,bat}` | No | Yes | — |
+
+**Notes:**
+
+- **Mandatory** = required for MCP Coder workflows to function. **Optional** files enhance the workflow but are not required.
+- **Copy as-is = Yes** means the file works in any project without edits. **Mostly** means small path tweaks may be needed. **No** means the file is project-specific and must be authored or adapted.
+- There is currently no sync/versioning mechanism — when files in this repo change, downstream projects must re-pull manually.
+
+Details for each file are documented in the sections below.
+
 ## GitHub Token Configuration
 
 The workflow automation requires a GitHub token configured in your user config file.
