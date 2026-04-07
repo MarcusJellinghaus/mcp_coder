@@ -26,6 +26,7 @@ from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 from .constants import (
     COMMIT_MESSAGE_FILE,
     LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
+    MAX_NO_CHANGE_RETRIES,
     PR_INFO_DIR,
     RUN_MYPY_AFTER_EACH_TASK,
 )
@@ -538,3 +539,33 @@ Please implement this task step by step."""
 
     logger.info(f"Task completed successfully: {next_task}")
     return True, "completed"
+
+
+def process_task_with_retry(
+    project_dir: Path,
+    provider: str,
+    mcp_config: str | None = None,
+    execution_dir: Optional[Path] = None,
+) -> tuple[bool, str]:
+    """Process a single task with bounded retry on zero-change results.
+
+    Calls process_single_task up to MAX_NO_CHANGE_RETRIES times.
+    Retries only on "no_changes" reason. Timeouts and errors propagate immediately.
+
+    Returns:
+        Tuple of (success, reason) where reason may be:
+        - 'completed' | 'no_tasks' | 'error' | 'timeout' (from process_single_task)
+        - 'no_changes_after_retries' (exhausted all retry attempts)
+    """
+    for attempt in range(1, MAX_NO_CHANGE_RETRIES + 1):
+        success, reason = process_single_task(
+            project_dir,
+            provider,
+            mcp_config=mcp_config,
+            execution_dir=execution_dir,
+            attempt=attempt,
+        )
+        if reason != "no_changes":
+            return success, reason
+        logger.warning(f"No changes on attempt {attempt}/{MAX_NO_CHANGE_RETRIES}")
+    return False, "no_changes_after_retries"

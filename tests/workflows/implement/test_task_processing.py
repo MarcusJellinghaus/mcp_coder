@@ -12,6 +12,7 @@ from mcp_coder.workflows.implement.task_processing import (
     commit_changes,
     get_next_task,
     process_single_task,
+    process_task_with_retry,
     push_changes,
     run_formatters,
 )
@@ -865,3 +866,97 @@ Please implement this task step by step."""
         ):
             push_result = push_changes(project_dir)
             assert push_result is False
+
+
+class TestProcessTaskWithRetry:
+    """Test process_task_with_retry wrapper function."""
+
+    @patch("mcp_coder.workflows.implement.task_processing.process_single_task")
+    def test_retry_succeeds_on_second_attempt(self, mock_process: MagicMock) -> None:
+        """First call returns no_changes, second returns completed."""
+        mock_process.side_effect = [
+            (False, "no_changes"),
+            (True, "completed"),
+        ]
+
+        success, reason = process_task_with_retry(Path("/test/project"), "claude")
+
+        assert success is True
+        assert reason == "completed"
+        assert mock_process.call_count == 2
+        # Verify attempt numbers
+        assert mock_process.call_args_list[0].kwargs["attempt"] == 1
+        assert mock_process.call_args_list[1].kwargs["attempt"] == 2
+
+    @patch("mcp_coder.workflows.implement.task_processing.process_single_task")
+    def test_retry_exhausted_returns_no_changes_after_retries(
+        self, mock_process: MagicMock
+    ) -> None:
+        """All 3 calls return no_changes."""
+        mock_process.return_value = (False, "no_changes")
+
+        success, reason = process_task_with_retry(Path("/test/project"), "claude")
+
+        assert success is False
+        assert reason == "no_changes_after_retries"
+        assert mock_process.call_count == 3
+
+    @patch("mcp_coder.workflows.implement.task_processing.process_single_task")
+    def test_timeout_propagates_immediately(self, mock_process: MagicMock) -> None:
+        """First call returns timeout — no retry."""
+        mock_process.return_value = (False, "timeout")
+
+        success, reason = process_task_with_retry(Path("/test/project"), "claude")
+
+        assert success is False
+        assert reason == "timeout"
+        assert mock_process.call_count == 1
+
+    @patch("mcp_coder.workflows.implement.task_processing.process_single_task")
+    def test_error_propagates_immediately(self, mock_process: MagicMock) -> None:
+        """First call returns error — no retry."""
+        mock_process.return_value = (False, "error")
+
+        success, reason = process_task_with_retry(Path("/test/project"), "claude")
+
+        assert success is False
+        assert reason == "error"
+        assert mock_process.call_count == 1
+
+    @patch("mcp_coder.workflows.implement.task_processing.process_single_task")
+    def test_no_tasks_propagates_immediately(self, mock_process: MagicMock) -> None:
+        """First call returns no_tasks — no retry."""
+        mock_process.return_value = (False, "no_tasks")
+
+        success, reason = process_task_with_retry(Path("/test/project"), "claude")
+
+        assert success is False
+        assert reason == "no_tasks"
+        assert mock_process.call_count == 1
+
+    @patch("mcp_coder.workflows.implement.task_processing.process_single_task")
+    def test_success_on_first_attempt_no_retry(self, mock_process: MagicMock) -> None:
+        """First call returns completed — no retry."""
+        mock_process.return_value = (True, "completed")
+
+        success, reason = process_task_with_retry(Path("/test/project"), "claude")
+
+        assert success is True
+        assert reason == "completed"
+        assert mock_process.call_count == 1
+
+    @patch("mcp_coder.workflows.implement.task_processing.process_single_task")
+    def test_timeout_on_second_attempt_propagates(
+        self, mock_process: MagicMock
+    ) -> None:
+        """First call no_changes, second call timeout — propagates immediately."""
+        mock_process.side_effect = [
+            (False, "no_changes"),
+            (False, "timeout"),
+        ]
+
+        success, reason = process_task_with_retry(Path("/test/project"), "claude")
+
+        assert success is False
+        assert reason == "timeout"
+        assert mock_process.call_count == 2

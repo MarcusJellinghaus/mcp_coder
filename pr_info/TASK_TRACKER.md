@@ -35,9 +35,9 @@ See [step_2.md](./steps/step_2.md)
 
 ### Step 3: Add `process_task_with_retry` wrapper function
 See [step_3.md](./steps/step_3.md)
-- [ ] Implementation: retry wrapper function and TestProcessTaskWithRetry test class
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: retry wrapper function and TestProcessTaskWithRetry test class
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Wire `process_task_with_retry` into `core.py` and add failure routing
 See [step_4.md](./steps/step_4.md)
