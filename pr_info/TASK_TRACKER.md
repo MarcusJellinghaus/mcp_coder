@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 4: Add subprocess integration test for real crash capture
-- [ ] Implementation: add `test_crash_log_captures_real_segfault` to `tests/utils/test_crash_logging.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `test_crash_log_captures_real_segfault` to `tests/utils/test_crash_logging.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review completed

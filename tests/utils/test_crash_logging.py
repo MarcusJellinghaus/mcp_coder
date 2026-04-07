@@ -1,5 +1,8 @@
 """Tests for crash_logging utility."""
 
+import subprocess
+import sys
+import textwrap
 from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import patch
@@ -107,3 +110,34 @@ class TestEnableCrashLogging:
         assert second is not None
         assert second.exists()
         assert _state["handle"] is not first_handle
+
+
+def test_crash_log_captures_real_segfault(tmp_path: Path) -> None:
+    """Subprocess crash via faulthandler._sigsegv() writes traceback to log.
+
+    Uses faulthandler._sigsegv() — CPython's standard test hook for triggering
+    a real segfault. This is the same API used by CPython's own test suite.
+    """
+    script = textwrap.dedent(f"""\
+        import sys
+        from pathlib import Path
+        import faulthandler
+        from mcp_coder.utils.crash_logging import enable_crash_logging
+        enable_crash_logging(Path(r"{tmp_path}"), "test")
+        faulthandler._sigsegv()
+    """)
+
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+
+    crash_dir = tmp_path / "logs" / "faulthandler"
+    crash_files = list(crash_dir.glob("crash_test_*.log"))
+    assert len(crash_files) == 1
+
+    content = crash_files[0].read_text(encoding="utf-8")
+    assert "Fatal Python error" in content or "Current thread" in content
