@@ -1,6 +1,7 @@
 """Main CLI entry point for MCP Coder."""
 
 import argparse
+import faulthandler
 import logging
 import sys
 
@@ -41,6 +42,12 @@ from .parsers import (
     add_verify_parser,
     add_vscodeclaude_parsers,
 )
+
+# Enable faulthandler early to capture tracebacks on crashes (e.g. segfaults)
+# before heavy imports. Zero cost, writes to stderr.
+faulthandler.enable(file=sys.stderr, all_threads=True)
+
+
 
 # Logger will be initialized in main()
 logger = logging.getLogger(__name__)

@@ -1,13 +1,9 @@
-feat: add crash_logging utility with enable_crash_logging and tests
+feat: add faulthandler stderr safety net to CLI entry point
 
-Add src/mcp_coder/utils/crash_logging.py with enable_crash_logging()
-which enables Python's faulthandler with a persistent per-process crash
-log file under {project_dir}/logs/faulthandler/. The function is
-idempotent, never raises, and includes _reset_for_testing() for test
-isolation.
+Enable faulthandler.enable(file=sys.stderr, all_threads=True) at the
+top of src/mcp_coder/cli/main.py, before heavy imports. This is a
+zero-cost safety net that captures native-level tracebacks on crashes
+(e.g. segfaults) during CLI startup.
 
-Add tests/utils/test_crash_logging.py with 7 unit tests covering file
-creation, faulthandler integration, idempotency, error handling, and
-state reset.
-
-Refs: #712
+Add subprocess-based test to verify faulthandler is enabled after
+importing the CLI module.
