@@ -239,3 +239,18 @@ async def test_input_area_has_history_attribute() -> None:
         from mcp_coder.icoder.core.command_history import CommandHistory
 
         assert isinstance(input_area.command_history, CommandHistory)
+
+
+@pytest.mark.asyncio
+async def test_input_area_no_registry_backward_compat() -> None:
+    """InputArea() with no registry mounts and accepts text changes (no autocomplete behavior)."""
+    app = WidgetTestApp()
+    async with app.run_test() as pilot:
+        input_area = app.query_one(InputArea)
+        input_area.focus()
+        await pilot.pause()
+        input_area.insert("/hel")
+        await pilot.pause()
+        # Should not crash — no registry means autocomplete is skipped
+        assert input_area.text == "/hel"
+        assert input_area._registry is None  # noqa: SLF001

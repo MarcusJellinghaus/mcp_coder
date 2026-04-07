@@ -1,13 +1,13 @@
-feat(icoder): add autocomplete state module
+feat(icoder): wire autocomplete into InputArea
 
-Add pure autocomplete state module with no Textual dependency:
-
-- AutocompleteState frozen dataclass capturing visible, matches, and
-  highlighted_index
-- compute_next_state() pure function that derives state from input text
-  and command registry
-- Dropdown visible whenever input starts with '/', even with no matches
-- highlighted_index is 0 when matches exist, -1 when empty
-
-Add 7 unit tests covering visibility, filtering, highlighting, and
-frozen immutability invariants.
+- Add registry, event_log kwargs to InputArea.__init__ (both default
+  None for backward compatibility)
+- Hold AutocompleteState, recompute on every text change via
+  compute_next_state()
+- Drive CommandAutocomplete dropdown (show/hide/update_matches)
+- Implement _emit_ac_event() for transition-based event logging:
+  autocomplete_shown, autocomplete_filtered, autocomplete_hidden
+- Route Escape/Up/Down/Tab keys to dropdown when visible
+- Tab-select inserts command name + trailing space via load_text()
+- Enter always submits (hides dropdown as side effect if visible)
+- Add backward-compat test: InputArea() with no args still works
