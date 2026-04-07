@@ -104,6 +104,9 @@ def mock_cache_issue_manager() -> Mock:
     """Mock IssueManager for cache testing."""
     manager = Mock()
     manager.list_issues.return_value = []
+    # _fetch_and_merge_issues calls _list_issues_no_error_handling (not list_issues).
+    # Share the same Mock so existing tests that set list_issues.return_value still work.
+    manager._list_issues_no_error_handling = manager.list_issues
     return manager
 
 

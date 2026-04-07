@@ -340,7 +340,7 @@ def _fetch_and_merge_issues(  # pylint: disable=too-many-arguments,too-many-posi
     if is_full_refresh:
         refresh_type = "force" if force_refresh else "full"
         logger.debug(f"Full refresh for {repo_name} (type={refresh_type})")
-        fresh_issues = issue_manager.list_issues(
+        fresh_issues = issue_manager._list_issues_no_error_handling(
             state="open", include_pull_requests=False
         )
         _log_cache_metrics(
@@ -364,7 +364,7 @@ def _fetch_and_merge_issues(  # pylint: disable=too-many-arguments,too-many-posi
         logger.debug(
             f"Incremental refresh for {repo_name} since {last_checked} (age={cache_age_minutes}m)"
         )
-        fresh_issues = issue_manager.list_issues(
+        fresh_issues = issue_manager._list_issues_no_error_handling(
             state="all", include_pull_requests=False, since=last_checked
         )
         _log_cache_metrics(
@@ -469,32 +469,42 @@ def get_all_cached_issues(  # pylint: disable=too-many-locals
         logger.debug(f"Skipping {repo_name} - checked {age_seconds}s ago")
         return list(cache_data["issues"].values())
 
-    # Step 4: Fetch and merge issues
-    # Note: _fetch_and_merge_issues may clear cache on full refresh
-    # So we need to preserve and restore additional_dict after
-    fresh_issues = _fetch_and_merge_issues(
-        issue_manager,
-        cache_data,
-        repo_name,
-        force_refresh,
-        last_checked,
-        now,
-        cache_refresh_minutes,
-    )
+    # Save snapshot BEFORE fetch (in case full refresh clears cache_data["issues"])
+    issues_snapshot = dict(cache_data["issues"])
 
-    # Step 5: Update cache with fresh data
-    fresh_dict = {str(issue["number"]): issue for issue in fresh_issues}
-    cache_data["issues"].update(fresh_dict)
+    try:
+        # Step 4: Fetch and merge issues
+        # Note: _fetch_and_merge_issues may clear cache on full refresh
+        # So we need to preserve and restore additional_dict after
+        fresh_issues = _fetch_and_merge_issues(
+            issue_manager,
+            cache_data,
+            repo_name,
+            force_refresh,
+            last_checked,
+            now,
+            cache_refresh_minutes,
+        )
 
-    # Step 5b: Restore additional issues (they may have been cleared during full refresh)
-    if additional_dict:
-        cache_data["issues"].update(additional_dict)
+        # Step 5: Update cache with fresh data
+        fresh_dict = {str(issue["number"]): issue for issue in fresh_issues}
+        cache_data["issues"].update(fresh_dict)
 
-    cache_data["last_checked"] = format_for_cache(now)
+        # Step 5b: Restore additional issues (they may have been cleared during full refresh)
+        if additional_dict:
+            cache_data["issues"].update(additional_dict)
 
-    # Step 6: Save cache
-    if _save_cache_file(_get_cache_file_path(repo_identifier), cache_data):
-        _log_cache_metrics("save", repo_name, total_issues=len(cache_data["issues"]))
+        cache_data["last_checked"] = format_for_cache(now)
+
+        # Step 6: Save cache
+        if _save_cache_file(_get_cache_file_path(repo_identifier), cache_data):
+            _log_cache_metrics(
+                "save", repo_name, total_issues=len(cache_data["issues"])
+            )
+    except Exception:  # pylint: disable=broad-exception-caught
+        logger.warning("API fetch failed for %s, returning stale cache", repo_name)
+        cache_data["issues"] = issues_snapshot
+        return list(cache_data["issues"].values())
 
     # Step 7: Return ALL cached issues (unfiltered)
     all_cached_issues = list(cache_data["issues"].values())

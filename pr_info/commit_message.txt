@@ -1,10 +1,13 @@
-refactor: extract _list_issues_no_error_handling() from list_issues()
+Handle API failure in get_all_cached_issues() with snapshot restore
 
-Split list_issues() into two functions so the cache can call the raw
-version that raises on API failure, while all other callers keep the
-existing error-swallowing behavior via @_handle_github_errors.
-
-- Extract body of list_issues() into _list_issues_no_error_handling()
-- list_issues() delegates to the private method (decorators unchanged)
-- Add 3 tests: server error raises, network error raises, list_issues
-  still returns [] on error
+- Change _fetch_and_merge_issues to call _list_issues_no_error_handling
+  instead of list_issues so exceptions propagate to the caller
+- Add snapshot/try-except in get_all_cached_issues(): save a shallow
+  copy of cache_data["issues"] before fetch, restore on failure
+- On API failure: log warning, do not advance last_checked, do not
+  save cache, return stale cached issues from snapshot
+- Update mock_cache_issue_manager fixture to share list_issues Mock
+  with _list_issues_no_error_handling for backward compatibility
+- Add 4 tests: API failure does not advance last_checked, returns
+  stale issues, restores snapshot on full refresh, and sanity check
+  that successful fetch still advances last_checked

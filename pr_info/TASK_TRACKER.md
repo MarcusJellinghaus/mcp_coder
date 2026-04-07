@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: Handle API failure in `get_all_cached_issues()` with snapshot restore
-- [ ] Implementation: call `_list_issues_no_error_handling` in `_fetch_and_merge_issues`, add snapshot/try-except in `get_all_cached_issues()`, update `mock_cache_issue_manager` fixture, add 4 tests in `test_issue_cache.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: call `_list_issues_no_error_handling` in `_fetch_and_merge_issues`, add snapshot/try-except in `get_all_cached_issues()`, update `mock_cache_issue_manager` fixture, add 4 tests in `test_issue_cache.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Add `last_full_refresh` field and use it for full refresh threshold
 - [ ] Implementation: add `last_full_refresh` to `CacheData`, update `_load_cache_file`, change `_fetch_and_merge_issues` return to `tuple[List[IssueData], bool]`, update `get_all_cached_issues()`, add 5 tests in `test_issue_cache.py`
