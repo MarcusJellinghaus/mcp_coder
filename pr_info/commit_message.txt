@@ -1,0 +1,13 @@
+feat: add crash_logging utility with enable_crash_logging and tests
+
+Add src/mcp_coder/utils/crash_logging.py with enable_crash_logging()
+which enables Python's faulthandler with a persistent per-process crash
+log file under {project_dir}/logs/faulthandler/. The function is
+idempotent, never raises, and includes _reset_for_testing() for test
+isolation.
+
+Add tests/utils/test_crash_logging.py with 7 unit tests covering file
+creation, faulthandler integration, idempotency, error handling, and
+state reset.
+
+Refs: #712
