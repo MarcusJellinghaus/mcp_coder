@@ -1011,7 +1011,7 @@ def test_collect_task_status() -> None:
         patch(
             "mcp_coder.checks.branch_status.get_task_counts",
             return_value=(5, 5),
-        ) as mock_counts,
+        ) as _mock_counts,
     ):
         status, reason, is_blocking = _collect_task_status(project_dir)
 

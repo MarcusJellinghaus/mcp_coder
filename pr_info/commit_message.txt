@@ -1,8 +1,5 @@
-refactor: extract _build_ci_error_details to ci_log_parser module
+fix: prefix unused mock variable to resolve pylint W0612
 
-Move _build_ci_error_details from branch_status.py to ci_log_parser.py
-to bring branch_status.py under the 750-line file size limit (764 -> ~587).
-
-The function is logically related to CI log parsing and fits naturally
-in the ci_log_parser module. A re-import in branch_status.py preserves
-backward compatibility for all existing importers.
+Rename `mock_counts` to `_mock_counts` in test_collect_task_status
+to indicate the context manager variable is intentionally unused.
+This fixes the CI pipeline failure caused by pylint W0612.
