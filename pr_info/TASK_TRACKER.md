@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Add FailureCategory enum value, label entry, retry constant, and static prompt change
 See [step_1.md](./steps/step_1.md)
-- [ ] Implementation: enum value, constant, label entry, prompt rule, and test updates
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: enum value, constant, label entry, prompt rule, and test updates
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Change `process_single_task` return contract and add `attempt` parameter
 See [step_2.md](./steps/step_2.md)
