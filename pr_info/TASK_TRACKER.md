@@ -21,6 +21,16 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: `--from-status` flag on `gh-tool set-status` ([step_1.md](./steps/step_1.md))
+- [ ] Implementation: tests (`TestFromStatusFlag` in `test_set_status.py`) + production code (`gh_parsers.py`, `set_status.py`)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Coordinator template watchdog lines ([step_2.md](./steps/step_2.md))
+- [ ] Implementation: tests (`TestTemplateWatchdogLines` in `test_commands.py`) + production code (`command_templates.py`)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review: verify all steps implemented and checks pass
+- [ ] PR summary prepared
