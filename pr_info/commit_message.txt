@@ -1,18 +1,9 @@
-test(icoder): add autocomplete pilot integration tests
+test(icoder): add autocomplete snapshot tests
 
-Add 18 Textual pilot integration tests covering full autocomplete
-behavior end-to-end: visibility, filtering, key routing, event
-emission, and no regression on existing behavior.
+Add three SVG snapshot tests for autocomplete dropdown visual states:
+- All commands visible (user typed '/')
+- Filtered to matching commands (user typed '/he')
+- No matching commands message (user typed '/xyz')
 
-Tests cover:
-- Dropdown visibility: slash shows, filtering, no-match state,
-  backspace past slash hides, empty/non-slash input hidden
-- Key routing: Tab selects and inserts command, Escape hides
-  preserving input, Enter submits, Up/Down navigate dropdown
-  when visible vs history when hidden, Tab no-op when hidden
-- Event sequences: type+tab, type+escape, type+enter,
-  backspace past slash
-
-Fix wiring bug in InputArea: suppress autocomplete recomputation
-during tab-insert to prevent dropdown from re-showing when
-load_text() triggers on_text_area_changed.
+Existing snapshot baselines regenerated to account for the new
+(hidden) CommandAutocomplete widget in the layout.
