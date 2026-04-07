@@ -9,7 +9,6 @@ import pytest
 from mcp_coder.utils.github_operations.issues import IssueData
 from mcp_coder.workflows.vscodeclaude.session_restart import (
     BranchPrepResult,
-    _prepare_restart_branch,
     restart_closed_sessions,
 )
 
