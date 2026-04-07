@@ -1,0 +1,14 @@
+Rename 5 orchestrator test files to match new source structure
+
+Rename test files in tests/workflows/vscodeclaude/ to align with
+the session_launch/session_restart/issues module names from #458:
+
+- test_orchestrator_launch.py → test_session_launch.py
+- test_orchestrator_regenerate.py → test_session_launch_regenerate.py
+- test_orchestrator_launch_process_issues.py → test_session_launch_process_issues.py
+- test_orchestrator_cache.py → test_session_restart_cache.py
+- test_orchestrator_documentation.py → test_issues_branch_requirements.py
+
+No content changes — imports already reference the new module paths.
+
+Closes #463 (partial)

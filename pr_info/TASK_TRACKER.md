@@ -21,7 +21,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-- [ ] [Step 1: Rename 5 orchestrator test files](./steps/step_1.md)
+- [x] [Step 1: Rename 5 orchestrator test files](./steps/step_1.md)
 - [ ] [Step 2: Split test_orchestrator_sessions.py into 4 files](./steps/step_2.md)
 
 ## Pull Request
