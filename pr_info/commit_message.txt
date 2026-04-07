@@ -1,18 +1,5 @@
-feat: add last_full_refresh field to decouple full refresh threshold from last_checked
+fix: add missing Returns section to _list_issues_no_error_handling docstring
 
-Add `last_full_refresh` to CacheData to track when the last successful
-full refresh occurred, independently from `last_checked`. The 24-hour
-full refresh threshold now uses `last_full_refresh` instead of
-`last_checked`, ensuring periodic full refreshes fire regardless of
-how frequently incremental refreshes run.
-
-Changes:
-- Add `last_full_refresh` (NotRequired[Optional[str]]) to CacheData TypedDict
-- Update `_load_cache_file()` to read `last_full_refresh` with `.get()` default None
-- Change `_fetch_and_merge_issues()` to accept `last_full_refresh` param and
-  return `Tuple[List[IssueData], bool]` (issues, was_full_refresh)
-- Update `get_all_cached_issues()` to parse, pass, and conditionally update
-  `last_full_refresh` only after successful full refreshes
-- Add 5 tests: persistence, full refresh update, incremental no-update,
-  old last_full_refresh triggers full refresh, backward compatibility
-- Fix existing tests for new CacheData shape
+Add Google-style Returns section to the _list_issues_no_error_handling
+method docstring to satisfy ruff rule DOC201, which requires documented
+return types when a return type annotation is present.

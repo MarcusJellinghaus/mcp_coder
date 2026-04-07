@@ -188,6 +188,9 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
         """List issues without error handling. Raises on API failure.
 
         Private method for callers that need to detect failures (e.g., cache).
+
+        Returns:
+            List of IssueData dictionaries with issue information.
         """
         # Get repository
         repo = self._get_repository()

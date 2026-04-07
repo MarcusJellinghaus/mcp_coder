@@ -1,0 +1,5 @@
+The CI pipeline failed on the `ruff-docstrings` job due to a missing `Returns` section in the docstring of `_list_issues_no_error_handling` in `src/mcp_coder/utils/github_operations/issues/manager.py`. Ruff rule DOC201 requires that all functions with a return type annotation document their return value in the docstring. The method has a return type of `List[IssueData]` (line 187) but its docstring (lines 188-191) only contains a brief description without a `Returns` section.
+
+The fix is straightforward: add a `Returns` section to the docstring of `_list_issues_no_error_handling` documenting that it returns a list of `IssueData` dictionaries. The only file that needs to be changed is `src/mcp_coder/utils/github_operations/issues/manager.py`, specifically the docstring at line 188. The docstring should follow the same Google-style format used by the other methods in the class (e.g., `list_issues`, `get_issue`) which already include proper `Returns` sections.
+
+No other jobs failed, and this is the only ruff DOC201 violation in the codebase. The fix is a documentation-only change with no impact on runtime behavior.
