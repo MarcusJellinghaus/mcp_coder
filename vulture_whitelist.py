@@ -140,6 +140,9 @@ _.pytestmark
 # langchain/conftest.py - Autouse session fixture for mocking langchain modules
 _._mock_langchain_modules
 
+# test_crash_logging.py - Autouse fixture to reset crash_logging module state
+_._isolate_crash_logging_state
+
 # =============================================================================
 # API COMPLETENESS - CommandResult Dataclass Fields
 # =============================================================================
