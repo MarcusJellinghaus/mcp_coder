@@ -41,9 +41,9 @@ See [step_3.md](./steps/step_3.md)
 
 ### Step 4: Wire `process_task_with_retry` into `core.py` and add failure routing
 See [step_4.md](./steps/step_4.md)
-- [ ] Implementation: import change, call site change, reason routing, and test in test_core.py
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: import change, call site change, reason routing, and test in test_core.py
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: all steps complete, all checks green
