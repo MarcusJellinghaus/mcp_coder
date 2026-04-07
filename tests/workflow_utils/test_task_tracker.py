@@ -1688,7 +1688,7 @@ class TestTaskTrackerStatusEnum:
         """Verify all 4 enum values exist and are strings."""
         assert TaskTrackerStatus.COMPLETE == "COMPLETE"
         assert TaskTrackerStatus.INCOMPLETE == "INCOMPLETE"
-        assert TaskTrackerStatus.N_A == "N_A"
+        assert TaskTrackerStatus.N_A.value == "N/A"
         assert TaskTrackerStatus.ERROR == "ERROR"
         assert len(TaskTrackerStatus) == 4
 

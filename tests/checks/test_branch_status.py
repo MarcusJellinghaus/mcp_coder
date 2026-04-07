@@ -1804,7 +1804,7 @@ def test_format_human_tasks_na_non_blocking() -> None:
         tasks_is_blocking=False,
     )
     output = report.format_for_human()
-    assert "Task Tracker: \u2796 N_A (no pr_info folder)" in output
+    assert "Task Tracker: \u2796 N/A (no pr_info folder)" in output
 
 
 def test_format_human_tasks_na_blocking() -> None:
@@ -1816,7 +1816,7 @@ def test_format_human_tasks_na_blocking() -> None:
     )
     output = report.format_for_human()
     assert (
-        "Task Tracker: \u26a0\ufe0f N_A (implementation plan exists but no TASK_TRACKER.md)"
+        "Task Tracker: \u26a0\ufe0f N/A (implementation plan exists but no TASK_TRACKER.md)"
         in output
     )
 
@@ -1857,7 +1857,7 @@ def test_format_llm_tasks_na() -> None:
         tasks_is_blocking=False,
     )
     output = report.format_for_llm()
-    assert "Tasks=N_A (no pr_info folder)" in output
+    assert "Tasks=N/A (no pr_info folder)" in output
 
 
 # --- _generate_recommendations tests ---

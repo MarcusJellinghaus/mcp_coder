@@ -75,7 +75,7 @@ class TaskTrackerStatus(str, Enum):
 
     COMPLETE = "COMPLETE"
     INCOMPLETE = "INCOMPLETE"
-    N_A = "N_A"
+    N_A = "N/A"
     ERROR = "ERROR"
 
 
