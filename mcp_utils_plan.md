@@ -3,7 +3,7 @@
 Planning doc for introducing a shared `mcp-utils` repo across the 4 existing repos.
 Every module in every repo is listed below with a proposed disposition. Nothing is final — this is the working surface for decisions.
 
-> ⚠️ **Validation pending (deferred).** This plan is based on module listings and directory structure, **not** a full source-code read. Before executing any move, the relevant section must be validated by reading the actual source of the affected modules (imports, public API, hidden coupling, test setup). Not required now — flagged for when we transition from planning to implementation.
+> ⚠️ **Validation status.** Phase 0 source-read validation is **complete for phase 2 modules** (`subprocess_runner`, `subprocess_streaming`, `log_utils`) — see "Phase 0 findings" section below. Validation for phase 4 (formatters, pyproject_config split) and phase 5 (git, github) is **deferred to just-in-time** — read the source of those modules immediately before starting each phase.
 
 **Legend:**
 
@@ -69,7 +69,8 @@ Strict shape under rules #3 and #4: only modules used by ≥2 MCP servers **and*
 | `subprocess/runner` | ✨ from mcp_tools_py + mcp_workspace (+ mcp_coder's version for reference) | used by every server to shell out. Pick mcp_coder's as canonical (most featureful) |
 | `subprocess/streaming` | ✨ from mcp_coder | pairs with `subprocess/runner` — moves together |
 | `logging/log_utils` | ✨ from mcp_tools_py + mcp_workspace (+ mcp_coder's redaction) | every server needs logging |
-| `fs/file_utils` | ✨ from mcp_tools_py + mcp_workspace's `path_utils` | path + basic file helpers; both servers touch files |
+| `fs/read_file` | ✨ from mcp_tools_py + mcp_config (literal duplicates) | 30-line UTF-8→latin-1 fallback reader; trivial dedupe |
+| `fs/path_security` | ✨ from mcp_workspace's `path_utils.py` | `normalize_path()` — path traversal prevention; different responsibility from read_file |
 
 **That's it for the first cut.** Everything else needs a concrete second-server consumer before it earns a spot here.
 
@@ -77,7 +78,7 @@ Strict shape under rules #3 and #4: only modules used by ≥2 MCP servers **and*
 
 | Module | Why demoted | New home |
 |---|---|---|
-| `pyproject_config` / `project_config` | Python-specific (rule #4) | `mcp_tools_py` — consolidate the two copies there |
+| `pyproject_config` (mcp_coder) | Python-specific (rule #4) — but NOT a duplicate of p_tools's `project_config`; see Phase 0 findings | **Split:** formatter helpers → `mcp_tools_py/formatter/`; `get_github_install_config` stays in mcp_coder |
 | `formatters/config_reader.py` | Reads `[tool.black]` / `[tool.isort]` — Python-specific | `mcp_tools_py` |
 | `user_config` | Only mcp_coder uses it | stays in `mcp_coder` |
 | `data_files` | Only mcp_coder uses it | stays in `mcp_coder` |
@@ -227,7 +228,7 @@ Re-audited under rules #3 and #4. Many previous 🟢 MOVE rows are now 🔴 KEEP
 | `git_utils.py` | 🔴 KEEP | workflow-aware; primitives live in `mcp_workspace` instead |
 | `log_utils.py` | 🟢 MOVE | → mcp-utils (used by all servers, has redaction logic others lack) |
 | `mlflow_config_loader.py` | 🔴 KEEP | mlflow-specific |
-| `pyproject_config.py` | ⚫ CONSOLIDATE | → `mcp_tools_py` (Python-specific; merge with its `project_config.py`) |
+| `pyproject_config.py` | 🟢 SPLIT | `get_formatter_config` + `check_line_length_conflicts` → `mcp_tools_py/formatter/`; `get_github_install_config` + `GitHubInstallConfig` stay in mcp_coder (install-from-github CLI feature) |
 | `subprocess_runner.py` | 🟢 MOVE | → mcp-utils (canonical; replaces copies in all servers) |
 | `subprocess_streaming.py` | 🟢 MOVE | → mcp-utils (pairs with `subprocess_runner`) |
 | `timezone_utils.py` | 🔴 KEEP | mcp_coder-only |
@@ -293,7 +294,7 @@ The **policy** (when/why to create PRs, which labels to apply) stays in mcp_code
 |---|---|---|
 | `main.py`, `server.py`, `__init__.py` | 🔴 KEEP | MCP server entry |
 | `checker_tools.py` | 🔴 KEEP | tool registration |
-| `utility_tools.py` | 🟡 TBD | not analysed yet — needs a read pass before disposition |
+| `utility_tools.py` | 🔴 KEEP | MCP sleep-tool registration (not a utils lib — misnamed). Stays as MCP server feature |
 | `inspect_library.py` | 🔴 KEEP | `get_library_source` logic |
 | `log_utils.py` | ⚫ CONSOLIDATE | duplicate → use mcp-utils/logging |
 
@@ -324,9 +325,9 @@ This is the **canonical home** for black/isort runners. mcp_coder's duplicates g
 
 | Module | Disposition | Notes |
 |---|---|---|
-| `file_utils.py` | ⚫ CONSOLIDATE | → mcp-utils/fs |
-| `project_config.py` | ⚫ CONSOLIDATE | → mcp-utils/config (same as mcp_coder's pyproject_config) |
-| `subprocess_runner.py` | ⚫ CONSOLIDATE | → mcp-utils/subprocess |
+| `file_utils.py` | 🟢 MOVE → `mcp-utils/fs/read_file` | identical to p_config's copy; trivial dedupe |
+| `project_config.py` | 🔴 KEEP | NOT a duplicate of mcp_coder's `pyproject_config` — reads packaging/test metadata for code checkers. Stays |
+| `subprocess_runner.py` | ⚫ CONSOLIDATE | contributes `format_command` + structured logging style to merged mcp-utils version |
 
 ---
 
@@ -347,7 +348,7 @@ This is the **canonical home** for black/isort runners. mcp_coder's duplicates g
 | `edit_file.py` | 🔴 KEEP | core edit semantics |
 | `file_operations.py` | 🔴 KEEP | MCP-facing |
 | `git_operations.py` | 🔴 KEEP (canonical) | **the only home for git-related code.** Absorbs the entirety of `mcp_coder/utils/git_operations/`. Exposed as MCP tools so mcp_coder can call them |
-| `path_utils.py` | ⚫ CONSOLIDATE | merge with mcp_tools_py's `file_utils.py` → mcp-utils/fs |
+| `path_utils.py` | 🟢 MOVE → `mcp-utils/fs/path_security` | `normalize_path()` path-traversal prevention; separate concern from `read_file` |
 | `search.py` | 🔴 KEEP | |
 | `github_operations.py` | ✨ NEW | absorbs entirety of `mcp_coder/utils/github_operations/`. Exposed as MCP tools. Temporary home until (if) a dedicated `mcp_github` server is created |
 
@@ -373,8 +374,8 @@ This is the **canonical home** for black/isort runners. mcp_coder's duplicates g
 
 | Module | Disposition | Notes |
 |---|---|---|
-| `file_utils.py` | ⚫ CONSOLIDATE | → mcp-utils/fs |
-| `subprocess_runner.py` | ⚫ CONSOLIDATE | → mcp-utils/subprocess |
+| `file_utils.py` | 🟢 MOVE → `mcp-utils/fs/read_file` | identical to p_tools's copy; trivial dedupe |
+| `subprocess_runner.py` | ⚫ CONSOLIDATE | older/simpler; reference only, not canonical source |
 
 *(The earlier "→ mcp_workspace (under consideration)" block is removed: the decision is now made and documented in §2 under `utils/git_operations/` and `utils/github_operations/`.)*
 
@@ -395,12 +396,31 @@ This is the **canonical home** for black/isort runners. mcp_coder's duplicates g
 
 ## Cross-cutting decisions still open
 
-1. **`pyproject_config` vs `project_config`** — same concept, two names. Pick one name before consolidating into `mcp_tools_py`.
-2. **`file_utils` vs `path_utils`** — mcp_tools_py's `file_utils.py` and mcp_workspace's `path_utils.py`. Compare APIs, pick the superset, land in mcp-utils.
-3. **Release coupling** — bumping mcp-utils means bumping all downstream repos. Acceptable, or push toward monorepo?
-4. **`utility_tools.py` in mcp_tools_py** — not yet analysed; needs a read pass before disposition.
+1. **Release coupling** — bumping mcp-utils means bumping all downstream repos. Acceptable, or push toward monorepo?
+2. **`subprocess_runner` canonical merge** — mcp_coder and p_tools have *different* feature supersets (mcp_coder: heartbeat, launch_process, env_remove, get_utf8_env; p_tools: format_command, cleaner structured logging). Canonical version must merge both, not pick one. Scheduled for phase 2 execution.
 
-*(Resolved and removed: subprocess_runner canonical choice, log_utils canonical choice, formatters routing, git primitives location, `mcp-llm` future repo, `icoder` future repo.)*
+*(Resolved during Phase 0 — see "Phase 0 findings" below. Earlier resolved: log_utils canonical choice = mcp_coder, formatters routing = mcp_tools_py, git primitives = mcp_workspace, mcp-llm deferred, icoder deferred.)*
+
+## Phase 0 findings
+
+Pre-work completed. Key corrections to earlier plan assumptions:
+
+1. **`pyproject_config` and `project_config` are NOT duplicates.** Different files reading different TOML sections for different purposes.
+   - `mcp_coder/utils/pyproject_config.py` → **split**: `get_formatter_config` + `check_line_length_conflicts` move to `mcp_tools_py/formatter/`; `get_github_install_config` + `GitHubInstallConfig` **stay in mcp_coder** (mcp_coder-specific install-from-github CLI feature).
+   - `mcp_tools_py/utils/project_config.py` → **stays in mcp_tools_py**, untouched. Reads `[tool.setuptools.packages.find]` / `[tool.pytest.ini_options]` — used by code checkers to discover src/test dirs.
+2. **`file_utils` and `path_utils` are NOT the same either.**
+   - `p_tools/utils/file_utils.py` ≡ `p_config/src/utils/file_utils.py` — literally identical 30-line `read_file()` helper. Trivial dedupe.
+   - `p_workspace/file_tools/path_utils.py` — 70-line `normalize_path()` security helper (path traversal prevention). Different responsibility.
+   - **Two separate mcp-utils modules, not one merged one:** `fs/read_file.py` (from the two duplicates) + `fs/path_security.py` (from p_workspace).
+3. **`utility_tools.py` is an MCP sleep-tool registration**, not a utils library. Misnamed. **Stays in mcp_tools_py** 🔴 KEEP. Optional rename to `sleep_tool.py` out of scope.
+4. **`log_utils` canonical = mcp_coder's version.** Clear superset: custom OUTPUT log level (25), CleanFormatter for CLI, testing-env detection, redaction support via `_redact_for_logging`, `log_function_call` with `sensitive_fields` parameter. Server versions (p_tools, p_workspace) are much smaller and lack all of these. Servers upgrade by adopting mcp_coder's.
+5. **`subprocess_runner` canonical = merge mcp_coder + p_tools.** Not a simple pick. Three-way drift:
+   - mcp_coder: heartbeat, launch_process, env_remove, get_utf8_env, FileNotFoundError/PermissionError branches
+   - p_tools: format_command helper, cleaner structured logging via `extra={}`
+   - p_config: older, simpler — reference only
+   - Canonical: mcp_coder as base + absorb p_tools's `format_command` + adopt p_tools's logging style. Merge work happens in phase 2.
+6. **Phase-2 coupling check: clean.** `subprocess_runner` uses only stdlib. `subprocess_streaming` depends only on `.subprocess_runner` (must move together). `log_utils` depends on `structlog` + `python-json-logger` (pip packages), zero internal imports. All three safe to move.
+7. **Deferred to just-in-time (per-phase) validation:** source-read validation for phase 4 (formatters, pyproject_config split) and phase 5 (git, github). Do not front-load.
 
 ---
 
