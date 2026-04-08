@@ -1,9 +1,5 @@
-Split test_compact_diffs.py to fix file-size CI check
+fix: resolve pylint W1404 implicit-str-concat in header-only test params (#709)
 
-Extract realistic refactor and header-only test classes from
-test_compact_diffs.py (927 lines) into a new
-test_compact_diffs_header_only.py module, bringing the original
-file under the 750-line limit.
-
-Also fix implicit-str-concat pylint warnings in the new file
-by expanding single-line string tuples to multi-line form.
+Split single-line implicit string concatenations in _HEADER_ONLY_CASES
+(empty_file_creation and empty_file_deletion pytest.param entries) into
+multi-line format to satisfy pylint W1404. No logic changes.
