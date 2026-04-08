@@ -1,12 +1,13 @@
-feat(init): add _deploy_skills() and integrate into execute_init()
+docs: replace hand-copy instructions with mcp-coder init references
 
-- Add _deploy_skills() that copies skills/, knowledge_base/, agents/
-  from source into project_dir/.claude/ with never-overwrite policy
-- Update execute_init() to validate --project-dir, resolve source dir,
-  detect self-deploy (running inside mcp-coder repo), deploy skills,
-  and conditionally create config (skip with --just-skills)
-- Add TestDeploySkills tests (empty project, no-overwrite, counts,
-  warnings, nested dirs, missing subdirs)
-- Add TestExecuteInitWithDeploy tests (default flow, --just-skills,
-  --project-dir, missing dir exits 1, self-deploy skip)
-- Update existing TestInitCommand tests to mock deploy functions
+Update repository-setup documentation to reference the new
+`mcp-coder init` command instead of manual file copying:
+
+- claude-code.md: skills section now references `mcp-coder init`
+  and `--just-skills` flag instead of "copy from mcp-coder"
+- claude-code.md: knowledge base section says "deployed automatically"
+  instead of "copy as-is"
+- README.md: quick setup checklist adds `mcp-coder init` step and
+  narrows manual config to CLAUDE.md and .mcp.json
+- README.md: compatibility table note explains init-based deployment
+  and no-overwrite behavior

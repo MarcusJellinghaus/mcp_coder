@@ -52,9 +52,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 5: Documentation updates
 > [step_5.md](./steps/step_5.md) — Replace hand-copy instructions with `mcp-coder init` references
 
-- [ ] Implementation: `docs/repository-setup/claude-code.md`, `docs/repository-setup/README.md`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `docs/repository-setup/claude-code.md`, `docs/repository-setup/README.md`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
