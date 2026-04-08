@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Streaming buffer + Static tail widget + basic regression tests (a–e)
-- [ ] Implementation: add `Static` streaming-tail widget, CSS, `_text_buffer`, `_flush_buffer()`, rewrite `_handle_stream_event` for buffered streaming; add tests a–e (`app.py`, `styles.py`, `test_app_pilot.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `Static` streaming-tail widget, CSS, `_text_buffer`, `_flush_buffer()`, rewrite `_handle_stream_event` for buffered streaming; add tests a–e (`app.py`, `styles.py`, `test_app_pilot.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Regression tests f–h (error/tool mid-line flush, back-to-back streams)
 - [ ] Implementation: add tests f–h for error mid-line flush, back-to-back streams, tool event mid-line (`test_app_pilot.py` only — no production code changes)

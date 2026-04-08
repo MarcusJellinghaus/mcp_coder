@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from textual.app import App, ComposeResult
+from textual.widgets import Static
 
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.ui.styles import CSS
@@ -13,6 +14,7 @@ from mcp_coder.icoder.ui.widgets.input_area import InputArea
 from mcp_coder.icoder.ui.widgets.output_log import OutputLog
 from mcp_coder.llm.formatting.render_actions import (
     ErrorMessage,
+    StreamDone,
     TextChunk,
     ToolResult,
     ToolStart,
@@ -39,6 +41,7 @@ class ICoderApp(App[None]):
         super().__init__(**kwargs)
         self._core = app_core
         self._renderer = StreamEventRenderer()
+        self._text_buffer: str = ""
 
     def compose(self) -> ComposeResult:
         """Vertical layout: OutputLog on top, InputArea at bottom.
@@ -47,6 +50,7 @@ class ICoderApp(App[None]):
             OutputLog and InputArea widgets.
         """
         yield OutputLog()
+        yield Static(id="streaming-tail")
         yield CommandAutocomplete()
         yield InputArea(
             registry=self._core.registry,
@@ -87,13 +91,21 @@ class ICoderApp(App[None]):
         try:
             for event in self._core.stream_llm(text):
                 self.call_from_thread(self._handle_stream_event, event)
-            self.call_from_thread(self._append_blank_line)
         except Exception as exc:  # pylint: disable=broad-exception-caught
+            self.call_from_thread(self._flush_buffer)
             self.call_from_thread(self._show_error, str(exc))
+            self.call_from_thread(self._append_blank_line)
 
     def _append_blank_line(self) -> None:
         """Write an empty line to the output log for visual spacing."""
         self.query_one(OutputLog).write("")
+
+    def _flush_buffer(self) -> None:
+        """Flush any buffered text to OutputLog and clear the streaming tail."""
+        if self._text_buffer:
+            self.query_one(OutputLog).append_text(self._text_buffer)
+            self._text_buffer = ""
+        self.query_one("#streaming-tail", Static).update("")
 
     def _handle_stream_event(self, event: StreamEvent) -> None:
         """Render a single stream event in the output log.
@@ -105,8 +117,21 @@ class ICoderApp(App[None]):
         action = self._renderer.render(event)
         if action is None:
             return
+
         if isinstance(action, TextChunk):
-            output.append_text(action.text)
+            self._text_buffer += action.text
+            lines = self._text_buffer.split("\n")
+            for line in lines[:-1]:
+                output.append_text(line)
+            self._text_buffer = lines[-1]
+            self.query_one("#streaming-tail", Static).update(self._text_buffer)
+            return
+
+        # Any non-text action: flush buffer first
+        self._flush_buffer()
+
+        if isinstance(action, StreamDone):
+            self._append_blank_line()
         elif isinstance(action, ToolStart):
             if action.inline_args is not None:
                 line = f"┌ {action.display_name}({action.inline_args})"
