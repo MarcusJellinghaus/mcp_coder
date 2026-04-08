@@ -1,0 +1,12 @@
+feat(cli): add --just-skills and --project-dir flags to init command
+
+Add dedicated add_init_parser() in parsers.py with --just-skills
+(store_true) and --project-dir (str, default None) arguments.
+
+Replace bare add_parser("init") in main.py with the new parser function.
+Update execute_init() signature from _args to args and reference the
+new attributes to prepare for deploy logic in a follow-up commit.
+
+Add TestInitParser with four test cases covering default args, each
+flag individually, and both flags combined. Update existing test
+Namespace objects to include the new attributes.

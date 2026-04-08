@@ -11,6 +11,7 @@ from unittest.mock import patch
 import pytest
 
 from mcp_coder.cli.commands.init import execute_init
+from mcp_coder.cli.main import create_parser
 
 
 def _load_setup_module() -> types.ModuleType:
@@ -39,7 +40,7 @@ class TestInitCommand:
         """Test successful config creation prints instructions."""
         mock_create.return_value = True  # type: ignore[attr-defined]
         mock_path.return_value = "/fake/path/config.toml"  # type: ignore[attr-defined]
-        args = argparse.Namespace(command="init")
+        args = argparse.Namespace(command="init", just_skills=False, project_dir=None)
 
         with caplog.at_level(logging.DEBUG):
             result = execute_init(args)
@@ -62,7 +63,7 @@ class TestInitCommand:
         """Test existing config prints already-exists message."""
         mock_create.return_value = False  # type: ignore[attr-defined]
         mock_path.return_value = "/fake/path/config.toml"  # type: ignore[attr-defined]
-        args = argparse.Namespace(command="init")
+        args = argparse.Namespace(command="init", just_skills=False, project_dir=None)
 
         with caplog.at_level(logging.DEBUG):
             result = execute_init(args)
@@ -81,7 +82,7 @@ class TestInitCommand:
         """Test write failure returns exit code 1 with error message."""
         mock_create.side_effect = OSError("Permission denied")  # type: ignore[attr-defined]
         mock_path.return_value = "/fake/path/config.toml"  # type: ignore[attr-defined]
-        args = argparse.Namespace(command="init")
+        args = argparse.Namespace(command="init", just_skills=False, project_dir=None)
 
         with caplog.at_level(logging.DEBUG):
             result = execute_init(args)
@@ -191,3 +192,34 @@ class TestBuildPyWithSkills:
             setup_mod._copy_claude_resources()
 
         assert (dest / "skills" / "skill.md").read_text() == "version 1"
+
+
+class TestInitParser:
+    """Tests for init command parser flags."""
+
+    def test_init_default_args(self) -> None:
+        """init with no flags sets just_skills=False, project_dir=None."""
+        parser = create_parser()
+        args = parser.parse_args(["init"])
+        assert args.command == "init"
+        assert args.just_skills is False
+        assert args.project_dir is None
+
+    def test_init_just_skills_flag(self) -> None:
+        """--just-skills sets just_skills=True."""
+        parser = create_parser()
+        args = parser.parse_args(["init", "--just-skills"])
+        assert args.just_skills is True
+
+    def test_init_project_dir_flag(self) -> None:
+        """--project-dir sets project_dir to given path."""
+        parser = create_parser()
+        args = parser.parse_args(["init", "--project-dir", "/tmp/foo"])
+        assert args.project_dir == "/tmp/foo"
+
+    def test_init_both_flags(self) -> None:
+        """--just-skills --project-dir /tmp/foo sets both."""
+        parser = create_parser()
+        args = parser.parse_args(["init", "--just-skills", "--project-dir", "/tmp/foo"])
+        assert args.just_skills is True
+        assert args.project_dir == "/tmp/foo"

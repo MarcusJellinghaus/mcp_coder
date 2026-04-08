@@ -31,9 +31,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 2: CLI parser for init command
 > [step_2.md](./steps/step_2.md) — `add_init_parser()` with `--just-skills` and `--project-dir` flags
 
-- [ ] Implementation: `parsers.py`, `main.py`, `init.py` signature update, tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `parsers.py`, `main.py`, `init.py` signature update, tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Runtime skill source resolver
 > [step_3.md](./steps/step_3.md) — `_find_claude_source_dir()` with dual-lookup logic

@@ -9,15 +9,16 @@ from ...utils.user_config import create_default_config, get_config_file_path
 logger = logging.getLogger(__name__)
 
 
-def execute_init(_args: argparse.Namespace) -> int:
+def execute_init(args: argparse.Namespace) -> int:
     """Execute init command to create default configuration file.
 
     Args:
-        _args: Parsed command-line arguments (unused for this command).
+        args: Parsed command-line arguments.
 
     Returns:
         Exit code (0 for success, 1 for write failure).
     """
+    _ = (args.just_skills, args.project_dir)  # consumed in step 4
     logger.info("Executing init command")
 
     path = get_config_file_path()
