@@ -2,7 +2,7 @@
 
 ## LLM Prompt
 
-> Read `pr_info/steps/summary.md` for context. Implement Step 2: add git_integration tests in a new file `test_compact_diffs_integration.py` that exercise the full pipeline with real git repos, then add `-M` and `-C90%` flags to `get_branch_diff()` in `diffs.py`. Follow TDD — write tests first (they will fail without the flags for rename/copy detection), then add the flags, then verify all checks pass.
+> Read `pr_info/steps/summary.md` for context. Implement Step 2: add git_integration tests in a new file `test_compact_diffs_integration.py` that exercise the full pipeline with real git repos, then add `-M` and `-C90%` flags to `get_branch_diff()` in `diffs.py`. Follow TDD — write tests first (they will fail without the flags for rename/copy detection), then add the flags, then verify all checks pass. Tests use the `git_repo_with_commit` fixture and capture the base branch name via `get_current_branch_name()` (never hard-code `"main"`).
 
 ## WHERE
 
@@ -13,26 +13,26 @@
 
 ### Integration tests in `test_compact_diffs_integration.py`
 
-All tests marked `@pytest.mark.git_integration`, using the existing `git_repo` fixture from `conftest.py`.
+All tests marked `@pytest.mark.git_integration`, using the existing `git_repo_with_commit` fixture from `conftest.py` (which provides a repo with one initial README commit on the default branch). Each test calls `get_current_branch_name(project_dir)` to capture the base branch name *before* creating a feature branch, then passes that captured name to `get_compact_diff(project_dir, base_branch)`. Never hard-code `"main"` — the default branch depends on the user's `init.defaultBranch` git config. This matches the existing pattern in `tests/utils/git_operations/test_diffs.py`.
 
 **Class `TestCompactDiffRenames`:**
 
-1. `test_pure_rename_appears_in_compact_diff` — rename a file with no content change on a feature branch, run `get_compact_diff`, assert output contains `rename from` and `rename to`.
-2. `test_partial_rename_shows_headers_and_hunks` — rename a file AND change some content, run `get_compact_diff`, assert output contains `rename from`/`rename to` AND the content diff.
+1. `test_pure_rename_appears_in_compact_diff` — capture base branch name, create feature branch, rename a file with no content change, commit, run `get_compact_diff(project_dir, base_branch)`, assert output contains `rename from` and `rename to`.
+2. `test_partial_rename_shows_headers_and_hunks` — capture base branch name, create feature branch, rename a file AND change some content, commit, run `get_compact_diff(project_dir, base_branch)`, assert output contains `rename from`/`rename to` AND the content diff.
 
 **Class `TestCompactDiffCopies`:**
 
-3. `test_pure_copy_appears_in_compact_diff` — on the feature branch, modify the source file's content slightly AND create a near-identical copy under a new name in the same commit, so git considers the source as a copy candidate (plain `-C` only considers files modified in the commit as copy sources). Run `get_compact_diff`, assert output contains `copy from`/`copy to`.
+3. `test_pure_copy_appears_in_compact_diff` — capture base branch name, create feature branch, modify the source file's content slightly AND create a near-identical copy under a new name in the same commit, so git considers the source as a copy candidate (plain `-C` only considers files modified in the commit as copy sources). Run `get_compact_diff(project_dir, base_branch)`, assert output contains `copy from`/`copy to`.
 
 **Class `TestCompactDiffModeChanges`:**
 
-4. `test_mode_change_appears_in_compact_diff` — change file mode via `git update-index --chmod=+x` (with `core.fileMode=true` in the test repo), run `get_compact_diff`, assert output contains `old mode`/`new mode`.
+4. `test_mode_change_appears_in_compact_diff` — capture base branch name, create feature branch, change file mode via `git update-index --chmod=+x` (with `core.fileMode=true` in the test repo), commit, run `get_compact_diff(project_dir, base_branch)`, assert output contains `old mode`/`new mode`.
 
 **Class `TestCompactDiffBinaryAndEmpty`:**
 
-5. `test_binary_change_appears_in_compact_diff` — add a binary file on a feature branch, run `get_compact_diff`, assert output contains `Binary files` or `Binary`.
-6. `test_empty_file_creation_appears_in_compact_diff` — create an empty file on a feature branch, run `get_compact_diff`, assert output contains `new file mode`.
-7. `test_empty_file_deletion_appears_in_compact_diff` — delete a file that was added on main, run `get_compact_diff`, assert output contains `deleted file mode`.
+5. `test_binary_change_appears_in_compact_diff` — capture base branch name, create feature branch, add a binary file, commit, run `get_compact_diff(project_dir, base_branch)`, assert output contains `Binary files` or `Binary`.
+6. `test_empty_file_creation_appears_in_compact_diff` — capture base branch name, create feature branch, create an empty file, commit, run `get_compact_diff(project_dir, base_branch)`, assert output contains `new file mode`.
+7. `test_empty_file_deletion_appears_in_compact_diff` — on the base branch add a file and commit, capture base branch name, create feature branch, delete that file, commit, run `get_compact_diff(project_dir, base_branch)`, assert output contains `deleted file mode`.
 
 ### Production change in `diffs.py`
 
@@ -40,9 +40,9 @@ Add `-M` and `-C90%` to the shared `diff_args` list in `get_branch_diff()`, befo
 
 ## HOW
 
-- Tests import `get_compact_diff` from `mcp_coder.utils.git_operations.compact_diffs`.
-- Tests use the `git_repo` fixture (non-bare, empty repo with no initial commit and configured user) from `tests/utils/git_operations/conftest.py`. Each test must create an initial commit on `main` before branching.
-- Each test creates a main branch with initial content, creates a feature branch, makes the specific change type, commits, then calls `get_compact_diff(project_dir, "main")`.
+- Tests import `get_compact_diff` from `mcp_coder.utils.git_operations.compact_diffs` and `get_current_branch_name` from `mcp_coder.utils.git_operations.branches` (matching the import pattern used in `tests/utils/git_operations/test_diffs.py`).
+- Tests use the `git_repo_with_commit` fixture from `tests/utils/git_operations/conftest.py`, which provides a non-bare repo with one initial README commit on the default branch and configured user — no manual initial-commit setup needed in each test.
+- Each test calls `base_branch = get_current_branch_name(project_dir)` *before* creating the feature branch, creates the feature branch, makes the specific change type, commits, then calls `get_compact_diff(project_dir, base_branch)`. The base branch is never hard-coded to `"main"` because the default branch depends on the user's `init.defaultBranch` git config.
 - The mode-change test sets `core.fileMode=true` and uses `git update-index --chmod=+x` for cross-platform support.
 - The copy test modifies the source file slightly AND creates a near-identical copy under a new name in the same commit, so git's `-C90%` detects it (plain `-C` only considers files modified in that commit as copy sources).
 - **Ripple-effect check**: before committing, verify the existing tests in `tests/utils/git_operations/test_diffs.py`, `tests/utils/test_git_encoding_stress.py`, and `tests/workflows/create_pr/test_generation.py` do not assert on delete+add shapes that will now collapse into renames after adding `-M`; update any assertions that break.
@@ -68,7 +68,7 @@ Both the `if exclude_paths:` and `else:` branches build `diff_args` — add `-M`
 
 ## DATA
 
-Integration test outputs are strings from `get_compact_diff()`. Assertions check for presence of specific header keywords:
+Integration test inputs come from the `git_repo_with_commit` fixture (one initial README commit on the default branch). Each test captures the base branch name with `get_current_branch_name(project_dir)` before branching and passes that captured value to `get_compact_diff`. Integration test outputs are strings from `get_compact_diff()`. Assertions check for presence of specific header keywords:
 
 | Change type | Assert contains |
 |------------|----------------|

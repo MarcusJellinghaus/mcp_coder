@@ -59,3 +59,28 @@ now checks that each header line is present as a substring in the returned
 string (contains-based), rather than strict equality to
 `"\n".join(headers)`. This survives future join-style refactors while still
 guarding the behavioural fix.
+
+## Additional decisions from Round 2
+
+### 8. Integration tests capture base branch via `get_current_branch_name`
+
+Step 2 integration tests must not hard-code `"main"` as the base branch — the
+default branch depends on the user's `init.defaultBranch` git config. Each
+test now calls `get_current_branch_name(project_dir)` *before* creating the
+feature branch and passes that captured name to `get_compact_diff`. This
+matches the existing pattern in `tests/utils/git_operations/test_diffs.py`.
+
+### 9. Integration tests use `git_repo_with_commit` fixture
+
+Step 2 integration tests now use the existing `git_repo_with_commit` fixture
+from `tests/utils/git_operations/conftest.py` instead of `git_repo`. The
+fixture already provides an initial README commit on the default branch, so
+each test no longer needs manual initial-commit setup. This simplifies the
+tests and matches house style used by existing integration tests.
+
+### 10. `parse_diff` header-only assertion tightened
+
+Step 1's `test_parse_diff_header_only_change_types` now asserts
+`file_diff.hunks == []` for all six header-only cases, rather than "where
+applicable." Every header-only diff block should parse to an empty hunks
+list.

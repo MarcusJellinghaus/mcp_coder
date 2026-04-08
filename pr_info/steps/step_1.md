@@ -41,7 +41,7 @@ This closes the gap where rendering could pass but parsing silently differs. Cur
   - empty-file creation (`new file mode 100644`)
   - empty-file deletion (`deleted file mode 100644`)
 
-  For each case, feed a raw git-diff string to `parse_diff()` and assert the resulting single `FileDiff.headers` list contains the expected header substrings (and `hunks == []` where applicable).
+  For each case, feed a raw git-diff string to `parse_diff()` and assert the resulting single `FileDiff.headers` list contains the expected header substrings and `file_diff.hunks == []` for all six cases.
 
 **New parameterised test in `TestRenderCompactDiff`** (full parse→render pipeline with raw diff strings):
 
