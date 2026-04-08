@@ -198,7 +198,11 @@ class TestBuildPyWithSkills:
     def test_copy_claude_resources_overwrites_stale_build_artifacts(
         self, tmp_path: Path
     ) -> None:
-        """Re-running copy replaces stale files (build artifact, not user files)."""
+        """Re-running copy replaces stale files AND removes deleted ones.
+
+        Build artifact, not user files: stale files (present in dest but
+        absent from source) must be removed, not just overwritten.
+        """
         setup_mod = _load_setup_module()
 
         source = tmp_path / ".claude"
@@ -207,15 +211,22 @@ class TestBuildPyWithSkills:
         (skills / "skill.md").write_text("version 1")
 
         dest = tmp_path / "src" / "mcp_coder" / "resources" / "claude"
-        # Pre-create stale artifact
+        # Pre-create stale artifact that also exists in source (overwrite case)
         stale = dest / "skills"
         stale.mkdir(parents=True)
         (stale / "skill.md").write_text("stale version")
+        # Pre-create stale file that does NOT exist in source (removal case)
+        (stale / "deleted_skill.md").write_text("gone from source")
+        (dest / "agents" / "nested").mkdir(parents=True)
+        (dest / "agents" / "nested" / "old.md").write_text("stale nested")
 
         with patch.object(setup_mod, "__file__", str(tmp_path / "setup.py")):
             setup_mod._copy_claude_resources()
 
         assert (dest / "skills" / "skill.md").read_text() == "version 1"
+        # Stale files removed
+        assert not (dest / "skills" / "deleted_skill.md").exists()
+        assert not (dest / "agents" / "nested" / "old.md").exists()
 
 
 class TestInitParser:
@@ -292,16 +303,13 @@ class TestFindClaudeSourceDir:
         claude_dir = repo_root / ".claude"
         self._make_claude_dir(claude_dir)
 
-        # Place a fake __file__ inside the repo
+        # Place a fake __file__ inside the repo, plus the repo marker
+        # (src/mcp_coder/__init__.py) that _find_claude_source_dir requires.
         fake_file = repo_root / "src" / "mcp_coder" / "cli" / "commands" / "init.py"
         fake_file.parent.mkdir(parents=True)
         fake_file.touch()
+        (repo_root / "src" / "mcp_coder" / "__init__.py").touch()
 
-        monkeypatch.setattr(
-            "mcp_coder.cli.commands.init.Path.__file__",
-            str(fake_file),
-            raising=False,
-        )
         # We need to monkeypatch __file__ in the module
         monkeypatch.setattr(
             "mcp_coder.cli.commands.init.__file__",
@@ -310,6 +318,41 @@ class TestFindClaudeSourceDir:
 
         result = _find_claude_source_dir()
         assert result == claude_dir
+
+    def test_rejects_foreign_project_without_marker(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A foreign project's .claude/ is not accepted without mcp-coder marker.
+
+        Simulates the editable-install-into-foreign-project scenario: an
+        ancestor directory has .claude/{skills,knowledge_base,agents}/ but
+        no src/mcp_coder/__init__.py marker, so it must be rejected.
+        """
+        # Make importlib path invalid
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.init.files",
+            lambda _name: tmp_path / "nonexistent",
+        )
+
+        # Foreign project with .claude/ but no mcp-coder marker
+        foreign = tmp_path / "foreign_project"
+        foreign.mkdir()
+        claude_dir = foreign / ".claude"
+        self._make_claude_dir(claude_dir)
+
+        # Place fake __file__ somewhere under foreign (as if editable-installed)
+        fake_file = foreign / "subdir" / "init.py"
+        fake_file.parent.mkdir(parents=True)
+        fake_file.touch()
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.init.__file__",
+            str(fake_file),
+        )
+
+        with pytest.raises(SystemExit) as exc_info:
+            _find_claude_source_dir()
+
+        assert exc_info.value.code == 1
 
     def test_exits_when_both_fail(
         self,
@@ -589,9 +632,13 @@ class TestExecuteInitWithDeploy:
 
     def test_deploy_failure_exits_1(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Exit 1 when source cannot be found (from _find_claude_source_dir)."""
+
+        def _raise_system_exit() -> Path:
+            raise SystemExit(1)
+
         monkeypatch.setattr(
             "mcp_coder.cli.commands.init._find_claude_source_dir",
-            lambda: (_ for _ in ()).throw(SystemExit(1)),
+            _raise_system_exit,
         )
         args = argparse.Namespace(command="init", just_skills=False, project_dir=None)
 

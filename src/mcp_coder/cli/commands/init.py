@@ -44,11 +44,15 @@ def _find_claude_source_dir() -> Path:
     if pkg_path.is_dir() and _has_all_subdirs(pkg_path):
         return pkg_path
 
-    # 2. Fallback: walk up from this file to find repo-root .claude/
+    # 2. Fallback: walk up from this file to find repo-root .claude/.
+    # Require a stable mcp-coder-repo marker (src/mcp_coder/__init__.py) at
+    # the same ancestor so we don't accidentally accept a foreign project's
+    # .claude/ when mcp-coder is installed editable into it.
     for ancestor in Path(__file__).resolve().parents:
         candidate = ancestor / ".claude"
         tried.append(candidate)
-        if candidate.is_dir() and _has_all_subdirs(candidate):
+        marker = ancestor / "src" / "mcp_coder" / "__init__.py"
+        if candidate.is_dir() and _has_all_subdirs(candidate) and marker.is_file():
             return candidate
 
     # 3. Both failed

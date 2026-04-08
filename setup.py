@@ -17,10 +17,16 @@ class BuildPyWithSkills(build_py):  # type: ignore[misc]
 
 
 def _copy_claude_resources() -> None:
-    """Copy .claude/{skills,knowledge_base,agents}/ → src/mcp_coder/resources/claude/."""
+    """Copy .claude/{skills,knowledge_base,agents}/ → src/mcp_coder/resources/claude/.
+
+    Removes any existing destination first so stale build artifacts (files
+    that were deleted from .claude/ since the previous build) don't linger.
+    """
     repo_root = Path(__file__).parent
     source = repo_root / ".claude"
     dest = repo_root / "src" / "mcp_coder" / "resources" / "claude"
+    if dest.exists():
+        shutil.rmtree(dest)
     for subdir in ["skills", "knowledge_base", "agents"]:
         src_dir = source / subdir
         if src_dir.exists():
