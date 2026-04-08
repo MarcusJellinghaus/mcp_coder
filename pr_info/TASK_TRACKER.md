@@ -38,9 +38,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 3: Runtime skill source resolver
 > [step_3.md](./steps/step_3.md) — `_find_claude_source_dir()` with dual-lookup logic
 
-- [ ] Implementation: `_find_claude_source_dir()` in `init.py`, tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `_find_claude_source_dir()` in `init.py`, tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Deploy logic and integration into execute_init
 > [step_4.md](./steps/step_4.md) — `_deploy_skills()` + `execute_init()` integration

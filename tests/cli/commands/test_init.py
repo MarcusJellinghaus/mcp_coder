@@ -10,7 +10,12 @@ from unittest.mock import patch
 
 import pytest
 
-from mcp_coder.cli.commands.init import execute_init
+from mcp_coder.cli.commands.init import (
+    DEPLOY_SUBDIRS,
+    _find_claude_source_dir,
+    _has_all_subdirs,
+    execute_init,
+)
 from mcp_coder.cli.main import create_parser
 
 
@@ -223,3 +228,145 @@ class TestInitParser:
         args = parser.parse_args(["init", "--just-skills", "--project-dir", "/tmp/foo"])
         assert args.just_skills is True
         assert args.project_dir == "/tmp/foo"
+
+
+class TestFindClaudeSourceDir:
+    """Tests for _find_claude_source_dir() resolver."""
+
+    @staticmethod
+    def _make_claude_dir(base: Path) -> Path:
+        """Create a directory with all required DEPLOY_SUBDIRS."""
+        for name in DEPLOY_SUBDIRS:
+            (base / name).mkdir(parents=True, exist_ok=True)
+        return base
+
+    def test_finds_via_importlib_resources(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Returns importlib.resources path when resources/claude/skills/ exists."""
+        pkg_root = tmp_path / "pkg"
+        pkg_root.mkdir()
+        claude_dir = pkg_root / "resources" / "claude"
+        self._make_claude_dir(claude_dir)
+
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.init.files",
+            lambda _name: pkg_root,
+        )
+
+        result = _find_claude_source_dir()
+        assert result == claude_dir
+
+    def test_falls_back_to_repo_root(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Falls back to repo-root .claude/ when importlib path is empty."""
+        # Make importlib path invalid
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.init.files",
+            lambda _name: tmp_path / "nonexistent",
+        )
+
+        # Create a fake repo root with .claude/
+        repo_root = tmp_path / "repo"
+        repo_root.mkdir()
+        claude_dir = repo_root / ".claude"
+        self._make_claude_dir(claude_dir)
+
+        # Place a fake __file__ inside the repo
+        fake_file = repo_root / "src" / "mcp_coder" / "cli" / "commands" / "init.py"
+        fake_file.parent.mkdir(parents=True)
+        fake_file.touch()
+
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.init.Path.__file__",
+            str(fake_file),
+            raising=False,
+        )
+        # We need to monkeypatch __file__ in the module
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.init.__file__",
+            str(fake_file),
+        )
+
+        result = _find_claude_source_dir()
+        assert result == claude_dir
+
+    def test_exits_when_both_fail(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Calls sys.exit(1) when neither location has the required subdirs."""
+        # Make importlib path invalid
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.init.files",
+            lambda _name: tmp_path / "nonexistent",
+        )
+
+        # Point __file__ at a location with no .claude/ ancestor
+        fake_file = tmp_path / "isolated" / "init.py"
+        fake_file.parent.mkdir(parents=True)
+        fake_file.touch()
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.init.__file__",
+            str(fake_file),
+        )
+
+        with caplog.at_level(logging.ERROR), pytest.raises(SystemExit) as exc_info:
+            _find_claude_source_dir()
+
+        assert exc_info.value.code == 1
+        assert "skills/" in caplog.text
+        assert "knowledge_base/" in caplog.text
+        assert "agents/" in caplog.text
+        assert "pip install --force-reinstall mcp-coder" in caplog.text
+
+    def test_requires_all_subdirs(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Directory missing any of skills/knowledge_base/agents is rejected."""
+        # Make importlib path have only 2 of 3 subdirs
+        pkg_root = tmp_path / "pkg"
+        pkg_root.mkdir()
+        claude_dir = pkg_root / "resources" / "claude"
+        claude_dir.mkdir(parents=True)
+        (claude_dir / "skills").mkdir()
+        (claude_dir / "knowledge_base").mkdir()
+        # agents/ is missing
+
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.init.files",
+            lambda _name: pkg_root,
+        )
+
+        # Point __file__ at a location with no .claude/ ancestor
+        fake_file = tmp_path / "isolated" / "init.py"
+        fake_file.parent.mkdir(parents=True)
+        fake_file.touch()
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.init.__file__",
+            str(fake_file),
+        )
+
+        with pytest.raises(SystemExit) as exc_info:
+            _find_claude_source_dir()
+
+        assert exc_info.value.code == 1
+
+
+class TestHasAllSubdirs:
+    """Tests for _has_all_subdirs() helper."""
+
+    def test_returns_true_when_all_present(self, tmp_path: Path) -> None:
+        for name in DEPLOY_SUBDIRS:
+            (tmp_path / name).mkdir()
+        assert _has_all_subdirs(tmp_path) is True
+
+    def test_returns_false_when_missing(self, tmp_path: Path) -> None:
+        (tmp_path / "skills").mkdir()
+        assert _has_all_subdirs(tmp_path) is False
+
+    def test_returns_false_for_nonexistent_dir(self, tmp_path: Path) -> None:
+        assert _has_all_subdirs(tmp_path / "nope") is False
