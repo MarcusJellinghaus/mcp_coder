@@ -3,6 +3,8 @@
 Planning doc for introducing a shared `mcp-utils` repo across the 4 existing repos.
 Every module in every repo is listed below with a proposed disposition. Nothing is final — this is the working surface for decisions.
 
+> ⚠️ **Validation pending (deferred).** This plan is based on module listings and directory structure, **not** a full source-code read. Before executing any move, the relevant section must be validated by reading the actual source of the affected modules (imports, public API, hidden coupling, test setup). Not required now — flagged for when we transition from planning to implementation.
+
 **Legend:**
 
 - 🟢 **MOVE** — move to `mcp-utils`
@@ -13,26 +15,110 @@ Every module in every repo is listed below with a proposed disposition. Nothing 
 
 ---
 
+## 0. Architectural rules
+
+These rules decide where any piece of code lives. Apply them *before* debating individual modules.
+
+1. **MCP-first (DRY).** If functionality can be exposed as an MCP tool, it lives in an MCP server — not in `mcp_coder`. `mcp_coder` orchestrates; servers execute. If something exists in both, the server copy wins and the `mcp_coder` copy is deleted.
+2. **One server per domain.** Split MCP servers by functional area. Current: `mcp_tools_py` (Python ecosystem), `mcp_workspace` (local checkout + git, and temporarily: GitHub). Possible future (for illustration): `mcp_github`, `mcp_jenkins`, `mcp_tools_sql`, …
+3. **`mcp-utils` = code used by ≥2 MCP servers.** Shared *across servers*, not across repos. `mcp_coder` and `mcp_config` are consumers — their usage does not justify a move into `mcp-utils`. If only one server needs a helper, it lives in that server. If only `mcp_coder` needs it, it stays in `mcp_coder`.
+4. **`mcp-utils` is strictly language-agnostic.** Zero knowledge of Python, .NET, Java, SQL, or any other ecosystem. Anything that parses `pyproject.toml`, knows about venvs, understands `.csproj`, etc. belongs to the relevant language server — never in `mcp-utils`. This is what lets future mcp servers consume `mcp-utils` without dragging Python along.
+
+### Server lineup (current + proposed + future)
+
+| Repo | Kind | Purpose | Status |
+|---|---|---|---|
+| `mcp_coder` | CLI client | Workflows, LLM providers, icoder TUI. Consumer only. | exists |
+| `mcp_tools_py` | MCP server | Python ecosystem: linters, formatters, refactoring, pyproject parsing | exists |
+| `mcp_workspace` | MCP server | Local checkout: file ops + git (read & write) | exists |
+| `mcp_github` | MCP server | GitHub API: issues, PRs, labels, CI, repo metadata | possible future (for illustration) |
+| `mcp_tools_sql` | MCP server | SQL linters, schema tools | possible future (for illustration) |
+| `mcp-utils` | library | Code shared by ≥2 MCP servers. Language-agnostic. | **proposed** |
+| `mcp_config` | CLI client | Manages MCP client config files. Consumer only. | exists, to be reviewed |
+
+---
+
 ## 1. `mcp-utils` (NEW repo — proposed)
 
-Target shape. Populated by moves from the other four repos.
+Strict shape under rules #3 and #4: only modules used by ≥2 MCP servers **and** language-agnostic.
 
 | Module | Source | Notes |
 |---|---|---|
-| `subprocess/runner` | ✨ from mcp_coder + mcp_tools_py + mcp_config | 3 duplicate implementations — pick best |
-| `subprocess/streaming` | ✨ from mcp_coder | streaming variant, mcp_coder-only today |
-| `logging/log_utils` | ✨ from mcp_coder + mcp_tools_py + mcp_workspace | 3 duplicates; mcp_coder has redaction |
-| `config/pyproject_config` | ✨ from mcp_coder + mcp_tools_py | pyproject.toml reader |
-| `config/user_config` | ✨ from mcp_coder | generic `~/.config` TOML loader |   TODO - not sure whether we need this in the other repos
-| `fs/data_files` | ✨ from mcp_coder | packaged-data file access |        TODO - not sure whether we need this in the other repos
-| `fs/folder_deletion` | ✨ from mcp_coder | safe recursive delete |     TODO - not sure whether we need this in the other repos
-| `fs/file_utils` | ✨ from mcp_tools_py + mcp_config | path helpers |
-| `git/core` | ✨ from mcp_coder (utils/git_operations/core.py) | low-level `_run_git` only |
-| `platform/clipboard` | ✨ from mcp_coder | |  TO BE REVIEWED, leave it whereit is, we migth want to delete this
-| `platform/timezone_utils` | ✨ from mcp_coder | |    TODO - not sure whether we need this in the other repos
-| `platform/crash_logging` | ✨ from mcp_coder | faulthandler helper |  TODO - new - to be evaluated furst
-| `formatter/black_runner` | 🟡 from mcp_tools_py OR mcp_coder | see duplication note below |
-| `formatter/isort_runner` | 🟡 from mcp_tools_py OR mcp_coder | see duplication note below |
+| `subprocess/runner` | ✨ from mcp_tools_py + mcp_workspace (+ mcp_coder's version for reference) | used by every server to shell out. Pick mcp_coder's as canonical (most featureful) |
+| `subprocess/streaming` | ✨ from mcp_coder | pairs with `subprocess/runner` — moves together |
+| `logging/log_utils` | ✨ from mcp_tools_py + mcp_workspace (+ mcp_coder's redaction) | every server needs logging |
+| `fs/file_utils` | ✨ from mcp_tools_py + mcp_workspace's `path_utils` | path + basic file helpers; both servers touch files |
+
+**That's it for the first cut.** Everything else needs a concrete second-server consumer before it earns a spot here.
+
+### Demoted — do **not** move to mcp-utils
+
+| Module | Why demoted | New home |
+|---|---|---|
+| `pyproject_config` / `project_config` | Python-specific (rule #4) | `mcp_tools_py` — consolidate the two copies there |
+| `formatters/config_reader.py` | Reads `[tool.black]` / `[tool.isort]` — Python-specific | `mcp_tools_py` |
+| `user_config` | Only mcp_coder uses it | stays in `mcp_coder` |
+| `data_files` | Only mcp_coder uses it | stays in `mcp_coder` |
+| `folder_deletion` | Only mcp_coder uses it (for now) | stays in `mcp_coder`; revisit if a server needs it |
+| `timezone_utils` | Only mcp_coder uses it | stays in `mcp_coder` |
+| `clipboard` | Only mcp_coder uses it; may even be deletable | stays in `mcp_coder` |
+| `crash_logging` | New; only mcp_coder uses it | stays in `mcp_coder`; revisit if servers crash silently |
+| `black_runner` / `isort_runner` | Python-specific | canonical lives in `mcp_tools_py/formatter/`; mcp_coder's duplicate gets deleted and the whole `mcp_coder/formatters/` directory moves there |
+
+### On cross-repo dependencies: always use thin shims
+
+**Rule:** every cross-repo dependency goes through a thin wrapper module in the consuming repo — never scattered imports at call sites.
+
+#### MCP servers expose two entry points
+
+Important for understanding what a shim wraps. Every MCP server (`mcp_tools_py`, `mcp_workspace`, future ones) has **two public surfaces**:
+
+1. **MCP tools** — invoked over the MCP protocol by an LLM (Claude Code, etc.). Example: `mcp__tools-py__run_pylint_check`. This is what Claude calls during a session.
+2. **Python modules** — importable directly as normal Python: `from mcp_tools_py.code_checker_pylint import run_pylint`. This is what other Python code (like `mcp_coder` workflows) calls in-process, without going through the MCP protocol.
+
+Both surfaces exist side-by-side. The same underlying function is reachable through either. `mcp_coder` typically uses the **Python module surface** (cheap, in-process, no protocol overhead) — the MCP tool surface is there for Claude.
+
+#### What a shim looks like
+
+A single file in the consuming repo (e.g. `mcp_coder/mcp_tools_py.py`) that re-exports or wraps the imports the consumer actually uses. Call sites import from the shim, not from the dependency directly. The shim hides *which* entry point is in play (MCP tool call vs direct Python import) — call sites just see a clean local function.
+
+#### Why shims
+
+1. **Clean architecture** — one chokepoint per dependency, easy to audit/mock/replace.
+2. **Entry-point flexibility** — you can switch a given call from MCP round-trip to direct Python import (or vice versa) by editing one file.
+3. **Documented surface area** — the shim is the place to explain *how* to use the dependency, which is also what an LLM reads when working in the repo.
+4. **Refactor safety** — if the dependency changes, only the shim updates.
+
+#### Shims don't need unit tests
+
+A shim is a pass-through. Testing it just tests the mock. The real tests live in the source repo (the MCP server's own test suite). What the consumer needs is **integration tests** that exercise the shim against the real dependency — those live in the consumer's own test suite and cover end-to-end flow, not the shim in isolation.
+
+#### When not to shim
+
+`mcp-utils` itself. It is the leaf library; shimming it would defeat the purpose. Consumers import `mcp-utils` functions directly.
+
+### LLM awareness of `mcp-utils`
+
+Since `mcp-utils` is not shimmed, the LLM working in a consumer repo needs another way to know it exists and what's in it. Use both of the following, in combination:
+
+1. **CLAUDE.md section in every consumer repo.** Each of `mcp_coder`, `mcp_tools_py`, `mcp_workspace`, `mcp_config` gets a short "Shared libraries" block listing the top-level imports and the rule "do not reimplement — check mcp-utils first." This is always in context at session start.
+2. **Register `mcp-utils` as a reference project.** Use the existing reference-project mechanism (`mcp__workspace__get_reference_projects` / `list_reference_directory` / `read_reference_file`). Add `mcp-utils` to each consumer repo's reference-project configuration so the LLM can read its actual source when needed — the same way this plan was developed against `p_tools`, `p_workspace`, `p_config`.
+
+**Why both:** (1) gives always-on awareness (LLM knows the dep exists without doing any lookup); (2) gives live, accurate source access (no staleness, no manual API docs to maintain).
+
+**Template for the CLAUDE.md block:**
+
+```markdown
+## Shared libraries
+
+This repo depends on `mcp-utils` for subprocess/logging/fs helpers.
+- `from mcp_utils.subprocess import run_command, run_streaming`
+- `from mcp_utils.logging import get_logger`
+- `from mcp_utils.fs import ...`
+
+**Do not reimplement these locally.** When in doubt, check mcp-utils first.
+Full source: reference project `p_mcp_utils` — use `mcp__workspace__read_reference_file`.
+```
 
 ---
 
@@ -73,12 +159,14 @@ Target shape. Populated by moves from the other four repos.
 
 ### `formatters/`
 
+Whole directory moves to `mcp_tools_py/formatter/`. mcp_coder becomes a consumer via a shim.
+
 | Module | Disposition | Notes |
 |---|---|---|
-| `black_formatter.py` | ⚫ CONSOLIDATE | mcp_tools_py has its own black_runner — pick one |
-| `isort_formatter.py` | ⚫ CONSOLIDATE | same |
-| `config_reader.py` | 🟡 TBD | may fold into mcp-utils/config |
-| `models.py`, `utils.py` | 🟡 TBD | |
+| `black_formatter.py` | 🟢 MOVE → `mcp_tools_py/formatter/` | merge with existing `black_runner.py`; pick best impl |
+| `isort_formatter.py` | 🟢 MOVE → `mcp_tools_py/formatter/` | merge with existing `isort_runner.py` |
+| `config_reader.py` | 🟢 MOVE → `mcp_tools_py/formatter/` | Python-specific (rule #4) |
+| `models.py`, `utils.py` | 🟢 MOVE → `mcp_tools_py/formatter/` | follow the formatters they support |
 
 ### `icoder/`
 
@@ -97,7 +185,6 @@ Target shape. Populated by moves from the other four repos.
 | `providers/langchain/` (10 files) | 🔴 KEEP | multi-backend LangChain provider |
 | `session/resolver.py` | 🔴 KEEP | |
 | `storage/session_*.py` | 🔴 KEEP | |
-| **Note** | | Entire `llm/` is a future candidate for its own `mcp-llm` repo — flag for later |
 
 ### `prompts/`
 
@@ -107,44 +194,56 @@ Target shape. Populated by moves from the other four repos.
 
 ### `utils/`
 
+Re-audited under rules #3 and #4. Many previous 🟢 MOVE rows are now 🔴 KEEP because only `mcp_coder` uses them.
+
 | Module | Disposition | Notes |
 |---|---|---|
-| `clipboard.py` | 🟢 MOVE | → mcp-utils/platform |
-| `crash_logging.py` | 🟢 MOVE | → mcp-utils/platform |
-| `data_files.py` | 🟢 MOVE | → mcp-utils/fs |
-| `folder_deletion.py` | 🟢 MOVE | → mcp-utils/fs |
-| `git_utils.py` | 🟡 TBD | may split: primitives to utils, workflow bits stay |
-| `log_utils.py` | 🟢 MOVE | → mcp-utils/logging (incl. redaction) |
+| `clipboard.py` | 🔴 KEEP | mcp_coder-only; candidate for deletion |
+| `crash_logging.py` | 🔴 KEEP | mcp_coder-only for now |
+| `data_files.py` | 🔴 KEEP | mcp_coder-only |
+| `folder_deletion.py` | 🔴 KEEP | mcp_coder-only |
+| `git_utils.py` | 🔴 KEEP | workflow-aware; primitives live in `mcp_workspace` instead |
+| `log_utils.py` | 🟢 MOVE | → mcp-utils (used by all servers, has redaction logic others lack) |
 | `mlflow_config_loader.py` | 🔴 KEEP | mlflow-specific |
-| `pyproject_config.py` | 🟢 MOVE | → mcp-utils/config |
-| `subprocess_runner.py` | 🟢 MOVE | → mcp-utils/subprocess |
-| `subprocess_streaming.py` | 🟢 MOVE | → mcp-utils/subprocess |
-| `timezone_utils.py` | 🟢 MOVE | → mcp-utils/platform |
-| `user_config.py` | 🟢 MOVE | → mcp-utils/config |
+| `pyproject_config.py` | ⚫ CONSOLIDATE | → `mcp_tools_py` (Python-specific; merge with its `project_config.py`) |
+| `subprocess_runner.py` | 🟢 MOVE | → mcp-utils (canonical; replaces copies in all servers) |
+| `subprocess_streaming.py` | 🟢 MOVE | → mcp-utils (pairs with `subprocess_runner`) |
+| `timezone_utils.py` | 🔴 KEEP | mcp_coder-only |
+| `user_config.py` | 🔴 KEEP | mcp_coder-only |
 
 ### `utils/git_operations/`
 
+Entire package moves to `mcp_workspace`. Rationale: git state *is* workspace state; consolidating all git in one server matches rule #2 (one server per domain). mcp_coder's workflow logic continues to exist, but calls git via MCP instead of importing directly.
+
 | Module | Disposition | Notes |
 |---|---|---|
-| `core.py` | 🟡 TBD | the low-level `_run_git` primitive → mcp-utils/git; rest stays |
-| `branches.py`, `branch_queries.py` | 🔴 KEEP | |
-| `commits.py`, `diffs.py`, `compact_diffs.py` | 🔴 KEEP | |
-| `file_tracking.py`, `staging.py`, `remotes.py` | 🔴 KEEP | |
-| `parent_branch_detection.py` | 🔴 KEEP | |
-| `repository_status.py`, `workflows.py` | 🔴 KEEP | workflow-aware |
+| `core.py` | 🟢 MOVE → `mcp_workspace` | low-level `_run_git` runner |
+| `branches.py`, `branch_queries.py` | 🟢 MOVE → `mcp_workspace` | |
+| `commits.py`, `diffs.py`, `compact_diffs.py` | 🟢 MOVE → `mcp_workspace` | |
+| `file_tracking.py`, `staging.py`, `remotes.py` | 🟢 MOVE → `mcp_workspace` | |
+| `parent_branch_detection.py` | 🟢 MOVE → `mcp_workspace` | |
+| `repository_status.py`, `workflows.py` | 🟢 MOVE → `mcp_workspace` | workflow-aware, but still pure git — exposed as MCP tools, called by mcp_coder workflows |
 
 ### `utils/github_operations/`
 
+Under rule #1 (MCP-first), the **mechanics** of talking to GitHub move out of mcp_coder. **For now they go into `mcp_workspace`** as a new `file_tools/github_operations.py` module, rather than spinning up a dedicated `mcp_github` repo. A future split into its own server remains possible (see §6).
+
+The **policy** (when/why to create PRs, which labels to apply) stays in mcp_coder workflows.
+
 | Module | Disposition | Notes |
 |---|---|---|
-| all (base_manager, ci_results, github_utils, labels, label_config, pr_manager) | 🔴 KEEP | opinionated GitHub workflow |
-| `issues/` subpackage (all 9 files) | 🔴 KEEP | |
+| `base_manager.py`, `github_utils.py` | 🟢 MOVE → `mcp_workspace` | low-level GitHub API access |
+| `pr_manager.py` | 🟢 MOVE → `mcp_workspace` | PR CRUD becomes MCP tools |
+| `labels_manager.py`, `label_config.py` | 🟢 MOVE → `mcp_workspace` | label CRUD as MCP tools; `labels.json` config stays in mcp_coder |
+| `ci_results_manager.py` | 🟢 MOVE → `mcp_workspace` | CI run/artifact reads as MCP tools |
+| `issues/` subpackage (all 9 files) | 🟢 MOVE → `mcp_workspace` | issue CRUD, branch_manager, cache, mixins — all API mechanics |
+| **Exception: workflow policy** | 🔴 KEEP | anything in mcp_coder's workflows that *decides* (e.g. "set label X when CI passes") stays; only the *call* moves |
 
 ### `utils/jenkins_operations/`
 
 | Module | Disposition | Notes |
 |---|---|---|
-| `client.py`, `models.py` | 🔴 KEEP | Jenkins client for specific pipelines |
+| `client.py`, `models.py` | 🟡 TBD → future `mcp_jenkins` | same pattern as GitHub, but deferred; stays in mcp_coder until the new server is built |
 
 ### `workflows/`
 
@@ -172,7 +271,7 @@ Target shape. Populated by moves from the other four repos.
 |---|---|---|
 | `main.py`, `server.py`, `__init__.py` | 🔴 KEEP | MCP server entry |
 | `checker_tools.py` | 🔴 KEEP | tool registration |
-| `utility_tools.py` | 🔴 KEEP | |
+| `utility_tools.py` | 🟡 TBD | not analysed yet — needs a read pass before disposition |
 | `inspect_library.py` | 🔴 KEEP | `get_library_source` logic |
 | `log_utils.py` | ⚫ CONSOLIDATE | duplicate → use mcp-utils/logging |
 
@@ -184,11 +283,14 @@ Target shape. Populated by moves from the other four repos.
 
 ### `formatter/`
 
+This is the **canonical home** for black/isort runners. mcp_coder's duplicates get deleted and its surrounding files (`config_reader`, `models`, `utils`) land here.
+
 | Module | Disposition | Notes |
 |---|---|---|
-| `black_runner.py` | 🟡 TBD | see duplication with mcp_coder/formatters |
-| `isort_runner.py` | 🟡 TBD | same |
+| `black_runner.py` | 🔴 KEEP (canonical) | absorbs mcp_coder's `black_formatter.py` |
+| `isort_runner.py` | 🔴 KEEP (canonical) | absorbs mcp_coder's `isort_formatter.py` |
 | `formatter_tools.py` | 🔴 KEEP | MCP tool wrapper |
+| *(incoming)* `config_reader.py`, `models.py`, `utils.py` | ✨ NEW (from mcp_coder) | |
 
 ### `refactoring/`
 
@@ -222,9 +324,10 @@ Target shape. Populated by moves from the other four repos.
 | `directory_utils.py` | 🔴 KEEP | MCP-facing |
 | `edit_file.py` | 🔴 KEEP | core edit semantics |
 | `file_operations.py` | 🔴 KEEP | MCP-facing |
-| `git_operations.py` | 🟡 TBD | has own git runner — could consume mcp-utils/git/core |
-| `path_utils.py` | 🟡 TBD | possibly overlaps mcp-utils/fs |
+| `git_operations.py` | 🔴 KEEP (canonical) | **the only home for git-related code.** Absorbs the entirety of `mcp_coder/utils/git_operations/`. Exposed as MCP tools so mcp_coder can call them |
+| `path_utils.py` | ⚫ CONSOLIDATE | merge with mcp_tools_py's `file_utils.py` → mcp-utils/fs |
 | `search.py` | 🔴 KEEP | |
+| `github_operations.py` | ✨ NEW | absorbs entirety of `mcp_coder/utils/github_operations/`. Exposed as MCP tools. Temporary home until (if) a dedicated `mcp_github` server is created |
 
 ---
 
@@ -251,39 +354,138 @@ Target shape. Populated by moves from the other four repos.
 | `file_utils.py` | ⚫ CONSOLIDATE | → mcp-utils/fs |
 | `subprocess_runner.py` | ⚫ CONSOLIDATE | → mcp-utils/subprocess |
 
+*(The earlier "→ mcp_workspace (under consideration)" block is removed: the decision is now made and documented in §2 under `utils/git_operations/` and `utils/github_operations/`.)*
+
 ---
 
-## Cross-cutting decisions to make
+## 6. `mcp_github` — possible future (for illustration)
 
-1. **subprocess_runner** — 3 implementations exist (mcp_coder, mcp_tools_py, mcp_config). Which is canonical? mcp_coder's is most featureful (has streaming sibling).
-2. **log_utils** — 3 implementations. mcp_coder's has redaction logic the others lack. Likely canonical.
-3. **Formatters duplication** — mcp_coder/formatters vs mcp_tools_py/formatter. Two paths:
-   - (a) Move one copy to mcp-utils; both repos depend on it.
-   - (b) Delete mcp_coder/formatters; mcp_coder calls mcp_tools_py via MCP (already does for running checks).
-4. **git primitives** — extract just `_run_git` to mcp-utils/git/core, or leave everything in mcp_coder? mcp_workspace/file_tools/git_operations.py also has its own — could consume shared.
-5. **pyproject_config vs project_config** — same concept, two names. Pick one.
-6. **file_utils** — 3 variants (mcp_tools_py, mcp_config, mcp_workspace has path_utils). Need to compare APIs before merging.
-7. **Release coupling** — bumping mcp-utils means bumping 4 downstream repos. Acceptable, or push toward monorepo?
-8. **Future `mcp-llm` repo** — flag `mcp_coder/llm/` (~25 files) as a future extraction candidate, but explicitly out of scope for this round.
-9. **`icoder/`** — same: future candidate, out of scope now.
+**Not an action item.** Documented here only to show that the GitHub code landing in `mcp_workspace` can later be split out if/when the scope justifies it. No work planned.
+
+**Trigger to revisit:** if `mcp_workspace/file_tools/github_operations.py` grows large enough (many subfiles, heavy API surface) that it stops fitting the "workspace" concept.
+
+**Rule-of-thumb boundary, for that eventual split:**
+
+- **Into a future `mcp_github`:** anything that talks to `api.github.com`, `gh` CLI, or a GitHub webhook payload.
+- **Stays in `mcp_coder`:** anything that decides *when* or *why* to call GitHub (label transitions, PR-creation triggers, coordinator logic).
+
+---
+
+## Cross-cutting decisions still open
+
+1. **`pyproject_config` vs `project_config`** — same concept, two names. Pick one name before consolidating into `mcp_tools_py`.
+2. **`file_utils` vs `path_utils`** — mcp_tools_py's `file_utils.py` and mcp_workspace's `path_utils.py`. Compare APIs, pick the superset, land in mcp-utils.
+3. **Release coupling** — bumping mcp-utils means bumping all downstream repos. Acceptable, or push toward monorepo?
+4. **`utility_tools.py` in mcp_tools_py** — not yet analysed; needs a read pass before disposition.
+
+*(Resolved and removed: subprocess_runner canonical choice, log_utils canonical choice, formatters routing, git primitives location, `mcp-llm` future repo, `icoder` future repo.)*
 
 ---
 
 ## Summary counts (mcp_coder)
 
-- 🟢 MOVE: ~12 files (utils/* flat files)
-- ⚫ CONSOLIDATE: ~2 files (formatters/black + isort)
-- 🟡 TBD: ~4 items (git core split, formatters config_reader, formatters models/utils, git_utils.py)
-- 🔴 KEEP: everything else (cli, workflows, llm, icoder, checks, github_operations, jenkins_operations, most of git_operations, workflow_utils, prompts, config)
+- 🟢 MOVE → mcp-utils: 3 files (`log_utils.py`, `subprocess_runner.py`, `subprocess_streaming.py`)
+- 🟢 MOVE → mcp_tools_py: entire `formatters/` directory + `pyproject_config.py`
+- 🟢 MOVE → mcp_workspace: entire `utils/git_operations/` + entire `utils/github_operations/` (~30 files)
+- 🔴 KEEP: cli, workflows, llm, icoder, checks, jenkins_operations, workflow_utils, prompts, config, and most of `utils/` (clipboard, crash_logging, data_files, folder_deletion, timezone_utils, user_config, mlflow_*, git_utils)
 
-## Gneral overview / architecture / relationship of 5 repos
+## General overview / architecture / relationship of 5 repos
 
-TODO
+Imports flow **downward**: top-level consumers → shared library at the bottom.
+
+```
+┌──────────────┐   ┌────────────────┐   ┌──────────────┐   ┌──────────────┐
+│  mcp_coder   │   │  mcp_tools_py  │   │ mcp_workspace│   │  mcp_config  │
+│  CLI + wf    │   │  MCP server:   │   │  MCP server: │   │  CLI: MCP    │
+│  + LLM + TUI │   │  checks/fmt/   │   │  file ops    │   │  client cfg  │
+│              │   │  refactoring   │   │              │   │              │
+└──────┬───────┘   └────────┬───────┘   └──────┬───────┘   └──────┬───────┘
+       │                    │                  │                  │
+       │ (runtime, via MCP) │                  │                  │
+       ├───────────────────▶│                  │                  │
+       ├───────────────────────────────────────▶                  │
+       │                    │                  │                  │
+       │ (all four import at build-time)                          │
+       ▼                    ▼                  ▼                  ▼
+                      ┌────────────────┐
+                      │   mcp-utils    │  (NEW, leaf — no internal deps)
+                      │   library      │
+                      └────────────────┘
+```
+
+**Decided:** all of `mcp_coder`'s `git_operations/` and `github_operations/` move into `mcp_workspace`. Git goes into the existing `file_tools/git_operations.py` (canonical home). GitHub goes into a new `file_tools/github_operations.py`. A dedicated `mcp_github` server remains possible future (§6).
+
+**Roles:**
+
+- **mcp_coder** — end-user CLI; orchestrates workflows (implement, create_pr, coordinator), hosts LLM providers, icoder TUI. Consumer of everything.
+- **mcp_tools_py** — MCP server exposing code-quality tools (pylint, mypy, pytest, vulture, black, isort) and refactoring (jedi, rope). Called by Claude via MCP.
+- **mcp_workspace** — MCP server exposing file read/edit/search/move tools. Called by Claude via MCP.
+- **mcp_config** — standalone CLI to install/manage MCP server entries in Claude Code / Desktop / VS Code / IntelliJ config files.
+- **mcp-utils** *(new)* — pure Python library of low-level helpers. Leaf in the graph: depends on nothing internal; everything else depends on it.
 
 ## What to move from mcp-coder to tools-py and to workspace
 
-TODO
+Orthogonal to mcp-utils: some mcp_coder code belongs in the MCP servers, not in a shared library.
+
+**Background — formatters are the odd one out.** `mcp_coder` already calls `pylint`, `mypy`, `pytest`, `vulture` via the `mcp_tools_py` MCP server — it has no local runners for those. The only code-tool runners still living in `mcp_coder` are `formatters/black_formatter.py` and `formatters/isort_formatter.py`. Fix: treat them like the others — delete the local copies and call `mcp_tools_py`'s `formatter/black_runner.py` + `isort_runner.py` via MCP. This is the pattern, not an exception.
+
+### → `mcp_tools_py`
+
+| Source in mcp_coder | Rationale |
+|---|---|
+| `formatters/black_formatter.py` | Route via MCP, same as pylint/mypy/pytest/vulture already do. Delete local copy |
+| `formatters/isort_formatter.py` | same |
+| `formatters/config_reader.py`, `models.py`, `utils.py` | follow the formatters they support — move or delete alongside |
+| `checks/file_sizes.py` | generic repo check, no GitHub coupling — could become an MCP tool |
+
+### → `mcp_workspace`
+
+| Source in mcp_coder | Rationale |
+|---|---|
+| entire `utils/git_operations/` | canonical home for all git-related code (rule #2: one server per domain) |
+| entire `utils/github_operations/` | lands in new `file_tools/github_operations.py`; temporary home until the possible future `mcp_github` split |
+
+### Stays in mcp_coder
+
+- `checks/branch_status.py`, `checks/ci_log_parser.py` — GitHub/PR workflow policy (decides *when*, not *how*)
+- `utils/jenkins_operations/` — deferred; moves to its own future server (§0)
+- `utils/git_utils.py` — workflow-aware helpers that call git primitives (now via MCP)
 
 ## General guidelines for consolidating / moving code
 
-TODO
+1. **Only move what has ≥2 real consumers** — or is provably generic. A single-user "might be useful" module stays where it is.
+2. **One canonical name per concept** — resolve `pyproject_config` vs `project_config`, `file_utils` vs `path_utils` *before* moving, not after.
+3. **Moved modules must be leaf code** — no imports from `mcp_coder.*`, `mcp_tools_py.*`, etc. If a helper pulls in project-specific types, it's not ready to move.
+4. **Move tests with the code** — each moved module brings its unit tests to the new repo. Integration tests stay with the consumer.
+5. **Pick the best implementation, don't merge** — when 3 repos have `subprocess_runner.py`, choose one (usually the most featureful) and delete the others. Do not try to union APIs.
+6. **Order of operations per module:**
+   1. Land the module in mcp-utils with tests (new repo PR)
+   2. Release a version tag
+   3. Update each consumer repo in its own PR: bump dep, swap imports, delete local copy
+   4. Never leave two copies live across releases
+7. **Start with leaf modules** — `subprocess_runner` + `log_utils` first (pure mcp-utils moves). Then `formatters/` → mcp_tools_py. Then `pyproject_config` consolidation. Then the bigger git/github moves into mcp_workspace last.
+8. **Preserve public API on move** — keep function names/signatures identical so consumer updates are mechanical (`from mcp_coder.utils.x import y` → `from mcp_utils.x import y`).
+9. **No deprecation shims** — we control all 4 consumers. Atomic swap per module; no `mcp_coder.utils.subprocess_runner` re-export left behind.
+10. **One PR per module per repo** — keeps diffs reviewable and rollback cheap. Don't batch "move 8 modules" into one PR.
+
+### Planning and implementation process (cross-repo work)
+
+We use issues + PRs per repo. There is no cross-repo PR mechanism on GitHub, so coordination is manual. Proposed approach:
+
+1. **Tracking issue lives in `mcp_coder`** — it is the primary consumer and the repo you work in daily. Each move gets one tracking issue there titled e.g. `extract: subprocess_runner → mcp-utils`. This issue holds the plan, the repo-by-repo checklist, and the links to all child PRs.
+2. **Per-repo issues are thin** — each downstream repo (`mcp_tools_py`, `mcp_workspace`, `mcp_config`, `mcp-utils`) gets a short issue that links back to the tracking issue. No duplicated context.
+3. **PR sequence is strict and serial** (matches guideline #6 above):
+   1. PR on `mcp-utils` — land module + tests. Merge. Tag release.
+   2. PR on `mcp_coder` — bump `mcp-utils` dep, swap imports, delete local copy. Merge.
+   3. PR on each other consumer (`mcp_tools_py`, `mcp_workspace`, `mcp_config`) — same swap. Merge.
+   4. Close the tracking issue only when every consumer is updated and no stale copy remains.
+4. **One module per tracking issue** — do not batch `subprocess_runner` and `log_utils` into one effort. Keeps scope small and rollback cheap.
+5. **Checklist shape on the tracking issue:**
+   - [ ] mcp-utils PR merged + released (`vX.Y.Z`)
+   - [ ] mcp_coder PR merged (dep bumped, local copy deleted)
+   - [ ] mcp_tools_py PR merged
+   - [ ] mcp_workspace PR merged
+   - [ ] mcp_config PR merged
+   - [ ] Grep all 4 repos: no references to old import path remain
+6. **Branch names** — consistent prefix across repos so they're easy to find: `extract/subprocess-runner`, `extract/log-utils`, etc.
+7. **Rollback plan** — if a downstream swap breaks, revert that repo's PR only. `mcp-utils` does not need to roll back because old versions remain usable via pin.
