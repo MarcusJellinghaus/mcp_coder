@@ -491,6 +491,8 @@ def render_file_diff(
             rendered_hunks.append(rendered)
 
     if not rendered_hunks:
+        if not file_diff.hunks:
+            return "\n".join(file_diff.headers)
         return ""
 
     parts = file_diff.headers + rendered_hunks

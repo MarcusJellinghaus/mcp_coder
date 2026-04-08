@@ -1,0 +1,6 @@
+fix: emit git headers for pure renames and other header-only changes (#709)
+
+render_file_diff() now distinguishes "no hunks at parse time" (emit
+headers verbatim) from "all hunks collapsed via moved-block suppression"
+(stay hidden). Fixes compact-diff silently dropping pure renames, mode
+changes, binary changes, and empty file create/delete.

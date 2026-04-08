@@ -1,5 +1,7 @@
 """Unit tests for compact_diffs.py — all synthetic string inputs, no git repos."""
 
+import pytest
+
 from mcp_coder.utils.git_operations.compact_diffs import (
     MIN_BLOCK_LINES,
     MIN_CONTENT_LENGTH,
@@ -465,8 +467,156 @@ class TestRenderFileDiff:
         assert "diff --git a.py b.py" in result
         assert "old unique content here in file" in result
 
-    def test_file_entirely_skipped_when_no_hunks(self) -> None:
-        file_diff = FileDiff(headers=["diff --git a.py b.py"], hunks=[])
+    def test_file_headers_emitted_when_no_parsed_hunks(self) -> None:
+        file_diff = FileDiff(
+            headers=["diff --git a.py b.py", "similarity index 100%"],
+            hunks=[],
+        )
+        result = render_file_diff(file_diff, set())
+        for header in file_diff.headers:
+            assert header in result
+
+    def test_pure_rename_headers_emitted(self) -> None:
+        file_diff = FileDiff(
+            headers=[
+                "diff --git a/old.py b/new.py",
+                "similarity index 100%",
+                "rename from old.py",
+                "rename to new.py",
+            ],
+            hunks=[],
+        )
+        result = render_file_diff(file_diff, set())
+        for header in file_diff.headers:
+            assert header in result
+
+    def test_partial_rename_emits_headers_and_hunks(self) -> None:
+        file_diff = FileDiff(
+            headers=[
+                "diff --git a/old.py b/new.py",
+                "similarity index 80%",
+                "rename from old.py",
+                "rename to new.py",
+                "--- a/old.py",
+                "+++ b/new.py",
+            ],
+            hunks=[
+                Hunk(
+                    header="@@ -1,2 +1,2 @@",
+                    lines=[
+                        "-old unique content here in file",
+                        "+new unique content here in file",
+                    ],
+                )
+            ],
+        )
+        result = render_file_diff(file_diff, set())
+        assert "rename from old.py" in result
+        assert "rename to new.py" in result
+        assert "old unique content here in file" in result
+        assert "new unique content here in file" in result
+
+    def test_pure_copy_headers_emitted(self) -> None:
+        file_diff = FileDiff(
+            headers=[
+                "diff --git a/src.py b/dst.py",
+                "similarity index 100%",
+                "copy from src.py",
+                "copy to dst.py",
+            ],
+            hunks=[],
+        )
+        result = render_file_diff(file_diff, set())
+        for header in file_diff.headers:
+            assert header in result
+
+    def test_partial_copy_emits_headers_and_hunks(self) -> None:
+        file_diff = FileDiff(
+            headers=[
+                "diff --git a/src.py b/dst.py",
+                "similarity index 85%",
+                "copy from src.py",
+                "copy to dst.py",
+                "--- a/src.py",
+                "+++ b/dst.py",
+            ],
+            hunks=[
+                Hunk(
+                    header="@@ -1,2 +1,2 @@",
+                    lines=[
+                        "-old unique content here in file",
+                        "+new unique content here in file",
+                    ],
+                )
+            ],
+        )
+        result = render_file_diff(file_diff, set())
+        assert "copy from src.py" in result
+        assert "copy to dst.py" in result
+        assert "old unique content here in file" in result
+
+    def test_mode_change_headers_emitted(self) -> None:
+        file_diff = FileDiff(
+            headers=[
+                "diff --git a/script.sh b/script.sh",
+                "old mode 100644",
+                "new mode 100755",
+            ],
+            hunks=[],
+        )
+        result = render_file_diff(file_diff, set())
+        for header in file_diff.headers:
+            assert header in result
+
+    def test_binary_change_headers_emitted(self) -> None:
+        file_diff = FileDiff(
+            headers=[
+                "diff --git a/image.png b/image.png",
+                "Binary files a/image.png and b/image.png differ",
+            ],
+            hunks=[],
+        )
+        result = render_file_diff(file_diff, set())
+        for header in file_diff.headers:
+            assert header in result
+
+    def test_empty_file_creation_headers_emitted(self) -> None:
+        file_diff = FileDiff(
+            headers=[
+                "diff --git a/empty.py b/empty.py",
+                "new file mode 100644",
+            ],
+            hunks=[],
+        )
+        result = render_file_diff(file_diff, set())
+        for header in file_diff.headers:
+            assert header in result
+
+    def test_empty_file_deletion_headers_emitted(self) -> None:
+        file_diff = FileDiff(
+            headers=[
+                "diff --git a/empty.py b/empty.py",
+                "deleted file mode 100644",
+            ],
+            hunks=[],
+        )
+        result = render_file_diff(file_diff, set())
+        for header in file_diff.headers:
+            assert header in result
+
+    def test_moved_suppression_still_hides_collapsed_hunks(self) -> None:
+        """Hunks that all collapse to '' via moved-block suppression → return ''."""
+        # Create a hunk with only context + the hunk header, which renders to ""
+        # when all +/- lines are suppressed. We simulate this by having a hunk
+        # that after render_hunk returns "" (only header remained).
+        hunk = Hunk(
+            header="@@ -1,1 +1,1 @@",
+            lines=[],  # empty lines → render_hunk returns ""
+        )
+        file_diff = FileDiff(
+            headers=["diff --git a/foo.py b/foo.py"],
+            hunks=[hunk],
+        )
         result = render_file_diff(file_diff, set())
         assert result == ""
 
@@ -680,3 +830,98 @@ class TestRenderCompactDiffRealistic:
             ' GREETING = "Hello from main"'
         )
         assert result == expected
+
+
+# ---------------------------------------------------------------------------
+# Raw diff strings for header-only change types
+# ---------------------------------------------------------------------------
+
+_HEADER_ONLY_CASES = [
+    pytest.param(
+        (
+            "diff --git a/old.py b/new.py\n"
+            "similarity index 100%\n"
+            "rename from old.py\n"
+            "rename to new.py\n"
+        ),
+        ["rename from", "rename to"],
+        id="pure_rename",
+    ),
+    pytest.param(
+        (
+            "diff --git a/src.py b/dst.py\n"
+            "similarity index 100%\n"
+            "copy from src.py\n"
+            "copy to dst.py\n"
+        ),
+        ["copy from", "copy to"],
+        id="pure_copy",
+    ),
+    pytest.param(
+        (
+            "diff --git a/script.sh b/script.sh\n"
+            "old mode 100644\n"
+            "new mode 100755\n"
+        ),
+        ["old mode", "new mode"],
+        id="mode_change",
+    ),
+    pytest.param(
+        (
+            "diff --git a/image.png b/image.png\n"
+            "index abc123..def456 100644\n"
+            "Binary files a/image.png and b/image.png differ\n"
+        ),
+        ["Binary"],
+        id="binary_change",
+    ),
+    pytest.param(
+        ("diff --git a/empty.py b/empty.py\n" "new file mode 100644\n"),
+        ["new file mode"],
+        id="empty_file_creation",
+    ),
+    pytest.param(
+        ("diff --git a/empty.py b/empty.py\n" "deleted file mode 100644\n"),
+        ["deleted file mode"],
+        id="empty_file_deletion",
+    ),
+]
+
+
+# ---------------------------------------------------------------------------
+# TestParseDiffHeaderOnly
+# ---------------------------------------------------------------------------
+
+
+class TestParseDiffHeaderOnly:
+    """Parameterised tests: raw diff strings → parse_diff → assert headers."""
+
+    @pytest.mark.parametrize(("raw_diff", "expected_substrings"), _HEADER_ONLY_CASES)
+    def test_parse_diff_header_only_change_types(
+        self, raw_diff: str, expected_substrings: list[str]
+    ) -> None:
+        files = parse_diff(raw_diff)
+        assert len(files) == 1
+        file_diff = files[0]
+        assert file_diff.hunks == []
+        headers_joined = "\n".join(file_diff.headers)
+        for substring in expected_substrings:
+            assert substring in headers_joined
+
+
+# ---------------------------------------------------------------------------
+# TestRenderCompactDiffHeaderOnly
+# ---------------------------------------------------------------------------
+
+
+class TestRenderCompactDiffHeaderOnly:
+    """Parameterised tests: raw diff strings → render_compact_diff → non-empty with expected headers."""
+
+    @pytest.mark.parametrize(("raw_diff", "expected_substrings"), _HEADER_ONLY_CASES)
+    def test_render_compact_diff_header_only_change_types(
+        self, raw_diff: str, expected_substrings: list[str]
+    ) -> None:
+        result = render_compact_diff(raw_diff, "")
+        assert result != ""
+        for substring in expected_substrings:
+            assert substring in result
