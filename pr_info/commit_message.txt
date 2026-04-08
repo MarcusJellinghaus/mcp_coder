@@ -1,10 +1,12 @@
-feat: add build-time packaging for .claude/ skill files
+feat(init): add _deploy_skills() and integrate into execute_init()
 
-Create setup.py with custom build_py hook that copies
-.claude/{skills,knowledge_base,agents}/ into
-src/mcp_coder/resources/claude/ at wheel build time.
-
-- Add BuildPyWithSkills and _copy_claude_resources() in setup.py
-- Add resources/claude/**/* to pyproject.toml package-data
-- Gitignore build artifact src/mcp_coder/resources/claude/
-- Add unit tests for copy behavior (create, skip, overwrite)
+- Add _deploy_skills() that copies skills/, knowledge_base/, agents/
+  from source into project_dir/.claude/ with never-overwrite policy
+- Update execute_init() to validate --project-dir, resolve source dir,
+  detect self-deploy (running inside mcp-coder repo), deploy skills,
+  and conditionally create config (skip with --just-skills)
+- Add TestDeploySkills tests (empty project, no-overwrite, counts,
+  warnings, nested dirs, missing subdirs)
+- Add TestExecuteInitWithDeploy tests (default flow, --just-skills,
+  --project-dir, missing dir exits 1, self-deploy skip)
+- Update existing TestInitCommand tests to mock deploy functions

@@ -12,6 +12,7 @@ import pytest
 
 from mcp_coder.cli.commands.init import (
     DEPLOY_SUBDIRS,
+    _deploy_skills,
     _find_claude_source_dir,
     _has_all_subdirs,
     execute_init,
@@ -34,17 +35,23 @@ def _load_setup_module() -> types.ModuleType:
 class TestInitCommand:
     """Tests for execute_init command handler."""
 
+    @patch("mcp_coder.cli.commands.init._deploy_skills", return_value=(0, 0))
+    @patch("mcp_coder.cli.commands.init._find_claude_source_dir")
     @patch("mcp_coder.cli.commands.init.get_config_file_path")
     @patch("mcp_coder.cli.commands.init.create_default_config")
     def test_init_creates_config_success(
         self,
         mock_create: object,
         mock_path: object,
+        mock_find: object,
+        mock_deploy: object,
         caplog: pytest.LogCaptureFixture,
+        tmp_path: Path,
     ) -> None:
         """Test successful config creation prints instructions."""
         mock_create.return_value = True  # type: ignore[attr-defined]
         mock_path.return_value = "/fake/path/config.toml"  # type: ignore[attr-defined]
+        mock_find.return_value = tmp_path / "source"  # type: ignore[attr-defined]
         args = argparse.Namespace(command="init", just_skills=False, project_dir=None)
 
         with caplog.at_level(logging.DEBUG):
@@ -57,17 +64,23 @@ class TestInitCommand:
         assert "mcp-coder verify" in caplog.text
         assert "mcp-coder gh-tool define-labels" in caplog.text
 
+    @patch("mcp_coder.cli.commands.init._deploy_skills", return_value=(0, 0))
+    @patch("mcp_coder.cli.commands.init._find_claude_source_dir")
     @patch("mcp_coder.cli.commands.init.get_config_file_path")
     @patch("mcp_coder.cli.commands.init.create_default_config")
     def test_init_config_already_exists(
         self,
         mock_create: object,
         mock_path: object,
+        mock_find: object,
+        mock_deploy: object,
         caplog: pytest.LogCaptureFixture,
+        tmp_path: Path,
     ) -> None:
         """Test existing config prints already-exists message."""
         mock_create.return_value = False  # type: ignore[attr-defined]
         mock_path.return_value = "/fake/path/config.toml"  # type: ignore[attr-defined]
+        mock_find.return_value = tmp_path / "source"  # type: ignore[attr-defined]
         args = argparse.Namespace(command="init", just_skills=False, project_dir=None)
 
         with caplog.at_level(logging.DEBUG):
@@ -76,17 +89,23 @@ class TestInitCommand:
         assert result == 0
         assert "Config already exists:" in caplog.text
 
+    @patch("mcp_coder.cli.commands.init._deploy_skills", return_value=(0, 0))
+    @patch("mcp_coder.cli.commands.init._find_claude_source_dir")
     @patch("mcp_coder.cli.commands.init.get_config_file_path")
     @patch("mcp_coder.cli.commands.init.create_default_config")
     def test_init_write_failure(
         self,
         mock_create: object,
         mock_path: object,
+        mock_find: object,
+        mock_deploy: object,
         caplog: pytest.LogCaptureFixture,
+        tmp_path: Path,
     ) -> None:
         """Test write failure returns exit code 1 with error message."""
         mock_create.side_effect = OSError("Permission denied")  # type: ignore[attr-defined]
         mock_path.return_value = "/fake/path/config.toml"  # type: ignore[attr-defined]
+        mock_find.return_value = tmp_path / "source"  # type: ignore[attr-defined]
         args = argparse.Namespace(command="init", just_skills=False, project_dir=None)
 
         with caplog.at_level(logging.DEBUG):
@@ -370,3 +389,254 @@ class TestHasAllSubdirs:
 
     def test_returns_false_for_nonexistent_dir(self, tmp_path: Path) -> None:
         assert _has_all_subdirs(tmp_path / "nope") is False
+
+
+class TestDeploySkills:
+    """Tests for _deploy_skills() function."""
+
+    @staticmethod
+    def _make_source(base: Path) -> Path:
+        """Create a source dir with sample files in all DEPLOY_SUBDIRS."""
+        for name in DEPLOY_SUBDIRS:
+            d = base / name
+            d.mkdir(parents=True, exist_ok=True)
+            (d / f"{name}.md").write_text(f"content of {name}")
+        return base
+
+    def test_deploy_to_empty_project(self, tmp_path: Path) -> None:
+        """All files deployed when target .claude/ doesn't exist."""
+        source = self._make_source(tmp_path / "source")
+        project = tmp_path / "project"
+        project.mkdir()
+
+        added, skipped = _deploy_skills(source, project)
+
+        assert added == 3
+        assert skipped == 0
+        for name in DEPLOY_SUBDIRS:
+            assert (project / ".claude" / name / f"{name}.md").exists()
+
+    def test_never_overwrites_existing_files(self, tmp_path: Path) -> None:
+        """Existing files are skipped, not overwritten."""
+        source = self._make_source(tmp_path / "source")
+        project = tmp_path / "project"
+        target = project / ".claude" / "skills"
+        target.mkdir(parents=True)
+        (target / "skills.md").write_text("original content")
+
+        _deploy_skills(source, project)
+
+        assert (target / "skills.md").read_text() == "original content"
+
+    def test_returns_correct_counts(self, tmp_path: Path) -> None:
+        """Returns (added, skipped) counts matching actual operations."""
+        source = self._make_source(tmp_path / "source")
+        project = tmp_path / "project"
+        # Pre-create one file to be skipped
+        target = project / ".claude" / "skills"
+        target.mkdir(parents=True)
+        (target / "skills.md").write_text("existing")
+
+        added, skipped = _deploy_skills(source, project)
+
+        assert added == 2
+        assert skipped == 1
+
+    def test_skipped_files_emit_warning(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Each skipped file produces a warning log message."""
+        source = self._make_source(tmp_path / "source")
+        project = tmp_path / "project"
+        target = project / ".claude" / "skills"
+        target.mkdir(parents=True)
+        (target / "skills.md").write_text("existing")
+
+        with caplog.at_level(logging.WARNING):
+            _deploy_skills(source, project)
+
+        assert "Skipped (exists):" in caplog.text
+
+    def test_creates_intermediate_directories(self, tmp_path: Path) -> None:
+        """Creates nested dirs (e.g., skills/plan_review/) as needed."""
+        source = tmp_path / "source"
+        nested = source / "skills" / "plan_review"
+        nested.mkdir(parents=True)
+        (nested / "deep.md").write_text("nested content")
+        # Create other required subdirs (empty)
+        for name in ("knowledge_base", "agents"):
+            (source / name).mkdir(parents=True, exist_ok=True)
+
+        project = tmp_path / "project"
+        project.mkdir()
+
+        _deploy_skills(source, project)
+
+        assert (project / ".claude" / "skills" / "plan_review" / "deep.md").exists()
+        assert (
+            project / ".claude" / "skills" / "plan_review" / "deep.md"
+        ).read_text() == "nested content"
+
+    def test_handles_missing_source_subdir(self, tmp_path: Path) -> None:
+        """Gracefully handles source dir missing a subdir (e.g., no agents/)."""
+        source = tmp_path / "source"
+        # Only create skills/ and knowledge_base/, skip agents/
+        for name in ("skills", "knowledge_base"):
+            d = source / name
+            d.mkdir(parents=True)
+            (d / f"{name}.md").write_text(f"content of {name}")
+
+        project = tmp_path / "project"
+        project.mkdir()
+
+        added, skipped = _deploy_skills(source, project)
+
+        assert added == 2
+        assert skipped == 0
+
+
+class TestExecuteInitWithDeploy:
+    """Tests for execute_init() with deploy integration."""
+
+    @staticmethod
+    def _make_source(base: Path) -> Path:
+        """Create a source dir with sample files in all DEPLOY_SUBDIRS."""
+        for name in DEPLOY_SUBDIRS:
+            d = base / name
+            d.mkdir(parents=True, exist_ok=True)
+            (d / f"{name}.md").write_text(f"content of {name}")
+        return base
+
+    @patch("mcp_coder.cli.commands.init.get_config_file_path")
+    @patch("mcp_coder.cli.commands.init.create_default_config")
+    def test_default_creates_config_and_deploys(
+        self,
+        mock_create: object,
+        mock_path: object,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Default init creates config AND deploys skills."""
+        mock_create.return_value = True  # type: ignore[attr-defined]
+        mock_path.return_value = "/fake/config.toml"  # type: ignore[attr-defined]
+        source = self._make_source(tmp_path / "source")
+        project = tmp_path / "project"
+        project.mkdir()
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.init._find_claude_source_dir",
+            lambda: source,
+        )
+        args = argparse.Namespace(
+            command="init", just_skills=False, project_dir=str(project)
+        )
+
+        result = execute_init(args)
+
+        assert result == 0
+        # Skills deployed
+        assert (project / ".claude" / "skills" / "skills.md").exists()
+        # Config creation was called
+        mock_create.assert_called_once()  # type: ignore[attr-defined]
+
+    @patch("mcp_coder.cli.commands.init.create_default_config")
+    def test_just_skills_skips_config(
+        self,
+        mock_create: object,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """--just-skills deploys skills but does NOT create config."""
+        source = self._make_source(tmp_path / "source")
+        project = tmp_path / "project"
+        project.mkdir()
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.init._find_claude_source_dir",
+            lambda: source,
+        )
+        args = argparse.Namespace(
+            command="init", just_skills=True, project_dir=str(project)
+        )
+
+        result = execute_init(args)
+
+        assert result == 0
+        # Skills deployed
+        assert (project / ".claude" / "skills" / "skills.md").exists()
+        # Config NOT created
+        mock_create.assert_not_called()  # type: ignore[attr-defined]
+
+    def test_project_dir_flag(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """--project-dir targets the specified directory."""
+        source = self._make_source(tmp_path / "source")
+        project = tmp_path / "target_project"
+        project.mkdir()
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.init._find_claude_source_dir",
+            lambda: source,
+        )
+        args = argparse.Namespace(
+            command="init", just_skills=True, project_dir=str(project)
+        )
+
+        result = execute_init(args)
+
+        assert result == 0
+        assert (project / ".claude" / "skills" / "skills.md").exists()
+
+    def test_deploy_failure_exits_1(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Exit 1 when source cannot be found (from _find_claude_source_dir)."""
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.init._find_claude_source_dir",
+            lambda: (_ for _ in ()).throw(SystemExit(1)),
+        )
+        args = argparse.Namespace(command="init", just_skills=False, project_dir=None)
+
+        with pytest.raises(SystemExit) as exc_info:
+            execute_init(args)
+
+        assert exc_info.value.code == 1
+
+    def test_missing_project_dir_exits_1(self, tmp_path: Path) -> None:
+        """--project-dir pointing at a non-existent path exits 1."""
+        args = argparse.Namespace(
+            command="init",
+            just_skills=False,
+            project_dir=str(tmp_path / "nonexistent"),
+        )
+
+        result = execute_init(args)
+
+        assert result == 1
+
+    @patch("mcp_coder.cli.commands.init._deploy_skills")
+    def test_self_deploy_is_skipped(
+        self,
+        mock_deploy: object,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """When source_dir.resolve() == target_base.resolve(), skip deploy."""
+        project = tmp_path / "project"
+        project.mkdir()
+        # source_dir IS the target .claude/ dir
+        source = project / ".claude"
+        source.mkdir()
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.init._find_claude_source_dir",
+            lambda: source,
+        )
+        args = argparse.Namespace(
+            command="init", just_skills=True, project_dir=str(project)
+        )
+
+        with caplog.at_level(logging.INFO, logger="mcp_coder.cli.commands.init"):
+            result = execute_init(args)
+
+        assert result == 0
+        mock_deploy.assert_not_called()  # type: ignore[attr-defined]
+        assert "Skipping deploy: running inside mcp-coder source repo" in caplog.text

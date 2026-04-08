@@ -45,9 +45,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 4: Deploy logic and integration into execute_init
 > [step_4.md](./steps/step_4.md) — `_deploy_skills()` + `execute_init()` integration
 
-- [ ] Implementation: `_deploy_skills()`, `execute_init()` update, tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `_deploy_skills()`, `execute_init()` update, tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Documentation updates
 > [step_5.md](./steps/step_5.md) — Replace hand-copy instructions with `mcp-coder init` references
