@@ -42,3 +42,11 @@
 - `pr_info/steps/step_4.md`: added early `--project-dir` existence check; added self-deploy detection via `.resolve()` comparison with info-log skip; added three new test cases (`test_missing_project_dir_exits_1`, `test_self_deploy_is_skipped`); annotated `test_deploy_failure_exits_1` as integration smoke test complementing step 3.
 
 **Status**: committed (log committed separately after round closes)
+
+## Round 2 — 2026-04-08
+
+**Findings**: [MINOR] Typo `commands/` should be `agents/` in step_1.md integration-test text and Decisions.md #4.
+**Decisions**: Accepted — straightforward typo fix.
+**User decisions**: None.
+**Changes**: Fixed `commands/` → `agents/` in step_1.md and Decisions.md.
+**Status**: committed.

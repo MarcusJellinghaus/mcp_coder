@@ -10,7 +10,7 @@ Log of decisions made during plan review round 1 (2026-04-08).
 
 3. **Missing `--project-dir` path** — `execute_init()` validates the `--project-dir` path EARLY (before deploy and config creation). If the path does not exist, exit 1 with a clear error (`"Project directory does not exist: <path>"`). Test case added. (Applied in step 4.)
 
-4. **setup.py test strategy** — Keep three unit tests that load `setup.py` via `importlib.util.spec_from_file_location` to exercise `_copy_claude_resources()` directly. **Also add** one slow integration test that runs `python -m build --wheel` against a tmp copy of the repo and inspects the resulting wheel (via `zipfile`) to confirm `resources/claude/skills/`, `resources/claude/knowledge_base/`, and `resources/claude/commands/` files are present inside it. Marked slow so it is excluded from fast unit runs. (Applied in step 1.)
+4. **setup.py test strategy** — Keep three unit tests that load `setup.py` via `importlib.util.spec_from_file_location` to exercise `_copy_claude_resources()` directly. **Also add** one slow integration test that runs `python -m build --wheel` against a tmp copy of the repo and inspects the resulting wheel (via `zipfile`) to confirm `resources/claude/skills/`, `resources/claude/knowledge_base/`, and `resources/claude/agents/` files are present inside it. Marked slow so it is excluded from fast unit runs. (Applied in step 1.)
 
 5. **MANIFEST.in** — Do NOT add MANIFEST.in. The wheel integration test is the authoritative check and will catch any packaging miss. (Applied in step 1.)
 
