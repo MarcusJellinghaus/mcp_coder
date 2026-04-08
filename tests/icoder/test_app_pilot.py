@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import Any
 
 import pytest
@@ -10,7 +10,7 @@ from textual.pilot import Pilot
 
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.core.event_log import EventLog
-from mcp_coder.icoder.services.llm_service import FakeLLMService
+from mcp_coder.icoder.services.llm_service import FakeLLMService, LLMService
 from mcp_coder.icoder.ui.app import ICoderApp
 from mcp_coder.icoder.ui.widgets.input_area import InputArea
 from mcp_coder.icoder.ui.widgets.output_log import OutputLog
@@ -35,7 +35,7 @@ def make_icoder_app(
     def _factory(
         *,
         responses: list[list[StreamEvent]] | None = None,
-        llm_service: FakeLLMService | None = None,
+        llm_service: LLMService | None = None,
     ) -> ICoderApp:
         llm = llm_service or FakeLLMService(responses=responses or [])
         return ICoderApp(AppCore(llm_service=llm, event_log=event_log))
@@ -334,4 +334,114 @@ async def test_streaming_tail_shows_partial_during_stream(
         # Now deliver StreamDone — tail should clear
         app._handle_stream_event({"type": "done"})
         await pilot.pause()
+        assert app._text_buffer == ""
+
+
+# --- Streaming edge-case regression tests (f–h) ---
+
+
+class ErrorAfterChunksLLMService:
+    """LLM service that yields some chunks then raises."""
+
+    def __init__(self, chunks: list[StreamEvent], error_msg: str) -> None:
+        self._chunks = chunks
+        self._error_msg = error_msg
+
+    def stream(self, question: str) -> Iterator[StreamEvent]:
+        """Yield chunks then raise RuntimeError."""
+        yield from self._chunks
+        raise RuntimeError(self._error_msg)
+
+    @property
+    def session_id(self) -> str | None:
+        """No session tracking."""
+        return None
+
+
+async def test_streaming_error_mid_line(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """(f) Stream error mid-line: partial text flushed before error message."""
+    app = make_icoder_app(
+        llm_service=ErrorAfterChunksLLMService(
+            chunks=[{"type": "text_delta", "text": "partial"}],
+            error_msg="boom",
+        ),
+    )
+    async with app.run_test() as pilot:
+        await _submit_and_wait(app, pilot)
+        output = app.query_one(OutputLog)
+        lines = output.recorded_lines
+        assert "partial" in lines
+        error_lines = [ln for ln in lines if ln.startswith("Error:")]
+        assert any("boom" in ln for ln in error_lines)
+        partial_idx = lines.index("partial")
+        error_idx = next(i for i, ln in enumerate(lines) if ln.startswith("Error:"))
+        assert partial_idx < error_idx
+
+
+async def test_streaming_back_to_back_no_leakage(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """(g) Back-to-back streams: buffer resets, no text leaks between streams."""
+    app = make_icoder_app(
+        responses=[
+            [
+                {"type": "text_delta", "text": "first"},
+                {"type": "done"},
+            ],
+            [
+                {"type": "text_delta", "text": "second"},
+                {"type": "done"},
+            ],
+        ],
+    )
+    async with app.run_test() as pilot:
+        await _submit_and_wait(app, pilot, text="msg1")
+        await _submit_and_wait(app, pilot, text="msg2")
+        output = app.query_one(OutputLog)
+        lines = output.recorded_lines
+        assert "first" in lines
+        assert "second" in lines
+        # No concatenation leak
+        assert "firstsecond" not in lines
+        assert app._text_buffer == ""
+
+
+async def test_streaming_tool_event_mid_line(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """(h) Tool event mid-line: partial text flushed before tool block."""
+    app = make_icoder_app(
+        responses=[
+            [
+                {"type": "text_delta", "text": "before tool"},
+                {
+                    "type": "tool_use_start",
+                    "name": "mcp__workspace__read_file",
+                    "args": {"file_path": "x.py"},
+                },
+                {
+                    "type": "tool_result",
+                    "name": "mcp__workspace__read_file",
+                    "output": "content",
+                },
+                {"type": "text_delta", "text": "after tool"},
+                {"type": "done"},
+            ]
+        ],
+    )
+    async with app.run_test() as pilot:
+        await _submit_and_wait(app, pilot)
+        output = app.query_one(OutputLog)
+        lines = output.recorded_lines
+        assert "before tool" in lines
+        assert "after tool" in lines
+        # Find tool start line (contains the "┌" prefix)
+        tool_start_lines = [i for i, ln in enumerate(lines) if "┌" in ln]
+        assert len(tool_start_lines) >= 1
+        before_idx = lines.index("before tool")
+        assert before_idx < tool_start_lines[0]
+        after_idx = lines.index("after tool")
+        assert tool_start_lines[0] < after_idx
         assert app._text_buffer == ""

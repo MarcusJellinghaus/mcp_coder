@@ -1,9 +1,5 @@
-fix(icoder): buffer streamed tokens into lines instead of one-per-row (#735)
+test(icoder): add streaming edge-case tests f-h (#735)
 
-Add Static streaming-tail widget and text buffer to ICoderApp.
-Complete lines flush to RichLog on newline; partial lines display
-in the Static widget. Any non-text event flushes the buffer first.
-
-Add regression tests a-e for basic buffer behavior:
-- single chunk, multi-chunk, mid-stream newline,
-  multiple newlines in chunk, empty text_delta.
+- f: stream error mid-line flushes partial before error
+- g: back-to-back streams reset buffer cleanly
+- h: tool event mid-line flushes partial before tool block
