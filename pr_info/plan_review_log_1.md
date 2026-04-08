@@ -71,3 +71,30 @@ Files edited:
 
 ### Status
 committed (to be committed next)
+
+## Round 3 — 2026-04-08
+
+### Findings
+none
+
+### Decisions
+n/a
+
+### Changes
+none
+
+### Status
+clean — no plan changes needed
+
+## Final Status
+
+- **Total rounds**: 3
+- **Commits produced**: 2 (`beeda93` round 1, `0fc3c93` round 2)
+- **Result**: **Plan is ready for approval**
+
+### Summary of key improvements across rounds
+- Deduped `get_bin_dir` helper — defined once (public) in `utils/mcp_verification.py`, reused by `llm/env.py` and `icoder/env_setup.py`.
+- Purified `setup_icoder_environment()` — no `os.environ` mutation; env vars flow via `RuntimeInfo.env_vars` → `RealLLMService` → subprocess runner.
+- Swapped Step 1/2 ordering to fix circular dependency — `get_bin_dir` helper now lands in Step 1 before Step 2 imports it.
+- Tightened test coverage and isolation — parametrized win/posix and per-key tests, `monkeypatch.setenv`/`delenv` for `VIRTUAL_ENV`/`CONDA_PREFIX`, added `env_vars` wiring test, env-setup failure path, TUI on_mount snapshot, and non-mutation assertions.
+- Specified `str` types for `RuntimeInfo` path fields — clean serialization into `session_start` event data and consistency with `env_vars`; added `python_version` / `claude_code_version` fields.
