@@ -23,7 +23,7 @@ Claude Code CLI is the primary LLM interface for MCP Coder's automated workflows
 
 ### Claude Code CLI Installation
 
-Follow the installation guide at [Anthropic's documentation](https://docs.anthropic.com/en/docs/claude-code).
+Follow the installation guide at [Anthropic's documentation](https://code.claude.com/docs).
 
 ### Windows Setup with `claude.bat`
 
@@ -238,5 +238,5 @@ These are used in `.mcp.json` to configure MCP servers with correct paths:
 
 ## External Resources
 
-- **[Claude Code Documentation](https://docs.anthropic.com/en/docs/claude-code)** - Official Anthropic documentation
-- **[MCP Protocol](https://spec.modelcontextprotocol.io/)** - Model Context Protocol specification
+- **[Claude Code Documentation](https://code.claude.com/docs)** - Official Anthropic documentation
+- **[MCP Protocol](https://modelcontextprotocol.io/specification)** - Model Context Protocol specification

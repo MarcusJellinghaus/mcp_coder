@@ -80,7 +80,7 @@ vulture src tests vulture_whitelist.py --min-confidence 60
 - **Purpose:** Contract-based import validation
 - **Execution:** `./tools/lint_imports.sh` (Linux/macOS) or `tools\lint_imports.bat` (Windows)
 - **Direct:** `lint-imports`
-- **Documentation:** [import-linter docs](https://import-linter.readthedocs.io/)
+- **Documentation:** [import-linter docs](https://import-linter.readthedocs.io/en/stable/)
 - **Example config:** See `.importlinter` in this repository
 
 ### Dependency Architecture Validation
@@ -92,7 +92,7 @@ vulture src tests vulture_whitelist.py --min-confidence 60
 - **Purpose:** Architectural boundary enforcement
 - **Execution:** `./tools/tach_check.sh` (Linux/macOS) or `tools\tach_check.bat` (Windows)
 - **Direct:** `tach check`
-- **Documentation:** [tach docs](https://docs.gauge.so/tach/)
+- **Documentation:** [tach docs](https://docs.gauge.sh/)
 - **Example config:** See `tach.toml` in this repository
 
 **Tool: pycycle**

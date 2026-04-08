@@ -168,9 +168,9 @@ To stop the MLflow UI server, press `Ctrl+C` in the terminal where MLflow is run
 - Prompt text file
 
 **Learn more about MLflow**:
-- [MLflow Tracking Documentation](https://mlflow.org/docs/latest/tracking.html)
-- [MLflow UI Guide](https://mlflow.org/docs/latest/tracking.html#tracking-ui)
-- [Querying Runs](https://mlflow.org/docs/latest/search-runs.html)
+- [MLflow Tracking Documentation](https://mlflow.org/docs/latest/tracking/)
+- [MLflow UI Guide](https://mlflow.org/docs/latest/tracking/#tracking-ui)
+- [Querying Runs](https://mlflow.org/docs/latest/search-runs/)
 
 ## Testing the Integration
 

@@ -2,7 +2,7 @@
 
 Quick reference for mcp-coder slash commands and development workflow.
 
-For a complete overview of the process, see [DEVELOPMENT_PROCESS.md](DEVELOPMENT_PROCESS.md).
+For a complete overview of the process, see [development-process.md](development-process.md).
 
 ---
 

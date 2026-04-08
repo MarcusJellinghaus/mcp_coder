@@ -35,4 +35,4 @@ With mcp-coder, it is possible to automate the creation of the implementation pl
 
 - **[Claude Code Configuration](claude-code.md)** - Claude Code CLI setup
 - **[Development Process](../processes-prompts/development-process.md)** - Complete workflow
-- **[MCP Documentation](https://spec.modelcontextprotocol.io/)** - Protocol specification
+- **[MCP Documentation](https://modelcontextprotocol.io/specification)** - Protocol specification

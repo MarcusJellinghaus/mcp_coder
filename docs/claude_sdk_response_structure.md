@@ -6,7 +6,7 @@ The Claude Code SDK returns a stream of different message types when making API 
 
 ## Official Documentation
 
-For complete SDK documentation, see: https://docs.anthropic.com/en/docs/claude-code/sdk/sdk-python
+For complete SDK documentation, see: https://platform.claude.com/docs/en/agent-sdk/python
 
 ## Response Message Types
 
