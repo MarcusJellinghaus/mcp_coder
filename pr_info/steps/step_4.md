@@ -41,20 +41,36 @@ def _deploy_skills(source_dir: Path, project_dir: Path) -> tuple[int, int]:
 
 ```python
 def execute_init(args: argparse.Namespace) -> int:
-    # Resolve project_dir
-    project_dir = Path(args.project_dir) if args.project_dir else Path.cwd()
+    # 1. Validate --project-dir EARLY (before deploy or config creation)
+    if args.project_dir is not None:
+        project_dir = Path(args.project_dir)
+        if not project_dir.exists():
+            logger.error("Project directory does not exist: %s", project_dir)
+            return 1
+    else:
+        project_dir = Path.cwd()
 
-    # Deploy skills (always — non-destructive)
+    # 2. Resolve source and detect self-deploy (running inside mcp-coder source repo)
     source_dir = _find_claude_source_dir()  # from step 3
-    added, skipped = _deploy_skills(source_dir, project_dir)
-    logger.log(OUTPUT, "Skills: %d added, %d skipped", added, skipped)
+    target_base = project_dir / ".claude"
+    if source_dir.resolve() == target_base.resolve():
+        logger.info("Skipping deploy: running inside mcp-coder source repo")
+    else:
+        added, skipped = _deploy_skills(source_dir, project_dir)
+        logger.log(OUTPUT, "Skills: %d added, %d skipped", added, skipped)
 
-    # Config creation (skip if --just-skills)
+    # 3. Config creation (skip if --just-skills)
     if not args.just_skills:
         # ... existing config creation logic ...
 
     return 0
 ```
+
+**Behavior notes:**
+
+- **Missing --project-dir:** If `args.project_dir` is set but the path does not exist, exit 1 with a clear error. Checked first so we fail fast before any side effects.
+- **Self-deploy detection:** Compare `source_dir.resolve()` with `target_base.resolve()`. When equal (the user is running `mcp-coder init` inside the mcp-coder source tree itself, where source and target are the same `.claude/`), skip deploy silently with a single info log line. This prevents the warning spam of skipping every file against itself.
+- Both checks live at the top of `execute_init()` so the order is: validate args → resolve source → self-deploy check → deploy → config.
 
 ## HOW
 
@@ -128,7 +144,23 @@ class TestExecuteInitWithDeploy:
         """--project-dir targets the specified directory."""
 
     def test_deploy_failure_exits_1(self, monkeypatch):
-        """Exit 1 when source cannot be found (from _find_claude_source_dir)."""
+        """Exit 1 when source cannot be found (from _find_claude_source_dir).
+
+        Integration smoke test complementing step 3's unit tests for
+        _find_claude_source_dir — verifies the sys.exit(1) actually propagates
+        through execute_init().
+        """
+
+    def test_missing_project_dir_exits_1(self, tmp_path):
+        """--project-dir pointing at a non-existent path exits 1 with a clear error."""
+
+    def test_self_deploy_is_skipped(self, tmp_path, monkeypatch, caplog):
+        """When source_dir.resolve() == target_base.resolve(), skip deploy silently.
+
+        - Asserts _deploy_skills is NOT called.
+        - Asserts an info log line like 'Skipping deploy: running inside mcp-coder source repo'.
+        - Config creation still runs (unless --just-skills).
+        """
 ```
 
 ## Integration with existing tests

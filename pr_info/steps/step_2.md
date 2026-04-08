@@ -58,6 +58,8 @@ from .parsers import add_init_parser  # add to existing import list
 
 ### `init.py` — Updated signature
 
+Rename `_args` → `args` in the `execute_init()` signature now that the function consumes real attributes:
+
 ```python
 def execute_init(args: argparse.Namespace) -> int:
     # args.just_skills: bool
@@ -65,6 +67,14 @@ def execute_init(args: argparse.Namespace) -> int:
 ```
 
 The function body stays the same for now — `just_skills` and `project_dir` are accepted but not yet used. Step 4 adds the deploy logic.
+
+**Avoiding `unused-argument` pylint errors:** because step 4 is a separate commit, the intermediate state must reference the new attributes harmlessly. Add a no-op access at the top of the function body, e.g.:
+
+```python
+_ = (args.just_skills, args.project_dir)  # consumed in step 4
+```
+
+Do NOT use `# pylint: disable=unused-argument` — the harmless reference is cleaner and step 4 will naturally replace it with real usage.
 
 ## HOW
 

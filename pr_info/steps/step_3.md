@@ -41,29 +41,45 @@ def _find_claude_source_dir() -> Path:
 
 ## HOW
 
-- Uses `importlib.resources.files("mcp_coder")` (already imported in `data_files.py` — same pattern).
-- Fallback walks from `Path(mcp_coder.__file__).parent` up at most 3 levels looking for `.claude/skills/`.
-- Validates that at least `skills/` subdir exists before returning.
-- On failure, calls `sys.exit(1)` with a terse error message.
+- Uses `importlib.resources.files("mcp_coder")` — mirror the pattern in `src/mcp_coder/utils/data_files.py` precisely (use `files()` and `as_file()` if needed to get a concrete `Path`). Add `from importlib.resources import files` to the imports.
+- Fallback walks from `Path(__file__).resolve().parent` upward via unbounded `.parents` iteration looking for `.claude/`.
+- Validates that **all three** `DEPLOY_SUBDIRS` (`skills`, `knowledge_base`, `agents`) exist under the resolved source before returning — this exercises the `DEPLOY_SUBDIRS` constant already in step 3.
+- On failure, calls `sys.exit(1)` with a **detailed** error message including:
+  1. What was being looked for (packaged Claude resources: `skills/`, `knowledge_base/`, `agents/`).
+  2. Each path that was tried (the importlib.resources path, and each ancestor directory checked).
+  3. A remediation hint: `pip install --force-reinstall mcp-coder`.
 
 ## ALGORITHM
 
 ```python
+from importlib.resources import files
+
+def _has_all_subdirs(base: Path) -> bool:
+    return all((base / name).is_dir() for name in DEPLOY_SUBDIRS)
+
 def _find_claude_source_dir() -> Path:
-    # 1. Try importlib.resources (wheel install)
+    tried: list[Path] = []
+
+    # 1. Try importlib.resources (wheel install) — mirror data_files.py pattern
     pkg_path = Path(str(files("mcp_coder"))) / "resources" / "claude"
-    if pkg_path.is_dir() and (pkg_path / "skills").is_dir():
+    tried.append(pkg_path)
+    if pkg_path.is_dir() and _has_all_subdirs(pkg_path):
         return pkg_path
 
-    # 2. Fallback: walk up from package __file__ to find repo-root .claude/
-    pkg_dir = Path(__file__).resolve().parent  # cli/commands/
-    for ancestor in pkg_dir.parents:
+    # 2. Fallback: walk up from this file to find repo-root .claude/ (editable install)
+    for ancestor in Path(__file__).resolve().parents:
         candidate = ancestor / ".claude"
-        if candidate.is_dir() and (candidate / "skills").is_dir():
+        tried.append(candidate)
+        if candidate.is_dir() and _has_all_subdirs(candidate):
             return candidate
 
-    # 3. Both failed
-    logger.error("Cannot find Claude skill files. Is mcp-coder installed correctly?")
+    # 3. Both failed — detailed error
+    logger.error(
+        "Cannot locate packaged Claude resources (skills/, knowledge_base/, agents/).\n"
+        "Paths tried:\n%s\n"
+        "Try reinstalling: pip install --force-reinstall mcp-coder",
+        "\n".join(f"  - {p}" for p in tried),
+    )
     sys.exit(1)
 ```
 
@@ -71,7 +87,7 @@ def _find_claude_source_dir() -> Path:
 
 - **Returns:** `Path` to a directory that contains `skills/`, `knowledge_base/`, `agents/` subdirs.
 - **Raises:** `SystemExit(1)` if both lookups fail.
-- **Constant:** `DEPLOY_SUBDIRS = ("skills", "knowledge_base", "agents")` — used here for validation and in step 4 for deploy.
+- **Constant:** `DEPLOY_SUBDIRS = ("skills", "knowledge_base", "agents")` — defined in this step and used here to validate **all three** subdirs exist under the resolved source. Reused by step 4 for deploy.
 
 ## TESTS
 
@@ -83,11 +99,17 @@ class TestFindClaudeSourceDir:
     def test_falls_back_to_repo_root(self, tmp_path, monkeypatch):
         """Falls back to repo-root .claude/ when importlib path is empty."""
 
-    def test_exits_when_both_fail(self, tmp_path, monkeypatch):
-        """Calls sys.exit(1) when neither location has skills/."""
+    def test_exits_when_both_fail(self, tmp_path, monkeypatch, caplog):
+        """Calls sys.exit(1) when neither location has the required subdirs.
 
-    def test_requires_skills_subdir(self, tmp_path, monkeypatch):
-        """Directory without skills/ subdir is rejected even if it exists."""
+        Asserts the error message mentions:
+        - What was sought (skills/, knowledge_base/, agents/)
+        - At least one of the paths tried
+        - The reinstall hint (pip install --force-reinstall mcp-coder)
+        """
+
+    def test_requires_all_subdirs(self, tmp_path, monkeypatch):
+        """Directory missing any of skills/knowledge_base/agents is rejected."""
 ```
 
 Tests use `monkeypatch` to override `importlib.resources.files` return value and `__file__` ancestry. Use `tmp_path` to create fake directory structures.

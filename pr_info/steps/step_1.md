@@ -24,6 +24,9 @@ Make `.claude/{skills,knowledge_base,agents}/` ship inside the wheel so downstre
 ### `setup.py` — Custom build_py
 
 ```python
+import shutil
+from pathlib import Path
+
 from setuptools import setup
 from setuptools.command.build_py import build_py
 
@@ -75,6 +78,10 @@ for subdir in ["skills", "knowledge_base", "agents"]:
 
 ## TESTS
 
+### Unit tests (fast)
+
+Load `setup.py` via `importlib.util.spec_from_file_location` to exercise `_copy_claude_resources()` directly:
+
 ```python
 class TestBuildPyWithSkills:
     def test_copy_claude_resources_creates_target_dirs(self, tmp_path):
@@ -86,6 +93,13 @@ class TestBuildPyWithSkills:
     def test_copy_claude_resources_overwrites_stale_build_artifacts(self, tmp_path):
         """Re-running copy replaces stale files (build artifact, not user files)."""
 ```
+
+### Integration test (slow — wheel build)
+
+One integration test that copies the repo to a tmp dir, runs `python -m build --wheel`, and inspects the resulting `.whl` (via `zipfile`) to confirm files under `resources/claude/skills/`, `resources/claude/knowledge_base/`, and `resources/claude/commands/` are present inside the wheel. This is the authoritative check for packaging correctness (it catches anything package-data / MANIFEST misses — which is why MANIFEST.in is intentionally NOT added in this step).
+
+- Mark slow/integration (e.g. a dedicated marker) so it is excluded from fast unit runs.
+- Keep it to a single test — it is expensive (build invocation).
 
 ## pyproject.toml change
 
