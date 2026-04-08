@@ -36,6 +36,28 @@ These rules decide where any piece of code lives. Apply them *before* debating i
 | `mcp-utils` | library | Code shared by ≥2 MCP servers. Language-agnostic. | **proposed** |
 | `mcp_config` | CLI client | Manages MCP client config files. Consumer only. | exists, to be reviewed |
 
+### High-level phased roadmap
+
+Big-picture sequencing of the work. Each phase is a group of tasks, not a single PR. Details of what moves where live in §1–§6.
+
+| Phase | Goal | Scope |
+|---|---|---|
+| **0. Pre-work** | Unblock decisions before any code moves | Resolve naming (`pyproject_config` vs `project_config`, `file_utils` vs `path_utils`); read `mcp_tools_py/utility_tools.py` to classify it; validate this plan against actual source (per top-of-doc banner) |
+| **1. Create `mcp-utils` repo** | New empty repo with project scaffolding | Empty GitHub repo; add baseline features per `docs/repository-setup/`; CI + CD pipelines; initial release tag `v0.1.1` (may be empty or contain just `subprocess_runner` + `log_utils`) |
+| **2. First functionality move** | Land the first real modules in `mcp-utils` | `subprocess_runner` + `subprocess_streaming` + `log_utils` — the pure leaves. Tests move with them. Release `v0.1.2` |
+| **3. Consumer adoption** | Replace local copies across repos | Register `mcp-utils` as a reference project in each consumer; add "Shared libraries" block to each `CLAUDE.md`; swap imports in `mcp_coder`, `mcp_tools_py`, `mcp_workspace`, `mcp_config`; delete local duplicates |
+| **4. mcp_coder → mcp_tools_py** | Consolidate Python-specific code | Move `mcp_coder/formatters/` (whole directory) + `pyproject_config.py` → `mcp_tools_py`. Smaller move, validates the cross-repo move pattern before the bigger one |
+| **5. mcp_coder → mcp_workspace** | Consolidate workspace/git/github code | Move `mcp_coder/utils/git_operations/` (entire) + `mcp_coder/utils/github_operations/` (entire) → `mcp_workspace` as MCP tools. Biggest move (~30 files). mcp_coder workflows now call git/GitHub via MCP |
+| **6. Finalize** | Clean up and document | Delete now-empty `mcp_coder/utils/*` subdirectories; verify no stale imports remain (grep all 4 repos); update `CLAUDE.md` "Shared libraries" blocks with final public API; close tracking issues |
+| **7. Oout of scope** | Documented but no action | `mcp_jenkins` split, `mcp_github` split (§6), `mcp-llm` extraction, `icoder` extraction, `mcp_config` review |
+
+**Ordering rationale:**
+- Phase 0 must complete first — unresolved names cause churn mid-migration.
+- Phases 1–3 establish the `mcp-utils` mechanism end-to-end with the simplest possible modules.
+- Phase 4 (smaller) before Phase 5 (larger) — validate the cross-repo move pattern on ~6 files before attempting ~30.
+- Phase 6 is cleanup only; no new moves.
+- Phase 7 is explicitly deferred.
+
 ---
 
 ## 1. `mcp-utils` (NEW repo — proposed)
