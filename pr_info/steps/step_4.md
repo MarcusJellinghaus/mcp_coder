@@ -67,7 +67,9 @@ event_log.emit("session_start",
 )
 ```
 
-**Note:** `setup_icoder_environment()` now handles what `prepare_llm_environment()` did for icoder. The `prepare_llm_environment()` call can be replaced by using `runtime_info.env_vars` directly. If `setup_icoder_environment()` fails (e.g., missing MCP binaries), log the error and return exit code 1.
+**Note:** `setup_icoder_environment()` now handles what `prepare_llm_environment()` did for icoder. The `prepare_llm_environment()` call can be replaced by using `runtime_info.env_vars` directly. If `setup_icoder_environment()` fails (raises `FileNotFoundError`, `RuntimeError`, or `PackageNotFoundError`), log the error and return exit code 1.
+
+**Intentional behavior change:** Icoder no longer uses `prepare_llm_environment()`'s `VIRTUAL_ENV → CONDA_PREFIX → sys.prefix` precedence for computing `MCP_CODER_VENV_DIR`. Inside icoder, `sys.prefix` is the authoritative source (with pre-set `MCP_CODER_*` taking priority). See `summary.md`.
 
 ### 3. `ICoderApp.on_mount()` — Display startup info
 
@@ -98,7 +100,7 @@ def on_mount(self) -> None:
 
 - `AppCore` import of `RuntimeInfo` uses `TYPE_CHECKING` guard if desired, but since it's a dataclass used at runtime, a direct import is fine.
 - `execute_icoder()` replaces the `prepare_llm_environment()` call with `setup_icoder_environment()` — the latter's `env_vars` dict serves the same purpose.
-- Error handling: if `setup_icoder_environment()` raises `FileNotFoundError`, log a clear error and return 1.
+- Error handling: if `setup_icoder_environment()` raises `FileNotFoundError`, `RuntimeError`, or `PackageNotFoundError`, log a clear error and return 1.
 
 ## Tests (TDD — write first)
 
@@ -112,6 +114,10 @@ def on_mount(self) -> None:
 ### `tests/icoder/test_cli_icoder.py` additions
 3. **`test_execute_icoder_calls_env_setup`** — Mock `setup_icoder_environment`, verify it's called with `project_dir`.
 4. **`test_execute_icoder_emits_session_start`** — Mock env_setup, verify `session_start` event is emitted to event log.
+5. **`test_execute_icoder_env_setup_failure_returns_1`** — Mock `setup_icoder_environment` to raise `FileNotFoundError` (and separately `RuntimeError`), verify `execute_icoder` logs an error and returns exit code 1.
+
+### TUI startup info rendering test
+6. **`test_tui_renders_runtime_info_on_mount`** — Add a Textual pilot/snapshot test (follow existing pattern in `tests/icoder/test_snapshots.py`) that mounts `ICoderApp` with a fake `RuntimeInfo` and asserts the output log contains the runtime info lines (`mcp-coder <version>`, server name/versions, `Tool env:`, `Project env:`, `Project dir:`) after `on_mount()`.
 
 ## Commit
 

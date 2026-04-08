@@ -15,21 +15,21 @@ Fix latent bug: `.mcp.json` references `${MCP_CODER_VENV_PATH}` but `prepare_llm
 
 ### `src/mcp_coder/llm/env.py`
 
-Add a helper to compute the bin/Scripts subdirectory, and include `MCP_CODER_VENV_PATH` in the returned dict.
+Import the shared `get_bin_dir` helper from `utils.mcp_verification` (defined in Step 2) and include `MCP_CODER_VENV_PATH` in the returned dict.
 
 ```python
-def _get_bin_dir(venv_root: str) -> str:
-    """Return the bin/Scripts subdirectory for a venv root."""
+from mcp_coder.utils.mcp_verification import get_bin_dir
 ```
 
 Update `prepare_llm_environment()` return dict to include `MCP_CODER_VENV_PATH`.
+
+- Update the `prepare_llm_environment()` docstring to document the new `MCP_CODER_VENV_PATH` key in the returned dict (absolute OS-native path to the venv `Scripts`/`bin` subdir).
 
 ### ALGORITHM
 
 ```
 venv_root = _get_runner_environment()  # existing, unchanged
-bin_dir = "Scripts" if sys.platform == "win32" else "bin"
-venv_path = Path(venv_root) / bin_dir
+venv_path = get_bin_dir(Path(venv_root))  # shared helper from utils.mcp_verification
 return {
     "MCP_CODER_PROJECT_DIR": ...,    # existing
     "MCP_CODER_VENV_DIR": ...,       # existing
@@ -43,9 +43,11 @@ Return type stays `dict[str, str]`. New key `MCP_CODER_VENV_PATH` added — valu
 
 ## HOW
 
-- Import `sys` (already imported in the file).
-- `_get_bin_dir` is a private module-level function — no exports needed.
+- Import `get_bin_dir` from `mcp_coder.utils.mcp_verification` (single source of truth, defined in Step 2). Do NOT define a local `_get_bin_dir` duplicate.
 - No change to `_get_runner_environment()` or its precedence logic.
+- Do NOT add `get_bin_dir` to any `__init__.py` — import directly from the module.
+
+**Note:** Step 1 depends on Step 2 being merged first (or the helper can be added in Step 2 and imported here as the steps land together).
 
 ## Tests (TDD — write first)
 
