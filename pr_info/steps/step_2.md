@@ -1,8 +1,8 @@
-# Step 2: Integration tests + `-M`/`-C=90%` flags
+# Step 2: Integration tests + `-M`/`-C90%` flags
 
 ## LLM Prompt
 
-> Read `pr_info/steps/summary.md` for context. Implement Step 2: add git_integration tests in a new file `test_compact_diffs_integration.py` that exercise the full pipeline with real git repos, then add `-M` and `-C=90%` flags to `get_branch_diff()` in `diffs.py`. Follow TDD — write tests first (they will fail without the flags for rename/copy detection), then add the flags, then verify all checks pass.
+> Read `pr_info/steps/summary.md` for context. Implement Step 2: add git_integration tests in a new file `test_compact_diffs_integration.py` that exercise the full pipeline with real git repos, then add `-M` and `-C90%` flags to `get_branch_diff()` in `diffs.py`. Follow TDD — write tests first (they will fail without the flags for rename/copy detection), then add the flags, then verify all checks pass.
 
 ## WHERE
 
@@ -22,7 +22,7 @@ All tests marked `@pytest.mark.git_integration`, using the existing `git_repo` f
 
 **Class `TestCompactDiffCopies`:**
 
-3. `test_pure_copy_appears_in_compact_diff` — copy a file (use `git diff -C=90%` detection by creating a near-identical file), run `get_compact_diff`, assert output contains `copy from`/`copy to`.
+3. `test_pure_copy_appears_in_compact_diff` — on the feature branch, modify the source file's content slightly AND create a near-identical copy under a new name in the same commit, so git considers the source as a copy candidate (plain `-C` only considers files modified in the commit as copy sources). Run `get_compact_diff`, assert output contains `copy from`/`copy to`.
 
 **Class `TestCompactDiffModeChanges`:**
 
@@ -36,17 +36,20 @@ All tests marked `@pytest.mark.git_integration`, using the existing `git_repo` f
 
 ### Production change in `diffs.py`
 
-Add `-M` and `-C=90%` to the shared `diff_args` list in `get_branch_diff()`, before the `if ansi:` branch, so both passes pick them up symmetrically.
+Add `-M` and `-C90%` to the shared `diff_args` list in `get_branch_diff()`, before the `if ansi:` branch, so both passes pick them up symmetrically.
 
 ## HOW
 
 - Tests import `get_compact_diff` from `mcp_coder.utils.git_operations.compact_diffs`.
-- Tests use the `git_repo` fixture (bare repo + configured user) from `tests/utils/git_operations/conftest.py`.
+- Tests use the `git_repo` fixture (non-bare, empty repo with no initial commit and configured user) from `tests/utils/git_operations/conftest.py`. Each test must create an initial commit on `main` before branching.
 - Each test creates a main branch with initial content, creates a feature branch, makes the specific change type, commits, then calls `get_compact_diff(project_dir, "main")`.
 - The mode-change test sets `core.fileMode=true` and uses `git update-index --chmod=+x` for cross-platform support.
-- The copy test creates a file on main, then on the feature branch creates a near-identical copy under a new name so `-C=90%` detects it.
+- The copy test modifies the source file slightly AND creates a near-identical copy under a new name in the same commit, so git's `-C90%` detects it (plain `-C` only considers files modified in that commit as copy sources).
+- **Ripple-effect check**: before committing, verify the existing tests in `tests/utils/git_operations/test_diffs.py`, `tests/utils/test_git_encoding_stress.py`, and `tests/workflows/create_pr/test_generation.py` do not assert on delete+add shapes that will now collapse into renames after adding `-M`; update any assertions that break.
 
 ## ALGORITHM (flag addition in `get_branch_diff`)
+
+`diff_args` is passed positionally via GitPython's `repo.git.diff(*diff_args)`, which shells out to git — so flags must use git's CLI syntax. Git accepts `-M` and `-C90%` (no equals sign); `-C=90%` is NOT valid.
 
 ```python
 # In get_branch_diff(), both exclude_paths and non-exclude code paths:
@@ -56,12 +59,12 @@ diff_args = [
     "--unified=5",
     "--no-prefix",
     "-M",          # ← NEW: force rename detection
-    "-C=90%",      # ← NEW: force copy detection (90% threshold)
+    "-C90%",       # ← NEW: force copy detection (90% threshold)
     ...
 ]
 ```
 
-Both the `if exclude_paths:` and `else:` branches build `diff_args` — add `-M` and `-C=90%` to both.
+Both the `if exclude_paths:` and `else:` branches build `diff_args` — add `-M` and `-C90%` to both.
 
 ## DATA
 
@@ -80,9 +83,9 @@ Integration test outputs are strings from `get_compact_diff()`. Assertions check
 ## Commit
 
 ```
-feat: add -M/-C=90% flags to get_branch_diff for rename/copy detection (#709)
+feat: add -M/-C90% flags to get_branch_diff for rename/copy detection (#709)
 
-Forces rename detection (-M) and conservative copy detection (-C=90%)
+Forces rename detection (-M) and conservative copy detection (-C90%)
 in both ANSI and plain diff passes, regardless of user's diff.renames
 git config. Integration tests verify the full pipeline for all
 header-only change types.

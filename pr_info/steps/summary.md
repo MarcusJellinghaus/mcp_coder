@@ -31,7 +31,7 @@ No new classes, no new functions, no parser changes. The `FileDiff.headers` list
 
 ### Rename/copy detection flags (`diffs.py`)
 
-Add `-M` and `-C=90%` to the shared `diff_args` list in `get_branch_diff()` so both ANSI and non-ANSI passes use identical rename/copy detection regardless of user's git config.
+Add `-M` and `-C90%` to the shared `diff_args` list in `get_branch_diff()` so both ANSI and non-ANSI passes use identical rename/copy detection regardless of user's git config. (Git CLI syntax is `-C90%`, not `-C=90%`.)
 
 ### No other production code changes
 
@@ -42,7 +42,7 @@ The parser, hunk renderer, moved-block suppression, and public API signatures ar
 | File | Change |
 |------|--------|
 | `src/mcp_coder/utils/git_operations/compact_diffs.py` | Fix `render_file_diff()` — ~4 lines |
-| `src/mcp_coder/utils/git_operations/diffs.py` | Add `-M`, `-C=90%` to `diff_args` — ~2 lines |
+| `src/mcp_coder/utils/git_operations/diffs.py` | Add `-M`, `-C90%` to `diff_args` — ~2 lines |
 | `tests/utils/git_operations/test_compact_diffs.py` | Update 1 existing test, add unit tests for each header-only change type + partial-rename regression guard |
 | `tests/utils/git_operations/test_compact_diffs_integration.py` | **New file** — integration tests with real git repos |
 
@@ -51,4 +51,4 @@ The parser, hunk renderer, moved-block suppression, and public API signatures ar
 | Step | Commit | Description |
 |------|--------|-------------|
 | 1 | Unit tests + `render_file_diff` fix | TDD: add unit tests for all header-only change types, update existing test, then fix `render_file_diff()` |
-| 2 | Integration tests + `-M`/`-C=90%` flags | TDD: add git_integration tests for real renames/copies/mode/binary/empty-file, then add flags to `get_branch_diff()` |
+| 2 | Integration tests + `-M`/`-C90%` flags | TDD: add git_integration tests for real renames/copies/mode/binary/empty-file, then add flags to `get_branch_diff()` |
