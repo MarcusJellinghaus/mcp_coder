@@ -21,6 +21,21 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Streaming buffer + Static tail widget + basic regression tests (a–e)
+- [ ] Implementation: add `Static` streaming-tail widget, CSS, `_text_buffer`, `_flush_buffer()`, rewrite `_handle_stream_event` for buffered streaming; add tests a–e (`app.py`, `styles.py`, `test_app_pilot.py`)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Regression tests f–h (error/tool mid-line flush, back-to-back streams)
+- [ ] Implementation: add tests f–h for error mid-line flush, back-to-back streams, tool event mid-line (`test_app_pilot.py` only — no production code changes)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Multi-chunk snapshot test + regenerate all snapshot baselines
+- [ ] Implementation: add snapshot test (i) for multi-chunk streaming layout; regenerate all snapshot baselines (`test_snapshots.py`, `__snapshots__/*.svg`)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review: verify all steps implemented, tests pass, no regressions
+- [ ] PR summary prepared
