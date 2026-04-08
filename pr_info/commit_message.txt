@@ -1,4 +1,0 @@
-fix: resolve implicit string concatenation warnings in test_compact_diffs_header_only
-
-Merge adjacent string literals into single strings on lines 202 and 207
-to fix pylint W1404 (implicit-str-concat) warnings that caused CI failure.
