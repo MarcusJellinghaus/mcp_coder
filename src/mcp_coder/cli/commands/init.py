@@ -3,7 +3,6 @@
 import argparse
 import logging
 import shutil
-import sys
 from importlib.resources import files
 from pathlib import Path
 
@@ -16,7 +15,11 @@ DEPLOY_SUBDIRS = ("skills", "knowledge_base", "agents")
 
 
 def _has_all_subdirs(base: Path) -> bool:
-    """Check whether *base* contains all required deploy subdirectories."""
+    """Check whether *base* contains all required deploy subdirectories.
+
+    Returns:
+        True if all required subdirectories exist under *base*.
+    """
     return all((base / name).is_dir() for name in DEPLOY_SUBDIRS)
 
 
@@ -55,7 +58,7 @@ def _find_claude_source_dir() -> Path:
         "Try reinstalling: pip install --force-reinstall mcp-coder",
         "\n".join(f"  - {p}" for p in tried),
     )
-    sys.exit(1)
+    raise SystemExit(1)
 
 
 def _deploy_skills(source_dir: Path, project_dir: Path) -> tuple[int, int]:
