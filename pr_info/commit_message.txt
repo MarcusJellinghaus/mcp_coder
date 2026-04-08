@@ -1,6 +1,6 @@
-fix: emit git headers for pure renames and other header-only changes (#709)
+feat: add -M/-C90% flags to get_branch_diff for rename/copy detection (#709)
 
-render_file_diff() now distinguishes "no hunks at parse time" (emit
-headers verbatim) from "all hunks collapsed via moved-block suppression"
-(stay hidden). Fixes compact-diff silently dropping pure renames, mode
-changes, binary changes, and empty file create/delete.
+Forces rename detection (-M) and conservative copy detection (-C90%)
+in both ANSI and plain diff passes, regardless of user's diff.renames
+git config. Integration tests verify the full pipeline for all
+header-only change types.
