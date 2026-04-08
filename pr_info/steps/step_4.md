@@ -67,7 +67,9 @@ event_log.emit("session_start",
 )
 ```
 
-**Note:** `setup_icoder_environment()` now handles what `prepare_llm_environment()` did for icoder. The `prepare_llm_environment()` call can be replaced by using `runtime_info.env_vars` directly. If `setup_icoder_environment()` fails (raises `FileNotFoundError`, `RuntimeError`, or `PackageNotFoundError`), log the error and return exit code 1.
+**Explicit removal:** Delete the existing `prepare_llm_environment()` call and its `try/except RuntimeError` wrapper (currently at `src/mcp_coder/cli/commands/icoder.py` lines ~49-54). Replace with the `setup_icoder_environment()` call plus broader error handling: catch `FileNotFoundError`, `RuntimeError`, and `PackageNotFoundError`, log a clear error, and return exit code 1.
+
+**env_vars contract change:** Previously `env_vars=` passed to `RealLLMService` could be `None` on `prepare_llm_environment` failure. The new flow always passes a populated dict (or returns 1 before reaching that call). `RealLLMService` already handles a populated dict identically — no changes needed there.
 
 **Intentional behavior change:** Icoder no longer uses `prepare_llm_environment()`'s `VIRTUAL_ENV → CONDA_PREFIX → sys.prefix` precedence for computing `MCP_CODER_VENV_DIR`. Inside icoder, `sys.prefix` is the authoritative source (with pre-set `MCP_CODER_*` taking priority). See `summary.md`.
 
@@ -114,10 +116,11 @@ def on_mount(self) -> None:
 ### `tests/icoder/test_cli_icoder.py` additions
 3. **`test_execute_icoder_calls_env_setup`** — Mock `setup_icoder_environment`, verify it's called with `project_dir`.
 4. **`test_execute_icoder_emits_session_start`** — Mock env_setup, verify `session_start` event is emitted to event log.
-5. **`test_execute_icoder_env_setup_failure_returns_1`** — Mock `setup_icoder_environment` to raise `FileNotFoundError` (and separately `RuntimeError`), verify `execute_icoder` logs an error and returns exit code 1.
+5. **`test_execute_icoder_env_setup_failure_returns_1`** — Mock `setup_icoder_environment` to raise `FileNotFoundError` (and separately `RuntimeError` and `PackageNotFoundError`), verify `execute_icoder` logs an error and returns exit code 1.
+6. **`test_execute_icoder_passes_env_vars_to_llm_service`** — Mock `setup_icoder_environment` to return a `RuntimeInfo` with a known `env_vars` dict (e.g. `{"MCP_CODER_VENV_PATH": "/fake/bin", "MCP_CODER_VENV_DIR": "/fake", "MCP_CODER_PROJECT_DIR": "/proj"}`). Assert `RealLLMService` was constructed/called with `env_vars=` equal to that dict.
 
 ### TUI startup info rendering test
-6. **`test_tui_renders_runtime_info_on_mount`** — Add a Textual pilot/snapshot test (follow existing pattern in `tests/icoder/test_snapshots.py`) that mounts `ICoderApp` with a fake `RuntimeInfo` and asserts the output log contains the runtime info lines (`mcp-coder <version>`, server name/versions, `Tool env:`, `Project env:`, `Project dir:`) after `on_mount()`.
+7. **`test_tui_renders_runtime_info_on_mount`** — Add a Textual pilot/snapshot test (follow existing pattern in `tests/icoder/test_snapshots.py`) that mounts `ICoderApp` with a fake `RuntimeInfo` and asserts the output log contains the runtime info lines (`mcp-coder <version>`, server name/versions, `Tool env:`, `Project env:`, `Project dir:`) after `on_mount()`.
 
 ## Commit
 

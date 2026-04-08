@@ -84,8 +84,8 @@ mcp-coder icoder (Python)
 
 | Step | Description | Commit |
 |------|-------------|--------|
-| 1 | Add `MCP_CODER_VENV_PATH` to `prepare_llm_environment()` | `feat(llm): add MCP_CODER_VENV_PATH to prepare_llm_environment` |
-| 2 | New `utils/mcp_verification.py` — cross-platform MCP binary verification | `feat(utils): add cross-platform MCP server verification` |
+| 1 | New `utils/mcp_verification.py` — cross-platform MCP binary verification | `feat(utils): add cross-platform MCP server verification` |
+| 2 | Add `MCP_CODER_VENV_PATH` to `prepare_llm_environment()` (imports `get_bin_dir` from Step 1) | `feat(llm): add MCP_CODER_VENV_PATH to prepare_llm_environment` |
 | 3 | New `icoder/env_setup.py` — RuntimeInfo + environment setup | `feat(icoder): add env_setup module with RuntimeInfo` |
 | 4 | Wire env_setup into `execute_icoder()`, `AppCore`, and TUI | `feat(icoder): integrate env_setup into icoder command` |
 | 5 | Delete `icoder.bat` + update all documentation | `chore: retire icoder.bat, update docs` |

@@ -40,3 +40,34 @@ Files edited:
 
 ### Status
 committed (to be committed by next agent)
+
+## Round 2 — 2026-04-08
+
+### Findings (10 items from round 2 review)
+- Step 1 (add `MCP_CODER_VENV_PATH`) imported `get_bin_dir` from Step 2's yet-to-exist module — circular dependency, Step 1 uncommittable on its own.
+- Step 2 (new `prepare_llm_environment` behavior) missing `monkeypatch.setenv`/`delenv` test-isolation note for `VIRTUAL_ENV`/`CONDA_PREFIX` (pytest-xdist `-n auto`).
+- Step 4 didn't explicitly state that the existing `prepare_llm_environment()` call plus its `try/except RuntimeError` wrapper must be deleted.
+- Step 4 missing note on `env_vars=` contract change: previously could be `None`, now always a populated dict; `RealLLMService` unaffected.
+- Step 4 had no test asserting `env_vars` from `RuntimeInfo` is wired into `RealLLMService`.
+- Step 3 `test_respects_preset_env_vars` only tested one key — per-key loop in the algorithm not fully covered.
+- `RuntimeInfo` field types for path fields unspecified — needed `str` (not `Path`) to match `env_vars` and serialize cleanly into `session_start` event data.
+- `RuntimeInfo` missing `python_version` / `claude_code_version` fields hinted at in summary `/info` future use.
+- Step ordering in `summary.md` needed to match the swap.
+- Round 2 changes should be logged in `plan_review_log_1.md` for traceability.
+
+### Decisions
+All 10 findings accepted. No user questions needed.
+
+### User decisions
+None this round.
+
+### Changes
+Files edited:
+- `pr_info/steps/step_1.md` — now contains the `utils/mcp_verification.py` content (swapped from Step 2). Added note explaining it lands first because Step 2 imports `get_bin_dir`.
+- `pr_info/steps/step_2.md` — now contains the `prepare_llm_environment` + `MCP_CODER_VENV_PATH` content (swapped from Step 1). Added `monkeypatch.setenv`/`delenv` test-isolation note. Updated reference: `get_bin_dir` created in Step 1 (not Step 2).
+- `pr_info/steps/step_3.md` — parametrized `test_respects_preset_env_vars` over all three `MCP_CODER_*` keys. Added `python_version`, `claude_code_version` fields to `RuntimeInfo`. Specified all path fields as `str` with a comment explaining the Path → str conversion at the function boundary.
+- `pr_info/steps/step_4.md` — explicit deletion of `prepare_llm_environment()` call + `try/except RuntimeError` wrapper at `icoder.py` ~lines 49-54. Added `env_vars` contract change note. Added `test_execute_icoder_passes_env_vars_to_llm_service`. Expanded `test_execute_icoder_env_setup_failure_returns_1` to cover `PackageNotFoundError`. Renumbered snapshot test 6 → 7.
+- `pr_info/steps/summary.md` — swapped Step 1 and Step 2 rows in the implementation table; Step 2 row annotated with "imports `get_bin_dir` from Step 1".
+
+### Status
+committed (to be committed next)

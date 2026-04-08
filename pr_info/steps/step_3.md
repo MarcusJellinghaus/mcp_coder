@@ -22,15 +22,21 @@ Create the iCoder-specific environment setup module. Pure function: computes too
 class RuntimeInfo:
     """Runtime information gathered during iCoder startup."""
     mcp_coder_version: str
-    tool_env_path: str          # venv root where mcp-coder is installed
-    project_venv_path: str      # project .venv root (or tool_env_path if self-hosting)
-    project_dir: str
+    python_version: str
+    claude_code_version: str
+    tool_env_path: str          # venv root where mcp-coder is installed (str, not Path)
+    project_venv_path: str      # project .venv root or tool_env_path if self-hosting (str)
+    project_dir: str            # absolute project dir (str, not Path)
     env_vars: dict[str, str]
     # ^ The effective final values for MCP_CODER_VENV_PATH, MCP_CODER_VENV_DIR,
     #   MCP_CODER_PROJECT_DIR — i.e., pre-set values from os.environ if present,
     #   otherwise computed from sys.prefix / project_dir. All three keys are
     #   always present.
     mcp_servers: list[MCPServerInfo]  # verified MCP server binaries
+
+# All path fields are `str` (not `Path`) to match env_vars and to serialize
+# cleanly into the session_start event data. Convert Path -> str at the
+# function boundary when constructing RuntimeInfo.
 
 def setup_icoder_environment(project_dir: Path) -> RuntimeInfo:
     """Set up iCoder environment: compute paths, verify MCP servers, return RuntimeInfo.
@@ -103,7 +109,7 @@ Add `tests/icoder/test_env_setup.py`.
 2. **`test_tool_env_uses_sys_prefix`** — Verify `tool_env_path` equals `sys.prefix`.
 3. **`test_project_venv_found`** — Create `project_dir/.venv`, verify `project_venv_path` points to it.
 4. **`test_project_venv_fallback`** — No `.venv` dir, verify fallback to `sys.prefix` and INFO log.
-5. **`test_respects_preset_env_vars`** — Pre-set `MCP_CODER_VENV_PATH` via `monkeypatch.setenv`, verify `RuntimeInfo.env_vars` contains the pre-set value (not the computed one) AND `os.environ` is unchanged.
+5. **`test_respects_preset_env_vars`** — Parametrized `@pytest.mark.parametrize("key", ["MCP_CODER_VENV_PATH", "MCP_CODER_VENV_DIR", "MCP_CODER_PROJECT_DIR"])`. For each key, pre-set it via `monkeypatch.setenv`, verify `RuntimeInfo.env_vars[key]` contains the pre-set value (not the computed one) AND `os.environ` is unchanged. This fully covers the per-key loop in the algorithm.
 6. **`test_logs_debug_when_preset_differs`** — Pre-set a var with different value via monkeypatch, verify DEBUG log emitted and effective value is the pre-set one.
 7. **`test_env_vars_always_contain_all_three_keys`** — With no pre-set vars (all `delenv`'d), verify `RuntimeInfo.env_vars` has all three `MCP_CODER_*` keys and `os.environ` is NOT mutated.
 8. **`test_does_not_mutate_os_environ`** — Snapshot `os.environ` keys before the call, verify no new `MCP_CODER_*` keys were added afterwards.
