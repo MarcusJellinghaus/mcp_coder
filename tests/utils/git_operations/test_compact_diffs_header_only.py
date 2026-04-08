@@ -199,12 +199,12 @@ _HEADER_ONLY_CASES = [
         id="binary_change",
     ),
     pytest.param(
-        ("diff --git a/empty.py b/empty.py\n" "new file mode 100644\n"),
+        "diff --git a/empty.py b/empty.py\nnew file mode 100644\n",
         ["new file mode"],
         id="empty_file_creation",
     ),
     pytest.param(
-        ("diff --git a/empty.py b/empty.py\n" "deleted file mode 100644\n"),
+        "diff --git a/empty.py b/empty.py\ndeleted file mode 100644\n",
         ["deleted file mode"],
         id="empty_file_deletion",
     ),

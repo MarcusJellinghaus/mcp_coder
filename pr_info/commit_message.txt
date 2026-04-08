@@ -1,5 +1,4 @@
-fix: resolve pylint W1404 implicit-str-concat in header-only test params (#709)
+fix: resolve implicit string concatenation warnings in test_compact_diffs_header_only
 
-Split single-line implicit string concatenations in _HEADER_ONLY_CASES
-(empty_file_creation and empty_file_deletion pytest.param entries) into
-multi-line format to satisfy pylint W1404. No logic changes.
+Merge adjacent string literals into single strings on lines 202 and 207
+to fix pylint W1404 (implicit-str-concat) warnings that caused CI failure.
