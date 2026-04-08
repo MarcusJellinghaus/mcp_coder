@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: Multi-chunk snapshot test + regenerate all snapshot baselines
-- [ ] Implementation: add snapshot test (i) for multi-chunk streaming layout; regenerate all snapshot baselines (`test_snapshots.py`, `__snapshots__/*.svg`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add snapshot test (i) for multi-chunk streaming layout; regenerate all snapshot baselines (`test_snapshots.py`, `__snapshots__/*.svg`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: verify all steps implemented, tests pass, no regressions

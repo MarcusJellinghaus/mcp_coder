@@ -153,3 +153,30 @@ def test_snapshot_autocomplete_no_match(
         await pilot.pause()
 
     assert snap_compare(icoder_app, run_before=type_bad_prefix)
+
+
+def test_snapshot_multi_chunk_streaming(snap_compare: Any, tmp_path: Path) -> None:
+    """Snapshot: multi-chunk streaming response with line breaks."""
+    responses: list[list[dict[str, object]]] = [
+        [
+            {"type": "text_delta", "text": "Hello "},
+            {"type": "text_delta", "text": "world!\n"},
+            {"type": "text_delta", "text": "Second line."},
+            {"type": "done"},
+        ]
+    ]
+    fake_llm = FakeLLMService(responses=responses)
+    with EventLog(logs_dir=tmp_path) as event_log:
+        app_core = AppCore(llm_service=fake_llm, event_log=event_log)
+        app = ICoderApp(app_core)
+
+        async def send_message(pilot: Any) -> None:
+            input_area = app.query_one(InputArea)
+            input_area.focus()
+            await pilot.pause()
+            input_area.insert("test streaming")
+            await pilot.pause()
+            await pilot.press("enter")
+            await pilot.pause(delay=0.5)
+
+        assert snap_compare(app, run_before=send_message)

@@ -1,5 +1,7 @@
-test(icoder): add streaming edge-case tests f-h (#735)
+test(icoder): add multi-chunk streaming snapshot + regenerate baselines (#735)
 
-- f: stream error mid-line flushes partial before error
-- g: back-to-back streams reset buffer cleanly
-- h: tool event mid-line flushes partial before tool block
+Add snapshot test (i) locking the Static streaming-tail layout with
+multi-chunk response containing newlines.
+
+Regenerate all snapshot baselines — the new Static widget in the DOM
+changes every existing snapshot's rendered output.
