@@ -5,7 +5,7 @@ Ple# Slow Test Review Methodology
 - **Profiling reports**: `docs/tests/performance_data/prof/*.txt`
 - **Runtime analysis**: [runtime_statistics.md](runtime_statistics.md)
 - **Issue tracking**: [issues.md](issues.md)
-- **Review process**: [runtime_statistics_review_process.md](runtime_statistics_review_process.md)
+- **Review process**: [runtime-statistics-review-process.md](runtime-statistics-review-process.md)
 
 ## Key Principle
 
@@ -144,5 +144,5 @@ pytest tests/ --durations=10
 
 ---
 
-**See also**: [Runtime Statistics Review Process](runtime_statistics_review_process.md)  
+**See also**: [Runtime Statistics Review Process](runtime-statistics-review-process.md)  
 *Last Updated: 2025-10-08 | Based on: Git Integration Test Review (Issue #013)*

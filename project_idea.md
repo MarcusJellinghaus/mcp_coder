@@ -99,7 +99,7 @@ In one case, a text document with a todo list (with `[ ]` and `[X]` that had to 
 
 ## How to automate
 
-The file [Development process](../PR_Info/Development_Process.md) outlines a development process that has already been tested.
+The file [Development process](docs/processes-prompts/development-process.md) outlines a development process that has already been tested.
 The prompts and the interaction with LLM and environment are working.
 However, it is so far only a semi-automated process.
 

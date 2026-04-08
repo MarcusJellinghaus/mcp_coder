@@ -3,7 +3,7 @@
 ## Overview
 This document tracks test performance baselines, known slow tests, and performance trends for the MCP Coder project.
 
-**📚 For detailed guidance on analyzing slow tests, see**: [Slow Test Review Methodology](slow_test_review_methodology.md)
+**📚 For detailed guidance on analyzing slow tests, see**: [Slow Test Review Methodology](slow-test-review-methodology.md)
 
 ## Performance Thresholds
 

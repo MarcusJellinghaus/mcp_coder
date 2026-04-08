@@ -125,7 +125,7 @@ flowchart TD
 
 ### Prerequisites
 
-- **Claude Code CLI**: Install from [Anthropic's documentation](https://docs.anthropic.com/en/docs/claude-code)
+- **Claude Code CLI**: Install from [Anthropic's documentation](https://code.claude.com/docs)
 - **Python 3.11+**
 - **Git** (for repository operations)
 - **Code base hosted on GitHub**
