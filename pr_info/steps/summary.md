@@ -36,7 +36,7 @@ StreamEvent → StreamEventRenderer.render() → RenderAction
 | Widget | `Static(id="streaming-tail")` between `OutputLog` and `CommandAutocomplete` |
 | Buffer | `self._text_buffer: str` on `ICoderApp`, flushed on any non-text event |
 | Flush trigger | `StreamDone`, `ToolStart`, `ToolResult`, `ErrorMessage`, or stream exception |
-| `_append_blank_line` | Removed — `StreamDone` handler flushes buffer + writes blank line |
+| `_append_blank_line` | Kept — called from `StreamDone` success path and `except` branch after flush. |
 | Error mid-line | Flush partial first, then show error (preserves information) |
 | Tool mid-line | Flush partial first, then render tool block (chronological order) |
 

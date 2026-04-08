@@ -87,7 +87,7 @@ async def test_streaming_back_to_back_no_leakage(make_icoder_app):
 **Approach:** Use `FakeLLMService(responses=[stream1_events, stream2_events])` — it pops responses in order. Submit two messages sequentially.
 
 ```python
-app = make_icoder_app([
+app = make_icoder_app(responses=[
     [  # First stream
         {"type": "text_delta", "text": "first"},
         {"type": "done"},
@@ -112,7 +112,7 @@ async def test_streaming_tool_event_mid_line(make_icoder_app):
 **Approach:** Response sequence with text chunks, then tool_use_start, tool_result, more text, done.
 
 ```python
-app = make_icoder_app([[
+app = make_icoder_app(responses=[[
     {"type": "text_delta", "text": "before tool"},
     {"type": "tool_use_start", "name": "mcp__workspace__read_file", "args": {"file_path": "x.py"}},
     {"type": "tool_result", "name": "mcp__workspace__read_file", "output": "content"},
@@ -120,7 +120,8 @@ app = make_icoder_app([[
     {"type": "done"},
 ]])
 # Verify recorded_lines ordering:
-#   1. "> test" (user input echo)
+#   1. the user-input echo line, whatever form it takes
+#      (verify the actual echo format against InputArea behavior during implementation)
 #   2. "before tool" (flushed partial)
 #   3. tool start line (┌ workspace > read_file...)
 #   4. tool result lines (│ ... └ done)

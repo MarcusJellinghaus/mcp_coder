@@ -31,17 +31,14 @@ Run all quality checks after changes.
 
 ### 1. `tests/icoder/test_snapshots.py`
 
-**New imports needed:**
-```python
-from mcp_coder.llm.types import StreamEvent
-```
-
 **New test (i) — snapshot for multi-chunk streaming:**
+
+Match the event-literal style already used by existing snapshot tests in `test_snapshots.py` — do not introduce a new `StreamEvent` import.
 
 ```python
 def test_snapshot_multi_chunk_streaming(snap_compare: Any, tmp_path: Path) -> None:
     """Snapshot: multi-chunk streaming response with line breaks."""
-    responses: list[list[StreamEvent]] = [[
+    responses = [[
         {"type": "text_delta", "text": "Hello "},
         {"type": "text_delta", "text": "world!\n"},
         {"type": "text_delta", "text": "Second line."},
