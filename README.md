@@ -145,7 +145,7 @@ pip install -e ".[dev]"
 ### Quick Links
 
 - **[CLI Reference](docs/cli-reference.md)** - Complete command documentation and usage examples
-- **[Repository Setup](docs/repository-setup.md)** - GitHub Actions, labels, and repository configuration
+- **[Repository Setup](docs/repository-setup/README.md)** - GitHub Actions, labels, and repository configuration
 - **[Configuration Guide](docs/configuration/config.md)** - User config files, environment variables, and platform setup
 - **[Development Process](docs/processes-prompts/development-process.md)** - Detailed methodology and workflow documentation
 

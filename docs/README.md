@@ -11,12 +11,12 @@ Complete documentation for MCP Coder.
 | Document | Description |
 |----------|-------------|
 | [CLI Reference](cli-reference.md) | All commands with examples |
-| [Repository Setup](repository-setup.md) | GitHub Actions, labels, MCP configuration |
+| [Repository Setup](repository-setup/README.md) | GitHub Actions, labels, MCP configuration |
 | [Configuration Guide](configuration/config.md) | User config files and environment variables |
 
 ### Setup & Configuration
 
-- **[Repository Setup](repository-setup.md)** - Complete guide for setting up repositories with MCP Coder workflows
+- **[Repository Setup](repository-setup/README.md)** - Complete guide for setting up repositories with MCP Coder workflows
 - **[Configuration Guide](configuration/config.md)** - User configuration, environment variables, platform setup
 - **[Claude Code Configuration](configuration/claude-code.md)** - Claude Code CLI setup and project configuration
 - **[Claude Desktop Configuration](configuration/claude-desktop.md)** - Claude Desktop setup for interactive workflows
