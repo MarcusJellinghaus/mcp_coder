@@ -7,6 +7,8 @@
 
 Add regression tests for edge cases: stream error mid-line, tool events mid-line, and back-to-back streams. Verify the flush-before-non-text-event behavior works correctly in all paths.
 
+**This step is strictly tests-only.** Step 2 does NOT modify `src/mcp_coder/icoder/ui/app.py`. If any of tests f/g/h reveals a production bug, the fix belongs in Step 1 and MUST be folded back into Step 1 before Step 1 is committed.
+
 ## LLM Prompt
 
 ```
@@ -14,7 +16,8 @@ Implement Step 2 from pr_info/steps/step_2.md.
 Read pr_info/steps/summary.md for context.
 Read the current state of src/mcp_coder/icoder/ui/app.py and tests/icoder/test_app_pilot.py before making changes.
 Step 1 is already implemented — the buffer, Static widget, and tests a-e exist.
-Add tests f-h. If any test reveals a bug in the Step 1 implementation, fix it.
+Add tests f-h. Step 2 is tests-only — do NOT modify app.py.
+If any test reveals a bug, stop, fold the fix into Step 1, then retry Step 2.
 Run all quality checks after changes.
 ```
 
@@ -23,7 +26,8 @@ Run all quality checks after changes.
 | File | Action |
 |---|---|
 | `tests/icoder/test_app_pilot.py` | Modify (add tests f–h) |
-| `src/mcp_coder/icoder/ui/app.py` | Modify only if tests reveal a bug |
+
+**Out of scope:** `src/mcp_coder/icoder/ui/app.py` must NOT be modified in this step. Production fixes belong in Step 1.
 
 ## WHAT — Tests to add
 
@@ -68,18 +72,9 @@ class ErrorAfterChunksLLMService:
 #   - "partial" should appear BEFORE "Error: boom" in the list
 ```
 
-**Factory adaptation:** The `make_icoder_app` fixture takes `responses`, but for this test we need a custom LLM service. Add a lower-level factory or create the app directly in the test.
-
-Alternative: add an `llm_service` parameter to the factory:
-
+**Factory usage:** The Step 1 `make_icoder_app` factory already accepts an `llm_service` kwarg, so this test just passes the raising service directly:
 ```python
-def _factory(
-    responses: list[list[StreamEvent]] | None = None,
-    llm_service: LLMService | None = None,
-) -> ICoderApp:
-    if llm_service is None:
-        llm_service = FakeLLMService(responses=responses or [])
-    ...
+app = make_icoder_app(llm_service=ErrorAfterChunksLLMService(chunks, "boom"))
 ```
 
 ### Test g) Back-to-back streams — buffer resets cleanly

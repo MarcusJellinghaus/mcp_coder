@@ -73,11 +73,19 @@ Run on Windows:
 pytest tests/icoder/test_snapshots.py --snapshot-update
 ```
 
-This regenerates all 8 existing SVGs + the 1 new one because the `Static(id="streaming-tail")` widget added in Step 1 changes the rendered DOM for every test.
+This may regenerate up to all 8 existing SVGs + the 1 new one because the `Static(id="streaming-tail")` widget added in Step 1 changes the rendered DOM for every test.
+
+**Note on `height: auto`:** The empty `Static#streaming-tail` may collapse to 0 lines in non-streaming snapshots, in which case some baselines may not actually differ. After `--snapshot-update`, run:
+```bash
+git diff --stat tests/icoder/__snapshots__/
+```
+and only commit baselines that genuinely changed — discard no-op regenerations.
 
 ### 3. Review regenerated SVGs
 
-Before committing, verify:
+**Baseline diff review (mandatory):** For each regenerated SVG, diff it against the previously committed baseline. The ONLY expected visual change is the addition of the `Static#streaming-tail` row (likely an empty row) between `OutputLog` and the input area. Any other pixel-level change — colors, wrapping, unrelated widgets, font metrics — must be investigated and justified before committing.
+
+Also verify:
 - No local file paths (e.g. `C:\Users\...`) leaked into SVGs
 - No environment variables or secrets visible
 - No API keys or tokens

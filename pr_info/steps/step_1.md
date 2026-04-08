@@ -12,7 +12,8 @@ Fix the token-per-line bug by adding a text buffer to `ICoderApp` and a `Static`
 Implement Step 1 from pr_info/steps/step_1.md.
 Read pr_info/steps/summary.md for context.
 Read the current source files before making changes.
-Follow TDD: write the tests first (they will fail), then implement the fix.
+Add the production change and regression tests in the same commit so all checks pass together.
+(Strict red->green TDD is not possible here: the new Static widget invalidates existing fixtures and snapshots immediately.)
 Run all quality checks after changes.
 ```
 
@@ -71,6 +72,8 @@ def _flush_buffer(self) -> None:
     self.query_one("#streaming-tail", Static).update("")
 ```
 
+**Keep `_append_blank_line()` helper** — called from BOTH the `StreamDone` success path AND the `except` branch in `_stream_llm`. This preserves the existing trailing-blank visual behavior after every stream (success or error) instead of dropping it on errors.
+
 **Rewritten `_handle_stream_event()`:**
 
 ```python
@@ -96,7 +99,7 @@ def _handle_stream_event(self, event: StreamEvent) -> None:
     self._flush_buffer()
 
     if isinstance(action, StreamDone):
-        output.write("")  # blank line for visual spacing
+        self._append_blank_line()  # preserve trailing blank line
     elif isinstance(action, ToolStart):
         # ... existing ToolStart logic unchanged ...
     elif isinstance(action, ToolResult):
@@ -105,19 +108,20 @@ def _handle_stream_event(self, event: StreamEvent) -> None:
         output.append_text(f"Error: {action.message}")
 ```
 
-**Modified `_stream_llm()`** — remove `_append_blank_line` call, add flush before error:
+**Modified `_stream_llm()`** — flush on error, keep `_append_blank_line` on error path too:
 ```python
 def _stream_llm(self, text: str) -> None:
     try:
         for event in self._core.stream_llm(text):
             self.call_from_thread(self._handle_stream_event, event)
-        # StreamDone event handles flush + blank line
+        # StreamDone event handles flush + blank line in the success path
     except Exception as exc:
         self.call_from_thread(self._flush_buffer)
         self.call_from_thread(self._show_error, str(exc))
+        self.call_from_thread(self._append_blank_line)
 ```
 
-**Remove `_append_blank_line` method** — no longer needed.
+**Decision — preserve pure blank lines:** The flush loop does NOT guard with `if line:`. Consecutive `\n` characters produce empty lines that are written to `OutputLog` as-is (Option A — simplest, matches LLM intent).
 
 ### ALGORITHM — TextChunk buffer logic (5 lines)
 
@@ -139,43 +143,39 @@ static.update(buffer)                # show partial to user
 
 All tests use `FakeLLMService(responses=[[...]])` with explicit multi-chunk sequences. Create the app inline with the custom responses (can't use the shared `icoder_app` fixture since it uses default FakeLLMService).
 
-**Helper fixture to add:**
-```python
-def _make_app(responses: list[list[StreamEvent]], tmp_path: Path) -> ICoderApp:
-    fake_llm = FakeLLMService(responses=responses)
-    with EventLog(logs_dir=tmp_path) as event_log:
-        app_core = AppCore(llm_service=fake_llm, event_log=event_log)
-        return ICoderApp(app_core)
-```
-
-Note: Since EventLog is a context manager, use a fixture that yields instead. Pattern:
+**Factory fixture (reuses the existing `event_log` fixture from `tests/icoder/conftest.py`):**
 
 ```python
 @pytest.fixture
-def make_icoder_app(tmp_path: Path) -> Iterator[Callable[[list[list[StreamEvent]]], ICoderApp]]:
-    """Factory fixture to create ICoderApp with custom FakeLLM responses."""
-    apps: list[tuple[EventLog, ICoderApp]] = []
+def make_icoder_app(event_log):
+    """Factory to create ICoderApp with custom FakeLLM responses or a custom LLM service."""
+    def _factory(*, responses=None, llm_service=None):
+        llm = llm_service or FakeLLMService(responses=responses or [])
+        return ICoderApp(AppCore(llm_service=llm, event_log=event_log))
+    return _factory
+```
 
-    def _factory(responses: list[list[StreamEvent]]) -> ICoderApp:
-        event_log = EventLog(logs_dir=tmp_path)
-        event_log.__enter__()
-        fake_llm = FakeLLMService(responses=responses)
-        app_core = AppCore(llm_service=fake_llm, event_log=event_log)
-        app = ICoderApp(app_core)
-        apps.append((event_log, app))
-        return app
+The `llm_service` kwarg lets Step 2 pass a raising service for the error-path test without duplicating the fixture.
 
-    yield _factory
+### Assertion pattern (applies to all tests a–e and beyond)
 
-    for el, _ in apps:
-        el.__exit__(None, None, None)
+Use **strict structural assertions**, not plain `in` checks (which can pass even in the buggy per-token case for single-word lines):
+
+```python
+# Exact-count check
+assert output.recorded_lines.count("line1") == 1
+# Index-ordering check
+assert output.recorded_lines.index("line1") < output.recorded_lines.index("line2")
+# Streaming tail must be empty after StreamDone
+from textual.widgets import Static
+assert str(app.query_one("#streaming-tail", Static).renderable) == ""
 ```
 
 **Test a) Single chunk, no newline — flushed on stream end:**
 ```python
 async def test_streaming_single_chunk_no_newline(make_icoder_app):
     """Single chunk without newline: buffered, flushed to RichLog on stream end."""
-    app = make_icoder_app([[
+    app = make_icoder_app(responses=[[
         {"type": "text_delta", "text": "hello"},
         {"type": "done"},
     ]])
@@ -187,17 +187,15 @@ async def test_streaming_single_chunk_no_newline(make_icoder_app):
         await pilot.press("enter")
         await pilot.pause(delay=0.5)
         output = app.query_one(OutputLog)
-        assert "hello" in output.recorded_lines
-        # Should be a single entry, not split across multiple lines
-        hello_entries = [l for l in output.recorded_lines if l == "hello"]
-        assert len(hello_entries) == 1
+        assert output.recorded_lines.count("hello") == 1
+        assert str(app.query_one("#streaming-tail", Static).renderable) == ""
 ```
 
 **Test b) Multiple chunks, no newlines — combined on stream end:**
 ```python
 async def test_streaming_multi_chunk_no_newlines(make_icoder_app):
     """Multiple chunks without newlines: combined into single line on flush."""
-    app = make_icoder_app([[
+    app = make_icoder_app(responses=[[
         {"type": "text_delta", "text": "hello"},
         {"type": "text_delta", "text": " world"},
         {"type": "text_delta", "text": "!"},
@@ -205,43 +203,47 @@ async def test_streaming_multi_chunk_no_newlines(make_icoder_app):
     ]])
     # ... submit input, wait ...
     output = app.query_one(OutputLog)
-    assert "hello world!" in output.recorded_lines
+    assert output.recorded_lines.count("hello world!") == 1
+    assert str(app.query_one("#streaming-tail", Static).renderable) == ""
 ```
 
 **Test c) Mid-stream newline — line flushed, remainder continues:**
 ```python
 async def test_streaming_mid_newline(make_icoder_app):
     """Newline mid-stream flushes completed line, partial continues."""
-    app = make_icoder_app([[
+    app = make_icoder_app(responses=[[
         {"type": "text_delta", "text": "line1\nline2"},
         {"type": "done"},
     ]])
     # ... submit input, wait ...
     output = app.query_one(OutputLog)
-    assert "line1" in output.recorded_lines
-    assert "line2" in output.recorded_lines
+    assert output.recorded_lines.count("line1") == 1
+    assert output.recorded_lines.count("line2") == 1
+    assert output.recorded_lines.index("line1") < output.recorded_lines.index("line2")
+    assert str(app.query_one("#streaming-tail", Static).renderable) == ""
 ```
 
 **Test d) Chunk with multiple newlines:**
 ```python
 async def test_streaming_multiple_newlines_in_chunk(make_icoder_app):
     """Chunk with multiple newlines: each complete line flushed, partial kept."""
-    app = make_icoder_app([[
+    app = make_icoder_app(responses=[[
         {"type": "text_delta", "text": "line1\nline2\nline3"},
         {"type": "done"},
     ]])
     # ... submit input, wait ...
     output = app.query_one(OutputLog)
-    assert "line1" in output.recorded_lines
-    assert "line2" in output.recorded_lines
-    assert "line3" in output.recorded_lines
+    for ln in ("line1", "line2", "line3"):
+        assert output.recorded_lines.count(ln) == 1
+    assert output.recorded_lines.index("line1") < output.recorded_lines.index("line2") < output.recorded_lines.index("line3")
+    assert str(app.query_one("#streaming-tail", Static).renderable) == ""
 ```
 
 **Test e) Empty text_delta — no spurious empty line:**
 ```python
 async def test_streaming_empty_text_delta(make_icoder_app):
     """Empty text_delta is a no-op: no spurious empty lines."""
-    app = make_icoder_app([[
+    app = make_icoder_app(responses=[[
         {"type": "text_delta", "text": "hello"},
         {"type": "text_delta", "text": ""},
         {"type": "text_delta", "text": " world"},
@@ -249,11 +251,50 @@ async def test_streaming_empty_text_delta(make_icoder_app):
     ]])
     # ... submit input, wait ...
     output = app.query_one(OutputLog)
-    assert "hello world" in output.recorded_lines
-    # No empty string entries from the empty text_delta
-    non_prompt_lines = [l for l in output.recorded_lines if not l.startswith(">")]
-    assert "" not in non_prompt_lines or non_prompt_lines == []  # only blank from StreamDone spacing
+    assert output.recorded_lines.count("hello world") == 1
+    assert str(app.query_one("#streaming-tail", Static).renderable) == ""
 ```
+
+### Additional edge-case tests
+
+**Test e2) Chunk ending exactly on `\n`:**
+```python
+async def test_streaming_chunk_ends_on_newline(make_icoder_app):
+    """Chunk ending exactly on newline: line flushed, no trailing empty entry."""
+    app = make_icoder_app(responses=[[
+        {"type": "text_delta", "text": "line1\n"},
+        {"type": "done"},
+    ]])
+    # ... submit, wait ...
+    output = app.query_one(OutputLog)
+    assert output.recorded_lines.count("line1") == 1
+    assert str(app.query_one("#streaming-tail", Static).renderable) == ""
+```
+
+**Test e3) Chunk containing only `"\n"` mid-stream:**
+```python
+async def test_streaming_newline_only_chunk(make_icoder_app):
+    """Chunks ['hello', '\\n', 'world']: 'hello' flushes on newline chunk, 'world' on StreamDone."""
+    app = make_icoder_app(responses=[[
+        {"type": "text_delta", "text": "hello"},
+        {"type": "text_delta", "text": "\n"},
+        {"type": "text_delta", "text": "world"},
+        {"type": "done"},
+    ]])
+    # ... submit, wait ...
+    output = app.query_one(OutputLog)
+    assert output.recorded_lines.count("hello") == 1
+    assert output.recorded_lines.count("world") == 1
+    assert output.recorded_lines.index("hello") < output.recorded_lines.index("world")
+    assert str(app.query_one("#streaming-tail", Static).renderable) == ""
+```
+
+**Test e4) Mid-stream Static tail assertion:**
+At least one test must verify that `Static#streaming-tail` holds the current partial line during streaming (not just after it ends). After a chunk without a newline (and before `StreamDone`), assert:
+```python
+assert str(app.query_one("#streaming-tail", Static).renderable) == "<expected partial>"
+```
+and after `StreamDone` assert it is empty. If strict mid-stream pausing is awkward with the Pilot API, drive `_handle_stream_event` directly with a single non-newline chunk event and check the tail state before delivering `StreamDone`.
 
 ## HOW — Integration points
 
