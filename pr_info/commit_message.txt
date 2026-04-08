@@ -1,6 +1,9 @@
-feat: add -M/-C90% flags to get_branch_diff for rename/copy detection (#709)
+Split test_compact_diffs.py to fix file-size CI check
 
-Forces rename detection (-M) and conservative copy detection (-C90%)
-in both ANSI and plain diff passes, regardless of user's diff.renames
-git config. Integration tests verify the full pipeline for all
-header-only change types.
+Extract realistic refactor and header-only test classes from
+test_compact_diffs.py (927 lines) into a new
+test_compact_diffs_header_only.py module, bringing the original
+file under the 750-line limit.
+
+Also fix implicit-str-concat pylint warnings in the new file
+by expanding single-line string tuples to multi-line form.
