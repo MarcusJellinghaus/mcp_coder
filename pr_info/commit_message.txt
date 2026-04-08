@@ -1,0 +1,10 @@
+feat: add build-time packaging for .claude/ skill files
+
+Create setup.py with custom build_py hook that copies
+.claude/{skills,knowledge_base,agents}/ into
+src/mcp_coder/resources/claude/ at wheel build time.
+
+- Add BuildPyWithSkills and _copy_claude_resources() in setup.py
+- Add resources/claude/**/* to pyproject.toml package-data
+- Gitignore build artifact src/mcp_coder/resources/claude/
+- Add unit tests for copy behavior (create, skip, overwrite)

@@ -1,13 +1,28 @@
 """Tests for init command functionality."""
 
 import argparse
+import importlib.util
 import logging
 import tomllib
+import types
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 from mcp_coder.cli.commands.init import execute_init
+
+
+def _load_setup_module() -> types.ModuleType:
+    """Load setup.py as a module to access _copy_claude_resources."""
+    setup_path = Path(__file__).resolve().parents[3] / "setup.py"
+    spec = importlib.util.spec_from_file_location("setup_module", setup_path)
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    # Prevent setup() from actually running
+    with patch("setuptools.setup"):
+        spec.loader.exec_module(mod)
+    return mod
 
 
 class TestInitCommand:
@@ -105,3 +120,74 @@ class TestInitCommand:
         assert "github" in data
         assert "jenkins" in data
         assert "coordinator" in data
+
+
+class TestBuildPyWithSkills:
+    """Tests for setup.py _copy_claude_resources build hook."""
+
+    def test_copy_claude_resources_creates_target_dirs(self, tmp_path: Path) -> None:
+        """_copy_claude_resources copies skills/knowledge_base/agents."""
+        setup_mod = _load_setup_module()
+
+        # Create source .claude/ structure
+        source = tmp_path / ".claude"
+        for subdir in ["skills", "knowledge_base", "agents"]:
+            d = source / subdir
+            d.mkdir(parents=True)
+            (d / "test.md").write_text(f"content of {subdir}")
+
+        dest = tmp_path / "src" / "mcp_coder" / "resources" / "claude"
+
+        # Monkeypatch __file__ in setup module to point at tmp_path
+        with patch.object(setup_mod, "__file__", str(tmp_path / "setup.py")):
+            setup_mod._copy_claude_resources()
+
+        for subdir in ["skills", "knowledge_base", "agents"]:
+            target_file = dest / subdir / "test.md"
+            assert target_file.exists(), f"{subdir}/test.md should exist"
+            assert target_file.read_text() == f"content of {subdir}"
+
+    def test_copy_claude_resources_skips_claude_md(self, tmp_path: Path) -> None:
+        """CLAUDE.md and settings.local.json are not copied."""
+        setup_mod = _load_setup_module()
+
+        source = tmp_path / ".claude"
+        source.mkdir(parents=True)
+        # These live directly in .claude/, not in subdirs — so they should NOT be copied
+        (source / "CLAUDE.md").write_text("# Claude instructions")
+        (source / "settings.local.json").write_text("{}")
+        # Create one subdir so there's something to copy
+        skills = source / "skills"
+        skills.mkdir()
+        (skills / "my_skill.md").write_text("skill content")
+
+        dest = tmp_path / "src" / "mcp_coder" / "resources" / "claude"
+
+        with patch.object(setup_mod, "__file__", str(tmp_path / "setup.py")):
+            setup_mod._copy_claude_resources()
+
+        assert not (dest / "CLAUDE.md").exists()
+        assert not (dest / "settings.local.json").exists()
+        assert (dest / "skills" / "my_skill.md").exists()
+
+    def test_copy_claude_resources_overwrites_stale_build_artifacts(
+        self, tmp_path: Path
+    ) -> None:
+        """Re-running copy replaces stale files (build artifact, not user files)."""
+        setup_mod = _load_setup_module()
+
+        source = tmp_path / ".claude"
+        skills = source / "skills"
+        skills.mkdir(parents=True)
+        (skills / "skill.md").write_text("version 1")
+
+        dest = tmp_path / "src" / "mcp_coder" / "resources" / "claude"
+        # Pre-create stale artifact
+        stale = dest / "skills"
+        stale.mkdir(parents=True)
+        (stale / "skill.md").write_text("stale version")
+
+        with patch.object(setup_mod, "__file__", str(tmp_path / "setup.py")):
+            setup_mod._copy_claude_resources()
+
+        assert (dest / "skills" / "skill.md").read_text() == "version 1"

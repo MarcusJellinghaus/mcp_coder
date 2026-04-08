@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Build-time packaging infrastructure
 > [step_1.md](./steps/step_1.md) — `setup.py` with custom `build_py`, `pyproject.toml` package-data, `.gitignore` update
 
-- [ ] Implementation: `setup.py`, `pyproject.toml` package-data, `.gitignore`, tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `setup.py`, `pyproject.toml` package-data, `.gitignore`, tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: CLI parser for init command
 > [step_2.md](./steps/step_2.md) — `add_init_parser()` with `--just-skills` and `--project-dir` flags
