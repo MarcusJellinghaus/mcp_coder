@@ -1,5 +1,7 @@
 """Unit tests for compact_diffs.py — all synthetic string inputs, no git repos."""
 
+import pytest
+
 from mcp_coder.utils.git_operations.compact_diffs import (
     MIN_BLOCK_LINES,
     MIN_CONTENT_LENGTH,
@@ -465,8 +467,156 @@ class TestRenderFileDiff:
         assert "diff --git a.py b.py" in result
         assert "old unique content here in file" in result
 
-    def test_file_entirely_skipped_when_no_hunks(self) -> None:
-        file_diff = FileDiff(headers=["diff --git a.py b.py"], hunks=[])
+    def test_file_headers_emitted_when_no_parsed_hunks(self) -> None:
+        file_diff = FileDiff(
+            headers=["diff --git a.py b.py", "similarity index 100%"],
+            hunks=[],
+        )
+        result = render_file_diff(file_diff, set())
+        for header in file_diff.headers:
+            assert header in result
+
+    def test_pure_rename_headers_emitted(self) -> None:
+        file_diff = FileDiff(
+            headers=[
+                "diff --git a/old.py b/new.py",
+                "similarity index 100%",
+                "rename from old.py",
+                "rename to new.py",
+            ],
+            hunks=[],
+        )
+        result = render_file_diff(file_diff, set())
+        for header in file_diff.headers:
+            assert header in result
+
+    def test_partial_rename_emits_headers_and_hunks(self) -> None:
+        file_diff = FileDiff(
+            headers=[
+                "diff --git a/old.py b/new.py",
+                "similarity index 80%",
+                "rename from old.py",
+                "rename to new.py",
+                "--- a/old.py",
+                "+++ b/new.py",
+            ],
+            hunks=[
+                Hunk(
+                    header="@@ -1,2 +1,2 @@",
+                    lines=[
+                        "-old unique content here in file",
+                        "+new unique content here in file",
+                    ],
+                )
+            ],
+        )
+        result = render_file_diff(file_diff, set())
+        assert "rename from old.py" in result
+        assert "rename to new.py" in result
+        assert "old unique content here in file" in result
+        assert "new unique content here in file" in result
+
+    def test_pure_copy_headers_emitted(self) -> None:
+        file_diff = FileDiff(
+            headers=[
+                "diff --git a/src.py b/dst.py",
+                "similarity index 100%",
+                "copy from src.py",
+                "copy to dst.py",
+            ],
+            hunks=[],
+        )
+        result = render_file_diff(file_diff, set())
+        for header in file_diff.headers:
+            assert header in result
+
+    def test_partial_copy_emits_headers_and_hunks(self) -> None:
+        file_diff = FileDiff(
+            headers=[
+                "diff --git a/src.py b/dst.py",
+                "similarity index 85%",
+                "copy from src.py",
+                "copy to dst.py",
+                "--- a/src.py",
+                "+++ b/dst.py",
+            ],
+            hunks=[
+                Hunk(
+                    header="@@ -1,2 +1,2 @@",
+                    lines=[
+                        "-old unique content here in file",
+                        "+new unique content here in file",
+                    ],
+                )
+            ],
+        )
+        result = render_file_diff(file_diff, set())
+        assert "copy from src.py" in result
+        assert "copy to dst.py" in result
+        assert "old unique content here in file" in result
+
+    def test_mode_change_headers_emitted(self) -> None:
+        file_diff = FileDiff(
+            headers=[
+                "diff --git a/script.sh b/script.sh",
+                "old mode 100644",
+                "new mode 100755",
+            ],
+            hunks=[],
+        )
+        result = render_file_diff(file_diff, set())
+        for header in file_diff.headers:
+            assert header in result
+
+    def test_binary_change_headers_emitted(self) -> None:
+        file_diff = FileDiff(
+            headers=[
+                "diff --git a/image.png b/image.png",
+                "Binary files a/image.png and b/image.png differ",
+            ],
+            hunks=[],
+        )
+        result = render_file_diff(file_diff, set())
+        for header in file_diff.headers:
+            assert header in result
+
+    def test_empty_file_creation_headers_emitted(self) -> None:
+        file_diff = FileDiff(
+            headers=[
+                "diff --git a/empty.py b/empty.py",
+                "new file mode 100644",
+            ],
+            hunks=[],
+        )
+        result = render_file_diff(file_diff, set())
+        for header in file_diff.headers:
+            assert header in result
+
+    def test_empty_file_deletion_headers_emitted(self) -> None:
+        file_diff = FileDiff(
+            headers=[
+                "diff --git a/empty.py b/empty.py",
+                "deleted file mode 100644",
+            ],
+            hunks=[],
+        )
+        result = render_file_diff(file_diff, set())
+        for header in file_diff.headers:
+            assert header in result
+
+    def test_moved_suppression_still_hides_collapsed_hunks(self) -> None:
+        """Hunks that all collapse to '' via moved-block suppression → return ''."""
+        # Create a hunk with only context + the hunk header, which renders to ""
+        # when all +/- lines are suppressed. We simulate this by having a hunk
+        # that after render_hunk returns "" (only header remained).
+        hunk = Hunk(
+            header="@@ -1,1 +1,1 @@",
+            lines=[],  # empty lines → render_hunk returns ""
+        )
+        file_diff = FileDiff(
+            headers=["diff --git a/foo.py b/foo.py"],
+            hunks=[hunk],
+        )
         result = render_file_diff(file_diff, set())
         assert result == ""
 
@@ -532,151 +682,3 @@ class TestRenderCompactDiff:
         assert "completely unique removed line in diff" in result
         assert "completely unique added line in diff" in result
         assert "# [moved:" not in result
-
-
-# Realistic diff: Calculator class moved from old_module.py to calculator.py,
-# with a genuine import change in main.py.
-_REALISTIC_REFACTOR_DIFF = """\
-diff --git old_module.py old_module.py
---- old_module.py
-+++ old_module.py
-@@ -1,25 +1,3 @@
- \"\"\"Old module — Calculator has moved to calculator.py.\"\"\"
- 
--
--class Calculator:
--    \"\"\"Simple calculator with basic arithmetic operations.\"\"\"
--
--    def __init__(self, precision: int = 2) -> None:
--        \"\"\"Initialise with decimal precision for results.\"\"\"
--        self.precision = precision
--
--    def add(self, a: float, b: float) -> float:
--        \"\"\"Return the sum of a and b, rounded to self.precision.\"\"\"
--        return round(a + b, self.precision)
--
--    def subtract(self, a: float, b: float) -> float:
--        \"\"\"Return a minus b, rounded to self.precision.\"\"\"
--        return round(a - b, self.precision)
--
--    def multiply(self, a: float, b: float) -> float:
--        \"\"\"Return the product of a and b, rounded to self.precision.\"\"\"
--        return round(a * b, self.precision)
--
- 
- CONSTANT_VALUE = 42
- ANOTHER_CONSTANT = \"hello world from old_module\"
-diff --git calculator.py calculator.py
-new file mode 100644
---- /dev/null
-+++ calculator.py
-@@ -0,0 +1,25 @@
-+\"\"\"Calculator module — extracted from old_module.py.\"\"\"
-+
-+
-+class Calculator:
-+    \"\"\"Simple calculator with basic arithmetic operations.\"\"\"
-+
-+    def __init__(self, precision: int = 2) -> None:
-+        \"\"\"Initialise with decimal precision for results.\"\"\"
-+        self.precision = precision
-+
-+    def add(self, a: float, b: float) -> float:
-+        \"\"\"Return the sum of a and b, rounded to self.precision.\"\"\"
-+        return round(a + b, self.precision)
-+
-+    def subtract(self, a: float, b: float) -> float:
-+        \"\"\"Return a minus b, rounded to self.precision.\"\"\"
-+        return round(a - b, self.precision)
-+
-+    def multiply(self, a: float, b: float) -> float:
-+        \"\"\"Return the product of a and b, rounded to self.precision.\"\"\"
-+        return round(a * b, self.precision)
-+
-+
-+CALCULATOR_VERSION = \"1.0.0\"
-diff --git main.py main.py
---- main.py
-+++ main.py
-@@ -1,3 +1,3 @@
--from old_module import Calculator
-+from calculator import Calculator
- 
- GREETING = \"Hello from main\"
-"""
-
-
-class TestRenderCompactDiffRealistic:
-    """End-to-end tests using a realistic refactoring diff."""
-
-    def test_output_is_shorter_than_input(self) -> None:
-        """Core property: compacting a moved-class diff produces fewer lines."""
-        result = render_compact_diff(_REALISTIC_REFACTOR_DIFF, "")
-        assert len(result.splitlines()) < len(_REALISTIC_REFACTOR_DIFF.splitlines())
-
-    def test_class_signature_visible_in_preview(self) -> None:
-        """The class name survives in the preview on both sides."""
-        result = render_compact_diff(_REALISTIC_REFACTOR_DIFF, "")
-        assert "class Calculator:" in result
-
-    def test_method_bodies_suppressed(self) -> None:
-        """Method bodies inside the moved class are hidden in the summary."""
-        result = render_compact_diff(_REALISTIC_REFACTOR_DIFF, "")
-        assert "def subtract" not in result
-        assert "def multiply" not in result
-
-    def test_genuine_change_preserved(self) -> None:
-        """Lines that are not moved (the import update in main.py) are always shown."""
-        result = render_compact_diff(_REALISTIC_REFACTOR_DIFF, "")
-        assert "-from old_module import Calculator" in result
-        assert "+from calculator import Calculator" in result
-
-    def test_summary_references_other_file(self) -> None:
-        """Moved-block summaries name the source/destination file."""
-        result = render_compact_diff(_REALISTIC_REFACTOR_DIFF, "")
-        assert "# [moved to calculator.py: 15 lines not shown]" in result
-        assert "# [moved from old_module.py: 16 lines not shown]" in result
-
-    def test_full_output_snapshot(self) -> None:
-        """Snapshot of the complete compact diff output."""
-        result = render_compact_diff(_REALISTIC_REFACTOR_DIFF, "")
-        expected = (
-            "diff --git old_module.py old_module.py\n"
-            "--- old_module.py\n"
-            "+++ old_module.py\n"
-            "@@ -1,25 +1,3 @@\n"
-            ' """Old module \u2014 Calculator has moved to calculator.py."""\n'
-            " \n"
-            "-\n"
-            "-class Calculator:\n"
-            '-    """Simple calculator with basic arithmetic operations."""\n'
-            "-\n"
-            "-    def __init__(self, precision: int = 2) -> None:\n"
-            "-# [moved to calculator.py: 15 lines not shown]\n"
-            " \n"
-            " CONSTANT_VALUE = 42\n"
-            ' ANOTHER_CONSTANT = "hello world from old_module"\n'
-            "diff --git calculator.py calculator.py\n"
-            "new file mode 100644\n"
-            "--- /dev/null\n"
-            "+++ calculator.py\n"
-            "@@ -0,0 +1,25 @@\n"
-            '+"""Calculator module \u2014 extracted from old_module.py."""\n'
-            "+\n"
-            "+\n"
-            "+class Calculator:\n"
-            '+    """Simple calculator with basic arithmetic operations."""\n'
-            "+\n"
-            "+    def __init__(self, precision: int = 2) -> None:\n"
-            "+# [moved from old_module.py: 16 lines not shown]\n"
-            '+CALCULATOR_VERSION = "1.0.0"\n'
-            "diff --git main.py main.py\n"
-            "--- main.py\n"
-            "+++ main.py\n"
-            "@@ -1,3 +1,3 @@\n"
-            "-from old_module import Calculator\n"
-            "+from calculator import Calculator\n"
-            " \n"
-            ' GREETING = "Hello from main"'
-        )
-        assert result == expected

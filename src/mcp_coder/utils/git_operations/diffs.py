@@ -171,6 +171,8 @@ def get_branch_diff(
                 # When using exclusions, we need to construct the command differently
                 # git diff base...HEAD -- . ':!excluded_path'
                 diff_args = [
+                    "-M",
+                    "-C90%",
                     f"{base_branch}...HEAD",
                     "--unified=5",
                     "--no-prefix",
@@ -183,6 +185,8 @@ def get_branch_diff(
             else:
                 # Simple diff without exclusions
                 diff_args = [
+                    "-M",
+                    "-C90%",
                     f"{base_branch}...HEAD",
                     "--unified=5",
                     "--no-prefix",
