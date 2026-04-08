@@ -21,6 +21,42 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Build-time packaging infrastructure
+> [step_1.md](./steps/step_1.md) — `setup.py` with custom `build_py`, `pyproject.toml` package-data, `.gitignore` update
+
+- [ ] Implementation: `setup.py`, `pyproject.toml` package-data, `.gitignore`, tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: CLI parser for init command
+> [step_2.md](./steps/step_2.md) — `add_init_parser()` with `--just-skills` and `--project-dir` flags
+
+- [ ] Implementation: `parsers.py`, `main.py`, `init.py` signature update, tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Runtime skill source resolver
+> [step_3.md](./steps/step_3.md) — `_find_claude_source_dir()` with dual-lookup logic
+
+- [ ] Implementation: `_find_claude_source_dir()` in `init.py`, tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Deploy logic and integration into execute_init
+> [step_4.md](./steps/step_4.md) — `_deploy_skills()` + `execute_init()` integration
+
+- [ ] Implementation: `_deploy_skills()`, `execute_init()` update, tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: Documentation updates
+> [step_5.md](./steps/step_5.md) — Replace hand-copy instructions with `mcp-coder init` references
+
+- [ ] Implementation: `docs/repository-setup/claude-code.md`, `docs/repository-setup/README.md`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: verify all steps integrated correctly
+- [ ] PR summary prepared
