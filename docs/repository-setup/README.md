@@ -22,7 +22,8 @@ This guide covers the **mandatory** and **optional** components for integrating 
 - [ ] Configure GitHub token in user config (`~/.mcp_coder/config.toml` — see [Configuration Guide](../configuration/config.md))
 - [ ] Set up workflow labels with `mcp-coder gh-tool define-labels`
 - [ ] Install GitHub Actions workflows
-- [ ] Configure Claude Code files (`.claude/`, `.mcp.json`)
+- [ ] Deploy Claude skills with `mcp-coder init`
+- [ ] Configure Claude Code files (`.claude/CLAUDE.md`, `.mcp.json`)
 - [ ] Test workflow with a sample issue
 - [ ] Create `docs/architecture/architecture.md` (required by `/implementation_review` and `/implementation_review_supervisor`)
 
@@ -90,7 +91,7 @@ The following files in this repository serve as references/templates for other p
 
 - **Mandatory** = required for MCP Coder workflows to function. **Optional** files enhance the workflow but are not required.
 - **Copy as-is = Yes** means the file works in any project without edits. **Mostly** means small path tweaks may be needed. **No** means the file is project-specific and must be authored or adapted.
-- There is currently no sync/versioning mechanism — when files in this repo change, downstream projects must re-pull manually.
+- Skills, knowledge base, and agents are deployed via `mcp-coder init`. Re-run `mcp-coder init` after upgrading mcp-coder — existing files are never overwritten (delete a file first to refresh it). Other files must be re-pulled manually.
 
 ## Testing Your Setup
 

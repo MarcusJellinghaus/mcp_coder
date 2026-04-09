@@ -603,6 +603,26 @@ def add_vscodeclaude_parsers(subparsers: Any) -> None:
     )
 
 
+def add_init_parser(subparsers: Any) -> None:
+    """Add the init command parser."""
+    init_parser = subparsers.add_parser(
+        "init",
+        help="Initialize project: create config and deploy Claude skills",
+        formatter_class=WideHelpFormatter,
+    )
+    init_parser.add_argument(
+        "--just-skills",
+        action="store_true",
+        help="Deploy skills only, skip config creation",
+    )
+    init_parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Target project directory (default: current directory)",
+    )
+
+
 def add_icoder_parser(subparsers: Any) -> None:
     """Add the icoder command parser."""
     icoder_parser = subparsers.add_parser(

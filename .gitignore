@@ -82,3 +82,6 @@ mlflow.db-shm
 mlflow.db-wal
 mlruns/
 mlartifacts/
+
+# Build artifact: skill files copied at build time (canonical source: .claude/)
+src/mcp_coder/resources/claude/

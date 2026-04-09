@@ -45,6 +45,7 @@ from .parsers import (
     add_create_pr_parser,
     add_icoder_parser,
     add_implement_parser,
+    add_init_parser,
     add_prompt_parser,
     add_verify_parser,
     add_vscodeclaude_parsers,
@@ -119,7 +120,7 @@ def create_parser() -> argparse.ArgumentParser:
 
     # Simple commands without subparsers
     subparsers.add_parser("help", help=argparse.SUPPRESS)
-    subparsers.add_parser("init", help="Create default configuration file")
+    add_init_parser(subparsers)
     add_verify_parser(subparsers)
 
     # Add command parsers from parsers module

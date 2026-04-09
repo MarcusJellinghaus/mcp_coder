@@ -29,7 +29,7 @@ This file contains mandatory instructions that Claude follows when working on yo
 
 > **Customize:** Repo-specific paths and commands inside individual `SKILL.md` files.
 
-Skills provide structured workflows for common tasks. Copy the skills from mcp-coder or create your own.
+Skills provide structured workflows for common tasks. Run `mcp-coder init` to deploy skills automatically. To deploy only skills (without config creation), use `mcp-coder init --just-skills`.
 
 **Available commands** (see [Claude Code Cheat Sheet](../processes-prompts/claude_cheat_sheet.md) for details):
 
@@ -80,7 +80,7 @@ Skills provide structured workflows for common tasks. Copy the skills from mcp-c
 
 ## Knowledge Base & Agents
 
-Supporting files referenced by skills. Copy as-is to downstream repos:
+Supporting files referenced by skills. Deployed automatically by `mcp-coder init`:
 
 - `.claude/knowledge_base/planning_principles.md` — Used by plan review skills
 - `.claude/knowledge_base/refactoring_principles.md` — Used by code review skills
