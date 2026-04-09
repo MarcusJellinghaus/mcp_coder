@@ -69,6 +69,20 @@ def execute_icoder(args: argparse.Namespace) -> int:
         session_file = find_latest_session(provider=provider)
         session_id = extract_session_id(session_file) if session_file else None
 
+        # Create registry and load skills
+        from ...icoder.core.command_registry import create_default_registry
+
+        registry = create_default_registry()
+        try:
+            from ...icoder.skills import load_skills, register_skill_commands
+
+            skills = load_skills(project_dir)
+            register_skill_commands(registry, skills, provider)
+        except ImportError:
+            logger.debug(
+                "Skills support unavailable (python-frontmatter not installed)"
+            )
+
         # Create core components
         from ...icoder.core.event_log import EventLog
         from ...icoder.services.llm_service import RealLLMService
@@ -93,7 +107,9 @@ def execute_icoder(args: argparse.Namespace) -> int:
                 project_dir=runtime_info.project_dir,
                 mcp_servers={s.name: s.version for s in runtime_info.mcp_servers},
             )
-            app_core = AppCore(llm_service, event_log, runtime_info=runtime_info)
+            app_core = AppCore(
+                llm_service, event_log, registry=registry, runtime_info=runtime_info
+            )
             ICoderApp(app_core).run()
 
         return 0

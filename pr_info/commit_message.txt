@@ -1,1 +1,8 @@
-feat(icoder): add skill registration with provider branching and UI routing
+feat(icoder): wire skill loading into execute_icoder startup
+
+- Create registry explicitly with create_default_registry() before AppCore
+- Load skills with load_skills(project_dir) and register via
+  register_skill_commands(registry, skills, provider)
+- Pass registry=registry to AppCore instead of letting it create its own
+- Handle missing python-frontmatter gracefully with ImportError fallback
+- Add test verifying skill commands appear in registry after startup

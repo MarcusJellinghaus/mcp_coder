@@ -212,3 +212,88 @@ def test_execute_icoder_passes_env_vars_to_llm_service(
 
     _, kwargs = mock_llm_init.call_args
     assert kwargs["env_vars"] == _FAKE_RUNTIME_INFO.env_vars
+
+
+def test_execute_icoder_creates_registry_with_skills(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """execute_icoder creates registry, loads skills, and passes to AppCore."""
+    import sys
+    from types import ModuleType
+
+    from mcp_coder.cli.commands.icoder import execute_icoder
+    from mcp_coder.icoder.core.command_registry import CommandRegistry
+    from mcp_coder.icoder.core.types import Command, Response
+
+    (tmp_path / "logs").mkdir()
+
+    # Ensure 'frontmatter' is importable (may not be installed)
+    if "frontmatter" not in sys.modules:
+        monkeypatch.setitem(sys.modules, "frontmatter", ModuleType("frontmatter"))
+
+    # Fake skill that register_skill_commands would create
+    fake_skill_command = Command(
+        name="/test_skill",
+        description="A test skill",
+        handler=lambda args: Response(send_to_llm=True),
+        show_in_help=False,
+    )
+
+    def fake_register(
+        registry: CommandRegistry,
+        skills: list[object],
+        provider: str,
+    ) -> list[object]:
+        registry.add_command(fake_skill_command)
+        return []
+
+    # Capture the AppCore instance
+    captured_app_core: list[object] = []
+
+    from mcp_coder.icoder.ui.app import ICoderApp
+
+    def capturing_init(self: object, app_core: object) -> None:
+        captured_app_core.append(app_core)
+
+    monkeypatch.setattr(ICoderApp, "__init__", capturing_init)
+    monkeypatch.setattr(ICoderApp, "run", lambda self: None)
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.setup_icoder_environment",
+        lambda _: _FAKE_RUNTIME_INFO,
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.resolve_llm_method",
+        lambda _: ("claude", None),
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.parse_llm_method_from_args",
+        lambda _: "claude",
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.resolve_mcp_config_path",
+        lambda *a, **kw: None,
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.find_latest_session",
+        lambda **kw: None,
+    )
+    monkeypatch.setattr(
+        "mcp_coder.icoder.skills.load_skills",
+        lambda _: [],
+    )
+    monkeypatch.setattr(
+        "mcp_coder.icoder.skills.register_skill_commands",
+        fake_register,
+    )
+
+    args = _make_args(tmp_path)
+    result = execute_icoder(args)
+
+    assert result == 0
+    assert len(captured_app_core) == 1
+    from mcp_coder.icoder.core.app_core import AppCore
+
+    core: AppCore = captured_app_core[0]  # type: ignore[assignment]
+    # Verify skill is registered
+    command_names = [c.name for c in core.registry.get_all()]
+    assert "/test_skill" in command_names
