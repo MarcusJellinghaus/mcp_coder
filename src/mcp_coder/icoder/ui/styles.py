@@ -11,7 +11,6 @@ InputArea {
     height: auto;
     background: #1e1e1e;
     color: #d4d4d4;
-    border: none;
 }
 
 #streaming-tail {
