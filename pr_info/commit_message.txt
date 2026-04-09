@@ -1,8 +1,9 @@
-feat(llm): add MCP_CODER_VENV_PATH to prepare_llm_environment
+feat(icoder): add env_setup module with RuntimeInfo
 
-.mcp.json references ${MCP_CODER_VENV_PATH} for MCP server binary
-paths, but prepare_llm_environment() never returned it — only .bat
-launchers set it. Add it to the returned dict using the existing
-venv precedence (VIRTUAL_ENV → CONDA_PREFIX → sys.prefix).
+New icoder/env_setup.py provides iCoder-specific environment setup:
+- Tool env from sys.prefix (no PATH scanning)
+- Project venv from <project_dir>/.venv with fallback
+- Respects pre-set MCP_CODER_* env vars (for icoder_local.bat)
+- Returns RuntimeInfo dataclass with all startup info
 
-Closes part of #724.
+Part of #724.
