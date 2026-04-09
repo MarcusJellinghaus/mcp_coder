@@ -9,7 +9,7 @@ Add a `Static` widget below `InputArea` showing `\ + Enter = newline` when input
 ## WHERE
 
 - **Modify:** `src/mcp_coder/icoder/ui/app.py` — `compose()` and new `on_text_area_changed` handler
-- **Modify:** `src/mcp_coder/icoder/ui/styles.py` — CSS for `#input-hint`
+- **Modify:** `src/mcp_coder/icoder/ui/styles.py` — CSS for `#input-hint` and `InputArea` border removal
 - **Modify:** `tests/icoder/test_app_pilot.py` — hint visibility tests
 
 ## WHAT
@@ -33,6 +33,10 @@ def on_text_area_changed(self) -> None:
 ### `styles.py`
 
 ```css
+InputArea {
+    border: none;
+}
+
 #input-hint {
     height: 1;
     background: #1e1e1e;
@@ -86,7 +90,7 @@ Implement the status hint widget below InputArea.
 1. Write tests first in tests/icoder/test_app_pilot.py — hint visible when empty, hidden with text, reappears after submit.
 2. Add the Static widget in app.py compose().
 3. Add on_text_area_changed handler in ICoderApp.
-4. Add CSS in styles.py.
+4. Add CSS in styles.py (including `InputArea { border: none; }` to remove the default TextArea border).
 5. Run all code quality checks (pylint, pytest, mypy). Fix any issues.
 6. Commit: "feat(icoder): add newline hint below input area (#754)"
 ```

@@ -16,7 +16,7 @@ Shift+Enter doesn't insert a newline in icoder on Windows. The terminal sends `\
 |------|--------|
 | `src/mcp_coder/icoder/ui/widgets/input_area.py` | Backslash+Enter newline logic in `_on_key` Enter handler |
 | `src/mcp_coder/icoder/ui/app.py` | Add `Static` hint widget below `InputArea`; toggle visibility on text changes |
-| `src/mcp_coder/icoder/ui/styles.py` | CSS for `#input-hint` (right-aligned, same background) |
+| `src/mcp_coder/icoder/ui/styles.py` | CSS for `#input-hint` (right-aligned, same background); remove `InputArea` default border |
 | `src/mcp_coder/icoder/core/commands/help.py` | Add "Keyboard shortcuts" section to `/help` output |
 
 ### New files

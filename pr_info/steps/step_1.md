@@ -44,14 +44,17 @@ if trailing > 0:
     text_without_last_backslash = raw[:-1]
     if trailing is odd:
         # Replace the trailing \ with a newline
-        load text_without_last_backslash, append newline via _replace_via_keyboard
+        load text_without_last_backslash
+        end = self.document.end  # Recalculate after load_text changed the document
+        _replace_via_keyboard("\n", end, end)
         return (do not submit)
     else:
-        # Even: strip one \, fall through to submit
-        set self.text to text_without_last_backslash, then submit
+        # Even: strip one \, fall through to existing submit code
+        set self.text to text_without_last_backslash
+        # Fall through — existing code at line 177 will .strip() and submit
 ```
 
-For the odd case, the simplest approach: use `self.load_text(raw[:-1])` to remove the `\`, then `self._replace_via_keyboard("\n", end, end)` to insert the newline at the new end position.
+For the odd case, the simplest approach: use `self.load_text(raw[:-1])` to remove the `\`, then recalculate `end = self.document.end` (since `load_text` replaced the document), then `self._replace_via_keyboard("\n", end, end)` to insert the newline at the new end position.
 
 ## DATA
 
