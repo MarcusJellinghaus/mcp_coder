@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat(icoder): backslash+Enter inserts newline (#754)`
 
 ### Step 2: Status hint widget below InputArea
-- [ ] Implementation: `Static` hint widget in `app.py`, `on_text_area_changed` handler, CSS in `styles.py`, hint visibility tests in `test_app_pilot.py`
-- [ ] Quality checks pass (pylint, pytest, mypy)
-- [ ] Commit: `feat(icoder): add newline hint below input area (#754)`
+- [x] Implementation: `Static` hint widget in `app.py`, `on_text_area_changed` handler, CSS in `styles.py`, hint visibility tests in `test_app_pilot.py`
+- [x] Quality checks pass (pylint, pytest, mypy)
+- [x] Commit: `feat(icoder): add newline hint below input area (#754)`
 
 ### Step 3: /help keyboard shortcuts section
 - [ ] Implementation: append keyboard shortcuts to `/help` output in `help.py`, test in `test_app_core.py`
