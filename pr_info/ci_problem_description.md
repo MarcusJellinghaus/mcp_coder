@@ -1,3 +1,0 @@
-The CI pipeline failed in the `ruff-docstrings` job due to a ruff DOC201 violation in `src/mcp_coder/icoder/ui/widgets/input_area.py` at line 23. The function `_count_trailing_backslashes(text: str) -> int` has a one-line docstring ("Count consecutive trailing backslashes in text.") but does not document its return value. Ruff's DOC201 rule requires that functions with a `return` statement include a corresponding "Returns" section in their docstring.
-
-The only file that needs to be changed is `src/mcp_coder/icoder/ui/widgets/input_area.py`. The fix is to expand the docstring of `_count_trailing_backslashes` to include a "Returns" section describing the integer return value — the count of consecutive trailing backslash characters found at the end of the input string.

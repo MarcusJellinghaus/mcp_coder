@@ -1,3 +1,0 @@
-fix: add missing Returns section to _count_trailing_backslashes docstring
-
-Add Returns section to satisfy ruff DOC201 lint rule.
