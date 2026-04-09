@@ -1,6 +1,0 @@
-fix: resolve ruff DOC201/DOC502 errors in init command
-
-- Add Returns section to _has_all_subdirs docstring (DOC201)
-- Replace sys.exit(1) with raise SystemExit(1) in
-  _find_claude_source_dir to match documented Raises (DOC502)
-- Remove unused sys import
