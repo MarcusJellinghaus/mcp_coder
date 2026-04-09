@@ -164,7 +164,6 @@ def test_filter_by_input_sorted() -> None:
 # --- Step 1: add_command and show_in_help tests ---
 
 
-
 def test_add_command() -> None:
     """add_command registers a command that can be dispatched."""
     registry = CommandRegistry()
