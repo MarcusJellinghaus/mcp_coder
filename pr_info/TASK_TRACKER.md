@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat(icoder): add newline hint below input area (#754)`
 
 ### Step 3: /help keyboard shortcuts section
-- [ ] Implementation: append keyboard shortcuts to `/help` output in `help.py`, test in `test_app_core.py`
-- [ ] Quality checks pass (pylint, pytest, mypy)
-- [ ] Commit: `feat(icoder): add keyboard shortcuts to /help (#754)`
+- [x] Implementation: append keyboard shortcuts to `/help` output in `help.py`, test in `test_app_core.py`
+- [x] Quality checks pass (pylint, pytest, mypy)
+- [x] Commit: `feat(icoder): add keyboard shortcuts to /help (#754)`
 
 ### Step 4: docs/iCoder.md user guide
 - [ ] Implementation: create `docs/iCoder.md` covering overview, startup, commands, autocomplete, streaming, keyboard shortcuts, backslash escape

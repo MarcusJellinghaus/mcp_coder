@@ -18,4 +18,8 @@ def register_help(registry: CommandRegistry) -> None:
         lines = ["Available commands:"]
         for cmd in registry.get_all():
             lines.append(f"  {cmd.name} - {cmd.description}")
+        lines.append("")
+        lines.append("Keyboard shortcuts:")
+        lines.append(r"  \ + Enter   - Insert newline")
+        lines.append("  Shift+Enter - Insert newline (terminal support varies)")
         return Response(text="\n".join(lines))

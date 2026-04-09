@@ -1,10 +1,6 @@
-feat(icoder): add newline hint below input area (#754)
+feat(icoder): add keyboard shortcuts to /help (#754)
 
-Add a Static hint widget showing "\ + Enter = newline" below the
-InputArea. The hint is visible when input is empty and hidden when
-the user types text, toggled via on_text_area_changed handler.
+Append a "Keyboard shortcuts" section to the /help command output,
+listing backslash+Enter and Shift+Enter newline shortcuts.
 
-Changes:
-- app.py: yield Static hint in compose(), add on_text_area_changed handler
-- styles.py: CSS for #input-hint (right-aligned, hidden class), InputArea border removal
-- test_app_pilot.py: hint visibility tests (empty, has text, after submit)
+Add test_help_includes_keyboard_shortcuts in test_app_core.py.
