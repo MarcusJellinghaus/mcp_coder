@@ -193,13 +193,13 @@ class TestGetFailedJobsSummary:
 class TestCheckAndFixCI:
     """Tests for check_and_fix_ci function."""
 
-    @patch("mcp_coder.workflows.implement.core.CIResultsManager")
-    @patch("mcp_coder.workflows.implement.core.time.sleep")
+    @patch("mcp_coder.workflows.implement.ci_operations.CIResultsManager")
+    @patch("mcp_coder.workflows.implement.ci_operations.time.sleep")
     def test_ci_passes_first_check_returns_true(
         self, mock_sleep: MagicMock, mock_ci_manager: MagicMock
     ) -> None:
         """When CI passes on first check, should return True immediately."""
-        from mcp_coder.workflows.implement.core import check_and_fix_ci
+        from mcp_coder.workflows.implement.ci_operations import check_and_fix_ci
 
         # Setup mock
         mock_manager = MagicMock()
@@ -218,13 +218,13 @@ class TestCheckAndFixCI:
         assert result is True
         mock_sleep.assert_not_called()  # No polling needed
 
-    @patch("mcp_coder.workflows.implement.core.CIResultsManager")
-    @patch("mcp_coder.workflows.implement.core.time.sleep")
+    @patch("mcp_coder.workflows.implement.ci_operations.CIResultsManager")
+    @patch("mcp_coder.workflows.implement.ci_operations.time.sleep")
     def test_ci_not_found_warns_and_returns_true(
         self, mock_sleep: MagicMock, mock_ci_manager: MagicMock
     ) -> None:
         """When no CI run found after polling, should warn and return True (exit 0)."""
-        from mcp_coder.workflows.implement.core import check_and_fix_ci
+        from mcp_coder.workflows.implement.ci_operations import check_and_fix_ci
 
         # Setup mock - always returns empty (no CI run)
         mock_manager = MagicMock()
@@ -239,13 +239,13 @@ class TestCheckAndFixCI:
 
         assert result is True  # Graceful exit
 
-    @patch("mcp_coder.workflows.implement.core.CIResultsManager")
-    @patch("mcp_coder.workflows.implement.core.prompt_llm")
-    @patch("mcp_coder.workflows.implement.core.store_session")
-    @patch("mcp_coder.workflows.implement.core.run_formatters")
-    @patch("mcp_coder.workflows.implement.core.commit_changes")
-    @patch("mcp_coder.workflows.implement.core.push_changes")
-    @patch("mcp_coder.workflows.implement.core.time.sleep")
+    @patch("mcp_coder.workflows.implement.ci_operations.CIResultsManager")
+    @patch("mcp_coder.workflows.implement.ci_operations.prompt_llm")
+    @patch("mcp_coder.workflows.implement.ci_operations.store_session")
+    @patch("mcp_coder.workflows.implement.ci_operations.run_formatters")
+    @patch("mcp_coder.workflows.implement.ci_operations.commit_changes")
+    @patch("mcp_coder.workflows.implement.ci_operations.push_changes")
+    @patch("mcp_coder.workflows.implement.ci_operations.time.sleep")
     def test_ci_fails_fix_succeeds_returns_true(
         self,
         mock_sleep: MagicMock,
@@ -257,7 +257,7 @@ class TestCheckAndFixCI:
         mock_ci_manager: MagicMock,
     ) -> None:
         """When CI fails but fix succeeds, should return True."""
-        from mcp_coder.workflows.implement.core import check_and_fix_ci
+        from mcp_coder.workflows.implement.ci_operations import check_and_fix_ci
 
         mock_manager = MagicMock()
         mock_ci_manager.return_value = mock_manager
@@ -312,13 +312,13 @@ class TestCheckAndFixCI:
 
         assert result is True
 
-    @patch("mcp_coder.workflows.implement.core.CIResultsManager")
-    @patch("mcp_coder.workflows.implement.core.prompt_llm")
-    @patch("mcp_coder.workflows.implement.core.store_session")
-    @patch("mcp_coder.workflows.implement.core.run_formatters")
-    @patch("mcp_coder.workflows.implement.core.commit_changes")
-    @patch("mcp_coder.workflows.implement.core.push_changes")
-    @patch("mcp_coder.workflows.implement.core.time.sleep")
+    @patch("mcp_coder.workflows.implement.ci_operations.CIResultsManager")
+    @patch("mcp_coder.workflows.implement.ci_operations.prompt_llm")
+    @patch("mcp_coder.workflows.implement.ci_operations.store_session")
+    @patch("mcp_coder.workflows.implement.ci_operations.run_formatters")
+    @patch("mcp_coder.workflows.implement.ci_operations.commit_changes")
+    @patch("mcp_coder.workflows.implement.ci_operations.push_changes")
+    @patch("mcp_coder.workflows.implement.ci_operations.time.sleep")
     def test_max_attempts_exhausted_returns_false(
         self,
         mock_sleep: MagicMock,
@@ -330,7 +330,7 @@ class TestCheckAndFixCI:
         mock_ci_manager: MagicMock,
     ) -> None:
         """When max fix attempts exhausted, should return False (exit 1)."""
-        from mcp_coder.workflows.implement.core import check_and_fix_ci
+        from mcp_coder.workflows.implement.ci_operations import check_and_fix_ci
 
         mock_manager = MagicMock()
         mock_ci_manager.return_value = mock_manager
@@ -388,12 +388,12 @@ class TestCheckAndFixCI:
 
         assert result is False  # Max attempts exhausted
 
-    @patch("mcp_coder.workflows.implement.core.CIResultsManager")
+    @patch("mcp_coder.workflows.implement.ci_operations.CIResultsManager")
     def test_api_error_returns_true_gracefully(
         self, mock_ci_manager: MagicMock
     ) -> None:
         """When API errors occur, should return True with warning (exit 0)."""
-        from mcp_coder.workflows.implement.core import check_and_fix_ci
+        from mcp_coder.workflows.implement.ci_operations import check_and_fix_ci
 
         mock_manager = MagicMock()
         mock_ci_manager.return_value = mock_manager
@@ -407,13 +407,13 @@ class TestCheckAndFixCI:
 
         assert result is True  # Graceful handling
 
-    @patch("mcp_coder.workflows.implement.core.CIResultsManager")
-    @patch("mcp_coder.workflows.implement.core.prompt_llm")
-    @patch("mcp_coder.workflows.implement.core.store_session")
-    @patch("mcp_coder.workflows.implement.core.run_formatters")
-    @patch("mcp_coder.workflows.implement.core.commit_changes")
-    @patch("mcp_coder.workflows.implement.core.push_changes")
-    @patch("mcp_coder.workflows.implement.core.time.sleep")
+    @patch("mcp_coder.workflows.implement.ci_operations.CIResultsManager")
+    @patch("mcp_coder.workflows.implement.ci_operations.prompt_llm")
+    @patch("mcp_coder.workflows.implement.ci_operations.store_session")
+    @patch("mcp_coder.workflows.implement.ci_operations.run_formatters")
+    @patch("mcp_coder.workflows.implement.ci_operations.commit_changes")
+    @patch("mcp_coder.workflows.implement.ci_operations.push_changes")
+    @patch("mcp_coder.workflows.implement.ci_operations.time.sleep")
     def test_git_push_error_returns_false(
         self,
         mock_sleep: MagicMock,
@@ -425,7 +425,7 @@ class TestCheckAndFixCI:
         mock_ci_manager: MagicMock,
     ) -> None:
         """When git push fails during fix, should return False (fail fast)."""
-        from mcp_coder.workflows.implement.core import check_and_fix_ci
+        from mcp_coder.workflows.implement.ci_operations import check_and_fix_ci
 
         mock_manager = MagicMock()
         mock_ci_manager.return_value = mock_manager
@@ -466,13 +466,13 @@ class TestCheckAndFixCI:
 
         assert result is False  # Fail fast on git errors
 
-    @patch("mcp_coder.workflows.implement.core.CIResultsManager")
-    @patch("mcp_coder.workflows.implement.core.time.sleep")
+    @patch("mcp_coder.workflows.implement.ci_operations.CIResultsManager")
+    @patch("mcp_coder.workflows.implement.ci_operations.time.sleep")
     def test_ci_in_progress_waits_for_completion(
         self, mock_sleep: MagicMock, mock_ci_manager: MagicMock
     ) -> None:
         """When CI is in progress, should poll until completed."""
-        from mcp_coder.workflows.implement.core import check_and_fix_ci
+        from mcp_coder.workflows.implement.ci_operations import check_and_fix_ci
 
         mock_manager = MagicMock()
         mock_ci_manager.return_value = mock_manager
@@ -505,7 +505,9 @@ class TestReadProblemDescription:
 
     def test_empty_file_uses_fallback(self, tmp_path: Path) -> None:
         """Empty temp file should return fallback response."""
-        from mcp_coder.workflows.implement.core import _read_problem_description
+        from mcp_coder.workflows.implement.ci_operations import (
+            _read_problem_description,
+        )
 
         temp_file = tmp_path / ".ci_problem_description.md"
         temp_file.write_text("")  # Empty file
@@ -517,7 +519,9 @@ class TestReadProblemDescription:
 
     def test_whitespace_only_file_uses_fallback(self, tmp_path: Path) -> None:
         """File with only whitespace should return fallback response."""
-        from mcp_coder.workflows.implement.core import _read_problem_description
+        from mcp_coder.workflows.implement.ci_operations import (
+            _read_problem_description,
+        )
 
         temp_file = tmp_path / ".ci_problem_description.md"
         temp_file.write_text("   \n\t\n  ")  # Whitespace only
@@ -529,7 +533,9 @@ class TestReadProblemDescription:
 
     def test_file_with_content_returns_content(self, tmp_path: Path) -> None:
         """File with content should return that content."""
-        from mcp_coder.workflows.implement.core import _read_problem_description
+        from mcp_coder.workflows.implement.ci_operations import (
+            _read_problem_description,
+        )
 
         temp_file = tmp_path / ".ci_problem_description.md"
         temp_file.write_text("Problem: test failed")
@@ -541,7 +547,9 @@ class TestReadProblemDescription:
 
     def test_missing_file_uses_fallback(self, tmp_path: Path) -> None:
         """Missing temp file should return fallback response."""
-        from mcp_coder.workflows.implement.core import _read_problem_description
+        from mcp_coder.workflows.implement.ci_operations import (
+            _read_problem_description,
+        )
 
         temp_file = tmp_path / ".ci_problem_description.md"
         # Don't create the file
