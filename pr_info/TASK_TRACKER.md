@@ -47,5 +47,5 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `test(icoder): update snapshots for input hint widget (#754)`
 
 ## Pull Request
-- [ ] PR review: verify all steps implemented correctly
+- [x] PR review: verify all steps implemented correctly
 - [ ] PR summary prepared
