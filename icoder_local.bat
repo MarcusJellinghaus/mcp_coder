@@ -2,7 +2,7 @@
 cls
 setlocal enabledelayedexpansion
 REM Two-env aware launcher for iCoder (developer edition)
-REM Same two-env discovery as icoder.bat, plus editable-install verification
+REM Two-env discovery with editable-install verification
 REM Assumes mcp-coder is editable-installed (pip install -e .)
 
 REM === Step 0: Project .venv must exist ===

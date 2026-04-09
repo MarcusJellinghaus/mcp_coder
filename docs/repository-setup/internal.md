@@ -13,8 +13,7 @@ Files used in the mcp-coder repository itself but not relevant to downstream use
 
 | File | Purpose |
 |---|---|
-| `icoder.bat` | Launches the `mcp-coder icoder` interactive command (this repo) |
-| `icoder_local.bat` | Same, using local venv for testing source changes |
+| `icoder_local.bat` | Launches iCoder using local venv for testing source changes |
 
 ## MLflow Tooling
 

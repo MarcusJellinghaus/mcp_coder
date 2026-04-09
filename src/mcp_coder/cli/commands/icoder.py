@@ -2,9 +2,10 @@
 
 import argparse
 import logging
+from importlib.metadata import PackageNotFoundError
 from pathlib import Path
 
-from ...llm.env import prepare_llm_environment
+from ...icoder.env_setup import setup_icoder_environment
 from ...llm.storage import extract_session_id, find_latest_session
 from ...utils.log_utils import OUTPUT
 from ..utils import (
@@ -46,12 +47,14 @@ def execute_icoder(args: argparse.Namespace) -> int:
         else:
             project_dir = Path.cwd()
 
-        # Prepare environment variables for LLM subprocess
+        # Set up iCoder environment (paths, env vars, MCP verification)
         try:
-            env_vars = prepare_llm_environment(project_dir)
-        except RuntimeError as e:
-            logger.warning(f"Could not prepare environment: {e}")
-            env_vars = None
+            runtime_info = setup_icoder_environment(project_dir)
+        except (FileNotFoundError, RuntimeError, PackageNotFoundError) as e:
+            logger.error("Environment setup failed: %s", e)
+            return 1
+
+        env_vars = runtime_info.env_vars
 
         # Resolve LLM method
         llm_method, _ = resolve_llm_method(getattr(args, "llm_method", None))
@@ -82,7 +85,15 @@ def execute_icoder(args: argparse.Namespace) -> int:
         from ...icoder.ui.app import ICoderApp
 
         with EventLog(logs_dir=project_dir / "logs") as event_log:
-            app_core = AppCore(llm_service, event_log)
+            event_log.emit(
+                "session_start",
+                mcp_coder_version=runtime_info.mcp_coder_version,
+                tool_env=runtime_info.tool_env_path,
+                project_venv=runtime_info.project_venv_path,
+                project_dir=runtime_info.project_dir,
+                mcp_servers={s.name: s.version for s in runtime_info.mcp_servers},
+            )
+            app_core = AppCore(llm_service, event_log, runtime_info=runtime_info)
             ICoderApp(app_core).run()
 
         return 0

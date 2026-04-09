@@ -9,6 +9,8 @@ import os
 import sys
 from pathlib import Path
 
+from mcp_coder.utils.mcp_verification import get_bin_dir
+
 logger = logging.getLogger(__name__)
 
 
@@ -58,8 +60,10 @@ def prepare_llm_environment(project_dir: Path) -> dict[str, str]:
         project_dir: Absolute path to project directory
 
     Returns:
-        Dictionary with MCP_CODER_PROJECT_DIR and MCP_CODER_VENV_DIR
-        environment variables as absolute OS-native paths.
+        Dictionary with MCP_CODER_PROJECT_DIR, MCP_CODER_VENV_DIR, and
+        MCP_CODER_VENV_PATH environment variables as absolute OS-native paths.
+        MCP_CODER_VENV_PATH points to the venv's Scripts (Windows) or bin
+        (POSIX) subdirectory.
     """
     logger.debug("Preparing LLM environment for project: %s", project_dir)
 
@@ -72,15 +76,20 @@ def prepare_llm_environment(project_dir: Path) -> dict[str, str]:
     project_dir_absolute = str(Path(project_dir).resolve())
     venv_dir_absolute = str(Path(runner_venv).resolve())
 
+    venv_path = str(get_bin_dir(Path(runner_venv)).resolve())
+
     env_vars = {
         "MCP_CODER_PROJECT_DIR": project_dir_absolute,
         "MCP_CODER_VENV_DIR": venv_dir_absolute,
+        "MCP_CODER_VENV_PATH": venv_path,
     }
 
     logger.debug(
-        "Prepared environment variables: MCP_CODER_PROJECT_DIR=%s, MCP_CODER_VENV_DIR=%s",
+        "Prepared environment variables: MCP_CODER_PROJECT_DIR=%s, "
+        "MCP_CODER_VENV_DIR=%s, MCP_CODER_VENV_PATH=%s",
         project_dir_absolute,
         venv_dir_absolute,
+        venv_path,
     )
 
     return env_vars

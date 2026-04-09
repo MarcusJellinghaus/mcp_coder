@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -10,11 +11,13 @@ from textual.pilot import Pilot
 
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.core.event_log import EventLog
+from mcp_coder.icoder.env_setup import RuntimeInfo
 from mcp_coder.icoder.services.llm_service import FakeLLMService, LLMService
 from mcp_coder.icoder.ui.app import ICoderApp
 from mcp_coder.icoder.ui.widgets.input_area import InputArea
 from mcp_coder.icoder.ui.widgets.output_log import OutputLog
 from mcp_coder.llm.types import StreamEvent
+from mcp_coder.utils.mcp_verification import MCPServerInfo
 
 pytestmark = pytest.mark.textual_integration
 
@@ -445,3 +448,39 @@ async def test_streaming_tool_event_mid_line(
         after_idx = lines.index("after tool")
         assert tool_start_lines[0] < after_idx
         assert app._text_buffer == ""
+
+
+async def test_tui_renders_runtime_info_on_mount(
+    fake_llm: FakeLLMService, event_log: EventLog
+) -> None:
+    """TUI output log shows runtime info on mount when RuntimeInfo is provided."""
+    info = RuntimeInfo(
+        mcp_coder_version="0.42.0",
+        python_version="3.12.0",
+        claude_code_version="1.2.3",
+        tool_env_path="/fake/tool",
+        project_venv_path="/fake/proj/.venv",
+        project_dir="/fake/proj",
+        env_vars={"MCP_CODER_VENV_PATH": "/fake/bin"},
+        mcp_servers=[
+            MCPServerInfo(
+                name="mcp-tools-py",
+                path=Path("/fake/mcp-tools-py"),
+                version="1.0",
+            ),
+        ],
+    )
+    app_core = AppCore(llm_service=fake_llm, event_log=event_log, runtime_info=info)
+    app = ICoderApp(app_core)
+
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        recorded = output.recorded_lines
+        assert len(recorded) >= 1
+        text = recorded[0]
+        assert "mcp-coder 0.42.0" in text
+        assert "mcp-tools-py 1.0" in text
+        assert "Tool env:" in text
+        assert "Project env:" in text
+        assert "Project dir:" in text

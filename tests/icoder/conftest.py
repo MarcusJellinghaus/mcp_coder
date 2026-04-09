@@ -28,4 +28,4 @@ def event_log(tmp_path: Path) -> Generator[EventLog, None, None]:
 @pytest.fixture
 def app_core(fake_llm: FakeLLMService, event_log: EventLog) -> AppCore:
     """Provide an AppCore with fake dependencies."""
-    return AppCore(llm_service=fake_llm, event_log=event_log)
+    return AppCore(llm_service=fake_llm, event_log=event_log, runtime_info=None)

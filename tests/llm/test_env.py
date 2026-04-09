@@ -271,3 +271,58 @@ def test_prepare_llm_environment_logging(
         "Preparing LLM environment" in record.message for record in caplog.records
     )
     assert any("MCP_CODER_PROJECT_DIR" in record.message for record in caplog.records)
+
+
+def test_prepare_llm_environment_includes_venv_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test that MCP_CODER_VENV_PATH is in the returned dict."""
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    venv_dir = tmp_path / "runner" / ".venv"
+    venv_dir.mkdir(parents=True)
+
+    monkeypatch.setenv("VIRTUAL_ENV", str(venv_dir))
+    monkeypatch.delenv("CONDA_PREFIX", raising=False)
+
+    result = prepare_llm_environment(project_dir)
+
+    assert "MCP_CODER_VENV_PATH" in result
+
+
+def test_venv_path_is_scripts_subdir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify the returned path ends with Scripts (Win) or bin (POSIX) and is a child of VENV_DIR."""
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    venv_dir = tmp_path / "runner" / ".venv"
+    venv_dir.mkdir(parents=True)
+
+    monkeypatch.setenv("VIRTUAL_ENV", str(venv_dir))
+    monkeypatch.delenv("CONDA_PREFIX", raising=False)
+
+    result = prepare_llm_environment(project_dir)
+
+    venv_path = Path(result["MCP_CODER_VENV_PATH"])
+    expected_suffix = "Scripts" if sys.platform == "win32" else "bin"
+    assert venv_path.name == expected_suffix
+
+    # Must be a child of MCP_CODER_VENV_DIR
+    venv_dir_path = Path(result["MCP_CODER_VENV_DIR"])
+    assert venv_path.is_relative_to(venv_dir_path)
+
+
+def test_venv_path_absolute(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify the returned MCP_CODER_VENV_PATH is an absolute path."""
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    venv_dir = tmp_path / "runner" / ".venv"
+    venv_dir.mkdir(parents=True)
+
+    monkeypatch.setenv("VIRTUAL_ENV", str(venv_dir))
+    monkeypatch.delenv("CONDA_PREFIX", raising=False)
+
+    result = prepare_llm_environment(project_dir)
+
+    assert Path(result["MCP_CODER_VENV_PATH"]).is_absolute()
