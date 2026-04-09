@@ -26,3 +26,25 @@
 
 **Status:** Committed.
 
+## Round 2 — 2026-04-09
+
+**Findings:** Fresh review of all branch changes. No new issues found. Verified:
+- Backslash parity logic correct for all edge cases
+- `self.text =` vs `load_text()` difference is intentional (different cursor needs)
+- Hint widget toggle logic correct (show/hide/reappear after submit)
+- Test coverage adequate (parametrized 0-4 backslashes, hint states, /help output)
+- No missing edge cases for backslash + whitespace-only input
+
+**Decisions:** All Skip — no actionable findings.
+
+**Changes:** None.
+
+**Status:** No changes needed.
+
+## Final Status
+
+**Rounds:** 2
+**Commits from review:** 1 (dash alignment fix in `/help` output)
+**Remaining issues:** None
+**Result:** Implementation is clean, well-tested, and ready for merge.
+
