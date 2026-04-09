@@ -35,6 +35,10 @@ class CommandRegistry:
 
         return decorator
 
+    def add_command(self, command: Command) -> None:
+        """Register a pre-built Command directly."""
+        self._commands[command.name] = command
+
     def dispatch(self, text: str) -> Response | None:
         """Parse input and dispatch to registered handler.
 

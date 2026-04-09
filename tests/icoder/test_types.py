@@ -1,6 +1,9 @@
 """Tests for iCoder core type definitions."""
 
+from __future__ import annotations
+
 from dataclasses import FrozenInstanceError
+from typing import Any
 
 import pytest
 
@@ -43,3 +46,31 @@ def test_event_entry() -> None:
 def test_event_entry_default_data() -> None:
     e = EventEntry(t=0.0, event="test")
     assert e.data == {}
+
+
+@pytest.mark.parametrize(
+    "kwargs, expected",
+    [
+        ({}, None),
+        ({"llm_text": "override"}, "override"),
+    ],
+)
+def test_response_llm_text(kwargs: dict[str, Any], expected: str | None) -> None:
+    """Response.llm_text defaults to None, can be set."""
+    r = Response(**kwargs)
+    assert r.llm_text == expected
+
+
+@pytest.mark.parametrize(
+    "kwargs, expected",
+    [
+        ({}, True),
+        ({"show_in_help": False}, False),
+    ],
+)
+def test_command_show_in_help(kwargs: dict[str, Any], expected: bool) -> None:
+    """Command.show_in_help defaults to True, can be set to False."""
+    cmd = Command(
+        name="/test", description="Test", handler=lambda args: Response(), **kwargs
+    )
+    assert cmd.show_in_help == expected

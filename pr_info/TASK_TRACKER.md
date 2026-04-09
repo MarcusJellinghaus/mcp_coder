@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Foundation — Response.llm_text, Command.show_in_help, Registry.add_command, Help Filter
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Skill Models and Loader — ClaudeSkill, ICoderSkillCommand, load_skills()
 - [ ] Implementation (tests + production code)
