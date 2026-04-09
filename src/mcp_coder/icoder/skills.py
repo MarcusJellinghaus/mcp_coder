@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import frontmatter
+
+from mcp_coder.icoder.core.command_registry import CommandRegistry
+from mcp_coder.icoder.core.types import Command, Response
 
 logger = logging.getLogger(__name__)
 
@@ -92,3 +96,63 @@ def load_skills(project_dir: Path) -> list[ClaudeSkill]:
         results.append(skill)
 
     return results
+
+
+def _make_claude_handler(skill: ClaudeSkill) -> Callable[[list[str]], Response]:
+    """Create handler for Claude Code provider (raw passthrough)."""
+
+    def handler(args: list[str]) -> Response:
+        return Response(send_to_llm=True)
+
+    return handler
+
+
+def _make_langchain_handler(skill: ClaudeSkill) -> Callable[[list[str]], Response]:
+    """Create handler for langchain provider (expand prompt template)."""
+
+    def handler(args: list[str]) -> Response:
+        arguments = " ".join(args)
+        expanded = skill.prompt_template.replace("$ARGUMENTS", arguments).strip()
+        return Response(send_to_llm=True, llm_text=expanded)
+
+    return handler
+
+
+def register_skill_commands(
+    registry: CommandRegistry,
+    skills: list[ClaudeSkill],
+    provider: str,
+) -> list[ICoderSkillCommand]:
+    """Register skills as slash commands in the registry.
+
+    Returns list of ICoderSkillCommand for the successfully registered skills.
+    """
+    registered: list[ICoderSkillCommand] = []
+    for skill in skills:
+        command_name = "/" + skill.name
+        # Check for collision with existing commands
+        existing = registry.filter_by_input(command_name)
+        if any(c.name == command_name for c in existing):
+            logger.warning(
+                "Skill '%s' skipped: command %s already registered",
+                skill.name,
+                command_name,
+            )
+            continue
+
+        if provider == "claude":
+            handler = _make_claude_handler(skill)
+        else:
+            handler = _make_langchain_handler(skill)
+
+        registry.add_command(
+            Command(
+                name=command_name,
+                description=skill.description,
+                handler=handler,
+                show_in_help=False,
+            )
+        )
+        registered.append(ICoderSkillCommand(skill=skill, command_name=command_name))
+
+    return registered

@@ -6,7 +6,16 @@ from pathlib import Path
 
 import pytest
 
-from mcp_coder.icoder.skills import ClaudeSkill, ICoderSkillCommand, load_skills
+from mcp_coder.icoder.core.command_registry import (
+    CommandRegistry,
+    create_default_registry,
+)
+from mcp_coder.icoder.skills import (
+    ClaudeSkill,
+    ICoderSkillCommand,
+    load_skills,
+    register_skill_commands,
+)
 
 
 def _create_skill(tmp_path: Path, skill_name: str, frontmatter: str, body: str) -> Path:
@@ -158,3 +167,95 @@ def test_load_skills_no_skills_directory(tmp_path: Path) -> None:
     """load_skills returns empty list when .claude/skills doesn't exist."""
     skills = load_skills(tmp_path)
     assert skills == []
+
+
+# --- register_skill_commands tests ---
+
+
+def _make_skill(name: str = "my_skill", prompt: str = "Do $ARGUMENTS") -> ClaudeSkill:
+    return ClaudeSkill(name=name, description=f"Skill {name}", prompt_template=prompt)
+
+
+def test_register_skill_commands_claude_provider() -> None:
+    """Claude provider: handler returns Response(send_to_llm=True) with no llm_text."""
+    registry = CommandRegistry()
+    skill = _make_skill()
+    registered = register_skill_commands(registry, [skill], "claude")
+    assert len(registered) == 1
+    resp = registry.dispatch("/my_skill some args")
+    assert resp is not None
+    assert resp.send_to_llm is True
+    assert resp.llm_text is None
+
+
+def test_register_skill_commands_langchain_provider() -> None:
+    """Langchain provider: handler returns Response(send_to_llm=True, llm_text=expanded)."""
+    registry = CommandRegistry()
+    skill = _make_skill(prompt="Analyse $ARGUMENTS please")
+    register_skill_commands(registry, [skill], "langchain")
+    resp = registry.dispatch("/my_skill issue 42")
+    assert resp is not None
+    assert resp.send_to_llm is True
+    assert resp.llm_text == "Analyse issue 42 please"
+
+
+def test_register_skill_commands_langchain_substitutes_arguments() -> None:
+    """$ARGUMENTS in prompt template is replaced with user args."""
+    registry = CommandRegistry()
+    skill = _make_skill(prompt="Fix $ARGUMENTS now")
+    register_skill_commands(registry, [skill], "langchain")
+    resp = registry.dispatch("/my_skill bug 123")
+    assert resp is not None
+    assert resp.llm_text == "Fix bug 123 now"
+
+
+def test_register_skill_commands_langchain_empty_arguments() -> None:
+    """Empty args: $ARGUMENTS replaced with empty string, whitespace stripped."""
+    registry = CommandRegistry()
+    skill = _make_skill(prompt="Do $ARGUMENTS stuff")
+    register_skill_commands(registry, [skill], "langchain")
+    resp = registry.dispatch("/my_skill")
+    assert resp is not None
+    assert resp.llm_text == "Do  stuff"
+
+
+def test_register_skill_commands_skips_builtin_collision(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Skill matching a built-in command name is skipped with warning."""
+    registry = create_default_registry()
+    skill = _make_skill(name="help")  # collides with /help
+    registered = register_skill_commands(registry, [skill], "claude")
+    assert len(registered) == 0
+    assert (
+        "already registered" in caplog.text.lower() or "skipping" in caplog.text.lower()
+    )
+
+
+def test_register_skill_commands_autocomplete() -> None:
+    """Registered skills appear in filter_by_input (autocomplete)."""
+    registry = CommandRegistry()
+    skill = _make_skill(name="analyse")
+    register_skill_commands(registry, [skill], "claude")
+    matches = registry.filter_by_input("/ana")
+    assert any(c.name == "/analyse" for c in matches)
+
+
+def test_register_skill_commands_not_in_help() -> None:
+    """Registered skills have show_in_help=False."""
+    registry = CommandRegistry()
+    skill = _make_skill()
+    register_skill_commands(registry, [skill], "claude")
+    all_cmds = registry.get_all()
+    skill_cmd = [c for c in all_cmds if c.name == "/my_skill"][0]
+    assert skill_cmd.show_in_help is False
+
+
+def test_register_skill_commands_multiple_skills() -> None:
+    """Multiple skills are all registered."""
+    registry = CommandRegistry()
+    skills = [_make_skill(name="skill_a"), _make_skill(name="skill_b")]
+    registered = register_skill_commands(registry, skills, "claude")
+    assert len(registered) == 2
+    names = {r.command_name for r in registered}
+    assert names == {"/skill_a", "/skill_b"}

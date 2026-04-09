@@ -99,7 +99,8 @@ class ICoderApp(App[None]):
             output.append_text(response.text)
         elif response.send_to_llm:
             output.write("")
-            self.run_worker(lambda: self._stream_llm(text), thread=True)
+            llm_input = response.llm_text or text
+            self.run_worker(lambda: self._stream_llm(llm_input), thread=True)
 
     def _stream_llm(self, text: str) -> None:
         """Worker target: stream LLM response in background thread.

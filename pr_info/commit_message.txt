@@ -1,1 +1,1 @@
-feat(icoder): add ClaudeSkill model and skill loader
+feat(icoder): add skill registration with provider branching and UI routing
