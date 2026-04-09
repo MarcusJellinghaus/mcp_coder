@@ -42,9 +42,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `docs: add iCoder user guide (#754)`
 
 ### Step 5: Snapshot updates
-- [ ] Implementation: regenerate Textual SVG snapshots via `pytest tests/icoder/test_snapshots.py --snapshot-update`, verify correctness
-- [ ] Quality checks pass (pylint, pytest, mypy)
-- [ ] Commit: `test(icoder): update snapshots for input hint widget (#754)`
+- [x] Implementation: regenerate Textual SVG snapshots via `pytest tests/icoder/test_snapshots.py --snapshot-update`, verify correctness
+- [x] Quality checks pass (pylint, pytest, mypy)
+- [x] Commit: `test(icoder): update snapshots for input hint widget (#754)`
 
 ## Pull Request
 - [ ] PR review: verify all steps implemented correctly

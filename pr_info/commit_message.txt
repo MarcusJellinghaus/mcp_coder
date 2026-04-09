@@ -1,10 +1,6 @@
-docs: add iCoder user guide (#754)
+test(icoder): update snapshots for input hint widget (#754)
 
-Add docs/iCoder.md covering:
-- Overview of the interactive TUI
-- Startup and CLI options
-- Slash commands (/help, /clear, /quit, /exit)
-- Autocomplete usage (Tab, Up/Down, Escape)
-- Streaming responses
-- Keyboard shortcuts (history navigation, newline insertion)
-- Backslash escape mechanism with parity rule explanation
+Regenerate all 9 Textual SVG snapshot baselines to reflect the new
+#input-hint Static widget added below the InputArea. The hint text
+"\ + Enter = newline" is now visible in the initial state snapshot
+and layout is updated across all snapshot tests.
