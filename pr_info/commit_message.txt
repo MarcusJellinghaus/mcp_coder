@@ -1,0 +1,7 @@
+test(icoder): add multi-chunk streaming snapshot + regenerate baselines (#735)
+
+Add snapshot test (i) locking the Static streaming-tail layout with
+multi-chunk response containing newlines.
+
+Regenerate all snapshot baselines — the new Static widget in the DOM
+changes every existing snapshot's rendered output.

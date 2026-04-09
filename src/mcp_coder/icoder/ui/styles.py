@@ -13,6 +13,12 @@ InputArea {
     color: #d4d4d4;
 }
 
+#streaming-tail {
+    height: auto;
+    background: #1e1e1e;
+    color: #d4d4d4;
+}
+
 CommandAutocomplete {
     display: none;
     height: auto;
