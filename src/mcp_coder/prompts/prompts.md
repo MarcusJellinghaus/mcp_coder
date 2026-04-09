@@ -173,6 +173,29 @@ Git diff to analyze:
 OUTPUT THE TITLE AND BODY EXACTLY AS SHOWN ABOVE - NO OTHER TEXT!
 ```
 
+### Finalisation
+
+This prompt is used during the finalisation phase to complete any remaining unchecked tasks in the task tracker.
+
+#### Finalisation Prompt
+
+```
+Please check [pr_info_dir]/TASK_TRACKER.md for unchecked tasks (- [ ]).
+
+For each unchecked task:
+1. If it's a "commit message" task and changes are already committed → mark [x] and skip
+2. Otherwise: verify if done, complete it if not, then mark [x]
+
+If step files exist in [pr_info_dir]/steps/, use them for context.
+If not, analyse based on task names and codebase.
+
+If you cannot complete a task, DO NOT mark the box as done.
+Instead, briefly explain the issue.
+
+Run quality checks (pylint, pytest, mypy) if any code changes were made.
+Write commit message to [commit_message_path].
+```
+
 ## Plan Generation Workflow
 
 Three-prompt sequence for generating implementation plans from GitHub issues.

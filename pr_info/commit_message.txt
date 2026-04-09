@@ -1,0 +1,6 @@
+refactor(implement): move FINALISATION_PROMPT to prompts.md
+
+Extract inline f-string constant from core.py into prompts.md as
+"Finalisation Prompt" section. Update run_finalisation to load the
+prompt at runtime via get_prompt_with_substitutions with placeholder
+substitutions for pr_info_dir and commit_message_path.

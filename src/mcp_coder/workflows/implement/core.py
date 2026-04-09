@@ -81,24 +81,6 @@ from .task_processing import (
     run_formatters,
 )
 
-# Finalisation prompt for completing remaining tasks
-FINALISATION_PROMPT = f"""
-Please check {PR_INFO_DIR}/TASK_TRACKER.md for unchecked tasks (- [ ]).
-
-For each unchecked task:
-1. If it's a "commit message" task and changes are already committed → mark [x] and skip
-2. Otherwise: verify if done, complete it if not, then mark [x]
-
-If step files exist in {PR_INFO_DIR}/steps/, use them for context.
-If not, analyse based on task names and codebase.
-
-If you cannot complete a task, DO NOT mark the box as done.
-Instead, briefly explain the issue.
-
-Run quality checks (pylint, pytest, mypy) if any code changes were made.
-Write commit message to {PR_INFO_DIR}/{COMMIT_MESSAGE_FILE}.
-"""
-
 # Setup logger
 logger = logging.getLogger(__name__)
 
@@ -929,8 +911,17 @@ def run_finalisation(
     env_vars = prepare_llm_environment(project_dir)
     branch_name = get_branch_name_for_logging(project_dir)
 
+    finalisation_prompt = get_prompt_with_substitutions(
+        str(PROMPTS_FILE_PATH),
+        "Finalisation Prompt",
+        {
+            "pr_info_dir": PR_INFO_DIR,
+            "commit_message_path": f"{PR_INFO_DIR}/{COMMIT_MESSAGE_FILE}",
+        },
+    )
+
     llm_response = prompt_llm(
-        FINALISATION_PROMPT,
+        finalisation_prompt,
         provider=provider,
         timeout=LLM_FINALISATION_TIMEOUT_SECONDS,
         env_vars=env_vars,
@@ -942,7 +933,7 @@ def run_finalisation(
     try:
         store_session(
             llm_response,
-            FINALISATION_PROMPT,
+            finalisation_prompt,
             store_path=str(project_dir / ".mcp-coder" / "implement_sessions"),
             step_name="finalisation",
             branch_name=branch_name,

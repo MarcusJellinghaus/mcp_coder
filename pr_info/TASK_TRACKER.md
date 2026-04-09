@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Move FINALISATION_PROMPT to prompts.md
-- [ ] Implementation: add prompt section to prompts.md, update `run_finalisation` to load via `get_prompt_with_substitutions`, delete constant
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add prompt section to prompts.md, update `run_finalisation` to load via `get_prompt_with_substitutions`, delete constant
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Extract CI operations to ci_operations.py
 - [ ] Implementation: create `ci_operations.py` with 9 moved symbols, update `core.py` imports, update `test_ci_check.py` patch paths, fix `_poll_for_ci_completion` import in `test_core.py`
