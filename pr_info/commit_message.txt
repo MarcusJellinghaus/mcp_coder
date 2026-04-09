@@ -1,6 +1,0 @@
-fix: update check_and_fix_ci import to use ci_operations module directly
-
-Change import in check_branch_status.py to import check_and_fix_ci
-from ci_operations.py instead of core.py, fixing mypy attr-defined
-error caused by non-explicit re-export after the CI operations
-refactoring.
