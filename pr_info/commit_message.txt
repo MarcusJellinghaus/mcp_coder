@@ -1,0 +1,8 @@
+feat(utils): add cross-platform MCP server verification
+
+New utils/mcp_verification.py provides generic verification of MCP
+server binaries (existence check + version capture). Cross-platform
+via public get_bin_dir() and private _exe_name() helpers. Tests
+parametrize over sys.platform via monkeypatch.
+
+Part of #724.
