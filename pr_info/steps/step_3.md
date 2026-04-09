@@ -41,7 +41,8 @@ def test_register_skill_commands_langchain_empty_arguments() -> None:
     """Empty args: $ARGUMENTS replaced with empty string, whitespace stripped."""
 
 def test_register_skill_commands_skips_builtin_collision() -> None:
-    """Skill matching a built-in command name is skipped with warning."""
+    """Skill matching a built-in command name is skipped with warning.
+    Use caplog fixture to assert the warning log message."""
 
 def test_register_skill_commands_autocomplete() -> None:
     """Registered skills appear in filter_by_input (autocomplete)."""
@@ -143,6 +144,8 @@ elif response.send_to_llm:
 ```
 
 **Note**: `llm_input` must be captured as a local variable before the lambda to avoid late-binding issues.
+
+**Note**: The `llm_text` routing in the Textual UI layer is not directly unit-tested (Textual widget testing is out of scope), but is covered by the `test_handle_input_returns_llm_text` test at the AppCore level.
 
 ## Commit Message
 ```

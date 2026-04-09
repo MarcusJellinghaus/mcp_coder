@@ -62,10 +62,12 @@ app_core = AppCore(llm_service, event_log, registry=registry, ...)
 | `src/mcp_coder/cli/commands/icoder.py` | Create registry, load skills, register, pass to AppCore |
 | `tests/icoder/test_types.py` | Test new fields on Response and Command |
 | `tests/icoder/test_command_registry.py` | Test add_command and show_in_help filtering |
+| `tests/icoder/test_app_core.py` | Test llm_text passthrough from handle_input |
+| `tests/icoder/test_cli_icoder.py` | Test skill loading in execute_icoder startup |
 
 ## Implementation Steps
 
 1. **Foundation**: Add fields to `Response` and `Command`, add `add_command()` to registry, update `/help` filter
-2. **Skill models and loader**: `ClaudeSkill`, `ICoderSkillCommand`, `load_skills()` in `skills.py`
+2. **Skill models and loader**: `ClaudeSkill`, `ICoderSkillCommand`, `load_skills()` in `skills.py`, add `python-frontmatter` dependency
 3. **Registration and provider branching**: `register_skill_commands()`, `app.py` llm_text routing
-4. **Startup wiring**: Connect everything in `execute_icoder()`, add `python-frontmatter` dependency
+4. **Startup wiring**: Connect everything in `execute_icoder()`

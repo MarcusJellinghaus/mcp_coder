@@ -27,17 +27,19 @@ Add foundation for skill slash commands:
 
 ### WHAT — new test functions
 ```python
-def test_response_llm_text_default() -> None:
-    """Response.llm_text defaults to None."""
+@pytest.mark.parametrize("kwargs, expected", [
+    ({}, None),
+    ({"llm_text": "override"}, "override"),
+])
+def test_response_llm_text(kwargs: dict, expected: str | None) -> None:
+    """Response.llm_text defaults to None, can be set."""
 
-def test_response_llm_text_set() -> None:
-    """Response.llm_text can be set via constructor."""
-
-def test_command_show_in_help_default() -> None:
-    """Command.show_in_help defaults to True."""
-
-def test_command_show_in_help_false() -> None:
-    """Command.show_in_help can be set to False."""
+@pytest.mark.parametrize("kwargs, expected", [
+    ({}, True),
+    ({"show_in_help": False}, False),
+])
+def test_command_show_in_help(kwargs: dict, expected: bool) -> None:
+    """Command.show_in_help defaults to True, can be set to False."""
 ```
 
 ## Tests First — `tests/icoder/test_command_registry.py`

@@ -41,14 +41,9 @@ def test_load_skills_defaults_for_missing_optional_fields(tmp_path: Path) -> Non
 def test_load_skills_filters_user_invocable_false(tmp_path: Path) -> None:
     """Skills with user-invocable: false are excluded."""
 
-def test_load_skills_skips_malformed_file(tmp_path: Path) -> None:
-    """Malformed SKILL.md is skipped with warning, not crash."""
-
-def test_load_skills_empty_directory(tmp_path: Path) -> None:
-    """No .claude/skills directory returns empty list."""
-
-def test_load_skills_no_skill_md_in_subdir(tmp_path: Path) -> None:
-    """Skill directory without SKILL.md is skipped."""
+@pytest.mark.parametrize("scenario", ["empty_dir", "no_skill_md", "malformed_file"])
+def test_load_skills_skip_cases(tmp_path: Path, scenario: str) -> None:
+    """load_skills handles edge cases: empty dir, missing SKILL.md, malformed files."""
 
 def test_load_skills_multiple_skills(tmp_path: Path) -> None:
     """Multiple valid skills are all returned."""
@@ -124,6 +119,10 @@ for each subdirectory in skills_dir:
     append to results
 return results
 ```
+
+### NOTES
+- **Import**: `import frontmatter` (the pip package is `python-frontmatter` but imports as `frontmatter`)
+- **Error handling**: Catch `Exception` broadly in the try/except around each SKILL.md parse, since `frontmatter` can raise various error types on malformed input (YAML errors, encoding errors, etc.)
 
 ### DATA — return value
 `list[ClaudeSkill]` — only skills with `user_invocable != False`
