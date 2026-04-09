@@ -8,6 +8,7 @@ from typing import Any
 
 import pytest
 from textual.pilot import Pilot
+from textual.widgets import Static
 
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.core.event_log import EventLog
@@ -484,3 +485,41 @@ async def test_tui_renders_runtime_info_on_mount(
         assert "Tool env:" in text
         assert "Project env:" in text
         assert "Project dir:" in text
+
+
+# --- Input hint widget tests ---
+
+
+async def test_hint_visible_when_input_empty(icoder_app: ICoderApp) -> None:
+    """Hint widget is visible when input area is empty."""
+    async with icoder_app.run_test() as pilot:
+        await pilot.pause()
+        hint = icoder_app.query_one("#input-hint", Static)
+        assert not hint.has_class("hidden")
+
+
+async def test_hint_hidden_when_input_has_text(icoder_app: ICoderApp) -> None:
+    """Hint widget is hidden when input area has text."""
+    async with icoder_app.run_test() as pilot:
+        input_area = icoder_app.query_one(InputArea)
+        input_area.focus()
+        await pilot.pause()
+        input_area.insert("some text")
+        await pilot.pause()
+        hint = icoder_app.query_one("#input-hint", Static)
+        assert hint.has_class("hidden")
+
+
+async def test_hint_reappears_after_submit(icoder_app: ICoderApp) -> None:
+    """Hint widget reappears after submitting text (input becomes empty)."""
+    async with icoder_app.run_test() as pilot:
+        input_area = icoder_app.query_one(InputArea)
+        input_area.focus()
+        await pilot.pause()
+        input_area.insert("hello")
+        await pilot.pause()
+        hint = icoder_app.query_one("#input-hint", Static)
+        assert hint.has_class("hidden")
+        await pilot.press("enter")
+        await pilot.pause()
+        assert not hint.has_class("hidden")

@@ -19,6 +19,17 @@ InputArea {
     color: #d4d4d4;
 }
 
+#input-hint {
+    height: 1;
+    background: #1e1e1e;
+    color: #666666;
+    text-align: right;
+}
+
+#input-hint.hidden {
+    display: none;
+}
+
 CommandAutocomplete {
     display: none;
     height: auto;

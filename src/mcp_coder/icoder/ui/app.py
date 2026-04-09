@@ -56,6 +56,16 @@ class ICoderApp(App[None]):
             registry=self._core.registry,
             event_log=self._core.event_log,
         )
+        yield Static(r"\ + Enter = newline", id="input-hint")
+
+    def on_text_area_changed(self) -> None:
+        """Toggle input hint visibility based on whether input is empty."""
+        hint = self.query_one("#input-hint", Static)
+        input_area = self.query_one(InputArea)
+        if input_area.text:
+            hint.add_class("hidden")
+        else:
+            hint.remove_class("hidden")
 
     def on_mount(self) -> None:
         """Display startup info and focus input area."""

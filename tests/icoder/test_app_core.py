@@ -18,6 +18,13 @@ def test_handle_help(app_core: AppCore) -> None:
     assert not response.send_to_llm
 
 
+def test_help_includes_keyboard_shortcuts(app_core: AppCore) -> None:
+    """Test /help output contains keyboard shortcuts section."""
+    response = app_core.handle_input("/help")
+    assert "Keyboard shortcuts:" in response.text
+    assert "Insert newline" in response.text
+
+
 def test_handle_unknown_command(app_core: AppCore) -> None:
     """Test /unknown returns error."""
     response = app_core.handle_input("/unknown")
