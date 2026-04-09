@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Backslash+Enter newline escape logic
-- [ ] Implementation: `_count_trailing_backslashes` helper + modified Enter handler in `input_area.py`, parametrized tests in `test_widgets.py`
-- [ ] Quality checks pass (pylint, pytest, mypy)
-- [ ] Commit: `feat(icoder): backslash+Enter inserts newline (#754)`
+- [x] Implementation: `_count_trailing_backslashes` helper + modified Enter handler in `input_area.py`, parametrized tests in `test_widgets.py`
+- [x] Quality checks pass (pylint, pytest, mypy)
+- [x] Commit: `feat(icoder): backslash+Enter inserts newline (#754)`
 
 ### Step 2: Status hint widget below InputArea
 - [ ] Implementation: `Static` hint widget in `app.py`, `on_text_area_changed` handler, CSS in `styles.py`, hint visibility tests in `test_app_pilot.py`

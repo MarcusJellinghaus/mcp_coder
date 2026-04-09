@@ -5,7 +5,10 @@ from __future__ import annotations
 import pytest
 from textual.app import App, ComposeResult
 
-from mcp_coder.icoder.ui.widgets.input_area import InputArea
+from mcp_coder.icoder.ui.widgets.input_area import (
+    InputArea,
+    _count_trailing_backslashes,
+)
 from mcp_coder.icoder.ui.widgets.output_log import OutputLog
 
 pytestmark = pytest.mark.textual_integration
@@ -254,3 +257,75 @@ async def test_input_area_no_registry_backward_compat() -> None:
         # Should not crash — no registry means autocomplete is skipped
         assert input_area.text == "/hel"
         assert input_area._registry is None  # noqa: SLF001
+
+
+# --- _count_trailing_backslashes unit tests ---
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        ("hello\\", 1),
+        ("hello\\\\", 2),
+        ("hello\\\\\\", 3),
+        ("hello\\\\\\\\", 4),
+        ("\\", 1),
+        ("hello", 0),
+        ("", 0),
+    ],
+)
+def test_count_trailing_backslashes(text: str, expected: int) -> None:
+    """_count_trailing_backslashes counts consecutive trailing backslashes."""
+    assert _count_trailing_backslashes(text) == expected
+
+
+# --- Backslash+Enter newline escape tests ---
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "input_text, expect_submit, expected_text",
+    [
+        pytest.param("hello\\", False, "hello\n", id="single-backslash-newline"),
+        pytest.param("hello\\\\", True, "hello\\", id="double-backslash-submit"),
+        pytest.param(
+            "hello\\\\\\", False, "hello\\\\\n", id="triple-backslash-newline"
+        ),
+        pytest.param("hello\\\\\\\\", True, "hello\\\\\\", id="quad-backslash-submit"),
+        pytest.param("\\", False, "\n", id="lone-backslash-newline"),
+        pytest.param("hello", True, "hello", id="no-backslash-submit"),
+    ],
+)
+async def test_backslash_enter_newline(
+    input_text: str, expect_submit: bool, expected_text: str
+) -> None:
+    """Backslash+Enter inserts newline; double-backslash+Enter submits with one backslash stripped."""
+    messages: list[InputArea.InputSubmitted] = []
+
+    class SubmitApp(WidgetTestApp):
+        def on_input_area_input_submitted(
+            self, message: InputArea.InputSubmitted
+        ) -> None:
+            messages.append(message)
+
+    app = SubmitApp()
+    async with app.run_test() as pilot:
+        input_area = app.query_one(InputArea)
+        input_area.focus()
+        await pilot.pause()
+        input_area.load_text(input_text)
+        input_area.move_cursor(input_area.document.end)
+        await pilot.pause()
+        await pilot.press("enter")
+        await pilot.pause()
+        if expect_submit:
+            assert (
+                len(messages) == 1
+            ), f"Expected submit but got {len(messages)} messages"
+            assert messages[0].text == expected_text
+            assert input_area.text == ""
+        else:
+            assert (
+                len(messages) == 0
+            ), f"Expected no submit but got {len(messages)} messages"
+            assert input_area.text == expected_text

@@ -1,0 +1,14 @@
+feat(icoder): backslash+Enter inserts newline (#754)
+
+Add backslash+Enter as a newline escape mechanism for InputArea.
+On Windows, Shift+Enter sends the same keycode as Enter, so this
+provides an alternative way to insert newlines in multi-line input.
+
+Algorithm (parity-based):
+- Odd trailing backslashes + Enter → strip last backslash, insert newline
+- Even trailing backslashes + Enter → strip last backslash, submit
+
+Changes:
+- Add _count_trailing_backslashes() helper in input_area.py
+- Modify Enter handler in InputArea._on_key to check trailing backslashes
+- Add parametrized tests for all backslash+Enter combinations

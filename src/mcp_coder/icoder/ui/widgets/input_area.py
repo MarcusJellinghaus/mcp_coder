@@ -19,6 +19,17 @@ from mcp_coder.icoder.core.event_log import EventLog
 from mcp_coder.icoder.ui.widgets.command_autocomplete import CommandAutocomplete
 
 
+def _count_trailing_backslashes(text: str) -> int:
+    """Count consecutive trailing backslashes in text."""
+    count = 0
+    for char in reversed(text):
+        if char == "\\":
+            count += 1
+        else:
+            break
+    return count
+
+
 class InputArea(TextArea):
     """Text input with Enter=submit, Shift-Enter=newline.
 
@@ -174,6 +185,16 @@ class InputArea(TextArea):
                         self._event_log.emit("autocomplete_hidden", reason="submit")
             event.stop()
             event.prevent_default()
+            raw = self.text
+            trailing = _count_trailing_backslashes(raw)
+            if trailing > 0:
+                text_without_last = raw[:-1]
+                if trailing % 2 == 1:
+                    self.load_text(text_without_last)
+                    end = self.document.end
+                    self._replace_via_keyboard("\n", end, end)
+                    return
+                self.text = text_without_last
             text = self.text.strip()
             if text:
                 self.post_message(self.InputSubmitted(text))
