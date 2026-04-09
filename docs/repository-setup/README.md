@@ -76,7 +76,7 @@ The following files in this repository serve as references/templates for other p
 | `tools/format_all.{sh,bat}` | P | No | Yes | — |
 | `tools/lint_imports.{sh,bat}`, `tach_check.*`, `pycycle_check.*`, `vulture_check.*` | P | No | Yes | — |
 | `tools/ruff_check.{sh,bat}` | P | No | Yes | — |
-| `icoder.bat` / `icoder_local.bat` | I | — | — | mcp-coder repo only |
+| `icoder_local.bat` | I | — | — | mcp-coder repo only |
 | `mlflow_implementation.md` / `project_idea.md` | I | — | — | mcp-coder repo only |
 | `tools/start_mlflow.*`, `get_*mlflow*.py`, `inspect_mlflow_run.py`, `search_mlflow_artifacts.py` | I | — | — | mcp-coder repo only |
 | `tools/reinstall_local.bat`, `read_github_deps.py`, `safe_delete_folder.py` | I | — | — | mcp-coder repo only |

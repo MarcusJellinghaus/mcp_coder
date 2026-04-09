@@ -119,7 +119,7 @@ MCP Coder supports platform-specific MCP configuration files:
 
 ### Environment Variables
 
-Set by the launcher scripts (`claude.bat`, `claude_local.bat`, `icoder.bat`, `icoder_local.bat`) before Claude Code starts:
+Set by the launcher scripts (`claude.bat`, `claude_local.bat`, `icoder_local.bat`) or `mcp-coder icoder` before Claude Code starts:
 
 | Variable | Set by launcher | Purpose |
 |---|---|---|

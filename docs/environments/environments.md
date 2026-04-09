@@ -60,7 +60,7 @@ There are two paths that set up environment variables: batch launchers (for inte
 | `claude_local.bat` | Discovers tool env via `MCP_CODER_VENV_PATH` or PATH lookup; verifies editable install | activates `.venv`, sets `VIRTUAL_ENV` | **Yes** |
 | `env.py` (`prepare_llm_environment()`) | Sets `MCP_CODER_VENV_DIR` from `VIRTUAL_ENV` / `CONDA_PREFIX` / `sys.prefix` | Sets `MCP_CODER_PROJECT_DIR` from `project_dir` arg | **Partial** — reads whatever venv is active |
 
-> All launcher scripts (`claude.bat`, `claude_local.bat`, `icoder.bat`, `icoder_local.bat`) print MCP server versions (`mcp-workspace --version`, `mcp-tools-py --version`) at startup after tool verification.
+> All launcher scripts (`claude.bat`, `claude_local.bat`, `icoder_local.bat`) print MCP server versions (`mcp-workspace --version`, `mcp-tools-py --version`) at startup after tool verification.
 
 ### How `.vscodeclaude_start.bat` Does It (Coordinator)
 

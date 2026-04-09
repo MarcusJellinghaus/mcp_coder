@@ -1,9 +1,7 @@
-feat(icoder): integrate env_setup into icoder command
+chore: retire icoder.bat, update docs
 
-- AppCore accepts optional RuntimeInfo via constructor injection
-- execute_icoder() calls setup_icoder_environment() early
-- session_start event emitted to EventLog with runtime info
-- TUI shows startup info (versions, paths) as first output log entry
-- Replaces prepare_llm_environment() call for icoder path
+mcp-coder icoder is now self-sufficient — icoder.bat is no longer
+needed. icoder_local.bat stays (dev edition with editable-install
+check). Updated 6 files that referenced icoder.bat.
 
-Part of #724.
+Closes #724.

@@ -111,7 +111,7 @@ The monorepo must preserve all current entry points. Inventory:
 |---|---|---|---|
 | `mcp-coder ...` | mcp_coder | `mcp_coder.cli.main:main` | `packages/mcp-coder/pyproject.toml` `[project.scripts]` — unchanged |
 | `mcp-config ...` | mcp_config | (from mcp_config CLI) | `packages/mcp-config/pyproject.toml` `[project.scripts]` — unchanged |
-| `icoder` / `icoder.bat` | mcp_coder | launcher batfile → `mcp-coder icoder` | stays in `packages/mcp-coder/` |
+| `icoder` | mcp_coder | `mcp-coder icoder` (self-sufficient) | stays in `packages/mcp-coder/` |
 
 Each package declares its own `[project.scripts]`. `pip install mcp-coder` gives `mcp-coder` + `icoder`. `pip install mcp-config` gives `mcp-config`. Exactly as today.
 
