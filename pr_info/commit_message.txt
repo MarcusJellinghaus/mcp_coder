@@ -1,6 +1,10 @@
-feat(icoder): add keyboard shortcuts to /help (#754)
+docs: add iCoder user guide (#754)
 
-Append a "Keyboard shortcuts" section to the /help command output,
-listing backslash+Enter and Shift+Enter newline shortcuts.
-
-Add test_help_includes_keyboard_shortcuts in test_app_core.py.
+Add docs/iCoder.md covering:
+- Overview of the interactive TUI
+- Startup and CLI options
+- Slash commands (/help, /clear, /quit, /exit)
+- Autocomplete usage (Tab, Up/Down, Escape)
+- Streaming responses
+- Keyboard shortcuts (history navigation, newline insertion)
+- Backslash escape mechanism with parity rule explanation

@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat(icoder): add keyboard shortcuts to /help (#754)`
 
 ### Step 4: docs/iCoder.md user guide
-- [ ] Implementation: create `docs/iCoder.md` covering overview, startup, commands, autocomplete, streaming, keyboard shortcuts, backslash escape
-- [ ] Quality checks pass (pylint, pytest, mypy)
-- [ ] Commit: `docs: add iCoder user guide (#754)`
+- [x] Implementation: create `docs/iCoder.md` covering overview, startup, commands, autocomplete, streaming, keyboard shortcuts, backslash escape
+- [x] Quality checks pass (pylint, pytest, mypy)
+- [x] Commit: `docs: add iCoder user guide (#754)`
 
 ### Step 5: Snapshot updates
 - [ ] Implementation: regenerate Textual SVG snapshots via `pytest tests/icoder/test_snapshots.py --snapshot-update`, verify correctness
