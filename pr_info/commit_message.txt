@@ -1,8 +1,8 @@
-feat(utils): add cross-platform MCP server verification
+feat(llm): add MCP_CODER_VENV_PATH to prepare_llm_environment
 
-New utils/mcp_verification.py provides generic verification of MCP
-server binaries (existence check + version capture). Cross-platform
-via public get_bin_dir() and private _exe_name() helpers. Tests
-parametrize over sys.platform via monkeypatch.
+.mcp.json references ${MCP_CODER_VENV_PATH} for MCP server binary
+paths, but prepare_llm_environment() never returned it — only .bat
+launchers set it. Add it to the returned dict using the existing
+venv precedence (VIRTUAL_ENV → CONDA_PREFIX → sys.prefix).
 
-Part of #724.
+Closes part of #724.
