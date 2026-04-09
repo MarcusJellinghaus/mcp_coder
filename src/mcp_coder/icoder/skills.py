@@ -44,7 +44,11 @@ class ICoderSkillCommand:
 
 
 def load_skills(project_dir: Path) -> list[ClaudeSkill]:
-    """Discover and parse skills from <project_dir>/.claude/skills/*/SKILL.md."""
+    """Discover and parse skills from <project_dir>/.claude/skills/*/SKILL.md.
+
+    Returns:
+        Parsed skill definitions found under the project skills directory.
+    """
     skills_dir = project_dir / ".claude" / "skills"
     if not skills_dir.is_dir():
         return []
@@ -99,7 +103,11 @@ def load_skills(project_dir: Path) -> list[ClaudeSkill]:
 
 
 def _make_claude_handler(skill: ClaudeSkill) -> Callable[[list[str]], Response]:
-    """Create handler for Claude Code provider (raw passthrough)."""
+    """Create handler for Claude Code provider (raw passthrough).
+
+    Returns:
+        Handler callable that produces a passthrough response.
+    """
 
     def handler(args: list[str]) -> Response:
         return Response(send_to_llm=True)
@@ -108,7 +116,11 @@ def _make_claude_handler(skill: ClaudeSkill) -> Callable[[list[str]], Response]:
 
 
 def _make_langchain_handler(skill: ClaudeSkill) -> Callable[[list[str]], Response]:
-    """Create handler for langchain provider (expand prompt template)."""
+    """Create handler for langchain provider (expand prompt template).
+
+    Returns:
+        Handler callable that expands the skill prompt template.
+    """
 
     def handler(args: list[str]) -> Response:
         arguments = " ".join(args)
@@ -125,7 +137,8 @@ def register_skill_commands(
 ) -> list[ICoderSkillCommand]:
     """Register skills as slash commands in the registry.
 
-    Returns list of ICoderSkillCommand for the successfully registered skills.
+    Returns:
+        List of ICoderSkillCommand for the successfully registered skills.
     """
     registered: list[ICoderSkillCommand] = []
     for skill in skills:

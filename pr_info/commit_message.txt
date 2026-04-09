@@ -1,8 +1,5 @@
-feat(icoder): wire skill loading into execute_icoder startup
+fix: add Returns sections to docstrings in skills.py for ruff DOC201
 
-- Create registry explicitly with create_default_registry() before AppCore
-- Load skills with load_skills(project_dir) and register via
-  register_skill_commands(registry, skills, provider)
-- Pass registry=registry to AppCore instead of letting it create its own
-- Handle missing python-frontmatter gracefully with ImportError fallback
-- Add test verifying skill commands appear in registry after startup
+Add properly formatted `Returns:` sections to the docstrings of
+load_skills, _make_claude_handler, _make_langchain_handler, and
+register_skill_commands to satisfy ruff's DOC201 rule.
