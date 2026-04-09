@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: Extract CI operations to ci_operations.py
-- [ ] Implementation: create `ci_operations.py` with 9 moved symbols, update `core.py` imports, update `test_ci_check.py` patch paths, fix `_poll_for_ci_completion` import in `test_core.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `ci_operations.py` with 9 moved symbols, update `core.py` imports, update `test_ci_check.py` patch paths, fix `_poll_for_ci_completion` import in `test_core.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Move CI test classes to test_ci_operations.py
 - [ ] Implementation: create `test_ci_operations.py` with `TestPollForCiCompletionHeartbeat`, update patch paths and caplog logger names, clean up `test_core.py` imports

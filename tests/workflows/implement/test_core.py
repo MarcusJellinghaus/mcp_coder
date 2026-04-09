@@ -11,12 +11,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.workflow_utils.task_tracker import TaskTrackerFileNotFoundError
+from mcp_coder.workflows.implement.ci_operations import _poll_for_ci_completion
 from mcp_coder.workflows.implement.constants import FailureCategory, WorkflowFailure
 from mcp_coder.workflows.implement.core import (
     _format_failure_comment,
     _get_rebase_target_branch,
     _handle_workflow_failure,
-    _poll_for_ci_completion,
     log_progress_summary,
     prepare_task_tracker,
     run_finalisation,
@@ -2311,9 +2311,9 @@ class TestPollForCiCompletionHeartbeat:
             completed
         ]
 
-        with patch("mcp_coder.workflows.implement.core.time.sleep"):
+        with patch("mcp_coder.workflows.implement.ci_operations.time.sleep"):
             with caplog.at_level(
-                logging.INFO, logger="mcp_coder.workflows.implement.core"
+                logging.INFO, logger="mcp_coder.workflows.implement.ci_operations"
             ):
                 _poll_for_ci_completion(mock_ci_manager, "main")
 
@@ -2349,9 +2349,9 @@ class TestPollForCiCompletionHeartbeat:
             completed
         ]
 
-        with patch("mcp_coder.workflows.implement.core.time.sleep"):
+        with patch("mcp_coder.workflows.implement.ci_operations.time.sleep"):
             with caplog.at_level(
-                logging.INFO, logger="mcp_coder.workflows.implement.core"
+                logging.INFO, logger="mcp_coder.workflows.implement.ci_operations"
             ):
                 _poll_for_ci_completion(mock_ci_manager, "main")
 
@@ -2382,9 +2382,9 @@ class TestPollForCiCompletionHeartbeat:
         }
         mock_ci_manager.get_latest_ci_status.side_effect = [in_progress, completed]
 
-        with patch("mcp_coder.workflows.implement.core.time.sleep"):
+        with patch("mcp_coder.workflows.implement.ci_operations.time.sleep"):
             with caplog.at_level(
-                logging.DEBUG, logger="mcp_coder.workflows.implement.core"
+                logging.DEBUG, logger="mcp_coder.workflows.implement.ci_operations"
             ):
                 _poll_for_ci_completion(mock_ci_manager, "main")
 
@@ -2412,9 +2412,9 @@ class TestPollForCiCompletionHeartbeat:
         }
         mock_ci_manager.get_latest_ci_status.side_effect = [empty_status, completed]
 
-        with patch("mcp_coder.workflows.implement.core.time.sleep"):
+        with patch("mcp_coder.workflows.implement.ci_operations.time.sleep"):
             with caplog.at_level(
-                logging.DEBUG, logger="mcp_coder.workflows.implement.core"
+                logging.DEBUG, logger="mcp_coder.workflows.implement.ci_operations"
             ):
                 _poll_for_ci_completion(mock_ci_manager, "main")
 
@@ -2451,9 +2451,9 @@ class TestPollForCiCompletionHeartbeat:
             completed
         ]
 
-        with patch("mcp_coder.workflows.implement.core.time.sleep"):
+        with patch("mcp_coder.workflows.implement.ci_operations.time.sleep"):
             with caplog.at_level(
-                logging.INFO, logger="mcp_coder.workflows.implement.core"
+                logging.INFO, logger="mcp_coder.workflows.implement.ci_operations"
             ):
                 _poll_for_ci_completion(mock_ci_manager, "main")
 
