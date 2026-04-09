@@ -232,3 +232,7 @@ _.on_text_area_changed
 
 # tests/icoder/test_command_registry.py - Test command handler
 _.handle_test
+
+# tests/icoder/test_env_setup.py - Autouse fixtures for env isolation and mocking
+_._clear_mcp_env
+_._mock_externals
