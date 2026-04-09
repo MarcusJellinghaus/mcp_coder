@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: Move CI test classes to test_ci_operations.py
-- [ ] Implementation: create `test_ci_operations.py` with `TestPollForCiCompletionHeartbeat`, update patch paths and caplog logger names, clean up `test_core.py` imports
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `test_ci_operations.py` with `TestPollForCiCompletionHeartbeat`, update patch paths and caplog logger names, clean up `test_core.py` imports
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: verify all steps completed, no regressions

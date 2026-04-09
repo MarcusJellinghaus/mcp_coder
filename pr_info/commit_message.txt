@@ -1,15 +1,10 @@
-refactor: extract CI operations from core.py to ci_operations.py
+refactor: move TestPollForCiCompletionHeartbeat to test_ci_operations.py
 
-Move 9 CI-related symbols (CIFixConfig, _short_sha, _run_ci_analysis,
-_run_ci_fix, _poll_for_ci_completion, _wait_for_new_ci_run,
-_run_ci_analysis_and_fix, _read_problem_description, check_and_fix_ci)
-from core.py to a new ci_operations.py module.
+Move CI heartbeat/elapsed-time test class from test_core.py to a new
+test_ci_operations.py file, co-locating tests with the ci_operations
+module they exercise.
 
-- Create ci_operations.py with moved symbols and required imports
-- Update core.py to import check_and_fix_ci from ci_operations
-- Remove now-unused imports from core.py (dataclass, CI constants, etc.)
-- Update test_ci_check.py @patch paths from core → ci_operations
-- Fix _poll_for_ci_completion import in test_core.py
-- Update heartbeat test patches and logger names for ci_operations
-
-No logic changes — only file location and imports change.
+- Create tests/workflows/implement/test_ci_operations.py with
+  TestPollForCiCompletionHeartbeat (5 tests)
+- Remove moved class from test_core.py
+- Clean up unused imports in test_core.py (logging, _poll_for_ci_completion)
