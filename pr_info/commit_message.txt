@@ -1,12 +1,1 @@
-feat(icoder): add Response.llm_text, Command.show_in_help, Registry.add_command
-
-Foundation for skill slash commands (issue #720):
-
-- Add llm_text field to Response dataclass (default None) to allow
-  overriding the text sent to the LLM when send_to_llm=True
-- Add show_in_help field to Command dataclass (default True) so
-  skill commands can be hidden from /help while remaining in autocomplete
-- Add add_command() method to CommandRegistry for imperative
-  registration of pre-built Command objects
-- Update /help handler to filter out commands with show_in_help=False
-- Add tests for all new fields and methods
+feat(icoder): add ClaudeSkill model and skill loader
