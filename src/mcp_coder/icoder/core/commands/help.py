@@ -21,5 +21,5 @@ def register_help(registry: CommandRegistry) -> None:
         lines.append("")
         lines.append("Keyboard shortcuts:")
         lines.append(r"  \ + Enter   - Insert newline")
-        lines.append("  Shift+Enter - Insert newline (terminal support varies)")
+        lines.append("  Shift+Enter  - Insert newline (terminal support varies)")
         return Response(text="\n".join(lines))
