@@ -58,7 +58,18 @@ class ICoderApp(App[None]):
         )
 
     def on_mount(self) -> None:
-        """Focus input area on startup."""
+        """Display startup info and focus input area."""
+        if self._core.runtime_info:
+            info = self._core.runtime_info
+            output = self.query_one(OutputLog)
+            lines = [
+                f"mcp-coder {info.mcp_coder_version}",
+                *(f"{s.name} {s.version}" for s in info.mcp_servers),
+                f"Tool env:    {info.tool_env_path}",
+                f"Project env: {info.project_venv_path}",
+                f"Project dir: {info.project_dir}",
+            ]
+            output.append_text("\n".join(lines), style="dim")
         self.query_one(InputArea).focus()
 
     def on_input_area_input_submitted(self, message: InputArea.InputSubmitted) -> None:

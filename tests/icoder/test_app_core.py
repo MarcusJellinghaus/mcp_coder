@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.core.event_log import EventLog
+from mcp_coder.icoder.env_setup import RuntimeInfo
+from mcp_coder.icoder.services.llm_service import FakeLLMService
+from mcp_coder.utils.mcp_verification import MCPServerInfo
 
 
 def test_handle_help(app_core: AppCore) -> None:
@@ -98,3 +103,27 @@ def test_multiple_inputs(app_core: AppCore, event_log: EventLog) -> None:
     list(app_core.stream_llm("question"))
     app_core.handle_input("/clear")
     assert len(event_log.entries) >= 4
+
+
+def test_runtime_info_none_by_default(app_core: AppCore) -> None:
+    """Verify runtime_info is None when not provided."""
+    assert app_core.runtime_info is None
+
+
+def test_runtime_info_injected(fake_llm: FakeLLMService, event_log: EventLog) -> None:
+    """Create AppCore with a RuntimeInfo instance, verify property returns it."""
+    info = RuntimeInfo(
+        mcp_coder_version="1.0.0",
+        python_version="3.12.0",
+        claude_code_version="1.2.3",
+        tool_env_path="/tool",
+        project_venv_path="/proj/.venv",
+        project_dir="/proj",
+        env_vars={"MCP_CODER_VENV_PATH": "/tool/bin"},
+        mcp_servers=[
+            MCPServerInfo(name="srv", path=Path("/fake/srv"), version="1.0"),
+        ],
+    )
+    core = AppCore(llm_service=fake_llm, event_log=event_log, runtime_info=info)
+    assert core.runtime_info is info
+    assert core.runtime_info.mcp_coder_version == "1.0.0"

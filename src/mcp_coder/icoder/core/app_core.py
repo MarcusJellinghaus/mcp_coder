@@ -10,6 +10,7 @@ from mcp_coder.icoder.core.command_registry import (
 )
 from mcp_coder.icoder.core.event_log import EventLog
 from mcp_coder.icoder.core.types import Response
+from mcp_coder.icoder.env_setup import RuntimeInfo
 from mcp_coder.icoder.services.llm_service import LLMService
 from mcp_coder.llm.types import StreamEvent
 
@@ -22,6 +23,7 @@ class AppCore:
         llm_service: LLMService,
         event_log: EventLog,
         registry: CommandRegistry | None = None,
+        runtime_info: RuntimeInfo | None = None,
     ) -> None:
         """Initialize with injected dependencies.
 
@@ -29,10 +31,12 @@ class AppCore:
             llm_service: LLM service for non-command input
             event_log: Structured event log
             registry: Command registry (default: create_default_registry())
+            runtime_info: Optional runtime environment info from env_setup
         """
         self._llm_service = llm_service
         self._event_log = event_log
         self._registry = registry if registry is not None else create_default_registry()
+        self._runtime_info = runtime_info
 
     def handle_input(self, text: str) -> Response:
         """Route user input to commands or flag for LLM streaming.
@@ -85,6 +89,11 @@ class AppCore:
     def event_log(self) -> EventLog:
         """Public read-only access to the event log."""
         return self._event_log
+
+    @property
+    def runtime_info(self) -> RuntimeInfo | None:
+        """Runtime environment info, if provided."""
+        return self._runtime_info
 
     @property
     def session_id(self) -> str | None:

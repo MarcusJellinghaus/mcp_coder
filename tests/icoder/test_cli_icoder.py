@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch
+from importlib.metadata import PackageNotFoundError
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from mcp_coder.cli.main import create_parser
+from mcp_coder.icoder.env_setup import RuntimeInfo
+from mcp_coder.utils.mcp_verification import MCPServerInfo
 
 
 def test_icoder_parser_registered() -> None:
@@ -79,3 +83,132 @@ def test_main_routes_icoder(monkeypatch: pytest.MonkeyPatch) -> None:
     assert result == 0
     args_obj = called["args"]
     assert getattr(args_obj, "command") == "icoder"
+
+
+# --- env_setup integration tests ---
+
+_FAKE_RUNTIME_INFO = RuntimeInfo(
+    mcp_coder_version="0.42.0",
+    python_version="3.12.0",
+    claude_code_version="1.2.3",
+    tool_env_path="/fake/tool",
+    project_venv_path="/fake/proj/.venv",
+    project_dir="/fake/proj",
+    env_vars={
+        "MCP_CODER_VENV_PATH": "/fake/bin",
+        "MCP_CODER_VENV_DIR": "/fake/tool",
+        "MCP_CODER_PROJECT_DIR": "/fake/proj",
+    },
+    mcp_servers=[
+        MCPServerInfo(
+            name="mcp-tools-py",
+            path=Path("/fake/mcp-tools-py"),
+            version="1.0",
+        ),
+    ],
+)
+
+
+def _make_args(tmp_path: Path) -> MagicMock:
+    """Create a mock args namespace for execute_icoder."""
+    args = MagicMock()
+    args.execution_dir = None
+    args.project_dir = str(tmp_path)
+    args.llm_method = None
+    args.mcp_config = None
+    return args
+
+
+@patch("mcp_coder.icoder.ui.app.ICoderApp.run")
+@patch("mcp_coder.cli.commands.icoder.setup_icoder_environment")
+def test_execute_icoder_calls_env_setup(
+    mock_setup: MagicMock,
+    _mock_run: MagicMock,
+    tmp_path: Path,
+) -> None:
+    """Verify setup_icoder_environment is called with project_dir."""
+    from mcp_coder.cli.commands.icoder import execute_icoder
+
+    mock_setup.return_value = _FAKE_RUNTIME_INFO
+    (tmp_path / "logs").mkdir()
+    args = _make_args(tmp_path)
+
+    execute_icoder(args)
+
+    mock_setup.assert_called_once_with(tmp_path)
+
+
+@patch("mcp_coder.icoder.ui.app.ICoderApp.run")
+@patch("mcp_coder.cli.commands.icoder.setup_icoder_environment")
+def test_execute_icoder_emits_session_start(
+    mock_setup: MagicMock,
+    _mock_run: MagicMock,
+    tmp_path: Path,
+) -> None:
+    """Verify session_start event is emitted to EventLog."""
+    from mcp_coder.cli.commands.icoder import execute_icoder
+
+    mock_setup.return_value = _FAKE_RUNTIME_INFO
+    (tmp_path / "logs").mkdir()
+    args = _make_args(tmp_path)
+
+    result = execute_icoder(args)
+
+    assert result == 0
+    # Check session_start event was written to log file
+    log_files = list((tmp_path / "logs").glob("*.jsonl"))
+    assert len(log_files) >= 1
+    import json
+
+    events = [
+        json.loads(line) for f in log_files for line in f.read_text().splitlines()
+    ]
+    session_starts = [e for e in events if e.get("event") == "session_start"]
+    assert len(session_starts) == 1
+    assert session_starts[0]["mcp_coder_version"] == "0.42.0"
+
+
+@pytest.mark.parametrize(
+    "exc_type",
+    [FileNotFoundError, RuntimeError, PackageNotFoundError],
+)
+@patch("mcp_coder.cli.commands.icoder.setup_icoder_environment")
+def test_execute_icoder_env_setup_failure_returns_1(
+    mock_setup: MagicMock,
+    exc_type: type,
+    tmp_path: Path,
+) -> None:
+    """Verify execute_icoder returns 1 on env_setup failure."""
+    from mcp_coder.cli.commands.icoder import execute_icoder
+
+    mock_setup.side_effect = exc_type("setup failed")
+    args = _make_args(tmp_path)
+
+    result = execute_icoder(args)
+
+    assert result == 1
+
+
+@patch("mcp_coder.icoder.ui.app.ICoderApp.run")
+@patch(
+    "mcp_coder.icoder.services.llm_service.RealLLMService.__init__",
+    return_value=None,
+)
+@patch("mcp_coder.cli.commands.icoder.setup_icoder_environment")
+def test_execute_icoder_passes_env_vars_to_llm_service(
+    mock_setup: MagicMock,
+    mock_llm_init: MagicMock,
+    _mock_run: MagicMock,
+    tmp_path: Path,
+) -> None:
+    """Verify env_vars from RuntimeInfo are passed to RealLLMService."""
+    from mcp_coder.cli.commands.icoder import execute_icoder
+
+    mock_setup.return_value = _FAKE_RUNTIME_INFO
+    (tmp_path / "logs").mkdir()
+    args = _make_args(tmp_path)
+
+    execute_icoder(args)
+
+    _, kwargs = mock_llm_init.call_args
+    assert kwargs["env_vars"] == _FAKE_RUNTIME_INFO.env_vars

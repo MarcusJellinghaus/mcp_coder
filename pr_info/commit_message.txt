@@ -1,9 +1,9 @@
-feat(icoder): add env_setup module with RuntimeInfo
+feat(icoder): integrate env_setup into icoder command
 
-New icoder/env_setup.py provides iCoder-specific environment setup:
-- Tool env from sys.prefix (no PATH scanning)
-- Project venv from <project_dir>/.venv with fallback
-- Respects pre-set MCP_CODER_* env vars (for icoder_local.bat)
-- Returns RuntimeInfo dataclass with all startup info
+- AppCore accepts optional RuntimeInfo via constructor injection
+- execute_icoder() calls setup_icoder_environment() early
+- session_start event emitted to EventLog with runtime info
+- TUI shows startup info (versions, paths) as first output log entry
+- Replaces prepare_llm_environment() call for icoder path
 
 Part of #724.
