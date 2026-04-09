@@ -40,6 +40,9 @@ class MCPServerInfo:
 def verify_mcp_servers(venv_root: str | Path) -> list[MCPServerInfo]:
     """Verify MCP server binaries exist and capture their versions.
 
+    Returns:
+        List of MCPServerInfo with name, path, and version for each server.
+
     Raises:
         FileNotFoundError: If a binary is missing.
         RuntimeError: If a binary exists but ``--version`` fails

@@ -46,6 +46,9 @@ def _get_claude_code_version() -> str:
     """Get Claude Code CLI version string.
 
     Returns ``"unknown"`` if Claude cannot be found or queried.
+
+    Returns:
+        Version string from ``claude --version``, or ``"unknown"`` on failure.
     """
     try:
         from mcp_coder.utils.subprocess_runner import execute_command
@@ -70,6 +73,9 @@ def setup_icoder_environment(project_dir: Path) -> RuntimeInfo:
     Pure function — does NOT mutate ``os.environ``.  Env vars are available to
     subprocesses because the caller passes ``runtime_info.env_vars`` into
     ``RealLLMService``, which merges with ``os.environ`` in ``prepare_env()``.
+
+    Returns:
+        RuntimeInfo with resolved paths, environment variables, and MCP server details.
     """
     tool_env = sys.prefix
     bin_dir = get_bin_dir(Path(tool_env))

@@ -1,7 +1,8 @@
-chore: retire icoder.bat, update docs
+fix: add missing Returns sections to docstrings for ruff DOC201
 
-mcp-coder icoder is now self-sufficient — icoder.bat is no longer
-needed. icoder_local.bat stays (dev edition with editable-install
-check). Updated 6 files that referenced icoder.bat.
+Add formal "Returns:" docstring sections to three functions that have
+return type annotations but were missing the documentation:
 
-Closes #724.
+- _get_claude_code_version() in icoder/env_setup.py
+- setup_icoder_environment() in icoder/env_setup.py
+- verify_mcp_servers() in utils/mcp_verification.py
