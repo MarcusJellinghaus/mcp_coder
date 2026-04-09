@@ -21,6 +21,21 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Move FINALISATION_PROMPT to prompts.md
+- [ ] Implementation: add prompt section to prompts.md, update `run_finalisation` to load via `get_prompt_with_substitutions`, delete constant
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Extract CI operations to ci_operations.py
+- [ ] Implementation: create `ci_operations.py` with 9 moved symbols, update `core.py` imports, update `test_ci_check.py` patch paths, fix `_poll_for_ci_completion` import in `test_core.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Move CI test classes to test_ci_operations.py
+- [ ] Implementation: create `test_ci_operations.py` with `TestPollForCiCompletionHeartbeat`, update patch paths and caplog logger names, clean up `test_core.py` imports
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review: verify all steps completed, no regressions
+- [ ] PR summary prepared
