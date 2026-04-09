@@ -25,9 +25,7 @@ Reduce `src/mcp_coder/workflows/implement/core.py` from 1,369 lines to ~803 line
 | `src/mcp_coder/workflows/implement/core.py` | Remove CI functions + FINALISATION_PROMPT, add import of `check_and_fix_ci` from ci_operations |
 | `src/mcp_coder/prompts/prompts.md` | Add Finalisation Prompt section |
 | `tests/workflows/implement/test_core.py` | Remove CI test classes, update remaining imports |
-| `src/mcp_coder/workflows/implement/__init__.py` | No change expected (check_and_fix_ci not in exports) |
-| `.large-files-allowlist` | No change expected (core.py stays on list at ~803 lines) |
-| `.importlinter` | No change expected (no new cross-layer imports) |
+| `tests/workflows/implement/test_ci_check.py` | Update @patch paths and imports from core → ci_operations |
 
 ## Constraints
 

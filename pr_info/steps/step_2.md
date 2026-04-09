@@ -8,6 +8,7 @@
 
 - `src/mcp_coder/workflows/implement/ci_operations.py` — **new file**
 - `src/mcp_coder/workflows/implement/core.py` — remove CI functions, add import
+- `tests/workflows/implement/test_ci_check.py` — update @patch paths and imports from core → ci_operations
 
 ## WHAT
 
@@ -106,9 +107,14 @@ Keep in core.py (still used by remaining functions):
 
 Also remove the `dataclass` import from core.py if `CIFixConfig` was the only dataclass defined there. Check: `core.py` line 12 imports `dataclass`, and `CIFixConfig` at line 106 is the only `@dataclass` in core.py. **Remove `from dataclasses import dataclass`.**
 
-### 3. Verify no other files import from core.py for CI symbols
+### 3. Update test_ci_check.py imports and @patch paths
 
-The `__init__.py` does not export `check_and_fix_ci`. The only external caller is `run_implement_workflow` in core.py itself (line 1280). No other files need updating.
+`tests/workflows/implement/test_ci_check.py` has ~30+ `@patch("mcp_coder.workflows.implement.core.X")` decorators and direct imports from `core` for CI symbols (`_read_problem_description`, `CIResultsManager`, etc.). All patches and imports targeting CI symbols that moved to `ci_operations` must be updated:
+
+- Change `from mcp_coder.workflows.implement.core import _read_problem_description` → `from mcp_coder.workflows.implement.ci_operations import _read_problem_description`
+- Change all `@patch("mcp_coder.workflows.implement.core.X")` to `@patch("mcp_coder.workflows.implement.ci_operations.X")` where `X` is a symbol that moved (e.g., `CIResultsManager`, `time.sleep`, `prompt_llm`, `store_session`, `run_formatters`, `commit_changes`, `push_changes`, `get_failed_jobs_summary`, `get_latest_commit_sha`, `prepare_llm_environment`, `get_branch_name_for_logging`)
+
+**Note**: Only update patches for symbols that are actually looked up in `ci_operations` at runtime. Symbols like `prompt_llm` are imported into `ci_operations`, so patches must target `ci_operations.prompt_llm` (not `core.prompt_llm`).
 
 ## DATA
 
@@ -122,13 +128,15 @@ No changes to function signatures or return types. All symbols moved as-is.
 3. Add `from .ci_operations import check_and_fix_ci` to core.py
 4. Remove moved symbols from core.py
 5. Remove now-unused imports from core.py
+6. Update test_ci_check.py: change imports and @patch paths from core → ci_operations for moved symbols
+7. Update test_core.py: fix _poll_for_ci_completion import
 ```
 
 ## Tests
 
-No test changes in this step. Existing tests that mock `mcp_coder.workflows.implement.core.check_and_fix_ci` will still work because `core.py` re-imports it. Tests that directly import `_poll_for_ci_completion` from `core` (line 19 of test_core.py) will break — those are fixed in Step 3.
+After this step, all tests should pass — including `test_ci_check.py` (updated in this step) and `test_core.py` (import fix below).
 
-**Important**: After this step, run tests. The import of `_poll_for_ci_completion` in test_core.py (line 19) will fail. This is expected and fixed in Step 3. To keep tests green within this step, also update that single import line in test_core.py now:
+**Important**: To keep tests green within this step, also update the `_poll_for_ci_completion` import in test_core.py:
 
 Change in `tests/workflows/implement/test_core.py` line 19:
 ```python
