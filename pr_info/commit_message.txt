@@ -1,10 +1,6 @@
-refactor: move TestPollForCiCompletionHeartbeat to test_ci_operations.py
+fix: update check_and_fix_ci import to use ci_operations module directly
 
-Move CI heartbeat/elapsed-time test class from test_core.py to a new
-test_ci_operations.py file, co-locating tests with the ci_operations
-module they exercise.
-
-- Create tests/workflows/implement/test_ci_operations.py with
-  TestPollForCiCompletionHeartbeat (5 tests)
-- Remove moved class from test_core.py
-- Clean up unused imports in test_core.py (logging, _poll_for_ci_completion)
+Change import in check_branch_status.py to import check_and_fix_ci
+from ci_operations.py instead of core.py, fixing mypy attr-defined
+error caused by non-explicit re-export after the CI operations
+refactoring.

@@ -26,7 +26,7 @@ from ...utils.github_operations.ci_results_manager import (
 )
 from ...utils.github_operations.pr_manager import PullRequestManager
 from ...utils.log_utils import OUTPUT
-from ...workflows.implement.core import check_and_fix_ci
+from ...workflows.implement.ci_operations import check_and_fix_ci
 from ...workflows.utils import resolve_project_dir
 from ..utils import (
     parse_llm_method_from_args,
