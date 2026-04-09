@@ -20,7 +20,11 @@ from mcp_coder.icoder.ui.widgets.command_autocomplete import CommandAutocomplete
 
 
 def _count_trailing_backslashes(text: str) -> int:
-    """Count consecutive trailing backslashes in text."""
+    """Count consecutive trailing backslashes in text.
+
+    Returns:
+        Number of consecutive backslashes at the end of the text.
+    """
     count = 0
     for char in reversed(text):
         if char == "\\":

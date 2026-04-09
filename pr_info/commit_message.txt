@@ -1,6 +1,3 @@
-test(icoder): update snapshots for input hint widget (#754)
+fix: add missing Returns section to _count_trailing_backslashes docstring
 
-Regenerate all 9 Textual SVG snapshot baselines to reflect the new
-#input-hint Static widget added below the InputArea. The hint text
-"\ + Enter = newline" is now visible in the initial state snapshot
-and layout is updated across all snapshot tests.
+Add Returns section to satisfy ruff DOC201 lint rule.
