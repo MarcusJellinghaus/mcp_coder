@@ -359,9 +359,9 @@ class TestRenderedStreamFormat:
                 id="short_result",
             ),
             pytest.param(
-                "\n".join(f"line {i}" for i in range(10)),
-                [f"\u2502  line {i}" for i in range(5)],
-                "\u2514 done (10 lines, truncated to 5)",
+                "\n".join(f"line {i}" for i in range(20)),
+                [f"\u2502  line {i}" for i in range(10)],
+                "\u2514 done (20 lines, truncated to 16)",
                 id="long_result_truncated",
             ),
             pytest.param(

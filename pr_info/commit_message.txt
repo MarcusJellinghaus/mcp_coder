@@ -1,5 +1,8 @@
-feat(icoder): add --no-format-tools CLI flag and plumbing (#763)
+feat(icoder): field filtering and head/tail truncation in tool output (#763)
 
-Thread format_tools bool from CLI parser through execute_icoder,
-ICoderApp, and StreamEventRenderer constructor. No formatting
-logic changes yet — just the wiring for the escape hatch.
+Rewrite _render_tool_output() to:
+- Extract main content (result > text > content priority)
+- Skip envelope fields (type, role, model, stop_reason, etc.)
+- Show extra fields below main content
+- Truncate to first 10 + last 5 lines with skip separator
+- Bypass all formatting when format_tools=False
