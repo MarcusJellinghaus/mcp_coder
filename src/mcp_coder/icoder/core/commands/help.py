@@ -17,6 +17,8 @@ def register_help(registry: CommandRegistry) -> None:
     def handle_help(args: list[str]) -> Response:  # noqa: ARG001
         lines = ["Available commands:"]
         for cmd in registry.get_all():
+            if not cmd.show_in_help:
+                continue
             lines.append(f"  {cmd.name} - {cmd.description}")
         lines.append("")
         lines.append("Keyboard shortcuts:")

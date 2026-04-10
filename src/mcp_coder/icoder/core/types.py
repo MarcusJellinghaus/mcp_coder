@@ -14,6 +14,7 @@ class Response:
     clear_output: bool = False
     quit: bool = False
     send_to_llm: bool = False  # True = forward original input to LLM
+    llm_text: str | None = None  # When set and send_to_llm=True, send this instead
 
 
 @dataclass(frozen=True)
@@ -23,6 +24,7 @@ class Command:
     name: str  # e.g. "/help"
     description: str  # Short help text
     handler: Callable[[list[str]], Response]  # handler(args) → Response
+    show_in_help: bool = True  # False hides from /help, still in autocomplete
 
 
 @dataclass

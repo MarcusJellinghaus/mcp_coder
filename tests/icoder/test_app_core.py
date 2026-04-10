@@ -134,3 +134,19 @@ def test_runtime_info_injected(fake_llm: FakeLLMService, event_log: EventLog) ->
     core = AppCore(llm_service=fake_llm, event_log=event_log, runtime_info=info)
     assert core.runtime_info is info
     assert core.runtime_info.mcp_coder_version == "1.0.0"
+
+
+def test_handle_input_returns_llm_text(app_core: AppCore) -> None:
+    """When a command sets llm_text, it's available on the response."""
+    from mcp_coder.icoder.core.types import Command, Response
+
+    app_core.registry.add_command(
+        Command(
+            name="/skill_test",
+            description="test skill",
+            handler=lambda args: Response(send_to_llm=True, llm_text="override"),
+        )
+    )
+    response = app_core.handle_input("/skill_test")
+    assert response.send_to_llm is True
+    assert response.llm_text == "override"
