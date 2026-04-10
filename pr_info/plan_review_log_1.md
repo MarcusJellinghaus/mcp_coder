@@ -38,4 +38,27 @@ Date: 2026-04-10
 - `step_2.md`: Added .rstrip() for trailing whitespace; added session_start event test; moved suffix tests to `tests/icoder/test_connection_status.py`
 - `summary.md`: Updated _compute_exit_code description
 
-**Status**: Ready to commit
+**Status**: Committed (26f0e2b)
+
+## Round 2 — 2026-04-10
+
+**Findings**:
+- Verified all round 1 fixes applied correctly (three-state semantics consistent, .rstrip() placed correctly, new tests described)
+- No new issues introduced by fixes
+- Cross-step consistency maintained (summary.md matches step details)
+- Minor informational items: WHERE table in step_3 doesn't list `_format_mcp_section()` signature update (intent is clear from DATA section); `project_dir` insertion point left to implementer (note is sufficient)
+
+**Decisions**: No changes needed — all informational only
+
+**User decisions**: None
+
+**Changes**: None
+
+**Status**: No changes — plan is clean
+
+## Final Status
+
+- **Rounds run**: 2
+- **Commits**: 1 (26f0e2b — round 1 fixes)
+- **Plan status**: Ready for approval
+- **Key fix**: `_compute_exit_code` backward compatibility — changed from `is not True` to `is False` with three-state semantics
