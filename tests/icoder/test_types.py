@@ -16,6 +16,7 @@ def test_response_defaults() -> None:
     assert r.clear_output is False
     assert r.quit is False
     assert r.send_to_llm is False
+    assert r.reset_session is False
 
 
 def test_response_with_text() -> None:
@@ -46,6 +47,16 @@ def test_event_entry() -> None:
 def test_event_entry_default_data() -> None:
     e = EventEntry(t=0.0, event="test")
     assert e.data == {}
+
+
+def test_response_reset_session_default() -> None:
+    r = Response()
+    assert r.reset_session is False
+
+
+def test_response_reset_session_explicit() -> None:
+    r = Response(reset_session=True)
+    assert r.reset_session is True
 
 
 @pytest.mark.parametrize(

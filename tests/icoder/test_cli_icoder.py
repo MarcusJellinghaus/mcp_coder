@@ -116,6 +116,9 @@ def _make_args(tmp_path: Path) -> MagicMock:
     args.project_dir = str(tmp_path)
     args.llm_method = None
     args.mcp_config = None
+    args.session_id = None
+    args.continue_session = False
+    args.continue_session_from = None
     return args
 
 

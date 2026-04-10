@@ -17,6 +17,13 @@ class LLMService(Protocol):
     def stream(self, question: str) -> Iterator[StreamEvent]:
         """Stream LLM response events for the given input."""
 
+    def reset_session(self) -> None:
+        """Reset session state to start a new conversation."""
+
+    @property
+    def provider(self) -> str:
+        """LLM provider name (e.g. 'claude', 'langchain')."""
+
     @property
     def session_id(self) -> str | None:
         """Current session ID (updated after each stream completes)."""
@@ -60,6 +67,15 @@ class RealLLMService:
                     self._session_id = sid
             yield event
 
+    def reset_session(self) -> None:
+        """Reset session state to start a new conversation."""
+        self._session_id = None
+
+    @property
+    def provider(self) -> str:
+        """LLM provider name."""
+        return self._provider
+
     @property
     def session_id(self) -> str | None:
         """Current session ID (updated after each stream completes)."""
@@ -69,13 +85,18 @@ class RealLLMService:
 class FakeLLMService:
     """Fake LLM for testing. Returns canned streaming responses."""
 
-    def __init__(self, responses: list[list[StreamEvent]] | None = None) -> None:
+    def __init__(
+        self,
+        responses: list[list[StreamEvent]] | None = None,
+        provider: str = "claude",
+    ) -> None:
         """Initialize with optional canned response sequences.
 
         Each call to stream() pops the next response from the list.
         Default: single response with one text_delta + done event.
         """
         self._responses: list[list[StreamEvent]] = list(responses) if responses else []
+        self._provider = provider
         self._session_id: str | None = None
 
     def stream(self, question: str) -> Iterator[StreamEvent]:
@@ -93,6 +114,15 @@ class FakeLLMService:
                 if isinstance(sid, str):
                     self._session_id = sid
             yield event
+
+    def reset_session(self) -> None:
+        """Reset session state to start a new conversation."""
+        self._session_id = None
+
+    @property
+    def provider(self) -> str:
+        """LLM provider name."""
+        return self._provider
 
     @property
     def session_id(self) -> str | None:

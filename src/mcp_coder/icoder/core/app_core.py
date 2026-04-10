@@ -12,7 +12,8 @@ from mcp_coder.icoder.core.event_log import EventLog
 from mcp_coder.icoder.core.types import Response
 from mcp_coder.icoder.env_setup import RuntimeInfo
 from mcp_coder.icoder.services.llm_service import LLMService
-from mcp_coder.llm.types import StreamEvent
+from mcp_coder.llm.storage import store_session
+from mcp_coder.llm.types import ResponseAssembler, StreamEvent
 
 
 class AppCore:
@@ -61,24 +62,36 @@ class AppCore:
             self._event_log.emit("command_matched", command=text.split()[0].lower())
             if response.text:
                 self._event_log.emit("output_emitted", text=response.text)
+            if response.reset_session:
+                self._llm_service.reset_session()
+                self._event_log.emit("session_reset")
             return response
 
         # Not a command → send to LLM
         return Response(send_to_llm=True)
 
     def stream_llm(self, text: str) -> Iterator[StreamEvent]:
-        """Stream LLM response for the given text.
+        """Stream LLM response and auto-store for session continuation.
 
         Called by UI layer after handle_input() returns send_to_llm=True.
-        Emits events for each stream phase.
+        Emits events for each stream phase. After streaming completes,
+        stores the response so ``--continue-session`` can find it.
 
         Yields:
             StreamEvent dicts for UI to render.
         """
+        assembler = ResponseAssembler(self._llm_service.provider)
         self._event_log.emit("llm_request_start", text=text)
+
         for event in self._llm_service.stream(text):
+            assembler.add(event)
             yield event
+
         self._event_log.emit("llm_request_end")
+
+        # Auto-store response for --continue-session
+        response_data = assembler.result()
+        store_session(response_data, text)
 
     @property
     def registry(self) -> CommandRegistry:

@@ -6,7 +6,11 @@ from importlib.metadata import PackageNotFoundError
 from pathlib import Path
 
 from ...icoder.env_setup import setup_icoder_environment
-from ...llm.storage import extract_session_id, find_latest_session
+from ...llm.storage import (
+    extract_langchain_session_id,
+    extract_session_id,
+    find_latest_session,
+)
 from ...utils.log_utils import OUTPUT
 from ..utils import (
     parse_llm_method_from_args,
@@ -65,9 +69,47 @@ def execute_icoder(args: argparse.Namespace) -> int:
             args.mcp_config, project_dir=args.project_dir
         )
 
-        # Auto-resume: find latest session
-        session_file = find_latest_session(provider=provider)
-        session_id = extract_session_id(session_file) if session_file else None
+        # Handle continuation from previous session if requested
+        # Priority: --session-id > --continue-session-from > --continue-session
+        resume_session_id = getattr(args, "session_id", None)
+        continue_file_path = None
+
+        if not resume_session_id:
+            if getattr(args, "continue_session_from", None):
+                continue_file_path = args.continue_session_from
+            elif getattr(args, "continue_session", False):
+                continue_file_path = find_latest_session(provider=provider)
+                if continue_file_path is None:
+                    logger.log(
+                        OUTPUT, "No previous session found, starting new conversation"
+                    )
+
+            if continue_file_path:
+                if provider == "langchain":
+                    resume_session_id = extract_langchain_session_id(continue_file_path)
+                else:
+                    extracted = extract_session_id(continue_file_path)
+                    if extracted:
+                        resume_session_id = extracted
+                if resume_session_id:
+                    logger.log(
+                        OUTPUT, "Resuming session: %s...", resume_session_id[:16]
+                    )
+                else:
+                    logger.log(
+                        OUTPUT,
+                        "Warning: No session_id found in stored response, starting new conversation",
+                    )
+        else:
+            if getattr(args, "continue_session_from", None) or getattr(
+                args, "continue_session", False
+            ):
+                logger.log(
+                    OUTPUT,
+                    "Using explicit session ID (ignoring file-based continuation)",
+                )
+
+        session_id = resume_session_id
 
         # Create registry and load skills
         from ...icoder.core.command_registry import create_default_registry

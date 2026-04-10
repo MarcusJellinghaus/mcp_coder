@@ -358,9 +358,17 @@ class ErrorAfterChunksLLMService:
         raise RuntimeError(self._error_msg)
 
     @property
+    def provider(self) -> str:
+        """Provider name."""
+        return "claude"
+
+    @property
     def session_id(self) -> str | None:
         """No session tracking."""
         return None
+
+    def reset_session(self) -> None:
+        """No-op."""
 
 
 async def test_streaming_error_mid_line(

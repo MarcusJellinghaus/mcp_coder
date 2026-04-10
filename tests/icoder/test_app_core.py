@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.core.event_log import EventLog
 from mcp_coder.icoder.env_setup import RuntimeInfo
@@ -38,9 +40,10 @@ def test_handle_free_text(app_core: AppCore) -> None:
 
 
 def test_handle_clear(app_core: AppCore) -> None:
-    """Test /clear returns clear_output=True."""
+    """Test /clear returns clear_output=True and reset_session=True."""
     response = app_core.handle_input("/clear")
     assert response.clear_output is True
+    assert response.reset_session is True
 
 
 def test_handle_quit(app_core: AppCore) -> None:
@@ -134,6 +137,60 @@ def test_runtime_info_injected(fake_llm: FakeLLMService, event_log: EventLog) ->
     core = AppCore(llm_service=fake_llm, event_log=event_log, runtime_info=info)
     assert core.runtime_info is info
     assert core.runtime_info.mcp_coder_version == "1.0.0"
+
+
+def test_clear_resets_session(
+    event_log: EventLog,
+) -> None:
+    """Test /clear resets the LLM session (session_id becomes None)."""
+    fake_llm = FakeLLMService(
+        responses=[
+            [
+                {"type": "text_delta", "text": "hello"},
+                {"type": "done", "session_id": "sess-123"},
+            ]
+        ]
+    )
+    core = AppCore(llm_service=fake_llm, event_log=event_log)
+    # Stream to populate session_id
+    list(core.stream_llm("hi"))
+    assert fake_llm.session_id == "sess-123"
+
+    # /clear should reset session
+    core.handle_input("/clear")
+    assert fake_llm.session_id is None
+
+
+def test_clear_emits_session_reset_event(
+    app_core: AppCore, event_log: EventLog
+) -> None:
+    """Test /clear emits a session_reset event."""
+    app_core.handle_input("/clear")
+    assert any(e.event == "session_reset" for e in event_log.entries)
+
+
+def test_stream_llm_stores_response(
+    app_core: AppCore,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """stream_llm() auto-stores response via store_session."""
+    stored_calls: list[tuple[object, str]] = []
+
+    def fake_store(response_data: object, prompt: str, **kwargs: object) -> str:
+        stored_calls.append((response_data, prompt))
+        return "/fake/path.json"
+
+    monkeypatch.setattr(
+        "mcp_coder.icoder.core.app_core.store_session",
+        fake_store,
+    )
+    events = list(app_core.stream_llm("hello"))
+    assert len(events) > 0
+    assert len(stored_calls) == 1
+    response_data, prompt = stored_calls[0]
+    assert prompt == "hello"
+    assert isinstance(response_data, dict)
+    assert response_data["provider"] == "claude"
 
 
 def test_handle_input_returns_llm_text(app_core: AppCore) -> None:

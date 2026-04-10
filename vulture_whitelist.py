@@ -236,3 +236,6 @@ _.handle_test
 # tests/icoder/test_env_setup.py - Autouse fixtures for env isolation and mocking
 _._clear_mcp_env
 _._mock_externals
+
+# tests/icoder/conftest.py - Autouse fixture to prevent store_session disk writes
+_._no_store_session
