@@ -59,17 +59,15 @@ if response is not None:
 
 ## Tests (TDD — write first)
 
-### `test_app_core.py` — add three tests:
+### `test_app_core.py` — add two tests:
 
-1. **`test_clear_resets_session`** — Give `FakeLLMService` a session_id (via streaming a `done` event with `session_id`), call `/clear`, assert `app_core.session_id is None`.
+1. **`test_clear_resets_session`** — Create a `FakeLLMService` with canned responses that include a `done` event carrying a `session_id` (following the pattern in `test_fake_session_id_from_done`). Stream to populate the session_id, then call `/clear`, and assert `llm_service.session_id is None`.
 
 2. **`test_clear_emits_session_reset_event`** — Call `/clear`, assert `event_log.entries` contains an entry with `event == "session_reset"`.
 
-3. **`test_handle_clear_returns_reset_session_flag`** — Call `/clear`, assert `response.reset_session is True` (extends existing `test_handle_clear`).
-
 ### Update existing test
 
-- **`test_handle_clear`** — Also assert `response.reset_session is True` alongside the existing `clear_output` check.
+- **`test_handle_clear`** — Also assert `response.reset_session is True` alongside the existing `clear_output` check (consolidate into one test, no separate flag test needed).
 
 ## Commit
 
