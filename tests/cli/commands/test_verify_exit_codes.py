@@ -279,6 +279,71 @@ class TestComputeExitCode:
             == 0
         )
 
+    def test_claude_active_mcp_ok_exit_0(self) -> None:
+        """Exit 0 when claude_mcp_ok=True and claude is active."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _claude_ok(),
+                None,
+                _mlflow_not_installed(),
+                claude_mcp_ok=True,
+            )
+            == 0
+        )
+
+    def test_claude_active_mcp_fail_exit_1(self) -> None:
+        """Exit 1 when claude_mcp_ok=False and claude is active."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _claude_ok(),
+                None,
+                _mlflow_not_installed(),
+                claude_mcp_ok=False,
+            )
+            == 1
+        )
+
+    def test_claude_active_mcp_none_no_effect(self) -> None:
+        """Exit 0 when claude_mcp_ok=None (not checked) and claude is active."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _claude_ok(),
+                None,
+                _mlflow_not_installed(),
+                claude_mcp_ok=None,
+            )
+            == 0
+        )
+
+    def test_langchain_active_mcp_fail_no_effect(self) -> None:
+        """Exit 0 when claude_mcp_ok=False but langchain is active."""
+        assert (
+            _compute_exit_code(
+                "langchain",
+                _claude_ok(),
+                _langchain_ok(),
+                _mlflow_not_installed(),
+                claude_mcp_ok=False,
+            )
+            == 0
+        )
+
+    def test_langchain_active_mcp_none_no_effect(self) -> None:
+        """Exit 0 when claude_mcp_ok=None and langchain is active."""
+        assert (
+            _compute_exit_code(
+                "langchain",
+                _claude_ok(),
+                _langchain_ok(),
+                _mlflow_not_installed(),
+                claude_mcp_ok=None,
+            )
+            == 0
+        )
+
 
 class TestMcpServersInVerify:
     """Tests for MCP server health check integration in execute_verify."""

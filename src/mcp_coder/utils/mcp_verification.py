@@ -6,10 +6,16 @@ plus ``--version`` capture. Used by ``llm/env.py`` and ``icoder/env_setup.py``.
 
 from __future__ import annotations
 
+import logging
+import re
 import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+from mcp_coder.utils.subprocess_runner import execute_command
+
+logger = logging.getLogger(__name__)
 
 MCP_SERVER_NAMES: list[str] = ["mcp-tools-py", "mcp-workspace"]
 
@@ -71,3 +77,100 @@ def verify_mcp_servers(venv_root: str | Path) -> list[MCPServerInfo]:
         version = proc.stdout.strip()
         results.append(MCPServerInfo(name=name, path=exe_path, version=version))
     return results
+
+
+# Regex pattern for parsing `claude mcp list` output lines.
+# Matches: "server-name: /path/to/exe args - ✓ Connected"
+#   Group 1: server name (e.g., "tools-py")
+#   Group 2: status icon (e.g., "✓", "✗", "!")
+#   Group 3: status text (e.g., "Connected", "Failed to start")
+_MCP_LIST_LINE_RE = re.compile(r"^(\S+):\s+.+\s+-\s+(\S+)\s+(.+)$")
+
+
+@dataclass(frozen=True)
+class ClaudeMCPStatus:
+    """Connection status for an MCP server from ``claude mcp list``."""
+
+    name: str
+    """Canonical name from MCP_SERVER_NAMES (e.g. ``mcp-tools-py``)."""
+
+    status_text: str
+    """Raw status text from claude output (e.g. ``Connected``)."""
+
+    ok: bool
+    """True when status_text == ``Connected``."""
+
+
+def parse_claude_mcp_list(
+    env_vars: dict[str, str],
+    mcp_config_path: str = ".mcp.json",
+    timeout: int = 60,
+    claude_executable: str | None = None,
+) -> list[ClaudeMCPStatus] | None:
+    """Run ``claude mcp list`` and parse connection status for known servers.
+
+    Args:
+        env_vars: Environment variables for subprocess
+            (for ``.mcp.json`` variable resolution).
+        mcp_config_path: Path to MCP config file (default: ``".mcp.json"``).
+        timeout: Subprocess timeout in seconds (default: 60).
+        claude_executable: Path to the Claude CLI binary. When ``None``
+            the check is skipped and the function returns ``None``.
+
+    Returns:
+        List of ClaudeMCPStatus for servers in MCP_SERVER_NAMES,
+        or None on any failure.
+    """
+    if claude_executable is None:
+        logger.debug("Claude executable not provided; skipping MCP list")
+        return None
+
+    command = [
+        claude_executable,
+        "--mcp-config",
+        mcp_config_path,
+        "--strict-mcp-config",
+        "mcp",
+        "list",
+    ]
+
+    try:
+        result = execute_command(
+            command,
+            timeout_seconds=timeout,
+            env=env_vars,
+        )
+    except Exception:
+        logger.debug("Exception running claude mcp list", exc_info=True)
+        return None
+
+    if result.timed_out:
+        logger.debug("claude mcp list timed out")
+        return None
+
+    if result.return_code != 0:
+        logger.debug(
+            "claude mcp list exited with code %d: %s",
+            result.return_code,
+            result.stderr,
+        )
+        return None
+
+    statuses: list[ClaudeMCPStatus] = []
+    for line in result.stdout.splitlines():
+        match = _MCP_LIST_LINE_RE.match(line.strip())
+        if not match:
+            continue
+        raw_name = match.group(1)
+        status_text = match.group(3).strip()
+        canonical_name = f"mcp-{raw_name}"
+        if canonical_name in MCP_SERVER_NAMES:
+            statuses.append(
+                ClaudeMCPStatus(
+                    name=canonical_name,
+                    status_text=status_text,
+                    ok=status_text == "Connected",
+                )
+            )
+
+    return statuses

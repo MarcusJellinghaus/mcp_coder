@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from mcp_coder.icoder.env_setup import RuntimeInfo, setup_icoder_environment
-from mcp_coder.utils.mcp_verification import MCPServerInfo
+from mcp_coder.utils.mcp_verification import ClaudeMCPStatus, MCPServerInfo
 
 
 @pytest.fixture()
@@ -68,6 +68,13 @@ def _mock_externals(
     monkeypatch.setattr(
         "mcp_coder.icoder.env_setup._get_claude_code_version",
         lambda: "1.2.3",
+    )
+    monkeypatch.setattr(
+        "mcp_coder.icoder.env_setup.parse_claude_mcp_list",
+        lambda *_a, **_kw: [
+            ClaudeMCPStatus(name="mcp-tools-py", status_text="Connected", ok=True),
+            ClaudeMCPStatus(name="mcp-workspace", status_text="Connected", ok=True),
+        ],
     )
 
 
@@ -153,3 +160,48 @@ class TestSetupIcoderEnvironment:
 
         assert info.mcp_servers == _FAKE_MCP_SERVERS
         assert len(info.mcp_servers) == 2
+
+    def test_mcp_connection_status_populated(self, tmp_path: Path) -> None:
+        """mcp_connection_status is populated from parse_claude_mcp_list."""
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+
+        info = setup_icoder_environment(project_dir)
+
+        assert info.mcp_connection_status is not None
+        assert len(info.mcp_connection_status) == 2
+        assert info.mcp_connection_status[0].name == "mcp-tools-py"
+        assert info.mcp_connection_status[0].ok is True
+
+    def test_mcp_connection_status_none_on_failure(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """mcp_connection_status is None when parse_claude_mcp_list returns None."""
+        monkeypatch.setattr(
+            "mcp_coder.icoder.env_setup.parse_claude_mcp_list",
+            lambda *_a, **_kw: None,
+        )
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+
+        info = setup_icoder_environment(project_dir)
+
+        assert info.mcp_connection_status is None
+
+
+class TestRuntimeInfoDefaults:
+    """Tests for RuntimeInfo default field values."""
+
+    def test_mcp_connection_status_default_none(self) -> None:
+        """RuntimeInfo without mcp_connection_status defaults to None."""
+        info = RuntimeInfo(
+            mcp_coder_version="1.0",
+            python_version="3.12.0",
+            claude_code_version="1.0",
+            tool_env_path="/fake",
+            project_venv_path="/fake",
+            project_dir="/fake",
+            env_vars={},
+            mcp_servers=[],
+        )
+        assert info.mcp_connection_status is None

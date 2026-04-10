@@ -22,9 +22,25 @@ from mcp_coder.llm.formatting.render_actions import (
 )
 from mcp_coder.llm.formatting.stream_renderer import StreamEventRenderer
 from mcp_coder.llm.types import StreamEvent
+from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 
 STYLE_USER_INPUT = "white on grey23"
 STYLE_TOOL_OUTPUT = "white on #0a0a2e"
+
+
+def _connection_status_suffix(
+    server_name: str,
+    statuses: list[ClaudeMCPStatus] | None,
+) -> str:
+    """Return '✓ Connected' or '✗ <text>' for a server, or '' if not found."""
+    if statuses is None:
+        return ""
+    for status in statuses:
+        if status.name == server_name:
+            if status.ok:
+                return "✓ Connected"
+            return f"✗ {status.status_text}"
+    return ""
 
 
 class ICoderApp(App[None]):
@@ -76,7 +92,14 @@ class ICoderApp(App[None]):
             output = self.query_one(OutputLog)
             lines = [
                 f"mcp-coder {info.mcp_coder_version}",
-                *(f"{s.name} {s.version}" for s in info.mcp_servers),
+                *(
+                    (
+                        f"{s.name} {s.version}  {_connection_status_suffix(s.name, info.mcp_connection_status)}".rstrip()
+                        if info.mcp_connection_status is not None
+                        else f"{s.name} {s.version}"
+                    )
+                    for s in info.mcp_servers
+                ),
                 f"Tool env:    {info.tool_env_path}",
                 f"Project env: {info.project_venv_path}",
                 f"Project dir: {info.project_dir}",

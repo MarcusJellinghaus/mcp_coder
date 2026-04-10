@@ -4,9 +4,11 @@ from typing import Any
 
 from mcp_coder.cli.commands.verify import (
     _collect_install_hints,
+    _format_claude_mcp_section,
     _format_mcp_section,
     _format_section,
 )
+from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 
 
 class TestFormatSection:
@@ -360,3 +362,91 @@ class TestCollectInstallHints:
         }
         hints = _collect_install_hints(result)
         assert hints == []
+
+
+class TestFormatClaudeMcpSection:
+    """Tests for _format_claude_mcp_section output formatting."""
+
+    def _symbols(self) -> dict[str, str]:
+        return {"success": "[OK]", "failure": "[NO]", "warning": "[!!]"}
+
+    def test_connected_servers_show_success_symbol(self) -> None:
+        """Two connected servers both show [OK] Connected."""
+        statuses = [
+            ClaudeMCPStatus(name="mcp-tools-py", status_text="Connected", ok=True),
+            ClaudeMCPStatus(name="mcp-workspace", status_text="Connected", ok=True),
+        ]
+        output = _format_claude_mcp_section(statuses, self._symbols())
+        assert "mcp-tools-py" in output
+        assert "mcp-workspace" in output
+        assert output.count("[OK]") == 2
+        assert output.count("Connected") == 2
+
+    def test_failed_server_shows_failure_symbol(self) -> None:
+        """One failed server shows [NO] Failed to start."""
+        statuses = [
+            ClaudeMCPStatus(
+                name="mcp-tools-py", status_text="Failed to start", ok=False
+            ),
+        ]
+        output = _format_claude_mcp_section(statuses, self._symbols())
+        assert "[NO]" in output
+        assert "Failed to start" in output
+
+    def test_section_title_default(self) -> None:
+        """Title is 'MCP SERVERS (via Claude Code)'."""
+        statuses = [
+            ClaudeMCPStatus(name="mcp-tools-py", status_text="Connected", ok=True),
+        ]
+        output = _format_claude_mcp_section(statuses, self._symbols())
+        assert "MCP SERVERS (via Claude Code)" in output
+        assert "for completeness" not in output
+
+    def test_section_title_for_completeness(self) -> None:
+        """for_completeness=True adds 'for completeness' to title."""
+        statuses = [
+            ClaudeMCPStatus(name="mcp-tools-py", status_text="Connected", ok=True),
+        ]
+        output = _format_claude_mcp_section(
+            statuses, self._symbols(), for_completeness=True
+        )
+        assert "for completeness" in output
+        assert "via Claude Code" in output
+
+    def test_server_names_left_aligned(self) -> None:
+        """Server names use {name:<20s} alignment."""
+        statuses = [
+            ClaudeMCPStatus(name="mcp-tools-py", status_text="Connected", ok=True),
+        ]
+        output = _format_claude_mcp_section(statuses, self._symbols())
+        # Name should be padded to 20 chars
+        lines = output.split("\n")
+        server_line = [l for l in lines if "mcp-tools-py" in l][0]
+        # "  mcp-tools-py" + padding + " [OK] Connected"
+        assert "mcp-tools-py      " in server_line
+
+
+class TestFormatMcpSectionForCompleteness:
+    """Tests for _format_mcp_section with for_completeness parameter."""
+
+    def _symbols(self) -> dict[str, str]:
+        return {"success": "[OK]", "failure": "[!!]", "warning": "[??]"}
+
+    def test_format_mcp_section_for_completeness_title(self) -> None:
+        """for_completeness=True changes title to include 'for completeness'."""
+        mcp_results: dict[str, Any] = {
+            "servers": {
+                "srv": {
+                    "ok": True,
+                    "value": "2 tools available",
+                    "tools": 2,
+                    "tool_names": [("alpha", "Alpha tool"), ("beta", "Beta tool")],
+                },
+            },
+            "overall_ok": True,
+        }
+        output = _format_mcp_section(
+            mcp_results, self._symbols(), for_completeness=True
+        )
+        assert "for completeness" in output
+        assert "via langchain-mcp-adapters" in output
