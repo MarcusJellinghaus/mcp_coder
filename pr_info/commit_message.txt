@@ -1,7 +1,12 @@
-feat(icoder): /clear resets LLM session (#765)
+feat(icoder): fresh session by default, add --continue-session flag (#765)
 
-- Update /clear handler to return Response(clear_output=True, reset_session=True)
-- Update AppCore.handle_input() to call llm_service.reset_session() and
-  emit "session_reset" event when reset_session flag is set
-- Add tests: test_clear_resets_session, test_clear_emits_session_reset_event
-- Update test_handle_clear to also assert reset_session=True
+Replace iCoder's auto-resume behavior with opt-in session continuation,
+matching the prompt command's pattern.
+
+Changes:
+- Add --continue-session, --continue-session-from, --session-id args to
+  icoder parser (mutually exclusive where appropriate)
+- Replace auto-resume logic in execute_icoder() with priority-based
+  continuation: --session-id > --continue-session-from > --continue-session
+- Add 5 parser tests for the new icoder session continuation args
+- Update test mock args to include new session attributes

@@ -655,3 +655,24 @@ def add_icoder_parser(subparsers: Any) -> None:
         default=None,
         help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
     )
+
+    # Session continuation options (mutually exclusive with each other)
+    continue_group = icoder_parser.add_mutually_exclusive_group()
+    continue_group.add_argument(
+        "--continue-session-from",
+        type=str,
+        metavar="FILE",
+        help="Resume conversation from specific stored session file",
+    )
+    continue_group.add_argument(
+        "--continue-session",
+        action="store_true",
+        help="Resume from most recent session (auto-discovers latest file)",
+    )
+
+    icoder_parser.add_argument(
+        "--session-id",
+        type=str,
+        metavar="ID",
+        help="Direct session ID for continuation (overrides file-based options)",
+    )

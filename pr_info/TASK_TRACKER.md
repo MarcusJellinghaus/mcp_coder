@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat(icoder): /clear resets LLM session (#765)`
 
 ### Step 4: Fresh session by default + `--continue-session` flag
-- [ ] Implementation: add session continuation args to icoder parser, replace auto-resume with opt-in continuation + tests in `test_parsers.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(icoder): fresh session by default, add --continue-session flag (#765)`
+- [x] Implementation: add session continuation args to icoder parser, replace auto-resume with opt-in continuation + tests in `test_parsers.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(icoder): fresh session by default, add --continue-session flag (#765)`
 
 ### Step 5: Auto-store iCoder sessions for Claude provider
 - [ ] Implementation: add `provider` property to `LLMService` protocol + implementations, update `AppCore.stream_llm()` to auto-store responses + tests
