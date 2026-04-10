@@ -11,17 +11,16 @@ from __future__ import annotations
 
 import importlib.metadata
 import logging
-import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.providers.claude.claude_executable_finder import (
     find_claude_executable,
 )
 from mcp_coder.utils.mcp_verification import (
     MCPServerInfo,
-    get_bin_dir,
     verify_mcp_servers,
 )
 
@@ -77,8 +76,10 @@ def setup_icoder_environment(project_dir: Path) -> RuntimeInfo:
     Returns:
         RuntimeInfo with resolved paths, environment variables, and MCP server details.
     """
-    tool_env = sys.prefix
-    bin_dir = get_bin_dir(Path(tool_env))
+    # Reuse shared env var logic (VIRTUAL_ENV > CONDA_PREFIX > sys.prefix)
+    effective = prepare_llm_environment(project_dir)
+
+    tool_env = effective["MCP_CODER_VENV_DIR"]
 
     project_venv = project_dir / ".venv"
     if not project_venv.exists():
@@ -87,24 +88,6 @@ def setup_icoder_environment(project_dir: Path) -> RuntimeInfo:
             project_venv,
         )
         project_venv = Path(tool_env)
-
-    computed = {
-        "MCP_CODER_VENV_PATH": str(bin_dir),
-        "MCP_CODER_VENV_DIR": str(tool_env),
-        "MCP_CODER_PROJECT_DIR": str(project_dir),
-    }
-
-    effective: dict[str, str] = {}
-    for key, value in computed.items():
-        existing = os.environ.get(key)
-        if existing is None:
-            effective[key] = value
-        else:
-            if existing != value:
-                logger.debug(
-                    "%s already set to %s (computed: %s)", key, existing, value
-                )
-            effective[key] = existing
 
     mcp_servers = verify_mcp_servers(tool_env)
     version = importlib.metadata.version("mcp-coder")
