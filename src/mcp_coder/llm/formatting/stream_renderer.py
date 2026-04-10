@@ -72,7 +72,11 @@ def _format_tool_args(args: object) -> str:
 
 
 def _render_value(value: object) -> list[str]:
-    """Render a single value into display lines."""
+    """Render a single value into display lines.
+
+    Returns:
+        List of display lines rendered from the input value.
+    """
     if isinstance(value, str):
         return value.splitlines() if value else [""]
     if isinstance(value, (dict, list)):

@@ -1,11 +1,6 @@
-feat(icoder): render tool output as Rich Markdown (#763)
+fix: add Returns section to _render_value docstring (DOC201)
 
-When format_tools is enabled (default), tool output is rendered as
-rich.markdown.Markdown for proper tables, headers, code blocks, and
-bold text. When disabled via --no-format-tools, plain text rendering
-is preserved identically to the previous behavior.
-
-- Override OutputLog.write() to record markup text for testability
-- Add Markdown rendering branch in _handle_stream_event() ToolResult
-- Add pilot tests for both markdown and plain text rendering paths
-- Add OutputLog unit tests for write() recording behavior
+Expand the docstring for `_render_value` in
+stream_renderer.py to include a Returns section,
+satisfying ruff rule DOC201 which requires all functions
+with return statements to document their return values.
