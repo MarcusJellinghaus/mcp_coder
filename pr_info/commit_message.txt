@@ -1,8 +1,20 @@
-feat: wire MCP connection status into RuntimeInfo, TUI startup, and event log
+feat(verify): add provider-aware Claude MCP section and exit code logic
 
-- Add `mcp_connection_status: list[ClaudeMCPStatus] | None` field to RuntimeInfo
-- Call `parse_claude_mcp_list()` in `setup_icoder_environment()` with graceful fallback
-- Add `_connection_status_suffix()` helper in app.py for inline status display
-- Update `on_mount()` to show "✓ Connected" or "✗ <error>" next to server versions
-- Include `mcp_connection_status` dict in `session_start` event payload
-- Add tests: env_setup (3), connection_status_suffix (4), app_pilot (2)
+Add _format_claude_mcp_section() to display MCP server connection status
+from `claude mcp list` in the verify command output.
+
+Update execute_verify() to show MCP sections in provider-dependent order:
+- Claude active: Claude MCP first, LangChain MCP "for completeness"
+- LangChain active: LangChain MCP first, Claude MCP "for completeness"
+
+Update _compute_exit_code() with claude_mcp_ok parameter:
+- False triggers exit 1 only when Claude is the active provider
+- None (not checked) has no effect for backward compatibility
+- Parser failure (None from parse_claude_mcp_list) treated as hard failure
+  when Claude is active (Decision 12)
+
+Update _format_mcp_section() to accept for_completeness kwarg for
+langchain-mcp-adapters section title.
+
+Tests: unit tests for format helper, exit code logic, and integration
+tests for provider-aware section ordering.

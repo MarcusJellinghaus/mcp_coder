@@ -35,9 +35,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: Verify Command — Claude MCP Section + Provider-Aware Display + Exit Code
 
-- [ ] Implementation: `_format_claude_mcp_section()`, `execute_verify()` provider-aware sections, `_compute_exit_code()` update, and tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `_format_claude_mcp_section()`, `execute_verify()` provider-aware sections, `_compute_exit_code()` update, and tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

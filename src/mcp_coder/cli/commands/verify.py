@@ -11,10 +11,12 @@ import textwrap
 from pathlib import Path
 from typing import Any
 
+from ...llm.env import prepare_llm_environment
 from ...llm.interface import prompt_llm
 from ...llm.mlflow_logger import verify_mlflow
 from ...llm.providers.claude.claude_cli_verification import verify_claude
 from ...llm.providers.claude.claude_executable_finder import find_claude_executable
+from ...utils.mcp_verification import ClaudeMCPStatus, parse_claude_mcp_list
 from ...utils.user_config import verify_config
 from ..utils import _get_status_symbols, resolve_llm_method, resolve_mcp_config_path
 
@@ -89,6 +91,7 @@ def _format_mcp_section(
     symbols: dict[str, str],
     *,
     list_mcp_tools: bool = False,
+    for_completeness: bool = False,
 ) -> str:
     """Format MCP server health check results.
 
@@ -97,11 +100,15 @@ def _format_mcp_section(
         symbols: Dict with 'success', 'failure', 'warning' keys.
         list_mcp_tools: When True, render each tool on its own indented line
             with descriptions aligned globally across all servers.
+        for_completeness: If True, append "for completeness" to section title.
 
     Returns:
         Formatted multi-line string for the MCP servers section.
     """
-    lines: list[str] = ["\n=== MCP SERVERS (via langchain-mcp-adapters) ==="]
+    title_suffix = " \u2014 for completeness" if for_completeness else ""
+    lines: list[str] = [
+        f"\n=== MCP SERVERS (via langchain-mcp-adapters{title_suffix}) ==="
+    ]
     servers = mcp_results["servers"]
 
     if list_mcp_tools:
@@ -150,6 +157,30 @@ def _format_mcp_section(
                 lines.extend(wrapped)
             else:
                 lines.append(f"  {name:<20s} {symbol} {value}")
+    return "\n".join(lines)
+
+
+def _format_claude_mcp_section(
+    statuses: list[ClaudeMCPStatus],
+    symbols: dict[str, str],
+    *,
+    for_completeness: bool = False,
+) -> str:
+    """Format MCP server connection status from ``claude mcp list``.
+
+    Args:
+        statuses: Parsed connection statuses.
+        symbols: Dict with 'success', 'failure' keys.
+        for_completeness: If True, append "for completeness" to section title.
+
+    Returns:
+        Formatted multi-line string.
+    """
+    title_suffix = " \u2014 for completeness" if for_completeness else ""
+    lines: list[str] = [f"\n=== MCP SERVERS (via Claude Code{title_suffix}) ==="]
+    for status in statuses:
+        symbol = symbols["success"] if status.ok else symbols["failure"]
+        lines.append(f"  {status.name:<20s} {symbol} {status.status_text}")
     return "\n".join(lines)
 
 
@@ -205,12 +236,13 @@ def _compute_exit_code(
     test_prompt_ok: bool = True,
     mcp_result: dict[str, Any] | None = None,
     config_has_error: bool = False,
+    claude_mcp_ok: bool | None = None,
 ) -> int:
     """Compute CLI exit code from verification results.
 
     Exit 1 when the config has errors, the active provider fails, when MLflow
     is enabled but broken, when the test prompt failed, or when MCP servers
-    failed (langchain only).
+    failed (langchain only), or when Claude MCP servers failed (claude only).
 
     Args:
         active_provider: The active LLM provider name.
@@ -220,6 +252,8 @@ def _compute_exit_code(
         test_prompt_ok: Whether the test prompt succeeded.
         mcp_result: MCP server health check result dict, or None.
         config_has_error: Whether config verification found errors (invalid TOML).
+        claude_mcp_ok: Claude MCP server status. None=not checked (no effect),
+            True=all ok, False=failure (exit 1 when claude active).
 
     Returns:
         Exit code (0 if all checks pass, 1 if any critical check failed).
@@ -245,6 +279,10 @@ def _compute_exit_code(
         and mcp_result
         and not mcp_result.get("overall_ok")
     ):
+        return 1
+
+    # Claude MCP failures affect exit code when claude is active
+    if active_provider == "claude" and claude_mcp_ok is False:
         return 1
 
     # MLflow: only fail if enabled AND broken
@@ -331,26 +369,88 @@ def execute_verify(args: argparse.Namespace) -> int:
     else:
         print("  (uses Claude CLI — see Basic Verification above)")
 
-    # 3a. MCP server health check (all providers, with ImportError handling)
+    # 3a. MCP server health checks (provider-aware ordering)
+    project_dir = Path(args.project_dir).resolve() if args.project_dir else Path.cwd()
     mcp_result: dict[str, Any] | None = None
+    claude_mcp: list[ClaudeMCPStatus] | None = None
+
     if mcp_config_resolved:
+        # Run Claude MCP list
+        env_vars = prepare_llm_environment(project_dir)
+        claude_mcp = parse_claude_mcp_list(env_vars)
+
+        # Run LangChain MCP health check
         try:
             from ...llm.providers.langchain.verification import verify_mcp_servers
 
             mcp_result = verify_mcp_servers(mcp_config_resolved)
-            list_mcp_tools = getattr(args, "list_mcp_tools", False)
-            print(
-                _format_mcp_section(mcp_result, symbols, list_mcp_tools=list_mcp_tools)
-            )
         except ImportError:
-            print("\n=== MCP SERVERS (via langchain-mcp-adapters) ===")
-            print(
-                f"  {symbols['warning']} server health check skipped"
-                " (langchain-mcp-adapters not installed)"
-            )
+            mcp_result = None
+
+        list_mcp_tools = getattr(args, "list_mcp_tools", False)
+        lc_for_completeness = active_provider == "claude"
+        claude_for_completeness = active_provider != "claude"
+
+        if active_provider == "claude":
+            # Claude MCP section first (primary)
+            if claude_mcp is not None:
+                print(
+                    _format_claude_mcp_section(
+                        claude_mcp, symbols, for_completeness=False
+                    )
+                )
+            # LangChain MCP section second (for completeness)
+            if mcp_result is not None:
+                print(
+                    _format_mcp_section(
+                        mcp_result,
+                        symbols,
+                        list_mcp_tools=list_mcp_tools,
+                        for_completeness=lc_for_completeness,
+                    )
+                )
+            elif mcp_result is None:
+                print("\n=== MCP SERVERS (via langchain-mcp-adapters) ===")
+                print(
+                    f"  {symbols['warning']} server health check skipped"
+                    " (langchain-mcp-adapters not installed)"
+                )
+        else:
+            # LangChain MCP section first (primary)
+            if mcp_result is not None:
+                print(
+                    _format_mcp_section(
+                        mcp_result,
+                        symbols,
+                        list_mcp_tools=list_mcp_tools,
+                        for_completeness=False,
+                    )
+                )
+            else:
+                print("\n=== MCP SERVERS (via langchain-mcp-adapters) ===")
+                print(
+                    f"  {symbols['warning']} server health check skipped"
+                    " (langchain-mcp-adapters not installed)"
+                )
+            # Claude MCP section second (for completeness)
+            if claude_mcp is not None:
+                print(
+                    _format_claude_mcp_section(
+                        claude_mcp, symbols, for_completeness=claude_for_completeness
+                    )
+                )
+
+    # Compute claude_mcp_ok for exit code
+    claude_mcp_ok: bool | None = None
+    if active_provider == "claude" and mcp_config_resolved:
+        if claude_mcp is None:
+            claude_mcp_ok = False  # parser failure = hard failure per Decision 12
+        elif all(s.ok for s in claude_mcp):
+            claude_mcp_ok = True
+        else:
+            claude_mcp_ok = False
 
     # 3b. MCP edit smoke test (informational only)
-    project_dir = Path(args.project_dir).resolve() if args.project_dir else Path.cwd()
     if mcp_config_resolved:
         smoke_line = _run_mcp_edit_smoke_test(
             project_dir,
@@ -423,6 +523,7 @@ def execute_verify(args: argparse.Namespace) -> int:
         test_prompt_ok=test_prompt_ok,
         mcp_result=mcp_result,
         config_has_error=config_result["has_error"],
+        claude_mcp_ok=claude_mcp_ok,
     )
     logger.info("Verify command completed with exit code %d", exit_code)
     return exit_code
