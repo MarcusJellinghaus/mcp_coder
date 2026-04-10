@@ -95,7 +95,10 @@ def setup_icoder_environment(project_dir: Path) -> RuntimeInfo:
     mcp_servers = verify_mcp_servers(tool_env)
 
     # Connection status from claude mcp list (graceful fallback)
-    mcp_connection_status = parse_claude_mcp_list(env_vars=effective)
+    claude_exe = find_claude_executable(return_none_if_not_found=True)
+    mcp_connection_status = parse_claude_mcp_list(
+        env_vars=effective, claude_executable=claude_exe
+    )
 
     version = importlib.metadata.version("mcp-coder")
     python_version = (

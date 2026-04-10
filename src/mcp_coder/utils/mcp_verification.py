@@ -13,9 +13,6 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from mcp_coder.llm.providers.claude.claude_executable_finder import (
-    find_claude_executable,
-)
 from mcp_coder.utils.subprocess_runner import execute_command
 
 logger = logging.getLogger(__name__)
@@ -108,6 +105,7 @@ def parse_claude_mcp_list(
     env_vars: dict[str, str],
     mcp_config_path: str = ".mcp.json",
     timeout: int = 60,
+    claude_executable: str | None = None,
 ) -> list[ClaudeMCPStatus] | None:
     """Run ``claude mcp list`` and parse connection status for known servers.
 
@@ -116,18 +114,19 @@ def parse_claude_mcp_list(
             (for ``.mcp.json`` variable resolution).
         mcp_config_path: Path to MCP config file (default: ``".mcp.json"``).
         timeout: Subprocess timeout in seconds (default: 60).
+        claude_executable: Path to the Claude CLI binary. When ``None``
+            the check is skipped and the function returns ``None``.
 
     Returns:
         List of ClaudeMCPStatus for servers in MCP_SERVER_NAMES,
         or None on any failure.
     """
-    claude_path = find_claude_executable(return_none_if_not_found=True)
-    if claude_path is None:
-        logger.debug("Claude executable not found; skipping MCP list")
+    if claude_executable is None:
+        logger.debug("Claude executable not provided; skipping MCP list")
         return None
 
     command = [
-        claude_path,
+        claude_executable,
         "--mcp-config",
         mcp_config_path,
         "--strict-mcp-config",

@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.cli.commands.verify import _format_mcp_section, execute_verify
+from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 
 # Patch target for lazily-imported langchain verification functions
 _LC_VERIFY = "mcp_coder.llm.providers.langchain.verification"
@@ -908,8 +909,6 @@ class TestVerifyMcpAllProviders:
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """ImportError from verify_mcp_servers prints info message and skips."""
-        from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
-
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
@@ -963,8 +962,6 @@ class TestVerifyMcpAllProviders:
         mock_smoke_test: MagicMock,
     ) -> None:
         """MCP failure does not affect exit code when provider is claude."""
-        from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
-
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_not_installed()

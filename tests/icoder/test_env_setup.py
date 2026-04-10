@@ -71,7 +71,7 @@ def _mock_externals(
     )
     monkeypatch.setattr(
         "mcp_coder.icoder.env_setup.parse_claude_mcp_list",
-        lambda env_vars: [
+        lambda *_a, **_kw: [
             ClaudeMCPStatus(name="mcp-tools-py", status_text="Connected", ok=True),
             ClaudeMCPStatus(name="mcp-workspace", status_text="Connected", ok=True),
         ],
@@ -179,7 +179,7 @@ class TestSetupIcoderEnvironment:
         """mcp_connection_status is None when parse_claude_mcp_list returns None."""
         monkeypatch.setattr(
             "mcp_coder.icoder.env_setup.parse_claude_mcp_list",
-            lambda env_vars: None,
+            lambda *_a, **_kw: None,
         )
         project_dir = tmp_path / "project"
         project_dir.mkdir()

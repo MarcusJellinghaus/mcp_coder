@@ -377,7 +377,8 @@ def execute_verify(args: argparse.Namespace) -> int:
     if mcp_config_resolved:
         # Run Claude MCP list
         env_vars = prepare_llm_environment(project_dir)
-        claude_mcp = parse_claude_mcp_list(env_vars)
+        claude_exe = find_claude_executable(return_none_if_not_found=True)
+        claude_mcp = parse_claude_mcp_list(env_vars, claude_executable=claude_exe)
 
         # Run LangChain MCP health check
         try:
@@ -409,7 +410,7 @@ def execute_verify(args: argparse.Namespace) -> int:
                         for_completeness=lc_for_completeness,
                     )
                 )
-            elif mcp_result is None:
+            else:
                 print("\n=== MCP SERVERS (via langchain-mcp-adapters) ===")
                 print(
                     f"  {symbols['warning']} server health check skipped"

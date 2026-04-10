@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.cli.commands.verify import _LABEL_MAP, execute_verify
+from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 
 
 def _make_args(**kwargs: Any) -> argparse.Namespace:
@@ -245,8 +246,6 @@ class TestProviderAwareMcpSections:
         tmp_path: Any,
     ) -> None:
         """'via Claude Code' appears before 'via langchain-mcp-adapters'."""
-        from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
-
         mock_parse.return_value = [
             ClaudeMCPStatus(name="mcp-tools-py", status_text="Connected", ok=True),
         ]
@@ -282,8 +281,6 @@ class TestProviderAwareMcpSections:
         tmp_path: Any,
     ) -> None:
         """'via langchain-mcp-adapters' appears before 'via Claude Code'."""
-        from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
-
         mock_parse.return_value = [
             ClaudeMCPStatus(name="mcp-tools-py", status_text="Connected", ok=True),
         ]
@@ -319,8 +316,6 @@ class TestProviderAwareMcpSections:
         tmp_path: Any,
     ) -> None:
         """Claude MCP section shows 'for completeness' when langchain is active."""
-        from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
-
         mock_parse.return_value = [
             ClaudeMCPStatus(name="mcp-tools-py", status_text="Connected", ok=True),
         ]
@@ -354,8 +349,6 @@ class TestProviderAwareMcpSections:
         tmp_path: Any,
     ) -> None:
         """Exit code 0 when claude MCP fails but langchain is active."""
-        from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
-
         mock_parse.return_value = [
             ClaudeMCPStatus(
                 name="mcp-tools-py", status_text="Failed to start", ok=False

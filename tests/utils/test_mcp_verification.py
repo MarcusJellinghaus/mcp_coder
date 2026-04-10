@@ -209,15 +209,13 @@ class TestParseClaudeMcpList:
 
     def test_parses_connected_servers(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
-            "mcp_coder.utils.mcp_verification.find_claude_executable",
-            lambda **_kw: "/usr/bin/claude",
-        )
-        monkeypatch.setattr(
             "mcp_coder.utils.mcp_verification.execute_command",
             lambda *_a, **_kw: self._make_result(stdout=_SAMPLE_OUTPUT),
         )
 
-        result = parse_claude_mcp_list(env_vars={"PATH": "/usr/bin"})
+        result = parse_claude_mcp_list(
+            env_vars={"PATH": "/usr/bin"}, claude_executable="/usr/bin/claude"
+        )
 
         assert result is not None
         assert len(result) == 2
@@ -227,15 +225,13 @@ class TestParseClaudeMcpList:
 
     def test_parses_failed_server(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
-            "mcp_coder.utils.mcp_verification.find_claude_executable",
-            lambda **_kw: "/usr/bin/claude",
-        )
-        monkeypatch.setattr(
             "mcp_coder.utils.mcp_verification.execute_command",
             lambda *_a, **_kw: self._make_result(stdout=_SAMPLE_OUTPUT_MIXED),
         )
 
-        result = parse_claude_mcp_list(env_vars={"PATH": "/usr/bin"})
+        result = parse_claude_mcp_list(
+            env_vars={"PATH": "/usr/bin"}, claude_executable="/usr/bin/claude"
+        )
 
         assert result is not None
         by_name = {s.name: s for s in result}
@@ -247,15 +243,11 @@ class TestParseClaudeMcpList:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setattr(
-            "mcp_coder.utils.mcp_verification.find_claude_executable",
-            lambda **_kw: "/usr/bin/claude",
-        )
-        monkeypatch.setattr(
             "mcp_coder.utils.mcp_verification.execute_command",
             lambda *_a, **_kw: self._make_result(stdout=_SAMPLE_OUTPUT),
         )
 
-        result = parse_claude_mcp_list(env_vars={})
+        result = parse_claude_mcp_list(env_vars={}, claude_executable="/usr/bin/claude")
 
         assert result is not None
         names = {s.name for s in result}
@@ -265,29 +257,18 @@ class TestParseClaudeMcpList:
 
     def test_maps_names_with_mcp_prefix(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
-            "mcp_coder.utils.mcp_verification.find_claude_executable",
-            lambda **_kw: "/usr/bin/claude",
-        )
-        monkeypatch.setattr(
             "mcp_coder.utils.mcp_verification.execute_command",
             lambda *_a, **_kw: self._make_result(stdout=_SAMPLE_OUTPUT),
         )
 
-        result = parse_claude_mcp_list(env_vars={})
+        result = parse_claude_mcp_list(env_vars={}, claude_executable="/usr/bin/claude")
 
         assert result is not None
         # Raw output has "tools-py", result should have "mcp-tools-py"
         assert any(s.name == "mcp-tools-py" for s in result)
 
-    def test_returns_none_when_claude_not_found(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setattr(
-            "mcp_coder.utils.mcp_verification.find_claude_executable",
-            lambda **_kw: None,
-        )
-
-        result = parse_claude_mcp_list(env_vars={})
+    def test_returns_none_when_claude_not_found(self) -> None:
+        result = parse_claude_mcp_list(env_vars={}, claude_executable=None)
 
         assert result is None
 
@@ -295,38 +276,25 @@ class TestParseClaudeMcpList:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setattr(
-            "mcp_coder.utils.mcp_verification.find_claude_executable",
-            lambda **_kw: "/usr/bin/claude",
-        )
-        monkeypatch.setattr(
             "mcp_coder.utils.mcp_verification.execute_command",
             lambda *_a, **_kw: self._make_result(return_code=1),
         )
 
-        result = parse_claude_mcp_list(env_vars={})
+        result = parse_claude_mcp_list(env_vars={}, claude_executable="/usr/bin/claude")
 
         assert result is None
 
     def test_returns_none_on_timeout(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
-            "mcp_coder.utils.mcp_verification.find_claude_executable",
-            lambda **_kw: "/usr/bin/claude",
-        )
-        monkeypatch.setattr(
             "mcp_coder.utils.mcp_verification.execute_command",
             lambda *_a, **_kw: self._make_result(timed_out=True),
         )
 
-        result = parse_claude_mcp_list(env_vars={})
+        result = parse_claude_mcp_list(env_vars={}, claude_executable="/usr/bin/claude")
 
         assert result is None
 
     def test_returns_none_on_exception(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(
-            "mcp_coder.utils.mcp_verification.find_claude_executable",
-            lambda **_kw: "/usr/bin/claude",
-        )
-
         def _raise(*_a: object, **_kw: object) -> None:
             raise OSError("boom")
 
@@ -335,7 +303,7 @@ class TestParseClaudeMcpList:
             _raise,
         )
 
-        result = parse_claude_mcp_list(env_vars={})
+        result = parse_claude_mcp_list(env_vars={}, claude_executable="/usr/bin/claude")
 
         assert result is None
 
@@ -344,15 +312,11 @@ class TestParseClaudeMcpList:
     ) -> None:
         output = "Checking MCP server health...\n\n\n"
         monkeypatch.setattr(
-            "mcp_coder.utils.mcp_verification.find_claude_executable",
-            lambda **_kw: "/usr/bin/claude",
-        )
-        monkeypatch.setattr(
             "mcp_coder.utils.mcp_verification.execute_command",
             lambda *_a, **_kw: self._make_result(stdout=output),
         )
 
-        result = parse_claude_mcp_list(env_vars={})
+        result = parse_claude_mcp_list(env_vars={}, claude_executable="/usr/bin/claude")
 
         assert result is not None
         assert len(result) == 0
@@ -362,15 +326,11 @@ class TestParseClaudeMcpList:
     ) -> None:
         output = "some garbage\n!!!\ntools-py: /exe - ✓ Connected\n"
         monkeypatch.setattr(
-            "mcp_coder.utils.mcp_verification.find_claude_executable",
-            lambda **_kw: "/usr/bin/claude",
-        )
-        monkeypatch.setattr(
             "mcp_coder.utils.mcp_verification.execute_command",
             lambda *_a, **_kw: self._make_result(stdout=output),
         )
 
-        result = parse_claude_mcp_list(env_vars={})
+        result = parse_claude_mcp_list(env_vars={}, claude_executable="/usr/bin/claude")
 
         assert result is not None
         assert len(result) == 1
@@ -386,16 +346,12 @@ class TestParseClaudeMcpList:
             return self._make_result(stdout="")
 
         monkeypatch.setattr(
-            "mcp_coder.utils.mcp_verification.find_claude_executable",
-            lambda **_kw: "/usr/bin/claude",
-        )
-        monkeypatch.setattr(
             "mcp_coder.utils.mcp_verification.execute_command",
             _capture,
         )
 
         env = {"MY_VAR": "hello"}
-        parse_claude_mcp_list(env_vars=env)
+        parse_claude_mcp_list(env_vars=env, claude_executable="/usr/bin/claude")
 
         assert captured_kwargs.get("env") == env
 
@@ -407,15 +363,15 @@ class TestParseClaudeMcpList:
             return self._make_result(stdout="")
 
         monkeypatch.setattr(
-            "mcp_coder.utils.mcp_verification.find_claude_executable",
-            lambda **_kw: "/usr/bin/claude",
-        )
-        monkeypatch.setattr(
             "mcp_coder.utils.mcp_verification.execute_command",
             _capture,
         )
 
-        parse_claude_mcp_list(env_vars={}, mcp_config_path="custom.json")
+        parse_claude_mcp_list(
+            env_vars={},
+            mcp_config_path="custom.json",
+            claude_executable="/usr/bin/claude",
+        )
 
         # First arg is the command list
         command = captured_args[0]
