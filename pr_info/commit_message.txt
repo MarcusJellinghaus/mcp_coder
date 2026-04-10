@@ -1,5 +1,0 @@
-fix: add Returns sections to docstrings in skills.py for ruff DOC201
-
-Add properly formatted `Returns:` sections to the docstrings of
-load_skills, _make_claude_handler, _make_langchain_handler, and
-register_skill_commands to satisfy ruff's DOC201 rule.
