@@ -21,6 +21,19 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Create `BusyIndicator` widget with tests ([step_1.md](./steps/step_1.md))
+
+- [ ] Implementation: create `BusyIndicator` widget, unit tests, and CSS styling
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Wire `BusyIndicator` into `app.py` and regenerate snapshots ([step_2.md](./steps/step_2.md))
+
+- [ ] Implementation: wire widget into app compose/events, add integration tests, regenerate snapshots
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: verify all steps complete, tests pass, no regressions
+- [ ] PR summary prepared
