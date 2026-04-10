@@ -21,6 +21,25 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: `parse_claude_mcp_list()` Parser + `ClaudeMCPStatus` Dataclass
+
+- [ ] Implementation: `ClaudeMCPStatus` dataclass, `parse_claude_mcp_list()` function, and tests in `test_mcp_verification.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Wire into RuntimeInfo + iCoder Startup Display + Event Log
+
+- [ ] Implementation: `RuntimeInfo.mcp_connection_status` field, `setup_icoder_environment()` integration, `on_mount()` display, `session_start` event, and tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Verify Command — Claude MCP Section + Provider-Aware Display + Exit Code
+
+- [ ] Implementation: `_format_claude_mcp_section()`, `execute_verify()` provider-aware sections, `_compute_exit_code()` update, and tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: verify all steps integrated correctly
+- [ ] PR summary prepared
