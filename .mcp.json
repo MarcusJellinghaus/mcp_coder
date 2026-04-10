@@ -32,6 +32,8 @@
         "--reference-project",
         "p_config=${USERPROFILE}\\Documents\\GitHub\\mcp-config",
         "--reference-project",
+        "p_coder-utils=${USERPROFILE}\\Documents\\GitHub\\mcp-coder-utils",
+        "--reference-project",
         "p_tools=${USERPROFILE}\\Documents\\GitHub\\mcp-tools-py"
       ],
       "env": {
