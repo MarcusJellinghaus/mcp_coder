@@ -9,6 +9,7 @@ from textual.widgets import Static
 
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.ui.styles import CSS
+from mcp_coder.icoder.ui.widgets.busy_indicator import BusyIndicator
 from mcp_coder.icoder.ui.widgets.command_autocomplete import CommandAutocomplete
 from mcp_coder.icoder.ui.widgets.input_area import InputArea
 from mcp_coder.icoder.ui.widgets.output_log import OutputLog
@@ -52,6 +53,7 @@ class ICoderApp(App[None]):
         yield OutputLog()
         yield Static(id="streaming-tail")
         yield CommandAutocomplete()
+        yield BusyIndicator()
         yield InputArea(
             registry=self._core.registry,
             event_log=self._core.event_log,
@@ -116,6 +118,7 @@ class ICoderApp(App[None]):
         except Exception as exc:  # pylint: disable=broad-exception-caught
             self.call_from_thread(self._flush_buffer)
             self.call_from_thread(self._show_error, str(exc))
+            self.call_from_thread(self._reset_busy_indicator)
             self.call_from_thread(self._append_blank_line)
 
     def _append_blank_line(self) -> None:
@@ -141,6 +144,7 @@ class ICoderApp(App[None]):
             return
 
         if isinstance(action, TextChunk):
+            self.query_one(BusyIndicator).show_busy("Thinking...")
             self._text_buffer += action.text
             lines = self._text_buffer.split("\n")
             for line in lines[:-1]:
@@ -153,8 +157,10 @@ class ICoderApp(App[None]):
         self._flush_buffer()
 
         if isinstance(action, StreamDone):
+            self.query_one(BusyIndicator).show_ready()
             self._append_blank_line()
         elif isinstance(action, ToolStart):
+            self.query_one(BusyIndicator).show_busy(action.display_name)
             if action.inline_args is not None:
                 line = f"┌ {action.display_name}({action.inline_args})"
             else:
@@ -175,6 +181,10 @@ class ICoderApp(App[None]):
             output.append_text("\n".join(parts), style=STYLE_TOOL_OUTPUT)
         elif isinstance(action, ErrorMessage):
             output.append_text(f"Error: {action.message}")
+
+    def _reset_busy_indicator(self) -> None:
+        """Reset busy indicator to ready state."""
+        self.query_one(BusyIndicator).show_ready()
 
     def _show_error(self, message: str) -> None:
         """Display error message in output log.

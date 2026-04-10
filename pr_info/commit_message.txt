@@ -1,7 +1,10 @@
-feat(icoder): add BusyIndicator widget with spinner animation (#752)
+feat(icoder): wire BusyIndicator into app and regenerate snapshots (#752)
 
-- Create BusyIndicator(Static) widget with show_busy/show_ready API
-- Animated braille spinner with elapsed time display
-- Always-running set_interval(0.15) timer, no-ops when idle
-- Add CSS styling in styles.py (1-line height, dim color)
-- Add 6 unit tests covering all widget states and transitions
+- Import and yield BusyIndicator in compose() between CommandAutocomplete
+  and InputArea
+- Show "Thinking..." on TextChunk, tool display name on ToolStart,
+  reset to "✓ Ready" on StreamDone
+- Reset indicator in _stream_llm error path via _reset_busy_indicator
+- Add 4 integration tests: startup ready state, post-stream ready,
+  tool name display, error reset
+- Regenerate all 9 SVG snapshot baselines to include new widget row

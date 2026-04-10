@@ -15,6 +15,7 @@ from mcp_coder.icoder.core.event_log import EventLog
 from mcp_coder.icoder.env_setup import RuntimeInfo
 from mcp_coder.icoder.services.llm_service import FakeLLMService, LLMService
 from mcp_coder.icoder.ui.app import ICoderApp
+from mcp_coder.icoder.ui.widgets.busy_indicator import BusyIndicator
 from mcp_coder.icoder.ui.widgets.input_area import InputArea
 from mcp_coder.icoder.ui.widgets.output_log import OutputLog
 from mcp_coder.llm.types import StreamEvent
@@ -523,3 +524,68 @@ async def test_hint_reappears_after_submit(icoder_app: ICoderApp) -> None:
         await pilot.press("enter")
         await pilot.pause()
         assert not hint.has_class("hidden")
+
+
+# --- BusyIndicator integration tests ---
+
+
+async def test_busy_indicator_shows_ready_on_startup(icoder_app: ICoderApp) -> None:
+    """After mount, BusyIndicator renderable contains '✓ Ready'."""
+    async with icoder_app.run_test() as pilot:
+        await pilot.pause()
+        indicator = icoder_app.query_one(BusyIndicator)
+        assert "✓ Ready" in indicator.label_text
+
+
+async def test_busy_indicator_shows_ready_after_streaming(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """After a full stream (text + done), indicator is back to '✓ Ready'."""
+    app = make_icoder_app(
+        responses=[
+            [
+                {"type": "text_delta", "text": "hello"},
+                {"type": "done"},
+            ]
+        ]
+    )
+    async with app.run_test() as pilot:
+        await _submit_and_wait(app, pilot)
+        indicator = app.query_one(BusyIndicator)
+        assert "✓ Ready" in indicator.label_text
+
+
+async def test_busy_indicator_shows_tool_name_during_tool_use(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """Directly call _handle_stream_event with tool_use_start, verify indicator shows tool display name."""
+    app = make_icoder_app(responses=[])
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        app._handle_stream_event(
+            {
+                "type": "tool_use_start",
+                "name": "mcp__workspace__read_file",
+                "args": {"file_path": "x.py"},
+            }
+        )
+        await pilot.pause()
+        indicator = app.query_one(BusyIndicator)
+        assert "workspace" in indicator.label_text
+        assert "read_file" in indicator.label_text
+
+
+async def test_busy_indicator_resets_on_stream_error(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """Use ErrorAfterChunksLLMService, verify indicator returns to '✓ Ready' after error."""
+    app = make_icoder_app(
+        llm_service=ErrorAfterChunksLLMService(
+            chunks=[{"type": "text_delta", "text": "partial"}],
+            error_msg="boom",
+        ),
+    )
+    async with app.run_test() as pilot:
+        await _submit_and_wait(app, pilot)
+        indicator = app.query_one(BusyIndicator)
+        assert "✓ Ready" in indicator.label_text

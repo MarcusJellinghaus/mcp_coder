@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Wire `BusyIndicator` into `app.py` and regenerate snapshots ([step_2.md](./steps/step_2.md))
 
-- [ ] Implementation: wire widget into app compose/events, add integration tests, regenerate snapshots
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: wire widget into app compose/events, add integration tests, regenerate snapshots
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
