@@ -17,7 +17,7 @@ popd
 
 set "VENV_DIR=!PROJECT_DIR!\.venv"
 set "VENV_SCRIPTS=!VENV_DIR!\Scripts"
-echo [0/7] Checking Python environment...
+echo [0/8] Checking Python environment...
 
 REM Silently deactivate any active venv
 call deactivate 2>nul
@@ -39,12 +39,12 @@ if not exist "!VENV_SCRIPTS!\activate.bat" (
 echo [OK] Target environment: !VENV_DIR!
 echo.
 
-echo [1/7] Uninstalling existing packages...
+echo [1/8] Uninstalling existing packages...
 uv pip uninstall mcp-coder mcp-tools-py mcp-config mcp-workspace --python "!VENV_SCRIPTS!\python.exe" 2>nul
 echo [OK] Packages uninstalled
 
 echo.
-echo [2/7] Installing mcp-coder (this project) in editable mode...
+echo [2/8] Installing mcp-coder (this project) in editable mode...
 REM Editable install pulls all deps (including mcp-tools-py, mcp-workspace,
 REM mcp-config) from PyPI first.
 pushd "!PROJECT_DIR!"
@@ -58,7 +58,7 @@ popd
 echo [OK] Package and dev dependencies installed (editable)
 
 echo.
-echo [3/7] Overriding dependencies with GitHub versions...
+echo [3/8] Overriding dependencies with GitHub versions...
 REM Validate read_github_deps.py succeeds before parsing its output
 "!VENV_SCRIPTS!\python.exe" tools\read_github_deps.py > nul 2>&1
 if !ERRORLEVEL! NEQ 0 (
@@ -78,7 +78,20 @@ for /f "delims=" %%C in ('"!VENV_SCRIPTS!\python.exe" tools\read_github_deps.py'
 echo [OK] GitHub dependencies overridden from pyproject.toml
 
 echo.
-echo [4/7] Installing LangChain and MLflow dependencies...
+echo [4/8] Finalizing editable install of mcp-coder...
+REM Re-run to ensure local source is the active install after GitHub overrides
+pushd "!PROJECT_DIR!"
+uv pip install -e . --python "!VENV_SCRIPTS!\python.exe"
+if !ERRORLEVEL! NEQ 0 (
+    echo [FAIL] Final editable install failed!
+    popd
+    exit /b 1
+)
+popd
+echo [OK] mcp-coder installed (editable)
+
+echo.
+echo [5/8] Installing LangChain and MLflow dependencies...
 uv pip install langchain langchain-anthropic mlflow --python "!VENV_SCRIPTS!\python.exe"
 if !ERRORLEVEL! NEQ 0 (
     echo [FAIL] LangChain/MLflow installation failed!
@@ -87,7 +100,7 @@ if !ERRORLEVEL! NEQ 0 (
 echo [OK] langchain, langchain-anthropic, mlflow installed
 
 echo.
-echo [5/7] Verifying CLI entry points in venv...
+echo [6/8] Verifying CLI entry points in venv...
 
 if not exist "!VENV_SCRIPTS!\mcp-tools-py.exe" (
     echo [FAIL] mcp-tools-py.exe not found in !VENV_SCRIPTS!
@@ -111,7 +124,7 @@ if not exist "!VENV_SCRIPTS!\mcp-coder.exe" (
 echo [OK] mcp-coder.exe found in !VENV_SCRIPTS!
 
 echo.
-echo [6/7] Verifying CLI functionality...
+echo [7/8] Verifying CLI functionality...
 "!VENV_SCRIPTS!\mcp-tools-py.exe" --help >nul 2>&1
 if !ERRORLEVEL! NEQ 0 (
     echo [FAIL] mcp-tools-py CLI verification failed!
@@ -135,7 +148,7 @@ echo [OK] mcp-coder CLI works
 
 echo.
 echo =============================================
-echo [7/7] Reinstallation completed successfully!
+echo [8/8] Reinstallation completed successfully!
 echo.
 echo Entry points installed in: !VENV_SCRIPTS!
 echo   - mcp-tools-py.exe
