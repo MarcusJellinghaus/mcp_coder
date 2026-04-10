@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Create `BusyIndicator` widget with tests ([step_1.md](./steps/step_1.md))
 
-- [ ] Implementation: create `BusyIndicator` widget, unit tests, and CSS styling
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `BusyIndicator` widget, unit tests, and CSS styling
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Wire `BusyIndicator` into `app.py` and regenerate snapshots ([step_2.md](./steps/step_2.md))
 

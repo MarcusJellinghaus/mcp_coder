@@ -37,4 +37,10 @@ CommandAutocomplete {
     background: #2d2d2d;
     color: #d4d4d4;
 }
+
+BusyIndicator {
+    height: 1;
+    background: #1e1e1e;
+    color: #666666;
+}
 """
