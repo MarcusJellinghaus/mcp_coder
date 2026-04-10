@@ -18,6 +18,20 @@ from mcp_coder.llm.formatting.stream_renderer import (
 _RENDERER = StreamEventRenderer()
 
 
+class TestRendererFormatToolsParam:
+    """Tests for format_tools constructor parameter."""
+
+    def test_renderer_format_tools_default_true(self) -> None:
+        """StreamEventRenderer defaults to format_tools=True."""
+        renderer = StreamEventRenderer()
+        assert renderer._format_tools is True
+
+    def test_renderer_format_tools_false(self) -> None:
+        """StreamEventRenderer accepts format_tools=False."""
+        renderer = StreamEventRenderer(format_tools=False)
+        assert renderer._format_tools is False
+
+
 class TestStreamEventRenderer:
     """Tests for StreamEventRenderer.render()."""
 

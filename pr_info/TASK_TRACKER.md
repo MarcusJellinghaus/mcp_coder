@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: `--no-format-tools` CLI Flag + Plumbing
 [Detail](./steps/step_1.md)
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks passed (pylint, pytest, mypy)
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks passed (pylint, pytest, mypy)
+- [x] Commit message prepared
 
 ### Step 2: Field Filtering and Head/Tail Truncation
 [Detail](./steps/step_2.md)

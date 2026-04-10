@@ -105,6 +105,9 @@ class StreamEventRenderer:
             ...
     """
 
+    def __init__(self, *, format_tools: bool = True) -> None:
+        self._format_tools = format_tools
+
     def render(self, event: StreamEvent) -> RenderAction | None:
         """Map a single stream event to a render action.
 

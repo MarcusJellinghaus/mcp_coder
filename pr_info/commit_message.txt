@@ -1,0 +1,5 @@
+feat(icoder): add --no-format-tools CLI flag and plumbing (#763)
+
+Thread format_tools bool from CLI parser through execute_icoder,
+ICoderApp, and StreamEventRenderer constructor. No formatting
+logic changes yet — just the wiring for the escape hatch.

@@ -655,6 +655,11 @@ def add_icoder_parser(subparsers: Any) -> None:
         default=None,
         help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
     )
+    icoder_parser.add_argument(
+        "--no-format-tools",
+        action="store_true",
+        help="Disable tool output formatting (show raw output)",
+    )
 
     # Session continuation options (mutually exclusive with each other)
     continue_group = icoder_parser.add_mutually_exclusive_group()

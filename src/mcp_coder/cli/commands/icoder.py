@@ -150,7 +150,8 @@ def execute_icoder(args: argparse.Namespace) -> int:
             app_core = AppCore(
                 llm_service, event_log, registry=registry, runtime_info=runtime_info
             )
-            ICoderApp(app_core).run()
+            format_tools = not getattr(args, "no_format_tools", False)
+            ICoderApp(app_core, format_tools=format_tools).run()
 
         return 0
 
