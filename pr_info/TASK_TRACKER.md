@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat(icoder): add reset_session flag to Response dataclass`
 
 ### Step 2: Add `reset_session()` to `LLMService` protocol + implementations
-- [ ] Implementation: add `reset_session()` to protocol, `RealLLMService`, `FakeLLMService` + tests in `test_llm_service.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(icoder): add reset_session() to LLMService protocol`
+- [x] Implementation: add `reset_session()` to protocol, `RealLLMService`, `FakeLLMService` + tests in `test_llm_service.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(icoder): add reset_session() to LLMService protocol`
 
 ### Step 3: Wire `/clear` → session reset in AppCore
 - [ ] Implementation: update `/clear` handler to set `reset_session=True`, update `AppCore.handle_input()` to act on flag + tests in `test_app_core.py`

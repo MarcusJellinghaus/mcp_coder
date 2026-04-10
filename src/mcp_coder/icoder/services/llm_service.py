@@ -17,6 +17,9 @@ class LLMService(Protocol):
     def stream(self, question: str) -> Iterator[StreamEvent]:
         """Stream LLM response events for the given input."""
 
+    def reset_session(self) -> None:
+        """Reset session state to start a new conversation."""
+
     @property
     def session_id(self) -> str | None:
         """Current session ID (updated after each stream completes)."""
@@ -60,6 +63,10 @@ class RealLLMService:
                     self._session_id = sid
             yield event
 
+    def reset_session(self) -> None:
+        """Reset session state to start a new conversation."""
+        self._session_id = None
+
     @property
     def session_id(self) -> str | None:
         """Current session ID (updated after each stream completes)."""
@@ -93,6 +100,10 @@ class FakeLLMService:
                 if isinstance(sid, str):
                     self._session_id = sid
             yield event
+
+    def reset_session(self) -> None:
+        """Reset session state to start a new conversation."""
+        self._session_id = None
 
     @property
     def session_id(self) -> str | None:

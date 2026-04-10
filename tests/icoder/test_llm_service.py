@@ -148,6 +148,46 @@ def test_real_llm_service_passes_timeout(
     assert captured_kwargs["timeout"] == ICODER_LLM_TIMEOUT_SECONDS
 
 
+def test_fake_reset_session() -> None:
+    """FakeLLMService.reset_session() clears session_id to None."""
+    responses: list[list[StreamEvent]] = [
+        [{"type": "done", "session_id": "session-1"}],
+    ]
+    service = FakeLLMService(responses=responses)
+    list(service.stream("q"))
+    assert service.session_id == "session-1"
+    service.reset_session()
+    assert service.session_id is None
+
+
+def test_real_reset_session(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RealLLMService.reset_session() clears session_id to None."""
+    fake_events: list[StreamEvent] = [
+        {"type": "done", "session_id": "real-session-99"},
+    ]
+
+    def mock_stream(question: str, **kwargs: object) -> Iterator[StreamEvent]:
+        yield from fake_events
+
+    monkeypatch.setattr(
+        "mcp_coder.icoder.services.llm_service.prompt_llm_stream",
+        mock_stream,
+    )
+    service = RealLLMService(provider="claude")
+    list(service.stream("hello"))
+    assert service.session_id == "real-session-99"
+    service.reset_session()
+    assert service.session_id is None
+
+
+def test_protocol_has_reset_session() -> None:
+    """Both implementations still satisfy LLMService protocol after adding reset_session."""
+    assert isinstance(FakeLLMService(), LLMService)
+    assert isinstance(RealLLMService(provider="claude"), LLMService)
+
+
 def test_fake_falls_back_to_default_after_canned_exhausted() -> None:
     """FakeLLMService falls back to default after canned responses are exhausted."""
     responses: list[list[StreamEvent]] = [
