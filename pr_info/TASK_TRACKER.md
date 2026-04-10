@@ -35,9 +35,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: Markdown Rendering in Tool Output Display
 [Detail](./steps/step_3.md)
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks passed (pylint, pytest, mypy)
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks passed (pylint, pytest, mypy)
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review completed

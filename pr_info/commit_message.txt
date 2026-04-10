@@ -1,8 +1,11 @@
-feat(icoder): field filtering and head/tail truncation in tool output (#763)
+feat(icoder): render tool output as Rich Markdown (#763)
 
-Rewrite _render_tool_output() to:
-- Extract main content (result > text > content priority)
-- Skip envelope fields (type, role, model, stop_reason, etc.)
-- Show extra fields below main content
-- Truncate to first 10 + last 5 lines with skip separator
-- Bypass all formatting when format_tools=False
+When format_tools is enabled (default), tool output is rendered as
+rich.markdown.Markdown for proper tables, headers, code blocks, and
+bold text. When disabled via --no-format-tools, plain text rendering
+is preserved identically to the previous behavior.
+
+- Override OutputLog.write() to record markup text for testability
+- Add Markdown rendering branch in _handle_stream_event() ToolResult
+- Add pilot tests for both markdown and plain text rendering paths
+- Add OutputLog unit tests for write() recording behavior

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from rich.console import ConsoleRenderable, RichCast
 from rich.text import Text
 from textual.widgets import RichLog
 
@@ -28,6 +29,34 @@ class OutputLog(RichLog):
             Copy of all appended lines.
         """
         return list(self._recorded)
+
+    def write(  # type: ignore[override]  # pylint: disable=arguments-differ
+        self,
+        content: RichCast | ConsoleRenderable | str | object,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        """Write content and record a text representation for testability.
+
+        Overrides RichLog.write() to also track non-string renderables
+        (e.g. Markdown objects) in _recorded.
+
+        Args:
+            content: Rich renderable, string, or other object to display.
+            *args: Positional args passed through to RichLog.write().
+            **kwargs: Keyword args passed through to RichLog.write().
+        """
+        if isinstance(content, str):
+            # Plain strings are recorded as-is (don't duplicate append_text records)
+            pass
+        elif isinstance(content, Text):
+            # Text objects are recorded via append_text, skip here
+            pass
+        else:
+            # Rich renderables (e.g. Markdown): record the markup text
+            markup = getattr(content, "markup", None)
+            self._recorded.append(markup if markup is not None else str(content))
+        super().write(content, *args, **kwargs)
 
     def append_text(self, text: str, style: str | None = None) -> None:
         """Write text to the output log, optionally styled.
