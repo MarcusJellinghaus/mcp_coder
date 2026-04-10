@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Add `reset_session` field to `Response` dataclass
-- [ ] Implementation: add `reset_session: bool = False` to `Response` + tests in `test_types.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(icoder): add reset_session flag to Response dataclass`
+- [x] Implementation: add `reset_session: bool = False` to `Response` + tests in `test_types.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(icoder): add reset_session flag to Response dataclass`
 
 ### Step 2: Add `reset_session()` to `LLMService` protocol + implementations
 - [ ] Implementation: add `reset_session()` to protocol, `RealLLMService`, `FakeLLMService` + tests in `test_llm_service.py`
