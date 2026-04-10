@@ -66,6 +66,10 @@ def test_render_tool_output_raw_mode_no_truncation() -> None:
     """format_tools=False: no truncation even for long output."""
 ```
 
+**Existing tests to update:**
+- `test_long_truncated`: Currently creates 10 lines and expects truncation to 5 lines. With new threshold >15, 10 lines will NOT be truncated. Update to create >15 lines and verify head 10 + separator + tail 5.
+- `test_tool_result_truncated`: Currently creates 10 lines and expects `len(output_lines) == 5`. Update similarly.
+
 ### DATA — Expected return values
 
 Field filtering example:
@@ -92,6 +96,7 @@ Truncation example:
 ```python
 _HEAD_LINES = 10
 _TAIL_LINES = 5
+_TRUNCATION_THRESHOLD = _HEAD_LINES + _TAIL_LINES  # 15
 
 _ENVELOPE_FIELDS: frozenset[str] = frozenset({
     "type", "role", "model", "stop_reason", "session_id", "usage",
@@ -109,9 +114,10 @@ def _render_tool_output(output: str, *, format_tools: bool = True) -> tuple[list
 ### ALGORITHM
 ```
 1. If not format_tools: return (output.splitlines(), len(output.splitlines()))  # raw, no truncation
+   # Note: 'truly raw' means no truncation/filtering, intentionally different from today's 5-line truncation
 2. Try json.loads(output) — if dict, apply field filtering:
    a. Find main content: first key in ("result", "text", "content") that exists
-   b. Render main content value (multiline strings split + indented, others as-is)
+   b. Render main content value: strings split on newlines; dicts/lists rendered via `json.dumps(value, indent=2).splitlines()`; other types via `str(value)`
    c. Collect extras: keys not in envelope set and not the main content key
    d. Render extras below with blank separator line
 3. If not dict or json fails: split into plain text lines

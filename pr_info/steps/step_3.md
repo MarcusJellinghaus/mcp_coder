@@ -27,7 +27,13 @@ async def test_tool_result_renders_plain_text_when_no_format(
     event_log: EventLog, fake_llm: FakeLLMService,
 ) -> None:
     """Tool result output is rendered as plain text when format_tools=False."""
+
+def test_output_log_write_records_text(self) -> None:
+    """OutputLog.write() with a Rich renderable also appends to _recorded."""
 ```
+
+### WHERE (additional)
+- `tests/icoder/ui/test_output_log.py` (OutputLog unit tests)
 
 ### DATA — Test strategy
 - Use `FakeLLMService` with `tool_result` events containing markdown-like content (e.g. `"# Header\n**bold**"`)
@@ -39,6 +45,7 @@ async def test_tool_result_renders_plain_text_when_no_format(
 
 ### WHERE
 - `src/mcp_coder/icoder/ui/app.py`
+- `src/mcp_coder/icoder/ui/widgets/output_log.py` (override `write()` to track recorded lines)
 
 ### WHAT — Changes to `_handle_stream_event()`
 
@@ -81,7 +88,7 @@ elif isinstance(action, ToolResult):
 - Plain text passes through `Markdown()` safely — Rich renders it as-is
 - Accidental markdown syntax (`#`, `*`) in output is acceptable per the issue
 - Error messages flow through `ErrorMessage` action, not `ToolResult` — no change needed
-- The `recorded_lines` tracking in `OutputLog` only records `append_text` calls; `write()` calls bypass it. This is acceptable since `recorded_lines` is for testing and the Markdown path uses `write()` directly.
+- The `recorded_lines` tracking in `OutputLog` only records `append_text` calls; `write()` calls bypass it. To prevent breaking existing pilot tests (e.g. `test_streaming_tool_event_mid_line`) that check `recorded_lines` for tool output, override `write()` in `OutputLog` to also append a text representation to `_recorded`.
 
 ## Commit Message
 ```

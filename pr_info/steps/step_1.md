@@ -30,6 +30,9 @@ def test_execute_icoder_passes_format_tools_to_app(
     """Verify format_tools=False is passed to ICoderApp when --no-format-tools is set."""
 ```
 
+**Existing test update required:**
+- `test_execute_icoder_creates_registry_with_skills`: Update monkeypatched `capturing_init` to accept `**kwargs`, since `execute_icoder()` will now pass `format_tools=` keyword argument.
+
 **`tests/llm/formatting/test_stream_renderer.py`:**
 ```python
 def test_renderer_format_tools_default_true() -> None:

@@ -34,13 +34,13 @@ CLI (--no-format-tools) → execute_icoder() → ICoderApp(format_tools=) → St
 | `src/mcp_coder/cli/commands/icoder.py` | Read flag, pass `format_tools` to `ICoderApp` |
 | `src/mcp_coder/icoder/ui/app.py` | Accept `format_tools`, pass to renderer, use Markdown rendering |
 | `src/mcp_coder/llm/formatting/stream_renderer.py` | `format_tools` on renderer; field filtering; head/tail truncation |
+| `src/mcp_coder/icoder/ui/widgets/output_log.py` | Override `write()` to record text for testing |
 | `tests/icoder/test_cli_icoder.py` | Test `--no-format-tools` flag parsing and threading |
 | `tests/llm/formatting/test_stream_renderer.py` | Test field filtering, head/tail truncation, `format_tools=False` bypass |
 
 ## Files NOT Modified
 
 - `src/mcp_coder/llm/formatting/render_actions.py` — `ToolResult` dataclass unchanged
-- `src/mcp_coder/icoder/ui/widgets/output_log.py` — `OutputLog` widget unchanged
 - `.importlinter` — no new cross-layer imports needed
 
 ## Implementation Steps
