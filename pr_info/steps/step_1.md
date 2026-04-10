@@ -82,12 +82,14 @@ _update_label:
 
 Tests use a minimal `App` that hosts just `BusyIndicator` (same pattern as `WidgetTestApp` in `test_widgets.py`).
 
+Tests need `pytestmark = pytest.mark.textual_integration` at module level, consistent with existing test patterns in `test_app_pilot.py`.
+
 1. **`test_initial_state_shows_ready`** — After mount, widget renders `✓ Ready`
 2. **`test_show_busy_updates_label`** — `show_busy("Thinking...")` renders spinner + message + elapsed
 3. **`test_show_ready_resets`** — After `show_busy` then `show_ready`, widget shows `✓ Ready` again
-4. **`test_show_busy_preserves_start_time`** — Calling `show_busy` again (different message) does NOT reset `_start_time`; elapsed keeps growing
-5. **`test_show_busy_after_ready_resets_start_time`** — `show_busy` → `show_ready` → `show_busy` resets `_start_time`
-6. **`test_spinner_frame_advances`** — After calling `_on_tick`, the frame index advances
+4. **`test_show_busy_preserves_start_time`** — After `show_busy("A")`, wait briefly, then `show_busy("B")` — rendered elapsed time is still > 0 (timer was not reset)
+5. **`test_show_busy_after_ready_resets_start_time`** — After `show_busy` → `show_ready` → `show_busy` — rendered elapsed time starts from ~0 (timer was reset)
+6. **`test_spinner_frame_advances`** — After a tick, the rendered spinner character has changed from its initial value
 
 ## Commit
 

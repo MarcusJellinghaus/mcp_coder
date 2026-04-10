@@ -46,7 +46,7 @@ Three call sites in `_handle_stream_event()` and one in the `_stream_llm()` erro
 
 ### Snapshot Impact
 
-All 8 existing SVG snapshots in `tests/icoder/__snapshots__/` will change because the new widget adds a row to the layout. Regenerated in the final step.
+All 9 existing SVG snapshots in `tests/icoder/__snapshots__/` will change because the new widget adds a row to the layout. Regenerated in step 2 alongside the app wiring.
 
 ## Files Created
 
@@ -61,7 +61,7 @@ All 8 existing SVG snapshots in `tests/icoder/__snapshots__/` will change becaus
 |------|--------|
 | `src/mcp_coder/icoder/ui/styles.py` | CSS for `BusyIndicator` |
 | `src/mcp_coder/icoder/ui/app.py` | Import, compose, wire events |
-| `tests/icoder/__snapshots__/*.svg` (8 files) | Regenerated baselines |
+| `tests/icoder/__snapshots__/*.svg` (9 files) | Regenerated baselines |
 
 ## Design Decisions
 

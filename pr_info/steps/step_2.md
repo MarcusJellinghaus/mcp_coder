@@ -10,6 +10,7 @@ Wire the `BusyIndicator` widget into iCoder's `app.py` (issue #752). Read `pr_in
 
 - **Modify**: `src/mcp_coder/icoder/ui/app.py`
 - **Modify**: `tests/icoder/test_app_pilot.py` — add integration tests
+- **Modify**: `tests/icoder/__snapshots__/test_snapshots/*.svg` (9 files) — regenerate baselines
 
 ## WHAT
 
@@ -87,8 +88,31 @@ No new data structures. Uses existing `BusyIndicator` API from step 1.
 3. **`test_busy_indicator_shows_tool_name_during_tool_use`** — Directly call `_handle_stream_event` with `tool_use_start`, verify indicator shows tool display name
 4. **`test_busy_indicator_resets_on_stream_error`** — Use `ErrorAfterChunksLLMService`, verify indicator returns to `✓ Ready` after error
 
+## Snapshot Regeneration
+
+Adding `BusyIndicator` to `compose()` changes every snapshot baseline. Regenerate them in the same commit so tests stay green.
+
+### Affected snapshots
+
+1. `test_snapshot_initial_state.svg`
+2. `test_snapshot_after_help.svg`
+3. `test_snapshot_after_conversation.svg`
+4. `test_snapshot_long_line_wraps.svg`
+5. `test_snapshot_input_area_grows.svg`
+6. `test_snapshot_autocomplete_all_commands.svg`
+7. `test_snapshot_autocomplete_filtered.svg`
+8. `test_snapshot_autocomplete_no_match.svg`
+9. `test_snapshot_multi_chunk_streaming.svg`
+
+### How
+
+1. Run snapshot tests with `--snapshot-update` flag to regenerate baselines
+2. Verify the regenerated SVGs contain the `✓ Ready` indicator text
+3. Verify no secrets, env vars, or local paths leaked into SVGs
+4. Run snapshot tests again (without `--snapshot-update`) to confirm they pass
+
 ## Commit
 
 ```
-feat(icoder): wire BusyIndicator into app layout and stream events (#752)
+feat(icoder): wire BusyIndicator into app and regenerate snapshots (#752)
 ```
