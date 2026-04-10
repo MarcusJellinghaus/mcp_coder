@@ -142,7 +142,7 @@ def register_skill_commands(
     """
     registered: list[ICoderSkillCommand] = []
     for skill in skills:
-        command_name = "/" + skill.name
+        command_name = "/" + skill.name.lower()
         # Check for collision with existing commands
         if registry.has_command(command_name):
             logger.warning(

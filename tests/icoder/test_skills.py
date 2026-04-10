@@ -259,3 +259,20 @@ def test_register_skill_commands_multiple_skills() -> None:
     assert len(registered) == 2
     names = {r.command_name for r in registered}
     assert names == {"/skill_a", "/skill_b"}
+
+
+def test_register_skill_commands_normalizes_to_lowercase() -> None:
+    """Mixed-case skill name is registered as lowercase command."""
+    registry = CommandRegistry()
+    skill = ClaudeSkill(
+        name="MySkill",
+        description="A mixed-case skill",
+        prompt_template="Do $ARGUMENTS",
+    )
+    registered = register_skill_commands(registry, [skill], "claude")
+    assert len(registered) == 1
+    assert registered[0].command_name == "/myskill"
+    assert registry.has_command("/myskill")
+    resp = registry.dispatch("/myskill some args")
+    assert resp is not None
+    assert resp.send_to_llm is True
