@@ -2,6 +2,7 @@
 
 > **Context:** See `pr_info/steps/summary.md` for full issue context and architecture.
 > **Depends on:** Steps 1–3 (session reset infrastructure).
+> **Prerequisite for:** Step 5 (auto-storage makes `--continue-session` work for Claude provider).
 
 ## Goal
 

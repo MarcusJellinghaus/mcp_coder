@@ -48,6 +48,34 @@
 
 **Status**: committed
 
+## Round 3 — 2026-04-10
+**Findings**:
+- User requested auto-storage of iCoder sessions so `--continue-session` works for Claude provider
+- Investigation revealed: langchain auto-stores, Claude does not, iCoder has no storage
+- Best approach: add `ResponseAssembler` + `store_session()` in `AppCore.stream_llm()` (same pattern as prompt command)
+- Requires `provider` property on `LLMService` protocol (not yet present)
+
+**Decisions**:
+- Accept: Created Step 5 (separate from Step 4 to keep steps small per planning principles)
+- Step 5 verified against codebase: `ResponseAssembler`, `store_session`, import paths all confirmed
+- `FakeLLMService` needs `provider` param added to `__init__` — correctly identified in the step
+
+**User decisions**: User confirmed auto-storage should be added.
+
+**Changes**:
+- Created `pr_info/steps/step_5.md`
+- Updated `pr_info/steps/step_4.md`: added prerequisite link to Step 5
+- Updated `pr_info/steps/summary.md`: added Step 5 to table and architecture section
+
+**Status**: committed
+
 ## Final Status
 
-Plan review complete. 2 rounds, all findings addressed. Steps 1-3 (original /clear reset) and Step 4 (fresh session default) are verified against the codebase and ready for implementation.
+Plan review complete. 3 rounds, 2 commits produced. The plan now has 5 steps:
+1. `reset_session` field on `Response` dataclass
+2. `reset_session()` method on `LLMService` protocol
+3. Wire `/clear` → session reset in AppCore
+4. Fresh session by default + `--continue-session` flags
+5. Auto-store iCoder sessions for Claude provider
+
+All steps verified against the codebase. Plan is ready for approval.

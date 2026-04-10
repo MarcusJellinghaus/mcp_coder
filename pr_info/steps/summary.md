@@ -50,3 +50,5 @@ This extends existing patterns. No new modules, classes, or abstractions are int
 | 1 | Add `reset_session` field to `Response` + tests | `feat(icoder): add reset_session flag to Response dataclass` |
 | 2 | Add `reset_session()` to `LLMService` protocol + implementations + tests | `feat(icoder): add reset_session() to LLMService protocol` |
 | 3 | Wire `/clear` → `reset_session` flag + `AppCore` handling + tests | `feat(icoder): /clear resets LLM session (#765)` |
+| 4 | Fresh session by default + `--continue-session` flag (matching prompt command) | `feat(icoder): fresh session by default, add --continue-session flag (#765)` |
+| 5 | Auto-store iCoder sessions so `--continue-session` works for Claude provider | `feat(icoder): auto-store sessions for --continue-session support (#765)` |
