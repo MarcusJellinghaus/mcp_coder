@@ -21,6 +21,31 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Add `reset_session` field to `Response` dataclass
+- [ ] Implementation: add `reset_session: bool = False` to `Response` + tests in `test_types.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit: `feat(icoder): add reset_session flag to Response dataclass`
+
+### Step 2: Add `reset_session()` to `LLMService` protocol + implementations
+- [ ] Implementation: add `reset_session()` to protocol, `RealLLMService`, `FakeLLMService` + tests in `test_llm_service.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit: `feat(icoder): add reset_session() to LLMService protocol`
+
+### Step 3: Wire `/clear` → session reset in AppCore
+- [ ] Implementation: update `/clear` handler to set `reset_session=True`, update `AppCore.handle_input()` to act on flag + tests in `test_app_core.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit: `feat(icoder): /clear resets LLM session (#765)`
+
+### Step 4: Fresh session by default + `--continue-session` flag
+- [ ] Implementation: add session continuation args to icoder parser, replace auto-resume with opt-in continuation + tests in `test_parsers.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit: `feat(icoder): fresh session by default, add --continue-session flag (#765)`
+
+### Step 5: Auto-store iCoder sessions for Claude provider
+- [ ] Implementation: add `provider` property to `LLMService` protocol + implementations, update `AppCore.stream_llm()` to auto-store responses + tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit: `feat(icoder): auto-store sessions for --continue-session support (#765)`
 
 ## Pull Request
+- [ ] PR review: verify all steps integrated correctly
+- [ ] PR summary prepared
