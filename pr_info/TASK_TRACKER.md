@@ -21,6 +21,24 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: `--no-format-tools` CLI Flag + Plumbing
+[Detail](./steps/step_1.md)
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks passed (pylint, pytest, mypy)
+- [ ] Commit message prepared
+
+### Step 2: Field Filtering and Head/Tail Truncation
+[Detail](./steps/step_2.md)
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks passed (pylint, pytest, mypy)
+- [ ] Commit message prepared
+
+### Step 3: Markdown Rendering in Tool Output Display
+[Detail](./steps/step_3.md)
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks passed (pylint, pytest, mypy)
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review completed
+- [ ] PR summary prepared
