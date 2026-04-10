@@ -73,15 +73,11 @@ def execute_icoder(args: argparse.Namespace) -> int:
         from ...icoder.core.command_registry import create_default_registry
 
         registry = create_default_registry()
-        try:
-            from ...icoder.skills import load_skills, register_skill_commands
 
-            skills = load_skills(project_dir)
-            register_skill_commands(registry, skills, provider)
-        except ImportError:
-            logger.debug(
-                "Skills support unavailable (python-frontmatter not installed)"
-            )
+        from ...icoder.skills import load_skills, register_skill_commands
+
+        skills = load_skills(project_dir)
+        register_skill_commands(registry, skills, provider)
 
         # Create core components
         from ...icoder.core.event_log import EventLog

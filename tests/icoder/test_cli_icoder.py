@@ -218,18 +218,11 @@ def test_execute_icoder_creates_registry_with_skills(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """execute_icoder creates registry, loads skills, and passes to AppCore."""
-    import sys
-    from types import ModuleType
-
     from mcp_coder.cli.commands.icoder import execute_icoder
     from mcp_coder.icoder.core.command_registry import CommandRegistry
     from mcp_coder.icoder.core.types import Command, Response
 
     (tmp_path / "logs").mkdir()
-
-    # Ensure 'frontmatter' is importable (may not be installed)
-    if "frontmatter" not in sys.modules:
-        monkeypatch.setitem(sys.modules, "frontmatter", ModuleType("frontmatter"))
 
     # Fake skill that register_skill_commands would create
     fake_skill_command = Command(

@@ -222,6 +222,31 @@ def test_help_shows_show_in_help_true() -> None:
     assert "/visible-skill" in response.text
 
 
+def test_has_command_returns_true_for_existing() -> None:
+    """has_command returns True for a registered command."""
+    registry = create_default_registry()
+    assert registry.has_command("/help") is True
+
+
+def test_has_command_returns_false_for_missing() -> None:
+    """has_command returns False for an unregistered command."""
+    registry = create_default_registry()
+    assert registry.has_command("/nonexistent") is False
+
+
+def test_has_command_after_add_command() -> None:
+    """has_command returns True after add_command."""
+    registry = CommandRegistry()
+    assert registry.has_command("/skill") is False
+    cmd = Command(
+        name="/skill",
+        description="A skill",
+        handler=lambda args: Response(text="ok"),
+    )
+    registry.add_command(cmd)
+    assert registry.has_command("/skill") is True
+
+
 def test_filter_includes_show_in_help_false() -> None:
     """filter_by_input includes commands with show_in_help=False (autocomplete shows all)."""
     registry = CommandRegistry()

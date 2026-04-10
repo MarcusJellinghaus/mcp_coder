@@ -125,6 +125,7 @@ def _make_langchain_handler(skill: ClaudeSkill) -> Callable[[list[str]], Respons
     def handler(args: list[str]) -> Response:
         arguments = " ".join(args)
         expanded = skill.prompt_template.replace("$ARGUMENTS", arguments).strip()
+        expanded = " ".join(expanded.split())
         return Response(send_to_llm=True, llm_text=expanded)
 
     return handler
@@ -144,8 +145,7 @@ def register_skill_commands(
     for skill in skills:
         command_name = "/" + skill.name
         # Check for collision with existing commands
-        existing = registry.filter_by_input(command_name)
-        if any(c.name == command_name for c in existing):
+        if registry.has_command(command_name):
             logger.warning(
                 "Skill '%s' skipped: command %s already registered",
                 skill.name,

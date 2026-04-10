@@ -35,6 +35,14 @@ class CommandRegistry:
 
         return decorator
 
+    def has_command(self, name: str) -> bool:
+        """Check if a command with the given name exists.
+
+        Returns:
+            True if a command with the given name is registered.
+        """
+        return name in self._commands
+
     def add_command(self, command: Command) -> None:
         """Register a pre-built Command directly."""
         self._commands[command.name] = command
