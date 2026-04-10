@@ -4,12 +4,23 @@ from __future__ import annotations
 
 from collections.abc import Generator
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.core.event_log import EventLog
 from mcp_coder.icoder.services.llm_service import FakeLLMService
+
+
+@pytest.fixture(autouse=True)
+def _no_store_session() -> Generator[None, None, None]:
+    """Prevent store_session from writing to disk in all icoder tests."""
+    with patch(
+        "mcp_coder.icoder.core.app_core.store_session",
+        return_value="/fake/path.json",
+    ):
+        yield
 
 
 @pytest.fixture
