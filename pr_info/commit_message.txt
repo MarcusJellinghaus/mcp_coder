@@ -1,13 +1,8 @@
-feat: add ClaudeMCPStatus dataclass and parse_claude_mcp_list() parser
+feat: wire MCP connection status into RuntimeInfo, TUI startup, and event log
 
-Add core parser for `claude mcp list` output to surface MCP server
-connection status (issue #748, step 1).
-
-Changes:
-- Add ClaudeMCPStatus frozen dataclass (name, status_text, ok)
-- Add parse_claude_mcp_list() function that runs `claude mcp list`,
-  parses stdout with regex, and filters to known MCP_SERVER_NAMES
-- Graceful fallback: returns None on CLI not found, timeout, or error
-- Maps raw names (tools-py) to canonical names (mcp-tools-py)
-- Add 12 comprehensive tests covering parsing, error handling, and
-  argument forwarding
+- Add `mcp_connection_status: list[ClaudeMCPStatus] | None` field to RuntimeInfo
+- Call `parse_claude_mcp_list()` in `setup_icoder_environment()` with graceful fallback
+- Add `_connection_status_suffix()` helper in app.py for inline status display
+- Update `on_mount()` to show "✓ Connected" or "✗ <error>" next to server versions
+- Include `mcp_connection_status` dict in `session_start` event payload
+- Add tests: env_setup (3), connection_status_suffix (4), app_pilot (2)

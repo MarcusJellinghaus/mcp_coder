@@ -150,7 +150,6 @@ class TestVerifyMcpServers:
             verify_mcp_servers(tmp_path)
 
 
-
 # --- Sample claude mcp list output ---
 _SAMPLE_OUTPUT = """\
 Checking MCP server health...

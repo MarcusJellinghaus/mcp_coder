@@ -142,6 +142,10 @@ def execute_icoder(args: argparse.Namespace) -> int:
                 project_venv=runtime_info.project_venv_path,
                 project_dir=runtime_info.project_dir,
                 mcp_servers={s.name: s.version for s in runtime_info.mcp_servers},
+                mcp_connection_status={
+                    s.name: {"ok": s.ok, "status_text": s.status_text}
+                    for s in (runtime_info.mcp_connection_status or [])
+                },
             )
             app_core = AppCore(
                 llm_service, event_log, registry=registry, runtime_info=runtime_info

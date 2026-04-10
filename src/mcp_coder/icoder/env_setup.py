@@ -20,7 +20,9 @@ from mcp_coder.llm.providers.claude.claude_executable_finder import (
     find_claude_executable,
 )
 from mcp_coder.utils.mcp_verification import (
+    ClaudeMCPStatus,
     MCPServerInfo,
+    parse_claude_mcp_list,
     verify_mcp_servers,
 )
 
@@ -39,6 +41,7 @@ class RuntimeInfo:
     project_dir: str
     env_vars: dict[str, str]
     mcp_servers: list[MCPServerInfo]
+    mcp_connection_status: list[ClaudeMCPStatus] | None = None
 
 
 def _get_claude_code_version() -> str:
@@ -90,6 +93,10 @@ def setup_icoder_environment(project_dir: Path) -> RuntimeInfo:
         project_venv = Path(tool_env)
 
     mcp_servers = verify_mcp_servers(tool_env)
+
+    # Connection status from claude mcp list (graceful fallback)
+    mcp_connection_status = parse_claude_mcp_list(env_vars=effective)
+
     version = importlib.metadata.version("mcp-coder")
     python_version = (
         f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
@@ -105,4 +112,5 @@ def setup_icoder_environment(project_dir: Path) -> RuntimeInfo:
         project_dir=str(project_dir),
         env_vars=effective,
         mcp_servers=mcp_servers,
+        mcp_connection_status=mcp_connection_status,
     )

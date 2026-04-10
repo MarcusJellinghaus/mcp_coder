@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Wire into RuntimeInfo + iCoder Startup Display + Event Log
 
-- [ ] Implementation: `RuntimeInfo.mcp_connection_status` field, `setup_icoder_environment()` integration, `on_mount()` display, `session_start` event, and tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `RuntimeInfo.mcp_connection_status` field, `setup_icoder_environment()` integration, `on_mount()` display, `session_start` event, and tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Verify Command — Claude MCP Section + Provider-Aware Display + Exit Code
 

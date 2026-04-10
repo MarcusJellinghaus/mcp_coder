@@ -19,7 +19,7 @@ from mcp_coder.icoder.ui.widgets.busy_indicator import BusyIndicator
 from mcp_coder.icoder.ui.widgets.input_area import InputArea
 from mcp_coder.icoder.ui.widgets.output_log import OutputLog
 from mcp_coder.llm.types import StreamEvent
-from mcp_coder.utils.mcp_verification import MCPServerInfo
+from mcp_coder.utils.mcp_verification import ClaudeMCPStatus, MCPServerInfo
 
 pytestmark = pytest.mark.textual_integration
 
@@ -494,6 +494,73 @@ async def test_tui_renders_runtime_info_on_mount(
         assert "Tool env:" in text
         assert "Project env:" in text
         assert "Project dir:" in text
+
+
+async def test_on_mount_shows_connection_status(
+    fake_llm: FakeLLMService, event_log: EventLog
+) -> None:
+    """on_mount() renders inline connection status when mcp_connection_status is set."""
+    info = RuntimeInfo(
+        mcp_coder_version="0.42.0",
+        python_version="3.12.0",
+        claude_code_version="1.2.3",
+        tool_env_path="/fake/tool",
+        project_venv_path="/fake/proj/.venv",
+        project_dir="/fake/proj",
+        env_vars={"MCP_CODER_VENV_PATH": "/fake/bin"},
+        mcp_servers=[
+            MCPServerInfo(
+                name="mcp-tools-py",
+                path=Path("/fake/mcp-tools-py"),
+                version="1.0",
+            ),
+        ],
+        mcp_connection_status=[
+            ClaudeMCPStatus(name="mcp-tools-py", status_text="Connected", ok=True),
+        ],
+    )
+    app_core = AppCore(llm_service=fake_llm, event_log=event_log, runtime_info=info)
+    app = ICoderApp(app_core)
+
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        text = output.recorded_lines[0]
+        assert "\u2713 Connected" in text
+        assert "mcp-tools-py 1.0" in text
+
+
+async def test_on_mount_no_connection_status_falls_back(
+    fake_llm: FakeLLMService, event_log: EventLog
+) -> None:
+    """on_mount() with mcp_connection_status=None shows version-only (no crash)."""
+    info = RuntimeInfo(
+        mcp_coder_version="0.42.0",
+        python_version="3.12.0",
+        claude_code_version="1.2.3",
+        tool_env_path="/fake/tool",
+        project_venv_path="/fake/proj/.venv",
+        project_dir="/fake/proj",
+        env_vars={"MCP_CODER_VENV_PATH": "/fake/bin"},
+        mcp_servers=[
+            MCPServerInfo(
+                name="mcp-tools-py",
+                path=Path("/fake/mcp-tools-py"),
+                version="1.0",
+            ),
+        ],
+        mcp_connection_status=None,
+    )
+    app_core = AppCore(llm_service=fake_llm, event_log=event_log, runtime_info=info)
+    app = ICoderApp(app_core)
+
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        text = output.recorded_lines[0]
+        assert "mcp-tools-py 1.0" in text
+        assert "\u2713" not in text
+        assert "\u2717" not in text
 
 
 # --- Input hint widget tests ---
