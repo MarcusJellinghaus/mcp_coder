@@ -145,6 +145,7 @@ class TestVerifyUsesSharedResolveLlmMethod:
     @patch(f"{_VERIFY}.verify_config")
     @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None)
     @patch(f"{_VERIFY}.verify_mlflow")
     @patch(f"{_VERIFY}.verify_claude")
     @patch(f"{_VERIFY}.resolve_llm_method")
@@ -153,6 +154,7 @@ class TestVerifyUsesSharedResolveLlmMethod:
         mock_resolve: MagicMock,
         mock_claude: MagicMock,
         mock_mlflow: MagicMock,
+        mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
         _mock_log_mlflow: MagicMock,
         mock_verify_config: MagicMock,

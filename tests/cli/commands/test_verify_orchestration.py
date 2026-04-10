@@ -886,6 +886,8 @@ class TestVerifyMcpAllProviders:
         f"{_VERIFY}._run_mcp_edit_smoke_test",
         return_value="  MCP edit smoke test  [OK] edit verified",
     )
+    @patch(f"{_VERIFY}.parse_claude_mcp_list")
+    @patch(f"{_VERIFY}.prepare_llm_environment", return_value={"K": "V"})
     @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value="/fake/.mcp.json")
@@ -900,14 +902,21 @@ class TestVerifyMcpAllProviders:
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
         _mock_log_mlflow: MagicMock,
+        mock_env: MagicMock,
+        mock_parse: MagicMock,
         mock_smoke_test: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """ImportError from verify_mcp_servers prints info message and skips."""
+        from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
+
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
         mock_prompt_llm.return_value = _minimal_llm_response()
+        mock_parse.return_value = [
+            ClaudeMCPStatus(name="mcp-tools-py", status_text="Connected", ok=True),
+        ]
 
         with patch(
             f"{_LC_VERIFY}.verify_mcp_servers",
@@ -931,6 +940,8 @@ class TestVerifyMcpAllProviders:
         f"{_VERIFY}._run_mcp_edit_smoke_test",
         return_value="  MCP edit smoke test  [OK] edit verified",
     )
+    @patch(f"{_VERIFY}.parse_claude_mcp_list")
+    @patch(f"{_VERIFY}.prepare_llm_environment", return_value={"K": "V"})
     @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value="/fake/.mcp.json")
@@ -947,14 +958,21 @@ class TestVerifyMcpAllProviders:
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
         _mock_log_mlflow: MagicMock,
+        mock_env: MagicMock,
+        mock_parse: MagicMock,
         mock_smoke_test: MagicMock,
     ) -> None:
         """MCP failure does not affect exit code when provider is claude."""
+        from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
+
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _claude_ok()
         mock_mlflow.return_value = _mlflow_not_installed()
         mock_prompt_llm.return_value = _minimal_llm_response()
         mock_mcp_servers.return_value = _mcp_servers_fail()
+        mock_parse.return_value = [
+            ClaudeMCPStatus(name="mcp-tools-py", status_text="Connected", ok=True),
+        ]
 
         result = execute_verify(_make_args(mcp_config=".mcp.json"))
 

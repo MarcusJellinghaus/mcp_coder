@@ -48,6 +48,7 @@ class TestExecuteVerify:
             "raw_response": {},
         },
     )
+    @patch("mcp_coder.cli.commands.verify.resolve_mcp_config_path", return_value=None)
     @patch("mcp_coder.cli.commands.verify.verify_mlflow")
     @patch("mcp_coder.cli.commands.verify.verify_claude")
     @patch("mcp_coder.cli.commands.verify.resolve_llm_method")
@@ -56,6 +57,7 @@ class TestExecuteVerify:
         mock_provider: MagicMock,
         mock_verify: MagicMock,
         mock_mlflow: MagicMock,
+        mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
     ) -> None:
         """Test that execute_verify returns 0 when overall_ok is True."""
