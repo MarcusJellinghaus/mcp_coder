@@ -19,6 +19,7 @@ This step wires `parse_claude_mcp_list()` (from Step 1) into the iCoder startup 
 | `src/mcp_coder/cli/commands/icoder.py` | Include connection status in `session_start` event emit |
 | `tests/icoder/test_env_setup.py` | Add tests for new field |
 | `tests/icoder/test_app_pilot.py` | Add test for connection status display |
+| `tests/icoder/test_connection_status.py` | Unit tests for `_connection_status_suffix` (non-Textual) |
 
 ## WHAT
 
@@ -52,7 +53,7 @@ Current:
 New:
 ```python
 *(
-    f"{s.name} {s.version}  {_connection_status_suffix(s.name, info.mcp_connection_status)}"
+    f"{s.name} {s.version}  {_connection_status_suffix(s.name, info.mcp_connection_status)}".rstrip()
     if info.mcp_connection_status is not None
     else f"{s.name} {s.version}"
     for s in info.mcp_servers
@@ -147,7 +148,11 @@ from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 - `test_on_mount_shows_connection_status` — create `RuntimeInfo` with `mcp_connection_status`, verify `on_mount()` renders inline status
 - `test_on_mount_no_connection_status_falls_back` — `mcp_connection_status=None` → verify version-only display (no crash)
 
-### Unit test for `_connection_status_suffix` (in `test_app_pilot.py` or a new small test)
+### `tests/cli/commands/test_icoder.py` — addition (or wherever `execute_icoder` tests live)
+
+- `test_session_start_event_includes_mcp_connection_status` — mock `setup_icoder_environment` to return `RuntimeInfo` with connection status, verify event payload includes `mcp_connection_status` dict
+
+### Unit test for `_connection_status_suffix` (in `tests/icoder/test_connection_status.py`)
 
 - `test_connection_status_suffix_connected` — returns `"✓ Connected"`
 - `test_connection_status_suffix_failed` — returns `"✗ Failed to start"`

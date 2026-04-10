@@ -104,11 +104,11 @@ if active_provider == "claude" and claude_mcp_ok is False:
 ```
 
 `claude_mcp_ok` values:
-- `None` — parser couldn't run. When Claude is active: this is a hard failure (exit 1). When langchain: ignored.
+- `None` — not checked / not applicable (default, backward compatible — does NOT trigger exit 1)
 - `True` — all known servers connected
-- `False` — at least one known server not connected
+- `False` — at least one known server not connected, OR parser failed when Claude is active
 
-**Decision 12 from issue**: If `claude mcp list` itself fails (CLI not found, timeout, crash), hard failure (exit 1) when Claude is the active provider. This means `parse_claude_mcp_list` returning `None` when Claude is active → exit 1.
+**Decision 12 from issue**: If `claude mcp list` itself fails (CLI not found, timeout, crash), hard failure (exit 1) when Claude is the active provider. The CALLER (`execute_verify`) is responsible for translating `parse_claude_mcp_list` returning `None` into `claude_mcp_ok=False` when Claude is the active provider. The default `None` must NOT trigger exit 1 — it means the check was not performed (backward compatibility).
 
 ## ALGORITHM
 
@@ -124,6 +124,8 @@ if active_provider == "claude" and claude_mcp_ok is False:
 
 ### `execute_verify()` MCP section logic
 
+**Note**: Ensure `project_dir` is resolved (via `Path(args.project_dir).resolve() if args.project_dir else Path.cwd()`) BEFORE calling `prepare_llm_environment(project_dir)`. The existing resolution happens later in the function — move or reuse it earlier.
+
 ```
 1. Compute env_vars via prepare_llm_environment(project_dir)
 2. claude_mcp = parse_claude_mcp_list(env_vars) if mcp_config_resolved else None
@@ -134,9 +136,10 @@ if active_provider == "claude" and claude_mcp_ok is False:
    a. Print langchain MCP section (primary) — existing code
    b. Print claude MCP section (for completeness, if available)
 5. Compute claude_mcp_ok:
-   - None if claude_mcp is None
+   - False if claude_mcp is None AND active_provider == "claude" (parser failure = hard failure per Decision 12)
    - True if all statuses have ok=True
-   - False otherwise
+   - False if any status has ok=False
+   - None if claude_mcp is None AND active_provider != "claude" (not relevant)
 6. Pass claude_mcp_ok to _compute_exit_code()
 ```
 
@@ -144,9 +147,9 @@ if active_provider == "claude" and claude_mcp_ok is False:
 
 ```
 1. Existing checks (config_has_error, test_prompt_ok, provider checks, mcp langchain)
-2. NEW: if active_provider == "claude" and claude_mcp_ok is not True:
-   (covers both False and None per Decision 12)
+2. NEW: if active_provider == "claude" and claude_mcp_ok is False:
    return 1
+   (Only False triggers exit 1. None means "not checked" and is ignored for backward compatibility.)
 ```
 
 ## DATA
@@ -157,9 +160,9 @@ if active_provider == "claude" and claude_mcp_ok is False:
 
 ### `_compute_exit_code()` new parameter
 - `claude_mcp_ok: bool | None = None`
-  - `None` → parser failed (hard failure when Claude active, ignored otherwise)
+  - `None` → not checked / not applicable (default, backward compatible, no exit 1)
   - `True` → all servers connected
-  - `False` → at least one server not connected
+  - `False` → at least one server not connected, or parser failed when Claude active (caller converts)
 
 ### Existing `_format_mcp_section()` title change
 When rendered "for completeness", change section title from:
@@ -183,11 +186,16 @@ This requires a small update to `_format_mcp_section()` to accept a `for_complet
 - `test_section_title_for_completeness` — `for_completeness=True` → title includes `"for completeness"`
 - `test_server_names_left_aligned` — verify `{name:<20s}` alignment
 
+### `tests/cli/commands/test_verify_format_section.py` — existing `_format_mcp_section()` with `for_completeness`
+
+- `test_format_mcp_section_for_completeness_title` — test that existing `_format_mcp_section()` with `for_completeness=True` changes its title to include "for completeness"
+
 ### `tests/cli/commands/test_verify_exit_codes.py` — additions to `TestComputeExitCode`
 
 - `test_claude_active_mcp_ok_exit_0` — `claude_mcp_ok=True` → exit 0
 - `test_claude_active_mcp_fail_exit_1` — `claude_mcp_ok=False` → exit 1
-- `test_claude_active_mcp_none_exit_1` — `claude_mcp_ok=None` when active=claude → exit 1 (Decision 12)
+- `test_claude_active_mcp_none_no_effect` — `claude_mcp_ok=None` (not checked) when active=claude → exit 0 (backward compatible)
+- `test_claude_active_mcp_parser_failed_exit_1` — tests that the CALLER (`execute_verify`) passes `claude_mcp_ok=False` when `parse_claude_mcp_list` returns `None` and active provider is claude
 - `test_langchain_active_mcp_fail_no_effect` — `claude_mcp_ok=False` when active=langchain → exit 0
 - `test_langchain_active_mcp_none_no_effect` — `claude_mcp_ok=None` when active=langchain → exit 0
 

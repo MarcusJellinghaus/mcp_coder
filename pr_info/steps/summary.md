@@ -23,7 +23,7 @@ Currently only binary existence is checked (`--version`). Whether Claude Code ac
 | What | Where | Change |
 |------|-------|--------|
 | `RuntimeInfo` dataclass | `icoder/env_setup.py` | New optional field `mcp_connection_status: list[ClaudeMCPStatus] \| None = None` |
-| `_compute_exit_code()` | `cli/commands/verify.py` | New `claude_mcp_ok: bool \| None = None` parameter |
+| `_compute_exit_code()` | `cli/commands/verify.py` | New `claude_mcp_ok: bool \| None = None` parameter (`None`=not checked, `True`=ok, `False`=failure; only `False` triggers exit 1) |
 | `execute_verify()` | `cli/commands/verify.py` | Provider-aware dual MCP sections |
 | `on_mount()` | `icoder/ui/app.py` | Inline connection status on server lines |
 | `execute_icoder()` | `cli/commands/icoder.py` | Include connection status in `session_start` event |
