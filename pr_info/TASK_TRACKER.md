@@ -34,7 +34,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 3: Wire `/clear` → session reset in AppCore
 - [x] Implementation: update `/clear` handler to set `reset_session=True`, update `AppCore.handle_input()` to act on flag + tests in `test_app_core.py`
 - [x] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(icoder): /clear resets LLM session (#765)`
+- [x] Commit: `feat(icoder): /clear resets LLM session (#765)`
 
 ### Step 4: Fresh session by default + `--continue-session` flag
 - [ ] Implementation: add session continuation args to icoder parser, replace auto-resume with opt-in continuation + tests in `test_parsers.py`
