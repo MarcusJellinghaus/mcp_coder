@@ -71,11 +71,9 @@ def execute_icoder(args: argparse.Namespace) -> int:
 
         # Create registry and load skills
         from ...icoder.core.command_registry import create_default_registry
-
-        registry = create_default_registry()
-
         from ...icoder.skills import load_skills, register_skill_commands
 
+        registry = create_default_registry()
         skills = load_skills(project_dir)
         register_skill_commands(registry, skills, provider)
 

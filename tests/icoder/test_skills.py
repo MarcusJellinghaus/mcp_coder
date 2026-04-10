@@ -216,7 +216,7 @@ def test_register_skill_commands_langchain_empty_arguments() -> None:
     register_skill_commands(registry, [skill], "langchain")
     resp = registry.dispatch("/my_skill")
     assert resp is not None
-    assert resp.llm_text == "Do stuff"
+    assert resp.llm_text == "Do  stuff"
 
 
 def test_register_skill_commands_skips_builtin_collision(
