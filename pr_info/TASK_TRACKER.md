@@ -42,9 +42,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat(icoder): fresh session by default, add --continue-session flag (#765)`
 
 ### Step 5: Auto-store iCoder sessions for Claude provider
-- [ ] Implementation: add `provider` property to `LLMService` protocol + implementations, update `AppCore.stream_llm()` to auto-store responses + tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(icoder): auto-store sessions for --continue-session support (#765)`
+- [x] Implementation: add `provider` property to `LLMService` protocol + implementations, update `AppCore.stream_llm()` to auto-store responses + tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(icoder): auto-store sessions for --continue-session support (#765)`
 
 ## Pull Request
 - [ ] PR review: verify all steps integrated correctly

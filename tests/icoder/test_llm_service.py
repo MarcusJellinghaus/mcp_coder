@@ -188,6 +188,24 @@ def test_protocol_has_reset_session() -> None:
     assert isinstance(RealLLMService(provider="claude"), LLMService)
 
 
+def test_fake_provider_property_default() -> None:
+    """FakeLLMService.provider defaults to 'claude'."""
+    service = FakeLLMService()
+    assert service.provider == "claude"
+
+
+def test_fake_provider_property_custom() -> None:
+    """FakeLLMService.provider returns custom value."""
+    service = FakeLLMService(provider="langchain")
+    assert service.provider == "langchain"
+
+
+def test_real_provider_property() -> None:
+    """RealLLMService.provider returns the configured provider."""
+    service = RealLLMService(provider="langchain")
+    assert service.provider == "langchain"
+
+
 def test_fake_falls_back_to_default_after_canned_exhausted() -> None:
     """FakeLLMService falls back to default after canned responses are exhausted."""
     responses: list[list[StreamEvent]] = [

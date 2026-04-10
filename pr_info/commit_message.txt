@@ -1,12 +1,19 @@
-feat(icoder): fresh session by default, add --continue-session flag (#765)
+feat(icoder): auto-store sessions for --continue-session support (#765)
 
-Replace iCoder's auto-resume behavior with opt-in session continuation,
-matching the prompt command's pattern.
+Add `provider` property to LLMService protocol and both implementations
+(RealLLMService, FakeLLMService) so AppCore can create a ResponseAssembler.
 
-Changes:
-- Add --continue-session, --continue-session-from, --session-id args to
-  icoder parser (mutually exclusive where appropriate)
-- Replace auto-resume logic in execute_icoder() with priority-based
-  continuation: --session-id > --continue-session-from > --continue-session
-- Add 5 parser tests for the new icoder session continuation args
-- Update test mock args to include new session attributes
+Update AppCore.stream_llm() to accumulate stream events via
+ResponseAssembler and call store_session() after streaming completes,
+mirroring the prompt command's pattern. This enables --continue-session
+to find prior iCoder sessions for the Claude provider.
+
+Fix ErrorAfterChunksLLMService test helper to satisfy updated protocol
+(add provider property and reset_session method).
+
+Files changed:
+- src/mcp_coder/icoder/services/llm_service.py
+- src/mcp_coder/icoder/core/app_core.py
+- tests/icoder/test_llm_service.py
+- tests/icoder/test_app_core.py
+- tests/icoder/test_app_pilot.py
