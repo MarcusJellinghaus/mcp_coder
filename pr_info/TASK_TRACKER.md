@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: `parse_claude_mcp_list()` Parser + `ClaudeMCPStatus` Dataclass
 
-- [ ] Implementation: `ClaudeMCPStatus` dataclass, `parse_claude_mcp_list()` function, and tests in `test_mcp_verification.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `ClaudeMCPStatus` dataclass, `parse_claude_mcp_list()` function, and tests in `test_mcp_verification.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Wire into RuntimeInfo + iCoder Startup Display + Event Log
 

@@ -1,0 +1,13 @@
+feat: add ClaudeMCPStatus dataclass and parse_claude_mcp_list() parser
+
+Add core parser for `claude mcp list` output to surface MCP server
+connection status (issue #748, step 1).
+
+Changes:
+- Add ClaudeMCPStatus frozen dataclass (name, status_text, ok)
+- Add parse_claude_mcp_list() function that runs `claude mcp list`,
+  parses stdout with regex, and filters to known MCP_SERVER_NAMES
+- Graceful fallback: returns None on CLI not found, timeout, or error
+- Maps raw names (tools-py) to canonical names (mcp-tools-py)
+- Add 12 comprehensive tests covering parsing, error handling, and
+  argument forwarding
