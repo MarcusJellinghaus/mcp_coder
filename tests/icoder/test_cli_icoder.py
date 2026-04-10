@@ -264,11 +264,11 @@ def test_execute_icoder_creates_registry_with_skills(
     )
     monkeypatch.setattr(
         "mcp_coder.cli.commands.icoder.resolve_mcp_config_path",
-        lambda *a, **kw: None,
+        lambda *a, **_kw: None,
     )
     monkeypatch.setattr(
         "mcp_coder.cli.commands.icoder.find_latest_session",
-        lambda **kw: None,
+        lambda **_kw: None,
     )
     monkeypatch.setattr(
         "mcp_coder.icoder.skills.load_skills",

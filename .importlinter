@@ -45,6 +45,8 @@ ignore_imports =
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.app_core
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.event_log
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.env_setup
+    mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.command_registry
+    mcp_coder.cli.commands.icoder -> mcp_coder.icoder.skills
 
 # -----------------------------------------------------------------------------
 # Contract: Domain Services Independence
