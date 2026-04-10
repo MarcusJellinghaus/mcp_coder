@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import logging
-import os
 import sys
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -48,8 +46,17 @@ def _mock_externals(
     monkeypatch: pytest.MonkeyPatch,
     fake_venv: Path,
 ) -> None:
-    """Mock sys.prefix, verify_mcp_servers, importlib.metadata.version, and claude."""
-    monkeypatch.setattr(sys, "prefix", str(fake_venv))
+    """Mock prepare_llm_environment, verify_mcp_servers, metadata.version, and claude."""
+    subdir = "Scripts" if sys.platform == "win32" else "bin"
+    bin_dir = fake_venv / subdir
+    monkeypatch.setattr(
+        "mcp_coder.icoder.env_setup.prepare_llm_environment",
+        lambda project_dir: {
+            "MCP_CODER_VENV_PATH": str(bin_dir),
+            "MCP_CODER_VENV_DIR": str(fake_venv),
+            "MCP_CODER_PROJECT_DIR": str(project_dir),
+        },
+    )
     monkeypatch.setattr(
         "mcp_coder.icoder.env_setup.verify_mcp_servers",
         lambda _root: _FAKE_MCP_SERVERS,
@@ -89,8 +96,8 @@ class TestSetupIcoderEnvironment:
         assert "MCP_CODER_VENV_DIR" in info.env_vars
         assert "MCP_CODER_PROJECT_DIR" in info.env_vars
 
-    def test_tool_env_uses_sys_prefix(self, tmp_path: Path, fake_venv: Path) -> None:
-        """tool_env_path should equal sys.prefix."""
+    def test_tool_env_uses_detected_venv(self, tmp_path: Path, fake_venv: Path) -> None:
+        """tool_env_path should equal the detected venv from prepare_llm_environment."""
         project_dir = tmp_path / "project"
         project_dir.mkdir()
 
@@ -123,51 +130,6 @@ class TestSetupIcoderEnvironment:
         assert info.project_venv_path == str(fake_venv)
         assert any("No project .venv found" in msg for msg in caplog.messages)
 
-    @pytest.mark.parametrize(
-        "key",
-        ["MCP_CODER_VENV_PATH", "MCP_CODER_VENV_DIR", "MCP_CODER_PROJECT_DIR"],
-    )
-    def test_respects_preset_env_vars(
-        self,
-        tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
-        key: str,
-    ) -> None:
-        """Pre-set env var wins over computed value."""
-        project_dir = tmp_path / "project"
-        project_dir.mkdir()
-        preset_value = "/preset/value"
-        monkeypatch.setenv(key, preset_value)
-
-        # Snapshot environ before
-        env_before = dict(os.environ)
-
-        info = setup_icoder_environment(project_dir)
-
-        assert info.env_vars[key] == preset_value
-        # os.environ should not have been mutated beyond the monkeypatch
-        assert os.environ[key] == env_before[key]
-
-    def test_logs_debug_when_preset_differs(
-        self,
-        tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
-        caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        """DEBUG log emitted when pre-set value differs from computed."""
-        project_dir = tmp_path / "project"
-        project_dir.mkdir()
-        monkeypatch.setenv("MCP_CODER_VENV_DIR", "/different/path")
-
-        with caplog.at_level(logging.DEBUG, logger="mcp_coder.icoder.env_setup"):
-            info = setup_icoder_environment(project_dir)
-
-        assert info.env_vars["MCP_CODER_VENV_DIR"] == "/different/path"
-        assert any(
-            "MCP_CODER_VENV_DIR" in msg and "already set" in msg
-            for msg in caplog.messages
-        )
-
     def test_env_vars_always_contain_all_three_keys(self, tmp_path: Path) -> None:
         """With no pre-set vars, all three MCP_CODER_* keys present."""
         project_dir = tmp_path / "project"
@@ -181,18 +143,6 @@ class TestSetupIcoderEnvironment:
             "MCP_CODER_PROJECT_DIR",
         }
         assert expected_keys == set(info.env_vars.keys())
-
-    def test_does_not_mutate_os_environ(self, tmp_path: Path) -> None:
-        """No new MCP_CODER_* keys added to os.environ."""
-        project_dir = tmp_path / "project"
-        project_dir.mkdir()
-
-        mcp_keys_before = {k for k in os.environ if k.startswith("MCP_CODER_")}
-
-        setup_icoder_environment(project_dir)
-
-        mcp_keys_after = {k for k in os.environ if k.startswith("MCP_CODER_")}
-        assert mcp_keys_after == mcp_keys_before
 
     def test_mcp_servers_verified(self, tmp_path: Path) -> None:
         """mcp_servers in RuntimeInfo comes from verify_mcp_servers."""
