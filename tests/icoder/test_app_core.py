@@ -38,9 +38,10 @@ def test_handle_free_text(app_core: AppCore) -> None:
 
 
 def test_handle_clear(app_core: AppCore) -> None:
-    """Test /clear returns clear_output=True."""
+    """Test /clear returns clear_output=True and reset_session=True."""
     response = app_core.handle_input("/clear")
     assert response.clear_output is True
+    assert response.reset_session is True
 
 
 def test_handle_quit(app_core: AppCore) -> None:
@@ -134,6 +135,36 @@ def test_runtime_info_injected(fake_llm: FakeLLMService, event_log: EventLog) ->
     core = AppCore(llm_service=fake_llm, event_log=event_log, runtime_info=info)
     assert core.runtime_info is info
     assert core.runtime_info.mcp_coder_version == "1.0.0"
+
+
+def test_clear_resets_session(
+    event_log: EventLog,
+) -> None:
+    """Test /clear resets the LLM session (session_id becomes None)."""
+    fake_llm = FakeLLMService(
+        responses=[
+            [
+                {"type": "text_delta", "text": "hello"},
+                {"type": "done", "session_id": "sess-123"},
+            ]
+        ]
+    )
+    core = AppCore(llm_service=fake_llm, event_log=event_log)
+    # Stream to populate session_id
+    list(core.stream_llm("hi"))
+    assert fake_llm.session_id == "sess-123"
+
+    # /clear should reset session
+    core.handle_input("/clear")
+    assert fake_llm.session_id is None
+
+
+def test_clear_emits_session_reset_event(
+    app_core: AppCore, event_log: EventLog
+) -> None:
+    """Test /clear emits a session_reset event."""
+    app_core.handle_input("/clear")
+    assert any(e.event == "session_reset" for e in event_log.entries)
 
 
 def test_handle_input_returns_llm_text(app_core: AppCore) -> None:

@@ -61,6 +61,9 @@ class AppCore:
             self._event_log.emit("command_matched", command=text.split()[0].lower())
             if response.text:
                 self._event_log.emit("output_emitted", text=response.text)
+            if response.reset_session:
+                self._llm_service.reset_session()
+                self._event_log.emit("session_reset")
             return response
 
         # Not a command → send to LLM

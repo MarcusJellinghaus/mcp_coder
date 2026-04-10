@@ -1,7 +1,7 @@
-feat(icoder): add reset_session() to LLMService protocol
+feat(icoder): /clear resets LLM session (#765)
 
-Add reset_session() method to LLMService protocol, RealLLMService,
-and FakeLLMService. The method sets session_id to None, enabling
-a fresh conversation on the next stream() call.
-
-Tests added for both implementations and protocol conformance.
+- Update /clear handler to return Response(clear_output=True, reset_session=True)
+- Update AppCore.handle_input() to call llm_service.reset_session() and
+  emit "session_reset" event when reset_session flag is set
+- Add tests: test_clear_resets_session, test_clear_emits_session_reset_event
+- Update test_handle_clear to also assert reset_session=True

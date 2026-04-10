@@ -32,8 +32,8 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat(icoder): add reset_session() to LLMService protocol`
 
 ### Step 3: Wire `/clear` → session reset in AppCore
-- [ ] Implementation: update `/clear` handler to set `reset_session=True`, update `AppCore.handle_input()` to act on flag + tests in `test_app_core.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Implementation: update `/clear` handler to set `reset_session=True`, update `AppCore.handle_input()` to act on flag + tests in `test_app_core.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
 - [ ] Commit: `feat(icoder): /clear resets LLM session (#765)`
 
 ### Step 4: Fresh session by default + `--continue-session` flag

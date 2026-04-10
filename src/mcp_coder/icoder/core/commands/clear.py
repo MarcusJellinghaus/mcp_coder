@@ -15,4 +15,4 @@ def register_clear(registry: CommandRegistry) -> None:
 
     @registry.register("/clear", "Clear the output log")
     def handle_clear(args: list[str]) -> Response:  # noqa: ARG001
-        return Response(clear_output=True)
+        return Response(clear_output=True, reset_session=True)
