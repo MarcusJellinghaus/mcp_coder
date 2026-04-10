@@ -47,5 +47,5 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat(icoder): auto-store sessions for --continue-session support (#765)`
 
 ## Pull Request
-- [ ] PR review: verify all steps integrated correctly
+- [x] PR review: verify all steps integrated correctly
 - [ ] PR summary prepared
