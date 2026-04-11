@@ -41,9 +41,13 @@ def make_icoder_app(
         *,
         responses: list[list[StreamEvent]] | None = None,
         llm_service: LLMService | None = None,
+        format_tools: bool = True,
     ) -> ICoderApp:
         llm = llm_service or FakeLLMService(responses=responses or [])
-        return ICoderApp(AppCore(llm_service=llm, event_log=event_log))
+        return ICoderApp(
+            AppCore(llm_service=llm, event_log=event_log),
+            format_tools=format_tools,
+        )
 
     return _factory
 
@@ -664,3 +668,79 @@ async def test_busy_indicator_resets_on_stream_error(
         await _submit_and_wait(app, pilot)
         indicator = app.query_one(BusyIndicator)
         assert "✓ Ready" in indicator.label_text
+
+
+# --- Markdown rendering tests (Step 3) ---
+
+
+async def test_tool_result_renders_markdown_by_default(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """Tool result output is rendered via Markdown when format_tools=True (default)."""
+    app = make_icoder_app(
+        responses=[
+            [
+                {
+                    "type": "tool_use_start",
+                    "name": "mcp__workspace__read_file",
+                    "args": {"file_path": "x.py"},
+                },
+                {
+                    "type": "tool_result",
+                    "name": "mcp__workspace__read_file",
+                    "output": "# Header\n**bold text**",
+                },
+                {"type": "done"},
+            ]
+        ],
+    )
+    async with app.run_test() as pilot:
+        await _submit_and_wait(app, pilot)
+        output = app.query_one(OutputLog)
+        lines = output.recorded_lines
+        # Tool start line should be present
+        tool_start_lines = [ln for ln in lines if "┌" in ln]
+        assert len(tool_start_lines) >= 1
+        # With format_tools=True, tool result goes through write() as Markdown,
+        # which records a text representation in _recorded
+        result_lines = [ln for ln in lines if "done" in ln]
+        assert len(result_lines) >= 1
+        # Verify the recorded content includes the tool output body
+        joined = "\n".join(lines)
+        assert "│" in joined, "Recorded content should contain box-drawing body lines"
+        assert "# Header" in joined, "Tool output body should be recorded"
+
+
+async def test_tool_result_renders_plain_text_when_no_format(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """Tool result output is rendered as plain text when format_tools=False."""
+    app = make_icoder_app(
+        responses=[
+            [
+                {
+                    "type": "tool_use_start",
+                    "name": "mcp__workspace__read_file",
+                    "args": {"file_path": "x.py"},
+                },
+                {
+                    "type": "tool_result",
+                    "name": "mcp__workspace__read_file",
+                    "output": "# Header\n**bold text**",
+                },
+                {"type": "done"},
+            ]
+        ],
+        format_tools=False,
+    )
+    async with app.run_test() as pilot:
+        await _submit_and_wait(app, pilot)
+        output = app.query_one(OutputLog)
+        lines = output.recorded_lines
+        # With format_tools=False, tool result goes through append_text (plain text)
+        result_lines = [ln for ln in lines if "│" in ln]
+        assert len(result_lines) >= 1
+        # The raw pipe-prefixed lines should be in recorded_lines as a single string
+        joined = "\n".join(lines)
+        assert "# Header" in joined
+        assert "**bold text**" in joined

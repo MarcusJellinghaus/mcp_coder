@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from rich.markdown import Markdown
 from textual.app import App, ComposeResult
 from textual.widgets import Static
 
@@ -48,16 +49,20 @@ class ICoderApp(App[None]):
 
     CSS = CSS
 
-    def __init__(self, app_core: AppCore, **kwargs: Any) -> None:
+    def __init__(
+        self, app_core: AppCore, *, format_tools: bool = True, **kwargs: Any
+    ) -> None:
         """Initialize with injected AppCore.
 
         Args:
             app_core: Central input router.
+            format_tools: Enable tool output formatting (default True).
             **kwargs: Passed to App.__init__.
         """
         super().__init__(**kwargs)
         self._core = app_core
-        self._renderer = StreamEventRenderer()
+        self._format_tools = format_tools
+        self._renderer = StreamEventRenderer(format_tools=format_tools)
         self._text_buffer: str = ""
 
     def compose(self) -> ComposeResult:
@@ -201,7 +206,11 @@ class ICoderApp(App[None]):
                 )
             else:
                 parts.append("└ done")
-            output.append_text("\n".join(parts), style=STYLE_TOOL_OUTPUT)
+            body = "\n".join(parts)
+            if self._format_tools:
+                output.write(Markdown(body))
+            else:
+                output.append_text(body, style=STYLE_TOOL_OUTPUT)
         elif isinstance(action, ErrorMessage):
             output.append_text(f"Error: {action.message}")
 
