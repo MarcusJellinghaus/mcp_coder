@@ -47,7 +47,7 @@ class OutputLog(RichLog):
             **kwargs: Keyword args passed through to RichLog.write().
         """
         if isinstance(content, str):
-            # Plain strings are recorded as-is (don't duplicate append_text records)
+            # Plain strings are NOT recorded by write(); use append_text() for recorded text.
             pass
         elif isinstance(content, Text):
             # Text objects are recorded via append_text, skip here

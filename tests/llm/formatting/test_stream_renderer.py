@@ -260,6 +260,13 @@ class TestRenderToolOutputFieldFiltering:
         assert "ok" in full_text
         assert "metadata:" in full_text
 
+    def test_render_tool_output_only_envelope_fields(self) -> None:
+        """Dict with only envelope fields returns empty output."""
+        data = {"type": "text", "role": "assistant"}
+        lines, total = _render_tool_output(json.dumps(data))
+        assert lines == []
+        assert total == 0
+
 
 class TestRenderToolOutputTruncation:
     """Tests for head/tail truncation in _render_tool_output()."""
@@ -287,7 +294,7 @@ class TestRenderToolOutputTruncation:
         lines, total = _render_tool_output(text)
         assert total == 16
         # head 10 + separator + tail 5 = 16, but 1 line skipped
-        assert lines[10] == "... (1 lines skipped)"
+        assert lines[10] == "... (1 line skipped)"
         assert len(lines) == 16  # 10 + 1 separator + 5
 
 

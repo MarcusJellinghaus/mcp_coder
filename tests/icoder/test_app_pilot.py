@@ -705,6 +705,10 @@ async def test_tool_result_renders_markdown_by_default(
         # which records a text representation in _recorded
         result_lines = [ln for ln in lines if "done" in ln]
         assert len(result_lines) >= 1
+        # Verify the recorded content includes the tool output body
+        joined = "\n".join(lines)
+        assert "│" in joined, "Recorded content should contain box-drawing body lines"
+        assert "# Header" in joined, "Tool output body should be recorded"
 
 
 async def test_tool_result_renders_plain_text_when_no_format(

@@ -157,7 +157,7 @@ def _render_tool_output(
         skipped = total - _HEAD_LINES - _TAIL_LINES
         lines = (
             lines[:_HEAD_LINES]
-            + [f"... ({skipped} lines skipped)"]
+            + [f"... ({skipped} {'line' if skipped == 1 else 'lines'} skipped)"]
             + lines[-_TAIL_LINES:]
         )
     return (lines, total)
@@ -223,7 +223,7 @@ class StreamEventRenderer:
                 name=_format_tool_name(name),
                 output_lines=output_lines,
                 total_lines=total_lines,
-                truncated=total_lines > _TRUNCATION_THRESHOLD,
+                truncated=len(output_lines) != total_lines,
             )
 
         if event_type == "error":
