@@ -1,6 +1,0 @@
-fix: add Returns section to _render_value docstring (DOC201)
-
-Expand the docstring for `_render_value` in
-stream_renderer.py to include a Returns section,
-satisfying ruff rule DOC201 which requires all functions
-with return statements to document their return values.
