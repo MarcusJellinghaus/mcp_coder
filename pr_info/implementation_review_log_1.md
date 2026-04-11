@@ -28,4 +28,24 @@
 - `test_stream_renderer.py`: Updated singular grammar assertion (F1); added `test_render_tool_output_only_envelope_fields` (F7)
 - `test_app_pilot.py`: Strengthened markdown test with box-drawing and content assertions (F11)
 
-**Status**: Committed
+**Status**: Committed (e351a25)
+
+## Round 2 — 2026-04-11
+
+**Findings**:
+- R2-F1 (Skip): Edge case — 16 lines produces `truncated=False` since output length equals total after separator insertion. Visual behavior is actually better UX.
+- R2-F2 (Skip): Pre-existing — separator line counted in truncation footer message. Not introduced by this PR.
+
+**Decisions**:
+- Skip: R2-F1 (defensible behavior), R2-F2 (pre-existing, out of scope)
+
+**Changes**: None
+
+**Status**: No changes needed
+
+## Final Status
+
+- **Rounds**: 2
+- **Critical issues found and fixed**: 1 (truncated flag bug)
+- **Other improvements**: 4 (grammar, comment, test coverage, test assertions)
+- **Open issues**: None
