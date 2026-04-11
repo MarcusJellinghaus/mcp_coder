@@ -13,7 +13,7 @@ Approve the implementation and transition the issue to PR-ready state.
 **Instructions:**
 1. Run branch-status check:
 ```bash
-mcp-coder check branch-status --ci-timeout 400 --pr-timeout 600 --llm-truncate
+mcp-coder check branch-status --ci-timeout 600 --pr-timeout 600 --llm-truncate
 ```
 
 2. If `branch-status` reports a base branch other than `main`, ask the user to confirm this is intentional before proceeding.
@@ -29,5 +29,5 @@ mcp-coder gh-tool set-status status-08:ready-pr
 
 4. After the label is set, poll for the PR to be created and pass CI. This runs in the background — the background process creates the PR while it polls (up to 600s):
 ```bash
-mcp-coder check branch-status --ci-timeout 400 --pr-timeout 600 --llm-truncate --wait-for-pr
+mcp-coder check branch-status --ci-timeout 600 --pr-timeout 600 --llm-truncate --wait-for-pr
 ```
