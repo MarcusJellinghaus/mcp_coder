@@ -206,6 +206,26 @@ def test_real_provider_property() -> None:
     assert service.provider == "langchain"
 
 
+def test_real_llm_service_custom_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RealLLMService passes custom timeout to prompt_llm_stream."""
+    captured_kwargs: dict[str, object] = {}
+    fake_events: list[StreamEvent] = [{"type": "done"}]
+
+    def mock_stream(question: str, **kwargs: object) -> Iterator[StreamEvent]:
+        captured_kwargs.update(kwargs)
+        yield from fake_events
+
+    monkeypatch.setattr(
+        "mcp_coder.icoder.services.llm_service.prompt_llm_stream",
+        mock_stream,
+    )
+    service = RealLLMService(provider="claude", timeout=600)
+    list(service.stream("hello"))
+    assert captured_kwargs["timeout"] == 600
+
+
 def test_fake_falls_back_to_default_after_canned_exhausted() -> None:
     """FakeLLMService falls back to default after canned responses are exhausted."""
     responses: list[list[StreamEvent]] = [

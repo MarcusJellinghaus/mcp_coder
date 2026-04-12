@@ -88,6 +88,16 @@ class TestICoderSessionArgs:
         assert args.continue_session is False
         assert args.session_id is None
 
+    def test_icoder_parser_timeout_default(self) -> None:
+        """icoder with no --timeout flag defaults to 300."""
+        args = self._parse("icoder")
+        assert args.timeout == 300
+
+    def test_icoder_parser_timeout_custom(self) -> None:
+        """icoder --timeout 600 sets timeout=600."""
+        args = self._parse("icoder", "--timeout", "600")
+        assert args.timeout == 600
+
     def test_icoder_parser_continue_flags_mutually_exclusive(self) -> None:
         """--continue-session and --continue-session-from are mutually exclusive."""
         with pytest.raises(SystemExit):
