@@ -21,6 +21,21 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: `--timeout` CLI flag + `RealLLMService` timeout parameter
+- [ ] Implementation: tests + production code ([step_1.md](./steps/step_1.md))
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Claude CLI — improved timeout message + double-error fix
+- [ ] Implementation: tests + production code ([step_2.md](./steps/step_2.md))
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Langchain — improved timeout messages (agent + text-stream)
+- [ ] Implementation: tests + production code ([step_3.md](./steps/step_3.md))
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review
+- [ ] PR summary
