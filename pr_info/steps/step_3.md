@@ -10,7 +10,7 @@ Replace raw timeout messages in both langchain streaming paths with informative 
 | File | Change |
 |------|--------|
 | `tests/llm/providers/langchain/test_langchain_streaming_timeout.py` | Update timeout message assertion |
-| `tests/llm/providers/langchain/test_langchain_agent_streaming.py` | Add/update agent timeout message assertion (if test exists) |
+| `tests/llm/providers/langchain/test_langchain_agent_timeout.py` | **New test**: agent inactivity timeout message assertion |
 | `src/mcp_coder/llm/providers/langchain/__init__.py` | Improved messages in `_ask_agent_stream` and `_ask_text_stream` |
 
 ## Implementation Details
@@ -31,14 +31,15 @@ pytest.raises(
 
 The `test_text_stream_active_no_timeout` test is unchanged.
 
-### 2. Tests: agent timeout (check `test_langchain_agent_streaming.py`)
+### 2. Tests: agent timeout
 
-If there's an existing test that asserts on `"Agent produced no output for {timeout}s"`, update its match pattern to:
-```python
-match=r"LLM inactivity timeout \(langchain\): no response for \d+s\. Connection closed\."
-```
+**No existing test covers the `_ask_agent_stream()` inactivity timeout.** Create a new test in the appropriate test file (e.g., `tests/llm/providers/langchain/test_langchain_agent_streaming.py` or a new file `tests/llm/providers/langchain/test_langchain_agent_timeout.py`).
 
-If no such test exists, add one in the appropriate test file.
+The test should:
+1. Mock the agent event queue to not produce any events (simulating timeout)
+2. Verify `TimeoutError` is raised with the new message pattern: `r"LLM inactivity timeout \(langchain\): no response for \d+s\. Connection closed\."`
+
+Read `_ask_agent_stream()` in `src/mcp_coder/llm/providers/langchain/__init__.py` (around line 490-500) to understand the `queue.Empty` → `TimeoutError` path and design the mock accordingly.
 
 ### 3. Source: `src/mcp_coder/llm/providers/langchain/__init__.py`
 

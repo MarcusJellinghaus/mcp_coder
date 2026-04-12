@@ -64,7 +64,7 @@ def __init__(
 
 ### 3. Source: `src/mcp_coder/cli/parsers.py`
 
-**WHERE**: Inside `add_icoder_parser()`, after the `--execution-dir` argument (around line 485)
+**WHERE**: Inside `add_icoder_parser()`, after the `--execution-dir` argument (around line 657, after lines 652-657, before `--no-format-tools` at lines 658-662)
 
 **WHAT**: Add one argument:
 ```python
@@ -81,7 +81,7 @@ No custom validator needed — `type=int` handles non-integers, and `prompt_llm_
 
 ### 4. Source: `src/mcp_coder/cli/commands/icoder.py`
 
-**WHERE**: `execute_icoder()`, where `RealLLMService` is constructed (around line 92)
+**WHERE**: `execute_icoder()`, where `RealLLMService` is constructed (around line 126-132)
 
 **WHAT**: Pass `timeout=args.timeout`:
 ```python
@@ -94,6 +94,16 @@ llm_service = RealLLMService(
     timeout=args.timeout,  # NEW
 )
 ```
+
+### 2b. Tests: `tests/cli/test_parsers.py`
+
+Read the existing `TestICoderSessionArgs` class to understand the test pattern, then add:
+
+**Add** `test_icoder_parser_timeout_default` and `test_icoder_parser_timeout_custom`:
+- Default: parse with no --timeout → `args.timeout == 300`
+- Custom: parse with `--timeout 600` → `args.timeout == 600`
+
+Follow the pattern used in existing icoder parser tests (e.g., `test_icoder_parser_continue_session_flag`).
 
 ## LLM Prompt
 
