@@ -94,6 +94,7 @@ depends_on = [
     { path = "mcp_coder.checks" },         # High-level check modules
     { path = "mcp_coder.llm" },           # LLM for code generation
     { path = "mcp_coder.formatters" },    # Code formatting after generation
+    { path = "mcp_coder.mcp_tools_py" },  # MCP tools (formatter shim, mypy)
     { path = "mcp_coder.prompt_manager" }, # Load workflow-specific prompts
     { path = "mcp_coder.utils" },         # Git, GitHub operations
     { path = "mcp_coder.config" },        # Access configuration

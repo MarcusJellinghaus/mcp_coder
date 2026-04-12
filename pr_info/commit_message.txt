@@ -1,0 +1,9 @@
+refactor: add run_format_code shim + swap caller
+
+- Add run_format_code() shim to mcp_tools_py.py that delegates to
+  mcp_tools_py.formatter.runner.run_format_code (lazy import)
+- Swap task_processing.py from mcp_coder.formatters.format_code to
+  mcp_coder.mcp_tools_py.run_format_code
+- Update error logging from .error_message to .output (FormatterResult field)
+- Update all test mock targets and assertions in test_task_processing.py
+- Add mcp_tools_py dependency to workflows module in tach.toml

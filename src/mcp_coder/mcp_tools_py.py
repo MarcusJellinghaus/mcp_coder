@@ -1,14 +1,35 @@
 """Thin wrapper for mcp_tools_py library.
 
-Provides a simplified interface to mcp_tools_py's mypy functionality.
+Provides a simplified interface to mcp_tools_py's mypy and formatter functionality.
 """
 
 import sys
 from pathlib import Path
-from typing import Union
+from typing import Any, Union
 
 from mcp_tools_py.code_checker_mypy import MypyResult
 from mcp_tools_py.code_checker_mypy import run_mypy_check as _run_mypy_check
+
+
+def run_format_code(
+    project_dir: Union[str, Path],
+) -> "dict[str, Any]":
+    """Run code formatters (isort, black) on the project.
+
+    Args:
+        project_dir: Path to the project directory.
+
+    Returns:
+        Dict mapping formatter step name to FormatterResult.
+    """
+    from mcp_tools_py.formatter.runner import run_format_code as _run_format_code
+    from mcp_tools_py.utils.project_config import resolve_target_directories
+
+    project_root = Path(str(project_dir))
+    target_dirs = resolve_target_directories(str(project_root), None)
+    if isinstance(target_dirs, str):
+        raise RuntimeError(target_dirs)
+    return _run_format_code(sys.executable, project_root, target_dirs)
 
 
 def run_mypy_check(
