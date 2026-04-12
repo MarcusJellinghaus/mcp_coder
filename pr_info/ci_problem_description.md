@@ -1,0 +1,5 @@
+The `ruff-docstrings` CI job fails because the newly added `run_format_code` function in `src/mcp_coder/mcp_tools_py.py` raises a `RuntimeError` on line 31 but does not document it in the docstring. Ruff rule DOC501 requires that all explicitly raised exceptions are listed in a `Raises:` section of the docstring. The error message is: "Raised exception `RuntimeError` missing from docstring".
+
+The fix is straightforward: add a `Raises:` section to the `run_format_code` docstring in `src/mcp_coder/mcp_tools_py.py` (lines 17-24) documenting that `RuntimeError` is raised when target directory resolution fails. This is the only file that needs to change for this specific CI failure.
+
+Note that the other failing CI jobs (integration-tests, unit-tests, pylint, mypy) are likely related to the broader refactoring described in the implementation plan (consolidating formatters into mcp-tools-py), where deleted modules, swapped imports, or updated test mocks may not yet be fully consistent. However, the ruff-docstrings fix is independent and should be addressed first as a minimal, isolated change.

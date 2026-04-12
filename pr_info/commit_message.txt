@@ -1,8 +1,5 @@
-refactor: remove formatter helpers from pyproject_config
+fix: add Raises section to run_format_code docstring for ruff DOC501
 
-Remove get_formatter_config() and check_line_length_conflicts() from
-pyproject_config.py along with their test classes. These functions were
-only used by the now-deleted mcp_coder.formatters package; equivalent
-functionality lives in mcp-tools-py's utils/project_config.py.
-
-Also removes the unused `from typing import Any` import.
+Document the RuntimeError raised when target directory resolution fails
+in the run_format_code function docstring. This fixes the ruff DOC501
+lint failure in CI.

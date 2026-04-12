@@ -21,6 +21,9 @@ def run_format_code(
 
     Returns:
         Dict mapping formatter step name to FormatterResult.
+
+    Raises:
+        RuntimeError: If target directory resolution fails.
     """
     from mcp_tools_py.formatter.runner import run_format_code as _run_format_code
     from mcp_tools_py.utils.project_config import resolve_target_directories
