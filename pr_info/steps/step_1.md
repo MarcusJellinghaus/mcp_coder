@@ -18,6 +18,7 @@ callers — making step 2 (deletion) safe.
 1. `src/mcp_coder/mcp_tools_py.py` — add shim
 2. `src/mcp_coder/workflows/implement/task_processing.py` — swap import + call
 3. `tests/workflows/implement/test_task_processing.py` — update mocks
+4. `tach.toml` — add mcp_tools_py dependency to workflows module
 
 ## WHAT — Functions and signatures
 
@@ -74,6 +75,16 @@ In `TestRunFormatters`:
 - In `test_run_formatters_failure`: change `mock_failed_result.error_message` to
   `mock_failed_result.output` (the field the caller now logs)
 
+In `TestIntegration`:
+- `test_error_recovery_patterns`: Change `@patch` target from `...task_processing.format_code`
+  to `...task_processing.run_format_code`
+
+### 4. tach.toml dependency update
+
+Add `{ path = "mcp_coder.mcp_tools_py" }` to the `depends_on` list of the
+`mcp_coder.workflows` module. This is needed because `task_processing.py` now
+has a top-level import from `mcp_coder.mcp_tools_py`.
+
 ## HOW — Integration points
 
 - Import isolation enforced by `.importlinter`: only `mcp_coder.mcp_tools_py` may
@@ -107,4 +118,6 @@ def run_format_code(project_dir):
 mcp__tools-py__run_pytest_check   (unit tests, exclude integration)
 mcp__tools-py__run_pylint_check
 mcp__tools-py__run_mypy_check
+mcp__tools-py__run_lint_imports_check
+mcp__tools-py__run_vulture_check
 ```

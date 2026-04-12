@@ -45,13 +45,15 @@ task_processing.py → mcp_coder.mcp_tools_py.run_format_code()
 |------|--------|
 | `src/mcp_coder/mcp_tools_py.py` | Add `run_format_code` shim |
 | `src/mcp_coder/workflows/implement/task_processing.py` | Swap import + adapt call |
-| `tests/workflows/implement/test_task_processing.py` | Update mock target + assertions |
+| `tests/workflows/implement/test_task_processing.py` | Update mock target + assertions (incl. `test_error_recovery_patterns`) |
+| `tach.toml` | Add `mcp_tools_py` dependency to workflows module |
 | `src/mcp_coder/utils/pyproject_config.py` | Remove 2 functions |
 | `tests/utils/test_pyproject_config.py` | Remove 2 test classes |
-| `.importlinter` | Remove 3 contracts + formatter refs in 2 others |
+| `.importlinter` | Remove 2 contracts + refs in 2 others (keep `black_isolation` and `isort_isolation`) |
 | `tach.toml` | Remove `mcp_coder.formatters` module + deps |
 | `tools/tach_docs.py` | Remove formatter from diagram + module list |
-| `docs/architecture/architecture.md` | Remove formatter section |
+| `docs/architecture/architecture.md` | Remove formatter section + `formatter_integration` marker description |
+| `pyproject.toml` | Remove `formatter_integration` marker definition |
 
 ## Files Deleted
 
@@ -72,10 +74,9 @@ task_processing.py → mcp_coder.mcp_tools_py.run_format_code()
 
 | Step | Commit message | Description |
 |------|---------------|-------------|
-| 1 | `refactor: add run_format_code shim + swap caller` | Shim in mcp_tools_py.py, swap task_processing.py import, update tests |
-| 2 | `refactor: delete mcp_coder/formatters package and tests` | Remove 6 source + 9 test files |
-| 3 | `refactor: trim pyproject_config.py formatter helpers` | Remove 2 functions + 2 test classes |
-| 4 | `refactor: update config files for formatter removal` | .importlinter, tach.toml, tach_docs.py, architecture.md |
+| 1 | `refactor: add run_format_code shim + swap caller` | Shim in mcp_tools_py.py, swap task_processing.py import, update tests (incl. `test_error_recovery_patterns`), add `tach.toml` workflows dependency |
+| 2 | `refactor: delete formatters package and update configs` | Remove 6 source + 9 test files, update .importlinter (remove 2 contracts, keep `black_isolation`/`isort_isolation`), tach.toml, tach_docs.py, architecture.md, pyproject.toml marker cleanup |
+| 3 | `refactor: remove formatter helpers from pyproject_config` | Remove 2 functions + 2 test classes from pyproject_config.py |
 
 ## Verification
 

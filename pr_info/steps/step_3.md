@@ -69,4 +69,6 @@ After trimming, `pyproject_config.py` exports:
 mcp__tools-py__run_pytest_check   (unit tests, exclude integration)
 mcp__tools-py__run_pylint_check
 mcp__tools-py__run_mypy_check
+mcp__tools-py__run_lint_imports_check
+mcp__tools-py__run_vulture_check
 ```
