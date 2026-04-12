@@ -17,7 +17,7 @@
 
 ### 1. Tests first: `tests/llm/providers/claude/test_claude_code_cli.py`
 
-**Update** `test_ask_claude_stream_timeout_yields_error` (line ~370):
+**Update** `test_ask_claude_stream_timeout_yields_error` (line ~620):
 
 Current assertion: `assert any("Timed out" in str(e["message"]) for e in error_events)`
 
@@ -35,7 +35,7 @@ The separate `test_ask_claude_stream_nonzero_exit_yields_error` test (which uses
 
 ### 2. Source: `src/mcp_coder/llm/providers/claude/claude_code_cli_streaming.py`
 
-**WHERE**: Lines 136–142 (end of `ask_claude_code_cli_stream`)
+**WHERE**: Lines 134–142 (end of `ask_claude_code_cli_stream`)
 
 **WHAT**: Two changes in the post-stream error handling block:
 

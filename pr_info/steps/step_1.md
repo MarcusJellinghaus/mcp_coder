@@ -97,7 +97,7 @@ llm_service = RealLLMService(
 
 ### 2b. Tests: `tests/cli/test_parsers.py`
 
-Read the existing `TestICoderSessionArgs` class to understand the test pattern, then add:
+Add two tests to the existing `TestICoderSessionArgs` class:
 
 **Add** `test_icoder_parser_timeout_default` and `test_icoder_parser_timeout_custom`:
 - Default: parse with no --timeout → `args.timeout == 300`
