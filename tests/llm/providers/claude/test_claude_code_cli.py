@@ -634,7 +634,11 @@ class TestAskClaudeCodeCliStream:
             events = list(ask_claude_code_cli_stream("Hello", timeout=30))
             error_events = [e for e in events if e["type"] == "error"]
 
-            assert any("Timed out" in str(e["message"]) for e in error_events)
+            assert len(error_events) == 1  # elif suppresses the second error
+            msg = str(error_events[0]["message"])
+            assert "LLM inactivity timeout (claude)" in msg
+            assert "no output for 30s" in msg
+            assert "--timeout" in msg
 
     def test_ask_claude_stream_empty_question_raises(self) -> None:
         """Test that empty/whitespace question raises ValueError."""

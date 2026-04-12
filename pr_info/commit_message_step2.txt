@@ -1,0 +1,7 @@
+fix(claude-cli): improve timeout error message and suppress double-error
+
+- Replace raw "Timed out after {timeout}s" with informative message
+  including provider name, timeout value, and --timeout action hint
+- Change `if` to `elif` on return code check so that when timed_out
+  is true, the redundant "CLI failed with code N" error is suppressed
+- Update test assertions to verify single error event with new message
