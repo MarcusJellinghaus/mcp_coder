@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared: `refactor: delete formatters package and update configs`
 
 ### Step 3: Remove formatter helpers from pyproject_config
-- [ ] Implementation: remove `get_formatter_config()` and `check_line_length_conflicts()` from `pyproject_config.py`, remove 2 test classes from `test_pyproject_config.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `refactor: remove formatter helpers from pyproject_config`
+- [x] Implementation: remove `get_formatter_config()` and `check_line_length_conflicts()` from `pyproject_config.py`, remove 2 test classes from `test_pyproject_config.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `refactor: remove formatter helpers from pyproject_config`
 
 ## Pull Request
 
