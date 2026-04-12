@@ -134,8 +134,14 @@ def ask_claude_code_cli_stream(
     # pylint: disable=no-member  # StreamResult.result is typed CommandResult
     cmd_result: CommandResult = stream.result
     if cmd_result.timed_out:
-        yield {"type": "error", "message": f"Timed out after {timeout}s"}
-    if cmd_result.return_code != 0:
+        yield {
+            "type": "error",
+            "message": (
+                f"LLM inactivity timeout (claude): no output for {timeout}s. "
+                "Process terminated. You can retry, or use --timeout to increase the limit."
+            ),
+        }
+    elif cmd_result.return_code != 0:
         yield {
             "type": "error",
             "message": f"CLI failed with code {cmd_result.return_code}",

@@ -656,6 +656,13 @@ def add_icoder_parser(subparsers: Any) -> None:
         help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
     )
     icoder_parser.add_argument(
+        "--timeout",
+        type=int,
+        default=300,
+        metavar="SECONDS",
+        help="LLM inactivity timeout in seconds — max silence before cancelling (default: 300)",
+    )
+    icoder_parser.add_argument(
         "--no-format-tools",
         action="store_true",
         help="Disable tool output formatting (show raw output)",

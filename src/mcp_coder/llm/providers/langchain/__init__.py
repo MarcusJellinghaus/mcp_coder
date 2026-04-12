@@ -496,7 +496,10 @@ def _ask_agent_stream(
                 event = q.get(timeout=timeout)
             except queue.Empty as exc:
                 cancel.set()
-                raise TimeoutError(f"Agent produced no output for {timeout}s") from exc
+                raise TimeoutError(
+                    f"LLM inactivity timeout (langchain): no response for {timeout}s. "
+                    "Connection closed. You can retry, or use --timeout to increase the limit."
+                ) from exc
             if event is None:
                 break
             if time.monotonic() - start > _AGENT_OVERALL_TIMEOUT:
@@ -605,7 +608,10 @@ def _ask_text_stream(
         last_activity = time.time()
         for chunk in chat_model.stream(lc_messages):
             if time.time() - last_activity > timeout:
-                raise TimeoutError(f"No LLM output for {timeout}s")
+                raise TimeoutError(
+                    f"LLM inactivity timeout (langchain): no output for {timeout}s. "
+                    "Stream stalled. You can retry, or use --timeout to increase the limit."
+                )
             last_activity = time.time()
             chunk_dict = (
                 chunk.model_dump() if hasattr(chunk, "model_dump") else chunk.dict()

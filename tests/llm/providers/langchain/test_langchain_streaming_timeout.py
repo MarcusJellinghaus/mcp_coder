@@ -50,7 +50,10 @@ class TestTextStreamInactivityTimeout:
         ):
             from mcp_coder.llm.providers.langchain import _ask_text_stream
 
-            with pytest.raises(TimeoutError, match="No LLM output for 1s"):
+            with pytest.raises(
+                TimeoutError,
+                match=r"LLM inactivity timeout \(langchain\): no output for 1s\. Stream stalled\.",
+            ):
                 list(
                     _ask_text_stream(
                         question="Hi",
