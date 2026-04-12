@@ -1,9 +1,15 @@
-refactor: add run_format_code shim + swap caller
+refactor: delete formatters package and update configs
 
-- Add run_format_code() shim to mcp_tools_py.py that delegates to
-  mcp_tools_py.formatter.runner.run_format_code (lazy import)
-- Swap task_processing.py from mcp_coder.formatters.format_code to
-  mcp_coder.mcp_tools_py.run_format_code
-- Update error logging from .error_message to .output (FormatterResult field)
-- Update all test mock targets and assertions in test_task_processing.py
-- Add mcp_tools_py dependency to workflows module in tach.toml
+Remove the entire src/mcp_coder/formatters/ package (6 files) and
+tests/formatters/ directory (9 files). Formatting is now handled by
+the mcp-tools-py run_format_code shim added in the previous commit.
+
+Update architectural boundary configs:
+- .importlinter: remove 2 formatter contracts, remove formatters from
+  layered architecture and test independence contracts
+- tach.toml: remove formatter module block and all depends_on refs
+- tools/tach_docs.py: remove formatter node, edges, and style from
+  mermaid diagram and module list
+- docs/architecture/architecture.md: remove formatter section and
+  formatter_integration marker docs
+- pyproject.toml: remove formatter_integration marker definition

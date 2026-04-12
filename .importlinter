@@ -19,7 +19,7 @@ include_external_packages = True
 # Contract: Layered Architecture
 # -----------------------------------------------------------------------------
 # Ensures dependencies flow downward through the architecture:
-#   cli -> workflows -> llm/formatters -> utils -> config
+#   cli -> workflows -> llm -> utils -> config
 #
 # Why this matters:
 # - Prevents circular dependencies between modules
@@ -36,7 +36,7 @@ layers =
     mcp_coder.workflows
     mcp_coder.checks
     mcp_coder.workflow_utils
-    mcp_coder.llm | mcp_coder.formatters | mcp_coder.prompt_manager
+    mcp_coder.llm | mcp_coder.prompt_manager
     mcp_coder.utils | mcp_coder.mcp_tools_py
     mcp_coder.config | mcp_coder.constants
 ignore_imports =
@@ -47,42 +47,6 @@ ignore_imports =
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.env_setup
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.command_registry
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.skills
-
-# -----------------------------------------------------------------------------
-# Contract: Domain Services Independence
-# -----------------------------------------------------------------------------
-# LLM and Formatters are parallel domain services that should not depend on
-# each other. They serve different purposes and should remain decoupled.
-#
-# Why this matters:
-# - Allows independent evolution of LLM and formatting capabilities
-# - Prevents feature creep between unrelated domains
-# - Makes it easier to replace or modify one without affecting the other
-# -----------------------------------------------------------------------------
-[importlinter:contract:domain_services]
-name = Domain Services Independence
-type = independence
-modules =
-    mcp_coder.llm
-    mcp_coder.formatters
-
-# -----------------------------------------------------------------------------
-# Contract: Formatter Implementations Independence
-# -----------------------------------------------------------------------------
-# Black and isort formatters should not import from each other.
-# They are independent formatting tools that can be used separately.
-#
-# Why this matters:
-# - Each formatter can be replaced or updated independently
-# - Avoids coupling between different formatting strategies
-# - Keeps formatter implementations focused and simple
-# -----------------------------------------------------------------------------
-[importlinter:contract:formatter_implementations]
-name = Formatter Implementations Independence
-type = independence
-modules =
-    mcp_coder.formatters.black_formatter
-    mcp_coder.formatters.isort_formatter
 
 # -----------------------------------------------------------------------------
 # Contract: External Service Integrations Independence
@@ -490,7 +454,6 @@ modules =
     tests.llm
     tests.utils
     tests.workflows
-    tests.formatters
     tests.workflow_utils
     tests.checks
     tests.icoder
