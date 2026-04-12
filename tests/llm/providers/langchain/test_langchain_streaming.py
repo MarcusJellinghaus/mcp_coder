@@ -362,7 +362,7 @@ class TestAskLangchainStreamAgentTimeouts:
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain_stream
 
-            with pytest.raises(TimeoutError, match="no output"):
+            with pytest.raises(TimeoutError, match="no response for"):
                 # Pass a very short timeout so the test completes quickly
                 list(ask_langchain_stream("Hi", mcp_config="/tmp/mcp.json", timeout=1))
 

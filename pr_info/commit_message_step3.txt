@@ -1,0 +1,16 @@
+feat(langchain): improve timeout messages in agent and text-stream paths
+
+Replace raw timeout messages in both langchain streaming paths with
+informative messages that include provider name, timeout value, what
+happened, and an actionable hint to use --timeout.
+
+Changes:
+- _ask_agent_stream: "Agent produced no output for Xs" →
+  "LLM inactivity timeout (langchain): no response for Xs. Connection
+  closed. You can retry, or use --timeout to increase the limit."
+- _ask_text_stream: "No LLM output for Xs" →
+  "LLM inactivity timeout (langchain): no output for Xs. Stream stalled.
+  You can retry, or use --timeout to increase the limit."
+- Add new test for agent stream inactivity timeout
+- Update existing text stream timeout test assertion
+- Update related test in test_langchain_streaming.py
