@@ -1130,6 +1130,21 @@ class TestRunFinalisation:
 class TestRunImplementWorkflow:
     """Test run_implement_workflow function."""
 
+    @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.get_full_status",
+        return_value={"staged": [], "modified": [], "untracked": []},
+    )
+    @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_and_fix_mypy", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.prepare_llm_environment", return_value={}
+    )
+    @patch(
+        "mcp_coder.workflows.implement.core.get_current_branch_name",
+        return_value="feature/test-branch",
+    )
     @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
@@ -1144,6 +1159,13 @@ class TestRunImplementWorkflow:
         mock_prepare_tracker: MagicMock,
         mock_log_progress: MagicMock,
         mock_process_task: MagicMock,
+        mock_get_branch: MagicMock,
+        mock_prepare_env: MagicMock,
+        mock_check_mypy: MagicMock,
+        mock_run_formatters: MagicMock,
+        mock_get_status: MagicMock,
+        mock_run_finalisation: MagicMock,
+        mock_check_ci: MagicMock,
     ) -> None:
         """Test run_implement_workflow successful execution."""
         # Setup mocks for success path

@@ -1,5 +1,14 @@
-fix: add Raises section to run_format_code docstring for ruff DOC501
+fix: resolve CI failures from formatter consolidation refactoring
 
-Document the RuntimeError raised when target directory resolution fails
-in the run_format_code function docstring. This fixes the ruff DOC501
-lint failure in CI.
+Add missing @patch decorators to test_run_implement_workflow_success for
+post-task-completion steps (check_and_fix_mypy, run_formatters,
+get_full_status, prepare_llm_environment, get_current_branch_name,
+run_finalisation, check_and_fix_ci) that executed against the fake
+/test/project path causing FileNotFoundError.
+
+Replace stale @pytest.mark.formatter_integration marker with
+@pytest.mark.checker_integration in test_mcp_tools_py_integration.py
+since formatter_integration was removed from pyproject.toml markers.
+
+Add type: ignore comments for mcp_tools_py.formatter.runner import
+that may not be available in all installed environments.

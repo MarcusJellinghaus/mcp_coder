@@ -25,14 +25,16 @@ def run_format_code(
     Raises:
         RuntimeError: If target directory resolution fails.
     """
-    from mcp_tools_py.formatter.runner import run_format_code as _run_format_code
+    from mcp_tools_py.formatter.runner import (
+        run_format_code as _run_format_code,  # type: ignore[import-not-found]
+    )
     from mcp_tools_py.utils.project_config import resolve_target_directories
 
     project_root = Path(str(project_dir))
     target_dirs = resolve_target_directories(str(project_root), None)
     if isinstance(target_dirs, str):
         raise RuntimeError(target_dirs)
-    return _run_format_code(sys.executable, project_root, target_dirs)
+    return _run_format_code(sys.executable, project_root, target_dirs)  # type: ignore[no-any-return]
 
 
 def run_mypy_check(
