@@ -1,14 +1,6 @@
-fix: resolve CI failures from formatter consolidation refactoring
+fix: suppress pylint import errors for mcp_tools_py.formatter.runner
 
-Add missing @patch decorators to test_run_implement_workflow_success for
-post-task-completion steps (check_and_fix_mypy, run_formatters,
-get_full_status, prepare_llm_environment, get_current_branch_name,
-run_finalisation, check_and_fix_ci) that executed against the fake
-/test/project path causing FileNotFoundError.
-
-Replace stale @pytest.mark.formatter_integration marker with
-@pytest.mark.checker_integration in test_mcp_tools_py_integration.py
-since formatter_integration was removed from pyproject.toml markers.
-
-Add type: ignore comments for mcp_tools_py.formatter.runner import
-that may not be available in all installed environments.
+Add pylint disable comments (import-error, no-name-in-module) on the
+lazy import of mcp_tools_py.formatter.runner in run_format_code shim.
+Move the existing type: ignore comment to the from-statement line where
+mypy actually reports the error, fixing the unused-ignore warning.

@@ -26,7 +26,7 @@ def run_format_code(
         RuntimeError: If target directory resolution fails.
     """
     from mcp_tools_py.formatter.runner import (
-        run_format_code as _run_format_code,  # type: ignore[import-not-found]
+        run_format_code as _run_format_code,  # type: ignore[import-not-found]  # pylint: disable=import-error,no-name-in-module
     )
     from mcp_tools_py.utils.project_config import resolve_target_directories
 
