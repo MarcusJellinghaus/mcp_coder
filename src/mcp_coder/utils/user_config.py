@@ -81,7 +81,11 @@ _CONFIG_SCHEMA: dict[str, dict[str, FieldDef]] = {
 
 
 def _get_field_def(section: str, key: str) -> FieldDef | None:
-    """Look up field definition from schema, supporting wildcard sections."""
+    """Look up field definition from schema, supporting wildcard sections.
+
+    Returns:
+        The matching FieldDef if found, or None if no definition exists.
+    """
     if section in _CONFIG_SCHEMA and key in _CONFIG_SCHEMA[section]:
         return _CONFIG_SCHEMA[section][key]
     if section.startswith("coordinator.repos.") and section.count(".") == 2:

@@ -1,12 +1,5 @@
-fix: resolve verify_config false positive and missing env var detection
+fix: add missing Returns section to _get_field_def docstring
 
-Fix two bugs in verify_config():
-
-1. Unknown key false positive on sub-tables: _verify_section() flagged
-   dict-valued TOML sub-tables (e.g. coordinator.repos) as unknown keys.
-   Fix: skip dict-valued keys in the unknown-key check.
-
-2. Env vars ignored for absent sections: when a config section was missing,
-   verify_config() skipped it entirely with an "info" entry, never checking
-   environment variables. Fix: check env vars for each field when a section
-   is absent, emitting "ok (env var)" when found.
+Add Returns section to the `_get_field_def()` docstring in
+user_config.py to satisfy ruff's DOC201 rule, which requires
+documented return values for functions with non-None return types.
