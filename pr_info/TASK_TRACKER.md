@@ -21,6 +21,26 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: TuiPreflightAbort + TuiChecker skeleton + warning checks
+- [ ] Implementation: TuiPreflightAbort exception, TuiChecker class with run_all_checks() orchestrator, _present_prompt(), four warning checks (SSH/dumb, locale, tmux/screen, macOS Terminal.app), Windows Terminal no-op stub, and all tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Silent fix — Windows CMD codepage auto-fix
+- [ ] Implementation: _check_windows_cmd_codepage() with ctypes.windll detection, SetConsoleOutputCP(65001) fix, atexit restore, wired into run_all_checks(), and all tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Prompted check — VS Code gpuAcceleration detection
+- [ ] Implementation: _check_vscode_gpu_acceleration() with platform/SSH/TERM_PROGRAM gates, regex settings.json search, prompt flow, wired into run_all_checks(), and all tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Integration into execute_icoder() + manual test tool
+- [ ] Implementation: Wire TuiChecker into icoder.py between dir resolution and setup, except TuiPreflightAbort before except Exception, integration tests, and tools/test_scroll.py
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review
+- [ ] PR summary
