@@ -65,11 +65,11 @@ def load_vscodeclaude_config() -> VSCodeClaudeConfig:
         ]
     )
 
-    workspace_base = config[("vscodeclaude", "workspace_base")]
-    max_sessions_str = config[("vscodeclaude", "max_sessions")]
+    raw_workspace_base = config[("vscodeclaude", "workspace_base")]
+    raw_max_sessions = config[("vscodeclaude", "max_sessions")]
 
     # Validate workspace_base is configured
-    if not workspace_base:
+    if not isinstance(raw_workspace_base, str):
         config_path = get_config_file_path()
         raise ValueError(
             f"workspace_base not configured in [vscodeclaude] section. "
@@ -77,23 +77,25 @@ def load_vscodeclaude_config() -> VSCodeClaudeConfig:
         )
 
     # Validate workspace_base path exists
-    workspace_path = Path(workspace_base)
+    workspace_path = Path(raw_workspace_base)
     if not workspace_path.exists():
-        raise ValueError(f"workspace_base path does not exist: {workspace_base}")
+        raise ValueError(f"workspace_base path does not exist: {raw_workspace_base}")
 
     # Parse max_sessions with default fallback
     max_sessions = DEFAULT_MAX_SESSIONS
-    if max_sessions_str:
+    if isinstance(raw_max_sessions, int):
+        max_sessions = raw_max_sessions
+    elif isinstance(raw_max_sessions, str):
         try:
-            max_sessions = int(max_sessions_str)
+            max_sessions = int(raw_max_sessions)
         except ValueError:
             logger.warning(
-                f"Invalid max_sessions value '{max_sessions_str}', "
+                f"Invalid max_sessions value '{raw_max_sessions}', "
                 f"using default {DEFAULT_MAX_SESSIONS}"
             )
 
     return VSCodeClaudeConfig(
-        workspace_base=workspace_base,
+        workspace_base=raw_workspace_base,
         max_sessions=max_sessions,
     )
 
@@ -121,19 +123,21 @@ def load_repo_vscodeclaude_config(repo_name: str) -> RepoVSCodeClaudeConfig:
 
     # Parse setup_commands_windows if present
     windows_commands = config[(section, "setup_commands_windows")]
-    if windows_commands:
-        # Config value might be a JSON-encoded list or comma-separated string
+    if isinstance(windows_commands, list):
+        result["setup_commands_windows"] = [str(c) for c in windows_commands]
+    elif isinstance(windows_commands, str):
         try:
             parsed = json.loads(windows_commands)
             if isinstance(parsed, list):
                 result["setup_commands_windows"] = parsed
         except json.JSONDecodeError:
-            # Treat as single command
             result["setup_commands_windows"] = [windows_commands]
 
     # Parse setup_commands_linux if present
     linux_commands = config[(section, "setup_commands_linux")]
-    if linux_commands:
+    if isinstance(linux_commands, list):
+        result["setup_commands_linux"] = [str(c) for c in linux_commands]
+    elif isinstance(linux_commands, str):
         try:
             parsed = json.loads(linux_commands)
             if isinstance(parsed, list):

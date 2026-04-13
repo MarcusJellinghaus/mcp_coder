@@ -37,15 +37,19 @@ class TestLoadLangchainConfig:
     def test_env_var_overrides_config_values(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """MCP_CODER_LLM_LANGCHAIN_* env vars override config.toml values."""
-        monkeypatch.setenv("MCP_CODER_LLM_LANGCHAIN_BACKEND", "gemini")
-        monkeypatch.setenv("MCP_CODER_LLM_LANGCHAIN_MODEL", "gemini-2.0-flash")
+        """MCP_CODER_LLM_LANGCHAIN_* env vars override config.toml values.
+
+        Env var overrides are now handled by get_config_values() via the schema,
+        so the mock returns values as if env vars were already resolved.
+        """
+        monkeypatch.delenv("MCP_CODER_LLM_LANGCHAIN_BACKEND", raising=False)
+        monkeypatch.delenv("MCP_CODER_LLM_LANGCHAIN_MODEL", raising=False)
         with patch(
             "mcp_coder.llm.providers.langchain.get_config_values",
             return_value={
                 ("llm", "default_provider"): "langchain",
-                ("llm.langchain", "backend"): "openai",
-                ("llm.langchain", "model"): "gpt-4o",
+                ("llm.langchain", "backend"): "gemini",
+                ("llm.langchain", "model"): "gemini-2.0-flash",
                 ("llm.langchain", "api_key"): None,
                 ("llm.langchain", "endpoint"): None,
                 ("llm.langchain", "api_version"): None,

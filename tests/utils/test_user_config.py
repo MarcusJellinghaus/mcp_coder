@@ -410,11 +410,10 @@ executor_os = "linux"
         assert result[("jenkins", "server_url")] == "env_jenkins_url"
         assert not load_called  # Config was never loaded (lazy loading)
 
-    def test_get_config_values_converts_non_string_to_string(
+    def test_get_config_values_preserves_native_types(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Non-string values (int, bool) are converted to string."""
-        # Setup
+        """Native TOML types (int, bool) are preserved, not converted to string."""
         config_file = tmp_path / "config.toml"
         config_file.write_text(
             "[settings]\ntimeout = 30\ndebug = true", encoding="utf-8"
@@ -423,7 +422,6 @@ executor_os = "linux"
             "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
         )
 
-        # Execute
         result = get_config_values(
             [
                 ("settings", "timeout", None),
@@ -431,9 +429,8 @@ executor_os = "linux"
             ]
         )
 
-        # Verify
-        assert result[("settings", "timeout")] == "30"
-        assert result[("settings", "debug")] == "True"
+        assert result[("settings", "timeout")] == 30
+        assert result[("settings", "debug")] is True
 
 
 class TestCreateDefaultConfig:
@@ -680,7 +677,6 @@ class TestGetCacheRefreshMinutes:
     @pytest.mark.parametrize(
         "config_value,description",
         [
-            ('"not_a_number"', "non-integer string"),
             ("-10", "negative value"),
             ("0", "zero value"),
         ],
@@ -692,8 +688,7 @@ class TestGetCacheRefreshMinutes:
         config_value: str,
         description: str,
     ) -> None:
-        """Returns 1440 for invalid values (non-integer, negative, zero)."""
-        # Setup
+        """Returns 1440 for invalid values (negative, zero)."""
         config_file = tmp_path / "config.toml"
         config_file.write_text(
             f"[coordinator]\ncache_refresh_minutes = {config_value}\n",
@@ -703,8 +698,22 @@ class TestGetCacheRefreshMinutes:
             "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
         )
 
-        # Execute
         result = get_cache_refresh_minutes()
 
-        # Verify - invalid value should return default 1440
         assert result == 1440, f"Expected default 1440 for {description}"
+
+    def test_get_cache_refresh_minutes_string_raises_valueerror(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """String in int field raises ValueError at schema validation."""
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            '[coordinator]\ncache_refresh_minutes = "not_a_number"\n',
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        with pytest.raises(ValueError, match="expected int.*got str"):
+            get_cache_refresh_minutes()

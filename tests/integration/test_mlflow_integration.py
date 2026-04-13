@@ -55,7 +55,7 @@ class TestMLflowIntegration:
     def test_enabled_but_mlflow_unavailable(self, mock_get_config: Any) -> None:
         """Test behavior when MLflow is enabled but not installed."""
         mock_get_config.return_value = {
-            ("mlflow", "enabled"): "true",
+            ("mlflow", "enabled"): True,
             ("mlflow", "tracking_uri"): "file:///tmp/mlruns",
             ("mlflow", "experiment_name"): "test-experiment",
         }
@@ -79,7 +79,7 @@ class TestMLflowIntegration:
         This test verifies that session storage works correctly without MLflow.
         """
         mock_get_config.return_value = {
-            ("mlflow", "enabled"): "true",
+            ("mlflow", "enabled"): True,
             ("mlflow", "tracking_uri"): "file:///tmp/test_mlruns",
             ("mlflow", "experiment_name"): "integration-test",
         }
@@ -138,7 +138,7 @@ class TestMLflowIntegration:
             ) as mock_get_config:
                 # Simulate environment variable precedence
                 mock_get_config.return_value = {
-                    ("mlflow", "enabled"): "true",
+                    ("mlflow", "enabled"): True,
                     ("mlflow", "tracking_uri"): "http://localhost:5000",  # From env var
                     ("mlflow", "experiment_name"): "env-override-test",  # From env var
                 }
@@ -154,7 +154,7 @@ class TestMLflowIntegration:
     def test_error_resilience(self, mock_get_config: Any) -> None:
         """Test that MLflow errors don't break main functionality."""
         mock_get_config.return_value = {
-            ("mlflow", "enabled"): "true",
+            ("mlflow", "enabled"): True,
             ("mlflow", "tracking_uri"): "file:///tmp/mlruns",
             ("mlflow", "experiment_name"): "error-test",
         }

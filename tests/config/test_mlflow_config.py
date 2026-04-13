@@ -50,10 +50,10 @@ class TestLoadMLflowConfig:
         assert config.experiment_name == "claude-conversations"
 
     @patch("mcp_coder.utils.mlflow_config_loader.get_config_values")
-    def test_enabled_true_string(self, mock_get_config: Any) -> None:
-        """Test enabling MLflow with 'true' string."""
+    def test_enabled_native_true(self, mock_get_config: Any) -> None:
+        """Test enabling MLflow with native TOML bool True."""
         mock_get_config.return_value = {
-            ("mlflow", "enabled"): "true",
+            ("mlflow", "enabled"): True,
             ("mlflow", "tracking_uri"): "file:///tmp/mlruns",
             ("mlflow", "experiment_name"): "test-exp",
         }
@@ -64,40 +64,34 @@ class TestLoadMLflowConfig:
         assert config.experiment_name == "test-exp"
 
     @patch("mcp_coder.utils.mlflow_config_loader.get_config_values")
-    def test_enabled_variations(self, mock_get_config: Any) -> None:
-        """Test various ways to enable MLflow."""
-        enabled_values = ["true", "True", "1", "yes", "YES", "on", "ON", "enabled"]
+    def test_disabled_native_false(self, mock_get_config: Any) -> None:
+        """Test that native TOML bool False disables MLflow."""
+        mock_get_config.return_value = {
+            ("mlflow", "enabled"): False,
+            ("mlflow", "tracking_uri"): None,
+            ("mlflow", "experiment_name"): None,
+        }
 
-        for value in enabled_values:
-            mock_get_config.return_value = {
-                ("mlflow", "enabled"): value,
-                ("mlflow", "tracking_uri"): None,
-                ("mlflow", "experiment_name"): None,
-            }
-
-            config = load_mlflow_config()
-            assert config.enabled is True, f"'{value}' should enable MLflow"
+        config = load_mlflow_config()
+        assert config.enabled is False
 
     @patch("mcp_coder.utils.mlflow_config_loader.get_config_values")
-    def test_disabled_variations(self, mock_get_config: Any) -> None:
-        """Test various ways MLflow stays disabled."""
-        disabled_values = ["false", "False", "0", "no", "off", "disabled", "invalid"]
+    def test_disabled_when_none(self, mock_get_config: Any) -> None:
+        """Test that None value (missing key) disables MLflow."""
+        mock_get_config.return_value = {
+            ("mlflow", "enabled"): None,
+            ("mlflow", "tracking_uri"): None,
+            ("mlflow", "experiment_name"): None,
+        }
 
-        for value in disabled_values:
-            mock_get_config.return_value = {
-                ("mlflow", "enabled"): value,
-                ("mlflow", "tracking_uri"): None,
-                ("mlflow", "experiment_name"): None,
-            }
-
-            config = load_mlflow_config()
-            assert config.enabled is False, f"'{value}' should disable MLflow"
+        config = load_mlflow_config()
+        assert config.enabled is False
 
     @patch("mcp_coder.utils.mlflow_config_loader.get_config_values")
     def test_default_experiment_name(self, mock_get_config: Any) -> None:
         """Test default experiment name when not configured."""
         mock_get_config.return_value = {
-            ("mlflow", "enabled"): "true",
+            ("mlflow", "enabled"): True,
             ("mlflow", "tracking_uri"): None,
             ("mlflow", "experiment_name"): None,
         }
@@ -109,7 +103,7 @@ class TestLoadMLflowConfig:
     def test_empty_experiment_name(self, mock_get_config: Any) -> None:
         """Test empty experiment name falls back to default."""
         mock_get_config.return_value = {
-            ("mlflow", "enabled"): "true",
+            ("mlflow", "enabled"): True,
             ("mlflow", "tracking_uri"): None,
             ("mlflow", "experiment_name"): "",
         }
@@ -122,7 +116,7 @@ class TestLoadMLflowConfig:
         """Test that environment variables take precedence."""
         # This test verifies that get_config_values is called with the right env vars
         mock_get_config.return_value = {
-            ("mlflow", "enabled"): "true",
+            ("mlflow", "enabled"): True,
             ("mlflow", "tracking_uri"): "http://localhost:5000",
             ("mlflow", "experiment_name"): "env-experiment",
         }
@@ -150,7 +144,7 @@ class TestLoadMLflowConfig:
     ) -> None:
         """Test debug logging when MLflow is enabled."""
         mock_get_config.return_value = {
-            ("mlflow", "enabled"): "true",
+            ("mlflow", "enabled"): True,
             ("mlflow", "tracking_uri"): "file:///tmp/test",
             ("mlflow", "experiment_name"): "test-exp",
         }
@@ -168,7 +162,7 @@ class TestLoadMLflowConfig:
     ) -> None:
         """Test debug logging when MLflow is disabled."""
         mock_get_config.return_value = {
-            ("mlflow", "enabled"): "false",
+            ("mlflow", "enabled"): False,
             ("mlflow", "tracking_uri"): None,
             ("mlflow", "experiment_name"): None,
         }

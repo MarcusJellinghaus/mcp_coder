@@ -98,11 +98,8 @@ def _handle_provider_error(exc: Exception, backend: str | None) -> None:
 def _load_langchain_config() -> dict[str, str | None]:
     """Read [llm] and [llm.langchain] from config.toml via get_config_values().
 
-    Environment variables override config file values:
-        MCP_CODER_LLM_LANGCHAIN_BACKEND   -> backend
-        MCP_CODER_LLM_LANGCHAIN_MODEL     -> model
-        MCP_CODER_LLM_LANGCHAIN_ENDPOINT  -> endpoint
-        MCP_CODER_LLM_LANGCHAIN_API_VERSION -> api_version
+    Environment variable overrides (e.g. MCP_CODER_LLM_LANGCHAIN_BACKEND) are
+    handled automatically by get_config_values() through the config schema.
 
     API keys are resolved by the vendor env var (OPENAI_API_KEY, GEMINI_API_KEY,
     ANTHROPIC_API_KEY) in each backend module, falling back to config.toml.
@@ -120,26 +117,19 @@ def _load_langchain_config() -> dict[str, str | None]:
             ("llm.langchain", "api_version", None),
         ]
     )
-    config = {
-        "default_provider": raw[("llm", "default_provider")],
-        "backend": raw[("llm.langchain", "backend")],
-        "model": raw[("llm.langchain", "model")],
-        "api_key": raw[("llm.langchain", "api_key")],
-        "endpoint": raw[("llm.langchain", "endpoint")],
-        "api_version": raw[("llm.langchain", "api_version")],
+
+    # All langchain fields are str type in schema — narrow from the wider union
+    def _str_or_none(val: str | bool | int | list[Any] | None) -> str | None:
+        return val if isinstance(val, str) else None
+
+    return {
+        "default_provider": _str_or_none(raw[("llm", "default_provider")]),
+        "backend": _str_or_none(raw[("llm.langchain", "backend")]),
+        "model": _str_or_none(raw[("llm.langchain", "model")]),
+        "api_key": _str_or_none(raw[("llm.langchain", "api_key")]),
+        "endpoint": _str_or_none(raw[("llm.langchain", "endpoint")]),
+        "api_version": _str_or_none(raw[("llm.langchain", "api_version")]),
     }
-    # Env vars override config file values
-    env_overrides = {
-        "backend": "MCP_CODER_LLM_LANGCHAIN_BACKEND",
-        "model": "MCP_CODER_LLM_LANGCHAIN_MODEL",
-        "endpoint": "MCP_CODER_LLM_LANGCHAIN_ENDPOINT",
-        "api_version": "MCP_CODER_LLM_LANGCHAIN_API_VERSION",
-    }
-    for key, env_var in env_overrides.items():
-        value = os.environ.get(env_var)
-        if value:
-            config[key] = value
-    return config
 
 
 def _create_chat_model(

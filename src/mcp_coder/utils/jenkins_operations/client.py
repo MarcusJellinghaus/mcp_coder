@@ -63,7 +63,7 @@ class JenkinsError(Exception):
     """
 
 
-def _get_jenkins_config() -> dict[str, Optional[str]]:
+def _get_jenkins_config() -> dict[str, str | None]:
     """Get Jenkins configuration from environment or config file.
 
     Priority: Environment variables > Config file > None
@@ -88,7 +88,7 @@ def _get_jenkins_config() -> dict[str, Optional[str]]:
         and is handled separately in the test fixture.
     """
     # get_config_values automatically checks environment variables first
-    config: dict[tuple[str, str], Optional[str]] = get_config_values(
+    config = get_config_values(
         [
             ("jenkins", "server_url", None),
             ("jenkins", "username", None),
@@ -97,9 +97,21 @@ def _get_jenkins_config() -> dict[str, Optional[str]]:
     )
 
     return {
-        "server_url": config[("jenkins", "server_url")],
-        "username": config[("jenkins", "username")],
-        "api_token": config[("jenkins", "api_token")],
+        "server_url": (
+            config[("jenkins", "server_url")]
+            if isinstance(config[("jenkins", "server_url")], str)
+            else None
+        ),
+        "username": (
+            config[("jenkins", "username")]
+            if isinstance(config[("jenkins", "username")], str)
+            else None
+        ),
+        "api_token": (
+            config[("jenkins", "api_token")]
+            if isinstance(config[("jenkins", "api_token")], str)
+            else None
+        ),
     }
 
 

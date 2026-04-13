@@ -13,7 +13,7 @@ from mcp_coder.cli.utils import (
     resolve_llm_method,
     resolve_mcp_config_path,
 )
-from mcp_coder.utils.user_config import _get_standard_env_var
+from mcp_coder.utils.user_config import _CONFIG_SCHEMA
 
 
 class TestLogCommandStartup:
@@ -369,10 +369,12 @@ class TestResolveMcpConfigPath:
         assert "default_config_path" in caplog.text
         assert "file not found" in caplog.text
 
-    def test_get_standard_env_var_mcp_config(self) -> None:
-        """Test that _get_standard_env_var maps mcp/default_config_path correctly."""
-        result = _get_standard_env_var("mcp", "default_config_path")
-        assert result == "MCP_CODER_MCP_CONFIG"
+    def test_schema_has_mcp_config_env_var(self) -> None:
+        """Test that schema maps mcp/default_config_path to MCP_CODER_MCP_CONFIG."""
+        assert (
+            _CONFIG_SCHEMA["mcp"]["default_config_path"].env_var
+            == "MCP_CODER_MCP_CONFIG"
+        )
 
 
 class TestResolveExecutionDir:
@@ -464,8 +466,8 @@ class TestResolveIssueInteractionFlags:
     ) -> None:
         """Config has both true, CLI has both False -> (False, False)."""
         mock_config.return_value = {
-            ("coordinator.repos.myrepo", "update_issue_labels"): "True",
-            ("coordinator.repos.myrepo", "post_issue_comments"): "True",
+            ("coordinator.repos.myrepo", "update_issue_labels"): True,
+            ("coordinator.repos.myrepo", "post_issue_comments"): True,
         }
         args = MagicMock(
             spec=["update_issue_labels", "post_issue_comments"],
@@ -492,7 +494,7 @@ class TestResolveIssueInteractionFlags:
     ) -> None:
         """Config has update_issue_labels=true, CLI is None -> (True, False)."""
         mock_config.return_value = {
-            ("coordinator.repos.myrepo", "update_issue_labels"): "True",
+            ("coordinator.repos.myrepo", "update_issue_labels"): True,
             ("coordinator.repos.myrepo", "post_issue_comments"): None,
         }
         args = MagicMock(
@@ -520,8 +522,8 @@ class TestResolveIssueInteractionFlags:
     ) -> None:
         """Config has both false, CLI has both True -> (True, True)."""
         mock_config.return_value = {
-            ("coordinator.repos.myrepo", "update_issue_labels"): "False",
-            ("coordinator.repos.myrepo", "post_issue_comments"): "False",
+            ("coordinator.repos.myrepo", "update_issue_labels"): False,
+            ("coordinator.repos.myrepo", "post_issue_comments"): False,
         }
         args = MagicMock(
             spec=["update_issue_labels", "post_issue_comments"],
@@ -578,8 +580,8 @@ class TestResolveIssueInteractionFlags:
     ) -> None:
         """CLI sets update_issue_labels=True, post_issue_comments=None, config has post_issue_comments=true -> (True, True)."""
         mock_config.return_value = {
-            ("coordinator.repos.myrepo", "update_issue_labels"): "False",
-            ("coordinator.repos.myrepo", "post_issue_comments"): "True",
+            ("coordinator.repos.myrepo", "update_issue_labels"): False,
+            ("coordinator.repos.myrepo", "post_issue_comments"): True,
         }
         args = MagicMock(
             spec=["update_issue_labels", "post_issue_comments"],
