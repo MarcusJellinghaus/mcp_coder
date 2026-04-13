@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: Silent fix — Windows CMD codepage auto-fix
-- [ ] Implementation: _check_windows_cmd_codepage() with ctypes.windll detection, SetConsoleOutputCP(65001) fix, atexit restore, wired into run_all_checks(), and all tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: _check_windows_cmd_codepage() with ctypes.windll detection, SetConsoleOutputCP(65001) fix, atexit restore, wired into run_all_checks(), and all tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Prompted check — VS Code gpuAcceleration detection
 - [ ] Implementation: _check_vscode_gpu_acceleration() with platform/SSH/TERM_PROGRAM gates, regex settings.json search, prompt flow, wired into run_all_checks(), and all tests

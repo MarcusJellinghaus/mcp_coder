@@ -4,6 +4,8 @@ Detects terminal-specific issues before launching TUI apps and either
 auto-fixes them silently, warns, or prompts the user to abort.
 """
 
+import atexit
+import ctypes
 import logging
 import os
 import sys
@@ -33,6 +35,7 @@ class TuiChecker:
 
     def run_all_checks(self) -> None:
         """Run all checks, apply fixes, log warnings, and present prompts."""
+        self._check_windows_cmd_codepage()
         self._check_ssh_dumb_terminal()
         self._check_non_utf8_locale()
         self._check_tmux_screen()
@@ -105,6 +108,26 @@ class TuiChecker:
                 "macOS Terminal.app has limited mouse reporting"
                 " — consider iTerm2 or Kitty for full TUI support."
             )
+
+    def _check_windows_cmd_codepage(self) -> None:
+        """Silently fix non-UTF-8 console codepage on Windows."""
+        if sys.platform != "win32":
+            return
+        if not hasattr(ctypes, "windll"):
+            return
+        current_cp = ctypes.windll.kernel32.GetConsoleOutputCP()  # type: ignore[attr-defined]
+        if current_cp == 65001:
+            return
+
+        def fix_fn() -> None:
+            ctypes.windll.kernel32.SetConsoleOutputCP(65001)  # type: ignore[attr-defined]
+            atexit.register(
+                ctypes.windll.kernel32.SetConsoleOutputCP, current_cp  # type: ignore[attr-defined]
+            )
+
+        self._silent_fixes.append(
+            (f"Console codepage set to UTF-8 (was {current_cp})", fix_fn)
+        )
 
     def _check_windows_terminal(self) -> None:
         """No-op stub for Windows Terminal (future-proofing)."""

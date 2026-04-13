@@ -1,12 +1,17 @@
-feat: add TUI pre-flight terminal checks skeleton (#780)
+feat(tui): add Windows CMD codepage auto-fix to TuiChecker
 
-Add tui_preparation module with TuiPreflightAbort exception and
-TuiChecker class for detecting terminal issues before TUI launch.
+Add _check_windows_cmd_codepage() that detects non-UTF-8 console
+codepage on Windows via ctypes.windll.kernel32.GetConsoleOutputCP(),
+silently fixes it to 65001 (UTF-8) with SetConsoleOutputCP(), and
+registers an atexit handler to restore the original codepage.
 
-Implements:
-- TuiPreflightAbort exception with message and exit_code
-- TuiChecker with run_all_checks() orchestrator and _present_prompt()
-- Warning checks: SSH/dumb terminal, non-UTF-8 locale, tmux/screen,
-  macOS Terminal.app
-- Windows Terminal no-op stub for future-proofing
-- Full test coverage (23 tests)
+Wired into run_all_checks() before warning checks so silent fixes
+are collected and applied first.
+
+Tests mock ctypes.windll so they run on all platforms:
+- Non-UTF-8 codepage detection
+- Already-UTF-8 no-op
+- Wrong platform no-op
+- Fix function calls SetConsoleOutputCP(65001)
+- Atexit restore registered with original codepage
+- Silent fix logged through run_all_checks()

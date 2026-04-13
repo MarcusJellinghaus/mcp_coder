@@ -1,6 +1,6 @@
 """Tests for TUI pre-flight terminal checks."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -214,6 +214,91 @@ class TestCheckWindowsTerminal:
         assert len(checker._warnings) == 0
         assert len(checker._silent_fixes) == 0
         assert len(checker._prompts) == 0
+
+
+class TestCheckWindowsCmdCodepage:
+    @staticmethod
+    def _mock_windll(monkeypatch: pytest.MonkeyPatch, codepage: int = 437) -> MagicMock:
+        mock_kernel32 = MagicMock()
+        mock_kernel32.GetConsoleOutputCP.return_value = codepage
+        mock_kernel32.SetConsoleOutputCP.return_value = 1
+        mock_windll = MagicMock()
+        mock_windll.kernel32 = mock_kernel32
+        monkeypatch.setattr("ctypes.windll", mock_windll, raising=False)
+        return mock_windll
+
+    def test_check_cmd_codepage_non_utf8(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr("sys.platform", "win32")
+        self._mock_windll(monkeypatch, codepage=437)
+        checker = TuiChecker()
+        checker._check_windows_cmd_codepage()
+        assert len(checker._silent_fixes) == 1
+        assert "437" in checker._silent_fixes[0][0]
+
+    def test_check_cmd_codepage_already_utf8(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr("sys.platform", "win32")
+        self._mock_windll(monkeypatch, codepage=65001)
+        checker = TuiChecker()
+        checker._check_windows_cmd_codepage()
+        assert len(checker._silent_fixes) == 0
+
+    def test_check_cmd_codepage_wrong_platform(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr("sys.platform", "linux")
+        checker = TuiChecker()
+        checker._check_windows_cmd_codepage()
+        assert len(checker._silent_fixes) == 0
+
+    def test_check_cmd_codepage_fix_calls_set(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr("sys.platform", "win32")
+        mock_windll = self._mock_windll(monkeypatch, codepage=437)
+        checker = TuiChecker()
+        checker._check_windows_cmd_codepage()
+        _, fix_fn = checker._silent_fixes[0]
+        with patch("atexit.register"):
+            fix_fn()
+        mock_windll.kernel32.SetConsoleOutputCP.assert_called_once_with(65001)
+
+    def test_check_cmd_codepage_atexit_registered(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr("sys.platform", "win32")
+        mock_windll = self._mock_windll(monkeypatch, codepage=437)
+        checker = TuiChecker()
+        checker._check_windows_cmd_codepage()
+        _, fix_fn = checker._silent_fixes[0]
+        with patch("atexit.register") as mock_atexit:
+            fix_fn()
+        mock_atexit.assert_called_once_with(
+            mock_windll.kernel32.SetConsoleOutputCP, 437
+        )
+
+    def test_silent_fix_logged_via_run_all_checks(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr("sys.platform", "win32")
+        monkeypatch.setenv("TERM", "xterm-256color")
+        monkeypatch.delenv("TMUX", raising=False)
+        monkeypatch.delenv("STY", raising=False)
+        monkeypatch.delenv("LANG", raising=False)
+        monkeypatch.delenv("LC_ALL", raising=False)
+        self._mock_windll(monkeypatch, codepage=437)
+
+        with patch("mcp_coder.utils.tui_preparation.logger") as mock_logger:
+            with patch("atexit.register"):
+                checker = TuiChecker()
+                checker.run_all_checks()
+            log_messages = [
+                call.args[1]
+                for call in mock_logger.log.call_args_list
+                if len(call.args) > 1
+            ]
+            assert any("codepage" in msg.lower() for msg in log_messages)
 
 
 class TestWarningsLoggedViaRunAllChecks:
