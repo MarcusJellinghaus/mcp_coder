@@ -33,17 +33,22 @@ async def test_busy_indicator_shows_querying_on_submit(
 ### Algorithm (test)
 
 ```
-1. Create app with SlowLLMService that blocks before yielding events
-2. Submit input via pilot
-3. While worker is running (before stream events arrive), read BusyIndicator.label_text
-4. Assert "Querying LLM..." is in the label
-5. Unblock the LLM service, let stream complete
-6. Assert indicator returns to "✓ Ready"
+1. Create a threading.Event (starts unset)
+2. Define SlowLLMService in the test file (same pattern as ErrorAfterChunksLLMService)
+   — its stream() method waits on the event before yielding any stream events
+3. Create app with SlowLLMService via make_icoder_app
+4. Submit input via pilot
+5. await pilot.pause() to let the worker start and show_busy() execute
+6. Read BusyIndicator.label_text and assert "Querying LLM..." is in the label
+7. Set the event to unblock SlowLLMService.stream()
+8. await pilot.pause() to let the worker complete and the indicator reset
+9. Assert indicator shows "✓ Ready"
 ```
 
 ### Data
 
 - Uses `make_icoder_app` fixture with a custom `SlowLLMService` (blocking iterator using `threading.Event`)
+- `SlowLLMService` follows the same pattern as `ErrorAfterChunksLLMService` already defined in `tests/icoder/test_app_pilot.py`
 - Asserts on `BusyIndicator.label_text` string content
 
 ## WHAT — Implementation
