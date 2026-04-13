@@ -1,16 +1,4 @@
-feat(tui): wire pre-flight checks into execute_icoder()
+docs: add Raises section to _present_prompt docstring
 
-Wire TuiChecker.run_all_checks() into execute_icoder() between project
-directory resolution and setup_icoder_environment() for fail-fast
-behavior before slow environment setup.
-
-Add except TuiPreflightAbort handler before except Exception to prevent
-the broad handler from swallowing preflight aborts (TuiPreflightAbort
-inherits from Exception).
-
-Add integration tests verifying:
-- TuiPreflightAbort is caught and returns exit code without traceback
-- Normal flow continues when preflight checks pass
-
-Create tools/test_scroll.py minimal Textual app for manual terminal
-verification of scroll, mouse, and rendering behavior.
+Add TuiPreflightAbort to the Raises section of the _present_prompt
+docstring in tui_preparation.py to satisfy ruff's DOC501 rule.

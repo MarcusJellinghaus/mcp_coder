@@ -62,7 +62,11 @@ class TuiChecker:
             self._present_prompt(prompt_text, instruction_text)
 
     def _present_prompt(self, prompt_text: str, instruction_text: str) -> None:
-        """Present a prompt to the user. Both choices result in abort."""
+        """Present a prompt to the user. Both choices result in abort.
+
+        Raises:
+            TuiPreflightAbort: Always raised — after viewing instructions or on abort.
+        """
         logger.log(OUTPUT, prompt_text)
         try:
             choice = input("(I)nstructions or (A)bort: ").strip().lower()
