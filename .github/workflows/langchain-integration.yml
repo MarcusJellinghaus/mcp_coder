@@ -47,6 +47,9 @@ jobs:
         with:
           python-version: 3.11
 
+      - name: Install latest mcp-tools-py from GitHub
+        run: uv pip install --system "mcp-tools-py @ git+https://github.com/MarcusJellinghaus/mcp-tools-py.git"
+
       - name: Install dependencies
         run: uv pip install --system ".[dev,langchain]"
 
