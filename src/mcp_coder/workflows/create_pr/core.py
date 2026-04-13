@@ -574,6 +574,30 @@ def run_create_pr_workflow(
         logger.log(OUTPUT, "Base Branch: %s", base_branch)
         logger.log(OUTPUT, "Head Branch: %s", current_branch)
 
+        # Fallback: query closingIssuesReferences if no issue found from branch
+        if update_issue_labels and cached_issue_number is None:
+            logger.info("Attempting fallback: querying PR closing issues references...")
+            try:
+                pr_mgr = PullRequestManager(project_dir)
+                closing_issues = pr_mgr.get_closing_issue_numbers(pr_number)
+                if len(closing_issues) == 1:
+                    cached_issue_number = closing_issues[0]
+                    logger.info(
+                        "Fallback found closing issue #%s from PR",
+                        cached_issue_number,
+                    )
+                elif len(closing_issues) > 1:
+                    logger.warning(
+                        "Multiple closing issues found: %s, using first (#%s)",
+                        closing_issues,
+                        closing_issues[0],
+                    )
+                    cached_issue_number = closing_issues[0]
+                else:
+                    logger.debug("No closing issues found for PR #%s", pr_number)
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                logger.warning("Failed to query closing issues (non-blocking): %s", e)
+
         # Step 5: Clean up repository
         logger.log(OUTPUT, "Step 5/5: Cleaning up repository...")
         if not cleanup_repository(project_dir):
@@ -691,7 +715,10 @@ def run_create_pr_workflow(
                 ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                     logger.error(f"Error updating issue label (non-blocking): {e}")
 
-        logger.log(OUTPUT, "Create PR workflow completed successfully!")
+        if update_issue_labels and cached_issue_number is None:
+            logger.log(OUTPUT, "Create PR workflow completed with warnings")
+        else:
+            logger.log(OUTPUT, "Create PR workflow completed successfully!")
         reached_terminal_state = True
         return 0
 

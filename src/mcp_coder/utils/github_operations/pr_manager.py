@@ -437,6 +437,63 @@ class PullRequestManager(BaseGitHubManager):
             logger.error(f"GitHub API error closing pull request {pr_number}: {e}")
             return cast(PullRequestData, {})
 
+    @log_function_call
+    @_handle_github_errors(default_return=[])
+    def get_closing_issue_numbers(self, pr_number: int) -> List[int]:
+        """Query closing issue references for a PR via GraphQL.
+
+        Args:
+            pr_number: Pull request number to query
+
+        Returns:
+            List of issue numbers linked as closing references, or empty list on error
+        """
+        if not self._validate_pr_number(pr_number):
+            return []
+
+        repo = self._get_repository()
+        if repo is None:
+            return []
+
+        owner, repo_name = repo.owner.login, repo.name
+
+        query = """
+        query($owner: String!, $repo: String!, $prNumber: Int!) {
+          repository(owner: $owner, name: $repo) {
+            pullRequest(number: $prNumber) {
+              closingIssuesReferences(first: 10) {
+                nodes {
+                  number
+                }
+              }
+            }
+          }
+        }
+        """
+
+        variables = {
+            "owner": owner,
+            "repo": repo_name,
+            "prNumber": pr_number,
+        }
+
+        _, result = self._github_client._Github__requester.graphql_query(  # type: ignore[attr-defined]  # pylint: disable=protected-access  # no public GraphQL API in PyGithub
+            query=query, variables=variables
+        )
+
+        try:
+            pr_data = result.get("data", {}).get("repository", {}).get("pullRequest")
+            if pr_data is None:
+                logger.warning(f"PR #{pr_number} not found")
+                return []
+
+            nodes = pr_data.get("closingIssuesReferences", {}).get("nodes", [])
+            return [node["number"] for node in nodes if node]
+
+        except (KeyError, TypeError) as e:
+            logger.error(f"Error parsing GraphQL response: {e}")
+            return []
+
     @property
     def repository_name(self) -> str:
         """Get the repository name in 'owner/repo' format.
