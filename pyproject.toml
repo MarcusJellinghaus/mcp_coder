@@ -25,7 +25,7 @@ dependencies = [
     "pyperclip>=1.8.2",
     "black>=23.0.0",
     "isort>=5.12.0",
-    "mcp-tools-py",
+    "mcp-tools-py>=0.1.7",
     "mcp-workspace",
     "mcp-coder-utils",
     "PyGithub>=1.59.0",

@@ -50,6 +50,9 @@ jobs:
       - name: Install dependencies
         run: uv pip install --system ".[dev,langchain]"
 
+      - name: Install latest mcp-tools-py from GitHub
+        run: uv pip install --system --no-deps "mcp-tools-py @ git+https://github.com/MarcusJellinghaus/mcp-tools-py.git"
+
       - name: Run LangChain integration tests
         run: |
           pytest tests/llm/providers/langchain/test_langchain_integration.py \

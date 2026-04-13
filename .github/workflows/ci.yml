@@ -125,6 +125,9 @@ jobs:
           
       - name: Install dependencies
         run: uv pip install --system ".[dev,langchain]"
+
+      - name: Install latest mcp-tools-py from GitHub
+        run: uv pip install --system --no-deps "mcp-tools-py @ git+https://github.com/MarcusJellinghaus/mcp-tools-py.git"
       
       - name: Environment info
         run: |
@@ -163,6 +166,9 @@ jobs:
           
       - name: Install dependencies
         run: uv pip install --system ".[dev,langchain]"
+
+      - name: Install latest mcp-tools-py from GitHub
+        run: uv pip install --system --no-deps "mcp-tools-py @ git+https://github.com/MarcusJellinghaus/mcp-tools-py.git"
       
       - name: Environment info
         run: |
