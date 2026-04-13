@@ -1,13 +1,12 @@
-config: rewrite verify_config to walk schema
+fix: resolve verify_config false positive and missing env var detection
 
-Replace ~100 lines of hand-coded per-section checks in verify_config()
-with a schema-driven loop over _CONFIG_SCHEMA.
+Fix two bugs in verify_config():
 
-- Add _get_section_data(), _verify_section(), _verify_wildcard_repos() helpers
-- verify_config() now walks _CONFIG_SCHEMA, producing per-field entries
-- has_error is True for type mismatches and missing required fields (not just invalid TOML)
-- Delete _SECTION_ENV_VARS, _get_source_annotation(), _get_standard_env_var()
-  (schema provides all needed info)
-- Remove unused Optional import
-- Update verify tests: switch from by_label dict to list filtering
-- Add tests for type mismatch, unknown key, missing required, absent section
+1. Unknown key false positive on sub-tables: _verify_section() flagged
+   dict-valued TOML sub-tables (e.g. coordinator.repos) as unknown keys.
+   Fix: skip dict-valued keys in the unknown-key check.
+
+2. Env vars ignored for absent sections: when a config section was missing,
+   verify_config() skipped it entirely with an "info" entry, never checking
+   environment variables. Fix: check env vars for each field when a section
+   is absent, emitting "ok (env var)" when found.

@@ -498,9 +498,9 @@ def _verify_section(
                 }
             )
 
-    # Check for unknown keys
+    # Check for unknown keys (skip dict-valued sub-tables like repos)
     for key in section_data:
-        if key not in fields:
+        if key not in fields and not isinstance(section_data[key], dict):
             entries.append(
                 {
                     "label": f"[{section_name}]",
@@ -609,13 +609,26 @@ def verify_config() -> dict[str, Any]:
 
         section_data = _get_section_data(config_data, section_name)
         if section_data is None:
-            entries.append(
-                {
-                    "label": f"[{section_name}]",
-                    "status": "info",
-                    "value": "not configured",
-                }
-            )
+            # Section absent: check env vars, but don't error on missing fields
+            found_env = False
+            for key, field_def in fields.items():
+                if field_def.env_var and os.environ.get(field_def.env_var):
+                    entries.append(
+                        {
+                            "label": f"[{section_name}]",
+                            "status": "ok",
+                            "value": f"{key} configured (env var)",
+                        }
+                    )
+                    found_env = True
+            if not found_env:
+                entries.append(
+                    {
+                        "label": f"[{section_name}]",
+                        "status": "info",
+                        "value": "not configured",
+                    }
+                )
             continue
 
         if _verify_section(section_name, section_data, fields, entries):
