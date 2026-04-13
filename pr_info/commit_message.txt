@@ -1,5 +1,0 @@
-refactor: extract get_closing_issue_numbers tests to separate file
-
-Move TestGetClosingIssueNumbers from test_pr_manager.py (765 lines) into
-test_pr_manager_closing_issues.py to bring the original file back under
-the 750-line CI file-size limit.
