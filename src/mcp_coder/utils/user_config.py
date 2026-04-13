@@ -298,7 +298,9 @@ def get_config_values(
 
         # Schema-driven type validation
         if value is not None and field_def is not None:
-            if not isinstance(value, field_def.field_type):
+            if not isinstance(value, field_def.field_type) or (
+                field_def.field_type is int and isinstance(value, bool)
+            ):
                 raise ValueError(
                     f"Config error in [{section}] {key}: "
                     f"expected {field_def.field_type.__name__}, "
@@ -463,7 +465,9 @@ def _verify_section(
                 }
             )
         elif config_value is not None:
-            if not isinstance(config_value, field_def.field_type):
+            if not isinstance(config_value, field_def.field_type) or (
+                field_def.field_type is int and isinstance(config_value, bool)
+            ):
                 entries.append(
                     {
                         "label": f"[{section_name}]",

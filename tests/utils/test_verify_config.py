@@ -356,6 +356,29 @@ github_credentials_id = "creds3"
             "expected bool" in e["value"] and "enabled" in e["value"] for e in errors
         )
 
+    def test_verify_config_bool_in_int_field_reports_error(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Boolean in int field -> error status (bool is subclass of int)."""
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            '[vscodeclaude]\nworkspace_base = "/tmp"\nmax_sessions = true\n',
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+        self._clear_env_vars(monkeypatch)
+
+        result = verify_config()
+
+        assert result["has_error"] is True
+        errors = [e for e in result["entries"] if e["status"] == "error"]
+        assert any(
+            "expected int" in e["value"] and "max_sessions" in e["value"]
+            for e in errors
+        )
+
     def test_verify_config_missing_required_field(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

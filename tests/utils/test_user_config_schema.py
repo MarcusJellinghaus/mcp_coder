@@ -44,6 +44,22 @@ class TestConfigTypeValidation:
         with pytest.raises(ValueError, match="expected int.*got str"):
             get_config_values([("vscodeclaude", "max_sessions", None)])
 
+    def test_bool_in_int_field_raises_valueerror(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """TOML boolean true in an int field raises ValueError (bool is subclass of int)."""
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            '[vscodeclaude]\nworkspace_base = "/tmp"\nmax_sessions = true\n',
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        with pytest.raises(ValueError, match="expected int.*got bool"):
+            get_config_values([("vscodeclaude", "max_sessions", None)])
+
     def test_native_bool_in_bool_field_passes(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
