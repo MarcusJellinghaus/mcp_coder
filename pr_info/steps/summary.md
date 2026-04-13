@@ -30,7 +30,7 @@ _prompts: list[tuple[str, str]]                        # (prompt_text, instructi
 
 - Import `TuiChecker` and `TuiPreflightAbort`
 - Call `TuiChecker().run_all_checks()` between directory resolution (line ~52) and `setup_icoder_environment()` (line ~54)
-- Add `except TuiPreflightAbort` handler before the broad `except Exception`
+- Add `except TuiPreflightAbort` handler **before** `except Exception` (the broad handler). This is the critical constraint since `TuiPreflightAbort` inherits from `Exception`. Placement relative to `KeyboardInterrupt` is stylistic only.
 
 ### Seven checks
 
@@ -66,8 +66,7 @@ _prompts: list[tuple[str, str]]                        # (prompt_text, instructi
 
 ## Implementation Steps
 
-- [Step 1](step_1.md) — `TuiPreflightAbort` exception + `TuiChecker` skeleton with `run_all_checks()` orchestrator
-- [Step 2](step_2.md) — Warning checks: SSH/dumb terminal, non-UTF-8 locale, tmux/screen, macOS Terminal.app
-- [Step 3](step_3.md) — Silent fix: Windows CMD codepage auto-fix with atexit restore
-- [Step 4](step_4.md) — Prompted check: VS Code gpuAcceleration detection + prompt flow
-- [Step 5](step_5.md) — Integration into `execute_icoder()` + `tools/test_scroll.py`
+- [Step 1](step_1.md) — `TuiPreflightAbort` + `TuiChecker` skeleton + warning checks (SSH/dumb, locale, tmux/screen, macOS Terminal.app, Windows Terminal stub)
+- [Step 2](step_2.md) — Silent fix: Windows CMD codepage auto-fix with atexit restore
+- [Step 3](step_3.md) — Prompted check: VS Code gpuAcceleration detection + prompt flow
+- [Step 4](step_4.md) — Integration into `execute_icoder()` + `tools/test_scroll.py`

@@ -1,11 +1,13 @@
-# Step 3: Silent fix — Windows CMD codepage auto-fix
+# Step 3: Prompted check — VS Code gpuAcceleration detection
 
 ## References
 - [Summary](summary.md) for architecture overview
+- [Step 1](step_1.md) for the skeleton and warning checks
+- [Step 2](step_2.md) for the silent fix this builds on
 - Issue #780 for full requirements
 
 ## Goal
-Add the Windows CMD codepage check: detect non-UTF-8 codepage, silently fix to 65001, register atexit restore.
+Add the VS Code gpuAcceleration check: Windows-only, reads `%APPDATA%\Code\User\settings.json`, regex search for `gpuAcceleration.*off`, prompts user with Instructions/Abort (both abort).
 
 ## WHERE
 - **Modify**: `src/mcp_coder/utils/tui_preparation.py`
@@ -13,63 +15,65 @@ Add the Windows CMD codepage check: detect non-UTF-8 codepage, silently fix to 6
 
 ## WHAT — New method on `TuiChecker`
 
-### `_check_windows_cmd_codepage(self) -> None`
+### `_check_vscode_gpu_acceleration(self) -> None`
 ```python
-def _check_windows_cmd_codepage(self) -> None: ...
+def _check_vscode_gpu_acceleration(self) -> None: ...
 ```
 
 ## ALGORITHM
 ```
 1. if sys.platform != "win32": return
-2. import ctypes; current_cp = ctypes.windll.kernel32.GetConsoleOutputCP()
-3. if current_cp == 65001: return  (already UTF-8)
-4. define fix_fn that: calls SetConsoleOutputCP(65001), registers atexit to restore original cp
-5. self._silent_fixes.append(("Console codepage set to UTF-8 (was {current_cp})", fix_fn))
+2. if os.environ.get("SSH_CONNECTION"): return   (remote session — settings.json not relevant)
+3. if os.environ.get("TERM_PROGRAM") != "vscode": return
+4. settings_path = Path(os.environ.get("APPDATA", "")) / "Code" / "User" / "settings.json"
+5. if not settings_path.is_file(): return
+6. content = settings_path.read_text(encoding="utf-8", errors="ignore")
+7. if re.search(r'"terminal\.integrated\.gpuAcceleration"\s*:\s*"off"', content):
+       self._prompts.append((PROMPT_TEXT, INSTRUCTION_TEXT))
+```
+
+## DATA — Constants
+```python
+_VSCODE_GPU_PROMPT = (
+    "VS Code terminal gpuAcceleration is set to 'off', which breaks TUI mouse/rendering."
+)
+_VSCODE_GPU_INSTRUCTIONS = (
+    "To fix: Open VS Code Settings → search 'gpuAcceleration' "
+    "→ change to 'auto' or remove the setting → restart the terminal."
+)
 ```
 
 ## HOW — Integration
-Add call in `run_all_checks()` (before the warning checks — silent fixes are collected first, presented first):
+Add call in `run_all_checks()`:
 ```python
-self._check_windows_cmd_codepage()
+self._check_vscode_gpu_acceleration()
 ```
-
-## DATA
-- `fix_fn` closure captures `current_cp` for atexit restore
-- Log message: `"Console codepage set to UTF-8 (was {current_cp})"`
 
 ## Tests
-All tests mock `ctypes.windll` so they run on any platform.
+Use `tmp_path` to create fake settings.json files. Mock `sys.platform`, env vars, and the settings path.
 
-1. `test_check_cmd_codepage_non_utf8` — mock `sys.platform="win32"`, mock `GetConsoleOutputCP()` returning 437, verify `_silent_fixes` has one entry
-2. `test_check_cmd_codepage_already_utf8` — mock returning 65001, verify `_silent_fixes` is empty
-3. `test_check_cmd_codepage_wrong_platform` — mock `sys.platform="linux"`, verify `_silent_fixes` is empty
-4. `test_check_cmd_codepage_fix_calls_set` — execute the fix_fn from `_silent_fixes`, verify `SetConsoleOutputCP(65001)` was called
-5. `test_check_cmd_codepage_atexit_registered` — execute fix_fn, verify `atexit.register` was called with a restore function
-6. `test_silent_fix_logged_via_run_all_checks` — trigger codepage fix, run `run_all_checks()`, verify `logger.log(OUTPUT, ...)` called with codepage message
+1. `test_vscode_gpu_detected` — `win32`, `TERM_PROGRAM=vscode`, settings.json contains `"terminal.integrated.gpuAcceleration": "off"`, verify `_prompts` has one entry
+2. `test_vscode_gpu_not_off` — settings.json contains `"terminal.integrated.gpuAcceleration": "auto"`, verify `_prompts` is empty
+3. `test_vscode_gpu_no_setting` — settings.json exists but no gpuAcceleration, verify `_prompts` is empty
+4. `test_vscode_gpu_no_settings_file` — settings path doesn't exist, verify `_prompts` is empty
+5. `test_vscode_gpu_wrong_platform` — `sys.platform="linux"`, verify `_prompts` is empty (skipped)
+6. `test_vscode_gpu_ssh_connection_skips` — `SSH_CONNECTION` set, verify `_prompts` is empty
+7. `test_vscode_gpu_not_vscode_terminal` — `TERM_PROGRAM=xterm`, verify `_prompts` is empty
+8. `test_vscode_gpu_prompt_instructions_flow` — run `run_all_checks()` with mock `input()` returning "i", verify `TuiPreflightAbort` raised and instruction text was logged
+9. `test_vscode_gpu_prompt_abort_flow` — run `run_all_checks()` with mock `input()` returning "a", verify `TuiPreflightAbort` raised
 
-### Mocking approach for ctypes.windll
-```python
-# Create mock windll module
-mock_kernel32 = MagicMock()
-mock_kernel32.GetConsoleOutputCP.return_value = 437
-mock_kernel32.SetConsoleOutputCP.return_value = 1
-
-mock_windll = MagicMock()
-mock_windll.kernel32 = mock_kernel32
-
-# Patch ctypes.windll (may not exist on non-Windows)
-monkeypatch.setattr("ctypes.windll", mock_windll, raising=False)
-```
+### Mocking the settings path
+Patch the `Path` construction or use `monkeypatch.setenv("APPDATA", str(tmp_path))` so the settings path resolves to `tmp_path / "Code" / "User" / "settings.json"`.
 
 ## LLM Prompt
 ```
 Implement Step 3 of issue #780 (TUI pre-flight terminal checks).
 See pr_info/steps/summary.md for architecture and pr_info/steps/step_3.md for this step's spec.
 
-Add _check_windows_cmd_codepage() to TuiChecker in src/mcp_coder/utils/tui_preparation.py.
-It detects non-UTF-8 codepage via ctypes.windll.kernel32.GetConsoleOutputCP(),
-auto-fixes with SetConsoleOutputCP(65001), and registers atexit to restore the original.
-Wire into run_all_checks(). Add tests to tests/utils/test_tui_preparation.py.
-Mock ctypes.windll so tests run on all platforms.
+Add _check_vscode_gpu_acceleration() to TuiChecker in src/mcp_coder/utils/tui_preparation.py.
+Windows-only, skips if SSH_CONNECTION is set, checks TERM_PROGRAM=vscode,
+reads %APPDATA%\Code\User\settings.json with regex for gpuAcceleration off.
+Appends to _prompts list. Wire into run_all_checks().
+Add tests to tests/utils/test_tui_preparation.py using tmp_path for fake settings files.
 Run all code quality checks (pylint, pytest, mypy) and fix any issues.
 ```

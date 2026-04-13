@@ -1,77 +1,102 @@
-# Step 4: Prompted check — VS Code gpuAcceleration detection
+# Step 4: Integration into execute_icoder() + manual test tool
 
 ## References
 - [Summary](summary.md) for architecture overview
+- [Step 1](step_1.md) for the skeleton and warning checks
+- [Step 2](step_2.md) for the silent fix (CMD codepage)
+- [Step 3](step_3.md) for the prompted check (VS Code gpuAcceleration)
 - Issue #780 for full requirements
 
 ## Goal
-Add the VS Code gpuAcceleration check: Windows-only, reads `%APPDATA%\Code\User\settings.json`, regex search for `gpuAcceleration.*off`, prompts user with Instructions/Abort (both abort).
+Wire `TuiChecker.run_all_checks()` into `execute_icoder()` at the correct integration point. Add the `except TuiPreflightAbort` handler. Create `tools/test_scroll.py` for manual TUI verification.
 
 ## WHERE
-- **Modify**: `src/mcp_coder/utils/tui_preparation.py`
-- **Modify**: `tests/utils/test_tui_preparation.py`
+- **Modify**: `src/mcp_coder/cli/commands/icoder.py`
+- **Modify**: `tests/icoder/test_cli_icoder.py`
+- **Create**: `tools/test_scroll.py`
 
-## WHAT — New method on `TuiChecker`
+## WHAT — Changes to `execute_icoder()`
 
-### `_check_vscode_gpu_acceleration(self) -> None`
+### Import additions
 ```python
-def _check_vscode_gpu_acceleration(self) -> None: ...
+from ...utils.tui_preparation import TuiChecker, TuiPreflightAbort
 ```
 
-## ALGORITHM
-```
-1. if sys.platform != "win32": return
-2. if os.environ.get("SSH_CONNECTION"): return   (remote session — settings.json not relevant)
-3. if os.environ.get("TERM_PROGRAM") != "vscode": return
-4. settings_path = Path(os.environ.get("APPDATA", "")) / "Code" / "User" / "settings.json"
-5. if not settings_path.is_file(): return
-6. content = settings_path.read_text(encoding="utf-8", errors="ignore")
-7. if re.search(r'"terminal\.integrated\.gpuAcceleration"\s*:\s*"off"', content):
-       self._prompts.append((PROMPT_TEXT, INSTRUCTION_TEXT))
-```
-
-## DATA — Constants
+### Integration point
+Insert between project directory resolution (line ~52) and `setup_icoder_environment()` (line ~54):
 ```python
-_VSCODE_GPU_PROMPT = (
-    "VS Code terminal gpuAcceleration is set to 'off', which breaks TUI mouse/rendering."
-)
-_VSCODE_GPU_INSTRUCTIONS = (
-    "To fix: Open VS Code Settings → search 'gpuAcceleration' "
-    "→ change to 'auto' or remove the setting → restart the terminal."
-)
+        # Pre-flight terminal checks (fail fast before slow env setup)
+        TuiChecker().run_all_checks()
 ```
 
-## HOW — Integration
-Add call in `run_all_checks()`:
+### Exception handler
+Add `except TuiPreflightAbort` **before** `except Exception` (the broad handler). This is the critical constraint — `TuiPreflightAbort` inherits from `Exception`, so it must be caught first to avoid being swallowed by the broad handler. The placement relative to `except KeyboardInterrupt` is just stylistic since `KeyboardInterrupt` does not inherit from `Exception`:
 ```python
-self._check_vscode_gpu_acceleration()
+    except TuiPreflightAbort as e:
+        logger.log(OUTPUT, e.message)
+        return e.exit_code
 ```
 
-## Tests
-Use `tmp_path` to create fake settings.json files. Mock `sys.platform`, env vars, and the settings path.
+## ALGORITHM — execute_icoder() flow change
+```
+1. resolve execution_dir
+2. resolve project_dir
+3. TuiChecker().run_all_checks()    ← NEW (fail fast)
+4. setup_icoder_environment(...)     (existing)
+5. ... rest of function ...
+```
 
-1. `test_vscode_gpu_detected` — `win32`, `TERM_PROGRAM=vscode`, settings.json contains `"terminal.integrated.gpuAcceleration": "off"`, verify `_prompts` has one entry
-2. `test_vscode_gpu_not_off` — settings.json contains `"terminal.integrated.gpuAcceleration": "auto"`, verify `_prompts` is empty
-3. `test_vscode_gpu_no_setting` — settings.json exists but no gpuAcceleration, verify `_prompts` is empty
-4. `test_vscode_gpu_no_settings_file` — settings path doesn't exist, verify `_prompts` is empty
-5. `test_vscode_gpu_wrong_platform` — `sys.platform="linux"`, verify `_prompts` is empty (skipped)
-6. `test_vscode_gpu_ssh_connection_skips` — `SSH_CONNECTION` set, verify `_prompts` is empty
-7. `test_vscode_gpu_not_vscode_terminal` — `TERM_PROGRAM=xterm`, verify `_prompts` is empty
-8. `test_vscode_gpu_prompt_instructions_flow` — run `run_all_checks()` with mock `input()` returning "i", verify `TuiPreflightAbort` raised and instruction text was logged
-9. `test_vscode_gpu_prompt_abort_flow` — run `run_all_checks()` with mock `input()` returning "a", verify `TuiPreflightAbort` raised
+## HOW — Exception ordering in try/except
+The critical constraint is that `except TuiPreflightAbort` must appear **before** `except Exception` (the broad handler), because `TuiPreflightAbort` inherits from `Exception` and would otherwise be caught by the broad handler. The ordering relative to `KeyboardInterrupt` is a stylistic choice only, since `KeyboardInterrupt` inherits from `BaseException`, not `Exception`.
+```python
+    except TuiPreflightAbort as e:    # ← NEW: must be before except Exception
+        logger.log(OUTPUT, e.message)
+        return e.exit_code
+    except KeyboardInterrupt:          # existing (ordering vs above is stylistic)
+        ...
+    except Exception as e:             # existing broad handler — must be AFTER TuiPreflightAbort
+        ...
+```
 
-### Mocking the settings path
-Patch the `Path` construction or use `monkeypatch.setenv("APPDATA", str(tmp_path))` so the settings path resolves to `tmp_path / "Code" / "User" / "settings.json"`.
+## Tests — `tests/icoder/test_cli_icoder.py`
+
+1. `test_execute_icoder_tui_preflight_abort` — mock `TuiChecker.run_all_checks` to raise `TuiPreflightAbort("broken", 1)`, verify `execute_icoder()` returns 1 (no traceback, no error log)
+2. `test_execute_icoder_tui_preflight_passes` — mock `TuiChecker.run_all_checks` to do nothing, verify normal flow continues (existing `setup_icoder_environment` mock gets called)
+
+## `tools/test_scroll.py` — Manual verification tool
+
+Minimal Textual app with a RichLog widget for manual testing of scroll/mouse/rendering:
+```python
+"""Minimal TUI for manual terminal verification (issue #780)."""
+from textual.app import App, ComposeResult
+from textual.widgets import RichLog
+
+class TestScrollApp(App):
+    def compose(self) -> ComposeResult:
+        yield RichLog()
+
+    def on_mount(self) -> None:
+        log = self.query_one(RichLog)
+        for i in range(100):
+            log.write(f"Line {i}: scroll test — mouse and rendering check")
+
+if __name__ == "__main__":
+    TestScrollApp().run()
+```
 
 ## LLM Prompt
 ```
 Implement Step 4 of issue #780 (TUI pre-flight terminal checks).
 See pr_info/steps/summary.md for architecture and pr_info/steps/step_4.md for this step's spec.
 
-Add _check_vscode_gpu_acceleration() to TuiChecker in src/mcp_coder/utils/tui_preparation.py.
-Windows-only, skips if SSH_CONNECTION is set, checks TERM_PROGRAM=vscode,
-reads %APPDATA%\Code\User\settings.json with regex for gpuAcceleration off.
-Appends to _prompts list. Wire into run_all_checks().
-Add tests to tests/utils/test_tui_preparation.py using tmp_path for fake settings files.
+Modify src/mcp_coder/cli/commands/icoder.py:
+- Import TuiChecker and TuiPreflightAbort from utils.tui_preparation
+- Call TuiChecker().run_all_checks() between project dir resolution and setup_icoder_environment()
+- Add except TuiPreflightAbort handler BEFORE except Exception (the broad handler)
+  The critical constraint is that TuiPreflightAbort inherits from Exception, so it must be caught first.
+  Placement relative to KeyboardInterrupt is just stylistic (KeyboardInterrupt doesn't inherit from Exception).
+
+Add integration tests to tests/icoder/test_cli_icoder.py.
+Create tools/test_scroll.py as a minimal manual verification TUI app.
 Run all code quality checks (pylint, pytest, mypy) and fix any issues.
 ```
