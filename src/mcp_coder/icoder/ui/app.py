@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import threading
 from typing import Any
 
 from rich.markdown import Markdown
 from textual.app import App, ComposeResult
+from textual.binding import Binding
 from textual.widgets import Static
 
 from mcp_coder.icoder.core.app_core import AppCore
@@ -27,6 +29,7 @@ from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 
 STYLE_USER_INPUT = "white on grey23"
 STYLE_TOOL_OUTPUT = "white on #0a0a2e"
+STYLE_CANCELLED = "dim #e8a838"
 
 
 def _connection_status_suffix(
@@ -48,6 +51,10 @@ class ICoderApp(App[None]):
     """Interactive coding TUI. Thin shell over AppCore."""
 
     CSS = CSS
+    BINDINGS = [
+        Binding("escape", "cancel_stream", "Cancel", show=False),
+        Binding("ctrl+c", "noop", "Copy", show=False),
+    ]
 
     def __init__(
         self, app_core: AppCore, *, format_tools: bool = True, **kwargs: Any
@@ -64,6 +71,7 @@ class ICoderApp(App[None]):
         self._format_tools = format_tools
         self._renderer = StreamEventRenderer(format_tools=format_tools)
         self._text_buffer: str = ""
+        self._cancel_event = threading.Event()
 
     def compose(self) -> ComposeResult:
         """Vertical layout: OutputLog on top, InputArea at bottom.
@@ -133,6 +141,13 @@ class ICoderApp(App[None]):
             llm_input = response.llm_text or text
             self.run_worker(lambda: self._stream_llm(llm_input), thread=True)
 
+    def action_cancel_stream(self) -> None:
+        """Set cancel event if currently streaming. No-op otherwise."""
+        self._cancel_event.set()
+
+    def action_noop(self) -> None:
+        """Suppress Ctrl+C quit dialog."""
+
     def _stream_llm(self, text: str) -> None:
         """Worker target: stream LLM response in background thread.
 
@@ -141,14 +156,25 @@ class ICoderApp(App[None]):
         Args:
             text: User input to send to LLM.
         """
+        self._cancel_event.clear()
+        _error_handled = False
         try:
             for event in self._core.stream_llm(text):
+                if self._cancel_event.is_set():
+                    break
                 self.call_from_thread(self._handle_stream_event, event)
         except Exception as exc:  # pylint: disable=broad-exception-caught
+            _error_handled = True
             self.call_from_thread(self._flush_buffer)
             self.call_from_thread(self._show_error, str(exc))
             self.call_from_thread(self._reset_busy_indicator)
             self.call_from_thread(self._append_blank_line)
+        finally:
+            if self._cancel_event.is_set() and not _error_handled:
+                self.call_from_thread(self._flush_buffer)
+                self.call_from_thread(self._append_cancelled_marker)
+                self.call_from_thread(self._reset_busy_indicator)
+                self.call_from_thread(self._append_blank_line)
 
     def _append_blank_line(self) -> None:
         """Write an empty line to the output log for visual spacing."""
@@ -218,6 +244,10 @@ class ICoderApp(App[None]):
     def _reset_busy_indicator(self) -> None:
         """Reset busy indicator to ready state."""
         self.query_one(BusyIndicator).show_ready()
+
+    def _append_cancelled_marker(self) -> None:
+        """Append dim orange '— Cancelled —' marker to output."""
+        self.query_one(OutputLog).append_text("— Cancelled —", style=STYLE_CANCELLED)
 
     def _show_error(self, message: str) -> None:
         """Display error message in output log.
