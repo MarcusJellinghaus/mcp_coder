@@ -62,5 +62,5 @@ Detail: [step_4.md](./steps/step_4.md)
 
 ## Pull Request
 
-- [ ] PR review: verify all 4 steps committed and clean
+- [x] PR review: verify all 4 steps committed and clean
 - [ ] PR summary prepared
