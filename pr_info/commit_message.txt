@@ -1,7 +1,5 @@
-fix: resolve mypy strict-mode errors in test_pr_manager
+refactor: extract get_closing_issue_numbers tests to separate file
 
-- Remove unused `# type: ignore[attr-defined]` on `manager._repository`
-  assignment (line 693) — attribute is now known to mypy after
-  PullRequestManager gained the `_repository` attribute
-- Add `dict[str, Any]` annotation to `response` variable (line 740)
-  where empty `"nodes": []` prevented mypy from inferring the full type
+Move TestGetClosingIssueNumbers from test_pr_manager.py (765 lines) into
+test_pr_manager_closing_issues.py to bring the original file back under
+the 750-line CI file-size limit.
