@@ -224,11 +224,14 @@ _.handle_clear
 _.handle_help
 _.handle_quit
 
-# icoder/ui/app.py - Textual lifecycle and message handlers
+# icoder/ui/app.py - Textual lifecycle, message handlers, and bindings
 _.compose
 _.on_mount
 _.on_input_area_input_submitted
 _.on_text_area_changed
+_.BINDINGS
+_.action_cancel_stream
+_.action_noop
 
 # tests/icoder/test_command_registry.py - Test command handler
 _.handle_test
