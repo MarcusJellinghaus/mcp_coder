@@ -1,9 +1,0 @@
-fix: widen type annotations in tests to match get_config_values and validate_repo_config signatures
-
-- tests/conftest.py: dict[tuple[str, str], str | None] -> dict[tuple[str, str], str | bool | int | list[Any] | None]
-- tests/utils/jenkins_operations/test_integration.py: same widening
-- tests/cli/commands/coordinator/test_core.py: dict[str, str | bool | None] -> dict[str, str | bool | int | list[str] | None] (6 occurrences)
-
-The source functions' return types were widened to include bool, int, and list
-types, but the test annotations were not updated, causing mypy errors due to
-dict invariance.
