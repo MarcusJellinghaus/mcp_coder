@@ -1,6 +1,0 @@
-fix: suppress pylint import errors for mcp_tools_py.formatter.runner
-
-Add pylint disable comments (import-error, no-name-in-module) on the
-lazy import of mcp_tools_py.formatter.runner in run_format_code shim.
-Move the existing type: ignore comment to the from-statement line where
-mypy actually reports the error, fixing the unused-ignore warning.
