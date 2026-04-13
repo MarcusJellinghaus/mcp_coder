@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 4: Integration into execute_icoder() + manual test tool
-- [ ] Implementation: Wire TuiChecker into icoder.py between dir resolution and setup, except TuiPreflightAbort before except Exception, integration tests, and tools/test_scroll.py
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: Wire TuiChecker into icoder.py between dir resolution and setup, except TuiPreflightAbort before except Exception, integration tests, and tools/test_scroll.py
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review

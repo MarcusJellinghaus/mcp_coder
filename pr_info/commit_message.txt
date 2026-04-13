@@ -1,17 +1,16 @@
-feat(tui): add VS Code gpuAcceleration detection check
+feat(tui): wire pre-flight checks into execute_icoder()
 
-Add _check_vscode_gpu_acceleration() to TuiChecker that detects when
-VS Code terminal has gpuAcceleration set to 'off', which breaks TUI
-mouse/rendering.
+Wire TuiChecker.run_all_checks() into execute_icoder() between project
+directory resolution and setup_icoder_environment() for fail-fast
+behavior before slow environment setup.
 
-Gates:
-- Windows only (sys.platform == "win32")
-- Skips if SSH_CONNECTION is set (remote session)
-- Only runs when TERM_PROGRAM == "vscode"
+Add except TuiPreflightAbort handler before except Exception to prevent
+the broad handler from swallowing preflight aborts (TuiPreflightAbort
+inherits from Exception).
 
-Uses regex search on %APPDATA%\Code\User\settings.json to detect the
-setting without JSON/JSONC parsing. When detected, appends a prompt
-that gives the user Instructions or Abort options (both abort).
+Add integration tests verifying:
+- TuiPreflightAbort is caught and returns exit code without traceback
+- Normal flow continues when preflight checks pass
 
-Wired into run_all_checks() between codepage fix and warning checks.
-Includes 9 tests covering all gates, detection, and prompt flows.
+Create tools/test_scroll.py minimal Textual app for manual terminal
+verification of scroll, mouse, and rendering behavior.

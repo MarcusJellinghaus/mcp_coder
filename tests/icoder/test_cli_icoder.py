@@ -361,3 +361,52 @@ def test_execute_icoder_passes_format_tools_to_app(
     assert result == 0
     assert len(captured_kwargs) == 1
     assert captured_kwargs[0]["format_tools"] is False
+
+
+# --- TUI pre-flight integration tests ---
+
+
+@patch("mcp_coder.cli.commands.icoder.TuiChecker")
+@patch("mcp_coder.cli.commands.icoder.setup_icoder_environment")
+def test_execute_icoder_tui_preflight_abort(
+    mock_setup: MagicMock,
+    mock_checker_cls: MagicMock,
+    tmp_path: Path,
+) -> None:
+    """TuiPreflightAbort is caught and returns its exit code without traceback."""
+    from mcp_coder.cli.commands.icoder import execute_icoder
+    from mcp_coder.utils.tui_preparation import TuiPreflightAbort
+
+    mock_checker_cls.return_value.run_all_checks.side_effect = TuiPreflightAbort(
+        "broken terminal", 1
+    )
+    args = _make_args(tmp_path)
+
+    result = execute_icoder(args)
+
+    assert result == 1
+    # setup_icoder_environment should NOT have been called
+    mock_setup.assert_not_called()
+
+
+@patch("mcp_coder.icoder.ui.app.ICoderApp.run")
+@patch("mcp_coder.cli.commands.icoder.setup_icoder_environment")
+@patch("mcp_coder.cli.commands.icoder.TuiChecker")
+def test_execute_icoder_tui_preflight_passes(
+    mock_checker_cls: MagicMock,
+    mock_setup: MagicMock,
+    _mock_run: MagicMock,
+    tmp_path: Path,
+) -> None:
+    """When TuiChecker passes, normal flow continues to setup_icoder_environment."""
+    from mcp_coder.cli.commands.icoder import execute_icoder
+
+    mock_checker_cls.return_value.run_all_checks.return_value = None
+    mock_setup.return_value = _FAKE_RUNTIME_INFO
+    (tmp_path / "logs").mkdir()
+    args = _make_args(tmp_path)
+
+    result = execute_icoder(args)
+
+    assert result == 0
+    mock_setup.assert_called_once_with(tmp_path)
