@@ -157,18 +157,20 @@ class ICoderApp(App[None]):
             text: User input to send to LLM.
         """
         self._cancel_event.clear()
+        _error_handled = False
         try:
             for event in self._core.stream_llm(text):
                 if self._cancel_event.is_set():
                     break
                 self.call_from_thread(self._handle_stream_event, event)
         except Exception as exc:  # pylint: disable=broad-exception-caught
+            _error_handled = True
             self.call_from_thread(self._flush_buffer)
             self.call_from_thread(self._show_error, str(exc))
             self.call_from_thread(self._reset_busy_indicator)
             self.call_from_thread(self._append_blank_line)
         finally:
-            if self._cancel_event.is_set():
+            if self._cancel_event.is_set() and not _error_handled:
                 self.call_from_thread(self._flush_buffer)
                 self.call_from_thread(self._append_cancelled_marker)
                 self.call_from_thread(self._reset_busy_indicator)
