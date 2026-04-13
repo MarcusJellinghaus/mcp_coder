@@ -70,6 +70,10 @@ The test method goes in the existing `TestTemplateWatchdogLines` class alongside
 for each of the 6 workflow templates:
     for each line containing "set-status" and "--from-status":
         assert "--project-dir" is in that line
+        if template is a Linux template:
+            assert "--project-dir /workspace/repo" is in that line
+        else (Windows template):
+            assert "--project-dir %WORKSPACE%\repo" is in that line
     assert at least one watchdog line was found (guard against template restructuring)
 ```
 
