@@ -129,6 +129,7 @@ class ICoderApp(App[None]):
             output.append_text(response.text)
         elif response.send_to_llm:
             output.write("")
+            self.query_one(BusyIndicator).show_busy("Querying LLM...")
             llm_input = response.llm_text or text
             self.run_worker(lambda: self._stream_llm(llm_input), thread=True)
 
