@@ -266,10 +266,6 @@ Interactive terminal chat for LLM-assisted coding. Three-layer architecture maxi
 - **Subprocess execution**: `utils/subprocess_runner.py` - MCP STDIO isolation support (tests: `utils/test_subprocess_runner.py`)
 - **Git utilities**: `utils/git_utils.py` - Branch name utilities for LLM log correlation (tests: `utils/test_git_utils.py`)
 
-### Code Quality & Formatting (`src/mcp_coder/formatters/`)
-- **Formatter integration**: `formatters/` - Black, isort automation (tests: `formatters/test_*.py` 🏷️ formatter_integration)
-- **Configuration reading**: `formatters/config_reader.py` - Tool settings (tests: `formatters/test_config_reader.py` 🏷️ formatter_integration)
-
 ### Workflow Automation (`src/mcp_coder/workflows/`)
 - **Implementation workflow**: `workflows/implement/` - Modular task automation (tests: `workflows/implement/test_*.py`)
   - **Design Decision**: Converted from standalone script to integrated CLI command (Oct 2025)
@@ -353,9 +349,6 @@ Interactive terminal chat for LLM-assisted coding. Three-layer architecture maxi
   - `claude_api_integration`: Claude API tests (network, auth needed) in `llm_providers/claude/`
     - **When to use**: Testing Claude Code API integration, SDK functionality
     - **Requirements**: Claude Code API access, authentication configured
-  - `formatter_integration`: Code formatter integration (black, isort) in `formatters/test_*.py`
-    - **When to use**: Testing code formatting automation, tool integration
-    - **Requirements**: Formatter tools installed
   - `github_integration`: GitHub API access (network, auth needed) in `utils/github_operations/test_*.py`
     - **When to use**: Testing GitHub operations, PR management, issue workflows
     - **Requirements**: GitHub API tokens, network access

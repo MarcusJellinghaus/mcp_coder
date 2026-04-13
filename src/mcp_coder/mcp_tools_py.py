@@ -1,14 +1,53 @@
 """Thin wrapper for mcp_tools_py library.
 
-Provides a simplified interface to mcp_tools_py's mypy functionality.
+Provides a simplified interface to mcp_tools_py's mypy and formatter functionality.
 """
 
 import sys
 from pathlib import Path
-from typing import Union
+from typing import NamedTuple, Union
 
 from mcp_tools_py.code_checker_mypy import MypyResult
 from mcp_tools_py.code_checker_mypy import run_mypy_check as _run_mypy_check
+
+
+class FormatterResult(NamedTuple):
+    """Result of a single formatter step."""
+
+    output: str
+    success: bool
+
+
+def run_format_code(
+    project_dir: Union[str, Path],
+) -> "dict[str, FormatterResult]":
+    """Run code formatters (isort, black) on the project.
+
+    Args:
+        project_dir: Path to the project directory.
+
+    Returns:
+        Dict mapping formatter step name to FormatterResult.
+
+    Raises:
+        RuntimeError: If target directory resolution fails.
+    """
+    from mcp_tools_py.formatter.black_runner import run_black
+    from mcp_tools_py.formatter.isort_runner import run_isort
+    from mcp_tools_py.utils.project_config import resolve_target_directories
+
+    project_root = Path(str(project_dir))
+    target_dirs = resolve_target_directories(str(project_root), None)
+    if isinstance(target_dirs, str):
+        raise RuntimeError(target_dirs)
+
+    results: dict[str, FormatterResult] = {}
+    for step_name, runner in [("isort", run_isort), ("black", run_black)]:
+        output, success = runner(sys.executable, target_dirs, str(project_root))
+        results[step_name] = FormatterResult(output=output, success=success)
+        if not success:
+            break
+    return results
 
 
 def run_mypy_check(

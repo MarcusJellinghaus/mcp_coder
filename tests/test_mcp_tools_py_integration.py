@@ -11,7 +11,7 @@ import pytest
 from mcp_coder.mcp_tools_py import run_mypy_check
 
 
-@pytest.mark.formatter_integration
+@pytest.mark.checker_integration
 class TestMypyIntegration:
     """Integration tests for mypy checking functionality."""
 

@@ -10,10 +10,10 @@ from pathlib import Path
 from typing import Optional
 
 from mcp_coder.constants import PROMPTS_FILE_PATH
-from mcp_coder.formatters import format_code
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import LLMTimeoutError, prompt_llm
 from mcp_coder.llm.storage.session_storage import store_session
+from mcp_coder.mcp_tools_py import run_format_code
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils import commit_all_changes, get_full_status, git_push
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
@@ -88,14 +88,12 @@ def run_formatters(project_dir: Path) -> bool:
     logger.info("Running code formatters...")
 
     try:
-        results = format_code(project_dir, formatters=["black", "isort"])
+        results = run_format_code(project_dir)
 
         # Check if any formatter failed
         for formatter_name, result in results.items():
             if not result.success:
-                logger.error(
-                    f"{formatter_name} formatting failed: {result.error_message}"
-                )
+                logger.error(f"{formatter_name} formatting failed: {result.output}")
                 return False
             logger.info(f"{formatter_name} formatting completed successfully")
 

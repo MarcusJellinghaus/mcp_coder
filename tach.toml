@@ -58,7 +58,6 @@ depends_on = [
     { path = "mcp_coder.workflow_utils" }, # Workflow helper utilities
     { path = "mcp_coder.checks" },        # High-level check modules
     { path = "mcp_coder.llm" },           # LLM interaction services
-    { path = "mcp_coder.formatters" },    # Code formatting services
     { path = "mcp_coder.prompt_manager" }, # Prompt template management
     { path = "mcp_coder.utils" },         # General utilities
     { path = "mcp_coder.config" },        # Configuration management
@@ -93,7 +92,7 @@ depends_on = [
     { path = "mcp_coder.workflow_utils" }, # Shared workflow helpers
     { path = "mcp_coder.checks" },         # High-level check modules
     { path = "mcp_coder.llm" },           # LLM for code generation
-    { path = "mcp_coder.formatters" },    # Code formatting after generation
+    { path = "mcp_coder.mcp_tools_py" },  # MCP tools (formatter shim, mypy)
     { path = "mcp_coder.prompt_manager" }, # Load workflow-specific prompts
     { path = "mcp_coder.utils" },         # Git, GitHub operations
     { path = "mcp_coder.config" },        # Access configuration
@@ -107,7 +106,6 @@ layer = "application"
 # Separated from workflows to avoid circular dependencies between workflows.
 depends_on = [
     { path = "mcp_coder.llm" },           # LLM interaction for task analysis
-    { path = "mcp_coder.formatters" },    # Format workflow outputs
     { path = "mcp_coder.prompt_manager" }, # Prompt management
     { path = "mcp_coder.utils" },         # General utilities
     { path = "mcp_coder.config" },        # Configuration access
@@ -130,7 +128,7 @@ depends_on = [
 # Layer 3: DOMAIN
 # =============================================================================
 # Purpose: Core business logic and domain services
-# Rationale: Domain services encapsulate core functionality (LLM, formatting).
+# Rationale: Domain services encapsulate core functionality (LLM, prompts).
 #            They should be independent of how they're invoked (CLI, API, etc.)
 # =============================================================================
 
@@ -146,16 +144,6 @@ depends_on = [
     { path = "mcp_coder.constants" }, # LLM-related constants
 ]
 
-[[modules]]
-path = "mcp_coder.formatters"
-layer = "domain"
-# Code formatting service (black, isort integration).
-# Pure domain service with no external dependencies beyond config.
-depends_on = [
-    { path = "mcp_coder.utils" },     # File system utilities if needed
-    { path = "mcp_coder.config" },    # Formatter configuration
-    { path = "mcp_coder.constants" }, # Formatting constants
-]
 
 [[modules]]
 path = "mcp_coder.prompt_manager"
@@ -397,7 +385,6 @@ depends_on = [
     { path = "mcp_coder.workflow_utils" },
     { path = "mcp_coder.checks" },
     { path = "mcp_coder.llm" },
-    { path = "mcp_coder.formatters" },
     { path = "mcp_coder.prompt_manager" },
     { path = "mcp_coder.utils" },
     { path = "mcp_coder.config" },
@@ -457,12 +444,3 @@ depends_on = [
 #     { path = "mcp_coder.constants" },    # Constants for assertions
 # ]
 
-# [[modules]]
-# path = "tests.formatters"
-# # Formatter tests should only import formatters module and test utilities
-# depends_on = [
-#     { path = "tests" },                  # Shared fixtures
-#     { path = "mcp_coder.formatters" },   # Module under test
-#     { path = "mcp_coder.config" },       # Configuration for test setup
-#     { path = "mcp_coder.constants" },    # Constants for assertions
-# ]
