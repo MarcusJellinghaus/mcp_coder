@@ -690,7 +690,7 @@ class TestGetClosingIssueNumbers:
         mock_repo = Mock()
         mock_repo.owner.login = "test"
         mock_repo.name = "repo"
-        manager._repository = mock_repo  # type: ignore[attr-defined]
+        manager._repository = mock_repo
 
         manager._github_client._Github__requester = Mock()  # type: ignore[attr-defined]
         manager._github_client._Github__requester.graphql_query = Mock(  # type: ignore[attr-defined]
@@ -737,7 +737,7 @@ class TestGetClosingIssueNumbers:
         self, mock_manager: PullRequestManager
     ) -> None:
         """GraphQL returns empty nodes → returns []."""
-        response = {
+        response: dict[str, Any] = {
             "data": {
                 "repository": {
                     "pullRequest": {"closingIssuesReferences": {"nodes": []}}

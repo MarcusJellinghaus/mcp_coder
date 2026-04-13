@@ -1,15 +1,7 @@
-feat: add fallback to PR closingIssuesReferences when branch has no issue number
+fix: resolve mypy strict-mode errors in test_pr_manager
 
-After PR creation (step 4), if no issue was found from the branch name,
-query the new PR's closingIssuesReferences via PullRequestManager to find
-the linked issue number. This enables label updates for branches that
-don't follow the {issue_number}-{title} naming convention.
-
-Changes:
-- Add fallback logic in run_create_pr_workflow() after step 4
-- Handle single, multiple, and zero closing issues from fallback
-- Change completion message to "completed with warnings" when no issue found
-- Add 5 new tests for fallback scenarios
-- Update existing test to mock PullRequestManager for fallback path
-
-Closes #776
+- Remove unused `# type: ignore[attr-defined]` on `manager._repository`
+  assignment (line 693) — attribute is now known to mypy after
+  PullRequestManager gained the `_repository` attribute
+- Add `dict[str, Any]` annotation to `response` variable (line 740)
+  where empty `"nodes": []` prevented mypy from inferring the full type
