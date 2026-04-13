@@ -12,6 +12,7 @@ from ...llm.storage import (
     find_latest_session,
 )
 from ...utils.log_utils import OUTPUT
+from ...utils.tui_preparation import TuiChecker, TuiPreflightAbort
 from ..utils import (
     parse_llm_method_from_args,
     resolve_execution_dir,
@@ -50,6 +51,9 @@ def execute_icoder(args: argparse.Namespace) -> int:
                 return 1
         else:
             project_dir = Path.cwd()
+
+        # Pre-flight terminal checks (fail fast before slow env setup)
+        TuiChecker().run_all_checks()
 
         # Set up iCoder environment (paths, env vars, MCP verification)
         try:
@@ -155,6 +159,10 @@ def execute_icoder(args: argparse.Namespace) -> int:
             ICoderApp(app_core, format_tools=format_tools).run()
 
         return 0
+
+    except TuiPreflightAbort as e:
+        logger.log(OUTPUT, e.message)
+        return e.exit_code
 
     except KeyboardInterrupt:
         logger.log(OUTPUT, "Operation cancelled by user.")
