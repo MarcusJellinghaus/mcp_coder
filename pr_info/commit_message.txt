@@ -1,0 +1,12 @@
+fix(icoder): render tool results as plain text instead of Markdown
+
+Rich's Markdown parser interprets box-drawing characters (│, └) as
+table syntax, making tool output invisible in iCoder.
+
+Replace Markdown(body) with append_text(body) for tool results.
+The format_tools flag continues to control JSON filtering/truncation
+in StreamEventRenderer.
+
+Add end-to-end pipeline tests for tool output visibility.
+
+Closes #778

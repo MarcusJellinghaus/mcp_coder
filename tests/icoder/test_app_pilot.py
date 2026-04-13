@@ -673,10 +673,10 @@ async def test_busy_indicator_resets_on_stream_error(
 # --- Markdown rendering tests (Step 3) ---
 
 
-async def test_tool_result_renders_markdown_by_default(
+async def test_tool_result_renders_plain_text_by_default(
     make_icoder_app: Callable[..., ICoderApp],
 ) -> None:
-    """Tool result output is rendered via Markdown when format_tools=True (default)."""
+    """Tool result output is rendered as plain text when format_tools=True (default)."""
     app = make_icoder_app(
         responses=[
             [
@@ -701,8 +701,7 @@ async def test_tool_result_renders_markdown_by_default(
         # Tool start line should be present
         tool_start_lines = [ln for ln in lines if "┌" in ln]
         assert len(tool_start_lines) >= 1
-        # With format_tools=True, tool result goes through write() as Markdown,
-        # which records a text representation in _recorded
+        # With format_tools=True, tool result goes through append_text (plain text)
         result_lines = [ln for ln in lines if "done" in ln]
         assert len(result_lines) >= 1
         # Verify the recorded content includes the tool output body

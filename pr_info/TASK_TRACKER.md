@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Fix tool result rendering + add pipeline tests
 [Detail](./steps/step_1.md)
 
-- [ ] Implementation: fix `app.py` Markdown rendering, update existing test, create `tests/icoder/ui/test_app.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: fix `app.py` Markdown rendering, update existing test, create `tests/icoder/ui/test_app.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
