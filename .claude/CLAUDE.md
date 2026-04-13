@@ -1,270 +1,103 @@
---- This file is used by Claude Code - similar to a system prompt. ---
+## About this repo
 
-# ⚠️ MANDATORY INSTRUCTIONS - MUST BE FOLLOWED ⚠️
+`mcp-coder` is a CLI and workflow orchestrator for LLM sessions, using Claude Code or langchain as backend.
 
-**THESE INSTRUCTIONS OVERRIDE ALL DEFAULT BEHAVIORS - NO EXCEPTIONS**
+## MCP Tools — mandatory
 
-## 🔴 CRITICAL: ALWAYS Use MCP Tools
+Use MCP tools for **all** operations. Never use `Read`, `Write`, `Edit`, or `Bash` for tasks that have an MCP equivalent.
 
-**MANDATORY**: You MUST use MCP tools for ALL operations when available. DO NOT use standard Claude tools.
+### Tool mapping
 
-**BEFORE EVERY TOOL USE, ASK: "Does an MCP version exist?"**
+| Task | MCP tool |
+|------|----------|
+| Read file | `mcp__workspace__read_file` |
+| Edit file | `mcp__workspace__edit_file` |
+| Write file | `mcp__workspace__save_file` |
+| Append to file | `mcp__workspace__append_file` |
+| Delete file | `mcp__workspace__delete_this_file` |
+| Move file | `mcp__workspace__move_file` |
+| List directory | `mcp__workspace__list_directory` |
+| Search files | `mcp__workspace__search_files` |
+| Read reference project | `mcp__workspace__read_reference_file` |
+| List reference dir | `mcp__workspace__list_reference_directory` |
+| Get reference projects | `mcp__workspace__get_reference_projects` |
+| Run pytest | `mcp__tools-py__run_pytest_check` |
+| Run pylint | `mcp__tools-py__run_pylint_check` |
+| Run mypy | `mcp__tools-py__run_mypy_check` |
+| Run vulture | `mcp__tools-py__run_vulture_check` |
+| Run lint-imports | `mcp__tools-py__run_lint_imports_check` |
+| Run ruff check | `mcp__tools-py__run_ruff_check` |
+| Run ruff fix | `mcp__tools-py__run_ruff_fix` |
+| Run bandit | `mcp__tools-py__run_bandit_check` |
+| Format code (black+isort) | `mcp__tools-py__run_format_code` |
+| Get library source | `mcp__tools-py__get_library_source` |
+| Refactoring | `mcp__tools-py__move_symbol`, `move_module`, `rename_symbol`, `list_symbols`, `find_references` |
 
-### Tool Mapping Reference
+## Code quality checks
 
-| Task | ❌ NEVER USE | ✅ USE MCP TOOL |
-|------|--------------|------------------|
-| Read file | `Read()` | `mcp__workspace__read_file()` |
-| Edit file | `Edit()` | `mcp__workspace__edit_file()` |
-| Write file | `Write()` | `mcp__workspace__save_file()` |
-| Run pytest | `Bash("pytest ...")` | `mcp__tools-py__run_pytest_check()` |
-| Run pylint | `Bash("pylint ...")` | `mcp__tools-py__run_pylint_check()` |
-| Run mypy | `Bash("mypy ...")` | `mcp__tools-py__run_mypy_check()` |
-| Format code | `Bash("./tools/format_all.sh")` | `mcp__tools-py__run_format_code()` |
-| Lint imports | `Bash("./tools/lint_imports.sh")` | `mcp__tools-py__run_lint_imports_check()` |
-| Vulture check | `Bash("./tools/vulture_check.sh")` | `mcp__tools-py__run_vulture_check()` |
-| Get library source | _(new capability)_ | `mcp__tools-py__get_library_source()` |
-| Run ruff | `Bash("ruff ...")` | ✅ `Bash("./tools/ruff_check.sh")` |
-| Git operations | ✅ `Bash("git ...")` | ✅ `Bash("git ...")` (allowed) |
-| View diff (compact) | `Bash("git diff")` | ✅ `Bash("mcp-coder git-tool compact-diff")` |
-| Refactoring | Manual copy-paste | `mcp__tools-py__move_symbol()`, `list_symbols()`, `find_references()`, `get_library_source()` |
-
-## 🔴 CRITICAL: Code Quality Requirements
-
-**MANDATORY**: After making ANY code changes (after EACH edit), you MUST run ALL FIVE code quality checks using the EXACT MCP tool names below:
+After making code changes, run:
 
 ```
 mcp__tools-py__run_pylint_check
 mcp__tools-py__run_pytest_check
 mcp__tools-py__run_mypy_check
-mcp__tools-py__run_lint_imports_check
-mcp__tools-py__run_vulture_check
 ```
 
-This runs:
+All checks must pass before proceeding.
 
-- **Pylint** - Code quality and style analysis
-- **Pytest** - All unit and integration tests
-- **Mypy** - Static type checking
-- **Lint imports** - Import dependency enforcement
-- **Vulture** - Dead code detection
+**Ruff:** use `./tools/ruff_check.sh` via Bash. Do not call `ruff` directly.
 
-**⚠️ ALL CHECKS MUST PASS** - If ANY issues are found, you MUST fix them immediately before proceeding.
-
-### 📋 Ruff Docstring Checks
-
-**MANDATORY**: Use the project's ruff script to check docstring linting:
-
-```bash
-./tools/ruff_check.sh
-```
-
-Do NOT call `ruff` directly — always use the script in `tools/`.
-
-### 📋 Pytest Execution Requirements
-
-**MANDATORY pytest parameters:**
-
-- ALWAYS use `extra_args: ["-n", "auto"]` for parallel execution
-
-**Available markers in pyproject.toml:**
-
-- `git_integration`: File system git operations (repos, commits)
-- `claude_api_integration`: Claude API tests
-- `claude_cli_integration`: Claude CLI tests
-- `formatter_integration`: Code formatter integration (black, isort)
-- `github_integration`: GitHub API access
-
-**RECOMMENDED USAGE:**
-
-- **Fast unit tests (recommended)**: Use `-m` with `not` expressions to exclude slow integration tests
-- **All tests**: Run without markers to include everything (slow!)
-- **Specific integration tests**: Use specific `markers` parameter when testing integration functionality
-
-**Examples:**
+**Pytest:** always use `extra_args: ["-n", "auto"]` for parallel execution.
 
 ```python
-# RECOMMENDED: Fast unit tests (excludes all integration tests)
+# Fast unit tests (recommended)
 mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration and not llm_integration and not textual_integration"])
 
-# All tests including slow integration tests (not recommended for regular development)
-mcp__tools-py__run_pytest_check(extra_args=["-n", "auto"])
-
-# Specific integration tests (only when needed)
+# Specific integration tests
 mcp__tools-py__run_pytest_check(extra_args=["-n", "auto"], markers=["git_integration"])
-mcp__tools-py__run_pytest_check(extra_args=["-n", "auto"], markers=["github_integration"])
 ```
 
-**Important:** Without the `-m "not ..."` exclusions, pytest runs ALL tests including slow integration tests that require external resources (git repos, network access, API tokens). For regular development, always use the exclusion pattern as shown in the first example above.
+Markers: `git_integration`, `claude_api_integration`, `claude_cli_integration`, `formatter_integration`, `github_integration`, `langchain_integration`, `llm_integration`, `textual_integration`.
 
-## 📁 MANDATORY: File Access Tools
+When debugging test failures, add `"-v", "-s", "--tb=short"` to extra_args.
 
-**YOU MUST USE THESE MCP TOOLS** for all file operations:
+## Git operations
 
-```
-mcp__workspace__get_reference_projects
-mcp__workspace__list_reference_directory
-mcp__workspace__read_reference_file
-mcp__workspace__list_directory
-mcp__workspace__read_file
-mcp__workspace__save_file
-mcp__workspace__append_file
-mcp__workspace__delete_this_file
-mcp__workspace__move_file
-mcp__workspace__edit_file
-```
-
-**⚠️ ABSOLUTELY FORBIDDEN:** Using `Read`, `Write`, `Edit`, `MultiEdit` tools when MCP filesystem tools are available.
-
-### Quick Examples
-
-```python
-# ❌ WRONG - Standard tools
-Read(file_path="src/example.py")
-Edit(file_path="src/example.py", old_string="...", new_string="...")
-Write(file_path="src/new.py", content="...")
-Bash("pytest tests/")
-Bash("./tools/format_all.sh")
-
-# ✅ CORRECT - MCP tools
-mcp__workspace__read_file(file_path="src/example.py")
-mcp__workspace__edit_file(file_path="src/example.py", edits=[...])
-mcp__workspace__save_file(file_path="src/new.py", content="...")
-mcp__tools-py__run_pytest_check(extra_args=["-n", "auto"])
-mcp__tools-py__run_format_code()
-```
-
-**WHY MCP TOOLS ARE MANDATORY:**
-
-- Proper security and access control
-- Consistent error handling
-- Better integration with the development environment
-- Required for this project's architecture
-
-## ✍️ Writing Style
-
-**Be concise.** Keep code comments, commit messages, documentation changes, and prompt additions short and direct. If one line works, don't use three.
-
-## 🚨 COMPLIANCE VERIFICATION
-
-**Before completing ANY task, you MUST:**
-
-1. ✅ Confirm all code quality checks passed using MCP tools
-2. ✅ Verify you used MCP tools exclusively (NO `Bash` for code checks, NO `Read`/`Write`/`Edit` for files)
-3. ✅ Ensure no issues remain unresolved
-4. ✅ State explicitly: "All CLAUDE.md requirements followed"
-
-## 🔧 DEBUGGING AND TROUBLESHOOTING
-
-**When tests fail or skip:**
-
-- Use MCP pytest tool with verbose flags: `extra_args: ["-v", "-s", "--tb=short"]`
-- For integration tests, check if they require external configuration (tokens, URLs)
-- Never fall back to `Bash` commands - always investigate within MCP tools
-- If MCP tools don't provide enough detail, ask user for guidance rather than using alternative tools
-
-## 🔧 MCP Server Issues
-
-**IMMEDIATELY ALERT** if MCP tools are not accessible - this blocks all work until resolved.
-
-## 🔄 Git Operations
-
-**MANDATORY: Before ANY commit:**
+**Allowed commands via Bash tool.** These have no MCP equivalent — use Bash directly. Skills that instruct bash commands (e.g. `gh issue view`) must also use Bash.
 
 ```
-# ALWAYS format code before committing
-mcp__tools-py__run_format_code
-
-# Then verify formatting worked
-git diff  # Should show formatting changes if any
-```
-
-**Format all code before committing:**
-
-- Run `mcp__tools-py__run_format_code` to format with black and isort
-- Review the changes to ensure they're formatting-only
-- Stage the formatted files
-- Then commit
-
-**ALLOWED git operations via Bash tool:**
-
-```
-git status
-git diff
-git commit
-git log
-git fetch
-git ls-tree
-gh issue view
-gh run view
+git status / diff / commit / log / fetch / ls-tree
+gh issue view / gh pr view / gh run view
 ./tools/ruff_check.sh
 mcp-coder git-tool compact-diff
 mcp-coder check branch-status
+mcp-coder check file-size --max-lines 750
 mcp-coder gh-tool set-status <label>
 ```
 
-**Status labels:** Use `mcp-coder gh-tool set-status` to change issue workflow status — never use raw `gh issue edit` with label flags.
+**Status labels:** use `mcp-coder gh-tool set-status` to change issue workflow status — never use raw `gh issue edit` with label flags.
 
-**Calling mcp-coder:** Bare `mcp-coder` uses the tool env (stable install). To test local source changes, use `.venv\Scripts\python -m mcp_coder <args>`. See [`docs/environments/environments.md`](../docs/environments/environments.md#calling-mcp-coder-explicitly).
+**Calling mcp-coder:** bare `mcp-coder` uses the tool env (stable install). To test local source changes, use `.venv\Scripts\python -m mcp_coder <args>`. See [`docs/environments/environments.md`](../docs/environments/environments.md#calling-mcp-coder-explicitly).
 
-**Compact diff for code review:**
+**Compact diff:** use `mcp-coder git-tool compact-diff` instead of `git diff` for code review. Detects moved code, collapses unchanged blocks. Supports `--exclude PATTERN`.
 
-Use `mcp-coder git-tool compact-diff` instead of `git diff` when reviewing branch changes. It detects moved code, collapses unchanged blocks, and separates committed vs uncommitted changes. Supports `--exclude PATTERN` to filter files.
+**Before every commit:** run `mcp__tools-py__run_format_code`, then stage and commit.
 
-**⚠️ Bash discipline (applies to subagents too):**
+**Bash discipline:** no `cd` prefix. Don't chain approved with unapproved commands. Run them separately.
 
-- No `cd` prefix — the working directory is already correct.
-- Stick to approved commands above. Avoid unapproved bash commands — they trigger user authorization prompts and interrupt the workflow.
-- Do not chain approved commands with unapproved ones (e.g. `git status && echo "---" && git diff`). The `echo` makes the whole command unapproved. Run approved commands separately instead.
+**Commit messages:** standard format, clear and descriptive. No attribution footers.
 
-**Git commit message format:**
+## Execution directory
 
-- Use standard commit message format without advertising footers
-- Focus on clear, descriptive commit messages
-- No required Claude Code attribution or links
+- `execution_dir`: where Claude subprocess runs (config discovery)
+- `project_dir`: where source code lives (git ops and file modifications)
 
-## 📏 File Size Check
+Never conflate the two. Use `--execution-dir` when workspace and project differ.
 
-Check for large files (>750 lines) that may impact LLM context:
+## Writing style
 
-```bash
-mcp-coder check file-size --max-lines 750
-mcp-coder check branch-status --llm-truncate
-```
+Be concise. If one line works, don't use three.
 
-For guidance on splitting large files, see [Safe Refactoring Guide](../docs/processes-prompts/refactoring-guide.md).
+## MCP server issues
 
----
-
-## 📂 Execution Directory Flag
-
-When working with mcp-coder, you may encounter `--execution-dir`:
-
-**Purpose**: Controls where Claude subprocess executes (separate from project location)
-
-**Usage**:
-
-- Default: Uses shell's current working directory
-- Explicit: `--execution-dir /path/to/execution/context`
-- Relative: `--execution-dir ./subdir` (resolves to CWD)
-
-**Common Scenario**:
-User has workspace with `.mcp.json` config, wants to work on separate project:
-
-```bash
-cd /home/user/workspace
-mcp-coder implement --project-dir /path/to/project
-# Claude runs in workspace, modifies project
-```
-
-**When Implementing**:
-
-- Respect both `project_dir` and `execution_dir` parameters
-- Use `project_dir` for file operations and git
-- Use `execution_dir` for config discovery
-- Never conflate the two concepts
-
-**Key Distinction**:
-
-- `execution_dir`: Where Claude subprocess runs (determines config discovery location)
-- `project_dir`: Where source code lives (determines git operations and file modifications)
+Alert immediately if MCP tools are not accessible — this blocks all work.
