@@ -128,15 +128,13 @@ class TuiChecker:
             return
         if not hasattr(ctypes, "windll"):
             return
-        current_cp = ctypes.windll.kernel32.GetConsoleOutputCP()  # type: ignore[attr-defined]
+        current_cp = ctypes.windll.kernel32.GetConsoleOutputCP()
         if current_cp == 65001:
             return
 
         def fix_fn() -> None:
-            ctypes.windll.kernel32.SetConsoleOutputCP(65001)  # type: ignore[attr-defined]
-            atexit.register(
-                ctypes.windll.kernel32.SetConsoleOutputCP, current_cp  # type: ignore[attr-defined]
-            )
+            ctypes.windll.kernel32.SetConsoleOutputCP(65001)
+            atexit.register(ctypes.windll.kernel32.SetConsoleOutputCP, current_cp)
 
         self._silent_fixes.append(
             (f"Console codepage set to UTF-8 (was {current_cp})", fix_fn)

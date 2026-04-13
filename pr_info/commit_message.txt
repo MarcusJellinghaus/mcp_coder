@@ -1,4 +1,6 @@
-docs: add Raises section to _present_prompt docstring
+fix: remove unused type: ignore comments on ctypes.windll calls
 
-Add TuiPreflightAbort to the Raises section of the _present_prompt
-docstring in tui_preparation.py to satisfy ruff's DOC501 rule.
+Mypy performs platform narrowing after the `sys.platform != "win32"`
+guard, making `ctypes.windll` a known attribute. The three
+`# type: ignore[attr-defined]` comments on windll.kernel32 calls in
+tui_preparation.py were flagged as unused by mypy's warn_unused_ignores.
