@@ -138,7 +138,7 @@ uv sync --extra types
 mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir /workspace/repo --mcp-config .mcp.json
 RC=$?
 
-mcp-coder gh-tool set-status status-03f:planning-failed --from-status status-03:planning --issue {issue_number} --force || true
+mcp-coder gh-tool set-status status-03f:planning-failed --from-status status-03:planning --issue {issue_number} --project-dir /workspace/repo --force || true
 
 echo "archive after execution ======================================="
 ls -la .mcp-coder/create_plan_sessions
@@ -156,7 +156,7 @@ uv sync --extra types
 mcp-coder --log-level {log_level} implement --project-dir /workspace/repo --mcp-config .mcp.json
 RC=$?
 
-mcp-coder gh-tool set-status status-06f:implementing-failed --from-status status-06:implementing --force || true
+mcp-coder gh-tool set-status status-06f:implementing-failed --from-status status-06:implementing --project-dir /workspace/repo --force || true
 
 echo "archive after execution ======================================="
 ls -la .mcp-coder/create_plan_sessions
@@ -174,7 +174,7 @@ uv sync --extra types
 mcp-coder --log-level {log_level} create-pr --project-dir /workspace/repo --mcp-config .mcp.json
 RC=$?
 
-mcp-coder gh-tool set-status status-09f:pr-creating-failed --from-status status-09:pr-creating --force || true
+mcp-coder gh-tool set-status status-09f:pr-creating-failed --from-status status-09:pr-creating --project-dir /workspace/repo --force || true
 
 echo "archive after execution ======================================="
 ls -la .mcp-coder/create_plan_sessions
@@ -212,7 +212,7 @@ echo command execution  =====================================
 mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
 set RC=%ERRORLEVEL%
 
-mcp-coder gh-tool set-status status-03f:planning-failed --from-status status-03:planning --issue {issue_number} --force
+mcp-coder gh-tool set-status status-03f:planning-failed --from-status status-03:planning --issue {issue_number} --project-dir %WORKSPACE%\repo --force
 
 echo archive after execution =======================================
 dir .mcp-coder\create_plan_sessions
@@ -248,7 +248,7 @@ echo command execution  =====================================
 mcp-coder --log-level {log_level} implement --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
 set RC=%ERRORLEVEL%
 
-mcp-coder gh-tool set-status status-06f:implementing-failed --from-status status-06:implementing --force
+mcp-coder gh-tool set-status status-06f:implementing-failed --from-status status-06:implementing --project-dir %WORKSPACE%\repo --force
 
 echo archive after execution =======================================
 dir .mcp-coder\create_plan_sessions
@@ -284,7 +284,7 @@ echo command execution  =====================================
 mcp-coder --log-level {log_level} create-pr --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
 set RC=%ERRORLEVEL%
 
-mcp-coder gh-tool set-status status-09f:pr-creating-failed --from-status status-09:pr-creating --force
+mcp-coder gh-tool set-status status-09f:pr-creating-failed --from-status status-09:pr-creating --project-dir %WORKSPACE%\repo --force
 
 echo archive after execution =======================================
 dir .mcp-coder\create_plan_sessions
