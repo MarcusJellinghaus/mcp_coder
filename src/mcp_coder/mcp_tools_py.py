@@ -5,15 +5,22 @@ Provides a simplified interface to mcp_tools_py's mypy and formatter functionali
 
 import sys
 from pathlib import Path
-from typing import Any, Union
+from typing import NamedTuple, Union
 
 from mcp_tools_py.code_checker_mypy import MypyResult
 from mcp_tools_py.code_checker_mypy import run_mypy_check as _run_mypy_check
 
 
+class FormatterResult(NamedTuple):
+    """Result of a single formatter step."""
+
+    output: str
+    success: bool
+
+
 def run_format_code(
     project_dir: Union[str, Path],
-) -> "dict[str, Any]":
+) -> "dict[str, FormatterResult]":
     """Run code formatters (isort, black) on the project.
 
     Args:
@@ -34,10 +41,10 @@ def run_format_code(
     if isinstance(target_dirs, str):
         raise RuntimeError(target_dirs)
 
-    results: dict[str, Any] = {}
+    results: dict[str, FormatterResult] = {}
     for step_name, runner in [("isort", run_isort), ("black", run_black)]:
         output, success = runner(sys.executable, target_dirs, str(project_root))
-        results[step_name] = {"output": output, "success": success}
+        results[step_name] = FormatterResult(output=output, success=success)
         if not success:
             break
     return results

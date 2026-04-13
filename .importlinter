@@ -360,9 +360,8 @@ ignore_imports =
 # -----------------------------------------------------------------------------
 # Contract: Black Library Isolation
 # -----------------------------------------------------------------------------
-# The 'black' library is currently called via subprocess.
-# This rule prevents anyone from importing it directly.
-# If direct import is needed later, add: mcp_coder.formatters.black_formatter -> black
+# Only mcp-tools-py should import black directly; guard against future
+# direct imports in mcp_coder.
 # -----------------------------------------------------------------------------
 [importlinter:contract:black_isolation]
 name = Black Library Isolation
@@ -375,9 +374,8 @@ forbidden_modules =
 # -----------------------------------------------------------------------------
 # Contract: Isort Library Isolation
 # -----------------------------------------------------------------------------
-# The 'isort' library is currently called via subprocess.
-# This rule prevents anyone from importing it directly.
-# If direct import is needed later, add: mcp_coder.formatters.isort_formatter -> isort
+# Only mcp-tools-py should import isort directly; guard against future
+# direct imports in mcp_coder.
 # -----------------------------------------------------------------------------
 [importlinter:contract:isort_isolation]
 name = Isort Library Isolation

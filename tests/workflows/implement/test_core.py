@@ -1164,7 +1164,7 @@ class TestRunImplementWorkflow:
         mock_check_mypy: MagicMock,
         mock_run_formatters: MagicMock,
         mock_get_status: MagicMock,
-        mock_run_finalisation: MagicMock,
+        _mock_run_finalisation: MagicMock,
         mock_check_ci: MagicMock,
     ) -> None:
         """Test run_implement_workflow successful execution."""
