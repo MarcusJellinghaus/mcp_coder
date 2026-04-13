@@ -95,31 +95,29 @@ class TestCommitMessageFile:
 class TestRunFormatters:
     """Test run_formatters function."""
 
-    @patch("mcp_coder.workflows.implement.task_processing.format_code")
-    def test_run_formatters_success(self, mock_format_code: MagicMock) -> None:
+    @patch("mcp_coder.workflows.implement.task_processing.run_format_code")
+    def test_run_formatters_success(self, mock_run_format_code: MagicMock) -> None:
         """Test running formatters successfully."""
         mock_result = MagicMock()
         mock_result.success = True
-        mock_format_code.return_value = {"black": mock_result, "isort": mock_result}
+        mock_run_format_code.return_value = {"black": mock_result, "isort": mock_result}
 
         result = run_formatters(Path("/test/project"))
 
         assert result is True
-        mock_format_code.assert_called_once_with(
-            Path("/test/project"), formatters=["black", "isort"]
-        )
+        mock_run_format_code.assert_called_once_with(Path("/test/project"))
 
-    @patch("mcp_coder.workflows.implement.task_processing.format_code")
-    def test_run_formatters_failure(self, mock_format_code: MagicMock) -> None:
+    @patch("mcp_coder.workflows.implement.task_processing.run_format_code")
+    def test_run_formatters_failure(self, mock_run_format_code: MagicMock) -> None:
         """Test running formatters with failure."""
         mock_success_result = MagicMock()
         mock_success_result.success = True
 
         mock_failed_result = MagicMock()
         mock_failed_result.success = False
-        mock_failed_result.error_message = "Black formatting failed"
+        mock_failed_result.output = "Black formatting failed"
 
-        mock_format_code.return_value = {
+        mock_run_format_code.return_value = {
             "black": mock_failed_result,
             "isort": mock_success_result,
         }
@@ -128,10 +126,10 @@ class TestRunFormatters:
 
         assert result is False
 
-    @patch("mcp_coder.workflows.implement.task_processing.format_code")
-    def test_run_formatters_exception(self, mock_format_code: MagicMock) -> None:
+    @patch("mcp_coder.workflows.implement.task_processing.run_format_code")
+    def test_run_formatters_exception(self, mock_run_format_code: MagicMock) -> None:
         """Test running formatters with exception."""
-        mock_format_code.side_effect = Exception("Formatter error")
+        mock_run_format_code.side_effect = Exception("Formatter error")
 
         result = run_formatters(Path("/test/project"))
 
@@ -854,7 +852,7 @@ Please implement this task step by step."""
             assert task_result is None
 
         with patch(
-            "mcp_coder.workflows.implement.task_processing.format_code",
+            "mcp_coder.workflows.implement.task_processing.run_format_code",
             side_effect=Exception("Format error"),
         ):
             format_result = run_formatters(project_dir)

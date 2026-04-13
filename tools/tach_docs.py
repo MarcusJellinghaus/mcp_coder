@@ -131,7 +131,7 @@ def generate_graph_html(mermaid_content: str) -> str:
         </div>
         <div class="legend-item">
             <div class="legend-color" style="background: #45b7d1;"></div>
-            <span>Domain (LLM, Formatters)</span>
+            <span>Domain (LLM, Prompts)</span>
         </div>
         <div class="legend-item">
             <div class="legend-color" style="background: #96ceb4;"></div>
@@ -156,7 +156,6 @@ graph TD
     
     subgraph Domain
         llm[mcp_coder.llm]
-        formatters[mcp_coder.formatters]
         prompt_manager[mcp_coder.prompt_manager]
     end
     
@@ -176,7 +175,6 @@ graph TD
     cli --> workflows
     cli --> workflow_utils
     cli --> llm
-    cli --> formatters
     cli --> prompt_manager
     cli --> utils
     cli --> config
@@ -185,14 +183,12 @@ graph TD
     
     workflows --> workflow_utils
     workflows --> llm
-    workflows --> formatters
     workflows --> prompt_manager
     workflows --> utils
     workflows --> config
     workflows --> constants
     
     workflow_utils --> llm
-    workflow_utils --> formatters
     workflow_utils --> prompt_manager
     workflow_utils --> utils
     workflow_utils --> config
@@ -201,10 +197,6 @@ graph TD
     llm --> utils
     llm --> config
     llm --> constants
-    
-    formatters --> utils
-    formatters --> config
-    formatters --> constants
     
     prompt_manager --> utils
     prompt_manager --> config
@@ -224,7 +216,6 @@ graph TD
     style workflows fill:#4ecdc4,stroke:#333,color:#000
     style workflow_utils fill:#4ecdc4,stroke:#333,color:#000
     style llm fill:#45b7d1,stroke:#333,color:#000
-    style formatters fill:#45b7d1,stroke:#333,color:#000
     style prompt_manager fill:#45b7d1,stroke:#333,color:#000
     style utils fill:#96ceb4,stroke:#333,color:#000
     style mcp_tools_py fill:#96ceb4,stroke:#333,color:#000
@@ -238,7 +229,7 @@ graph TD
         <ul>
             <li><strong>Presentation</strong> - User-facing interfaces (CLI commands)</li>
             <li><strong>Application</strong> - Use cases and workflow orchestration</li>
-            <li><strong>Domain</strong> - Core business logic (LLM, formatting, prompts)</li>
+            <li><strong>Domain</strong> - Core business logic (LLM, prompts)</li>
             <li><strong>Infrastructure</strong> - Technical implementations (git, github, subprocess)</li>
             <li><strong>Foundation</strong> - Shared constants and configuration</li>
         </ul>
@@ -386,7 +377,6 @@ def main():
         "src/mcp_coder/workflows", 
         "src/mcp_coder/workflow_utils",
         "src/mcp_coder/llm",
-        "src/mcp_coder/formatters",
         "src/mcp_coder/utils",
         "src/mcp_coder/config",
     ]
