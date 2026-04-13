@@ -1,28 +1,10 @@
-config: return native TOML types with schema validation and update bool callers
+config: update int, list, and langchain callers for native types
 
-Remove str() coercion in _get_nested_value() so TOML native types (bool,
-int, list) flow through to callers instead of being flattened to strings.
-
-Add schema-driven type validation in get_config_values() that raises
-ValueError when a config value has the wrong type (e.g. string "true"
-in a bool field). Env var values bypass validation since they are always
-strings.
-
-Replace _get_standard_env_var() usage in get_config_values() with schema
-lookup via _get_field_def(). The function is kept alive for
-_get_source_annotation() until the verify rewrite in Step 4.
-
-Update all bool-field callers:
-- cli/utils.py: == "True" -> is True
-- coordinator/core.py: == "True" -> is True
-- mlflow_config_loader.py: .lower() string parsing -> is True
-
-Update get_cache_refresh_minutes() to handle native int directly,
-with string fallback for env var case.
-
-Update type annotations in caller files (base_manager.py,
-jenkins client.py, coordinator/core.py, langchain/__init__.py,
-vscodeclaude/config.py, cli/utils.py) to accept the wider return
-type from get_config_values.
-
-Update all test mocks from string booleans/ints to native types.
+- Remove env var override loop in langchain/_load_langchain_config()
+  since get_config_values() now handles env vars via schema
+- Update test mocks: string "5" → native int 5 for max_sessions,
+  JSON strings → native lists for setup_commands
+- Update langchain env var override test to reflect schema-driven
+  env var resolution
+- Widen type annotations in test mocks to match get_config_values()
+  return type (str | bool | int | list | None)

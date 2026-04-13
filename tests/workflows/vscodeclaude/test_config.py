@@ -1,7 +1,7 @@
 """Test configuration loading for VSCode Claude."""
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 
 import pytest
 
@@ -21,14 +21,15 @@ class TestConfiguration:
     ) -> None:
         """Loads config with valid workspace_base."""
         # Mock get_config_values directly
-        mock_config = {
+        _ConfigVal = Union[str, bool, int, list[Any], None]
+        mock_config: dict[tuple[str, str], _ConfigVal] = {
             ("vscodeclaude", "workspace_base"): str(tmp_path),
-            ("vscodeclaude", "max_sessions"): "5",
+            ("vscodeclaude", "max_sessions"): 5,
         }
 
         def mock_get_config_values(
             keys: list[tuple[str, str, str | None]],
-        ) -> dict[tuple[str, str], str | None]:
+        ) -> dict[tuple[str, str], _ConfigVal]:
             return {(k[0], k[1]): mock_config.get((k[0], k[1])) for k in keys}
 
         monkeypatch.setattr(
@@ -110,17 +111,18 @@ class TestConfiguration:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Loads repo-specific setup commands."""
-        mock_config: dict[tuple[str, str], str | None] = {
+        _ConfigVal = Union[str, bool, int, list[Any], None]
+        mock_config: dict[tuple[str, str], _ConfigVal] = {
             (
                 "coordinator.repos.mcp_coder",
                 "setup_commands_windows",
-            ): '["uv venv", "uv sync"]',
-            ("coordinator.repos.mcp_coder", "setup_commands_linux"): '["make setup"]',
+            ): ["uv venv", "uv sync"],
+            ("coordinator.repos.mcp_coder", "setup_commands_linux"): ["make setup"],
         }
 
         def mock_get_config_values(
             keys: list[tuple[str, str, str | None]],
-        ) -> dict[tuple[str, str], str | None]:
+        ) -> dict[tuple[str, str], _ConfigVal]:
             return {(k[0], k[1]): mock_config.get((k[0], k[1])) for k in keys}
 
         monkeypatch.setattr(

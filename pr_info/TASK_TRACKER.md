@@ -43,12 +43,12 @@ Detail: [step_2.md](./steps/step_2.md)
 
 Detail: [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: update `vscodeclaude/config.py` for native `int` (max_sessions) and native `list` (setup_commands)
-- [ ] Implementation: remove env var override loop in `langchain/__init__.py`
-- [ ] Implementation: update type annotations in `jenkins_operations/client.py` and `github_operations/base_manager.py`
-- [ ] Implementation: update test mocks in `test_config.py` and `test_langchain_provider.py`
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `config: update int, list, and langchain callers for native types`
+- [x] Implementation: update `vscodeclaude/config.py` for native `int` (max_sessions) and native `list` (setup_commands)
+- [x] Implementation: remove env var override loop in `langchain/__init__.py`
+- [x] Implementation: update type annotations in `jenkins_operations/client.py` and `github_operations/base_manager.py`
+- [x] Implementation: update test mocks in `test_config.py` and `test_langchain_provider.py`
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `config: update int, list, and langchain callers for native types`
 
 ### Step 4: Schema-driven verify_config rewrite
 
