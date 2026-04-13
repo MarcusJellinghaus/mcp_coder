@@ -23,7 +23,7 @@ Note:
 """
 
 import os
-from typing import Generator
+from typing import Any, Generator
 
 import pytest
 
@@ -66,7 +66,9 @@ def jenkins_test_setup() -> Generator[dict[str, str], None, None]:
         missing_keys.append(("jenkins", "test_job", None))
 
     if missing_keys:
-        config: dict[tuple[str, str], str | None] = get_config_values(missing_keys)
+        config: dict[tuple[str, str], str | bool | int | list[Any] | None] = (
+            get_config_values(missing_keys)
+        )
         if not server_url:
             server_url = config[("jenkins", "server_url")]
         if not username:

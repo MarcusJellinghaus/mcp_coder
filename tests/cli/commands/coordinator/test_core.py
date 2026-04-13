@@ -193,7 +193,7 @@ class TestValidateRepoConfig:
     def test_validate_repo_config_complete(self) -> None:
         """Test validation passes for complete configuration."""
         # Setup
-        config: dict[str, str | bool | None] = {
+        config: dict[str, str | bool | int | list[str] | None] = {
             "repo_url": "https://github.com/user/repo.git",
             "executor_job_path": "Folder/job-name",
             "github_credentials_id": "github-pat",
@@ -206,7 +206,7 @@ class TestValidateRepoConfig:
     def test_validate_repo_config_missing_repo_url(self) -> None:
         """Test validation fails when repo_url is missing."""
         # Setup
-        config: dict[str, str | bool | None] = {
+        config: dict[str, str | bool | int | list[str] | None] = {
             "repo_url": None,
             "executor_job_path": "Folder/job-name",
             "github_credentials_id": "github-pat",
@@ -221,7 +221,7 @@ class TestValidateRepoConfig:
     def test_validate_repo_config_missing_executor_job_path(self) -> None:
         """Test validation fails when executor_job_path is missing."""
         # Setup
-        config: dict[str, str | bool | None] = {
+        config: dict[str, str | bool | int | list[str] | None] = {
             "repo_url": "https://github.com/user/repo.git",
             "executor_job_path": None,
             "github_credentials_id": "github-pat",
@@ -237,7 +237,7 @@ class TestValidateRepoConfig:
     def test_validate_repo_config_missing_github_credentials_id(self) -> None:
         """Test validation fails when github_credentials_id is missing."""
         # Setup
-        config: dict[str, str | bool | None] = {
+        config: dict[str, str | bool | int | list[str] | None] = {
             "repo_url": "https://github.com/user/repo.git",
             "executor_job_path": "Folder/job-name",
             "github_credentials_id": None,
@@ -253,7 +253,7 @@ class TestValidateRepoConfig:
     def test_validate_repo_config_invalid_executor_os(self) -> None:
         """Test validation fails for invalid executor_os values."""
         # Setup
-        config: dict[str, str | bool | None] = {
+        config: dict[str, str | bool | int | list[str] | None] = {
             "repo_url": "https://github.com/test/repo.git",
             "executor_job_path": "Tests/test",
             "github_credentials_id": "cred-id",
@@ -272,7 +272,7 @@ class TestValidateRepoConfig:
         # Test both lowercase (normalized) values
         for os_value in ["windows", "linux"]:
             # Setup
-            config: dict[str, str | bool | None] = {
+            config: dict[str, str | bool | int | list[str] | None] = {
                 "repo_url": "https://github.com/test/repo.git",
                 "executor_job_path": "Tests/test",
                 "github_credentials_id": "cred-id",
