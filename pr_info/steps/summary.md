@@ -15,11 +15,12 @@ This forces callers to do fragile string comparisons:
 
 ## Solution
 
-Three tasks, each one commit:
+Four steps, each one commit:
 
 1. **Schema definition** — `FieldDef` dataclass + `_CONFIG_SCHEMA` dict in `user_config.py`
-2. **Native types + validation** — Remove `str()` coercion, add type checking, update all callers + tests
-3. **Schema-driven `verify_config()`** — Walk schema instead of hand-coding each section
+2. **Native types + bool callers** — Remove `str()` coercion, add type checking, update bool-field callers + tests
+3. **Callers: int/list/langchain** — Update `vscodeclaude/config.py`, `langchain/__init__.py`, type annotations + tests
+4. **Schema-driven `verify_config()`** — Walk schema instead of hand-coding each section, delete `_get_standard_env_var`, `_SECTION_ENV_VARS`, `_get_source_annotation`
 
 ## Architectural / Design Changes
 
@@ -63,7 +64,7 @@ Three tasks, each one commit:
 | `src/mcp_coder/utils/jenkins_operations/client.py` | Update type annotation (line 91) |
 | `src/mcp_coder/utils/github_operations/base_manager.py` | Update type annotation (line 169) |
 
-### Test files
+### Test files (~11 test files)
 | File | Change |
 |------|--------|
 | `tests/utils/test_user_config.py` | Update `test_converts_non_string_to_string` → test native types; add schema validation tests; update `get_cache_refresh_minutes` tests |
@@ -71,6 +72,7 @@ Three tasks, each one commit:
 | `tests/cli/test_utils.py` | Mock returns: `"True"` → `True`, `"False"` → `False` |
 | `tests/cli/commands/coordinator/test_core.py` | Mock returns: `"True"` → `True` |
 | `tests/integration/test_mlflow_integration.py` | Mock returns: `"true"` → `True` |
+| `tests/config/test_mlflow_config.py` | Replace string-variant bool tests with native bool tests |
 | `tests/workflows/vscodeclaude/test_config.py` | Mock returns: `"5"` → `5`, JSON strings → native lists |
 | `tests/llm/providers/langchain/test_langchain_provider.py` | Remove/update env var override tests |
 | Other test files mocking `get_config_values` | Update string → native type mock returns |
@@ -83,7 +85,6 @@ All changes are modifications to existing files.
 | Step | Commit | Description |
 |------|--------|-------------|
 | 1 | Schema definition | Add `FieldDef` + `_CONFIG_SCHEMA` + `_get_field_def()` helper. Purely additive. |
-| 2 | Native types core | Remove `str()` in `_get_nested_value`, add validation in `get_config_values`, delete `_get_standard_env_var` |
-| 3 | Callers: bool fields | Update `cli/utils.py`, `coordinator/core.py`, `mlflow_config_loader.py` + their tests |
-| 4 | Callers: int/list/langchain | Update `vscodeclaude/config.py`, `langchain/__init__.py`, type annotations + their tests |
-| 5 | Schema-driven verify | Rewrite `verify_config()` to walk schema + update verify tests |
+| 2 | Native types + bool callers | Remove `str()` in `_get_nested_value`, add validation, update bool-field callers + tests |
+| 3 | Callers: int/list/langchain | Update `vscodeclaude/config.py`, `langchain/__init__.py`, type annotations + tests |
+| 4 | Schema-driven verify | Rewrite `verify_config()` to walk schema + delete `_get_standard_env_var`, `_SECTION_ENV_VARS`, `_get_source_annotation` + update verify tests |

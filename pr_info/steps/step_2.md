@@ -1,20 +1,24 @@
-# Step 2: Return native TOML types and validate at load time
+# Step 2: Return native TOML types, validate at load time, and update bool-field callers
 
-**Commit message:** `config: return native TOML types from get_config_values with schema validation`
+**Commit message:** `config: return native TOML types with schema validation and update bool callers`
 
-> Read `pr_info/steps/summary.md` for full context. This is Step 2: the core behavior change in `user_config.py`.
+> Read `pr_info/steps/summary.md` for full context. This is Step 2: the core behavior change in `user_config.py` plus all bool-field caller updates (merged to avoid a broken intermediate state where `True == "True"` would be `False`).
 
 ## Goal
 
 Make `_get_nested_value()` return native TOML types instead of strings.
 Add schema-driven type validation in `get_config_values()`.
-Replace `_get_standard_env_var()` with schema lookup.
+Replace `_get_standard_env_var` usage in `get_config_values()` with schema lookup. Keep the function — it's still used by `_get_source_annotation()` until Step 4 (verify rewrite) deletes both.
+Update all bool-field callers to use native `bool` checks instead of string comparisons.
 
 ## WHERE
 
-`src/mcp_coder/utils/user_config.py`
+- `src/mcp_coder/utils/user_config.py`
+- `src/mcp_coder/cli/utils.py`
+- `src/mcp_coder/cli/commands/coordinator/core.py`
+- `src/mcp_coder/utils/mlflow_config_loader.py`
 
-## WHAT — Changes
+## WHAT — Changes in `user_config.py`
 
 ### 1. `_get_nested_value()` — return native type
 
@@ -36,7 +40,7 @@ def get_config_values(
 
 **Add after `_get_nested_value()` call:** schema validation block.
 
-### 3. Delete `_get_standard_env_var()` — replace with schema lookup
+### 3. Replace `_get_standard_env_var()` usage in `get_config_values()` with schema lookup
 
 In `get_config_values()`, replace:
 ```python
@@ -47,6 +51,8 @@ with:
 field_def = _get_field_def(section, key)
 actual_env_var = env_var or (field_def.env_var if field_def else None)
 ```
+
+**Do NOT delete `_get_standard_env_var()` yet** — it's still called by `_get_source_annotation()` which is used by `verify_config()`. Both will be deleted in Step 4 (verify rewrite).
 
 ## ALGORITHM — validation in `get_config_values`
 
@@ -69,11 +75,57 @@ results[(section, key)] = value
 **Before:** `dict[tuple[str, str], str | None]`
 **After:** `dict[tuple[str, str], str | bool | int | list | None]`
 
+## WHAT — Bool-field caller updates
+
+### 4. `src/mcp_coder/cli/utils.py` (lines 92-93)
+
+**Before:**
+```python
+cfg_labels = config[(section, "update_issue_labels")] == "True"
+cfg_comments = config[(section, "post_issue_comments")] == "True"
+```
+
+**After:**
+```python
+cfg_labels = config[(section, "update_issue_labels")] is True
+cfg_comments = config[(section, "post_issue_comments")] is True
+```
+
+### 5. `src/mcp_coder/cli/commands/coordinator/core.py` (lines 78-79)
+
+**Before:**
+```python
+"update_issue_labels": config[(section, "update_issue_labels")] == "True",
+"post_issue_comments": config[(section, "post_issue_comments")] == "True",
+```
+
+**After:**
+```python
+"update_issue_labels": config[(section, "update_issue_labels")] is True,
+"post_issue_comments": config[(section, "post_issue_comments")] is True,
+```
+
+### 6. `src/mcp_coder/utils/mlflow_config_loader.py` (lines 51-55)
+
+**Before:**
+```python
+enabled_str = config_values[("mlflow", "enabled")]
+enabled = False
+if enabled_str is not None:
+    enabled = enabled_str.lower() in ("true", "1", "yes", "on", "enabled")
+```
+
+**After:**
+```python
+enabled_value = config_values[("mlflow", "enabled")]
+enabled = enabled_value is True
+```
+
 ## Tests
 
-`tests/utils/test_user_config.py` — modify and add:
+### `tests/utils/test_user_config.py` — modify and add:
 
-### Modify existing test
+#### Modify existing test
 
 `test_get_config_values_converts_non_string_to_string` → rename to `test_get_config_values_preserves_native_types`:
 
@@ -99,7 +151,7 @@ def test_get_config_values_preserves_native_types(
     assert result[("settings", "debug")] is True
 ```
 
-### Add new tests
+#### Add new tests
 
 ```python
 class TestConfigTypeValidation:
@@ -229,20 +281,55 @@ def get_cache_refresh_minutes() -> int:
         ...
 ```
 
-The test `test_get_cache_refresh_minutes_from_config` already uses native TOML (`cache_refresh_minutes = 60`) which will now return `int` 60 directly — test should still pass. The parameterized test with `'"not_a_number"'` will now raise `ValueError` at load time (string in int field) — update that test case.
+The test `test_get_cache_refresh_minutes_from_config` already uses native TOML (`cache_refresh_minutes = 60`) which will now return `int` 60 directly — test should still pass. The parameterized test with `'"not_a_number"'` will now raise `ValueError` at `get_config_values` time (string in int field triggers schema validation error). Update that test case to expect `pytest.raises(ValueError)` instead of returning default 1440. The `-10` and `0` cases remain as-is (native ints pass schema validation, function handles range checking).
 
 ### Update `tests/cli/test_utils.py`
 
-- Delete `from mcp_coder.utils.user_config import _get_standard_env_var` import (line 16)
-- Delete `test_get_standard_env_var_mcp_config` test — it tests a function being removed
+- Remove `from mcp_coder.utils.user_config import _get_standard_env_var` import (line 16) — the function still exists but tests for it are obsolete since `get_config_values` no longer calls it
+- Delete `test_get_standard_env_var_mcp_config` test — it tests a function being replaced by schema lookup
 - Alternatively, replace with a test that verifies the schema has the correct env var mapping for `mcp.default_config_path`
+
+### `tests/cli/test_utils.py` — `TestResolveIssueInteractionFlags`
+
+Update mock return values from string `"True"`/`"False"` to native `True`/`False`:
+
+- `test_cli_flags_override_config`: `"True"` → `True`
+- `test_config_values_used_when_cli_none`: `"True"` → `True`
+- `test_cli_true_overrides_config_false`: `"False"` → `False`
+- `test_partial_cli_override`: `"False"` → `False`, `"True"` → `True`
+
+### `tests/cli/commands/coordinator/test_core.py` — `TestLoadRepoConfig`
+
+- `test_load_repo_config_includes_issue_interaction_flags`: `"True"` → `True`
+- `test_load_repo_config_defaults_flags_when_missing`: no change (already `None`)
+
+### `tests/integration/test_mlflow_integration.py`
+
+- `test_enabled_but_mlflow_unavailable`: `"true"` → `True`
+- Any other tests mocking mlflow enabled with string values → `True`/`False`
+
+### `tests/config/test_mlflow_config.py`
+
+This file has 9 test methods mocking `get_config_values` with string values like `"true"`, `"True"`, `"1"`, `"yes"` for `(mlflow, enabled)`. After the change, `mlflow_config_loader.py` uses `is True`, so:
+- `test_enabled_variations` (tests 8 string variants) becomes meaningless — replace with a single test that `enabled_value is True` results in `enabled=True`
+- `test_disabled_variations` — update to test native `False` and `None`
+- Other tests: update mock returns from string to native bool
+
+### Other mlflow test files
+
+Search for mocks of `get_config_values` returning `("mlflow", "enabled"): "true"` or similar strings and update to native `True`/`False`.
 
 ## Checklist
 - [ ] `_get_nested_value()` returns native types (remove `str()` conversion)
 - [ ] `get_config_values()` return type updated
 - [ ] Schema validation added in `get_config_values()`
-- [ ] `_get_standard_env_var()` deleted, replaced by schema lookup
+- [ ] `_get_standard_env_var()` usage in `get_config_values()` replaced by schema lookup (function kept alive for `_get_source_annotation`)
 - [ ] `get_cache_refresh_minutes()` updated for native int
+- [ ] `"not_a_number"` test case updated to expect `pytest.raises(ValueError)`
+- [ ] `cli/utils.py`: `== "True"` → `is True`
+- [ ] `coordinator/core.py`: `== "True"` → `is True`
+- [ ] `mlflow_config_loader.py`: delete flexible parsing, use `is True`
+- [ ] `tests/config/test_mlflow_config.py`: update string-based bool tests to native bool
+- [ ] All test mocks updated: string booleans → native booleans
 - [ ] `tests/cli/test_utils.py`: remove `_get_standard_env_var` import and test
-- [ ] Existing tests updated, new validation tests added
 - [ ] All checks pass (pylint, pytest, mypy)

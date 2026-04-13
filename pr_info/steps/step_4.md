@@ -1,171 +1,247 @@
-# Step 4: Update int/list/langchain callers and type annotations
+# Step 4: Schema-driven verify_config rewrite
 
-**Commit message:** `config: update int, list, and langchain callers for native types`
+**Commit message:** `config: rewrite verify_config to walk schema`
 
-> Read `pr_info/steps/summary.md` for full context. This is Step 4: update remaining callers that parse integers, lists, or duplicate env var logic.
+> Read `pr_info/steps/summary.md` for full context. This is Step 4: rewrite `verify_config()` to use `_CONFIG_SCHEMA` instead of hand-coded per-section logic.
 
 ## Goal
 
-Update `vscodeclaude/config.py` (int and list handling), `langchain/__init__.py` (env var override removal), and type annotations in `jenkins_operations/client.py` and `github_operations/base_manager.py`.
+Replace ~100 lines of repetitive per-section checks in `verify_config()` with a schema-driven loop.
+Delete `_SECTION_ENV_VARS`, `_get_source_annotation()`, and `_get_standard_env_var()` — the schema provides all needed info.
+Preserve the return format: `{"entries": [...], "has_error": bool}`.
 
-## WHERE + WHAT
+## WHERE
 
-### 1. `src/mcp_coder/workflows/vscodeclaude/config.py` — `load_vscodeclaude_config()` (line ~88)
+`src/mcp_coder/utils/user_config.py` — rewrite `verify_config()`, delete `_SECTION_ENV_VARS`, delete `_get_source_annotation()`, delete `_get_standard_env_var()`
 
-**Before:**
-```python
-max_sessions_str = config[("vscodeclaude", "max_sessions")]
-max_sessions = DEFAULT_MAX_SESSIONS
-if max_sessions_str:
-    try:
-        max_sessions = int(max_sessions_str)
-    except ValueError:
-        logger.warning(...)
+## WHAT
+
+### Delete
+- `_SECTION_ENV_VARS` dict (lines ~340-348)
+- `_get_source_annotation()` function (lines ~351-377)
+- `_get_standard_env_var()` function — no longer referenced after `get_config_values` was updated in Step 2 and `_get_source_annotation` is deleted here
+
+### Rewrite `verify_config()`
+
+Same signature, same return format. New implementation walks schema.
+
+## ALGORITHM
+
+```
+def verify_config():
+    entries = []
+    # Step 1-3: File existence + TOML parse (unchanged)
+    ...same as before...
+    
+    # Step 4: Walk schema sections
+    for section_name, fields in _CONFIG_SCHEMA.items():
+        if section_name == "coordinator.repos.*":
+            # Handle wildcard: iterate actual repos in config_data
+            _verify_wildcard_repos(config_data, fields, entries)
+            continue
+        
+        section_data = _get_section_data(config_data, section_name)
+        if section_data is None:
+            entries.append({"label": f"[{section_name}]", "status": "info",
+                           "value": "not configured"})
+            continue
+        
+        _verify_section(section_name, section_data, fields, entries)
+    
+    return {"entries": entries, "has_error": False}
 ```
 
-**After:**
+### Severity rules (from issue)
+
+| Condition | Severity |
+|---|---|
+| Type mismatch (e.g. `"true"` instead of `true`) | **Error** |
+| Missing mandatory field (in a present section) | **Error** |
+| Unknown key in a section | **Warning** |
+| Missing optional field (in a present section) | **Info** |
+| Section entirely absent | **Info** (hint to configure) |
+| Env var set (overrides config) | **OK** (shown alongside TOML status) |
+
+### Helper: `_verify_section()`
+
 ```python
-max_sessions_value = config[("vscodeclaude", "max_sessions")]
-max_sessions = DEFAULT_MAX_SESSIONS
-if max_sessions_value is not None:
-    if isinstance(max_sessions_value, int):
-        max_sessions = max_sessions_value
+def _verify_section(
+    section_name: str,
+    section_data: dict[str, Any],
+    fields: dict[str, FieldDef],
+    entries: list[dict[str, str]],
+) -> None:
+```
+
+```
+for key, field_def in fields.items():
+    env_value = os.environ.get(field_def.env_var) if field_def.env_var else None
+    config_value = section_data.get(key)
+    
+    if env_value:
+        source = "(env var, also in config.toml)" if config_value is not None else "(env var)"
+        entries.append({"label": f"[{section_name}]", "status": "ok",
+                       "value": f"{key} configured {source}"})
+    elif config_value is not None:
+        # Type check
+        if not isinstance(config_value, field_def.field_type):
+            entries.append({"label": f"[{section_name}]", "status": "error",
+                           "value": f"{key}: expected {field_def.field_type.__name__}, "
+                                    f"got {type(config_value).__name__} ('{config_value}')"})
+        else:
+            entries.append({"label": f"[{section_name}]", "status": "ok",
+                           "value": f"{key} configured (config.toml)"})
+    elif field_def.required:
+        entries.append({"label": f"[{section_name}]", "status": "error",
+                       "value": f"{key} is required but missing"})
     else:
-        # Env var case: string value
-        try:
-            max_sessions = int(max_sessions_value)
-        except (ValueError, TypeError):
-            logger.warning(...)
+        entries.append({"label": f"[{section_name}]", "status": "info",
+                       "value": f"{key} not configured"})
+
+# Check for unknown keys
+for key in section_data:
+    if key not in fields:
+        entries.append({"label": f"[{section_name}]", "status": "warning",
+                       "value": f"unknown key: {key}"})
 ```
 
-### 2. `src/mcp_coder/workflows/vscodeclaude/config.py` — `load_repo_vscodeclaude_config()` (lines ~117-128)
+### Helper: `_verify_wildcard_repos()`
 
-**Before:**
 ```python
-windows_commands = config[(section, "setup_commands_windows")]
-if windows_commands:
-    try:
-        parsed = json.loads(windows_commands)
-        if isinstance(parsed, list):
-            result["setup_commands_windows"] = parsed
-    except json.JSONDecodeError:
-        result["setup_commands_windows"] = [windows_commands]
+def _verify_wildcard_repos(
+    config_data: dict[str, Any],
+    fields: dict[str, FieldDef],
+    entries: list[dict[str, str]],
+) -> None:
 ```
 
-**After:**
-```python
-windows_commands = config[(section, "setup_commands_windows")]
-if windows_commands is not None:
-    if isinstance(windows_commands, list):
-        result["setup_commands_windows"] = windows_commands
-    elif isinstance(windows_commands, str):
-        # Env var case: try JSON parse, fallback to single command
-        try:
-            parsed = json.loads(windows_commands)
-            if isinstance(parsed, list):
-                result["setup_commands_windows"] = parsed
-            else:
-                result["setup_commands_windows"] = [windows_commands]
-        except json.JSONDecodeError:
-            result["setup_commands_windows"] = [windows_commands]
+```
+repos = config_data.get("coordinator", {}).get("repos", {})
+if not repos:
+    entries.append({"label": "[coordinator.repos]", "status": "info",
+                   "value": "no repositories configured"})
+    return
+
+entries.append({"label": "[coordinator]", "status": "ok",
+               "value": f"{len(repos)} repos configured"})
+
+for repo_name, repo_data in repos.items():
+    section_name = f"coordinator.repos.{repo_name}"
+    if isinstance(repo_data, dict):
+        _verify_section(section_name, repo_data, fields, entries)
 ```
 
-Same pattern for `setup_commands_linux`.
+## DATA — return format (preserved)
 
-### 3. `src/mcp_coder/llm/providers/langchain/__init__.py` — `_load_langchain_config()` (lines 113-142)
-
-**Before:**
 ```python
-raw = get_config_values([
-    ("llm", "default_provider", None),
-    ("llm.langchain", "backend", None),
-    ("llm.langchain", "model", None),
-    ("llm.langchain", "api_key", None),
-    ("llm.langchain", "endpoint", None),
-    ("llm.langchain", "api_version", None),
-])
-config = {
-    "default_provider": raw[("llm", "default_provider")],
-    "backend": raw[("llm.langchain", "backend")],
-    ...
-}
-# Env vars override config file values
-env_overrides = {
-    "backend": "MCP_CODER_LLM_LANGCHAIN_BACKEND",
-    "model": "MCP_CODER_LLM_LANGCHAIN_MODEL",
-    "endpoint": "MCP_CODER_LLM_LANGCHAIN_ENDPOINT",
-    "api_version": "MCP_CODER_LLM_LANGCHAIN_API_VERSION",
-}
-for key, env_var in env_overrides.items():
-    value = os.environ.get(env_var)
-    if value:
-        config[key] = value
-return config
-```
-
-**After:**
-```python
-raw = get_config_values([
-    ("llm", "default_provider", None),
-    ("llm.langchain", "backend", None),
-    ("llm.langchain", "model", None),
-    ("llm.langchain", "api_key", None),
-    ("llm.langchain", "endpoint", None),
-    ("llm.langchain", "api_version", None),
-])
-return {
-    "default_provider": raw[("llm", "default_provider")],
-    "backend": raw[("llm.langchain", "backend")],
-    "model": raw[("llm.langchain", "model")],
-    "api_key": raw[("llm.langchain", "api_key")],
-    "endpoint": raw[("llm.langchain", "endpoint")],
-    "api_version": raw[("llm.langchain", "api_version")],
+{
+    "entries": [
+        {"label": "[github]", "status": "ok", "value": "token configured (env var)"},
+        {"label": "[jenkins]", "status": "ok", "value": "server_url configured (config.toml)"},
+        {"label": "[mlflow]", "status": "info", "value": "not configured"},
+        ...
+    ],
+    "has_error": False  # True only for TOML parse errors or type mismatches
 }
 ```
 
-The env var override loop is deleted. The schema already maps these keys to their env vars, so `get_config_values()` checks them automatically. Remove the `import os` if it becomes unused.
+**Note on `has_error`**: The issue says type mismatches are **Error** severity. If any type mismatch is found by verify, set `has_error = True`. Currently `has_error` is only True for invalid TOML. After this change, it's also True for type mismatches and missing required fields.
 
-### 4. Type annotations
+## Tests
 
-**`src/mcp_coder/utils/jenkins_operations/client.py` (line 91):**
+`tests/utils/test_verify_config.py` — update existing + add new:
+
+### Important: entry pattern change
+
+The existing `by_label = {e['label']: e for e in result['entries']}` pattern assumes one entry per label. The new schema-driven output produces multiple entries per `[section]` label (one per field). Tests using this pattern must switch to list filtering, e.g., `github_entries = [e for e in entries if e['label'] == '[github]']`.
+
+### Tests that need output format updates
+
+The existing tests check for specific label/value patterns. The schema-driven output will be more granular (per-field instead of per-section summary). Update assertions to match new output format.
+
+Key tests to update:
+- `test_verify_config_valid_with_all_sections`: Update expected labels/values for schema-driven output
+- `test_verify_config_env_var_only`: Check per-field env var reporting
+- `test_verify_config_dual_source`: Check "(env var, also in config.toml)" format
+- `test_verify_config_coordinator_repo_count`: Now walks individual repo fields
+- `test_verify_config_mcp_*`: Now part of schema-driven loop
+
+### New tests to add
 
 ```python
-# Before
-config: dict[tuple[str, str], Optional[str]] = get_config_values(...)
-# After
-config: dict[tuple[str, str], str | bool | int | list | None] = get_config_values(...)
+def test_verify_config_type_mismatch_reports_error(
+    self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """String in bool field -> error status with type context."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text(
+        '[mlflow]\nenabled = "true"\n', encoding="utf-8"
+    )
+    monkeypatch.setattr(...)
+    self._clear_env_vars(monkeypatch)
+
+    result = verify_config()
+
+    assert result["has_error"] is True
+    errors = [e for e in result["entries"] if e["status"] == "error"]
+    assert any("expected bool" in e["value"] and "enabled" in e["value"] for e in errors)
+
+def test_verify_config_missing_required_field(
+    self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Present section with missing required field -> error."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text('[github]\n', encoding="utf-8")  # token missing
+    monkeypatch.setattr(...)
+    self._clear_env_vars(monkeypatch)
+
+    result = verify_config()
+
+    errors = [e for e in result["entries"] if e["status"] == "error"]
+    assert any("token" in e["value"] and "required" in e["value"] for e in errors)
+
+def test_verify_config_unknown_key_warns(
+    self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Unknown key in known section -> warning."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text(
+        '[github]\ntoken = "ghp_test"\nunknown_key = "value"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(...)
+    self._clear_env_vars(monkeypatch)
+
+    result = verify_config()
+
+    warnings = [e for e in result["entries"] if e["status"] == "warning"]
+    assert any("unknown_key" in e["value"] for e in warnings)
+
+def test_verify_config_absent_section_info(
+    self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Absent section -> info hint."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("", encoding="utf-8")
+    monkeypatch.setattr(...)
+    self._clear_env_vars(monkeypatch)
+
+    result = verify_config()
+
+    info_entries = [e for e in result["entries"] if e["status"] == "info"]
+    labels = [e["label"] for e in info_entries]
+    assert "[github]" in labels or any("github" in e["value"] for e in info_entries)
 ```
-
-**`src/mcp_coder/utils/github_operations/base_manager.py` (line 169):**
-
-```python
-# Before
-config: dict[tuple[str, str], Optional[str]] = user_config.get_config_values(...)
-# After
-config: dict[tuple[str, str], str | bool | int | list | None] = user_config.get_config_values(...)
-```
-
-## Tests to update
-
-### `tests/workflows/vscodeclaude/test_config.py`
-
-- `test_load_vscodeclaude_config_success`: `"5"` → `5` for max_sessions mock
-- `test_load_repo_vscodeclaude_config`: `'["uv venv", "uv sync"]'` → `["uv venv", "uv sync"]` (native list), `'["make setup"]'` → `["make setup"]`
-
-### `tests/llm/providers/langchain/test_langchain_provider.py`
-
-- `test_env_var_overrides_config_values`: This test sets env vars and expects them to override. After this change, `get_config_values` handles env vars via schema. The mock for `get_config_values` already returns the config-file values. The env vars should now be picked up by `get_config_values` itself (not by the manual loop). Update the test: instead of mocking `get_config_values` to return config values and relying on the manual loop, mock `get_config_values` to return the env var values directly (since that's what it would do in reality).
-- `test_env_var_does_not_override_when_empty`: Similar update — env vars are now handled by `get_config_values`.
-
-### Other test files
-
-Check for any other tests mocking `get_config_values` with string representations of int/list values and update to native types.
 
 ## Checklist
-- [ ] `vscodeclaude/config.py`: handle native `int` for max_sessions
-- [ ] `vscodeclaude/config.py`: handle native `list` for setup_commands
-- [ ] `langchain/__init__.py`: remove env var override loop
-- [ ] `jenkins_operations/client.py`: update type annotation
-- [ ] `github_operations/base_manager.py`: update type annotation
-- [ ] All test mocks updated
+- [ ] `_SECTION_ENV_VARS` deleted
+- [ ] `_get_source_annotation()` deleted
+- [ ] `_get_standard_env_var()` deleted
+- [ ] `verify_config()` walks `_CONFIG_SCHEMA`
+- [ ] Severity levels match issue table
+- [ ] `has_error` True for type mismatches and missing required fields
+- [ ] Return format preserved (`entries` list + `has_error`)
+- [ ] Wildcard repos handled
+- [ ] All existing verify tests updated (switch from `by_label` dict to list filtering)
+- [ ] New tests for type mismatch, unknown key, missing required, absent section
 - [ ] All checks pass (pylint, pytest, mypy)
