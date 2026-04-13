@@ -48,16 +48,17 @@ def load_mlflow_config() -> MLflowConfig:
     )
 
     # Parse enabled flag
-    enabled_str = config_values[("mlflow", "enabled")]
-    enabled = False
-    if enabled_str is not None:
-        # Handle various boolean representations
-        enabled = enabled_str.lower() in ("true", "1", "yes", "on", "enabled")
+    enabled_value = config_values[("mlflow", "enabled")]
+    enabled = enabled_value is True
 
     # Get tracking URI, experiment name, and artifact location
-    tracking_uri = config_values.get(("mlflow", "tracking_uri"))
-    experiment_name = config_values.get(("mlflow", "experiment_name"))
-    artifact_location = config_values.get(("mlflow", "artifact_location"))
+    raw_uri = config_values.get(("mlflow", "tracking_uri"))
+    raw_experiment = config_values.get(("mlflow", "experiment_name"))
+    raw_artifact = config_values.get(("mlflow", "artifact_location"))
+
+    tracking_uri = raw_uri if isinstance(raw_uri, str) else None
+    experiment_name = raw_experiment if isinstance(raw_experiment, str) else None
+    artifact_location = raw_artifact if isinstance(raw_artifact, str) else None
 
     # Validate tracking URI format
     if enabled and tracking_uri:

@@ -120,13 +120,18 @@ def _load_langchain_config() -> dict[str, str | None]:
             ("llm.langchain", "api_version", None),
         ]
     )
-    config = {
-        "default_provider": raw[("llm", "default_provider")],
-        "backend": raw[("llm.langchain", "backend")],
-        "model": raw[("llm.langchain", "model")],
-        "api_key": raw[("llm.langchain", "api_key")],
-        "endpoint": raw[("llm.langchain", "endpoint")],
-        "api_version": raw[("llm.langchain", "api_version")],
+
+    # All langchain fields are str type in schema — narrow from the wider union
+    def _str_or_none(val: str | bool | int | list[Any] | None) -> str | None:
+        return val if isinstance(val, str) else None
+
+    config: dict[str, str | None] = {
+        "default_provider": _str_or_none(raw[("llm", "default_provider")]),
+        "backend": _str_or_none(raw[("llm.langchain", "backend")]),
+        "model": _str_or_none(raw[("llm.langchain", "model")]),
+        "api_key": _str_or_none(raw[("llm.langchain", "api_key")]),
+        "endpoint": _str_or_none(raw[("llm.langchain", "endpoint")]),
+        "api_version": _str_or_none(raw[("llm.langchain", "api_version")]),
     }
     # Env vars override config file values
     env_overrides = {

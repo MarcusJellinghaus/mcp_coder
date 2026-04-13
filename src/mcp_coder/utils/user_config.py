@@ -226,7 +226,7 @@ def _get_standard_env_var(section: str, key: str) -> Optional[str]:
 
 def _get_nested_value(
     config_data: dict[str, Any], section: str, key: str
-) -> Optional[str]:
+) -> str | bool | int | list[Any] | None:
     """Get a value from nested config data using dot notation for section.
 
     Args:
@@ -235,7 +235,7 @@ def _get_nested_value(
         key: The key within the section
 
     Returns:
-        The value as string, or None if not found
+        The native TOML value, or None if not found
     """
     # Navigate nested sections using dot notation
     section_data: Any = config_data
@@ -250,15 +250,13 @@ def _get_nested_value(
     if not isinstance(section_data, dict) or key not in section_data:
         return None
 
-    value = section_data[key]
-
-    # Convert to string if not already a string
-    return str(value) if value is not None else None
+    value: str | bool | int | list[Any] | None = section_data[key]
+    return value
 
 
 def get_config_values(
     keys: list[tuple[str, str, str | None]],
-) -> dict[tuple[str, str], str | None]:
+) -> dict[tuple[str, str], str | bool | int | list[Any] | None]:
     """Get multiple config values in one disk read.
 
     Retrieves configuration values from environment variables or config file,
@@ -284,7 +282,8 @@ def get_config_values(
     Priority: Environment variable > Config file > None
 
     Raises:
-        ValueError: If config file exists but has invalid TOML syntax.
+        ValueError: If config file exists but has invalid TOML syntax,
+                   or if a config value has the wrong type per the schema.
 
     Examples:
         # Basic usage with auto-detected env vars
@@ -304,12 +303,13 @@ def get_config_values(
             ("coordinator.repos.mcp_coder", "repo_url", None),
         ])
     """
-    results: dict[tuple[str, str], str | None] = {}
+    results: dict[tuple[str, str], str | bool | int | list[Any] | None] = {}
     config_data: dict[str, Any] | None = None  # Lazy load
 
     for section, key, env_var in keys:
-        # Check env var first
-        actual_env_var = env_var or _get_standard_env_var(section, key)
+        # Check env var first (schema lookup replaces _get_standard_env_var)
+        field_def = _get_field_def(section, key)
+        actual_env_var = env_var or (field_def.env_var if field_def else None)
         if actual_env_var:
             env_value = os.getenv(actual_env_var)
             if env_value:
@@ -321,7 +321,19 @@ def get_config_values(
             config_data = load_config()
 
         # Navigate to value
-        results[(section, key)] = _get_nested_value(config_data, section, key)
+        value = _get_nested_value(config_data, section, key)
+
+        # Schema-driven type validation
+        if value is not None and field_def is not None:
+            if not isinstance(value, field_def.field_type):
+                raise ValueError(
+                    f"Config error in [{section}] {key}: "
+                    f"expected {field_def.field_type.__name__}, "
+                    f"got {type(value).__name__} ('{value}'). "
+                    f"Check your config.toml \u2014 use native TOML types."
+                )
+
+        results[(section, key)] = value
 
     return results
 
@@ -659,8 +671,18 @@ def get_cache_refresh_minutes() -> int:
     if value is None:
         return 1440  # Default: 24 hours
 
+    if isinstance(value, int):
+        if value <= 0:
+            logger.warning(
+                f"Invalid cache_refresh_minutes value '{value}' (must be positive), "
+                "using default 1440"
+            )
+            return 1440
+        return value
+
+    # Env var case: value is str
     try:
-        result = int(value)
+        result = int(str(value))
         if result <= 0:
             logger.warning(
                 f"Invalid cache_refresh_minutes value '{value}' (must be positive), "

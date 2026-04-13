@@ -87,16 +87,16 @@ def get_authenticated_username() -> str:
         ValueError: If GitHub authentication fails or token not configured
     """
     config = user_config.get_config_values([("github", "token", None)])
-    token = config[("github", "token")]
+    raw_token = config[("github", "token")]
 
-    if not token:
+    if not isinstance(raw_token, str):
         raise ValueError(
             "GitHub token not configured. Set via GITHUB_TOKEN environment "
             "variable or config file [github] section"
         )
 
     try:
-        github_client = Github(auth=Auth.Token(token))
+        github_client = Github(auth=Auth.Token(raw_token))
         user = github_client.get_user()
         return user.login
     except (
@@ -166,19 +166,17 @@ class BaseGitHubManager:
             self._init_with_repo_url(repo_url)  # type: ignore[arg-type]
 
         # Get GitHub token (after directory/repository validation)
-        config: dict[tuple[str, str], Optional[str]] = user_config.get_config_values(
-            [("github", "token", None)]
-        )
-        github_token = config[("github", "token")]
-        if not github_token:
+        config = user_config.get_config_values([("github", "token", None)])
+        raw_token = config[("github", "token")]
+        if not isinstance(raw_token, str):
             raise ValueError(
                 "GitHub token not found. Configure it in ~/.mcp_coder/config.toml "
                 "or set GITHUB_TOKEN environment variable"
             )
 
         # Initialize GitHub client
-        self.github_token = github_token
-        self._github_client = Github(auth=Auth.Token(github_token))
+        self.github_token = raw_token
+        self._github_client = Github(auth=Auth.Token(raw_token))
         self._repository: Optional[Repository] = None
 
     def _init_with_project_dir(self, project_dir: Path) -> None:

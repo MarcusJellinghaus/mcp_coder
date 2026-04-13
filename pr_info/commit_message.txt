@@ -1,12 +1,28 @@
-config: add FieldDef dataclass and _CONFIG_SCHEMA
+config: return native TOML types with schema validation and update bool callers
 
-Add schema data structure to drive config validation and env var lookup:
+Remove str() coercion in _get_nested_value() so TOML native types (bool,
+int, list) flow through to callers instead of being flattened to strings.
 
-- FieldDef frozen dataclass with field_type, required, and env_var fields
-- _CONFIG_SCHEMA dict covering all config sections (github, jenkins, mcp,
-  llm, llm.langchain, coordinator, coordinator.repos.*, vscodeclaude, mlflow)
-- _get_field_def() helper with exact and wildcard section matching
-- TestConfigSchema tests for creation, defaults, schema completeness,
-  env var mappings, exact/wildcard lookup, and immutability
+Add schema-driven type validation in get_config_values() that raises
+ValueError when a config value has the wrong type (e.g. string "true"
+in a bool field). Env var values bypass validation since they are always
+strings.
 
-Purely additive — no existing behavior changed.
+Replace _get_standard_env_var() usage in get_config_values() with schema
+lookup via _get_field_def(). The function is kept alive for
+_get_source_annotation() until the verify rewrite in Step 4.
+
+Update all bool-field callers:
+- cli/utils.py: == "True" -> is True
+- coordinator/core.py: == "True" -> is True
+- mlflow_config_loader.py: .lower() string parsing -> is True
+
+Update get_cache_refresh_minutes() to handle native int directly,
+with string fallback for env var case.
+
+Update type annotations in caller files (base_manager.py,
+jenkins client.py, coordinator/core.py, langchain/__init__.py,
+vscodeclaude/config.py, cli/utils.py) to accept the wider return
+type from get_config_values.
+
+Update all test mocks from string booleans/ints to native types.

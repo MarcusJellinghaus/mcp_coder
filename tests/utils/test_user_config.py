@@ -413,11 +413,10 @@ executor_os = "linux"
         assert result[("jenkins", "server_url")] == "env_jenkins_url"
         assert not load_called  # Config was never loaded (lazy loading)
 
-    def test_get_config_values_converts_non_string_to_string(
+    def test_get_config_values_preserves_native_types(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Non-string values (int, bool) are converted to string."""
-        # Setup
+        """Native TOML types (int, bool) are preserved, not converted to string."""
         config_file = tmp_path / "config.toml"
         config_file.write_text(
             "[settings]\ntimeout = 30\ndebug = true", encoding="utf-8"
@@ -426,7 +425,6 @@ executor_os = "linux"
             "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
         )
 
-        # Execute
         result = get_config_values(
             [
                 ("settings", "timeout", None),
@@ -434,9 +432,8 @@ executor_os = "linux"
             ]
         )
 
-        # Verify
-        assert result[("settings", "timeout")] == "30"
-        assert result[("settings", "debug")] == "True"
+        assert result[("settings", "timeout")] == 30
+        assert result[("settings", "debug")] is True
 
 
 class TestCreateDefaultConfig:
@@ -683,7 +680,6 @@ class TestGetCacheRefreshMinutes:
     @pytest.mark.parametrize(
         "config_value,description",
         [
-            ('"not_a_number"', "non-integer string"),
             ("-10", "negative value"),
             ("0", "zero value"),
         ],
@@ -695,8 +691,7 @@ class TestGetCacheRefreshMinutes:
         config_value: str,
         description: str,
     ) -> None:
-        """Returns 1440 for invalid values (non-integer, negative, zero)."""
-        # Setup
+        """Returns 1440 for invalid values (negative, zero)."""
         config_file = tmp_path / "config.toml"
         config_file.write_text(
             f"[coordinator]\ncache_refresh_minutes = {config_value}\n",
@@ -706,11 +701,125 @@ class TestGetCacheRefreshMinutes:
             "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
         )
 
-        # Execute
         result = get_cache_refresh_minutes()
 
-        # Verify - invalid value should return default 1440
         assert result == 1440, f"Expected default 1440 for {description}"
+
+    def test_get_cache_refresh_minutes_string_raises_valueerror(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """String in int field raises ValueError at schema validation."""
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            '[coordinator]\ncache_refresh_minutes = "not_a_number"\n',
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        with pytest.raises(ValueError, match="expected int.*got str"):
+            get_cache_refresh_minutes()
+
+
+class TestConfigTypeValidation:
+    """Tests for schema-driven type validation in get_config_values."""
+
+    def test_string_in_bool_field_raises_valueerror(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """TOML string 'true' in a bool field raises ValueError."""
+        config_file = tmp_path / "config.toml"
+        config_file.write_text('[mlflow]\nenabled = "true"\n', encoding="utf-8")
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        with pytest.raises(ValueError, match="expected bool.*got str"):
+            get_config_values([("mlflow", "enabled", None)])
+
+    def test_string_in_int_field_raises_valueerror(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """TOML string "3" in an int field raises ValueError."""
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            '[vscodeclaude]\nworkspace_base = "/tmp"\nmax_sessions = "3"\n',
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        with pytest.raises(ValueError, match="expected int.*got str"):
+            get_config_values([("vscodeclaude", "max_sessions", None)])
+
+    def test_native_bool_in_bool_field_passes(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Native TOML bool in a bool field passes validation."""
+        config_file = tmp_path / "config.toml"
+        config_file.write_text("[mlflow]\nenabled = true\n", encoding="utf-8")
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        result = get_config_values([("mlflow", "enabled", None)])
+        assert result[("mlflow", "enabled")] is True
+
+    def test_unknown_section_key_no_validation(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Keys not in schema pass through without validation."""
+        config_file = tmp_path / "config.toml"
+        config_file.write_text('[custom]\nfoo = "bar"\n', encoding="utf-8")
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        result = get_config_values([("custom", "foo", None)])
+        assert result[("custom", "foo")] == "bar"
+
+    def test_env_var_bypasses_type_validation(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Env var values are strings and bypass schema type validation."""
+        monkeypatch.setenv("GITHUB_TOKEN", "env_token_string")
+
+        result = get_config_values([("github", "token", None)])
+        assert result[("github", "token")] == "env_token_string"
+
+    def test_valueerror_message_includes_context(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """ValueError message includes section, key, expected type, actual type, value."""
+        config_file = tmp_path / "config.toml"
+        config_file.write_text('[mlflow]\nenabled = "yes"\n', encoding="utf-8")
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        with pytest.raises(ValueError, match=r"\[mlflow\].*enabled.*bool.*str.*yes"):
+            get_config_values([("mlflow", "enabled", None)])
+
+    def test_wildcard_section_validates(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """coordinator.repos.* fields are validated against wildcard schema."""
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            '[coordinator.repos.myrepo]\nrepo_url = "https://example.com"\n'
+            'update_issue_labels = "true"\n',
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        with pytest.raises(ValueError, match="expected bool.*got str"):
+            get_config_values(
+                [("coordinator.repos.myrepo", "update_issue_labels", None)]
+            )
 
 
 class TestConfigSchema:

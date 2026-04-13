@@ -34,7 +34,7 @@ from .workflow_constants import WORKFLOW_MAPPING
 logger = logging.getLogger(__name__)
 
 
-def load_repo_config(repo_name: str) -> dict[str, str | bool | None]:
+def load_repo_config(repo_name: str) -> dict[str, str | bool | int | list[str] | None]:
     """Load repository configuration from config file.
 
     Args:
@@ -63,9 +63,9 @@ def load_repo_config(repo_name: str) -> dict[str, str | bool | None]:
     github_credentials_id = config[(section, "github_credentials_id")]
 
     # Load executor_os with default and normalize to lowercase
-    executor_os = config[(section, "executor_os")]
-    if executor_os:
-        executor_os = executor_os.lower()  # Normalize to lowercase
+    raw_executor_os = config[(section, "executor_os")]
+    if isinstance(raw_executor_os, str):
+        executor_os = raw_executor_os.lower()  # Normalize to lowercase
     else:
         executor_os = "linux"  # Default
 
@@ -75,12 +75,14 @@ def load_repo_config(repo_name: str) -> dict[str, str | bool | None]:
         "executor_job_path": executor_job_path,
         "github_credentials_id": github_credentials_id,
         "executor_os": executor_os,
-        "update_issue_labels": config[(section, "update_issue_labels")] == "True",
-        "post_issue_comments": config[(section, "post_issue_comments")] == "True",
+        "update_issue_labels": config[(section, "update_issue_labels")] is True,
+        "post_issue_comments": config[(section, "post_issue_comments")] is True,
     }
 
 
-def validate_repo_config(repo_name: str, config: dict[str, str | bool | None]) -> None:
+def validate_repo_config(
+    repo_name: str, config: dict[str, str | bool | int | list[str] | None]
+) -> None:
     """Validate repository configuration has all required fields.
 
     Args:
@@ -173,10 +175,10 @@ def get_jenkins_credentials() -> tuple[str, str, str]:
             f"or config file [jenkins] section"
         )
 
-    # Type narrowing: if we reach here, all values are non-None
-    assert server_url is not None
-    assert username is not None
-    assert api_token is not None
+    # Type narrowing: if we reach here, all values are non-None strings
+    assert isinstance(server_url, str)
+    assert isinstance(username, str)
+    assert isinstance(api_token, str)
 
     return (server_url, username, api_token)
 

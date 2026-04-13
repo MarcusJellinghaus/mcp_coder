@@ -33,11 +33,11 @@ Detail: [step_1.md](./steps/step_1.md)
 
 Detail: [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: remove `str()` coercion in `_get_nested_value`, add schema validation in `get_config_values`, replace `_get_standard_env_var` usage with schema lookup, update `get_cache_refresh_minutes` for native int
-- [ ] Implementation: update bool-field callers (`cli/utils.py`, `coordinator/core.py`, `mlflow_config_loader.py`) from `== "True"` to `is True`
-- [ ] Implementation: update all test mocks from string booleans to native booleans, update `test_mlflow_config.py`, `test_utils.py`, `test_core.py`, `test_mlflow_integration.py`
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `config: return native TOML types with schema validation and update bool callers`
+- [x] Implementation: remove `str()` coercion in `_get_nested_value`, add schema validation in `get_config_values`, replace `_get_standard_env_var` usage with schema lookup, update `get_cache_refresh_minutes` for native int
+- [x] Implementation: update bool-field callers (`cli/utils.py`, `coordinator/core.py`, `mlflow_config_loader.py`) from `== "True"` to `is True`
+- [x] Implementation: update all test mocks from string booleans to native booleans, update `test_mlflow_config.py`, `test_utils.py`, `test_core.py`, `test_mlflow_integration.py`
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `config: return native TOML types with schema validation and update bool callers`
 
 ### Step 3: Update int, list, and langchain callers for native types
 

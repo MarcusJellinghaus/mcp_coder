@@ -89,8 +89,8 @@ def resolve_issue_interaction_flags(
                     (section, "post_issue_comments", None),
                 ]
             )
-            cfg_labels = config[(section, "update_issue_labels")] == "True"
-            cfg_comments = config[(section, "post_issue_comments")] == "True"
+            cfg_labels = config[(section, "update_issue_labels")] is True
+            cfg_comments = config[(section, "post_issue_comments")] is True
 
     # Merge: CLI wins if not None, else config, else False
     return (
@@ -140,9 +140,9 @@ def resolve_llm_method(llm_method: str | None) -> tuple[str, str]:
         provider, source = env_value, "env MCP_CODER_LLM_PROVIDER"
     else:
         config = get_config_values([("llm", "default_provider", None)])
-        cfg_provider = config[("llm", "default_provider")]
-        if cfg_provider is not None:
-            provider, source = cfg_provider, "config default_provider"
+        raw_provider = config[("llm", "default_provider")]
+        if isinstance(raw_provider, str):
+            provider, source = raw_provider, "config default_provider"
         else:
             return ("claude", "default")
 
@@ -214,7 +214,8 @@ def resolve_mcp_config_path(
 
     # Check config file [mcp] default_config_path
     config = get_config_values([("mcp", "default_config_path", "_NO_ENV_VAR_")])
-    if (cfg_path := config[("mcp", "default_config_path")]) is not None:
+    cfg_path = config[("mcp", "default_config_path")]
+    if isinstance(cfg_path, str):
         resolved = Path(cfg_path).resolve()
         if resolved.exists():
             return str(resolved)

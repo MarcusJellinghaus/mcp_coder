@@ -157,8 +157,8 @@ class TestLoadRepoConfig:
             (section, "executor_job_path"): "Tests/test",
             (section, "github_credentials_id"): "cred-id",
             (section, "executor_os"): "linux",
-            (section, "update_issue_labels"): "True",
-            (section, "post_issue_comments"): "True",
+            (section, "update_issue_labels"): True,
+            (section, "post_issue_comments"): True,
         }
 
         config = load_repo_config("test_repo")
@@ -356,7 +356,7 @@ class TestGetCacheRefreshMinutes:
         """Test custom value from config."""
         # Setup - return batch config values dict with custom value
         mock_get_config.return_value = {
-            ("coordinator", "cache_refresh_minutes"): "720",
+            ("coordinator", "cache_refresh_minutes"): 720,
         }
 
         result = get_cache_refresh_minutes()
@@ -382,7 +382,7 @@ class TestGetCacheRefreshMinutes:
         """Test fallback to default for negative values."""
         # Setup - return batch config values dict with negative value
         mock_get_config.return_value = {
-            ("coordinator", "cache_refresh_minutes"): "-60",
+            ("coordinator", "cache_refresh_minutes"): -60,
         }
 
         result = get_cache_refresh_minutes()

@@ -52,7 +52,7 @@ port = 5432
             assert result[("tokens", "claude")] == "cl_test_token_456"
             assert result[("settings", "default_branch")] == "develop"
 
-            # Test type conversion
+            # Test native type preservation
             result = get_config_values(
                 [
                     ("settings", "timeout", None),
@@ -60,9 +60,9 @@ port = 5432
                     ("database", "port", None),
                 ]
             )
-            assert result[("settings", "timeout")] == "45"
-            assert result[("settings", "enabled")] == "True"
-            assert result[("database", "port")] == "5432"
+            assert result[("settings", "timeout")] == 45
+            assert result[("settings", "enabled")] is True
+            assert result[("database", "port")] == 5432
 
             # Test missing section/key
             result = get_config_values(
@@ -271,16 +271,14 @@ nested_key = "nested_value"
                 ]
             )
             assert result[("simple", "string_value")] == "simple string"
-            assert result[("simple", "number_value")] == "42"
-            assert result[("simple", "boolean_value")] == "True"
+            assert result[("simple", "number_value")] == 42
+            assert result[("simple", "boolean_value")] is True
 
-            # Test arrays (should be converted to string representation)
+            # Test arrays (native TOML list preserved)
             result = get_config_values([("arrays", "string_array", None)])
             array_result = result[("arrays", "string_array")]
-            assert array_result is not None
-            assert (
-                "one" in array_result
-            )  # Array converted to string should contain elements
+            assert isinstance(array_result, list)
+            assert "one" in array_result
 
             # Test nested tables
             result = get_config_values([("nested", "table", None)])
