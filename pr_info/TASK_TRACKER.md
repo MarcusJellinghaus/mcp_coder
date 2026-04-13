@@ -21,6 +21,16 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Add `get_closing_issue_numbers()` to PullRequestManager
+- [ ] Implementation: tests + production code ([step_1.md](./steps/step_1.md))
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Add fallback logic in workflow + conditional completion message
+- [ ] Implementation: tests + production code ([step_2.md](./steps/step_2.md))
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review
+- [ ] PR summary prepared
