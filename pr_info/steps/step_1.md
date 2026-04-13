@@ -29,7 +29,7 @@ def get_closing_issue_numbers(self, pr_number: int) -> List[int]:
 ## HOW
 
 - Decorators: `@log_function_call` + `@_handle_github_errors(default_return=[])` (both already imported in `pr_manager.py`)
-- GraphQL access: `self._github_client._Github__requester.graphql_query(...)` — same pattern as `IssueBranchManager.get_linked_branches()` in `branch_manager.py`
+- GraphQL access: `self._github_client._Github__requester.graphql_query(...)` — same pattern as `IssueBranchManager.get_linked_branches()` in `src/mcp_coder/utils/github_operations/issues/branch_manager.py`
 - No new imports needed — `List` and `logger` already available
 
 ## ALGORITHM
@@ -83,6 +83,6 @@ Add `get_closing_issue_numbers(pr_number: int) -> List[int]` method to PullReque
 in src/mcp_coder/utils/github_operations/pr_manager.py.
 
 Write tests FIRST in tests/utils/github_operations/test_pr_manager.py, then implement the method.
-Follow the existing GraphQL pattern from IssueBranchManager.get_linked_branches() in branch_manager.py.
+Follow the existing GraphQL pattern from IssueBranchManager.get_linked_branches() in src/mcp_coder/utils/github_operations/issues/branch_manager.py.
 Run all code quality checks after implementation.
 ```
