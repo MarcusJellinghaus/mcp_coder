@@ -5,7 +5,6 @@ from __future__ import annotations
 import threading
 from typing import Any
 
-from rich.markdown import Markdown
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.widgets import Static
@@ -68,7 +67,6 @@ class ICoderApp(App[None]):
         """
         super().__init__(**kwargs)
         self._core = app_core
-        self._format_tools = format_tools
         self._renderer = StreamEventRenderer(format_tools=format_tools)
         self._text_buffer: str = ""
         self._cancel_event = threading.Event()
@@ -234,10 +232,7 @@ class ICoderApp(App[None]):
             else:
                 parts.append("└ done")
             body = "\n".join(parts)
-            if self._format_tools:
-                output.write(Markdown(body))
-            else:
-                output.append_text(body, style=STYLE_TOOL_OUTPUT)
+            output.append_text(body, style=STYLE_TOOL_OUTPUT)
         elif isinstance(action, ErrorMessage):
             output.append_text(f"Error: {action.message}")
 
