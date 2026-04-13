@@ -504,6 +504,40 @@ class TestTemplateWatchdogLines:
                         "--issue" not in line
                     ), f"Unexpected --issue in watchdog line: {line}"
 
+    # -- Project dir in watchdog lines --
+
+    def test_watchdog_lines_include_project_dir(self) -> None:
+        """All 6 watchdog set-status lines must include --project-dir."""
+        linux_templates = (
+            CREATE_PLAN_COMMAND_TEMPLATE,
+            IMPLEMENT_COMMAND_TEMPLATE,
+            CREATE_PR_COMMAND_TEMPLATE,
+        )
+        windows_templates = (
+            CREATE_PLAN_COMMAND_WINDOWS,
+            IMPLEMENT_COMMAND_WINDOWS,
+            CREATE_PR_COMMAND_WINDOWS,
+        )
+        for template in linux_templates:
+            found = False
+            for line in template.splitlines():
+                if "set-status" in line and "--from-status" in line:
+                    found = True
+                    assert (
+                        "--project-dir /workspace/repo" in line
+                    ), f"Missing --project-dir /workspace/repo in: {line}"
+            assert found, "No watchdog line found in Linux template"
+
+        for template in windows_templates:
+            found = False
+            for line in template.splitlines():
+                if "set-status" in line and "--from-status" in line:
+                    found = True
+                    assert (
+                        "--project-dir %WORKSPACE%\\repo" in line
+                    ), f"Missing --project-dir %WORKSPACE%\\repo in: {line}"
+            assert found, "No watchdog line found in Windows template"
+
     # -- Placeholder resolution --
 
     @pytest.mark.parametrize(
