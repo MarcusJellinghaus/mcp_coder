@@ -21,7 +21,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-- [ ] [Step 1: Cancel infrastructure + Escape binding + cancel logic](steps/step_1.md)
-- [ ] [Step 2: Disable Ctrl+C quit confirmation dialog](steps/step_2.md)
+- [x] [Step 1: Cancel infrastructure + Escape binding + cancel logic](steps/step_1.md)
+- [x] [Step 2: Disable Ctrl+C quit confirmation dialog](steps/step_2.md)
 
 ## Pull Request
