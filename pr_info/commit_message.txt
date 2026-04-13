@@ -1,8 +1,15 @@
-feat: add get_closing_issue_numbers() to PullRequestManager
+feat: add fallback to PR closingIssuesReferences when branch has no issue number
 
-Add GraphQL-based method to query closing issue references for a PR.
-Uses the closingIssuesReferences API to return a list of issue numbers
-linked to a pull request via "Closes #N" keywords.
+After PR creation (step 4), if no issue was found from the branch name,
+query the new PR's closingIssuesReferences via PullRequestManager to find
+the linked issue number. This enables label updates for branches that
+don't follow the {issue_number}-{title} naming convention.
 
-Includes 5 unit tests covering: single issue, multiple issues, no issues,
-invalid PR number, and PR not found scenarios.
+Changes:
+- Add fallback logic in run_create_pr_workflow() after step 4
+- Handle single, multiple, and zero closing issues from fallback
+- Change completion message to "completed with warnings" when no issue found
+- Add 5 new tests for fallback scenarios
+- Update existing test to mock PullRequestManager for fallback path
+
+Closes #776
