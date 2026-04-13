@@ -670,7 +670,7 @@ async def test_busy_indicator_resets_on_stream_error(
         assert "✓ Ready" in indicator.label_text
 
 
-# --- Markdown rendering tests (Step 3) ---
+# --- Plain text rendering tests (Step 3) ---
 
 
 async def test_tool_result_renders_plain_text_by_default(

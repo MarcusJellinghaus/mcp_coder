@@ -67,7 +67,6 @@ class ICoderApp(App[None]):
         """
         super().__init__(**kwargs)
         self._core = app_core
-        self._format_tools = format_tools
         self._renderer = StreamEventRenderer(format_tools=format_tools)
         self._text_buffer: str = ""
         self._cancel_event = threading.Event()
