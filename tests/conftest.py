@@ -6,7 +6,7 @@ import shutil
 import tempfile
 from importlib.resources.abc import Traversable
 from pathlib import Path
-from typing import Any, Generator, Type, TypeVar
+from typing import Any, Generator, Type, TypeVar, cast
 
 import git
 import pytest
@@ -251,9 +251,9 @@ def github_test_setup(tmp_path: Path) -> Generator[GitHubTestSetup, None, None]:
             )
         )
         if not github_token:
-            github_token = config[("github", "token")]
+            github_token = cast("str | None", config[("github", "token")])
         if not test_repo_url:
-            test_repo_url = config[("github", "test_repo_url")]
+            test_repo_url = cast("str | None", config[("github", "test_repo_url")])
 
     # Summary of what was found
     token_source = (

@@ -23,7 +23,7 @@ Note:
 """
 
 import os
-from typing import Any, Generator
+from typing import Any, Generator, cast
 
 import pytest
 
@@ -70,13 +70,13 @@ def jenkins_test_setup() -> Generator[dict[str, str], None, None]:
             get_config_values(missing_keys)
         )
         if not server_url:
-            server_url = config[("jenkins", "server_url")]
+            server_url = cast("str | None", config[("jenkins", "server_url")])
         if not username:
-            username = config[("jenkins", "username")]
+            username = cast("str | None", config[("jenkins", "username")])
         if not api_token:
-            api_token = config[("jenkins", "api_token")]
+            api_token = cast("str | None", config[("jenkins", "api_token")])
         if not test_job:
-            test_job = config[("jenkins", "test_job")]
+            test_job = cast("str | None", config[("jenkins", "test_job")])
 
     # Check required configuration and skip if missing
     if not server_url or not username or not api_token or not test_job:
