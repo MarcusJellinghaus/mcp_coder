@@ -21,8 +21,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-- [ ] [Step 1: Add cancel infrastructure (constant + event)](steps/step_1.md)
-- [ ] [Step 2: Escape binding + cancel logic in _stream_llm()](steps/step_2.md)
-- [ ] [Step 3: Disable Ctrl+C quit confirmation dialog](steps/step_3.md)
+- [ ] [Step 1: Cancel infrastructure + Escape binding + cancel logic](steps/step_1.md)
+- [ ] [Step 2: Disable Ctrl+C quit confirmation dialog](steps/step_2.md)
 
 ## Pull Request

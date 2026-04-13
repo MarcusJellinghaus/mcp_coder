@@ -41,6 +41,5 @@ On cancel: flush any buffered text, append a dim-orange "— Cancelled —" mark
 
 | Step | Description |
 |------|-------------|
-| [Step 1](step_1.md) | Add `STYLE_CANCELLED` constant and `_cancel_event` to `ICoderApp.__init__` |
-| [Step 2](step_2.md) | Wire Escape binding + `action_cancel_stream()`, check event in `_stream_llm()`, append cancelled marker |
-| [Step 3](step_3.md) | Disable Ctrl+C quit confirmation dialog |
+| [Step 1](step_1.md) | Add cancel infrastructure (`STYLE_CANCELLED`, `_cancel_event`), Escape binding + `action_cancel_stream()`, cancel logic in `_stream_llm()`, cancelled marker |
+| [Step 2](step_2.md) | Disable Ctrl+C quit confirmation dialog |
