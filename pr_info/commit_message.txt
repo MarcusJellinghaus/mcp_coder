@@ -1,0 +1,8 @@
+feat: add get_closing_issue_numbers() to PullRequestManager
+
+Add GraphQL-based method to query closing issue references for a PR.
+Uses the closingIssuesReferences API to return a list of issue numbers
+linked to a pull request via "Closes #N" keywords.
+
+Includes 5 unit tests covering: single issue, multiple issues, no issues,
+invalid PR number, and PR not found scenarios.
