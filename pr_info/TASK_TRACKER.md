@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: Prompted check — VS Code gpuAcceleration detection
-- [ ] Implementation: _check_vscode_gpu_acceleration() with platform/SSH/TERM_PROGRAM gates, regex settings.json search, prompt flow, wired into run_all_checks(), and all tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: _check_vscode_gpu_acceleration() with platform/SSH/TERM_PROGRAM gates, regex settings.json search, prompt flow, wired into run_all_checks(), and all tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Integration into execute_icoder() + manual test tool
 - [ ] Implementation: Wire TuiChecker into icoder.py between dir resolution and setup, except TuiPreflightAbort before except Exception, integration tests, and tools/test_scroll.py

@@ -1,5 +1,6 @@
 """Tests for TUI pre-flight terminal checks."""
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -299,6 +300,154 @@ class TestCheckWindowsCmdCodepage:
                 if len(call.args) > 1
             ]
             assert any("codepage" in msg.lower() for msg in log_messages)
+
+
+class TestCheckVscodeGpuAcceleration:
+    @staticmethod
+    def _create_settings(
+        tmp_path: Path, content: str = '{"terminal.integrated.gpuAcceleration": "off"}'
+    ) -> None:
+        settings_dir = tmp_path / "Code" / "User"
+        settings_dir.mkdir(parents=True, exist_ok=True)
+        (settings_dir / "settings.json").write_text(content, encoding="utf-8")
+
+    def test_vscode_gpu_detected(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        monkeypatch.setattr("sys.platform", "win32")
+        monkeypatch.setenv("TERM_PROGRAM", "vscode")
+        monkeypatch.delenv("SSH_CONNECTION", raising=False)
+        monkeypatch.setenv("APPDATA", str(tmp_path))
+        self._create_settings(tmp_path)
+        checker = TuiChecker()
+        checker._check_vscode_gpu_acceleration()
+        assert len(checker._prompts) == 1
+        assert "gpuAcceleration" in checker._prompts[0][0]
+
+    def test_vscode_gpu_not_off(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        monkeypatch.setattr("sys.platform", "win32")
+        monkeypatch.setenv("TERM_PROGRAM", "vscode")
+        monkeypatch.delenv("SSH_CONNECTION", raising=False)
+        monkeypatch.setenv("APPDATA", str(tmp_path))
+        self._create_settings(
+            tmp_path, '{"terminal.integrated.gpuAcceleration": "auto"}'
+        )
+        checker = TuiChecker()
+        checker._check_vscode_gpu_acceleration()
+        assert len(checker._prompts) == 0
+
+    def test_vscode_gpu_no_setting(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        monkeypatch.setattr("sys.platform", "win32")
+        monkeypatch.setenv("TERM_PROGRAM", "vscode")
+        monkeypatch.delenv("SSH_CONNECTION", raising=False)
+        monkeypatch.setenv("APPDATA", str(tmp_path))
+        self._create_settings(tmp_path, '{"editor.fontSize": 14}')
+        checker = TuiChecker()
+        checker._check_vscode_gpu_acceleration()
+        assert len(checker._prompts) == 0
+
+    def test_vscode_gpu_no_settings_file(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        monkeypatch.setattr("sys.platform", "win32")
+        monkeypatch.setenv("TERM_PROGRAM", "vscode")
+        monkeypatch.delenv("SSH_CONNECTION", raising=False)
+        monkeypatch.setenv("APPDATA", str(tmp_path))
+        checker = TuiChecker()
+        checker._check_vscode_gpu_acceleration()
+        assert len(checker._prompts) == 0
+
+    def test_vscode_gpu_wrong_platform(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        monkeypatch.setattr("sys.platform", "linux")
+        monkeypatch.setenv("TERM_PROGRAM", "vscode")
+        monkeypatch.delenv("SSH_CONNECTION", raising=False)
+        monkeypatch.setenv("APPDATA", str(tmp_path))
+        self._create_settings(tmp_path)
+        checker = TuiChecker()
+        checker._check_vscode_gpu_acceleration()
+        assert len(checker._prompts) == 0
+
+    def test_vscode_gpu_ssh_connection_skips(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        monkeypatch.setattr("sys.platform", "win32")
+        monkeypatch.setenv("TERM_PROGRAM", "vscode")
+        monkeypatch.setenv("SSH_CONNECTION", "192.168.1.1 22 192.168.1.2 54321")
+        monkeypatch.setenv("APPDATA", str(tmp_path))
+        self._create_settings(tmp_path)
+        checker = TuiChecker()
+        checker._check_vscode_gpu_acceleration()
+        assert len(checker._prompts) == 0
+
+    def test_vscode_gpu_not_vscode_terminal(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        monkeypatch.setattr("sys.platform", "win32")
+        monkeypatch.setenv("TERM_PROGRAM", "xterm")
+        monkeypatch.delenv("SSH_CONNECTION", raising=False)
+        monkeypatch.setenv("APPDATA", str(tmp_path))
+        self._create_settings(tmp_path)
+        checker = TuiChecker()
+        checker._check_vscode_gpu_acceleration()
+        assert len(checker._prompts) == 0
+
+    def test_vscode_gpu_prompt_instructions_flow(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        monkeypatch.setattr("sys.platform", "win32")
+        monkeypatch.setenv("TERM_PROGRAM", "vscode")
+        monkeypatch.delenv("SSH_CONNECTION", raising=False)
+        monkeypatch.setenv("APPDATA", str(tmp_path))
+        monkeypatch.setenv("TERM", "xterm-256color")
+        monkeypatch.delenv("TMUX", raising=False)
+        monkeypatch.delenv("STY", raising=False)
+        monkeypatch.delenv("LANG", raising=False)
+        monkeypatch.delenv("LC_ALL", raising=False)
+        self._create_settings(tmp_path)
+        mock_windll = MagicMock()
+        mock_windll.kernel32.GetConsoleOutputCP.return_value = 65001
+        monkeypatch.setattr("ctypes.windll", mock_windll, raising=False)
+
+        with patch("mcp_coder.utils.tui_preparation.logger") as mock_logger:
+            with patch("builtins.input", return_value="i"):
+                with pytest.raises(TuiPreflightAbort):
+                    checker = TuiChecker()
+                    checker.run_all_checks()
+            log_messages = [
+                call.args[1]
+                for call in mock_logger.log.call_args_list
+                if len(call.args) > 1
+            ]
+            assert any("gpuAcceleration" in msg for msg in log_messages)
+            assert any("Settings" in msg for msg in log_messages)
+
+    def test_vscode_gpu_prompt_abort_flow(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        monkeypatch.setattr("sys.platform", "win32")
+        monkeypatch.setenv("TERM_PROGRAM", "vscode")
+        monkeypatch.delenv("SSH_CONNECTION", raising=False)
+        monkeypatch.setenv("APPDATA", str(tmp_path))
+        monkeypatch.setenv("TERM", "xterm-256color")
+        monkeypatch.delenv("TMUX", raising=False)
+        monkeypatch.delenv("STY", raising=False)
+        monkeypatch.delenv("LANG", raising=False)
+        monkeypatch.delenv("LC_ALL", raising=False)
+        self._create_settings(tmp_path)
+        mock_windll = MagicMock()
+        mock_windll.kernel32.GetConsoleOutputCP.return_value = 65001
+        monkeypatch.setattr("ctypes.windll", mock_windll, raising=False)
+
+        with patch("builtins.input", return_value="a"):
+            with pytest.raises(TuiPreflightAbort, match="Aborted by user"):
+                checker = TuiChecker()
+                checker.run_all_checks()
 
 
 class TestWarningsLoggedViaRunAllChecks:

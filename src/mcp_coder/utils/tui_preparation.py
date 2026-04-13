@@ -8,12 +8,20 @@ import atexit
 import ctypes
 import logging
 import os
+import re
 import sys
 from collections.abc import Callable
+from pathlib import Path
 
 from mcp_coder.utils.log_utils import OUTPUT
 
 logger = logging.getLogger(__name__)
+
+_VSCODE_GPU_PROMPT = "VS Code terminal gpuAcceleration is set to 'off', which breaks TUI mouse/rendering."
+_VSCODE_GPU_INSTRUCTIONS = (
+    "To fix: Open VS Code Settings → search 'gpuAcceleration' "
+    "→ change to 'auto' or remove the setting → restart the terminal."
+)
 
 
 class TuiPreflightAbort(Exception):
@@ -36,6 +44,7 @@ class TuiChecker:
     def run_all_checks(self) -> None:
         """Run all checks, apply fixes, log warnings, and present prompts."""
         self._check_windows_cmd_codepage()
+        self._check_vscode_gpu_acceleration()
         self._check_ssh_dumb_terminal()
         self._check_non_utf8_locale()
         self._check_tmux_screen()
@@ -128,6 +137,23 @@ class TuiChecker:
         self._silent_fixes.append(
             (f"Console codepage set to UTF-8 (was {current_cp})", fix_fn)
         )
+
+    def _check_vscode_gpu_acceleration(self) -> None:
+        """Prompt if VS Code gpuAcceleration is set to 'off'."""
+        if sys.platform != "win32":
+            return
+        if os.environ.get("SSH_CONNECTION"):
+            return
+        if os.environ.get("TERM_PROGRAM") != "vscode":
+            return
+        settings_path = (
+            Path(os.environ.get("APPDATA", "")) / "Code" / "User" / "settings.json"
+        )
+        if not settings_path.is_file():
+            return
+        content = settings_path.read_text(encoding="utf-8", errors="ignore")
+        if re.search(r'"terminal\.integrated\.gpuAcceleration"\s*:\s*"off"', content):
+            self._prompts.append((_VSCODE_GPU_PROMPT, _VSCODE_GPU_INSTRUCTIONS))
 
     def _check_windows_terminal(self) -> None:
         """No-op stub for Windows Terminal (future-proofing)."""
