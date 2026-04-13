@@ -54,11 +54,11 @@ Detail: [step_3.md](./steps/step_3.md)
 
 Detail: [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: rewrite `verify_config()` to walk `_CONFIG_SCHEMA` with `_verify_section` and `_verify_wildcard_repos` helpers
-- [ ] Implementation: delete `_SECTION_ENV_VARS`, `_get_source_annotation()`, and `_get_standard_env_var()`
-- [ ] Implementation: update existing verify tests for schema-driven output format, add tests for type mismatch, unknown key, missing required, absent section
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `config: rewrite verify_config to walk schema`
+- [x] Implementation: rewrite `verify_config()` to walk `_CONFIG_SCHEMA` with `_verify_section` and `_verify_wildcard_repos` helpers
+- [x] Implementation: delete `_SECTION_ENV_VARS`, `_get_source_annotation()`, and `_get_standard_env_var()`
+- [x] Implementation: update existing verify tests for schema-driven output format, add tests for type mismatch, unknown key, missing required, absent section
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `config: rewrite verify_config to walk schema`
 
 ## Pull Request
 

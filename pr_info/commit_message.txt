@@ -1,10 +1,13 @@
-config: update int, list, and langchain callers for native types
+config: rewrite verify_config to walk schema
 
-- Remove env var override loop in langchain/_load_langchain_config()
-  since get_config_values() now handles env vars via schema
-- Update test mocks: string "5" → native int 5 for max_sessions,
-  JSON strings → native lists for setup_commands
-- Update langchain env var override test to reflect schema-driven
-  env var resolution
-- Widen type annotations in test mocks to match get_config_values()
-  return type (str | bool | int | list | None)
+Replace ~100 lines of hand-coded per-section checks in verify_config()
+with a schema-driven loop over _CONFIG_SCHEMA.
+
+- Add _get_section_data(), _verify_section(), _verify_wildcard_repos() helpers
+- verify_config() now walks _CONFIG_SCHEMA, producing per-field entries
+- has_error is True for type mismatches and missing required fields (not just invalid TOML)
+- Delete _SECTION_ENV_VARS, _get_source_annotation(), _get_standard_env_var()
+  (schema provides all needed info)
+- Remove unused Optional import
+- Update verify tests: switch from by_label dict to list filtering
+- Add tests for type mismatch, unknown key, missing required, absent section

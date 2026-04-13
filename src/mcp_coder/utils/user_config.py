@@ -15,7 +15,7 @@ import platform
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from .log_utils import log_function_call
 
@@ -191,37 +191,6 @@ def load_config() -> dict[str, Any]:
         raise ValueError(_format_toml_error(config_path, e)) from e
     except OSError as e:
         raise ValueError(f"Error reading config file: {config_path}\n{e}") from e
-
-
-def _get_standard_env_var(section: str, key: str) -> Optional[str]:
-    """Get standard environment variable name for known config keys.
-
-    Maps common config keys to their standardized environment variable names.
-    This allows automatic environment variable detection for known keys.
-
-    Args:
-        section: TOML section name
-        key: Configuration key
-
-    Returns:
-        Standard environment variable name, or None if no mapping exists
-
-    Examples:
-        _get_standard_env_var('github', 'token') -> 'GITHUB_TOKEN'
-        _get_standard_env_var('jenkins', 'server_url') -> 'JENKINS_URL'
-        _get_standard_env_var('unknown', 'key') -> None
-    """
-    # Known environment variable mappings
-    mappings = {
-        ("github", "token"): "GITHUB_TOKEN",
-        ("github", "test_repo_url"): "GITHUB_TEST_REPO_URL",
-        ("jenkins", "server_url"): "JENKINS_URL",
-        ("jenkins", "username"): "JENKINS_USER",
-        ("jenkins", "api_token"): "JENKINS_TOKEN",
-        ("mcp", "default_config_path"): "MCP_CODER_MCP_CONFIG",
-    }
-
-    return mappings.get((section, key))
 
 
 def _get_nested_value(
@@ -433,55 +402,175 @@ post_issue_comments = true
     return True
 
 
-# Section-to-env-var mapping for verify_config
-_SECTION_ENV_VARS: dict[str, list[tuple[str, str]]] = {
-    "github": [("token", "GITHUB_TOKEN")],
-    "jenkins": [
-        ("server_url", "JENKINS_URL"),
-        ("username", "JENKINS_USER"),
-        ("api_token", "JENKINS_TOKEN"),
-    ],
-}
-
-
-def _get_source_annotation(section: str, key: str, config_data: dict[str, Any]) -> str:
-    """Get source annotation for a config key (env var, config.toml, or both).
+def _get_section_data(
+    config_data: dict[str, Any], section_name: str
+) -> dict[str, Any] | None:
+    """Navigate to a section in config data using dot notation.
 
     Args:
-        section: TOML section name
-        key: Configuration key
-        config_data: Loaded config data
+        config_data: The loaded config dictionary
+        section_name: Section name with dot notation (e.g., 'llm.langchain')
 
     Returns:
-        Source annotation string like "(env var)", "(config.toml)",
-        or "(env var, also in config.toml)"
+        The section dict, or None if the section doesn't exist
     """
-    env_var_name = _get_standard_env_var(section, key)
-    has_env = bool(env_var_name and os.environ.get(env_var_name))
-    has_config = bool(
-        config_data.get(section, {}).get(key)
-        if isinstance(config_data.get(section), dict)
-        else False
+    current: Any = config_data
+    for part in section_name.split("."):
+        if not isinstance(current, dict) or part not in current:
+            return None
+        current = current[part]
+    return current if isinstance(current, dict) else None
+
+
+def _verify_section(
+    section_name: str,
+    section_data: dict[str, Any],
+    fields: dict[str, FieldDef],
+    entries: list[dict[str, str]],
+) -> bool:
+    """Verify fields in a config section against schema.
+
+    Args:
+        section_name: Display name for the section (e.g., 'github')
+        section_data: Actual config data for the section
+        fields: Schema field definitions for the section
+        entries: List to append verification entries to
+
+    Returns:
+        True if any error was found
+    """
+    has_error = False
+
+    for key, field_def in fields.items():
+        env_value = os.environ.get(field_def.env_var) if field_def.env_var else None
+        config_value = section_data.get(key)
+
+        if env_value:
+            source = (
+                "(env var, also in config.toml)"
+                if config_value is not None
+                else "(env var)"
+            )
+            entries.append(
+                {
+                    "label": f"[{section_name}]",
+                    "status": "ok",
+                    "value": f"{key} configured {source}",
+                }
+            )
+        elif config_value is not None:
+            if not isinstance(config_value, field_def.field_type):
+                entries.append(
+                    {
+                        "label": f"[{section_name}]",
+                        "status": "error",
+                        "value": (
+                            f"{key}: expected {field_def.field_type.__name__}, "
+                            f"got {type(config_value).__name__} "
+                            f"('{config_value}')"
+                        ),
+                    }
+                )
+                has_error = True
+            else:
+                entries.append(
+                    {
+                        "label": f"[{section_name}]",
+                        "status": "ok",
+                        "value": f"{key} configured (config.toml)",
+                    }
+                )
+        elif field_def.required:
+            entries.append(
+                {
+                    "label": f"[{section_name}]",
+                    "status": "error",
+                    "value": f"{key} is required but missing",
+                }
+            )
+            has_error = True
+        else:
+            entries.append(
+                {
+                    "label": f"[{section_name}]",
+                    "status": "info",
+                    "value": f"{key} not configured",
+                }
+            )
+
+    # Check for unknown keys
+    for key in section_data:
+        if key not in fields:
+            entries.append(
+                {
+                    "label": f"[{section_name}]",
+                    "status": "warning",
+                    "value": f"unknown key: {key}",
+                }
+            )
+
+    return has_error
+
+
+def _verify_wildcard_repos(
+    config_data: dict[str, Any],
+    fields: dict[str, FieldDef],
+    entries: list[dict[str, str]],
+) -> bool:
+    """Verify all [coordinator.repos.*] sections.
+
+    Args:
+        config_data: The loaded config dictionary
+        fields: Schema field definitions for repo sections
+        entries: List to append verification entries to
+
+    Returns:
+        True if any error was found
+    """
+    repos = config_data.get("coordinator", {}).get("repos", {})
+    if not repos:
+        entries.append(
+            {
+                "label": "[coordinator.repos]",
+                "status": "info",
+                "value": "no repositories configured",
+            }
+        )
+        return False
+
+    entries.append(
+        {
+            "label": "[coordinator]",
+            "status": "ok",
+            "value": f"{len(repos)} repos configured",
+        }
     )
 
-    if has_env and has_config:
-        return "(env var, also in config.toml)"
-    if has_env:
-        return "(env var)"
-    return "(config.toml)"
+    has_error = False
+    for repo_name, repo_data in repos.items():
+        section_name = f"coordinator.repos.{repo_name}"
+        if isinstance(repo_data, dict):
+            if _verify_section(section_name, repo_data, fields, entries):
+                has_error = True
+
+    return has_error
 
 
 def verify_config() -> dict[str, Any]:
     """Verify user config file and return structured result.
 
+    Walks ``_CONFIG_SCHEMA`` to check every known section and field.
+
     Returns:
         Dict with:
         - "entries": list of {"label": str, "status": "ok"|"warning"|"error"|"info",
           "value": str}
-        - "has_error": bool (True only for invalid TOML)
+        - "has_error": bool (True for invalid TOML, type mismatches, or missing
+          required fields)
     """
     entries: list[dict[str, str]] = []
     path = get_config_file_path()
+    has_error = False
 
     # Step 1-2: Check if config file exists
     if not path.exists():
@@ -511,114 +600,28 @@ def verify_config() -> dict[str, Any]:
         # Config file found and valid
         entries.append({"label": "Config file", "status": "ok", "value": str(path)})
 
-    # Step 4: Check known sections
-    # [llm] - show if section exists
-    llm_section = config_data.get("llm")
-    if isinstance(llm_section, dict) and "default_provider" in llm_section:
-        provider = llm_section["default_provider"]
-        entries.append(
-            {
-                "label": "[llm]",
-                "status": "ok",
-                "value": f"default_provider = {provider}",
-            }
-        )
+    # Step 4: Walk schema sections
+    for section_name, fields in _CONFIG_SCHEMA.items():
+        if section_name == "coordinator.repos.*":
+            if _verify_wildcard_repos(config_data, fields, entries):
+                has_error = True
+            continue
 
-    # [mcp] - always shown
-    mcp_env = os.environ.get("MCP_CODER_MCP_CONFIG")
-    mcp_config = (
-        config_data.get("mcp", {}).get("default_config_path")
-        if isinstance(config_data.get("mcp"), dict)
-        else None
-    )
-    if mcp_env:
-        source = _get_source_annotation("mcp", "default_config_path", config_data)
-        entries.append(
-            {
-                "label": "[mcp]",
-                "status": "ok",
-                "value": f"default_config_path configured {source}",
-            }
-        )
-    elif mcp_config:
-        entries.append(
-            {
-                "label": "[mcp]",
-                "status": "ok",
-                "value": f"default_config_path = {mcp_config} (config.toml)",
-            }
-        )
-    else:
-        entries.append(
-            {
-                "label": "[mcp]",
-                "status": "info",
-                "value": "not configured (using auto-detect)",
-            }
-        )
-
-    # [github] - check env var + config
-    github_env = os.environ.get("GITHUB_TOKEN")
-    github_config = (
-        config_data.get("github", {}).get("token")
-        if isinstance(config_data.get("github"), dict)
-        else None
-    )
-    if github_env or github_config:
-        source = _get_source_annotation("github", "token", config_data)
-        entries.append(
-            {
-                "label": "[github]",
-                "status": "ok",
-                "value": f"token configured {source}",
-            }
-        )
-
-    # [jenkins] - check env vars + config, use server_url as representative
-    jenkins_env_any = any(
-        os.environ.get(env_var) for _, env_var in _SECTION_ENV_VARS["jenkins"]
-    )
-    jenkins_config_any = (
-        bool(config_data.get("jenkins"))
-        if isinstance(config_data.get("jenkins"), dict)
-        else False
-    )
-    if jenkins_env_any or jenkins_config_any:
-        source = _get_source_annotation("jenkins", "server_url", config_data)
-        entries.append(
-            {
-                "label": "[jenkins]",
-                "status": "ok",
-                "value": f"server_url configured {source}",
-            }
-        )
-
-    # [coordinator] - count repos
-    coordinator = config_data.get("coordinator")
-    if isinstance(coordinator, dict):
-        repos = coordinator.get("repos")
-        if isinstance(repos, dict) and repos:
-            count = len(repos)
+        section_data = _get_section_data(config_data, section_name)
+        if section_data is None:
             entries.append(
                 {
-                    "label": "[coordinator]",
-                    "status": "ok",
-                    "value": f"{count} repos configured",
+                    "label": f"[{section_name}]",
+                    "status": "info",
+                    "value": "not configured",
                 }
             )
+            continue
 
-    # [vscodeclaude] - check workspace_base
-    vscodeclaude = config_data.get("vscodeclaude")
-    if isinstance(vscodeclaude, dict) and vscodeclaude.get("workspace_base"):
-        entries.append(
-            {
-                "label": "[vscodeclaude]",
-                "status": "ok",
-                "value": "workspace_base configured",
-            }
-        )
+        if _verify_section(section_name, section_data, fields, entries):
+            has_error = True
 
-    return {"entries": entries, "has_error": False}
+    return {"entries": entries, "has_error": has_error}
 
 
 def find_repo_section_by_url(repo_url: str) -> str | None:
