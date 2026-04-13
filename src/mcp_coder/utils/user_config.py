@@ -13,10 +13,81 @@ import logging
 import os
 import platform
 import tomllib
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
 from .log_utils import log_function_call
+
+
+@dataclass(frozen=True, slots=True)
+class FieldDef:
+    """Schema definition for a single config field."""
+
+    field_type: type  # str, bool, int, list
+    required: bool = False
+    env_var: str | None = None
+
+
+_CONFIG_SCHEMA: dict[str, dict[str, FieldDef]] = {
+    "github": {
+        "token": FieldDef(str, required=True, env_var="GITHUB_TOKEN"),
+        "test_repo_url": FieldDef(str, env_var="GITHUB_TEST_REPO_URL"),
+    },
+    "jenkins": {
+        "server_url": FieldDef(str, required=True, env_var="JENKINS_URL"),
+        "username": FieldDef(str, required=True, env_var="JENKINS_USER"),
+        "api_token": FieldDef(str, required=True, env_var="JENKINS_TOKEN"),
+        "test_job": FieldDef(str),
+        "test_job_coordination": FieldDef(str),
+    },
+    "mcp": {
+        "default_config_path": FieldDef(str, env_var="MCP_CODER_MCP_CONFIG"),
+    },
+    "llm": {
+        "default_provider": FieldDef(str),
+    },
+    "llm.langchain": {
+        "backend": FieldDef(str, env_var="MCP_CODER_LLM_LANGCHAIN_BACKEND"),
+        "model": FieldDef(str, env_var="MCP_CODER_LLM_LANGCHAIN_MODEL"),
+        "api_key": FieldDef(str),
+        "endpoint": FieldDef(str, env_var="MCP_CODER_LLM_LANGCHAIN_ENDPOINT"),
+        "api_version": FieldDef(str, env_var="MCP_CODER_LLM_LANGCHAIN_API_VERSION"),
+    },
+    "coordinator": {
+        "cache_refresh_minutes": FieldDef(int),
+    },
+    "coordinator.repos.*": {
+        "repo_url": FieldDef(str, required=True),
+        "executor_job_path": FieldDef(str, required=True),
+        "github_credentials_id": FieldDef(str, required=True),
+        "executor_os": FieldDef(str),
+        "update_issue_labels": FieldDef(bool),
+        "post_issue_comments": FieldDef(bool),
+        "setup_commands_windows": FieldDef(list),
+        "setup_commands_linux": FieldDef(list),
+    },
+    "vscodeclaude": {
+        "workspace_base": FieldDef(str, required=True),
+        "max_sessions": FieldDef(int),
+    },
+    "mlflow": {
+        "enabled": FieldDef(bool),
+        "tracking_uri": FieldDef(str, env_var="MLFLOW_TRACKING_URI"),
+        "experiment_name": FieldDef(str, env_var="MLFLOW_EXPERIMENT_NAME"),
+        "artifact_location": FieldDef(str, env_var="MLFLOW_DEFAULT_ARTIFACT_ROOT"),
+    },
+}
+
+
+def _get_field_def(section: str, key: str) -> FieldDef | None:
+    """Look up field definition from schema, supporting wildcard sections."""
+    if section in _CONFIG_SCHEMA and key in _CONFIG_SCHEMA[section]:
+        return _CONFIG_SCHEMA[section][key]
+    if section.startswith("coordinator.repos.") and section.count(".") == 2:
+        wildcard = _CONFIG_SCHEMA.get("coordinator.repos.*", {})
+        return wildcard.get(key)
+    return None
 
 
 def _format_toml_error(file_path: Path, error: tomllib.TOMLDecodeError) -> str:

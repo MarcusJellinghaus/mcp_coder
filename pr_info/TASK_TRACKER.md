@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Detail: [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: add `FieldDef` dataclass, `_CONFIG_SCHEMA`, `_get_field_def()` helper, and tests
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `config: add FieldDef dataclass and _CONFIG_SCHEMA`
+- [x] Implementation: add `FieldDef` dataclass, `_CONFIG_SCHEMA`, `_get_field_def()` helper, and tests
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `config: add FieldDef dataclass and _CONFIG_SCHEMA`
 
 ### Step 2: Return native TOML types, validate at load time, and update bool-field callers
 

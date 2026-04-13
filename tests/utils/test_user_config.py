@@ -7,7 +7,10 @@ from pathlib import Path
 import pytest
 
 from mcp_coder.utils.user_config import (
+    _CONFIG_SCHEMA,
+    FieldDef,
     _format_toml_error,
+    _get_field_def,
     create_default_config,
     get_cache_refresh_minutes,
     get_config_file_path,
@@ -708,3 +711,70 @@ class TestGetCacheRefreshMinutes:
 
         # Verify - invalid value should return default 1440
         assert result == 1440, f"Expected default 1440 for {description}"
+
+
+class TestConfigSchema:
+    """Tests for FieldDef and _CONFIG_SCHEMA."""
+
+    def test_field_def_creation(self) -> None:
+        """FieldDef stores type, required, and env_var."""
+        f = FieldDef(str, required=True, env_var="MY_VAR")
+        assert f.field_type is str
+        assert f.required is True
+        assert f.env_var == "MY_VAR"
+
+    def test_field_def_defaults(self) -> None:
+        """FieldDef defaults: required=False, env_var=None."""
+        f = FieldDef(bool)
+        assert f.required is False
+        assert f.env_var is None
+
+    def test_schema_has_all_known_sections(self) -> None:
+        """Schema contains all expected top-level sections."""
+        expected = {
+            "github",
+            "jenkins",
+            "mcp",
+            "llm",
+            "llm.langchain",
+            "coordinator",
+            "coordinator.repos.*",
+            "vscodeclaude",
+            "mlflow",
+        }
+        assert set(_CONFIG_SCHEMA.keys()) == expected
+
+    def test_schema_github_token_env_var(self) -> None:
+        """github.token maps to GITHUB_TOKEN."""
+        assert _CONFIG_SCHEMA["github"]["token"].env_var == "GITHUB_TOKEN"
+
+    def test_schema_langchain_env_vars(self) -> None:
+        """llm.langchain fields have correct env var mappings."""
+        lc = _CONFIG_SCHEMA["llm.langchain"]
+        assert lc["backend"].env_var == "MCP_CODER_LLM_LANGCHAIN_BACKEND"
+        assert lc["model"].env_var == "MCP_CODER_LLM_LANGCHAIN_MODEL"
+        assert lc["endpoint"].env_var == "MCP_CODER_LLM_LANGCHAIN_ENDPOINT"
+        assert lc["api_version"].env_var == "MCP_CODER_LLM_LANGCHAIN_API_VERSION"
+
+    def test_get_field_def_exact_match(self) -> None:
+        """_get_field_def returns FieldDef for exact section match."""
+        result = _get_field_def("github", "token")
+        assert result is not None
+        assert result.env_var == "GITHUB_TOKEN"
+
+    def test_get_field_def_wildcard_match(self) -> None:
+        """_get_field_def matches coordinator.repos.* sections."""
+        result = _get_field_def("coordinator.repos.mcp_coder", "repo_url")
+        assert result is not None
+        assert result.required is True
+
+    def test_get_field_def_unknown_returns_none(self) -> None:
+        """_get_field_def returns None for unknown section/key."""
+        assert _get_field_def("unknown", "key") is None
+        assert _get_field_def("github", "unknown_key") is None
+
+    def test_field_def_is_frozen(self) -> None:
+        """FieldDef instances are immutable."""
+        f = FieldDef(str)
+        with pytest.raises(AttributeError):
+            f.required = True  # type: ignore[misc]

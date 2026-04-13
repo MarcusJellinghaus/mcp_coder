@@ -1,0 +1,12 @@
+config: add FieldDef dataclass and _CONFIG_SCHEMA
+
+Add schema data structure to drive config validation and env var lookup:
+
+- FieldDef frozen dataclass with field_type, required, and env_var fields
+- _CONFIG_SCHEMA dict covering all config sections (github, jenkins, mcp,
+  llm, llm.langchain, coordinator, coordinator.repos.*, vscodeclaude, mlflow)
+- _get_field_def() helper with exact and wildcard section matching
+- TestConfigSchema tests for creation, defaults, schema completeness,
+  env var mappings, exact/wildcard lookup, and immutability
+
+Purely additive — no existing behavior changed.
