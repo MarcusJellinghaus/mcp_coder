@@ -1,0 +1,12 @@
+feat: add TUI pre-flight terminal checks skeleton (#780)
+
+Add tui_preparation module with TuiPreflightAbort exception and
+TuiChecker class for detecting terminal issues before TUI launch.
+
+Implements:
+- TuiPreflightAbort exception with message and exit_code
+- TuiChecker with run_all_checks() orchestrator and _present_prompt()
+- Warning checks: SSH/dumb terminal, non-UTF-8 locale, tmux/screen,
+  macOS Terminal.app
+- Windows Terminal no-op stub for future-proofing
+- Full test coverage (23 tests)
