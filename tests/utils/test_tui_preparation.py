@@ -416,7 +416,10 @@ class TestCheckVscodeGpuAcceleration:
 
         with patch("mcp_coder.utils.tui_preparation.logger") as mock_logger:
             with patch("builtins.input", return_value="i"):
-                with pytest.raises(TuiPreflightAbort):
+                with pytest.raises(
+                    TuiPreflightAbort,
+                    match="Aborted after viewing instructions",
+                ):
                     checker = TuiChecker()
                     checker.run_all_checks()
             log_messages = [

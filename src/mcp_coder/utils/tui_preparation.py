@@ -153,7 +153,10 @@ class TuiChecker:
         )
         if not settings_path.is_file():
             return
-        content = settings_path.read_text(encoding="utf-8", errors="ignore")
+        try:
+            content = settings_path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            return
         if re.search(r'"terminal\.integrated\.gpuAcceleration"\s*:\s*"off"', content):
             self._prompts.append((_VSCODE_GPU_PROMPT, _VSCODE_GPU_INSTRUCTIONS))
 
