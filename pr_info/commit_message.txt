@@ -1,1 +1,0 @@
-fix(coordinator): add --project-dir to watchdog set-status in command templates (#746)
