@@ -414,6 +414,26 @@ class TestTemplateWatchdogLines:
                 "set RC=%ERRORLEVEL%" in template
             ), f"Missing set RC=%ERRORLEVEL% in {template[:40]}"
 
+    def test_linux_templates_echo_rc(self) -> None:
+        """All 3 Linux templates echo RC after capturing it."""
+        for template in (
+            CREATE_PLAN_COMMAND_TEMPLATE,
+            IMPLEMENT_COMMAND_TEMPLATE,
+            CREATE_PR_COMMAND_TEMPLATE,
+        ):
+            assert "echo RC=$RC" in template, f"Missing echo RC=$RC in {template[:40]}"
+
+    def test_windows_templates_echo_rc(self) -> None:
+        """All 3 Windows templates echo RC after capturing it."""
+        for template in (
+            CREATE_PLAN_COMMAND_WINDOWS,
+            IMPLEMENT_COMMAND_WINDOWS,
+            CREATE_PR_COMMAND_WINDOWS,
+        ):
+            assert (
+                "echo RC=%RC%" in template
+            ), f"Missing echo RC=%RC% in {template[:40]}"
+
     # -- Watchdog lines --
 
     def test_linux_templates_have_watchdog_line(self) -> None:

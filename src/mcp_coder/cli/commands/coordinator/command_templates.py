@@ -137,6 +137,7 @@ which claude && claude --version
 uv sync --extra types
 mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir /workspace/repo --mcp-config .mcp.json
 RC=$?
+echo RC=$RC
 
 mcp-coder gh-tool set-status status-03f:planning-failed --from-status status-03:planning --issue {issue_number} --project-dir /workspace/repo --force || true
 
@@ -155,6 +156,7 @@ which claude && claude --version
 uv sync --extra types
 mcp-coder --log-level {log_level} implement --project-dir /workspace/repo --mcp-config .mcp.json
 RC=$?
+echo RC=$RC
 
 mcp-coder gh-tool set-status status-06f:implementing-failed --from-status status-06:implementing --project-dir /workspace/repo --force || true
 
@@ -173,6 +175,7 @@ which claude && claude --version
 uv sync --extra types
 mcp-coder --log-level {log_level} create-pr --project-dir /workspace/repo --mcp-config .mcp.json
 RC=$?
+echo RC=$RC
 
 mcp-coder gh-tool set-status status-09f:pr-creating-failed --from-status status-09:pr-creating --project-dir /workspace/repo --force || true
 
@@ -211,6 +214,7 @@ uv sync --project %WORKSPACE%\repo --extra types
 echo command execution  =====================================
 mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
 set RC=%ERRORLEVEL%
+echo RC=%RC%
 
 mcp-coder gh-tool set-status status-03f:planning-failed --from-status status-03:planning --issue {issue_number} --project-dir %WORKSPACE%\repo --force
 
@@ -247,6 +251,7 @@ uv sync --project %WORKSPACE%\repo --extra types
 echo command execution  =====================================
 mcp-coder --log-level {log_level} implement --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
 set RC=%ERRORLEVEL%
+echo RC=%RC%
 
 mcp-coder gh-tool set-status status-06f:implementing-failed --from-status status-06:implementing --project-dir %WORKSPACE%\repo --force
 
@@ -283,6 +288,7 @@ uv sync --project %WORKSPACE%\repo --extra types
 echo command execution  =====================================
 mcp-coder --log-level {log_level} create-pr --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
 set RC=%ERRORLEVEL%
+echo RC=%RC%
 
 mcp-coder gh-tool set-status status-09f:pr-creating-failed --from-status status-09:pr-creating --project-dir %WORKSPACE%\repo --force
 
