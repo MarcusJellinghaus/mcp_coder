@@ -21,6 +21,14 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Fix tool result rendering + add pipeline tests
+[Detail](./steps/step_1.md)
+
+- [ ] Implementation: fix `app.py` Markdown rendering, update existing test, create `tests/icoder/ui/test_app.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review
+- [ ] PR summary
