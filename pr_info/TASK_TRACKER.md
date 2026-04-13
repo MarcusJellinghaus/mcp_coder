@@ -38,5 +38,5 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Pull Request
 
-- [ ] PR review: verify all steps complete, grep confirms zero `mcp_coder.formatters` references
+- [x] PR review: verify all steps complete, grep confirms zero `mcp_coder.formatters` references
 - [ ] PR summary prepared
