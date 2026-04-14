@@ -101,6 +101,7 @@ class TestCheckSshTerminalCapabilities:
         checker._check_ssh_terminal_capabilities()
         assert len(checker._warnings) == 1
         assert "dumb" in checker._warnings[0]
+        assert "SSH" in checker._warnings[0]
 
     def test_warns_when_ssh_and_term_unset(
         self, monkeypatch: pytest.MonkeyPatch
@@ -110,6 +111,7 @@ class TestCheckSshTerminalCapabilities:
         checker = TuiChecker()
         checker._check_ssh_terminal_capabilities()
         assert len(checker._warnings) == 1
+        assert "SSH" in checker._warnings[0]
 
     def test_no_warning_when_ssh_and_term_ok(
         self, monkeypatch: pytest.MonkeyPatch
