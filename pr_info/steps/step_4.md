@@ -65,6 +65,11 @@ if mcp_manager is not None:
     for s in mcp_manager.status():
         lines += [f"  {s.name}  {'✓' if s.connected else '✗'}  ({s.tool_count} tools)"]
 # When mcp_manager is None, omit the "MCP servers (langchain)" section entirely
+claude_mcp = parse_claude_mcp_list(runtime_info.env_vars)
+if claude_mcp is not None:
+    lines += ["MCP servers (claude):"]
+    lines += [f"  {line}" for line in claude_mcp]
+# When parse_claude_mcp_list returns None (Claude not installed), omit section entirely
 lines += ["MCP_CODER_* env vars: ..."]  # filtered from os.environ
 lines += ["Other env vars: ..."]  # redacted via _redact_env_vars
 return "\n".join(lines)

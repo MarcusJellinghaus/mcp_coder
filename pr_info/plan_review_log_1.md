@@ -22,5 +22,20 @@
 
 **User decisions**: None needed — all straightforward improvements
 **Changes**: Updated step_1.md (init, close), step_2.md (test file), step_4.md (None behavior, new test)
+**Status**: Committed (590a64d)
+
+## Round 2 — 2026-04-14
+**Findings**:
+- [F1] Step 4: Algorithm missing defensive check for `parse_claude_mcp_list()` returning None — inconsistent with test #18
+- [F2] Step 3: Vague test file references — skipped, adequate for plan level
+- [F3] Step 1: `client.__aexit__()` correctness — skipped, implementation detail
+
+**Decisions**:
+- F1: Accept — added Claude MCP section handling with None guard to _format_info() algorithm
+- F2: Skip — LLM will find correct test files during implementation
+- F3: Skip — implementation detail
+
+**User decisions**: None needed
+**Changes**: Updated step_4.md algorithm to handle parse_claude_mcp_list() returning None
 **Status**: Pending commit
 
