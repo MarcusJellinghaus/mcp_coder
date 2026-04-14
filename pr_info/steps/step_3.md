@@ -25,6 +25,8 @@ The shared `stream_subprocess()` now:
 
 **Remove import:** `StreamResult` is no longer needed in the import from `subprocess_streaming` (it's used internally by the returned object, but the caller doesn't construct it). Keep it if the type annotation `stream.result` still needs it for type checking.
 
+**Remove stale pylint comment:** After this API change, `stream` has an explicit `StreamResult` return type, so any `# pylint: disable=no-member` comment on the `stream.result` access line becomes stale and should be removed.
+
 ## HOW
 
 ```python

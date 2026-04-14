@@ -31,7 +31,7 @@ ignore_imports =
 ```
 
 ### 4b. Update `subprocess_isolation` contract
-The shim files no longer import `subprocess` directly. Also, test files `test_subprocess_runner.py` and `test_subprocess_runner_real.py` are deleted in step 5.
+The shim files no longer import `subprocess` directly. Also, test files `test_subprocess_runner.py` and `test_subprocess_runner_real.py` are deleted in step 1.
 
 **Remove these ignore_imports lines:**
 - `mcp_coder.utils.subprocess_runner -> subprocess`
@@ -50,10 +50,14 @@ The `log_utils` shim no longer imports `structlog` directly.
 
 **Remove the `ignore_imports` section entirely** (or remove the line `mcp_coder.utils.log_utils -> structlog`).
 
+> **Trace-through note:** Since `mcp_coder_utils` is not configured as a `root_package` in `.importlinter`, grimp should not trace through it, so these exceptions can be safely removed. If `lint-imports` fails, add back the shim exception.
+
 ### 4d. Tighten `jsonlogger_isolation` contract
 The `log_utils` shim no longer imports `pythonjsonlogger` directly.
 
 **Remove the `ignore_imports` section entirely** (or remove the line `mcp_coder.utils.log_utils -> pythonjsonlogger`).
+
+> **Trace-through note:** Since `mcp_coder_utils` is not configured as a `root_package` in `.importlinter`, grimp should not trace through it, so these exceptions can be safely removed. If `lint-imports` fails, add back the shim exception.
 
 ## HOW
 

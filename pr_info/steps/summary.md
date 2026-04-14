@@ -62,12 +62,12 @@ After:   mcp_coder.utils.subprocess_runner  →  mcp_coder_utils.subprocess_runn
 | `src/mcp_coder/llm/providers/claude/claude_code_cli_streaming.py` | Modify — adapt to new `stream_subprocess` API |
 | `.importlinter` | Modify — add `mcp_coder_utils_isolation`, update 3 existing contracts |
 | `.claude/CLAUDE.md` | Modify — add shared-libraries note |
-| `tests/utils/test_subprocess_runner.py` | Delete |
-| `tests/utils/test_subprocess_runner_real.py` | Delete |
-| `tests/utils/test_subprocess_streaming.py` | Delete |
-| `tests/utils/test_log_utils.py` | Delete |
-| `tests/utils/test_log_utils_redaction.py` | Delete |
-| `tests/utils/test_log_utils_shim.py` | Create — log suppression shim test |
+| `tests/utils/test_subprocess_runner.py` | Delete (step 1) |
+| `tests/utils/test_subprocess_runner_real.py` | Delete (step 1) |
+| `tests/utils/test_subprocess_streaming.py` | Delete (step 1) |
+| `tests/utils/test_log_utils.py` | Delete (step 2) |
+| `tests/utils/test_log_utils_redaction.py` | Delete (step 2) |
+| `tests/utils/test_log_utils_shim.py` | Create (step 2) — log suppression shim test |
 
 ## Pre-merge prerequisite
 
@@ -75,9 +75,8 @@ After:   mcp_coder.utils.subprocess_runner  →  mcp_coder_utils.subprocess_runn
 
 ## Steps Overview
 
-1. **Dependency + subprocess shims** — `pyproject.toml`, `subprocess_runner.py`, `subprocess_streaming.py`
-2. **log_utils shim** — `log_utils.py` with wrapped `setup_logging()`
+1. **Dependency + subprocess shims** — `pyproject.toml`, `subprocess_runner.py`, `subprocess_streaming.py` + delete 3 broken subprocess test files
+2. **log_utils shim** — `log_utils.py` with wrapped `setup_logging()` + delete 2 broken log_utils test files + create `test_log_utils_shim.py`
 3. **stream_subprocess API update** — `claude_code_cli_streaming.py`
 4. **Import-linter contracts** — `.importlinter` (all contract changes)
-5. **Test cleanup + shim test** — delete 5 test files, add `test_log_utils_shim.py`
-6. **Docs + stale import grep** — CLAUDE.md one-liner, verify no stale imports
+5. **Docs + stale import grep** — CLAUDE.md one-liner, verify no stale imports
