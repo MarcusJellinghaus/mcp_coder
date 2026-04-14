@@ -90,8 +90,8 @@ class TestMCPManagerTools:
     def test_tools_returns_cached_tools(self) -> None:
         """After first call, second call returns same list without reconnecting."""
         tool1 = _make_mock_tool("tool_a")
-        client_patch, convert_patch, lc_tools, mock_client = _patch_client_and_convert(
-            {"server1": [tool1]}
+        client_patch, convert_patch, _lc_tools, _mock_client = (
+            _patch_client_and_convert({"server1": [tool1]})
         )
 
         with client_patch, convert_patch:
@@ -106,21 +106,22 @@ class TestMCPManagerTools:
 
     def test_tools_lazy_connect(self) -> None:
         """Constructor does NOT connect; connection happens on first tools() call."""
-        client_patch, convert_patch, _, mock_client = _patch_client_and_convert(
+        client_patch, convert_patch, _, _mock_client = _patch_client_and_convert(
             {"server1": [_make_mock_tool()]}
         )
 
-        with client_patch as client_cls, convert_patch:
-            manager = MCPManager({"server1": {"transport": "stdio"}})
-            try:
-                # Not called yet at construction time
-                client_cls.assert_not_called()
+        with client_patch as client_cls:
+            with convert_patch:
+                manager = MCPManager({"server1": {"transport": "stdio"}})
+                try:
+                    # Not called yet at construction time
+                    client_cls.assert_not_called()
 
-                # First tools() triggers connection
-                manager.tools()
-                client_cls.assert_called_once()
-            finally:
-                manager.close()
+                    # First tools() triggers connection
+                    manager.tools()
+                    client_cls.assert_called_once()
+                finally:
+                    manager.close()
 
     def test_tools_recreates_on_failure(self) -> None:
         """If _connect_and_discover fails, next tools() call retries."""

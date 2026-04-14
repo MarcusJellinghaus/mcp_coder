@@ -523,8 +523,6 @@ def test_mcp_manager_created_for_langchain(
         lambda *_a, **_kw: fake_server_config,
     )
 
-    original_init = None
-
     def tracking_init(self: object, server_config: object) -> None:
         created_managers.append(self)
         # Don't start real threads — just set minimal attrs

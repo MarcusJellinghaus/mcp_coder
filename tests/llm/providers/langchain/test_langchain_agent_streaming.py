@@ -434,7 +434,7 @@ class TestRunAgentStream:
         mock_load_config.assert_not_called()
         # create_react_agent should be called with the prebuilt tools
         mock_create_agent.assert_called_once()
-        _, call_kwargs = mock_create_agent.call_args
+        _, _call_kwargs = mock_create_agent.call_args
         # Second positional arg is the tools list
         call_args_positional = mock_create_agent.call_args[0]
         assert call_args_positional[1] == [mock_tool]
