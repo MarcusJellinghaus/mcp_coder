@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Rename method, add SSH guard, update message, and update all tests
-- [ ] Implementation: rename `_check_ssh_dumb_terminal` → `_check_ssh_terminal_capabilities`, add SSH guard, update warning message, update caller, update all unit tests and integration test ([step_1.md](./steps/step_1.md))
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: rename `_check_ssh_dumb_terminal` → `_check_ssh_terminal_capabilities`, add SSH guard, update warning message, update caller, update all unit tests and integration test ([step_1.md](./steps/step_1.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review

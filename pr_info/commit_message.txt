@@ -1,0 +1,7 @@
+fix: suppress false TERM warning on non-SSH terminals (#792)
+
+- Rename _check_ssh_dumb_terminal → _check_ssh_terminal_capabilities
+- Guard: return early if SSH_CONNECTION is not set
+- Update warning message to prefix with "SSH"
+- Update unit tests for renamed method and SSH guard
+- Add SSH_CONNECTION to run_all_checks integration test

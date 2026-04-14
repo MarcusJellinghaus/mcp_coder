@@ -91,28 +91,40 @@ class TestPresentPrompt:
                 checker._present_prompt("prompt", "instructions")
 
 
-class TestCheckSshDumbTerminal:
-    def test_check_ssh_dumb_terminal_detected(
+class TestCheckSshTerminalCapabilities:
+    def test_warns_when_ssh_and_term_dumb(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        monkeypatch.setenv("SSH_CONNECTION", "192.168.1.1 22 192.168.1.2 54321")
         monkeypatch.setenv("TERM", "dumb")
         checker = TuiChecker()
-        checker._check_ssh_dumb_terminal()
+        checker._check_ssh_terminal_capabilities()
         assert len(checker._warnings) == 1
         assert "dumb" in checker._warnings[0]
 
-    def test_check_ssh_dumb_terminal_unset(
+    def test_warns_when_ssh_and_term_unset(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        monkeypatch.setenv("SSH_CONNECTION", "192.168.1.1 22 192.168.1.2 54321")
         monkeypatch.delenv("TERM", raising=False)
         checker = TuiChecker()
-        checker._check_ssh_dumb_terminal()
+        checker._check_ssh_terminal_capabilities()
         assert len(checker._warnings) == 1
 
-    def test_check_ssh_dumb_terminal_ok(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_no_warning_when_ssh_and_term_ok(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("SSH_CONNECTION", "192.168.1.1 22 192.168.1.2 54321")
         monkeypatch.setenv("TERM", "xterm-256color")
         checker = TuiChecker()
-        checker._check_ssh_dumb_terminal()
+        checker._check_ssh_terminal_capabilities()
+        assert len(checker._warnings) == 0
+
+    def test_no_warning_when_not_ssh(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("SSH_CONNECTION", raising=False)
+        monkeypatch.setenv("TERM", "dumb")
+        checker = TuiChecker()
+        checker._check_ssh_terminal_capabilities()
         assert len(checker._warnings) == 0
 
 
@@ -457,6 +469,7 @@ class TestWarningsLoggedViaRunAllChecks:
     def test_warnings_logged_via_run_all_checks(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        monkeypatch.setenv("SSH_CONNECTION", "192.168.1.1 22 192.168.1.2 54321")
         monkeypatch.setenv("TERM", "dumb")
         monkeypatch.delenv("TMUX", raising=False)
         monkeypatch.delenv("STY", raising=False)
