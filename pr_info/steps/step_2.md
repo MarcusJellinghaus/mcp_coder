@@ -12,7 +12,7 @@
 ## WHERE
 
 - **Modified:** `src/mcp_coder/llm/providers/langchain/agent.py`
-- **Modified:** `tests/llm/providers/langchain/test_langchain_agent.py` (or `test_langchain_agent_streaming.py`)
+- **Modified:** `tests/llm/providers/langchain/test_langchain_agent_streaming.py`
 
 ## WHAT
 

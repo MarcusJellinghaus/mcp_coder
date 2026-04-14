@@ -37,7 +37,9 @@ class MCPManager:
     def __init__(
         self,
         server_config: dict[str, dict[str, object]],
-    ) -> None: ...
+    ) -> None:
+        self._server_names = list(server_config.keys())
+        ...
 
     def tools(self) -> list[Any]:
         """Return cached LangChain tools. Connects lazily on first call.
@@ -89,11 +91,11 @@ return all_tools
 ## ALGORITHM — `close()`
 
 ```
+if client exists:
+    run_coroutine_threadsafe(client.__aexit__(), loop).result(timeout=5)
 if loop is running:
     loop.call_soon_threadsafe(loop.stop)
     thread.join(timeout=5)
-if client exists:
-    # Client cleanup handled by loop shutdown
 ```
 
 ## DATA
@@ -101,7 +103,7 @@ if client exists:
 - `server_config`: `dict[str, dict[str, object]]` — output of `_load_mcp_server_config()`
 - `tools()` returns: `list[Any]` (LangChain `BaseTool` instances)
 - `status()` returns: `list[MCPServerStatus]`
-- Internal state: `_cached_tools: list[Any] | None`, `_client: MultiServerMCPClient | None`, `_loop: asyncio.AbstractEventLoop`, `_thread: threading.Thread`, `_server_names: list[str]`
+- Internal state: `_cached_tools: list[Any] | None`, `_client: MultiServerMCPClient | None`, `_loop: asyncio.AbstractEventLoop`, `_thread: threading.Thread`, `_server_names: list[str]` — initialized from `server_config.keys()` in `__init__` so `status()` can report all configured servers even before connection
 
 ## TEST PLAN (`tests/llm/test_mcp_manager.py`)
 

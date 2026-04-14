@@ -61,9 +61,10 @@ lines = ["=== iCoder /info ==="]
 lines += [f"mcp-coder version: {importlib.metadata.version('mcp-coder')}"]
 lines += [f"Python: {sys.version} ({sys.executable})"]
 lines += [f"Environments: tool_env={runtime_info.tool_env_path}, ..."]
-if mcp_manager:
+if mcp_manager is not None:
     for s in mcp_manager.status():
         lines += [f"  {s.name}  {'✓' if s.connected else '✗'}  ({s.tool_count} tools)"]
+# When mcp_manager is None, omit the "MCP servers (langchain)" section entirely
 lines += ["MCP_CODER_* env vars: ..."]  # filtered from os.environ
 lines += ["Other env vars: ..."]  # redacted via _redact_env_vars
 return "\n".join(lines)
@@ -139,10 +140,11 @@ Other env vars (secrets redacted):
 11. `test_info_shows_python` — output contains `Python:` and `sys.executable`
 12. `test_info_shows_environments` — output contains `Tool env:`, `Project env:`, `Project dir:`
 13. `test_info_shows_mcp_status` — with mock `MCPManager`, output contains server status with `✓`/`✗`
-14. `test_info_without_mcp_manager` — `mcp_manager=None`, no crash, MCP langchain section omitted or shows "not active"
+14. `test_info_without_mcp_manager` — `mcp_manager=None`, no crash, MCP langchain section omitted entirely
 15. `test_info_shows_mcp_coder_env_vars` — output contains `MCP_CODER_*` section
 16. `test_info_redacts_secrets_in_env` — output contains `***` for sensitive vars
 17. `test_info_in_help` — `/info` appears in `/help` output
+18. `test_info_claude_mcp_list_unavailable` — mock `parse_claude_mcp_list` to return `None` (e.g., Claude not installed), verify `/info` handles it gracefully without crashing and omits the Claude MCP section
 
 ## COMMIT
 
