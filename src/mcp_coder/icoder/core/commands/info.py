@@ -26,6 +26,9 @@ def _redact_env_vars(env: dict[str, str]) -> dict[str, str]:
 
     Matches case-insensitively: token, key, secret, password, credential.
     Redacted values replaced with '***'.
+
+    Returns:
+        Copy of the env dict with sensitive values replaced by '***'.
     """
     result: dict[str, str] = {}
     for k, v in env.items():
@@ -40,7 +43,11 @@ def _format_info(
     runtime_info: RuntimeInfo,
     mcp_manager: MCPManager | None,
 ) -> str:
-    """Build the /info output string. All values re-read live."""
+    """Build the /info output string. All values re-read live.
+
+    Returns:
+        Formatted multi-line info string.
+    """
     lines: list[str] = []
     lines.append("=== iCoder /info ===")
     lines.append(f"mcp-coder version: {importlib.metadata.version('mcp-coder')}")

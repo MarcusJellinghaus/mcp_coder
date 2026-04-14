@@ -1,9 +1,8 @@
-fix: resolve pylint warnings in test files causing CI failure
+fix: add missing Returns docstring sections for ruff DOC201
 
-- Prefix unused variables with underscore in test_mcp_manager.py
-  (lc_tools, mock_client)
-- Split multi-context `with` statement to avoid W0124
-  confusing-with-statement warning in test_mcp_manager.py
-- Prefix unused call_kwargs with underscore in
-  test_langchain_agent_streaming.py
-- Remove unused original_init variable in test_cli_icoder.py
+Add Returns sections to three functions with return type annotations
+but no return documentation in their docstrings:
+
+- _redact_env_vars in icoder/core/commands/info.py
+- _format_info in icoder/core/commands/info.py
+- _connect_and_discover in llm/mcp_manager.py

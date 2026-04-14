@@ -76,7 +76,11 @@ class MCPManager:
         return self._cached_tools
 
     async def _connect_and_discover(self) -> list[Any]:
-        """Connect to MCP servers and discover tools (runs on background loop)."""
+        """Connect to MCP servers and discover tools (runs on background loop).
+
+        Returns:
+            List of discovered LangChain-compatible tools from all servers.
+        """
         from langchain_mcp_adapters.client import MultiServerMCPClient
         from langchain_mcp_adapters.tools import convert_mcp_tool_to_langchain_tool
 
