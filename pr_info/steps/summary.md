@@ -22,5 +22,4 @@ Guard the check behind `SSH_CONNECTION` — only SSH sessions can have a genuine
 
 | Step | Description | Commit |
 |------|-------------|--------|
-| 1 | Update tests for renamed method and SSH guard | Tests + source changes together |
-| 2 | Update integration test that exercises `run_all_checks` with TERM=dumb | Fix remaining test |
+| 1 | Rename method, add SSH guard, update message, and update all tests (unit + integration) | Single commit with source and test changes |

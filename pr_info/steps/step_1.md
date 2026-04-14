@@ -1,4 +1,4 @@
-# Step 1: Rename method, add SSH guard, update message and unit tests
+# Step 1: Rename method, add SSH guard, update message, and update all tests
 
 ## References
 - **Summary**: `pr_info/steps/summary.md`
@@ -9,7 +9,7 @@
 
 ## WHERE
 - `src/mcp_coder/utils/tui_preparation.py` — method rename + logic change
-- `tests/utils/test_tui_preparation.py` — `TestCheckSshDumbTerminal` class
+- `tests/utils/test_tui_preparation.py` — `TestCheckSshDumbTerminal` class and `TestWarningsLoggedViaRunAllChecks` class
 
 ## WHAT
 
@@ -21,10 +21,13 @@ Update call from `self._check_ssh_dumb_terminal()` → `self._check_ssh_terminal
 
 ### Tests updated:
 - `TestCheckSshDumbTerminal` → `TestCheckSshTerminalCapabilities`
-- `test_check_ssh_dumb_terminal_detected` → `test_warns_when_ssh_and_term_dumb` — sets `SSH_CONNECTION`
-- `test_check_ssh_dumb_terminal_unset` → `test_warns_when_ssh_and_term_unset` — sets `SSH_CONNECTION`
-- `test_check_ssh_dumb_terminal_ok` → `test_no_warning_when_ssh_and_term_ok` — sets `SSH_CONNECTION`
-- **New**: `test_no_warning_when_not_ssh` — sets `TERM=dumb`, no `SSH_CONNECTION`, expects 0 warnings
+- `test_check_ssh_dumb_terminal_detected` → `test_warns_when_ssh_and_term_dumb` — adds `monkeypatch.setenv("SSH_CONNECTION", "192.168.1.1 22 192.168.1.2 54321")` so the SSH guard passes and the TERM-checking logic is exercised
+- `test_check_ssh_dumb_terminal_unset` → `test_warns_when_ssh_and_term_unset` — adds `monkeypatch.setenv("SSH_CONNECTION", "192.168.1.1 22 192.168.1.2 54321")` so the SSH guard passes and the TERM-checking logic is exercised
+- `test_check_ssh_dumb_terminal_ok` → `test_no_warning_when_ssh_and_term_ok` — adds `monkeypatch.setenv("SSH_CONNECTION", "192.168.1.1 22 192.168.1.2 54321")` so the SSH guard passes and the TERM-checking logic is exercised
+- **New**: `test_no_warning_when_not_ssh` — sets `TERM=dumb`, uses `monkeypatch.delenv("SSH_CONNECTION", raising=False)` for robustness, expects 0 warnings
+
+### Integration test: `TestWarningsLoggedViaRunAllChecks`
+- `test_warnings_logged_via_run_all_checks` — add `monkeypatch.setenv("SSH_CONNECTION", "192.168.1.1 22 192.168.1.2 54321")` so the SSH guard passes and the TERM=dumb warning is still produced via `run_all_checks`.
 
 ## HOW
 - Method is called from `run_all_checks` — just update the name there.
@@ -52,4 +55,5 @@ fix: suppress false TERM warning on non-SSH terminals (#792)
 - Guard: return early if SSH_CONNECTION is not set
 - Update warning message to prefix with "SSH"
 - Update unit tests for renamed method and SSH guard
+- Add SSH_CONNECTION to run_all_checks integration test
 ```
