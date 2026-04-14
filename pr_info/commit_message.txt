@@ -1,0 +1,8 @@
+adopt mcp-coder-utils: subprocess shims + delete broken subprocess tests
+
+- Pin mcp-coder-utils>=0.1.3 in pyproject.toml
+- Replace subprocess_runner.py with thin re-export shim over mcp_coder_utils
+- Replace subprocess_streaming.py with thin re-export shim over mcp_coder_utils
+- Delete tests/utils/test_subprocess_runner.py (patches internals no longer in shim)
+- Delete tests/utils/test_subprocess_runner_real.py (patches internals no longer in shim)
+- Delete tests/utils/test_subprocess_streaming.py (double-wraps StreamResult)

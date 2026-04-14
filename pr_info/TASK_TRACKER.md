@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Dependency + subprocess shims ([step_1.md](./steps/step_1.md))
-- [ ] Implementation: pin `mcp-coder-utils>=0.1.3` in pyproject.toml, replace `subprocess_runner.py` and `subprocess_streaming.py` with re-export shims, delete 3 broken subprocess test files
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `adopt mcp-coder-utils: subprocess shims + delete broken subprocess tests`
+- [x] Implementation: pin `mcp-coder-utils>=0.1.3` in pyproject.toml, replace `subprocess_runner.py` and `subprocess_streaming.py` with re-export shims, delete 3 broken subprocess test files
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit: `adopt mcp-coder-utils: subprocess shims + delete broken subprocess tests`
 
 ### Step 2: log_utils shim ([step_2.md](./steps/step_2.md))
 - [ ] Implementation: replace `log_utils.py` with re-export shim + wrapped `setup_logging()`, delete 2 broken log test files, create `test_log_utils_shim.py`
