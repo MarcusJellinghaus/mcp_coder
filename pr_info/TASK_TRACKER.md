@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `adopt mcp-coder-utils: subprocess shims + delete broken subprocess tests`
 
 ### Step 2: log_utils shim ([step_2.md](./steps/step_2.md))
-- [ ] Implementation: replace `log_utils.py` with re-export shim + wrapped `setup_logging()`, delete 2 broken log test files, create `test_log_utils_shim.py`
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `adopt mcp-coder-utils: log_utils shim + delete broken log tests + add shim test`
+- [x] Implementation: replace `log_utils.py` with re-export shim + wrapped `setup_logging()`, delete 2 broken log test files, create `test_log_utils_shim.py`
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit: `adopt mcp-coder-utils: log_utils shim + delete broken log tests + add shim test`
 
 ### Step 3: stream_subprocess API update ([step_3.md](./steps/step_3.md))
 - [ ] Implementation: update `claude_code_cli_streaming.py` to use new `stream_subprocess` API — remove manual `StreamResult` wrapper, pass `inactivity_timeout_seconds` as kwarg
