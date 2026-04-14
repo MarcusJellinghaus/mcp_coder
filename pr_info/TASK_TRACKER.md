@@ -31,9 +31,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 2: Add `project_dir` to Interface + Load Prompts in `prompt_llm()` / `prompt_llm_stream()`
 > [Detail](./steps/step_2.md) — `interface.py` gains `project_dir` param, calls `load_prompts()`, passes results to providers
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Langchain Provider — Prepend System Messages
 > [Detail](./steps/step_3.md) — `ask_langchain()` accepts `system_prompt`/`project_prompt`, builds `SystemMessage` objects, prepends to message lists

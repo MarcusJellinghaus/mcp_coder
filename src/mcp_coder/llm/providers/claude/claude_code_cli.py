@@ -549,6 +549,8 @@ def ask_claude_code_cli(
     mcp_config: str | None = None,
     logs_dir: str | None = None,
     branch_name: str | None = None,
+    append_system_prompt: str | None = None,
+    system_prompt_replace: str | None = None,
 ) -> LLMResponseDict:
     """Ask Claude via CLI with native session support and stream logging.
 

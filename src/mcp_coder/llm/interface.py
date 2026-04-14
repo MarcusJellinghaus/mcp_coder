@@ -41,6 +41,7 @@ def prompt_llm(
     execution_dir: str | None = None,
     mcp_config: str | None = None,
     branch_name: str | None = None,
+    project_dir: str | None = None,
 ) -> LLMResponseDict:
     """Ask a question to an LLM provider with full session management.
 
@@ -60,6 +61,8 @@ def prompt_llm(
             directory. Defaults to the caller's current working directory.
         mcp_config: Optional path to MCP configuration file
         branch_name: Optional git branch name to include in log filename
+        project_dir: Optional project directory for loading system/project prompts.
+            When provided, prompts are loaded via prompt_loader and passed to providers.
 
     Returns:
         LLMResponseDict containing:
@@ -107,6 +110,14 @@ def prompt_llm(
     # Allow env var to override the provider parameter (e.g. in CI)
     provider = os.environ.get("MCP_CODER_LLM_PROVIDER") or provider
 
+    # Load prompts if project_dir is provided
+    system_prompt: str | None = None
+    project_prompt: str | None = None
+    if project_dir:
+        from mcp_coder.prompts.prompt_loader import load_prompts  # noqa: PLC0415
+
+        system_prompt, project_prompt, _config = load_prompts(Path(project_dir))
+
     # Unsupported provider check — before context manager (no MLflow run needed)
     if provider not in ("claude", "langchain"):
         raise ValueError(
@@ -129,6 +140,8 @@ def prompt_llm(
                     mcp_config=mcp_config,
                     execution_dir=execution_dir,
                     env_vars=env_vars,
+                    system_prompt=system_prompt,
+                    project_prompt=project_prompt,
                 )
             except asyncio.TimeoutError as e:
                 logger.error("LLM request timed out after %ds", timeout)
@@ -159,6 +172,8 @@ def prompt_llm(
                     mcp_config=mcp_config,
                     branch_name=branch_name,
                     logs_dir=logs_dir,
+                    append_system_prompt=system_prompt,
+                    system_prompt_replace=project_prompt,
                 )
             except TimeoutExpired as e:
                 logger.error("LLM request timed out after %ds", timeout)
@@ -188,6 +203,7 @@ def prompt_llm_stream(
     mcp_config: str | None = None,
     branch_name: str | None = None,
     tools: list[Any] | None = None,
+    project_dir: str | None = None,
 ) -> Iterator[StreamEvent]:
     """Stream LLM responses as events.
 
@@ -213,6 +229,14 @@ def prompt_llm_stream(
     # Allow env var to override the provider parameter
     provider = os.environ.get("MCP_CODER_LLM_PROVIDER") or provider
 
+    # Load prompts if project_dir is provided
+    system_prompt: str | None = None
+    project_prompt: str | None = None
+    if project_dir:
+        from mcp_coder.prompts.prompt_loader import load_prompts  # noqa: PLC0415
+
+        system_prompt, project_prompt, _config = load_prompts(Path(project_dir))
+
     if provider not in ("claude", "langchain"):
         raise ValueError(
             f"Unsupported provider: {provider}. Supported: 'claude', 'langchain'"
@@ -231,6 +255,8 @@ def prompt_llm_stream(
             execution_dir=execution_dir,
             env_vars=env_vars,
             tools=tools,
+            system_prompt=system_prompt,
+            project_prompt=project_prompt,
         )
     else:
         from .providers.claude.claude_code_cli_streaming import (  # noqa: PLC0415
@@ -245,4 +271,6 @@ def prompt_llm_stream(
             cwd=execution_dir,
             mcp_config=mcp_config,
             branch_name=branch_name,
+            append_system_prompt=system_prompt,
+            system_prompt_replace=project_prompt,
         )

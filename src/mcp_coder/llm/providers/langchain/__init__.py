@@ -189,6 +189,8 @@ def ask_langchain(
     mcp_config: str | None = None,
     execution_dir: str | None = None,
     env_vars: dict[str, str] | None = None,
+    system_prompt: str | None = None,
+    project_prompt: str | None = None,
 ) -> LLMResponseDict:
     """Entry point called by interface.prompt_llm() for provider='langchain'.
 
@@ -525,6 +527,8 @@ def ask_langchain_stream(
     execution_dir: str | None = None,
     env_vars: dict[str, str] | None = None,
     tools: list[Any] | None = None,
+    system_prompt: str | None = None,
+    project_prompt: str | None = None,
 ) -> Iterator[StreamEvent]:
     """Stream LangChain responses as events.
 
