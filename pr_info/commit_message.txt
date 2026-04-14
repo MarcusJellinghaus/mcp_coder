@@ -1,4 +1,0 @@
-fix: add missing Returns sections to docstrings in types.py
-
-Add Returns sections to `format_token_count` and `TokenUsage.display_text`
-docstrings to satisfy ruff DOC201 rule requiring documented return values.
