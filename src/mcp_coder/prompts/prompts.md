@@ -293,12 +293,13 @@ Fix the CI pipeline failure based on the problem description below.
 **Your Task:**
 1. Read the problem description carefully
 2. Make the necessary code changes to fix the issue
-3. Run quality checks: pylint, pytest, mypy
-4. Fix any issues found by quality checks
-5. Write a commit message to `pr_info/.commit_message.txt`
+3. Run all quality checks — not just the one that failed
+4. Fix any issues found by ANY of the quality checks above
+5. Repeat step 3-4 until all checks pass
+6. Write a commit message to `pr_info/.commit_message.txt`
 
 **Rules:**
 - Make minimal, focused changes
-- Ensure all quality checks pass
+- Ensure all quality checks pass before finishing
 - Do NOT commit - just write the commit message file
 ```
