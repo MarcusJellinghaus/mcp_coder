@@ -1,0 +1,11 @@
+feat(icoder): add TokenUsage dataclass and format_token_count()
+
+Add foundational token tracking types to icoder/core/types.py:
+
+- format_token_count(n): compact suffix formatting (k/M/B)
+- TokenUsage dataclass: tracks last-request and cumulative token
+  counts with update(), display_text(), and has_data property
+
+Full test coverage in tests/icoder/test_types.py (9 new tests).
+
+Ref: #808

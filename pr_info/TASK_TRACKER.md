@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: TokenUsage Dataclass + format_token_count()
-- [ ] Implementation: `TokenUsage` dataclass, `format_token_count()` in `types.py` + tests in `test_types.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `TokenUsage` dataclass, `format_token_count()` in `types.py` + tests in `test_types.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Wire TokenUsage into AppCore
 - [ ] Implementation: `_token_usage` field, `token_usage` property, usage extraction in `stream_llm()` + tests in `test_app_core.py`
