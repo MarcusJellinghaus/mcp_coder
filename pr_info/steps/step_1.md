@@ -17,11 +17,14 @@ No new functions. One line added inside `prepare_llm_environment()`:
 env_vars["DISABLE_AUTOUPDATER"] = os.environ.get("DISABLE_AUTOUPDATER", "1")
 ```
 
+Also update the docstring of `prepare_llm_environment()` to mention `DISABLE_AUTOUPDATER` in the Returns description (the docstring explicitly lists returned keys).
+
 ## HOW
 
 - `os.environ.get` is already imported (`os` is used throughout the file)
 - The line goes after the existing `env_vars = { ... }` dict literal, before the `logger.debug(...)` call
 - No new imports, no signature changes
+- Update the `prepare_llm_environment()` docstring Returns section to include `DISABLE_AUTOUPDATER`
 
 ## ALGORITHM
 
