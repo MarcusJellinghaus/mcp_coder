@@ -1,10 +1,10 @@
-adopt mcp-coder-utils: log_utils shim + delete broken log tests + add shim test
+adopt mcp-coder-utils: adapt claude_code_cli_streaming to new stream_subprocess API
 
-Replace log_utils.py with a thin re-export shim over mcp_coder_utils.log_utils
-and mcp_coder_utils.redaction. The local setup_logging() wraps the upstream
-version to add app-specific third-party log suppression (urllib3, github,
-httpx, httpcore).
-
-- Delete test_log_utils.py (tested internal structlog/JSON implementation)
-- Delete test_log_utils_redaction.py (imported _redact_for_logging, not re-exported)
-- Create test_log_utils_shim.py with 4 log suppression assertions
+- Remove manual StreamResult() wrapper; stream_subprocess now returns
+  StreamResult directly
+- Pass inactivity_timeout_seconds as explicit kwarg instead of setting
+  timeout_seconds on CommandOptions
+- Remove stale pylint disable=no-member comment on stream.result access
+- Remove unused StreamResult import from production code
+- Update test helper to use _MockStreamResult class instead of generator
+  with return value, matching the new StreamResult iteration contract

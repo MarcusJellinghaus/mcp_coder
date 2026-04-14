@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `adopt mcp-coder-utils: log_utils shim + delete broken log tests + add shim test`
 
 ### Step 3: stream_subprocess API update ([step_3.md](./steps/step_3.md))
-- [ ] Implementation: update `claude_code_cli_streaming.py` to use new `stream_subprocess` API — remove manual `StreamResult` wrapper, pass `inactivity_timeout_seconds` as kwarg
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `adopt mcp-coder-utils: adapt claude_code_cli_streaming to new stream_subprocess API`
+- [x] Implementation: update `claude_code_cli_streaming.py` to use new `stream_subprocess` API — remove manual `StreamResult` wrapper, pass `inactivity_timeout_seconds` as kwarg
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit: `adopt mcp-coder-utils: adapt claude_code_cli_streaming to new stream_subprocess API`
 
 ### Step 4: Import-linter contract updates ([step_4.md](./steps/step_4.md))
 - [ ] Implementation: add `mcp_coder_utils_isolation` contract, update `subprocess_isolation`, tighten `structlog_isolation` and `jsonlogger_isolation`
