@@ -21,6 +21,32 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Dependency + subprocess shims ([step_1.md](./steps/step_1.md))
+- [ ] Implementation: pin `mcp-coder-utils>=0.1.3` in pyproject.toml, replace `subprocess_runner.py` and `subprocess_streaming.py` with re-export shims, delete 3 broken subprocess test files
+- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [ ] Commit: `adopt mcp-coder-utils: subprocess shims + delete broken subprocess tests`
+
+### Step 2: log_utils shim ([step_2.md](./steps/step_2.md))
+- [ ] Implementation: replace `log_utils.py` with re-export shim + wrapped `setup_logging()`, delete 2 broken log test files, create `test_log_utils_shim.py`
+- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [ ] Commit: `adopt mcp-coder-utils: log_utils shim + delete broken log tests + add shim test`
+
+### Step 3: stream_subprocess API update ([step_3.md](./steps/step_3.md))
+- [ ] Implementation: update `claude_code_cli_streaming.py` to use new `stream_subprocess` API — remove manual `StreamResult` wrapper, pass `inactivity_timeout_seconds` as kwarg
+- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [ ] Commit: `adopt mcp-coder-utils: adapt claude_code_cli_streaming to new stream_subprocess API`
+
+### Step 4: Import-linter contract updates ([step_4.md](./steps/step_4.md))
+- [ ] Implementation: add `mcp_coder_utils_isolation` contract, update `subprocess_isolation`, tighten `structlog_isolation` and `jsonlogger_isolation`
+- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [ ] Commit: `adopt mcp-coder-utils: update import-linter contracts for shim boundary`
+
+### Step 5: Docs + stale import verification ([step_5.md](./steps/step_5.md))
+- [ ] Implementation: add shared-libraries note to `.claude/CLAUDE.md`, grep for stale imports
+- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [ ] Commit: `adopt mcp-coder-utils: add shared-libraries note to CLAUDE.md`
 
 ## Pull Request
+- [ ] All steps committed and pushed
+- [ ] PR review: verify all changes match plan
+- [ ] PR summary prepared
