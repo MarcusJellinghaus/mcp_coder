@@ -45,7 +45,7 @@ class TuiChecker:
         """Run all checks, apply fixes, log warnings, and present prompts."""
         self._check_windows_cmd_codepage()
         self._check_vscode_gpu_acceleration()
-        self._check_ssh_dumb_terminal()
+        self._check_ssh_terminal_capabilities()
         self._check_non_utf8_locale()
         self._check_tmux_screen()
         self._check_macos_terminal_app()
@@ -81,12 +81,14 @@ class TuiChecker:
             raise TuiPreflightAbort("Aborted after viewing instructions.")
         raise TuiPreflightAbort("Aborted by user.")
 
-    def _check_ssh_dumb_terminal(self) -> None:
-        """Warn if TERM is 'dumb' or unset."""
+    def _check_ssh_terminal_capabilities(self) -> None:
+        """Warn if TERM is 'dumb' or unset in an SSH session."""
+        if not os.environ.get("SSH_CONNECTION"):
+            return
         term = os.environ.get("TERM")
         if term is None or term == "dumb":
             self._warnings.append(
-                "Terminal type is 'dumb' or unset — TUI may not render correctly."
+                "SSH terminal type is 'dumb' or unset — TUI may not render correctly."
                 " Fix: export TERM=xterm-256color"
             )
 
