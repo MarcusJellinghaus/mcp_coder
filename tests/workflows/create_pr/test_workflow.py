@@ -61,8 +61,8 @@ class TestRunCreatePrWorkflow:
         mock_create_pr.assert_called_once_with(Path("/test"), "Test Title", "Test Body")
         mock_cleanup.assert_called_once_with(Path("/test"))
         mock_commit.assert_called_once()
-        # git_push should be called twice: once after generate_pr_summary and once after commit
-        assert mock_push.call_count == 2
+        # git_push should be called once (cleanup happens before push)
+        assert mock_push.call_count == 1
 
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
@@ -82,12 +82,16 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
     @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
+    @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.git_push")
     @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
     def test_workflow_pr_creation_fails(
         self,
         mock_create_pr: MagicMock,
         mock_push: MagicMock,
+        mock_clean: MagicMock,
+        mock_cleanup: MagicMock,
         mock_generate: MagicMock,
         mock_prereqs: MagicMock,
         mock_handle_failure: MagicMock,
@@ -95,6 +99,8 @@ class TestRunCreatePrWorkflow:
         """Test workflow exits when PR creation fails."""
         mock_prereqs.return_value = True
         mock_generate.return_value = ("Title", "Body")
+        mock_cleanup.return_value = True
+        mock_clean.return_value = True
         mock_push.return_value = {"success": True}
         mock_create_pr.return_value = None  # PR creation fails
 

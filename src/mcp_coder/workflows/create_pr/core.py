@@ -526,8 +526,64 @@ def run_create_pr_workflow(
             reached_terminal_state = True
             return 1
 
-        # Step 3: Push any existing commits
-        logger.log(OUTPUT, "Step 3/5: Pushing commits...")
+        # Step 3: Clean up repository
+        logger.log(OUTPUT, "Step 3/5: Cleaning up repository...")
+        if not cleanup_repository(project_dir):
+            logger.error("Repository cleanup failed")
+            elapsed = time.time() - start_time
+            _handle_create_pr_failure(
+                stage="cleanup",
+                message="Repository cleanup failed",
+                project_dir=project_dir,
+                update_issue_labels=update_issue_labels,
+                post_issue_comments=post_issue_comments,
+                elapsed_time=elapsed,
+                issue_number=cached_issue_number,
+            )
+            reached_terminal_state = True
+            return 1
+
+        # Check if there are changes to commit
+        if not is_working_directory_clean(
+            project_dir, ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
+        ):
+            # Commit cleanup changes
+            logger.log(OUTPUT, "Committing cleanup changes...")
+            commit_result = commit_all_changes(
+                "chore: clean up build artifacts", project_dir
+            )
+
+            if not commit_result["success"]:
+                # Ignore "No staged files" - this is expected when cleanup had no effect
+                error_msg = commit_result.get("error") or ""
+                if "No staged files" not in error_msg:
+                    logger.error(
+                        f"Failed to commit cleanup changes: {commit_result['error']}"
+                    )
+                    elapsed = time.time() - start_time
+                    _handle_create_pr_failure(
+                        stage="cleanup",
+                        message=f"Failed to commit cleanup: {commit_result['error']}",
+                        project_dir=project_dir,
+                        update_issue_labels=update_issue_labels,
+                        post_issue_comments=post_issue_comments,
+                        elapsed_time=elapsed,
+                        issue_number=cached_issue_number,
+                    )
+                    reached_terminal_state = True
+                    return 1
+                logger.log(
+                    OUTPUT, "No cleanup changes to commit (files were already clean)"
+                )
+            else:
+                logger.log(
+                    OUTPUT, "Cleanup committed: %s", commit_result["commit_hash"]
+                )
+        else:
+            logger.log(OUTPUT, "No cleanup changes to commit")
+
+        # Step 4: Push commits
+        logger.log(OUTPUT, "Step 4/5: Pushing commits...")
         push_result = git_push(project_dir)
         if not push_result["success"]:
             logger.error(f"Failed to push commits: {push_result['error']}")
@@ -545,8 +601,8 @@ def run_create_pr_workflow(
             return 1
         logger.log(OUTPUT, "Commits pushed successfully")
 
-        # Step 4: Create pull request
-        logger.log(OUTPUT, "Step 4/5: Creating pull request...")
+        # Step 5: Create pull request
+        logger.log(OUTPUT, "Step 5/5: Creating pull request...")
         pr_result = create_pull_request(project_dir, title, body)
         if pr_result is None:
             logger.error("Failed to create pull request")
@@ -597,93 +653,6 @@ def run_create_pr_workflow(
                     logger.debug("No closing issues found for PR #%s", pr_number)
             except Exception as e:  # pylint: disable=broad-exception-caught
                 logger.warning("Failed to query closing issues (non-blocking): %s", e)
-
-        # Step 5: Clean up repository
-        logger.log(OUTPUT, "Step 5/5: Cleaning up repository...")
-        if not cleanup_repository(project_dir):
-            logger.error("Repository cleanup failed")
-            elapsed = time.time() - start_time
-            _handle_create_pr_failure(
-                stage="cleanup",
-                message="Repository cleanup failed",
-                project_dir=project_dir,
-                update_issue_labels=update_issue_labels,
-                post_issue_comments=post_issue_comments,
-                elapsed_time=elapsed,
-                issue_number=cached_issue_number,
-                pr_url=pr_url,
-                pr_number=pr_number,
-                is_cleanup_failure=True,
-            )
-            reached_terminal_state = True
-            return 1
-
-        # Check if there are changes to commit
-        if not is_working_directory_clean(
-            project_dir, ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
-        ):
-            # Commit cleanup changes
-            logger.log(OUTPUT, "Committing cleanup changes...")
-            commit_result = commit_all_changes(
-                "Clean up pr_info temporary folders", project_dir
-            )
-
-            if not commit_result["success"]:
-                # Ignore "No staged files" - this is expected when cleanup had no effect
-                error_msg = commit_result.get("error") or ""
-                if "No staged files" not in error_msg:
-                    logger.error(
-                        f"Failed to commit cleanup changes: {commit_result['error']}"
-                    )
-                    elapsed = time.time() - start_time
-                    _handle_create_pr_failure(
-                        stage="cleanup",
-                        message=f"Failed to commit cleanup: {commit_result['error']}",
-                        project_dir=project_dir,
-                        update_issue_labels=update_issue_labels,
-                        post_issue_comments=post_issue_comments,
-                        elapsed_time=elapsed,
-                        issue_number=cached_issue_number,
-                        pr_url=pr_url,
-                        pr_number=pr_number,
-                        is_cleanup_failure=True,
-                    )
-                    reached_terminal_state = True
-                    return 1
-                logger.log(
-                    OUTPUT, "No cleanup changes to commit (files were already clean)"
-                )
-            else:
-                logger.log(
-                    OUTPUT, "Cleanup committed: %s", commit_result["commit_hash"]
-                )
-
-                # Push cleanup commit
-                logger.log(OUTPUT, "Pushing cleanup changes...")
-                push_result = git_push(project_dir)
-
-                if not push_result["success"]:
-                    logger.error(
-                        f"Failed to push cleanup changes: {push_result['error']}"
-                    )
-                    elapsed = time.time() - start_time
-                    _handle_create_pr_failure(
-                        stage="cleanup",
-                        message=f"Failed to push cleanup: {push_result['error']}",
-                        project_dir=project_dir,
-                        update_issue_labels=update_issue_labels,
-                        post_issue_comments=post_issue_comments,
-                        elapsed_time=elapsed,
-                        issue_number=cached_issue_number,
-                        pr_url=pr_url,
-                        pr_number=pr_number,
-                        is_cleanup_failure=True,
-                    )
-                    reached_terminal_state = True
-                    return 1
-                logger.log(OUTPUT, "Cleanup changes pushed successfully")
-        else:
-            logger.log(OUTPUT, "No cleanup changes to commit")
 
         # Update GitHub issue label if requested
         if update_issue_labels:
