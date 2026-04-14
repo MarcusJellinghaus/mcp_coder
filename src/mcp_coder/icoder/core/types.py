@@ -38,7 +38,11 @@ class EventEntry:
 
 
 def format_token_count(n: int) -> str:
-    """Format token count with compact suffix (k/M)."""
+    """Format token count with compact suffix (k/M).
+
+    Returns:
+        Formatted string with compact suffix.
+    """
     if n < 1000:
         return str(n)
     if n < 1_000_000:
@@ -73,7 +77,11 @@ class TokenUsage:
         self._ever_updated = True
 
     def display_text(self) -> str:
-        """Build formatted display string for the status bar."""
+        """Build formatted display string for the status bar.
+
+        Returns:
+            Formatted string showing last and total token usage.
+        """
         last = f"\u2193{format_token_count(self.last_input)} \u2191{format_token_count(self.last_output)}"
         total = f"\u2193{format_token_count(self.total_input)} \u2191{format_token_count(self.total_output)}"
         return f"{last} | total: {total}"

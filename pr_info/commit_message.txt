@@ -1,10 +1,4 @@
-docs: add iCoder TUI reference documentation
+fix: add missing Returns sections to docstrings in types.py
 
-Create docs/icoder/icoder.md with:
-- Status line three-zone layout (tokens, version, input hint)
-- Token display format with compact suffixes (k/M)
-- Slash commands reference (/help, /info, /clear, /quit, /exit)
-- Autocomplete usage (Tab, Up/Down, Escape)
-- Busy indicator states (ready, thinking, tool execution)
-- Input behaviour (Enter, backslash escape, Shift+Enter)
-- Backslash parity rule for multi-line input
+Add Returns sections to `format_token_count` and `TokenUsage.display_text`
+docstrings to satisfy ruff DOC201 rule requiring documented return values.
