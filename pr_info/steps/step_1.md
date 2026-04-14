@@ -87,7 +87,7 @@ No changes to return values or data structures. `run_create_pr_workflow()` still
 - **`test_push_failure_is_fatal`**: Add `mock_cleanup` and `mock_clean` mocks (cleanup now runs before push). Mock cleanup returning True and clean returning True.
 - **`test_pr_creation_failure`**: Add `mock_cleanup` and `mock_clean` mocks.
 - **`test_cleanup_failure_includes_pr_link`**: Rename to reflect cleanup now happens before PR. Remove assertions on `pr_url`, `pr_number`, `is_cleanup_failure` — these no longer apply. Remove `mock_create_pr` and `mock_push` mocks (cleanup is step 3, before push/PR). The failure handler call should NOT have `pr_url`/`pr_number`/`is_cleanup_failure` kwargs.
-- **`test_cleanup_commit_failure`**: Remove `mock_create_pr` mock. Remove assertions on `is_cleanup_failure`. Remove `pr_url`/`pr_number` from expected kwargs.
+- **`test_cleanup_commit_failure`**: Remove `mock_create_pr` and `mock_push` mocks. Remove assertions on `is_cleanup_failure`. Remove `pr_url`/`pr_number` from expected kwargs.
 - **`test_cleanup_push_failure`**: **Delete this test entirely** — there is no separate cleanup push anymore. The single push is in step 4 and is already covered by `test_push_failure_is_fatal`.
 
 ## Commit
