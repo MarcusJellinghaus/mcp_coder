@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `adopt mcp-coder-utils: adapt claude_code_cli_streaming to new stream_subprocess API`
 
 ### Step 4: Import-linter contract updates ([step_4.md](./steps/step_4.md))
-- [ ] Implementation: add `mcp_coder_utils_isolation` contract, update `subprocess_isolation`, tighten `structlog_isolation` and `jsonlogger_isolation`
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `adopt mcp-coder-utils: update import-linter contracts for shim boundary`
+- [x] Implementation: add `mcp_coder_utils_isolation` contract, update `subprocess_isolation`, tighten `structlog_isolation` and `jsonlogger_isolation`
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit: `adopt mcp-coder-utils: update import-linter contracts for shim boundary`
 
 ### Step 5: Docs + stale import verification ([step_5.md](./steps/step_5.md))
 - [ ] Implementation: add shared-libraries note to `.claude/CLAUDE.md`, grep for stale imports

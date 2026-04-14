@@ -1,10 +1,11 @@
-adopt mcp-coder-utils: adapt claude_code_cli_streaming to new stream_subprocess API
+adopt mcp-coder-utils: update import-linter contracts for shim boundary
 
-- Remove manual StreamResult() wrapper; stream_subprocess now returns
-  StreamResult directly
-- Pass inactivity_timeout_seconds as explicit kwarg instead of setting
-  timeout_seconds on CommandOptions
-- Remove stale pylint disable=no-member comment on stream.result access
-- Remove unused StreamResult import from production code
-- Update test helper to use _MockStreamResult class instead of generator
-  with return value, matching the new StreamResult iteration contract
+- Add mcp_coder_utils_isolation contract: only the 3 shim files
+  (subprocess_runner, subprocess_streaming, log_utils) may import
+  from mcp_coder_utils
+- Remove shim and deleted test exceptions from subprocess_isolation
+  (shims no longer import subprocess directly; test files were deleted)
+- Remove ignore_imports from structlog_isolation (log_utils shim no
+  longer imports structlog directly)
+- Remove ignore_imports from jsonlogger_isolation (log_utils shim no
+  longer imports pythonjsonlogger directly)

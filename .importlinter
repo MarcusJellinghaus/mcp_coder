@@ -155,6 +155,24 @@ forbidden_modules =
     mcp_coder.cli.commands.prompt
 
 
+# -----------------------------------------------------------------------------
+# Contract: MCP Coder Utils Isolation
+# -----------------------------------------------------------------------------
+# The 'mcp_coder_utils' package should only be imported by the 3 shim files.
+# All other modules must use the local shims as an abstraction layer.
+# -----------------------------------------------------------------------------
+[importlinter:contract:mcp_coder_utils_isolation]
+name = MCP Coder Utils Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    mcp_coder_utils
+ignore_imports =
+    mcp_coder.utils.subprocess_runner -> mcp_coder_utils
+    mcp_coder.utils.subprocess_streaming -> mcp_coder_utils
+    mcp_coder.utils.log_utils -> mcp_coder_utils
+
 # =============================================================================
 # THIRD-PARTY LIBRARY ISOLATION CONTRACTS
 # =============================================================================
@@ -339,8 +357,6 @@ source_modules =
     mcp_coder
 forbidden_modules =
     structlog
-ignore_imports =
-    mcp_coder.utils.log_utils -> structlog
 
 # -----------------------------------------------------------------------------
 # Contract: Python JSON Logger Isolation
@@ -354,8 +370,6 @@ source_modules =
     mcp_coder
 forbidden_modules =
     pythonjsonlogger
-ignore_imports =
-    mcp_coder.utils.log_utils -> pythonjsonlogger
 
 # -----------------------------------------------------------------------------
 # Contract: Black Library Isolation
@@ -520,9 +534,5 @@ source_modules =
 forbidden_modules =
     subprocess
 ignore_imports =
-    mcp_coder.utils.subprocess_runner -> subprocess
-    mcp_coder.utils.subprocess_streaming -> subprocess
-    tests.utils.test_subprocess_runner -> subprocess
-    tests.utils.test_subprocess_runner_real -> subprocess
     mcp_coder.utils.mcp_verification -> subprocess
     tests.utils.test_mcp_verification -> subprocess
