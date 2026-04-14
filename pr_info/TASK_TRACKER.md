@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: Three-Zone Status Bar UI + CSS
-- [ ] Implementation: replace `#input-hint` with `#status-bar` (3 zones), `_update_token_display()`, remove `on_text_area_changed()`, update CSS + snapshot tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: replace `#input-hint` with `#status-bar` (3 zones), `_update_token_display()`, remove `on_text_area_changed()`, update CSS + snapshot tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Documentation — `docs/icoder/icoder.md`
 - [ ] Implementation: create `docs/icoder/icoder.md` with TUI reference (status line, commands, busy indicator, input)

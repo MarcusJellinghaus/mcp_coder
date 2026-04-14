@@ -19,14 +19,26 @@ InputArea {
     color: #d4d4d4;
 }
 
-#input-hint {
+#status-bar {
     height: 1;
     background: #1e1e1e;
     color: #666666;
+}
+
+#status-tokens {
+    width: 1fr;
+}
+
+#status-version {
+    width: auto;
+}
+
+#status-hint {
+    width: 1fr;
     text-align: right;
 }
 
-#input-hint.hidden {
+#status-tokens.hidden {
     display: none;
 }
 

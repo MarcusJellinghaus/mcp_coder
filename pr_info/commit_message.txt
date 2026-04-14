@@ -1,6 +1,14 @@
-feat(icoder): wire TokenUsage into AppCore with usage extraction
+feat(icoder): replace input-hint with three-zone status bar
 
-- Add _token_usage field and token_usage property to AppCore
-- Extract usage data from "done" events inside stream_llm() for-loop
-- Defensive type checks for missing or malformed usage dicts
-- Add 4 tests: initial state, single update, cumulative, no-usage
+Replace single #input-hint Static widget with a Horizontal #status-bar
+containing three zones: #status-tokens (left), #status-version (center),
+and #status-hint (right).
+
+- Add _get_version() to read version from RuntimeInfo or importlib.metadata
+- Add _update_token_display() called on StreamDone to pull token usage
+- Remove on_text_area_changed() — status bar is always visible
+- Update CSS: replace #input-hint rules with #status-bar + children
+- Add #status-tokens.hidden class for providers with no usage data
+- Replace input-hint tests with status bar + token display tests
+- Inject fixed RuntimeInfo in snapshot fixtures for version stability
+- Regenerate all snapshot SVG baselines
