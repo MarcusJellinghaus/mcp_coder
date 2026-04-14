@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: MCPManager — Persistent MCP Client
 > [Detail](./steps/step_1.md) — Create `MCPManager` class in `src/mcp_coder/llm/mcp_manager.py`
 
-- [ ] Implementation: `MCPManager` class + tests in `tests/llm/test_mcp_manager.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `MCPManager` class + tests in `tests/llm/test_mcp_manager.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: `run_agent_stream()` Accepts Optional Pre-built Tools
 > [Detail](./steps/step_2.md) — Add optional `tools` parameter to `run_agent_stream()`
