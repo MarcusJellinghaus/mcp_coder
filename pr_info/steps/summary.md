@@ -38,7 +38,7 @@ The loading happens **once** in the interface layer — providers receive string
 
 ### Claude Provider Change: `llm/providers/claude/claude_code_cli.py`
 
-`build_cli_command()` gains an `append_system_prompt: str | None` parameter (appended via `--append-system-prompt` flag). A separate `system_prompt: str | None` + `system_prompt_replace: bool` parameter pair handles the `replace` mode (uses `--system-prompt` instead). The interface layer handles prompt concatenation and CLAUDE.md redundancy detection before calling the provider.
+`build_cli_command()` gains two mutually exclusive string parameters: `append_system_prompt: str | None` (appended via `--append-system-prompt` flag) and `system_prompt_replace: str | None` (uses `--system-prompt` flag for replace mode). The interface layer handles prompt concatenation and CLAUDE.md redundancy detection before calling the provider.
 
 ### CLI Changes
 

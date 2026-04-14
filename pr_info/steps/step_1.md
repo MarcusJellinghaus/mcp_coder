@@ -16,6 +16,7 @@
 
 **Modified files:**
 - `src/mcp_coder/utils/pyproject_config.py` — add `get_prompts_config()`
+- `.importlinter` — add `mcp_coder.prompts` to layered architecture contract; add `tests.prompts` to test independence contract
 
 ## WHAT
 
@@ -53,6 +54,18 @@ def is_claude_md(project_prompt_path: Path | None, project_dir: str | None) -> b
     """Check if project_prompt points to any known CLAUDE.md location.
     Checks root-level, .claude/ dir, and parent directories up to filesystem root."""
 ```
+
+### `.importlinter` — layered architecture update
+
+The new `mcp_coder.prompts` module must be registered in the layered architecture contract. It sits between the `llm` layer and the `utils` layer because `llm` imports from `prompts` (interface.py calls `load_prompts`), and `prompts` imports from `utils` (uses `data_files.py` and `pyproject_config.py`). Add it on a new line between `mcp_coder.llm | mcp_coder.prompt_manager` and `mcp_coder.utils | mcp_coder.mcp_tools_py`:
+
+```
+    mcp_coder.llm | mcp_coder.prompt_manager
+    mcp_coder.prompts
+    mcp_coder.utils | mcp_coder.mcp_tools_py
+```
+
+Also add `tests.prompts` to the `test_module_independence` contract's module list so the new test package is checked for cross-imports.
 
 ### `system-prompt.md`
 

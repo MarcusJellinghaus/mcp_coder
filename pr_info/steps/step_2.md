@@ -76,7 +76,7 @@ if provider == "langchain":
     response = ask_langchain(..., system_prompt=system_prompt, project_prompt=project_prompt)
 elif provider == "claude":
     # Build append_system_prompt for Claude CLI
-    append_system_prompt = _build_claude_prompt(system_prompt, project_prompt, prompt_config, project_dir)
+    append_system_prompt = _build_claude_system_prompts(system_prompt, project_prompt, prompt_config, project_dir)
     response = ask_claude_code_cli(..., append_system_prompt=append_system_prompt)
 ```
 
