@@ -42,9 +42,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `adopt mcp-coder-utils: update import-linter contracts for shim boundary`
 
 ### Step 5: Docs + stale import verification ([step_5.md](./steps/step_5.md))
-- [ ] Implementation: add shared-libraries note to `.claude/CLAUDE.md`, grep for stale imports
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `adopt mcp-coder-utils: add shared-libraries note to CLAUDE.md`
+- [x] Implementation: add shared-libraries note to `.claude/CLAUDE.md`, grep for stale imports
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit: `adopt mcp-coder-utils: add shared-libraries note to CLAUDE.md`
 
 ## Pull Request
 - [ ] All steps committed and pushed

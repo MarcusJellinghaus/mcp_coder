@@ -94,6 +94,10 @@ mcp-coder gh-tool set-status <label>
 
 Never conflate the two. Use `--execution-dir` when workspace and project differ.
 
+## Shared Libraries
+
+`subprocess_runner`, `subprocess_streaming`, and `log_utils` in `src/mcp_coder/utils/` are thin shims over `mcp-coder-utils`. Always import through the local shims (`from mcp_coder.utils.<module> import ...`), not from `mcp_coder_utils` directly. Enforced by import-linter (`mcp_coder_utils_isolation` contract).
+
 ## Writing style
 
 Be concise. If one line works, don't use three.
