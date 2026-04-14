@@ -385,12 +385,16 @@ class TestWorkflowMainFunction:
 
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
     @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
+    @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.git_push")
     @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
     def test_main_workflow_pr_creation_failure(
         self,
         mock_create_pr: MagicMock,
         mock_git_push: MagicMock,
+        mock_clean: MagicMock,
+        mock_cleanup: MagicMock,
         mock_generate_summary: MagicMock,
         mock_check_prereqs: MagicMock,
     ) -> None:
@@ -398,6 +402,8 @@ class TestWorkflowMainFunction:
         # Setup mocks for successful prerequisites but failed PR creation
         mock_check_prereqs.return_value = True
         mock_generate_summary.return_value = ("Test PR", "Test body")
+        mock_cleanup.return_value = True
+        mock_clean.return_value = True  # Clean directory, no commit needed
         mock_git_push.return_value = {"success": True}  # Push succeeds
         mock_create_pr.return_value = None  # PR creation fails
 

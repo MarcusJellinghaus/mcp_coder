@@ -1,22 +1,6 @@
-feat(create-pr): reorder cleanup before push and PR creation (#759)
+fix: add missing mocks for cleanup_repository and is_working_directory_clean in test
 
-Reorder the steps in run_create_pr_workflow() so that repository cleanup
-happens before pushing and PR creation. This ensures the PR diff is
-clean from the start and eliminates the need for a second push.
-
-New step order:
-  1. Check prerequisites (unchanged)
-  2. Generate PR summary (unchanged)
-  3. Clean up repository (moved from step 5)
-  4. Push commits (single push covers feature + cleanup)
-  5. Create pull request (moved from step 4)
-
-Changes:
-- Move cleanup_repository() and commit logic before git_push()
-- Remove second git_push() call (cleanup push no longer needed)
-- Update step numbering in log messages
-- Change cleanup commit message to "chore: clean up build artifacts"
-- Remove pr_url/pr_number/is_cleanup_failure from cleanup failure handler
-  calls (PR doesn't exist yet at cleanup time)
-- Update test expectations for new step order
-- Delete test_cleanup_push_failure (no separate cleanup push anymore)
+After the workflow step reorder (#759), cleanup now runs between summary
+generation and push. The test_main_workflow_pr_creation_failure test was
+missing mocks for these two functions, causing is_working_directory_clean
+to hit the real git check on the fake /test/project path.
