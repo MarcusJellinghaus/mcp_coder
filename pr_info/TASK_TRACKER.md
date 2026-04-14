@@ -38,9 +38,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 3A: Thread `tools` Through `_ask_agent_stream()` and `ask_langchain_stream()`
 > [Detail](./steps/step_3.md) — Add `tools` param to langchain provider functions
 
-- [ ] Implementation: modify `langchain/__init__.py` + tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: modify `langchain/__init__.py` + tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3B: Thread `tools` Through `prompt_llm_stream()`
 > [Detail](./steps/step_3.md) — Add `tools` param to LLM interface

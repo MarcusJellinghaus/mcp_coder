@@ -1,10 +1,13 @@
-feat(langchain): run_agent_stream accepts pre-built tools (#741)
+feat(langchain): thread tools param through _ask_agent_stream and ask_langchain_stream (#741)
 
-Add optional `tools` parameter to `run_agent_stream()`. When pre-built
-LangChain tools are provided (e.g. from MCPManager), the function skips
-MultiServerMCPClient creation and uses the provided tools directly.
-When `tools=None` (default), existing behavior is unchanged.
+Add optional `tools: list[Any] | None = None` parameter to both
+`_ask_agent_stream()` and `ask_langchain_stream()` in the langchain
+provider __init__.py. Each function passes it through to the next layer
+(`run_agent_stream`), enabling pre-built MCP tools from MCPManager to
+bypass MultiServerMCPClient creation.
 
-Add tests verifying both paths:
-- Pre-built tools bypass MCP client instantiation
-- Default path still creates MCP client as before
+- `_ask_agent_stream()` gains `tools` param, forwards to `run_agent_stream()`
+- `ask_langchain_stream()` gains `tools` param, forwards to `_ask_agent_stream()`
+- Text mode path unaffected (tools param ignored when no mcp_config)
+- Tests: verify tools forwarded to run_agent_stream, tools=None by default,
+  text mode works with tools param present

@@ -424,6 +424,7 @@ def _ask_agent_stream(
     execution_dir: str | None = None,
     env_vars: dict[str, str] | None = None,
     timeout: int = 30,
+    tools: list[Any] | None = None,
 ) -> Iterator[StreamEvent]:
     """Stream agent events via thread+queue bridge from async to sync.
 
@@ -438,6 +439,8 @@ def _ask_agent_stream(
         execution_dir: Optional working directory for agent execution.
         env_vars: Optional environment variables for agent subprocesses.
         timeout: Request timeout in seconds.
+        tools: Optional pre-built LangChain tools (e.g. from MCPManager).
+            When provided, skips MultiServerMCPClient creation.
 
     Yields:
         StreamEvent dicts from the agent.
@@ -467,6 +470,7 @@ def _ask_agent_stream(
                 cancel_event=cancel,
                 execution_dir=execution_dir,
                 env_vars=env_vars,
+                tools=tools,
             ):
                 q.put(event)
         except Exception as exc:  # pylint: disable=broad-except
@@ -520,6 +524,7 @@ def ask_langchain_stream(
     mcp_config: str | None = None,
     execution_dir: str | None = None,
     env_vars: dict[str, str] | None = None,
+    tools: list[Any] | None = None,
 ) -> Iterator[StreamEvent]:
     """Stream LangChain responses as events.
 
@@ -555,6 +560,7 @@ def ask_langchain_stream(
             execution_dir=execution_dir,
             env_vars=env_vars,
             timeout=timeout,
+            tools=tools,
         )
         return
 
