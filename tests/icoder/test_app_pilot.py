@@ -567,42 +567,77 @@ async def test_on_mount_no_connection_status_falls_back(
         assert "\u2717" not in text
 
 
-# --- Input hint widget tests ---
+# --- Status bar widget tests ---
 
 
-async def test_hint_visible_when_input_empty(icoder_app: ICoderApp) -> None:
-    """Hint widget is visible when input area is empty."""
+async def test_status_bar_visible_on_startup(icoder_app: ICoderApp) -> None:
+    """Status bar is visible with all three zones on startup."""
     async with icoder_app.run_test() as pilot:
         await pilot.pause()
-        hint = icoder_app.query_one("#input-hint", Static)
-        assert not hint.has_class("hidden")
+        tokens = icoder_app.query_one("#status-tokens", Static)
+        version = icoder_app.query_one("#status-version", Static)
+        hint = icoder_app.query_one("#status-hint", Static)
+        assert not tokens.has_class("hidden")
+        assert version is not None
+        assert hint is not None
 
 
-async def test_hint_hidden_when_input_has_text(icoder_app: ICoderApp) -> None:
-    """Hint widget is hidden when input area has text."""
+async def test_status_bar_always_visible_when_typing(icoder_app: ICoderApp) -> None:
+    """Status bar stays visible when input area has text (no hide-on-type)."""
     async with icoder_app.run_test() as pilot:
         input_area = icoder_app.query_one(InputArea)
         input_area.focus()
         await pilot.pause()
         input_area.insert("some text")
         await pilot.pause()
-        hint = icoder_app.query_one("#input-hint", Static)
-        assert hint.has_class("hidden")
+        hint = icoder_app.query_one("#status-hint", Static)
+        version = icoder_app.query_one("#status-version", Static)
+        assert hint is not None
+        assert version is not None
 
 
-async def test_hint_reappears_after_submit(icoder_app: ICoderApp) -> None:
-    """Hint widget reappears after submitting text (input becomes empty)."""
-    async with icoder_app.run_test() as pilot:
-        input_area = icoder_app.query_one(InputArea)
-        input_area.focus()
-        await pilot.pause()
-        input_area.insert("hello")
-        await pilot.pause()
-        hint = icoder_app.query_one("#input-hint", Static)
-        assert hint.has_class("hidden")
-        await pilot.press("enter")
-        await pilot.pause()
-        assert not hint.has_class("hidden")
+async def test_token_display_updates_after_stream_with_usage(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """After stream with usage data, #status-tokens shows formatted counts."""
+    app = make_icoder_app(
+        responses=[
+            [
+                {"type": "text_delta", "text": "hello"},
+                {
+                    "type": "done",
+                    "usage": {"input_tokens": 1200, "output_tokens": 800},
+                },
+            ]
+        ]
+    )
+    async with app.run_test() as pilot:
+        await _submit_and_wait(app, pilot)
+        token_widget = app.query_one("#status-tokens", Static)
+        # Use update() content via _content (internal) or render to string
+        rendered = token_widget.render()
+        text = str(rendered)
+        assert "\u21931.2k" in text
+        assert "\u2191800" in text
+        assert not token_widget.has_class("hidden")
+
+
+async def test_token_display_hidden_after_stream_without_usage(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """After stream without usage data, #status-tokens is hidden."""
+    app = make_icoder_app(
+        responses=[
+            [
+                {"type": "text_delta", "text": "hello"},
+                {"type": "done"},
+            ]
+        ]
+    )
+    async with app.run_test() as pilot:
+        await _submit_and_wait(app, pilot)
+        token_widget = app.query_one("#status-tokens", Static)
+        assert token_widget.has_class("hidden")
 
 
 # --- BusyIndicator integration tests ---

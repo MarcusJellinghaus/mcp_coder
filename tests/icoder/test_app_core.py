@@ -8,6 +8,7 @@ import pytest
 
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.core.event_log import EventLog
+from mcp_coder.icoder.core.types import TokenUsage
 from mcp_coder.icoder.env_setup import RuntimeInfo
 from mcp_coder.icoder.services.llm_service import FakeLLMService
 from mcp_coder.utils.mcp_verification import MCPServerInfo
@@ -191,6 +192,75 @@ def test_stream_llm_stores_response(
     assert prompt == "hello"
     assert isinstance(response_data, dict)
     assert response_data["provider"] == "claude"
+
+
+def test_token_usage_initial_state(app_core: AppCore) -> None:
+    """token_usage property exists and starts at zero."""
+    usage = app_core.token_usage
+    assert isinstance(usage, TokenUsage)
+    assert usage.last_input == 0
+    assert usage.last_output == 0
+    assert usage.total_input == 0
+    assert usage.total_output == 0
+    assert usage.has_data is False
+
+
+def test_stream_llm_updates_token_usage(event_log: EventLog) -> None:
+    """stream_llm() extracts usage from done event and updates token_usage."""
+    fake_llm = FakeLLMService(
+        responses=[
+            [
+                {"type": "text_delta", "text": "hi"},
+                {
+                    "type": "done",
+                    "usage": {"input_tokens": 100, "output_tokens": 50},
+                },
+            ]
+        ]
+    )
+    core = AppCore(llm_service=fake_llm, event_log=event_log)
+    list(core.stream_llm("hello"))
+    assert core.token_usage.last_input == 100
+    assert core.token_usage.last_output == 50
+    assert core.token_usage.total_input == 100
+    assert core.token_usage.total_output == 50
+    assert core.token_usage.has_data is True
+
+
+def test_stream_llm_cumulative_tokens(event_log: EventLog) -> None:
+    """Two streams with usage data accumulate totals."""
+    fake_llm = FakeLLMService(
+        responses=[
+            [
+                {"type": "text_delta", "text": "a"},
+                {
+                    "type": "done",
+                    "usage": {"input_tokens": 100, "output_tokens": 50},
+                },
+            ],
+            [
+                {"type": "text_delta", "text": "b"},
+                {
+                    "type": "done",
+                    "usage": {"input_tokens": 200, "output_tokens": 80},
+                },
+            ],
+        ]
+    )
+    core = AppCore(llm_service=fake_llm, event_log=event_log)
+    list(core.stream_llm("q1"))
+    list(core.stream_llm("q2"))
+    assert core.token_usage.last_input == 200
+    assert core.token_usage.last_output == 80
+    assert core.token_usage.total_input == 300
+    assert core.token_usage.total_output == 130
+
+
+def test_stream_llm_no_usage_data(app_core: AppCore) -> None:
+    """Stream with done event but no usage key leaves token_usage unchanged."""
+    list(app_core.stream_llm("hello"))
+    assert app_core.token_usage.has_data is False
+    assert app_core.token_usage.total_input == 0
 
 
 def test_handle_input_returns_llm_text(app_core: AppCore) -> None:

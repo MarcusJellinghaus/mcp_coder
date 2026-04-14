@@ -21,6 +21,7 @@ import pytest
 
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.core.event_log import EventLog
+from mcp_coder.icoder.env_setup import RuntimeInfo
 from mcp_coder.icoder.services.llm_service import FakeLLMService
 from mcp_coder.icoder.ui.app import ICoderApp
 from mcp_coder.icoder.ui.widgets.input_area import InputArea
@@ -34,12 +35,30 @@ pytestmark = [
 ]
 
 
+def _test_runtime_info() -> RuntimeInfo:
+    """Return RuntimeInfo with fixed version for stable snapshots."""
+    return RuntimeInfo(
+        mcp_coder_version="0.0.0-test",
+        python_version="3.12.0",
+        claude_code_version="0.0.0",
+        tool_env_path="/test/tool",
+        project_venv_path="/test/.venv",
+        project_dir="/test/project",
+        env_vars={},
+        mcp_servers=[],
+    )
+
+
 @pytest.fixture()
 def icoder_app(tmp_path: Path) -> Iterator[ICoderApp]:
     """Create ICoderApp with FakeLLM; uses context manager for EventLog."""
     fake_llm = FakeLLMService()
     with EventLog(logs_dir=tmp_path) as event_log:
-        app_core = AppCore(llm_service=fake_llm, event_log=event_log)
+        app_core = AppCore(
+            llm_service=fake_llm,
+            event_log=event_log,
+            runtime_info=_test_runtime_info(),
+        )
         yield ICoderApp(app_core)
 
 
@@ -167,7 +186,11 @@ def test_snapshot_multi_chunk_streaming(snap_compare: Any, tmp_path: Path) -> No
     ]
     fake_llm = FakeLLMService(responses=responses)
     with EventLog(logs_dir=tmp_path) as event_log:
-        app_core = AppCore(llm_service=fake_llm, event_log=event_log)
+        app_core = AppCore(
+            llm_service=fake_llm,
+            event_log=event_log,
+            runtime_info=_test_runtime_info(),
+        )
         app = ICoderApp(app_core)
 
         async def send_message(pilot: Any) -> None:

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import importlib.metadata
 import threading
 from typing import Any
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
+from textual.containers import Horizontal
 from textual.widgets import Static
 
 from mcp_coder.icoder.core.app_core import AppCore
@@ -85,16 +87,11 @@ class ICoderApp(App[None]):
             registry=self._core.registry,
             event_log=self._core.event_log,
         )
-        yield Static(r"\ + Enter = newline", id="input-hint")
-
-    def on_text_area_changed(self) -> None:
-        """Toggle input hint visibility based on whether input is empty."""
-        hint = self.query_one("#input-hint", Static)
-        input_area = self.query_one(InputArea)
-        if input_area.text:
-            hint.add_class("hidden")
-        else:
-            hint.remove_class("hidden")
+        version = self._get_version()
+        with Horizontal(id="status-bar"):
+            yield Static("↓0 ↑0 | total: ↓0 ↑0", id="status-tokens")
+            yield Static(f"v{version}", id="status-version")
+            yield Static(r"\ + Enter = newline", id="status-hint")
 
     def on_mount(self) -> None:
         """Display startup info and focus input area."""
@@ -211,6 +208,7 @@ class ICoderApp(App[None]):
 
         if isinstance(action, StreamDone):
             self.query_one(BusyIndicator).show_ready()
+            self._update_token_display()
             self._append_blank_line()
         elif isinstance(action, ToolStart):
             self.query_one(BusyIndicator).show_busy(action.display_name)
@@ -251,3 +249,22 @@ class ICoderApp(App[None]):
             message: Error text to display.
         """
         self.query_one(OutputLog).append_text(f"Error: {message}")
+
+    def _get_version(self) -> str:
+        """Return mcp-coder version from runtime info or package metadata."""
+        if self._core.runtime_info:
+            return self._core.runtime_info.mcp_coder_version
+        try:
+            return importlib.metadata.version("mcp-coder")
+        except importlib.metadata.PackageNotFoundError:
+            return "unknown"
+
+    def _update_token_display(self) -> None:
+        """Update status bar token zone from app_core.token_usage."""
+        usage = self._core.token_usage
+        token_widget = self.query_one("#status-tokens", Static)
+        if usage.has_data:
+            token_widget.update(usage.display_text())
+            token_widget.remove_class("hidden")
+        else:
+            token_widget.add_class("hidden")

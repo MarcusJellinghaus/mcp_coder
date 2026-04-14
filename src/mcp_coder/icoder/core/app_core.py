@@ -9,7 +9,7 @@ from mcp_coder.icoder.core.command_registry import (
     create_default_registry,
 )
 from mcp_coder.icoder.core.event_log import EventLog
-from mcp_coder.icoder.core.types import Response
+from mcp_coder.icoder.core.types import Response, TokenUsage
 from mcp_coder.icoder.env_setup import RuntimeInfo
 from mcp_coder.icoder.services.llm_service import LLMService
 from mcp_coder.llm.storage import store_session
@@ -38,6 +38,7 @@ class AppCore:
         self._event_log = event_log
         self._registry = registry if registry is not None else create_default_registry()
         self._runtime_info = runtime_info
+        self._token_usage = TokenUsage()
 
     def handle_input(self, text: str) -> Response:
         """Route user input to commands or flag for LLM streaming.
@@ -85,6 +86,13 @@ class AppCore:
 
         for event in self._llm_service.stream(text):
             assembler.add(event)
+            if event.get("type") == "done":
+                usage = event.get("usage", {})
+                if isinstance(usage, dict):
+                    input_tokens = usage.get("input_tokens", 0)
+                    output_tokens = usage.get("output_tokens", 0)
+                    if isinstance(input_tokens, int) and isinstance(output_tokens, int):
+                        self._token_usage.update(input_tokens, output_tokens)
             yield event
 
         self._event_log.emit("llm_request_end")
@@ -107,6 +115,11 @@ class AppCore:
     def runtime_info(self) -> RuntimeInfo | None:
         """Runtime environment info, if provided."""
         return self._runtime_info
+
+    @property
+    def token_usage(self) -> TokenUsage:
+        """Cumulative token usage for this session."""
+        return self._token_usage
 
     @property
     def session_id(self) -> str | None:
