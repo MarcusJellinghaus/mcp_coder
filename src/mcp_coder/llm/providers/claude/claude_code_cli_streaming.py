@@ -11,7 +11,7 @@ import os
 from collections.abc import Iterator
 
 from ....utils.subprocess_runner import CommandOptions, CommandResult
-from ....utils.subprocess_streaming import StreamResult, stream_subprocess
+from ....utils.subprocess_streaming import stream_subprocess
 from ...types import StreamEvent
 from .claude_code_cli import (
     StreamMessage,
@@ -107,14 +107,13 @@ def ask_claude_code_cli_stream(
     stream_file = get_stream_log_path(logs_dir, cwd, branch_name)
     input_data = format_stream_json_input(question)
     options = CommandOptions(
-        timeout_seconds=timeout,
         input_data=input_data,
         env=env_vars,
         cwd=cwd,
         env_remove=["CLAUDECODE"],  # Allow nested Claude CLI invocations
     )
 
-    stream = StreamResult(stream_subprocess(command, options))
+    stream = stream_subprocess(command, options, inactivity_timeout_seconds=timeout)
     try:
         log_fh = open(stream_file, "w", encoding="utf-8")  # noqa: SIM115
     except OSError:
@@ -131,7 +130,6 @@ def ask_claude_code_cli_stream(
             if msg:
                 yield from _map_stream_message_to_event(msg)
 
-    # pylint: disable=no-member  # StreamResult.result is typed CommandResult
     cmd_result: CommandResult = stream.result
     if cmd_result.timed_out:
         yield {
