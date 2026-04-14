@@ -18,9 +18,9 @@ from .claude_code_cli import (
     _find_claude_executable,
     build_cli_command,
     format_stream_json_input,
-    get_stream_log_path,
     parse_stream_json_line,
 )
+from .claude_code_cli_log_paths import get_stream_log_path
 
 logger = logging.getLogger(__name__)
 

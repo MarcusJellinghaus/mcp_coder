@@ -1,5 +1,13 @@
-fix: resolve W1404 implicit-str-concat warnings in test_interface.py
+refactor: split oversized files to fix CI file-size check
 
-Replace implicit string concatenation with explicit `+` operator at
-three locations in tests/llm/test_interface.py to satisfy pylint W1404
-(implicit-str-concat) checks.
+Extract functions and test classes from 3 files exceeding the 750-line
+limit into new focused modules:
+
+- claude_code_cli.py (768→660): Move sanitize_branch_identifier and
+  get_stream_log_path to claude_code_cli_log_paths.py
+- test_langchain_provider.py (943→643): Move system message and
+  truststore tests to test_langchain_provider_system_messages.py
+- test_langchain_agent.py (771→669): Move system message and timeout
+  agent tests to test_langchain_agent_system_messages.py
+
+All imports updated. No behavioral changes.
