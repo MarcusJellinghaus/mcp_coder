@@ -376,3 +376,111 @@ class TestRunAgentStream:
         assert text_deltas[0]["text"] == "first"
         done_events = [e for e in result if e["type"] == "done"]
         assert len(done_events) == 1
+
+    async def test_run_agent_stream_with_prebuilt_tools(self) -> None:
+        """When tools are provided, MultiServerMCPClient is NOT instantiated."""
+        mock_tool = MagicMock()
+        mock_tool.name = "prebuilt_tool"
+
+        mock_agent = MagicMock()
+        chunk = MagicMock()
+        chunk.content = "response"
+        mock_agent.astream_events.return_value = _async_events(
+            [
+                {
+                    "event": "on_chat_model_stream",
+                    "data": {"chunk": chunk},
+                    "run_id": "r1",
+                    "name": "model",
+                },
+            ]
+        )
+
+        mock_client_cls = MagicMock()
+        mock_create_agent = MagicMock(return_value=mock_agent)
+
+        with (
+            patch(
+                f"{_AGENT_MOD_PATH}._load_mcp_server_config",
+                return_value={},
+            ) as mock_load_config,
+            patch(
+                "langchain_mcp_adapters.client.MultiServerMCPClient",
+                mock_client_cls,
+            ),
+            patch(
+                "langgraph.prebuilt.create_react_agent",
+                mock_create_agent,
+            ),
+            patch(f"{_STORAGE_MOD_PATH}.store_langchain_history"),
+        ):
+            from mcp_coder.llm.providers.langchain.agent import run_agent_stream
+
+            result = [
+                e
+                async for e in run_agent_stream(
+                    question="Hi",
+                    chat_model=MagicMock(),
+                    messages=[],
+                    mcp_config_path="/tmp/mcp.json",
+                    session_id="s1",
+                    tools=[mock_tool],
+                )
+            ]
+
+        # MultiServerMCPClient should NOT be instantiated
+        mock_client_cls.assert_not_called()
+        # _load_mcp_server_config should NOT be called
+        mock_load_config.assert_not_called()
+        # create_react_agent should be called with the prebuilt tools
+        mock_create_agent.assert_called_once()
+        _, call_kwargs = mock_create_agent.call_args
+        # Second positional arg is the tools list
+        call_args_positional = mock_create_agent.call_args[0]
+        assert call_args_positional[1] == [mock_tool]
+        # Should still produce events
+        text_deltas = [e for e in result if e["type"] == "text_delta"]
+        assert len(text_deltas) == 1
+        assert text_deltas[0]["text"] == "response"
+
+    async def test_run_agent_stream_without_tools_uses_client(self) -> None:
+        """When tools=None (default), MultiServerMCPClient IS instantiated."""
+        events: list[dict[str, object]] = []
+
+        mock_client_cls = MagicMock()
+        mock_client_cls.return_value.connections = {}
+
+        with (
+            patch(
+                f"{_AGENT_MOD_PATH}._load_mcp_server_config",
+                return_value={},
+            ) as mock_load_config,
+            patch(
+                "langchain_mcp_adapters.client.MultiServerMCPClient",
+                mock_client_cls,
+            ),
+            patch(
+                "langgraph.prebuilt.create_react_agent",
+                return_value=MagicMock(
+                    astream_events=MagicMock(return_value=_async_events(events))
+                ),
+            ),
+            patch(f"{_STORAGE_MOD_PATH}.store_langchain_history"),
+        ):
+            from mcp_coder.llm.providers.langchain.agent import run_agent_stream
+
+            _ = [
+                e
+                async for e in run_agent_stream(
+                    question="Hi",
+                    chat_model=MagicMock(),
+                    messages=[],
+                    mcp_config_path="/tmp/mcp.json",
+                    session_id="s1",
+                )
+            ]
+
+        # MultiServerMCPClient SHOULD be instantiated
+        mock_client_cls.assert_called_once()
+        # _load_mcp_server_config SHOULD be called
+        mock_load_config.assert_called_once()

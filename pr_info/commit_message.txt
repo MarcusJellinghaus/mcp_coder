@@ -1,11 +1,10 @@
-feat(llm): add MCPManager for persistent MCP connections (#741)
+feat(langchain): run_agent_stream accepts pre-built tools (#741)
 
-Add MCPManager class that owns persistent MCP server connections for
-the app's lifetime. Uses a dedicated daemon thread with its own asyncio
-event loop. Connects lazily on first tools() call and caches results.
-Recreates the client on failure for robustness.
+Add optional `tools` parameter to `run_agent_stream()`. When pre-built
+LangChain tools are provided (e.g. from MCPManager), the function skips
+MultiServerMCPClient creation and uses the provided tools directly.
+When `tools=None` (default), existing behavior is unchanged.
 
-New files:
-- src/mcp_coder/llm/mcp_manager.py: MCPManager class + MCPServerStatus
-- tests/llm/test_mcp_manager.py: 8 unit tests covering tools caching,
-  lazy connect, status, close, error recovery, and empty config
+Add tests verifying both paths:
+- Pre-built tools bypass MCP client instantiation
+- Default path still creates MCP client as before

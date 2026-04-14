@@ -31,9 +31,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 2: `run_agent_stream()` Accepts Optional Pre-built Tools
 > [Detail](./steps/step_2.md) — Add optional `tools` parameter to `run_agent_stream()`
 
-- [ ] Implementation: modify `agent.py` + tests in `test_langchain_agent_streaming.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: modify `agent.py` + tests in `test_langchain_agent_streaming.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3A: Thread `tools` Through `_ask_agent_stream()` and `ask_langchain_stream()`
 > [Detail](./steps/step_3.md) — Add `tools` param to langchain provider functions
