@@ -226,6 +226,52 @@ def test_real_llm_service_custom_timeout(
     assert captured_kwargs["timeout"] == 600
 
 
+def test_real_llm_service_passes_tools_from_mcp_manager(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RealLLMService passes tools from mcp_manager to prompt_llm_stream."""
+    captured_kwargs: dict[str, object] = {}
+    fake_events: list[StreamEvent] = [{"type": "done"}]
+    fake_tools = ["tool_a", "tool_b"]
+
+    def mock_stream(question: str, **kwargs: object) -> Iterator[StreamEvent]:
+        captured_kwargs.update(kwargs)
+        yield from fake_events
+
+    monkeypatch.setattr(
+        "mcp_coder.icoder.services.llm_service.prompt_llm_stream",
+        mock_stream,
+    )
+
+    class FakeMCPManager:
+        def tools(self) -> list[str]:
+            return fake_tools
+
+    service = RealLLMService(provider="langchain", mcp_manager=FakeMCPManager())  # type: ignore[arg-type]
+    list(service.stream("hello"))
+    assert captured_kwargs["tools"] is fake_tools
+
+
+def test_real_llm_service_no_manager_passes_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RealLLMService passes tools=None when no mcp_manager is set."""
+    captured_kwargs: dict[str, object] = {}
+    fake_events: list[StreamEvent] = [{"type": "done"}]
+
+    def mock_stream(question: str, **kwargs: object) -> Iterator[StreamEvent]:
+        captured_kwargs.update(kwargs)
+        yield from fake_events
+
+    monkeypatch.setattr(
+        "mcp_coder.icoder.services.llm_service.prompt_llm_stream",
+        mock_stream,
+    )
+    service = RealLLMService(provider="langchain")
+    list(service.stream("hello"))
+    assert captured_kwargs["tools"] is None
+
+
 def test_fake_falls_back_to_default_after_canned_exhausted() -> None:
     """FakeLLMService falls back to default after canned responses are exhausted."""
     responses: list[list[StreamEvent]] = [

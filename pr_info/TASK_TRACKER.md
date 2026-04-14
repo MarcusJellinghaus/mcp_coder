@@ -52,9 +52,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 3C: Add `mcp_manager` to `RealLLMService`
 > [Detail](./steps/step_3.md) — Add `mcp_manager` parameter to `RealLLMService`
 
-- [ ] Implementation: modify `llm_service.py` + tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: modify `llm_service.py` + tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: `/info` Command
 > [Detail](./steps/step_4.md) — Create `/info` slash command in `src/mcp_coder/icoder/core/commands/info.py`

@@ -1,15 +1,10 @@
-feat(llm): thread tools param through prompt_llm_stream (#741)
+feat(llm): add mcp_manager to RealLLMService (#741)
 
-Add optional `tools: list[Any] | None` parameter to `prompt_llm_stream()`
-in the high-level LLM interface. The parameter is forwarded to
-`ask_langchain_stream()` on the langchain path; the claude path ignores it.
+Add optional `mcp_manager` parameter to `RealLLMService` so persistent
+MCP tools are threaded through to `prompt_llm_stream()`.
 
-This is part of threading persistent MCP tools through the provider stack
-so that `RealLLMService` can pass pre-built tools from `MCPManager`.
-
-Changes:
-- src/mcp_coder/llm/interface.py: add `tools` param to `prompt_llm_stream()`,
-  forward to `ask_langchain_stream()`
-- tests/llm/test_interface.py: add tests for tools forwarding (langchain),
-  tools=None default, and claude path ignoring tools; update existing
-  langchain stream routing test for new kwarg
+- Import `MCPManager` under `TYPE_CHECKING` to avoid circular imports
+- In `stream()`, resolve tools from mcp_manager when present, pass as
+  `tools=` kwarg to `prompt_llm_stream()`
+- When no mcp_manager is set, `tools=None` preserves existing behavior
+- Add two tests: with manager (tools forwarded) and without (None)
