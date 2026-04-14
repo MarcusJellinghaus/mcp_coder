@@ -1,6 +1,10 @@
 """Tests for prompt_loader module."""
 
+import logging
 from pathlib import Path
+from unittest.mock import patch
+
+import pytest
 
 from mcp_coder.prompts.prompt_loader import (
     get_project_prompt_path,
@@ -175,3 +179,25 @@ def test_is_claude_md_none_inputs() -> None:
     assert is_claude_md(None, None) is False
     assert is_claude_md(None, "/some/path") is False
     assert is_claude_md(Path("/some/file"), None) is False
+
+
+def test_is_claude_md_oserror_returns_false() -> None:
+    """OSError during resolve() returns False instead of raising."""
+    bad_path = Path("/some/broken/symlink")
+    with patch.object(Path, "resolve", side_effect=OSError("broken symlink")):
+        assert is_claude_md(bad_path, "/some/project") is False
+
+
+def test_get_prompts_config_warns_on_invalid_mode(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Invalid claude-system-prompt-mode logs a warning."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text(
+        '[tool.mcp-coder.prompts]\nclaude-system-prompt-mode = "prepend"\n',
+        encoding="utf-8",
+    )
+    with caplog.at_level(logging.WARNING, logger="mcp_coder.utils.pyproject_config"):
+        config = get_prompts_config(tmp_path)
+    assert config.claude_system_prompt_mode == "prepend"
+    assert "Invalid claude-system-prompt-mode 'prepend'" in caplog.text

@@ -5,9 +5,14 @@ For user-level configuration (API tokens, Jenkins, etc.), see user_config.py
 which reads from config.toml.
 """
 
+import logging
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
+
+_VALID_PROMPT_MODES = {"append", "replace"}
 
 
 @dataclass(frozen=True)
@@ -55,10 +60,17 @@ def get_prompts_config(project_dir: Path) -> PromptsConfig:
         )
 
     prompts = data.get("tool", {}).get("mcp-coder", {}).get("prompts", {})
+    mode = prompts.get("claude-system-prompt-mode", "append")
+    if mode not in _VALID_PROMPT_MODES:
+        logger.warning(
+            "Invalid claude-system-prompt-mode '%s' in pyproject.toml; "
+            "expected 'append' or 'replace'",
+            mode,
+        )
     return PromptsConfig(
         system_prompt=prompts.get("system-prompt"),
         project_prompt=prompts.get("project-prompt"),
-        claude_system_prompt_mode=prompts.get("claude-system-prompt-mode", "append"),
+        claude_system_prompt_mode=mode,
     )
 
 

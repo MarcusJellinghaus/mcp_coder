@@ -142,22 +142,25 @@ def is_claude_md(project_prompt_path: Path | None, project_dir: str | None) -> b
     if project_prompt_path is None or project_dir is None:
         return False
 
-    resolved = project_prompt_path.resolve()
-    project = Path(project_dir).resolve()
+    try:
+        resolved = project_prompt_path.resolve()
+        project = Path(project_dir).resolve()
 
-    # Check current project dir and all parent directories
-    current = project
-    while True:
-        # Root-level CLAUDE.md
-        if resolved == (current / "CLAUDE.md").resolve():
-            return True
-        # .claude/CLAUDE.md
-        if resolved == (current / ".claude" / "CLAUDE.md").resolve():
-            return True
+        # Check current project dir and all parent directories
+        current = project
+        while True:
+            # Root-level CLAUDE.md
+            if resolved == (current / "CLAUDE.md").resolve():
+                return True
+            # .claude/CLAUDE.md
+            if resolved == (current / ".claude" / "CLAUDE.md").resolve():
+                return True
 
-        parent = current.parent
-        if parent == current:
-            break
-        current = parent
+            parent = current.parent
+            if parent == current:
+                break
+            current = parent
+    except OSError:
+        return False
 
     return False
