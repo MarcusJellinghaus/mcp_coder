@@ -1511,7 +1511,7 @@ class TestPromptLlmProjectDir:
 
         mock_load_prompts.assert_called_once_with(Path("/my/project"))
         expected_combined = (
-            "## System Prompt\n\nsys prompt\n\n" "## Project Prompt\n\nproj prompt"
+            "## System Prompt\n\nsys prompt\n\n" + "## Project Prompt\n\nproj prompt"
         )
         mock_stream.assert_called_once_with(
             "Hello",
@@ -1587,7 +1587,7 @@ class TestBuildClaudeSystemPrompts:
         )
 
         expected = (
-            "## System Prompt\n\nSystem text\n\n" "## Project Prompt\n\nProject text"
+            "## System Prompt\n\nSystem text\n\n" + "## Project Prompt\n\nProject text"
         )
         assert append == expected
         assert replace is None
@@ -1608,7 +1608,7 @@ class TestBuildClaudeSystemPrompts:
         )
 
         expected = (
-            "## System Prompt\n\nSystem text\n\n" "## Project Prompt\n\nProject text"
+            "## System Prompt\n\nSystem text\n\n" + "## Project Prompt\n\nProject text"
         )
         assert append is None
         assert replace == expected

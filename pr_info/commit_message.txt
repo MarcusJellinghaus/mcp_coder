@@ -1,8 +1,5 @@
-feat: add PROMPTS section to verify command and /info display
+fix: resolve W1404 implicit-str-concat warnings in test_interface.py
 
-- Add PROMPTS section to `execute_verify()` showing system prompt,
-  project prompt, Claude mode, and CLAUDE.md redundancy warning
-- Add prompt paths display to iCoder `/info` command output
-- Add `_prompt_source()` helper for formatting prompt source labels
-- Add tests for verify prompt section (defaults, custom paths, redundancy)
-- Add tests for /info prompt display (custom paths, shipped defaults)
+Replace implicit string concatenation with explicit `+` operator at
+three locations in tests/llm/test_interface.py to satisfy pylint W1404
+(implicit-str-concat) checks.
