@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Iterator, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Iterator, Protocol, runtime_checkable
 
 from mcp_coder.llm.interface import prompt_llm_stream
 from mcp_coder.llm.types import StreamEvent
+
+if TYPE_CHECKING:
+    from mcp_coder.llm.mcp_manager import MCPManager
 
 ICODER_LLM_TIMEOUT_SECONDS = 300  # 5-minute inactivity timeout for interactive use
 
@@ -40,6 +43,7 @@ class RealLLMService:
         mcp_config: str | None = None,
         env_vars: dict[str, str] | None = None,
         timeout: int = ICODER_LLM_TIMEOUT_SECONDS,
+        mcp_manager: MCPManager | None = None,
     ) -> None:
         self._provider = provider
         self._session_id = session_id
@@ -47,6 +51,7 @@ class RealLLMService:
         self._mcp_config = mcp_config
         self._env_vars = env_vars
         self._timeout = timeout
+        self._mcp_manager = mcp_manager
 
     def stream(self, question: str) -> Iterator[StreamEvent]:
         """Call prompt_llm_stream() with stored config. Updates session_id from 'done' events.
@@ -54,6 +59,9 @@ class RealLLMService:
         Yields:
             StreamEvent dicts from the underlying LLM provider.
         """
+        tools = None
+        if self._mcp_manager is not None:
+            tools = self._mcp_manager.tools()
         for event in prompt_llm_stream(
             question,
             provider=self._provider,
@@ -62,6 +70,7 @@ class RealLLMService:
             execution_dir=self._execution_dir,
             mcp_config=self._mcp_config,
             env_vars=self._env_vars,
+            tools=tools,
         ):
             if event.get("type") == "done":
                 sid = event.get("session_id")

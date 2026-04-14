@@ -350,6 +350,7 @@ async def run_agent_stream(
     cancel_event: threading.Event | None = None,
     execution_dir: str | None = None,  # pylint: disable=unused-argument
     env_vars: dict[str, str] | None = None,
+    tools: list[Any] | None = None,
 ) -> AsyncIterator[StreamEvent]:
     """Stream agent execution events as an async generator.
 
@@ -365,6 +366,8 @@ async def run_agent_stream(
         cancel_event: Optional threading.Event to signal early cancellation.
         execution_dir: Optional working directory (reserved for future).
         env_vars: Optional extra environment variables for MCP server resolution.
+        tools: Optional pre-built LangChain tools (e.g. from MCPManager).
+            When provided, skips MultiServerMCPClient creation.
 
     Yields:
         ``StreamEvent`` dicts: ``text_delta``, ``tool_use_start``,
@@ -376,28 +379,32 @@ async def run_agent_stream(
         ToolMessage,
         messages_from_dict,
     )
-    from langchain_mcp_adapters.client import MultiServerMCPClient
-    from langchain_mcp_adapters.tools import convert_mcp_tool_to_langchain_tool
     from langgraph.prebuilt import create_react_agent
 
-    server_config = _load_mcp_server_config(mcp_config_path, env_vars)
+    if tools is not None:
+        all_tools = tools
+    else:
+        from langchain_mcp_adapters.client import MultiServerMCPClient
+        from langchain_mcp_adapters.tools import convert_mcp_tool_to_langchain_tool
 
-    # Load tools with schema sanitization (inline, same as run_agent)
-    client = MultiServerMCPClient(cast(Any, server_config))
-    all_tools = []
-    for server_name, connection in client.connections.items():
-        async with client.session(server_name) as session:
-            raw_tools = await session.list_tools()
-            for tool in raw_tools.tools:
-                sanitized = _sanitize_tool_schema(tool.inputSchema)
-                tool = tool.model_copy(update={"inputSchema": sanitized})
-                lc_tool = convert_mcp_tool_to_langchain_tool(
-                    None,
-                    tool,
-                    connection=connection,
-                    server_name=server_name,
-                )
-                all_tools.append(lc_tool)
+        server_config = _load_mcp_server_config(mcp_config_path, env_vars)
+
+        # Load tools with schema sanitization (inline, same as run_agent)
+        client = MultiServerMCPClient(cast(Any, server_config))
+        all_tools = []
+        for server_name, connection in client.connections.items():
+            async with client.session(server_name) as session:
+                raw_tools = await session.list_tools()
+                for tool in raw_tools.tools:
+                    sanitized = _sanitize_tool_schema(tool.inputSchema)
+                    tool = tool.model_copy(update={"inputSchema": sanitized})
+                    lc_tool = convert_mcp_tool_to_langchain_tool(
+                        None,
+                        tool,
+                        connection=connection,
+                        server_name=server_name,
+                    )
+                    all_tools.append(lc_tool)
 
     agent = create_react_agent(chat_model, all_tools)
 

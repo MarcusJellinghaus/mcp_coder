@@ -472,3 +472,90 @@ class TestAskLangchainStreamErrorHandling:
 
             with pytest.raises(RuntimeError, match="boom"):
                 list(ask_langchain_stream("Hi"))
+
+
+class TestAskLangchainStreamToolsPassthrough:
+    """ask_langchain_stream passes tools parameter to _ask_agent_stream → run_agent_stream."""
+
+    def test_tools_forwarded_to_run_agent_stream(self) -> None:
+        """When tools kwarg is provided, it reaches run_agent_stream."""
+        captured_kwargs: dict[str, object] = {}
+
+        async def _capturing_stream(
+            **kwargs: object,
+        ) -> AsyncIterator[dict[str, object]]:
+            captured_kwargs.update(kwargs)
+            yield {"type": "done", "session_id": "s1"}
+
+        mock_tool = MagicMock()
+        mock_tool.name = "my_tool"
+
+        with (
+            patch(f"{_MOD_LC}._load_langchain_config", return_value=_make_config()),
+            patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
+            patch(f"{_MOD_LC}.ensure_truststore"),
+            patch(f"{_MOD_LC}._create_chat_model", return_value=MagicMock()),
+            patch(f"{_MOD_LC}.agent._check_agent_dependencies"),
+            patch(
+                f"{_MOD_LC}.agent.run_agent_stream",
+                side_effect=_capturing_stream,
+            ),
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain_stream
+
+            list(
+                ask_langchain_stream(
+                    "Hi", mcp_config="/tmp/mcp.json", tools=[mock_tool]
+                )
+            )
+
+        assert "tools" in captured_kwargs
+        assert captured_kwargs["tools"] == [mock_tool]
+
+    def test_tools_none_by_default(self) -> None:
+        """When tools kwarg is omitted, run_agent_stream receives tools=None."""
+        captured_kwargs: dict[str, object] = {}
+
+        async def _capturing_stream(
+            **kwargs: object,
+        ) -> AsyncIterator[dict[str, object]]:
+            captured_kwargs.update(kwargs)
+            yield {"type": "done", "session_id": "s1"}
+
+        with (
+            patch(f"{_MOD_LC}._load_langchain_config", return_value=_make_config()),
+            patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
+            patch(f"{_MOD_LC}.ensure_truststore"),
+            patch(f"{_MOD_LC}._create_chat_model", return_value=MagicMock()),
+            patch(f"{_MOD_LC}.agent._check_agent_dependencies"),
+            patch(
+                f"{_MOD_LC}.agent.run_agent_stream",
+                side_effect=_capturing_stream,
+            ),
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain_stream
+
+            list(ask_langchain_stream("Hi", mcp_config="/tmp/mcp.json"))
+
+        assert "tools" in captured_kwargs
+        assert captured_kwargs["tools"] is None
+
+    def test_tools_not_passed_to_text_mode(self) -> None:
+        """In text mode (no mcp_config), tools param doesn't cause errors."""
+        mock_model = MagicMock()
+        mock_model.stream.return_value = iter([_mock_chunk("hi")])
+
+        with (
+            patch(f"{_MOD_LC}._load_langchain_config", return_value=_make_config()),
+            patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
+            patch(f"{_MOD_LC}.store_langchain_history"),
+            patch(f"{_MOD_LC}._create_chat_model", return_value=mock_model),
+            patch(f"{_MOD_LC}.ensure_truststore"),
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain_stream
+
+            events = list(ask_langchain_stream("Hi", tools=[MagicMock()]))
+
+        # Should still work fine — text mode ignores tools
+        text_deltas = [e for e in events if e["type"] == "text_delta"]
+        assert len(text_deltas) == 1

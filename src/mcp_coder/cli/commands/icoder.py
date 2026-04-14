@@ -6,6 +6,10 @@ from importlib.metadata import PackageNotFoundError
 from pathlib import Path
 
 from ...icoder.env_setup import setup_icoder_environment
+from ...llm.mcp_manager import MCPManager
+from ...llm.providers.langchain.agent import (  # noqa: PLC2701
+    _load_mcp_server_config,
+)
 from ...llm.storage import (
     extract_langchain_session_id,
     extract_session_id,
@@ -73,6 +77,12 @@ def execute_icoder(args: argparse.Namespace) -> int:
             args.mcp_config, project_dir=args.project_dir
         )
 
+        # Create MCPManager for persistent MCP connections (langchain only)
+        mcp_manager: MCPManager | None = None
+        if provider == "langchain" and mcp_config:
+            server_config = _load_mcp_server_config(mcp_config, env_vars)
+            mcp_manager = MCPManager(server_config)
+
         # Handle continuation from previous session if requested
         # Priority: --session-id > --continue-session-from > --continue-session
         resume_session_id = getattr(args, "session_id", None)
@@ -117,11 +127,13 @@ def execute_icoder(args: argparse.Namespace) -> int:
 
         # Create registry and load skills
         from ...icoder.core.command_registry import create_default_registry
+        from ...icoder.core.commands.info import register_info
         from ...icoder.skills import load_skills, register_skill_commands
 
         registry = create_default_registry()
         skills = load_skills(project_dir)
         register_skill_commands(registry, skills, provider)
+        register_info(registry, runtime_info, mcp_manager=mcp_manager)
 
         # Create core components
         from ...icoder.core.event_log import EventLog
@@ -134,29 +146,37 @@ def execute_icoder(args: argparse.Namespace) -> int:
             mcp_config=mcp_config,
             env_vars=env_vars,
             timeout=args.timeout,
+            mcp_manager=mcp_manager,
         )
 
         from ...icoder.core.app_core import AppCore
         from ...icoder.ui.app import ICoderApp
 
-        with EventLog(logs_dir=project_dir / "logs") as event_log:
-            event_log.emit(
-                "session_start",
-                mcp_coder_version=runtime_info.mcp_coder_version,
-                tool_env=runtime_info.tool_env_path,
-                project_venv=runtime_info.project_venv_path,
-                project_dir=runtime_info.project_dir,
-                mcp_servers={s.name: s.version for s in runtime_info.mcp_servers},
-                mcp_connection_status={
-                    s.name: {"ok": s.ok, "status_text": s.status_text}
-                    for s in (runtime_info.mcp_connection_status or [])
-                },
-            )
-            app_core = AppCore(
-                llm_service, event_log, registry=registry, runtime_info=runtime_info
-            )
-            format_tools = not getattr(args, "no_format_tools", False)
-            ICoderApp(app_core, format_tools=format_tools).run()
+        try:
+            with EventLog(logs_dir=project_dir / "logs") as event_log:
+                event_log.emit(
+                    "session_start",
+                    mcp_coder_version=runtime_info.mcp_coder_version,
+                    tool_env=runtime_info.tool_env_path,
+                    project_venv=runtime_info.project_venv_path,
+                    project_dir=runtime_info.project_dir,
+                    mcp_servers={s.name: s.version for s in runtime_info.mcp_servers},
+                    mcp_connection_status={
+                        s.name: {"ok": s.ok, "status_text": s.status_text}
+                        for s in (runtime_info.mcp_connection_status or [])
+                    },
+                )
+                app_core = AppCore(
+                    llm_service,
+                    event_log,
+                    registry=registry,
+                    runtime_info=runtime_info,
+                )
+                format_tools = not getattr(args, "no_format_tools", False)
+                ICoderApp(app_core, format_tools=format_tools).run()
+        finally:
+            if mcp_manager is not None:
+                mcp_manager.close()
 
         return 0
 

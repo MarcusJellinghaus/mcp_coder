@@ -5,6 +5,7 @@ import logging
 import os
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 from mcp_coder.utils.subprocess_runner import TimeoutExpired
 
@@ -186,6 +187,7 @@ def prompt_llm_stream(
     execution_dir: str | None = None,
     mcp_config: str | None = None,
     branch_name: str | None = None,
+    tools: list[Any] | None = None,
 ) -> Iterator[StreamEvent]:
     """Stream LLM responses as events.
 
@@ -228,6 +230,7 @@ def prompt_llm_stream(
             mcp_config=mcp_config,
             execution_dir=execution_dir,
             env_vars=env_vars,
+            tools=tools,
         )
     else:
         from .providers.claude.claude_code_cli_streaming import (  # noqa: PLC0415
