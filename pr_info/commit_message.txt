@@ -1,13 +1,11 @@
-refactor: split oversized files to fix CI file-size check
+fix: add missing docstring entries for prompt parameters
 
-Extract functions and test classes from 3 files exceeding the 750-line
-limit into new focused modules:
+Add missing Args descriptions for new prompt-related parameters
+(append_system_prompt, system_prompt_replace, system_prompt,
+project_prompt, system_messages) across claude_code_cli.py,
+langchain/__init__.py, and langchain/agent.py.
 
-- claude_code_cli.py (768→660): Move sanitize_branch_identifier and
-  get_stream_log_path to claude_code_cli_log_paths.py
-- test_langchain_provider.py (943→643): Move system message and
-  truststore tests to test_langchain_provider_system_messages.py
-- test_langchain_agent.py (771→669): Move system message and timeout
-  agent tests to test_langchain_agent_system_messages.py
+Add missing Returns sections to all public functions in
+prompts/prompt_loader.py.
 
-All imports updated. No behavioral changes.
+Fixes 13 ruff docstring errors (7 D417, 6 DOC201).

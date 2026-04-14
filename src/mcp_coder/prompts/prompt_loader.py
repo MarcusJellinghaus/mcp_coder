@@ -16,7 +16,11 @@ _PROJECT_PROMPT_FILE = "project-prompt.md"
 
 
 def _read_shipped_default(filename: str) -> str:
-    """Read a shipped default prompt file from the package."""
+    """Read a shipped default prompt file from the package.
+
+    Returns:
+        The prompt file content as a string.
+    """
     path = find_data_file(_PACKAGE, filename)
     return path.read_text(encoding="utf-8")
 
@@ -26,7 +30,9 @@ def _resolve_and_read(
 ) -> str | None:
     """Resolve a configured prompt path and read its content.
 
-    Returns None if the path is not configured or the file doesn't exist.
+    Returns:
+        The file content as a string, or None if the path is not configured
+        or the file doesn't exist.
     """
     if configured_path is None:
         return None
@@ -47,7 +53,11 @@ def _resolve_and_read(
 
 
 def load_system_prompt(project_dir: Path | None = None) -> str:
-    """Load system prompt content. Falls back to shipped default."""
+    """Load system prompt content. Falls back to shipped default.
+
+    Returns:
+        The system prompt content as a string.
+    """
     if project_dir is not None:
         config = get_prompts_config(project_dir)
         content = _resolve_and_read(config.system_prompt, project_dir)
@@ -57,7 +67,11 @@ def load_system_prompt(project_dir: Path | None = None) -> str:
 
 
 def load_project_prompt(project_dir: Path | None = None) -> str:
-    """Load project prompt content. Falls back to shipped default."""
+    """Load project prompt content. Falls back to shipped default.
+
+    Returns:
+        The project prompt content as a string.
+    """
     if project_dir is not None:
         config = get_prompts_config(project_dir)
         content = _resolve_and_read(config.project_prompt, project_dir)
@@ -97,7 +111,9 @@ def load_prompts(
 def get_project_prompt_path(project_dir: Path | None = None) -> Path | None:
     """Resolve the project prompt file path (for redundancy detection).
 
-    Returns None when using shipped default.
+    Returns:
+        The resolved Path to the project prompt file, or None when using
+        the shipped default.
     """
     if project_dir is None:
         return None
@@ -119,6 +135,9 @@ def is_claude_md(project_prompt_path: Path | None, project_dir: str | None) -> b
     """Check if project_prompt points to any known CLAUDE.md location.
 
     Checks root-level, .claude/ dir, and parent directories up to filesystem root.
+
+    Returns:
+        True if the project prompt path resolves to a CLAUDE.md file.
     """
     if project_prompt_path is None or project_dir is None:
         return False

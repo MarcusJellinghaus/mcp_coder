@@ -228,6 +228,8 @@ def ask_langchain(
         mcp_config: Optional path to .mcp.json for agent mode.
         execution_dir: Optional working directory for agent execution.
         env_vars: Optional environment variables for agent subprocesses.
+        system_prompt: Optional system-level prompt text.
+        project_prompt: Optional project-level prompt text.
 
     Returns:
         LLMResponseDict with the model's response.
@@ -289,6 +291,7 @@ def _ask_text(
         backend: Backend name ("openai", "gemini", "anthropic").
         session_id: Session ID for conversation history.
         timeout: Request timeout in seconds.
+        system_messages: Optional list of system messages to prepend.
 
     Returns:
         LLMResponseDict with the model's text response.
@@ -399,6 +402,7 @@ def _ask_agent(
         execution_dir: Optional working directory for agent execution.
         env_vars: Optional environment variables for agent subprocesses.
         timeout: Request timeout in seconds.
+        system_messages: Optional list of system messages to prepend.
 
     Returns:
         LLMResponseDict with the agent's text response and tool usage stats.
@@ -475,6 +479,7 @@ def _ask_agent_stream(
         timeout: Request timeout in seconds.
         tools: Optional pre-built LangChain tools (e.g. from MCPManager).
             When provided, skips MultiServerMCPClient creation.
+        system_messages: Optional list of system messages to prepend.
 
     Yields:
         StreamEvent dicts from the agent.

@@ -485,6 +485,10 @@ def ask_claude_code_cli(
         mcp_config: Optional path to MCP config file
         logs_dir: Optional logs directory for stream files (default: logs/claude-sessions)
         branch_name: Optional git branch name to include in log filename for context
+        append_system_prompt: Optional system prompt to append via --append-system-prompt.
+            Mutually exclusive with system_prompt_replace.
+        system_prompt_replace: Optional system prompt to replace via --system-prompt.
+            Mutually exclusive with append_system_prompt.
 
     Returns:
         LLMResponseDict with complete response data including session_id.

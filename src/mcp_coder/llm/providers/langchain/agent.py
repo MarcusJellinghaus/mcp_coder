@@ -232,6 +232,8 @@ async def run_agent(
             for future).
         env_vars: Optional extra environment variables for MCP server resolution.
         timeout: Maximum time in seconds for the agent invocation.
+        system_messages: Optional list of system messages to prepend to the
+            conversation.
 
     Returns:
         ``(final_text, full_message_history, stats_dict)``.
@@ -374,6 +376,8 @@ async def run_agent_stream(
         env_vars: Optional extra environment variables for MCP server resolution.
         tools: Optional pre-built LangChain tools (e.g. from MCPManager).
             When provided, skips MultiServerMCPClient creation.
+        system_messages: Optional list of system messages to prepend to the
+            conversation.
 
     Yields:
         ``StreamEvent`` dicts: ``text_delta``, ``tool_use_start``,
