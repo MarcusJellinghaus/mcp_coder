@@ -101,10 +101,14 @@ class TestCreatePrFailureHandling:
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
     @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
+    @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.git_push")
     def test_push_failure_is_fatal(
         self,
         mock_push: MagicMock,
+        mock_clean: MagicMock,
+        mock_cleanup: MagicMock,
         mock_generate: MagicMock,
         mock_prereqs: MagicMock,
         mock_handle_failure: MagicMock,
@@ -112,6 +116,8 @@ class TestCreatePrFailureHandling:
         """Test pre-PR push failure is now fatal (returns 1)."""
         mock_prereqs.return_value = True
         mock_generate.return_value = ("Title", "Body")
+        mock_cleanup.return_value = True
+        mock_clean.return_value = True
         mock_push.return_value = {"success": False, "error": "remote rejected"}
 
         result = run_create_pr_workflow(Path("/test"), "claude")
@@ -125,12 +131,16 @@ class TestCreatePrFailureHandling:
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
     @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
+    @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.git_push")
     @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
     def test_pr_creation_failure(
         self,
         mock_create_pr: MagicMock,
         mock_push: MagicMock,
+        mock_clean: MagicMock,
+        mock_cleanup: MagicMock,
         mock_generate: MagicMock,
         mock_prereqs: MagicMock,
         mock_handle_failure: MagicMock,
@@ -138,6 +148,8 @@ class TestCreatePrFailureHandling:
         """Test PR creation failure calls failure handler."""
         mock_prereqs.return_value = True
         mock_generate.return_value = ("Title", "Body")
+        mock_cleanup.return_value = True
+        mock_clean.return_value = True
         mock_push.return_value = {"success": True}
         mock_create_pr.return_value = None
 
@@ -151,26 +163,17 @@ class TestCreatePrFailureHandling:
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
     @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
-    @patch("mcp_coder.workflows.create_pr.core.git_push")
-    @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
-    def test_cleanup_failure_includes_pr_link(
+    def test_cleanup_failure_is_fatal(
         self,
         mock_cleanup: MagicMock,
-        mock_create_pr: MagicMock,
-        mock_push: MagicMock,
         mock_generate: MagicMock,
         mock_prereqs: MagicMock,
         mock_handle_failure: MagicMock,
     ) -> None:
-        """Test cleanup failure includes PR URL and number."""
+        """Test cleanup failure before push/PR is fatal (no pr_url/pr_number)."""
         mock_prereqs.return_value = True
         mock_generate.return_value = ("Title", "Body")
-        mock_push.return_value = {"success": True}
-        mock_create_pr.return_value = {
-            "number": 42,
-            "url": "https://github.com/test/repo/pull/42",
-        }
         mock_cleanup.return_value = False
 
         result = run_create_pr_workflow(Path("/test"), "claude")
@@ -179,15 +182,13 @@ class TestCreatePrFailureHandling:
         mock_handle_failure.assert_called_once()
         call_kwargs = mock_handle_failure.call_args.kwargs
         assert call_kwargs["stage"] == "cleanup"
-        assert call_kwargs["pr_url"] == "https://github.com/test/repo/pull/42"
-        assert call_kwargs["pr_number"] == 42
-        assert call_kwargs["is_cleanup_failure"] is True
+        assert "pr_url" not in call_kwargs
+        assert "pr_number" not in call_kwargs
+        assert "is_cleanup_failure" not in call_kwargs
 
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
     @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
-    @patch("mcp_coder.workflows.create_pr.core.git_push")
-    @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.commit_all_changes")
@@ -196,8 +197,6 @@ class TestCreatePrFailureHandling:
         mock_commit: MagicMock,
         mock_clean: MagicMock,
         mock_cleanup: MagicMock,
-        mock_create_pr: MagicMock,
-        mock_push: MagicMock,
         mock_generate: MagicMock,
         mock_prereqs: MagicMock,
         mock_handle_failure: MagicMock,
@@ -205,11 +204,6 @@ class TestCreatePrFailureHandling:
         """Test commit failure during cleanup calls failure handler."""
         mock_prereqs.return_value = True
         mock_generate.return_value = ("Title", "Body")
-        mock_push.return_value = {"success": True}
-        mock_create_pr.return_value = {
-            "number": 42,
-            "url": "https://github.com/test/repo/pull/42",
-        }
         mock_cleanup.return_value = True
         mock_clean.return_value = False  # Has changes
         mock_commit.return_value = {"success": False, "error": "commit hook failed"}
@@ -221,51 +215,9 @@ class TestCreatePrFailureHandling:
         call_kwargs = mock_handle_failure.call_args.kwargs
         assert call_kwargs["stage"] == "cleanup"
         assert "commit hook failed" in call_kwargs["message"]
-        assert call_kwargs["is_cleanup_failure"] is True
-
-    @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
-    @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
-    @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
-    @patch("mcp_coder.workflows.create_pr.core.git_push")
-    @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
-    @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
-    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
-    @patch("mcp_coder.workflows.create_pr.core.commit_all_changes")
-    def test_cleanup_push_failure(
-        self,
-        mock_commit: MagicMock,
-        mock_clean: MagicMock,
-        mock_cleanup: MagicMock,
-        mock_create_pr: MagicMock,
-        mock_push: MagicMock,
-        mock_generate: MagicMock,
-        mock_prereqs: MagicMock,
-        mock_handle_failure: MagicMock,
-    ) -> None:
-        """Test push failure during cleanup calls failure handler."""
-        mock_prereqs.return_value = True
-        mock_generate.return_value = ("Title", "Body")
-        # First push succeeds (pre-PR), second push fails (cleanup)
-        mock_push.side_effect = [
-            {"success": True},
-            {"success": False, "error": "network timeout"},
-        ]
-        mock_create_pr.return_value = {
-            "number": 42,
-            "url": "https://github.com/test/repo/pull/42",
-        }
-        mock_cleanup.return_value = True
-        mock_clean.return_value = False  # Has changes
-        mock_commit.return_value = {"success": True, "commit_hash": "abc123"}
-
-        result = run_create_pr_workflow(Path("/test"), "claude")
-
-        assert result == 1
-        mock_handle_failure.assert_called_once()
-        call_kwargs = mock_handle_failure.call_args.kwargs
-        assert call_kwargs["stage"] == "cleanup"
-        assert "network timeout" in call_kwargs["message"]
-        assert call_kwargs["is_cleanup_failure"] is True
+        assert "is_cleanup_failure" not in call_kwargs
+        assert "pr_url" not in call_kwargs
+        assert "pr_number" not in call_kwargs
 
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
