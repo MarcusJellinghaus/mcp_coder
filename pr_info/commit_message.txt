@@ -1,11 +1,6 @@
-feat(icoder): add TokenUsage dataclass and format_token_count()
+feat(icoder): wire TokenUsage into AppCore with usage extraction
 
-Add foundational token tracking types to icoder/core/types.py:
-
-- format_token_count(n): compact suffix formatting (k/M/B)
-- TokenUsage dataclass: tracks last-request and cumulative token
-  counts with update(), display_text(), and has_data property
-
-Full test coverage in tests/icoder/test_types.py (9 new tests).
-
-Ref: #808
+- Add _token_usage field and token_usage property to AppCore
+- Extract usage data from "done" events inside stream_llm() for-loop
+- Defensive type checks for missing or malformed usage dicts
+- Add 4 tests: initial state, single update, cumulative, no-usage

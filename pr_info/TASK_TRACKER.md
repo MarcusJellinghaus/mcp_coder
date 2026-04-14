@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: Wire TokenUsage into AppCore
-- [ ] Implementation: `_token_usage` field, `token_usage` property, usage extraction in `stream_llm()` + tests in `test_app_core.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `_token_usage` field, `token_usage` property, usage extraction in `stream_llm()` + tests in `test_app_core.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Three-Zone Status Bar UI + CSS
 - [ ] Implementation: replace `#input-hint` with `#status-bar` (3 zones), `_update_token_display()`, remove `on_text_area_changed()`, update CSS + snapshot tests
