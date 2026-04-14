@@ -38,9 +38,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 3: Langchain Provider — Prepend System Messages
 > [Detail](./steps/step_3.md) — `ask_langchain()` accepts `system_prompt`/`project_prompt`, builds `SystemMessage` objects, prepends to message lists
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Claude Provider — Accept and Inject System Prompts via CLI Flags
 > [Detail](./steps/step_4.md) — `build_cli_command()` gains `--append-system-prompt`/`--system-prompt` flags, CLAUDE.md redundancy detection, prompt concatenation in `interface.py`

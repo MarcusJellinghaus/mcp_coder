@@ -43,6 +43,29 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
+def _build_system_messages(
+    system_prompt: str | None, project_prompt: str | None
+) -> list[Any]:
+    """Build a list of SystemMessage objects from optional prompt strings.
+
+    Args:
+        system_prompt: Optional system-level prompt text.
+        project_prompt: Optional project-level prompt text.
+
+    Returns:
+        List of SystemMessage objects (may be empty).
+    """
+    from langchain_core.messages import SystemMessage
+
+    msgs: list[Any] = []
+    if system_prompt:
+        msgs.append(SystemMessage(content=system_prompt))
+    if project_prompt:
+        msgs.append(SystemMessage(content=project_prompt))
+    return msgs
+
+
 # Agent streaming timeout constants (seconds)
 _AGENT_OVERALL_TIMEOUT = 3600  # 60 minutes
 
@@ -223,6 +246,7 @@ def ask_langchain(
         )
 
     sid = session_id or str(uuid.uuid4())
+    sys_msgs = _build_system_messages(system_prompt, project_prompt)
 
     if mcp_config:
         # Agent mode needs a longer timeout than text mode — MCP tool calls
@@ -236,6 +260,7 @@ def ask_langchain(
             execution_dir=execution_dir,
             env_vars=env_vars,
             timeout=agent_timeout,
+            system_messages=sys_msgs,
         )
 
     return _ask_text(
@@ -244,6 +269,7 @@ def ask_langchain(
         backend=backend,
         session_id=sid,
         timeout=timeout,
+        system_messages=sys_msgs,
     )
 
 
@@ -253,6 +279,7 @@ def _ask_text(
     backend: str | None,
     session_id: str,
     timeout: int,
+    system_messages: list[Any] | None = None,
 ) -> LLMResponseDict:
     """Text-only backend dispatch using unified chat model factory.
 
@@ -273,7 +300,9 @@ def _ask_text(
 
     history = load_langchain_history(session_id)
     history_messages = messages_from_dict(history)
-    lc_messages = history_messages + [HumanMessage(content=question)]
+    lc_messages = (
+        (system_messages or []) + history_messages + [HumanMessage(content=question)]
+    )
 
     ensure_truststore()
     chat_model = _create_chat_model(config, timeout=timeout)
@@ -358,6 +387,7 @@ def _ask_agent(
     execution_dir: str | None = None,
     env_vars: dict[str, str] | None = None,
     timeout: int = 30,
+    system_messages: list[Any] | None = None,
 ) -> LLMResponseDict:
     """Agent mode: route through LangGraph ReAct agent with MCP tools.
 
@@ -393,6 +423,7 @@ def _ask_agent(
                 execution_dir=execution_dir,
                 env_vars=env_vars,
                 timeout=timeout,
+                system_messages=system_messages,
             )
         )
     except Exception as exc:
@@ -427,6 +458,7 @@ def _ask_agent_stream(
     env_vars: dict[str, str] | None = None,
     timeout: int = 30,
     tools: list[Any] | None = None,
+    system_messages: list[Any] | None = None,
 ) -> Iterator[StreamEvent]:
     """Stream agent events via thread+queue bridge from async to sync.
 
@@ -473,6 +505,7 @@ def _ask_agent_stream(
                 execution_dir=execution_dir,
                 env_vars=env_vars,
                 tools=tools,
+                system_messages=system_messages,
             ):
                 q.put(event)
         except Exception as exc:  # pylint: disable=broad-except
@@ -554,6 +587,7 @@ def ask_langchain_stream(
         )
 
     sid = session_id or str(uuid.uuid4())
+    sys_msgs = _build_system_messages(system_prompt, project_prompt)
 
     if mcp_config:
         yield from _ask_agent_stream(
@@ -565,6 +599,7 @@ def ask_langchain_stream(
             env_vars=env_vars,
             timeout=timeout,
             tools=tools,
+            system_messages=sys_msgs,
         )
         return
 
@@ -574,6 +609,7 @@ def ask_langchain_stream(
         backend=backend,
         session_id=sid,
         timeout=timeout,
+        system_messages=sys_msgs,
     )
 
 
@@ -583,6 +619,7 @@ def _ask_text_stream(
     backend: str | None,
     session_id: str,
     timeout: int,
+    system_messages: list[Any] | None = None,
 ) -> Iterator[StreamEvent]:
     """Stream text-only responses using chat_model.stream().
 
@@ -598,7 +635,9 @@ def _ask_text_stream(
 
     history = load_langchain_history(session_id)
     history_messages = messages_from_dict(history)
-    lc_messages = history_messages + [HumanMessage(content=question)]
+    lc_messages = (
+        (system_messages or []) + history_messages + [HumanMessage(content=question)]
+    )
 
     ensure_truststore()
     chat_model = _create_chat_model(config, timeout=timeout)

@@ -47,6 +47,16 @@ def _mock_langchain_modules() -> Generator[None, None, None]:
         def model_dump(self) -> dict[str, object]:
             return {"type": self.type, "content": getattr(self, "content", "")}
 
+    class _SystemMessage:
+        type = "system"
+
+        def __init__(self, **kwargs: object) -> None:
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+
+        def model_dump(self) -> dict[str, object]:
+            return {"type": self.type, "content": getattr(self, "content", "")}
+
     class _ToolMessage:
         type = "tool"
 
@@ -73,6 +83,7 @@ def _mock_langchain_modules() -> Generator[None, None, None]:
     _lc_messages = MagicMock()
     _lc_messages.AIMessage = _AIMessage
     _lc_messages.HumanMessage = _HumanMessage
+    _lc_messages.SystemMessage = _SystemMessage
     _lc_messages.ToolMessage = _ToolMessage
     _lc_messages.messages_from_dict = _messages_from_dict
 

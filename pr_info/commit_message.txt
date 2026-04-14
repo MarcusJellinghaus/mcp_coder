@@ -1,20 +1,15 @@
-feat: add project_dir param to prompt_llm/prompt_llm_stream for prompt injection
+feat(langchain): prepend system messages in langchain provider
 
-Add `project_dir: str | None = None` parameter to both `prompt_llm()` and
-`prompt_llm_stream()` in the interface layer. When provided, `load_prompts()`
-is called to resolve system and project prompts, which are then passed
-through to the provider functions.
+Add SystemMessage injection to the langchain provider:
 
-Provider entry points updated with no-op parameters:
-- `ask_langchain()` / `ask_langchain_stream()`: gain `system_prompt`, `project_prompt`
-- `ask_claude_code_cli()` / `ask_claude_code_cli_stream()`: gain `append_system_prompt`, `system_prompt_replace`
-
-Actual provider-side handling will be implemented in Steps 3-4.
-
-Modified files:
-- src/mcp_coder/llm/interface.py
-- src/mcp_coder/llm/providers/langchain/__init__.py
-- src/mcp_coder/llm/providers/claude/claude_code_cli.py
-- src/mcp_coder/llm/providers/claude/claude_code_cli_streaming.py
-- tests/llm/test_interface.py
-- tests/llm/providers/claude/test_llm_sessions.py
+- Add _build_system_messages() helper in __init__.py to convert
+  system_prompt/project_prompt strings into SystemMessage objects
+- Wire system_messages param through all internal functions:
+  _ask_text, _ask_text_stream, _ask_agent, _ask_agent_stream
+- Prepend system_messages to message lists in all code paths
+- Add system_messages param to run_agent() and run_agent_stream()
+  in agent.py with prepend logic
+- Add _SystemMessage stub class to test conftest for isinstance()
+  support in unit tests
+- Add tests: _build_system_messages helper, text/stream prepending,
+  agent prepending, end-to-end pass-through
