@@ -1,8 +1,0 @@
-fix: resolve mypy strict mode errors in test files
-
-- Type mock_load parameter as MagicMock instead of object in
-  test_info_command.py to fix attr-defined errors and remove stale
-  type: ignore[union-attr] comments
-- Import get_stream_log_path and sanitize_branch_identifier directly
-  from claude_code_cli_log_paths in test_claude_cli_stream_parsing.py
-  to fix implicit re-export errors under mypy strict mode
