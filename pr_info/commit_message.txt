@@ -1,1 +1,0 @@
-adopt mcp-coder-utils: add shared-libraries note to CLAUDE.md
