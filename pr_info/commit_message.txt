@@ -1,14 +1,10 @@
-feat(icoder): replace input-hint with three-zone status bar
+docs: add iCoder TUI reference documentation
 
-Replace single #input-hint Static widget with a Horizontal #status-bar
-containing three zones: #status-tokens (left), #status-version (center),
-and #status-hint (right).
-
-- Add _get_version() to read version from RuntimeInfo or importlib.metadata
-- Add _update_token_display() called on StreamDone to pull token usage
-- Remove on_text_area_changed() — status bar is always visible
-- Update CSS: replace #input-hint rules with #status-bar + children
-- Add #status-tokens.hidden class for providers with no usage data
-- Replace input-hint tests with status bar + token display tests
-- Inject fixed RuntimeInfo in snapshot fixtures for version stability
-- Regenerate all snapshot SVG baselines
+Create docs/icoder/icoder.md with:
+- Status line three-zone layout (tokens, version, input hint)
+- Token display format with compact suffixes (k/M)
+- Slash commands reference (/help, /info, /clear, /quit, /exit)
+- Autocomplete usage (Tab, Up/Down, Escape)
+- Busy indicator states (ready, thinking, tool execution)
+- Input behaviour (Enter, backslash escape, Shift+Enter)
+- Backslash parity rule for multi-line input

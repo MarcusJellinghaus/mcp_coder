@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 4: Documentation — `docs/icoder/icoder.md`
-- [ ] Implementation: create `docs/icoder/icoder.md` with TUI reference (status line, commands, busy indicator, input)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `docs/icoder/icoder.md` with TUI reference (status line, commands, busy indicator, input)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: verify all steps integrated correctly
