@@ -355,7 +355,7 @@ class TestCheckAndFixCI:
                 ],
             }
 
-        # Simulate 3 fix attempts all failing with new CI runs each time
+        # Simulate 4 fix attempts all failing with new CI runs each time
         # Flow: initial poll -> fix 1 -> wait for new run -> poll -> fix 2 -> ...
         mock_manager.get_latest_ci_status.side_effect = [
             make_failed_status(1),  # Initial poll
@@ -364,7 +364,9 @@ class TestCheckAndFixCI:
             make_failed_status(3),  # After fix 2: wait_for_new detects new run
             make_failed_status(3),  # poll_for_completion
             make_failed_status(4),  # After fix 3: wait_for_new detects new run
-            make_failed_status(4),  # poll_for_completion (final failure)
+            make_failed_status(4),  # poll_for_completion
+            make_failed_status(5),  # After fix 4: wait_for_new detects new run
+            make_failed_status(5),  # poll_for_completion (final failure)
         ]
         mock_manager.get_run_logs.return_value = {"test/1_Run tests.txt": "Error"}
 
