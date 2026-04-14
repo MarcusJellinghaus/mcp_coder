@@ -1,17 +1,14 @@
-feat: add system prompt CLI flags to Claude provider and prompt assembly
+feat(cli): add --add-system-prompts flag to prompt command
 
-- Add append_system_prompt and system_prompt_replace params to
-  build_cli_command(), ask_claude_code_cli(), and
-  ask_claude_code_cli_stream() with --append-system-prompt and
-  --system-prompt flag injection (mutually exclusive)
-- Add _build_claude_system_prompts() helper in interface.py that
-  assembles prompts with section headers, detects CLAUDE.md redundancy
-  via is_claude_md(), and routes to append or replace mode
-- Wire prompt assembly into prompt_llm() and prompt_llm_stream()
-  Claude paths so loaded prompts are properly formatted before passing
-  to the CLI provider
-- Add tests for CLI flag generation (append, replace, none, both-raises)
-  and prompt building (append mode, replace mode, CLAUDE.md skip,
-  no prompts, system-only)
-- Add tests for is_claude_md (root, .claude dir, parent dir, non-match,
-  None cases)
+Add --add-system-prompts flag to the prompt parser that conditionally
+passes project_dir to prompt_llm()/prompt_llm_stream() for system and
+project prompt injection.
+
+- Add --add-system-prompts store_true argument to add_prompt_parser()
+- Wire prompt_project_dir in execute_prompt() for all 3 output paths
+  (streaming, session-id, json)
+- Without flag: project_dir=None (backward compatible, no prompts loaded)
+- With flag: project_dir=str(project_dir) (prompts loaded and injected)
+- Add 5 tests covering flag on/off, explicit project_dir, and all
+  output format paths
+- Update existing test assertions to include project_dir=None kwarg

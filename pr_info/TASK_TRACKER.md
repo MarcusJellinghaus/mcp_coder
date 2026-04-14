@@ -52,9 +52,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 5: CLI `prompt` Command — `--add-system-prompts` Flag
 > [Detail](./steps/step_5.md) — Add flag to parser, wire `project_dir` to `prompt_llm()`/`prompt_llm_stream()` conditionally
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: iCoder — Pass `project_dir` for Prompt Injection
 > [Detail](./steps/step_6.md) — `RealLLMService` gains `project_dir`, iCoder always injects prompts
