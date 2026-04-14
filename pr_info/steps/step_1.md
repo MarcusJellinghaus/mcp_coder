@@ -7,6 +7,7 @@
 ## WHERE
 
 **New files:**
+- `src/mcp_coder/prompts/__init__.py` — package init (required for `importlib.resources` and imports)
 - `src/mcp_coder/prompts/system-prompt.md` — shipped default system prompt
 - `src/mcp_coder/prompts/project-prompt.md` — shipped default project prompt
 - `src/mcp_coder/prompts/prompt_loader.py` — config reader + path resolver + loader
@@ -47,6 +48,10 @@ def load_prompts(project_dir: Path | None = None) -> tuple[str, str, PromptsConf
 def get_project_prompt_path(project_dir: Path | None = None) -> Path | None:
     """Resolve the project prompt file path (for redundancy detection).
     Returns None when using shipped default."""
+
+def is_claude_md(project_prompt_path: Path | None, project_dir: str | None) -> bool:
+    """Check if project_prompt points to any known CLAUDE.md location.
+    Checks root-level, .claude/ dir, and parent directories up to filesystem root."""
 ```
 
 ### `system-prompt.md`
@@ -60,7 +65,7 @@ Generic baseline: "This is a Python project. Follow existing code conventions. R
 ## HOW
 
 - `get_prompts_config()` follows the exact same pattern as `get_github_install_config()` in `pyproject_config.py` (read TOML, extract nested keys, return dataclass)
-- `prompt_loader.py` uses `importlib.resources.files("mcp_coder.prompts")` for shipped defaults (same pattern as `data_files.py`)
+- `prompt_loader.py` uses `find_data_file("mcp_coder.prompts", filename)` from `src/mcp_coder/utils/data_files.py` for shipped defaults (DRY — reuses existing helper with built-in error handling)
 - Path resolution order: if configured path is absolute → use as-is; if relative → resolve against `project_dir`; if neither exists → try as package-relative
 - No new dependencies
 
@@ -74,7 +79,8 @@ def load_prompts(project_dir):
     return (system, project, config)
 
 def _read_shipped_default(filename):
-    return files("mcp_coder.prompts").joinpath(filename).read_text()
+    path = find_data_file("mcp_coder.prompts", filename)
+    return path.read_text(encoding="utf-8")
 
 def _resolve_and_read(configured_path, project_dir):
     if configured_path is None: return None
@@ -117,12 +123,13 @@ load_prompts() -> tuple[str, str, PromptsConfig]
 ```
 Read pr_info/steps/summary.md for overall context, then implement Step 1.
 
-Create the shipped default prompt files (system-prompt.md, project-prompt.md) in
-src/mcp_coder/prompts/. Add get_prompts_config() to pyproject_config.py following
-the existing get_github_install_config() pattern. Create prompt_loader.py with
-load_prompts(), load_system_prompt(), load_project_prompt(), and
-get_project_prompt_path(). Write comprehensive tests in tests/prompts/test_prompt_loader.py.
+Create __init__.py and the shipped default prompt files (system-prompt.md,
+project-prompt.md) in src/mcp_coder/prompts/. Add get_prompts_config() to
+pyproject_config.py following the existing get_github_install_config() pattern.
+Create prompt_loader.py with load_prompts(), load_system_prompt(),
+load_project_prompt(), get_project_prompt_path(), and is_claude_md().
+Write comprehensive tests in tests/prompts/test_prompt_loader.py.
 
-Use importlib.resources for shipped defaults (same pattern as data_files.py).
+Use find_data_file() from utils/data_files.py for shipped defaults (DRY reuse).
 All quality checks must pass.
 ```

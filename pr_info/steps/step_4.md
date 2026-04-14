@@ -9,7 +9,7 @@
 **Modified files:**
 - `src/mcp_coder/llm/providers/claude/claude_code_cli.py` — `build_cli_command()` + `ask_claude_code_cli()` gain prompt params
 - `src/mcp_coder/llm/providers/claude/claude_code_cli_streaming.py` — `ask_claude_code_cli_stream()` gains prompt param
-- `src/mcp_coder/llm/interface.py` — add CLAUDE.md redundancy detection + prompt concatenation logic
+- `src/mcp_coder/llm/interface.py` — import `is_claude_md` from `prompt_loader` + add prompt concatenation logic
 - `tests/llm/providers/claude/test_claude_code_cli.py` — test CLI flag generation
 - `tests/llm/providers/claude/test_claude_cli_wrappers.py` — test pass-through
 
@@ -73,24 +73,56 @@ def _build_claude_system_prompts(
 
 ```python
 # After existing MCP config flags:
+if append_system_prompt and system_prompt_replace:
+    raise ValueError("Cannot specify both append_system_prompt and system_prompt_replace")
 if append_system_prompt:
     command.extend(["--append-system-prompt", append_system_prompt])
 if system_prompt_replace:
     command.extend(["--system-prompt", system_prompt_replace])
 ```
 
+`build_cli_command()` must raise `ValueError` if both `append_system_prompt` and `system_prompt_replace` are provided — they are mutually exclusive.
+
 ### CLAUDE.md redundancy detection (in `interface.py`)
 
+Note: `_is_claude_md` is defined in `prompt_loader.py` as the public function `is_claude_md` (see Step 1). Import it from there:
+
 ```python
-def _is_claude_md(project_prompt_path: Path | None, project_dir: str | None) -> bool:
-    """Check if project_prompt points to the project's CLAUDE.md."""
+from mcp_coder.prompts.prompt_loader import is_claude_md
+```
+
+```python
+def is_claude_md(project_prompt_path: Path | None, project_dir: str | None) -> bool:
+    """Check if project_prompt points to any known CLAUDE.md location.
+    Checks root-level, .claude/ dir, and parent directories up to filesystem root."""
     if project_prompt_path is None or project_dir is None:
         return False
-    claude_md = Path(project_dir) / ".claude" / "CLAUDE.md"
     try:
-        return project_prompt_path.resolve() == claude_md.resolve()
+        resolved = project_prompt_path.resolve()
     except OSError:
         return False
+    root = Path(project_dir).resolve()
+    # Known locations within the project
+    candidates = [
+        root / "CLAUDE.md",
+        root / ".claude" / "CLAUDE.md",
+    ]
+    # Walk parent directories up to filesystem root
+    current = root.parent
+    while current != current.parent:
+        candidates.append(current / "CLAUDE.md")
+        candidates.append(current / ".claude" / "CLAUDE.md")
+        current = current.parent
+    # Check filesystem root itself
+    candidates.append(current / "CLAUDE.md")
+    candidates.append(current / ".claude" / "CLAUDE.md")
+    return any(_safe_resolve(c) == resolved for c in candidates)
+
+def _safe_resolve(p: Path) -> Path | None:
+    try:
+        return p.resolve()
+    except OSError:
+        return None
 ```
 
 ### Prompt concatenation for Claude
@@ -111,7 +143,7 @@ def _build_claude_system_prompts(system_prompt, project_prompt, config, project_
     if project_prompt:
         # Skip if pointing at CLAUDE.md (Claude reads it natively)
         prompt_path = get_project_prompt_path(Path(project_dir) if project_dir else None)
-        if not _is_claude_md(prompt_path, project_dir):
+        if not is_claude_md(prompt_path, project_dir):
             parts.append(f"## Project Prompt\n\n{project_prompt}")
     combined = "\n\n".join(parts) if parts else None
     if config.claude_system_prompt_mode == "replace":
@@ -145,15 +177,16 @@ No new data structures. String parameters threaded through existing call chain.
 1. **`test_build_cli_command_append_system_prompt`** — `--append-system-prompt` flag present with correct value
 2. **`test_build_cli_command_system_prompt_replace`** — `--system-prompt` flag present with correct value
 3. **`test_build_cli_command_no_system_prompt`** — neither flag present (backward compatible)
-4. **`test_build_cli_command_both_prompts_raises`** — ValueError if both append and replace provided (optional, defensive)
+4. **`test_build_cli_command_both_prompts_raises`** — ValueError if both append and replace provided
 
 ### `test_interface.py` (additions)
 
 5. **`test_build_claude_system_prompts_append_mode`** — returns `(combined, None)`
 6. **`test_build_claude_system_prompts_replace_mode`** — returns `(None, combined)`
 7. **`test_build_claude_system_prompts_skips_claude_md`** — project prompt skipped when pointing at CLAUDE.md
-8. **`test_is_claude_md_true`** — matching path detected
+8. **`test_is_claude_md_true`** — matching path detected (including root-level CLAUDE.md and parent dirs)
 9. **`test_is_claude_md_false`** — non-matching path passes through
+10. **`test_is_claude_md_parent_dir`** — detects CLAUDE.md in parent directory
 
 ## LLM Prompt
 
@@ -164,7 +197,7 @@ Add append_system_prompt and system_prompt_replace parameters to build_cli_comma
 ask_claude_code_cli(), and ask_claude_code_cli_stream(). In build_cli_command(),
 append the appropriate CLI flags (--append-system-prompt or --system-prompt).
 
-In interface.py, add _build_claude_system_prompts() and _is_claude_md() helpers.
+In interface.py, add _build_claude_system_prompts() helper and import is_claude_md from prompt_loader.
 Wire them into the Claude path in prompt_llm() and prompt_llm_stream() so that
 loaded prompts are assembled and passed to the Claude provider.
 

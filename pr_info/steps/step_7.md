@@ -20,9 +20,10 @@ After the config section and before the LLM provider section, add:
 
 ```python
 # Prompt configuration section
-from ...prompts.prompt_loader import load_prompts, get_project_prompt_path
+from ...prompts.prompt_loader import load_prompts, get_project_prompt_path, is_claude_md
 
-project_dir = Path(args.project_dir).resolve() if args.project_dir else Path.cwd()
+# Reuse the project_dir variable already resolved earlier in execute_verify()
+# project_dir = Path(args.project_dir).resolve() if args.project_dir else Path.cwd()
 system_prompt, project_prompt, prompt_config = load_prompts(project_dir)
 
 lines = ["\n=== PROMPTS ==="]
@@ -33,7 +34,7 @@ lines.append(f"  {'Claude mode':<20s} {symbols['success']} {prompt_config.claude
 # Show CLAUDE.md redundancy detection for Claude provider
 if active_provider == "claude" and prompt_config.project_prompt:
     prompt_path = get_project_prompt_path(project_dir)
-    if _is_claude_md(prompt_path, str(project_dir)):
+    if is_claude_md(prompt_path, str(project_dir)):
         lines.append(f"  {'Redundancy':<20s} {symbols['warning']} project prompt is CLAUDE.md (will skip for Claude)")
 print("\n".join(lines))
 ```
@@ -64,7 +65,7 @@ lines.append(f"  Claude mode: {prompt_config.claude_system_prompt_mode}")
 ## HOW
 
 - Both changes are purely display — they call `load_prompts()` read-only and format output
-- `verify.py` imports `_is_claude_md` from `interface.py` (or duplicates the simple check inline)
+- `verify.py` imports `is_claude_md` from `prompt_loader.py` (public function defined in Step 1, moved from `interface.py` per Fix 5)
 - No behavioral changes, just informational output
 - `_prompt_source` is a simple inline helper
 

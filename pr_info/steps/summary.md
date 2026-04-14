@@ -74,9 +74,10 @@ CLI (prompt.py / icoder.py)
 
 | File | Purpose |
 |------|---------|
+| `src/mcp_coder/prompts/__init__.py` | Package init (required for `importlib.resources` and imports) |
 | `src/mcp_coder/prompts/system-prompt.md` | Shipped default system prompt |
 | `src/mcp_coder/prompts/project-prompt.md` | Shipped default project prompt |
-| `src/mcp_coder/prompts/prompt_loader.py` | Config reading + path resolution + loading |
+| `src/mcp_coder/prompts/prompt_loader.py` | Config reading + path resolution + loading + `is_claude_md()` |
 | `tests/prompts/__init__.py` | Test package |
 | `tests/prompts/test_prompt_loader.py` | Tests for prompt_loader |
 
