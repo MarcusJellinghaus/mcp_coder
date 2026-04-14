@@ -1,14 +1,12 @@
-feat(cli): add --add-system-prompts flag to prompt command
+feat(icoder): pass project_dir to RealLLMService for prompt injection
 
-Add --add-system-prompts flag to the prompt parser that conditionally
-passes project_dir to prompt_llm()/prompt_llm_stream() for system and
-project prompt injection.
+Add project_dir parameter to RealLLMService and pass it through to
+prompt_llm_stream() in the stream() method. iCoder always injects
+system prompts by passing project_dir when creating RealLLMService
+in execute_icoder().
 
-- Add --add-system-prompts store_true argument to add_prompt_parser()
-- Wire prompt_project_dir in execute_prompt() for all 3 output paths
-  (streaming, session-id, json)
-- Without flag: project_dir=None (backward compatible, no prompts loaded)
-- With flag: project_dir=str(project_dir) (prompts loaded and injected)
-- Add 5 tests covering flag on/off, explicit project_dir, and all
-  output format paths
-- Update existing test assertions to include project_dir=None kwarg
+Changes:
+- RealLLMService.__init__ accepts optional project_dir parameter
+- RealLLMService.stream() forwards project_dir to prompt_llm_stream()
+- execute_icoder() passes project_dir=str(project_dir) to RealLLMService
+- Added tests verifying project_dir pass-through and None default

@@ -272,6 +272,46 @@ def test_real_llm_service_no_manager_passes_none(
     assert captured_kwargs["tools"] is None
 
 
+def test_real_llm_service_passes_project_dir(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RealLLMService passes project_dir to prompt_llm_stream."""
+    captured_kwargs: dict[str, object] = {}
+    fake_events: list[StreamEvent] = [{"type": "done"}]
+
+    def mock_stream(question: str, **kwargs: object) -> Iterator[StreamEvent]:
+        captured_kwargs.update(kwargs)
+        yield from fake_events
+
+    monkeypatch.setattr(
+        "mcp_coder.icoder.services.llm_service.prompt_llm_stream",
+        mock_stream,
+    )
+    service = RealLLMService(provider="claude", project_dir="/tmp/my-project")
+    list(service.stream("hello"))
+    assert captured_kwargs["project_dir"] == "/tmp/my-project"
+
+
+def test_real_llm_service_project_dir_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RealLLMService passes project_dir=None when not provided (backward compat)."""
+    captured_kwargs: dict[str, object] = {}
+    fake_events: list[StreamEvent] = [{"type": "done"}]
+
+    def mock_stream(question: str, **kwargs: object) -> Iterator[StreamEvent]:
+        captured_kwargs.update(kwargs)
+        yield from fake_events
+
+    monkeypatch.setattr(
+        "mcp_coder.icoder.services.llm_service.prompt_llm_stream",
+        mock_stream,
+    )
+    service = RealLLMService(provider="claude")
+    list(service.stream("hello"))
+    assert captured_kwargs["project_dir"] is None
+
+
 def test_fake_falls_back_to_default_after_canned_exhausted() -> None:
     """FakeLLMService falls back to default after canned responses are exhausted."""
     responses: list[list[StreamEvent]] = [

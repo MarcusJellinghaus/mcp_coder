@@ -44,6 +44,7 @@ class RealLLMService:
         env_vars: dict[str, str] | None = None,
         timeout: int = ICODER_LLM_TIMEOUT_SECONDS,
         mcp_manager: MCPManager | None = None,
+        project_dir: str | None = None,
     ) -> None:
         self._provider = provider
         self._session_id = session_id
@@ -52,6 +53,7 @@ class RealLLMService:
         self._env_vars = env_vars
         self._timeout = timeout
         self._mcp_manager = mcp_manager
+        self._project_dir = project_dir
 
     def stream(self, question: str) -> Iterator[StreamEvent]:
         """Call prompt_llm_stream() with stored config. Updates session_id from 'done' events.
@@ -71,6 +73,7 @@ class RealLLMService:
             mcp_config=self._mcp_config,
             env_vars=self._env_vars,
             tools=tools,
+            project_dir=self._project_dir,
         ):
             if event.get("type") == "done":
                 sid = event.get("session_id")
