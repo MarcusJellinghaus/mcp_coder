@@ -1,0 +1,7 @@
+feat: set DISABLE_AUTOUPDATER=1 in LLM subprocess environment
+
+Add DISABLE_AUTOUPDATER to prepare_llm_environment() so all Claude CLI
+subprocesses have the autoupdater disabled by default. The value defaults
+to "1" but respects any existing value set in the parent environment.
+
+Closes #740

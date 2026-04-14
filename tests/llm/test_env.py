@@ -326,3 +326,39 @@ def test_venv_path_absolute(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
     result = prepare_llm_environment(project_dir)
 
     assert Path(result["MCP_CODER_VENV_PATH"]).is_absolute()
+
+
+def test_prepare_llm_environment_sets_disable_autoupdater(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test that DISABLE_AUTOUPDATER defaults to '1' when not set."""
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    venv_dir = tmp_path / "runner" / ".venv"
+    venv_dir.mkdir(parents=True)
+
+    monkeypatch.setenv("VIRTUAL_ENV", str(venv_dir))
+    monkeypatch.delenv("CONDA_PREFIX", raising=False)
+    monkeypatch.delenv("DISABLE_AUTOUPDATER", raising=False)
+
+    result = prepare_llm_environment(project_dir)
+
+    assert result["DISABLE_AUTOUPDATER"] == "1"
+
+
+def test_prepare_llm_environment_preserves_existing_disable_autoupdater(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test that an existing DISABLE_AUTOUPDATER value is preserved."""
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    venv_dir = tmp_path / "runner" / ".venv"
+    venv_dir.mkdir(parents=True)
+
+    monkeypatch.setenv("VIRTUAL_ENV", str(venv_dir))
+    monkeypatch.delenv("CONDA_PREFIX", raising=False)
+    monkeypatch.setenv("DISABLE_AUTOUPDATER", "0")
+
+    result = prepare_llm_environment(project_dir)
+
+    assert result["DISABLE_AUTOUPDATER"] == "0"

@@ -60,10 +60,11 @@ def prepare_llm_environment(project_dir: Path) -> dict[str, str]:
         project_dir: Absolute path to project directory
 
     Returns:
-        Dictionary with MCP_CODER_PROJECT_DIR, MCP_CODER_VENV_DIR, and
-        MCP_CODER_VENV_PATH environment variables as absolute OS-native paths.
+        Dictionary with MCP_CODER_PROJECT_DIR, MCP_CODER_VENV_DIR,
+        MCP_CODER_VENV_PATH, and DISABLE_AUTOUPDATER environment variables.
         MCP_CODER_VENV_PATH points to the venv's Scripts (Windows) or bin
-        (POSIX) subdirectory.
+        (POSIX) subdirectory. DISABLE_AUTOUPDATER defaults to "1" but
+        preserves any value already set in the parent environment.
     """
     logger.debug("Preparing LLM environment for project: %s", project_dir)
 
@@ -83,6 +84,8 @@ def prepare_llm_environment(project_dir: Path) -> dict[str, str]:
         "MCP_CODER_VENV_DIR": venv_dir_absolute,
         "MCP_CODER_VENV_PATH": venv_path,
     }
+
+    env_vars["DISABLE_AUTOUPDATER"] = os.environ.get("DISABLE_AUTOUPDATER", "1")
 
     logger.debug(
         "Prepared environment variables: MCP_CODER_PROJECT_DIR=%s, "
