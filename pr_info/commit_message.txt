@@ -1,14 +1,7 @@
-feat(icoder): add /info slash command with runtime diagnostics (#741)
+feat(icoder): wire MCPManager and /info into execute_icoder (#741)
 
-Add `/info` command that displays:
-- mcp-coder version, Python version/path
-- Environment paths (tool env, project env, project dir)
-- MCP server status (langchain and Claude Code)
-- Environment variables with secret redaction
-
-New files:
-- src/mcp_coder/icoder/core/commands/info.py
-- tests/icoder/test_info_command.py
-
-The `_redact_env_vars` helper redacts values for keys containing
-token, key, secret, password, or credential (case-insensitive).
+- Create MCPManager when provider=langchain and mcp_config is set
+- Register /info command with runtime_info and mcp_manager
+- Pass mcp_manager to RealLLMService constructor
+- Ensure MCPManager.close() on exit via try/finally
+- Add tests: MCPManager creation, cleanup, /info registration, error handling

@@ -66,9 +66,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 5: Wire Everything in `execute_icoder()`
 > [Detail](./steps/step_5.md) — Wire `MCPManager`, `/info`, and cleanup in `icoder.py`
 
-- [ ] Implementation: modify `execute_icoder()` + tests in `tests/icoder/test_cli_icoder.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: modify `execute_icoder()` + tests in `tests/icoder/test_cli_icoder.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
