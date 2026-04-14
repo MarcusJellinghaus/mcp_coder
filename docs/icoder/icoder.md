@@ -9,7 +9,7 @@ A single-row bar at the bottom of the output log with three zones:
 | Zone | Position | Content |
 |------|----------|---------|
 | Tokens | Left | `↓<in> ↑<out> \| total: ↓<in> ↑<out>` |
-| Version | Centre | `mcp-coder <version>` |
+| Version | Centre | `v<version>` |
 | Input hint | Right | `\ + Enter = newline` |
 
 - Token counts use compact suffixes: **k** (thousands), **M** (millions)
