@@ -68,14 +68,18 @@ class TokenUsage:
 if n < 1000:        return str(n)           # "0", "999"
 if n < 1_000_000:
     k = n / 1000
-    if k < 10:      return f"{k:.1f}k"      # "1.2k"
-    else:           return f"{int(k)}k"      # "12k", "123k"
+    if k < 9.95:    return f"{k:.1f}k"      # "1.2k" .. "9.9k"
+    else:           return f"{round(k)}k"   # "10k", "123k"
 if n < 1_000_000_000:
     m = n / 1_000_000
-    if m < 10:      return f"{m:.1f}M"       # "1.2M"
-    else:           return f"{int(m)}M"      # "12M"
+    if m < 9.95:    return f"{m:.1f}M"      # "1.2M" .. "9.9M"
+    else:           return f"{round(m)}M"   # "10M", "123M"
 return f"{n // 1_000_000_000}B"
 ```
+
+> **Boundary note**: The threshold `9.95` ensures that values which round to 10.0
+> at one decimal place (e.g., 9999 → 9.999 → "10.0k") use the integer path instead.
+> `round(k)` is used instead of `int(k)` so that 9999 → `round(9.999)` = `10` → `"10k"`.
 
 ### `TokenUsage.update(input_tokens, output_tokens)`
 ```
@@ -104,7 +108,7 @@ return self._ever_updated and (self.total_input > 0 or self.total_output > 0)
 - `format_token_count(999)` → `"999"`
 - `format_token_count(1000)` → `"1.0k"`
 - `format_token_count(1200)` → `"1.2k"`
-- `format_token_count(9999)` → `"10.0k"` → wait, 9.999k rounds to 10.0k. Actually 9999/1000=9.999, `f"{9.999:.1f}k"` = `"10.0k"`. Since 9.999 < 10 is False, we use int path: `"9k"`. Actually 9.999 < 10 is True. Let me recalculate: 9999/1000 = 9.999. 9.999 < 10 is True → `f"{9.999:.1f}k"` = `"10.0k"`. That's acceptable — the boundary is inherently fuzzy.
+- `format_token_count(9999)` → `"10k"` (9999/1000 = 9.999, which is ≥ 9.95 so uses integer path: `round(9.999)` = `10` → `"10k"`)
 - `format_token_count(10000)` → `"10k"`
 - `format_token_count(123456)` → `"123k"`
 - `format_token_count(999999)` → `"999k"`
@@ -116,8 +120,8 @@ return self._ever_updated and (self.total_input > 0 or self.total_output > 0)
 
 1. `test_format_token_count_zero` — `0` → `"0"`
 2. `test_format_token_count_small` — `999` → `"999"`
-3. `test_format_token_count_k_range` — parametrize `(1200, "1.2k"), (5400, "5.4k"), (10000, "10k"), (123456, "123k")`
-4. `test_format_token_count_m_range` — parametrize `(1_000_000, "1.0M"), (1_200_000, "1.2M"), (12_000_000, "12M")`
+3. `test_format_token_count_k_range` — parametrize `(1200, "1.2k"), (5400, "5.4k"), (9949, "9.9k"), (9999, "10k"), (10000, "10k"), (123456, "123k")`
+4. `test_format_token_count_m_range` — parametrize `(1_000_000, "1.0M"), (1_200_000, "1.2M"), (9_949_999, "9.9M"), (9_999_999, "10M"), (12_000_000, "12M")`
 5. `test_token_usage_initial_state` — all zeros, `has_data` is False, `display_text()` returns `"↓0 ↑0 | total: ↓0 ↑0"`
 6. `test_token_usage_single_update` — update(100, 50) → last and total match, `has_data` True
 7. `test_token_usage_cumulative` — two updates accumulate totals, last reflects most recent

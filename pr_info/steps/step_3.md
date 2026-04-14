@@ -130,8 +130,14 @@ def _update_token_display(self) -> None:
 }
 ```
 
+### Changes to snapshot tests
+
+- Snapshot test fixtures must inject a fixed version string (e.g., `"0.0.0-test"` via `RuntimeInfo` or by mocking `importlib.metadata.version`) to prevent breakage on version bumps.
+- Add Textual async tests for `_update_token_display()` verifying widget text and hidden-class behavior (see DATA section for details).
+
 ## HOW
 
+- Snapshot tests must use a fixed version string (see DATA section) to avoid fragile snapshots
 - `Horizontal` container with `id="status-bar"` gives the three-zone layout
 - `width: 1fr` on left and right zones makes them share remaining space equally
 - `width: auto` on center version zone sizes to content
@@ -146,9 +152,9 @@ usage = self._core.token_usage
 widget = query("#status-tokens")
 if usage.has_data:
     widget.update(usage.display_text())
-    widget.show()
+    widget.remove_class("hidden")
 else:
-    widget.hide()
+    widget.add_class("hidden")
 ```
 
 ### Initial state in `compose()`
@@ -175,3 +181,26 @@ Run: `pytest tests/icoder/test_snapshots.py --snapshot-update`
 All existing snapshots will change because:
 1. `#input-hint` replaced by `#status-bar` with different layout
 2. Content changes (version string, token counts visible)
+
+**Version stability**: Snapshot test fixtures must pass a `RuntimeInfo` with a fixed version to `AppCore` so the status bar renders a stable version string. Update the `icoder_app` fixture:
+
+```python
+from mcp_coder.icoder.runtime_info import RuntimeInfo
+
+@pytest.fixture
+def icoder_app(...):
+    runtime_info = RuntimeInfo(mcp_coder_version="0.0.0-test")
+    app_core = AppCore(..., runtime_info=runtime_info)
+    ...
+```
+
+This prevents snapshot breakage whenever mcp-coder is released with a new version number.
+
+### Tests for `_update_token_display()` (in `test_snapshots.py` or a new `test_status_bar.py`)
+
+Add Textual async tests that verify the status bar update logic beyond snapshots:
+
+1. **`test_token_display_updates_after_stream_with_usage`** -- Run a stream with usage data (`{"type": "done", "usage": {"input_tokens": 1200, "output_tokens": 800}}`), then assert that `#status-tokens` text contains the formatted counts (e.g., `"\u21931.2k \u2191800"`) and does NOT have the `hidden` class.
+2. **`test_token_display_hidden_after_stream_without_usage`** -- Run a stream with `{"type": "done"}` (no usage key), then assert that `#status-tokens` has the `hidden` class.
+
+Use existing test patterns from `tests/icoder/test_app_core.py` and `tests/icoder/test_snapshots.py` for fixture setup (FakeLLMService, patched store_session, etc.).

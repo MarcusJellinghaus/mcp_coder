@@ -17,7 +17,7 @@ Repurpose the `#input-hint` status line at the bottom of the iCoder TUI into a p
 ### Modified: `AppCore` owns token state (`icoder/core/app_core.py`)
 
 - New `_token_usage: TokenUsage` field, exposed via `token_usage` property
-- `stream_llm()` extracts usage from `assembler.result()["raw_response"]` after the stream loop and calls `_token_usage.update(...)`
+- `stream_llm()` extracts usage from the `"done"` event **inside** the stream for-loop (before yielding) and calls `_token_usage.update(...)`. This avoids a race condition where the UI thread could read `token_usage` on `StreamDone` before post-loop code runs.
 - Follows existing core/UI split: core owns state, UI renders
 
 ### Modified: Status bar replaces `#input-hint` (`icoder/ui/app.py`, `icoder/ui/styles.py`)
@@ -54,10 +54,10 @@ Repurpose the `#input-hint` status line at the bottom of the iCoder TUI into a p
 ## Data Flow
 
 ```
-LLM stream → ResponseAssembler captures usage in "done" event
-           → AppCore.stream_llm() extracts usage from assembler.result()
-           → AppCore._token_usage.update(input, output)
-           → UI handles StreamDone → reads app_core.token_usage
+LLM stream → events flow through AppCore.stream_llm() for-loop
+           → on "done" event: extract usage from event dict
+           → AppCore._token_usage.update(input, output) (inside loop, before yield)
+           → yield event → UI handles StreamDone → reads app_core.token_usage
            → Updates #status-tokens label text
 ```
 

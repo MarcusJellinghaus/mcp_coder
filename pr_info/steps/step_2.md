@@ -42,32 +42,36 @@ def token_usage(self) -> TokenUsage:
 
 ### Changes to `AppCore.stream_llm()`
 
-After the existing `response_data = assembler.result()` and `store_session(...)` lines, extract usage:
+Inside the existing `for event in ...` loop, before yielding each event, check for usage data:
 
 ```python
-usage = response_data["raw_response"].get("usage", {})
-if isinstance(usage, dict):
-    input_tokens = usage.get("input_tokens", 0)
-    output_tokens = usage.get("output_tokens", 0)
-    if isinstance(input_tokens, int) and isinstance(output_tokens, int):
-        self._token_usage.update(input_tokens, output_tokens)
+if event.get("type") == "done":
+    usage = event.get("usage", {})
+    if isinstance(usage, dict):
+        input_tokens = usage.get("input_tokens", 0)
+        output_tokens = usage.get("output_tokens", 0)
+        if isinstance(input_tokens, int) and isinstance(output_tokens, int):
+            self._token_usage.update(input_tokens, output_tokens)
 ```
+
+This extraction happens **inside** the for-loop, not after it.
 
 ## HOW
 
 - Import `TokenUsage` from `mcp_coder.icoder.core.types`
-- Insert usage extraction after the existing `store_session()` call — minimal diff
+- Extract usage **inside the for-loop** on the `"done"` event, before the event is yielded. This avoids a race condition: if usage extraction were placed after the loop (alongside `store_session()`), the UI thread could process `StreamDone` and read `token_usage` before the worker thread executes the post-loop code. By updating inside the loop, `token_usage` is guaranteed to be populated before the UI sees `StreamDone`.
 - Defensive type checks: usage dict may be absent (LangChain) or malformed
 
 ## ALGORITHM
 
 ```
-# After existing stream loop and store_session():
-raw = assembler.result()["raw_response"]
-usage = raw.get("usage", {})
-input_t = usage.get("input_tokens", 0)  # default 0 if missing
-output_t = usage.get("output_tokens", 0)
-if both are int: self._token_usage.update(input_t, output_t)
+# Inside the for-loop, when processing each event:
+if event.get("type") == "done":
+    usage = event.get("usage", {})
+    input_t = usage.get("input_tokens", 0)  # default 0 if missing
+    output_t = usage.get("output_tokens", 0)
+    if both are int: self._token_usage.update(input_t, output_t)
+# then yield the event as before
 ```
 
 ## DATA
