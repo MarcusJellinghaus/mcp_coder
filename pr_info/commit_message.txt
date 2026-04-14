@@ -1,6 +1,0 @@
-fix: add missing mocks for cleanup_repository and is_working_directory_clean in test
-
-After the workflow step reorder (#759), cleanup now runs between summary
-generation and push. The test_main_workflow_pr_creation_failure test was
-missing mocks for these two functions, causing is_working_directory_clean
-to hit the real git check on the fake /test/project path.
