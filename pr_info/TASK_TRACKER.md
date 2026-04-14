@@ -45,9 +45,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 4: Claude Provider — Accept and Inject System Prompts via CLI Flags
 > [Detail](./steps/step_4.md) — `build_cli_command()` gains `--append-system-prompt`/`--system-prompt` flags, CLAUDE.md redundancy detection, prompt concatenation in `interface.py`
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: CLI `prompt` Command — `--add-system-prompts` Flag
 > [Detail](./steps/step_5.md) — Add flag to parser, wire `project_dir` to `prompt_llm()`/`prompt_llm_stream()` conditionally

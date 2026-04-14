@@ -1,15 +1,17 @@
-feat(langchain): prepend system messages in langchain provider
+feat: add system prompt CLI flags to Claude provider and prompt assembly
 
-Add SystemMessage injection to the langchain provider:
-
-- Add _build_system_messages() helper in __init__.py to convert
-  system_prompt/project_prompt strings into SystemMessage objects
-- Wire system_messages param through all internal functions:
-  _ask_text, _ask_text_stream, _ask_agent, _ask_agent_stream
-- Prepend system_messages to message lists in all code paths
-- Add system_messages param to run_agent() and run_agent_stream()
-  in agent.py with prepend logic
-- Add _SystemMessage stub class to test conftest for isinstance()
-  support in unit tests
-- Add tests: _build_system_messages helper, text/stream prepending,
-  agent prepending, end-to-end pass-through
+- Add append_system_prompt and system_prompt_replace params to
+  build_cli_command(), ask_claude_code_cli(), and
+  ask_claude_code_cli_stream() with --append-system-prompt and
+  --system-prompt flag injection (mutually exclusive)
+- Add _build_claude_system_prompts() helper in interface.py that
+  assembles prompts with section headers, detects CLAUDE.md redundancy
+  via is_claude_md(), and routes to append or replace mode
+- Wire prompt assembly into prompt_llm() and prompt_llm_stream()
+  Claude paths so loaded prompts are properly formatted before passing
+  to the CLI provider
+- Add tests for CLI flag generation (append, replace, none, both-raises)
+  and prompt building (append mode, replace mode, CLAUDE.md skip,
+  no prompts, system-only)
+- Add tests for is_claude_md (root, .claude dir, parent dir, non-match,
+  None cases)

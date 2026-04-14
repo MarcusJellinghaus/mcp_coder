@@ -335,6 +335,43 @@ class TestPureFunctions:
         assert "version" in result
         assert "timestamp" in result
 
+    def test_build_cli_command_append_system_prompt(self) -> None:
+        """Test --append-system-prompt flag is present with correct value."""
+        cmd = build_cli_command(
+            None, "claude", append_system_prompt="You are a helpful assistant."
+        )
+
+        assert "--append-system-prompt" in cmd
+        idx = cmd.index("--append-system-prompt")
+        assert cmd[idx + 1] == "You are a helpful assistant."
+        assert "--system-prompt" not in cmd
+
+    def test_build_cli_command_system_prompt_replace(self) -> None:
+        """Test --system-prompt flag is present with correct value."""
+        cmd = build_cli_command(None, "claude", system_prompt_replace="Replace prompt.")
+
+        assert "--system-prompt" in cmd
+        idx = cmd.index("--system-prompt")
+        assert cmd[idx + 1] == "Replace prompt."
+        assert "--append-system-prompt" not in cmd
+
+    def test_build_cli_command_no_system_prompt(self) -> None:
+        """Test neither flag is present when no system prompt given."""
+        cmd = build_cli_command(None, "claude")
+
+        assert "--append-system-prompt" not in cmd
+        assert "--system-prompt" not in cmd
+
+    def test_build_cli_command_both_prompts_raises(self) -> None:
+        """Test ValueError if both append and replace provided."""
+        with pytest.raises(ValueError, match="Cannot specify both"):
+            build_cli_command(
+                None,
+                "claude",
+                append_system_prompt="append",
+                system_prompt_replace="replace",
+            )
+
 
 class TestFormatStreamJsonInput:
     """Tests for format_stream_json_input function."""

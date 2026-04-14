@@ -5,7 +5,7 @@ import logging
 import os
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from mcp_coder.utils.subprocess_runner import TimeoutExpired
 
@@ -14,6 +14,10 @@ from .providers.claude.claude_code_cli import ask_claude_code_cli
 
 # Serialization functions are now in .serialization module
 from .types import LLMResponseDict, StreamEvent
+
+if TYPE_CHECKING:
+    from mcp_coder.utils.pyproject_config import PromptsConfig
+
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +34,40 @@ __all__ = [
     "prompt_llm",
     "prompt_llm_stream",
 ]
+
+
+def _build_claude_system_prompts(
+    system_prompt: str | None,
+    project_prompt: str | None,
+    config: "PromptsConfig",
+    project_dir: str | None,
+) -> tuple[str | None, str | None]:
+    """Build append_system_prompt / system_prompt_replace for Claude CLI.
+
+    Returns:
+        (append_system_prompt, system_prompt_replace) — one will be set, the other None.
+    """
+    from mcp_coder.prompts.prompt_loader import (  # noqa: PLC0415
+        get_project_prompt_path,
+        is_claude_md,
+    )
+
+    parts: list[str] = []
+    if system_prompt:
+        parts.append(f"## System Prompt\n\n{system_prompt}")
+    if project_prompt:
+        # Skip if pointing at CLAUDE.md (Claude reads it natively)
+        prompt_path = get_project_prompt_path(
+            Path(project_dir) if project_dir else None
+        )
+        if not is_claude_md(prompt_path, project_dir):
+            parts.append(f"## Project Prompt\n\n{project_prompt}")
+
+    combined = "\n\n".join(parts) if parts else None
+
+    if config.claude_system_prompt_mode == "replace":
+        return (None, combined)
+    return (combined, None)
 
 
 def prompt_llm(
@@ -113,10 +151,11 @@ def prompt_llm(
     # Load prompts if project_dir is provided
     system_prompt: str | None = None
     project_prompt: str | None = None
+    prompts_config = None
     if project_dir:
         from mcp_coder.prompts.prompt_loader import load_prompts  # noqa: PLC0415
 
-        system_prompt, project_prompt, _config = load_prompts(Path(project_dir))
+        system_prompt, project_prompt, prompts_config = load_prompts(Path(project_dir))
 
     # Unsupported provider check — before context manager (no MLflow run needed)
     if provider not in ("claude", "langchain"):
@@ -162,6 +201,14 @@ def prompt_llm(
             if env_vars and "MCP_CODER_PROJECT_DIR" in env_vars:
                 logs_dir = str(Path(env_vars["MCP_CODER_PROJECT_DIR"]) / "logs")
 
+            # Build system prompt flags for Claude CLI
+            claude_append: str | None = None
+            claude_replace: str | None = None
+            if prompts_config is not None:
+                claude_append, claude_replace = _build_claude_system_prompts(
+                    system_prompt, project_prompt, prompts_config, project_dir
+                )
+
             try:
                 response = ask_claude_code_cli(
                     question,
@@ -172,8 +219,8 @@ def prompt_llm(
                     mcp_config=mcp_config,
                     branch_name=branch_name,
                     logs_dir=logs_dir,
-                    append_system_prompt=system_prompt,
-                    system_prompt_replace=project_prompt,
+                    append_system_prompt=claude_append,
+                    system_prompt_replace=claude_replace,
                 )
             except TimeoutExpired as e:
                 logger.error("LLM request timed out after %ds", timeout)
@@ -232,10 +279,11 @@ def prompt_llm_stream(
     # Load prompts if project_dir is provided
     system_prompt: str | None = None
     project_prompt: str | None = None
+    prompts_config = None
     if project_dir:
         from mcp_coder.prompts.prompt_loader import load_prompts  # noqa: PLC0415
 
-        system_prompt, project_prompt, _config = load_prompts(Path(project_dir))
+        system_prompt, project_prompt, prompts_config = load_prompts(Path(project_dir))
 
     if provider not in ("claude", "langchain"):
         raise ValueError(
@@ -263,6 +311,14 @@ def prompt_llm_stream(
             ask_claude_code_cli_stream,
         )
 
+        # Build system prompt flags for Claude CLI
+        claude_append: str | None = None
+        claude_replace: str | None = None
+        if prompts_config is not None:
+            claude_append, claude_replace = _build_claude_system_prompts(
+                system_prompt, project_prompt, prompts_config, project_dir
+            )
+
         yield from ask_claude_code_cli_stream(
             question,
             session_id=session_id,
@@ -271,6 +327,6 @@ def prompt_llm_stream(
             cwd=execution_dir,
             mcp_config=mcp_config,
             branch_name=branch_name,
-            append_system_prompt=system_prompt,
-            system_prompt_replace=project_prompt,
+            append_system_prompt=claude_append,
+            system_prompt_replace=claude_replace,
         )

@@ -370,6 +370,8 @@ def build_cli_command(
     claude_cmd: str,
     mcp_config: str | None = None,
     use_stream_json: bool = True,
+    append_system_prompt: str | None = None,
+    system_prompt_replace: str | None = None,
 ) -> list[str]:
     """Build CLI command arguments for stdin input (pure function).
 
@@ -391,12 +393,17 @@ def build_cli_command(
         mcp_config: Optional path to MCP config file
         use_stream_json: If True, use stream-json format for realtime output
             with complete logging including user prompts and tool interactions
+        append_system_prompt: Optional system prompt to append via --append-system-prompt.
+            Mutually exclusive with system_prompt_replace.
+        system_prompt_replace: Optional system prompt to replace via --system-prompt.
+            Mutually exclusive with append_system_prompt.
 
     Returns:
         Command list ready for subprocess execution with stdin
 
     Raises:
-        ValueError: If required parameters are missing or invalid.
+        ValueError: If required parameters are missing or invalid, or if both
+            append_system_prompt and system_prompt_replace are provided.
 
     Example:
         >>> cmd = build_cli_command(None, "claude")
@@ -446,6 +453,16 @@ def build_cli_command(
     # preventing fallback to default MCP configurations
     if mcp_config:
         command.extend(["--mcp-config", mcp_config, "--strict-mcp-config"])
+
+    # System prompt flags (mutually exclusive)
+    if append_system_prompt and system_prompt_replace:
+        raise ValueError(
+            "Cannot specify both append_system_prompt and system_prompt_replace"
+        )
+    if append_system_prompt:
+        command.extend(["--append-system-prompt", append_system_prompt])
+    if system_prompt_replace:
+        command.extend(["--system-prompt", system_prompt_replace])
 
     return command
 
@@ -614,7 +631,12 @@ def ask_claude_code_cli(
 
     # Build command with stream-json output format
     command = build_cli_command(
-        session_id, claude_cmd, mcp_config, use_stream_json=True
+        session_id,
+        claude_cmd,
+        mcp_config,
+        use_stream_json=True,
+        append_system_prompt=append_system_prompt,
+        system_prompt_replace=system_prompt_replace,
     )
 
     # Generate stream log file path

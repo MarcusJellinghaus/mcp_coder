@@ -104,7 +104,12 @@ def ask_claude_code_cli_stream(
 
     claude_cmd = _find_claude_executable()
     command = build_cli_command(
-        session_id, claude_cmd, mcp_config, use_stream_json=True
+        session_id,
+        claude_cmd,
+        mcp_config,
+        use_stream_json=True,
+        append_system_prompt=append_system_prompt,
+        system_prompt_replace=system_prompt_replace,
     )
     stream_file = get_stream_log_path(logs_dir, cwd, branch_name)
     input_data = format_stream_json_input(question)

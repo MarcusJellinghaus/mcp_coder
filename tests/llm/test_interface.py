@@ -1461,6 +1461,10 @@ class TestPromptLlmProjectDir:
         result = prompt_llm("Test question", project_dir="/my/project")
 
         mock_load_prompts.assert_called_once_with(Path("/my/project"))
+        expected_combined = (
+            "## System Prompt\n\nsystem prompt content\n\n"
+            "## Project Prompt\n\nproject prompt content"
+        )
         mock_ask_claude_code_cli.assert_called_once_with(
             "Test question",
             session_id=None,
@@ -1470,8 +1474,8 @@ class TestPromptLlmProjectDir:
             mcp_config=None,
             branch_name=None,
             logs_dir=None,
-            append_system_prompt="system prompt content",
-            system_prompt_replace="project prompt content",
+            append_system_prompt=expected_combined,
+            system_prompt_replace=None,
         )
         assert result["text"] == "Response with prompts"
 
@@ -1506,6 +1510,9 @@ class TestPromptLlmProjectDir:
         )
 
         mock_load_prompts.assert_called_once_with(Path("/my/project"))
+        expected_combined = (
+            "## System Prompt\n\nsys prompt\n\n" "## Project Prompt\n\nproj prompt"
+        )
         mock_stream.assert_called_once_with(
             "Hello",
             session_id=None,
@@ -1514,8 +1521,8 @@ class TestPromptLlmProjectDir:
             cwd=None,
             mcp_config=None,
             branch_name=None,
-            append_system_prompt="sys prompt",
-            system_prompt_replace="proj prompt",
+            append_system_prompt=expected_combined,
+            system_prompt_replace=None,
         )
         assert len(events) == 2
 
@@ -1559,3 +1566,169 @@ class TestPromptLlmProjectDir:
         assert kwargs["system_prompt"] == "sys prompt"
         assert kwargs["project_prompt"] == "proj prompt"
         assert result["text"] == "langchain reply"
+
+
+class TestBuildClaudeSystemPrompts:
+    """Tests for _build_claude_system_prompts helper."""
+
+    def test_append_mode_returns_combined_in_first_slot(self) -> None:
+        """In append mode, combined prompt goes to append_system_prompt."""
+        from mcp_coder.llm.interface import _build_claude_system_prompts
+        from mcp_coder.utils.pyproject_config import PromptsConfig
+
+        config = PromptsConfig(
+            system_prompt=None,
+            project_prompt=None,
+            claude_system_prompt_mode="append",
+        )
+
+        append, replace = _build_claude_system_prompts(
+            "System text", "Project text", config, "/fake/dir"
+        )
+
+        expected = (
+            "## System Prompt\n\nSystem text\n\n" "## Project Prompt\n\nProject text"
+        )
+        assert append == expected
+        assert replace is None
+
+    def test_replace_mode_returns_combined_in_second_slot(self) -> None:
+        """In replace mode, combined prompt goes to system_prompt_replace."""
+        from mcp_coder.llm.interface import _build_claude_system_prompts
+        from mcp_coder.utils.pyproject_config import PromptsConfig
+
+        config = PromptsConfig(
+            system_prompt=None,
+            project_prompt=None,
+            claude_system_prompt_mode="replace",
+        )
+
+        append, replace = _build_claude_system_prompts(
+            "System text", "Project text", config, "/fake/dir"
+        )
+
+        expected = (
+            "## System Prompt\n\nSystem text\n\n" "## Project Prompt\n\nProject text"
+        )
+        assert append is None
+        assert replace == expected
+
+    @patch("mcp_coder.prompts.prompt_loader.is_claude_md", return_value=True)
+    @patch(
+        "mcp_coder.prompts.prompt_loader.get_project_prompt_path",
+        return_value=Path("/fake/dir/CLAUDE.md"),
+    )
+    def test_skips_project_prompt_when_claude_md(
+        self,
+        _mock_path: MagicMock,
+        _mock_is_claude: MagicMock,
+    ) -> None:
+        """Project prompt is skipped when pointing at CLAUDE.md."""
+        from mcp_coder.llm.interface import _build_claude_system_prompts
+        from mcp_coder.utils.pyproject_config import PromptsConfig
+
+        config = PromptsConfig(
+            system_prompt=None,
+            project_prompt=None,
+            claude_system_prompt_mode="append",
+        )
+
+        append, replace = _build_claude_system_prompts(
+            "System text", "Project text", config, "/fake/dir"
+        )
+
+        assert append == "## System Prompt\n\nSystem text"
+        assert replace is None
+
+    def test_no_prompts_returns_none(self) -> None:
+        """When both prompts are None, returns (None, None)."""
+        from mcp_coder.llm.interface import _build_claude_system_prompts
+        from mcp_coder.utils.pyproject_config import PromptsConfig
+
+        config = PromptsConfig(
+            system_prompt=None,
+            project_prompt=None,
+            claude_system_prompt_mode="append",
+        )
+
+        append, replace = _build_claude_system_prompts(None, None, config, None)
+
+        assert append is None
+        assert replace is None
+
+    def test_only_system_prompt(self) -> None:
+        """When only system_prompt is set, only system section present."""
+        from mcp_coder.llm.interface import _build_claude_system_prompts
+        from mcp_coder.utils.pyproject_config import PromptsConfig
+
+        config = PromptsConfig(
+            system_prompt=None,
+            project_prompt=None,
+            claude_system_prompt_mode="append",
+        )
+
+        append, replace = _build_claude_system_prompts(
+            "System only", None, config, None
+        )
+
+        assert append == "## System Prompt\n\nSystem only"
+        assert replace is None
+
+
+class TestIsClaudeMd:
+    """Tests for is_claude_md function."""
+
+    def test_is_claude_md_true_root_level(self, tmp_path: Path) -> None:
+        """Detects CLAUDE.md at project root."""
+        from mcp_coder.prompts.prompt_loader import is_claude_md
+
+        claude_md = tmp_path / "CLAUDE.md"
+        claude_md.write_text("# Instructions")
+
+        assert is_claude_md(claude_md, str(tmp_path)) is True
+
+    def test_is_claude_md_true_dot_claude_dir(self, tmp_path: Path) -> None:
+        """Detects .claude/CLAUDE.md."""
+        from mcp_coder.prompts.prompt_loader import is_claude_md
+
+        dot_claude = tmp_path / ".claude"
+        dot_claude.mkdir()
+        claude_md = dot_claude / "CLAUDE.md"
+        claude_md.write_text("# Instructions")
+
+        assert is_claude_md(claude_md, str(tmp_path)) is True
+
+    def test_is_claude_md_false_non_matching(self, tmp_path: Path) -> None:
+        """Non-CLAUDE.md paths return False."""
+        from mcp_coder.prompts.prompt_loader import is_claude_md
+
+        custom = tmp_path / "my-prompt.md"
+        custom.write_text("custom prompt")
+
+        assert is_claude_md(custom, str(tmp_path)) is False
+
+    def test_is_claude_md_parent_dir(self, tmp_path: Path) -> None:
+        """Detects CLAUDE.md in parent directory."""
+        from mcp_coder.prompts.prompt_loader import is_claude_md
+
+        parent_claude = tmp_path / "CLAUDE.md"
+        parent_claude.write_text("# Parent instructions")
+        sub_project = tmp_path / "subproject"
+        sub_project.mkdir()
+
+        assert is_claude_md(parent_claude, str(sub_project)) is True
+
+    def test_is_claude_md_none_path(self) -> None:
+        """Returns False when path is None."""
+        from mcp_coder.prompts.prompt_loader import is_claude_md
+
+        assert is_claude_md(None, "/some/dir") is False
+
+    def test_is_claude_md_none_project_dir(self, tmp_path: Path) -> None:
+        """Returns False when project_dir is None."""
+        from mcp_coder.prompts.prompt_loader import is_claude_md
+
+        claude_md = tmp_path / "CLAUDE.md"
+        claude_md.write_text("# Instructions")
+
+        assert is_claude_md(claude_md, None) is False
