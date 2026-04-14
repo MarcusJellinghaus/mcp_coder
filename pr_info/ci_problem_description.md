@@ -1,5 +1,0 @@
-The CI pipeline failed on the `ruff-docstrings` job because ruff's DOC201 rule detected three functions with return types declared in their signatures but no corresponding "Returns" section in their docstrings. Ruff version 0.15.10 enforces that any function with a `return` annotation must document its return value in the docstring.
-
-The three violations are in two files. In `src/mcp_coder/icoder/core/commands/info.py`, the function `_redact_env_vars` (line 24) returns `dict[str, str]` and `_format_info` (line 39) returns `str`, but neither docstring includes a "Returns" section. In `src/mcp_coder/llm/mcp_manager.py`, the async method `_connect_and_discover` (line 78) returns `list[Any]` without documenting the return value in its docstring.
-
-The fix is to add a "Returns" section to each of these three docstrings describing what the function returns. The format should follow the project's existing docstring convention (likely Google-style, given the ruff DOC201 rule). No logic changes are needed — only docstring additions.

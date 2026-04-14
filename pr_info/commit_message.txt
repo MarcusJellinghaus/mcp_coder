@@ -1,8 +1,0 @@
-fix: add missing Returns docstring sections for ruff DOC201
-
-Add Returns sections to three functions with return type annotations
-but no return documentation in their docstrings:
-
-- _redact_env_vars in icoder/core/commands/info.py
-- _format_info in icoder/core/commands/info.py
-- _connect_and_discover in llm/mcp_manager.py
