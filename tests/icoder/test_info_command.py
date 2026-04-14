@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -250,13 +250,13 @@ def _make_mock_mcp_manager(
 @patch("mcp_coder.icoder.core.commands.info.find_claude_executable", return_value=None)
 def test_info_shows_prompt_paths(
     _mock_claude: object,
-    mock_load: object,
+    mock_load: MagicMock,
     registry: CommandRegistry,
     runtime_info: RuntimeInfo,
 ) -> None:
     from mcp_coder.utils.pyproject_config import PromptsConfig
 
-    mock_load.return_value = (  # type: ignore[union-attr]
+    mock_load.return_value = (
         "sys",
         "proj",
         PromptsConfig(
@@ -278,13 +278,13 @@ def test_info_shows_prompt_paths(
 @patch("mcp_coder.icoder.core.commands.info.find_claude_executable", return_value=None)
 def test_info_shows_shipped_defaults(
     _mock_claude: object,
-    mock_load: object,
+    mock_load: MagicMock,
     registry: CommandRegistry,
     runtime_info: RuntimeInfo,
 ) -> None:
     from mcp_coder.utils.pyproject_config import PromptsConfig
 
-    mock_load.return_value = (  # type: ignore[union-attr]
+    mock_load.return_value = (
         "sys",
         "proj",
         PromptsConfig(

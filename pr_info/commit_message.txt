@@ -1,11 +1,8 @@
-fix: add missing docstring entries for prompt parameters
+fix: resolve mypy strict mode errors in test files
 
-Add missing Args descriptions for new prompt-related parameters
-(append_system_prompt, system_prompt_replace, system_prompt,
-project_prompt, system_messages) across claude_code_cli.py,
-langchain/__init__.py, and langchain/agent.py.
-
-Add missing Returns sections to all public functions in
-prompts/prompt_loader.py.
-
-Fixes 13 ruff docstring errors (7 D417, 6 DOC201).
+- Type mock_load parameter as MagicMock instead of object in
+  test_info_command.py to fix attr-defined errors and remove stale
+  type: ignore[union-attr] comments
+- Import get_stream_log_path and sanitize_branch_identifier directly
+  from claude_code_cli_log_paths in test_claude_cli_stream_parsing.py
+  to fix implicit re-export errors under mypy strict mode

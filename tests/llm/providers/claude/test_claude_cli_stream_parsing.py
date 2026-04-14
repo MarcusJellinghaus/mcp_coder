@@ -14,10 +14,12 @@ from mcp_coder.llm.providers.claude.claude_code_cli import (
     StreamMessage,
     ask_claude_code_cli,
     create_response_dict_from_stream,
-    get_stream_log_path,
     parse_stream_json_file,
     parse_stream_json_line,
     parse_stream_json_string,
+)
+from mcp_coder.llm.providers.claude.claude_code_cli_log_paths import (
+    get_stream_log_path,
     sanitize_branch_identifier,
 )
 from mcp_coder.utils.subprocess_runner import CalledProcessError, CommandResult
