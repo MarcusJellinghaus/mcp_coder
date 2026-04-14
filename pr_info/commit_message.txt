@@ -1,10 +1,14 @@
-feat(llm): add mcp_manager to RealLLMService (#741)
+feat(icoder): add /info slash command with runtime diagnostics (#741)
 
-Add optional `mcp_manager` parameter to `RealLLMService` so persistent
-MCP tools are threaded through to `prompt_llm_stream()`.
+Add `/info` command that displays:
+- mcp-coder version, Python version/path
+- Environment paths (tool env, project env, project dir)
+- MCP server status (langchain and Claude Code)
+- Environment variables with secret redaction
 
-- Import `MCPManager` under `TYPE_CHECKING` to avoid circular imports
-- In `stream()`, resolve tools from mcp_manager when present, pass as
-  `tools=` kwarg to `prompt_llm_stream()`
-- When no mcp_manager is set, `tools=None` preserves existing behavior
-- Add two tests: with manager (tools forwarded) and without (None)
+New files:
+- src/mcp_coder/icoder/core/commands/info.py
+- tests/icoder/test_info_command.py
+
+The `_redact_env_vars` helper redacts values for keys containing
+token, key, secret, password, or credential (case-insensitive).

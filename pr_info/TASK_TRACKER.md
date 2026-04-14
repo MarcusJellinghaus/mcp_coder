@@ -59,9 +59,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 4: `/info` Command
 > [Detail](./steps/step_4.md) — Create `/info` slash command in `src/mcp_coder/icoder/core/commands/info.py`
 
-- [ ] Implementation: `/info` command + `_redact_env_vars` + tests in `tests/icoder/test_info_command.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `/info` command + `_redact_env_vars` + tests in `tests/icoder/test_info_command.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Wire Everything in `execute_icoder()`
 > [Detail](./steps/step_5.md) — Wire `MCPManager`, `/info`, and cleanup in `icoder.py`
