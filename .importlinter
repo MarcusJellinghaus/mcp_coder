@@ -37,6 +37,7 @@ layers =
     mcp_coder.checks
     mcp_coder.workflow_utils
     mcp_coder.llm | mcp_coder.prompt_manager
+    mcp_coder.prompts
     mcp_coder.utils | mcp_coder.mcp_tools_py
     mcp_coder.config | mcp_coder.constants
 ignore_imports =
@@ -470,6 +471,7 @@ modules =
     tests.workflow_utils
     tests.checks
     tests.icoder
+    tests.prompts
 # Allowed: Importing shared fixtures from tests.utils.conftest
 # TODO: Refactor to use pytest's conftest discovery instead of explicit imports
 ignore_imports =

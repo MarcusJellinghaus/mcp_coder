@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Shipped Default Prompts + `prompt_loader.py` Module with Tests
 > [Detail](./steps/step_1.md) — New `mcp_coder.prompts` package: `prompt_loader.py`, shipped defaults, `get_prompts_config()` in `pyproject_config.py`, `.importlinter` update
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Add `project_dir` to Interface + Load Prompts in `prompt_llm()` / `prompt_llm_stream()`
 > [Detail](./steps/step_2.md) — `interface.py` gains `project_dir` param, calls `load_prompts()`, passes results to providers

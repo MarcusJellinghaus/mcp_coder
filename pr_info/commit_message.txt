@@ -1,0 +1,15 @@
+feat: add prompt loading module with shipped defaults (#648)
+
+Add system prompt and project prompt infrastructure:
+
+- Create mcp_coder.prompts package with prompt_loader.py module
+- Ship default system-prompt.md and project-prompt.md files
+- Add PromptsConfig dataclass and get_prompts_config() to pyproject_config.py
+- Implement load_prompts(), load_system_prompt(), load_project_prompt(),
+  get_project_prompt_path(), and is_claude_md() functions
+- Add comprehensive tests (16 tests) in tests/prompts/test_prompt_loader.py
+- Update .importlinter: add mcp_coder.prompts layer and tests.prompts
+  to test independence contract
+
+Prompt resolution order: pyproject.toml config → absolute path → relative
+to project_dir → shipped default. Uses find_data_file() for DRY reuse.
