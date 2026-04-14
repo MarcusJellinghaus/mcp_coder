@@ -33,6 +33,8 @@ class MCPManager:
 
     Owns MCP server connections for the app's lifetime.
     Lazy: connects on first tools() call, not at construction.
+
+    Not thread-safe: callers must ensure tools() and close() are not called concurrently.
     """
 
     def __init__(
