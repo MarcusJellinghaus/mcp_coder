@@ -20,7 +20,7 @@ MCP Coder uses two separate configuration files for different purposes:
 | File | Scope | Module | Contents |
 |------|-------|--------|----------|
 | `config.toml` | Per-user | `utils/user_config.py` | API tokens, Jenkins credentials, coordinator settings, LLM provider |
-| `pyproject.toml` | Per-project | `utils/pyproject_config.py` | Formatter settings (`[tool.black]`, `[tool.isort]`), GitHub dependency overrides (`[tool.mcp-coder.install-from-github]`) |
+| `pyproject.toml` | Per-project | `utils/pyproject_config.py` | Formatter settings (`[tool.black]`, `[tool.isort]`), GitHub dependency overrides (`[tool.mcp-coder.install-from-github]`), prompt configuration (`[tool.mcp-coder.prompts]`) |
 
 **Priority:** Environment variables > config file values (for both systems).
 

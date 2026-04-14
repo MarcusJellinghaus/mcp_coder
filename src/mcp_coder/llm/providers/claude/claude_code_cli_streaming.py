@@ -18,9 +18,9 @@ from .claude_code_cli import (
     _find_claude_executable,
     build_cli_command,
     format_stream_json_input,
-    get_stream_log_path,
     parse_stream_json_line,
 )
+from .claude_code_cli_log_paths import get_stream_log_path
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +79,8 @@ def ask_claude_code_cli_stream(
     mcp_config: str | None = None,
     logs_dir: str | None = None,
     branch_name: str | None = None,
+    append_system_prompt: str | None = None,
+    system_prompt_replace: str | None = None,
 ) -> Iterator[StreamEvent]:
     """Stream Claude CLI responses as events.
 
@@ -102,7 +104,12 @@ def ask_claude_code_cli_stream(
 
     claude_cmd = _find_claude_executable()
     command = build_cli_command(
-        session_id, claude_cmd, mcp_config, use_stream_json=True
+        session_id,
+        claude_cmd,
+        mcp_config,
+        use_stream_json=True,
+        append_system_prompt=append_system_prompt,
+        system_prompt_replace=system_prompt_replace,
     )
     stream_file = get_stream_log_path(logs_dir, cwd, branch_name)
     input_data = format_stream_json_input(question)

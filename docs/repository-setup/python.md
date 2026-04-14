@@ -23,8 +23,46 @@ The following `pyproject.toml` sections are read by the Python MCP tools and/or 
 | `[tool.pylint.main]` / `[tool.pylint.messages_control]` | `mcp__tools-py__run_pylint_check`, pylint CLI | Pylint config |
 | `[tool.ruff]` / `[tool.ruff.lint]` | `tools/ruff_check.sh` / `.bat` | Ruff lint + format config |
 | `[tool.mcp-coder.install-from-github]` | mcp-coder install process (`pyproject_config.py`) | GitHub-based dependency packages (`packages`, `packages-no-deps`) |
+| `[tool.mcp-coder.prompts]` | `prompt_loader.py`, `prompt` command, `icoder` | System/project prompt paths and Claude injection mode |
 
 **mcp-coder-specific behavior:** [`src/mcp_coder/utils/pyproject_config.py`](../../src/mcp_coder/utils/pyproject_config.py) reads `[tool.black]` and `[tool.isort]` and warns if their `line-length` settings disagree. It also reads `[tool.mcp-coder.install-from-github]` to find packages mcp-coder should install from GitHub source.
+
+### Prompt Configuration
+
+The `[tool.mcp-coder.prompts]` section configures system and project prompts that are injected into LLM requests. This is particularly important for the **langchain provider**, which has no built-in system prompt — without this, the LLM has no context about its role, tools, or coding conventions.
+
+```toml
+[tool.mcp-coder.prompts]
+system-prompt = "path/to/custom-system-prompt.md"     # optional
+project-prompt = ".claude/CLAUDE.md"                   # optional
+claude-system-prompt-mode = "append"                   # "append" (default) or "replace"
+```
+
+| Field | Type | Description | Default |
+|-------|------|-------------|---------|
+| `system-prompt` | string | Path to system prompt file (role definition, tool usage, coding practices) | Shipped default (`src/mcp_coder/prompts/system-prompt.md`) |
+| `project-prompt` | string | Path to project-specific prompt file (project conventions, architecture notes) | Shipped default (`src/mcp_coder/prompts/project-prompt.md`) |
+| `claude-system-prompt-mode` | string | How to inject prompts into Claude Code: `"append"` adds to built-in prompt, `"replace"` overrides it | `"append"` |
+
+**Path resolution:** Paths are resolved relative to the project root directory. Absolute paths are also supported. When the section is absent or a field is omitted, shipped defaults from the `mcp_coder` package are used.
+
+**When prompts are injected:**
+
+| Context | Behavior |
+|---------|----------|
+| `mcp-coder prompt --add-system-prompts` | Opt-in via flag |
+| `mcp-coder icoder` | Always injected |
+| Automated workflows (`implement`, `create-plan`) | Not injected (these use their own prompt templates) |
+
+**Provider-specific behavior:**
+
+- **Langchain:** Two `SystemMessage` objects (system prompt + project prompt) are prepended to the message list. Works in both text and agent modes.
+- **Claude Code (append mode):** Prompts are concatenated with section headers (`## System Prompt` / `## Project Prompt`) and passed via `--append-system-prompt`. Claude Code's built-in prompt is preserved.
+- **Claude Code (replace mode):** The concatenated prompt replaces Claude Code's entire built-in system prompt via `--system-prompt`. **Use with caution** — this removes Claude Code's tool instructions and safety rules.
+
+**CLAUDE.md redundancy detection:** When using the Claude Code provider, if `project-prompt` points to a `CLAUDE.md` file (in the project root, `.claude/` directory, or any parent directory), the project prompt is automatically skipped to avoid double injection — Claude Code already reads `CLAUDE.md` natively.
+
+**Verification:** Run `mcp-coder verify` to see which prompts are resolved and which mode is active. The iCoder `/info` command also shows prompt paths.
 
 **Other sections** (`[tool.setuptools.*]`, `[tool.setuptools_scm]`, etc.) are standard Python packaging configuration and not specifically used by mcp-coder workflows.
 

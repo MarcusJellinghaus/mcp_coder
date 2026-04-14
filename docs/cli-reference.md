@@ -134,6 +134,7 @@ mcp-coder prompt "Your prompt here" [OPTIONS]
 - `--output-format FORMAT` - Output format: `text` (default) or `json` (includes session_id)
 - `--mcp-config PATH` - Path to MCP configuration file (e.g., `.mcp.linux.json`)
 - `--execution-dir PATH` - Working directory for Claude subprocess (default: current directory)
+- `--add-system-prompts` - Inject system and project prompts into the LLM request. Loads prompts from `[tool.mcp-coder.prompts]` in `pyproject.toml` (or shipped defaults). See [Prompt Configuration](repository-setup/python.md#prompt-configuration).
 
 **Examples:**
 ```bash
@@ -151,6 +152,9 @@ mcp-coder prompt "What's next?" --continue-session
 
 # Use verbose output with MCP config
 mcp-coder prompt "Review my implementation" --verbosity verbose --mcp-config .mcp.linux.json
+
+# Inject system and project prompts (useful for langchain provider)
+mcp-coder prompt "Analyze code" --add-system-prompts --llm-method langchain
 ```
 
 ---

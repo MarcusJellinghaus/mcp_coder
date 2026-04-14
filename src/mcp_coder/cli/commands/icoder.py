@@ -147,6 +147,7 @@ def execute_icoder(args: argparse.Namespace) -> int:
             env_vars=env_vars,
             timeout=args.timeout,
             mcp_manager=mcp_manager,
+            project_dir=str(project_dir),
         )
 
         from ...icoder.core.app_core import AppCore

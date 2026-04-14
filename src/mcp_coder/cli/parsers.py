@@ -112,6 +112,11 @@ def add_prompt_parser(subparsers: Any) -> None:
         help="Path to MCP configuration file (e.g., .mcp.linux.json)",
     )
     prompt_parser.add_argument(
+        "--add-system-prompts",
+        action="store_true",
+        help="Inject system and project prompts into the LLM request",
+    )
+    prompt_parser.add_argument(
         "--execution-dir",
         type=str,
         default=None,

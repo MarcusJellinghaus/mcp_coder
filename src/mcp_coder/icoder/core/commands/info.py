@@ -5,12 +5,14 @@ from __future__ import annotations
 import importlib.metadata
 import os
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from mcp_coder.icoder.core.types import Response
 from mcp_coder.llm.providers.claude.claude_executable_finder import (
     find_claude_executable,
 )
+from mcp_coder.prompts.prompt_loader import load_prompts
 from mcp_coder.utils.mcp_verification import parse_claude_mcp_list
 
 if TYPE_CHECKING:
@@ -58,6 +60,15 @@ def _format_info(
     lines.append(f"  Tool env:    {runtime_info.tool_env_path}")
     lines.append(f"  Project env: {runtime_info.project_venv_path}")
     lines.append(f"  Project dir: {runtime_info.project_dir}")
+
+    _sys_prompt, _proj_prompt, prompt_config = load_prompts(
+        Path(runtime_info.project_dir) if runtime_info.project_dir else None
+    )
+    lines.append("")
+    lines.append("Prompts:")
+    lines.append(f"  System:  {prompt_config.system_prompt or '(shipped default)'}")
+    lines.append(f"  Project: {prompt_config.project_prompt or '(shipped default)'}")
+    lines.append(f"  Claude mode: {prompt_config.claude_system_prompt_mode}")
 
     if mcp_manager is not None:
         lines.append("")

@@ -218,6 +218,7 @@ async def run_agent(
     execution_dir: str | None = None,  # pylint: disable=unused-argument
     env_vars: dict[str, str] | None = None,
     timeout: int = 30,
+    system_messages: list[Any] | None = None,
 ) -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
     """Run a LangGraph ReAct agent with MCP tools.
 
@@ -231,6 +232,8 @@ async def run_agent(
             for future).
         env_vars: Optional extra environment variables for MCP server resolution.
         timeout: Maximum time in seconds for the agent invocation.
+        system_messages: Optional list of system messages to prepend to the
+            conversation.
 
     Returns:
         ``(final_text, full_message_history, stats_dict)``.
@@ -273,8 +276,12 @@ async def run_agent(
 
     agent = create_react_agent(chat_model, all_tools)
 
-    # Build input: prior history + new question
-    input_messages = messages_from_dict(messages) + [HumanMessage(content=question)]
+    # Build input: system messages + prior history + new question
+    input_messages = (
+        (system_messages or [])
+        + messages_from_dict(messages)
+        + [HumanMessage(content=question)]
+    )
 
     result = await asyncio.wait_for(
         agent.ainvoke(
@@ -351,6 +358,7 @@ async def run_agent_stream(
     execution_dir: str | None = None,  # pylint: disable=unused-argument
     env_vars: dict[str, str] | None = None,
     tools: list[Any] | None = None,
+    system_messages: list[Any] | None = None,
 ) -> AsyncIterator[StreamEvent]:
     """Stream agent execution events as an async generator.
 
@@ -368,6 +376,8 @@ async def run_agent_stream(
         env_vars: Optional extra environment variables for MCP server resolution.
         tools: Optional pre-built LangChain tools (e.g. from MCPManager).
             When provided, skips MultiServerMCPClient creation.
+        system_messages: Optional list of system messages to prepend to the
+            conversation.
 
     Yields:
         ``StreamEvent`` dicts: ``text_delta``, ``tool_use_start``,
@@ -408,7 +418,11 @@ async def run_agent_stream(
 
     agent = create_react_agent(chat_model, all_tools)
 
-    input_messages = messages_from_dict(messages) + [HumanMessage(content=question)]
+    input_messages = (
+        (system_messages or [])
+        + messages_from_dict(messages)
+        + [HumanMessage(content=question)]
+    )
 
     # Accumulators for history reconstruction
     accumulated_text = ""

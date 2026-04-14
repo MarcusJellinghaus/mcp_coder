@@ -122,6 +122,11 @@ def execute_prompt(
                     "Using explicit session ID (ignoring file-based continuation)",
                 )
 
+        # Determine whether to pass project_dir for prompt loading
+        prompt_project_dir = (
+            str(project_dir) if getattr(args, "add_system_prompts", False) else None
+        )
+
         # Get user-specified timeout, output_format, and mcp_config
         timeout = getattr(args, "timeout", 30)
         output_format = getattr(args, "output_format", "text")
@@ -142,6 +147,7 @@ def execute_prompt(
                 execution_dir=str(execution_dir),
                 mcp_config=mcp_config,
                 branch_name=branch_name,
+                project_dir=prompt_project_dir,
             ):
                 assembler.add(event)
                 print_stream_event(event, output_format)
@@ -175,6 +181,7 @@ def execute_prompt(
                 env_vars=env_vars,
                 execution_dir=str(execution_dir),
                 mcp_config=mcp_config,
+                project_dir=prompt_project_dir,
             )
 
             session_id = response_dict.get("session_id", "")
@@ -197,6 +204,7 @@ def execute_prompt(
                 execution_dir=str(execution_dir),
                 mcp_config=mcp_config,
                 branch_name=branch_name,
+                project_dir=prompt_project_dir,
             )
             # Output complete response as JSON (includes session_id)
             print(json.dumps(response_dict, indent=2, default=str))
