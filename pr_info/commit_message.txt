@@ -1,13 +1,15 @@
-feat(langchain): thread tools param through _ask_agent_stream and ask_langchain_stream (#741)
+feat(llm): thread tools param through prompt_llm_stream (#741)
 
-Add optional `tools: list[Any] | None = None` parameter to both
-`_ask_agent_stream()` and `ask_langchain_stream()` in the langchain
-provider __init__.py. Each function passes it through to the next layer
-(`run_agent_stream`), enabling pre-built MCP tools from MCPManager to
-bypass MultiServerMCPClient creation.
+Add optional `tools: list[Any] | None` parameter to `prompt_llm_stream()`
+in the high-level LLM interface. The parameter is forwarded to
+`ask_langchain_stream()` on the langchain path; the claude path ignores it.
 
-- `_ask_agent_stream()` gains `tools` param, forwards to `run_agent_stream()`
-- `ask_langchain_stream()` gains `tools` param, forwards to `_ask_agent_stream()`
-- Text mode path unaffected (tools param ignored when no mcp_config)
-- Tests: verify tools forwarded to run_agent_stream, tools=None by default,
-  text mode works with tools param present
+This is part of threading persistent MCP tools through the provider stack
+so that `RealLLMService` can pass pre-built tools from `MCPManager`.
+
+Changes:
+- src/mcp_coder/llm/interface.py: add `tools` param to `prompt_llm_stream()`,
+  forward to `ask_langchain_stream()`
+- tests/llm/test_interface.py: add tests for tools forwarding (langchain),
+  tools=None default, and claude path ignoring tools; update existing
+  langchain stream routing test for new kwarg

@@ -45,9 +45,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 3B: Thread `tools` Through `prompt_llm_stream()`
 > [Detail](./steps/step_3.md) — Add `tools` param to LLM interface
 
-- [ ] Implementation: modify `interface.py` + tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: modify `interface.py` + tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3C: Add `mcp_manager` to `RealLLMService`
 > [Detail](./steps/step_3.md) — Add `mcp_manager` parameter to `RealLLMService`

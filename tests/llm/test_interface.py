@@ -1219,6 +1219,7 @@ class TestPromptLlmStream:
             mcp_config=None,
             execution_dir=None,
             env_vars=None,
+            tools=None,
         )
         assert len(events) == 2
 
@@ -1265,3 +1266,78 @@ class TestPromptLlmStream:
             mcp_config="/mcp.json",
             branch_name="main",
         )
+
+
+class TestPromptLlmStreamToolsParam:
+    """Tests for tools parameter threading in prompt_llm_stream()."""
+
+    @patch("mcp_coder.llm.providers.langchain.ask_langchain_stream")
+    def test_prompt_llm_stream_passes_tools_to_langchain(
+        self, mock_stream: MagicMock
+    ) -> None:
+        """prompt_llm_stream forwards tools= to ask_langchain_stream for langchain provider."""
+        mock_stream.return_value = iter(
+            [{"type": "text_delta", "text": "Hi"}, {"type": "done", "usage": {}}]
+        )
+        fake_tools: list[Any] = [MagicMock(), MagicMock()]
+
+        events = list(
+            prompt_llm_stream("Hello", provider="langchain", tools=fake_tools)
+        )
+
+        mock_stream.assert_called_once_with(
+            "Hello",
+            session_id=None,
+            timeout=30,
+            mcp_config=None,
+            execution_dir=None,
+            env_vars=None,
+            tools=fake_tools,
+        )
+        assert len(events) == 2
+
+    @patch("mcp_coder.llm.providers.langchain.ask_langchain_stream")
+    def test_prompt_llm_stream_passes_none_tools_by_default(
+        self, mock_stream: MagicMock
+    ) -> None:
+        """prompt_llm_stream passes tools=None when no tools argument given."""
+        mock_stream.return_value = iter([{"type": "done", "usage": {}}])
+
+        list(prompt_llm_stream("Hello", provider="langchain"))
+
+        mock_stream.assert_called_once_with(
+            "Hello",
+            session_id=None,
+            timeout=30,
+            mcp_config=None,
+            execution_dir=None,
+            env_vars=None,
+            tools=None,
+        )
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.ask_claude_code_cli_stream"
+    )
+    def test_prompt_llm_stream_claude_ignores_tools(
+        self, mock_stream: MagicMock
+    ) -> None:
+        """Claude path works fine with tools param present (tools not forwarded to claude)."""
+        mock_stream.return_value = iter(
+            [{"type": "text_delta", "text": "Hi"}, {"type": "done", "usage": {}}]
+        )
+
+        events = list(
+            prompt_llm_stream("Hello", provider="claude", tools=[MagicMock()])
+        )
+
+        # Claude provider call should NOT include tools kwarg
+        mock_stream.assert_called_once_with(
+            "Hello",
+            session_id=None,
+            timeout=30,
+            env_vars=None,
+            cwd=None,
+            mcp_config=None,
+            branch_name=None,
+        )
+        assert len(events) == 2
