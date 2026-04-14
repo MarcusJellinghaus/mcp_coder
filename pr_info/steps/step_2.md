@@ -37,7 +37,7 @@ Calls `_upstream_setup_logging(log_level, log_file)`, then suppresses:
 - `httpcore` → WARNING
 
 ### NOT re-exported
-- `_redact_for_logging` — only consumer is `test_log_utils_redaction.py` which is deleted in this step
+- `_redact_for_logging` — not re-exported because `log_function_call` (which uses it internally) is itself re-exported from `mcp_coder_utils`; the local helper is no longer needed
 
 ### Delete 2 log_utils test files
 These test files must be deleted in this same step because they break immediately once the shim replaces the full implementation:

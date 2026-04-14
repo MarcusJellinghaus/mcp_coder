@@ -24,7 +24,7 @@ Also verify no remaining references to deleted symbols like `_redact_for_logging
 Add a short note under a relevant section in CLAUDE.md, e.g. near the MCP tools section or as a new subsection:
 
 ```markdown
-## 📦 Shared Libraries
+## Shared Libraries
 
 `subprocess_runner`, `subprocess_streaming`, and `log_utils` in `src/mcp_coder/utils/` are thin shims over `mcp-coder-utils`. Always import through the local shims (`from mcp_coder.utils.<module> import ...`), not from `mcp_coder_utils` directly. Enforced by import-linter (`mcp_coder_utils_isolation` contract).
 ```

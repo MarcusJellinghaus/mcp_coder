@@ -38,5 +38,27 @@
 - step_6.md: Renamed to step_5.md
 - summary.md: Updated to 5 steps, moved test annotations
 
+**Status:** Committed (1ebb423)
+
+## Round 2 — 2026-04-14
+
+**Findings:**
+- [ACCEPT] `_redact_for_logging` non-re-export rationale was misleading (said "only consumer is test file" but it's actually used internally by `log_function_call`)
+- [ACCEPT] Emoji in proposed CLAUDE.md heading inconsistent with existing style
+- [VERIFIED] Step ordering fix from round 1 applied correctly
+- [VERIFIED] All 12 issue checklist items covered
+- [VERIFIED] No stale step references
+- [VERIFIED] Step sizing appropriate
+
+**Decisions:**
+- Fix rationale text in step_2.md
+- Remove emoji from heading in step_5.md
+
+**User decisions:** None needed
+
+**Changes:**
+- step_2.md: Fixed `_redact_for_logging` rationale
+- step_5.md: Removed emoji from CLAUDE.md heading
+
 **Status:** Committed (see below)
 
