@@ -241,3 +241,60 @@ def _make_mock_mcp_manager(
 ) -> MCPManager:
     """Create a fake MCPManager that returns given statuses."""
     return _FakeMCPManager(statuses)  # type: ignore[return-value]
+
+
+# ── Prompt section in /info tests ───────────────────────────────────
+
+
+@patch("mcp_coder.icoder.core.commands.info.load_prompts")
+@patch("mcp_coder.icoder.core.commands.info.find_claude_executable", return_value=None)
+def test_info_shows_prompt_paths(
+    _mock_claude: object,
+    mock_load: object,
+    registry: CommandRegistry,
+    runtime_info: RuntimeInfo,
+) -> None:
+    from mcp_coder.utils.pyproject_config import PromptsConfig
+
+    mock_load.return_value = (  # type: ignore[union-attr]
+        "sys",
+        "proj",
+        PromptsConfig(
+            system_prompt="prompts/system.md",
+            project_prompt="prompts/project.md",
+            claude_system_prompt_mode="replace",
+        ),
+    )
+    register_info(registry, runtime_info)
+    result = registry.dispatch("/info")
+    assert result is not None
+    assert "Prompts:" in result.text
+    assert "prompts/system.md" in result.text
+    assert "prompts/project.md" in result.text
+    assert "replace" in result.text
+
+
+@patch("mcp_coder.icoder.core.commands.info.load_prompts")
+@patch("mcp_coder.icoder.core.commands.info.find_claude_executable", return_value=None)
+def test_info_shows_shipped_defaults(
+    _mock_claude: object,
+    mock_load: object,
+    registry: CommandRegistry,
+    runtime_info: RuntimeInfo,
+) -> None:
+    from mcp_coder.utils.pyproject_config import PromptsConfig
+
+    mock_load.return_value = (  # type: ignore[union-attr]
+        "sys",
+        "proj",
+        PromptsConfig(
+            system_prompt=None,
+            project_prompt=None,
+            claude_system_prompt_mode="append",
+        ),
+    )
+    register_info(registry, runtime_info)
+    result = registry.dispatch("/info")
+    assert result is not None
+    assert "(shipped default)" in result.text
+    assert "append" in result.text

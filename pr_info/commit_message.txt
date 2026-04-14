@@ -1,12 +1,8 @@
-feat(icoder): pass project_dir to RealLLMService for prompt injection
+feat: add PROMPTS section to verify command and /info display
 
-Add project_dir parameter to RealLLMService and pass it through to
-prompt_llm_stream() in the stream() method. iCoder always injects
-system prompts by passing project_dir when creating RealLLMService
-in execute_icoder().
-
-Changes:
-- RealLLMService.__init__ accepts optional project_dir parameter
-- RealLLMService.stream() forwards project_dir to prompt_llm_stream()
-- execute_icoder() passes project_dir=str(project_dir) to RealLLMService
-- Added tests verifying project_dir pass-through and None default
+- Add PROMPTS section to `execute_verify()` showing system prompt,
+  project prompt, Claude mode, and CLAUDE.md redundancy warning
+- Add prompt paths display to iCoder `/info` command output
+- Add `_prompt_source()` helper for formatting prompt source labels
+- Add tests for verify prompt section (defaults, custom paths, redundancy)
+- Add tests for /info prompt display (custom paths, shipped defaults)

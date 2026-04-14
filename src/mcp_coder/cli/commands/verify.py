@@ -16,6 +16,7 @@ from ...llm.interface import prompt_llm
 from ...llm.mlflow_logger import verify_mlflow
 from ...llm.providers.claude.claude_cli_verification import verify_claude
 from ...llm.providers.claude.claude_executable_finder import find_claude_executable
+from ...prompts.prompt_loader import get_project_prompt_path, is_claude_md, load_prompts
 from ...utils.mcp_verification import ClaudeMCPStatus, parse_claude_mcp_list
 from ...utils.user_config import verify_config
 from ..utils import _get_status_symbols, resolve_llm_method, resolve_mcp_config_path
@@ -307,6 +308,15 @@ def _collect_install_hints(result: dict[str, Any]) -> list[str]:
     return hints
 
 
+def _prompt_source(configured: str | None, default_label: str) -> str:
+    """Format a prompt source for display.
+
+    Returns:
+        The configured path, or the default_label in parentheses.
+    """
+    return configured if configured else f"({default_label})"
+
+
 def execute_verify(args: argparse.Namespace) -> int:
     """Execute verify command: orchestrate domain checks and format output.
 
@@ -332,8 +342,34 @@ def execute_verify(args: argparse.Namespace) -> int:
         lines.append(f"  {entry['label']:<20s} {symbol} {entry['value']}")
     print("\n".join(lines))
 
-    # 1. Resolve active provider
+    # 0b. Prompt configuration section
+    project_dir = Path(args.project_dir).resolve() if args.project_dir else Path.cwd()
+    _sys_prompt, _proj_prompt, prompt_config = load_prompts(project_dir)
     active_provider, source = resolve_llm_method(args.llm_method)
+
+    prompt_lines = ["\n=== PROMPTS ==="]
+    prompt_lines.append(
+        f"  {'System prompt':<20s} {symbols['success']}"
+        f" {_prompt_source(prompt_config.system_prompt, 'shipped default')}"
+    )
+    prompt_lines.append(
+        f"  {'Project prompt':<20s} {symbols['success']}"
+        f" {_prompt_source(prompt_config.project_prompt, 'shipped default')}"
+    )
+    prompt_lines.append(
+        f"  {'Claude mode':<20s} {symbols['success']}"
+        f" {prompt_config.claude_system_prompt_mode}"
+    )
+    if active_provider == "claude" and prompt_config.project_prompt:
+        prompt_path = get_project_prompt_path(project_dir)
+        if is_claude_md(prompt_path, str(project_dir)):
+            prompt_lines.append(
+                f"  {'Redundancy':<20s} {symbols['warning']}"
+                " project prompt is CLAUDE.md (will skip for Claude)"
+            )
+    print("\n".join(prompt_lines))
+
+    # 1. Resolve active provider (already done above)
 
     # 2. Claude CLI verification (conditional on provider)
     if active_provider == "claude":
@@ -370,7 +406,6 @@ def execute_verify(args: argparse.Namespace) -> int:
         print("  (uses Claude CLI — see Basic Verification above)")
 
     # 3a. MCP server health checks (provider-aware ordering)
-    project_dir = Path(args.project_dir).resolve() if args.project_dir else Path.cwd()
     mcp_result: dict[str, Any] | None = None
     claude_mcp: list[ClaudeMCPStatus] | None = None
 
