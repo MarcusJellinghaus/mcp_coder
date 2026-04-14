@@ -21,6 +21,26 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: TokenUsage Dataclass + format_token_count()
+- [ ] Implementation: `TokenUsage` dataclass, `format_token_count()` in `types.py` + tests in `test_types.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Wire TokenUsage into AppCore
+- [ ] Implementation: `_token_usage` field, `token_usage` property, usage extraction in `stream_llm()` + tests in `test_app_core.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Three-Zone Status Bar UI + CSS
+- [ ] Implementation: replace `#input-hint` with `#status-bar` (3 zones), `_update_token_display()`, remove `on_text_area_changed()`, update CSS + snapshot tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Documentation — `docs/icoder/icoder.md`
+- [ ] Implementation: create `docs/icoder/icoder.md` with TUI reference (status line, commands, busy indicator, input)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review: verify all steps integrated correctly
+- [ ] PR summary prepared
