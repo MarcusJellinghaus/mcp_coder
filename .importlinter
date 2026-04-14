@@ -47,6 +47,7 @@ ignore_imports =
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.env_setup
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.command_registry
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.skills
+    mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.commands.info
 
 # -----------------------------------------------------------------------------
 # Contract: External Service Integrations Independence

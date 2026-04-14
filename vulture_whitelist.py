@@ -222,6 +222,7 @@ _.__aexit__
 # icoder/core/commands/*.py - Command handlers registered in CommandRegistry
 _.handle_clear
 _.handle_help
+_.handle_info
 _.handle_quit
 
 # icoder/ui/app.py - Textual lifecycle, message handlers, and bindings
