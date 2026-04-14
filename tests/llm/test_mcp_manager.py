@@ -63,7 +63,7 @@ def _build_mock_client(
 
 def _patch_client_and_convert(
     server_tools: dict[str, list[MagicMock]],
-) -> tuple[Any, Any]:
+) -> tuple[Any, Any, Any, Any]:
     """Create patches for MultiServerMCPClient and convert_mcp_tool_to_langchain_tool."""
     mock_client = _build_mock_client(server_tools)
     client_cls = patch(
@@ -81,7 +81,7 @@ def _patch_client_and_convert(
         "langchain_mcp_adapters.tools.convert_mcp_tool_to_langchain_tool",
         side_effect=_convert,
     )
-    return client_cls, convert_fn, lc_tools_created, mock_client  # type: ignore[return-value]
+    return client_cls, convert_fn, lc_tools_created, mock_client
 
 
 class TestMCPManagerTools:
