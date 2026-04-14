@@ -21,6 +21,56 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: MCPManager — Persistent MCP Client
+> [Detail](./steps/step_1.md) — Create `MCPManager` class in `src/mcp_coder/llm/mcp_manager.py`
+
+- [ ] Implementation: `MCPManager` class + tests in `tests/llm/test_mcp_manager.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: `run_agent_stream()` Accepts Optional Pre-built Tools
+> [Detail](./steps/step_2.md) — Add optional `tools` parameter to `run_agent_stream()`
+
+- [ ] Implementation: modify `agent.py` + tests in `test_langchain_agent_streaming.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3A: Thread `tools` Through `_ask_agent_stream()` and `ask_langchain_stream()`
+> [Detail](./steps/step_3.md) — Add `tools` param to langchain provider functions
+
+- [ ] Implementation: modify `langchain/__init__.py` + tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3B: Thread `tools` Through `prompt_llm_stream()`
+> [Detail](./steps/step_3.md) — Add `tools` param to LLM interface
+
+- [ ] Implementation: modify `interface.py` + tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3C: Add `mcp_manager` to `RealLLMService`
+> [Detail](./steps/step_3.md) — Add `mcp_manager` parameter to `RealLLMService`
+
+- [ ] Implementation: modify `llm_service.py` + tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: `/info` Command
+> [Detail](./steps/step_4.md) — Create `/info` slash command in `src/mcp_coder/icoder/core/commands/info.py`
+
+- [ ] Implementation: `/info` command + `_redact_env_vars` + tests in `tests/icoder/test_info_command.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: Wire Everything in `execute_icoder()`
+> [Detail](./steps/step_5.md) — Wire `MCPManager`, `/info`, and cleanup in `icoder.py`
+
+- [ ] Implementation: modify `execute_icoder()` + tests in `tests/icoder/test_cli_icoder.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: verify all steps integrated correctly
+- [ ] PR summary prepared
