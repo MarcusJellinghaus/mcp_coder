@@ -348,6 +348,8 @@ class TestComputeExitCode:
 class TestMcpServersInVerify:
     """Tests for MCP server health check integration in execute_verify."""
 
+    @patch(f"{_VERIFY}.parse_claude_mcp_list")
+    @patch(f"{_VERIFY}.prepare_llm_environment", return_value={"K": "V"})
     @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_LC_VERIFY}.verify_mcp_servers")
@@ -369,6 +371,8 @@ class TestMcpServersInVerify:
         mock_mcp_servers: MagicMock,
         mock_prompt_llm: MagicMock,
         _mock_log_mlflow: MagicMock,
+        _mock_prepare_env: MagicMock,
+        _mock_claude_mcp: MagicMock,
         capsys: pytest.CaptureFixture[str],
         tmp_path: Path,
     ) -> None:
@@ -385,7 +389,7 @@ class TestMcpServersInVerify:
         assert "MCP SERVERS" in output
         assert "tools-py" in output
         assert "5 tools available" in output
-        mock_mcp_servers.assert_called_once_with("/fake/.mcp.json")
+        mock_mcp_servers.assert_called_once_with("/fake/.mcp.json", env_vars={"K": "V"})
 
     @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
