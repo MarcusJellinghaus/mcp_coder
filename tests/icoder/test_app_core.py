@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from mcp_coder.icoder.core.app_core import AppCore
+from mcp_coder.icoder.core.command_history import CommandHistory
 from mcp_coder.icoder.core.event_log import EventLog
 from mcp_coder.icoder.core.types import TokenUsage
 from mcp_coder.icoder.env_setup import RuntimeInfo
@@ -138,6 +139,21 @@ def test_runtime_info_injected(fake_llm: FakeLLMService, event_log: EventLog) ->
     core = AppCore(llm_service=fake_llm, event_log=event_log, runtime_info=info)
     assert core.runtime_info is info
     assert core.runtime_info.mcp_coder_version == "1.0.0"
+
+
+def test_command_history_survives_clear(app_core: AppCore) -> None:
+    """command_history persists across /clear — entries are not lost."""
+    app_core.command_history.add("first")
+    app_core.command_history.add("second")
+    app_core.handle_input("/clear")
+    # History should still recall entries added before /clear
+    assert app_core.command_history.up("") == "second"
+    assert app_core.command_history.up("second") == "first"
+
+
+def test_command_history_property(app_core: AppCore) -> None:
+    """AppCore exposes a CommandHistory instance."""
+    assert isinstance(app_core.command_history, CommandHistory)
 
 
 def test_clear_resets_session(
