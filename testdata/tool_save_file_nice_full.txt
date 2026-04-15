@@ -1,0 +1,4 @@
+┌ workspace > save_file(file_path='pr_info/.commit_message.txt', content=(425 chars))
+├──
+│  Error: Error executing tool save_file: File 'pr_info/.commit_message.txt' is excluded by .gitignore and cannot be accessed. Use list_directory() to see available files.
+└ done

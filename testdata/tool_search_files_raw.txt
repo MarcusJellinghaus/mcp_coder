@@ -1,0 +1,8 @@
+┌ workspace > search_files(glob='".vscodeclaude_status.txt"')
+│  {
+│    "mode": "file_search",
+│    "files": [],
+│    "total_files": 0,
+│    "truncated": false
+│  }
+└ done

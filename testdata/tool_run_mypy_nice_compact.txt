@@ -1,0 +1,4 @@
+┌ tools-py > run_mypy_check(target_directories=(4 items))
+├──
+│  Pylint check completed. No issues found that require attention.
+└ done

@@ -1,0 +1,3 @@
+┌ workspace > list_symbols(file='src/mcp_coder/llm/providers/claude/claude_code_cli.py')
+│  Error: No such tool available: mcp__workspace__list_symbols
+└ done

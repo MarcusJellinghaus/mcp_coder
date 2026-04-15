@@ -1,0 +1,38 @@
+{
+  "tool_call": {
+    "type": "tool_use",
+    "id": "toolu_01HtKHvR5WdEFyGzyqgesNqf",
+    "name": "mcp__workspace__edit_file",
+    "input": {
+      "file_path": ".mcp_coder_verify.md",
+      "edits": [
+        {
+          "old_text": "A\n\nC",
+          "new_text": "A\nB\nC"
+        }
+      ]
+    },
+    "caller": {
+      "type": "direct"
+    }
+  },
+  "tool_result": {
+    "content": "{\"result\":{\"success\":true,\"diff\":\"--- a/C:\\\\Users\\\\Marcus\\\\Documents\\\\VSCC\\\\mcp_coder_817\\\\.mcp_coder_verify.md+++ b/C:\\\\Users\\\\Marcus\\\\Documents\\\\VSCC\\\\mcp_coder_817\\\\.mcp_coder_verify.md@@ -1,3 +1,3 @@ A\\n-\\n+B\\n C\\n\",\"match_results\":[{\"edit_index\":0,\"match_type\":\"exact\",\"line_index\":0,\"line_count\":3}],\"file_path\":\"C:\\\\Users\\\\Marcus\\\\Documents\\\\VSCC\\\\mcp_coder_817\\\\.mcp_coder_verify.md\",\"dry_run\":false}}",
+    "structuredContent": {
+      "result": {
+        "success": true,
+        "diff": "--- a/C:\\Users\\Marcus\\Documents\\VSCC\\mcp_coder_817\\.mcp_coder_verify.md+++ b/C:\\Users\\Marcus\\Documents\\VSCC\\mcp_coder_817\\.mcp_coder_verify.md@@ -1,3 +1,3 @@ A\n-\n+B\n C\n",
+        "match_results": [
+          {
+            "edit_index": 0,
+            "match_type": "exact",
+            "line_index": 0,
+            "line_count": 3
+          }
+        ],
+        "file_path": "C:\\Users\\Marcus\\Documents\\VSCC\\mcp_coder_817\\.mcp_coder_verify.md",
+        "dry_run": false
+      }
+    }
+  }
+}

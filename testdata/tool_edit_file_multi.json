@@ -1,0 +1,48 @@
+{
+  "tool_call": {
+    "type": "tool_use",
+    "id": "toolu_01PE1F8L8xWGuQzgy9HMaz4G",
+    "name": "mcp__workspace__edit_file",
+    "input": {
+      "file_path": "tests/icoder/test_info_command.py",
+      "edits": [
+        {
+          "old_text": "from unittest.mock import patch",
+          "new_text": "from unittest.mock import MagicMock, patch"
+        },
+        {
+          "old_text": "    _mock_claude: object,\n    mock_load: object,\n    registry: CommandRegistry,\n    runtime_info: RuntimeInfo,\n) -> None:\n    from mcp_coder.utils.pyproject_config import PromptsConfig\n\n    mock_load.return_value = (  # type: ignore[union-attr]\n        \"sys\",\n        \"proj\",\n        PromptsConfig(\n            system_prompt=\"prompts/system.md\",\n            project_prompt=\"prompts/project.md\",\n            claude_system_prompt_mode=\"replace\",\n        ),\n    )\n    register_info(registry, runtime_info)\n    result = registry.dispatch(\"/info\")\n    assert result is not None\n    assert \"Prompts:\" in result.text\n    assert \"prompts/system.md\" in result.text\n    assert \"prompts/project.md\" in result.text\n    assert \"replace\" in result.text\n\n\n@patch(\"mcp_coder.icoder.core.commands.info.load_prompts\")\n@patch(\"mcp_coder.icoder.core.commands.info.find_claude_executable\", return_value=None)\ndef test_info_shows_shipped_defaults(\n    _mock_claude: object,\n    mock_load: object,\n    registry: CommandRegistry,\n    runtime_info: RuntimeInfo,\n) -> None:\n    from mcp_coder.utils.pyproject_config import PromptsConfig\n\n    mock_load.return_value = (  # type: ignore[union-attr]",
+          "new_text": "    _mock_claude: object,\n    mock_load: MagicMock,\n    registry: CommandRegistry,\n    runtime_info: RuntimeInfo,\n) -> None:\n    from mcp_coder.utils.pyproject_config import PromptsConfig\n\n    mock_load.return_value = (\n        \"sys\",\n        \"proj\",\n        PromptsConfig(\n            system_prompt=\"prompts/system.md\",\n            project_prompt=\"prompts/project.md\",\n            claude_system_prompt_mode=\"replace\",\n        ),\n    )\n    register_info(registry, runtime_info)\n    result = registry.dispatch(\"/info\")\n    assert result is not None\n    assert \"Prompts:\" in result.text\n    assert \"prompts/system.md\" in result.text\n    assert \"prompts/project.md\" in result.text\n    assert \"replace\" in result.text\n\n\n@patch(\"mcp_coder.icoder.core.commands.info.load_prompts\")\n@patch(\"mcp_coder.icoder.core.commands.info.find_claude_executable\", return_value=None)\ndef test_info_shows_shipped_defaults(\n    _mock_claude: object,\n    mock_load: MagicMock,\n    registry: CommandRegistry,\n    runtime_info: RuntimeInfo,\n) -> None:\n    from mcp_coder.utils.pyproject_config import PromptsConfig\n\n    mock_load.return_value = ("
+        }
+      ]
+    },
+    "caller": {
+      "type": "direct"
+    }
+  },
+  "tool_result": {
+    "content": "{\"result\":{\"success\":true,\"diff\":\"--- a/C:\\\\Jenkins\\\\workspace\\\\Windows-Agents\\\\Executor\\\\repo\\\\tests\\\\icoder\\\\test_info_command.py+++ b/C:\\\\Jenkins\\\\workspace\\\\Windows-Agents\\\\Executor\\\\repo\\\\tests\\\\icoder\\\\test_info_command.py@@ -2,7 +2,7 @@ \\n from __future__ import annotations\\n \\n-from unittest.mock import patch\\n+from unittest.mock import MagicMock, patch\\n \\n import pytest\\n \\n@@ -250,13 +250,13 @@ @patch(\\\"mcp_coder.icoder.core.commands.info.find_claude_executable\\\", return_value=None)\\n def test_info_shows_prompt_paths(\\n     _mock_claude: object,\\n-    mock_load: object,\\n+    mock_load: MagicMock,\\n     registry: CommandRegistry,\\n     runtime_info: RuntimeInfo,\\n ) -> None:\\n     from mcp_coder.utils.pyproject_config import PromptsConfig\\n \\n-    mock_load.return_value = (  # type: ignore[union-attr]\\n+    mock_load.return_value = (\\n         \\\"sys\\\",\\n         \\\"proj\\\",\\n         PromptsConfig(\\n@@ -278,13 +278,13 @@ @patch(\\\"mcp_coder.icoder.core.commands.info.find_claude_executable\\\", return_value=None)\\n def test_info_shows_shipped_defaults(\\n     _mock_claude: object,\\n-    mock_load: object,\\n+    mock_load: MagicMock,\\n     registry: CommandRegistry,\\n     runtime_info: RuntimeInfo,\\n ) -> None:\\n     from mcp_coder.utils.pyproject_config import PromptsConfig\\n \\n-    mock_load.return_value = (  # type: ignore[union-attr]\\n+    mock_load.return_value = (\\n         \\\"sys\\\",\\n         \\\"proj\\\",\\n         PromptsConfig(\\n\",\"match_results\":[{\"edit_index\":0,\"match_type\":\"exact\",\"line_index\":4,\"line_count\":1},{\"edit_index\":1,\"match_type\":\"exact\",\"line_index\":251,\"line_count\":36}],\"file_path\":\"C:\\\\Jenkins\\\\workspace\\\\Windows-Agents\\\\Executor\\\\repo\\\\tests\\\\icoder\\\\test_info_command.py\",\"dry_run\":false}}",
+    "structuredContent": {
+      "result": {
+        "success": true,
+        "diff": "--- a/C:\\Jenkins\\workspace\\Windows-Agents\\Executor\\repo\\tests\\icoder\\test_info_command.py+++ b/C:\\Jenkins\\workspace\\Windows-Agents\\Executor\\repo\\tests\\icoder\\test_info_command.py@@ -2,7 +2,7 @@ \n from __future__ import annotations\n \n-from unittest.mock import patch\n+from unittest.mock import MagicMock, patch\n \n import pytest\n \n@@ -250,13 +250,13 @@ @patch(\"mcp_coder.icoder.core.commands.info.find_claude_executable\", return_value=None)\n def test_info_shows_prompt_paths(\n     _mock_claude: object,\n-    mock_load: object,\n+    mock_load: MagicMock,\n     registry: CommandRegistry,\n     runtime_info: RuntimeInfo,\n ) -> None:\n     from mcp_coder.utils.pyproject_config import PromptsConfig\n \n-    mock_load.return_value = (  # type: ignore[union-attr]\n+    mock_load.return_value = (\n         \"sys\",\n         \"proj\",\n         PromptsConfig(\n@@ -278,13 +278,13 @@ @patch(\"mcp_coder.icoder.core.commands.info.find_claude_executable\", return_value=None)\n def test_info_shows_shipped_defaults(\n     _mock_claude: object,\n-    mock_load: object,\n+    mock_load: MagicMock,\n     registry: CommandRegistry,\n     runtime_info: RuntimeInfo,\n ) -> None:\n     from mcp_coder.utils.pyproject_config import PromptsConfig\n \n-    mock_load.return_value = (  # type: ignore[union-attr]\n+    mock_load.return_value = (\n         \"sys\",\n         \"proj\",\n         PromptsConfig(\n",
+        "match_results": [
+          {
+            "edit_index": 0,
+            "match_type": "exact",
+            "line_index": 4,
+            "line_count": 1
+          },
+          {
+            "edit_index": 1,
+            "match_type": "exact",
+            "line_index": 251,
+            "line_count": 36
+          }
+        ],
+        "file_path": "C:\\Jenkins\\workspace\\Windows-Agents\\Executor\\repo\\tests\\icoder\\test_info_command.py",
+        "dry_run": false
+      }
+    }
+  }
+}

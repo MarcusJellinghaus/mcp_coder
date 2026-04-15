@@ -1,0 +1,19 @@
+┌ workspace > edit_file(file_path='src/mcp_coder/llm/providers/langchain/__init__.py', edits=(4 items))
+├──
+│  success: true
+│  diff:
+│    --- a/C:\Jenkins\workspace\Windows-Agents\Executor\repo\src\mcp_coder\llm\providers\langchain\__init__.py+++ b/C:\Jenkins\workspace\Windows-Agents\Executor\repo\src\mcp_coder\llm\providers\langchain\__init__.py@@ -228,6 +228,8 @@         mcp_config: Optional path to .mcp.json for agent mode.
+│             execution_dir: Optional working directory for agent execution.
+│             env_vars: Optional environment variables for agent subprocesses.
+│    +        system_prompt: Optional system-level prompt text.
+│    +        project_prompt: Optional project-level prompt text.
+│     
+│         Returns:
+│             LLMResponseDict with the model's response.
+│  ... (45 lines skipped)
+│        "line_count": 4
+│      }
+│    ]
+│  file_path: "C:\\Jenkins\\workspace\\Windows-Agents\\Executor\\repo\\src\\mcp_coder\\llm\\providers\\langchain\\__init__.py"
+│  dry_run: false
+└ done (60 lines, truncated to 16)

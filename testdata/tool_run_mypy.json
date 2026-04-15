@@ -1,0 +1,24 @@
+{
+  "tool_call": {
+    "type": "tool_use",
+    "id": "toolu_01Xppei5LFymbpSoHAYRmecf",
+    "name": "mcp__tools-py__run_mypy_check",
+    "input": {
+      "target_directories": [
+        "src/mcp_coder/prompts/prompt_loader.py",
+        "src/mcp_coder/llm/providers/claude/claude_code_cli.py",
+        "src/mcp_coder/llm/providers/langchain/__init__.py",
+        "src/mcp_coder/llm/providers/langchain/agent.py"
+      ]
+    },
+    "caller": {
+      "type": "direct"
+    }
+  },
+  "tool_result": {
+    "content": "{\"result\":\"Pylint check completed. No issues found that require attention.\"}",
+    "structuredContent": {
+      "result": "Pylint check completed. No issues found that require attention."
+    }
+  }
+}

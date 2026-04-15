@@ -1,0 +1,60 @@
+┌ workspace > edit_file(file_path='tests/icoder/test_info_command.py', edits=(2 items))
+├──
+│  success: true
+│  diff:
+│    --- a/C:\Jenkins\workspace\Windows-Agents\Executor\repo\tests\icoder\test_info_command.py+++ b/C:\Jenkins\workspace\Windows-Agents\Executor\repo\tests\icoder\test_info_command.py@@ -2,7 +2,7 @@ 
+│     from __future__ import annotations
+│     
+│    -from unittest.mock import patch
+│    +from unittest.mock import MagicMock, patch
+│     
+│     import pytest
+│     
+│    @@ -250,13 +250,13 @@ @patch("mcp_coder.icoder.core.commands.info.find_claude_executable", return_value=None)
+│     def test_info_shows_prompt_paths(
+│         _mock_claude: object,
+│    -    mock_load: object,
+│    +    mock_load: MagicMock,
+│         registry: CommandRegistry,
+│         runtime_info: RuntimeInfo,
+│     ) -> None:
+│         from mcp_coder.utils.pyproject_config import PromptsConfig
+│     
+│    -    mock_load.return_value = (  # type: ignore[union-attr]
+│    +    mock_load.return_value = (
+│             "sys",
+│             "proj",
+│             PromptsConfig(
+│    @@ -278,13 +278,13 @@ @patch("mcp_coder.icoder.core.commands.info.find_claude_executable", return_value=None)
+│     def test_info_shows_shipped_defaults(
+│         _mock_claude: object,
+│    -    mock_load: object,
+│    +    mock_load: MagicMock,
+│         registry: CommandRegistry,
+│         runtime_info: RuntimeInfo,
+│     ) -> None:
+│         from mcp_coder.utils.pyproject_config import PromptsConfig
+│     
+│    -    mock_load.return_value = (  # type: ignore[union-attr]
+│    +    mock_load.return_value = (
+│             "sys",
+│             "proj",
+│             PromptsConfig(
+│  match_results:
+│    [
+│      {
+│        "edit_index": 0,
+│        "match_type": "exact",
+│        "line_index": 4,
+│        "line_count": 1
+│      },
+│      {
+│        "edit_index": 1,
+│        "match_type": "exact",
+│        "line_index": 251,
+│        "line_count": 36
+│      }
+│    ]
+│  file_path: "C:\\Jenkins\\workspace\\Windows-Agents\\Executor\\repo\\tests\\icoder\\test_info_command.py"
+│  dry_run: false
+└ done

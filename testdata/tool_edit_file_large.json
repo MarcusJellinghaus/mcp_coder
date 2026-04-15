@@ -1,0 +1,68 @@
+{
+  "tool_call": {
+    "type": "tool_use",
+    "id": "toolu_019opkWBLGMp9obZcYhTGoXG",
+    "name": "mcp__workspace__edit_file",
+    "input": {
+      "file_path": "src/mcp_coder/llm/providers/langchain/__init__.py",
+      "edits": [
+        {
+          "old_text": "        execution_dir: Optional working directory for agent execution.\n        env_vars: Optional environment variables for agent subprocesses.\n\n    Returns:\n        LLMResponseDict with the model's response.\n",
+          "new_text": "        execution_dir: Optional working directory for agent execution.\n        env_vars: Optional environment variables for agent subprocesses.\n        system_prompt: Optional system-level prompt text.\n        project_prompt: Optional project-level prompt text.\n\n    Returns:\n        LLMResponseDict with the model's response.\n"
+        },
+        {
+          "old_text": "        session_id: Session ID for conversation history.\n        timeout: Request timeout in seconds.\n\n    Returns:\n        LLMResponseDict with the model's text response.\n",
+          "new_text": "        session_id: Session ID for conversation history.\n        timeout: Request timeout in seconds.\n        system_messages: Optional list of system messages to prepend.\n\n    Returns:\n        LLMResponseDict with the model's text response.\n"
+        },
+        {
+          "old_text": "        timeout: Request timeout in seconds.\n\n    Returns:\n        LLMResponseDict with the agent's text response and tool usage stats.\n\n    \"\"\"",
+          "new_text": "        timeout: Request timeout in seconds.\n        system_messages: Optional list of system messages to prepend.\n\n    Returns:\n        LLMResponseDict with the agent's text response and tool usage stats.\n\n    \"\"\""
+        },
+        {
+          "old_text": "        tools: Optional pre-built LangChain tools (e.g. from MCPManager).\n            When provided, skips MultiServerMCPClient creation.\n\n    Yields:",
+          "new_text": "        tools: Optional pre-built LangChain tools (e.g. from MCPManager).\n            When provided, skips MultiServerMCPClient creation.\n        system_messages: Optional list of system messages to prepend.\n\n    Yields:"
+        }
+      ]
+    },
+    "caller": {
+      "type": "direct"
+    }
+  },
+  "tool_result": {
+    "content": "{\"result\":{\"success\":true,\"diff\":\"--- a/C:\\\\Jenkins\\\\workspace\\\\Windows-Agents\\\\Executor\\\\repo\\\\src\\\\mcp_coder\\\\llm\\\\providers\\\\langchain\\\\__init__.py+++ b/C:\\\\Jenkins\\\\workspace\\\\Windows-Agents\\\\Executor\\\\repo\\\\src\\\\mcp_coder\\\\llm\\\\providers\\\\langchain\\\\__init__.py@@ -228,6 +228,8 @@         mcp_config: Optional path to .mcp.json for agent mode.\\n         execution_dir: Optional working directory for agent execution.\\n         env_vars: Optional environment variables for agent subprocesses.\\n+        system_prompt: Optional system-level prompt text.\\n+        project_prompt: Optional project-level prompt text.\\n \\n     Returns:\\n         LLMResponseDict with the model's response.\\n@@ -289,6 +291,7 @@         backend: Backend name (\\\"openai\\\", \\\"gemini\\\", \\\"anthropic\\\").\\n         session_id: Session ID for conversation history.\\n         timeout: Request timeout in seconds.\\n+        system_messages: Optional list of system messages to prepend.\\n \\n     Returns:\\n         LLMResponseDict with the model's text response.\\n@@ -399,6 +402,7 @@         execution_dir: Optional working directory for agent execution.\\n         env_vars: Optional environment variables for agent subprocesses.\\n         timeout: Request timeout in seconds.\\n+        system_messages: Optional list of system messages to prepend.\\n \\n     Returns:\\n         LLMResponseDict with the agent's text response and tool usage stats.\\n@@ -475,6 +479,7 @@         timeout: Request timeout in seconds.\\n         tools: Optional pre-built LangChain tools (e.g. from MCPManager).\\n             When provided, skips MultiServerMCPClient creation.\\n+        system_messages: Optional list of system messages to prepend.\\n \\n     Yields:\\n         StreamEvent dicts from the agent.\\n\",\"match_results\":[{\"edit_index\":0,\"match_type\":\"exact\",\"line_index\":228,\"line_count\":6},{\"edit_index\":1,\"match_type\":\"exact\",\"line_index\":291,\"line_count\":6},{\"edit_index\":2,\"match_type\":\"exact\",\"line_index\":403,\"line_count\":6},{\"edit_index\":3,\"match_type\":\"exact\",\"line_index\":479,\"line_count\":4}],\"file_path\":\"C:\\\\Jenkins\\\\workspace\\\\Windows-Agents\\\\Executor\\\\repo\\\\src\\\\mcp_coder\\\\llm\\\\providers\\\\langchain\\\\__init__.py\",\"dry_run\":false}}",
+    "structuredContent": {
+      "result": {
+        "success": true,
+        "diff": "--- a/C:\\Jenkins\\workspace\\Windows-Agents\\Executor\\repo\\src\\mcp_coder\\llm\\providers\\langchain\\__init__.py+++ b/C:\\Jenkins\\workspace\\Windows-Agents\\Executor\\repo\\src\\mcp_coder\\llm\\providers\\langchain\\__init__.py@@ -228,6 +228,8 @@         mcp_config: Optional path to .mcp.json for agent mode.\n         execution_dir: Optional working directory for agent execution.\n         env_vars: Optional environment variables for agent subprocesses.\n+        system_prompt: Optional system-level prompt text.\n+        project_prompt: Optional project-level prompt text.\n \n     Returns:\n         LLMResponseDict with the model's response.\n@@ -289,6 +291,7 @@         backend: Backend name (\"openai\", \"gemini\", \"anthropic\").\n         session_id: Session ID for conversation history.\n         timeout: Request timeout in seconds.\n+        system_messages: Optional list of system messages to prepend.\n \n     Returns:\n         LLMResponseDict with the model's text response.\n@@ -399,6 +402,7 @@         execution_dir: Optional working directory for agent execution.\n         env_vars: Optional environment variables for agent subprocesses.\n         timeout: Request timeout in seconds.\n+        system_messages: Optional list of system messages to prepend.\n \n     Returns:\n         LLMResponseDict with the agent's text response and tool usage stats.\n@@ -475,6 +479,7 @@         timeout: Request timeout in seconds.\n         tools: Optional pre-built LangChain tools (e.g. from MCPManager).\n             When provided, skips MultiServerMCPClient creation.\n+        system_messages: Optional list of system messages to prepend.\n \n     Yields:\n         StreamEvent dicts from the agent.\n",
+        "match_results": [
+          {
+            "edit_index": 0,
+            "match_type": "exact",
+            "line_index": 228,
+            "line_count": 6
+          },
+          {
+            "edit_index": 1,
+            "match_type": "exact",
+            "line_index": 291,
+            "line_count": 6
+          },
+          {
+            "edit_index": 2,
+            "match_type": "exact",
+            "line_index": 403,
+            "line_count": 6
+          },
+          {
+            "edit_index": 3,
+            "match_type": "exact",
+            "line_index": 479,
+            "line_count": 4
+          }
+        ],
+        "file_path": "C:\\Jenkins\\workspace\\Windows-Agents\\Executor\\repo\\src\\mcp_coder\\llm\\providers\\langchain\\__init__.py",
+        "dry_run": false
+      }
+    }
+  }
+}
