@@ -73,6 +73,7 @@ layer = "presentation"
 # Depends on llm for streaming responses.
 depends_on = [
     { path = "mcp_coder.llm" },
+    { path = "mcp_coder.prompts" },   # Prompt loading for info command
 ]
 
 # =============================================================================
@@ -139,11 +140,21 @@ layer = "domain"
 # Core domain service that should be reusable across different interfaces.
 # Depends on utils only for subprocess execution (running claude CLI).
 depends_on = [
+    { path = "mcp_coder.prompts" },   # System/project prompt loading
     { path = "mcp_coder.utils" },     # subprocess_runner for CLI execution
     { path = "mcp_coder.config" },    # LLM configuration (API keys, models)
     { path = "mcp_coder.constants" }, # LLM-related constants
 ]
 
+
+[[modules]]
+path = "mcp_coder.prompts"
+layer = "domain"
+# Prompt loading and resolution (system/project prompts from pyproject.toml).
+# Reads prompt config, resolves file paths, loads content with shipped defaults.
+depends_on = [
+    { path = "mcp_coder.utils" },     # data_files, pyproject_config
+]
 
 [[modules]]
 path = "mcp_coder.prompt_manager"
@@ -391,6 +402,7 @@ depends_on = [
     { path = "mcp_coder.constants" },
     { path = "mcp_coder.mcp_tools_py" },
     { path = "mcp_coder.icoder" },
+    { path = "mcp_coder.prompts" },
 ]
 
 # -----------------------------------------------------------------------------
