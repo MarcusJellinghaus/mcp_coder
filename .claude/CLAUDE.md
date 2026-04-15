@@ -4,7 +4,7 @@
 
 ## MCP Tools — mandatory
 
-Use MCP tools for **all** operations. Never use `Read`, `Write`, `Edit`, or `Bash` for tasks that have an MCP equivalent.
+Use MCP tools for **all** operations. Never use `Read`, `Write`, `Edit`, or `Bash` for tasks that have an MCP equivalent. If no MCP equivalent exists, use Bash. Check the tool mapping table above first.
 
 ### Tool mapping
 
