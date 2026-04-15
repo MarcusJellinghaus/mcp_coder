@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Iterator
 
+from mcp_coder.icoder.core.command_history import CommandHistory
 from mcp_coder.icoder.core.command_registry import (
     CommandRegistry,
     create_default_registry,
@@ -39,6 +40,7 @@ class AppCore:
         self._registry = registry if registry is not None else create_default_registry()
         self._runtime_info = runtime_info
         self._token_usage = TokenUsage()
+        self._command_history = CommandHistory()
 
     def handle_input(self, text: str) -> Response:
         """Route user input to commands or flag for LLM streaming.
@@ -100,6 +102,11 @@ class AppCore:
         # Auto-store response for --continue-session
         response_data = assembler.result()
         store_session(response_data, text)
+
+    @property
+    def command_history(self) -> CommandHistory:
+        """Command history for Up/Down recall. Survives /clear."""
+        return self._command_history
 
     @property
     def registry(self) -> CommandRegistry:

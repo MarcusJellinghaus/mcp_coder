@@ -44,12 +44,15 @@ class InputArea(TextArea):
     def __init__(
         self,
         *args: Any,
+        command_history: CommandHistory | None = None,
         registry: CommandRegistry | None = None,
         event_log: EventLog | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
-        self.command_history = CommandHistory()
+        self.command_history = (
+            command_history if command_history is not None else CommandHistory()
+        )
         self._registry: CommandRegistry | None = registry
         self._event_log: EventLog | None = event_log
         self._ac_state: AutocompleteState = AutocompleteState(

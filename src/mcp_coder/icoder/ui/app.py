@@ -84,6 +84,7 @@ class ICoderApp(App[None]):
         yield CommandAutocomplete()
         yield BusyIndicator()
         yield InputArea(
+            command_history=self._core.command_history,
             registry=self._core.registry,
             event_log=self._core.event_log,
         )
@@ -118,7 +119,7 @@ class ICoderApp(App[None]):
     def on_input_area_input_submitted(self, message: InputArea.InputSubmitted) -> None:
         """Handle submitted input: route through AppCore."""
         text = message.text
-        self.query_one(InputArea).command_history.add(text)
+        self._core.command_history.add(text)
         output = self.query_one(OutputLog)
         output.append_text(f"> {text}", style=STYLE_USER_INPUT)
 
