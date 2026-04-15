@@ -143,6 +143,17 @@ def test_venv_section_path_restored_after_activation() -> None:
     )
 
 
+def test_venv_section_sets_uv_git_shallow() -> None:
+    """Test that VENV_SECTION_WINDOWS disables shallow git clones.
+
+    setuptools_scm relies on git tags for version resolution. uv's default
+    shallow clones omit tags, causing version fallback to 0.0.0 (#817).
+    """
+    assert (
+        "UV_GIT_SHALLOW=0" in VENV_SECTION_WINDOWS
+    ), "VENV_SECTION_WINDOWS should set UV_GIT_SHALLOW=0 for setuptools_scm"
+
+
 def test_venv_section_runs_editable_install() -> None:
     """Test that VENV_SECTION_WINDOWS runs editable install on every launch.
 
