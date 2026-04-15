@@ -419,7 +419,7 @@ def execute_verify(args: argparse.Namespace) -> int:
         try:
             from ...llm.providers.langchain.verification import verify_mcp_servers
 
-            mcp_result = verify_mcp_servers(mcp_config_resolved)
+            mcp_result = verify_mcp_servers(mcp_config_resolved, env_vars=env_vars)
         except ImportError:
             mcp_result = None
 

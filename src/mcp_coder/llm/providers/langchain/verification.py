@@ -315,12 +315,16 @@ async def _check_servers(
 def verify_mcp_servers(
     mcp_config_path: str,
     timeout: int = 15,
+    env_vars: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Check each configured MCP server by connecting and listing tools.
 
     Args:
         mcp_config_path: Path to the .mcp.json configuration file.
         timeout: Connection timeout in seconds per server.
+        env_vars: Optional extra environment variables for ``${VAR}``
+            resolution in the MCP config.  When *None*, only ``os.environ``
+            is used, which may lack variables like ``MCP_CODER_PROJECT_DIR``.
 
     Returns:
         Dict with per-server results and overall_ok.
@@ -329,7 +333,7 @@ def verify_mcp_servers(
         Each server result: ``{"ok": bool, "value": str, "tools": int | None,
         "error": str | None}``.
     """
-    server_config = _load_mcp_server_config(mcp_config_path)
+    server_config = _load_mcp_server_config(mcp_config_path, env_vars=env_vars)
     if not server_config:
         return {"servers": {}, "overall_ok": True, "value": "no servers configured"}
 

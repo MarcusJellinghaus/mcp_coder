@@ -854,6 +854,8 @@ class TestVerifyMcpAllProviders:
         f"{_VERIFY}._run_mcp_edit_smoke_test",
         return_value="  MCP edit smoke test  [OK] edit verified",
     )
+    @patch(f"{_VERIFY}.parse_claude_mcp_list")
+    @patch(f"{_VERIFY}.prepare_llm_environment", return_value={"K": "V"})
     @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value="/fake/.mcp.json")
@@ -870,6 +872,8 @@ class TestVerifyMcpAllProviders:
         mock_resolve_mcp: MagicMock,
         mock_prompt_llm: MagicMock,
         _mock_log_mlflow: MagicMock,
+        _mock_prepare_env: MagicMock,
+        _mock_claude_mcp: MagicMock,
         mock_smoke_test: MagicMock,
     ) -> None:
         """verify_mcp_servers is called when provider is claude and MCP config exists."""
@@ -881,7 +885,7 @@ class TestVerifyMcpAllProviders:
 
         execute_verify(_make_args(mcp_config=".mcp.json"))
 
-        mock_mcp_servers.assert_called_once_with("/fake/.mcp.json")
+        mock_mcp_servers.assert_called_once_with("/fake/.mcp.json", env_vars={"K": "V"})
 
     @patch(
         f"{_VERIFY}._run_mcp_edit_smoke_test",
