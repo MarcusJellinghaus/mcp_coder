@@ -236,8 +236,10 @@ class TestFormatDiagnostics:
                 result = format_diagnostics(exc)
         assert "Truststore active: True" in result
 
-    def test_truststore_not_available_shows_hint(self) -> None:
-        """When truststore is absent, install hint is shown."""
+    def test_truststore_not_available_omits_install_hint(self) -> None:
+        """When truststore is absent, the status line is shown but the
+        duplicate install hint is omitted (it lives in raise_connection_error,
+        gated on SSL classification)."""
         exc = OSError("fail")
         import os
 
@@ -250,5 +252,5 @@ class TestFormatDiagnostics:
             ):
                 result = format_diagnostics(exc)
         assert "Truststore active: False" in result
-        assert "truststore" in result.lower()
-        assert "pip install" in result
+        assert "pip install" not in result
+        assert "Install truststore" not in result

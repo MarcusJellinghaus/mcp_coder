@@ -450,7 +450,7 @@ class TestAskTextConnectionError:
         from mcp_coder.llm.providers.langchain._exceptions import LLMConnectionError
 
         mock_model = MagicMock()
-        mock_model.invoke.side_effect = OSError("Connection reset by peer")
+        mock_model.invoke.side_effect = ConnectionError("Connection reset by peer")
         with (
             patch(
                 f"{_MOD}._load_langchain_config",
@@ -470,7 +470,7 @@ class TestAskTextConnectionError:
         from mcp_coder.llm.providers.langchain._exceptions import LLMConnectionError
 
         mock_model = MagicMock()
-        mock_model.invoke.side_effect = OSError("Connection reset")
+        mock_model.invoke.side_effect = ConnectionError("Connection reset")
         with (
             patch(
                 f"{_MOD}._load_langchain_config",
@@ -563,7 +563,7 @@ class TestAskAgentConnectionError:
         }
 
     def test_connection_error_raises_llm_connection_error(self) -> None:
-        """OSError from asyncio.run(run_agent(...)) raises LLMConnectionError."""
+        """ConnectionError from asyncio.run(run_agent(...)) raises LLMConnectionError."""
         from mcp_coder.llm.providers.langchain._exceptions import LLMConnectionError
 
         with (
@@ -575,7 +575,10 @@ class TestAskAgentConnectionError:
             patch(f"{_MOD}.store_langchain_history"),
             patch(f"{_MOD}._create_chat_model", return_value=MagicMock()),
             patch(f"{_MOD}.agent._check_agent_dependencies"),
-            patch(f"{_MOD}.asyncio.run", side_effect=OSError("Connection refused")),
+            patch(
+                f"{_MOD}.asyncio.run",
+                side_effect=ConnectionError("Connection refused"),
+            ),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain
 

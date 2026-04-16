@@ -16,21 +16,28 @@ class LLMAuthError(Exception):
     """Authentication failure (HTTP 401/403) from an LLM provider."""
 
 
+class LLMMCPLaunchError(Exception):
+    """Local MCP subprocess launch failed (binary missing / permission)."""
+
+
 # ---------------------------------------------------------------------------
 # Try-import fallback tuples
 # ---------------------------------------------------------------------------
 
-# Connection errors — httpx transport failures + OS-level socket errors
+# Connection errors — httpx transport failures + generic ConnectionError.
+# Deliberately excludes OSError so that FileNotFoundError / PermissionError
+# from local MCP subprocess launches are not reclassified as remote
+# connection failures (see LLMMCPLaunchError).
 try:
     import httpx
 
     CONNECTION_ERRORS: tuple[type[Exception], ...] = (
         httpx.ConnectError,
         httpx.ConnectTimeout,
-        OSError,
+        ConnectionError,
     )
 except ImportError:
-    CONNECTION_ERRORS = (OSError,)
+    CONNECTION_ERRORS = (ConnectionError,)
 
 # Auth errors per provider — SDK-native exception classes
 try:
@@ -63,7 +70,7 @@ except ImportError:
 
 _SSL_HINT = (
     "For SSL errors behind a corporate proxy, try:\n"
-    "  pip install 'mcp-coder[truststore]'\n"
+    "  pip install mcp-coder[truststore]\n"
     "  or set SSL_CERT_FILE / REQUESTS_CA_BUNDLE env var to your corporate CA bundle."
 )
 
@@ -93,7 +100,8 @@ def raise_connection_error(
         lines.append(f"  {item}. endpoint/base_url: {endpoint_hint}")
         item += 1
     lines.append(f"  {item}. Network/firewall/proxy settings")
-    lines.append(_SSL_HINT)
+    if classify_connection_error(original).startswith("ssl-error"):
+        lines.append(_SSL_HINT)
     raise LLMConnectionError("\n".join(lines)) from original
 
 
@@ -246,9 +254,4 @@ def format_diagnostics(exc: Exception) -> str:
     ]
     if not proxy:
         lines.append("Hint: If behind a corporate proxy, set HTTPS_PROXY / HTTP_PROXY.")
-    if not truststore_active:
-        lines.append(
-            "Hint: Install truststore (pip install 'mcp-coder[truststore]') "
-            "for OS certificate store support."
-        )
     return "\n".join(lines)

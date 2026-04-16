@@ -1,0 +1,33 @@
+Step 1: narrow CONNECTION_ERRORS, add LLMMCPLaunchError, gate SSL hint (#830)
+
+Tighten error classification in the LangChain provider so local MCP
+subprocess-launch failures (FileNotFoundError / PermissionError) no
+longer masquerade as remote connection problems, and make the truststore
+install hint pastable on Windows.
+
+Production (`src/mcp_coder/llm/providers/langchain/_exceptions.py`):
+- Drop OSError from CONNECTION_ERRORS; keep only httpx.ConnectError,
+  httpx.ConnectTimeout, and ConnectionError (fallback: ConnectionError).
+- Add LLMMCPLaunchError(Exception) for local MCP launch failures; it
+  does not inherit ConnectionError and is not in CONNECTION_ERRORS, so
+  _handle_provider_error passes it through unchanged.
+- Gate _SSL_HINT in raise_connection_error on
+  classify_connection_error(...).startswith("ssl-error") so the hint
+  only appears for SSL/certificate failures.
+- Un-quote the pip install hint: `pip install mcp-coder[truststore]`
+  (pastable in cmd.exe, PowerShell, bash, zsh).
+- Remove the duplicate truststore install hint from format_diagnostics;
+  keep the `Truststore active: <bool>` status line.
+
+Tests:
+- test_langchain_exceptions.py: flip OSError assertion to excludes;
+  add httpx.ConnectError inclusion check; change ssl hint test to use
+  ssl.SSLError and assert unquoted form; add non-SSL no-hint test;
+  add LLMMCPLaunchError hierarchy test; add _handle_provider_error
+  pass-through tests for FileNotFoundError and PermissionError.
+- test_langchain_diagnostics.py: rename to
+  test_truststore_not_available_omits_install_hint and assert no
+  `pip install` / `Install truststore` line.
+- test_langchain_models.py & test_langchain_provider.py: switch
+  OSError side_effects to ConnectionError in tests that rely on the
+  connection-error catch path, matching the narrowed tuple.
