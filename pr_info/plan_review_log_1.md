@@ -41,3 +41,27 @@ Plan files reviewed: summary.md, step_1.md, step_2.md, step_3.md
 - `step_3.md`: pre-flight uses `shutil.which`; helper `name` parameter now used in messages (`unresolved placeholder ... in {name}.{field}`, `binary not found at ... (server {name})`); new imports listed explicitly; tightened `${VAR}` pseudocode; updated `test_server_failure` bullet for `shutil.which` return shape; added new TDD bullet `test_launch_error_filenotfound_after_preflight_passes`.
 
 **Status**: Changes applied. Ready to commit.
+
+
+## Round 2 — 2026-04-16
+
+**Findings**
+- `test_mixed_servers` — after switching to `shutil.which`, `bad.command="nonexistent"` short-circuits in pre-flight and the mocked `ConnectionError` at `__aenter__` is never reached.
+- Missing "remains green" note for existing `test_server_failure_has_no_tool_names` (mirrors round 1 pattern for `test_hard_fails_on_mcp_server_error`).
+- Brittle coupling: `_check_servers` derives `error` category via `msg.startswith("unresolved placeholder")`. Implicit string-prefix contract between helper and caller.
+- Test name `test_connection_errors_contains_oserror` stays stale after Step 1 semantics flip (assertion now says `OSError not in ...`).
+
+**Decisions**
+- Accept (autonomous): rewrite `test_mixed_servers` — drop `ConnectionError` mock, assert `error == "FileNotFoundError"` from pre-flight. Launch-error path already covered by `test_hard_fails_on_mcp_server_error` and the new `test_launch_error_filenotfound_after_preflight_passes`.
+- Accept (autonomous): add "remains green" note for `test_server_failure_has_no_tool_names`.
+- Skip (YAGNI): keep the 2-tuple `(ok, msg)` helper signature. Helper and caller share the same short span in the same file; rewording can be updated together. A 3-tuple or enum adds complexity without meaningful robustness gain.
+- Accept (autonomous): rename `test_connection_errors_contains_oserror` → `test_connection_errors_excludes_oserror`.
+
+**User decisions**
+- None — no design questions escalated this round.
+
+**Changes**
+- `step_1.md`: renamed `test_connection_errors_contains_oserror` → `test_connection_errors_excludes_oserror`.
+- `step_3.md`: rewrote `test_mixed_servers` TDD bullet — bad server fails in pre-flight (`shutil.which` returns None), asserts `error == "FileNotFoundError"`, dropped launch-mock side_effect; added "remains green" bullet for `test_server_failure_has_no_tool_names`.
+
+**Status**: Changes applied. Ready to commit.

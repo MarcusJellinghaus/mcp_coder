@@ -109,8 +109,9 @@ raise LLMConnectionError("\n".join(lines)) from original
 
 In `test_langchain_exceptions.py`:
 
-1. **Change `test_connection_errors_contains_oserror`** → assert
-   `OSError not in CONNECTION_ERRORS` and
+1. **Rename `test_connection_errors_contains_oserror` →
+   `test_connection_errors_excludes_oserror`** and flip the assertion:
+   assert `OSError not in CONNECTION_ERRORS` and
    `ConnectionError in CONNECTION_ERRORS`. Optionally also assert
    `httpx.ConnectError in CONNECTION_ERRORS` (guard the assertion with a
    `try: import httpx` skip).

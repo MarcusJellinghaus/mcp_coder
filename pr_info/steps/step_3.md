@@ -152,10 +152,21 @@ In `tests/llm/providers/langchain/test_mcp_health_check.py`:
      `result["servers"]["broken"]["value"]`.
 
 2. **Update `test_mixed_servers`** — `bad` entry uses
-   `command="nonexistent"`. Assert new `binary not found` message.
-   `good` uses `command="python"` which may or may not exist on CI.
-   Change the `good` command to point at an existing path (e.g.
-   `sys.executable`) so pre-flight passes and the live launch mock fires.
+   `command="nonexistent"` so `shutil.which` returns `None` and
+   pre-flight fails with
+   `"binary not found at nonexistent (server bad)"`. Drop the previously
+   mocked `ConnectionError` `side_effect` on `__aenter__` — pre-flight
+   short-circuits before the async launch, so the mock is never reached.
+   Assert `result["servers"]["bad"]["ok"] is False` and
+   `result["servers"]["bad"]["error"] == "FileNotFoundError"` (the
+   category derived from the `"binary not found"` prefix). `good` uses
+   `command="python"` which may or may not exist on CI; change the
+   `good` command to point at an existing path (e.g. `sys.executable`)
+   so pre-flight passes and the live launch mock fires. The launch-error
+   `ConnectionError` path is already covered by the existing
+   `test_hard_fails_on_mcp_server_error` (in agent.py tests) and the new
+   `test_launch_error_filenotfound_after_preflight_passes`; no
+   duplication needed here.
 
 3. **Update `test_timeout_handling`** — command `"python"` may fail
    pre-flight. Change to `sys.executable` to skip pre-flight.
@@ -191,6 +202,12 @@ In `tests/llm/providers/langchain/test_mcp_health_check.py`:
    `"FileNotFoundError"` (not just `str(exc)`), confirming the
    enriched launch-error fallback fires even when pre-flight was
    green.
+
+10. **Remains green — `test_server_failure_has_no_tool_names`.** Existing
+    `test_server_failure_has_no_tool_names` (same file) uses
+    `command='nonexistent'` + mocked `FileNotFoundError` at `__aenter__`;
+    after pre-flight short-circuit the mock is bypassed but the test
+    still passes (ok=False, no `tool_names`). Unchanged, remains green.
 
 ## Done-when
 
