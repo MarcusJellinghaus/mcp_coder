@@ -184,6 +184,10 @@ class TestVerifyMcpServers:
         assert result["overall_ok"] is False
         assert result["servers"]["slow"]["ok"] is False
         assert result["servers"]["slow"]["error"] == "TimeoutError"
+        # Timeout must not be mislabeled as "failed to launch" (issue #830)
+        value = result["servers"]["slow"]["value"]
+        assert "timed out" in value
+        assert "failed to launch" not in value
 
     @patch(
         "mcp_coder.llm.providers.langchain.verification._load_mcp_server_config",
@@ -274,8 +278,10 @@ class TestVerifyMcpServers:
     )
     def test_server_failure_has_no_tool_names(self, mock_load: MagicMock) -> None:
         """Failed server result does not contain tool_names."""
+        # Use sys.executable so pre-flight (shutil.which) passes and the
+        # mocked async context manager is actually reached.
         mock_load.return_value = {
-            "broken": {"command": "nonexistent", "args": [], "transport": "stdio"},
+            "broken": {"command": sys.executable, "args": [], "transport": "stdio"},
         }
 
         mock_client = MagicMock()

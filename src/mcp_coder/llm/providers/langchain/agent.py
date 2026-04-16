@@ -60,6 +60,24 @@ def _check_agent_dependencies() -> None:
 _KNOWN_FIELDS = {"command", "args", "env", "transport", "type"}
 
 
+def _format_launch_error(server_name: str, command: object, exc: BaseException) -> str:
+    """Format the user-facing message for a failed MCP server launch.
+
+    Args:
+        server_name: Name of the MCP server that failed to launch.
+        command: The configured command (may be missing, non-string, or empty).
+        exc: The original exception that caused the launch failure.
+
+    Returns:
+        A formatted message suitable for use in an LLMMCPLaunchError.
+    """
+    cmd_str = command if isinstance(command, str) and command else "<unknown>"
+    return (
+        f"MCP server {server_name!r} failed to launch: "
+        f"{cmd_str} ({type(exc).__name__})"
+    )
+
+
 def _resolve_env_vars(value: str, env: dict[str, str]) -> str:
     """Replace ``${VAR}`` placeholders in *value* with values from *env*.
 
@@ -284,10 +302,10 @@ async def run_agent(
                     )
                     all_tools.append(lc_tool)
         except (FileNotFoundError, PermissionError) as exc:
-            cmd = server_config[server_name].get("command", "")
             raise LLMMCPLaunchError(
-                f"MCP server '{server_name}' failed to launch: "
-                f"{cmd} ({type(exc).__name__})"
+                _format_launch_error(
+                    server_name, server_config[server_name].get("command"), exc
+                )
             ) from exc
 
     agent = create_react_agent(chat_model, all_tools)
@@ -443,10 +461,10 @@ async def run_agent_stream(
                         )
                         all_tools.append(lc_tool)
             except (FileNotFoundError, PermissionError) as exc:
-                cmd = server_config[server_name].get("command", "")
                 raise LLMMCPLaunchError(
-                    f"MCP server '{server_name}' failed to launch: "
-                    f"{cmd} ({type(exc).__name__})"
+                    _format_launch_error(
+                        server_name, server_config[server_name].get("command"), exc
+                    )
                 ) from exc
 
     agent = create_react_agent(chat_model, all_tools)

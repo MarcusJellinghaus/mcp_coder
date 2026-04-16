@@ -369,18 +369,30 @@ def _make_launch_failing_client(exc: BaseException) -> MagicMock:
 class TestRunAgentLaunchErrorWrap:
     """Wrap FileNotFoundError / PermissionError as LLMMCPLaunchError."""
 
+    @pytest.mark.parametrize(
+        ("exc_class", "exc_message", "command"),
+        [
+            (FileNotFoundError, "no such file", "/no/such/binary"),
+            (PermissionError, "denied", "/denied/binary"),
+        ],
+        ids=["FileNotFoundError", "PermissionError"],
+    )
     @pytest.mark.asyncio
-    async def test_run_agent_wraps_filenotfound_as_launch_error(
-        self, tmp_path: Path
+    async def test_run_agent_wraps_launch_errors(
+        self,
+        tmp_path: Path,
+        exc_class: type[BaseException],
+        exc_message: str,
+        command: str,
     ) -> None:
-        """FileNotFoundError from session.__aenter__ becomes LLMMCPLaunchError."""
+        """FileNotFoundError / PermissionError from session.__aenter__ become LLMMCPLaunchError."""
         from mcp_coder.llm.providers.langchain._exceptions import LLMMCPLaunchError
 
-        cfg = {"mcpServers": {"broken": {"command": "/no/such/binary"}}}
+        cfg = {"mcpServers": {"broken": {"command": command}}}
         cfg_file = tmp_path / ".mcp.json"
         cfg_file.write_text(json.dumps(cfg), encoding="utf-8")
 
-        original = FileNotFoundError("no such file")
+        original = exc_class(exc_message)
         mock_client = _make_launch_failing_client(original)
 
         with (
@@ -398,41 +410,8 @@ class TestRunAgentLaunchErrorWrap:
 
         msg = str(exc_info.value)
         assert "broken" in msg
-        assert "/no/such/binary" in msg
-        assert "FileNotFoundError" in msg
-        assert exc_info.value.__cause__ is original
-
-    @pytest.mark.asyncio
-    async def test_run_agent_wraps_permissionerror_as_launch_error(
-        self, tmp_path: Path
-    ) -> None:
-        """PermissionError from session.__aenter__ becomes LLMMCPLaunchError."""
-        from mcp_coder.llm.providers.langchain._exceptions import LLMMCPLaunchError
-
-        cfg = {"mcpServers": {"broken": {"command": "/denied/binary"}}}
-        cfg_file = tmp_path / ".mcp.json"
-        cfg_file.write_text(json.dumps(cfg), encoding="utf-8")
-
-        original = PermissionError("denied")
-        mock_client = _make_launch_failing_client(original)
-
-        with (
-            patch(_PATCH_MCP_CLIENT, return_value=mock_client),
-            patch(_PATCH_CONVERT_TOOL, return_value=MagicMock()),
-            patch(_PATCH_FROM_DICT, return_value=[]),
-            pytest.raises(LLMMCPLaunchError) as exc_info,
-        ):
-            await run_agent(
-                question="test",
-                chat_model=MagicMock(),
-                messages=[],
-                mcp_config_path=str(cfg_file),
-            )
-
-        msg = str(exc_info.value)
-        assert "broken" in msg
-        assert "/denied/binary" in msg
-        assert "PermissionError" in msg
+        assert command in msg
+        assert exc_class.__name__ in msg
         assert exc_info.value.__cause__ is original
 
     @pytest.mark.asyncio

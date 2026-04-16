@@ -376,14 +376,21 @@ async def _check_servers(
                         "tool_names": tool_names,
                     }
         except Exception as exc:  # pylint: disable=broad-except
-            results[server_name] = {
-                "ok": False,
-                "value": (
-                    f"MCP server {server_name!r} failed to launch: "
-                    f"{cfg.get('command', '')} ({type(exc).__name__}: {exc})"
-                ),
-                "error": type(exc).__name__,
-            }
+            if isinstance(exc, asyncio.TimeoutError):
+                results[server_name] = {
+                    "ok": False,
+                    "value": (f"MCP server {server_name!r} timed out after {timeout}s"),
+                    "error": "TimeoutError",
+                }
+            else:
+                results[server_name] = {
+                    "ok": False,
+                    "value": (
+                        f"MCP server {server_name!r} failed to launch: "
+                        f"{cfg.get('command', '')} ({type(exc).__name__}: {exc})"
+                    ),
+                    "error": type(exc).__name__,
+                }
     return results
 
 
