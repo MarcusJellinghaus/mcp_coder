@@ -1,0 +1,19 @@
+Add _pad() header helper and apply to all verify section headers
+
+Introduce a `_pad(title)` helper in `src/mcp_coder/cli/commands/verify.py`
+that returns a `"\n=== {title} "` header padded to 60 chars with `=`,
+never truncated. Apply it to all 9 `=== X ===` header-print sites in
+`verify.py`:
+
+- `_format_section` (dynamic section title)
+- `_format_mcp_section` (langchain-mcp-adapters)
+- `_format_claude_mcp_section` (Claude Code)
+- Inline headers in `execute_verify`: CONFIG, PROMPTS, LLM PROVIDER,
+  both "langchain-mcp-adapters not installed" fallback headers, and
+  INSTALL INSTRUCTIONS.
+
+Add a `TestPadHeader` class in
+`tests/cli/commands/test_verify_format_section.py` covering the padding
+boundary (short, exact-60, and long titles). Loosen the
+`"=== MY SECTION ===" in output` assertion to `"=== MY SECTION "` so it
+tolerates trailing `=` padding.

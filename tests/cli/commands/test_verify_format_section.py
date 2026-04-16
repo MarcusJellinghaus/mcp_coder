@@ -7,8 +7,29 @@ from mcp_coder.cli.commands.verify import (
     _format_claude_mcp_section,
     _format_mcp_section,
     _format_section,
+    _pad,
 )
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
+
+
+class TestPadHeader:
+    """Tests for the _pad(title) header padding helper."""
+
+    def test_short_title_padded_to_60(self) -> None:
+        out = _pad("CONFIG")
+        assert out == "\n=== CONFIG " + "=" * (60 - len("=== CONFIG "))
+        assert len(out.lstrip("\n")) == 60
+
+    def test_exact_60_title_no_extra_padding(self) -> None:
+        title = "X" * (60 - len("===  "))  # prefix "=== X...X " == 60
+        out = _pad(title)
+        assert len(out.lstrip("\n")) == 60
+
+    def test_long_title_not_truncated(self) -> None:
+        long = "MCP SERVERS (via langchain-mcp-adapters \u2014 for completeness)"
+        out = _pad(long)
+        assert long in out
+        assert out.lstrip("\n").startswith(f"=== {long} ")
 
 
 class TestFormatSection:
@@ -58,7 +79,7 @@ class TestFormatSection:
         """Section header contains the title."""
         result: dict[str, Any] = {"overall_ok": True}
         output = _format_section("MY SECTION", result, self._symbols())
-        assert "=== MY SECTION ===" in output
+        assert "=== MY SECTION " in output
 
     def test_install_hint_rendered_inline(self) -> None:
         """When entry has install_hint and ok=False, hint appears indented below."""

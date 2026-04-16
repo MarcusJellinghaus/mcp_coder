@@ -29,6 +29,20 @@ STATUS_SYMBOLS: dict[str, str] = {
     "warning": "[WARN]",
 }
 
+
+def _pad(title: str) -> str:
+    """Return a section header line padded to 60 chars with '=' (never truncated).
+
+    Args:
+        title: Section title (without surrounding '===').
+
+    Returns:
+        Header line prefixed with '\\n' for the required blank line above.
+    """
+    prefix = f"=== {title} "
+    return "\n" + prefix + "=" * max(0, 60 - len(prefix))
+
+
 _LABEL_MAP: dict[str, str] = {
     # Claude section
     "cli_found": "Claude CLI Found",
@@ -68,7 +82,7 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
     Returns:
         Formatted multi-line string for the section.
     """
-    lines: list[str] = [f"\n=== {title} ==="]
+    lines: list[str] = [_pad(title)]
     for key, entry in result.items():
         if key == "overall_ok":
             continue
@@ -113,9 +127,7 @@ def _format_mcp_section(
         Formatted multi-line string for the MCP servers section.
     """
     title_suffix = " \u2014 for completeness" if for_completeness else ""
-    lines: list[str] = [
-        f"\n=== MCP SERVERS (via langchain-mcp-adapters{title_suffix}) ==="
-    ]
+    lines: list[str] = [_pad(f"MCP SERVERS (via langchain-mcp-adapters{title_suffix})")]
     servers = mcp_results["servers"]
 
     if list_mcp_tools:
@@ -184,7 +196,7 @@ def _format_claude_mcp_section(
         Formatted multi-line string.
     """
     title_suffix = " \u2014 for completeness" if for_completeness else ""
-    lines: list[str] = [f"\n=== MCP SERVERS (via Claude Code{title_suffix}) ==="]
+    lines: list[str] = [_pad(f"MCP SERVERS (via Claude Code{title_suffix})")]
     for status in statuses:
         symbol = symbols["success"] if status.ok else symbols["failure"]
         lines.append(f"  {status.name:<20s} {symbol} {status.status_text}")
@@ -337,7 +349,7 @@ def execute_verify(args: argparse.Namespace) -> int:
 
     # 0. Config verification (first section)
     config_result = verify_config()
-    lines = ["\n=== CONFIG ==="]
+    lines = [_pad("CONFIG")]
     for entry in config_result["entries"]:
         status = entry["status"]
         symbol = {
@@ -353,7 +365,7 @@ def execute_verify(args: argparse.Namespace) -> int:
     _sys_prompt, _proj_prompt, prompt_config = load_prompts(project_dir)
     active_provider, source = resolve_llm_method(args.llm_method)
 
-    prompt_lines = ["\n=== PROMPTS ==="]
+    prompt_lines = [_pad("PROMPTS")]
     prompt_lines.append(
         f"  {'System prompt':<20s} {symbols['success']}"
         f" {_prompt_source(prompt_config.system_prompt, 'shipped default')}"
@@ -390,7 +402,7 @@ def execute_verify(args: argparse.Namespace) -> int:
 
     # 3. LangChain verification (only when provider is langchain)
     langchain_result: dict[str, Any] | None = None
-    print("\n=== LLM PROVIDER ===")
+    print(_pad("LLM PROVIDER"))
     print(
         f"  {'Active provider':<20s} {symbols['success']} {active_provider} (from {source})"
     )
@@ -452,7 +464,7 @@ def execute_verify(args: argparse.Namespace) -> int:
                     )
                 )
             else:
-                print("\n=== MCP SERVERS (via langchain-mcp-adapters) ===")
+                print(_pad("MCP SERVERS (via langchain-mcp-adapters)"))
                 print(
                     f"  {symbols['warning']} server health check skipped"
                     " (langchain-mcp-adapters not installed)"
@@ -469,7 +481,7 @@ def execute_verify(args: argparse.Namespace) -> int:
                     )
                 )
             else:
-                print("\n=== MCP SERVERS (via langchain-mcp-adapters) ===")
+                print(_pad("MCP SERVERS (via langchain-mcp-adapters)"))
                 print(
                     f"  {symbols['warning']} server health check skipped"
                     " (langchain-mcp-adapters not installed)"
@@ -553,7 +565,7 @@ def execute_verify(args: argparse.Namespace) -> int:
             if h.startswith("pip install")
         )
         if pip_packages:
-            print("\n=== INSTALL INSTRUCTIONS ===")
+            print(_pad("INSTALL INSTRUCTIONS"))
             print(f"  pip install {pip_packages}")
 
     # 6. Compute and return exit code
