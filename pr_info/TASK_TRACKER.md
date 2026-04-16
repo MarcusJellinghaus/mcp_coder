@@ -21,6 +21,39 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Move `mcp_manager.py` under `providers/langchain/`
+
+Detail: [steps/step_1.md](./steps/step_1.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Restructure `pyproject.toml` optional extras
+
+Detail: [steps/step_2.md](./steps/step_2.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Add `langchain_transitive_isolation` import-linter contract
+
+Detail: [steps/step_3.md](./steps/step_3.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Documentation — optional-dependencies page + pointers
+
+Detail: [steps/step_4.md](./steps/step_4.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review
+- [ ] PR summary
