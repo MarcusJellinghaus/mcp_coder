@@ -1,4 +1,0 @@
-┌ tools-py > run_ruff_check(select=["D", "DOC"], extra_args=["--preview"], target_directories=(4 items))
-├──
-│  Error: Claude requested permissions to use mcp__tools-py__run_ruff_check, but you haven't granted it yet.
-└ done

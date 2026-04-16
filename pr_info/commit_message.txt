@@ -1,21 +1,17 @@
-Refactor ToolStart to carry raw args; add format_tool_start() (#820)
+Delete testdata/ folder (#820)
 
-Change ToolStart dataclass to hold `args: dict[str, object]` instead
-of pre-formatted inline_args/block_args strings. Formatting decisions
-are made on demand via the new public `format_tool_start(action,
-full=False)` helper, which applies a length-based (100-char)
-inline/block threshold and appends a `├──` separator line when args
-are present.
+The testdata/ folder was used as visual acceptance tests during the
+redesign of tool-output rendering. With the rendering expectations now
+encoded in unit tests (test_stream_renderer.py) and the new formatter
+pipeline in place, the JSON fixtures, rendered outputs, and one-off
+development scripts (render_testdata.py, render_nice.py) are no longer
+needed.
 
-Consumers now share a single formatting path: iCoder's app.py and
-the CLI rendered output both call `format_tool_start()`. The CLI
-text path uses `_render_value_compact()` for concise single-line
-arg display.
+Removed:
+- Rendering scripts (2 files)
+- Design document (1 file)
+- Non-tool test data (4 JSON files)
+- Tool JSON inputs (14 files)
+- Rendered outputs (42 files: 14 x 3 variants each)
 
-Remove dead code: `_INLINE_ARG_LIMIT` and `_format_tool_args()`.
-
-Tests: rewrite ToolStart tests in test_stream_renderer.py; add
-TestFormatToolStart covering inline/block boundary (exactly 100
-vs 101 chars), compact vs full modes, separator presence/absence,
-and insertion-order preservation in block form. Update affected
-rendered-format tests in test_formatters.py.
+No production code imports from testdata/; all tests still pass.

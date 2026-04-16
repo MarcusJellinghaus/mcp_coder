@@ -1,3 +1,0 @@
-┌ tools-py > run_pylint_check(target_directories=['src/mcp_coder/prompts/prompt_loader.py', 'src/mcp_coder/llm/providers/claude/claude_code_cli.py', 'src/mcp_coder/llm/providers/langchain/__init__.py', 'src/mcp_coder/llm/providers/langchain/agent.py'])
-│  Pylint check completed. No issues found that require attention.
-└ done

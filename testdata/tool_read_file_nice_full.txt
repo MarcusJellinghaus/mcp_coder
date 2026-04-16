@@ -1,6 +1,0 @@
-┌ workspace > read_file(file_path='.mcp_coder_verify.md')
-├──
-│  A
-│  
-│  C
-└ done

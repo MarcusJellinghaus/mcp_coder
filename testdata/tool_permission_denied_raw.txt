@@ -1,6 +1,0 @@
-┌ tools-py > run_ruff_check
-│  select: ["D", "DOC"]
-│  extra_args: ["--preview"]
-│  target_directories: ["src/mcp_coder/llm/providers/claude/claude_code_cli.py", "src/mcp_coder/llm/providers/langchain/__init__.py", "src/mcp_coder/llm/providers/langchain/agent.py", "src/mcp_coder/prompts/prompt_loader.py"]
-│  Error: Claude requested permissions to use mcp__tools-py__run_ruff_check, but you haven't granted it yet.
-└ done
