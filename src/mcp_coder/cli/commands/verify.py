@@ -101,13 +101,13 @@ def _print_environment_section() -> None:
 
 
 def _pad(title: str) -> str:
-    """Return a section header line padded to 60 chars with '=' (never truncated).
+    r"""Return a section header line padded to 60 chars with '=' (never truncated).
 
     Args:
         title: Section title (without surrounding '===').
 
     Returns:
-        Header line prefixed with '\\n' for the required blank line above.
+        Header line prefixed with '\n' for the required blank line above.
     """
     prefix = f"=== {title} "
     return "\n" + prefix + "=" * max(0, 60 - len(prefix))
