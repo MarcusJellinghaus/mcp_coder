@@ -23,20 +23,7 @@ from .render_actions import (
 _HEAD_LINES = 10
 _TAIL_LINES = 5
 _TRUNCATION_THRESHOLD = _HEAD_LINES + _TAIL_LINES  # 15
-_INLINE_ARG_LIMIT = 2
-
-_ENVELOPE_FIELDS: frozenset[str] = frozenset(
-    {
-        "type",
-        "role",
-        "model",
-        "stop_reason",
-        "session_id",
-        "usage",
-    }
-)
-
-_MAIN_CONTENT_KEYS: tuple[str, ...] = ("result", "text", "content")
+_MAX_INLINE_LEN = 100
 
 
 def _format_tool_name(name: str) -> str:
@@ -59,46 +46,111 @@ def _format_tool_name(name: str) -> str:
     return name
 
 
-def _format_tool_args(args: object) -> str:
-    """Format tool arguments for text display.
+def _render_value_compact(value: object) -> str:
+    """Render a value as a single-line summary for compact arg display.
 
     Returns:
-        Formatted string of tool arguments.
-    """
-    if isinstance(args, dict):
-        parts = [f"{k}={v!r}" for k, v in args.items()]
-        return ", ".join(parts)
-    return str(args) if args else ""
-
-
-def _render_value(value: object) -> list[str]:
-    """Render a single value into display lines.
-
-    Returns:
-        List of display lines rendered from the input value.
+        Single-line string summary of the value. Long strings, long lists,
+        lists containing dicts, and long dicts are summarized as counts.
     """
     if isinstance(value, str):
-        return value.splitlines() if value else [""]
-    if isinstance(value, (dict, list)):
+        if len(value) > 80:
+            return f"({len(value)} chars)"
+        return repr(value)
+    if isinstance(value, list):
+        if any(isinstance(item, dict) for item in value):
+            return f"({len(value)} items)"
+        compact = json.dumps(value)
+        if len(compact) > 120:
+            return f"({len(value)} items)"
+        return compact
+    if isinstance(value, dict):
+        compact = json.dumps(value)
+        if len(compact) > 120:
+            return f"({len(value)} keys)"
+        return compact
+    return repr(value)
+
+
+def _render_value_full(value: object) -> list[str]:
+    """Render a value as multiple lines with full detail for block arg display.
+
+    Returns:
+        List of display lines: multiline strings split, long strings truncated
+        to 120 chars, lists/dicts inline when short else pretty-printed JSON.
+    """
+    if isinstance(value, str):
+        if "\n" in value:
+            return value.splitlines()
+        if len(value) > 120:
+            return [f"{value[:117]}..."]
+        return [value]
+    if isinstance(value, (list, dict)):
+        compact = json.dumps(value)
+        if len(compact) <= 120:
+            return [compact]
         return json.dumps(value, indent=2).splitlines()
-    return [str(value)]
+    return [repr(value)]
+
+
+def _render_output_value(value: object) -> list[str]:
+    """Render any JSON value generically for tool output display.
+
+    Recursively renders dicts: multiline string values become an indented
+    block; nested dict/list values render inline when short or as an
+    indented block when multi-line; scalar values render inline via
+    ``json.dumps``.
+
+    Returns:
+        List of display lines for the rendered value.
+    """
+    if isinstance(value, str):
+        if "\n" in value:
+            return value.splitlines()
+        return [value]
+    if isinstance(value, dict):
+        lines: list[str] = []
+        for key, child in value.items():
+            if isinstance(child, str) and "\n" in child:
+                lines.append(f"{key}:")
+                for sub in child.splitlines():
+                    lines.append(f"  {sub}")
+            elif isinstance(child, (dict, list)):
+                rendered = _render_output_value(child)
+                if len(rendered) == 1:
+                    lines.append(f"{key}: {rendered[0]}")
+                else:
+                    lines.append(f"{key}:")
+                    for sub in rendered:
+                        lines.append(f"  {sub}")
+            else:
+                lines.append(f"{key}: {json.dumps(child)}")
+        return lines
+    if isinstance(value, list):
+        compact = json.dumps(value)
+        if len(compact) <= _MAX_INLINE_LEN:
+            return [compact]
+        return json.dumps(value, indent=2).splitlines()
+    return [json.dumps(value)]
 
 
 def _render_tool_output(
-    output: str, *, format_tools: bool = True
+    output: str, *, format_tools: bool = True, full: bool = False
 ) -> tuple[list[str], int]:
-    """Render tool output into display lines with field filtering and truncation.
+    """Render tool output into display lines with optional truncation.
 
     When *format_tools* is ``False``, return the raw output split into lines
-    with no filtering or truncation.
+    with no parsing or truncation.
 
     Otherwise:
-    1. Try ``json.loads`` — if dict, apply field filtering:
-       a. Find main content (first of result / text / content present).
-       b. Render main content value directly.
-       c. Collect extras (non-envelope, non-main keys) below a blank line.
-    2. If not dict or JSON fails, split into plain text lines.
-    3. Apply head/tail truncation when lines exceed threshold.
+    1. Try ``json.loads`` — if a dict with a ``"result"`` key, render
+       ``parsed["result"]`` via ``_render_output_value()`` and append any
+       remaining keys (as extras) below a blank separator.
+    2. If not a dict or no ``"result"`` key, render the parsed value via
+       ``_render_output_value()``.
+    3. If JSON parsing fails, split the raw output into lines.
+    4. Apply head/tail truncation when ``full`` is ``False`` and lines
+       exceed the threshold.
 
     Returns:
         ``(display_lines, total_line_count)``.
@@ -112,48 +164,19 @@ def _render_tool_output(
 
     try:
         parsed = json.loads(output)
-        if isinstance(parsed, dict):
-            lines: list[str] = []
-
-            # Find main content key
-            main_key: str | None = None
-            for key in _MAIN_CONTENT_KEYS:
-                if key in parsed:
-                    main_key = key
-                    break
-
-            # Render main content
-            if main_key is not None:
-                lines.extend(_render_value(parsed[main_key]))
-
-            # Collect and render extras
-            extras: list[tuple[str, object]] = []
-            for key, value in parsed.items():
-                if key == main_key:
-                    continue
-                if key in _ENVELOPE_FIELDS:
-                    continue
-                extras.append((key, value))
-
-            if extras and main_key is not None:
-                lines.append("")  # blank separator between main content and extras
+        if isinstance(parsed, dict) and "result" in parsed:
+            lines = _render_output_value(parsed["result"])
+            extras = {k: v for k, v in parsed.items() if k != "result"}
             if extras:
-                for key, value in extras:
-                    if isinstance(value, str) and "\n" in value:
-                        lines.append(f"{key}:")
-                        for subline in value.splitlines():
-                            lines.append(f"  {subline}")
-                    elif isinstance(value, str):
-                        lines.append(f"{key}: {value}")
-                    else:
-                        lines.append(f"{key}: {json.dumps(value)}")
+                lines.append("")
+                lines.extend(_render_output_value(extras))
         else:
-            lines = str(parsed).splitlines()
+            lines = _render_output_value(parsed)
     except (json.JSONDecodeError, ValueError):
         lines = output.splitlines()
 
     total = len(lines)
-    if total > _TRUNCATION_THRESHOLD:
+    if not full and total > _TRUNCATION_THRESHOLD:
         skipped = total - _HEAD_LINES - _TAIL_LINES
         lines = (
             lines[:_HEAD_LINES]
@@ -161,6 +184,48 @@ def _render_tool_output(
             + lines[-_TAIL_LINES:]
         )
     return (lines, total)
+
+
+def format_tool_start(action: ToolStart, full: bool = False) -> list[str]:
+    """Format a ``ToolStart`` action into display lines.
+
+    Returns a single inline header line when args fit in
+    ``_MAX_INLINE_LEN`` characters, otherwise a block header with one
+    line per arg. When args are present, a ``├──`` separator line is
+    appended as the last line.
+
+    Args:
+        action: The ``ToolStart`` action to format.
+        full: When ``True``, expand block args using full detail; when
+            ``False``, use compact summaries for long values.
+
+    Returns:
+        A list of display lines.
+    """
+    if not action.args:
+        return [f"\u250c {action.display_name}"]
+
+    inline_parts = [
+        f"{key}={_render_value_compact(value)}" for key, value in action.args.items()
+    ]
+    inline = f"\u250c {action.display_name}({', '.join(inline_parts)})"
+    if len(inline) <= _MAX_INLINE_LEN:
+        lines = [inline]
+    else:
+        lines = [f"\u250c {action.display_name}"]
+        for key, value in action.args.items():
+            if full:
+                rendered = _render_value_full(value)
+                if len(rendered) == 1:
+                    lines.append(f"\u2502  {key}: {rendered[0]}")
+                else:
+                    lines.append(f"\u2502  {key}:")
+                    for sub in rendered:
+                        lines.append(f"\u2502    {sub}")
+            else:
+                lines.append(f"\u2502  {key}: {_render_value_compact(value)}")
+    lines.append("\u251c\u2500\u2500")
+    return lines
 
 
 class StreamEventRenderer:
@@ -192,25 +257,12 @@ class StreamEventRenderer:
         if event_type == "tool_use_start":
             name = str(event.get("name", ""))
             args = event.get("args", {})
-            display_name = _format_tool_name(name)
-
-            if isinstance(args, dict) and len(args) <= _INLINE_ARG_LIMIT:
-                inline_args = _format_tool_args(args)
-                block_args: list[tuple[str, str]] = []
-            else:
-                inline_args = None
-                if isinstance(args, dict):
-                    block_args = [
-                        (key, json.dumps(value)) for key, value in args.items()
-                    ]
-                else:
-                    block_args = []
-
+            if not isinstance(args, dict):
+                args = {}
             return ToolStart(
-                display_name=display_name,
+                display_name=_format_tool_name(name),
                 raw_name=name,
-                inline_args=inline_args,
-                block_args=block_args,
+                args=args,
             )
 
         if event_type == "tool_result":

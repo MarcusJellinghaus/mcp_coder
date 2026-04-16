@@ -23,8 +23,7 @@ class ToolStart:
 
     display_name: str  # e.g. "workspace > read_file"
     raw_name: str  # e.g. "mcp__workspace__read_file"
-    inline_args: str | None  # formatted args when ≤2 keys, else None
-    block_args: list[tuple[str, str]]  # [(key, json_value), ...] when >2 keys
+    args: dict[str, object]  # raw args from stream event
 
 
 @dataclass(frozen=True)

@@ -309,7 +309,7 @@ class TestRenderedStreamFormat:
             assert out.getvalue() == expected_output
 
     def test_inline_params(self) -> None:
-        """Tool with 1-2 args renders inline: ┌ server > tool(args)."""
+        """Tool with short args renders inline header + separator."""
         buf = io.StringIO()
         print_stream_event(
             {
@@ -324,17 +324,23 @@ class TestRenderedStreamFormat:
         assert output.startswith("\u250c")
         assert "workspace > read_file" in output
         assert "file_path='x.py'" in output
-        # Should be single line (inline)
-        assert output.strip().count("\n") == 0
+        # Inline header + separator = 2 lines
+        assert "\u251c\u2500\u2500" in output
 
     def test_block_params(self) -> None:
-        """Tool with 3+ args renders block format with │ lines."""
+        """Tool with args exceeding 100 chars renders block format."""
+        # 50-char values (repr form) with 3 args easily exceed 100 chars inline.
+        val = "x" * 50
         buf = io.StringIO()
         print_stream_event(
             {
                 "type": "tool_use_start",
                 "name": "mcp__workspace__edit_file",
-                "args": {"file_path": "a.py", "old_text": "foo", "new_text": "bar"},
+                "args": {
+                    "file_path": "a.py",
+                    "old_text": val,
+                    "new_text": val,
+                },
             },
             output_format="rendered",
             file=buf,
@@ -348,6 +354,8 @@ class TestRenderedStreamFormat:
         assert any("file_path" in line for line in lines[1:])
         assert any("old_text" in line for line in lines[1:])
         assert any("new_text" in line for line in lines[1:])
+        # Separator is last line
+        assert lines[-1] == "\u251c\u2500\u2500"
 
     @pytest.mark.parametrize(
         "output_str,expected_lines,expected_footer",
