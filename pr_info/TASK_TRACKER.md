@@ -63,5 +63,5 @@ Detail: [step_5.md](./steps/step_5.md)
 
 ## Pull Request
 
-- [ ] PR review
+- [x] PR review
 - [ ] PR summary
