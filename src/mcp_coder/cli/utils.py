@@ -7,7 +7,6 @@ for parameter parsing and conversion.
 import argparse
 import logging
 import os
-import sys
 from pathlib import Path
 
 from ..llm.session import parse_llm_method
@@ -17,7 +16,6 @@ from ..utils.user_config import find_repo_section_by_url, get_config_values
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "_get_status_symbols",
     "log_command_startup",
     "parse_llm_method_from_args",
     "resolve_issue_interaction_flags",
@@ -97,18 +95,6 @@ def resolve_issue_interaction_flags(
         cli_labels if cli_labels is not None else cfg_labels,
         cli_comments if cli_comments is not None else cfg_comments,
     )
-
-
-def _get_status_symbols() -> dict[str, str]:
-    """Get platform-appropriate status symbols for terminal display.
-
-    Returns:
-        Dict with 'success', 'failure', and 'warning' status symbols
-    """
-    if sys.platform.startswith("win"):
-        return {"success": "[OK]", "failure": "[NO]", "warning": "[!!]"}
-    else:
-        return {"success": "\u2713", "failure": "\u2717", "warning": "\u26a0"}
 
 
 _VALID_PROVIDERS = {"claude", "langchain"}

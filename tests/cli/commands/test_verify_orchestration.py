@@ -2,13 +2,20 @@
 
 import argparse
 import datetime
+import json
+import logging
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.cli.commands.verify import _format_mcp_section, execute_verify
+from mcp_coder.cli.commands.verify import (
+    _collect_mcp_warnings,
+    _DropUnexpandedWarnings,
+    _format_mcp_section,
+    execute_verify,
+)
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 
 # Patch target for lazily-imported langchain verification functions
@@ -1011,3 +1018,234 @@ class TestVerifyMcpAllProviders:
         mock_smoke_test.assert_called_once()
         call_kwargs = mock_smoke_test.call_args
         assert call_kwargs[0][2] == "/fake/.mcp.json"  # mcp_config arg
+
+
+class TestMcpConfigWarnings:
+    """Tests for ``_collect_mcp_warnings`` parser and rendered section."""
+
+    def test_none_path_returns_empty(self) -> None:
+        assert _collect_mcp_warnings(None) == []
+
+    def test_missing_file_returns_empty(self, tmp_path: Path) -> None:
+        assert _collect_mcp_warnings(str(tmp_path / "nope.json")) == []
+
+    def test_invalid_json_returns_empty(self, tmp_path: Path) -> None:
+        p = tmp_path / ".mcp.json"
+        p.write_text("{not json", encoding="utf-8")
+        assert _collect_mcp_warnings(str(p)) == []
+
+    def test_unresolved_placeholder_found(self, tmp_path: Path) -> None:
+        p = tmp_path / ".mcp.json"
+        p.write_text(
+            json.dumps(
+                {
+                    "mcpServers": {
+                        "tools-py": {
+                            "env": {"PYTHONPATH": "${MCP_CODER_PROJECT_DIR}/src"}
+                        }
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+        result = _collect_mcp_warnings(str(p))
+        assert result == ["tools-py / PYTHONPATH  ${MCP_CODER_PROJECT_DIR}/src"]
+
+    def test_no_placeholders_returns_empty(self, tmp_path: Path) -> None:
+        p = tmp_path / ".mcp.json"
+        p.write_text(
+            json.dumps({"mcpServers": {"srv": {"env": {"PATH": "/usr/bin"}}}}),
+            encoding="utf-8",
+        )
+        assert _collect_mcp_warnings(str(p)) == []
+
+    def test_multiple_servers_multiple_vars(self, tmp_path: Path) -> None:
+        p = tmp_path / ".mcp.json"
+        p.write_text(
+            json.dumps(
+                {
+                    "mcpServers": {
+                        "srv-a": {"env": {"PYTHONPATH": "${VAR_A}/src"}},
+                        "srv-b": {"env": {"LIBPATH": "${VAR_B}\\Lib\\"}},
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+        result = _collect_mcp_warnings(str(p))
+        assert result == [
+            "srv-a / PYTHONPATH  ${VAR_A}/src",
+            "srv-b / LIBPATH  ${VAR_B}\\Lib\\",
+        ]
+
+    @patch(f"{_VERIFY}._run_mcp_edit_smoke_test", return_value="  smoke")
+    @patch(f"{_VERIFY}.parse_claude_mcp_list", return_value=[])
+    @patch(f"{_VERIFY}.prepare_llm_environment", return_value={})
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_LC_VERIFY}.verify_mcp_servers")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    def test_section_omitted_when_clean(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_mcp_servers: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        _mock_env: MagicMock,
+        _mock_parse: MagicMock,
+        _mock_smoke: MagicMock,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """When ``.mcp.json`` has no placeholders, section is omitted."""
+        mcp_json = tmp_path / ".mcp.json"
+        mcp_json.write_text(
+            json.dumps({"mcpServers": {"srv": {"env": {"PATH": "/usr/bin"}}}}),
+            encoding="utf-8",
+        )
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_mcp_servers.return_value = _mcp_servers_ok()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+
+        with patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=str(mcp_json)):
+            execute_verify(_make_args(mcp_config=str(mcp_json)))
+        output = capsys.readouterr().out
+        assert "MCP CONFIG WARNINGS" not in output
+
+    @patch(f"{_VERIFY}._run_mcp_edit_smoke_test", return_value="  smoke")
+    @patch(f"{_VERIFY}.parse_claude_mcp_list", return_value=[])
+    @patch(f"{_VERIFY}.prepare_llm_environment", return_value={})
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_LC_VERIFY}.verify_mcp_servers")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    def test_section_rendered_when_findings(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_mcp_servers: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        _mock_env: MagicMock,
+        _mock_parse: MagicMock,
+        _mock_smoke: MagicMock,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Section header and finding row are printed when unresolved vars exist."""
+        mcp_json = tmp_path / ".mcp.json"
+        mcp_json.write_text(
+            json.dumps(
+                {
+                    "mcpServers": {
+                        "tools-py": {
+                            "env": {"PYTHONPATH": "${MCP_CODER_PROJECT_DIR}/src"}
+                        }
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_mcp_servers.return_value = _mcp_servers_ok()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+
+        with patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=str(mcp_json)):
+            execute_verify(_make_args(mcp_config=str(mcp_json)))
+        output = capsys.readouterr().out
+        assert "MCP CONFIG WARNINGS" in output
+        assert "tools-py / PYTHONPATH  ${MCP_CODER_PROJECT_DIR}/src" in output
+
+    @patch(f"{_VERIFY}._run_mcp_edit_smoke_test", return_value="  smoke")
+    @patch(f"{_VERIFY}.parse_claude_mcp_list", return_value=[])
+    @patch(f"{_VERIFY}.prepare_llm_environment", return_value={})
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_LC_VERIFY}.verify_mcp_servers")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    def test_log_filter_suppresses_unexpanded_warning(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_mcp_servers: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        _mock_env: MagicMock,
+        _mock_parse: MagicMock,
+        _mock_smoke: MagicMock,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """The scoped log filter drops 'unexpanded variable' records from stdout."""
+        mcp_json = tmp_path / ".mcp.json"
+        mcp_json.write_text(json.dumps({"mcpServers": {}}), encoding="utf-8")
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+
+        def _emit_warning_then_return(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+            logging.getLogger("langchain_mcp_adapters").warning(
+                "env['PYTHONPATH'] contains unexpanded variable reference: 'X'"
+            )
+            return _mcp_servers_ok()
+
+        mock_mcp_servers.side_effect = _emit_warning_then_return
+
+        handler = logging.StreamHandler()
+        lc_logger = logging.getLogger("langchain_mcp_adapters")
+        lc_logger.addHandler(handler)
+        try:
+            with patch(
+                f"{_VERIFY}.resolve_mcp_config_path", return_value=str(mcp_json)
+            ):
+                execute_verify(_make_args(mcp_config=str(mcp_json)))
+        finally:
+            lc_logger.removeHandler(handler)
+
+        captured = capsys.readouterr()
+        combined = captured.out + captured.err
+        assert "unexpanded variable" not in combined
+
+        # Filter is removed after execute_verify returns: ensure no lingering filter.
+        assert not any(
+            isinstance(f, _DropUnexpandedWarnings) for f in lc_logger.filters
+        )
+
+
+class TestDropUnexpandedFilter:
+    """Tests for the ``_DropUnexpandedWarnings`` logging filter."""
+
+    def test_drops_unexpanded_message(self) -> None:
+        f = _DropUnexpandedWarnings()
+        rec = logging.LogRecord(
+            "x",
+            logging.WARNING,
+            "",
+            0,
+            "env['PYTHONPATH'] contains unexpanded variable reference: 'X'",
+            None,
+            None,
+        )
+        assert f.filter(rec) is False
+
+    def test_passes_other_messages(self) -> None:
+        f = _DropUnexpandedWarnings()
+        rec = logging.LogRecord(
+            "x", logging.WARNING, "", 0, "normal warning", None, None
+        )
+        assert f.filter(rec) is True

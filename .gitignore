@@ -57,12 +57,6 @@ docs/architecture/dependencies/dependency_report.html
 # Lock files (regenerate with: uv sync)
 uv.lock
 
-# Transient commit message file (used by implement workflow)
-pr_info/.commit_message.txt
-
-# CI check temporary files
-pr_info/.ci_problem_description.md
-
 # Test artifacts (cleanup safety net)
 temp_integration_test.py
 snapshot_report.html

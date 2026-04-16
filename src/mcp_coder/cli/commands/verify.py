@@ -6,8 +6,14 @@ MLflow) and formats their output for the terminal.
 
 import argparse
 import datetime
+import json
+import keyword
 import logging
+import os
+import re
+import sys
 import textwrap
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
@@ -19,9 +25,106 @@ from ...llm.providers.claude.claude_executable_finder import find_claude_executa
 from ...prompts.prompt_loader import get_project_prompt_path, is_claude_md, load_prompts
 from ...utils.mcp_verification import ClaudeMCPStatus, parse_claude_mcp_list
 from ...utils.user_config import verify_config
-from ..utils import _get_status_symbols, resolve_llm_method, resolve_mcp_config_path
+from ..utils import resolve_llm_method, resolve_mcp_config_path
 
 logger = logging.getLogger(__name__)
+
+STATUS_SYMBOLS: dict[str, str] = {
+    "success": "[OK]",
+    "failure": "[ERR]",
+    "warning": "[WARN]",
+}
+
+_ENVIRONMENT_PACKAGES: tuple[str, ...] = (
+    "mcp-coder",
+    "mcp-coder-utils",
+    "mcp-tools-py",
+    "mcp-workspace",
+)
+
+
+class _DropUnexpandedWarnings(logging.Filter):
+    """Scoped filter that drops langchain-mcp-adapters unresolved-var warnings."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        return "unexpanded variable" not in record.getMessage()
+
+
+def _collect_mcp_warnings(mcp_json_path: str | None) -> list[str]:
+    """Parse ``.mcp.json`` for unresolved ``${...}`` placeholders in env values.
+
+    Args:
+        mcp_json_path: Path to ``.mcp.json`` (or None).
+
+    Returns:
+        Pre-formatted lines ``"server / env_var  unresolved_template"``; empty
+        if there are no findings or the file is missing/invalid.
+    """
+    if mcp_json_path is None:
+        return []
+    try:
+        data = json.loads(Path(mcp_json_path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    lines: list[str] = []
+    for server_name, server in data.get("mcpServers", {}).items():
+        for env_var, value in server.get("env", {}).items():
+            if isinstance(value, str) and re.search(r"\$\{[^}]+\}", value):
+                lines.append(f"{server_name} / {env_var}  {value}")
+    return lines
+
+
+def _print_environment_section() -> None:
+    """Print the ENVIRONMENT section (Python info + 4 package versions).
+
+    Uses ``sys``, ``os.environ``, ``importlib.metadata``. Writes directly to
+    stdout via ``print`` to match the style of inline sections in
+    ``execute_verify``.
+    """
+    print(_pad("ENVIRONMENT"))
+    python_version = (
+        f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    )
+    print(f"  {'Python version':<20s} {python_version}")
+    print(f"  {'Executable':<20s} {sys.executable}")
+    virtualenv = sys.prefix if sys.prefix != sys.base_prefix else "(none)"
+    print(f"  {'Virtualenv':<20s} {virtualenv}")
+    pythonpath = os.environ.get("PYTHONPATH") or "(not set)"
+    print(f"  {'PYTHONPATH':<20s} {pythonpath}")
+    print()
+    for pkg in _ENVIRONMENT_PACKAGES:
+        try:
+            value = version(pkg)
+        except PackageNotFoundError:
+            value = "[ERR] not installed"
+        print(f"  {pkg:<20s} {value}")
+
+
+def _pad(title: str) -> str:
+    r"""Return a section header line padded to 60 chars with '=' (never truncated).
+
+    Args:
+        title: Section title (without surrounding '===').
+
+    Returns:
+        Header line prefixed with '\n' for the required blank line above.
+    """
+    prefix = f"=== {title} "
+    return "\n" + prefix + "=" * max(0, 60 - len(prefix))
+
+
+_KEY_REGEX = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _looks_like_key(token: str) -> bool:
+    """Return True if ``token`` looks like a Python-identifier key.
+
+    The token must match ``^[A-Za-z_][A-Za-z0-9_]*$`` and must not be a
+    reserved Python keyword (which would make rendering it as a key column
+    misleading, e.g. ``not configured``).
+    """
+    return bool(_KEY_REGEX.match(token)) and not keyword.iskeyword(token)
+
 
 _LABEL_MAP: dict[str, str] = {
     # Claude section
@@ -62,7 +165,7 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
     Returns:
         Formatted multi-line string for the section.
     """
-    lines: list[str] = [f"\n=== {title} ==="]
+    lines: list[str] = [_pad(title)]
     for key, entry in result.items():
         if key == "overall_ok":
             continue
@@ -83,7 +186,7 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
             line += f" ({error})"
         lines.append(line)
         if ok is False and "install_hint" in entry:
-            lines.append(f"                           \u2192 {entry['install_hint']}")
+            lines.append(f"                           -> {entry['install_hint']}")
     return "\n".join(lines)
 
 
@@ -107,9 +210,7 @@ def _format_mcp_section(
         Formatted multi-line string for the MCP servers section.
     """
     title_suffix = " \u2014 for completeness" if for_completeness else ""
-    lines: list[str] = [
-        f"\n=== MCP SERVERS (via langchain-mcp-adapters{title_suffix}) ==="
-    ]
+    lines: list[str] = [_pad(f"MCP SERVERS (via langchain-mcp-adapters{title_suffix})")]
     servers = mcp_results["servers"]
 
     if list_mcp_tools:
@@ -178,7 +279,7 @@ def _format_claude_mcp_section(
         Formatted multi-line string.
     """
     title_suffix = " \u2014 for completeness" if for_completeness else ""
-    lines: list[str] = [f"\n=== MCP SERVERS (via Claude Code{title_suffix}) ==="]
+    lines: list[str] = [_pad(f"MCP SERVERS (via Claude Code{title_suffix})")]
     for status in statuses:
         symbol = symbols["success"] if status.ok else symbols["failure"]
         lines.append(f"  {status.name:<20s} {symbol} {status.status_text}")
@@ -327,27 +428,46 @@ def execute_verify(args: argparse.Namespace) -> int:
         Exit code (0 for success, 1 for failure)
     """
     logger.info("Executing verify command")
-    symbols = _get_status_symbols()
+    symbols = STATUS_SYMBOLS
+    _print_environment_section()
 
-    # 0. Config verification (first section)
+    # 0. Config verification (first section) with TOML-style grouping
     config_result = verify_config()
-    lines = ["\n=== CONFIG ==="]
+    print(_pad("CONFIG"))
+    status_symbol_map = {
+        "ok": symbols["success"],
+        "warning": symbols["warning"],
+        "error": symbols["failure"],
+    }
+    last_label: str | None = None
     for entry in config_result["entries"]:
+        label = entry["label"]
         status = entry["status"]
-        symbol = {
-            "ok": symbols["success"],
-            "warning": symbols["warning"],
-            "error": symbols["failure"],
-        }.get(status, " ")
-        lines.append(f"  {entry['label']:<20s} {symbol} {entry['value']}")
-    print("\n".join(lines))
+        symbol = status_symbol_map.get(status, "")
+        value = entry["value"]
+        if label.startswith("["):
+            if label != last_label:
+                if last_label is not None:
+                    print()  # blank line between groups
+                print(f"  {label}")
+                last_label = label
+            first, _sep, rest = value.partition(" ")
+            if _looks_like_key(first) and rest:
+                print(f"    {first:<18s} {symbol} {rest}")
+            elif symbol.strip():
+                print(f"    {symbol} {value}")
+            else:
+                print(f"    {value}")
+        else:
+            # Top-level rows (Config file, Expected path, Hint, Parse error)
+            print(f"  {label:<20s} {symbol} {value}")
 
     # 0b. Prompt configuration section
     project_dir = Path(args.project_dir).resolve() if args.project_dir else Path.cwd()
     _sys_prompt, _proj_prompt, prompt_config = load_prompts(project_dir)
     active_provider, source = resolve_llm_method(args.llm_method)
 
-    prompt_lines = ["\n=== PROMPTS ==="]
+    prompt_lines = [_pad("PROMPTS")]
     prompt_lines.append(
         f"  {'System prompt':<20s} {symbols['success']}"
         f" {_prompt_source(prompt_config.system_prompt, 'shipped default')}"
@@ -384,7 +504,7 @@ def execute_verify(args: argparse.Namespace) -> int:
 
     # 3. LangChain verification (only when provider is langchain)
     langchain_result: dict[str, Any] | None = None
-    print("\n=== LLM PROVIDER ===")
+    print(_pad("LLM PROVIDER"))
     print(
         f"  {'Active provider':<20s} {symbols['success']} {active_provider} (from {source})"
     )
@@ -419,7 +539,13 @@ def execute_verify(args: argparse.Namespace) -> int:
         try:
             from ...llm.providers.langchain.verification import verify_mcp_servers
 
-            mcp_result = verify_mcp_servers(mcp_config_resolved, env_vars=env_vars)
+            lc_logger = logging.getLogger("langchain_mcp_adapters")
+            log_filter = _DropUnexpandedWarnings()
+            lc_logger.addFilter(log_filter)
+            try:
+                mcp_result = verify_mcp_servers(mcp_config_resolved, env_vars=env_vars)
+            finally:
+                lc_logger.removeFilter(log_filter)
         except ImportError:
             mcp_result = None
 
@@ -446,7 +572,7 @@ def execute_verify(args: argparse.Namespace) -> int:
                     )
                 )
             else:
-                print("\n=== MCP SERVERS (via langchain-mcp-adapters) ===")
+                print(_pad("MCP SERVERS (via langchain-mcp-adapters)"))
                 print(
                     f"  {symbols['warning']} server health check skipped"
                     " (langchain-mcp-adapters not installed)"
@@ -463,7 +589,7 @@ def execute_verify(args: argparse.Namespace) -> int:
                     )
                 )
             else:
-                print("\n=== MCP SERVERS (via langchain-mcp-adapters) ===")
+                print(_pad("MCP SERVERS (via langchain-mcp-adapters)"))
                 print(
                     f"  {symbols['warning']} server health check skipped"
                     " (langchain-mcp-adapters not installed)"
@@ -485,6 +611,14 @@ def execute_verify(args: argparse.Namespace) -> int:
             claude_mcp_ok = True
         else:
             claude_mcp_ok = False
+
+    # 3a-bis. MCP config warnings (unresolved ${...} placeholders)
+    if mcp_config_resolved:
+        warnings = _collect_mcp_warnings(mcp_config_resolved)
+        if warnings:
+            print(_pad("MCP CONFIG WARNINGS"))
+            for warning_line in warnings:
+                print(f"  {warning_line}")
 
     # 3b. MCP edit smoke test (informational only)
     if mcp_config_resolved:
@@ -547,7 +681,7 @@ def execute_verify(args: argparse.Namespace) -> int:
             if h.startswith("pip install")
         )
         if pip_packages:
-            print("\n=== INSTALL INSTRUCTIONS ===")
+            print(_pad("INSTALL INSTRUCTIONS"))
             print(f"  pip install {pip_packages}")
 
     # 6. Compute and return exit code
