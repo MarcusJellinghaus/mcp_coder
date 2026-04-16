@@ -2,12 +2,17 @@
 """Tests for the verify CLI command integration."""
 
 import argparse
+import sys
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.cli.commands.verify import _prompt_source, execute_verify
+from mcp_coder.cli.commands.verify import (
+    _print_environment_section,
+    _prompt_source,
+    execute_verify,
+)
 from mcp_coder.cli.main import main
 from mcp_coder.utils.pyproject_config import PromptsConfig
 
@@ -209,3 +214,52 @@ class TestVerifyShowsPromptSection:
         output = capsys.readouterr().out
         assert "Redundancy" in output
         assert "CLAUDE.md" in output
+
+
+class TestEnvironmentSection:
+    """Tests for the _print_environment_section helper."""
+
+    def test_section_header_present(self, capsys: pytest.CaptureFixture[str]) -> None:
+        _print_environment_section()
+        assert "=== ENVIRONMENT" in capsys.readouterr().out
+
+    def test_python_version_row(self, capsys: pytest.CaptureFixture[str]) -> None:
+        _print_environment_section()
+        out = capsys.readouterr().out
+        assert "Python version" in out
+        assert f"{sys.version_info.major}.{sys.version_info.minor}" in out
+
+    def test_pythonpath_not_set_when_missing(
+        self,
+        capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        _print_environment_section()
+        assert "(not set)" in capsys.readouterr().out
+
+    def test_missing_package_shows_err_not_installed(
+        self,
+        capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from importlib.metadata import PackageNotFoundError
+
+        def fake_version(pkg: str) -> str:
+            if pkg == "mcp-tools-py":
+                raise PackageNotFoundError(pkg)
+            return "1.2.3"
+
+        monkeypatch.setattr("mcp_coder.cli.commands.verify.version", fake_version)
+        _print_environment_section()
+        assert "[ERR] not installed" in capsys.readouterr().out
+
+    def test_virtualenv_none_when_not_in_venv(
+        self,
+        capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(sys, "prefix", "/usr")
+        monkeypatch.setattr(sys, "base_prefix", "/usr")
+        _print_environment_section()
+        assert "(none)" in capsys.readouterr().out

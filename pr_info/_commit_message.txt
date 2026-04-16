@@ -1,19 +1,14 @@
-Add _pad() header helper and apply to all verify section headers
+Add ENVIRONMENT section to verify output (#824 step 3)
 
-Introduce a `_pad(title)` helper in `src/mcp_coder/cli/commands/verify.py`
-that returns a `"\n=== {title} "` header padded to 60 chars with `=`,
-never truncated. Apply it to all 9 `=== X ===` header-print sites in
-`verify.py`:
+Introduce `_print_environment_section()` in `verify.py` and invoke it
+at the top of `execute_verify`. The section prints Python runtime info
+(version, executable, virtualenv, PYTHONPATH) followed by the installed
+versions of the four mcp-coder packages. Missing packages render as
+`[ERR] not installed`.
 
-- `_format_section` (dynamic section title)
-- `_format_mcp_section` (langchain-mcp-adapters)
-- `_format_claude_mcp_section` (Claude Code)
-- Inline headers in `execute_verify`: CONFIG, PROMPTS, LLM PROVIDER,
-  both "langchain-mcp-adapters not installed" fallback headers, and
-  INSTALL INSTRUCTIONS.
+Package list is lifted to a module-level `_ENVIRONMENT_PACKAGES` tuple
+for testability. Virtualenv detection uses `sys.prefix != sys.base_prefix`
+and PYTHONPATH falls back to `(not set)` when missing or empty.
 
-Add a `TestPadHeader` class in
-`tests/cli/commands/test_verify_format_section.py` covering the padding
-boundary (short, exact-60, and long titles). Loosen the
-`"=== MY SECTION ===" in output` assertion to `"=== MY SECTION "` so it
-tolerates trailing `=` padding.
+Adds `TestEnvironmentSection` covering the header, Python version row,
+missing PYTHONPATH, missing package, and non-venv cases.

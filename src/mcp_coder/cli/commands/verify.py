@@ -7,7 +7,10 @@ MLflow) and formats their output for the terminal.
 import argparse
 import datetime
 import logging
+import os
+import sys
 import textwrap
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +31,39 @@ STATUS_SYMBOLS: dict[str, str] = {
     "failure": "[ERR]",
     "warning": "[WARN]",
 }
+
+_ENVIRONMENT_PACKAGES: tuple[str, ...] = (
+    "mcp-coder",
+    "mcp-coder-utils",
+    "mcp-tools-py",
+    "mcp-workspace",
+)
+
+
+def _print_environment_section() -> None:
+    """Print the ENVIRONMENT section (Python info + 4 package versions).
+
+    Uses ``sys``, ``os.environ``, ``importlib.metadata``. Writes directly to
+    stdout via ``print`` to match the style of inline sections in
+    ``execute_verify``.
+    """
+    print(_pad("ENVIRONMENT"))
+    python_version = (
+        f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    )
+    print(f"  {'Python version':<20s} {python_version}")
+    print(f"  {'Executable':<20s} {sys.executable}")
+    virtualenv = sys.prefix if sys.prefix != sys.base_prefix else "(none)"
+    print(f"  {'Virtualenv':<20s} {virtualenv}")
+    pythonpath = os.environ.get("PYTHONPATH") or "(not set)"
+    print(f"  {'PYTHONPATH':<20s} {pythonpath}")
+    print()
+    for pkg in _ENVIRONMENT_PACKAGES:
+        try:
+            value = version(pkg)
+        except PackageNotFoundError:
+            value = "[ERR] not installed"
+        print(f"  {pkg:<20s} {value}")
 
 
 def _pad(title: str) -> str:
@@ -346,6 +382,7 @@ def execute_verify(args: argparse.Namespace) -> int:
     """
     logger.info("Executing verify command")
     symbols = STATUS_SYMBOLS
+    _print_environment_section()
 
     # 0. Config verification (first section)
     config_result = verify_config()
