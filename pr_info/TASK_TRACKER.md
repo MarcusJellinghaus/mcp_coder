@@ -21,6 +21,31 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: `_exceptions.py` — narrow tuple, add LLMMCPLaunchError, gate SSL hint, un-quote install hint
+
+Detail: [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: `agent.py` — wrap MCP launch failures as LLMMCPLaunchError
+
+Detail: [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: `verification.py` — pre-flight MCP server check with actionable diagnostics
+
+Detail: [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review
+- [ ] PR summary
