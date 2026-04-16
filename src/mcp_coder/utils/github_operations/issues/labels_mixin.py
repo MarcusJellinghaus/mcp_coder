@@ -264,9 +264,6 @@ class LabelsMixin:
         Returns:
             ``True`` on success (including idempotent no-op), ``False`` on
             swallowed error or failed ``set_labels``.
-
-        Raises:
-            ValueError: If issue number is invalid.
         """
         # Validate issue number (decorator re-raises ValueError).
         validate_issue_number(issue_number)
