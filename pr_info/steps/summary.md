@@ -37,7 +37,8 @@ the real cause:
    `src/mcp_coder/llm/providers/langchain/verification.py`. Before the
    async launch:
      - scan `command`, `args`, and `env` values for `${VAR}` residue;
-     - `Path(resolved_command).exists()` check.
+     - `shutil.which(resolved_command)` check (covers both absolute paths
+       and PATH-resolved bare executables like `python` / `npx`).
    Distinct, actionable messages: `unresolved placeholder ${…}` vs
    `binary not found at <path>`. If pre-flight passes but launch still
    fails, include the resolved path and exception class name in the
@@ -57,7 +58,9 @@ the real cause:
   existing generic handlers print as-is.
 - No new helpers or abstractions for one-time operations.
 - `TimeoutError` stays out of the narrowed tuple (flagged for future
-  non-httpx paths).
+  non-httpx paths). Grep confirmed: no existing test under
+  `tests/llm/providers/langchain/` relies on `TimeoutError` being
+  classified as a connection error.
 
 ## Files to modify
 

@@ -48,6 +48,13 @@ except ImportError:
 
 `pip install 'mcp-coder[truststore]'` → `pip install mcp-coder[truststore]`.
 
+> **Out-of-scope note (Boy Scout):**
+> `src/mcp_coder/llm/providers/langchain/_models.py` contains 3
+> single-quoted `pip install 'mcp-coder[langchain]'` ImportError hints
+> (lines ~45, ~81, ~119). These are pre-existing and **out of scope** for
+> issue #830; flagged for a future Boy Scout fix so future reviewers
+> don't re-flag.
+
 ### Gate SSL hint in `raise_connection_error`
 
 Before `lines.append(_SSL_HINT)`, check classification:

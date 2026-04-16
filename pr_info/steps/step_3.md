@@ -25,9 +25,11 @@
 def _preflight_mcp_server(
     name: str,
     cfg: dict[str, object],
-) -> dict[str, object] | None:
-    """Return a failure result dict if the resolved config has obvious
-    issues (unresolved ${VAR} or missing binary), else None.
+) -> tuple[bool, str | None]:
+    """Return (ok, message). ok=True and message=None means proceed to
+    live launch. ok=False and message=<actionable text> means short-circuit
+    with the message. `name` is used in the message so the caller can
+    build the result dict without re-threading the server name.
     """
 ```
 
@@ -37,29 +39,23 @@ def _preflight_mcp_server(
    string value of `cfg["env"]` for `\$\{[^}]+\}` residue. On first
    match, return:
    ```python
-   {
-       "ok": False,
-       "value": f"unresolved placeholder {match.group(0)} in {field}",
-       "error": "UnresolvedPlaceholder",
-   }
+   return (False,
+           f"unresolved placeholder {m.group(0)} in {name}.{field}")
    ```
-   (`field` is one of `"command"`, `"args"`, `"env"`.)
+   (`field` is one of `"command"`, `"args"`, `"env"`; `name` is the
+   server name — this is why the helper takes `name` as a parameter.)
 
-2. Otherwise, `Path(command).exists()` check (only when `command` is a
-   non-empty string). If the path does not exist, return:
+2. Otherwise, `shutil.which(command)` check (only when `command` is a
+   non-empty string). `shutil.which` covers both absolute paths and
+   bare executables resolved via `PATH` (e.g. `python`, `npx`), so
+   there are **no** false-positives. If `shutil.which` returns `None`,
+   return:
    ```python
-   {
-       "ok": False,
-       "value": f"binary not found at {command}",
-       "error": "FileNotFoundError",
-   }
+   return (False,
+           f"binary not found at {resolved_command} (server {name})")
    ```
 
-3. Otherwise return `None` (proceed to live launch).
-
-Known false-positive trade-off: bare executables like `python` or `npx`
-that resolve via `PATH` will fail the `Path.exists()` check. Accepted —
-the launch-error fallback still reports them cleanly.
+3. Otherwise return `(True, None)` (proceed to live launch).
 
 ### Use in `_check_servers`
 
@@ -68,9 +64,15 @@ Before the existing `try:` block:
 ```python
 for server_name in server_config:
     cfg = server_config[server_name]
-    preflight = _preflight_mcp_server(server_name, cfg)
-    if preflight is not None:
-        results[server_name] = preflight
+    ok, msg = _preflight_mcp_server(server_name, cfg)
+    if not ok:
+        # msg already names the server + the unresolved placeholder /
+        # missing binary; derive a category tag from its prefix.
+        category = ("UnresolvedPlaceholder"
+                    if msg.startswith("unresolved placeholder")
+                    else "FileNotFoundError")
+        results[server_name] = {"ok": False, "value": msg,
+                                "error": category}
         continue
     # ... existing client.session(...) block ...
 ```
@@ -94,12 +96,16 @@ results[server_name] = {
 
 ## HOW — integration points
 
-- No new imports beyond `re` (module already imports `Path` from
-  `pathlib` indirectly? — add `from pathlib import Path` and
-  `import re` if not present).
+- Add at module top (only the ones not already imported):
+  - `import re`
+  - `import shutil`
+  - `from pathlib import Path` — only if something else in the module
+    still uses `Path`. Pre-flight no longer needs `Path` (it uses
+    `shutil.which`), so if no other consumer remains, drop the import.
 - `_preflight_mcp_server` is module-private (`_` prefix) and synchronous.
 - `_check_servers` remains `async` and keeps its existing signature.
-- The returned dict shape matches the existing success-failure contract
+- The returned dict shape (built by the caller from the helper's
+  `(ok, msg)` tuple) matches the existing success-failure contract
   (`{"ok": bool, "value": str, "error": str}`), so
   `_format_mcp_section` in `verify.py` renders without change.
 
@@ -110,23 +116,23 @@ pattern = re.compile(r"\$\{[^}]+\}")
 for field, value in (("command", cmd_str),
                      ("args", each args string),
                      ("env", each env value string)):
-    if pattern.search(value):
-        return {"ok": False,
-                "value": f"unresolved placeholder {match} in {field}",
-                "error": "UnresolvedPlaceholder"}
-if cmd_str and not Path(cmd_str).exists():
-    return {"ok": False,
-            "value": f"binary not found at {cmd_str}",
-            "error": "FileNotFoundError"}
-return None
+    m = pattern.search(value)
+    if m:
+        return (False,
+                f"unresolved placeholder {m.group(0)} in {name}.{field}")
+if cmd_str and shutil.which(cmd_str) is None:
+    return (False,
+            f"binary not found at {cmd_str} (server {name})")
+return (True, None)
 ```
 
 ## DATA
 
-- Pre-flight result: `dict[str, object]` with keys `"ok"` (False),
-  `"value"` (message), `"error"` (category tag: `"UnresolvedPlaceholder"`
-  or `"FileNotFoundError"`).
-- Pre-flight success: `None`.
+- Pre-flight return: `tuple[bool, str | None]`. `(True, None)` means
+  proceed; `(False, <message>)` means short-circuit.
+- Caller (`_check_servers`) wraps the failure tuple into the existing
+  result dict shape (`{"ok": False, "value": msg, "error": category}`
+  where category is `"UnresolvedPlaceholder"` or `"FileNotFoundError"`).
 - `verify_mcp_servers` return shape unchanged: `{"servers":
   {name: {"ok": bool, "value": str, "error": str, ...}},
   "overall_ok": bool}`.
@@ -138,8 +144,8 @@ In `tests/llm/providers/langchain/test_mcp_health_check.py`:
 1. **Update `test_server_failure`** — the existing test uses
    `command="nonexistent"` with `__aenter__` raising `FileNotFoundError`.
    With the new pre-flight, `_check_servers` never reaches the live
-   launch because `Path("nonexistent").exists()` is False. Update the
-   assertion:
+   launch because `shutil.which("nonexistent")` returns `None`. Update
+   the assertion:
    - `result["servers"]["broken"]["error"] == "FileNotFoundError"` ✓
      (still true).
    - `"binary not found at nonexistent"` **in**
@@ -176,6 +182,15 @@ In `tests/llm/providers/langchain/test_mcp_health_check.py`:
    pre-flight passes (`command=sys.executable`), live launch raises
    `ConnectionError("boom")`. Assert the reported value contains both
    `sys.executable` and `"ConnectionError"`.
+
+9. **New `test_launch_error_filenotfound_after_preflight_passes`** —
+   pre-flight passes (resolved command is present, e.g.
+   `sys.executable`), but the async `client.session(...)` still raises
+   `FileNotFoundError`. Assert the verify row's value contains the
+   resolved command path **and** the class name
+   `"FileNotFoundError"` (not just `str(exc)`), confirming the
+   enriched launch-error fallback fires even when pre-flight was
+   green.
 
 ## Done-when
 

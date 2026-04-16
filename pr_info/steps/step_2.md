@@ -26,7 +26,7 @@
 from ._exceptions import LLMMCPLaunchError
 ```
 
-### Wrap site A — `run_agent` (~line 233)
+### Wrap site A — `run_agent`
 
 Current block:
 
@@ -39,15 +39,22 @@ for server_name, connection in client.connections.items():
         ...
 ```
 
-Wrap the `async with client.session(...)` body (only that line and the
-nested tool-loading) in try/except catching `FileNotFoundError` and
-`PermissionError`. Re-raise as `LLMMCPLaunchError`.
+Wrap the `async with client.session(server_name) as session:` line
+together with the tool-loading body inside the same `try` block —
+`FileNotFoundError` / `PermissionError` from `stdio_client.__aenter__`
+are raised *on entering* the context manager, so the `try` must cover
+the `async with` statement itself, not only its body. Re-raise as
+`LLMMCPLaunchError`.
 
-### Wrap site B — `run_agent_stream` (~line 383)
+### Wrap site B — `run_agent_stream`
 
 Inside the `if tools is None:` branch (subprocess-spawning path only),
-apply the same wrap. The `tools is not None` early-return path does
-**not** spawn subprocesses and does **not** need the wrap.
+apply the same wrap: wrap the
+`async with client.session(server_name) as session:` line together with
+the tool-loading body inside the same `try` block — `FileNotFoundError`
+/ `PermissionError` from `stdio_client.__aenter__` are raised *on
+entering* the context manager. The `tools is not None` early-return
+path does **not** spawn subprocesses and does **not** need the wrap.
 
 ### Message format
 
@@ -124,6 +131,12 @@ Mock `create_react_agent` to return an object whose `astream_events` (or
 `ainvoke`) never gets called — these tests only exercise the
 pre-agent-setup path, so the wrap exception is raised before agent
 invocation.
+
+- Existing test
+  `tests/llm/providers/langchain/test_langchain_agent.py::test_hard_fails_on_mcp_server_error`
+  (approx. line 510) asserts `ConnectionError` (not `FileNotFoundError`
+  / `PermissionError`); it is unchanged by this step and must remain
+  green.
 
 ## Done-when
 
