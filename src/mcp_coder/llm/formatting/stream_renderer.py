@@ -24,6 +24,7 @@ _HEAD_LINES = 10
 _TAIL_LINES = 5
 _TRUNCATION_THRESHOLD = _HEAD_LINES + _TAIL_LINES  # 15
 _INLINE_ARG_LIMIT = 2
+_MAX_INLINE_LEN = 100
 
 _ENVELOPE_FIELDS: frozenset[str] = frozenset(
     {
@@ -82,6 +83,94 @@ def _render_value(value: object) -> list[str]:
     if isinstance(value, (dict, list)):
         return json.dumps(value, indent=2).splitlines()
     return [str(value)]
+
+
+def _render_value_compact(value: object) -> str:
+    """Render a value as a single-line summary for compact arg display.
+
+    Returns:
+        Single-line string summary of the value. Long strings, long lists,
+        lists containing dicts, and long dicts are summarized as counts.
+    """
+    if isinstance(value, str):
+        if len(value) > 80:
+            return f"({len(value)} chars)"
+        return repr(value)
+    if isinstance(value, list):
+        if any(isinstance(item, dict) for item in value):
+            return f"({len(value)} items)"
+        compact = json.dumps(value)
+        if len(compact) > 120:
+            return f"({len(value)} items)"
+        return compact
+    if isinstance(value, dict):
+        compact = json.dumps(value)
+        if len(compact) > 120:
+            return f"({len(value)} keys)"
+        return compact
+    return repr(value)
+
+
+def _render_value_full(value: object) -> list[str]:
+    """Render a value as multiple lines with full detail for block arg display.
+
+    Returns:
+        List of display lines: multiline strings split, long strings truncated
+        to 120 chars, lists/dicts inline when short else pretty-printed JSON.
+    """
+    if isinstance(value, str):
+        if "\n" in value:
+            return value.splitlines()
+        if len(value) > 120:
+            return [f"{value[:117]}..."]
+        return [value]
+    if isinstance(value, (list, dict)):
+        compact = json.dumps(value)
+        if len(compact) <= 120:
+            return [compact]
+        return json.dumps(value, indent=2).splitlines()
+    return [repr(value)]
+
+
+def _render_output_value(value: object) -> list[str]:
+    """Render any JSON value generically for tool output display.
+
+    Recursively renders dicts: multiline string values become an indented
+    block; nested dict/list values render inline when short or as an
+    indented block when multi-line; scalar values render inline via
+    ``json.dumps``.
+
+    Returns:
+        List of display lines for the rendered value.
+    """
+    if isinstance(value, str):
+        if "\n" in value:
+            return value.splitlines()
+        return [value]
+    if isinstance(value, dict):
+        lines: list[str] = []
+        for key, child in value.items():
+            if isinstance(child, str) and "\n" in child:
+                lines.append(f"{key}:")
+                for sub in child.splitlines():
+                    lines.append(f"  {sub}")
+            elif isinstance(child, (dict, list)):
+                rendered = _render_output_value(child)
+                if len(rendered) == 1:
+                    lines.append(f"{key}: {rendered[0]}")
+                else:
+                    lines.append(f"{key}:")
+                    for sub in rendered:
+                        lines.append(f"  {sub}")
+            else:
+                lines.append(f"{key}: {json.dumps(child)}")
+        return lines
+    if isinstance(value, list):
+        compact = json.dumps(value)
+        if len(compact) <= _MAX_INLINE_LEN:
+            return [compact]
+        return json.dumps(value, indent=2).splitlines()
+    return [json.dumps(value)]
 
 
 def _render_tool_output(

@@ -1,0 +1,19 @@
+Add rendering helper functions for tool output display
+
+Add three pure helper functions and a constant to stream_renderer.py that
+steps 2 and 3 will use to render tool args and output generically:
+
+- _MAX_INLINE_LEN constant (100) for inline/block switching
+- _render_value_compact(): single-line summary for compact arg display
+  (repr for short strings/scalars, "(N chars/items/keys)" for long values)
+- _render_value_full(): multi-line expansion for full-mode block args
+  (splits multi-line strings, truncates long strings at 120 chars,
+  pretty-prints large JSON)
+- _render_output_value(): recursive generic JSON renderer for tool output
+  bodies (splits multi-line string values in dicts into indented blocks,
+  recurses into nested dicts/lists)
+
+Pure additions: no existing behavior changed. Steps 2 and 3 will wire
+these helpers into _render_tool_output and format_tool_start.
+
+Refs: #820

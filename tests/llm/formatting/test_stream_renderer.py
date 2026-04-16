@@ -12,7 +12,10 @@ from mcp_coder.llm.formatting.render_actions import (
 from mcp_coder.llm.formatting.stream_renderer import (
     StreamEventRenderer,
     _format_tool_name,
+    _render_output_value,
     _render_tool_output,
+    _render_value_compact,
+    _render_value_full,
 )
 
 _RENDERER = StreamEventRenderer()
@@ -317,3 +320,138 @@ class TestRenderToolOutputRawMode:
         assert len(lines) == 50
         assert total == 50
         assert "skipped" not in "\n".join(lines)
+
+
+class TestRenderValueCompact:
+    """Tests for _render_value_compact()."""
+
+    def test_short_string(self) -> None:
+        assert _render_value_compact("hello") == "'hello'"
+
+    def test_long_string(self) -> None:
+        assert _render_value_compact("x" * 100) == "(100 chars)"
+
+    def test_string_exactly_80_chars(self) -> None:
+        value = "x" * 80
+        assert _render_value_compact(value) == repr(value)
+
+    def test_string_81_chars(self) -> None:
+        assert _render_value_compact("x" * 81) == "(81 chars)"
+
+    def test_simple_list(self) -> None:
+        assert _render_value_compact([1, 2]) == "[1, 2]"
+
+    def test_list_with_dicts(self) -> None:
+        assert _render_value_compact([{"a": 1}]) == "(1 items)"
+
+    def test_long_list(self) -> None:
+        value = list(range(100))
+        assert _render_value_compact(value) == f"({len(value)} items)"
+
+    def test_small_dict(self) -> None:
+        assert _render_value_compact({"a": 1}) == '{"a": 1}'
+
+    def test_large_dict(self) -> None:
+        value = {f"key_{i}": i for i in range(20)}
+        assert _render_value_compact(value) == f"({len(value)} keys)"
+
+    def test_bool_value(self) -> None:
+        assert _render_value_compact(True) == "True"
+
+    def test_int_value(self) -> None:
+        assert _render_value_compact(42) == "42"
+
+
+class TestRenderValueFull:
+    """Tests for _render_value_full()."""
+
+    def test_short_string(self) -> None:
+        assert _render_value_full("hello") == ["hello"]
+
+    def test_multiline_string(self) -> None:
+        assert _render_value_full("a\nb") == ["a", "b"]
+
+    def test_long_string_truncated(self) -> None:
+        value = "x" * 200
+        result = _render_value_full(value)
+        assert len(result) == 1
+        assert result[0] == "x" * 117 + "..."
+        assert len(result[0]) == 120
+
+    def test_short_list(self) -> None:
+        assert _render_value_full([1, 2]) == ["[1, 2]"]
+
+    def test_long_list_expanded(self) -> None:
+        value = list(range(50))
+        result = _render_value_full(value)
+        assert result == json.dumps(value, indent=2).splitlines()
+        assert len(result) > 1
+
+    def test_short_dict(self) -> None:
+        assert _render_value_full({"k": "v"}) == ['{"k": "v"}']
+
+    def test_large_dict_expanded(self) -> None:
+        value = {f"key_{i}": i for i in range(20)}
+        result = _render_value_full(value)
+        assert result == json.dumps(value, indent=2).splitlines()
+        assert len(result) > 1
+
+
+class TestRenderOutputValue:
+    """Tests for _render_output_value()."""
+
+    def test_plain_string(self) -> None:
+        assert _render_output_value("hello") == ["hello"]
+
+    def test_multiline_string_split(self) -> None:
+        assert _render_output_value("a\nb\nc") == ["a", "b", "c"]
+
+    def test_bool(self) -> None:
+        assert _render_output_value(True) == ["true"]
+
+    def test_int(self) -> None:
+        assert _render_output_value(42) == ["42"]
+
+    def test_simple_dict(self) -> None:
+        assert _render_output_value({"a": True, "b": 42}) == ["a: true", "b: 42"]
+
+    def test_dict_multiline_string_expanded(self) -> None:
+        result = _render_output_value({"diff": "line1\nline2"})
+        assert result == ["diff:", "  line1", "  line2"]
+
+    def test_dict_nested_dict(self) -> None:
+        # Nested dicts always render as an indented block (recursion
+        # produces key: value lines, which is multi-line when >1 key).
+        value = {"meta": {"a": 1, "b": 2}}
+        result = _render_output_value(value)
+        assert result == ["meta:", "  a: 1", "  b: 2"]
+
+    def test_dict_nested_dict_multiline(self) -> None:
+        # Nested dict whose inner value contains newlines expands as a block
+        value = {"meta": {"note": "line1\nline2"}}
+        result = _render_output_value(value)
+        assert result == ["meta:", "  note:", "    line1", "    line2"]
+
+    def test_short_list_inline(self) -> None:
+        assert _render_output_value([1, 2, 3]) == ["[1, 2, 3]"]
+
+    def test_long_list_expanded(self) -> None:
+        value = list(range(50))
+        result = _render_output_value(value)
+        assert result == json.dumps(value, indent=2).splitlines()
+        assert len(result) > 1
+
+    def test_dict_with_list_value_inline(self) -> None:
+        result = _render_output_value({"items": [1, 2, 3]})
+        assert result == ["items: [1, 2, 3]"]
+
+    def test_dict_with_list_value_expanded(self) -> None:
+        value = {"items": list(range(50))}
+        result = _render_output_value(value)
+        assert result[0] == "items:"
+        # Remaining lines are the indented json.dumps output
+        expected_inner = json.dumps(list(range(50)), indent=2).splitlines()
+        assert result[1:] == [f"  {line}" for line in expected_inner]
+
+    def test_string_value_in_dict(self) -> None:
+        assert _render_output_value({"key": "simple"}) == ['key: "simple"']
