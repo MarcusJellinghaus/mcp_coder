@@ -60,13 +60,18 @@ Recursive rendering of any JSON value for tool output display. Splits multiline 
 ```
 if str with newlines: return value.splitlines()
 if str: return [value]
-if dict: for each key, render value recursively;
-         if rendered is multi-line, put key: on its own line + indent children
-         if single-line, put key: value on one line
+if dict: for each key (in dict insertion order), render value recursively;
+         if rendered value is multi-line, emit "{key}:" on its own line + indent child lines with 2 spaces
+         if scalar (non-dict, non-list value, or string without newlines),
+             emit "{key}: {json.dumps(value)}" on a single line
+             (this yields key: "quoted" for strings, key: 42 for ints, key: true for bools,
+              matching the reference `render_nice.py._render_dict`)
 if list and json.dumps <= _MAX_INLINE_LEN: return [compact]
 if list: return json.dumps(indent=2).splitlines()
 else: return [json.dumps(value)]
 ```
+
+**Dict key ordering:** Dict keys are rendered in insertion order (Python 3.7+ guarantee). Do NOT alphabetize — the test `test_json_dict_multiline_string` expects `success` before `diff` based on input insertion order.
 
 **Key behavior — this single function replaces both `_render_dict` and `_render_json_value` from the reference implementation.**
 

@@ -35,8 +35,10 @@ Tool call outputs in the iCoder TUI are hard to read:
 |------|-------|--------|
 | `src/mcp_coder/llm/formatting/stream_renderer.py` | 1, 2, 3 | New helpers, rewritten output rendering, `format_tool_start()` |
 | `src/mcp_coder/llm/formatting/render_actions.py` | 3 | `ToolStart` dataclass: `args: dict` replaces inline/block fields |
+| `src/mcp_coder/llm/formatting/formatters.py` | 3 | CLI rendered path uses `format_tool_start()`; CLI text path uses `_render_value_compact()`; `_format_tool_args` deleted |
 | `src/mcp_coder/icoder/ui/app.py` | 3 | Use `format_tool_start()`, remove manual inline/block logic |
 | `tests/llm/formatting/test_stream_renderer.py` | 1, 2, 3 | Tests added/rewritten for new behavior |
+| `tests/llm/formatting/test_formatters.py` | 3 | Tests updated to match new CLI rendered/text output (via `format_tool_start` + `_render_value_compact`) |
 
 ## Files/Folders Deleted
 
