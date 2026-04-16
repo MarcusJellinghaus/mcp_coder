@@ -631,9 +631,6 @@ class TestIssueManagerLabelUpdate:
             # Non-workflow labels should be preserved
             assert "bug" in labels
 
-            # Verify INFO log was emitted for missing source label
-            assert "Source label 'status-06:implementing' not present" in caplog.text
-
     def test_update_workflow_label_with_validated_issue_number(
         self, mock_github: Mock, _mock_git_repo: Any, tmp_path: Path
     ) -> None:

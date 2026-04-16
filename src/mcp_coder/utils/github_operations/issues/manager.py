@@ -49,16 +49,24 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
     """
 
     def __init__(
-        self, project_dir: Optional[Path] = None, repo_url: Optional[str] = None
+        self,
+        project_dir: Optional[Path] = None,
+        repo_url: Optional[str] = None,
+        github_token: Optional[str] = None,
     ) -> None:
         """Initialize the IssueManager.
 
         Args:
             project_dir: Path to the project directory containing git repository
             repo_url: GitHub repository URL (e.g., "https://github.com/user/repo.git")
+            github_token: Optional explicit token — overrides user_config lookup when provided.
 
         """
-        super().__init__(project_dir=project_dir, repo_url=repo_url)
+        super().__init__(
+            project_dir=project_dir,
+            repo_url=repo_url,
+            github_token=github_token,
+        )
 
     @log_function_call
     @_handle_github_errors(default_return=create_empty_issue_data())
@@ -501,47 +509,18 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
                 )
                 return False
 
-            # Step 6: Get current issue labels
-            issue_data = self.get_issue(issue_number)
-            if issue_data["number"] == 0:
-                logger.error(f"Failed to get issue #{issue_number}")
-                return False
-
-            current_labels = set(issue_data["labels"])
-
-            # Step 7: Check if already in target state (idempotent)
-            if to_label_name in current_labels:
-                if from_label_name not in current_labels:
-                    # Already transitioned, nothing to do
-                    logger.debug(
-                        f"Issue #{issue_number} already has label '{to_label_name}' "
-                        f"without '{from_label_name}'. No action needed."
-                    )
-                    return True
-                # else: Has both labels, proceed with removal of old label
-
-            # Log if source label is not present (but target label is also not present)
-            if from_label_name not in current_labels:
-                logger.info(
-                    f"Source label '{from_label_name}' not present on "
-                    f"issue #{issue_number}. "
-                    "Proceeding with transition."
-                )
-
-            # Step 8: Compute new label set
-            new_labels = (current_labels - label_lookups["all_names"]) | {to_label_name}
-
-            # Step 9: Apply label transition
-            result = self.set_labels(issue_number, *new_labels)
-            if result["number"] == 0:
-                logger.error(f"Failed to update labels for issue #{issue_number}")
-                return False
-
-            logger.info(
-                f"Successfully updated issue #{issue_number} label: "
-                f"{from_label_name} → {to_label_name}",
+            # Step 6: Delegate label mutation + idempotency + current-labels
+            # fetch to the config-free primitive.
+            labels_to_clear = label_lookups["all_names"] - {to_label_name}
+            success = self.transition_issue_label(
+                issue_number, to_label_name, labels_to_clear
             )
-            return True
+            if success:
+                logger.info(
+                    f"Successfully updated issue #{issue_number} label: "
+                    f"{from_label_name} → {to_label_name}"
+                )
+            return success
 
         except (
             Exception

@@ -55,17 +55,22 @@ class PullRequestManager(BaseGitHubManager):
         Token needs 'repo' scope for private repositories, 'public_repo' for public.
     """
 
-    def __init__(self, project_dir: Optional[Path] = None) -> None:
+    def __init__(
+        self,
+        project_dir: Optional[Path] = None,
+        github_token: Optional[str] = None,
+    ) -> None:
         """Initialize the PullRequestManager.
 
         Args:
             project_dir: Path to the project directory containing git repository
+            github_token: Optional explicit token — overrides user_config lookup when provided.
 
         Raises:
             ValueError: If project_dir is None, directory doesn't exist, is not a git repository,
                        has no GitHub remote origin, or GitHub token is not configured
         """
-        super().__init__(project_dir)
+        super().__init__(project_dir=project_dir, github_token=github_token)
 
         # Store repository URL for compatibility with existing code
         # At this point, project_dir is guaranteed to be valid (checked by super().__init__)

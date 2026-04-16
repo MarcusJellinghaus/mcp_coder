@@ -933,3 +933,100 @@ class TestBaseGitHubManagerParameterValidation:
             assert "Exactly one of project_dir or repo_url must be provided" in str(
                 exc_info.value
             )
+
+
+class TestGithubTokenForwarding:
+    """Test suite for explicit ``github_token`` forwarding through subclasses.
+
+    Verifies that when callers pass an explicit ``github_token`` kwarg, the
+    value is used directly and ``user_config.get_config_values`` is NOT
+    consulted. When omitted (or ``None``), fallback to user_config is
+    preserved unchanged.
+    """
+
+    @pytest.mark.parametrize(
+        "manager_cls_path",
+        [
+            "mcp_coder.utils.github_operations.issues.manager.IssueManager",
+            "mcp_coder.utils.github_operations.issues.branch_manager.IssueBranchManager",
+            "mcp_coder.utils.github_operations.pr_manager.PullRequestManager",
+            "mcp_coder.utils.github_operations.labels_manager.LabelsManager",
+            "mcp_coder.utils.github_operations.ci_results_manager.CIResultsManager",
+        ],
+    )
+    def test_explicit_github_token_bypasses_user_config(
+        self, manager_cls_path: str
+    ) -> None:
+        """Explicit ``github_token`` must bypass user_config lookup for all subclasses."""
+        # Import the manager class dynamically so a single parametrized test
+        # exercises all 5 subclasses.
+        module_path, cls_name = manager_cls_path.rsplit(".", 1)
+        import importlib
+
+        manager_cls = getattr(importlib.import_module(module_path), cls_name)
+
+        mock_path = Mock(spec=Path)
+        mock_path.exists.return_value = True
+        mock_path.is_dir.return_value = True
+
+        with (
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                return_value=True,
+            ),
+            patch(
+                "mcp_coder.utils.github_operations.pr_manager.get_github_repository_url",
+                return_value="https://github.com/test-owner/test-repo.git",
+            ),
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+            ) as mock_get_config,
+            patch("mcp_coder.utils.github_operations.base_manager.Github"),
+        ):
+            manager = manager_cls(project_dir=mock_path, github_token="explicit-token")
+
+            assert manager.github_token == "explicit-token"
+            mock_get_config.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "manager_cls_path",
+        [
+            "mcp_coder.utils.github_operations.issues.manager.IssueManager",
+            "mcp_coder.utils.github_operations.issues.branch_manager.IssueBranchManager",
+            "mcp_coder.utils.github_operations.pr_manager.PullRequestManager",
+            "mcp_coder.utils.github_operations.labels_manager.LabelsManager",
+            "mcp_coder.utils.github_operations.ci_results_manager.CIResultsManager",
+        ],
+    )
+    def test_missing_github_token_falls_back_to_user_config(
+        self, manager_cls_path: str
+    ) -> None:
+        """Without explicit ``github_token``, fallback to user_config is preserved."""
+        module_path, cls_name = manager_cls_path.rsplit(".", 1)
+        import importlib
+
+        manager_cls = getattr(importlib.import_module(module_path), cls_name)
+
+        mock_path = Mock(spec=Path)
+        mock_path.exists.return_value = True
+        mock_path.is_dir.return_value = True
+
+        with (
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                return_value=True,
+            ),
+            patch(
+                "mcp_coder.utils.github_operations.pr_manager.get_github_repository_url",
+                return_value="https://github.com/test-owner/test-repo.git",
+            ),
+            patch(
+                "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
+                return_value={("github", "token"): "config-token"},
+            ) as mock_get_config,
+            patch("mcp_coder.utils.github_operations.base_manager.Github"),
+        ):
+            manager = manager_cls(project_dir=mock_path)
+
+            assert manager.github_token == "config-token"
+            mock_get_config.assert_called_once()
