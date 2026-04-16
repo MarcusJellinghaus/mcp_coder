@@ -35,6 +35,7 @@ def execute_icoder(args: argparse.Namespace) -> int:
     Returns:
         Exit code (0 for success, 1 for error).
     """
+    logger.log(OUTPUT, "Starting iCoder...")
     try:
         # Resolve execution directory
         try:
