@@ -1,24 +1,24 @@
-Step 2: wrap MCP launch failures as LLMMCPLaunchError in agent (#830)
+Step 3: pre-flight MCP server check with actionable diagnostics (#830)
 
-In both run_agent and run_agent_stream (tools=None branch), wrap
-FileNotFoundError / PermissionError raised on entering
-client.session(server_name) as LLMMCPLaunchError. The re-raised error
-includes the server name, resolved command path, and original exception
-class name so the CLI top-level handlers surface actionable diagnostics
-instead of generic WinError 2 strings.
+Add _preflight_mcp_server helper in verification.py that distinguishes
+unresolved ${VAR} residue from missing binary before the async launch,
+using shutil.which to cover both absolute paths and PATH-resolved bare
+executables (e.g. python, npx).
 
-The try/except is placed inside the per-server loop so the server name
-and resolved command are in scope, and covers the async context manager
-entry itself (where stdio_client.__aenter__ raises FileNotFoundError /
-PermissionError on Windows / POSIX).
+Use the helper inside _check_servers to short-circuit the live launch
+with a category tag ("UnresolvedPlaceholder" or "FileNotFoundError")
+and an actionable message naming the server and the offending field.
 
-LLMMCPLaunchError inherits from Exception (not ConnectionError) and is
-not in CONNECTION_ERRORS, so _handle_provider_error in __init__.py
-passes it through unchanged; the CLI top-level handlers print str(exc).
+Enrich the launch-error fallback to include the resolved command path
+and exception class name, so operators see why launch failed even when
+pre-flight passed.
 
-Tests added in tests/llm/providers/langchain/test_langchain_agent.py:
-- run_agent wraps FileNotFoundError as LLMMCPLaunchError
-- run_agent wraps PermissionError as LLMMCPLaunchError
-- run_agent_stream wraps FileNotFoundError on first iteration
-- run_agent_stream with pre-built tools does not construct
-  MultiServerMCPClient (wrap path is skipped)
+Tests updated/added in tests/llm/providers/langchain/test_mcp_health_check.py:
+- Switch "python" to sys.executable where pre-flight must pass.
+- Update test_server_failure and test_mixed_servers assertions for the
+  new pre-flight "binary not found at ..." message; drop the mocked
+  ConnectionError side_effect from the bad server in test_mixed_servers
+  since pre-flight short-circuits before the async launch.
+- Add placeholder-residue tests covering command, args, and env.
+- Add launch-error fallback tests for non-OSError (ConnectionError) and
+  for FileNotFoundError after pre-flight passes.

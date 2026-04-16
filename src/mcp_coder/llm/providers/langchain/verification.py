@@ -10,6 +10,8 @@ import asyncio
 import importlib.util
 import logging
 import os
+import re
+import shutil
 from typing import Any
 
 from . import _load_langchain_config
@@ -273,6 +275,61 @@ def _import_mcp_client() -> Any:
     return _mcp_client_cache["cls"]
 
 
+_PLACEHOLDER_RE = re.compile(r"\$\{[^}]+\}")
+
+
+def _preflight_mcp_server(
+    name: str,
+    cfg: dict[str, object],
+) -> tuple[bool, str | None]:
+    """Pre-flight check for an MCP server configuration.
+
+    Scans ``command``, ``args`` and ``env`` values for unresolved ``${VAR}``
+    placeholders, then verifies the command resolves to an existing binary
+    via :func:`shutil.which`.
+
+    Args:
+        name: Server name, used in the returned message.
+        cfg: Server configuration dict.
+
+    Returns:
+        Tuple ``(ok, message)``.  ``(True, None)`` means proceed to the
+        live launch.  ``(False, <message>)`` means short-circuit with an
+        actionable message.
+    """
+    command = cfg.get("command")
+    cmd_str = command if isinstance(command, str) else ""
+
+    scan_items: list[tuple[str, str]] = []
+    if cmd_str:
+        scan_items.append(("command", cmd_str))
+
+    args = cfg.get("args")
+    if isinstance(args, list):
+        for item in args:
+            if isinstance(item, str):
+                scan_items.append(("args", item))
+
+    env = cfg.get("env")
+    if isinstance(env, dict):
+        for value in env.values():
+            if isinstance(value, str):
+                scan_items.append(("env", value))
+
+    for field, value in scan_items:
+        m = _PLACEHOLDER_RE.search(value)
+        if m:
+            return (
+                False,
+                f"unresolved placeholder {m.group(0)} in {name}.{field}",
+            )
+
+    if cmd_str and shutil.which(cmd_str) is None:
+        return (False, f"binary not found at {cmd_str} (server {name})")
+
+    return (True, None)
+
+
 async def _check_servers(
     server_config: dict[str, dict[str, object]],
     timeout: int,
@@ -290,7 +347,22 @@ async def _check_servers(
     results: dict[str, dict[str, Any]] = {}
 
     for server_name in server_config:
-        single_config = {server_name: server_config[server_name]}
+        cfg = server_config[server_name]
+        ok, msg = _preflight_mcp_server(server_name, cfg)
+        if not ok:
+            category = (
+                "UnresolvedPlaceholder"
+                if msg is not None and msg.startswith("unresolved placeholder")
+                else "FileNotFoundError"
+            )
+            results[server_name] = {
+                "ok": False,
+                "value": msg,
+                "error": category,
+            }
+            continue
+
+        single_config = {server_name: cfg}
         client = client_cls(single_config)
         try:
             async with asyncio.timeout(timeout):
@@ -306,7 +378,10 @@ async def _check_servers(
         except Exception as exc:  # pylint: disable=broad-except
             results[server_name] = {
                 "ok": False,
-                "value": str(exc),
+                "value": (
+                    f"MCP server {server_name!r} failed to launch: "
+                    f"{cfg.get('command', '')} ({type(exc).__name__}: {exc})"
+                ),
                 "error": type(exc).__name__,
             }
     return results
