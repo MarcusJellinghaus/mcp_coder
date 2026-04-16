@@ -279,6 +279,123 @@ def test_stream_llm_no_usage_data(app_core: AppCore) -> None:
     assert app_core.token_usage.total_input == 0
 
 
+def test_stream_llm_updates_cache_usage(event_log: EventLog) -> None:
+    """stream_llm() extracts cache_read_input_tokens from done event usage."""
+    fake_llm = FakeLLMService(
+        responses=[
+            [
+                {"type": "text_delta", "text": "hi"},
+                {
+                    "type": "done",
+                    "usage": {
+                        "input_tokens": 1000,
+                        "output_tokens": 500,
+                        "cache_read_input_tokens": 450,
+                    },
+                },
+            ]
+        ]
+    )
+    core = AppCore(llm_service=fake_llm, event_log=event_log)
+    list(core.stream_llm("hello"))
+    assert core.token_usage.last_cache_read == 450
+    assert core.token_usage.total_cache_read == 450
+
+
+def test_stream_llm_no_cache_in_usage(event_log: EventLog) -> None:
+    """Done event without cache key leaves cache_read at 0."""
+    fake_llm = FakeLLMService(
+        responses=[
+            [
+                {"type": "text_delta", "text": "hi"},
+                {
+                    "type": "done",
+                    "usage": {"input_tokens": 100, "output_tokens": 50},
+                },
+            ]
+        ]
+    )
+    core = AppCore(llm_service=fake_llm, event_log=event_log)
+    list(core.stream_llm("hello"))
+    assert core.token_usage.last_cache_read == 0
+    assert core.token_usage.total_cache_read == 0
+
+
+def test_stream_llm_cumulative_cache(event_log: EventLog) -> None:
+    """Two streams with cache data accumulate total_cache_read."""
+    fake_llm = FakeLLMService(
+        responses=[
+            [
+                {"type": "text_delta", "text": "a"},
+                {
+                    "type": "done",
+                    "usage": {
+                        "input_tokens": 1000,
+                        "output_tokens": 100,
+                        "cache_read_input_tokens": 200,
+                    },
+                },
+            ],
+            [
+                {"type": "text_delta", "text": "b"},
+                {
+                    "type": "done",
+                    "usage": {
+                        "input_tokens": 2000,
+                        "output_tokens": 200,
+                        "cache_read_input_tokens": 300,
+                    },
+                },
+            ],
+        ]
+    )
+    core = AppCore(llm_service=fake_llm, event_log=event_log)
+    list(core.stream_llm("q1"))
+    list(core.stream_llm("q2"))
+    assert core.token_usage.last_cache_read == 300
+    assert core.token_usage.total_cache_read == 500
+
+
+def test_stream_llm_claude_cli_done_event_cache_regression(
+    event_log: EventLog,
+) -> None:
+    """Regression: Claude CLI result message → mapper → AppCore preserves cache."""
+    from mcp_coder.llm.providers.claude.claude_code_cli import StreamMessage
+    from mcp_coder.llm.providers.claude.claude_code_cli_streaming import (
+        _map_stream_message_to_event,
+    )
+
+    cli_result_msg: StreamMessage = {
+        "type": "result",
+        "session_id": "sess-1",
+        "usage": {
+            "input_tokens": 1200,
+            "output_tokens": 800,
+            "cache_read_input_tokens": 540,
+            "cache_creation_input_tokens": 0,
+        },
+        "total_cost_usd": 0.01,
+    }
+    mapped_events = list(_map_stream_message_to_event(cli_result_msg))
+    assert len(mapped_events) == 1
+    done_event = mapped_events[0]
+    assert done_event["type"] == "done"
+
+    fake_llm = FakeLLMService(
+        responses=[
+            [
+                {"type": "text_delta", "text": "hi"},
+                done_event,
+            ]
+        ]
+    )
+    core = AppCore(llm_service=fake_llm, event_log=event_log)
+    list(core.stream_llm("hello"))
+    assert core.token_usage.last_input == 1200
+    assert core.token_usage.last_output == 800
+    assert core.token_usage.last_cache_read == 540
+
+
 def test_handle_input_returns_llm_text(app_core: AppCore) -> None:
     """When a command sets llm_text, it's available on the response."""
     from mcp_coder.icoder.core.types import Command, Response

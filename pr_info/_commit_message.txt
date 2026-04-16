@@ -1,0 +1,13 @@
+feat(icoder): wire cache usage from done events through AppCore (#819)
+
+Extract cache_read_input_tokens from the "done" event's usage dict in
+AppCore.stream_llm() and forward it to TokenUsage.update(). Claude CLI
+already emits this field; LangChain paths will populate it in steps 4-5.
+Providers that don't emit cache keys default to 0 and display hides the
+cache percentage (per Decision #6).
+
+Tests cover:
+- cache extraction from done event updates last/total_cache_read
+- absence of cache key leaves cache_read at 0 (backward compat)
+- cumulative cache totals across multiple streams
+- regression guard: Claude CLI result message -> mapper -> AppCore end-to-end
