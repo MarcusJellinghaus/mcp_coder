@@ -1,22 +1,25 @@
-Add github_token parameter to BaseGitHubManager and all 5 subclasses
+Add transition_issue_label primitive on LabelsMixin
 
-Adds an optional `github_token` kwarg to `BaseGitHubManager.__init__`
-and forwards it through `IssueManager`, `IssueBranchManager`,
-`PullRequestManager`, `LabelsManager`, and `CIResultsManager`. When
-provided, the explicit value bypasses the `user_config` lookup;
-when omitted the existing fallback behavior is preserved.
+Introduce a config-free, atomic label transition primitive alongside
+add_labels/remove_labels/set_labels. Computes
+(current - labels_to_clear) | {new_label} and applies via set_labels.
 
-This is internal prep for issue #832 (part 1 of 5): upcoming shim
-consumers can inject a pre-resolved token without depending on
-`user_config`. No public API breakage — existing callers pass nothing
-and keep the current behavior. Directory/URL validation still runs
-before token resolution so error precedence is unchanged.
+- Idempotent short-circuit: if new_label is already present AND there
+  is no overlap between current labels and labels_to_clear, returns
+  True without calling set_labels.
+- Guards against get_issue swallowing a failure via its own
+  default_return: if get_issue returns an empty IssueData (number=0),
+  primitive returns False without calling set_labels.
+- ValueError from validate_issue_number and 401/403 GithubException
+  propagate via the @_handle_github_errors decorator; other errors
+  return False.
 
-Signature asymmetry between managers is preserved per issue decision:
-`PullRequestManager` and `LabelsManager` gain only `github_token` and
-do not receive a `repo_url` parameter.
+Adds TestTransitionIssueLabel test class (8 cases) covering basic
+add+clear, idempotent no-op, stray-label cleanup, empty clear set,
+invalid issue number, auth error reraise, set_labels failure, and
+get_issue failure.
 
-Tests added in tests/utils/github_operations/test_base_manager.py:
-a parametrized `TestGithubTokenForwarding` class verifies for all 5
-subclasses that (a) an explicit token bypasses user_config and
-(b) a missing token still falls back to user_config.
+update_workflow_label is not modified in this step; the refactor to
+delegate to the primitive comes in Step 3.
+
+Part of #832.

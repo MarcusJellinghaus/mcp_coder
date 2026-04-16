@@ -7,7 +7,7 @@ for managing issue labels through the GitHub API.
 from __future__ import annotations
 
 import logging
-from typing import List
+from typing import Iterable, List
 
 from mcp_coder.utils.log_utils import log_function_call
 
@@ -240,3 +240,50 @@ class LabelsMixin:
             url=github_issue.html_url,
             locked=github_issue.locked,
         )
+
+    @log_function_call
+    @_handle_github_errors(default_return=False)
+    def transition_issue_label(
+        self: "BaseGitHubManager",
+        issue_number: int,
+        new_label: str,
+        labels_to_clear: Iterable[str] = (),
+    ) -> bool:
+        """Atomic label transition primitive — no workflow semantics.
+
+        Computes ``(current - labels_to_clear) | {new_label}`` and applies the
+        result via :meth:`set_labels`. Idempotent: if ``new_label`` is already
+        present AND there is no overlap between current labels and
+        ``labels_to_clear``, returns ``True`` without calling ``set_labels``.
+
+        Args:
+            issue_number: Issue number to operate on.
+            new_label: Label to ensure is present on the issue.
+            labels_to_clear: Iterable of labels to remove if present.
+
+        Returns:
+            ``True`` on success (including idempotent no-op), ``False`` on
+            swallowed error or failed ``set_labels``.
+
+        Raises:
+            ValueError: If issue number is invalid.
+        """
+        # Validate issue number (decorator re-raises ValueError).
+        validate_issue_number(issue_number)
+
+        # Fetch current labels. get_issue has its own default_return that
+        # yields an empty IssueData (number=0) on swallowed failure.
+        issue = self.get_issue(issue_number)  # type: ignore[attr-defined]
+        if issue["number"] == 0:
+            return False
+
+        current = set(issue["labels"])
+        to_clear = set(labels_to_clear)
+
+        # Idempotent short-circuit: target present and no overlap to clear.
+        if new_label in current and not (to_clear & current):
+            return True
+
+        new_labels = (current - to_clear) | {new_label}
+        result = self.set_labels(issue_number, *new_labels)  # type: ignore[attr-defined]
+        return bool(result["number"] != 0)
