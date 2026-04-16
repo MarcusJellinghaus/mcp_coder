@@ -1,12 +1,10 @@
-fix(tests): add total_tokens to usage_metadata and split agent usage tests
+test: split test_langchain_provider.py usage tests into separate file
 
-Fixes two CI failures in the langchain agent test suite:
+Extract TestExtractUsage, TestSumUsage, and TestAskTextIncludesUsage from
+test_langchain_provider.py (was 800 lines) into a new module
+test_langchain_provider_usage.py (163 lines), bringing the original file
+down to 642 lines.
 
-1. Unit-test failure: real langchain_core.messages.AIMessage pydantic-validates
-   UsageMetadata and requires total_tokens. Added total_tokens (= input + output)
-   to every usage_metadata dict passed to _make_ai_message_with_usage() in
-   test_langchain_agent.py and test_langchain_agent_streaming.py.
-
-2. File-size failure: test_langchain_agent.py was 809 lines (>750 threshold).
-   Extracted TestRunAgentUsage class and its helpers into a dedicated
-   test_langchain_agent_usage.py file. test_langchain_agent.py is now 667 lines.
+This resolves the CI file-size check failure
+(mcp-coder check file-size --max-lines 750). Tests and coverage are
+unchanged; only module organization was modified.
