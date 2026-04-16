@@ -1,13 +1,14 @@
-feat(icoder): wire cache usage from done events through AppCore (#819)
+feat(langchain): extract token usage from text and stream paths (#819)
 
-Extract cache_read_input_tokens from the "done" event's usage dict in
-AppCore.stream_llm() and forward it to TokenUsage.update(). Claude CLI
-already emits this field; LangChain paths will populate it in steps 4-5.
-Providers that don't emit cache keys default to 0 and display hides the
-cache percentage (per Decision #6).
+Add _usage.py submodule with _extract_usage() and _sum_usage() helpers that
+map LangChain's usage_metadata (with nested input_token_details) onto the
+provider-agnostic UsageInfo TypedDict.
 
-Tests cover:
-- cache extraction from done event updates last/total_cache_read
-- absence of cache key leaves cache_read at 0 (backward compat)
-- cumulative cache totals across multiple streams
-- regression guard: Claude CLI result message -> mapper -> AppCore end-to-end
+Wire _extract_usage() into:
+- _ask_text(): populates raw_response["usage"] from chat_model.invoke() result
+- _ask_text_stream(): tracks any chunk with non-empty usage_metadata (last-wins)
+  and emits the extracted usage in the final "done" event
+
+The helpers live in a dedicated _usage.py submodule (rather than __init__.py)
+to avoid circular-import risk with agent.py, which will consume _sum_usage in
+the following step.

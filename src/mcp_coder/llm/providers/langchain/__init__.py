@@ -36,6 +36,7 @@ from ._exceptions import (
     raise_connection_error,
 )
 from ._ssl import ensure_truststore
+from ._usage import _extract_usage
 
 if TYPE_CHECKING:
     from langchain_core.language_models import BaseChatModel
@@ -331,6 +332,7 @@ def _ask_text(
         "backend": backend,
         "model": config.get("model", ""),
         "response_content": text,
+        "usage": _extract_usage(ai_msg),
     }
 
     # Serialize history using model_dump() for messages_from_dict() compatibility
@@ -649,6 +651,7 @@ def _ask_text_stream(
 
     try:
         all_text_parts: list[str] = []
+        last_chunk_with_usage: Any = None
         last_activity = time.time()
         for chunk in chat_model.stream(lc_messages):
             if time.time() - last_activity > timeout:
@@ -657,6 +660,8 @@ def _ask_text_stream(
                     "Stream stalled. You can retry, or use --timeout to increase the limit."
                 )
             last_activity = time.time()
+            if getattr(chunk, "usage_metadata", None):
+                last_chunk_with_usage = chunk
             chunk_dict = (
                 chunk.model_dump() if hasattr(chunk, "model_dump") else chunk.dict()
             )
@@ -683,7 +688,8 @@ def _ask_text_stream(
             serialized.append({"type": msg_type, "data": dump})
         store_langchain_history(session_id, serialized)
 
-        yield {"type": "done", "session_id": session_id, "usage": {}}
+        usage = _extract_usage(last_chunk_with_usage) if last_chunk_with_usage else {}
+        yield {"type": "done", "session_id": session_id, "usage": usage}
     except TimeoutError:
         raise
     except Exception as exc:

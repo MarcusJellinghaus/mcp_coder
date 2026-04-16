@@ -559,3 +559,164 @@ class TestAskLangchainStreamToolsPassthrough:
         # Should still work fine — text mode ignores tools
         text_deltas = [e for e in events if e["type"] == "text_delta"]
         assert len(text_deltas) == 1
+
+
+def _mock_chunk_with_usage(
+    content: str, usage_metadata: dict[str, object] | None
+) -> MagicMock:
+    """Create a mock AIMessageChunk with content and optional usage_metadata."""
+    chunk = MagicMock()
+    chunk.content = content
+    chunk.usage_metadata = usage_metadata
+    chunk.model_dump.return_value = {
+        "type": "AIMessageChunk",
+        "content": content,
+        "usage_metadata": usage_metadata,
+    }
+    return chunk
+
+
+class TestAskLangchainStreamTextUsage:
+    """_ask_text_stream emits usage in the done event."""
+
+    def test_text_stream_done_event_includes_usage(self) -> None:
+        """Last chunk with usage_metadata populates usage in done event."""
+        chunks = [
+            _mock_chunk_with_usage("Hi", None),
+            _mock_chunk_with_usage(
+                "",
+                {
+                    "input_tokens": 120,
+                    "output_tokens": 34,
+                    "input_token_details": {
+                        "cache_read": 40,
+                        "cache_creation": 5,
+                    },
+                },
+            ),
+        ]
+        mock_model = MagicMock()
+        mock_model.stream.return_value = iter(chunks)
+
+        with (
+            patch(f"{_MOD_LC}._load_langchain_config", return_value=_make_config()),
+            patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
+            patch(f"{_MOD_LC}.store_langchain_history"),
+            patch(f"{_MOD_LC}._create_chat_model", return_value=mock_model),
+            patch(f"{_MOD_LC}.ensure_truststore"),
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain_stream
+
+            events = list(ask_langchain_stream("Hi"))
+
+        done_events = [e for e in events if e["type"] == "done"]
+        assert len(done_events) == 1
+        assert done_events[0]["usage"] == {
+            "input_tokens": 120,
+            "output_tokens": 34,
+            "cache_read_input_tokens": 40,
+            "cache_creation_input_tokens": 5,
+        }
+
+    def test_text_stream_done_event_no_usage_metadata(self) -> None:
+        """Chunks without usage_metadata yield empty usage dict in done event."""
+        chunks = [_mock_chunk_with_usage("a", None), _mock_chunk_with_usage("b", None)]
+        mock_model = MagicMock()
+        mock_model.stream.return_value = iter(chunks)
+
+        with (
+            patch(f"{_MOD_LC}._load_langchain_config", return_value=_make_config()),
+            patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
+            patch(f"{_MOD_LC}.store_langchain_history"),
+            patch(f"{_MOD_LC}._create_chat_model", return_value=mock_model),
+            patch(f"{_MOD_LC}.ensure_truststore"),
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain_stream
+
+            events = list(ask_langchain_stream("Hi"))
+
+        done_events = [e for e in events if e["type"] == "done"]
+        assert len(done_events) == 1
+        assert done_events[0]["usage"] == {}
+
+    def test_text_stream_usage_on_middle_chunk(self) -> None:
+        """Usage on a middle chunk is still extracted (regression: last-wins)."""
+        chunks = [
+            _mock_chunk_with_usage("start", None),
+            _mock_chunk_with_usage(
+                "mid",
+                {
+                    "input_tokens": 80,
+                    "output_tokens": 10,
+                    "input_token_details": {"cache_read": 20},
+                },
+            ),
+            _mock_chunk_with_usage("end", None),
+        ]
+        mock_model = MagicMock()
+        mock_model.stream.return_value = iter(chunks)
+
+        with (
+            patch(f"{_MOD_LC}._load_langchain_config", return_value=_make_config()),
+            patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
+            patch(f"{_MOD_LC}.store_langchain_history"),
+            patch(f"{_MOD_LC}._create_chat_model", return_value=mock_model),
+            patch(f"{_MOD_LC}.ensure_truststore"),
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain_stream
+
+            events = list(ask_langchain_stream("Hi"))
+
+        done_events = [e for e in events if e["type"] == "done"]
+        assert len(done_events) == 1
+        assert done_events[0]["usage"] == {
+            "input_tokens": 80,
+            "output_tokens": 10,
+            "cache_read_input_tokens": 20,
+        }
+
+
+class TestAskTextStreamUsageFlowsToRawResponse:
+    """_ask_text_stream → ResponseAssembler → LLMResponseDict carries all 4 fields."""
+
+    def test_ask_text_stream_usage_flows_to_raw_response(self) -> None:
+        """All 4 usage fields flow from done event into raw_response['usage']."""
+        from mcp_coder.llm.types import ResponseAssembler
+
+        chunks = [
+            _mock_chunk_with_usage("Hello", None),
+            _mock_chunk_with_usage(
+                "",
+                {
+                    "input_tokens": 900,
+                    "output_tokens": 150,
+                    "input_token_details": {
+                        "cache_read": 300,
+                        "cache_creation": 25,
+                    },
+                },
+            ),
+        ]
+        mock_model = MagicMock()
+        mock_model.stream.return_value = iter(chunks)
+
+        with (
+            patch(f"{_MOD_LC}._load_langchain_config", return_value=_make_config()),
+            patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
+            patch(f"{_MOD_LC}.store_langchain_history"),
+            patch(f"{_MOD_LC}._create_chat_model", return_value=mock_model),
+            patch(f"{_MOD_LC}.ensure_truststore"),
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain_stream
+
+            assembler = ResponseAssembler(provider="langchain")
+            for event in ask_langchain_stream("Hi"):
+                assembler.add(event)
+            result = assembler.result()
+
+        assert result["raw_response"]["usage"] == {
+            "input_tokens": 900,
+            "output_tokens": 150,
+            "cache_read_input_tokens": 300,
+            "cache_creation_input_tokens": 25,
+        }
