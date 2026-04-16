@@ -63,7 +63,11 @@ mirroring the existing `langchain_library_isolation` pattern (same
 New `docs/configuration/optional-dependencies.md` with a table mapping each
 extra to what it enables and when to install it. Includes the name mismatch
 note (`[langchain-gemini]` wraps PyPI `langchain-google-genai`). README gains
-a short "Optional features" pointer to this page.
+a short "Optional features" subsection under `### Installation` pointing to
+this page. The three existing docs that already mention install hints
+(`docs/configuration/config.md`, `docs/configuration/mlflow-integration.md`,
+`docs/architecture/architecture.md`) each gain a one-line pointer to the
+new reference page.
 
 ## Out of Scope (tracked separately)
 
@@ -81,6 +85,9 @@ a short "Optional features" pointer to this page.
 - `pyproject.toml` — extras restructure, `[dev]` update
 - `.importlinter` — new `langchain_transitive_isolation` contract
 - `README.md` — Optional features pointer
+- `docs/configuration/config.md` — one-line pointer to the new page near the `[langchain]` install hint
+- `docs/configuration/mlflow-integration.md` — one-line pointer to the new page near the install hint
+- `docs/architecture/architecture.md` — one-line pointer to the new page near the `langchain/` optional-install bullet
 - `src/mcp_coder/cli/commands/icoder.py` — import path update
 - `src/mcp_coder/icoder/services/llm_service.py` — TYPE_CHECKING import
 - `src/mcp_coder/icoder/core/commands/info.py` — TYPE_CHECKING import
@@ -98,7 +105,7 @@ step 1's move.
 1. **step_1.md** — Move `mcp_manager.py` under `providers/langchain/`
 2. **step_2.md** — Restructure `pyproject.toml` extras
 3. **step_3.md** — Add `langchain_transitive_isolation` import-linter contract
-4. **step_4.md** — Documentation (new page + README pointer)
+4. **step_4.md** — Documentation (new page + pointers from README and the three existing install-hint docs)
 
 Each step = one commit; all three code-quality checks (pylint, pytest,
 mypy) plus `lint-imports` green at the end of each step.
@@ -111,4 +118,7 @@ mypy) plus `lint-imports` green at the end of each step.
   base + anthropic wrapper (no `openai`, `google-genai`, `grpcio`, `tiktoken`)
 - `lint-imports` passes with the new contract enabled
 - `docs/configuration/optional-dependencies.md` exists, linked from README
+  and from `docs/configuration/config.md`,
+  `docs/configuration/mlflow-integration.md`, and
+  `docs/architecture/architecture.md`
 - All existing tests pass

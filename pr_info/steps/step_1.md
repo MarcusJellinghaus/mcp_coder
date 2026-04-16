@@ -47,6 +47,12 @@ mcp__tools-py__move_module(
 )
 ```
 
+The tool's signature documents both arguments as "path relative to project
+root", so the filesystem-path form above is the primary call. **Fallback:**
+if `move_module` rejects filesystem paths in this environment, retry with
+the dotted-module form (`source_module="mcp_coder.llm.mcp_manager"`,
+`dest_package="mcp_coder.llm.providers.langchain"`).
+
 This automatically updates the 5 known import sites from
 `mcp_coder.llm.mcp_manager` to `mcp_coder.llm.providers.langchain.mcp_manager`.
 
