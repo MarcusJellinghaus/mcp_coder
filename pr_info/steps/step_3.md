@@ -47,8 +47,7 @@ Delete from the old body:
 
 - The step-6 `get_issue` call and the `issue_data["number"] == 0` check → primitive owns the fetch and the empty-`IssueData` guard.
 - The step-7 idempotency block (`if to_label_name in current_labels: ...`) → primitive's stricter idempotency check replaces it.
-- The step-7 info log "Source label '...' not present" → no longer needed; primitive doesn't distinguish.
-- The step-7 INFO log `'Source label <from_label_id> not present in issue labels'` is removed as a side-effect of delegating to the config-free primitive (which has no concept of `from_label` vs `to_label`). No tests assert this log. Accepted per review Round 1 decision.
+- The step-7 INFO log `'Source label <from_label_id> not present in issue labels'` is removed as a side-effect of delegating to the config-free primitive (which has no concept of `from_label` vs `to_label`). One test asserts this log — see the regression instruction below. Accepted per review Round 1 decision.
 - The step-8 `new_labels = (current_labels - label_lookups["all_names"]) | {to_label_name}` computation → moved into primitive via the `labels_to_clear` argument.
 - The step-9 `result = self.set_labels(...)` call and `result["number"] == 0` check → primitive returns a `bool` directly.
 
@@ -63,7 +62,7 @@ Keep the final outer `except Exception:` block logging and returning `False`.
 
 No new tests in this step. The existing suite in `tests/utils/github_operations/test_issue_manager_label_update.py` acts as full regression coverage.
 
-Before running the regression tests, skim each listed test's assertions once. Confirm none rely on the dropped `'Source label ... not present'` or step-7 `'already has ... without ...'` log strings. If any do, update the assertion to check behaviour (e.g. `set_labels` call count or absence) rather than log text.
+**Required test-assertion update**: `tests/utils/github_operations/test_issue_manager_label_update.py::test_update_workflow_label_removes_different_workflow_label` asserts the removed log string on line 635 (`assert "Source label 'status-06:implementing' not present" in caplog.text`). Drop this assertion. The behavioural assertions on the same test (lines 625, 629, 632 — `set_labels` call-args) already cover the contract. No other test uses this log string; the `'already has ... without ...'` phrase mentioned in Round 1 does not appear in the test suite (confirmed).
 
 Tests expected to pass unchanged:
 

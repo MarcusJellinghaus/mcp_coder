@@ -119,7 +119,7 @@ def test_explicit_github_token_bypasses_user_config(manager_cls, init_kwargs) ->
     # Assert user_config.get_config_values was not called.
 ```
 
-Use `Mock(spec=Path)` + patch `mcp_coder.utils.github_operations.base_manager.is_git_repository` to return `True` (matches the style in `TestBaseGitHubManagerWithProjectDir` in `test_base_manager.py`). Primary assertion: patch `mcp_coder.utils.github_operations.base_manager.user_config.get_config_values` and assert it is NOT called when `github_token` is passed explicitly; IS called when `github_token=None`.
+Use `Mock(spec=Path)` + patch `mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository` to return `True` (matches the style in `TestBaseGitHubManagerWithProjectDir` in `test_base_manager.py`). Primary assertion: patch `mcp_coder.utils.github_operations.base_manager.user_config.get_config_values` and assert it is NOT called when `github_token` is passed explicitly; IS called when `github_token=None`.
 
 Also add a second test verifying the fallback still works (token=None → `user_config.get_config_values` IS called, token comes from config).
 

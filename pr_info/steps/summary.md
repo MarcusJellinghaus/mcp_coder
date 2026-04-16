@@ -33,7 +33,7 @@ Internal prep refactors in `mcp_coder` so the upcoming cross-repo move of `git_o
 
 Today's step-7 idempotency check returns `True` without touching labels when the target label is present AND source label is absent — even if other stray workflow labels linger. The primitive's stricter idempotency check (target present AND no overlap with `labels_to_clear`) cleans up such strays instead. Example: issue has `code_review` + stale `planning` + no `implementing` → today returns True silently; post-refactor strips `planning`. Consistent with `test_update_workflow_label_removes_different_workflow_label`.
 
-The `update_workflow_label` INFO log `'Source label ... not present'` is removed. The primitive is config-free and cannot distinguish source vs clear-set labels. No tests assert this log.
+The `update_workflow_label` INFO log `'Source label ... not present'` is removed. One test asserts it (`test_update_workflow_label_removes_different_workflow_label`, line 635); its assertion will be dropped — existing `set_labels` call-args checks on lines 625/629/632 already cover the contract. The primitive is config-free and cannot distinguish source vs clear-set labels.
 
 ## Out of scope
 
