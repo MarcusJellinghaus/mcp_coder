@@ -252,7 +252,7 @@ Placeholders: `[job_name]`, `[step_name]`, `[other_failed_jobs]`, `[log_excerpt]
 #### CI Failure Analysis Prompt
 
 ```
-Analyze the CI pipeline failure and write a problem description.
+Analyze the CI pipeline failure and produce a problem description.
 
 **Context:**
 - Failed job: [job_name]
@@ -266,15 +266,15 @@ Analyze the CI pipeline failure and write a problem description.
 **Your Task:**
 1. Identify the root cause of the failure
 2. Determine which files/code likely need changes
-3. Write a clear problem description to `pr_info/.ci_problem_description.md`
+3. Return a clear problem description as your response
 
 **Output Format:**
-Write a concise problem description (2-5 paragraphs) to the file that includes:
+Output a concise problem description (2-5 paragraphs) that includes:
 - What failed and why
 - Which files are likely involved
 - What changes are needed to fix it
 
-Write ONLY the problem description to the file - no code, no markdown headers, just the analysis text.
+Output ONLY the problem description as your response - no preamble, no code, no markdown headers, just the analysis text.
 ```
 
 ### CI Fix
