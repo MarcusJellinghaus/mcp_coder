@@ -93,8 +93,15 @@ class AppCore:
                 if isinstance(usage, dict):
                     input_tokens = usage.get("input_tokens", 0)
                     output_tokens = usage.get("output_tokens", 0)
-                    if isinstance(input_tokens, int) and isinstance(output_tokens, int):
-                        self._token_usage.update(input_tokens, output_tokens)
+                    cache_read = usage.get("cache_read_input_tokens", 0)
+                    if (
+                        isinstance(input_tokens, int)
+                        and isinstance(output_tokens, int)
+                        and isinstance(cache_read, int)
+                    ):
+                        self._token_usage.update(
+                            input_tokens, output_tokens, cache_read
+                        )
             yield event
 
         self._event_log.emit("llm_request_end")

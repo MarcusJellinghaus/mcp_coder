@@ -103,6 +103,11 @@ _.last_updated
 _.setup_commands_windows
 _.setup_commands_linux
 
+# llm/types.py - UsageInfo TypedDict field (captured in raw_response but not
+# displayed; see pr_info/steps/Decisions.md D9). Only referenced as a kwarg in
+# _usage.py, which vulture cannot detect at 60% confidence.
+_.cache_creation_input_tokens
+
 # =============================================================================
 # FALSE POSITIVES - Argparse Pattern
 # =============================================================================

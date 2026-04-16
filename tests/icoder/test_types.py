@@ -177,3 +177,62 @@ def test_token_usage_display_text() -> None:
     usage = TokenUsage()
     usage.update(1200, 800)
     assert usage.display_text() == "\u21931.2k \u2191800 | total: \u21931.2k \u2191800"
+
+
+def test_token_usage_update_with_cache() -> None:
+    usage = TokenUsage()
+    usage.update(1000, 500, cache_read_input_tokens=450)
+    assert usage.last_cache_read == 450
+    assert usage.total_cache_read == 450
+
+
+def test_token_usage_cumulative_cache() -> None:
+    usage = TokenUsage()
+    usage.update(1000, 500, cache_read_input_tokens=450)
+    usage.update(2000, 800, cache_read_input_tokens=900)
+    assert usage.last_cache_read == 900
+    assert usage.total_cache_read == 1350
+
+
+def test_token_usage_display_text_with_cache() -> None:
+    usage = TokenUsage()
+    usage.update(1200, 800, cache_read_input_tokens=540)
+    text = usage.display_text()
+    # last section: 540/1200 = 45%, total section: same numbers → 45%
+    assert "cache:45%" in text
+    # Ensure both last and total carry cache info
+    last_part, total_part = text.split(" | total: ")
+    assert "cache:45%" in last_part
+    assert "cache:45%" in total_part
+
+
+def test_token_usage_display_text_without_cache() -> None:
+    usage = TokenUsage()
+    usage.update(1200, 800)
+    assert "cache:" not in usage.display_text()
+
+
+def test_token_usage_display_text_mixed_cache() -> None:
+    usage = TokenUsage()
+    usage.update(1000, 500)  # no cache
+    usage.update(2000, 800, cache_read_input_tokens=1000)
+    text = usage.display_text()
+    last_part, total_part = text.split(" | total: ")
+    # last: 1000/2000 = 50%
+    assert "cache:50%" in last_part
+    # total: 1000/3000 = 33%
+    assert "cache:33%" in total_part
+
+
+def test_token_usage_cache_percentage_rounding() -> None:
+    usage = TokenUsage()
+    usage.update(1000, 500, cache_read_input_tokens=333)
+    # 333/1000 = 33.3% → rounds to 33%
+    assert "cache:33%" in usage.display_text()
+
+
+def test_token_usage_display_text_zero_input_with_cache() -> None:
+    usage = TokenUsage()
+    usage.update(0, 0, cache_read_input_tokens=100)
+    text = usage.display_text()
+    assert "cache:" not in text

@@ -7,6 +7,7 @@ from mcp_coder.llm.types import (
     LLMResponseDict,
     ResponseAssembler,
     StreamEvent,
+    UsageInfo,
 )
 
 
@@ -276,3 +277,46 @@ class TestResponseAssemblerToolTrace:
         tool_trace = result["raw_response"]["tool_trace"]
         assert isinstance(tool_trace, list)
         assert len(tool_trace) == 2
+
+
+# --- UsageInfo tests ---
+
+
+def test_usage_info_is_typed_dict() -> None:
+    """Verify UsageInfo is a TypedDict subclass."""
+    from typing import is_typeddict
+
+    assert is_typeddict(UsageInfo)
+
+
+def test_usage_info_fields() -> None:
+    """Verify all 4 field names exist with int type via get_type_hints()."""
+    from typing import get_type_hints
+
+    hints = get_type_hints(UsageInfo)
+    expected_fields = {
+        "input_tokens",
+        "output_tokens",
+        "cache_read_input_tokens",
+        "cache_creation_input_tokens",
+    }
+    assert set(hints.keys()) == expected_fields
+    for field_name in expected_fields:
+        assert hints[field_name] is int
+
+
+def test_usage_info_total_false() -> None:
+    """Verify all fields are optional (total=False): create UsageInfo with only
+    input_tokens set, confirm it's valid.
+    """
+    usage: UsageInfo = {"input_tokens": 100}
+    assert usage["input_tokens"] == 100
+    # Verify TypedDict has total=False
+    assert getattr(UsageInfo, "__total__") is False
+
+
+def test_usage_info_importable_from_llm_package() -> None:
+    """Verify `from mcp_coder.llm import UsageInfo` works."""
+    from mcp_coder.llm import UsageInfo as ImportedUsageInfo
+
+    assert ImportedUsageInfo is UsageInfo

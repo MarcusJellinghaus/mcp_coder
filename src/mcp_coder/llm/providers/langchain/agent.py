@@ -16,6 +16,10 @@ import threading
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
+from mcp_coder.llm.types import UsageInfo
+
+from ._usage import _extract_usage, _sum_usage
+
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
@@ -305,21 +309,26 @@ async def run_agent(
     total_tool_calls = 0
     tool_trace: list[dict[str, Any]] = []
     trace_by_id: dict[str, dict[str, Any]] = {}
+    accumulated_usage: UsageInfo = {}
 
     for msg in output_messages:
-        if isinstance(msg, AIMessage) and getattr(msg, "tool_calls", None):
-            agent_steps += 1
-            for tc in msg.tool_calls:
-                total_tool_calls += 1
-                entry: dict[str, Any] = {
-                    "name": tc["name"],
-                    "args": tc["args"],
-                    "result": "",
-                }
-                tool_trace.append(entry)
-                tc_id: str = tc.get("id") or ""
-                if tc_id:
-                    trace_by_id[tc_id] = entry
+        if isinstance(msg, AIMessage):
+            msg_usage = _extract_usage(msg)
+            if msg_usage:
+                accumulated_usage = _sum_usage(accumulated_usage, msg_usage)
+            if getattr(msg, "tool_calls", None):
+                agent_steps += 1
+                for tc in msg.tool_calls:
+                    total_tool_calls += 1
+                    entry: dict[str, Any] = {
+                        "name": tc["name"],
+                        "args": tc["args"],
+                        "result": "",
+                    }
+                    tool_trace.append(entry)
+                    tc_id: str = tc.get("id") or ""
+                    if tc_id:
+                        trace_by_id[tc_id] = entry
 
     # Fill tool results from ToolMessages, matched by tool_call_id
     for msg in output_messages:
@@ -332,6 +341,7 @@ async def run_agent(
         "agent_steps": agent_steps,
         "total_tool_calls": total_tool_calls,
         "tool_trace": tool_trace,
+        "usage": accumulated_usage,
     }
 
     # Serialize full history in the format expected by messages_from_dict:
@@ -428,6 +438,7 @@ async def run_agent_stream(
     accumulated_text = ""
     tool_calls_by_run_id: dict[str, dict[str, Any]] = {}
     tool_results_list: list[dict[str, Any]] = []
+    accumulated_usage: UsageInfo = {}
 
     try:
         async for event in agent.astream_events(
@@ -467,6 +478,13 @@ async def run_agent_stream(
                     "args": input_data,
                     "tool_call_id": run_id,
                 }
+
+            elif event_kind == "on_chat_model_end":
+                output_msg = event.get("data", {}).get("output")
+                if output_msg is not None:
+                    msg_usage = _extract_usage(output_msg)
+                    if msg_usage:
+                        accumulated_usage = _sum_usage(accumulated_usage, msg_usage)
 
             elif event_kind == "on_tool_end":
                 output = event.get("data", {}).get("output", "")
@@ -532,4 +550,4 @@ async def run_agent_stream(
 
     _store_history(session_id, serialized)
 
-    yield {"type": "done", "session_id": session_id}
+    yield {"type": "done", "session_id": session_id, "usage": accumulated_usage}
