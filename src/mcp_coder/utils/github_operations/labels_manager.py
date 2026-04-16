@@ -31,14 +31,19 @@ class LabelsManager(BaseGitHubManager):
     Provides methods for creating, reading, updating, and deleting GitHub labels.
     """
 
-    def __init__(self, project_dir: Optional[Path] = None) -> None:
+    def __init__(
+        self,
+        project_dir: Optional[Path] = None,
+        github_token: Optional[str] = None,
+    ) -> None:
         """Initialize LabelsManager.
 
         Args:
             project_dir: Path to the project directory
+            github_token: Optional explicit token — overrides user_config lookup when provided.
 
         """
-        super().__init__(project_dir)
+        super().__init__(project_dir=project_dir, github_token=github_token)
 
     def _validate_label_name(self, name: str) -> bool:
         """Validate label name.

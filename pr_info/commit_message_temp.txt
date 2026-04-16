@@ -1,0 +1,22 @@
+Add github_token parameter to BaseGitHubManager and all 5 subclasses
+
+Adds an optional `github_token` kwarg to `BaseGitHubManager.__init__`
+and forwards it through `IssueManager`, `IssueBranchManager`,
+`PullRequestManager`, `LabelsManager`, and `CIResultsManager`. When
+provided, the explicit value bypasses the `user_config` lookup;
+when omitted the existing fallback behavior is preserved.
+
+This is internal prep for issue #832 (part 1 of 5): upcoming shim
+consumers can inject a pre-resolved token without depending on
+`user_config`. No public API breakage — existing callers pass nothing
+and keep the current behavior. Directory/URL validation still runs
+before token resolution so error precedence is unchanged.
+
+Signature asymmetry between managers is preserved per issue decision:
+`PullRequestManager` and `LabelsManager` gain only `github_token` and
+do not receive a `repo_url` parameter.
+
+Tests added in tests/utils/github_operations/test_base_manager.py:
+a parametrized `TestGithubTokenForwarding` class verifies for all 5
+subclasses that (a) an explicit token bypasses user_config and
+(b) a missing token still falls back to user_config.

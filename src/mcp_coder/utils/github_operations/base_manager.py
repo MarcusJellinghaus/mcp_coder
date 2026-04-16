@@ -133,6 +133,7 @@ class BaseGitHubManager:
         self,
         project_dir: Optional[Path] = None,
         repo_url: Optional[str] = None,
+        github_token: Optional[str] = None,
     ) -> None:
         """Initialize the BaseGitHubManager.
 
@@ -142,6 +143,7 @@ class BaseGitHubManager:
         Args:
             project_dir: Path to the project directory containing git repository
             repo_url: GitHub repository URL (e.g., "https://github.com/user/repo.git")
+            github_token: Optional explicit token — overrides user_config lookup when provided.
 
         Raises:
             ValueError: If neither or both parameters provided, directory doesn't exist,
@@ -165,9 +167,13 @@ class BaseGitHubManager:
         else:
             self._init_with_repo_url(repo_url)  # type: ignore[arg-type]
 
-        # Get GitHub token (after directory/repository validation)
-        config = user_config.get_config_values([("github", "token", None)])
-        raw_token = config[("github", "token")]
+        # Resolve GitHub token (after directory/repository validation).
+        # Explicit github_token parameter wins and bypasses user_config.
+        if github_token is not None:
+            raw_token: object = github_token
+        else:
+            config = user_config.get_config_values([("github", "token", None)])
+            raw_token = config[("github", "token")]
         if not isinstance(raw_token, str):
             raise ValueError(
                 "GitHub token not found. Configure it in ~/.mcp_coder/config.toml "

@@ -49,16 +49,24 @@ class IssueManager(CommentsMixin, LabelsMixin, EventsMixin, BaseGitHubManager):
     """
 
     def __init__(
-        self, project_dir: Optional[Path] = None, repo_url: Optional[str] = None
+        self,
+        project_dir: Optional[Path] = None,
+        repo_url: Optional[str] = None,
+        github_token: Optional[str] = None,
     ) -> None:
         """Initialize the IssueManager.
 
         Args:
             project_dir: Path to the project directory containing git repository
             repo_url: GitHub repository URL (e.g., "https://github.com/user/repo.git")
+            github_token: Optional explicit token — overrides user_config lookup when provided.
 
         """
-        super().__init__(project_dir=project_dir, repo_url=repo_url)
+        super().__init__(
+            project_dir=project_dir,
+            repo_url=repo_url,
+            github_token=github_token,
+        )
 
     @log_function_call
     @_handle_github_errors(default_return=create_empty_issue_data())
