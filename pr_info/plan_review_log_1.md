@@ -40,4 +40,28 @@ TASK_TRACKER.md is empty — plan has not started execution. Full review covers 
 - `pr_info/steps/step_3.md` — expanded Goal list; added formatters.py WHAT section; removed misleading ToolResult subsection; added `full=False` default note; added `test_block_preserves_arg_order`.
 - `pr_info/steps/Decisions.md` — new file logging all 9 Round 1 decisions.
 
-**Status:** Changes committed (see commit agent). Loop back to Round 2.
+**Status:** Changes committed (9fdfb5e). Loop back to Round 2.
+
+## Round 2 — 2026-04-16
+
+**Findings (from fresh review subagent):**
+- Verdict: **approve**. Round 1 decisions landed correctly; plan files internally consistent; source/test alignment verified; no critical issues.
+- Minor nit 1: `_render_value_compact` uses a literal 120 (not `_MAX_INLINE_LEN = 100`) — matches reference impl, serves a distinct purpose (value-compact vs header-line), but the distinction is not named/explained in the plan.
+- Minor nit 2: Step 3's "tests affected" list in formatters.py mentions `test_json_result_expanded` and `test_blank_line_after_footer`, but those operate on `tool_result` only and should pass unmodified. Only `test_inline_params`, `test_block_params`, and `test_print_stream_event_tool_use_bordered` actually change.
+- No new design questions raised.
+
+**Decisions:**
+- Skip both nits. Engineer explicitly recommended "all skippable — no need for another round." Per knowledge base: prefer simpler plans; trust the implementer to resolve trivial clarifications in passing.
+
+**User decisions:** None needed.
+
+**Changes:** None this round.
+
+**Status:** Zero plan changes — loop terminates.
+
+## Final Status
+
+- **Rounds run:** 2
+- **Commits produced:** 1 (9fdfb5e — plan refinements covering Step 3 scope expansion, Step 1 clarifications, Round 1 decisions logged in `Decisions.md`)
+- **Plan verdict:** Approved. Ready for implementation.
+- **Scope confirmed:** 4 steps, each a single green-checks commit. Step 3 grew to cover `formatters.py` + `test_formatters.py` (CLI aligned with iCoder rendering). Step 4 stays as isolated `testdata/` cleanup.
