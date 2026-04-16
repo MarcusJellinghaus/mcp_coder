@@ -8,7 +8,7 @@ from mcp_coder.llm.interface import prompt_llm_stream
 from mcp_coder.llm.types import StreamEvent
 
 if TYPE_CHECKING:
-    from mcp_coder.llm.mcp_manager import MCPManager
+    from mcp_coder.llm.providers.langchain.mcp_manager import MCPManager
 
 ICODER_LLM_TIMEOUT_SECONDS = 300  # 5-minute inactivity timeout for interactive use
 

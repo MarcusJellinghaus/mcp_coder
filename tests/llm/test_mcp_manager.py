@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from mcp_coder.llm.mcp_manager import MCPManager, MCPServerStatus
+from mcp_coder.llm.providers.langchain.mcp_manager import MCPManager, MCPServerStatus
 
 
 def _make_mock_tool(name: str = "test_tool") -> MagicMock:
