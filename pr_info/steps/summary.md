@@ -20,7 +20,7 @@ STATUS_SYMBOLS = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
 This constant lives in `verify.py` (its only consumer). The helper in `cli/utils.py` is deleted along with its dedicated test file. Also: Unicode `→` is replaced with ASCII `->`.
 
 ### 2. A single `_pad(title)` header helper
-Every section header passes through `_pad(title)` which returns `"\n=== {title} " + "=" * fill` (pad to 60, never truncate). Replaces six scattered f-strings.
+Every section header passes through `_pad(title)` which returns `"\n=== {title} " + "=" * fill` (pad to 60, never truncate). Replaces all header literals in `verify.py` (all 9 header-print sites: the six named sections plus the fallback-branch headers for the "langchain-mcp-adapters not installed" path and the INSTALL INSTRUCTIONS header).
 
 ### 3. New `_print_environment_section()`
 Informational section at the top of the output. Uses `sys`, `os.environ`, and `importlib.metadata.version()`. Prints rows directly (mirrors the existing `PROMPTS` section style).
@@ -36,9 +36,14 @@ Informational section at the top of the output. Uses `sys`, `os.environ`, and `i
 ### 6. Section order (final)
 ```
 ENVIRONMENT → CONFIG → PROMPTS → BASIC VERIFICATION →
-LLM PROVIDER → MCP SERVERS (Claude) → MCP SERVERS (langchain) →
-MCP CONFIG WARNINGS → MLFLOW → INSTALL INSTRUCTIONS
+LLM PROVIDER → MCP SERVERS (Claude) →
+MCP SERVERS (langchain) server list → MCP CONFIG WARNINGS →
+  [MCP edit smoke test + test-prompt rows are part of the langchain-MCP section
+   and print AFTER the MCP CONFIG WARNINGS section] →
+MLFLOW → INSTALL INSTRUCTIONS
 ```
+
+Note: MCP CONFIG WARNINGS is rendered **immediately after the langchain-MCP server list, BEFORE the MCP edit smoke-test and test-prompt lines**. The smoke-test + test-prompt lines are part of the langchain-MCP section's output and follow the warnings section.
 
 ---
 

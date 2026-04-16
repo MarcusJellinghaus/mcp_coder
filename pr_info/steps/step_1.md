@@ -34,6 +34,7 @@ In `_format_section`, replace `"\u2192"` with `"->"`.
 - Remove `_get_status_symbols` import from `verify.py`.
 - Remove `_get_status_symbols` from `__all__` in `cli/utils.py`.
 - Delete `_get_status_symbols` function body in `cli/utils.py`.
+- Remove any now-unused imports in `cli/utils.py` (e.g., `sys`) — ruff/pylint will flag them.
 - Delete `tests/cli/test_utils_status_symbols.py`.
 - Global string replacements in the 6 verify test files:
   - `"[NO]"` → `"[ERR]"` (in assertion strings and helper `_symbols()` dicts)

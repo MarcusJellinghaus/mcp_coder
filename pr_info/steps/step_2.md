@@ -2,7 +2,7 @@
 
 ## Goal
 
-Add a `_pad(title)` helper in `verify.py` that returns a 60-char-wide header (or wider when the title is long — never truncate). Apply it to all six section headers. Tests verify the padding boundary.
+Add a `_pad(title)` helper in `verify.py` that returns a 60-char-wide header (or wider when the title is long — never truncate). Apply it to **all existing `=== X ===` header strings in `verify.py`** — all 9 header-print sites (six named sections plus fallback-branch duplicates and INSTALL INSTRUCTIONS). Tests verify the padding boundary.
 
 ## LLM Prompt
 
@@ -29,14 +29,23 @@ def _pad(title: str) -> str:
     return "\n" + prefix + "=" * max(0, 60 - len(prefix))
 ```
 
+Replace **all existing `=== X ===` header literals in `verify.py`** — including fallback-branch duplicates and INSTALL INSTRUCTIONS. Actual count: **9 header-print sites**.
+
 ## HOW
 
 - Add `_pad` near the top of `verify.py` (before `_format_section`).
-- Replace all six header literals:
-  - `_format_section`: `f"\n=== {title} ==="` → `_pad(title)`
-  - `_format_mcp_section`: `f"\n=== MCP SERVERS (via langchain-mcp-adapters{title_suffix}) ==="` → `_pad(f"MCP SERVERS (via langchain-mcp-adapters{title_suffix})")`
-  - `_format_claude_mcp_section`: same pattern
-  - `execute_verify` inline prints: `"\n=== CONFIG ==="`, `"\n=== PROMPTS ==="`, `"\n=== LLM PROVIDER ==="`, `"\n=== MCP SERVERS (via langchain-mcp-adapters) ==="` (the "skipped" fallback), `"\n=== INSTALL INSTRUCTIONS ==="` → `_pad("CONFIG")`, etc.
+- Replace all 9 header literals across the module:
+  1. `_format_section`: `f"\n=== {title} ==="` → `_pad(title)`
+  2. `_format_mcp_section` (primary path): `f"\n=== MCP SERVERS (via langchain-mcp-adapters{title_suffix}) ==="` → `_pad(f"MCP SERVERS (via langchain-mcp-adapters{title_suffix})")`
+  3. `_format_mcp_section` fallback ("langchain-mcp-adapters not installed" branch): same pattern → `_pad(...)`
+  4. `_format_claude_mcp_section` (primary path): same pattern → `_pad(...)`
+  5. `_format_claude_mcp_section` fallback: same pattern → `_pad(...)`
+  6. `execute_verify` inline: `"\n=== CONFIG ==="` → `_pad("CONFIG")`
+  7. `execute_verify` inline: `"\n=== PROMPTS ==="` → `_pad("PROMPTS")`
+  8. `execute_verify` inline: `"\n=== LLM PROVIDER ==="` → `_pad("LLM PROVIDER")`
+  9. `execute_verify` inline: `"\n=== INSTALL INSTRUCTIONS ==="` → `_pad("INSTALL INSTRUCTIONS")`
+
+Equivalent instruction: replace **every** `=== X ===` header string in `verify.py`, including fallback-branch duplicates and INSTALL INSTRUCTIONS.
 
 ## ALGORITHM
 

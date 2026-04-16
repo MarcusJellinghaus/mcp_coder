@@ -48,7 +48,7 @@ finally:
     lc_logger.removeFilter(log_filter)
 ```
 
-After the langchain-MCP section is printed, call the warnings renderer:
+Immediately after the langchain-MCP server list is printed, BEFORE the MCP edit smoke test and test-prompt rows, call the warnings renderer:
 ```python
 warnings = _collect_mcp_warnings(mcp_config_resolved)
 if warnings:
@@ -57,12 +57,15 @@ if warnings:
         print(f"  {line}")
 ```
 
+Placement is explicit: the MCP CONFIG WARNINGS section appears directly after the langchain-MCP server list, and BEFORE the smoke-test / test-prompt rows that currently print at the end of the langchain-MCP section output.
+
 ## HOW
 
 - Use `json.load` to read `.mcp.json`; wrap in `try/except (OSError, json.JSONDecodeError)` → return `[]`.
-- Use `re.findall(r"\$\{[^}]+\}", value)` to detect unresolved placeholders.
+- Use `re.search(r"\$\{[^}]+\}", value)` to detect whether the value contains ANY unresolved placeholder.
 - For each server in `config.get("mcpServers", {})`, iterate `server.get("env", {})` dict values.
-- Output row format: `f"{server_name} / {env_var}  {unresolved_template}"` (two-space separator between label and template).
+- If any `${...}` placeholder is present, emit **one** row per `(server, env_var)` with the **full original value** (including any non-placeholder suffix like `/src` or `\Lib\`). Do not split on matches; do not emit multiple rows per value.
+- Output row format: `f"{server_name} / {env_var}  {full_value}"` (two-space separator between label and full value). Example: `tools-py / PYTHONPATH  ${MCP_CODER_PROJECT_DIR}/src`.
 
 ## ALGORITHM
 
@@ -72,10 +75,12 @@ except (OSError, json.JSONDecodeError): return []
 lines = []
 for server_name, server in data.get("mcpServers", {}).items():
     for env_var, value in server.get("env", {}).items():
-        for match in re.findall(r"\$\{[^}]+\}", value):
-            lines.append(f"{server_name} / {env_var}  {match}")
+        if re.search(r"\$\{[^}]+\}", value):
+            lines.append(f"{server_name} / {env_var}  {value}")
 return lines
 ```
+
+One row per env var that contains any `${...}` placeholder; emit the full unresolved value. Aligns with the issue body's expected output and the existing `test_unresolved_placeholder_found` test (which asserts `"tools-py / PYTHONPATH  ${MCP_CODER_PROJECT_DIR}/src"` — full value including the `/src` suffix).
 
 ## DATA
 

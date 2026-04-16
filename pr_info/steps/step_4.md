@@ -39,6 +39,9 @@ With a grouping loop that:
 - Uses `STATUS_SYMBOLS` (added in Step 1) and `_pad` (added in Step 2).
 - "Config file" label (first entry, when present) — keep as a top-level row (no group header). Detect via `entry["label"] == "Config file"` or `not entry["label"].startswith("[")`.
 - Use `itertools.groupby` or a simple "last_label" tracker.
+- **Edge case — entries without a clean `key value` structure:** inside a `[section]` group, when the entry's value cannot be cleanly split into `key value` (i.e., the first space-separated token is not a valid Python-identifier-like key), render the whole value on an indented line without a key column.
+  - Detection heuristic: `first_token, _, rest = value.partition(" ")`. Treat as "no key" when `first_token` starts with `[` (e.g., `[OK] 6 repos configured`) or does not match `^[A-Za-z_][A-Za-z0-9_]*$` (e.g., `not configured` — `not` is a Python keyword but still matches the identifier regex, which is fine as a fallback trigger — or digits).
+  - Add a small helper in `verify.py`: `_looks_like_key(token: str) -> bool` that returns `True` iff the token matches `^[A-Za-z_][A-Za-z0-9_]*$`.
 
 ## ALGORITHM
 
@@ -47,16 +50,34 @@ print(_pad("CONFIG"))
 last_label = None
 for entry in entries:
     label = entry["label"]
+    symbol = symbol_for(entry["status"])
     if label.startswith("["):
         if label != last_label:
             if last_label is not None: print()  # blank line between groups
             print(f"  {label}")
             last_label = label
-        key, _, rest = entry["value"].partition(" ")
-        print(f"    {key:<18s} {symbol_for(entry['status'])} {rest}")
+        first, _, rest = entry["value"].partition(" ")
+        if _looks_like_key(first) and rest:
+            print(f"    {first:<18s} {symbol} {rest}")
+        else:
+            # whole-value rendering without a key column
+            print(f"    {symbol} {entry['value']}" if symbol.strip() else f"    {entry['value']}")
     else:
         # top-level rows like "Config file", "Expected path", "Hint"
-        print(f"  {label:<20s} {symbol_for(entry['status'])} {entry['value']}")
+        print(f"  {label:<20s} {symbol} {entry['value']}")
+```
+
+Where `_looks_like_key(token)` returns `True` iff `token` matches `^[A-Za-z_][A-Za-z0-9_]*$`.
+
+### Preview of rendered output (user's chosen style)
+
+```
+  [mcp]
+    not configured
+
+  [coordinator]
+    cache_refresh_minutes  not configured
+    [OK] 6 repos configured
 ```
 
 ## DATA
@@ -95,6 +116,16 @@ class TestConfigGrouping:
 
     def test_config_file_row_outside_groups(self, ...):
         # "Config file" label has no preceding "[..." header
+
+    def test_info_entry_renders_without_key_split(self, ...):
+        # [mcp] + value "not configured" renders as an indented
+        # "not configured" line (no key column, no nonsensical split
+        # like "not  configured" with status symbol between).
+
+    def test_summary_entry_with_status_prefix_renders_plain(self, ...):
+        # [coordinator] + value "[OK] 6 repos configured" renders as a
+        # single indented row (not split at "6"; first token "[OK]" fails
+        # the _looks_like_key check, so the whole value is emitted as-is).
 ```
 
 ## Verification

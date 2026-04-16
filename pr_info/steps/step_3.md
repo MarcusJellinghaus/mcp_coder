@@ -36,7 +36,16 @@ def execute_verify(args: argparse.Namespace) -> int:
 ## HOW
 
 - Import at top: `import sys`, `from importlib.metadata import PackageNotFoundError, version`.
-- Four packages: `"mcp-coder"`, `"mcp-coder-utils"`, `"mcp-tools-py"`, `"mcp-workspace"`.
+- Define a module-level constant in `verify.py` (near the top, alongside `STATUS_SYMBOLS`):
+  ```python
+  _ENVIRONMENT_PACKAGES: tuple[str, ...] = (
+      "mcp-coder",
+      "mcp-coder-utils",
+      "mcp-tools-py",
+      "mcp-workspace",
+  )
+  ```
+  The `_print_environment_section()` helper iterates over `_ENVIRONMENT_PACKAGES` instead of an inline hardcoded list (for testability and maintenance).
 - Virtualenv: `sys.prefix` when `sys.prefix != sys.base_prefix`, else `"(none)"`.
 - PYTHONPATH: `os.environ.get("PYTHONPATH", "(not set)")` — if empty string, use `"(not set)"`.
 - Python version: `f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"`.
@@ -50,7 +59,7 @@ print_row("Executable", sys.executable)
 print_row("Virtualenv", sys.prefix if sys.prefix != sys.base_prefix else "(none)")
 print_row("PYTHONPATH", os.environ.get("PYTHONPATH") or "(not set)")
 print()  # blank line between python info and versions
-for pkg in ["mcp-coder", "mcp-coder-utils", "mcp-tools-py", "mcp-workspace"]:
+for pkg in _ENVIRONMENT_PACKAGES:
     try: val = version(pkg)
     except PackageNotFoundError: val = "[ERR] not installed"
     print_row(pkg, val)
