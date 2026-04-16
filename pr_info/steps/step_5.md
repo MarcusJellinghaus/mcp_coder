@@ -61,6 +61,7 @@ Placement is explicit: the MCP CONFIG WARNINGS section appears directly after th
 
 ## HOW
 
+- Import at top of `verify.py`: add `import json` and `import re` (both new). `logging` and `from pathlib import Path` are already imported — the helper depends on them being available.
 - Use `json.load` to read `.mcp.json`; wrap in `try/except (OSError, json.JSONDecodeError)` → return `[]`.
 - Use `re.search(r"\$\{[^}]+\}", value)` to detect whether the value contains ANY unresolved placeholder.
 - For each server in `config.get("mcpServers", {})`, iterate `server.get("env", {})` dict values.

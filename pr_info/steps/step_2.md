@@ -2,7 +2,7 @@
 
 ## Goal
 
-Add a `_pad(title)` helper in `verify.py` that returns a 60-char-wide header (or wider when the title is long — never truncate). Apply it to **all existing `=== X ===` header strings in `verify.py`** — all 9 header-print sites (six named sections plus fallback-branch duplicates and INSTALL INSTRUCTIONS). Tests verify the padding boundary.
+Add a `_pad(title)` helper in `verify.py` that returns a 60-char-wide header (or wider when the title is long — never truncate). Apply it to **all existing `=== X ===` header strings in `verify.py`** — all 9 header-print sites (three formatter helpers plus six inline headers in `execute_verify`, including the two fallback-branch "langchain-mcp-adapters not installed" headers and INSTALL INSTRUCTIONS). Tests verify the padding boundary.
 
 ## LLM Prompt
 
@@ -35,14 +35,14 @@ Replace **all existing `=== X ===` header literals in `verify.py`** — includin
 
 - Add `_pad` near the top of `verify.py` (before `_format_section`).
 - Replace all 9 header literals across the module:
-  1. `_format_section`: `f"\n=== {title} ==="` → `_pad(title)`
-  2. `_format_mcp_section` (primary path): `f"\n=== MCP SERVERS (via langchain-mcp-adapters{title_suffix}) ==="` → `_pad(f"MCP SERVERS (via langchain-mcp-adapters{title_suffix})")`
-  3. `_format_mcp_section` fallback ("langchain-mcp-adapters not installed" branch): same pattern → `_pad(...)`
-  4. `_format_claude_mcp_section` (primary path): same pattern → `_pad(...)`
-  5. `_format_claude_mcp_section` fallback: same pattern → `_pad(...)`
-  6. `execute_verify` inline: `"\n=== CONFIG ==="` → `_pad("CONFIG")`
-  7. `execute_verify` inline: `"\n=== PROMPTS ==="` → `_pad("PROMPTS")`
-  8. `execute_verify` inline: `"\n=== LLM PROVIDER ==="` → `_pad("LLM PROVIDER")`
+  1. `_format_section`: `f"\n=== {title} ==="` → `_pad(title)` (the dynamic `=== {title} ===` line)
+  2. `_format_mcp_section`: `f"\n=== MCP SERVERS (via langchain-mcp-adapters{title_suffix}) ==="` → `_pad(f"MCP SERVERS (via langchain-mcp-adapters{title_suffix})")` (single header, takes `title_suffix`)
+  3. `_format_claude_mcp_section`: `f"\n=== MCP SERVERS (via Claude Code{title_suffix}) ==="` → `_pad(f"MCP SERVERS (via Claude Code{title_suffix})")` (single header, takes `title_suffix`)
+  4. `execute_verify` inline: `"\n=== CONFIG ==="` → `_pad("CONFIG")`
+  5. `execute_verify` inline: `"\n=== PROMPTS ==="` → `_pad("PROMPTS")`
+  6. `execute_verify` inline: `"\n=== LLM PROVIDER ==="` → `_pad("LLM PROVIDER")`
+  7. `execute_verify` fallback MCP "not installed" header in the claude-active branch: `"\n=== MCP SERVERS (via langchain-mcp-adapters) ==="` → `_pad("MCP SERVERS (via langchain-mcp-adapters)")`
+  8. `execute_verify` fallback MCP "not installed" header in the langchain-active branch: `"\n=== MCP SERVERS (via langchain-mcp-adapters) ==="` → `_pad("MCP SERVERS (via langchain-mcp-adapters)")`
   9. `execute_verify` inline: `"\n=== INSTALL INSTRUCTIONS ==="` → `_pad("INSTALL INSTRUCTIONS")`
 
 Equivalent instruction: replace **every** `=== X ===` header string in `verify.py`, including fallback-branch duplicates and INSTALL INSTRUCTIONS.
