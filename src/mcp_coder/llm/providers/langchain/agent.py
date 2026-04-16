@@ -244,6 +244,10 @@ async def run_agent(
         ``(final_text, full_message_history, stats_dict)``.
         *stats_dict* contains: ``agent_steps``, ``total_tool_calls``,
         ``tool_trace``.
+
+    Raises:
+        LLMMCPLaunchError: If an MCP server fails to launch (e.g. executable
+            not found or permission denied).
     """
     # Deferred imports — only needed when agent mode is active
     from langchain_core.messages import (
@@ -400,6 +404,10 @@ async def run_agent_stream(
     Yields:
         ``StreamEvent`` dicts: ``text_delta``, ``tool_use_start``,
         ``tool_result``, ``raw_line``, ``error``, and ``done``.
+
+    Raises:
+        LLMMCPLaunchError: If an MCP server fails to launch (e.g. executable
+            not found or permission denied).
     """
     from langchain_core.messages import (
         AIMessage,
