@@ -24,7 +24,10 @@ from mcp_coder.llm.formatting.render_actions import (
     ToolResult,
     ToolStart,
 )
-from mcp_coder.llm.formatting.stream_renderer import StreamEventRenderer
+from mcp_coder.llm.formatting.stream_renderer import (
+    StreamEventRenderer,
+    format_tool_start,
+)
 from mcp_coder.llm.types import StreamEvent
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 
@@ -213,14 +216,8 @@ class ICoderApp(App[None]):
             self._append_blank_line()
         elif isinstance(action, ToolStart):
             self.query_one(BusyIndicator).show_busy(action.display_name)
-            if action.inline_args is not None:
-                line = f"┌ {action.display_name}({action.inline_args})"
-            else:
-                parts = [f"┌ {action.display_name}"]
-                for key, value in action.block_args:
-                    parts.append(f"│  {key}: {value}")
-                line = "\n".join(parts)
-            output.append_text(line, style=STYLE_TOOL_OUTPUT)
+            lines = format_tool_start(action, full=False)
+            output.append_text("\n".join(lines), style=STYLE_TOOL_OUTPUT)
         elif isinstance(action, ToolResult):
             parts = [f"│  {ln}" for ln in action.output_lines]
             if action.truncated:

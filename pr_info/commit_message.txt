@@ -1,16 +1,21 @@
-Rewrite _render_tool_output() to use generic rendering (#820)
+Refactor ToolStart to carry raw args; add format_tool_start() (#820)
 
-Remove field-filtering logic (_ENVELOPE_FIELDS, _MAIN_CONTENT_KEYS) and
-the obsolete _render_value() helper. _render_tool_output() now only
-unwraps the {"result": ...} envelope and delegates all JSON rendering
-to _render_output_value() (added in step 1), which correctly splits
-multiline strings like diffs.
+Change ToolStart dataclass to hold `args: dict[str, object]` instead
+of pre-formatted inline_args/block_args strings. Formatting decisions
+are made on demand via the new public `format_tool_start(action,
+full=False)` helper, which applies a length-based (100-char)
+inline/block threshold and appends a `├──` separator line when args
+are present.
 
-Add a full=False parameter to _render_tool_output(); when True,
-head/tail truncation is skipped. The StreamEventRenderer continues
-using the default compact mode.
+Consumers now share a single formatting path: iCoder's app.py and
+the CLI rendered output both call `format_tool_start()`. The CLI
+text path uses `_render_value_compact()` for concise single-line
+arg display.
 
-Rewrite the affected test classes: drop TestRenderToolOutputFieldFiltering,
-add coverage for result-envelope unwrap (scalar, dict with multiline diff,
-with extras), non-unwrap of text/content keys, and full-mode truncation
-skip.
+Remove dead code: `_INLINE_ARG_LIMIT` and `_format_tool_args()`.
+
+Tests: rewrite ToolStart tests in test_stream_renderer.py; add
+TestFormatToolStart covering inline/block boundary (exactly 100
+vs 101 chars), compact vs full modes, separator presence/absence,
+and insertion-order preservation in block form. Update affected
+rendered-format tests in test_formatters.py.

@@ -23,7 +23,6 @@ from .render_actions import (
 _HEAD_LINES = 10
 _TAIL_LINES = 5
 _TRUNCATION_THRESHOLD = _HEAD_LINES + _TAIL_LINES  # 15
-_INLINE_ARG_LIMIT = 2
 _MAX_INLINE_LEN = 100
 
 
@@ -45,18 +44,6 @@ def _format_tool_name(name: str) -> str:
             return f"{server} > {tool}"
         return server
     return name
-
-
-def _format_tool_args(args: object) -> str:
-    """Format tool arguments for text display.
-
-    Returns:
-        Formatted string of tool arguments.
-    """
-    if isinstance(args, dict):
-        parts = [f"{k}={v!r}" for k, v in args.items()]
-        return ", ".join(parts)
-    return str(args) if args else ""
 
 
 def _render_value_compact(value: object) -> str:
@@ -199,6 +186,48 @@ def _render_tool_output(
     return (lines, total)
 
 
+def format_tool_start(action: ToolStart, full: bool = False) -> list[str]:
+    """Format a ``ToolStart`` action into display lines.
+
+    Returns a single inline header line when args fit in
+    ``_MAX_INLINE_LEN`` characters, otherwise a block header with one
+    line per arg. When args are present, a ``├──`` separator line is
+    appended as the last line.
+
+    Args:
+        action: The ``ToolStart`` action to format.
+        full: When ``True``, expand block args using full detail; when
+            ``False``, use compact summaries for long values.
+
+    Returns:
+        A list of display lines.
+    """
+    if not action.args:
+        return [f"\u250c {action.display_name}"]
+
+    inline_parts = [
+        f"{key}={_render_value_compact(value)}" for key, value in action.args.items()
+    ]
+    inline = f"\u250c {action.display_name}({', '.join(inline_parts)})"
+    if len(inline) <= _MAX_INLINE_LEN:
+        lines = [inline]
+    else:
+        lines = [f"\u250c {action.display_name}"]
+        for key, value in action.args.items():
+            if full:
+                rendered = _render_value_full(value)
+                if len(rendered) == 1:
+                    lines.append(f"\u2502  {key}: {rendered[0]}")
+                else:
+                    lines.append(f"\u2502  {key}:")
+                    for sub in rendered:
+                        lines.append(f"\u2502    {sub}")
+            else:
+                lines.append(f"\u2502  {key}: {_render_value_compact(value)}")
+    lines.append("\u251c\u2500\u2500")
+    return lines
+
+
 class StreamEventRenderer:
     """Converts ``StreamEvent`` dicts into typed ``RenderAction`` dataclasses.
 
@@ -228,25 +257,12 @@ class StreamEventRenderer:
         if event_type == "tool_use_start":
             name = str(event.get("name", ""))
             args = event.get("args", {})
-            display_name = _format_tool_name(name)
-
-            if isinstance(args, dict) and len(args) <= _INLINE_ARG_LIMIT:
-                inline_args = _format_tool_args(args)
-                block_args: list[tuple[str, str]] = []
-            else:
-                inline_args = None
-                if isinstance(args, dict):
-                    block_args = [
-                        (key, json.dumps(value)) for key, value in args.items()
-                    ]
-                else:
-                    block_args = []
-
+            if not isinstance(args, dict):
+                args = {}
             return ToolStart(
-                display_name=display_name,
+                display_name=_format_tool_name(name),
                 raw_name=name,
-                inline_args=inline_args,
-                block_args=block_args,
+                args=args,
             )
 
         if event_type == "tool_result":

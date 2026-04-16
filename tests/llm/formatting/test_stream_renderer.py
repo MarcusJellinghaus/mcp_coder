@@ -16,6 +16,7 @@ from mcp_coder.llm.formatting.stream_renderer import (
     _render_tool_output,
     _render_value_compact,
     _render_value_full,
+    format_tool_start,
 )
 
 _RENDERER = StreamEventRenderer()
@@ -42,7 +43,7 @@ class TestStreamEventRenderer:
         action = _RENDERER.render({"type": "text_delta", "text": "Hello"})
         assert action == TextChunk(text="Hello")
 
-    def test_tool_use_start_inline(self) -> None:
+    def test_tool_use_start_short_args(self) -> None:
         action = _RENDERER.render(
             {
                 "type": "tool_use_start",
@@ -53,10 +54,9 @@ class TestStreamEventRenderer:
         assert isinstance(action, ToolStart)
         assert action.display_name == "workspace > read_file"
         assert action.raw_name == "mcp__workspace__read_file"
-        assert action.inline_args == "file_path='x.py'"
-        assert action.block_args == []
+        assert action.args == {"file_path": "x.py"}
 
-    def test_tool_use_start_block(self) -> None:
+    def test_tool_use_start_many_args(self) -> None:
         action = _RENDERER.render(
             {
                 "type": "tool_use_start",
@@ -65,13 +65,11 @@ class TestStreamEventRenderer:
             }
         )
         assert isinstance(action, ToolStart)
-        assert action.display_name == "workspace > edit_file"
-        assert action.inline_args is None
-        assert action.block_args == [
-            ("file_path", '"a.py"'),
-            ("old_text", '"foo"'),
-            ("new_text", '"bar"'),
-        ]
+        assert action.args == {
+            "file_path": "a.py",
+            "old_text": "foo",
+            "new_text": "bar",
+        }
 
     def test_tool_result_short(self) -> None:
         action = _RENDERER.render(
@@ -425,3 +423,165 @@ class TestRenderOutputValue:
 
     def test_string_value_in_dict(self) -> None:
         assert _render_output_value({"key": "simple"}) == ['key: "simple"']
+
+
+class TestFormatToolStart:
+    """Tests for format_tool_start()."""
+
+    def test_no_args(self) -> None:
+        """Empty args → single header line, no separator."""
+        action = ToolStart(
+            display_name="workspace > read_file",
+            raw_name="mcp__workspace__read_file",
+            args={},
+        )
+        assert format_tool_start(action) == ["\u250c workspace > read_file"]
+
+    def test_inline_short_args(self) -> None:
+        """Short args fit inline → header line + separator."""
+        action = ToolStart(
+            display_name="workspace > read_file",
+            raw_name="mcp__workspace__read_file",
+            args={"file_path": "x.py"},
+        )
+        result = format_tool_start(action)
+        assert result == [
+            "\u250c workspace > read_file(file_path='x.py')",
+            "\u251c\u2500\u2500",
+        ]
+
+    def test_block_long_args(self) -> None:
+        """Args exceeding 100 chars → block header, per-arg lines, separator."""
+        # Use values of 50 chars each (below 80-char compact threshold,
+        # so they keep their repr form). Three args with repr'd 50-char
+        # values easily exceed the 100-char inline threshold.
+        val = "x" * 50
+        action = ToolStart(
+            display_name="workspace > edit_file",
+            raw_name="mcp__workspace__edit_file",
+            args={"file_path": "a.py", "old_text": val, "new_text": val},
+        )
+        result = format_tool_start(action)
+        assert result[0] == "\u250c workspace > edit_file"
+        assert result[-1] == "\u251c\u2500\u2500"
+        # Block lines for each arg with │
+        assert any("file_path" in line and line.startswith("\u2502") for line in result)
+        assert any("old_text" in line and line.startswith("\u2502") for line in result)
+        assert any("new_text" in line and line.startswith("\u2502") for line in result)
+
+    def test_inline_threshold_boundary(self) -> None:
+        """Exactly 100 chars → inline; 101 chars → block."""
+        # Line format: "┌ NAME(KEY='<80 x's>')"
+        # Length = 7 + len(NAME) + len(KEY) + 80 (since repr adds 2 quotes)
+        # = 7 + 4 + 9 + 80 = 100
+        value = "x" * 80  # repr is 82 chars
+        action_100 = ToolStart(
+            display_name="tool",
+            raw_name="tool",
+            args={"keystr_xx": value},
+        )
+        result_100 = format_tool_start(action_100)
+        assert result_100[0].startswith("\u250c tool(keystr_xx=")
+        assert len(result_100[0]) == 100
+        # Inline form: header + separator only (2 lines)
+        assert len(result_100) == 2
+        assert result_100[-1] == "\u251c\u2500\u2500"
+
+        # Now 101-char variant: add one more char to NAME
+        action_101 = ToolStart(
+            display_name="toolx",
+            raw_name="toolx",
+            args={"keystr_xx": value},
+        )
+        result_101 = format_tool_start(action_101)
+        # Block form: header + arg line + separator (3 lines)
+        assert result_101[0] == "\u250c toolx"
+        assert len(result_101) == 3
+        assert result_101[-1] == "\u251c\u2500\u2500"
+
+    def test_compact_value_summaries(self) -> None:
+        """Large list arg → compact mode shows '(N items)'."""
+        action = ToolStart(
+            display_name="workspace > edit_file",
+            raw_name="mcp__workspace__edit_file",
+            args={"edits": [{"a": 1}] * 5, "file_path": "a.py", "other": "x" * 150},
+        )
+        result = format_tool_start(action, full=False)
+        # Block format: must contain '(5 items)' for edits and '(150 chars)' for other
+        joined = "\n".join(result)
+        assert "(5 items)" in joined
+        assert "(150 chars)" in joined
+
+    def test_full_mode_expands_values(self) -> None:
+        """Full mode expands multiline string values as indented blocks."""
+        # Use enough args to force block format in compact inline attempt.
+        action = ToolStart(
+            display_name="workspace > edit_file",
+            raw_name="mcp__workspace__edit_file",
+            args={
+                "file_path": "some/path/to/file.py",
+                "old_text": "line1\nline2\nline3",
+                "new_text": "y" * 50,
+                "extra": "z" * 50,
+            },
+        )
+        result = format_tool_start(action, full=True)
+        # Should be block mode (exceeds 100 chars inline)
+        assert result[0] == "\u250c workspace > edit_file"
+        # Multi-line string expanded
+        assert "\u2502  old_text:" in result
+        assert "\u2502    line1" in result
+        assert "\u2502    line2" in result
+        assert "\u2502    line3" in result
+        assert result[-1] == "\u251c\u2500\u2500"
+
+    def test_full_mode_still_inlines_short(self) -> None:
+        """Short args + full=True → still inline (full doesn't force block)."""
+        action = ToolStart(
+            display_name="workspace > read_file",
+            raw_name="mcp__workspace__read_file",
+            args={"file_path": "x.py"},
+        )
+        result = format_tool_start(action, full=True)
+        assert result == [
+            "\u250c workspace > read_file(file_path='x.py')",
+            "\u251c\u2500\u2500",
+        ]
+
+    def test_separator_present_with_args(self) -> None:
+        """Last line is always '├──' when args are present."""
+        action = ToolStart(
+            display_name="tool",
+            raw_name="tool",
+            args={"k": "v"},
+        )
+        result = format_tool_start(action)
+        assert result[-1] == "\u251c\u2500\u2500"
+
+    def test_separator_absent_without_args(self) -> None:
+        """No '├──' in output when no args."""
+        action = ToolStart(display_name="tool", raw_name="tool", args={})
+        result = format_tool_start(action)
+        assert "\u251c\u2500\u2500" not in result
+
+    def test_block_preserves_arg_order(self) -> None:
+        """Block format preserves insertion order, not alphabetical."""
+        # Use 50-char string values (repr form, not summarized) to ensure
+        # the inline form exceeds 100 chars and block mode is used.
+        val = "x" * 50
+        action = ToolStart(
+            display_name="tool",
+            raw_name="tool",
+            args={
+                "zebra": val,
+                "apple": val,
+                "middle": val,
+            },
+        )
+        result = format_tool_start(action)
+        # Strip to find arg lines (those starting with │)
+        arg_lines = [line for line in result if line.startswith("\u2502")]
+        assert len(arg_lines) == 3
+        assert "zebra" in arg_lines[0]
+        assert "apple" in arg_lines[1]
+        assert "middle" in arg_lines[2]

@@ -12,7 +12,11 @@ from typing import IO, Any, Dict
 from ..types import StreamEvent
 from .render_actions import ErrorMessage, StreamDone, TextChunk, ToolResult, ToolStart
 from .sdk_serialization import extract_tool_interactions, serialize_message_for_json
-from .stream_renderer import StreamEventRenderer, _format_tool_args
+from .stream_renderer import (
+    StreamEventRenderer,
+    _render_value_compact,
+    format_tool_start,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -313,12 +317,8 @@ def print_stream_event(
         if isinstance(action, TextChunk):
             print(action.text, end="", file=file, flush=True)
         elif isinstance(action, ToolStart):
-            if action.inline_args is not None:
-                print(f"\u250c {action.display_name}({action.inline_args})", file=file)
-            else:
-                print(f"\u250c {action.display_name}", file=file)
-                for key, value in action.block_args:
-                    print(f"\u2502  {key}: {value}", file=file)
+            for line in format_tool_start(action, full=False):
+                print(line, file=file)
         elif isinstance(action, ToolResult):
             for line in action.output_lines:
                 print(f"\u2502  {line}", file=file)
@@ -341,7 +341,13 @@ def print_stream_event(
         print(event.get("text", ""), end="", file=file, flush=True)
     elif event_type == "tool_use_start":
         name = str(event.get("name", ""))
-        args_str = _format_tool_args(event.get("args"))
+        args = event.get("args") or {}
+        if isinstance(args, dict):
+            args_str = ", ".join(
+                f"{k}={_render_value_compact(v)}" for k, v in args.items()
+            )
+        else:
+            args_str = ""
         print(f"\n── tool: {name}({args_str}) ──", file=file)
     elif event_type == "tool_result":
         output = str(event.get("output", ""))
