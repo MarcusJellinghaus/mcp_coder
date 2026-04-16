@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from mcp_coder.llm.types import UsageInfo
 
+from ._exceptions import LLMMCPLaunchError
 from ._usage import _extract_usage, _sum_usage
 
 if TYPE_CHECKING:
@@ -264,19 +265,26 @@ async def run_agent(
     client = MultiServerMCPClient(cast(Any, server_config))
     all_tools = []
     for server_name, connection in client.connections.items():
-        async with client.session(server_name) as session:
-            raw_tools = await session.list_tools()
-            for tool in raw_tools.tools:
-                sanitized = _sanitize_tool_schema(tool.inputSchema)
-                # Shallow copy to avoid mutating the original MCP tool
-                tool = tool.model_copy(update={"inputSchema": sanitized})
-                lc_tool = convert_mcp_tool_to_langchain_tool(
-                    None,
-                    tool,
-                    connection=connection,
-                    server_name=server_name,
-                )
-                all_tools.append(lc_tool)
+        try:
+            async with client.session(server_name) as session:
+                raw_tools = await session.list_tools()
+                for tool in raw_tools.tools:
+                    sanitized = _sanitize_tool_schema(tool.inputSchema)
+                    # Shallow copy to avoid mutating the original MCP tool
+                    tool = tool.model_copy(update={"inputSchema": sanitized})
+                    lc_tool = convert_mcp_tool_to_langchain_tool(
+                        None,
+                        tool,
+                        connection=connection,
+                        server_name=server_name,
+                    )
+                    all_tools.append(lc_tool)
+        except (FileNotFoundError, PermissionError) as exc:
+            cmd = server_config[server_name].get("command", "")
+            raise LLMMCPLaunchError(
+                f"MCP server '{server_name}' failed to launch: "
+                f"{cmd} ({type(exc).__name__})"
+            ) from exc
 
     agent = create_react_agent(chat_model, all_tools)
 
@@ -413,18 +421,25 @@ async def run_agent_stream(
         client = MultiServerMCPClient(cast(Any, server_config))
         all_tools = []
         for server_name, connection in client.connections.items():
-            async with client.session(server_name) as session:
-                raw_tools = await session.list_tools()
-                for tool in raw_tools.tools:
-                    sanitized = _sanitize_tool_schema(tool.inputSchema)
-                    tool = tool.model_copy(update={"inputSchema": sanitized})
-                    lc_tool = convert_mcp_tool_to_langchain_tool(
-                        None,
-                        tool,
-                        connection=connection,
-                        server_name=server_name,
-                    )
-                    all_tools.append(lc_tool)
+            try:
+                async with client.session(server_name) as session:
+                    raw_tools = await session.list_tools()
+                    for tool in raw_tools.tools:
+                        sanitized = _sanitize_tool_schema(tool.inputSchema)
+                        tool = tool.model_copy(update={"inputSchema": sanitized})
+                        lc_tool = convert_mcp_tool_to_langchain_tool(
+                            None,
+                            tool,
+                            connection=connection,
+                            server_name=server_name,
+                        )
+                        all_tools.append(lc_tool)
+            except (FileNotFoundError, PermissionError) as exc:
+                cmd = server_config[server_name].get("command", "")
+                raise LLMMCPLaunchError(
+                    f"MCP server '{server_name}' failed to launch: "
+                    f"{cmd} ({type(exc).__name__})"
+                ) from exc
 
     agent = create_react_agent(chat_model, all_tools)
 

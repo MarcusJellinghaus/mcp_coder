@@ -665,3 +665,165 @@ class TestRunAgent:
         assert trace[1]["name"] == "read_file"
         assert trace[1]["args"] == {"path": "b.py"}
         assert trace[1]["result"] == "content of b.py"
+
+
+# ---------------------------------------------------------------------------
+# Tests for LLMMCPLaunchError wrap (issue #830 — Step 2)
+# ---------------------------------------------------------------------------
+
+
+def _make_launch_failing_client(exc: BaseException) -> MagicMock:
+    """Build a mock MultiServerMCPClient whose session() raises on enter."""
+    mock_client = MagicMock()
+    mock_client.connections = {"broken": {"transport": "stdio", "command": "/no/such"}}
+    mock_client.session.return_value.__aenter__ = AsyncMock(side_effect=exc)
+    mock_client.session.return_value.__aexit__ = AsyncMock(return_value=False)
+    return mock_client
+
+
+class TestRunAgentLaunchErrorWrap:
+    """Wrap FileNotFoundError / PermissionError as LLMMCPLaunchError."""
+
+    @pytest.mark.asyncio
+    async def test_run_agent_wraps_filenotfound_as_launch_error(
+        self, tmp_path: Path
+    ) -> None:
+        """FileNotFoundError from session.__aenter__ becomes LLMMCPLaunchError."""
+        from mcp_coder.llm.providers.langchain._exceptions import LLMMCPLaunchError
+
+        cfg = {"mcpServers": {"broken": {"command": "/no/such/binary"}}}
+        cfg_file = tmp_path / ".mcp.json"
+        cfg_file.write_text(json.dumps(cfg), encoding="utf-8")
+
+        original = FileNotFoundError("no such file")
+        mock_client = _make_launch_failing_client(original)
+
+        with (
+            patch(_PATCH_MCP_CLIENT, return_value=mock_client),
+            patch(_PATCH_CONVERT_TOOL, return_value=MagicMock()),
+            patch(_PATCH_FROM_DICT, return_value=[]),
+            pytest.raises(LLMMCPLaunchError) as exc_info,
+        ):
+            await run_agent(
+                question="test",
+                chat_model=MagicMock(),
+                messages=[],
+                mcp_config_path=str(cfg_file),
+            )
+
+        msg = str(exc_info.value)
+        assert "broken" in msg
+        assert "/no/such/binary" in msg
+        assert "FileNotFoundError" in msg
+        assert exc_info.value.__cause__ is original
+
+    @pytest.mark.asyncio
+    async def test_run_agent_wraps_permissionerror_as_launch_error(
+        self, tmp_path: Path
+    ) -> None:
+        """PermissionError from session.__aenter__ becomes LLMMCPLaunchError."""
+        from mcp_coder.llm.providers.langchain._exceptions import LLMMCPLaunchError
+
+        cfg = {"mcpServers": {"broken": {"command": "/denied/binary"}}}
+        cfg_file = tmp_path / ".mcp.json"
+        cfg_file.write_text(json.dumps(cfg), encoding="utf-8")
+
+        original = PermissionError("denied")
+        mock_client = _make_launch_failing_client(original)
+
+        with (
+            patch(_PATCH_MCP_CLIENT, return_value=mock_client),
+            patch(_PATCH_CONVERT_TOOL, return_value=MagicMock()),
+            patch(_PATCH_FROM_DICT, return_value=[]),
+            pytest.raises(LLMMCPLaunchError) as exc_info,
+        ):
+            await run_agent(
+                question="test",
+                chat_model=MagicMock(),
+                messages=[],
+                mcp_config_path=str(cfg_file),
+            )
+
+        msg = str(exc_info.value)
+        assert "broken" in msg
+        assert "/denied/binary" in msg
+        assert "PermissionError" in msg
+        assert exc_info.value.__cause__ is original
+
+    @pytest.mark.asyncio
+    async def test_run_agent_stream_wraps_filenotfound(self, tmp_path: Path) -> None:
+        """run_agent_stream wraps FileNotFoundError on first iteration."""
+        from mcp_coder.llm.providers.langchain._exceptions import LLMMCPLaunchError
+        from mcp_coder.llm.providers.langchain.agent import run_agent_stream
+
+        cfg = {"mcpServers": {"broken": {"command": "/no/such/binary"}}}
+        cfg_file = tmp_path / ".mcp.json"
+        cfg_file.write_text(json.dumps(cfg), encoding="utf-8")
+
+        original = FileNotFoundError("no such file")
+        mock_client = _make_launch_failing_client(original)
+
+        with (
+            patch(_PATCH_MCP_CLIENT, return_value=mock_client),
+            patch(_PATCH_CONVERT_TOOL, return_value=MagicMock()),
+            patch(_PATCH_CREATE_AGENT, return_value=AsyncMock()),
+            patch(_PATCH_FROM_DICT, return_value=[]),
+        ):
+            gen = run_agent_stream(
+                question="test",
+                chat_model=MagicMock(),
+                messages=[],
+                mcp_config_path=str(cfg_file),
+                session_id="s1",
+            )
+            with pytest.raises(LLMMCPLaunchError) as exc_info:
+                async for _ in gen:
+                    pass
+
+        msg = str(exc_info.value)
+        assert "broken" in msg
+        assert "/no/such/binary" in msg
+        assert "FileNotFoundError" in msg
+        assert exc_info.value.__cause__ is original
+
+    @pytest.mark.asyncio
+    async def test_run_agent_stream_skips_wrap_when_tools_provided(
+        self, tmp_path: Path
+    ) -> None:
+        """When ``tools`` is passed, MultiServerMCPClient must not be constructed."""
+        from mcp_coder.llm.providers.langchain.agent import run_agent_stream
+
+        cfg_file = tmp_path / ".mcp.json"
+        cfg_file.write_text(json.dumps({"mcpServers": {}}), encoding="utf-8")
+
+        mock_agent = MagicMock()
+
+        async def _empty_events() -> Any:
+            return
+            yield  # pragma: no cover  # make this an async generator
+
+        mock_agent.astream_events.return_value = _empty_events()
+
+        pre_built_tool = MagicMock()
+
+        with (
+            patch(_PATCH_MCP_CLIENT) as mock_client_cls,
+            patch(_PATCH_CREATE_AGENT, return_value=mock_agent),
+            patch(_PATCH_FROM_DICT, return_value=[]),
+            patch(
+                "mcp_coder.llm.storage.session_storage.store_langchain_history",
+                MagicMock(),
+            ),
+        ):
+            gen = run_agent_stream(
+                question="test",
+                chat_model=MagicMock(),
+                messages=[],
+                mcp_config_path=str(cfg_file),
+                session_id="s1",
+                tools=[pre_built_tool],
+            )
+            async for _ in gen:
+                pass
+
+        mock_client_cls.assert_not_called()
