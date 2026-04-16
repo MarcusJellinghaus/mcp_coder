@@ -6,6 +6,7 @@ MLflow) and formats their output for the terminal.
 
 import argparse
 import datetime
+import json
 import keyword
 import logging
 import os
@@ -40,6 +41,37 @@ _ENVIRONMENT_PACKAGES: tuple[str, ...] = (
     "mcp-tools-py",
     "mcp-workspace",
 )
+
+
+class _DropUnexpandedWarnings(logging.Filter):
+    """Scoped filter that drops langchain-mcp-adapters unresolved-var warnings."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        return "unexpanded variable" not in record.getMessage()
+
+
+def _collect_mcp_warnings(mcp_json_path: str | None) -> list[str]:
+    """Parse ``.mcp.json`` for unresolved ``${...}`` placeholders in env values.
+
+    Args:
+        mcp_json_path: Path to ``.mcp.json`` (or None).
+
+    Returns:
+        Pre-formatted lines ``"server / env_var  unresolved_template"``; empty
+        if there are no findings or the file is missing/invalid.
+    """
+    if mcp_json_path is None:
+        return []
+    try:
+        data = json.loads(Path(mcp_json_path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    lines: list[str] = []
+    for server_name, server in data.get("mcpServers", {}).items():
+        for env_var, value in server.get("env", {}).items():
+            if isinstance(value, str) and re.search(r"\$\{[^}]+\}", value):
+                lines.append(f"{server_name} / {env_var}  {value}")
+    return lines
 
 
 def _print_environment_section() -> None:
@@ -507,7 +539,13 @@ def execute_verify(args: argparse.Namespace) -> int:
         try:
             from ...llm.providers.langchain.verification import verify_mcp_servers
 
-            mcp_result = verify_mcp_servers(mcp_config_resolved, env_vars=env_vars)
+            lc_logger = logging.getLogger("langchain_mcp_adapters")
+            log_filter = _DropUnexpandedWarnings()
+            lc_logger.addFilter(log_filter)
+            try:
+                mcp_result = verify_mcp_servers(mcp_config_resolved, env_vars=env_vars)
+            finally:
+                lc_logger.removeFilter(log_filter)
         except ImportError:
             mcp_result = None
 
@@ -573,6 +611,14 @@ def execute_verify(args: argparse.Namespace) -> int:
             claude_mcp_ok = True
         else:
             claude_mcp_ok = False
+
+    # 3a-bis. MCP config warnings (unresolved ${...} placeholders)
+    if mcp_config_resolved:
+        warnings = _collect_mcp_warnings(mcp_config_resolved)
+        if warnings:
+            print(_pad("MCP CONFIG WARNINGS"))
+            for warning_line in warnings:
+                print(f"  {warning_line}")
 
     # 3b. MCP edit smoke test (informational only)
     if mcp_config_resolved:

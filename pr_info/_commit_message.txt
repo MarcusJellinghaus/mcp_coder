@@ -1,26 +1,34 @@
-Group CONFIG entries by [section] header in verify output (#824 step 4)
+Add MCP config warnings section and log filter to verify (#824 step 5)
 
-Replace the flat config-printing loop in `execute_verify` with a
-grouping loop keyed on `entry["label"]`. Each `[section]` header is
-emitted once, items are indented below it, and a blank line separates
-groups.
+Parse `.mcp.json` for unresolved `${...}` placeholders in
+`mcpServers[*].env[*]` values and render them in a new
+`=== MCP CONFIG WARNINGS ===` section. The section is omitted when
+there are no findings or when `.mcp.json` is missing/invalid.
 
-For entries inside a `[section]`:
-- Split value on first space -> `key` / `rest`.
-- If the first token looks like a Python-identifier-like key
-  (new `_looks_like_key` helper; rejects Python keywords such as
-  `not` so that `not configured` is not rendered as a key column),
-  render as `    {key:<18s} {symbol} {rest}`.
-- Otherwise (e.g. `[OK] 6 repos configured`, `not configured`),
-  render the whole value without a key column.
+Also suppress the raw `WARNING: env['PYTHONPATH'] contains unexpanded
+variable reference` stdout noise from `langchain_mcp_adapters` via a
+scoped `logging.Filter` installed around the `verify_mcp_servers()`
+call. A try/finally ensures the filter is removed afterwards.
 
-Top-level rows (`Config file`, `Expected path`, `Hint`, `Parse error`)
-continue to render as two-space indented rows.
+Changes:
+- `src/mcp_coder/cli/commands/verify.py`
+  - Add `import json`.
+  - Add `_DropUnexpandedWarnings` logging.Filter subclass that drops
+    records whose message contains "unexpanded variable".
+  - Add `_collect_mcp_warnings(path)` parser helper:
+    - Returns `[]` for `None`, missing file, or invalid JSON.
+    - Emits one `"server / env_var  value"` row per env value that
+      contains any `${...}` placeholder, preserving the full original
+      value (including suffixes like `/src` or `\Lib\`).
+  - Wrap the `verify_mcp_servers()` call with the scoped log filter
+    (try/finally).
+  - Render the new section immediately after the langchain-MCP
+    server list and before the MCP edit smoke test / test-prompt rows.
 
-`verify_config()` return shape is unchanged.
-
-Adds `TestConfigGrouping` covering header-once grouping, indentation,
-blank-line separation, key extraction, the `Config file` top-level
-row, info entries without a clean `key value` split, and summary
-entries whose value begins with a status symbol. Also adds
-`TestLooksLikeKey` covering the identifier/keyword/bracket rules.
+- `tests/cli/commands/test_verify_orchestration.py`
+  - Add `TestMcpConfigWarnings` covering parser edge cases (None,
+    missing file, invalid JSON, no placeholders, single and multiple
+    findings) and the orchestrator behavior (section omitted when
+    clean, rendered when findings exist, log filter suppresses the
+    `unexpanded variable` warning and is removed after the call).
+  - Add `TestDropUnexpandedFilter` covering the filter itself.
