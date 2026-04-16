@@ -18,7 +18,7 @@ Run all three checks after.
 
 ## WHAT
 
-In `AppCore.stream_llm()`, the existing code (lines 91-95) already extracts `input_tokens` and `output_tokens` from the done event's `usage` dict. Add extraction of `cache_read_input_tokens` and pass it to `self._token_usage.update()`.
+In `AppCore.stream_llm()`, the existing `done`-event handler branch already extracts `input_tokens` and `output_tokens` from the event's `usage` dict (look for the `event["type"] == "done"` branch and the subsequent `self._token_usage.update(...)` call). Add extraction of `cache_read_input_tokens` and pass it to `self._token_usage.update()`.
 
 ## ALGORITHM — change in `stream_llm()`
 
@@ -36,7 +36,7 @@ That's it — 3 lines changed.
 
 ## HOW
 
-- The `usage` dict in the "done" event already contains `cache_read_input_tokens` when emitted by Claude CLI (see `claude_code_cli_streaming.py:_map_stream_message_to_event`)
+- The `usage` dict in the "done" event already contains `cache_read_input_tokens` when emitted by Claude CLI (see `_map_stream_message_to_event` in `claude_code_cli_streaming.py`)
 - LangChain will populate this in steps 4-5
 - `cache_read_input_tokens` defaults to `0` via `.get()` so existing providers that don't emit it continue to work
 
@@ -60,6 +60,8 @@ Add these tests:
 2. **`test_stream_llm_no_cache_in_usage`** — FakeLLMService emits done event with `usage: {"input_tokens": 100, "output_tokens": 50}` (no cache key). Verify `core.token_usage.last_cache_read == 0`.
 
 3. **`test_stream_llm_cumulative_cache`** — Two stream calls, first with `cache_read_input_tokens: 200`, second with `cache_read_input_tokens: 300`. Verify `total_cache_read == 500`.
+
+4. **`test_stream_llm_claude_cli_done_event_cache_regression`** — Regression guard for the Claude CLI → icoder pipeline. Feed a realistic Claude CLI `done` event (with `input_tokens`, `output_tokens`, and `cache_read_input_tokens` fields matching what `_map_stream_message_to_event` emits) through `AppCore.stream_llm()`. Assert the status-bar `TokenUsage` (`core.token_usage`) receives the `cache_read_input_tokens` value. Currently works end-to-end but has no dedicated test for cache flow.
 
 ## COMMIT
 

@@ -72,6 +72,7 @@ Add these tests:
 4. **`test_token_usage_display_text_without_cache`** — `update(1200, 800)` → display does NOT contain `cache:` (backward compat)
 5. **`test_token_usage_display_text_mixed_cache`** — first update without cache, second with cache → last section has cache%, total section has cache% (based on totals)
 6. **`test_token_usage_cache_percentage_rounding`** — verify rounding: `update(1000, 500, 333)` → `cache:33%`
+7. **`test_token_usage_display_text_zero_input_with_cache`** — edge case guarding against `ZeroDivisionError`: `update(input_tokens=0, output_tokens=0, cache_read_input_tokens=100)` → cache% hidden, no exception raised. Guards providers that emit `cache_read > 0` while `input_tokens == 0`.
 
 ## COMMIT
 

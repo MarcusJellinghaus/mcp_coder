@@ -20,9 +20,11 @@ input_tokens, output_tokens, cache_read_input_tokens, cache_creation_input_token
 ```
 This is the contract between providers and consumers. Lives in `llm/types.py` (LLM layer, not UI layer) per issue Decision #3.
 
-### 2. LangChain usage extraction helper (`langchain/__init__.py`)
+### 2. LangChain usage extraction helper (`langchain/_usage.py`)
 
-Single `_extract_usage(ai_msg)` helper maps LangChain's `usage_metadata` → `UsageInfo` dict. Used in all 4 LangChain code paths to avoid duplicating the nested-dict traversal (`input_token_details.cache_read` → `cache_read_input_tokens`, etc.). A companion `_sum_usage()` helper adds two usage dicts for agent multi-step summing.
+Single `_extract_usage(ai_msg)` helper maps LangChain's `usage_metadata` → `UsageInfo` dict. Used in all 4 LangChain code paths to avoid duplicating the nested-dict traversal (`input_token_details.cache_read` → `cache_read_input_tokens`, etc.). A companion `_sum_usage()` helper adds two usage dicts for agent multi-step summing. Both live in a dedicated `_usage.py` submodule (not in `langchain/__init__.py`) to avoid circular-import risk between `__init__.py` and `agent.py`.
+
+Note: `cache_creation_input_tokens` flows into `StreamEvent["usage"]` and `raw_response["usage"]` but is NOT extracted into `TokenUsage` or displayed. It is captured for future analysis/logging.
 
 ### 3. Data flow (unchanged architecture, new data)
 
@@ -45,7 +47,8 @@ Cache percentage hidden entirely when data unavailable (Decision #6).
 |------|--------|
 | `src/mcp_coder/llm/types.py` | Add `UsageInfo` TypedDict, export in `__all__` |
 | `src/mcp_coder/llm/__init__.py` | Re-export `UsageInfo` |
-| `src/mcp_coder/llm/providers/langchain/__init__.py` | Add `_extract_usage()`, `_sum_usage()` helpers; use in `_ask_text`, `_ask_text_stream` |
+| `src/mcp_coder/llm/providers/langchain/_usage.py` | **New file.** Contains `_extract_usage()` and `_sum_usage()` helpers |
+| `src/mcp_coder/llm/providers/langchain/__init__.py` | Import helpers from `_usage`; use in `_ask_text`, `_ask_text_stream` |
 | `src/mcp_coder/llm/providers/langchain/agent.py` | Sum usage in `run_agent()` stats and `run_agent_stream()` done event |
 | `src/mcp_coder/icoder/core/types.py` | Add cache fields to `TokenUsage`, update `update()` signature, update `display_text()` |
 | `src/mcp_coder/icoder/core/app_core.py` | Pass `cache_read_input_tokens` from done event to `TokenUsage.update()` |

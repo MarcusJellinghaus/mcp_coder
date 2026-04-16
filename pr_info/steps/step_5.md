@@ -7,8 +7,8 @@
 ```
 Implement step 5 of issue #819 (pr_info/steps/summary.md).
 Sum token usage across all LLM calls in run_agent() and run_agent_stream().
-Import _extract_usage and _sum_usage from the langchain __init__ (step 4).
-Write tests first (TDD), then implement. Run all three checks after.
+Import _extract_usage and _sum_usage from mcp_coder.llm.providers.langchain._usage
+(created in step 4). Write tests first (TDD), then implement. Run all three checks after.
 ```
 
 ## WHERE
@@ -36,16 +36,16 @@ yield {"type": "done", "session_id": session_id, "usage": accumulated_usage}
 ## HOW — imports
 
 ```python
-from mcp_coder.llm.providers.langchain import _extract_usage, _sum_usage
+from mcp_coder.llm.providers.langchain._usage import _extract_usage, _sum_usage
 ```
 
-These helpers were added in step 4.
+These helpers live in the dedicated `_usage.py` submodule (step 4) to avoid circular-import risk between `langchain/__init__.py` and `agent.py`.
 
 ## ALGORITHM — `run_agent()` addition
 
 ```python
 # Inside existing AIMessage loop:
-accumulated_usage: dict[str, int] = {}
+accumulated_usage: UsageInfo = {}
 for msg in output_messages:
     if isinstance(msg, AIMessage):
         msg_usage = _extract_usage(msg)
@@ -58,7 +58,7 @@ stats["usage"] = accumulated_usage
 ## ALGORITHM — `run_agent_stream()` addition
 
 ```python
-accumulated_usage: dict[str, int] = {}
+accumulated_usage: UsageInfo = {}
 
 # Inside the event loop, add a new elif branch:
 elif event_kind == "on_chat_model_end":
@@ -85,7 +85,7 @@ Agent with 2 LLM calls:
 
 ### `tests/llm/providers/langchain/test_langchain_agent.py`
 
-1. **`test_run_agent_stats_include_usage`** — mock `agent.ainvoke()` returning messages where `AIMessage`s have `usage_metadata`. Verify `stats["usage"]` contains summed values.
+1. **`test_run_agent_stats_include_usage`** — mock `agent.ainvoke()` returning messages where `AIMessage`s have `usage_metadata`. Tests MUST construct real `langchain_core.messages.AIMessage(content=..., usage_metadata={...})` instances (NOT `Mock` objects) to mirror actual attribute access in the production code path. Verify `stats["usage"]` contains summed values.
 
 2. **`test_run_agent_stats_usage_empty_when_no_metadata`** — mock `AIMessage`s without `usage_metadata`. Verify `stats["usage"]` is empty dict `{}`.
 

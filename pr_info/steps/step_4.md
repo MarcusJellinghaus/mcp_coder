@@ -6,27 +6,33 @@
 
 ```
 Implement step 4 of issue #819 (pr_info/steps/summary.md).
-Add _extract_usage() and _sum_usage() helpers to the langchain provider package.
-Use _extract_usage() in _ask_text (→ raw_response["usage"]) and _ask_text_stream (→ done event usage).
+Create a new _usage.py submodule under the langchain provider package containing
+_extract_usage() and _sum_usage() helpers. Use _extract_usage() in _ask_text
+(→ raw_response["usage"]) and _ask_text_stream (→ done event usage).
 Write tests first (TDD), then implement. Run all three checks after.
 ```
 
 ## WHERE
 
-- **Modify**: `src/mcp_coder/llm/providers/langchain/__init__.py`
+- **Create**: `src/mcp_coder/llm/providers/langchain/_usage.py` (new file containing `_extract_usage` and `_sum_usage`)
+- **Modify**: `src/mcp_coder/llm/providers/langchain/__init__.py` (import helpers from `_usage` for use in `_ask_text` and `_ask_text_stream`)
 - **Modify**: `tests/llm/providers/langchain/test_langchain_provider.py`
 - **Modify**: `tests/llm/providers/langchain/test_langchain_streaming.py`
 
 ## WHAT
 
-### New helper functions (module-private)
+### New helper functions (in `_usage.py`, module-private)
+
+Helpers live in a dedicated `_usage.py` submodule (NOT in `langchain/__init__.py`) to avoid circular-import risk between `langchain/__init__.py` and `agent.py`.
 
 ```python
-def _extract_usage(ai_msg: Any) -> dict[str, int]:
+from mcp_coder.llm.types import UsageInfo
+
+def _extract_usage(ai_msg: Any) -> UsageInfo:
     """Extract UsageInfo-shaped dict from a LangChain AIMessage's usage_metadata."""
 
-def _sum_usage(a: dict[str, int], b: dict[str, int]) -> dict[str, int]:
-    """Sum two usage dicts field-by-field. Used for agent multi-step summing."""
+def _sum_usage(a: UsageInfo, b: UsageInfo) -> UsageInfo:
+    """Sum two UsageInfo dicts field-by-field. Used for agent multi-step summing."""
 ```
 
 ### `_ask_text()` change
@@ -61,15 +67,20 @@ return usage
 
 ## ALGORITHM — `_sum_usage(a, b)`
 
+Always include all 4 keys with `0` default. Symmetric with `_extract_usage`; the display layer already gates `cache:XX%` on `cache_read > 0`, so emitting zeros is safe.
+
 ```python
-keys = {"input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens"}
-return {k: a.get(k, 0) + b.get(k, 0) for k in keys if a.get(k, 0) + b.get(k, 0) > 0}
+def _sum_usage(a: UsageInfo, b: UsageInfo) -> UsageInfo:
+    keys = ("input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")
+    return {k: a.get(k, 0) + b.get(k, 0) for k in keys}
 ```
 
 ## ALGORITHM — `_ask_text_stream()` change
 
+Track ANY chunk with non-empty `usage_metadata` as `last_chunk` (last-wins). Do NOT assume usage only appears on the final chunk — some providers emit usage on a middle chunk and then send additional chunks without usage.
+
 ```python
-last_chunk = None          # track last chunk with usage_metadata
+last_chunk = None          # last-wins: any chunk with non-empty usage_metadata
 for chunk in chat_model.stream(lc_messages):
     if getattr(chunk, "usage_metadata", None):
         last_chunk = chunk
@@ -120,6 +131,7 @@ Mapped to `UsageInfo`:
 
 7. **`test_text_stream_done_event_includes_usage`** — mock chunks where last chunk has `usage_metadata`, verify done event has `usage` dict with correct fields
 8. **`test_text_stream_done_event_no_usage_metadata`** — mock chunks without `usage_metadata`, verify done event has empty `usage` dict
+9. **`test_text_stream_usage_on_middle_chunk`** — mock chunks where a middle chunk carries `usage_metadata` and the final chunk does NOT; verify usage is still extracted correctly (regression guard for last-wins tracking)
 
 ## COMMIT
 
