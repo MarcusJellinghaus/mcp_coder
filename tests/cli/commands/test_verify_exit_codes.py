@@ -568,7 +568,7 @@ class TestMcpEditSmokeTest:
     """Tests for _run_mcp_edit_smoke_test function."""
 
     def _symbols(self) -> dict[str, str]:
-        return {"success": "[OK]", "failure": "[FAIL]", "warning": "[!!]"}
+        return {"success": "[OK]", "failure": "[FAIL]", "warning": "[WARN]"}
 
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
     def test_smoke_test_pass_displays_ok(
@@ -605,7 +605,7 @@ class TestMcpEditSmokeTest:
             tmp_path, "langchain", "/fake/.mcp.json", str(tmp_path), self._symbols()
         )
 
-        assert "[!!]" in result
+        assert "[WARN]" in result
         assert "edit not verified" in result
 
     @patch("mcp_coder.cli.commands.verify.prompt_llm")
@@ -621,7 +621,7 @@ class TestMcpEditSmokeTest:
             tmp_path, "langchain", "/fake/.mcp.json", str(tmp_path), self._symbols()
         )
 
-        assert "[!!]" in result
+        assert "[WARN]" in result
         assert "edit not verified" in result
         assert "timed out" in result
 

@@ -15,7 +15,7 @@ class TestFormatSection:
     """Tests for _format_section output formatting (Decision 10)."""
 
     def _symbols(self) -> dict[str, str]:
-        return {"success": "[OK]", "failure": "[NO]", "warning": "[!!]"}
+        return {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
 
     def test_ok_entry_formatted_with_success_symbol(self) -> None:
         """Entries with ok=True show [OK] symbol and value."""
@@ -27,13 +27,13 @@ class TestFormatSection:
         assert "Claude CLI Found     [OK] YES" in output
 
     def test_failed_entry_formatted_with_failure_symbol(self) -> None:
-        """Entries with ok=False show [NO] symbol and value."""
+        """Entries with ok=False show [ERR] symbol and value."""
         result: dict[str, Any] = {
             "cli_found": {"ok": False, "value": "NO"},
             "overall_ok": False,
         }
         output = _format_section("BASIC VERIFICATION", result, self._symbols())
-        assert "Claude CLI Found     [NO] NO" in output
+        assert "Claude CLI Found     [ERR] NO" in output
 
     def test_skipped_entry_formatted(self) -> None:
         """Entries with ok=None show warning indicator."""
@@ -42,7 +42,7 @@ class TestFormatSection:
             "overall_ok": True,
         }
         output = _format_section("TEST", result, self._symbols())
-        assert "[!!]" in output
+        assert "[WARN]" in output
         assert "skipped (no API key)" in output
 
     def test_error_shown_on_failure(self) -> None:
@@ -52,7 +52,7 @@ class TestFormatSection:
             "overall_ok": False,
         }
         output = _format_section("TEST", result, self._symbols())
-        assert "[NO] FAILED (not found)" in output
+        assert "[ERR] FAILED (not found)" in output
 
     def test_section_title_in_header(self) -> None:
         """Section header contains the title."""
@@ -71,15 +71,15 @@ class TestFormatSection:
             "overall_ok": False,
         }
         output = _format_section("TEST", result, self._symbols())
-        assert "[NO] not installed" in output
-        assert "\u2192 pip install langchain-openai" in output
+        assert "[ERR] not installed" in output
+        assert "-> pip install langchain-openai" in output
 
 
 class TestFormatMcpSection:
     """Tests for _format_mcp_section tool name rendering."""
 
     def _symbols(self) -> dict[str, str]:
-        return {"success": "[OK]", "failure": "[!!]", "warning": "[??]"}
+        return {"success": "[OK]", "failure": "[WARN]", "warning": "[??]"}
 
     def test_tool_names_displayed_inline(self) -> None:
         """Short tool names fit on one line."""
@@ -155,7 +155,7 @@ class TestFormatMcpSection:
         }
         output = _format_mcp_section(mcp_results, self._symbols())
         assert "connection refused" in output
-        assert "[!!]" in output
+        assert "[WARN]" in output
 
     def test_empty_tool_names_falls_back_to_value(self) -> None:
         """Server with tool_names=[] shows value string (0 tools case)."""
@@ -274,7 +274,7 @@ class TestFormatMcpSection:
         assert "good_tool" in output
         assert "Works fine" in output
         assert "connection refused" in output
-        assert "[!!]" in output
+        assert "[WARN]" in output
 
     def test_list_mcp_tools_false_still_shows_comma_format(self) -> None:
         """Default mode with tuple data still produces comma-separated output."""
@@ -368,7 +368,7 @@ class TestFormatClaudeMcpSection:
     """Tests for _format_claude_mcp_section output formatting."""
 
     def _symbols(self) -> dict[str, str]:
-        return {"success": "[OK]", "failure": "[NO]", "warning": "[!!]"}
+        return {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
 
     def test_connected_servers_show_success_symbol(self) -> None:
         """Two connected servers both show [OK] Connected."""
@@ -383,14 +383,14 @@ class TestFormatClaudeMcpSection:
         assert output.count("Connected") == 2
 
     def test_failed_server_shows_failure_symbol(self) -> None:
-        """One failed server shows [NO] Failed to start."""
+        """One failed server shows [ERR] Failed to start."""
         statuses = [
             ClaudeMCPStatus(
                 name="mcp-tools-py", status_text="Failed to start", ok=False
             ),
         ]
         output = _format_claude_mcp_section(statuses, self._symbols())
-        assert "[NO]" in output
+        assert "[ERR]" in output
         assert "Failed to start" in output
 
     def test_section_title_default(self) -> None:
@@ -430,7 +430,7 @@ class TestFormatMcpSectionForCompleteness:
     """Tests for _format_mcp_section with for_completeness parameter."""
 
     def _symbols(self) -> dict[str, str]:
-        return {"success": "[OK]", "failure": "[!!]", "warning": "[??]"}
+        return {"success": "[OK]", "failure": "[WARN]", "warning": "[??]"}
 
     def test_format_mcp_section_for_completeness_title(self) -> None:
         """for_completeness=True changes title to include 'for completeness'."""

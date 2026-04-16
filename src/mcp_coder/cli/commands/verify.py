@@ -19,9 +19,15 @@ from ...llm.providers.claude.claude_executable_finder import find_claude_executa
 from ...prompts.prompt_loader import get_project_prompt_path, is_claude_md, load_prompts
 from ...utils.mcp_verification import ClaudeMCPStatus, parse_claude_mcp_list
 from ...utils.user_config import verify_config
-from ..utils import _get_status_symbols, resolve_llm_method, resolve_mcp_config_path
+from ..utils import resolve_llm_method, resolve_mcp_config_path
 
 logger = logging.getLogger(__name__)
+
+STATUS_SYMBOLS: dict[str, str] = {
+    "success": "[OK]",
+    "failure": "[ERR]",
+    "warning": "[WARN]",
+}
 
 _LABEL_MAP: dict[str, str] = {
     # Claude section
@@ -83,7 +89,7 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
             line += f" ({error})"
         lines.append(line)
         if ok is False and "install_hint" in entry:
-            lines.append(f"                           \u2192 {entry['install_hint']}")
+            lines.append(f"                           -> {entry['install_hint']}")
     return "\n".join(lines)
 
 
@@ -327,7 +333,7 @@ def execute_verify(args: argparse.Namespace) -> int:
         Exit code (0 for success, 1 for failure)
     """
     logger.info("Executing verify command")
-    symbols = _get_status_symbols()
+    symbols = STATUS_SYMBOLS
 
     # 0. Config verification (first section)
     config_result = verify_config()
