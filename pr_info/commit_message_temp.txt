@@ -1,25 +1,22 @@
-Add transition_issue_label primitive on LabelsMixin
+Refactor update_workflow_label to delegate to transition_issue_label
 
-Introduce a config-free, atomic label transition primitive alongside
-add_labels/remove_labels/set_labels. Computes
-(current - labels_to_clear) | {new_label} and applies via set_labels.
+Replace the inline steps 6-9 (current-labels fetch, legacy idempotency
+check, new-label-set computation, and set_labels call) with a single
+delegation to the config-free transition_issue_label primitive from
+LabelsMixin. Branch/issue resolution and labels.json lookup (steps 1-5)
+remain in IssueManager; the public signature is unchanged.
 
-- Idempotent short-circuit: if new_label is already present AND there
-  is no overlap between current labels and labels_to_clear, returns
-  True without calling set_labels.
-- Guards against get_issue swallowing a failure via its own
-  default_return: if get_issue returns an empty IssueData (number=0),
-  primitive returns False without calling set_labels.
-- ValueError from validate_issue_number and 401/403 GithubException
-  propagate via the @_handle_github_errors decorator; other errors
-  return False.
+Intentional narrow behavior change: stray workflow labels not equal to
+the target are now stripped even when the target label is already
+present (the primitive's stricter idempotency check). The 'Source label
+... not present' INFO log is removed as a side-effect of delegating to
+a primitive that has no concept of source vs clear-set labels.
 
-Adds TestTransitionIssueLabel test class (8 cases) covering basic
-add+clear, idempotent no-op, stray-label cleanup, empty clear set,
-invalid issue number, auth error reraise, set_labels failure, and
-get_issue failure.
-
-update_workflow_label is not modified in this step; the refactor to
-delegate to the primitive comes in Step 3.
+Drop the now-obsolete log-assertion on
+test_update_workflow_label_removes_different_workflow_label — the
+set_labels call-args assertions on the same test already cover the
+contract. All other existing tests in test_issue_manager_label_update.py
+and test_issue_manager_labels.py pass unchanged, acting as regression
+coverage.
 
 Part of #832.
