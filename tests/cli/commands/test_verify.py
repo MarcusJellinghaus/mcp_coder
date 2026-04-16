@@ -445,20 +445,26 @@ class TestConfigGrouping:
     def test_summary_entry_with_status_prefix_renders_plain(
         self, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        """[coordinator] + '[OK] 6 repos configured' renders as a single indented row."""
+        """[coordinator] + '6 repos configured' renders as a single indented row.
+
+        The real producer in ``user_config.verify_coordinator_config`` emits
+        ``value = "6 repos configured"`` (no ``[OK]`` prefix); the renderer
+        prepends the ``[OK]`` status symbol itself. The fixture mirrors that
+        contract so the assertion proves the rendered line has exactly one
+        ``[OK]`` (not a doubled prefix).
+        """
         entries = [
             {
                 "label": "[coordinator]",
                 "status": "ok",
-                "value": "[OK] 6 repos configured",
+                "value": "6 repos configured",
             },
         ]
         out = _run_verify_with_entries(entries, capsys)
         lines = _config_block(out)
-        # Must contain a single indented line with the whole value intact
-        assert any(
-            "[OK] 6 repos configured" in line and line.startswith("    ")
-            for line in lines
-        )
+        # Must contain the exact indented line with a single [OK] status symbol
+        assert "    [OK] 6 repos configured" in lines
         # Must not be split at "6" (i.e., no "[OK]              <symbol> 6 repos")
         assert not any(line.startswith("    [OK]              ") for line in lines)
+        # Must not double the [OK] prefix
+        assert not any("[OK] [OK]" in line for line in lines)
