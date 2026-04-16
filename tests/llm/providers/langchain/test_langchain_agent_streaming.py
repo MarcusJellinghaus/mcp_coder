@@ -484,3 +484,132 @@ class TestRunAgentStream:
         mock_client_cls.assert_called_once()
         # _load_mcp_server_config SHOULD be called
         mock_load_config.assert_called_once()
+
+
+def _make_ai_message_with_usage(
+    content: str,
+    usage_metadata: dict[str, object] | None = None,
+) -> object:
+    """Create an AIMessage with optional usage_metadata (uses conftest stub)."""
+    from langchain_core.messages import AIMessage
+
+    kwargs: dict[str, object] = {"content": content}
+    if usage_metadata is not None:
+        kwargs["usage_metadata"] = usage_metadata
+    return AIMessage(**kwargs)
+
+
+class TestRunAgentStreamUsage:
+    """Tests for token usage accumulation in run_agent_stream() done event."""
+
+    async def test_agent_stream_done_event_includes_usage(self) -> None:
+        """done event contains usage summed from on_chat_model_end events."""
+        ai_msg = _make_ai_message_with_usage(
+            "Answer",
+            usage_metadata={
+                "input_tokens": 500,
+                "output_tokens": 200,
+                "input_token_details": {"cache_read": 100},
+            },
+        )
+        events: list[dict[str, object]] = [
+            {
+                "event": "on_chat_model_end",
+                "data": {"output": ai_msg},
+                "run_id": "r1",
+                "name": "model",
+            },
+        ]
+        with _patch_run_agent_stream(events):
+            from mcp_coder.llm.providers.langchain.agent import run_agent_stream
+
+            result = [
+                e
+                async for e in run_agent_stream(
+                    question="Hi",
+                    chat_model=MagicMock(),
+                    messages=[],
+                    mcp_config_path="/tmp/mcp.json",
+                    session_id="s1",
+                )
+            ]
+        done_events = [e for e in result if e["type"] == "done"]
+        assert len(done_events) == 1
+        usage = done_events[0]["usage"]
+        assert isinstance(usage, dict)
+        assert usage["input_tokens"] == 500
+        assert usage["output_tokens"] == 200
+        assert usage["cache_read_input_tokens"] == 100
+
+    async def test_agent_stream_done_event_sums_usage(self) -> None:
+        """done event usage is the per-field sum across multiple on_chat_model_end events."""
+        ai_msg_1 = _make_ai_message_with_usage(
+            "",
+            usage_metadata={
+                "input_tokens": 500,
+                "output_tokens": 200,
+                "input_token_details": {"cache_read": 100},
+            },
+        )
+        ai_msg_2 = _make_ai_message_with_usage(
+            "Answer",
+            usage_metadata={
+                "input_tokens": 800,
+                "output_tokens": 300,
+                "input_token_details": {"cache_read": 200},
+            },
+        )
+        events: list[dict[str, object]] = [
+            {
+                "event": "on_chat_model_end",
+                "data": {"output": ai_msg_1},
+                "run_id": "r1",
+                "name": "model",
+            },
+            {
+                "event": "on_chat_model_end",
+                "data": {"output": ai_msg_2},
+                "run_id": "r2",
+                "name": "model",
+            },
+        ]
+        with _patch_run_agent_stream(events):
+            from mcp_coder.llm.providers.langchain.agent import run_agent_stream
+
+            result = [
+                e
+                async for e in run_agent_stream(
+                    question="Hi",
+                    chat_model=MagicMock(),
+                    messages=[],
+                    mcp_config_path="/tmp/mcp.json",
+                    session_id="s1",
+                )
+            ]
+        done_events = [e for e in result if e["type"] == "done"]
+        assert len(done_events) == 1
+        usage = done_events[0]["usage"]
+        assert isinstance(usage, dict)
+        assert usage["input_tokens"] == 1300
+        assert usage["output_tokens"] == 500
+        assert usage["cache_read_input_tokens"] == 300
+
+    async def test_agent_stream_done_event_no_usage(self) -> None:
+        """done event has empty usage dict when no on_chat_model_end events fire."""
+        events: list[dict[str, object]] = []
+        with _patch_run_agent_stream(events):
+            from mcp_coder.llm.providers.langchain.agent import run_agent_stream
+
+            result = [
+                e
+                async for e in run_agent_stream(
+                    question="Hi",
+                    chat_model=MagicMock(),
+                    messages=[],
+                    mcp_config_path="/tmp/mcp.json",
+                    session_id="s1",
+                )
+            ]
+        done_events = [e for e in result if e["type"] == "done"]
+        assert len(done_events) == 1
+        assert done_events[0]["usage"] == {}
