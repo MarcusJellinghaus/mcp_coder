@@ -78,3 +78,32 @@ Plan review for: Prep: BaseGitHubManager token param + transition_issue_label pr
 - `pr_info/steps/Decisions.md` — rewrote item #6 from "skim-TODO" wording to "skim complete (Round 2)" summary naming the test, line, and the confirmation that the `'already has ... without ...'` phrase does not appear in any assertion.
 
 **Status**: Plan files updated. Commit pending. Loop: one more review round expected to confirm clean state.
+
+
+## Round 4 — 2026-04-16
+
+**Findings**: None. Cross-file consistency verified:
+- INFO log fact (line 635 test) consistent across summary.md, step_3.md, Decisions.md #1 and #6.
+- Patch path `...base_manager.git_operations.is_git_repository` consistent in step_1.md and Decisions.md #4.
+- Primitive ALGORITHM (empty-IssueData guard) consistent in step_2.md, step_3.md, Decisions.md #2.
+- Subclass forwarding count (5), signature asymmetry (no `repo_url` on LabelsManager / PullRequestManager), decorator order, test marker all consistent.
+- Scope and dependencies unchanged.
+
+**Decisions**: none required. **User decisions**: none required. **Changes**: none.
+
+**Status**: Zero plan changes this round. Exit loop.
+
+## Final Status
+
+- **Rounds run**: 4 (Round 1 + 2 + 3 + 4).
+- **Plan changes**: 3 commits (Round 1: a5d84cc; Round 2: fff01a0; Round 3: 7fa218f).
+- **User decisions escalated**: 1 (Round 1 F6 — INFO log drop — user chose "Accept the loss").
+- **Blockers resolved**: 2 (Round 2 F8 and F9 — both factual errors introduced by Round 1 fixes, caught and corrected).
+- **Scope**: no expansion; no new dependencies; stays inside issue #832's stated scope.
+- **Verdict**: **Plan ready for approval and implementation.**
+
+Key invariants confirmed for the implementation phase:
+- `transition_issue_label` primitive owns `get_issue` fetch AND empty-`IssueData` guard; `update_workflow_label` drops its redundant step-6 `get_issue` call.
+- Patch target for the parametrized token-forwarding test is `mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository` (module-attribute, not a top-level name rebinding).
+- On Step 3, one existing test assertion (`test_update_workflow_label_removes_different_workflow_label`, line 635) must be dropped — behavioural `set_labels` assertions on lines 625/629/632 already cover the contract.
+- Scope: `github_token` added to `BaseGitHubManager` + forwarded through all 5 subclasses. `repo_url` NOT added to `LabelsManager` / `PullRequestManager` (decision #9).
