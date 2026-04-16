@@ -102,3 +102,86 @@ into `TokenUsage` or displayed in the icoder status bar.
 for analysis/logging without adding UI noise now.
 
 **Affects:** summary.md.
+
+## D10. Clarify `_ask_text_stream` patch location (round 2)
+
+**Decision:** Step 4 must specify that `last_chunk` tracking and the modified
+`yield done` go inside the existing `try:` block (tracking inside the
+`for chunk in chat_model.stream(...)` loop; done-event replacement after the
+loop). Error/timeout branches are unchanged.
+
+**Rationale:** Prevents the implementer from accidentally patching the error
+path or introducing a duplicate done event outside the try block.
+
+**Affects:** step_4.md.
+
+## D11. Clarify `run_agent_stream` done event shape (round 2)
+
+**Decision:** Step 5 must note that the existing `run_agent_stream` done event
+is `yield {"type": "done", "session_id": session_id}` (NO `usage` key), unlike
+`_ask_text_stream` which already has `"usage": {}`. Step 5 is the commit that
+adds the `usage` key to `run_agent_stream`'s done event.
+
+**Rationale:** Avoids confusion about whether step 5 is "filling an empty dict"
+vs. "adding a new key". It is the latter.
+
+**Affects:** step_5.md.
+
+## D12. Parameterize `test_extract_usage_no_metadata` (round 2)
+
+**Decision:** Split/parameterize `test_extract_usage_no_metadata` to cover three
+distinct inputs: (a) attribute absent on message, (b) `usage_metadata is None`,
+(c) `usage_metadata == {}`. All three must return `{}`.
+
+**Rationale:** The production code uses
+`getattr(ai_msg, "usage_metadata", None) or {}`. All three inputs hit a
+different code path in that expression; one generic test would leave two of
+them unverified.
+
+**Affects:** step_4.md (test #2).
+
+## D13. Add `ResponseAssembler` end-to-end test for all 4 usage fields (round 2)
+
+**Decision:** Add `test_ask_text_stream_usage_flows_to_raw_response` to step 4:
+exercise `_ask_text_stream()` end-to-end through `ResponseAssembler` (via
+`ask_with_provider(..., provider_stream=True)` or directly). Assert all 4
+fields (including `cache_creation_input_tokens`) land in
+`LLMResponseDict.raw_response["usage"]`.
+
+**Rationale:** `tests/llm/test_types.py::test_response_assembler_done_event`
+already tests the assembler in isolation with 2 fields
+(`input_tokens`, `output_tokens`). A LangChain-path test with all 4 fields
+closes the gap and guards against regression in the `_ask_text_stream` →
+`ResponseAssembler` → `raw_response` pipeline.
+
+**Affects:** step_4.md (test #10).
+
+## D14. `_sum_usage` docstring must state the zero-default contract (round 2)
+
+**Decision:** The `_sum_usage` docstring must explicitly read: "Always returns
+all 4 keys (zero-default). Symmetric contract — display layer gates on
+`cache_read > 0`." (see D2).
+
+**Rationale:** Without the explicit docstring note, a future maintainer may
+"optimize" the helper to drop zero-valued keys, silently breaking the symmetric
+contract assumed by consumers.
+
+**Affects:** step_4.md (`_sum_usage` algorithm block).
+
+## D15. Claude CLI regression test asserts round-trip through mapper (round 2)
+
+**Decision:** Rewrite `test_stream_llm_claude_cli_done_event_cache_regression`
+(step 3, test #4) to construct a realistic Claude CLI `StreamMessage`
+(`{"type": "result", "usage": {"input_tokens": 1200, "output_tokens": 800,
+"cache_read_input_tokens": 540, "cache_creation_input_tokens": 0}}`), pass it
+through `_map_stream_message_to_event` to produce the done event, then feed
+that event into `AppCore.stream_llm()` via a FakeLLMService. Assert
+`TokenUsage.input_tokens == 1200`, `output_tokens == 800`,
+`cache_read_input_tokens == 540`.
+
+**Rationale:** Asserting only `cache_read` leaves the mapper's handling of the
+other fields untested in this regression path. Exercising the real mapper
+(not just a hand-crafted done event) verifies the full mapper + AppCore
+pipeline in one test.
+
+**Affects:** step_3.md (test #4).

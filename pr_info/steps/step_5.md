@@ -33,6 +33,8 @@ Listen for `on_chat_model_end` events (which carry the full `AIMessage` with `us
 yield {"type": "done", "session_id": session_id, "usage": accumulated_usage}
 ```
 
+Note: the existing `run_agent_stream` done event is `yield {"type": "done", "session_id": session_id}` with NO `usage` key (unlike `_ask_text_stream`). Step 5 adds it.
+
 ## HOW — imports
 
 ```python

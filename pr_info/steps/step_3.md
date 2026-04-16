@@ -61,7 +61,7 @@ Add these tests:
 
 3. **`test_stream_llm_cumulative_cache`** — Two stream calls, first with `cache_read_input_tokens: 200`, second with `cache_read_input_tokens: 300`. Verify `total_cache_read == 500`.
 
-4. **`test_stream_llm_claude_cli_done_event_cache_regression`** — Regression guard for the Claude CLI → icoder pipeline. Feed a realistic Claude CLI `done` event (with `input_tokens`, `output_tokens`, and `cache_read_input_tokens` fields matching what `_map_stream_message_to_event` emits) through `AppCore.stream_llm()`. Assert the status-bar `TokenUsage` (`core.token_usage`) receives the `cache_read_input_tokens` value. Currently works end-to-end but has no dedicated test for cache flow.
+4. **`test_stream_llm_claude_cli_done_event_cache_regression`** — Regression guard for the Claude CLI → icoder pipeline (mapper + AppCore together). Construct a realistic Claude CLI `StreamMessage` (`{"type": "result", "usage": {"input_tokens": 1200, "output_tokens": 800, "cache_read_input_tokens": 540, "cache_creation_input_tokens": 0}}`), pass through `_map_stream_message_to_event` to produce the done event, then feed that event into `AppCore.stream_llm()` via a FakeLLMService. Assert `TokenUsage.input_tokens == 1200`, `output_tokens == 800`, `cache_read_input_tokens == 540`. Verifies mapper + AppCore together.
 
 ## COMMIT
 
