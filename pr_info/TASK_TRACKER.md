@@ -33,9 +33,9 @@ Detail: [steps/step_1.md](./steps/step_1.md)
 
 Detail: [steps/step_2.md](./steps/step_2.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Add `langchain_transitive_isolation` import-linter contract
 
