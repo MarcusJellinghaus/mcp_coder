@@ -1,0 +1,12 @@
+fix(tests): add total_tokens to usage_metadata and split agent usage tests
+
+Fixes two CI failures in the langchain agent test suite:
+
+1. Unit-test failure: real langchain_core.messages.AIMessage pydantic-validates
+   UsageMetadata and requires total_tokens. Added total_tokens (= input + output)
+   to every usage_metadata dict passed to _make_ai_message_with_usage() in
+   test_langchain_agent.py and test_langchain_agent_streaming.py.
+
+2. File-size failure: test_langchain_agent.py was 809 lines (>750 threshold).
+   Extracted TestRunAgentUsage class and its helpers into a dedicated
+   test_langchain_agent_usage.py file. test_langchain_agent.py is now 667 lines.

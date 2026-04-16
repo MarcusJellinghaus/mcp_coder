@@ -509,6 +509,7 @@ class TestRunAgentStreamUsage:
             usage_metadata={
                 "input_tokens": 500,
                 "output_tokens": 200,
+                "total_tokens": 700,
                 "input_token_details": {"cache_read": 100},
             },
         )
@@ -548,6 +549,7 @@ class TestRunAgentStreamUsage:
             usage_metadata={
                 "input_tokens": 500,
                 "output_tokens": 200,
+                "total_tokens": 700,
                 "input_token_details": {"cache_read": 100},
             },
         )
@@ -556,6 +558,7 @@ class TestRunAgentStreamUsage:
             usage_metadata={
                 "input_tokens": 800,
                 "output_tokens": 300,
+                "total_tokens": 1100,
                 "input_token_details": {"cache_read": 200},
             },
         )
