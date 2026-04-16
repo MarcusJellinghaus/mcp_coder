@@ -185,90 +185,52 @@ class TestRenderToolOutputRenderer:
         assert lines == ["not json", "second line"]
         assert total == 2
 
-
-class TestRenderToolOutputFieldFiltering:
-    """Tests for field filtering in _render_tool_output()."""
-
-    def test_render_tool_output_extracts_result_field(self) -> None:
-        """Main content: 'result' field shown prominently."""
-        data = {"result": "hello\nworld"}
-        lines, total = _render_tool_output(json.dumps(data))
-        assert lines[:2] == ["hello", "world"]
-        assert total == 2
-
-    def test_render_tool_output_extracts_text_field(self) -> None:
-        """Main content: 'text' field when 'result' absent."""
-        data = {"text": "some text"}
-        lines, total = _render_tool_output(json.dumps(data))
-        assert lines == ["some text"]
+    def test_result_envelope_unwrap(self) -> None:
+        """`{"result": "hello"}` unwraps to just the value."""
+        lines, total = _render_tool_output(json.dumps({"result": "hello"}))
+        assert lines == ["hello"]
         assert total == 1
 
-    def test_render_tool_output_extracts_content_field(self) -> None:
-        """Main content: 'content' field when 'result' and 'text' absent."""
-        data = {"content": "body content"}
+    def test_result_envelope_with_extras(self) -> None:
+        """Non-`result` keys render as extras below a blank separator."""
+        data = {"result": "ok", "meta": "x"}
         lines, total = _render_tool_output(json.dumps(data))
-        assert lines == ["body content"]
-        assert total == 1
-
-    def test_render_tool_output_priority_result_over_text(self) -> None:
-        """'result' wins over 'text' when both present."""
-        data = {"result": "winner", "text": "loser"}
-        lines, _total = _render_tool_output(json.dumps(data))
-        assert lines[0] == "winner"
-        # 'text' should appear as extra
-        assert "" in lines  # blank separator
-        assert "text: loser" in lines
-
-    def test_render_tool_output_skips_envelope_fields(self) -> None:
-        """Envelope fields (type, role, model, etc.) not shown."""
-        data = {
-            "result": "hello",
-            "type": "text",
-            "role": "assistant",
-            "model": "gpt-4",
-            "stop_reason": "end",
-            "session_id": "abc",
-            "usage": {"tokens": 10},
-        }
-        lines, _total = _render_tool_output(json.dumps(data))
-        full_text = "\n".join(lines)
-        assert "hello" in full_text
-        assert "type:" not in full_text
-        assert "role:" not in full_text
-        assert "model:" not in full_text
-        assert "stop_reason:" not in full_text
-        assert "session_id:" not in full_text
-        assert "usage:" not in full_text
-
-    def test_render_tool_output_shows_extra_fields(self) -> None:
-        """Non-envelope, non-main fields shown below main content."""
-        data = {"result": "hello", "extra_field": "val"}
-        lines, total = _render_tool_output(json.dumps(data))
-        assert lines == ["hello", "", "extra_field: val"]
+        assert lines == ["ok", "", 'meta: "x"']
         assert total == 3
 
-    def test_render_tool_output_no_duplicate_main_in_extras(self) -> None:
-        """Winning main content field not duplicated in extras."""
-        data = {"result": "hello", "extra": "other"}
-        lines, _total = _render_tool_output(json.dumps(data))
-        # 'result' should not appear in extras section
-        result_count = sum(1 for line in lines if line.startswith("result:"))
-        assert result_count == 0  # main content shown directly, not as "result: ..."
-
-    def test_render_tool_output_single_level_unwrap(self) -> None:
-        """Nested dicts shown as structured key-value, not recursed."""
-        data = {"result": "ok", "metadata": {"key": "value"}}
-        lines, _total = _render_tool_output(json.dumps(data))
-        full_text = "\n".join(lines)
-        assert "ok" in full_text
-        assert "metadata:" in full_text
-
-    def test_render_tool_output_only_envelope_fields(self) -> None:
-        """Dict with only envelope fields returns empty output."""
-        data = {"type": "text", "role": "assistant"}
+    def test_result_dict_with_multiline_diff(self) -> None:
+        """Multiline string inside a `result` dict is split into lines."""
+        data = {"result": {"diff": "a\nb", "ok": True}}
         lines, total = _render_tool_output(json.dumps(data))
-        assert lines == []
-        assert total == 0
+        assert lines == ["diff:", "  a", "  b", "ok: true"]
+        assert total == 4
+
+    def test_no_text_unwrap(self) -> None:
+        """`{"text": ...}` is not treated as an envelope — shown as key/value."""
+        lines, total = _render_tool_output(json.dumps({"text": "hello"}))
+        assert lines == ['text: "hello"']
+        assert total == 1
+
+    def test_no_content_unwrap(self) -> None:
+        """`{"content": ...}` is not treated as an envelope — shown as key/value."""
+        lines, total = _render_tool_output(json.dumps({"content": "hello"}))
+        assert lines == ['content: "hello"']
+        assert total == 1
+
+    def test_full_mode_no_truncation(self) -> None:
+        """30-line input with ``full=True`` returns all 30 lines."""
+        text = "\n".join(f"line {i}" for i in range(30))
+        lines, total = _render_tool_output(text, full=True)
+        assert len(lines) == 30
+        assert total == 30
+        assert lines == [f"line {i}" for i in range(30)]
+
+    def test_compact_mode_truncates(self) -> None:
+        """30-line input with default ``full=False`` is truncated."""
+        text = "\n".join(f"line {i}" for i in range(30))
+        lines, total = _render_tool_output(text)
+        assert total == 30
+        assert len(lines) == 16  # 10 head + 1 separator + 5 tail
 
 
 class TestRenderToolOutputTruncation:
@@ -299,6 +261,14 @@ class TestRenderToolOutputTruncation:
         # head 10 + separator + tail 5 = 16, but 1 line skipped
         assert lines[10] == "... (1 line skipped)"
         assert len(lines) == 16  # 10 + 1 separator + 5
+
+    def test_full_mode_skips_truncation(self) -> None:
+        """``full=True`` disables truncation regardless of line count."""
+        text = "\n".join(f"line {i}" for i in range(30))
+        lines, total = _render_tool_output(text, full=True)
+        assert total == 30
+        assert len(lines) == 30
+        assert "skipped" not in "\n".join(lines)
 
 
 class TestRenderToolOutputRawMode:

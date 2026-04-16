@@ -26,19 +26,6 @@ _TRUNCATION_THRESHOLD = _HEAD_LINES + _TAIL_LINES  # 15
 _INLINE_ARG_LIMIT = 2
 _MAX_INLINE_LEN = 100
 
-_ENVELOPE_FIELDS: frozenset[str] = frozenset(
-    {
-        "type",
-        "role",
-        "model",
-        "stop_reason",
-        "session_id",
-        "usage",
-    }
-)
-
-_MAIN_CONTENT_KEYS: tuple[str, ...] = ("result", "text", "content")
-
 
 def _format_tool_name(name: str) -> str:
     """Format tool name for rendered display.
@@ -70,19 +57,6 @@ def _format_tool_args(args: object) -> str:
         parts = [f"{k}={v!r}" for k, v in args.items()]
         return ", ".join(parts)
     return str(args) if args else ""
-
-
-def _render_value(value: object) -> list[str]:
-    """Render a single value into display lines.
-
-    Returns:
-        List of display lines rendered from the input value.
-    """
-    if isinstance(value, str):
-        return value.splitlines() if value else [""]
-    if isinstance(value, (dict, list)):
-        return json.dumps(value, indent=2).splitlines()
-    return [str(value)]
 
 
 def _render_value_compact(value: object) -> str:
@@ -174,20 +148,22 @@ def _render_output_value(value: object) -> list[str]:
 
 
 def _render_tool_output(
-    output: str, *, format_tools: bool = True
+    output: str, *, format_tools: bool = True, full: bool = False
 ) -> tuple[list[str], int]:
-    """Render tool output into display lines with field filtering and truncation.
+    """Render tool output into display lines with optional truncation.
 
     When *format_tools* is ``False``, return the raw output split into lines
-    with no filtering or truncation.
+    with no parsing or truncation.
 
     Otherwise:
-    1. Try ``json.loads`` — if dict, apply field filtering:
-       a. Find main content (first of result / text / content present).
-       b. Render main content value directly.
-       c. Collect extras (non-envelope, non-main keys) below a blank line.
-    2. If not dict or JSON fails, split into plain text lines.
-    3. Apply head/tail truncation when lines exceed threshold.
+    1. Try ``json.loads`` — if a dict with a ``"result"`` key, render
+       ``parsed["result"]`` via ``_render_output_value()`` and append any
+       remaining keys (as extras) below a blank separator.
+    2. If not a dict or no ``"result"`` key, render the parsed value via
+       ``_render_output_value()``.
+    3. If JSON parsing fails, split the raw output into lines.
+    4. Apply head/tail truncation when ``full`` is ``False`` and lines
+       exceed the threshold.
 
     Returns:
         ``(display_lines, total_line_count)``.
@@ -201,48 +177,19 @@ def _render_tool_output(
 
     try:
         parsed = json.loads(output)
-        if isinstance(parsed, dict):
-            lines: list[str] = []
-
-            # Find main content key
-            main_key: str | None = None
-            for key in _MAIN_CONTENT_KEYS:
-                if key in parsed:
-                    main_key = key
-                    break
-
-            # Render main content
-            if main_key is not None:
-                lines.extend(_render_value(parsed[main_key]))
-
-            # Collect and render extras
-            extras: list[tuple[str, object]] = []
-            for key, value in parsed.items():
-                if key == main_key:
-                    continue
-                if key in _ENVELOPE_FIELDS:
-                    continue
-                extras.append((key, value))
-
-            if extras and main_key is not None:
-                lines.append("")  # blank separator between main content and extras
+        if isinstance(parsed, dict) and "result" in parsed:
+            lines = _render_output_value(parsed["result"])
+            extras = {k: v for k, v in parsed.items() if k != "result"}
             if extras:
-                for key, value in extras:
-                    if isinstance(value, str) and "\n" in value:
-                        lines.append(f"{key}:")
-                        for subline in value.splitlines():
-                            lines.append(f"  {subline}")
-                    elif isinstance(value, str):
-                        lines.append(f"{key}: {value}")
-                    else:
-                        lines.append(f"{key}: {json.dumps(value)}")
+                lines.append("")
+                lines.extend(_render_output_value(extras))
         else:
-            lines = str(parsed).splitlines()
+            lines = _render_output_value(parsed)
     except (json.JSONDecodeError, ValueError):
         lines = output.splitlines()
 
     total = len(lines)
-    if total > _TRUNCATION_THRESHOLD:
+    if not full and total > _TRUNCATION_THRESHOLD:
         skipped = total - _HEAD_LINES - _TAIL_LINES
         lines = (
             lines[:_HEAD_LINES]
