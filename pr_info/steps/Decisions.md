@@ -12,4 +12,4 @@
 
 5. **Bound the docstring update scope** in Step 1: add a single-line `github_token: Optional explicit token ...` entry under the Args section of each modified `__init__` docstring. Do not reformat or rewrite other docstring content.
 
-6. **Log-string assertion caveat for Step 3 regression tests:** before running, skim listed test assertions and confirm none rely on the dropped `'Source label ... not present'` or step-7 `'already has ... without ...'` log strings. If any do, update the assertion to check behaviour (e.g. `set_labels` call count or absence) rather than log text.
+6. **Log-string assertion skim complete (Round 2):** one test asserts the `'Source label ... not present'` log at line 635 of `test_issue_manager_label_update.py`; that assertion will be dropped per `step_3.md`'s regression instruction. The phrase `'already has ... without ...'` was confirmed NOT present in any test assertion (only appears in a docstring — line 271 of the same file), so no action needed for it.

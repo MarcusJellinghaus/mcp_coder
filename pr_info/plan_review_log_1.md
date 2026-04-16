@@ -58,3 +58,23 @@ Plan review for: Prep: BaseGitHubManager token param + transition_issue_label pr
 - `pr_info/plan_review_log_1.md` — appended Round 2 correction note under F6 rationale in the Round 1 entry (engineer's own update during Round 2 edits).
 
 **Status**: Plan files updated. Commit pending. Loop: another review round required.
+
+
+## Round 3 — 2026-04-16
+
+**Findings**:
+- Verified Round 2 fixes landed correctly and the asserted facts are accurate:
+  - F8 fix: Step 3 line 65 names `test_update_workflow_label_removes_different_workflow_label` and line 635 correctly; verified against actual test file at that exact line.
+  - F9 fix: patch path `...base_manager.git_operations.is_git_repository` verified against `base_manager.py:16,200` (module import + attribute access) and existing `test_base_manager.py:232` style.
+  - No cross-file contradictions about the INFO log fact.
+- F14 [Low, polish] Decisions.md #6 still read as an open action ("before running, skim test assertions") even though the skim was actually completed in Round 2 and resolved in step_3.md:65. Not a blocker, but stale.
+- F15 [Info] No scope expansion, no new dependencies introduced across Rounds 1-2.
+
+**Decisions**: F14 — accept, apply (trivial polish to reflect resolved state). Everything else: no action.
+
+**User decisions**: none required.
+
+**Changes**:
+- `pr_info/steps/Decisions.md` — rewrote item #6 from "skim-TODO" wording to "skim complete (Round 2)" summary naming the test, line, and the confirmation that the `'already has ... without ...'` phrase does not appear in any assertion.
+
+**Status**: Plan files updated. Commit pending. Loop: one more review round expected to confirm clean state.
