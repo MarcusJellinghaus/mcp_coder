@@ -19,6 +19,7 @@ from mcp_coder.llm.types import (
     LLMResponseDict,
     ResponseAssembler,
     StreamEvent,
+    UsageInfo,
 )
 
 __all__ = [
@@ -31,4 +32,5 @@ __all__ = [
     "LLM_RESPONSE_VERSION",
     "ResponseAssembler",
     "StreamEvent",
+    "UsageInfo",
 ]
