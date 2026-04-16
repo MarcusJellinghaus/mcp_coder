@@ -3,10 +3,10 @@
 
 Two modes:
   1. One example per unique tool name (for building test data):
-     python tools/extract_mlflow_tool_calls.py --unique --output testdata/
+     python tools/extract_mlflow_tool_calls.py --unique --output tool_samples/
 
   2. All tool calls from a specific run (for debugging a session):
-     python tools/extract_mlflow_tool_calls.py --run <run_id> --output testdata/
+     python tools/extract_mlflow_tool_calls.py --run <run_id> --output tool_samples/
 
 Options:
     --limit N       Max runs to scan when using --unique (default: 50)
@@ -17,13 +17,13 @@ Options:
 
 Examples:
     # One file per unique tool type from last 50 runs
-    python tools/extract_mlflow_tool_calls.py --unique --output testdata/
+    python tools/extract_mlflow_tool_calls.py --unique --output tool_samples/
 
     # All tool calls from a specific run
-    python tools/extract_mlflow_tool_calls.py --run 962a21de --output testdata/
+    python tools/extract_mlflow_tool_calls.py --run 962a21de --output tool_samples/
 
     # Scan more runs for unique tools
-    python tools/extract_mlflow_tool_calls.py --unique --limit 100 --output testdata/
+    python tools/extract_mlflow_tool_calls.py --unique --limit 100 --output tool_samples/
 """
 
 import argparse
