@@ -45,9 +45,10 @@ return success
 
 Delete from the old body:
 
-- The step-6 `get_issue` call and the `issue_data["number"] == 0` check → primitive owns the fetch; its decorator covers the failure path.
+- The step-6 `get_issue` call and the `issue_data["number"] == 0` check → primitive owns the fetch and the empty-`IssueData` guard.
 - The step-7 idempotency block (`if to_label_name in current_labels: ...`) → primitive's stricter idempotency check replaces it.
 - The step-7 info log "Source label '...' not present" → no longer needed; primitive doesn't distinguish.
+- The step-7 INFO log `'Source label <from_label_id> not present in issue labels'` is removed as a side-effect of delegating to the config-free primitive (which has no concept of `from_label` vs `to_label`). No tests assert this log. Accepted per review Round 1 decision.
 - The step-8 `new_labels = (current_labels - label_lookups["all_names"]) | {to_label_name}` computation → moved into primitive via the `labels_to_clear` argument.
 - The step-9 `result = self.set_labels(...)` call and `result["number"] == 0` check → primitive returns a `bool` directly.
 
@@ -60,7 +61,11 @@ Keep the final outer `except Exception:` block logging and returning `False`.
 
 ## Tests — regression only
 
-No new tests in this step. The existing suite in `tests/utils/github_operations/test_issue_manager_label_update.py` acts as full regression coverage:
+No new tests in this step. The existing suite in `tests/utils/github_operations/test_issue_manager_label_update.py` acts as full regression coverage.
+
+Before running the regression tests, skim each listed test's assertions once. Confirm none rely on the dropped `'Source label ... not present'` or step-7 `'already has ... without ...'` log strings. If any do, update the assertion to check behaviour (e.g. `set_labels` call count or absence) rather than log text.
+
+Tests expected to pass unchanged:
 
 - `test_update_workflow_label_success_happy_path` → still passes (new path → `transition_issue_label` → `set_labels`).
 - `test_update_workflow_label_already_correct_state` → still passes (current has `code_review`, `implementing` absent from both current and `labels_to_clear` stripped set → idempotent short-circuit fires).

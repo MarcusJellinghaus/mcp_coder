@@ -73,7 +73,7 @@ class CIResultsManager(BaseGitHubManager):
 - Plain typed keyword param, default `None`. **No `*` keyword-only marker** (matches style of `project_dir` / `repo_url`).
 - Each subclass forwards via `super().__init__(..., github_token=github_token)`.
 - `PullRequestManager` / `LabelsManager` forward only `project_dir` + `github_token` (no `repo_url` — signature asymmetry preserved per issue decision #9).
-- Update docstrings to mention the new param. Keep existing error messages unchanged.
+- Add a single line `github_token: Optional explicit token — overrides user_config lookup when provided.` under the Args section of each modified `__init__` docstring. Do not reformat or rewrite other docstring content. Keep existing error messages unchanged.
 
 ## ALGORITHM — token resolution in `BaseGitHubManager.__init__`
 
@@ -118,6 +118,8 @@ def test_explicit_github_token_bypasses_user_config(manager_cls, init_kwargs) ->
     # Assert manager.github_token == "explicit-token".
     # Assert user_config.get_config_values was not called.
 ```
+
+Use `Mock(spec=Path)` + patch `mcp_coder.utils.github_operations.base_manager.is_git_repository` to return `True` (matches the style in `TestBaseGitHubManagerWithProjectDir` in `test_base_manager.py`). Primary assertion: patch `mcp_coder.utils.github_operations.base_manager.user_config.get_config_values` and assert it is NOT called when `github_token` is passed explicitly; IS called when `github_token=None`.
 
 Also add a second test verifying the fallback still works (token=None → `user_config.get_config_values` IS called, token comes from config).
 

@@ -45,6 +45,8 @@ def transition_issue_label(
 ```
 validate_issue_number(issue_number)
 issue = self.get_issue(issue_number)
+if issue["number"] == 0:   # get_issue swallowed a failure via its default_return
+    return False
 current = set(issue["labels"])
 to_clear = set(labels_to_clear)
 if new_label in current and not (to_clear & current):
@@ -54,6 +56,8 @@ result = self.set_labels(issue_number, *new_labels)
 return result["number"] != 0
 ```
 
+Rationale: the issue's acceptance criterion states "step 6 check owned by the primitive now" — the primitive must actually own the empty-`IssueData` guard, not assume the `@_handle_github_errors` decorator covers it. `get_issue` has its own `default_return=create_empty_issue_data()`, so a swallowed failure surfaces as `number == 0`. Without this guard, the primitive would call `set_labels(issue_number=0, ...)`, which raises `ValueError` from `validate_issue_number` — a regression vs. the legacy `update_workflow_label` behavior.
+
 ## DATA
 
 - Input: `issue_number: int`, `new_label: str`, `labels_to_clear: Iterable[str] = ()`.
@@ -62,7 +66,9 @@ return result["number"] != 0
 
 ## Tests (write first) — new `TestTransitionIssueLabel` class
 
-Use the existing `mock_issue_manager` fixture (from `tests/utils/github_operations/conftest.py`). Patch `get_issue` and `set_labels` on `IssueManager` via `patch.object` per test. Mock-based, no integration marker.
+Decorate the new class with `@pytest.mark.git_integration` to match the sibling `TestIssueManagerLabels` class marker in the same file (file-level consistency; the sibling class uses the marker even for mocked tests). Do not change the sibling class.
+
+Use the existing `mock_issue_manager` fixture (from `tests/utils/github_operations/conftest.py`). Patch `get_issue` and `set_labels` on `IssueManager` via `patch.object` per test. Mock-based tests under the `git_integration` marker for consistency.
 
 Cases (each a single test method):
 
@@ -73,6 +79,7 @@ Cases (each a single test method):
 5. `test_transition_invalid_issue_number_raises` — `issue_number=0` → `ValueError` propagates (not caught by decorator).
 6. `test_transition_auth_error_reraises` — `get_issue` / `set_labels` raises `GithubException(401)` → re-raised by decorator.
 7. `test_transition_set_labels_failure_returns_false` — `set_labels` returns empty `IssueData` (`number=0`) → primitive returns `False`.
+8. `test_transition_get_issue_failure_returns_false` — patch `get_issue` to return `create_empty_issue_data()` (number=0, labels=[]). Assert primitive returns `False`. Assert `set_labels` is NOT called. (Guards against `get_issue` swallowing a failure via its `default_return`; without this guard the primitive would call `set_labels(issue_number=0, ...)` and raise `ValueError`.)
 
 ## Acceptance (local checks)
 
