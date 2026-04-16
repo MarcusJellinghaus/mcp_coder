@@ -191,6 +191,7 @@ mcp-coder implement --project-dir /path/to/project
     - `gemini_backend.py` - Google Gemini backend via `ChatGoogleGenerativeAI`
     - `anthropic_backend.py` - Anthropic backend via `ChatAnthropic`
     - **Optional install**: `pip install 'mcp-coder[langchain]'`
+    - See [`docs/configuration/optional-dependencies.md`](../configuration/optional-dependencies.md) for per-provider extras (smaller footprints if you only need one backend).
     - **Session storage**: history persisted to `~/.mcp_coder/sessions/langchain/`
 
 ### CLI System (`src/mcp_coder/cli/`)

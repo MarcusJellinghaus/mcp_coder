@@ -49,9 +49,9 @@ Detail: [steps/step_3.md](./steps/step_3.md)
 
 Detail: [steps/step_4.md](./steps/step_4.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
