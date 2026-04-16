@@ -1,14 +1,26 @@
-Add ENVIRONMENT section to verify output (#824 step 3)
+Group CONFIG entries by [section] header in verify output (#824 step 4)
 
-Introduce `_print_environment_section()` in `verify.py` and invoke it
-at the top of `execute_verify`. The section prints Python runtime info
-(version, executable, virtualenv, PYTHONPATH) followed by the installed
-versions of the four mcp-coder packages. Missing packages render as
-`[ERR] not installed`.
+Replace the flat config-printing loop in `execute_verify` with a
+grouping loop keyed on `entry["label"]`. Each `[section]` header is
+emitted once, items are indented below it, and a blank line separates
+groups.
 
-Package list is lifted to a module-level `_ENVIRONMENT_PACKAGES` tuple
-for testability. Virtualenv detection uses `sys.prefix != sys.base_prefix`
-and PYTHONPATH falls back to `(not set)` when missing or empty.
+For entries inside a `[section]`:
+- Split value on first space -> `key` / `rest`.
+- If the first token looks like a Python-identifier-like key
+  (new `_looks_like_key` helper; rejects Python keywords such as
+  `not` so that `not configured` is not rendered as a key column),
+  render as `    {key:<18s} {symbol} {rest}`.
+- Otherwise (e.g. `[OK] 6 repos configured`, `not configured`),
+  render the whole value without a key column.
 
-Adds `TestEnvironmentSection` covering the header, Python version row,
-missing PYTHONPATH, missing package, and non-venv cases.
+Top-level rows (`Config file`, `Expected path`, `Hint`, `Parse error`)
+continue to render as two-space indented rows.
+
+`verify_config()` return shape is unchanged.
+
+Adds `TestConfigGrouping` covering header-once grouping, indentation,
+blank-line separation, key extraction, the `Config file` top-level
+row, info entries without a clean `key value` split, and summary
+entries whose value begins with a status symbol. Also adds
+`TestLooksLikeKey` covering the identifier/keyword/bracket rules.

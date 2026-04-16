@@ -6,8 +6,10 @@ MLflow) and formats their output for the terminal.
 
 import argparse
 import datetime
+import keyword
 import logging
 import os
+import re
 import sys
 import textwrap
 from importlib.metadata import PackageNotFoundError, version
@@ -77,6 +79,19 @@ def _pad(title: str) -> str:
     """
     prefix = f"=== {title} "
     return "\n" + prefix + "=" * max(0, 60 - len(prefix))
+
+
+_KEY_REGEX = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _looks_like_key(token: str) -> bool:
+    """Return True if ``token`` looks like a Python-identifier key.
+
+    The token must match ``^[A-Za-z_][A-Za-z0-9_]*$`` and must not be a
+    reserved Python keyword (which would make rendering it as a key column
+    misleading, e.g. ``not configured``).
+    """
+    return bool(_KEY_REGEX.match(token)) and not keyword.iskeyword(token)
 
 
 _LABEL_MAP: dict[str, str] = {
@@ -384,18 +399,36 @@ def execute_verify(args: argparse.Namespace) -> int:
     symbols = STATUS_SYMBOLS
     _print_environment_section()
 
-    # 0. Config verification (first section)
+    # 0. Config verification (first section) with TOML-style grouping
     config_result = verify_config()
-    lines = [_pad("CONFIG")]
+    print(_pad("CONFIG"))
+    status_symbol_map = {
+        "ok": symbols["success"],
+        "warning": symbols["warning"],
+        "error": symbols["failure"],
+    }
+    last_label: str | None = None
     for entry in config_result["entries"]:
+        label = entry["label"]
         status = entry["status"]
-        symbol = {
-            "ok": symbols["success"],
-            "warning": symbols["warning"],
-            "error": symbols["failure"],
-        }.get(status, " ")
-        lines.append(f"  {entry['label']:<20s} {symbol} {entry['value']}")
-    print("\n".join(lines))
+        symbol = status_symbol_map.get(status, "")
+        value = entry["value"]
+        if label.startswith("["):
+            if label != last_label:
+                if last_label is not None:
+                    print()  # blank line between groups
+                print(f"  {label}")
+                last_label = label
+            first, _sep, rest = value.partition(" ")
+            if _looks_like_key(first) and rest:
+                print(f"    {first:<18s} {symbol} {rest}")
+            elif symbol.strip():
+                print(f"    {symbol} {value}")
+            else:
+                print(f"    {value}")
+        else:
+            # Top-level rows (Config file, Expected path, Hint, Parse error)
+            print(f"  {label:<20s} {symbol} {value}")
 
     # 0b. Prompt configuration section
     project_dir = Path(args.project_dir).resolve() if args.project_dir else Path.cwd()
