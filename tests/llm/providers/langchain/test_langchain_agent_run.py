@@ -463,8 +463,8 @@ class TestRunAgentLaunchErrorWrap:
         mock_agent = MagicMock()
 
         async def _empty_events() -> Any:
-            return
-            yield  # pragma: no cover  # make this an async generator
+            for _ in []:
+                yield
 
         mock_agent.astream_events.return_value = _empty_events()
 
