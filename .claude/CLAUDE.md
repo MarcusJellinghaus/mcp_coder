@@ -104,9 +104,11 @@ Be concise. If one line works, don't use three.
 
 ## Obsidian knowledge base
 
-An Obsidian vault (`obsidian-dev-wiki`) is available via the `obsidian-wiki` MCP server. At the start of non-trivial tasks (issue analysis, planning, implementation), search the vault for relevant context — repo notes, processes, known issues, and prior decisions. Update the vault when you learn something worth preserving for future sessions.
+An Obsidian vault (`obsidian-dev-wiki`) is available via the `obsidian-wiki` MCP server.
 
-When asked to perform a task that matches a process in the vault's `Processes/` folder, follow the documented steps. For example, "please update release_notes.md" should follow the [[Release Notes Drafting]] process.
+- **Read first:** At the start of non-trivial tasks, search the vault for relevant context — repo notes, processes, known issues, prior decisions.
+- **Follow processes:** When a task matches a documented process in `Processes/`, follow those steps.
+- **Write back:** Update the vault when you learn something worth preserving for future sessions.
 
 ## MCP server issues
 
