@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from mcp_coder.llm.types import UsageInfo
 
+from ._exceptions import LLMMCPLaunchError
 from ._usage import _extract_usage, _sum_usage
 
 if TYPE_CHECKING:
@@ -57,6 +58,24 @@ def _check_agent_dependencies() -> None:
 
 
 _KNOWN_FIELDS = {"command", "args", "env", "transport", "type"}
+
+
+def _format_launch_error(server_name: str, command: object, exc: BaseException) -> str:
+    """Format the user-facing message for a failed MCP server launch.
+
+    Args:
+        server_name: Name of the MCP server that failed to launch.
+        command: The configured command (may be missing, non-string, or empty).
+        exc: The original exception that caused the launch failure.
+
+    Returns:
+        A formatted message suitable for use in an LLMMCPLaunchError.
+    """
+    cmd_str = command if isinstance(command, str) and command else "<unknown>"
+    return (
+        f"MCP server {server_name!r} failed to launch: "
+        f"{cmd_str} ({type(exc).__name__})"
+    )
 
 
 def _resolve_env_vars(value: str, env: dict[str, str]) -> str:
@@ -243,6 +262,10 @@ async def run_agent(
         ``(final_text, full_message_history, stats_dict)``.
         *stats_dict* contains: ``agent_steps``, ``total_tool_calls``,
         ``tool_trace``.
+
+    Raises:
+        LLMMCPLaunchError: If an MCP server fails to launch (e.g. executable
+            not found or permission denied).
     """
     # Deferred imports — only needed when agent mode is active
     from langchain_core.messages import (
@@ -264,19 +287,26 @@ async def run_agent(
     client = MultiServerMCPClient(cast(Any, server_config))
     all_tools = []
     for server_name, connection in client.connections.items():
-        async with client.session(server_name) as session:
-            raw_tools = await session.list_tools()
-            for tool in raw_tools.tools:
-                sanitized = _sanitize_tool_schema(tool.inputSchema)
-                # Shallow copy to avoid mutating the original MCP tool
-                tool = tool.model_copy(update={"inputSchema": sanitized})
-                lc_tool = convert_mcp_tool_to_langchain_tool(
-                    None,
-                    tool,
-                    connection=connection,
-                    server_name=server_name,
+        try:
+            async with client.session(server_name) as session:
+                raw_tools = await session.list_tools()
+                for tool in raw_tools.tools:
+                    sanitized = _sanitize_tool_schema(tool.inputSchema)
+                    # Shallow copy to avoid mutating the original MCP tool
+                    tool = tool.model_copy(update={"inputSchema": sanitized})
+                    lc_tool = convert_mcp_tool_to_langchain_tool(
+                        None,
+                        tool,
+                        connection=connection,
+                        server_name=server_name,
+                    )
+                    all_tools.append(lc_tool)
+        except (FileNotFoundError, PermissionError) as exc:
+            raise LLMMCPLaunchError(
+                _format_launch_error(
+                    server_name, server_config[server_name].get("command"), exc
                 )
-                all_tools.append(lc_tool)
+            ) from exc
 
     agent = create_react_agent(chat_model, all_tools)
 
@@ -392,6 +422,10 @@ async def run_agent_stream(
     Yields:
         ``StreamEvent`` dicts: ``text_delta``, ``tool_use_start``,
         ``tool_result``, ``raw_line``, ``error``, and ``done``.
+
+    Raises:
+        LLMMCPLaunchError: If an MCP server fails to launch (e.g. executable
+            not found or permission denied).
     """
     from langchain_core.messages import (
         AIMessage,
@@ -413,18 +447,25 @@ async def run_agent_stream(
         client = MultiServerMCPClient(cast(Any, server_config))
         all_tools = []
         for server_name, connection in client.connections.items():
-            async with client.session(server_name) as session:
-                raw_tools = await session.list_tools()
-                for tool in raw_tools.tools:
-                    sanitized = _sanitize_tool_schema(tool.inputSchema)
-                    tool = tool.model_copy(update={"inputSchema": sanitized})
-                    lc_tool = convert_mcp_tool_to_langchain_tool(
-                        None,
-                        tool,
-                        connection=connection,
-                        server_name=server_name,
+            try:
+                async with client.session(server_name) as session:
+                    raw_tools = await session.list_tools()
+                    for tool in raw_tools.tools:
+                        sanitized = _sanitize_tool_schema(tool.inputSchema)
+                        tool = tool.model_copy(update={"inputSchema": sanitized})
+                        lc_tool = convert_mcp_tool_to_langchain_tool(
+                            None,
+                            tool,
+                            connection=connection,
+                            server_name=server_name,
+                        )
+                        all_tools.append(lc_tool)
+            except (FileNotFoundError, PermissionError) as exc:
+                raise LLMMCPLaunchError(
+                    _format_launch_error(
+                        server_name, server_config[server_name].get("command"), exc
                     )
-                    all_tools.append(lc_tool)
+                ) from exc
 
     agent = create_react_agent(chat_model, all_tools)
 

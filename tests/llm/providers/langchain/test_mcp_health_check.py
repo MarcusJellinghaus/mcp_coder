@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -67,7 +68,7 @@ class TestVerifyMcpServers:
         """Server responds with tools → ok True, tool count reported."""
         mock_load.return_value = {
             "tools-py": {
-                "command": "python",
+                "command": sys.executable,
                 "args": ["-m", "tools"],
                 "transport": "stdio",
             },
@@ -117,7 +118,7 @@ class TestVerifyMcpServers:
         assert result["overall_ok"] is False
         assert result["servers"]["broken"]["ok"] is False
         assert result["servers"]["broken"]["error"] == "FileNotFoundError"
-        assert "executable not found" in result["servers"]["broken"]["value"]
+        assert "binary not found at nonexistent" in result["servers"]["broken"]["value"]
 
     @patch(
         "mcp_coder.llm.providers.langchain.verification._load_mcp_server_config",
@@ -125,7 +126,7 @@ class TestVerifyMcpServers:
     def test_mixed_servers(self, mock_load: MagicMock) -> None:
         """One ok, one broken → overall_ok False, per-server details correct."""
         mock_load.return_value = {
-            "good": {"command": "python", "args": [], "transport": "stdio"},
+            "good": {"command": sys.executable, "args": [], "transport": "stdio"},
             "bad": {"command": "nonexistent", "args": [], "transport": "stdio"},
         }
 
@@ -134,12 +135,8 @@ class TestVerifyMcpServers:
 
         def _session_side_effect(name: str) -> MagicMock:
             ctx = MagicMock()
-            if name == "good":
-                ctx.__aenter__ = AsyncMock(return_value=good_session)
-                ctx.__aexit__ = AsyncMock(return_value=False)
-            else:
-                ctx.__aenter__ = AsyncMock(side_effect=ConnectionError("refused"))
-                ctx.__aexit__ = AsyncMock(return_value=False)
+            ctx.__aenter__ = AsyncMock(return_value=good_session)
+            ctx.__aexit__ = AsyncMock(return_value=False)
             return ctx
 
         mock_client = MagicMock()
@@ -155,7 +152,10 @@ class TestVerifyMcpServers:
         assert result["servers"]["good"]["ok"] is True
         assert result["servers"]["good"]["tools"] == 3
         assert result["servers"]["bad"]["ok"] is False
-        assert result["servers"]["bad"]["error"] == "ConnectionError"
+        assert result["servers"]["bad"]["error"] == "FileNotFoundError"
+        assert "binary not found at nonexistent (server bad)" in (
+            result["servers"]["bad"]["value"]
+        )
 
     @patch(
         "mcp_coder.llm.providers.langchain.verification._load_mcp_server_config",
@@ -163,7 +163,7 @@ class TestVerifyMcpServers:
     def test_timeout_handling(self, mock_load: MagicMock) -> None:
         """Slow server → timeout error reported."""
         mock_load.return_value = {
-            "slow": {"command": "python", "args": [], "transport": "stdio"},
+            "slow": {"command": sys.executable, "args": [], "transport": "stdio"},
         }
 
         mock_session = AsyncMock()
@@ -184,6 +184,10 @@ class TestVerifyMcpServers:
         assert result["overall_ok"] is False
         assert result["servers"]["slow"]["ok"] is False
         assert result["servers"]["slow"]["error"] == "TimeoutError"
+        # Timeout must not be mislabeled as "failed to launch" (issue #830)
+        value = result["servers"]["slow"]["value"]
+        assert "timed out" in value
+        assert "failed to launch" not in value
 
     @patch(
         "mcp_coder.llm.providers.langchain.verification._load_mcp_server_config",
@@ -192,7 +196,7 @@ class TestVerifyMcpServers:
         """Successful server result includes tool_names list."""
         mock_load.return_value = {
             "tools-py": {
-                "command": "python",
+                "command": sys.executable,
                 "args": ["-m", "tools"],
                 "transport": "stdio",
             },
@@ -233,7 +237,7 @@ class TestVerifyMcpServers:
         """Successful server result includes tool descriptions in tuples."""
         mock_load.return_value = {
             "workspace": {
-                "command": "python",
+                "command": sys.executable,
                 "args": ["-m", "workspace"],
                 "transport": "stdio",
             },
@@ -274,8 +278,10 @@ class TestVerifyMcpServers:
     )
     def test_server_failure_has_no_tool_names(self, mock_load: MagicMock) -> None:
         """Failed server result does not contain tool_names."""
+        # Use sys.executable so pre-flight (shutil.which) passes and the
+        # mocked async context manager is actually reached.
         mock_load.return_value = {
-            "broken": {"command": "nonexistent", "args": [], "transport": "stdio"},
+            "broken": {"command": sys.executable, "args": [], "transport": "stdio"},
         }
 
         mock_client = MagicMock()
@@ -293,6 +299,128 @@ class TestVerifyMcpServers:
         server_result = result["servers"]["broken"]
         assert server_result["ok"] is False
         assert "tool_names" not in server_result
+
+    @patch(
+        "mcp_coder.llm.providers.langchain.verification._load_mcp_server_config",
+    )
+    def test_unresolved_placeholder_in_command(self, mock_load: MagicMock) -> None:
+        """Unresolved ${VAR} in command → UnresolvedPlaceholder category."""
+        mock_load.return_value = {
+            "srv": {
+                "command": "${MCP_CODER_VENV_PATH}\\foo.exe",
+                "args": [],
+                "transport": "stdio",
+            },
+        }
+
+        result = verify_mcp_servers("/fake/path/.mcp.json")
+
+        assert result["overall_ok"] is False
+        entry = result["servers"]["srv"]
+        assert entry["ok"] is False
+        assert entry["error"] == "UnresolvedPlaceholder"
+        assert "${MCP_CODER_VENV_PATH}" in entry["value"]
+
+    @patch(
+        "mcp_coder.llm.providers.langchain.verification._load_mcp_server_config",
+    )
+    def test_unresolved_placeholder_in_args(self, mock_load: MagicMock) -> None:
+        """Unresolved ${VAR} in args → UnresolvedPlaceholder category."""
+        mock_load.return_value = {
+            "srv": {
+                "command": sys.executable,
+                "args": ["--path", "${FOO_UNSET}"],
+                "transport": "stdio",
+            },
+        }
+
+        result = verify_mcp_servers("/fake/path/.mcp.json")
+
+        assert result["overall_ok"] is False
+        entry = result["servers"]["srv"]
+        assert entry["ok"] is False
+        assert entry["error"] == "UnresolvedPlaceholder"
+        assert "${FOO_UNSET}" in entry["value"]
+
+    @patch(
+        "mcp_coder.llm.providers.langchain.verification._load_mcp_server_config",
+    )
+    def test_unresolved_placeholder_in_env(self, mock_load: MagicMock) -> None:
+        """Unresolved ${VAR} in env → UnresolvedPlaceholder category."""
+        mock_load.return_value = {
+            "srv": {
+                "command": sys.executable,
+                "args": [],
+                "env": {"X": "${BAR_UNSET}"},
+                "transport": "stdio",
+            },
+        }
+
+        result = verify_mcp_servers("/fake/path/.mcp.json")
+
+        assert result["overall_ok"] is False
+        entry = result["servers"]["srv"]
+        assert entry["ok"] is False
+        assert entry["error"] == "UnresolvedPlaceholder"
+        assert "${BAR_UNSET}" in entry["value"]
+
+    @patch(
+        "mcp_coder.llm.providers.langchain.verification._load_mcp_server_config",
+    )
+    def test_launch_error_includes_resolved_path_and_class(
+        self, mock_load: MagicMock
+    ) -> None:
+        """Launch error fallback includes resolved path and exception class."""
+        mock_load.return_value = {
+            "srv": {"command": sys.executable, "args": [], "transport": "stdio"},
+        }
+
+        mock_client = MagicMock()
+        mock_client.session.return_value.__aenter__ = AsyncMock(
+            side_effect=ConnectionError("boom")
+        )
+        mock_client.session.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        with patch(
+            "mcp_coder.llm.providers.langchain.verification._import_mcp_client",
+            return_value=lambda cfg: mock_client,
+        ):
+            result = verify_mcp_servers("/fake/path/.mcp.json")
+
+        entry = result["servers"]["srv"]
+        assert entry["ok"] is False
+        assert entry["error"] == "ConnectionError"
+        assert sys.executable in entry["value"]
+        assert "ConnectionError" in entry["value"]
+
+    @patch(
+        "mcp_coder.llm.providers.langchain.verification._load_mcp_server_config",
+    )
+    def test_launch_error_filenotfound_after_preflight_passes(
+        self, mock_load: MagicMock
+    ) -> None:
+        """Pre-flight passes but async session still raises FileNotFoundError."""
+        mock_load.return_value = {
+            "srv": {"command": sys.executable, "args": [], "transport": "stdio"},
+        }
+
+        mock_client = MagicMock()
+        mock_client.session.return_value.__aenter__ = AsyncMock(
+            side_effect=FileNotFoundError("gone after preflight")
+        )
+        mock_client.session.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        with patch(
+            "mcp_coder.llm.providers.langchain.verification._import_mcp_client",
+            return_value=lambda cfg: mock_client,
+        ):
+            result = verify_mcp_servers("/fake/path/.mcp.json")
+
+        entry = result["servers"]["srv"]
+        assert entry["ok"] is False
+        assert entry["error"] == "FileNotFoundError"
+        assert sys.executable in entry["value"]
+        assert "FileNotFoundError" in entry["value"]
 
 
 @pytest.mark.langchain_integration

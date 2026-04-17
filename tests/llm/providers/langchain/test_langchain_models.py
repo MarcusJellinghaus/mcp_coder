@@ -300,18 +300,22 @@ class TestListModelsCommon:
 
 
 class TestListOpenaiModelsConnectionError:
-    """list_openai_models wraps OSError as LLMConnectionError."""
+    """list_openai_models wraps connection errors as LLMConnectionError."""
 
-    def test_oserror_raises_llm_connection_error(self) -> None:
+    def test_connection_error_raises_llm_connection_error(self) -> None:
         mock_openai = _openai_mock()
-        mock_openai.OpenAI.return_value.models.list.side_effect = OSError("reset")
+        mock_openai.OpenAI.return_value.models.list.side_effect = ConnectionError(
+            "reset"
+        )
         with patch.dict(sys.modules, {"openai": mock_openai}):
             with pytest.raises(LLMConnectionError):
                 list_openai_models(api_key="k")
 
     def test_connection_error_message_contains_hints(self) -> None:
         mock_openai = _openai_mock()
-        mock_openai.OpenAI.return_value.models.list.side_effect = OSError("reset")
+        mock_openai.OpenAI.return_value.models.list.side_effect = ConnectionError(
+            "reset"
+        )
         with patch.dict(sys.modules, {"openai": mock_openai}):
             with pytest.raises(LLMConnectionError, match="OPENAI_API_KEY") as exc_info:
                 list_openai_models(api_key="k")
@@ -347,17 +351,17 @@ class TestListOpenaiModelsAuthError:
 
 
 class TestListGeminiModelsConnectionError:
-    """list_gemini_models wraps OSError as LLMConnectionError."""
+    """list_gemini_models wraps connection errors as LLMConnectionError."""
 
-    def test_oserror_raises_llm_connection_error(self) -> None:
+    def test_connection_error_raises_llm_connection_error(self) -> None:
         with patch.object(_google_genai, "Client") as mock_client:
-            mock_client.return_value.models.list.side_effect = OSError("reset")
+            mock_client.return_value.models.list.side_effect = ConnectionError("reset")
             with pytest.raises(LLMConnectionError):
                 list_gemini_models(api_key="k")
 
     def test_connection_error_message_contains_hints(self) -> None:
         with patch.object(_google_genai, "Client") as mock_client:
-            mock_client.return_value.models.list.side_effect = OSError("reset")
+            mock_client.return_value.models.list.side_effect = ConnectionError("reset")
             with pytest.raises(LLMConnectionError, match="GEMINI_API_KEY"):
                 list_gemini_models(api_key="k")
 
@@ -389,18 +393,22 @@ class TestListGeminiModelsAuthError:
 
 
 class TestListAnthropicModelsConnectionError:
-    """list_anthropic_models wraps OSError as LLMConnectionError."""
+    """list_anthropic_models wraps connection errors as LLMConnectionError."""
 
-    def test_oserror_raises_llm_connection_error(self) -> None:
+    def test_connection_error_raises_llm_connection_error(self) -> None:
         mock_anthropic = _anthropic_mock()
-        mock_anthropic.Anthropic.return_value.models.list.side_effect = OSError("reset")
+        mock_anthropic.Anthropic.return_value.models.list.side_effect = ConnectionError(
+            "reset"
+        )
         with patch.dict(sys.modules, {"anthropic": mock_anthropic}):
             with pytest.raises(LLMConnectionError):
                 list_anthropic_models(api_key="k")
 
     def test_connection_error_message_contains_hints(self) -> None:
         mock_anthropic = _anthropic_mock()
-        mock_anthropic.Anthropic.return_value.models.list.side_effect = OSError("reset")
+        mock_anthropic.Anthropic.return_value.models.list.side_effect = ConnectionError(
+            "reset"
+        )
         with patch.dict(sys.modules, {"anthropic": mock_anthropic}):
             with pytest.raises(LLMConnectionError, match="ANTHROPIC_API_KEY"):
                 list_anthropic_models(api_key="k")

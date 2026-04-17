@@ -31,6 +31,7 @@ from ._exceptions import (
     CONNECTION_ERRORS,
     GOOGLE_CLIENT_ERRORS,
     OPENAI_AUTH_ERRORS,
+    LLMMCPLaunchError,
     is_google_auth_error,
     raise_auth_error,
     raise_connection_error,
