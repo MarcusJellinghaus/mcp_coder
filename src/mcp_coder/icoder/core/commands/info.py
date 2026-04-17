@@ -18,7 +18,7 @@ from mcp_coder.utils.mcp_verification import parse_claude_mcp_list
 if TYPE_CHECKING:
     from mcp_coder.icoder.core.command_registry import CommandRegistry
     from mcp_coder.icoder.env_setup import RuntimeInfo
-    from mcp_coder.llm.mcp_manager import MCPManager
+    from mcp_coder.llm.providers.langchain.mcp_manager import MCPManager
 
 _SENSITIVE = ("token", "key", "secret", "password", "credential")
 

@@ -13,7 +13,7 @@ from mcp_coder.icoder.core.commands.info import (
     register_info,
 )
 from mcp_coder.icoder.env_setup import RuntimeInfo
-from mcp_coder.llm.mcp_manager import MCPManager, MCPServerStatus
+from mcp_coder.llm.providers.langchain.mcp_manager import MCPManager, MCPServerStatus
 
 
 @pytest.fixture

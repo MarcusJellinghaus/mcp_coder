@@ -6,10 +6,10 @@ from importlib.metadata import PackageNotFoundError
 from pathlib import Path
 
 from ...icoder.env_setup import setup_icoder_environment
-from ...llm.mcp_manager import MCPManager
 from ...llm.providers.langchain.agent import (  # noqa: PLC2701
     _load_mcp_server_config,
 )
+from ...llm.providers.langchain.mcp_manager import MCPManager
 from ...llm.storage import (
     extract_langchain_session_id,
     extract_session_id,

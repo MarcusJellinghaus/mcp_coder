@@ -138,6 +138,13 @@ cd mcp_coder
 pip install -e ".[dev]"
 ```
 
+#### Optional features
+
+mcp-coder publishes several pip extras for optional integrations
+(LangChain providers, MLflow logging, Textual dev tooling, …). See
+[Optional Dependencies](docs/configuration/optional-dependencies.md) for
+the full list and when to install each.
+
 ## 📚 Documentation
 
 **[Full Documentation Index](docs/README.md)** - Complete list of all documentation

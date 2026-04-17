@@ -53,30 +53,45 @@ test = [
     "pytest-textual-snapshot>=1.0.0",
 ]
 
-# MCP servers - for local development (execution env already has these)
-mcp = [
-    # mcp-workspace moved to main dependencies for check file-size command
-]
-
 # MLflow integration - for conversation logging and analytics
 mlflow = [
     "mlflow>=2.10.0",
 ]
 
-# OS certificate store integration — fixes SSL errors behind corporate proxies
-truststore = [
+# LangChain shared runtime (langchain-core, MCP adapters, graph, HTTP, SSL)
+langchain-base = [
+    "langchain-core>=0.3.0",
+    "langchain-mcp-adapters>=0.1.0",
+    "langgraph>=0.2.0",
+    "httpx>=0.27.0",
     "truststore>=0.9.0",
 ]
 
 # LangChain integration — alternative LLM providers (OpenAI, Gemini, Anthropic, …)
-langchain = [
-    "langchain-core>=0.3.0",
+# Per-provider extras — each pulls the shared base + its wrapper SDK
+langchain-openai = [
+    "mcp-coder[langchain-base]",
     "langchain-openai>=0.2.0",
+]
+langchain-gemini = [
+    "mcp-coder[langchain-base]",
     "langchain-google-genai>=2.0.0",
+]
+langchain-anthropic = [
+    "mcp-coder[langchain-base]",
     "langchain-anthropic>=0.3.0",
-    "langchain-mcp-adapters>=0.1.0",
-    "langgraph>=0.2.0",
-    "httpx>=0.27.0",
+]
+langchain-ollama = [
+    "mcp-coder[langchain-base]",
+    "langchain-ollama>=0.2.0",
+]
+
+# Meta — identical installed set to the current [langchain] extra
+langchain = [
+    "mcp-coder[langchain-openai]",
+    "mcp-coder[langchain-gemini]",
+    "mcp-coder[langchain-anthropic]",
+    "mcp-coder[langchain-ollama]",
 ]
 
 # Textual TUI - dev tooling for interactive coding interface
@@ -86,7 +101,7 @@ tui = [
 
 # Full development setup - combines all groups for local development
 dev = [
-    "mcp-coder[types,test,mcp,langchain,mlflow,tui]",
+    "mcp-coder[types,test,langchain,mlflow,tui]",
     "import-linter>=2.0",
     "pycycle>=0.0.8",
     "pydeps>=3.0.0",

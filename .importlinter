@@ -301,6 +301,31 @@ ignore_imports =
     mcp_coder.llm.providers.langchain.** -> anthropic
 
 # -----------------------------------------------------------------------------
+# Contract: LangChain Transitive Dependencies Isolation
+# -----------------------------------------------------------------------------
+# langchain_mcp_adapters, langgraph, truststore, and httpx are transitive
+# optional dependencies installed via [langchain-base]. Only the langchain
+# provider package may import them. Grouped into one contract because the
+# boundary (source_modules + ignore_imports) is identical for all four —
+# same grouping style as langchain_library_isolation above.
+# -----------------------------------------------------------------------------
+[importlinter:contract:langchain_transitive_isolation]
+name = LangChain Transitive Dependencies Isolation
+type = forbidden
+source_modules =
+    mcp_coder
+forbidden_modules =
+    langchain_mcp_adapters
+    langgraph
+    truststore
+    httpx
+ignore_imports =
+    mcp_coder.llm.providers.langchain.** -> langchain_mcp_adapters
+    mcp_coder.llm.providers.langchain.** -> langgraph
+    mcp_coder.llm.providers.langchain.** -> truststore
+    mcp_coder.llm.providers.langchain.** -> httpx
+
+# -----------------------------------------------------------------------------
 # Contract: Pyperclip Library Isolation
 # -----------------------------------------------------------------------------
 # The 'pyperclip' package should only be used by utils.clipboard.

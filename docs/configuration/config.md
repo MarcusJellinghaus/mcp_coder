@@ -215,6 +215,9 @@ Install the extra dependency first:
 pip install 'mcp-coder[langchain]'
 ```
 
+See [`optional-dependencies.md`](./optional-dependencies.md) for per-provider
+extras (smaller footprints if you only need one backend).
+
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | `backend` | string | LangChain backend: `"openai"`, `"gemini"`, or `"anthropic"` | Yes |
