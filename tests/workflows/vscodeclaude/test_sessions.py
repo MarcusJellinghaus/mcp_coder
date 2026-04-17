@@ -1063,22 +1063,22 @@ class TestWarnOrphanFolders:
         )
 
 
-class TestIsSessionActiveWindowPriority:
-    """Tests for is_session_active() window-title-priority behavior.
+class TestIsSessionActiveFallbackChain:
+    """Tests for is_session_active() fallback chain behaviour.
 
-    These tests verify that is_session_active() prioritizes window title
-    checks over PID checks, so that a stale PID (alive but belonging to a
-    different VSCode instance) does not cause a false positive when the
-    session's workspace window is actually gone.
+    These tests verify that is_session_active() uses a window-title ->
+    PID -> cmdline fallback chain (instead of treating the Windows title
+    check as authoritative), and that each call emits exactly one INFO
+    line naming the deciding criterion.
     """
 
-    def test_pid_alive_but_window_gone_returns_inactive_with_warning(
+    def test_windows_title_miss_pid_alive_returns_active(
         self,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """PID alive but no matching window title -> inactive with warning."""
+        """Title miss + PID alive -> active with INFO noting potentially stale."""
         folder = tmp_path / "mcp_coder_542"
         folder.mkdir()
 
@@ -1110,15 +1110,178 @@ class TestIsSessionActiveWindowPriority:
         )
 
         with caplog.at_level(
-            logging.WARNING, logger="mcp_coder.workflows.vscodeclaude.sessions"
+            logging.DEBUG, logger="mcp_coder.workflows.vscodeclaude.sessions"
+        ):
+            result = is_session_active(session)
+
+        assert result is True
+        assert any(
+            "active (PID 28036 alive, window-title not found \u2014 potentially stale)"
+            in record.message
+            for record in caplog.records
+        )
+
+    def test_windows_title_miss_cmdline_match_refreshes_pid(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Title miss + PID dead + cmdline match w/ new PID -> refresh + active."""
+        folder = tmp_path / "mcp_coder_542"
+        folder.mkdir()
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 542,
+            "status": "s",
+            "vscode_pid": 28036,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+            "install_from_github": False,
+        }
+
+        update_mock = MagicMock()
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI", True
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.session_has_artifacts",
+            lambda f: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_window_open_for_folder",
+            lambda folder_path, issue_number=None, repo=None: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_open_for_folder",
+            lambda f: (True, 54321),
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.update_session_pid",
+            update_mock,
+        )
+
+        with caplog.at_level(
+            logging.DEBUG, logger="mcp_coder.workflows.vscodeclaude.sessions"
+        ):
+            result = is_session_active(session)
+
+        assert result is True
+        update_mock.assert_called_once_with(str(folder), 54321)
+        assert any(
+            "active (cmdline match PID=54321, window-title not found \u2014 potentially stale)"
+            in record.message
+            for record in caplog.records
+        )
+        assert any(
+            "refreshing stored PID 28036 -> 54321" in record.message
+            for record in caplog.records
+        )
+
+    def test_windows_all_miss_returns_inactive(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Title miss + PID dead + cmdline miss -> inactive with INFO summary."""
+        folder = tmp_path / "mcp_coder_542"
+        folder.mkdir()
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 542,
+            "status": "s",
+            "vscode_pid": 28036,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+            "install_from_github": False,
+        }
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI", True
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.session_has_artifacts",
+            lambda f: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_window_open_for_folder",
+            lambda folder_path, issue_number=None, repo=None: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.check_vscode_running",
+            lambda pid: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_open_for_folder",
+            lambda f: (False, None),
+        )
+
+        with caplog.at_level(
+            logging.DEBUG, logger="mcp_coder.workflows.vscodeclaude.sessions"
         ):
             result = is_session_active(session)
 
         assert result is False
         assert any(
-            "window title not found but PID" in record.message
+            "inactive (no window / PID 28036 gone / no cmdline match)" in record.message
             for record in caplog.records
         )
+
+    def test_non_windows_pid_alive_info_format(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """HAS_WIN32GUI=False + PID alive -> 'active (PID 1234 alive)' only."""
+        folder = tmp_path / "mcp_coder_100"
+        folder.mkdir()
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 100,
+            "status": "s",
+            "vscode_pid": 1234,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+            "install_from_github": False,
+        }
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI", False
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.session_has_artifacts",
+            lambda f: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.check_vscode_running",
+            lambda pid: True,
+        )
+
+        with caplog.at_level(
+            logging.DEBUG, logger="mcp_coder.workflows.vscodeclaude.sessions"
+        ):
+            result = is_session_active(session)
+
+        assert result is True
+        matching = [
+            record
+            for record in caplog.records
+            if "active (PID 1234 alive)" in record.message
+        ]
+        assert matching, "Expected INFO line 'active (PID 1234 alive)'"
+        assert "window-title" not in matching[0].message
 
     @pytest.mark.parametrize(
         "session_data",

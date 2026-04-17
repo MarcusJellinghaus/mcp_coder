@@ -505,20 +505,34 @@ def is_session_active(session: VSCodeClaudeSession) -> bool:
     Single entry point for all VSCode detection logic. Callers should always
     use this instead of assembling individual checks themselves.
 
-    Check order:
-    - On Windows (with issue_num + repo): window title check is authoritative.
-      Its result is returned directly — no fallthrough to PID or cmdline checks,
-      which can false-positive when a VSCode process has been reused.
-    - Non-Windows fallback: PID check → cmdline check (unchanged).
+    Uses a fallback chain that prefers false-positives (skip cleanup) over
+    false-negatives (delete live folder):
+
+    1. On Windows with issue_num + repo: window-title match -> active.
+    2. Stored PID still alive -> active.
+    3. Cmdline match on folder -> active (and refresh stored PID if the
+       found PID differs from the stored one, so subsequent calls can hit
+       the fast PID path).
+    4. Otherwise -> inactive.
 
     Pre-condition: only runs checks if session artifacts exist. If both the
-    folder and workspace file are gone, any matching process is a zombie.
+    folder and workspace file are gone, any matching process is a zombie
+    and this short-circuits to False with a DEBUG line.
+
+    Every other call emits exactly one INFO line naming the deciding
+    criterion. Windows fallback paths carry a ``window-title not found —
+    potentially stale`` note so silent title-detection degradation surfaces
+    in logs even when a later check succeeds.
+
+    Side effect: on cmdline match where the found PID differs from the
+    stored ``vscode_pid``, calls ``update_session_pid(folder, found_pid)``,
+    which writes ``sessions.json``.
 
     Args:
         session: Session to check
 
     Returns:
-        True if VSCode is running for this session
+        True if any evidence of a live VSCode session for this folder.
     """
     folder = session.get("folder", "")
     issue_num = session.get("issue_number")
@@ -526,27 +540,56 @@ def is_session_active(session: VSCodeClaudeSession) -> bool:
     if not session_has_artifacts(folder):
         logger.debug("is_session_active #%s: no artifacts -> False", issue_num)
         return False
+
+    title_checked = False
     if HAS_WIN32GUI and issue_num is not None and repo is not None:
-        found = is_vscode_window_open_for_folder(
+        title_checked = True
+        if is_vscode_window_open_for_folder(
             folder,
             issue_number=issue_num,
             repo=repo,
+        ):
+            logger.info("is_session_active #%s: active (window-title match)", issue_num)
+            return True
+
+    stale = ", window-title not found \u2014 potentially stale" if title_checked else ""
+    stored_pid = session.get("vscode_pid")
+
+    if check_vscode_running(stored_pid):
+        logger.info(
+            "is_session_active #%s: active (PID %s alive%s)",
+            issue_num,
+            stored_pid,
+            stale,
         )
-        if not found and check_vscode_running(session.get("vscode_pid")):
-            logger.warning(
-                "is_session_active #%s: window title not found but PID %s alive"
-                " — treating as inactive",
-                issue_num,
-                session.get("vscode_pid"),
-            )
-        logger.debug("is_session_active #%s: window check -> %s", issue_num, found)
-        return found
-    if check_vscode_running(session.get("vscode_pid")):
-        logger.debug("is_session_active #%s: PID check -> True", issue_num)
         return True
-    is_open, _ = is_vscode_open_for_folder(folder)
-    logger.debug("is_session_active #%s: process check -> %s", issue_num, is_open)
-    return is_open
+
+    is_open, found_pid = is_vscode_open_for_folder(folder)
+    if is_open:
+        if found_pid is not None and found_pid != stored_pid:
+            logger.debug(
+                "is_session_active #%s: refreshing stored PID %s -> %s",
+                issue_num,
+                stored_pid,
+                found_pid,
+            )
+            update_session_pid(folder, found_pid)
+        logger.info(
+            "is_session_active #%s: active (cmdline match PID=%s%s)",
+            issue_num,
+            found_pid,
+            stale,
+        )
+        return True
+
+    prefix = "no window / " if title_checked else ""
+    logger.info(
+        "is_session_active #%s: inactive (%sPID %s gone / no cmdline match)",
+        issue_num,
+        prefix,
+        stored_pid,
+    )
+    return False
 
 
 def get_active_session_count() -> int:
