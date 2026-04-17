@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Iterator
 
+from mcp_coder.icoder.core.colors import DEFAULT_PROMPT_COLOR, validate_color
 from mcp_coder.icoder.core.command_history import CommandHistory
 from mcp_coder.icoder.core.command_registry import (
     CommandRegistry,
@@ -41,6 +42,7 @@ class AppCore:
         self._runtime_info = runtime_info
         self._token_usage = TokenUsage()
         self._command_history = CommandHistory()
+        self._prompt_color: str = DEFAULT_PROMPT_COLOR
 
     def handle_input(self, text: str) -> Response:
         """Route user input to commands or flag for LLM streaming.
@@ -134,6 +136,23 @@ class AppCore:
     def token_usage(self) -> TokenUsage:
         """Cumulative token usage for this session."""
         return self._token_usage
+
+    @property
+    def prompt_color(self) -> str:
+        """Current prompt border color as hex string. Always concrete, never None."""
+        return self._prompt_color
+
+    def set_prompt_color(self, value: str) -> str | None:
+        """Validate and set prompt border color. Delegates to validate_color().
+
+        Returns:
+            Error message string on failure, None on success.
+        """
+        hex_color, error = validate_color(value)
+        if error:
+            return error
+        self._prompt_color = hex_color  # type: ignore[assignment]
+        return None
 
     @property
     def session_id(self) -> str | None:

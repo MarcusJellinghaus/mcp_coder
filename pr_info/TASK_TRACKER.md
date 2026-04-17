@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Color validation module and AppCore color state
-- [ ] Implementation: `colors.py` module + `AppCore` color state + tests ([step_1.md](./steps/step_1.md))
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(icoder): add color validation module and prompt color state (#798)`
+- [x] Implementation: `colors.py` module + `AppCore` color state + tests ([step_1.md](./steps/step_1.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(icoder): add color validation module and prompt color state (#798)`
 
 ### Step 2: /color command handler
 - [ ] Implementation: `commands/color.py` + registration wiring + tests ([step_2.md](./steps/step_2.md))
