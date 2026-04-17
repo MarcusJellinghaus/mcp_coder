@@ -6,6 +6,7 @@
       "Bash(./tools/tach_check.sh:*)",
       "Bash(find:*)",
       "Bash(gh issue view:*)",
+      "Bash(gh issue list:*)",
       "Bash(gh pr view:*)",
       "Bash(gh run view:*)",
       "Bash(git diff:*)",
