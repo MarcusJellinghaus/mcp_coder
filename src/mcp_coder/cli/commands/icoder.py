@@ -175,6 +175,15 @@ def execute_icoder(args: argparse.Namespace) -> int:
                     registry=registry,
                     runtime_info=runtime_info,
                 )
+                initial_color = getattr(args, "initial_color", None)
+                if initial_color:
+                    error = app_core.set_prompt_color(initial_color)
+                    if error:
+                        logger.warning(
+                            "Invalid --initial-color '%s': %s",
+                            initial_color,
+                            error,
+                        )
                 register_color(registry, app_core)
                 format_tools = not getattr(args, "no_format_tools", False)
                 ICoderApp(app_core, format_tools=format_tools).run()

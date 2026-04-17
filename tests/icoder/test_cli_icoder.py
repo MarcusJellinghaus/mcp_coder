@@ -133,6 +133,7 @@ def _make_args(tmp_path: Path) -> MagicMock:
     args.session_id = None
     args.continue_session = False
     args.continue_session_from = None
+    args.initial_color = None
     return args
 
 
@@ -775,3 +776,135 @@ def test_color_command_registered_in_icoder(
     assert len(captured_app_core) == 1
     command_names = [c.name for c in captured_app_core[0].registry.get_all()]
     assert "/color" in command_names
+
+
+# --- Step 4: --initial-color CLI parameter tests ---
+
+
+def test_icoder_initial_color_flag() -> None:
+    """Parser accepts --initial-color."""
+    parser = create_parser()
+    args = parser.parse_args(["icoder", "--initial-color", "red"])
+    assert args.initial_color == "red"
+
+
+def test_icoder_initial_color_default() -> None:
+    """Default --initial-color is None."""
+    parser = create_parser()
+    args = parser.parse_args(["icoder"])
+    assert args.initial_color is None
+
+
+def test_execute_icoder_initial_color_applied(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Valid --initial-color sets prompt_color on app_core."""
+    from mcp_coder.cli.commands.icoder import execute_icoder
+    from mcp_coder.icoder.core.app_core import AppCore
+    from mcp_coder.icoder.ui.app import ICoderApp
+
+    (tmp_path / "logs").mkdir()
+
+    captured_app_core: list[AppCore] = []
+
+    def capturing_init(self: object, app_core: object, **kwargs: object) -> None:
+        captured_app_core.append(app_core)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(ICoderApp, "__init__", capturing_init)
+    monkeypatch.setattr(ICoderApp, "run", lambda self: None)
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.setup_icoder_environment",
+        lambda _: _FAKE_RUNTIME_INFO,
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.resolve_llm_method",
+        lambda _: ("claude", None),
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.parse_llm_method_from_args",
+        lambda _: "claude",
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.resolve_mcp_config_path",
+        lambda *a, **_kw: None,
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.find_latest_session",
+        lambda **_kw: None,
+    )
+    monkeypatch.setattr(
+        "mcp_coder.icoder.skills.load_skills",
+        lambda _: [],
+    )
+    monkeypatch.setattr(
+        "mcp_coder.icoder.skills.register_skill_commands",
+        lambda registry, skills, provider: [],
+    )
+
+    args = _make_args(tmp_path)
+    args.initial_color = "red"
+    result = execute_icoder(args)
+
+    assert result == 0
+    assert len(captured_app_core) == 1
+    assert captured_app_core[0].prompt_color == "#ef4444"
+
+
+def test_execute_icoder_initial_color_invalid_warns(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Invalid --initial-color logs warning and keeps default color."""
+    from mcp_coder.cli.commands.icoder import execute_icoder
+    from mcp_coder.icoder.core.app_core import AppCore
+    from mcp_coder.icoder.ui.app import ICoderApp
+
+    (tmp_path / "logs").mkdir()
+
+    captured_app_core: list[AppCore] = []
+
+    def capturing_init(self: object, app_core: object, **kwargs: object) -> None:
+        captured_app_core.append(app_core)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(ICoderApp, "__init__", capturing_init)
+    monkeypatch.setattr(ICoderApp, "run", lambda self: None)
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.setup_icoder_environment",
+        lambda _: _FAKE_RUNTIME_INFO,
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.resolve_llm_method",
+        lambda _: ("claude", None),
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.parse_llm_method_from_args",
+        lambda _: "claude",
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.resolve_mcp_config_path",
+        lambda *a, **_kw: None,
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.find_latest_session",
+        lambda **_kw: None,
+    )
+    monkeypatch.setattr(
+        "mcp_coder.icoder.skills.load_skills",
+        lambda _: [],
+    )
+    monkeypatch.setattr(
+        "mcp_coder.icoder.skills.register_skill_commands",
+        lambda registry, skills, provider: [],
+    )
+
+    args = _make_args(tmp_path)
+    args.initial_color = "not_a_color"
+
+    import logging
+
+    with caplog.at_level(logging.WARNING):
+        result = execute_icoder(args)
+
+    assert result == 0
+    assert len(captured_app_core) == 1
+    assert captured_app_core[0].prompt_color == "#666666"
+    assert "Invalid --initial-color" in caplog.text

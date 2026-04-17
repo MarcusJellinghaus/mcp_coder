@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat(icoder): add colored round border to InputArea (#798)`
 
 ### Step 4: --initial-color CLI parameter
-- [ ] Implementation: parser argument + `execute_icoder()` wiring + docs + tests ([step_4.md](./steps/step_4.md))
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(icoder): add --initial-color CLI parameter and docs (#798)`
+- [x] Implementation: parser argument + `execute_icoder()` wiring + docs + tests ([step_4.md](./steps/step_4.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(icoder): add --initial-color CLI parameter and docs (#798)`
 
 ## Pull Request
 - [ ] PR review: verify all steps integrated correctly
