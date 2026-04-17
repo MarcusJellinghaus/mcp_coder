@@ -102,6 +102,14 @@ Never conflate the two. Use `--execution-dir` when workspace and project differ.
 
 Be concise. If one line works, don't use three.
 
+## Obsidian knowledge base
+
+An Obsidian vault (`obsidian-dev-wiki`) is available via the `obsidian-wiki` MCP server.
+
+- **Read first:** At the start of non-trivial tasks, search the vault for relevant context — repo notes, processes, known issues, prior decisions.
+- **Follow processes:** When a task matches a documented process in `Processes/`, follow those steps.
+- **Write back:** Update the vault when you learn something worth preserving for future sessions.
+
 ## MCP server issues
 
 Alert immediately if MCP tools are not accessible — this blocks all work.
