@@ -9,7 +9,7 @@ Add a `/color` slash command to the iCoder TUI that changes the InputArea border
 ### State: `AppCore` gains color state + validation
 - `AppCore` gets a `_prompt_color` field (default `"#666666"`) with a `prompt_color` property
 - `AppCore.set_prompt_color(value: str) -> str | None` is the **single validation point** — validates named colors, hex codes, and `Color.parse()` fallback. Returns error string or `None` on success
-- Named color map (`NAMED_COLORS` dict) lives as a module constant in `app_core.py`
+- `NAMED_COLORS`, `DEFAULT_PROMPT_COLOR`, and `validate_color()` live in a new `src/mcp_coder/icoder/core/colors.py` module. `AppCore.set_prompt_color()` delegates to `validate_color()`.
 
 ### Command: new `commands/color.py`
 - Thin `register_color(registry, app_core)` following the `register_info` pattern
@@ -30,7 +30,8 @@ Add a `/color` slash command to the iCoder TUI that changes the InputArea border
 
 | File | Change |
 |------|--------|
-| `src/mcp_coder/icoder/core/app_core.py` | Add `NAMED_COLORS`, `_prompt_color`, `prompt_color` property, `set_prompt_color()` |
+| `src/mcp_coder/icoder/core/colors.py` | **New file** — named color map, default color, `validate_color()` function |
+| `src/mcp_coder/icoder/core/app_core.py` | Add `_prompt_color`, `prompt_color` property, `set_prompt_color()` delegating to `colors.validate_color()` |
 | `src/mcp_coder/icoder/core/commands/color.py` | **New file** — `register_color()` command handler |
 | `src/mcp_coder/icoder/ui/styles.py` | Add `border: round #666666;` to InputArea CSS |
 | `src/mcp_coder/icoder/ui/app.py` | Add `_apply_prompt_border()`, call from `on_mount()` and `on_input_area_input_submitted()` |
@@ -41,6 +42,7 @@ Add a `/color` slash command to the iCoder TUI that changes the InputArea border
 
 | File | Change |
 |------|--------|
+| `tests/icoder/test_colors.py` | Tests for `validate_color()` (named colors, hex, CSS fallback, invalid) |
 | `tests/icoder/test_app_core.py` | Tests for `set_prompt_color()` and `prompt_color` property |
 | `tests/icoder/test_command_registry.py` | Tests for `/color` command registration and dispatch |
 | `tests/icoder/test_cli_icoder.py` | Tests for `--initial-color` parser flag and wiring |
@@ -50,4 +52,4 @@ Add a `/color` slash command to the iCoder TUI that changes the InputArea border
 1. **Step 1** — `AppCore.set_prompt_color()` + `prompt_color` property (state + validation logic, with tests)
 2. **Step 2** — `/color` command handler in `commands/color.py` (command registration + dispatch, with tests)
 3. **Step 3** — UI wiring: default border CSS + `_apply_prompt_border()` in app.py
-4. **Step 4** — `--initial-color` CLI parameter (parser + wiring in execute_icoder, with tests)
+4. **Step 4** — `--initial-color` CLI parameter + documentation (parser + wiring + docs updates, with tests)

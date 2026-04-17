@@ -71,6 +71,13 @@ def _apply_prompt_border(self) -> None:
 - Existing snapshot SVGs will need regeneration since the border is new visual content — update with `pytest --snapshot-update` if needed
 - Import `Color` only inside the method to keep the module-level import light
 
+## SNAPSHOT TESTS
+
+- Adding `border: round #666666` to InputArea CSS will change the visual output
+- Existing snapshot tests (if any) must be regenerated in this step: `pytest --snapshot-update -k snapshot`
+- Verify snapshot diffs only show the new border, no unrelated changes
+- If no snapshot tests exist for InputArea, note this and move on
+
 ## Commit message
 
 ```

@@ -59,9 +59,9 @@ register_color(registry, app_core)
 
 ## HOW
 
-- Follows exact pattern of `register_info()` and `register_clear()`
+- Follows a similar registration pattern to `register_info()` and `register_clear()`, but takes `app_core` directly since the color command needs to mutate session state.
 - `AppCore` imported with `TYPE_CHECKING` guard (same as other commands)
-- Registration call placed next to `register_info()` call in `execute_icoder()`
+- Registration call placed after `app_core = AppCore(...)` creation inside the `with EventLog(...)` block in `execute_icoder()`
 
 ## TESTS
 

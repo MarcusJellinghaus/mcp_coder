@@ -19,6 +19,8 @@ Run all three code quality checks after changes. Commit as one unit.
 - `src/mcp_coder/cli/parsers.py` — add `--initial-color` argument
 - `src/mcp_coder/cli/commands/icoder.py` — apply initial color after app_core creation
 - `tests/icoder/test_cli_icoder.py` — add parser and wiring tests
+- `docs/icoder/icoder.md` — add `/color` row to Slash Commands table (check if file exists first)
+- `docs/cli-reference.md` — add `--initial-color` to icoder Options section (check if file exists first)
 
 ## WHAT
 
@@ -82,8 +84,22 @@ def test_execute_icoder_initial_color_invalid_warns(): ...
     # Capture app_core + caplog, verify prompt_color == "#666666" and warning logged
 ```
 
+## DOCUMENTATION
+
+### WHERE
+
+- `docs/icoder/icoder.md` — add `/color` to the Slash Commands table
+- `docs/cli-reference.md` — add `--initial-color` to the icoder Options section
+
+**Before editing, verify these files exist** using `mcp__workspace__search_files` or listing the docs directory. If a file doesn't exist, skip that doc update.
+
+### WHAT
+
+- In `icoder.md`: add a row `| /color [name\|hex] | Change prompt border color. No args lists available colors. |` to the Slash Commands table
+- In `cli-reference.md`: add `--initial-color COLOR` to the icoder Options section with description: "Set prompt border color at startup (named color or hex code)"
+
 ## Commit message
 
 ```
-feat(icoder): add --initial-color CLI parameter (#798)
+feat(icoder): add --initial-color CLI parameter and docs (#798)
 ```
