@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat(icoder): add /color slash command (#798)`
 
 ### Step 3: UI wiring — default border CSS and runtime color application
-- [ ] Implementation: InputArea border CSS + `_apply_prompt_border()` + snapshot updates ([step_3.md](./steps/step_3.md))
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(icoder): add colored round border to InputArea (#798)`
+- [x] Implementation: InputArea border CSS + `_apply_prompt_border()` + snapshot updates ([step_3.md](./steps/step_3.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(icoder): add colored round border to InputArea (#798)`
 
 ### Step 4: --initial-color CLI parameter
 - [ ] Implementation: parser argument + `execute_icoder()` wiring + docs + tests ([step_4.md](./steps/step_4.md))

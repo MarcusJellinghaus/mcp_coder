@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from mcp_coder.icoder.core.command_registry import (
     CommandRegistry,
     create_default_registry,
@@ -265,7 +267,7 @@ def test_filter_includes_show_in_help_false() -> None:
 # --- Step 2: /color command tests ---
 
 
-def _make_registry_with_color() -> tuple[CommandRegistry, object]:
+def _make_registry_with_color() -> tuple[CommandRegistry, Any]:
     """Create a registry with /color registered via a real AppCore."""
     from unittest.mock import MagicMock
 
@@ -289,7 +291,7 @@ def test_color_no_args_shows_list() -> None:
 def test_color_valid_returns_empty() -> None:
     """Test /color with valid color returns empty response."""
     registry, app_core = _make_registry_with_color()
-    app_core.set_prompt_color.return_value = None  # type: ignore[union-attr]
+    app_core.set_prompt_color.return_value = None
     response = registry.dispatch("/color red")
     assert response is not None
     assert response.text == ""
@@ -298,7 +300,9 @@ def test_color_valid_returns_empty() -> None:
 def test_color_invalid_returns_error() -> None:
     """Test /color with invalid color returns error."""
     registry, app_core = _make_registry_with_color()
-    app_core.set_prompt_color.return_value = "Unknown color 'notacolor'. Use /color for options."  # type: ignore[union-attr]
+    app_core.set_prompt_color.return_value = (
+        "Unknown color 'notacolor'. Use /color for options."
+    )
     response = registry.dispatch("/color notacolor")
     assert response is not None
     assert "Unknown color" in response.text
