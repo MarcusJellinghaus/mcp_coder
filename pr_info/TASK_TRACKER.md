@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat(icoder): add color validation module and prompt color state (#798)`
 
 ### Step 2: /color command handler
-- [ ] Implementation: `commands/color.py` + registration wiring + tests ([step_2.md](./steps/step_2.md))
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(icoder): add /color slash command (#798)`
+- [x] Implementation: `commands/color.py` + registration wiring + tests ([step_2.md](./steps/step_2.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(icoder): add /color slash command (#798)`
 
 ### Step 3: UI wiring — default border CSS and runtime color application
 - [ ] Implementation: InputArea border CSS + `_apply_prompt_border()` + snapshot updates ([step_3.md](./steps/step_3.md))

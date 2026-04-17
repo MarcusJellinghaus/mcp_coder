@@ -717,3 +717,61 @@ def test_mcp_manager_passed_to_llm_service(
     assert result == 0
     assert len(captured_kwargs) == 1
     assert captured_kwargs[0]["mcp_manager"] is not None
+
+
+# --- Step 2: /color registration wiring test ---
+
+
+def test_color_command_registered_in_icoder(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Verify /color is registered in the command registry after execute_icoder sets up."""
+    from mcp_coder.cli.commands.icoder import execute_icoder
+    from mcp_coder.icoder.core.app_core import AppCore
+    from mcp_coder.icoder.ui.app import ICoderApp
+
+    (tmp_path / "logs").mkdir()
+
+    captured_app_core: list[AppCore] = []
+
+    def capturing_init(self: object, app_core: object, **kwargs: object) -> None:
+        captured_app_core.append(app_core)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(ICoderApp, "__init__", capturing_init)
+    monkeypatch.setattr(ICoderApp, "run", lambda self: None)
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.setup_icoder_environment",
+        lambda _: _FAKE_RUNTIME_INFO,
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.resolve_llm_method",
+        lambda _: ("claude", None),
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.parse_llm_method_from_args",
+        lambda _: "claude",
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.resolve_mcp_config_path",
+        lambda *a, **_kw: None,
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.find_latest_session",
+        lambda **_kw: None,
+    )
+    monkeypatch.setattr(
+        "mcp_coder.icoder.skills.load_skills",
+        lambda _: [],
+    )
+    monkeypatch.setattr(
+        "mcp_coder.icoder.skills.register_skill_commands",
+        lambda registry, skills, provider: [],
+    )
+
+    args = _make_args(tmp_path)
+    result = execute_icoder(args)
+
+    assert result == 0
+    assert len(captured_app_core) == 1
+    command_names = [c.name for c in captured_app_core[0].registry.get_all()]
+    assert "/color" in command_names
