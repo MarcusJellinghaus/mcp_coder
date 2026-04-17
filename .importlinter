@@ -320,13 +320,9 @@ forbidden_modules =
     truststore
     httpx
 ignore_imports =
-    mcp_coder.llm.providers.langchain -> langchain_mcp_adapters
     mcp_coder.llm.providers.langchain.** -> langchain_mcp_adapters
-    mcp_coder.llm.providers.langchain -> langgraph
     mcp_coder.llm.providers.langchain.** -> langgraph
-    mcp_coder.llm.providers.langchain -> truststore
     mcp_coder.llm.providers.langchain.** -> truststore
-    mcp_coder.llm.providers.langchain -> httpx
     mcp_coder.llm.providers.langchain.** -> httpx
 
 # -----------------------------------------------------------------------------

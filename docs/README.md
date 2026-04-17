@@ -21,6 +21,7 @@ Complete documentation for MCP Coder.
 - **[Claude Code Configuration](configuration/claude-code.md)** - Claude Code CLI setup and project configuration
 - **[Claude Desktop Configuration](configuration/claude-desktop.md)** - Claude Desktop setup for interactive workflows
 - **[Label Setup](getting-started/label-setup.md)** - Detailed GitHub workflow label configuration
+- **[Optional Dependencies](configuration/optional-dependencies.md)** - Available pip extras for optional features
 
 ### Usage & Workflows
 

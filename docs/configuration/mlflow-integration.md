@@ -18,8 +18,7 @@ pip install mcp-coder[mlflow]
 uv pip install mcp-coder[mlflow]
 ```
 
-See [`optional-dependencies.md`](./optional-dependencies.md) for per-provider
-extras (smaller footprints if you only need one backend).
+See [Optional Dependencies](optional-dependencies.md) for a full list of available pip extras.
 
 ## Configuration
 
