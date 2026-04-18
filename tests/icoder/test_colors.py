@@ -37,17 +37,17 @@ def test_validate_color_hex_without_hash() -> None:
 
 
 def test_validate_color_3digit_hex() -> None:
-    """3-digit hex falls through to Color.parse() fallback."""
+    """3-digit hex is expanded to 6-digit."""
     hex_color, error = validate_color("#f00")
     assert error is None
-    assert hex_color is not None
+    assert hex_color == "#ff0000"
 
 
-def test_validate_color_css_fallback() -> None:
-    """CSS color names are handled by Color.parse() fallback."""
+def test_validate_color_css_name_rejected() -> None:
+    """CSS color names are not supported (no Textual fallback in core)."""
     hex_color, error = validate_color("cornflowerblue")
-    assert error is None
-    assert hex_color is not None
+    assert hex_color is None
+    assert error is not None
 
 
 def test_validate_color_invalid() -> None:

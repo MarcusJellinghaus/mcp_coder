@@ -229,6 +229,10 @@ _.handle_clear
 _.handle_help
 _.handle_info
 _.handle_quit
+_.handle_color
+
+# icoder/ui/app.py - Textual styles set programmatically
+_.border
 
 # icoder/ui/app.py - Textual lifecycle, message handlers, and bindings
 _.compose

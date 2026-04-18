@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import re
 
-from textual.color import Color, ColorParseError
-
 NAMED_COLORS: dict[str, str] = {
     "red": "#ef4444",
     "green": "#22c55e",
@@ -21,6 +19,7 @@ NAMED_COLORS: dict[str, str] = {
 DEFAULT_PROMPT_COLOR: str = "#666666"
 
 _HEX6_RE = re.compile(r"^[0-9a-f]{6}$")
+_HEX3_RE = re.compile(r"^[0-9a-f]{3}$")
 
 
 def validate_color(value: str) -> tuple[str | None, str | None]:
@@ -44,9 +43,9 @@ def validate_color(value: str) -> tuple[str | None, str | None]:
     if _HEX6_RE.match(bare):
         return f"#{bare}", None
 
-    # Fallback to Textual Color.parse
-    try:
-        color = Color.parse(value)
-        return color.hex6, None
-    except ColorParseError:
-        return None, f"Unknown color '{original}'. Use /color for options."
+    # 3-digit hex shorthand (expand #f00 -> #ff0000)
+    if _HEX3_RE.match(bare):
+        expanded = "".join(c * 2 for c in bare)
+        return f"#{expanded}", None
+
+    return None, f"Unknown color '{original}'. Use /color for options."
