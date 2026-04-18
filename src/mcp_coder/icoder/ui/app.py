@@ -117,6 +117,7 @@ class ICoderApp(App[None]):
                 f"Project dir: {info.project_dir}",
             ]
             output.append_text("\n".join(lines), style="dim")
+        self._apply_prompt_border()
         self.query_one(InputArea).focus()
 
     def on_input_area_input_submitted(self, message: InputArea.InputSubmitted) -> None:
@@ -127,6 +128,7 @@ class ICoderApp(App[None]):
         output.append_text(f"> {text}", style=STYLE_USER_INPUT)
 
         response = self._core.handle_input(text)
+        self._apply_prompt_border()
         if response.quit:
             self.exit()
         elif response.clear_output:
@@ -256,6 +258,13 @@ class ICoderApp(App[None]):
             return importlib.metadata.version("mcp-coder")
         except importlib.metadata.PackageNotFoundError:
             return "unknown"
+
+    def _apply_prompt_border(self) -> None:
+        """Apply current prompt color as InputArea border."""
+        from textual.color import Color
+
+        color = Color.parse(self._core.prompt_color)
+        self.query_one(InputArea).styles.border = ("round", color)
 
     def _update_token_display(self) -> None:
         """Update status bar token zone from app_core.token_usage."""

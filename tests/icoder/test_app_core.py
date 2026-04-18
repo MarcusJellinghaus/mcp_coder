@@ -396,6 +396,25 @@ def test_stream_llm_claude_cli_done_event_cache_regression(
     assert core.token_usage.last_cache_read == 540
 
 
+def test_prompt_color_default(app_core: AppCore) -> None:
+    """Default prompt color is the grey default."""
+    assert app_core.prompt_color == "#666666"
+
+
+def test_set_prompt_color_and_get(app_core: AppCore) -> None:
+    """set_prompt_color updates the prompt_color property."""
+    assert app_core.set_prompt_color("red") is None
+    assert app_core.prompt_color == "#ef4444"
+
+
+def test_set_prompt_color_invalid_preserves_current(app_core: AppCore) -> None:
+    """Invalid color keeps the previous value."""
+    app_core.set_prompt_color("red")
+    error = app_core.set_prompt_color("notacolor")
+    assert error is not None
+    assert app_core.prompt_color == "#ef4444"
+
+
 def test_handle_input_returns_llm_text(app_core: AppCore) -> None:
     """When a command sets llm_text, it's available on the response."""
     from mcp_coder.icoder.core.types import Command, Response

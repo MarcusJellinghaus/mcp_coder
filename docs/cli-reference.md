@@ -174,6 +174,7 @@ mcp-coder icoder [OPTIONS]
 - `--mcp-config PATH` - Path to MCP configuration file
 - `--project-dir PATH` - Project directory path (default: current directory)
 - `--execution-dir PATH` - Working directory for Claude subprocess
+- `--initial-color COLOR` - Set prompt border color at startup (named color or hex code)
 
 **Built-in commands:**
 - `/help` - Show available commands

@@ -693,3 +693,10 @@ def add_icoder_parser(subparsers: Any) -> None:
         metavar="ID",
         help="Direct session ID for continuation (overrides file-based options)",
     )
+    icoder_parser.add_argument(
+        "--initial-color",
+        type=str,
+        default=None,
+        metavar="COLOR",
+        help="Set prompt border color at startup (named color or hex code)",
+    )

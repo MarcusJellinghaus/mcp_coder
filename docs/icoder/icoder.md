@@ -23,6 +23,7 @@ A single-row bar at the bottom of the output log with three zones:
 | `/help` | Show available commands and keyboard shortcuts |
 | `/info` | Show runtime diagnostics (version, venv, MCP servers, env vars) |
 | `/clear` | Clear the output log |
+| `/color [name\|hex]` | Change prompt border color. No args lists available colors. |
 | `/quit` | Exit iCoder |
 | `/exit` | Exit iCoder (alias for `/quit`) |
 
