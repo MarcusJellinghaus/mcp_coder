@@ -34,18 +34,9 @@
 4. Same system prompt logic as `prompt_llm()`
 5. Yield from `ask_copilot_cli_stream()`
 
-### Settings.local.json reading (in copilot module, not interface.py)
+### Settings.local.json reading
 
-`_read_settings_allow()` lives in `copilot_cli.py`, not `interface.py`. The interface just passes `execution_dir` to the copilot functions, and they read the settings internally. This keeps the settings-reading logic close to the tool converter that consumes it.
-
-```python
-# In copilot_cli.py:
-def _read_settings_allow(execution_dir: str | None) -> list[str] | None:
-    """Read permissions.allow from .claude/settings.local.json.
-
-    Returns list of allow entries, or None if file not found.
-    """
-```
+Uses `_read_settings_allow()` from `copilot_cli.py` (implemented in step 5).
 
 ## HOW
 
@@ -66,18 +57,8 @@ def _read_settings_allow(execution_dir: str | None) -> list[str] | None:
 5. Catch TimeoutExpired → raise LLMTimeoutError
 ```
 
-### _read_settings_allow (in copilot_cli.py)
-```
-1. Determine base_dir from execution_dir or cwd
-2. Read base_dir / ".claude" / "settings.local.json"
-3. Parse JSON, extract permissions.allow list
-4. Return list or None if file missing
-```
-
 ## DATA
 
-- `_read_settings_allow()` returns `list[str] | None` (lives in `copilot_cli.py`)
-- `ask_copilot_cli()` accepts `execution_dir` parameter and calls `_read_settings_allow()` internally
 - Copilot branch produces same `LLMResponseDict` as other providers
 - Error message in unsupported-provider ValueError now lists all three providers
 
@@ -102,7 +83,4 @@ def _read_settings_allow(execution_dir: str | None) -> list[str] | None:
 - `test_prompt_llm_accepts_copilot_provider` — no ValueError for provider="copilot"
 - `test_prompt_llm_stream_accepts_copilot_provider` — no ValueError for provider="copilot"
 
-#### Settings reading (tests in test_copilot_cli.py, not test_interface.py)
-- `test_read_settings_allow_returns_list` — mock file with permissions.allow entries
-- `test_read_settings_allow_file_missing_returns_none` — no file → None
-- `test_read_settings_allow_no_permissions_key_returns_none` — JSON without permissions → None
+

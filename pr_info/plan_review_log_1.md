@@ -88,5 +88,25 @@
 - `step_1.md`: Added note about updating exclusion patterns for `copilot_cli_integration`
 - `summary.md`: Removed phantom streaming file row, added 3 missing test files to Created, reclassified logging_utils.py as Created, added test_logging_utils.py move
 
+**Status**: committed (282918b)
+
+## Round 4 — 2026-04-19
+
+**Findings** (4 actionable):
+- A (Medium): `tests/llm/test_types.py` misclassified as "Created" in summary — file already exists (245 lines)
+- B (Medium): `_read_settings_allow()` defined in step 7 but needed by step 5's `ask_copilot_cli()` — ordering issue
+- C (Low): `.claude/CLAUDE.md` not listed in step 1's modified files despite needing exclusion pattern update
+- D (Low): `__init__.py` export timing — step 5 tests should import directly from module, not package
+
+**Decisions**: All accepted — straightforward consistency fixes
+
+**User decisions**: None needed
+
+**Changes**:
+- `summary.md`: Moved test_types.py to Files Modified, added CLAUDE.md to Files Modified
+- `step_5.md`: Added `_read_settings_allow()` specification and tests (moved from step 7), added __init__.py export timing note
+- `step_7.md`: Replaced `_read_settings_allow` spec with reference to step 5
+- `step_1.md`: Added CLAUDE.md to modified files
+
 **Status**: pending commit
 

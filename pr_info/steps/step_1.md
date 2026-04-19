@@ -20,6 +20,7 @@
 - `tests/cli/test_parsers.py`
 - `tests/cli/test_utils.py`
 - `pyproject.toml` (add `copilot_cli_integration` marker)
+- `.claude/CLAUDE.md` (add `copilot_cli_integration` to recommended test exclusion pattern)
 
 ## WHAT
 

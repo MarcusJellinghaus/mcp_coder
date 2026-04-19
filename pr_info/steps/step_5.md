@@ -93,6 +93,26 @@ def ask_copilot_cli(
     """
 ```
 
+### Private helper: `_read_settings_allow()`
+
+```python
+def _read_settings_allow(execution_dir: str | None) -> list[str] | None:
+    """Read permissions.allow from .claude/settings.local.json.
+
+    Returns list of allow entries, or None if file not found.
+    """
+```
+
+Algorithm:
+```
+1. Determine base_dir from execution_dir or cwd
+2. Read base_dir / ".claude" / "settings.local.json"
+3. Parse JSON, extract permissions.allow list
+4. Return list or None if file missing
+```
+
+> **Note:** The `__init__.py` exports will be added in step 6. Step 5 tests should import directly from `copilot_cli` module, not via the package.
+
 ## HOW
 
 - **Sub-step 5a (move logging_utils):** Move `src/mcp_coder/llm/providers/claude/logging_utils.py` to `src/mcp_coder/llm/logging_utils.py` (use `mcp__tools-py__move_module` during implementation). Update imports in `claude_code_cli.py` and `claude_code_api.py` to use `...logging_utils` (or absolute `mcp_coder.llm.logging_utils`). Update `.importlinter` contract `mlflow_logger_no_cycles` — change `mcp_coder.llm.providers.claude.logging_utils` to `mcp_coder.llm.logging_utils`. If `tests/llm/providers/claude/test_logging_utils.py` exists, move it to `tests/llm/test_logging_utils.py`.
@@ -182,3 +202,8 @@ LLMResponseDict(
 - `test_ask_copilot_cli_nonzero_exit_raises` — CalledProcessError with stream file path
 - `test_ask_copilot_cli_saves_jsonl_log` — verify log file written
 - `test_ask_copilot_cli_not_found_raises` — FileNotFoundError from find_executable
+
+### _read_settings_allow tests
+- `test_read_settings_allow_returns_list` — mock file with permissions.allow entries
+- `test_read_settings_allow_file_missing_returns_none` — no file → None
+- `test_read_settings_allow_no_permissions_key_returns_none` — JSON without permissions → None
