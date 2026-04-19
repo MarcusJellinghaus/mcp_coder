@@ -47,9 +47,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 6: GitHub Action generation (`--generate-github-actions`)
-- [ ] Implementation: add `generate_label_new_issues_yml()`, `generate_approve_command_yml()`, `build_promotions()`, `write_github_actions()` to `define_labels.py`, with tests (TDD)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `generate_label_new_issues_yml()`, `generate_approve_command_yml()`, `build_promotions()`, `write_github_actions()` to `define_labels.py`, with tests (TDD)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: Documentation updates
 - [ ] Implementation: update `label-setup.md`, `github.md`, `README.md`, `cli-reference.md`
