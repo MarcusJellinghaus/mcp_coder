@@ -21,3 +21,15 @@
 **Changes**: Restored `ignore_imports` in `git_library_isolation` contract in `.importlinter` with exemptions for `mcp_coder.utils.git_operations.** -> git` and `mcp_coder.utils.git_operations.** -> gitdb`
 
 **Status**: committed
+
+## Round 2 — 2026-04-19
+**Findings**:
+- Critical: `layered_architecture` contract broken — `mcp_workspace_git` (in `shim_workspace` layer below `utils`) imports from `mcp_coder.utils.git_operations.*` (in `utils` layer above). Same root cause as round 1: Step 4 blocked, shim must temporarily use local package.
+- Note: This failure was hidden by MCP tool output truncation (filed as mcp-tools-py#171).
+
+**Decisions**:
+- Accept: add temporary `ignore_imports` exemption for `mcp_coder.mcp_workspace_git -> mcp_coder.utils.git_operations.**`
+
+**Changes**: Added wildcard ignore to `layered_architecture` contract in `.importlinter`
+
+**Status**: committed
