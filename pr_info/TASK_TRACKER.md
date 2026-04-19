@@ -35,9 +35,9 @@ See [step_2.md](./steps/step_2.md)
 
 ### Step 3: Copilot log paths + shared log utilities
 See [step_3.md](./steps/step_3.md)
-- [ ] Implementation: extract shared `log_utils.py`, create `copilot_cli_log_paths.py`, update Claude imports + tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: extract shared `log_utils.py`, create `copilot_cli_log_paths.py`, update Claude imports + tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Copilot JSONL parser + tool permission converter
 See [step_4.md](./steps/step_4.md)

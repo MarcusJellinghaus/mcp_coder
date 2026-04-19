@@ -1,8 +1,7 @@
-"""Log path utilities for Claude Code CLI stream logging.
+"""Log path utilities for Copilot CLI stream logging.
 
-Extracted from claude_code_cli.py to keep file sizes manageable.
-Shared utilities (sanitize_branch_identifier, DEFAULT_LOGS_DIR) live in
-mcp_coder.llm.log_utils and are re-exported here for backwards compatibility.
+Generates unique log file paths in the copilot-sessions/ subdirectory,
+following the same pattern as Claude's log paths.
 """
 
 from datetime import datetime
@@ -10,7 +9,7 @@ from pathlib import Path
 
 from ...log_utils import DEFAULT_LOGS_DIR, sanitize_branch_identifier
 
-CLAUDE_SESSIONS_SUBDIR = "claude-sessions"
+COPILOT_SESSIONS_SUBDIR: str = "copilot-sessions"
 
 
 def get_stream_log_path(
@@ -18,16 +17,10 @@ def get_stream_log_path(
     cwd: str | None = None,
     branch_name: str | None = None,
 ) -> Path:
-    """Generate a unique path for stream log file.
+    """Generate unique path for Copilot JSONL log file.
 
-    The filename includes:
-    - Timestamp for uniqueness
-    - Git branch identifier (max 10 chars) for context (if provided)
-
-    Example filenames:
-    - session_20260201_123456_789012_fix.ndjson (branch: fix/improve-logging)
-    - session_20260201_123456_789012_123.ndjson (branch: 123-feature-name)
-    - session_20260201_123456_789012.ndjson (no branch provided)
+    Same pattern as Claude's log paths but in copilot-sessions/ subdirectory.
+    Filename: session_YYYYMMDD_HHMMSS_NNNNNN[_BRANCH].ndjson
 
     Args:
         logs_dir: Base logs directory (default: 'logs' in cwd or project root)
@@ -45,8 +38,8 @@ def get_stream_log_path(
     else:
         base_dir = Path.cwd() / DEFAULT_LOGS_DIR
 
-    # Create claude-sessions subdirectory
-    session_dir = base_dir / CLAUDE_SESSIONS_SUBDIR
+    # Create copilot-sessions subdirectory
+    session_dir = base_dir / COPILOT_SESSIONS_SUBDIR
     session_dir.mkdir(parents=True, exist_ok=True)
 
     # Generate unique filename with timestamp and optional branch identifier
