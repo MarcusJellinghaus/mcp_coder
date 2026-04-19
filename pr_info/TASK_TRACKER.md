@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Add `ImplementConfig` and `get_implement_config()` to pyproject_config.py
-- [ ] Implementation: add `ImplementConfig` dataclass and `get_implement_config()` function with tests ([step_1.md](./steps/step_1.md))
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `ImplementConfig` dataclass and `get_implement_config()` function with tests ([step_1.md](./steps/step_1.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Gate formatting and mypy in task_processing.py
 - [ ] Implementation: add `format_code`/`check_type_hints` params to `process_single_task()` and `process_task_with_retry()`, gate Steps 7-8, update existing tests ([step_2.md](./steps/step_2.md))
