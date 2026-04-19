@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: Update CLAUDE.md tool mapping and git operations section
-- [ ] Implementation: Add git MCP tool rows to tool mapping table, update Bash-allowed commands, replace compact-diff guidance
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: Add git MCP tool rows to tool mapping table, update Bash-allowed commands, replace compact-diff guidance
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Update all skills and rebase design doc
 - [ ] Implementation: Update allowed-tools frontmatter and body text in 5 skill/design files
