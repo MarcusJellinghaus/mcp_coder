@@ -19,13 +19,14 @@ You are implementing Step 2 of Issue #859. Read `pr_info/steps/summary.md` for c
 
 **Change return type** from `PullRequestData | None` to `tuple[PullRequestData | None, str | None]`.
 
+**Docstring**: Update the function's docstring to reflect the new return type: `Returns: tuple of (PullRequestData dict, None) on success, (None, error_message) on failure.`
+
 **Change each failure path** to return `(None, "error message")`:
 
 | Current | New |
 |---|---|
 | `return None` after `current_branch is None` | `return None, "Could not determine current branch"` |
 | `return None` after `base_branch is None` | `return None, "Could not detect base branch for PR creation"` |
-| `return None` after `not pr_result or not pr_result.get("number")` | `return None, "Failed to create pull request"` |
 | `return None` in `except Exception as e` | `return None, f"Error creating pull request: {e}"` |
 
 **Change success path** to return tuple:
@@ -79,6 +80,7 @@ Update all tests to expect tuples:
 | `test_create_pull_request_no_current_branch` | `assert result is None` | `result, error = ...; assert result is None; assert "current branch" in error` |
 | `test_create_pull_request_no_parent_branch` | `assert result is None` | `result, error = ...; assert result is None; assert "base branch" in error` |
 | `test_create_pull_request_manager_failure` | `mock returns {}; assert result is None` | `mock raises ValueError("test error"); result, error = ...; assert result is None; assert "test error" in error` |
+| `test_create_pull_request_github_api_error` (new test) | N/A | Add test: `mock_manager_instance.create_pull_request.side_effect = GithubException(422, {"message": "Validation Failed"}, None)` → `result, error = ...; assert result is None; assert "Validation Failed" in error` |
 | `test_create_pull_request_no_pr_number` | `mock returns {"url": ...} without number; assert result is None` | Remove this test — after Step 1, `pr_manager.create_pull_request()` raises instead of returning incomplete dicts. The `_manager_failure` and `_exception` tests already cover error paths. |
 | `test_create_pull_request_exception` | `assert result is None` | `result, error = ...; assert result is None; assert "GitHub API error" in error` |
 | `test_create_pull_request_success_with_url` | `assert result is not None; assert result["number"] == 456` | `result, error = ...; assert error is None; assert result["number"] == 456` |

@@ -46,6 +46,8 @@ def create_pull_request(
 
 Note: Return type stays `PullRequestData` (no longer returns empty dict — raises on failure).
 
+**Docstring**: Update the method's docstring to reflect that it raises exceptions instead of returning empty dict. Remove "or empty dict on failure" language and add a `Raises:` section documenting `ValueError` (validation failures) and `GithubException` (API errors).
+
 ## ALGORITHM
 
 ```
@@ -55,9 +57,13 @@ validate title — raise ValueError if empty
 validate head_branch — raise ValueError if invalid
 validate base_branch — raise ValueError if invalid
 repo = _get_repository() — raise ValueError if None
-pr = repo.create_pull(...)  # GithubException propagates naturally
+pr = repo.create_pull(...)  # GithubException propagates as-is to caller (not wrapped in ValueError)
 return PullRequestData dict
 ```
+
+**Important**: After removing both the `@_handle_github_errors` decorator and the local `except GithubException`, the `repo.create_pull()` call is intentionally unprotected. `GithubException` propagates to `core.py`'s `except Exception as e` block, which formats it as `f"Error creating pull request: {e}"`. Do not re-add exception handling around this call.
+
+**Verify**: Confirm that `@log_function_call` (the remaining decorator) does not catch or swallow exceptions — it should only log entry/exit.
 
 ## DATA
 
@@ -74,11 +80,14 @@ Update three tests that currently assert `not result` (empty dict) to assert `py
 1. `test_create_pull_request_empty_title` — expect `ValueError` with match on "Invalid PR title"
 2. `test_create_pull_request_invalid_head_branch` — expect `ValueError` with match on "Invalid head branch"
 3. `test_create_pull_request_invalid_base_branch` — expect `ValueError` with match on "Invalid base branch"
+4. Update `test_github_api_error_returns_empty` — rename to `test_create_pull_request_github_api_error_propagates`, change assertion from `assert not result` to `pytest.raises(GithubException)`
+5. Update `test_create_pr_returns_empty_when_default_branch_unknown` — change assertion from `assert not result` to `pytest.raises(ValueError)` with match on `'Could not determine default branch'`
 
 ### DO NOT change:
 - Any other methods on `PullRequestManager` (they keep `@_handle_github_errors`)
 - The `_handle_github_errors` decorator itself
 - The `_validate_branch_name` or `_validate_pr_number` helper methods
+- The `@log_function_call` decorator behavior — but verify it does not catch/swallow exceptions
 
 ## Commit
 

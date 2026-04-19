@@ -81,7 +81,7 @@ mock_create_pr.return_value = None
 # After:
 mock_create_pr.return_value = (None, "422 Validation Failed: head branch not found")
 
-# Add assertion:
+# Add new assertion (the existing test only checks stage, not message content):
 assert "422 Validation Failed" in call_kwargs["message"]
 ```
 
