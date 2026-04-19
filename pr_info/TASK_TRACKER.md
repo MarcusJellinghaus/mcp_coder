@@ -21,6 +21,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Migrate .mcp.json to KV format and add search_reference_files permission
+- [ ] Implementation: migrate 4 reference-project values to KV format and add permission
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review
+- [ ] PR summary
