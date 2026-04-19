@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 
-from mcp_coder.utils.git_operations import get_branch_diff, is_git_repository
+from mcp_coder.mcp_workspace_git import get_branch_diff
 
 
 @pytest.mark.git_integration

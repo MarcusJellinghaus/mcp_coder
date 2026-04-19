@@ -1,7 +1,7 @@
 """Tests for git-tool compact-diff CLI command.
 
 This module tests CLI-specific behavior (exit codes, output format, argument parsing).
-Core compact diff logic tests are in tests/utils/git_operations/test_compact_diffs.py.
+Core compact diff logic tests are in the mcp_workspace package.
 """
 
 import argparse

@@ -38,10 +38,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: Update remaining test consumers + delete old git_operations tests
-- [ ] Implementation: update remaining test imports (`test_git_encoding_stress.py`, `test_check_branch_status_pr_waiting.py`, `test_create_pr_integration.py`, `test_github_integration_smoke.py`, `test_github_utils.py`, `cli/test_utils.py`, `test_git_tool.py`)
-- [ ] Implementation: delete `tests/utils/git_operations/` directory (14 files)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: update remaining test imports (`test_git_encoding_stress.py`, `test_check_branch_status_pr_waiting.py`, `test_create_pr_integration.py`, `test_github_integration_smoke.py`, `test_github_utils.py`, `cli/test_utils.py`, `test_git_tool.py`)
+- [x] Implementation: delete `tests/utils/git_operations/` directory (14 files)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Delete local git_operations package
 - [ ] Implementation: delete `src/mcp_coder/utils/git_operations/` directory (13 files); grep-verify no remaining references

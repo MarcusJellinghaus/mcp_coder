@@ -14,7 +14,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.utils.git_operations import (
+from mcp_coder.mcp_workspace_git import (
     commit_all_changes,
     get_current_branch_name,
     is_working_directory_clean,
