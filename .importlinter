@@ -205,6 +205,9 @@ source_modules =
 forbidden_modules =
     git
     gitdb
+ignore_imports =
+    mcp_coder.utils.git_operations.** -> git
+    mcp_coder.utils.git_operations.** -> gitdb
 
 # -----------------------------------------------------------------------------
 # Contract: Jenkins Library Isolation
