@@ -151,7 +151,10 @@ class TestCreatePrFailureHandling:
         mock_cleanup.return_value = True
         mock_clean.return_value = True
         mock_push.return_value = {"success": True}
-        mock_create_pr.return_value = (None, "Failed to create pull request")
+        mock_create_pr.return_value = (
+            None,
+            "422 Validation Failed: head branch not found",
+        )
 
         result = run_create_pr_workflow(Path("/test"), "claude")
 
@@ -159,6 +162,7 @@ class TestCreatePrFailureHandling:
         mock_handle_failure.assert_called_once()
         call_kwargs = mock_handle_failure.call_args.kwargs
         assert call_kwargs["stage"] == "pr_creation"
+        assert "422 Validation Failed" in call_kwargs["message"]
 
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")

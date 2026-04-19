@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: Wire error message through Step 5 + update workflow/failure tests
-- [ ] Implementation: unpack tuple in `run_create_pr_workflow()` step 5, update `test_workflow.py` and `test_failure_handling.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: unpack tuple in `run_create_pr_workflow()` step 5, update `test_workflow.py` and `test_failure_handling.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review completed

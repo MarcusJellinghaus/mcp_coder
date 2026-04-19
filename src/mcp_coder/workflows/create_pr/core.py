@@ -598,13 +598,14 @@ def run_create_pr_workflow(
 
         # Step 5: Create pull request
         logger.log(OUTPUT, "Step 5/5: Creating pull request...")
-        pr_result, _pr_error = create_pull_request(project_dir, title, body)
+        pr_result, pr_error = create_pull_request(project_dir, title, body)
         if pr_result is None:
-            logger.error("Failed to create pull request")
+            error_msg = pr_error or "Failed to create pull request"
+            logger.error(error_msg)
             elapsed = time.time() - start_time
             _handle_create_pr_failure(
                 stage="pr_creation",
-                message="Failed to create pull request",
+                message=error_msg,
                 project_dir=project_dir,
                 update_issue_labels=update_issue_labels,
                 post_issue_comments=post_issue_comments,
