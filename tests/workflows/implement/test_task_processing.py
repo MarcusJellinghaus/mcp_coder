@@ -501,7 +501,12 @@ class TestProcessSingleTask:
         mock_commit.return_value = True
         mock_push.return_value = True
 
-        success, reason = process_single_task(Path("/test/project"), "claude")
+        success, reason = process_single_task(
+            Path("/test/project"),
+            "claude",
+            format_code=True,
+            check_type_hints=True,
+        )
 
         assert success is True
         assert reason == "completed"
@@ -680,7 +685,9 @@ class TestProcessSingleTask:
         mock_check_mypy.return_value = True
         mock_run_formatters.return_value = False
 
-        success, reason = process_single_task(Path("/test/project"), "claude")
+        success, reason = process_single_task(
+            Path("/test/project"), "claude", format_code=True, check_type_hints=True
+        )
 
         assert success is False
         assert reason == "error"
@@ -742,6 +749,201 @@ class TestProcessSingleTask:
         assert RETRY_REMINDER not in prompt_sent
 
 
+class TestProcessSingleTaskGating:
+    """Test format_code and check_type_hints gating in process_single_task."""
+
+    @patch("mcp_coder.workflows.implement.task_processing.push_changes")
+    @patch("mcp_coder.workflows.implement.task_processing.commit_changes")
+    @patch("mcp_coder.workflows.implement.task_processing.run_formatters")
+    @patch("mcp_coder.workflows.implement.task_processing.check_and_fix_mypy")
+    @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    def test_process_single_task_skips_formatters_when_format_code_false(
+        self,
+        mock_get_next_task: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
+        mock_get_status: MagicMock,
+        mock_check_mypy: MagicMock,
+        mock_run_formatters: MagicMock,
+        mock_commit: MagicMock,
+        mock_push: MagicMock,
+    ) -> None:
+        """Verify run_formatters not called when format_code=False."""
+        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_prompt.return_value = "Template"
+        mock_prompt_llm.return_value = _make_llm_response("Response")
+        mock_get_status.return_value = {
+            "staged": ["file.py"],
+            "modified": [],
+            "untracked": [],
+        }
+        mock_commit.return_value = True
+        mock_push.return_value = True
+
+        success, reason = process_single_task(
+            Path("/test/project"), "claude", format_code=False
+        )
+
+        assert success is True
+        assert reason == "completed"
+        mock_run_formatters.assert_not_called()
+
+    @patch("mcp_coder.workflows.implement.task_processing.push_changes")
+    @patch("mcp_coder.workflows.implement.task_processing.commit_changes")
+    @patch("mcp_coder.workflows.implement.task_processing.run_formatters")
+    @patch("mcp_coder.workflows.implement.task_processing.check_and_fix_mypy")
+    @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    def test_process_single_task_runs_formatters_when_format_code_true(
+        self,
+        mock_get_next_task: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
+        mock_get_status: MagicMock,
+        mock_check_mypy: MagicMock,
+        mock_run_formatters: MagicMock,
+        mock_commit: MagicMock,
+        mock_push: MagicMock,
+    ) -> None:
+        """Verify run_formatters called when format_code=True."""
+        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_prompt.return_value = "Template"
+        mock_prompt_llm.return_value = _make_llm_response("Response")
+        mock_get_status.return_value = {
+            "staged": ["file.py"],
+            "modified": [],
+            "untracked": [],
+        }
+        mock_run_formatters.return_value = True
+        mock_commit.return_value = True
+        mock_push.return_value = True
+
+        success, reason = process_single_task(
+            Path("/test/project"), "claude", format_code=True
+        )
+
+        assert success is True
+        assert reason == "completed"
+        mock_run_formatters.assert_called_once_with(Path("/test/project"))
+
+    @patch(
+        "mcp_coder.workflows.implement.task_processing.RUN_MYPY_AFTER_EACH_TASK", True
+    )
+    @patch("mcp_coder.workflows.implement.task_processing.push_changes")
+    @patch("mcp_coder.workflows.implement.task_processing.commit_changes")
+    @patch("mcp_coder.workflows.implement.task_processing.run_formatters")
+    @patch("mcp_coder.workflows.implement.task_processing.check_and_fix_mypy")
+    @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    def test_process_single_task_skips_mypy_when_check_type_hints_false(
+        self,
+        mock_get_next_task: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
+        mock_get_status: MagicMock,
+        mock_check_mypy: MagicMock,
+        mock_run_formatters: MagicMock,
+        mock_commit: MagicMock,
+        mock_push: MagicMock,
+    ) -> None:
+        """Verify check_and_fix_mypy not called when check_type_hints=False."""
+        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_prompt.return_value = "Template"
+        mock_prompt_llm.return_value = _make_llm_response("Response")
+        mock_get_status.return_value = {
+            "staged": ["file.py"],
+            "modified": [],
+            "untracked": [],
+        }
+        mock_commit.return_value = True
+        mock_push.return_value = True
+
+        success, reason = process_single_task(
+            Path("/test/project"), "claude", check_type_hints=False
+        )
+
+        assert success is True
+        assert reason == "completed"
+        mock_check_mypy.assert_not_called()
+
+    @patch(
+        "mcp_coder.workflows.implement.task_processing.RUN_MYPY_AFTER_EACH_TASK", True
+    )
+    @patch("mcp_coder.workflows.implement.task_processing.push_changes")
+    @patch("mcp_coder.workflows.implement.task_processing.commit_changes")
+    @patch("mcp_coder.workflows.implement.task_processing.run_formatters")
+    @patch("mcp_coder.workflows.implement.task_processing.check_and_fix_mypy")
+    @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    def test_process_single_task_runs_mypy_when_check_type_hints_true(
+        self,
+        mock_get_next_task: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
+        mock_get_status: MagicMock,
+        mock_check_mypy: MagicMock,
+        mock_run_formatters: MagicMock,
+        mock_commit: MagicMock,
+        mock_push: MagicMock,
+    ) -> None:
+        """Verify check_and_fix_mypy called when check_type_hints=True."""
+        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_prompt.return_value = "Template"
+        mock_prompt_llm.return_value = _make_llm_response("Response")
+        mock_get_status.return_value = {
+            "staged": ["file.py"],
+            "modified": [],
+            "untracked": [],
+        }
+        mock_check_mypy.return_value = True
+        mock_commit.return_value = True
+        mock_push.return_value = True
+
+        success, reason = process_single_task(
+            Path("/test/project"), "claude", check_type_hints=True
+        )
+
+        assert success is True
+        assert reason == "completed"
+        mock_check_mypy.assert_called_once()
+
+    @patch("mcp_coder.workflows.implement.task_processing.process_single_task")
+    def test_process_task_with_retry_forwards_config_params(
+        self, mock_process: MagicMock
+    ) -> None:
+        """Verify process_task_with_retry passes format_code and check_type_hints through."""
+        mock_process.return_value = (True, "completed")
+
+        process_task_with_retry(
+            Path("/test/project"),
+            "claude",
+            format_code=True,
+            check_type_hints=True,
+        )
+
+        mock_process.assert_called_once()
+        call_kwargs = mock_process.call_args
+        assert call_kwargs.kwargs["format_code"] is True
+        assert call_kwargs.kwargs["check_type_hints"] is True
+
+
 class TestIntegration:
     """Integration tests for task processing workflow."""
 
@@ -793,7 +995,9 @@ class TestIntegration:
         mock_push.return_value = True
 
         # Execute workflow
-        success, reason = process_single_task(project_dir, "claude")
+        success, reason = process_single_task(
+            project_dir, "claude", format_code=True, check_type_hints=True
+        )
 
         # Verify success
         assert success is True
