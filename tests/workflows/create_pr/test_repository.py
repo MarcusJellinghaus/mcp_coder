@@ -3,6 +3,8 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+from github import GithubException
+
 from mcp_coder.workflows.create_pr.core import cleanup_repository, create_pull_request
 
 
@@ -138,10 +140,11 @@ class TestCreatePullRequest:
         }
         mock_pr_manager.return_value = mock_manager_instance
 
-        result = create_pull_request(
+        result, error = create_pull_request(
             Path("/test/project"), "Test PR Title", "Test PR Body"
         )
 
+        assert error is None
         assert result is not None
         assert result["number"] == 123
         assert result["url"] == "https://github.com/owner/repo/pull/123"
@@ -160,11 +163,13 @@ class TestCreatePullRequest:
         """Test pull request creation when current branch is unknown."""
         mock_current_branch.return_value = None
 
-        result = create_pull_request(
+        result, error = create_pull_request(
             Path("/test/project"), "Test PR Title", "Test PR Body"
         )
 
         assert result is None
+        assert error is not None
+        assert "current branch" in error
 
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
@@ -177,11 +182,13 @@ class TestCreatePullRequest:
         mock_current_branch.return_value = "feature-branch"
         mock_detect_base_branch.return_value = None
 
-        result = create_pull_request(
+        result, error = create_pull_request(
             Path("/test/project"), "Test PR Title", "Test PR Body"
         )
 
         assert result is None
+        assert error is not None
+        assert "base branch" in error
 
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
@@ -192,47 +199,21 @@ class TestCreatePullRequest:
         mock_current_branch: MagicMock,
         mock_pr_manager: MagicMock,
     ) -> None:
-        """Test pull request creation when PullRequestManager fails."""
+        """Test pull request creation when PullRequestManager raises."""
         mock_current_branch.return_value = "feature-branch"
         mock_detect_base_branch.return_value = "main"
 
         mock_manager_instance = MagicMock()
-        mock_manager_instance.create_pull_request.return_value = (
-            {}
-        )  # Empty dict indicates failure
+        mock_manager_instance.create_pull_request.side_effect = ValueError("test error")
         mock_pr_manager.return_value = mock_manager_instance
 
-        result = create_pull_request(
+        result, error = create_pull_request(
             Path("/test/project"), "Test PR Title", "Test PR Body"
         )
 
         assert result is None
-
-    @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
-    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
-    def test_create_pull_request_no_pr_number(
-        self,
-        mock_detect_base_branch: MagicMock,
-        mock_current_branch: MagicMock,
-        mock_pr_manager: MagicMock,
-    ) -> None:
-        """Test pull request creation when PR number is missing."""
-        mock_current_branch.return_value = "feature-branch"
-        mock_detect_base_branch.return_value = "main"
-
-        mock_manager_instance = MagicMock()
-        mock_manager_instance.create_pull_request.return_value = {
-            "url": "https://github.com/owner/repo/pull/123"
-            # Missing "number" key
-        }
-        mock_pr_manager.return_value = mock_manager_instance
-
-        result = create_pull_request(
-            Path("/test/project"), "Test PR Title", "Test PR Body"
-        )
-
-        assert result is None
+        assert error is not None
+        assert "test error" in error
 
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
@@ -249,11 +230,40 @@ class TestCreatePullRequest:
 
         mock_pr_manager.side_effect = Exception("GitHub API error")
 
-        result = create_pull_request(
+        result, error = create_pull_request(
             Path("/test/project"), "Test PR Title", "Test PR Body"
         )
 
         assert result is None
+        assert error is not None
+        assert "GitHub API error" in error
+
+    @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
+    def test_create_pull_request_github_api_error(
+        self,
+        mock_detect_base_branch: MagicMock,
+        mock_current_branch: MagicMock,
+        mock_pr_manager: MagicMock,
+    ) -> None:
+        """Test pull request creation when GitHub API returns validation error."""
+        mock_current_branch.return_value = "feature-branch"
+        mock_detect_base_branch.return_value = "main"
+
+        mock_manager_instance = MagicMock()
+        mock_manager_instance.create_pull_request.side_effect = GithubException(
+            422, {"message": "Validation Failed"}, None
+        )
+        mock_pr_manager.return_value = mock_manager_instance
+
+        result, error = create_pull_request(
+            Path("/test/project"), "Test PR Title", "Test PR Body"
+        )
+
+        assert result is None
+        assert error is not None
+        assert "Validation Failed" in error
 
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
@@ -275,10 +285,11 @@ class TestCreatePullRequest:
         }
         mock_pr_manager.return_value = mock_manager_instance
 
-        result = create_pull_request(
+        result, error = create_pull_request(
             Path("/test/project"), "feat: Amazing feature", "Detailed description"
         )
 
+        assert error is None
         assert result is not None
         assert result["number"] == 456
         mock_manager_instance.create_pull_request.assert_called_once_with(
@@ -308,9 +319,10 @@ class TestCreatePullRequest:
         }
         mock_pr_manager.return_value = mock_manager_instance
 
-        result = create_pull_request(
+        result, error = create_pull_request(
             Path("/test/project"), "fix: Bug fix", "Fixed the bug"
         )
 
+        assert error is None
         assert result is not None
         assert result["number"] == 789

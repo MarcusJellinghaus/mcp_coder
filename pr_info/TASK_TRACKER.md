@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: Change `core.py` wrapper to return `(result, error_msg)` tuple
-- [ ] Implementation: change return type to `tuple[PullRequestData | None, str | None]`, update `test_repository.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: change return type to `tuple[PullRequestData | None, str | None]`, update `test_repository.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Wire error message through Step 5 + update workflow/failure tests
 - [ ] Implementation: unpack tuple in `run_create_pr_workflow()` step 5, update `test_workflow.py` and `test_failure_handling.py`

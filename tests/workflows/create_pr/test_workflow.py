@@ -41,10 +41,10 @@ class TestRunCreatePrWorkflow:
         mock_prereqs.return_value = True
         mock_generate.return_value = ("Test Title", "Test Body")
         mock_push.return_value = {"success": True}
-        mock_create_pr.return_value = {
-            "number": 42,
-            "url": "https://github.com/test/repo/pull/42",
-        }
+        mock_create_pr.return_value = (
+            {"number": 42, "url": "https://github.com/test/repo/pull/42"},
+            None,
+        )
         mock_cleanup.return_value = True
         mock_clean.return_value = False  # Has changes to commit
         mock_commit.return_value = {"success": True, "commit_hash": "abc123"}
@@ -102,7 +102,7 @@ class TestRunCreatePrWorkflow:
         mock_cleanup.return_value = True
         mock_clean.return_value = True
         mock_push.return_value = {"success": True}
-        mock_create_pr.return_value = None  # PR creation fails
+        mock_create_pr.return_value = (None, "Failed to create pull request")
 
         result = run_create_pr_workflow(Path("/test"), "claude")
 
@@ -162,10 +162,10 @@ class TestRunCreatePrWorkflow:
         mock_prereqs.return_value = True
         mock_generate.return_value = ("Test Title", "Test Body")
         mock_push.return_value = {"success": True}
-        mock_create_pr.return_value = {
-            "number": 42,
-            "url": "https://github.com/test/repo/pull/42",
-        }
+        mock_create_pr.return_value = (
+            {"number": 42, "url": "https://github.com/test/repo/pull/42"},
+            None,
+        )
         mock_cleanup.return_value = True
         mock_clean.return_value = True  # Clean directory, no commit needed
         mock_get_branch.return_value = "feature-branch"
@@ -210,10 +210,10 @@ class TestRunCreatePrWorkflow:
         mock_prereqs.return_value = True
         mock_generate.return_value = ("Test Title", "Test Body")
         mock_push.return_value = {"success": True}
-        mock_create_pr.return_value = {
-            "number": 42,
-            "url": "https://github.com/test/repo/pull/42",
-        }
+        mock_create_pr.return_value = (
+            {"number": 42, "url": "https://github.com/test/repo/pull/42"},
+            None,
+        )
         mock_cleanup.return_value = True
         mock_clean.return_value = True  # Clean directory, no commit needed
         mock_get_branch.return_value = "feature-branch"
@@ -275,10 +275,10 @@ class TestRunCreatePrWorkflow:
         mock_prereqs.return_value = True
         mock_generate.return_value = ("Test Title", "Test Body")
         mock_push.return_value = {"success": True}
-        mock_create_pr.return_value = {
-            "number": 42,
-            "url": "https://github.com/test/repo/pull/42",
-        }
+        mock_create_pr.return_value = (
+            {"number": 42, "url": "https://github.com/test/repo/pull/42"},
+            None,
+        )
         mock_cleanup.return_value = True
         mock_clean.return_value = True  # Clean directory, no commit needed
         mock_get_branch.return_value = "feature-branch"
@@ -329,10 +329,10 @@ class TestRunCreatePrWorkflow:
         mock_prereqs.return_value = True
         mock_generate.return_value = ("Test Title", "Test Body")
         mock_push.return_value = {"success": True}
-        mock_create_pr.return_value = {
-            "number": 42,
-            "url": "https://github.com/test/repo/pull/42",
-        }
+        mock_create_pr.return_value = (
+            {"number": 42, "url": "https://github.com/test/repo/pull/42"},
+            None,
+        )
         mock_cleanup.return_value = True
         mock_clean.return_value = True
         mock_get_branch.return_value = "feature-branch"
@@ -390,10 +390,10 @@ class TestRunCreatePrWorkflow:
         mock_prereqs.return_value = True
         mock_generate.return_value = ("Test Title", "Test Body")
         mock_push.return_value = {"success": True}
-        mock_create_pr.return_value = {
-            "number": 42,
-            "url": "https://github.com/test/repo/pull/42",
-        }
+        mock_create_pr.return_value = (
+            {"number": 42, "url": "https://github.com/test/repo/pull/42"},
+            None,
+        )
         mock_cleanup.return_value = True
         mock_clean.return_value = True
         mock_get_branch.return_value = "feature-branch"
@@ -447,10 +447,10 @@ class TestRunCreatePrWorkflow:
         mock_prereqs.return_value = True
         mock_generate.return_value = ("Test Title", "Test Body")
         mock_push.return_value = {"success": True}
-        mock_create_pr.return_value = {
-            "number": 42,
-            "url": "https://github.com/test/repo/pull/42",
-        }
+        mock_create_pr.return_value = (
+            {"number": 42, "url": "https://github.com/test/repo/pull/42"},
+            None,
+        )
         mock_cleanup.return_value = True
         mock_clean.return_value = True
         mock_get_branch.return_value = "feature-branch"
@@ -497,10 +497,10 @@ class TestRunCreatePrWorkflow:
         mock_prereqs.return_value = True
         mock_generate.return_value = ("Test Title", "Test Body")
         mock_push.return_value = {"success": True}
-        mock_create_pr.return_value = {
-            "number": 42,
-            "url": "https://github.com/test/repo/pull/42",
-        }
+        mock_create_pr.return_value = (
+            {"number": 42, "url": "https://github.com/test/repo/pull/42"},
+            None,
+        )
         mock_cleanup.return_value = True
         mock_clean.return_value = True
         mock_get_branch.return_value = "feature-branch"
@@ -552,10 +552,10 @@ class TestRunCreatePrWorkflow:
         mock_prereqs.return_value = True
         mock_generate.return_value = ("Test Title", "Test Body")
         mock_push.return_value = {"success": True}
-        mock_create_pr.return_value = {
-            "number": 42,
-            "url": "https://github.com/test/repo/pull/42",
-        }
+        mock_create_pr.return_value = (
+            {"number": 42, "url": "https://github.com/test/repo/pull/42"},
+            None,
+        )
         mock_cleanup.return_value = True
         mock_clean.return_value = True
         mock_get_branch.return_value = "123-feature-branch"

@@ -151,7 +151,7 @@ class TestCreatePrFailureHandling:
         mock_cleanup.return_value = True
         mock_clean.return_value = True
         mock_push.return_value = {"success": True}
-        mock_create_pr.return_value = None
+        mock_create_pr.return_value = (None, "Failed to create pull request")
 
         result = run_create_pr_workflow(Path("/test"), "claude")
 
