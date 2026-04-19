@@ -51,13 +51,13 @@ All checks must pass before proceeding.
 
 ```python
 # Fast unit tests (recommended)
-mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration and not llm_integration and not textual_integration"])
+mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not langchain_integration and not llm_integration and not textual_integration"])
 
 # Specific integration tests
 mcp__tools-py__run_pytest_check(extra_args=["-n", "auto"], markers=["git_integration"])
 ```
 
-Markers: `git_integration`, `claude_api_integration`, `claude_cli_integration`, `formatter_integration`, `github_integration`, `langchain_integration`, `llm_integration`, `textual_integration`.
+Markers: `git_integration`, `claude_api_integration`, `claude_cli_integration`, `copilot_cli_integration`, `formatter_integration`, `github_integration`, `langchain_integration`, `llm_integration`, `textual_integration`.
 
 When debugging test failures, add `"-v", "-s", "--tb=short"` to extra_args.
 

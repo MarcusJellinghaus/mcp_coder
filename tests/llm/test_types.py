@@ -4,6 +4,7 @@ import pytest
 
 from mcp_coder.llm.types import (
     LLM_RESPONSE_VERSION,
+    SUPPORTED_PROVIDERS,
     LLMResponseDict,
     ResponseAssembler,
     StreamEvent,
@@ -320,3 +321,16 @@ def test_usage_info_importable_from_llm_package() -> None:
     from mcp_coder.llm import UsageInfo as ImportedUsageInfo
 
     assert ImportedUsageInfo is UsageInfo
+
+
+# --- SUPPORTED_PROVIDERS tests ---
+
+
+def test_supported_providers_contains_expected_values() -> None:
+    """Test SUPPORTED_PROVIDERS contains exactly claude, langchain, copilot."""
+    assert SUPPORTED_PROVIDERS == {"claude", "langchain", "copilot"}
+
+
+def test_supported_providers_is_frozenset() -> None:
+    """Test SUPPORTED_PROVIDERS is a frozenset (immutable)."""
+    assert isinstance(SUPPORTED_PROVIDERS, frozenset)

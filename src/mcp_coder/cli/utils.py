@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 
 from ..llm.session import parse_llm_method
+from ..llm.types import SUPPORTED_PROVIDERS
 from ..utils.git_operations.remotes import get_github_repository_url
 from ..utils.user_config import find_repo_section_by_url, get_config_values
 
@@ -97,9 +98,6 @@ def resolve_issue_interaction_flags(
     )
 
 
-_VALID_PROVIDERS = {"claude", "langchain"}
-
-
 def resolve_llm_method(llm_method: str | None) -> tuple[str, str]:
     """Resolve LLM method from CLI arg, env var, config file, or default.
 
@@ -132,10 +130,10 @@ def resolve_llm_method(llm_method: str | None) -> tuple[str, str]:
         else:
             return ("claude", "default")
 
-    if provider not in _VALID_PROVIDERS:
+    if provider not in SUPPORTED_PROVIDERS:
         raise ValueError(
             f"Invalid LLM provider {provider!r} from {source}. "
-            f"Valid values: {', '.join(sorted(_VALID_PROVIDERS))}"
+            f"Valid values: {', '.join(sorted(SUPPORTED_PROVIDERS))}"
         )
     return (provider, source)
 

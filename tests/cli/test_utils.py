@@ -590,3 +590,19 @@ class TestResolveIssueInteractionFlags:
         )
         result = resolve_issue_interaction_flags(args, Path("/tmp/project"))
         assert result == (True, True)
+
+
+class TestResolveLlmMethodCopilot:
+    """Test cases for copilot provider in resolve_llm_method."""
+
+    def test_resolve_llm_method_copilot_cli_arg(self) -> None:
+        """Test that copilot CLI arg returns (copilot, 'cli argument')."""
+        assert resolve_llm_method("copilot") == ("copilot", "cli argument")
+
+    def test_resolve_llm_method_invalid_mentions_all_providers(self) -> None:
+        """Test that invalid provider error mentions all three providers."""
+        with pytest.raises(ValueError, match="claude") as exc_info:
+            resolve_llm_method("invalid")
+        error_msg = str(exc_info.value)
+        assert "copilot" in error_msg
+        assert "langchain" in error_msg

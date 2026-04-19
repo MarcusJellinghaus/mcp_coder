@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: SUPPORTED_PROVIDERS constant + update all consumers
 See [step_1.md](./steps/step_1.md)
-- [ ] Implementation: add `SUPPORTED_PROVIDERS` to `types.py`, update `resolver.py`, `parsers.py`, `utils.py`, `pyproject.toml`, `CLAUDE.md` + tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `SUPPORTED_PROVIDERS` to `types.py`, update `resolver.py`, `parsers.py`, `utils.py`, `pyproject.toml`, `CLAUDE.md` + tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Shared executable finder utility
 See [step_2.md](./steps/step_2.md)

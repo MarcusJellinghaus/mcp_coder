@@ -150,6 +150,7 @@ markers = [
     "mlflow_integration: tests requiring MLflow installation and functionality",
     "llm_integration: end-to-end tests with real LLM call, real MLflow logging, real DB check (slow, requires provider credentials)",
     "langchain_integration: tests requiring LangChain and provider API access (network, auth needed)",
+    "copilot_cli_integration: tests that use real Copilot CLI executable (slow)",
     "integration: general integration tests",
     # Regenerate snapshot baselines: pytest tests/icoder/test_snapshots.py --snapshot-update
     "textual_integration: tests requiring Textual TUI (headless app, pilot, snapshots)",
@@ -157,7 +158,7 @@ markers = [
 ]
 # RECOMMENDED usage patterns:
 # pytest (no markers) - All unit tests (fast, mocked, default for CI)
-# -m "not claude_cli_integration and not claude_api_integration and not git_integration and not github_integration and not langchain_integration and not textual_integration" - All unit tests (explicit)
+# -m "not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not git_integration and not github_integration and not langchain_integration and not textual_integration" - All unit tests (explicit)
 # -m "claude_cli_integration"
 # -m "claude_api_integration"
 # -m "git_integration"

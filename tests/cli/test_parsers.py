@@ -165,3 +165,27 @@ class TestBooleanOptionalFlags:
             ), f"{cmd_args[0]} missing post_issue_comments"
             assert args.update_issue_labels is None
             assert args.post_issue_comments is None
+
+
+class TestLlmMethodCopilotChoice:
+    """Tests for --llm-method copilot acceptance in parsers."""
+
+    def _parse(self, *args: str) -> argparse.Namespace:
+        """Parse CLI args using the full parser."""
+        parser = create_parser()
+        return parser.parse_args(list(args))
+
+    def test_prompt_parser_accepts_copilot(self) -> None:
+        """--llm-method copilot is accepted by prompt parser."""
+        args = self._parse("prompt", "hello", "--llm-method", "copilot")
+        assert args.llm_method == "copilot"
+
+    def test_prompt_parser_rejects_invalid(self) -> None:
+        """--llm-method invalid is rejected by prompt parser."""
+        with pytest.raises(SystemExit):
+            self._parse("prompt", "hello", "--llm-method", "invalid")
+
+    def test_implement_parser_accepts_copilot(self) -> None:
+        """--llm-method copilot is accepted by implement parser."""
+        args = self._parse("implement", "--llm-method", "copilot")
+        assert args.llm_method == "copilot"
