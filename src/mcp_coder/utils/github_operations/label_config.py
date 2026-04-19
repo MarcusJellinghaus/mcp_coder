@@ -91,6 +91,39 @@ def build_label_lookups(labels_config: Dict[str, Any]) -> LabelLookups:
     )
 
 
+def validate_labels_config(labels_config: Dict[str, Any]) -> None:
+    """Validate label config constraints. Raises ValueError on problems.
+
+    Checks:
+    1. Exactly one label has "default": true
+    2. Each "promotable": true label has a next label in workflow_labels list
+    3. No promotable label's next target has "failure": true
+    """
+    labels = labels_config["workflow_labels"]
+
+    # Check exactly one default
+    defaults = [label for label in labels if label.get("default")]
+    if len(defaults) != 1:
+        raise ValueError(
+            f"Expected exactly one label with 'default': true, found {len(defaults)}"
+        )
+
+    # Check promotable constraints
+    for i, label in enumerate(labels):
+        if label.get("promotable"):
+            if i + 1 >= len(labels):
+                raise ValueError(
+                    f"Label '{label['internal_id']}' is promotable but has "
+                    f"no next label in the workflow_labels list"
+                )
+            next_label = labels[i + 1]
+            if next_label.get("failure"):
+                raise ValueError(
+                    f"Label '{label['internal_id']}' is promotable but its "
+                    f"next label '{next_label['internal_id']}' has failure: true"
+                )
+
+
 def get_labels_config_path(project_dir: Optional[Path] = None) -> Path | Traversable:
     """Get path to labels.json configuration file.
 

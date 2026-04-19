@@ -8,6 +8,7 @@ import pytest
 from mcp_coder.utils.github_operations.label_config import (
     get_labels_config_path,
     load_labels_config,
+    validate_labels_config,
 )
 
 
@@ -202,3 +203,151 @@ def test_load_labels_config_missing_workflow_labels_key(tmp_path: Path) -> None:
     assert "Configuration missing required key: 'workflow_labels'" in str(
         exc_info.value
     )
+
+
+class TestValidateLabelsConfig:
+    """Tests for validate_labels_config()."""
+
+    def test_valid_config_passes(self) -> None:
+        """Bundled config should pass validation."""
+        config = load_labels_config(get_labels_config_path(None))
+        validate_labels_config(config)  # Should not raise
+
+    def test_missing_default_raises(self) -> None:
+        """Config with no default: true label raises ValueError."""
+        config = {
+            "workflow_labels": [
+                {
+                    "internal_id": "a",
+                    "name": "a",
+                    "color": "000000",
+                    "description": "a",
+                    "category": "human_action",
+                },
+            ]
+        }
+        with pytest.raises(ValueError, match="exactly one.*default"):
+            validate_labels_config(config)
+
+    def test_multiple_defaults_raises(self) -> None:
+        """Config with two default: true labels raises ValueError."""
+        config = {
+            "workflow_labels": [
+                {
+                    "internal_id": "a",
+                    "name": "a",
+                    "color": "000000",
+                    "description": "a",
+                    "category": "human_action",
+                    "default": True,
+                },
+                {
+                    "internal_id": "b",
+                    "name": "b",
+                    "color": "111111",
+                    "description": "b",
+                    "category": "human_action",
+                    "default": True,
+                },
+            ]
+        }
+        with pytest.raises(ValueError, match="exactly one.*default"):
+            validate_labels_config(config)
+
+    def test_promotable_without_next_raises(self) -> None:
+        """Last label in list with promotable: true raises ValueError."""
+        config = {
+            "workflow_labels": [
+                {
+                    "internal_id": "a",
+                    "name": "a",
+                    "color": "000000",
+                    "description": "a",
+                    "category": "human_action",
+                    "default": True,
+                },
+                {
+                    "internal_id": "b",
+                    "name": "b",
+                    "color": "111111",
+                    "description": "b",
+                    "category": "human_action",
+                    "promotable": True,
+                },
+            ]
+        }
+        with pytest.raises(ValueError, match="no next label"):
+            validate_labels_config(config)
+
+    def test_promotable_targeting_failure_raises(self) -> None:
+        """Promotable label whose next entry has failure: true raises ValueError."""
+        config = {
+            "workflow_labels": [
+                {
+                    "internal_id": "a",
+                    "name": "a",
+                    "color": "000000",
+                    "description": "a",
+                    "category": "human_action",
+                    "default": True,
+                    "promotable": True,
+                },
+                {
+                    "internal_id": "b",
+                    "name": "b",
+                    "color": "111111",
+                    "description": "b",
+                    "category": "human_action",
+                    "failure": True,
+                },
+            ]
+        }
+        with pytest.raises(ValueError, match="failure"):
+            validate_labels_config(config)
+
+    def test_valid_promotable_passes(self) -> None:
+        """Promotable label with valid non-failure next entry passes."""
+        config = {
+            "workflow_labels": [
+                {
+                    "internal_id": "a",
+                    "name": "a",
+                    "color": "000000",
+                    "description": "a",
+                    "category": "human_action",
+                    "default": True,
+                    "promotable": True,
+                },
+                {
+                    "internal_id": "b",
+                    "name": "b",
+                    "color": "111111",
+                    "description": "b",
+                    "category": "bot_pickup",
+                },
+            ]
+        }
+        validate_labels_config(config)  # Should not raise
+
+    def test_config_without_new_fields_fails(self) -> None:
+        """Config missing default field fails validation (exactly one required)."""
+        config = {
+            "workflow_labels": [
+                {
+                    "internal_id": "a",
+                    "name": "a",
+                    "color": "000000",
+                    "description": "a",
+                    "category": "human_action",
+                },
+                {
+                    "internal_id": "b",
+                    "name": "b",
+                    "color": "111111",
+                    "description": "b",
+                    "category": "bot_pickup",
+                },
+            ]
+        }
+        with pytest.raises(ValueError, match="exactly one.*default"):
+            validate_labels_config(config)
