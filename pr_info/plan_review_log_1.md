@@ -35,4 +35,31 @@
 - step_5.md: Added `jenkins_independence` contract update, added `tach check` note
 - summary.md: Updated symbol count, consumer lists, dead symbols section
 
+**Status**: committed (94feed8)
+
+## Round 2 — 2026-04-19
+
+**Findings**:
+- 4 more missing source consumers in step 2: `cli/utils.py`, `cli/commands/set_status.py`, `cli/commands/gh_tool.py`, `cli/commands/coordinator/issue_stats.py`
+- 6 more missing test consumers with `@patch` string paths: `test_utils.py`, `test_base_manager.py`, `test_ci_results_manager_foundation.py`, `test_issue_branch_manager.py`, `issues/conftest.py`, `test_issue_manager_label_update.py`
+- `jenkins_independence` contract update wording needed to be more explicit
+- Summary file counts inconsistent after round 1 additions
+- Test method name `test_workflow_git_operations_integration` cosmetic rename (skipped per SE principles)
+
+**Decisions**:
+- Add 4 source consumers to step 2 → accepted (straightforward)
+- Add 6 test consumers to step 3 → accepted (straightforward, `@patch` paths)
+- Make `jenkins_independence` update explicit → accepted
+- Update summary file counts → accepted
+- Test method rename → skipped (cosmetic, out of scope)
+- `git_local` contract removal note → skipped (nit)
+
+**User decisions**: None needed this round.
+
+**Changes**:
+- step_2.md: Added 4 source consumers
+- step_3.md: Added 6 test consumers with `@patch` path update details
+- step_5.md: Made `jenkins_independence` update wording explicit
+- summary.md: Updated file counts (now 38 files modified)
+
 **Status**: pending commit

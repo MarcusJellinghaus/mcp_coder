@@ -30,6 +30,10 @@ Switch every `src/` file that imports from `mcp_coder.utils.git_operations` (or 
 | `src/mcp_coder/utils/github_operations/ci_results_manager.py` | `utils.git_operations.branch_queries` | `validate_branch_name` |
 | `src/mcp_coder/utils/github_operations/pr_manager.py` | `utils.git_operations` | `get_default_branch_name`, `get_github_repository_url` |
 | `src/mcp_coder/utils/github_operations/issues/manager.py` | `utils.git_operations.branch_queries` | `extract_issue_number_from_branch`, `get_current_branch_name` |
+| `src/mcp_coder/cli/utils.py` | `..utils.git_operations.remotes` + `..utils.git_operations.branch_queries` (lazy import) | `get_github_repository_url`, `get_current_branch_name` |
+| `src/mcp_coder/cli/commands/set_status.py` | `...utils.git_operations.branch_queries` + `...utils.git_operations.repository_status` | `extract_issue_number_from_branch`, `get_current_branch_name`, `is_working_directory_clean` |
+| `src/mcp_coder/cli/commands/gh_tool.py` | `...utils.git_operations.branches` + `...utils.git_operations.remotes` | `checkout_branch`, `fetch_remote` |
+| `src/mcp_coder/cli/commands/coordinator/issue_stats.py` | `....utils.git_operations.remotes` | `get_github_repository_url` |
 
 **Note on `base_manager.py`**: This file imports the `git_operations` module itself (not individual symbols) and uses attribute access (`git_operations.is_git_repository()`). The transformation is:
 - Remove `git_operations` from `from mcp_coder.utils import git_operations, user_config`
