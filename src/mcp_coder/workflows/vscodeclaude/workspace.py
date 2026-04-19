@@ -13,7 +13,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from ...utils.git_operations import checkout_branch, fetch_remote
+from mcp_coder.mcp_workspace_git import checkout_branch, fetch_remote
+
 from ...utils.pyproject_config import get_github_install_config
 from ...utils.subprocess_runner import (
     CalledProcessError,

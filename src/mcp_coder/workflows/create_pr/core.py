@@ -14,6 +14,7 @@ from typing import Optional, Tuple
 from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS, PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import prompt_llm
+from mcp_coder.mcp_workspace_git import extract_issue_number_from_branch
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils import (
     commit_all_changes,
@@ -21,9 +22,6 @@ from mcp_coder.utils import (
     get_current_branch_name,
     git_push,
     is_working_directory_clean,
-)
-from mcp_coder.utils.git_operations.branch_queries import (
-    extract_issue_number_from_branch,
 )
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.github_operations.issues import IssueBranchManager

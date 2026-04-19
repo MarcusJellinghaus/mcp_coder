@@ -111,9 +111,7 @@ class TestHasRemoteTrackingBranch:
     def test_has_remote_tracking_branch_true(
         self, mock_is_git: Mock, mock_ctx: Mock
     ) -> None:
-        from mcp_coder.utils.git_operations.branch_queries import (
-            has_remote_tracking_branch,
-        )
+        from mcp_coder.mcp_workspace_git import has_remote_tracking_branch
 
         mock_is_git.return_value = True
         mock_repo = Mock()
@@ -130,9 +128,7 @@ class TestHasRemoteTrackingBranch:
     def test_has_remote_tracking_branch_false(
         self, mock_is_git: Mock, mock_ctx: Mock
     ) -> None:
-        from mcp_coder.utils.git_operations.branch_queries import (
-            has_remote_tracking_branch,
-        )
+        from mcp_coder.mcp_workspace_git import has_remote_tracking_branch
 
         mock_is_git.return_value = True
         mock_repo = Mock()

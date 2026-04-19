@@ -8,11 +8,11 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
-from mcp_coder.utils.git_operations.branch_queries import (
+from mcp_coder.mcp_workspace_git import (
+    _safe_repo_context,
     extract_issue_number_from_branch,
     get_current_branch_name,
 )
-from mcp_coder.utils.git_operations.core import _safe_repo_context
 from mcp_coder.utils.github_operations.issues import IssueManager
 
 logger = logging.getLogger(__name__)

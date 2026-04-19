@@ -15,8 +15,8 @@ from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import prompt_llm
 from mcp_coder.llm.storage.session_storage import store_session
+from mcp_coder.mcp_workspace_git import get_latest_commit_sha
 from mcp_coder.prompt_manager import get_prompt_with_substitutions
-from mcp_coder.utils.git_operations.commits import get_latest_commit_sha
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.github_operations.ci_results_manager import (
     CIResultsManager,

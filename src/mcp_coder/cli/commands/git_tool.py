@@ -7,8 +7,8 @@ import argparse
 import fnmatch
 import logging
 
-from ...utils.git_operations.compact_diffs import get_compact_diff
-from ...utils.git_operations.diffs import get_git_diff_for_commit
+from mcp_coder.mcp_workspace_git import get_compact_diff, get_git_diff_for_commit
+
 from ...workflow_utils.base_branch import detect_base_branch
 from ...workflows.utils import resolve_project_dir
 

@@ -23,18 +23,18 @@ from .llm.providers.claude.claude_executable_finder import (
 from .llm.providers.langchain.verification import verify_langchain
 from .llm.serialization import deserialize_llm_response, serialize_llm_response
 from .llm.types import LLM_RESPONSE_VERSION, LLMResponseDict
-from .prompt_manager import (
-    get_prompt,
-    validate_prompt_directory,
-    validate_prompt_markdown,
-)
-from .utils.git_operations import (
+from .mcp_workspace_git import (
     CommitResult,
     commit_all_changes,
     commit_staged_files,
     get_full_status,
     git_push,
     is_git_repository,
+)
+from .prompt_manager import (
+    get_prompt,
+    validate_prompt_directory,
+    validate_prompt_markdown,
 )
 from .utils.github_operations.issues import CommentData, IssueData, IssueManager
 from .utils.github_operations.labels_manager import LabelData

@@ -9,9 +9,10 @@ import logging
 import os
 from pathlib import Path
 
+from mcp_coder.mcp_workspace_git import get_github_repository_url
+
 from ..llm.session import parse_llm_method
 from ..llm.types import SUPPORTED_PROVIDERS
-from ..utils.git_operations.remotes import get_github_repository_url
 from ..utils.user_config import find_repo_section_by_url, get_config_values
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,7 @@ def log_command_startup(command_name: str, project_dir: Path | None = None) -> N
     from .. import __version__
 
     if project_dir is not None:
-        from ..utils.git_operations.branch_queries import get_current_branch_name
+        from mcp_coder.mcp_workspace_git import get_current_branch_name
 
         try:
             branch = get_current_branch_name(project_dir) or "(unknown)"

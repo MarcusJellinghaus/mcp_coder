@@ -12,7 +12,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from mcp_coder.utils.git_operations import (
+from mcp_coder.mcp_workspace_git import (
     MERGE_BASE_DISTANCE_THRESHOLD,
     detect_parent_branch_via_merge_base,
     extract_issue_number_from_branch,

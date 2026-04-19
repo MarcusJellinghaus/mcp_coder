@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from mcp_coder.utils.git_operations.branches import checkout_branch
+from mcp_coder.mcp_workspace_git import checkout_branch
 from mcp_coder.utils.github_operations.issues import (
     IssueBranchManager,
     IssueData,

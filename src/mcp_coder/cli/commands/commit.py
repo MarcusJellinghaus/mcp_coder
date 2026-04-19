@@ -5,16 +5,17 @@ import logging
 from pathlib import Path
 from typing import Optional, Tuple
 
-from ...utils.clipboard import (
-    get_clipboard_text,
-    parse_commit_message,
-    validate_commit_message,
-)
-from ...utils.git_operations import (
+from mcp_coder.mcp_workspace_git import (
     commit_staged_files,
     get_git_diff_for_commit,
     is_git_repository,
     stage_all_changes,
+)
+
+from ...utils.clipboard import (
+    get_clipboard_text,
+    parse_commit_message,
+    validate_commit_message,
 )
 from ...utils.log_utils import OUTPUT
 from ...workflow_utils.commit_operations import generate_commit_message_with_llm

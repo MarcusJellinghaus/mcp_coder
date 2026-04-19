@@ -189,8 +189,8 @@ def get_github_repository_url(project_dir: Path) -> Optional[str]:
 
     Note:
         Converts various Git URL formats to standard GitHub HTTPS format:
-        - SSH: git@github.com:owner/repo.git → https://github.com/owner/repo
-        - HTTPS: https://github.com/owner/repo.git → https://github.com/owner/repo
+        - SSH: git@github.com:owner/repo.git -> https://github.com/owner/repo
+        - HTTPS: https://github.com/owner/repo.git -> https://github.com/owner/repo
     """
     logger.debug("Getting GitHub repository URL for %s", project_dir)
 

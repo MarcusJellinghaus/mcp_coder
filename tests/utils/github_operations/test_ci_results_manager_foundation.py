@@ -24,7 +24,8 @@ class TestCIResultsManagerFoundation:
 
         # Mock the git repository check
         with patch(
-            "mcp_coder.utils.git_operations.is_git_repository", return_value=True
+            "mcp_coder.utils.github_operations.base_manager.is_git_repository",
+            return_value=True,
         ):
             # Mock user config to return a token
             with patch("mcp_coder.utils.user_config.get_config_values") as mock_config:

@@ -223,7 +223,7 @@ def find_moved_lines(files: list[FileDiff]) -> set[str]:
 def collect_line_sources(
     files: list[FileDiff],
 ) -> tuple[dict[str, str], dict[str, str]]:
-    """Return (removed_to_file, added_to_file) mappings of content → filename.
+    """Return (removed_to_file, added_to_file) mappings of content -> filename.
 
     For each significant line, records the last file that removed or added it.
     Used to annotate moved-block summaries with source/destination file names:

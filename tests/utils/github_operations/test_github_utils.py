@@ -298,14 +298,14 @@ class TestPullRequestManagerIntegration:
         print(f"PR Manager received: {type(pr_manager)}")
         print(f"Project dir: {pr_manager.project_dir}")
 
-        from mcp_coder.utils.git_operations import create_branch, push_branch
+        from mcp_coder.mcp_workspace_git import create_branch, push_branch
 
         test_branch = "test-branch-lifecycle"
 
         # Create unique PR title with timestamp and current branch name
         import datetime
 
-        from mcp_coder.utils.git_operations import get_current_branch_name
+        from mcp_coder.mcp_workspace_git import get_current_branch_name
 
         timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M")
         current_branch = get_current_branch_name(Path.cwd()) or "unknown"
@@ -335,7 +335,7 @@ class TestPullRequestManagerIntegration:
         created_pr = None
         try:
             # Check if test branch exists remotely first
-            from mcp_coder.utils.git_operations import (
+            from mcp_coder.mcp_workspace_git import (
                 branch_exists,
                 checkout_branch,
                 fetch_remote,

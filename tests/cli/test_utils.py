@@ -20,7 +20,7 @@ class TestLogCommandStartup:
     """Test cases for log_command_startup function."""
 
     @patch(
-        "mcp_coder.utils.git_operations.branch_queries.get_current_branch_name",
+        "mcp_coder.mcp_workspace_git.get_current_branch_name",
         return_value="feat/my-branch",
     )
     @patch("mcp_coder.__version__", new="1.2.3")
@@ -53,7 +53,7 @@ class TestLogCommandStartup:
         assert "project" not in caplog.text
 
     @patch(
-        "mcp_coder.utils.git_operations.branch_queries.get_current_branch_name",
+        "mcp_coder.mcp_workspace_git.get_current_branch_name",
         return_value=None,
     )
     @patch("mcp_coder.__version__", new="2.0.0")
@@ -70,7 +70,7 @@ class TestLogCommandStartup:
         assert "mcp-coder v2.0.0" in caplog.text
 
     @patch(
-        "mcp_coder.utils.git_operations.branch_queries.get_current_branch_name",
+        "mcp_coder.mcp_workspace_git.get_current_branch_name",
         side_effect=OSError("git not found"),
     )
     @patch("mcp_coder.__version__", new="3.0.0")

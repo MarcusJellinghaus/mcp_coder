@@ -105,7 +105,7 @@ def _mock_git_repo() -> Any:
     significantly improving test performance.
     """
     with patch(
-        "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+        "mcp_coder.utils.github_operations.base_manager.is_git_repository",
         return_value=True,
     ):
         yield
