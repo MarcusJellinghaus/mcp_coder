@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Update settings.local.json permissions
-- [ ] Implementation: Remove 4 Bash git permissions, add 4 MCP workspace git tool permissions
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: Remove 4 Bash git permissions, add 4 MCP workspace git tool permissions
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Update CLAUDE.md tool mapping and git operations section
 - [ ] Implementation: Add git MCP tool rows to tool mapping table, update Bash-allowed commands, replace compact-diff guidance
