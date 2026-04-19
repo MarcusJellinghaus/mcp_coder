@@ -39,6 +39,9 @@ def _map_copilot_message_to_event(
     - result → done (with session_id, usage)
     - session.info with unknown-tool warning → error StreamEvent + WARNING log
     - All other types → skipped (ephemeral)
+
+    Yields:
+        StreamEvent dicts corresponding to the parsed message type.
     """
     msg_type = msg.get("type", "")
 

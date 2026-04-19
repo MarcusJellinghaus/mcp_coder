@@ -47,7 +47,8 @@ class CopilotToolFlags(TypedDict):
 def parse_copilot_jsonl_line(line: str) -> dict[str, Any] | None:
     """Parse a single JSONL line from Copilot output.
 
-    Returns parsed dict or None if line is empty/invalid.
+    Returns:
+        Parsed dict or None if line is empty/invalid.
     """
     stripped = line.strip()
     if not stripped:
@@ -66,6 +67,9 @@ def parse_copilot_jsonl_output(lines: list[str]) -> ParsedCopilotResponse:
     - session_id from result message's sessionId field
     - usage: outputTokens → output_tokens mapping
     - Copilot-specific fields into raw_response
+
+    Returns:
+        ParsedCopilotResponse with text, session_id, messages, usage, and raw_result.
     """
     text_parts: list[str] = []
     messages: list[dict[str, Any]] = []
@@ -220,7 +224,8 @@ def build_copilot_command(
 def _read_settings_allow(execution_dir: str | None) -> list[str] | None:
     """Read permissions.allow from .claude/settings.local.json.
 
-    Returns list of allow entries, or None if file not found.
+    Returns:
+        List of allow entries, or None if file not found.
     """
     if execution_dir:
         base_dir = Path(execution_dir)
@@ -277,7 +282,6 @@ def ask_copilot_cli(
 
     Raises:
         ValueError: If question is empty or command exceeds 8KB
-        FileNotFoundError: If copilot executable not found
         TimeoutExpired: If command times out
         CalledProcessError: If command fails
     """
