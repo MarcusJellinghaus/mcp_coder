@@ -5,14 +5,17 @@
       "name": "status-01:created",
       "color": "10b981",
       "description": "Fresh issue",
-      "category": "human_action"
+      "category": "human_action",
+      "default": true,
+      "promotable": true
     },
     {
       "internal_id": "plan_review",
       "name": "status-04:plan-review",
       "color": "3b82f6",
       "description": "Plan review",
-      "category": "human_action"
+      "category": "human_action",
+      "promotable": true
     },
     {
       "internal_id": "awaiting_planning",
@@ -27,6 +30,14 @@
       "color": "bfdbfe",
       "description": "Coding in progress",
       "category": "bot_busy"
+    },
+    {
+      "internal_id": "planning_failed",
+      "name": "status-03f:planning-failed",
+      "color": "b60205",
+      "description": "Plan generation failed",
+      "category": "human_action",
+      "failure": true
     }
   ],
   "ignore_labels": []

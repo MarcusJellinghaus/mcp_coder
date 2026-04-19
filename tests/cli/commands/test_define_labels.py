@@ -10,6 +10,7 @@ Tests cover:
 Note: Additional tests are split into separate modules:
 - test_define_labels_validation.py - Validation and staleness detection tests
 - test_define_labels_label_changes.py - Label change calculation tests
+- test_define_labels_summary.py - Summary output tests
 """
 
 import argparse
@@ -28,6 +29,27 @@ from mcp_coder.cli.commands.define_labels import (
 from mcp_coder.utils.github_operations.label_config import load_labels_config
 from mcp_coder.workflows.utils import resolve_project_dir
 from tests.utils.conftest import git_repo
+
+
+def _make_namespace(
+    project_dir: str | None = None,
+    dry_run: bool = False,
+    init: bool = False,
+    validate: bool = False,
+    all_ops: bool = False,
+    config: str | None = None,
+    generate_github_actions: bool = False,
+) -> argparse.Namespace:
+    """Build an argparse.Namespace with all define-labels flags."""
+    return argparse.Namespace(
+        project_dir=project_dir,
+        dry_run=dry_run,
+        init=init,
+        validate=validate,
+        all=all_ops,
+        config=config,
+        generate_github_actions=generate_github_actions,
+    )
 
 
 class TestWorkflowLabelsFromConfig:
@@ -268,6 +290,7 @@ class TestResolveProjectDir:
 class TestExecuteDefineLabels:
     """Test the CLI execute function - minimal tests for wiring."""
 
+    @patch("mcp_coder.cli.commands.define_labels.validate_labels_config")
     @patch("mcp_coder.cli.commands.define_labels.IssueManager")
     @patch("mcp_coder.cli.commands.define_labels.apply_labels")
     @patch("mcp_coder.cli.commands.define_labels.load_labels_config")
@@ -280,6 +303,7 @@ class TestExecuteDefineLabels:
         mock_load_config: MagicMock,
         mock_apply_labels: MagicMock,
         mock_issue_manager: MagicMock,
+        mock_validate_config: MagicMock,
         tmp_path: Path,
     ) -> None:
         """Test successful dry-run execution returns 0."""
@@ -296,6 +320,7 @@ class TestExecuteDefineLabels:
                     "color": "10b981",
                     "description": "Test",
                     "category": "human_action",
+                    "default": True,
                 }
             ]
         }
@@ -310,7 +335,7 @@ class TestExecuteDefineLabels:
         mock_issue_manager_instance.list_issues.return_value = []
         mock_issue_manager.return_value = mock_issue_manager_instance
 
-        args = argparse.Namespace(
+        args = _make_namespace(
             project_dir=str(project_dir),
             dry_run=True,
         )
@@ -334,9 +359,8 @@ class TestExecuteDefineLabels:
         # Setup mock to raise ValueError (invalid directory)
         mock_resolve_dir.side_effect = ValueError("Project directory does not exist")
 
-        args = argparse.Namespace(
+        args = _make_namespace(
             project_dir="/invalid/path",
-            dry_run=False,
         )
 
         with caplog.at_level(logging.ERROR):
@@ -344,3 +368,298 @@ class TestExecuteDefineLabels:
 
         assert result == 1
         assert "does not exist" in caplog.text
+
+
+class TestFlagGating:
+    """Test that --init, --validate, --all flags gate IssueManager usage."""
+
+    @patch("mcp_coder.cli.commands.define_labels.validate_labels_config")
+    @patch("mcp_coder.cli.commands.define_labels.IssueManager")
+    @patch("mcp_coder.cli.commands.define_labels.apply_labels")
+    @patch("mcp_coder.cli.commands.define_labels.load_labels_config")
+    @patch("mcp_coder.cli.commands.define_labels.get_labels_config_path")
+    @patch("mcp_coder.cli.commands.define_labels.resolve_project_dir")
+    def test_no_flags_skips_issue_manager(
+        self,
+        mock_resolve_dir: MagicMock,
+        mock_get_config_path: MagicMock,
+        mock_load_config: MagicMock,
+        mock_apply_labels: MagicMock,
+        mock_issue_manager: MagicMock,
+        mock_validate_config: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Without --init or --validate, IssueManager is never created."""
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        mock_resolve_dir.return_value = project_dir
+        mock_get_config_path.return_value = project_dir / "labels.json"
+        mock_load_config.return_value = {
+            "workflow_labels": [
+                {
+                    "internal_id": "created",
+                    "name": "status-01:created",
+                    "color": "10b981",
+                    "description": "Test",
+                    "category": "human_action",
+                    "default": True,
+                }
+            ]
+        }
+        mock_apply_labels.return_value = {
+            "created": [],
+            "updated": [],
+            "deleted": [],
+            "unchanged": ["status-01:created"],
+        }
+
+        args = _make_namespace(project_dir=str(project_dir))
+        result = execute_define_labels(args)
+
+        assert result == 0
+        mock_issue_manager.assert_not_called()
+
+    @patch("mcp_coder.cli.commands.define_labels.validate_labels_config")
+    @patch("mcp_coder.cli.commands.define_labels.IssueManager")
+    @patch("mcp_coder.cli.commands.define_labels.apply_labels")
+    @patch("mcp_coder.cli.commands.define_labels.load_labels_config")
+    @patch("mcp_coder.cli.commands.define_labels.get_labels_config_path")
+    @patch("mcp_coder.cli.commands.define_labels.resolve_project_dir")
+    def test_init_flag_creates_issue_manager(
+        self,
+        mock_resolve_dir: MagicMock,
+        mock_get_config_path: MagicMock,
+        mock_load_config: MagicMock,
+        mock_apply_labels: MagicMock,
+        mock_issue_manager: MagicMock,
+        mock_validate_config: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """With --init, IssueManager is created and initialize_issues called."""
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        mock_resolve_dir.return_value = project_dir
+        mock_get_config_path.return_value = project_dir / "labels.json"
+        mock_load_config.return_value = {
+            "workflow_labels": [
+                {
+                    "internal_id": "created",
+                    "name": "status-01:created",
+                    "color": "10b981",
+                    "description": "Test",
+                    "category": "human_action",
+                    "default": True,
+                }
+            ]
+        }
+        mock_apply_labels.return_value = {
+            "created": [],
+            "updated": [],
+            "deleted": [],
+            "unchanged": ["status-01:created"],
+        }
+        mock_instance = MagicMock()
+        mock_instance.list_issues.return_value = []
+        mock_issue_manager.return_value = mock_instance
+
+        args = _make_namespace(project_dir=str(project_dir), init=True)
+        result = execute_define_labels(args)
+
+        assert result == 0
+        mock_issue_manager.assert_called_once_with(project_dir)
+        mock_instance.list_issues.assert_called_once()
+
+    @patch("mcp_coder.cli.commands.define_labels.validate_labels_config")
+    @patch("mcp_coder.cli.commands.define_labels.IssueManager")
+    @patch("mcp_coder.cli.commands.define_labels.apply_labels")
+    @patch("mcp_coder.cli.commands.define_labels.load_labels_config")
+    @patch("mcp_coder.cli.commands.define_labels.get_labels_config_path")
+    @patch("mcp_coder.cli.commands.define_labels.resolve_project_dir")
+    def test_validate_flag_creates_issue_manager(
+        self,
+        mock_resolve_dir: MagicMock,
+        mock_get_config_path: MagicMock,
+        mock_load_config: MagicMock,
+        mock_apply_labels: MagicMock,
+        mock_issue_manager: MagicMock,
+        mock_validate_config: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """With --validate, IssueManager is created and validate_issues called."""
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        mock_resolve_dir.return_value = project_dir
+        mock_get_config_path.return_value = project_dir / "labels.json"
+        mock_load_config.return_value = {
+            "workflow_labels": [
+                {
+                    "internal_id": "created",
+                    "name": "status-01:created",
+                    "color": "10b981",
+                    "description": "Test",
+                    "category": "human_action",
+                    "default": True,
+                }
+            ]
+        }
+        mock_apply_labels.return_value = {
+            "created": [],
+            "updated": [],
+            "deleted": [],
+            "unchanged": ["status-01:created"],
+        }
+        mock_instance = MagicMock()
+        mock_instance.list_issues.return_value = []
+        mock_issue_manager.return_value = mock_instance
+
+        args = _make_namespace(project_dir=str(project_dir), validate=True)
+        result = execute_define_labels(args)
+
+        assert result == 0
+        mock_issue_manager.assert_called_once_with(project_dir)
+
+    @patch("mcp_coder.cli.commands.define_labels.write_github_actions")
+    @patch("mcp_coder.cli.commands.define_labels.validate_labels_config")
+    @patch("mcp_coder.cli.commands.define_labels.IssueManager")
+    @patch("mcp_coder.cli.commands.define_labels.apply_labels")
+    @patch("mcp_coder.cli.commands.define_labels.load_labels_config")
+    @patch("mcp_coder.cli.commands.define_labels.get_labels_config_path")
+    @patch("mcp_coder.cli.commands.define_labels.resolve_project_dir")
+    def test_all_flag_expands(
+        self,
+        mock_resolve_dir: MagicMock,
+        mock_get_config_path: MagicMock,
+        mock_load_config: MagicMock,
+        mock_apply_labels: MagicMock,
+        mock_issue_manager: MagicMock,
+        mock_validate_config: MagicMock,
+        mock_write_actions: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """--all enables init, validate, and generate_github_actions."""
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        mock_resolve_dir.return_value = project_dir
+        mock_get_config_path.return_value = project_dir / "labels.json"
+        mock_load_config.return_value = {
+            "workflow_labels": [
+                {
+                    "internal_id": "created",
+                    "name": "status-01:created",
+                    "color": "10b981",
+                    "description": "Test",
+                    "category": "human_action",
+                    "default": True,
+                }
+            ]
+        }
+        mock_apply_labels.return_value = {
+            "created": [],
+            "updated": [],
+            "deleted": [],
+            "unchanged": ["status-01:created"],
+        }
+        mock_instance = MagicMock()
+        mock_instance.list_issues.return_value = []
+        mock_issue_manager.return_value = mock_instance
+        mock_write_actions.return_value = []
+
+        args = _make_namespace(project_dir=str(project_dir), all_ops=True)
+        result = execute_define_labels(args)
+
+        assert result == 0
+        # --all should cause IssueManager to be created (init + validate)
+        mock_issue_manager.assert_called_once_with(project_dir)
+        mock_instance.list_issues.assert_called_once()
+        # --all should trigger write_github_actions
+        mock_write_actions.assert_called_once()
+
+    @patch("mcp_coder.cli.commands.define_labels.validate_labels_config")
+    @patch("mcp_coder.cli.commands.define_labels.apply_labels")
+    @patch("mcp_coder.cli.commands.define_labels.load_labels_config")
+    @patch("mcp_coder.cli.commands.define_labels.get_labels_config_path")
+    @patch("mcp_coder.cli.commands.define_labels.resolve_project_dir")
+    def test_config_flag_passed_to_discovery(
+        self,
+        mock_resolve_dir: MagicMock,
+        mock_get_config_path: MagicMock,
+        mock_load_config: MagicMock,
+        mock_apply_labels: MagicMock,
+        mock_validate_config: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """--config path is passed as config_override to get_labels_config_path."""
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        mock_resolve_dir.return_value = project_dir
+        mock_get_config_path.return_value = project_dir / "labels.json"
+        mock_load_config.return_value = {
+            "workflow_labels": [
+                {
+                    "internal_id": "created",
+                    "name": "status-01:created",
+                    "color": "10b981",
+                    "description": "Test",
+                    "category": "human_action",
+                    "default": True,
+                }
+            ]
+        }
+        mock_apply_labels.return_value = {
+            "created": [],
+            "updated": [],
+            "deleted": [],
+            "unchanged": ["status-01:created"],
+        }
+
+        config_path = "/custom/labels.json"
+        args = _make_namespace(project_dir=str(project_dir), config=config_path)
+        execute_define_labels(args)
+
+        # Verify config_override was passed
+        call_kwargs = mock_get_config_path.call_args
+        assert call_kwargs[1]["config_override"] == Path(config_path)
+
+    @patch("mcp_coder.cli.commands.define_labels.validate_labels_config")
+    @patch("mcp_coder.cli.commands.define_labels.apply_labels")
+    @patch("mcp_coder.cli.commands.define_labels.load_labels_config")
+    @patch("mcp_coder.cli.commands.define_labels.get_labels_config_path")
+    @patch("mcp_coder.cli.commands.define_labels.resolve_project_dir")
+    def test_config_validation_always_runs(
+        self,
+        mock_resolve_dir: MagicMock,
+        mock_get_config_path: MagicMock,
+        mock_load_config: MagicMock,
+        mock_apply_labels: MagicMock,
+        mock_validate_config: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """validate_labels_config is called even without --init or --validate."""
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        mock_resolve_dir.return_value = project_dir
+        mock_get_config_path.return_value = project_dir / "labels.json"
+        config = {
+            "workflow_labels": [
+                {
+                    "internal_id": "created",
+                    "name": "status-01:created",
+                    "color": "10b981",
+                    "description": "Test",
+                    "category": "human_action",
+                    "default": True,
+                }
+            ]
+        }
+        mock_load_config.return_value = config
+        mock_apply_labels.return_value = {
+            "created": [],
+            "updated": [],
+            "deleted": [],
+            "unchanged": ["status-01:created"],
+        }
+
+        args = _make_namespace(project_dir=str(project_dir))
+        execute_define_labels(args)
+
+        mock_validate_config.assert_called_once_with(config)

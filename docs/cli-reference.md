@@ -457,11 +457,21 @@ Sync workflow status labels to GitHub repository.
 mcp-coder gh-tool define-labels [OPTIONS]
 ```
 
+**Description:** Validate label config, then create, update, and delete `status-*` label definitions from config. Optional operations (init, validate, generate GitHub Actions) are opt-in via flags.
+
+Config resolution order:
+1. `--config PATH` (explicit, highest priority)
+2. `[tool.mcp-coder] labels-config` in `pyproject.toml`
+3. Bundled package defaults
+
 **Options:**
 - `--project-dir PATH` - Project directory path (default: current directory)
 - `--dry-run` - Preview changes without applying them
-
-**Description:** Create or update GitHub issue labels for workflow status tracking. Uses label configuration from `workflows/config/labels.json` or package defaults. Also validates issues and initializes issues without status labels.
+- `--init` - Assign the default label to open issues without a status label
+- `--validate` - Check all open issues for errors and warnings
+- `--config PATH` - Path to labels config file (overrides pyproject.toml and bundled defaults)
+- `--generate-github-actions` - Write `label-new-issues.yml` and `approve-command.yml` to `.github/workflows/`
+- `--all` - Enable all optional operations (`--init --validate --generate-github-actions`)
 
 **Exit Codes:**
 
@@ -476,8 +486,20 @@ mcp-coder gh-tool define-labels [OPTIONS]
 # Preview label changes
 mcp-coder gh-tool define-labels --dry-run
 
-# Apply labels to repository
+# Sync labels only (no issue operations)
 mcp-coder gh-tool define-labels
+
+# Initialize issues without status and validate
+mcp-coder gh-tool define-labels --init --validate
+
+# Use custom config file
+mcp-coder gh-tool define-labels --config config/labels.json
+
+# Generate GitHub Actions workflow files
+mcp-coder gh-tool define-labels --generate-github-actions
+
+# Run all optional operations
+mcp-coder gh-tool define-labels --all
 
 # Apply to specific project
 mcp-coder gh-tool define-labels --project-dir /path/to/project

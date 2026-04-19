@@ -146,7 +146,7 @@ def test_load_labels_config_valid(test_labels_config: dict[str, Any]) -> None:
     """Test loading valid labels configuration."""
     assert "workflow_labels" in test_labels_config
     assert isinstance(test_labels_config["workflow_labels"], list)
-    assert len(test_labels_config["workflow_labels"]) == 4
+    assert len(test_labels_config["workflow_labels"]) == 5
 
 
 def test_load_labels_config_with_ignore_labels(

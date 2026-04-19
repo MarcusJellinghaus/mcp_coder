@@ -39,7 +39,30 @@ def add_gh_tool_parsers(subparsers: Any) -> None:
     # gh-tool define-labels (moved from top-level)
     define_labels_parser = gh_tool_subparsers.add_parser(
         "define-labels",
-        help="Sync workflow status labels to GitHub repository",
+        help="Sync workflow label definitions to a GitHub repository",
+        description="Sync workflow label definitions to a GitHub repository.",
+        epilog="""Operations (always):
+  - Validate labels config (default label, promotable targets)
+  - Create, update, and delete status-* label definitions from config
+
+With --init:
+  - Assign the default label to open issues without a status label
+
+With --validate:
+  - Check all open issues for errors (multiple status labels)
+    and warnings (stale bot processes)
+
+With --generate-github-actions:
+  - Write label-new-issues.yml and approve-command.yml
+    to {project_dir}/.github/workflows/
+
+With --all:
+  - Run all optional operations (--init --validate --generate-github-actions)
+
+Config resolution:
+  1. --config PATH (explicit, highest priority)
+  2. [tool.mcp-coder] labels-config in pyproject.toml
+  3. Bundled package defaults""",
         formatter_class=WideHelpFormatter,
     )
     define_labels_parser.add_argument(
@@ -52,6 +75,33 @@ def add_gh_tool_parsers(subparsers: Any) -> None:
         "--dry-run",
         action="store_true",
         help="Preview changes without applying them",
+    )
+    define_labels_parser.add_argument(
+        "--init",
+        action="store_true",
+        help="Assign the default label to open issues without a status label",
+    )
+    define_labels_parser.add_argument(
+        "--validate",
+        action="store_true",
+        help="Check all open issues for errors and warnings",
+    )
+    define_labels_parser.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        metavar="PATH",
+        help="Path to labels config file (overrides pyproject.toml and bundled defaults)",
+    )
+    define_labels_parser.add_argument(
+        "--generate-github-actions",
+        action="store_true",
+        help="Write label-new-issues.yml and approve-command.yml to .github/workflows/",
+    )
+    define_labels_parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Enable all optional operations (--init --validate --generate-github-actions)",
     )
 
     # gh-tool issue-stats (moved from coordinator)

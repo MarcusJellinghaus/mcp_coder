@@ -21,7 +21,7 @@ This guide covers the **mandatory** and **optional** components for integrating 
 
 - [ ] Configure GitHub token in user config (`~/.mcp_coder/config.toml` — see [Configuration Guide](../configuration/config.md))
 - [ ] Set up workflow labels with `mcp-coder gh-tool define-labels`
-- [ ] Install GitHub Actions workflows
+- [ ] Install GitHub Actions workflows (or generate with `mcp-coder gh-tool define-labels --generate-github-actions`)
 - [ ] Deploy Claude skills with `mcp-coder init`
 - [ ] Configure Claude Code files (`.claude/CLAUDE.md`, `.mcp.json`)
 - [ ] Test workflow with a sample issue
@@ -67,7 +67,6 @@ The following files in this repository serve as references/templates for other p
 | `.large-files-allowlist` | G | No | No | Files exempt from size limits |
 | `claude_local.bat` / `claude.bat` | G | No | Mostly | Path to `claude.exe` if non-standard |
 | `docs/architecture/architecture.md` | G | Yes | No | Write your own — required by `/implementation_review` |
-| `workflows/config/labels.json` | G | No | No | Only if customizing default labels |
 | `pyproject.toml` | P | No | No | Use as a dependency/config reference, not a copy |
 | `.python-version` | P | No | No | Pin to your Python version |
 | `.importlinter` | P | No | No | Package names, contract definitions |
