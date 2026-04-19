@@ -14,6 +14,7 @@ Add the `{color_prefix}` placeholder to the two interactive templates, build the
 | `src/mcp_coder/workflows/vscodeclaude/workspace.py` | Modify — build `color_prefix`, pass to `.format()` |
 | `tests/workflows/vscodeclaude/test_templates.py` | Modify — add tests for `{color_prefix}` placeholder |
 | `tests/workflows/vscodeclaude/test_workspace_startup_script.py` | Modify — update assertions for `/color` in generated scripts |
+| `tests/cli/commands/coordinator/test_vscodeclaude_cli.py` | No changes needed — existing placeholder tests won't break, and `test_templates.py` covers the new `{color_prefix}` placeholder |
 
 ## WHAT
 
@@ -100,14 +101,13 @@ INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS.format(command=cmd, step_number=step, co
 
 Tests that assert on exact `claude "..."` strings need updating:
 
-- **`test_creates_script_with_claude_resume`**: The `claude --resume` line now has `/color green\n` before `/discuss`
-- **`test_single_command_uses_interactive_only`**: `claude "/implementation_review_supervisor 123"` becomes `claude "/color yellow\n/implementation_review_supervisor 123"` (literal newline in file)
-- **`test_creates_script_with_claude_resume`** (the resume assertion): Updated for color prefix
-- **`test_multi_command_has_automated_and_interactive_sections`**: `/discuss` line includes color prefix
+- **`test_creates_script_with_claude_resume`**: Tests single-command flow (status-07). Assertion `claude "/implementation_review_supervisor 123"` becomes `claude "/color yellow\n/implementation_review_supervisor 123"` (literal newline in file)
+- **`test_single_command_uses_interactive_only`**: Same single-command flow (status-07). Same assertion update as above.
+- **`test_multi_command_has_automated_and_interactive_sections`**: Tests multi-command flow (status-01). The `claude --resume` assertion for `/discuss` now includes `/color green\n` before `/discuss`.
 
 ### New test in `test_workspace_startup_script.py`
 
-- **`test_no_color_config_produces_no_prefix`** — use a mock config without `"color"` field, verify no `/color` appears in output
+- **`test_no_color_config_produces_no_prefix`** — parameterized test verifying no `/color` appears in output: (1) config dict with `commands` but without `"color"` key, (2) `get_vscodeclaude_config` returns `None` (unknown status)
 
 ## Verification
 
