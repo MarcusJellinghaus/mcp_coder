@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 0: Pre-flight check — verify mcp_workspace.git_operations exists
-- [ ] Implementation: verify `mcp_workspace.git_operations` package in `p_workspace` reference project; create `pr_info/error.md` if missing
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: verify `mcp_workspace.git_operations` package in `p_workspace` reference project; create `pr_info/error.md` if missing
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 1: Create shim module + smoke test
 - [ ] Implementation: create `src/mcp_coder/mcp_workspace_git.py` (28 symbols + 1 constant) and `tests/test_mcp_workspace_git_smoke.py`
