@@ -73,7 +73,7 @@ Add to `tests/workflows/implement/test_core.py`:
 1. `test_run_implement_workflow_reads_config` — verify `get_implement_config` is called with `project_dir`
 2. `test_run_implement_workflow_passes_config_to_process_task` — verify `process_task_with_retry` receives the config booleans
 3. `test_run_implement_workflow_skips_final_mypy_when_disabled` — `check_type_hints=False` → `check_and_fix_mypy` not called in Step 5
-4. `test_run_implement_workflow_skips_final_formatting_when_disabled` — `format_code=False` → `run_formatters` not called in Step 5
+4. `test_run_implement_workflow_skips_final_formatting_when_disabled` — `check_type_hints=True, format_code=False` → `run_formatters` not called in Step 5 (needs `check_type_hints=True` to enter the block and actually test the `format_code` gate)
 
 **Updating existing tests:** `get_implement_config` handles missing `pyproject.toml` gracefully — it returns `ImplementConfig(format_code=False, check_type_hints=False)` when the file doesn't exist. Since most tests use fake paths like `Path("/test/project")`, the function works without mocking. Only tests that assert on `process_task_with_retry` call arguments (e.g., `test_run_implement_workflow_success` which checks positional args at the call site) need updating to also verify the new `format_code`/`check_type_hints` keyword arguments.
 

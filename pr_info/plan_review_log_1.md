@@ -23,3 +23,39 @@
 **Changes**: step_2.md, step_3.md, step_4.md updated
 
 **Status**: committed (a88d899)
+
+## Round 2 — 2026-04-19
+
+**Findings**:
+- (Medium) Step 3: test count "~7" is inaccurate (~25 tests affected), but most pass via graceful fallback without mocking
+- (Medium) Step 3: config placement heading should specify "inside the try block"
+- (Medium) Step 2: 3 existing tests will break due to False defaults — need explicit `format_code=True`/`check_type_hints=True`
+- (Low) Step 3: `test_run_implement_workflow_success` assertion should also verify new keyword arguments
+
+**Decisions**:
+- Accept: Rewrite step 3 test guidance to explain graceful fallback (no blanket mocking)
+- Accept: Fix config placement heading to "inside the try block, before Step 2 — prepare_task_tracker"
+- Accept: Enumerate 3 breaking tests in step 2
+- Accept: Add note about positional vs keyword arg assertions
+
+**User decisions**: none (all straightforward improvements)
+
+**Changes**: step_2.md, step_3.md updated
+
+**Status**: committed (e422b82)
+
+## Round 3 — 2026-04-19
+
+**Findings**:
+- All round 2 fixes verified correct against source code
+- (Low) Step 3 test `test_run_implement_workflow_skips_final_formatting_when_disabled` should specify `check_type_hints=True, format_code=False` to properly test the nested gate
+
+**Decisions**:
+- Accept: Clarify test config combination
+- Skip: RUN_MYPY_AFTER_EACH_TASK patch note already correct in step 2
+
+**User decisions**: none
+
+**Changes**: step_3.md updated (test description precision)
+
+**Status**: pending commit
