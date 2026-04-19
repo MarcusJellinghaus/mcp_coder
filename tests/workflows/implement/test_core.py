@@ -1190,6 +1190,10 @@ class TestRunImplementWorkflow:
         # Verify process_task was called with None for execution_dir
         first_call_args = mock_process_task.call_args_list[0][0]
         assert first_call_args == (Path("/test/project"), "claude", None, None)
+        # Verify config booleans passed (defaults from missing pyproject.toml)
+        first_call_kwargs = mock_process_task.call_args_list[0][1]
+        assert first_call_kwargs["format_code"] is False
+        assert first_call_kwargs["check_type_hints"] is False
         assert mock_log_progress.call_count >= 2  # Initial + final progress
 
     @patch("mcp_coder.workflows.implement.core.check_git_clean")
@@ -1315,6 +1319,205 @@ class TestRunImplementWorkflow:
 
         assert result == 0  # Should succeed with no tasks
         mock_process_task.assert_called_once()
+
+    @patch("mcp_coder.workflows.implement.core.get_implement_config")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    def test_run_implement_workflow_reads_config(
+        self,
+        mock_check_git: MagicMock,
+        mock_check_branch: MagicMock,
+        mock_check_prereq: MagicMock,
+        mock_prepare_tracker: MagicMock,
+        mock_log_progress: MagicMock,
+        mock_process_task: MagicMock,
+        mock_get_config: MagicMock,
+    ) -> None:
+        """Test that get_implement_config is called with project_dir."""
+        mock_check_git.return_value = True
+        mock_check_branch.return_value = True
+        mock_check_prereq.return_value = True
+        mock_prepare_tracker.return_value = True
+        mock_process_task.return_value = (False, "no_tasks")
+
+        from mcp_coder.utils.pyproject_config import ImplementConfig
+
+        mock_get_config.return_value = ImplementConfig(
+            format_code=False, check_type_hints=False
+        )
+
+        run_implement_workflow(Path("/test/project"), "claude")
+
+        mock_get_config.assert_called_once_with(Path("/test/project"))
+
+    @patch("mcp_coder.workflows.implement.core.get_implement_config")
+    @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.get_full_status",
+        return_value={"staged": [], "modified": [], "untracked": []},
+    )
+    @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_and_fix_mypy", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.prepare_llm_environment", return_value={}
+    )
+    @patch(
+        "mcp_coder.workflows.implement.core.get_current_branch_name",
+        return_value="feature/test-branch",
+    )
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    def test_run_implement_workflow_passes_config_to_process_task(
+        self,
+        mock_check_git: MagicMock,
+        mock_check_branch: MagicMock,
+        mock_check_prereq: MagicMock,
+        mock_prepare_tracker: MagicMock,
+        mock_log_progress: MagicMock,
+        mock_process_task: MagicMock,
+        mock_get_branch: MagicMock,
+        mock_prepare_env: MagicMock,
+        mock_check_mypy: MagicMock,
+        mock_run_formatters: MagicMock,
+        mock_get_status: MagicMock,
+        _mock_run_finalisation: MagicMock,
+        mock_check_ci: MagicMock,
+        mock_get_config: MagicMock,
+    ) -> None:
+        """Test that config booleans are passed to process_task_with_retry."""
+        from mcp_coder.utils.pyproject_config import ImplementConfig
+
+        mock_get_config.return_value = ImplementConfig(
+            format_code=True, check_type_hints=True
+        )
+        mock_check_git.return_value = True
+        mock_check_branch.return_value = True
+        mock_check_prereq.return_value = True
+        mock_prepare_tracker.return_value = True
+        mock_process_task.side_effect = [(True, "completed"), (False, "no_tasks")]
+
+        run_implement_workflow(Path("/test/project"), "claude")
+
+        first_call_kwargs = mock_process_task.call_args_list[0][1]
+        assert first_call_kwargs["format_code"] is True
+        assert first_call_kwargs["check_type_hints"] is True
+
+    @patch("mcp_coder.workflows.implement.core.get_implement_config")
+    @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_and_fix_mypy", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.prepare_llm_environment", return_value={}
+    )
+    @patch(
+        "mcp_coder.workflows.implement.core.get_current_branch_name",
+        return_value="feature/test-branch",
+    )
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    def test_run_implement_workflow_skips_final_mypy_when_disabled(
+        self,
+        mock_check_git: MagicMock,
+        mock_check_branch: MagicMock,
+        mock_check_prereq: MagicMock,
+        mock_prepare_tracker: MagicMock,
+        mock_log_progress: MagicMock,
+        mock_process_task: MagicMock,
+        mock_get_branch: MagicMock,
+        mock_prepare_env: MagicMock,
+        mock_check_mypy: MagicMock,
+        _mock_run_finalisation: MagicMock,
+        mock_check_ci: MagicMock,
+        mock_get_config: MagicMock,
+    ) -> None:
+        """Test that check_type_hints=False skips final mypy in Step 5."""
+        from mcp_coder.utils.pyproject_config import ImplementConfig
+
+        mock_get_config.return_value = ImplementConfig(
+            format_code=True, check_type_hints=False
+        )
+        mock_check_git.return_value = True
+        mock_check_branch.return_value = True
+        mock_check_prereq.return_value = True
+        mock_prepare_tracker.return_value = True
+        mock_process_task.side_effect = [(True, "completed"), (False, "no_tasks")]
+
+        result = run_implement_workflow(Path("/test/project"), "claude")
+
+        assert result == 0
+        mock_check_mypy.assert_not_called()
+
+    @patch("mcp_coder.workflows.implement.core.get_implement_config")
+    @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.get_full_status",
+        return_value={"staged": [], "modified": [], "untracked": []},
+    )
+    @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_and_fix_mypy", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.prepare_llm_environment", return_value={}
+    )
+    @patch(
+        "mcp_coder.workflows.implement.core.get_current_branch_name",
+        return_value="feature/test-branch",
+    )
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    def test_run_implement_workflow_skips_final_formatting_when_disabled(
+        self,
+        mock_check_git: MagicMock,
+        mock_check_branch: MagicMock,
+        mock_check_prereq: MagicMock,
+        mock_prepare_tracker: MagicMock,
+        mock_log_progress: MagicMock,
+        mock_process_task: MagicMock,
+        mock_get_branch: MagicMock,
+        mock_prepare_env: MagicMock,
+        mock_check_mypy: MagicMock,
+        mock_run_formatters: MagicMock,
+        mock_get_status: MagicMock,
+        _mock_run_finalisation: MagicMock,
+        mock_check_ci: MagicMock,
+        mock_get_config: MagicMock,
+    ) -> None:
+        """Test that format_code=False skips formatters in Step 5 while mypy still runs."""
+        from mcp_coder.utils.pyproject_config import ImplementConfig
+
+        mock_get_config.return_value = ImplementConfig(
+            format_code=False, check_type_hints=True
+        )
+        mock_check_git.return_value = True
+        mock_check_branch.return_value = True
+        mock_check_prereq.return_value = True
+        mock_prepare_tracker.return_value = True
+        mock_process_task.side_effect = [(True, "completed"), (False, "no_tasks")]
+
+        result = run_implement_workflow(Path("/test/project"), "claude")
+
+        assert result == 0
+        # mypy should still be called since check_type_hints=True
+        mock_check_mypy.assert_called_once()
+        # but formatters should NOT be called since format_code=False
+        mock_run_formatters.assert_not_called()
 
 
 class TestIntegration:

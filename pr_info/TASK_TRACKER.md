@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: Read config in core.py and pass booleans down
-- [ ] Implementation: import and call `get_implement_config()` in `run_implement_workflow()`, pass config to `process_task_with_retry()`, gate Step 5 final mypy/formatting ([step_3.md](./steps/step_3.md))
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: import and call `get_implement_config()` in `run_implement_workflow()`, pass config to `process_task_with_retry()`, gate Step 5 final mypy/formatting ([step_3.md](./steps/step_3.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Add PROJECT section to verify command
 - [ ] Implementation: add `_print_project_section()` to verify.py, call from `execute_verify()` after PROMPTS section ([step_4.md](./steps/step_4.md))
