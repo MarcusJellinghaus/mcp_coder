@@ -11,18 +11,21 @@ MOCK_VSCODECLAUDE_CONFIGS: dict[str, dict[str, Any]] = {
         "display_name": "ISSUE ANALYSIS",
         "stage_short": "new",
         "commands": ["/issue_analyse", "/discuss"],
+        "color": "green",
     },
     "status-04:plan-review": {
         "emoji": "📋",
         "display_name": "PLAN REVIEW",
         "stage_short": "plan",
         "commands": ["/plan_review", "/discuss"],
+        "color": "blue",
     },
     "status-07:code-review": {
         "emoji": "🔍",
         "display_name": "CODE REVIEW",
         "stage_short": "review",
         "commands": ["/implementation_review_supervisor"],
+        "color": "yellow",
     },
     "status-10:pr-created": {
         "emoji": "🎉",

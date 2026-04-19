@@ -10,7 +10,8 @@
         "emoji": "📝",
         "display_name": "ISSUE ANALYSIS",
         "stage_short": "new",
-        "commands": ["/issue_analyse", "/discuss"]
+        "commands": ["/issue_analyse", "/discuss"],
+        "color": "green"
       }
     },
     {
@@ -39,7 +40,8 @@
         "display_name": "PLAN REVIEW",
         "stage_short": "plan",
         "commands": ["/plan_review_supervisor"],
-        "requires_branch": true
+        "requires_branch": true,
+        "color": "blue"
       }
     },
     {
@@ -68,7 +70,8 @@
         "display_name": "CODE REVIEW",
         "stage_short": "review",
         "commands": ["/implementation_review_supervisor"],
-        "requires_branch": true
+        "requires_branch": true,
+        "color": "yellow"
       }
     },
     {
@@ -108,7 +111,8 @@
         "emoji": "⏱️",
         "display_name": "PLANNING LLM TIMEOUT",
         "stage_short": "plan-timeout",
-        "commands": ["/check_branch_status"]
+        "commands": ["/check_branch_status"],
+        "color": "red"
       }
     },
     {
@@ -121,7 +125,8 @@
         "emoji": "❌",
         "display_name": "PLANNING PREREQ FAILED",
         "stage_short": "plan-prereq-fail",
-        "commands": ["/check_branch_status"]
+        "commands": ["/check_branch_status"],
+        "color": "red"
       }
     },
     {
@@ -134,7 +139,8 @@
         "emoji": "❌",
         "display_name": "PLANNING FAILED",
         "stage_short": "plan-fail",
-        "commands": ["/check_branch_status"]
+        "commands": ["/check_branch_status"],
+        "color": "red"
       }
     },
     {
@@ -147,7 +153,8 @@
         "emoji": "❌",
         "display_name": "IMPLEMENTING FAILED",
         "stage_short": "impl-fail",
-        "commands": ["/check_branch_status"]
+        "commands": ["/check_branch_status"],
+        "color": "red"
       }
     },
     {
@@ -160,7 +167,8 @@
         "emoji": "❌",
         "display_name": "TASK TRACKER PREP FAILED",
         "stage_short": "prep-fail",
-        "commands": ["/check_branch_status"]
+        "commands": ["/check_branch_status"],
+        "color": "red"
       }
     },
     {
@@ -173,7 +181,8 @@
         "emoji": "🔧",
         "display_name": "CI FIX NEEDED",
         "stage_short": "ci-fail",
-        "commands": ["/check_branch_status"]
+        "commands": ["/check_branch_status"],
+        "color": "red"
       }
     },
     {
@@ -186,7 +195,8 @@
         "emoji": "⏱️",
         "display_name": "LLM TIMEOUT",
         "stage_short": "timeout",
-        "commands": ["/check_branch_status"]
+        "commands": ["/check_branch_status"],
+        "color": "red"
       }
     },
     {
@@ -199,7 +209,8 @@
         "emoji": "🔄",
         "display_name": "NO CHANGES AFTER RETRIES",
         "stage_short": "no-change",
-        "commands": ["/check_branch_status"]
+        "commands": ["/check_branch_status"],
+        "color": "red"
       }
     },
     {
@@ -212,7 +223,8 @@
         "emoji": "❌",
         "display_name": "PR CREATION FAILED",
         "stage_short": "pr-fail",
-        "commands": ["/check_branch_status"]
+        "commands": ["/check_branch_status"],
+        "color": "red"
       }
     }
   ],

@@ -151,7 +151,7 @@ INTERACTIVE_ONLY_SECTION_WINDOWS = r"""echo.
 echo Running: {command} {issue_number}
 echo.
 
-claude "{command} {issue_number}"
+claude "{color_prefix}{command} {issue_number}"
 """
 
 # Middle commands in multi-command flow for Windows (automated session resume)
@@ -177,7 +177,7 @@ echo You can now interact with Claude directly.
 echo The conversation context from previous steps is preserved.
 echo.
 
-claude --resume %SESSION_ID% "{command}"
+claude --resume %SESSION_ID% "{color_prefix}{command}"
 """
 
 # Main startup script for Windows (with venv and mcp-coder)

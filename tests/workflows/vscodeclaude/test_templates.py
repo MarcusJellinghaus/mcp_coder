@@ -154,6 +154,20 @@ def test_venv_section_sets_uv_git_shallow() -> None:
     ), "VENV_SECTION_WINDOWS should set UV_GIT_SHALLOW=0 for setuptools_scm"
 
 
+def test_interactive_only_section_has_color_prefix_placeholder() -> None:
+    """Test that INTERACTIVE_ONLY_SECTION_WINDOWS contains {color_prefix} placeholder."""
+    assert (
+        "{color_prefix}" in INTERACTIVE_ONLY_SECTION_WINDOWS
+    ), "INTERACTIVE_ONLY_SECTION_WINDOWS must contain '{color_prefix}' placeholder"
+
+
+def test_interactive_resume_section_has_color_prefix_placeholder() -> None:
+    """Test that INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS contains {color_prefix} placeholder."""
+    assert (
+        "{color_prefix}" in INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS
+    ), "INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS must contain '{color_prefix}' placeholder"
+
+
 def test_venv_section_runs_editable_install() -> None:
     """Test that VENV_SECTION_WINDOWS runs editable install on every launch.
 
