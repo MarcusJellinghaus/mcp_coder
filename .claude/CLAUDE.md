@@ -45,7 +45,7 @@ mcp__tools-py__run_mypy_check
 
 All checks must pass before proceeding.
 
-**Ruff:** use `./tools/ruff_check.sh` via Bash. Do not call `ruff` directly.
+**Ruff:** use `mcp__tools-py__run_ruff_check`. Do not call `ruff` directly.
 
 **Pytest:** always use `extra_args: ["-n", "auto"]` for parallel execution.
 
@@ -68,7 +68,6 @@ When debugging test failures, add `"-v", "-s", "--tb=short"` to extra_args.
 ```
 git status / diff / commit / log / fetch / ls-tree
 gh issue view / gh pr view / gh run view
-./tools/ruff_check.sh
 mcp-coder git-tool compact-diff
 mcp-coder check branch-status
 mcp-coder check file-size --max-lines 750
