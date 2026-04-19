@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 1: Create shim module + smoke test
-- [ ] Implementation: create `src/mcp_coder/mcp_workspace_git.py` (28 symbols + 1 constant) and `tests/test_mcp_workspace_git_smoke.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `src/mcp_coder/mcp_workspace_git.py` (28 symbols + 1 constant) and `tests/test_mcp_workspace_git_smoke.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Update all source consumers to use shim
 - [ ] Implementation: switch all `src/` imports from `mcp_coder.utils.git_operations` to `mcp_coder.mcp_workspace_git`; update `utils/__init__.py` (remove dead symbols, source from shim); update root `__init__.py`
