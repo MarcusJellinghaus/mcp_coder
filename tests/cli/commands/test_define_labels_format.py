@@ -32,7 +32,13 @@ class TestFormatValidationSummary:
         }
         repo_url = "https://github.com/owner/repo"
 
-        result = format_validation_summary(label_changes, validation_results, repo_url)
+        result = format_validation_summary(
+            label_changes,
+            validation_results,
+            repo_url,
+            init_requested=True,
+            validate_requested=True,
+        )
 
         assert "Created=2" in result
         assert "Updated=1" in result
@@ -54,7 +60,13 @@ class TestFormatValidationSummary:
         }
         repo_url = "https://github.com/owner/repo"
 
-        result = format_validation_summary(label_changes, validation_results, repo_url)
+        result = format_validation_summary(
+            label_changes,
+            validation_results,
+            repo_url,
+            init_requested=True,
+            validate_requested=True,
+        )
 
         assert "Issues initialized: 3" in result
 
@@ -78,7 +90,13 @@ class TestFormatValidationSummary:
         }
         repo_url = "https://github.com/owner/repo"
 
-        result = format_validation_summary(label_changes, validation_results, repo_url)
+        result = format_validation_summary(
+            label_changes,
+            validation_results,
+            repo_url,
+            init_requested=True,
+            validate_requested=True,
+        )
 
         assert "Errors (multiple status labels): 1" in result
         assert "#45" in result
@@ -107,7 +125,13 @@ class TestFormatValidationSummary:
         }
         repo_url = "https://github.com/owner/repo"
 
-        result = format_validation_summary(label_changes, validation_results, repo_url)
+        result = format_validation_summary(
+            label_changes,
+            validation_results,
+            repo_url,
+            init_requested=True,
+            validate_requested=True,
+        )
 
         assert "Warnings (stale bot processes): 1" in result
         assert "#78" in result
@@ -130,8 +154,92 @@ class TestFormatValidationSummary:
         }
         repo_url = "https://github.com/owner/repo"
 
-        result = format_validation_summary(label_changes, validation_results, repo_url)
+        result = format_validation_summary(
+            label_changes,
+            validation_results,
+            repo_url,
+            init_requested=True,
+            validate_requested=True,
+        )
 
         # Should not contain error or warning sections
         assert "Errors" not in result
         assert "Warnings" not in result
+
+    def test_init_skipped_shows_skipped(self) -> None:
+        """When init_requested=False, summary shows 'skipped' for initialized."""
+        label_changes = {
+            "created": [],
+            "updated": [],
+            "deleted": [],
+            "unchanged": ["status-01:created"],
+        }
+        validation_results: ValidationResults = {
+            "initialized": [],
+            "errors": [],
+            "warnings": [],
+        }
+        repo_url = "https://github.com/owner/repo"
+
+        result = format_validation_summary(
+            label_changes,
+            validation_results,
+            repo_url,
+            init_requested=False,
+            validate_requested=True,
+        )
+
+        assert "Issues initialized: skipped" in result
+
+    def test_validate_skipped_shows_skipped(self) -> None:
+        """When validate_requested=False, summary omits error/warning sections."""
+        label_changes = {
+            "created": [],
+            "updated": [],
+            "deleted": [],
+            "unchanged": ["status-01:created"],
+        }
+        validation_results: ValidationResults = {
+            "initialized": [],
+            "errors": [],
+            "warnings": [],
+        }
+        repo_url = "https://github.com/owner/repo"
+
+        result = format_validation_summary(
+            label_changes,
+            validation_results,
+            repo_url,
+            init_requested=True,
+            validate_requested=False,
+        )
+
+        # Should not contain error or warning sections when validate not requested
+        assert "Errors" not in result
+        assert "Warnings" not in result
+
+    def test_both_requested_shows_counts(self) -> None:
+        """When both requested, summary shows actual counts."""
+        label_changes = {
+            "created": [],
+            "updated": [],
+            "deleted": [],
+            "unchanged": ["status-01:created"],
+        }
+        validation_results: ValidationResults = {
+            "initialized": [1, 2],
+            "errors": [{"issue": 3, "labels": ["a", "b"]}],
+            "warnings": [],
+        }
+        repo_url = "https://github.com/owner/repo"
+
+        result = format_validation_summary(
+            label_changes,
+            validation_results,
+            repo_url,
+            init_requested=True,
+            validate_requested=True,
+        )
+
+        assert "Issues initialized: 2" in result
+        assert "Errors (multiple status labels): 1" in result

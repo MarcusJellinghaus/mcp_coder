@@ -15,9 +15,25 @@ from unittest.mock import MagicMock, patch
 from mcp_coder.cli.commands.define_labels import execute_define_labels
 
 
+def _make_namespace(**kwargs: object) -> argparse.Namespace:
+    """Build an argparse.Namespace with all define-labels flags."""
+    defaults: dict[str, object] = {
+        "project_dir": None,
+        "dry_run": False,
+        "init": False,
+        "validate": False,
+        "all": False,
+        "config": None,
+        "generate_github_actions": False,
+    }
+    defaults.update(kwargs)
+    return argparse.Namespace(**defaults)
+
+
 class TestExecuteDefineLabelsExitCodes:
     """Test exit codes from execute_define_labels."""
 
+    @patch("mcp_coder.cli.commands.define_labels.validate_labels_config")
     @patch("mcp_coder.cli.commands.define_labels.IssueManager")
     @patch("mcp_coder.cli.commands.define_labels.apply_labels")
     @patch("mcp_coder.cli.commands.define_labels.load_labels_config")
@@ -30,6 +46,7 @@ class TestExecuteDefineLabelsExitCodes:
         mock_load_config: MagicMock,
         mock_apply_labels: MagicMock,
         mock_issue_manager_class: MagicMock,
+        mock_validate_config: MagicMock,
         tmp_path: Path,
     ) -> None:
         """Test successful execution returns 0."""
@@ -46,6 +63,7 @@ class TestExecuteDefineLabelsExitCodes:
                     "category": "human_action",
                     "color": "10b981",
                     "description": "Test",
+                    "default": True,
                 }
             ]
         }
@@ -61,15 +79,17 @@ class TestExecuteDefineLabelsExitCodes:
         mock_issue_manager.list_issues.return_value = []
         mock_issue_manager_class.return_value = mock_issue_manager
 
-        args = argparse.Namespace(
+        args = _make_namespace(
             project_dir=str(project_dir),
-            dry_run=False,
+            init=True,
+            validate=True,
         )
 
         result = execute_define_labels(args)
 
         assert result == 0
 
+    @patch("mcp_coder.cli.commands.define_labels.validate_labels_config")
     @patch("mcp_coder.cli.commands.define_labels.IssueManager")
     @patch("mcp_coder.cli.commands.define_labels.apply_labels")
     @patch("mcp_coder.cli.commands.define_labels.load_labels_config")
@@ -82,6 +102,7 @@ class TestExecuteDefineLabelsExitCodes:
         mock_load_config: MagicMock,
         mock_apply_labels: MagicMock,
         mock_issue_manager_class: MagicMock,
+        mock_validate_config: MagicMock,
         tmp_path: Path,
     ) -> None:
         """Test execution with errors returns 1."""
@@ -98,6 +119,7 @@ class TestExecuteDefineLabelsExitCodes:
                     "category": "human_action",
                     "color": "10b981",
                     "description": "Test",
+                    "default": True,
                 },
                 {
                     "name": "status-03:planning",
@@ -135,15 +157,16 @@ class TestExecuteDefineLabelsExitCodes:
         ]
         mock_issue_manager_class.return_value = mock_issue_manager
 
-        args = argparse.Namespace(
+        args = _make_namespace(
             project_dir=str(project_dir),
-            dry_run=False,
+            validate=True,
         )
 
         result = execute_define_labels(args)
 
         assert result == 1
 
+    @patch("mcp_coder.cli.commands.define_labels.validate_labels_config")
     @patch("mcp_coder.cli.commands.define_labels.IssueManager")
     @patch("mcp_coder.cli.commands.define_labels.apply_labels")
     @patch("mcp_coder.cli.commands.define_labels.load_labels_config")
@@ -156,6 +179,7 @@ class TestExecuteDefineLabelsExitCodes:
         mock_load_config: MagicMock,
         mock_apply_labels: MagicMock,
         mock_issue_manager_class: MagicMock,
+        mock_validate_config: MagicMock,
         tmp_path: Path,
     ) -> None:
         """Test execution with warnings only returns 2."""
@@ -173,6 +197,7 @@ class TestExecuteDefineLabelsExitCodes:
                     "color": "bfdbfe",
                     "description": "Implementing",
                     "stale_timeout_minutes": 120,
+                    "default": True,
                 },
             ]
         }
@@ -215,15 +240,16 @@ class TestExecuteDefineLabelsExitCodes:
         ]
         mock_issue_manager_class.return_value = mock_issue_manager
 
-        args = argparse.Namespace(
+        args = _make_namespace(
             project_dir=str(project_dir),
-            dry_run=False,
+            validate=True,
         )
 
         result = execute_define_labels(args)
 
         assert result == 2
 
+    @patch("mcp_coder.cli.commands.define_labels.validate_labels_config")
     @patch("mcp_coder.cli.commands.define_labels.IssueManager")
     @patch("mcp_coder.cli.commands.define_labels.apply_labels")
     @patch("mcp_coder.cli.commands.define_labels.load_labels_config")
@@ -236,6 +262,7 @@ class TestExecuteDefineLabelsExitCodes:
         mock_load_config: MagicMock,
         mock_apply_labels: MagicMock,
         mock_issue_manager_class: MagicMock,
+        mock_validate_config: MagicMock,
         tmp_path: Path,
     ) -> None:
         """Test that errors (exit code 1) take precedence over warnings (exit code 2)."""
@@ -252,6 +279,7 @@ class TestExecuteDefineLabelsExitCodes:
                     "category": "human_action",
                     "color": "10b981",
                     "description": "Test",
+                    "default": True,
                 },
                 {
                     "name": "status-03:planning",
@@ -329,9 +357,9 @@ class TestExecuteDefineLabelsExitCodes:
         ]
         mock_issue_manager_class.return_value = mock_issue_manager
 
-        args = argparse.Namespace(
+        args = _make_namespace(
             project_dir=str(project_dir),
-            dry_run=False,
+            validate=True,
         )
 
         result = execute_define_labels(args)

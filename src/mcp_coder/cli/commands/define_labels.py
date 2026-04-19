@@ -20,6 +20,7 @@ from ...utils.github_operations.label_config import (
     build_label_lookups,
     get_labels_config_path,
     load_labels_config,
+    validate_labels_config,
 )
 from ...utils.github_operations.labels_manager import LabelsManager
 from ...workflows.utils import resolve_project_dir
@@ -262,6 +263,9 @@ def format_validation_summary(
     label_changes: dict[str, list[str]],
     validation_results: ValidationResults,
     repo_url: str,  # pylint: disable=unused-argument
+    *,
+    init_requested: bool,
+    validate_requested: bool,
 ) -> str:
     """Format the complete summary output.
 
@@ -269,6 +273,8 @@ def format_validation_summary(
         label_changes: Dict with 'created', 'updated', 'deleted', 'unchanged' lists
         validation_results: Results from issue validation
         repo_url: Repository URL (reserved for future use)
+        init_requested: Whether --init was requested
+        validate_requested: Whether --validate was requested
 
     Returns:
         Formatted summary string for printing
@@ -287,32 +293,37 @@ def format_validation_summary(
     )
     lines.append(labels_line)
 
-    # Build "Issues initialized:" line with count
-    initialized_count = len(validation_results["initialized"])
-    lines.append(f"  Issues initialized: {initialized_count}")
+    # Build "Issues initialized:" line with count or "skipped"
+    if init_requested:
+        initialized_count = len(validation_results["initialized"])
+        lines.append(f"  Issues initialized: {initialized_count}")
+    else:
+        lines.append("  Issues initialized: skipped")
 
-    # If errors: Build "Errors (multiple status labels):" with issue details
-    errors = validation_results["errors"]
-    if errors:
-        lines.append(f"  Errors (multiple status labels): {len(errors)}")
-        for error in errors:
-            issue_num = error["issue"]
-            labels = ", ".join(error["labels"])
-            lines.append(f"    - Issue #{issue_num}: {labels}")
+    # Only show errors/warnings when validate was requested
+    if validate_requested:
+        # If errors: Build "Errors (multiple status labels):" with issue details
+        errors = validation_results["errors"]
+        if errors:
+            lines.append(f"  Errors (multiple status labels): {len(errors)}")
+            for error in errors:
+                issue_num = error["issue"]
+                labels = ", ".join(error["labels"])
+                lines.append(f"    - Issue #{issue_num}: {labels}")
 
-    # If warnings: Build "Warnings (stale bot processes):" with elapsed/threshold
-    warnings = validation_results["warnings"]
-    if warnings:
-        lines.append(f"  Warnings (stale bot processes): {len(warnings)}")
-        for warning in warnings:
-            issue_num = warning["issue"]
-            label = warning["label"]
-            elapsed = warning["elapsed"]
-            threshold = warning["threshold"]
-            lines.append(
-                f"    - Issue #{issue_num}: {label} for "
-                f"{elapsed} minutes (threshold: {threshold})"
-            )
+        # If warnings: Build "Warnings (stale bot processes):" with elapsed/threshold
+        warnings = validation_results["warnings"]
+        if warnings:
+            lines.append(f"  Warnings (stale bot processes): {len(warnings)}")
+            for warning in warnings:
+                issue_num = warning["issue"]
+                label = warning["label"]
+                elapsed = warning["elapsed"]
+                threshold = warning["threshold"]
+                lines.append(
+                    f"    - Issue #{issue_num}: {label} for "
+                    f"{elapsed} minutes (threshold: {threshold})"
+                )
 
     return "\n".join(lines)
 
@@ -515,15 +526,27 @@ def execute_define_labels(args: argparse.Namespace) -> int:
 
         logger.info(f"Project directory: {project_dir}")
 
+        # --all expansion
+        init = getattr(args, "init", False) or getattr(args, "all", False)
+        validate = getattr(args, "validate", False) or getattr(args, "all", False)
+        # generate_github_actions read but not implemented yet (Step 6)
+        # gen_actions = getattr(args, "generate_github_actions", False) or getattr(args, "all", False)  # noqa: E501
+
         # Load labels from JSON config using shared module
-        # Tries project's local config first, falls back to package bundled config
+        # --config support: pass config_override to get_labels_config_path
+        config_override = Path(args.config) if getattr(args, "config", None) else None
         try:
-            config_path = get_labels_config_path(project_dir)
+            config_path = get_labels_config_path(
+                project_dir, config_override=config_override
+            )
             labels_config = load_labels_config(config_path)
         except FileNotFoundError as exc:
-            raise ValueError(f"Configuration file not found: {config_path}") from exc
+            raise ValueError(f"Configuration file not found: {exc}") from exc
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON in configuration file: {e}") from e
+
+        # Config validation — always runs
+        validate_labels_config(labels_config)
 
         # Extract workflow labels and convert to tuple format for GitHub API
         workflow_labels = [
@@ -539,36 +562,61 @@ def execute_define_labels(args: argparse.Namespace) -> int:
         # Apply labels to repository
         label_changes = apply_labels(project_dir, workflow_labels, dry_run=dry_run)
 
+        # Find default label from config
+        default_label = next(
+            (l for l in labels_config["workflow_labels"] if l.get("default")),
+            None,
+        )
+        if default_label is None:
+            raise ValueError("No label with 'default: true' found in labels config")
+        created_label_name = default_label["name"]
+
         # Build label lookups for initialization and validation
         label_lookups = build_label_lookups(labels_config)
         workflow_label_names = label_lookups["all_names"]
-        created_label_name = label_lookups["id_to_name"].get(
-            "created", "status-01:created"
-        )
 
-        # Initialize IssueManager and fetch open issues
-        issue_manager = IssueManager(project_dir)
-        issues = issue_manager.list_issues(state="open", include_pull_requests=False)
+        # Initialize validation results
+        validation: ValidationResults = {
+            "initialized": [],
+            "errors": [],
+            "warnings": [],
+        }
 
-        # Initialize issues without status labels
-        initialized = initialize_issues(
-            issues,
-            workflow_label_names,
-            created_label_name,
-            issue_manager,
-            dry_run=dry_run,
-        )
+        # Gate IssueManager — only create when init or validate is set
+        if init or validate:
+            issue_manager = IssueManager(project_dir)
+            issues = issue_manager.list_issues(
+                state="open", include_pull_requests=False
+            )
 
-        # Validate issues for errors and warnings
-        validation = validate_issues(
-            issues, labels_config, issue_manager, dry_run=dry_run
-        )
-        # Add initialized issues to validation results
-        validation["initialized"] = initialized
+            if init:
+                # Initialize issues without status labels
+                initialized = initialize_issues(
+                    issues,
+                    workflow_label_names,
+                    created_label_name,
+                    issue_manager,
+                    dry_run=dry_run,
+                )
+                validation["initialized"] = initialized
+
+            if validate:
+                # Validate issues for errors and warnings
+                issue_validation = validate_issues(
+                    issues, labels_config, issue_manager, dry_run=dry_run
+                )
+                validation["errors"] = issue_validation["errors"]
+                validation["warnings"] = issue_validation["warnings"]
 
         # Format and print summary
         repo_url = ""  # Reserved for future use
-        summary = format_validation_summary(label_changes, validation, repo_url)
+        summary = format_validation_summary(
+            label_changes,
+            validation,
+            repo_url,
+            init_requested=init,
+            validate_requested=validate,
+        )
         print(summary)
 
         # Log completion
