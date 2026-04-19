@@ -526,6 +526,10 @@ def create_startup_script(
     commands = config.get("commands", []) if config else []
     emoji = config["emoji"] if config else "📋"
 
+    # Build color prefix for interactive templates
+    color = config.get("color") if config else None
+    color_prefix = f"/color {color}\n" if color else ""
+
     # Default: use raw title (for non-Windows platforms when implemented)
     title_display = issue_title[:58] if len(issue_title) > 58 else issue_title
 
@@ -580,6 +584,7 @@ def create_startup_script(
                 command_sections = INTERACTIVE_ONLY_SECTION_WINDOWS.format(
                     command=commands[0],
                     issue_number=issue_number,
+                    color_prefix=color_prefix,
                 )
             elif len(commands) > 1:
                 sections = []
@@ -608,6 +613,7 @@ def create_startup_script(
                             INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS.format(
                                 command=cmd,
                                 step_number=step_number,
+                                color_prefix=color_prefix,
                             )
                         )
                 command_sections = "\n".join(sections)
