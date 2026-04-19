@@ -6,8 +6,8 @@ This module provides the gh-tool command group for GitHub-related operations.
 import argparse
 import logging
 
-from ...utils.git_operations.branches import checkout_branch
-from ...utils.git_operations.remotes import fetch_remote
+from mcp_coder.mcp_workspace_git import checkout_branch, fetch_remote
+
 from ...utils.github_operations.issues.branch_manager import IssueBranchManager
 from ...utils.github_operations.issues.manager import IssueManager
 from ...workflow_utils.base_branch import detect_base_branch

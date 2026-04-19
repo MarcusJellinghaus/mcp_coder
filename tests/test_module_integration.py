@@ -6,58 +6,51 @@ import pytest
 class TestModuleIntegration:
     """Test that git operations are properly exported and accessible."""
 
-    def test_direct_git_operations_import(self) -> None:
-        """Test importing directly from git_operations module."""
-        from mcp_coder.utils.git_operations import (
+    def test_shim_import(self) -> None:
+        """Test importing directly from the mcp_workspace_git shim module."""
+        from mcp_coder.mcp_workspace_git import (
             CommitResult,
             commit_all_changes,
             commit_staged_files,
             get_full_status,
-            get_staged_changes,
-            get_unstaged_changes,
-            git_move,
-            is_file_tracked,
             is_git_repository,
             stage_all_changes,
-            stage_specific_files,
         )
 
         # Verify functions are callable
         assert callable(commit_all_changes)
         assert callable(commit_staged_files)
         assert callable(get_full_status)
-        assert callable(get_staged_changes)
-        assert callable(get_unstaged_changes)
-        assert callable(git_move)
-        assert callable(is_file_tracked)
         assert callable(is_git_repository)
         assert callable(stage_all_changes)
-        assert callable(stage_specific_files)
 
         # Verify CommitResult is a type
         assert CommitResult is not None
 
     def test_utils_module_import(self) -> None:
-        """Test importing from utils module."""
+        """Test importing surviving re-exports from utils module."""
         from mcp_coder.utils import (
             CommitResult,
+            branch_exists,
+            checkout_branch,
             commit_all_changes,
             commit_staged_files,
+            fetch_remote,
+            get_branch_diff,
+            get_current_branch_name,
+            get_default_branch_name,
             get_full_status,
-            get_staged_changes,
-            get_unstaged_changes,
-            git_move,
-            is_file_tracked,
-            is_git_repository,
+            get_git_diff_for_commit,
+            get_github_repository_url,
+            git_push,
+            is_working_directory_clean,
             stage_all_changes,
-            stage_specific_files,
         )
 
         # Verify functions are callable
         assert callable(commit_all_changes)
         assert callable(commit_staged_files)
         assert callable(get_full_status)
-        assert callable(is_git_repository)
 
         # Verify CommitResult is available
         assert CommitResult is not None
@@ -128,19 +121,23 @@ class TestModuleIntegration:
         assert hasattr(utils_module, "__all__")
         utils_all = utils_module.__all__
 
-        # Verify git functions are in utils __all__
+        # Verify surviving git functions are in utils __all__
         git_functions = [
             "CommitResult",
+            "branch_exists",
+            "checkout_branch",
             "commit_all_changes",
             "commit_staged_files",
+            "fetch_remote",
+            "get_branch_diff",
+            "get_current_branch_name",
+            "get_default_branch_name",
             "get_full_status",
-            "get_staged_changes",
-            "get_unstaged_changes",
-            "git_move",
-            "is_file_tracked",
-            "is_git_repository",
+            "get_git_diff_for_commit",
+            "get_github_repository_url",
+            "git_push",
+            "is_working_directory_clean",
             "stage_all_changes",
-            "stage_specific_files",
         ]
 
         for func_name in git_functions:
@@ -148,6 +145,20 @@ class TestModuleIntegration:
             assert hasattr(
                 utils_module, func_name
             ), f"{func_name} not available in utils module"
+
+        # Verify dead symbols are removed from utils __all__
+        dead_symbols = [
+            "git_move",
+            "is_file_tracked",
+            "get_staged_changes",
+            "get_unstaged_changes",
+            "stage_specific_files",
+        ]
+
+        for func_name in dead_symbols:
+            assert (
+                func_name not in utils_all
+            ), f"{func_name} should be removed from utils.__all__"
 
         # Check main module has __all__ defined
         assert hasattr(main_module, "__all__")
@@ -173,16 +184,15 @@ class TestModuleIntegration:
         # This test passes if we can import without ImportError
         try:
             import mcp_coder
+            import mcp_coder.mcp_workspace_git
             import mcp_coder.utils
-            import mcp_coder.utils.git_operations
 
             # Try accessing functions through different paths
             func1 = mcp_coder.is_git_repository
-            func2 = mcp_coder.utils.is_git_repository
-            func3 = mcp_coder.utils.git_operations.is_git_repository
+            func2 = mcp_coder.mcp_workspace_git.is_git_repository
 
             # Verify they're the same function
-            assert func1 is func2 is func3
+            assert func1 is func2
 
         except ImportError as e:
             pytest.fail(f"Circular import detected: {e}")

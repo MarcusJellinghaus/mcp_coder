@@ -32,10 +32,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: Update all source consumers to use shim
-- [ ] Implementation: switch all `src/` imports from `mcp_coder.utils.git_operations` to `mcp_coder.mcp_workspace_git`; update `utils/__init__.py` (remove dead symbols, source from shim); update root `__init__.py`
-- [ ] Implementation: update test `@patch` targets that break from source changes (`test_module_integration.py`, `test_base_manager.py`, `test_ci_results_manager_foundation.py`, `test_issue_branch_manager.py`, `issues/conftest.py`, `test_issue_manager_label_update.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: switch all `src/` imports from `mcp_coder.utils.git_operations` to `mcp_coder.mcp_workspace_git`; update `utils/__init__.py` (remove dead symbols, source from shim); update root `__init__.py`
+- [x] Implementation: update test `@patch` targets that break from source changes (`test_module_integration.py`, `test_base_manager.py`, `test_ci_results_manager_foundation.py`, `test_issue_branch_manager.py`, `issues/conftest.py`, `test_issue_manager_label_update.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Update remaining test consumers + delete old git_operations tests
 - [ ] Implementation: update remaining test imports (`test_git_encoding_stress.py`, `test_check_branch_status_pr_waiting.py`, `test_create_pr_integration.py`, `test_github_integration_smoke.py`, `test_github_utils.py`, `cli/test_utils.py`, `test_git_tool.py`)

@@ -19,10 +19,10 @@ from mcp_coder.checks.ci_log_parser import (
 from mcp_coder.checks.ci_log_parser import _find_log_content as _find_log_content
 from mcp_coder.checks.ci_log_parser import _strip_timestamps as _strip_timestamps
 from mcp_coder.checks.ci_log_parser import truncate_ci_details as truncate_ci_details
-from mcp_coder.utils.git_operations import needs_rebase
-from mcp_coder.utils.git_operations.branch_queries import (
+from mcp_coder.mcp_workspace_git import (
     extract_issue_number_from_branch,
     get_current_branch_name,
+    needs_rebase,
 )
 from mcp_coder.utils.github_operations.ci_results_manager import CIResultsManager
 from mcp_coder.utils.github_operations.issues import IssueData, IssueManager

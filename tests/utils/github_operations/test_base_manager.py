@@ -229,7 +229,7 @@ class TestBaseGitHubManagerWithProjectDir:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                "mcp_coder.utils.github_operations.base_manager.is_git_repository",
                 return_value=True,
             ),
             patch(
@@ -300,7 +300,7 @@ class TestBaseGitHubManagerWithProjectDir:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                "mcp_coder.utils.github_operations.base_manager.is_git_repository",
                 return_value=False,
             ),
             patch(
@@ -322,7 +322,7 @@ class TestBaseGitHubManagerWithProjectDir:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                "mcp_coder.utils.github_operations.base_manager.is_git_repository",
                 return_value=True,
             ),
             patch(
@@ -346,11 +346,11 @@ class TestBaseGitHubManagerWithProjectDir:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                "mcp_coder.utils.github_operations.base_manager.is_git_repository",
                 return_value=True,
             ),
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git_operations.get_github_repository_url",
+                "mcp_coder.utils.github_operations.base_manager.get_github_repository_url",
                 return_value="https://github.com/test-owner/test-repo.git",
             ),
             patch(
@@ -645,11 +645,11 @@ class TestBaseGitHubManagerWithRepoUrl:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                "mcp_coder.utils.github_operations.base_manager.is_git_repository",
                 return_value=True,
             ),
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git_operations.get_github_repository_url",
+                "mcp_coder.utils.github_operations.base_manager.get_github_repository_url",
                 return_value="https://github.com/test-owner/test-repo.git",
             ),
             patch(
@@ -685,11 +685,11 @@ class TestBaseGitHubManagerWithRepoUrl:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                "mcp_coder.utils.github_operations.base_manager.is_git_repository",
                 return_value=True,
             ),
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git_operations.get_github_repository_url",
+                "mcp_coder.utils.github_operations.base_manager.get_github_repository_url",
                 return_value=None,  # No origin remote
             ),
             patch(
@@ -714,11 +714,11 @@ class TestBaseGitHubManagerWithRepoUrl:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                "mcp_coder.utils.github_operations.base_manager.is_git_repository",
                 return_value=True,
             ),
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git_operations.get_github_repository_url",
+                "mcp_coder.utils.github_operations.base_manager.get_github_repository_url",
                 return_value="https://gitlab.com/test-owner/test-repo.git",  # Not GitHub
             ),
             patch(
@@ -743,11 +743,11 @@ class TestBaseGitHubManagerWithRepoUrl:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                "mcp_coder.utils.github_operations.base_manager.is_git_repository",
                 return_value=True,
             ),
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git_operations.get_github_repository_url",
+                "mcp_coder.utils.github_operations.base_manager.get_github_repository_url",
                 return_value="https://github.com/test-owner/test-repo.git",
             ),
             patch(
@@ -780,11 +780,11 @@ class TestBaseGitHubManagerWithRepoUrl:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                "mcp_coder.utils.github_operations.base_manager.is_git_repository",
                 return_value=True,
             ),
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git_operations.get_github_repository_url",
+                "mcp_coder.utils.github_operations.base_manager.get_github_repository_url",
                 return_value="https://github.com/test-owner/test-repo.git",
             ),
             patch(
@@ -817,11 +817,11 @@ class TestBaseGitHubManagerWithRepoUrl:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                "mcp_coder.utils.github_operations.base_manager.is_git_repository",
                 return_value=True,
             ),
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git_operations.get_github_repository_url",
+                "mcp_coder.utils.github_operations.base_manager.get_github_repository_url",
                 return_value="git@github.com:test-owner/test-repo.git",  # SSH format
             ),
             patch(
@@ -857,11 +857,11 @@ class TestBaseGitHubManagerWithRepoUrl:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                "mcp_coder.utils.github_operations.base_manager.is_git_repository",
                 return_value=True,
             ),
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git_operations.get_github_repository_url",
+                "mcp_coder.utils.github_operations.base_manager.get_github_repository_url",
                 return_value="https://github.com/test-owner/test-repo",  # No .git
             ),
             patch(
@@ -971,7 +971,7 @@ class TestGithubTokenForwarding:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                "mcp_coder.utils.github_operations.base_manager.is_git_repository",
                 return_value=True,
             ),
             patch(
@@ -1013,7 +1013,7 @@ class TestGithubTokenForwarding:
 
         with (
             patch(
-                "mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository",
+                "mcp_coder.utils.github_operations.base_manager.is_git_repository",
                 return_value=True,
             ),
             patch(

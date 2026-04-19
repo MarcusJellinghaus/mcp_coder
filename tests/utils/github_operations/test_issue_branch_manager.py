@@ -23,7 +23,8 @@ class TestGetLinkedBranches:
 
         with (
             patch(
-                "mcp_coder.utils.git_operations.is_git_repository", return_value=True
+                "mcp_coder.utils.github_operations.base_manager.is_git_repository",
+                return_value=True,
             ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
@@ -225,7 +226,8 @@ class TestCreateLinkedBranch:
 
         with (
             patch(
-                "mcp_coder.utils.git_operations.is_git_repository", return_value=True
+                "mcp_coder.utils.github_operations.base_manager.is_git_repository",
+                return_value=True,
             ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",
@@ -714,7 +716,8 @@ class TestDeleteLinkedBranch:
 
         with (
             patch(
-                "mcp_coder.utils.git_operations.is_git_repository", return_value=True
+                "mcp_coder.utils.github_operations.base_manager.is_git_repository",
+                return_value=True,
             ),
             patch(
                 "mcp_coder.utils.github_operations.base_manager.user_config.get_config_values",

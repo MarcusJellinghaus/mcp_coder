@@ -11,7 +11,8 @@ import argparse
 import logging
 from typing import Any
 
-from ....utils.git_operations.remotes import get_github_repository_url
+from mcp_coder.mcp_workspace_git import get_github_repository_url
+
 from ....utils.github_operations.issues import IssueData, IssueManager
 from ....utils.github_operations.label_config import (
     get_labels_config_path,

@@ -11,14 +11,15 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Optional, Tuple
 
+from mcp_coder.mcp_workspace_git import (
+    get_current_branch_name,
+    has_remote_tracking_branch,
+)
+
 from ...checks.branch_status import (
     BranchStatusReport,
     CIStatus,
     collect_branch_status,
-)
-from ...utils.git_operations.branch_queries import (
-    get_current_branch_name,
-    has_remote_tracking_branch,
 )
 from ...utils.github_operations.ci_results_manager import (
     CIResultsManager,

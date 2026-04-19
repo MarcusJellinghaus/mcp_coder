@@ -13,7 +13,9 @@ from github import Auth, Github
 from github.GithubException import GithubException
 from github.Repository import Repository
 
-from mcp_coder.utils import git_operations, user_config
+from mcp_coder.utils import user_config
+from mcp_coder.utils.git_operations.remotes import get_github_repository_url
+from mcp_coder.utils.git_operations.repository_status import is_git_repository
 from mcp_coder.utils.log_utils import log_function_call
 
 from .github_utils import parse_github_url
@@ -203,7 +205,7 @@ class BaseGitHubManager:
             raise ValueError(f"Path is not a directory: {project_dir}")
 
         # Check if it's a git repository
-        if not git_operations.is_git_repository(project_dir):
+        if not is_git_repository(project_dir):
             raise ValueError(f"Directory is not a git repository: {project_dir}")
 
         # Initialize attributes for project_dir mode
@@ -261,7 +263,7 @@ class BaseGitHubManager:
                 repo_full_name = self._repo_full_name
             elif self.project_dir is not None:
                 # project_dir mode - use git_operations abstraction
-                github_url = git_operations.get_github_repository_url(self.project_dir)
+                github_url = get_github_repository_url(self.project_dir)
                 if not github_url:
                     logger.warning("Could not get GitHub URL from repository")
                     return None
