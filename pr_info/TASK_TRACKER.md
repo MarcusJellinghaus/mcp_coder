@@ -64,5 +64,5 @@ See [step_7.md](./steps/step_7.md)
 - [x] Commit message prepared
 
 ## Pull Request
-- [ ] PR review: verify all steps integrated correctly
+- [x] PR review: verify all steps integrated correctly
 - [ ] PR summary prepared
