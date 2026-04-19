@@ -192,7 +192,7 @@ Selects the LLM provider. Defaults to `"claude"` when omitted.
 
 | Field | Type | Description | Required | Default |
 |-------|------|-------------|----------|---------|
-| `provider` | string | LLM provider: `"claude"` or `"langchain"` | No | `"claude"` |
+| `provider` | string | LLM provider: `"claude"`, `"copilot"`, or `"langchain"` | No | `"claude"` |
 
 **Example — use Claude (default, no change needed):**
 ```toml
@@ -200,10 +200,22 @@ Selects the LLM provider. Defaults to `"claude"` when omitted.
 provider = "claude"
 ```
 
+**Example — use Copilot CLI:**
+```toml
+[llm]
+provider = "copilot"
+```
+
 **Example — use LangChain:**
 ```toml
 [llm]
 provider = "langchain"
+```
+
+**Ad-hoc provider selection:** Any command with `--llm-method` supports all providers without changing config:
+```bash
+mcp-coder prompt "Your prompt" --llm-method copilot
+mcp-coder implement --llm-method copilot
 ```
 
 ### [llm.langchain]
