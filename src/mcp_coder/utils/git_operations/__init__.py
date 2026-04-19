@@ -23,10 +23,7 @@ from mcp_coder.utils.git_operations.diffs import (
     get_branch_diff,
     get_git_diff_for_commit,
 )
-from mcp_coder.utils.git_operations.file_tracking import (
-    git_move,
-    is_file_tracked,
-)
+from mcp_coder.utils.git_operations.file_tracking import git_move, is_file_tracked
 from mcp_coder.utils.git_operations.parent_branch_detection import (
     MERGE_BASE_DISTANCE_THRESHOLD,
     detect_parent_branch_via_merge_base,
@@ -40,53 +37,42 @@ from mcp_coder.utils.git_operations.remotes import (
 )
 from mcp_coder.utils.git_operations.repository_status import (
     get_full_status,
-    get_staged_changes,
-    get_unstaged_changes,
     is_git_repository,
     is_working_directory_clean,
 )
-from mcp_coder.utils.git_operations.staging import (
-    stage_all_changes,
-    stage_specific_files,
-)
-from mcp_coder.utils.git_operations.workflows import (
-    commit_all_changes,
-    needs_rebase,
-)
+from mcp_coder.utils.git_operations.staging import stage_all_changes
+from mcp_coder.utils.git_operations.workflows import commit_all_changes, needs_rebase
 
 __all__ = [
     "CommitResult",
     "_safe_repo_context",
-    "branch_exists",
-    "checkout_branch",
-    "commit_all_changes",
-    "commit_staged_files",
-    "create_branch",
-    "delete_branch",
-    "detect_parent_branch_via_merge_base",
-    "extract_issue_number_from_branch",
-    "fetch_remote",
-    "get_branch_diff",
-    "get_compact_diff",
-    "get_current_branch_name",
-    "get_default_branch_name",
     "get_full_status",
-    "get_git_diff_for_commit",
-    "get_github_repository_url",
-    "get_latest_commit_sha",
-    "get_staged_changes",
-    "get_unstaged_changes",
-    "git_move",
-    "git_push",
-    "has_remote_tracking_branch",
-    "is_file_tracked",
     "is_git_repository",
     "is_working_directory_clean",
-    "MERGE_BASE_DISTANCE_THRESHOLD",
-    "needs_rebase",
+    "branch_exists",
+    "extract_issue_number_from_branch",
+    "get_current_branch_name",
+    "get_default_branch_name",
+    "has_remote_tracking_branch",
+    "validate_branch_name",
+    "checkout_branch",
+    "create_branch",
+    "delete_branch",
+    "commit_staged_files",
+    "get_latest_commit_sha",
+    "get_branch_diff",
+    "get_git_diff_for_commit",
+    "get_compact_diff",
+    "fetch_remote",
+    "get_github_repository_url",
+    "git_push",
     "push_branch",
     "rebase_onto_branch",
     "stage_all_changes",
-    "stage_specific_files",
-    "validate_branch_name",
+    "commit_all_changes",
+    "needs_rebase",
+    "MERGE_BASE_DISTANCE_THRESHOLD",
+    "detect_parent_branch_via_merge_base",
+    "is_file_tracked",
+    "git_move",
 ]
