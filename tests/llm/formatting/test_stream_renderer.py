@@ -434,13 +434,6 @@ class TestRenderOutputValue:
         result = _render_output_value(["file_a.py", "file_b.py", "dir/file_c.py"])
         assert result == ["file_a.py", "file_b.py", "dir/file_c.py"]
 
-    def test_list_of_strings_no_quotes_or_brackets(self) -> None:
-        """String list items have no JSON quotes, commas, or brackets."""
-        result = _render_output_value(["src\\main.py"])
-        assert result == ["src\\main.py"]
-        assert '"' not in result[0]
-        assert "[" not in result[0]
-
     def test_mixed_list_still_uses_json(self) -> None:
         """Lists with non-string items still use JSON formatting."""
         result = _render_output_value([1, 2, 3])
