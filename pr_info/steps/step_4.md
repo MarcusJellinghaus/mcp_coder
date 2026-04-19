@@ -67,7 +67,7 @@ def _print_project_section(project_dir: Path, symbols: dict[str, str]) -> None:
 ```
 
 ### Call site in `execute_verify()`:
-Insert `_print_project_section(project_dir, symbols)` after the ENVIRONMENT section (before CONFIG section).
+Insert `_print_project_section(project_dir, symbols)` after the PROMPTS section. By that point `project_dir` has been resolved and is available.
 
 ## ALGORITHM
 ```
@@ -97,6 +97,6 @@ Add to `tests/cli/commands/test_verify.py`:
 Read pr_info/steps/summary.md for context, then implement pr_info/steps/step_4.md.
 
 Add _print_project_section() to verify.py and call it from execute_verify()
-after the ENVIRONMENT section. The section is informational only (no exit code
-impact). Write tests first, then implement.
+after the PROMPTS section (project_dir is resolved there). The section is
+informational only (no exit code impact). Write tests first, then implement.
 ```

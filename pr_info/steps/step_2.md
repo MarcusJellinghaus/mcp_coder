@@ -62,6 +62,7 @@ Add to `tests/workflows/implement/test_task_processing.py`:
 2. `test_process_single_task_runs_formatters_when_format_code_true` — verify `run_formatters` called
 3. `test_process_single_task_skips_mypy_when_check_type_hints_false` — verify `check_and_fix_mypy` not called
 4. `test_process_single_task_runs_mypy_when_check_type_hints_true` — verify `check_and_fix_mypy` called (with `RUN_MYPY_AFTER_EACH_TASK=True` patched)
+5. `test_process_task_with_retry_forwards_config_params` — verify that `process_task_with_retry` passes `format_code` and `check_type_hints` through to `process_single_task`
 
 Update all existing tests that call `process_single_task()` or `process_task_with_retry()` to pass the new params (or rely on defaults).
 

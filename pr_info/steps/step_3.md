@@ -46,6 +46,8 @@ if not RUN_MYPY_AFTER_EACH_TASK and completed_tasks > 0 and implement_config.che
             # existing error handling...
 ```
 
+**Note:** The `format_code` check in Step 5 is intentionally nested inside the `check_type_hints` condition. When `check_type_hints=false`, the entire mypy+formatting block is skipped. This is correct because this formatting specifically handles code changes made by mypy auto-fixes. The per-task formatting in Step 2 (`task_processing.py`) is gated independently by `format_code` alone.
+
 ## ALGORITHM
 ```
 # After prerequisites pass:
@@ -73,7 +75,7 @@ Add to `tests/workflows/implement/test_core.py`:
 3. `test_run_implement_workflow_skips_final_mypy_when_disabled` — `check_type_hints=False` → `check_and_fix_mypy` not called in Step 5
 4. `test_run_implement_workflow_skips_final_formatting_when_disabled` — `format_code=False` → `run_formatters` not called in Step 5
 
-Update existing `test_core.py` tests to mock `get_implement_config` where needed.
+Update existing `test_core.py` tests: all `TestRunImplementWorkflow` tests that reach past `check_prerequisites` will need a `@patch` for `get_implement_config` returning an `ImplementConfig(format_code=False, check_type_hints=False)` mock. There are approximately 7 such tests.
 
 ## LLM PROMPT
 ```
