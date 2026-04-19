@@ -41,9 +41,9 @@ See [step_3.md](./steps/step_3.md)
 
 ### Step 4: Copilot JSONL parser + tool permission converter
 See [step_4.md](./steps/step_4.md)
-- [ ] Implementation: add `parse_copilot_jsonl_line()`, `parse_copilot_jsonl_output()`, `convert_settings_to_copilot_tools()` to `copilot_cli.py` + conftest fixtures + tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `parse_copilot_jsonl_line()`, `parse_copilot_jsonl_output()`, `convert_settings_to_copilot_tools()` to `copilot_cli.py` + conftest fixtures + tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Copilot command builder + `ask_copilot_cli()`
 See [step_5.md](./steps/step_5.md)
