@@ -166,7 +166,7 @@ class PullRequestManager(BaseGitHubManager):
             - draft: Whether PR is a draft (bool)
 
         Raises:
-            ValueError: If validation fails (invalid title, branch names, or repository access)
+            ValueError: If repository access fails or default branch cannot be resolved
         """
         # Resolve base_branch if not provided
         if base_branch is None:
@@ -180,15 +180,16 @@ class PullRequestManager(BaseGitHubManager):
 
         # Validate title
         if not isinstance(title, str) or not title.strip():
-            raise ValueError(
-                f"Invalid PR title: '{title}'. Must be a non-empty string."
-            )
+            logger.warning("Invalid PR title: '%s'. Must be a non-empty string.", title)
+            return cast(PullRequestData, {})
 
         # Validate branch names
         if not self._validate_branch_name(head_branch):
-            raise ValueError(f"Invalid head branch name: '{head_branch}'")
+            logger.warning("Invalid head branch name: '%s'", head_branch)
+            return cast(PullRequestData, {})
         if not self._validate_branch_name(base_branch):
-            raise ValueError(f"Invalid base branch name: '{base_branch}'")
+            logger.warning("Invalid base branch name: '%s'", base_branch)
+            return cast(PullRequestData, {})
 
         repo = self._get_repository()
         if repo is None:
