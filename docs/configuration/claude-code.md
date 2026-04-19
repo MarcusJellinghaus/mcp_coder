@@ -231,7 +231,7 @@ These are used in `.mcp.json` to configure MCP servers with correct paths:
 ## Related Documentation
 
 - **[Repository Setup](../repository-setup/README.md)** - Complete project setup including MCP configuration
-- **[Claude Desktop Configuration](claude-desktop.md)** - Alternative Claude interface
+- **[Copilot CLI Setup](../repository-setup/copilot.md)** - GitHub Copilot CLI file compatibility
 - **[Configuration Guide](config.md)** - General mcp-coder configuration
 - **[Claude Code Cheat Sheet](../processes-prompts/claude_cheat_sheet.md)** - Slash command reference
 - **[Development Process](../processes-prompts/development-process.md)** - Workflow methodology

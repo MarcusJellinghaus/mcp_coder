@@ -33,6 +33,7 @@ This guide covers the **mandatory** and **optional** components for integrating 
 |---|---|---|
 | GitHub-side: tokens, labels, actions, CI, dependabot | [github.md](github.md) | Any downstream repo |
 | Claude Code: `.claude/`, `.mcp.json`, launchers, architecture docs | [claude-code.md](claude-code.md) | Any downstream repo |
+| Copilot CLI: file compatibility, Copilot-specific flags | [copilot.md](copilot.md) | Any downstream repo |
 | Generic repo conventions: `.gitattributes`, `.gitignore`, file size | [repo.md](repo.md) | Any downstream repo |
 | Python-specific: `pyproject.toml`, linters, formatters, architecture enforcement | [python.md](python.md) | Python downstream repos only |
 | mcp-coder repo internals: design docs, mlflow tools, internal scripts | [internal.md](internal.md) | Not for downstream use |
@@ -116,6 +117,7 @@ mcp-coder prompt "List files in src/" --mcp-config .mcp.json
 ## Related Documentation
 
 - **[Claude Code Configuration](../configuration/claude-code.md)** - Detailed Claude Code setup, CLI commands, troubleshooting
+- **[Copilot CLI Setup](copilot.md)** - GitHub Copilot CLI file compatibility and configuration
 - **[CLI Reference](../cli-reference.md)** - Complete mcp-coder command documentation
 - **[Configuration Guide](../configuration/config.md)** - User and system configuration
 - **[Development Process](../processes-prompts/development-process.md)** - Complete workflow methodology

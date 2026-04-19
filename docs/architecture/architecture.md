@@ -17,8 +17,8 @@
 AI-powered software development automation toolkit that orchestrates end-to-end GitHub issue workflows from planning through implementation to pull request creation.
 
 ### Key Features
-- **LLM Integration**: Multi-provider interface with Claude Code CLI support
-  and optional LangChain backends (OpenAI, Gemini, and others)
+- **LLM Integration**: Multi-provider interface — Claude Code CLI, GitHub Copilot CLI,
+  and LangChain backends (OpenAI, Azure OpenAI, Gemini, Anthropic API, Ollama)
 - **GitHub Automation**: Issue-driven workflow automation with status label transitions
 - **Git Operations**: Automated repository management and version control
 - **Code Quality**: Integrated testing with pylint, pytest, mypy via MCP servers
@@ -40,7 +40,7 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 
 ### Technical Constraints
 - **Python 3.11+**: Minimum required Python version
-- **Claude Code CLI**: External dependency for AI functionality
+- **Claude Code CLI or GitHub Copilot CLI**: External dependency for AI functionality
 - **MCP Server Dependencies**:
   - `mcp-tools-py`: Quality checks (pylint, pytest, mypy)
   - `mcp-workspace`: File operations and management
@@ -80,15 +80,15 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 
 ### External Systems
 - **GitHub Issues API**: Source of workflow triggers and status updates
-- **Claude Code CLI**: AI reasoning and content generation
+- **Claude Code CLI / Copilot CLI**: AI reasoning and content generation
 - **Git Repositories**: Version control and code management
 - **Integration Test Repository**: External testing environment
 
 ### Data Flow
 1. **GitHub → mcp_coder**: Issue status changes, requirements
-2. **mcp_coder → Claude Code**: Orchestration commands, structured prompts
-3. **Claude Code → MCP Servers**: File operations, quality checks, configuration
-4. **Claude Code → mcp_coder**: Project plans, code, PR reviews, PR summaries
+2. **mcp_coder → LLM CLI**: Orchestration commands, structured prompts
+3. **LLM CLI → MCP Servers**: File operations, quality checks, configuration
+4. **LLM CLI → mcp_coder**: Project plans, code, PR reviews, PR summaries
 5. **mcp_coder → GitHub**: Comments, label updates, PR creation
 
 ### Component Outputs
@@ -176,7 +176,7 @@ mcp-coder implement --project-dir /path/to/project
   - `session_finder.py` - Find latest session files (tests: `llm/storage/test_session_finder.py`)
 - **Session**: `llm/session/` - Session management
   - `resolver.py` - LLM method parsing and session resolution (tests: `llm/session/test_resolver.py`)
-- **Providers**: `llm/providers/` - Provider implementations
+- **Providers**: `llm/providers/` - Provider implementations (claude, copilot, langchain)
   - `claude/` - Claude Code CLI integration (tests: `llm/providers/claude/test_*.py`)
     - `claude_code_cli.py` - Claude Code CLI integration with stream-json session logging
     - `claude_code_api.py` - Claude Code API integration (legacy, not used by interface)
@@ -185,6 +185,9 @@ mcp-coder implement --project-dir /path/to/project
         - **Rationale**: Centralized logging functions for request, response, and error tracking in Claude provider integrations
         - **Benefits**: Consistent logging patterns, easier debugging, structured debug output
         - **Functions**: `log_llm_request()`, `log_llm_response()`, `log_llm_error()`
+  - `copilot/` - GitHub Copilot CLI integration (tests: `llm/providers/copilot/test_*.py`)
+    - `copilot_cli.py` - JSONL parser, tool permission converter, command builder
+    - `copilot_cli_streaming.py` - Streaming variant
   - `langchain/` - LangChain multi-backend integration (tests: `llm/providers/langchain/test_*.py`)
     - `__init__.py` - Entry point `ask_langchain()`, config loading, backend dispatch
     - `openai_backend.py` - OpenAI / Azure / Ollama backend via `ChatOpenAI`

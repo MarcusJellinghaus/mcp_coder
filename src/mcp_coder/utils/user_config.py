@@ -337,8 +337,8 @@ def create_default_config() -> bool:
 # Update with your actual credentials and repository information
 
 # [llm]
-# Default LLM provider: "claude" (default) or "langchain"
-# default_provider = "langchain"
+# Default LLM provider: "claude" (default), "copilot", or "langchain"
+# default_provider = "copilot"
 
 # [mcp]
 # Default MCP config file path (relative to CWD or absolute)

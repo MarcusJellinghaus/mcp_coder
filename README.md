@@ -39,8 +39,8 @@ MCP Coder implements a structured 3-layer development approach that separates hu
 │                                         │     │   steps & sessions)                     │
 │                                         │     │ • Pull request generation               │
 │                                         │     │                                         │
-│ Using Claude Desktop and/or             │     │                calls                    │
-│ Claude Code interactively               │     │                ▼                       │
+│ Using Claude Code or                    │     │                calls                    │
+│ Copilot CLI interactively               │     │                ▼                       │
 │                                         │     │         ┌─────────────────┐             │
 │                                         │     │         │  MCP Servers    │             │
 │                                         │     │         │ • tools-py      │             │
@@ -62,7 +62,7 @@ MCP Coder implements a structured 3-layer development approach that separates hu
 flowchart TD
     PA["🤖 Process Automation<br/>mcp-coder coordinate command<br/>Jenkins scheduling"]
     
-    HI["👤 Human Input & LLM Facilitated<br/>Discussions<br/><br/>• Issue analysis<br/>• Implementation planning<br/>• Code reviews<br/><br/>Using Claude Desktop and/or<br/>Claude Code interactively"]
+    HI["👤 Human Input & LLM Facilitated<br/>Discussions<br/><br/>• Issue analysis<br/>• Implementation planning<br/>• Code reviews<br/><br/>Using Claude Code or<br/>Copilot CLI interactively"]
     
     LW["🤖 LLM Work<br/>(MCP-supported)<br/><br/>• Implementation planning<br/>• Implementation (code writing &<br/>  automated testing)<br/> (multiple steps & sessions)<br/>• Pull request generation"]
     
@@ -94,14 +94,14 @@ flowchart TD
 
 - **🤖 Automated LLM Work**: Automated implementation calling specialized MCP servers for reliable code operations
 - **🤖 Process Automation**: `mcp-coder coordinate` command orchestrates LLM work, with Jenkins scheduling for mass execution
-- **👤 Human Input & LLM Discussions**: Issue analysis, implementation planning and code review based on LLM-based analysis and interactive discussion using Claude Desktop or Claude Code
+- **👤 Human Input & LLM Discussions**: Issue analysis, implementation planning and code review based on LLM-based analysis and interactive discussion using Claude Code or Copilot CLI
 - **📂  Foundation: GitHub**: Centralized source code storage and issue management with status labels
 
 ## ✨ Current Features
 
 ### 🤖 Development Automation
 
-- **Integrated LLMs**: Claude Code CLI support (additional LLM providers planned)
+- **Integrated LLMs**: Claude Code CLI, GitHub Copilot CLI, and LangChain backends (OpenAI, Azure OpenAI, Gemini, Anthropic API, Ollama)
 - **Automated Implementation**: Complete feature development via `mcp-coder implement`
 
 ### 🔄 Interactive Planning & Quality Assurance
@@ -125,7 +125,7 @@ flowchart TD
 
 ### Prerequisites
 
-- **Claude Code CLI**: Install from [Anthropic's documentation](https://code.claude.com/docs)
+- **LLM CLI** (at least one): [Claude Code CLI](https://code.claude.com/docs) or [GitHub Copilot CLI](https://docs.github.com/copilot/how-tos/use-copilot-agents/use-copilot-cli)
 - **Python 3.11+**
 - **Git** (for repository operations)
 - **Code base hosted on GitHub**

@@ -19,7 +19,7 @@ Complete documentation for MCP Coder.
 - **[Repository Setup](repository-setup/README.md)** - Complete guide for setting up repositories with MCP Coder workflows
 - **[Configuration Guide](configuration/config.md)** - User configuration, environment variables, platform setup
 - **[Claude Code Configuration](configuration/claude-code.md)** - Claude Code CLI setup and project configuration
-- **[Claude Desktop Configuration](configuration/claude-desktop.md)** - Claude Desktop setup for interactive workflows
+- **[Copilot CLI Setup](repository-setup/copilot.md)** - GitHub Copilot CLI file compatibility and configuration
 - **[Label Setup](getting-started/label-setup.md)** - Detailed GitHub workflow label configuration
 - **[Optional Dependencies](configuration/optional-dependencies.md)** - Available pip extras for optional features
 
@@ -47,6 +47,7 @@ Complete documentation for MCP Coder.
 - **[Runtime Statistics Review](tests/runtime-statistics-review-process.md)** - Process for reviewing test performance
 - **[Slow Test Review](tests/slow-test-review-methodology.md)** - Methodology for optimizing slow tests
 
-### API & Internals
+### LLM Providers
 
-- **[Claude SDK Response Structure](claude_sdk_response_structure.md)** - API response format documentation
+- **[Claude SDK Response Structure](providers/claude_sdk_response_structure.md)** - Claude Code API response format
+- **[Copilot Response Structure](providers/copilot_response_structure.md)** - Copilot CLI JSONL format
