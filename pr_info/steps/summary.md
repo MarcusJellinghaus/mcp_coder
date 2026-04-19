@@ -75,7 +75,9 @@ Shows "skipped" for operations not requested instead of showing zeros.
 |------|--------|
 | `tests/workflows/config/test_labels.json` | Add `default`, `promotable`, `failure` fields |
 | `tests/workflows/test_label_config.py` | Tests for new discovery + validation |
+| `tests/cli/test_parsers.py` | Add `TestDefineLabelsParser` for new CLI flags |
 | `tests/cli/commands/test_define_labels.py` | Tests for flag gating, `--all` expansion |
+| `tests/cli/commands/test_define_labels_execute.py` | Update Namespace mocks with new flags |
 | `tests/cli/commands/test_define_labels_config.py` | May need fixture updates |
 | `tests/cli/commands/test_define_labels_format.py` | Test "skipped" summary output |
 

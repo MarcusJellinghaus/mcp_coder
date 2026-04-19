@@ -36,4 +36,18 @@
 - `pr_info/steps/step_5.md` — added existing test update requirements, defensive `next()` pattern
 - `pr_info/steps/step_6.md` — added file size check note, DRY note, workflow template reference
 
+**Status**: Committed (5cac505)
+
+## Round 2 — 2026-04-19
+
+**Findings**:
+- F1-F6, F8-F10 (SKIP/ACCEPT-no-action): All Round 1 fixes verified correctly applied. Step ordering, dependencies, and issue coverage confirmed.
+- F7 (CRITICAL): Summary "Test Files to Modify / Create" table missing `tests/cli/test_parsers.py` (Step 4) and `tests/cli/commands/test_define_labels_execute.py` (Step 5)
+
+**Decisions**: F7 accepted — add both missing test files to summary table
+
+**User decisions**: None needed
+
+**Changes**: `pr_info/steps/summary.md` — added 2 missing test files to table
+
 **Status**: Committing changes
