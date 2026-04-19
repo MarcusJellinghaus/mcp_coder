@@ -1,46 +1,30 @@
 """Label configuration loading utilities.
 
 This module provides functions to load and parse GitHub label configurations
-from JSON files. It supports two operational modes:
+from JSON files.
 
-1. LOCAL MODE: Workflow scripts with local project directory
-   - Used by: mcp-coder gh-tool define-labels, validate_labels.py, issue_stats.py
-   - Tries: project_dir/workflows/config/labels.json first
-   - Falls back to: bundled package config
-   - Use case: Development, testing, custom label configurations
-
-2. REMOTE MODE: Operations without local project (coordinator)
-   - Used by: coordinator run, remote GitHub operations via repo_url
-   - Always uses: bundled mcp_coder/config/labels.json
-   - Use case: Centralized automation, consistent labels across repos
+Config resolution order:
+1. Explicit ``config_override`` path (highest priority, e.g. ``--config`` flag)
+2. ``[tool.mcp-coder] labels-config`` in ``pyproject.toml`` (relative to project root)
+3. Bundled package defaults (``mcp_coder/config/labels.json``)
 
 Usage patterns:
 
-    # LOCAL MODE: CLI command or workflow script with project directory
+    # With explicit override (CLI --config flag)
+    config_path = get_labels_config_path(project_dir, config_override=Path("custom.json"))
+    labels_config = load_labels_config(config_path)
+
+    # Project with pyproject.toml config
     config_path = get_labels_config_path(project_dir)
     labels_config = load_labels_config(config_path)
 
-    # REMOTE MODE: Coordinator without project directory
+    # Without project directory (coordinator / remote mode)
     config_path = get_labels_config_path(None)  # Uses bundled config
     labels_config = load_labels_config(config_path)
-
-    # Build lookup dictionaries (both modes)
-    label_lookups = build_label_lookups(labels_config)
-
-    # Access label information (both modes)
-    bot_pickup_labels = {
-        name for name, category in label_lookups["name_to_category"].items()
-        if category == "bot_pickup"
-    }
-
-Design rationale:
-- Workflows need flexibility for testing/customization
-- Coordinator needs consistency across multiple repositories
-- Single bundled source of truth ensures reliable automation
-- Backwards compatible with existing workflow scripts
 """
 
 import json
+import tomllib
 from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Any, Dict, Optional, TypedDict
@@ -124,66 +108,65 @@ def validate_labels_config(labels_config: Dict[str, Any]) -> None:
                 )
 
 
-def get_labels_config_path(project_dir: Optional[Path] = None) -> Path | Traversable:
+def _get_labels_config_from_pyproject(project_dir: Path) -> Optional[Path]:
+    """Read labels-config from [tool.mcp-coder] in pyproject.toml.
+
+    Returns absolute Path if configured and file exists, None otherwise.
+    """
+    path = project_dir / "pyproject.toml"
+    if not path.exists():
+        return None
+    try:
+        with open(path, "rb") as f:
+            data = tomllib.load(f)
+    except (tomllib.TOMLDecodeError, OSError):
+        return None
+    try:
+        config_value = data["tool"]["mcp-coder"]["labels-config"]
+    except KeyError:
+        return None
+    resolved = project_dir / config_value
+    return resolved if resolved.exists() else None
+
+
+def get_labels_config_path(
+    project_dir: Optional[Path] = None,
+    config_override: Optional[Path] = None,
+) -> Path | Traversable:
     """Get path to labels.json configuration file.
 
-    This function supports two operational modes:
-
-    MODE 1: Local project with custom labels (project_dir provided)
-    ----------------------------------------------------------------
-    Used by CLI commands (mcp-coder gh-tool define-labels) and workflow scripts
-    (validate_labels.py, issue_stats.py) that run in a local git repository
-    and may want to customize labels.
-
-    - If project_dir is provided AND local config exists:
-      Returns: project_dir/workflows/config/labels.json
-    - Otherwise falls back to bundled config (see MODE 2)
-
-    MODE 2: Remote operations without local project (project_dir=None)
-    -------------------------------------------------------------------
-    Used by coordinator and remote GitHub operations that work via repo_url
-    without a local git clone. These always use the bundled package config.
-
-    - When project_dir is None:
-      Returns: bundled mcp_coder/config/labels.json from installed package
-
-    WHY THIS DESIGN:
-    ----------------
-    - Workflows need flexibility: Allow customization for testing/development
-    - Coordinator needs consistency: Use standard labels across all repos
-    - Single source of truth: Bundled config ensures consistent behavior
-    - Backwards compatible: Existing workflows continue to work unchanged
-
     Resolution order:
-    1. Project's local workflows/config/labels.json (if project_dir provided and exists)
-    2. Package's bundled config (mcp_coder/config/labels.json) - ALWAYS works
+    1. config_override (explicit --config flag, highest priority)
+    2. [tool.mcp-coder] labels-config in pyproject.toml (relative to project root)
+    3. Bundled package defaults (mcp_coder/config/labels.json)
 
     Args:
-        project_dir: Optional project directory to check for local config override.
+        project_dir: Optional project directory for pyproject.toml lookup.
                     Pass None to always use bundled config (coordinator pattern).
+        config_override: Optional explicit path to a labels config file.
+                        Raises FileNotFoundError if the file does not exist.
 
     Returns:
-        Path to labels.json file (either local override or bundled)
+        Path to labels.json file
 
-    Examples:
-        # Workflow script with local project
-        >>> config_path = get_labels_config_path(Path("/my/project"))
-        >>> labels = load_labels_config(config_path)
-
-        # Coordinator without local project (repo_url mode)
-        >>> config_path = get_labels_config_path(None)  # Uses bundled config
-        >>> labels = load_labels_config(config_path)
+    Raises:
+        FileNotFoundError: If config_override is given but the file does not exist.
     """
     from importlib import resources
 
-    # Check for project-local override
-    if project_dir is not None:
-        local_config = project_dir / "workflows" / "config" / "labels.json"
-        if local_config.exists():
-            return local_config
+    # 1. Explicit override takes priority
+    if config_override is not None:
+        if not config_override.exists():
+            raise FileNotFoundError(f"Config override not found: {config_override}")
+        return config_override
 
-    # Fall back to package's bundled config
-    # Return Traversable directly — safe for both editable installs and wheel installs
+    # 2. pyproject.toml lookup
+    if project_dir is not None:
+        pyproject_path = _get_labels_config_from_pyproject(project_dir)
+        if pyproject_path is not None:
+            return pyproject_path
+
+    # 3. Bundled package defaults
     return resources.files("mcp_coder.config") / "labels.json"
 
 

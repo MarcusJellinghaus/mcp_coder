@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: New config discovery
-- [ ] Implementation: modify `get_labels_config_path()` — drop `workflows/config/`, add `pyproject.toml` lookup and `config_override` param, with tests (TDD)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: modify `get_labels_config_path()` — drop `workflows/config/`, add `pyproject.toml` lookup and `config_override` param, with tests (TDD)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: CLI flags in `gh_parsers.py`
 - [ ] Implementation: add `--init`, `--validate`, `--config`, `--generate-github-actions`, `--all` arguments and help text, with parser tests (TDD)

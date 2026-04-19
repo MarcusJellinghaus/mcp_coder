@@ -1,11 +1,15 @@
 """Tests for workflows/label_config.py shared configuration loading module."""
 
+# ruff: noqa: S324
+
 import json
+from importlib.resources.abc import Traversable
 from pathlib import Path
 
 import pytest
 
 from mcp_coder.utils.github_operations.label_config import (
+    _get_labels_config_from_pyproject,
     get_labels_config_path,
     load_labels_config,
     validate_labels_config,
@@ -351,3 +355,144 @@ class TestValidateLabelsConfig:
         }
         with pytest.raises(ValueError, match="exactly one.*default"):
             validate_labels_config(config)
+
+
+class TestConfigDiscovery:
+    """Tests for get_labels_config_path() config discovery."""
+
+    def test_config_override_takes_priority(self, tmp_path: Path) -> None:
+        """Explicit config_override is returned even when pyproject.toml exists."""
+        # Create a config override file
+        override = tmp_path / "custom_labels.json"
+        override.write_text('{"workflow_labels": []}', encoding="utf-8")
+
+        # Create pyproject.toml that also points to a config
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            '[tool.mcp-coder]\nlabels-config = "other.json"\n',
+            encoding="utf-8",
+        )
+        other = tmp_path / "other.json"
+        other.write_text('{"workflow_labels": []}', encoding="utf-8")
+
+        result = get_labels_config_path(project_dir=tmp_path, config_override=override)
+        assert result == override
+
+    def test_config_override_missing_raises(self, tmp_path: Path) -> None:
+        """Non-existent config_override raises FileNotFoundError."""
+        missing = tmp_path / "nonexistent.json"
+        with pytest.raises(FileNotFoundError):
+            get_labels_config_path(config_override=missing)
+
+    def test_pyproject_toml_labels_config(self, tmp_path: Path) -> None:
+        """labels-config in pyproject.toml is used when no override given."""
+        labels_file = tmp_path / "my_labels.json"
+        labels_file.write_text('{"workflow_labels": []}', encoding="utf-8")
+
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            '[tool.mcp-coder]\nlabels-config = "my_labels.json"\n',
+            encoding="utf-8",
+        )
+
+        result = get_labels_config_path(project_dir=tmp_path)
+        assert result == labels_file
+
+    def test_pyproject_toml_missing_key_falls_to_bundled(self, tmp_path: Path) -> None:
+        """pyproject.toml without labels-config key falls back to bundled."""
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            "[tool.mcp-coder]\n# no labels-config key\n",
+            encoding="utf-8",
+        )
+
+        result = get_labels_config_path(project_dir=tmp_path)
+        assert isinstance(result, Traversable)
+
+    def test_no_project_dir_returns_bundled(self) -> None:
+        """project_dir=None returns bundled config."""
+        result = get_labels_config_path(project_dir=None)
+        assert isinstance(result, Traversable)
+
+    def test_pyproject_toml_nonexistent_path_falls_to_bundled(
+        self, tmp_path: Path
+    ) -> None:
+        """labels-config pointing to non-existent file falls back to bundled."""
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            '[tool.mcp-coder]\nlabels-config = "does_not_exist.json"\n',
+            encoding="utf-8",
+        )
+
+        result = get_labels_config_path(project_dir=tmp_path)
+        assert isinstance(result, Traversable)
+
+    def test_old_workflows_config_not_used(self, tmp_path: Path) -> None:
+        """workflows/config/labels.json is NOT used even if it exists (breaking change)."""
+        old_dir = tmp_path / "workflows" / "config"
+        old_dir.mkdir(parents=True)
+        old_config = old_dir / "labels.json"
+        old_config.write_text('{"workflow_labels": []}', encoding="utf-8")
+
+        result = get_labels_config_path(project_dir=tmp_path)
+        # Should NOT return the old path — should return bundled
+        assert result != old_config
+        assert isinstance(result, Traversable)
+
+    def test_malformed_pyproject_toml_falls_back(self, tmp_path: Path) -> None:
+        """Invalid TOML content in pyproject.toml causes graceful fallback to bundled config."""
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text("this is {{{ not valid TOML", encoding="utf-8")
+
+        result = get_labels_config_path(project_dir=tmp_path)
+        assert isinstance(result, Traversable)
+
+
+class TestGetLabelsConfigFromPyproject:
+    """Tests for _get_labels_config_from_pyproject() helper."""
+
+    def test_no_pyproject_returns_none(self, tmp_path: Path) -> None:
+        """No pyproject.toml file returns None."""
+        result = _get_labels_config_from_pyproject(tmp_path)
+        assert result is None
+
+    def test_valid_config_returns_path(self, tmp_path: Path) -> None:
+        """Valid labels-config key returns resolved path."""
+        labels = tmp_path / "labels.json"
+        labels.write_text("{}", encoding="utf-8")
+
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            '[tool.mcp-coder]\nlabels-config = "labels.json"\n',
+            encoding="utf-8",
+        )
+
+        result = _get_labels_config_from_pyproject(tmp_path)
+        assert result == labels
+
+    def test_missing_tool_section_returns_none(self, tmp_path: Path) -> None:
+        """pyproject.toml without [tool] section returns None."""
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text("[project]\nname = 'foo'\n", encoding="utf-8")
+
+        result = _get_labels_config_from_pyproject(tmp_path)
+        assert result is None
+
+    def test_malformed_toml_returns_none(self, tmp_path: Path) -> None:
+        """Malformed TOML returns None gracefully."""
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text("{{{ bad toml", encoding="utf-8")
+
+        result = _get_labels_config_from_pyproject(tmp_path)
+        assert result is None
+
+    def test_file_not_found_returns_none(self, tmp_path: Path) -> None:
+        """labels-config pointing to missing file returns None."""
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            '[tool.mcp-coder]\nlabels-config = "missing.json"\n',
+            encoding="utf-8",
+        )
+
+        result = _get_labels_config_from_pyproject(tmp_path)
+        assert result is None
