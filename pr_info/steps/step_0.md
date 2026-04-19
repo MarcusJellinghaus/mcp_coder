@@ -24,7 +24,7 @@ Verify these exist in `p_workspace`:
 - `src/mcp_workspace/git_operations/remotes.py`
 - `src/mcp_workspace/git_operations/repository_status.py`
 - `src/mcp_workspace/git_operations/staging.py`
-- `src/mcp_workspace/git_operations/workflows.py`
+- `src/mcp_workspace/git_operations/workflows.py` (spot-check: must export `needs_rebase`)
 - `src/mcp_workspace/git_operations/parent_branch_detection.py`
 
 ## ALGORITHM

@@ -13,6 +13,12 @@ Switch test files that import from `mcp_coder.utils.git_operations` to use the s
 | File | Old import | New import |
 |------|-----------|------------|
 | `tests/utils/test_git_encoding_stress.py` | `from mcp_coder.utils.git_operations import get_branch_diff, is_git_repository` | `from mcp_coder.mcp_workspace_git import get_branch_diff` (remove `is_git_repository` — dead symbol, check if still used in test) |
+| `tests/cli/commands/test_check_branch_status_pr_waiting.py` | `mcp_coder.utils.git_operations.branch_queries` (imports AND `@patch` decorators) | `from mcp_coder.mcp_workspace_git import ...` + update `@patch` target paths |
+| `tests/workflows/test_create_pr_integration.py` | `mcp_coder.utils.git_operations` | `from mcp_coder.mcp_workspace_git import ...` |
+| `tests/utils/github_operations/test_github_integration_smoke.py` | `mcp_coder.utils.git_operations` | `from mcp_coder.mcp_workspace_git import ...` (uses `create_branch`, `delete_branch`, `branch_exists`, `checkout_branch`) |
+| `tests/utils/github_operations/test_github_utils.py` | `mcp_coder.utils.git_operations` | `from mcp_coder.mcp_workspace_git import ...` (uses `create_branch`, `push_branch`, `get_current_branch_name`, `branch_exists`, `checkout_branch`, `fetch_remote`) |
+
+**Important note about `@patch` decorators**: `test_check_branch_status_pr_waiting.py` uses `@patch("mcp_coder.utils.git_operations.branch_queries.X")` as string-based mock targets. These must be updated. Since the source module is now `mcp_workspace.git_operations.branch_queries`, the patch target should reference wherever the symbol is looked up at runtime. Since the test imports from the shim, the patch path should be `"mcp_coder.mcp_workspace_git.X"` (patching where it's looked up, not where it's defined).
 
 ### Test file to rewrite
 
@@ -46,7 +52,8 @@ Rewrite to test:
 
 Remove from tests:
 - References to `mcp_coder.utils.git_operations` (package deleted)
-- Dead symbols: `git_move`, `is_file_tracked`, `is_git_repository`, `get_staged_changes`, `get_unstaged_changes`, `stage_specific_files`, `create_branch`, `push_branch`
+- Dead symbols: `git_move`, `is_file_tracked`, `get_staged_changes`, `get_unstaged_changes`, `stage_specific_files`
+- Note: `is_git_repository`, `create_branch`, `push_branch` are now in the shim (they have consumers)
 
 ## ALGORITHM
 

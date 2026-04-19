@@ -54,14 +54,15 @@ After:  mcp_coder.* → mcp_coder.mcp_workspace_git → mcp_workspace.git_operat
 ### Dead symbols removed from `utils/__init__.py`
 
 These symbols have no consumers outside `git_operations/` itself and are not in the shim:
-`create_branch`, `git_move`, `is_file_tracked`, `push_branch`, `is_git_repository`,
-`get_staged_changes`, `get_unstaged_changes`, `stage_specific_files`
+`git_move`, `is_file_tracked`, `get_staged_changes`, `get_unstaged_changes`, `stage_specific_files`
+
+Note: `is_git_repository`, `create_branch`, `push_branch` were previously listed here but are now in the shim (they have consumers). `PushResult` was never in `utils/__init__.py` so its removal was a no-op.
 
 ## Files Created
 
 | File | Purpose |
 |------|---------|
-| `src/mcp_coder/mcp_workspace_git.py` | Shim: re-exports 24 symbols from `mcp_workspace.git_operations.*` |
+| `src/mcp_coder/mcp_workspace_git.py` | Shim: re-exports 28 symbols + 1 constant from `mcp_workspace.git_operations.*` |
 | `tests/test_mcp_workspace_git_smoke.py` | Smoke test: shim importable, key symbols accessible |
 
 ## Files Modified
@@ -83,8 +84,17 @@ These symbols have no consumers outside `git_operations/` itself and are not in 
 | `src/mcp_coder/workflows/vscodeclaude/workspace.py` | Import from shim |
 | `src/mcp_coder/workflow_utils/commit_operations.py` | Import from shim |
 | `src/mcp_coder/workflow_utils/base_branch.py` | Import from shim |
+| `src/mcp_coder/workflow_utils/failure_handling.py` | Import from shim |
+| `src/mcp_coder/utils/github_operations/base_manager.py` | Import from shim; replace module-level `git_operations` attribute access with direct symbol imports |
+| `src/mcp_coder/utils/github_operations/ci_results_manager.py` | Import from shim |
+| `src/mcp_coder/utils/github_operations/pr_manager.py` | Import from shim |
+| `src/mcp_coder/utils/github_operations/issues/manager.py` | Import from shim |
 | `tests/test_module_integration.py` | Update to test shim paths; remove old `git_operations` tests |
 | `tests/utils/test_git_encoding_stress.py` | Import from shim |
+| `tests/cli/commands/test_check_branch_status_pr_waiting.py` | Import from shim; update `@patch` decorator target paths |
+| `tests/workflows/test_create_pr_integration.py` | Import from shim |
+| `tests/utils/github_operations/test_github_integration_smoke.py` | Import from shim |
+| `tests/utils/github_operations/test_github_utils.py` | Import from shim |
 | `.importlinter` | Remove 2 old contracts, add 2 new isolation contracts |
 | `tach.toml` | Add `shim_workspace` layer, move `mcp_tools_py`, add `mcp_workspace_git` |
 
@@ -110,6 +120,6 @@ These symbols have no consumers outside `git_operations/` itself and are not in 
 
 - Import path is `mcp_workspace.git_operations` (top-level, not under `file_tools`)
 - `_safe_repo_context` imported from `mcp_workspace.git_operations.core` (private, pragmatic)
-- Only 6 of 24 symbols are in `mcp_workspace.git_operations.__init__`; rest need submodule imports
+- Only 6 of 28 symbols are in `mcp_workspace.git_operations.__init__`; rest need submodule imports
 - Tests must also use the shim (import-linter enforced)
 - Dependency: issue ② (mcp-workspace#98) must be complete first

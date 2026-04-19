@@ -45,7 +45,10 @@ ignore_imports =
     mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations.parent_branch_detection
 ```
 
-### Update 1 existing contract
+### Update 2 existing contracts
+
+**`jenkins_independence`** — Update `forbidden_modules` to remove `mcp_coder.utils.git_operations` (the module no longer exists). Replace with `mcp_coder.mcp_workspace_git` if jenkins should remain independent from git operations.
+
 
 **`git_library_isolation`** — GitPython now fully forbidden from `mcp_coder` (no exceptions):
 ```ini
@@ -61,6 +64,10 @@ forbidden_modules =
 Remove the old `ignore_imports` line that allowed `mcp_coder.utils.git_operations.** -> git`.
 
 ## WHAT — `tach.toml` changes
+
+### Verify with `tach check`
+
+After making changes, run `tach check` to verify that modules importing from `mcp_coder.mcp_workspace_git` (workflows, workflow_utils, checks, cli) don't need explicit `depends_on` entries. If they do, add them.
 
 ### Add new layer
 

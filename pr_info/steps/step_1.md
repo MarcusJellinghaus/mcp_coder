@@ -13,7 +13,7 @@ Create the shim module `mcp_workspace_git.py` and its smoke test. This step adds
 
 ## WHAT — Shim module
 
-Pure re-export file. No logic, no wrapper functions. Imports 24 symbols + 1 constant from `mcp_workspace.git_operations` submodules and re-exports them.
+Pure re-export file. No logic, no wrapper functions. Imports 28 symbols + 1 constant from `mcp_workspace.git_operations` submodules and re-exports them.
 
 ```python
 """Thin shim re-exporting git operations from mcp_workspace."""
@@ -24,6 +24,7 @@ from mcp_workspace.git_operations.core import CommitResult, _safe_repo_context
 # Repository status
 from mcp_workspace.git_operations.repository_status import (
     get_full_status,
+    is_git_repository,
     is_working_directory_clean,
 )
 
@@ -38,7 +39,7 @@ from mcp_workspace.git_operations.branch_queries import (
 )
 
 # Branches
-from mcp_workspace.git_operations.branches import checkout_branch
+from mcp_workspace.git_operations.branches import checkout_branch, create_branch, delete_branch
 
 # Commits
 from mcp_workspace.git_operations.commits import commit_staged_files, get_latest_commit_sha
@@ -54,6 +55,7 @@ from mcp_workspace.git_operations.remotes import (
     fetch_remote,
     get_github_repository_url,
     git_push,
+    push_branch,
     rebase_onto_branch,
 )
 
@@ -73,6 +75,7 @@ __all__ = [
     "CommitResult",
     "_safe_repo_context",
     "get_full_status",
+    "is_git_repository",
     "is_working_directory_clean",
     "branch_exists",
     "extract_issue_number_from_branch",
@@ -81,6 +84,8 @@ __all__ = [
     "has_remote_tracking_branch",
     "validate_branch_name",
     "checkout_branch",
+    "create_branch",
+    "delete_branch",
     "commit_staged_files",
     "get_latest_commit_sha",
     "get_branch_diff",
@@ -89,6 +94,7 @@ __all__ = [
     "fetch_remote",
     "get_github_repository_url",
     "git_push",
+    "push_branch",
     "rebase_onto_branch",
     "stage_all_changes",
     "commit_all_changes",
@@ -126,7 +132,7 @@ def test_key_symbols_accessible() -> None:
 def test_all_exports_defined() -> None:
     """__all__ has expected count."""
     from mcp_coder.mcp_workspace_git import __all__
-    assert len(__all__) == 25  # 24 symbols + 1 constant
+    assert len(__all__) == 29  # 28 symbols + 1 constant
 ```
 
 ## HOW

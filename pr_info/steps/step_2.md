@@ -25,6 +25,16 @@ Switch every `src/` file that imports from `mcp_coder.utils.git_operations` (or 
 | `src/mcp_coder/workflow_utils/commit_operations.py` | `utils.git_operations` | `get_git_diff_for_commit`, `stage_all_changes` |
 | `src/mcp_coder/workflow_utils/base_branch.py` | `utils.git_operations` | `MERGE_BASE_DISTANCE_THRESHOLD`, `detect_parent_branch_via_merge_base`, `extract_issue_number_from_branch`, `get_current_branch_name`, `get_default_branch_name` |
 | `src/mcp_coder/utils/git_utils.py` | `.git_operations` | `get_current_branch_name` |
+| `src/mcp_coder/workflow_utils/failure_handling.py` | `utils.git_operations` + `.branch_queries` + `.core` | `extract_issue_number_from_branch`, `get_current_branch_name`, `_safe_repo_context` |
+| `src/mcp_coder/utils/github_operations/base_manager.py` | `utils` (module-level import of `git_operations`) | `is_git_repository`, `get_github_repository_url` |
+| `src/mcp_coder/utils/github_operations/ci_results_manager.py` | `utils.git_operations.branch_queries` | `validate_branch_name` |
+| `src/mcp_coder/utils/github_operations/pr_manager.py` | `utils.git_operations` | `get_default_branch_name`, `get_github_repository_url` |
+| `src/mcp_coder/utils/github_operations/issues/manager.py` | `utils.git_operations.branch_queries` | `extract_issue_number_from_branch`, `get_current_branch_name` |
+
+**Note on `base_manager.py`**: This file imports the `git_operations` module itself (not individual symbols) and uses attribute access (`git_operations.is_git_repository()`). The transformation is:
+- Remove `git_operations` from `from mcp_coder.utils import git_operations, user_config`
+- Add `from mcp_coder.mcp_workspace_git import is_git_repository, get_github_repository_url`
+- Update call sites from `git_operations.X(...)` to `X(...)`
 
 ### `utils/__init__.py` — source from shim + remove dead symbols
 
@@ -32,9 +42,11 @@ Switch every `src/` file that imports from `mcp_coder.utils.git_operations` (or 
 `CommitResult`, `branch_exists`, `checkout_branch`, `commit_all_changes`, `commit_staged_files`, `fetch_remote`, `get_branch_diff`, `get_current_branch_name`, `get_default_branch_name`, `get_full_status`, `get_git_diff_for_commit`, `get_github_repository_url`, `git_push`, `is_working_directory_clean`, `stage_all_changes`
 
 **Dead symbols to remove** (not in shim, no external consumers):
-`create_branch`, `git_move`, `is_file_tracked`, `push_branch`, `is_git_repository`, `get_staged_changes`, `get_unstaged_changes`, `stage_specific_files`, `PushResult`
+`git_move`, `is_file_tracked`, `get_staged_changes`, `get_unstaged_changes`, `stage_specific_files`
 
-Note on `is_git_repository`: it's used in `cli/commands/commit.py` — that file imports it from `utils.git_operations` directly, which we change to import from the shim. But `is_git_repository` is NOT in the shim's 24 symbols. Check: the issue lists it as a dead symbol. If `commit.py` uses it, either add it to the shim or replace the usage. **Resolution**: `is_git_repository` is used in `commit.py` — it must be added to the shim, OR `commit.py` must stop using it. Per the issue's dead symbol list, it should be removed. Check `commit.py` usage and handle accordingly (likely the check is redundant since commit operations will fail naturally on non-git dirs).
+Note: `is_git_repository` was previously listed as dead but now has consumers (`commit.py`, `base_manager.py`) and is in the shim (added in step 1). `PushResult` was removed from this list because it was never in `utils/__init__.py` to begin with — removing it would be a no-op. `create_branch` and `push_branch` are now in the shim (added in step 1) so they are no longer dead.
+
+Note on `is_git_repository` in `cli/commands/commit.py`: since `is_git_repository` is now in the shim, `commit.py` will import it from `mcp_coder.mcp_workspace_git` like the other symbols.
 
 ### `__init__.py` (root) — source from shim
 
@@ -47,7 +59,7 @@ To:
 from .mcp_workspace_git import (CommitResult, commit_all_changes, ...)
 ```
 
-Note: `is_git_repository` is in root `__all__` — remove it (dead symbol per issue).
+Note: `is_git_repository` is now in the shim, so it can remain in root `__all__` if still re-exported. If the root `__init__.py` re-exports it, source it from the shim.
 
 ## WHAT — The transformation pattern
 
