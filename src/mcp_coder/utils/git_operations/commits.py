@@ -4,7 +4,8 @@ from pathlib import Path
 from typing import Optional
 
 from git.exc import GitCommandError, InvalidGitRepositoryError
-from mcp_coder_utils.subprocess_runner import execute_command
+
+from mcp_coder.utils.subprocess_runner import execute_command
 
 from .core import GIT_SHORT_HASH_LENGTH, CommitResult, _safe_repo_context, logger
 from .repository_status import get_staged_changes, is_git_repository

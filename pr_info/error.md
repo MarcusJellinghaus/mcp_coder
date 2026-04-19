@@ -24,4 +24,6 @@ Second attempt also confirmed:
 - Files were restored from reference project `p_workspace` (identical content, relative imports)
 - Additional blocker: `github_operations` files cannot import from the shim due to circular import chain: `shim` → `git_operations.*` → `utils.__init__` → `github_operations` → `shim` (still loading). These must keep direct `git_operations` imports.
 
+**Re-confirmed 2026-04-19 (third attempt)**: Same result. Pylint reports E0401/E0611 for all 11 submodules when the shim imports from `mcp_workspace.file_tools.git_operations.*`. Files deleted and restored from reference project. All checks pass with local copy in place.
+
 **Action needed**: Reinstall `mcp_workspace` from latest GitHub source (`pip install --force-reinstall git+https://github.com/MarcusJellinghaus/mcp-workspace.git`) so that `mcp_workspace.file_tools.git_operations.*` submodules are importable, then retry Step 4.
