@@ -42,9 +42,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 5: Add `[tool.mcp-coder.implement]` to pyproject.toml
-- [ ] Implementation: add `[tool.mcp-coder.implement]` section with `format_code = true` and `check_type_hints = true`, add verification test ([step_5.md](./steps/step_5.md))
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `[tool.mcp-coder.implement]` section with `format_code = true` and `check_type_hints = true`, add verification test ([step_5.md](./steps/step_5.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: verify all steps integrated correctly
