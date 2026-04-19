@@ -50,6 +50,8 @@ Switch every `src/` file that imports from `mcp_coder.utils.git_operations` (or 
 
 Note: `is_git_repository` was previously listed as dead but now has consumers (`commit.py`, `base_manager.py`) and is in the shim (added in step 1). `PushResult` was removed from this list because it was never in `utils/__init__.py` to begin with — removing it would be a no-op. `create_branch` and `push_branch` are now in the shim (added in step 1) so they are no longer dead.
 
+**Clarification on `is_git_repository`, `create_branch`, `push_branch`**: These symbols are in the shim (they have consumers) but are NOT re-exported through `utils/__init__.py` because no consumer imports them via that path. They are removed from `utils/__init__.py` along with the other dead symbols.
+
 Note on `is_git_repository` in `cli/commands/commit.py`: since `is_git_repository` is now in the shim, `commit.py` will import it from `mcp_coder.mcp_workspace_git` like the other symbols.
 
 ### `__init__.py` (root) — source from shim

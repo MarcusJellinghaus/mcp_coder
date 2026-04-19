@@ -62,4 +62,29 @@
 - step_5.md: Made `jenkins_independence` update wording explicit
 - summary.md: Updated file counts (now 38 files modified)
 
+**Status**: committed (6551c98)
+
+## Round 3 — 2026-04-19
+
+**Findings**:
+- 3 test files had wrong `@patch` target (`mcp_coder.mcp_workspace_git.is_git_repository` should be `mcp_coder.utils.github_operations.base_manager.is_git_repository`): test_ci_results_manager_foundation.py, test_issue_branch_manager.py, issues/conftest.py
+- `test_check_branch_status_pr_waiting.py` had wrong `@patch` targets (should be `mcp_workspace.git_operations.branch_queries.*` since patching internal dependencies)
+- Inconsistency: `is_git_repository`, `create_branch`, `push_branch` marked as "no longer dead" but not in surviving re-exports list
+- Stale docstring comment in `test_git_tool.py` referencing deleted test directory
+- Step sizing is reasonable (mechanical transforms, no split needed)
+- Symbol count (29) verified correct
+- Architecture config changes verified complete
+
+**Decisions**:
+- Fix @patch paths for 3 github_operations test files → accepted (critical correctness fix)
+- Fix @patch paths for test_check_branch_status_pr_waiting.py → accepted (critical correctness fix)
+- Clarify re-export scope in step 2 → accepted (consistency improvement)
+- Add test_git_tool.py stale comment fix → accepted (nit)
+
+**User decisions**: None needed this round.
+
+**Changes**:
+- step_2.md: Added clarifying note about symbols in shim but not in utils/__init__.py re-exports
+- step_3.md: Fixed @patch paths for 4 test files, added test_git_tool.py, rewrote Important Note with correct rationale
+
 **Status**: pending commit
