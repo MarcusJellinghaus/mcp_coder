@@ -26,5 +26,5 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ## Pull Request
-- [ ] PR review
+- [x] PR review
 - [ ] PR summary
