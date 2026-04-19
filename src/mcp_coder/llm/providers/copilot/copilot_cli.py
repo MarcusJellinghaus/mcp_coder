@@ -196,6 +196,9 @@ def build_copilot_command(
         "--output-format",
         "json",
         "-s",
+        # --allow-all-tools auto-approves visible tools without prompting;
+        # --available-tools (added below) controls which tools are visible.
+        # They are complementary, not redundant.
         "--allow-all-tools",
     ]
 
@@ -297,7 +300,10 @@ def ask_copilot_cli(
         install_hint="Install GitHub Copilot CLI: https://github.com/github/gh-copilot",
     )
 
-    # Build prompt: prepend system prompt on new sessions only
+    # Build prompt: prepend system prompt on new sessions only.
+    # Workaround: Copilot CLI has no --system-prompt flag, so we prepend
+    # it to the user question. On --resume we skip it because Copilot
+    # preserves full conversation history and would duplicate it.
     prompt_text = question
     if session_id is None and system_prompt:
         prompt_text = f"{system_prompt}\n\n{question}"
@@ -351,7 +357,7 @@ def ask_copilot_cli(
         if result.stdout:
             try:
                 stream_file_path.write_text(result.stdout, encoding="utf-8")
-            except (OSError, IOError) as e:
+            except OSError as e:
                 logger.warning("Failed to write stream file: %s", e)
 
         # Handle errors

@@ -19,7 +19,7 @@ def log_llm_request(
     """Log LLM request details at DEBUG level.
 
     Args:
-        provider: 'claude' or 'langchain'
+        provider: Provider name (e.g. 'claude', 'copilot', 'langchain')
         session_id: Session ID or None for new session
         prompt: The prompt being sent
         timeout: Timeout in seconds
