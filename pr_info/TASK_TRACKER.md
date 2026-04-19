@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Add `color` field to `labels.json` and test fixtures ([step_1.md](./steps/step_1.md))
-- [ ] Implementation: add `"color"` to vscodeclaude entries in `labels.json` + update mock configs in `conftest.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `"color"` to vscodeclaude entries in `labels.json` + update mock configs in `conftest.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Add `{color_prefix}` to templates and workspace, update tests ([step_2.md](./steps/step_2.md))
 - [ ] Implementation: add `{color_prefix}` placeholder to templates, build prefix in `workspace.py`, add/update tests
