@@ -524,6 +524,8 @@ Please implement this task step by step."""
             logger.warning(
                 "Mypy check failed or found unresolved issues - continuing anyway"
             )
+    elif not check_type_hints:
+        logger.info("Skipping mypy check (check_type_hints disabled)")
     else:
         logger.info("Skipping mypy check (will run after all tasks complete)")
 
