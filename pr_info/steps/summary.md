@@ -121,8 +121,8 @@ Note: `is_git_repository`, `create_branch`, `push_branch` were previously listed
 |------|--------|-------------|
 | 0 | Pre-flight check | Verify `mcp_workspace.git_operations` is available; fail-fast if not |
 | 1 | Shim + smoke test | Create shim module and smoke test |
-| 2 | Update source consumers | Switch all `src/` imports to use shim |
-| 3 | Update test consumers + delete old tests | Switch test imports; delete `tests/utils/git_operations/` |
+| 2 | Update source consumers + dependent tests | Switch all `src/` imports to use shim; update test `@patch` targets that break from source changes |
+| 3 | Update remaining test consumers + delete old tests | Switch remaining test imports; delete `tests/utils/git_operations/`; add smoke test |
 | 4 | Delete local git_operations | Delete `src/mcp_coder/utils/git_operations/` |
 | 5 | Update architecture configs | `.importlinter` and `tach.toml` changes |
 
@@ -130,6 +130,6 @@ Note: `is_git_repository`, `create_branch`, `push_branch` were previously listed
 
 - Import path is `mcp_workspace.git_operations` (top-level, not under `file_tools`)
 - `_safe_repo_context` imported from `mcp_workspace.git_operations.core` (private, pragmatic)
-- Only 6 of 28 symbols are in `mcp_workspace.git_operations.__init__`; rest need submodule imports
+- 10 of 29 symbols are in `mcp_workspace.git_operations.__init__`; rest need submodule imports
 - Tests must also use the shim (import-linter enforced)
 - Dependency: issue ② (mcp-workspace#98) must be complete first

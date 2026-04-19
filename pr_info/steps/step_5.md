@@ -65,9 +65,18 @@ Remove the old `ignore_imports` line that allowed `mcp_coder.utils.git_operation
 
 ## WHAT — `tach.toml` changes
 
-### Verify with `tach check`
+### Modules needing `depends_on` for `mcp_workspace_git`
 
-After making changes, run `tach check` to verify that modules importing from `mcp_coder.mcp_workspace_git` (workflows, workflow_utils, checks, cli) don't need explicit `depends_on` entries. If they do, add them.
+The following modules import (directly or transitively) from `mcp_coder.mcp_workspace_git` and need `{ path = "mcp_coder.mcp_workspace_git" }` added to their `depends_on`:
+
+- `mcp_coder` (root) -- root `__init__.py` re-exports git symbols from shim
+- `mcp_coder.cli` -- `cli/utils.py` and commands import from shim
+- `mcp_coder.workflows` -- multiple workflow modules import from shim
+- `mcp_coder.workflow_utils` -- `commit_operations.py`, `base_branch.py`, `failure_handling.py` import from shim
+- `mcp_coder.checks` -- `branch_status.py` imports from shim
+- `mcp_coder.utils` -- `utils/__init__.py` and `git_utils.py` source from shim
+
+After making all changes, run `tach check` to verify boundaries are satisfied.
 
 ### Add new layer
 
@@ -116,11 +125,12 @@ Modules that depend on `mcp_coder.mcp_tools_py` or will depend on `mcp_coder.mcp
 - `mcp_coder.utils` — currently depends on `config`, `constants`. After this, `utils/__init__.py` imports from `mcp_workspace_git`, so add `{ path = "mcp_coder.mcp_workspace_git" }` to its depends_on.
 - `mcp_coder.workflows` already has `mcp_coder.mcp_tools_py` in depends_on — no change needed since layer hierarchy handles it.
 
-Also update the layered architecture contract in `.importlinter`:
+Also update the layered architecture contract in `.importlinter`. The shim (`mcp_coder.mcp_workspace_git`) should be on a **separate layer below** `utils`, matching `tach.toml` where `shim_workspace` is below `infrastructure`:
 ```
-mcp_coder.utils | mcp_coder.mcp_tools_py | mcp_coder.mcp_workspace_git
+mcp_coder.utils | mcp_coder.mcp_tools_py
+mcp_coder.mcp_workspace_git
 ```
-Since these are now all at the same conceptual level in the layered architecture contract.
+This means `utils` can import from `mcp_workspace_git`, but not vice versa.
 
 ## ALGORITHM
 

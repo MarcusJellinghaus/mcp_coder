@@ -4,7 +4,9 @@
 
 ## Goal
 
-Switch test files that import from `mcp_coder.utils.git_operations` to use the shim. Delete the old `tests/utils/git_operations/` test suite (already moved to mcp_workspace). Update `tests/test_module_integration.py` to test the new import paths.
+Switch remaining test files that import from `mcp_coder.utils.git_operations` to use the shim. Delete the old `tests/utils/git_operations/` test suite (already moved to mcp_workspace). Add a smoke test for the shim.
+
+> **Note:** Test files whose `@patch` targets break due to step 2 source changes were already updated in step 2 (`tests/test_module_integration.py`, `tests/utils/github_operations/test_base_manager.py`, `test_ci_results_manager_foundation.py`, `test_issue_branch_manager.py`, `issues/conftest.py`, `test_issue_manager_label_update.py`, `tests/cli/test_utils.py`). This step handles only the remaining test-only files.
 
 ## WHERE
 
@@ -12,26 +14,20 @@ Switch test files that import from `mcp_coder.utils.git_operations` to use the s
 
 | File | Old import | New import |
 |------|-----------|------------|
-| `tests/utils/test_git_encoding_stress.py` | `from mcp_coder.utils.git_operations import get_branch_diff, is_git_repository` | `from mcp_coder.mcp_workspace_git import get_branch_diff` (remove `is_git_repository` — dead symbol, check if still used in test) |
+| `tests/utils/test_git_encoding_stress.py` | `from mcp_coder.utils.git_operations import get_branch_diff, is_git_repository` | `from mcp_coder.mcp_workspace_git import get_branch_diff` (remove `is_git_repository` (unused in this file)) |
 | `tests/cli/commands/test_check_branch_status_pr_waiting.py` | `mcp_coder.utils.git_operations.branch_queries` (imports AND `@patch` decorators) | `from mcp_coder.mcp_workspace_git import ...` + update `@patch` targets to `@patch("mcp_workspace.git_operations.branch_queries._safe_repo_context")` and `@patch("mcp_workspace.git_operations.branch_queries.is_git_repository")` |
 | `tests/workflows/test_create_pr_integration.py` | `mcp_coder.utils.git_operations` | `from mcp_coder.mcp_workspace_git import ...` |
 | `tests/utils/github_operations/test_github_integration_smoke.py` | `mcp_coder.utils.git_operations` | `from mcp_coder.mcp_workspace_git import ...` (uses `create_branch`, `delete_branch`, `branch_exists`, `checkout_branch`) |
 | `tests/utils/github_operations/test_github_utils.py` | `mcp_coder.utils.git_operations` | `from mcp_coder.mcp_workspace_git import ...` (uses `create_branch`, `push_branch`, `get_current_branch_name`, `branch_exists`, `checkout_branch`, `fetch_remote`) |
-| `tests/cli/test_utils.py` | `@patch("mcp_coder.utils.git_operations.branch_queries.get_current_branch_name")` | `@patch("mcp_coder.mcp_workspace_git.get_current_branch_name")` (multiple `@patch` uses) |
-| `tests/utils/github_operations/test_base_manager.py` | `@patch("mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository")` + `.get_github_repository_url` | `@patch("mcp_coder.utils.github_operations.base_manager.is_git_repository")` + `.get_github_repository_url` (after step 2 changes base_manager.py from module-level `git_operations` import to direct symbol import, the patch path changes) |
-| `tests/utils/github_operations/test_ci_results_manager_foundation.py` | `@patch("mcp_coder.utils.git_operations.is_git_repository")` | `@patch("mcp_coder.utils.github_operations.base_manager.is_git_repository")` (patch where the symbol is looked up — `base_manager.py` imports it directly after step 2) |
-| `tests/utils/github_operations/test_issue_branch_manager.py` | `@patch("mcp_coder.utils.git_operations.is_git_repository")` (multiple uses) | `@patch("mcp_coder.utils.github_operations.base_manager.is_git_repository")` (multiple `@patch` uses — patch where the symbol is looked up in `base_manager.py`) |
-| `tests/utils/github_operations/issues/conftest.py` | `@patch("mcp_coder.utils.git_operations.is_git_repository")` | `@patch("mcp_coder.utils.github_operations.base_manager.is_git_repository")` (fixture-level patch — patch where the symbol is looked up in `base_manager.py`) |
-| `tests/utils/github_operations/test_issue_manager_label_update.py` | `@patch("mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository")` | `@patch("mcp_coder.utils.github_operations.base_manager.is_git_repository")` (same base_manager pattern as test_base_manager.py) |
 | `tests/cli/commands/test_git_tool.py` | stale docstring comment on line 4 referencing `tests/utils/git_operations/test_compact_diffs.py` | Update or remove the docstring comment (directory deleted in this step) |
 
-**Important note about `@patch` decorators**: `test_check_branch_status_pr_waiting.py` uses `@patch("mcp_coder.utils.git_operations.branch_queries.X")` as string-based mock targets. These must be updated. The test patches internal dependencies of `has_remote_tracking_branch()`, which lives in `mcp_workspace.git_operations.branch_queries`. After migration, the function's internal calls resolve from that module's namespace, so the correct patch targets are `@patch("mcp_workspace.git_operations.branch_queries._safe_repo_context")` and `@patch("mcp_workspace.git_operations.branch_queries.is_git_repository")`. Note: `@patch` strings are NOT Python imports — they're runtime lookups, so import-linter won't flag them.
+**Important note about `@patch` decorators**: `test_check_branch_status_pr_waiting.py` uses `@patch("mcp_coder.utils.git_operations.branch_queries.X")` as string-based mock targets. These must be updated. The test patches internal dependencies of `has_remote_tracking_branch()`, which lives in `mcp_workspace.git_operations.branch_queries`. After migration, the function's internal calls resolve from that module's namespace, so the correct patch targets are `@patch("mcp_workspace.git_operations.branch_queries._safe_repo_context")` and `@patch("mcp_workspace.git_operations.branch_queries.is_git_repository")`. Note: `@patch` strings are NOT Python imports -- they're runtime lookups, so import-linter won't flag them.
 
-### Test file to rewrite
+### Smoke test to add
 
-| File | Change |
-|------|--------|
-| `tests/test_module_integration.py` | Rewrite to test shim import paths instead of old `utils.git_operations` paths. Remove tests for dead symbols. Update `test_no_circular_imports` to test through shim. |
+| File | Purpose |
+|------|---------|
+| `tests/test_mcp_workspace_git_smoke.py` | Smoke test: shim importable, key symbols accessible |
 
 ### Directory to delete
 
@@ -46,31 +42,16 @@ Contains 14 files:
 - `test_diffs.py`, `test_file_tracking.py`, `test_parent_branch_detection.py`
 - `test_remotes.py`, `test_repository_status.py`, `test_staging.py`
 
-## WHAT — Updated `tests/test_module_integration.py`
-
-Rewrite to test:
-1. Shim module importability (`from mcp_coder.mcp_workspace_git import ...`)
-2. `utils` re-exports still work for surviving symbols
-3. Root `mcp_coder` re-exports still work
-4. Function attributes preserved
-5. `CommitResult` TypedDict usable
-6. `__all__` exports correct (updated lists — no dead symbols)
-7. No circular imports (test through shim path, not old path)
-
-Remove from tests:
-- References to `mcp_coder.utils.git_operations` (package deleted)
-- Dead symbols: `git_move`, `is_file_tracked`, `get_staged_changes`, `get_unstaged_changes`, `stage_specific_files`
-- Note: `is_git_repository`, `create_branch`, `push_branch` are now in the shim (they have consumers)
-
 ## ALGORITHM
 
 ```
 1. Delete tests/utils/git_operations/ directory entirely
-2. Update tests/utils/test_git_encoding_stress.py imports
-3. Rewrite tests/test_module_integration.py for new paths
+2. Update remaining test file imports (test_git_encoding_stress.py, test_check_branch_status_pr_waiting.py,
+   test_create_pr_integration.py, test_github_integration_smoke.py, test_github_utils.py, test_git_tool.py)
+3. Add tests/test_mcp_workspace_git_smoke.py
 4. Run pytest (unit tests only — exclude integration markers)
 5. Run pylint, mypy on modified test files
-6. Commit: "refactor: update test imports to shim, delete old git_operations tests"
+6. Commit: "refactor: update remaining test imports to shim, delete old git_operations tests"
 ```
 
 ## LLM Prompt
@@ -79,9 +60,12 @@ Remove from tests:
 Read pr_info/steps/summary.md and pr_info/steps/step_3.md.
 
 Delete the entire tests/utils/git_operations/ directory. Update test imports in
-tests/utils/test_git_encoding_stress.py to use the shim. Rewrite
-tests/test_module_integration.py to test the new shim-based import paths
-(remove dead symbols, test surviving re-exports through utils and root __init__).
+the remaining test files listed in the step (test_git_encoding_stress.py,
+test_check_branch_status_pr_waiting.py, test_create_pr_integration.py,
+test_github_integration_smoke.py, test_github_utils.py, test_git_tool.py)
+to use the shim. Add the smoke test tests/test_mcp_workspace_git_smoke.py.
+Note: tests/test_module_integration.py and @patch-dependent test files were
+already updated in step 2.
 Run pylint, mypy, and pytest checks.
-Commit with message: "refactor: update test imports to shim, delete old git_operations tests"
+Commit with message: "refactor: update remaining test imports to shim, delete old git_operations tests"
 ```
