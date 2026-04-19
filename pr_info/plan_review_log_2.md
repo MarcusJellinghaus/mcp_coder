@@ -95,4 +95,18 @@
 - step_2.md: Fixed root `__init__.py` note, removed test_utils.py from test table
 - step_3.md: Added test_utils.py with correct @patch details, removed from "already handled" note
 
-**Status**: pending commit
+**Status**: committed
+
+## Round 5 — 2026-04-19
+
+Verification pass — no issues found. Plan is clean.
+
+## Final Status
+
+- **Rounds run**: 5 (4 with changes, 1 clean verification)
+- **Commits produced**: 4
+  1. `abf5dda` — restructure steps 2/3, fix tach/importlinter configs, update symbol count
+  2. `bfa0f00` — remove duplicate smoke test, fix is_git_repository contradiction, align layers
+  3. `0cca209` — list all 7 tach dependants, clarify lazy imports
+  4. `6d30b49` — correct root __init__.py note, move test_utils.py to step 3
+- **Plan status**: ready for approval
