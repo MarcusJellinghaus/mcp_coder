@@ -44,12 +44,15 @@ def ask_copilot_cli_stream(
     logs_dir: str | None = None,
     branch_name: str | None = None,
     system_prompt: str | None = None,
-    settings_allow: list[str] | None = None,
+    execution_dir: str | None = None,
 ) -> Iterator[StreamEvent]:
     """Stream Copilot CLI responses as events.
 
     Same parameters as ask_copilot_cli(). Yields StreamEvent dicts
     as each JSONL line arrives from the subprocess.
+
+    Args:
+        execution_dir: Directory to read .claude/settings.local.json from
 
     Yields:
         StreamEvent dicts: text_delta, tool_use_start, tool_result,
@@ -67,7 +70,7 @@ from .copilot_cli_streaming import ask_copilot_cli_stream
 
 - Imports `stream_subprocess` from `mcp_coder.utils.subprocess_streaming`
 - Imports `CommandOptions`, `CommandResult` from subprocess_runner
-- Imports `parse_copilot_jsonl_line`, `build_copilot_command`, `convert_settings_to_copilot_tools` from `.copilot_cli`
+- Imports `parse_copilot_jsonl_line`, `build_copilot_command`, `convert_settings_to_copilot_tools`, `_read_settings_allow` from `.copilot_cli`
 - Imports `find_executable` from `mcp_coder.utils.executable_finder`
 - Imports `get_stream_log_path` from `.copilot_cli_log_paths`
 - Uses same `raw_line` passthrough pattern as Claude streaming for `json-raw` mode
@@ -88,7 +91,7 @@ from .copilot_cli_streaming import ask_copilot_cli_stream
 ### Stream orchestration
 ```
 1. Find executable, build prompt (prepend system prompt if new session)
-2. Convert tool settings, build command
+2. Read settings_allow via _read_settings_allow(execution_dir), convert via convert_settings_to_copilot_tools(), build command
 3. Open log file, start stream_subprocess
 4. For each line: write to log, yield raw_line, parse and yield mapped events
 5. After stream ends: check result for timeout/error, yield error event if needed

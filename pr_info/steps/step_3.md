@@ -59,7 +59,7 @@ Extracted from `claude_code_cli_log_paths.py` — these are provider-agnostic ut
 
 ## HOW
 
-- **Sub-step 3a (extract shared utilities):** Extract `sanitize_branch_identifier` and `DEFAULT_LOGS_DIR` from `claude_code_cli_log_paths.py` into `src/mcp_coder/llm/log_utils.py`. Update `claude_code_cli_log_paths.py` to `from ...log_utils import sanitize_branch_identifier, DEFAULT_LOGS_DIR`.
+- **Sub-step 3a (extract shared utilities):** Extract `sanitize_branch_identifier` and `DEFAULT_LOGS_DIR` from `claude_code_cli_log_paths.py` into `src/mcp_coder/llm/log_utils.py`. Update `claude_code_cli_log_paths.py` to `from ...log_utils import sanitize_branch_identifier, DEFAULT_LOGS_DIR`. Keep both names in `claude_code_cli_log_paths.py`'s public API (i.e., import them and let them be re-exported) so that existing imports from other claude modules (e.g., `claude_code_cli.py` line 19) continue to work without changes. This minimizes the refactoring diff.
 - **Sub-step 3b (copilot log paths):** Create `copilot_cli_log_paths.py` importing from `...log_utils` (three dots — up from `providers/copilot/` to `llm/`).
 
 ## ALGORITHM
@@ -76,6 +76,8 @@ Extracted from `claude_code_cli_log_paths.py` — these are provider-agnostic ut
 
 - Input: `logs_dir`, `cwd`, `branch_name` (all optional strings)
 - Output: `Path` to `logs/copilot-sessions/session_YYYYMMDD_HHMMSS_NNNNNN[_BRANCH].ndjson`
+
+**Note on existing tests:** Existing tests for `sanitize_branch_identifier` in `tests/llm/providers/claude/test_claude_cli_stream_parsing.py` remain as-is — they test via the re-exported path which still works. The new `tests/llm/test_log_utils.py` tests the canonical location. No test removal needed.
 
 ## Tests
 

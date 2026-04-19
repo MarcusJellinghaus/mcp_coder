@@ -17,6 +17,8 @@
 - `src/mcp_coder/llm/providers/copilot/copilot_cli.py` (add command builder + ask function)
 - `src/mcp_coder/llm/providers/claude/claude_code_cli.py` (update imports to use `llm.logging_utils`)
 - `src/mcp_coder/llm/providers/claude/claude_code_cli_streaming.py` (update imports to use `llm.logging_utils`)
+- `src/mcp_coder/llm/providers/claude/claude_code_api.py` (update imports to use `llm.logging_utils`)
+- `.importlinter` (update `mlflow_logger_no_cycles` contract path after logging_utils move)
 - `tests/llm/providers/copilot/test_copilot_cli.py` (add command builder + ask tests)
 
 ## WHAT
@@ -94,7 +96,7 @@ def ask_copilot_cli(
 
 ## HOW
 
-- **Sub-step 5a (move logging_utils):** Move `src/mcp_coder/llm/providers/claude/logging_utils.py` to `src/mcp_coder/llm/logging_utils.py` (use `mcp__tools-py__move_module` during implementation). Update imports in `claude_code_cli.py` and `claude_code_cli_streaming.py` to use `...logging_utils` (or absolute `mcp_coder.llm.logging_utils`). If `tests/llm/providers/claude/test_logging_utils.py` exists, move it to `tests/llm/test_logging_utils.py`.
+- **Sub-step 5a (move logging_utils):** Move `src/mcp_coder/llm/providers/claude/logging_utils.py` to `src/mcp_coder/llm/logging_utils.py` (use `mcp__tools-py__move_module` during implementation). Update imports in `claude_code_cli.py`, `claude_code_cli_streaming.py`, and `claude_code_api.py` to use `...logging_utils` (or absolute `mcp_coder.llm.logging_utils`). Update `.importlinter` contract `mlflow_logger_no_cycles` — change `mcp_coder.llm.providers.claude.logging_utils` to `mcp_coder.llm.logging_utils`. If `tests/llm/providers/claude/test_logging_utils.py` exists, move it to `tests/llm/test_logging_utils.py`.
 - **Sub-step 5b (command builder + ask function):** Add the command builder and `ask_copilot_cli()` entry point.
 
 ### Imports

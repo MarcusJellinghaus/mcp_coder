@@ -43,5 +43,30 @@
 - `step_5.md`: Added sub-step 5a to move logging_utils.py, clarified 8KB limit measurement, changed settings_allow → execution_dir parameter
 - `step_7.md`: Moved _read_settings_allow into copilot_cli.py, interface just passes execution_dir
 
+**Status**: committed (43780fc)
+
+## Round 2 — 2026-04-19
+
+**Findings** (8 actionable from engineer review):
+- #1 (Medium): Step 5 missing `claude_code_api.py` from import update list after logging_utils move
+- #2 (Medium): `.importlinter` `mlflow_logger_no_cycles` contract references old `logging_utils` path
+- #3 (Medium): Step 6 `ask_copilot_cli_stream` still uses `settings_allow` parameter instead of `execution_dir`
+- #5 (Low): `claude_code_cli.py` imports `sanitize_branch_identifier` — re-export strategy not specified
+- #6 (Low): Existing tests for `sanitize_branch_identifier` in `test_claude_cli_stream_parsing.py` — dedup not addressed
+- #7 (Low): Summary.md mixes new/moved files into "Files Modified" table
+- #8 (Low): Summary.md missing `claude_code_api.py` in modified files
+- #9 (Low): Summary.md missing `.importlinter` in modified files
+
+**Decisions**:
+- All findings accepted — all are straightforward consistency fixes, no design questions
+
+**User decisions**: None needed
+
+**Changes**:
+- `step_5.md`: Added `claude_code_api.py` and `.importlinter` to modified files and sub-step 5a
+- `step_6.md`: Changed `settings_allow` → `execution_dir` parameter, updated algorithm
+- `step_3.md`: Added re-export strategy guidance and existing test dedup note
+- `summary.md`: Moved `log_utils.py` to Files Created, added `claude_code_api.py` and `.importlinter` to Files Modified
+
 **Status**: pending commit
 
