@@ -10,6 +10,13 @@ from pathlib import Path
 
 from ...log_utils import DEFAULT_LOGS_DIR, sanitize_branch_identifier
 
+__all__ = [
+    "DEFAULT_LOGS_DIR",
+    "sanitize_branch_identifier",
+    "CLAUDE_SESSIONS_SUBDIR",
+    "get_stream_log_path",
+]
+
 CLAUDE_SESSIONS_SUBDIR = "claude-sessions"
 
 
