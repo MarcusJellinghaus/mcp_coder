@@ -121,6 +121,12 @@ _.verify_parser
 # test_execution_dir_integration.py - Fixture triggers skip logic
 _.require_claude_cli
 
+# test_copilot_integration.py - Fixture triggers skip logic
+_.require_copilot_cli
+
+# test_copilot_cli.py - @patch decorator requires accepting the mock parameter
+_.mock_settings
+
 # test_issue_manager_label_update.py - Fixture used for side effect (patching)
 _._mock_git_repo
 
