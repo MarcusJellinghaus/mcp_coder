@@ -67,7 +67,7 @@ To:
 from .mcp_workspace_git import (CommitResult, commit_all_changes, ...)
 ```
 
-Note: `is_git_repository` is now in the shim, so it can remain in root `__all__` if still re-exported. If the root `__init__.py` re-exports it, source it from the shim.
+Note: `is_git_repository`, `create_branch`, and `push_branch` are in the shim (they have consumers). Source them from the shim in both `utils/__init__.py` and root `__init__.py`.
 
 ### Test files updated alongside source changes
 
@@ -115,7 +115,7 @@ Actually: since `mcp_workspace_git.py` is at `src/mcp_coder/mcp_workspace_git.py
      Remove dead symbols from import and __all__
 3. Update root __init__.py:
      Replace `from .utils.git_operations import (...)` with `from .mcp_workspace_git import (...)`
-     Remove is_git_repository from import and __all__
+     Source is_git_repository from shim (keep in __all__)
 4. Update test files listed in "Test files updated alongside source changes":
      Update @patch targets to match the new import paths in the source files
      Rewrite tests/test_module_integration.py for new shim paths

@@ -75,6 +75,7 @@ The following modules import (directly or transitively) from `mcp_coder.mcp_work
 - `mcp_coder.workflow_utils` -- `commit_operations.py`, `base_branch.py`, `failure_handling.py` import from shim
 - `mcp_coder.checks` -- `branch_status.py` imports from shim
 - `mcp_coder.utils` -- `utils/__init__.py` and `git_utils.py` source from shim
+- `tests` -- test files import from shim
 
 After making all changes, run `tach check` to verify boundaries are satisfied.
 
@@ -125,12 +126,12 @@ Modules that depend on `mcp_coder.mcp_tools_py` or will depend on `mcp_coder.mcp
 - `mcp_coder.utils` — currently depends on `config`, `constants`. After this, `utils/__init__.py` imports from `mcp_workspace_git`, so add `{ path = "mcp_coder.mcp_workspace_git" }` to its depends_on.
 - `mcp_coder.workflows` already has `mcp_coder.mcp_tools_py` in depends_on — no change needed since layer hierarchy handles it.
 
-Also update the layered architecture contract in `.importlinter`. The shim (`mcp_coder.mcp_workspace_git`) should be on a **separate layer below** `utils`, matching `tach.toml` where `shim_workspace` is below `infrastructure`:
+Also update the layered architecture contract in `.importlinter`. Both shims (`mcp_coder.mcp_tools_py` and `mcp_coder.mcp_workspace_git`) should be on the **same layer below** `utils`, matching `tach.toml` where both are in `shim_workspace` (below `infrastructure`):
 ```
-mcp_coder.utils | mcp_coder.mcp_tools_py
-mcp_coder.mcp_workspace_git
+mcp_coder.utils
+mcp_coder.mcp_tools_py | mcp_coder.mcp_workspace_git
 ```
-This means `utils` can import from `mcp_workspace_git`, but not vice versa.
+This means `utils` can import from either shim, but not vice versa. Both shims are peers.
 
 ## ALGORITHM
 

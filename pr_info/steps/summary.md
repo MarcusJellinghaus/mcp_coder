@@ -96,6 +96,7 @@ Note: `is_git_repository`, `create_branch`, `push_branch` were previously listed
 | `tests/test_module_integration.py` | Update to test shim paths; remove old `git_operations` tests |
 | `tests/utils/test_git_encoding_stress.py` | Import from shim |
 | `tests/cli/commands/test_check_branch_status_pr_waiting.py` | Import from shim; update `@patch` decorator target paths |
+| `tests/cli/commands/test_git_tool.py` | Update stale docstring reference to deleted test directory |
 | `tests/workflows/test_create_pr_integration.py` | Import from shim |
 | `tests/utils/github_operations/test_github_integration_smoke.py` | Import from shim |
 | `tests/utils/github_operations/test_github_utils.py` | Import from shim |

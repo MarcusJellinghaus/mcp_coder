@@ -28,4 +28,32 @@
 - step_5.md: Listed explicit `depends_on` entries, fixed layered_architecture placement
 - summary.md: Updated step descriptions, fixed symbol count
 
+**Status**: committed
+
+## Round 2 — 2026-04-19
+
+**Findings**:
+1. (Critical) Smoke test created twice — step 1 creates it, step 3 tries to add it again
+2. (Improvement) `tests` module missing `depends_on` for `mcp_workspace_git` in tach.toml step 5
+3. (Improvement) Contradictory `is_git_repository` instructions in step 2 algorithm vs note
+4. (Improvement) `mcp_tools_py` layer inconsistency between importlinter (alongside utils) and tach.toml (below utils in shim_workspace)
+5. (Nit) Summary missing `test_git_tool.py` from modified files list
+6. (Informational) Step 2/3 restructuring verified correct — all @patch dependencies properly assigned
+7. (Informational) Symbol counts and architecture changes verified consistent
+
+**Decisions**:
+- Finding 1 → accepted: removed duplicate smoke test from step 3, added note referencing step 1
+- Finding 2 → accepted: added `tests` to tach.toml `depends_on` list (now 7 modules)
+- Finding 3 → accepted: changed "Remove is_git_repository" to "Source from shim (keep in __all__)", fixed note
+- Finding 4 → accepted: aligned importlinter layers with tach — both shims on same layer below utils
+- Finding 5 → accepted: added `test_git_tool.py` to summary
+
+**User decisions**: None needed.
+
+**Changes**:
+- step_2.md: Fixed is_git_repository algorithm step and note
+- step_3.md: Removed duplicate smoke test section, updated algorithm and LLM prompt
+- step_5.md: Added `tests` to depends_on list, aligned importlinter layers
+- summary.md: Added test_git_tool.py to modified files
+
 **Status**: pending commit

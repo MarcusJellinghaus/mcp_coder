@@ -23,11 +23,7 @@ Switch remaining test files that import from `mcp_coder.utils.git_operations` to
 
 **Important note about `@patch` decorators**: `test_check_branch_status_pr_waiting.py` uses `@patch("mcp_coder.utils.git_operations.branch_queries.X")` as string-based mock targets. These must be updated. The test patches internal dependencies of `has_remote_tracking_branch()`, which lives in `mcp_workspace.git_operations.branch_queries`. After migration, the function's internal calls resolve from that module's namespace, so the correct patch targets are `@patch("mcp_workspace.git_operations.branch_queries._safe_repo_context")` and `@patch("mcp_workspace.git_operations.branch_queries.is_git_repository")`. Note: `@patch` strings are NOT Python imports -- they're runtime lookups, so import-linter won't flag them.
 
-### Smoke test to add
-
-| File | Purpose |
-|------|---------|
-| `tests/test_mcp_workspace_git_smoke.py` | Smoke test: shim importable, key symbols accessible |
+> **Note:** The smoke test `tests/test_mcp_workspace_git_smoke.py` was already created in step 1.
 
 ### Directory to delete
 
@@ -48,10 +44,9 @@ Contains 14 files:
 1. Delete tests/utils/git_operations/ directory entirely
 2. Update remaining test file imports (test_git_encoding_stress.py, test_check_branch_status_pr_waiting.py,
    test_create_pr_integration.py, test_github_integration_smoke.py, test_github_utils.py, test_git_tool.py)
-3. Add tests/test_mcp_workspace_git_smoke.py
-4. Run pytest (unit tests only — exclude integration markers)
-5. Run pylint, mypy on modified test files
-6. Commit: "refactor: update remaining test imports to shim, delete old git_operations tests"
+3. Run pytest (unit tests only — exclude integration markers)
+4. Run pylint, mypy on modified test files
+5. Commit: "refactor: update remaining test imports to shim, delete old git_operations tests"
 ```
 
 ## LLM Prompt
@@ -63,7 +58,7 @@ Delete the entire tests/utils/git_operations/ directory. Update test imports in
 the remaining test files listed in the step (test_git_encoding_stress.py,
 test_check_branch_status_pr_waiting.py, test_create_pr_integration.py,
 test_github_integration_smoke.py, test_github_utils.py, test_git_tool.py)
-to use the shim. Add the smoke test tests/test_mcp_workspace_git_smoke.py.
+to use the shim. The smoke test was already created in step 1.
 Note: tests/test_module_integration.py and @patch-dependent test files were
 already updated in step 2.
 Run pylint, mypy, and pytest checks.
