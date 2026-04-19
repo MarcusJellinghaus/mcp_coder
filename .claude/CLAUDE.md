@@ -83,7 +83,7 @@ mcp-coder gh-tool set-status <label>
 
 **Before every commit:** run `mcp__tools-py__run_format_code`, then stage and commit.
 
-**Bash discipline:** no `cd` prefix. Don't chain approved with unapproved commands. Run them separately.
+**Bash discipline:** no `cd` prefix, no `git -C` — commands already run in the project directory. Don't chain approved with unapproved commands. Run them separately.
 
 **Commit messages:** standard format, clear and descriptive. No attribution footers.
 
