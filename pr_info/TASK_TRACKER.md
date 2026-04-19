@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 4: CLI flags in `gh_parsers.py`
-- [ ] Implementation: add `--init`, `--validate`, `--config`, `--generate-github-actions`, `--all` arguments and help text, with parser tests (TDD)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `--init`, `--validate`, `--config`, `--generate-github-actions`, `--all` arguments and help text, with parser tests (TDD)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Gate operations in `define_labels.py` + updated summary
 - [ ] Implementation: gate init/validate behind flags, expand `--all`, use `default: true` label, pass `--config` to discovery, call `validate_labels_config()`, update summary output, with tests (TDD)
