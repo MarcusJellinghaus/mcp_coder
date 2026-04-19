@@ -29,9 +29,9 @@ See [step_1.md](./steps/step_1.md)
 
 ### Step 2: Shared executable finder utility
 See [step_2.md](./steps/step_2.md)
-- [ ] Implementation: create `utils/executable_finder.py` with `find_executable()` + tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `utils/executable_finder.py` with `find_executable()` + tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Copilot log paths + shared log utilities
 See [step_3.md](./steps/step_3.md)
