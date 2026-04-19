@@ -21,6 +21,21 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Update settings.local.json permissions
+- [ ] Implementation: Remove 4 Bash git permissions, add 4 MCP workspace git tool permissions
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Update CLAUDE.md tool mapping and git operations section
+- [ ] Implementation: Add git MCP tool rows to tool mapping table, update Bash-allowed commands, replace compact-diff guidance
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Update all skills and rebase design doc
+- [ ] Implementation: Update allowed-tools frontmatter and body text in 5 skill/design files
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review completed
+- [ ] PR summary prepared
