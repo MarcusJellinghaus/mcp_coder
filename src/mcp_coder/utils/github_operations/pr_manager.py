@@ -167,7 +167,6 @@ class PullRequestManager(BaseGitHubManager):
 
         Raises:
             ValueError: If validation fails (invalid title, branch names, or repository access)
-            GithubException: If the GitHub API call fails
         """
         # Resolve base_branch if not provided
         if base_branch is None:
