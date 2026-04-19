@@ -1,81 +1,92 @@
 """Git operations package - modular git utilities."""
 
-from .branch_queries import (
+from mcp_coder.utils.git_operations.branch_queries import (
     branch_exists,
     extract_issue_number_from_branch,
     get_current_branch_name,
     get_default_branch_name,
     has_remote_tracking_branch,
-    remote_branch_exists,
     validate_branch_name,
 )
-from .branches import checkout_branch, create_branch, delete_branch
-from .commits import commit_staged_files, get_latest_commit_sha
-from .core import CommitResult, PushResult
-from .diffs import get_branch_diff, get_git_diff_for_commit
-from .file_tracking import git_move, is_file_tracked
-from .parent_branch_detection import (
+from mcp_coder.utils.git_operations.branches import (
+    checkout_branch,
+    create_branch,
+    delete_branch,
+)
+from mcp_coder.utils.git_operations.commits import (
+    commit_staged_files,
+    get_latest_commit_sha,
+)
+from mcp_coder.utils.git_operations.compact_diffs import get_compact_diff
+from mcp_coder.utils.git_operations.core import CommitResult, _safe_repo_context
+from mcp_coder.utils.git_operations.diffs import (
+    get_branch_diff,
+    get_git_diff_for_commit,
+)
+from mcp_coder.utils.git_operations.file_tracking import (
+    git_move,
+    is_file_tracked,
+)
+from mcp_coder.utils.git_operations.parent_branch_detection import (
     MERGE_BASE_DISTANCE_THRESHOLD,
     detect_parent_branch_via_merge_base,
 )
-from .remotes import (
+from mcp_coder.utils.git_operations.remotes import (
     fetch_remote,
     get_github_repository_url,
     git_push,
     push_branch,
     rebase_onto_branch,
 )
-from .repository_status import (
+from mcp_coder.utils.git_operations.repository_status import (
     get_full_status,
     get_staged_changes,
     get_unstaged_changes,
     is_git_repository,
     is_working_directory_clean,
 )
-from .staging import stage_all_changes, stage_specific_files
-from .workflows import commit_all_changes, needs_rebase
+from mcp_coder.utils.git_operations.staging import (
+    stage_all_changes,
+    stage_specific_files,
+)
+from mcp_coder.utils.git_operations.workflows import (
+    commit_all_changes,
+    needs_rebase,
+)
 
 __all__ = [
-    # Types
     "CommitResult",
-    "PushResult",
-    # Branch operations
+    "_safe_repo_context",
     "branch_exists",
     "checkout_branch",
+    "commit_all_changes",
+    "commit_staged_files",
     "create_branch",
     "delete_branch",
     "detect_parent_branch_via_merge_base",
     "extract_issue_number_from_branch",
+    "fetch_remote",
+    "get_branch_diff",
+    "get_compact_diff",
     "get_current_branch_name",
     "get_default_branch_name",
-    "has_remote_tracking_branch",
-    "MERGE_BASE_DISTANCE_THRESHOLD",
-    "needs_rebase",
-    "rebase_onto_branch",
-    "remote_branch_exists",
-    "validate_branch_name",
-    # Commit operations
-    "commit_all_changes",
-    "commit_staged_files",
-    "get_latest_commit_sha",
-    # Diff operations
-    "get_branch_diff",
-    "get_git_diff_for_commit",
-    # File tracking
-    "git_move",
-    "is_file_tracked",
-    # Remote operations
-    "fetch_remote",
-    "get_github_repository_url",
-    "git_push",
-    "push_branch",
-    # Repository operations
     "get_full_status",
+    "get_git_diff_for_commit",
+    "get_github_repository_url",
+    "get_latest_commit_sha",
     "get_staged_changes",
     "get_unstaged_changes",
+    "git_move",
+    "git_push",
+    "has_remote_tracking_branch",
+    "is_file_tracked",
     "is_git_repository",
     "is_working_directory_clean",
-    # Staging operations
+    "MERGE_BASE_DISTANCE_THRESHOLD",
+    "needs_rebase",
+    "push_branch",
+    "rebase_onto_branch",
     "stage_all_changes",
     "stage_specific_files",
+    "validate_branch_name",
 ]

@@ -44,7 +44,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 4: Delete local git_operations package
-- [ ] Implementation: delete `src/mcp_coder/utils/git_operations/` directory (13 files); grep-verify no remaining references
+- [ ] Implementation: delete `src/mcp_coder/utils/git_operations/` directory (13 files); grep-verify no remaining references — **BLOCKED**: `mcp_workspace.file_tools.git_operations` submodules not importable in installed version (see `pr_info/error.md`)
 - [ ] Quality checks: pylint, pytest, mypy — fix all issues
 - [ ] Commit message prepared
 
