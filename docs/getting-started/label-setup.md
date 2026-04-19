@@ -32,21 +32,27 @@ The token needs `repo` scope permissions to create and manage labels.
 
 ## Label Configuration
 
-The `gh-tool define-labels` command uses a two-location configuration system to determine which labels to create.
+The `gh-tool define-labels` command uses a three-level configuration resolution to determine which labels to create.
 
 ### Configuration Priority
 
-1. **Local project config** (checked first):
+1. **Explicit CLI flag** (highest priority):
+   ```bash
+   mcp-coder gh-tool define-labels --config path/to/labels.json
    ```
-   your-project/workflows/config/labels.json
-   ```
-   Use this to customize labels for your specific project.
 
-2. **Bundled package config** (fallback):
+2. **pyproject.toml setting**:
+   ```toml
+   [tool.mcp-coder]
+   labels-config = "config/labels.json"
+   ```
+   Path is relative to the project root.
+
+3. **Bundled package defaults** (fallback):
    ```
    mcp_coder/config/labels.json
    ```
-   Used when no local config exists. Provides sensible defaults.
+   Used when no custom config is specified. Provides sensible defaults.
 
 ### Configuration File Format
 
@@ -72,24 +78,27 @@ Each label requires:
 - `color`: Hex color code without the `#` prefix (string)
 - `description`: Brief description of the label's purpose (string)
 
+Optional metadata fields:
+- `default`: Set to `true` on exactly one label — this label is assigned to new issues without a status label (e.g., `status-01:created`)
+- `promotable`: Set to `true` on labels eligible for `/approve` promotion. The promotion target is the next label in the `workflow_labels` list.
+- `failure`: Set to `true` on failure-state labels. A `promotable` label cannot promote into a `failure` label.
+
 ### Customizing Labels
 
 To use custom labels for your project:
 
-1. Create the config directory:
+1. Copy the bundled config as a starting point:
    ```bash
-   mkdir -p workflows/config
-   ```
-
-2. Copy the default config as a starting point:
-   ```bash
-   # Find the bundled config location
    python -c "from mcp_coder.utils.github_operations.label_config import get_labels_config_path; print(get_labels_config_path(None))"
    ```
 
-3. Create `workflows/config/labels.json` with your custom labels
+2. Save your custom `labels.json` and point to it via `pyproject.toml`:
+   ```toml
+   [tool.mcp-coder]
+   labels-config = "config/labels.json"
+   ```
 
-4. Preview changes before applying:
+3. Preview changes before applying:
    ```bash
    mcp-coder gh-tool define-labels --dry-run
    ```
@@ -112,6 +121,11 @@ mcp-coder gh-tool define-labels
 |--------|-------------|
 | `--project-dir PATH` | Specify project directory (default: current directory) |
 | `--dry-run` | Preview changes without applying them |
+| `--init` | Assign the default label to open issues without a status label |
+| `--validate` | Check all open issues for errors and warnings |
+| `--config PATH` | Path to labels config file (overrides pyproject.toml and bundled defaults) |
+| `--generate-github-actions` | Write `label-new-issues.yml` and `approve-command.yml` to `.github/workflows/` |
+| `--all` | Enable all optional operations (`--init --validate --generate-github-actions`) |
 
 ### Examples
 
@@ -119,8 +133,20 @@ mcp-coder gh-tool define-labels
 # Preview what labels will be created
 mcp-coder gh-tool define-labels --dry-run
 
-# Apply labels to current project
-mcp-coder gh-tool define-labels
+# Apply labels and initialize issues without status
+mcp-coder gh-tool define-labels --init
+
+# Validate issues for errors/warnings
+mcp-coder gh-tool define-labels --validate
+
+# Use a custom config file
+mcp-coder gh-tool define-labels --config config/labels.json
+
+# Generate GitHub Actions workflow files from config
+mcp-coder gh-tool define-labels --generate-github-actions
+
+# Run all optional operations
+mcp-coder gh-tool define-labels --all
 
 # Apply labels to a specific project
 mcp-coder gh-tool define-labels --project-dir /path/to/project
@@ -136,6 +162,12 @@ The command shows:
 ## GitHub Actions Setup
 
 To automate label management, set up these GitHub Actions in your repository.
+
+> **Tip:** You can generate these workflow files automatically from your label config:
+> ```bash
+> mcp-coder gh-tool define-labels --generate-github-actions
+> ```
+> This writes `label-new-issues.yml` and `approve-command.yml` to `.github/workflows/` based on the `default` and `promotable` fields in your labels config.
 
 ### Auto-Label New Issues
 

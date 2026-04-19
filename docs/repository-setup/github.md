@@ -71,13 +71,16 @@ mcp-coder gh-tool define-labels            # Create/update labels
 
 ### Customizing Labels
 
-> **Customize (`workflows/config/labels.json`):** Only needed if you want to override the default labels.
-
 **Default label source:** `mcp_coder/config/labels.json`, deployed with the package.
 
-**Custom labels:** Place a `labels.json` file at `workflows/config/labels.json` in your project to override the defaults. See [`labels_schema.md`](https://github.com/MarcusJellinghaus/mcp_coder/blob/main/src/mcp_coder/config/labels_schema.md) for the schema.
+**Custom labels:** Point to a custom `labels.json` via `pyproject.toml`:
 
-> **See also:** Issue [#726](https://github.com/MarcusJellinghaus/mcp_coder/issues/726) tracks improving cross-references for label setup docs.
+```toml
+[tool.mcp-coder]
+labels-config = "config/labels.json"
+```
+
+Alternatively, pass `--config PATH` on the command line. See [`labels_schema.md`](https://github.com/MarcusJellinghaus/mcp_coder/blob/main/src/mcp_coder/config/labels_schema.md) for the schema.
 
 **Test custom config:**
 
@@ -87,17 +90,33 @@ mcp-coder gh-tool define-labels --dry-run  # Preview your custom labels
 
 ### Issue Validation and Initialization
 
-The `gh-tool define-labels` command now includes automatic issue validation:
+Issue initialization and validation are opt-in operations:
 
-**Automatic initialization:**
+**Initialization (`--init`):**
 
-- Issues without any workflow status label are initialized with `status-01:created`
+- Assigns the `default: true` label to open issues without any status label
 - Use `--dry-run` to preview which issues would be initialized
 
-**Validation checks:**
+```bash
+mcp-coder gh-tool define-labels --init
+```
+
+**Validation (`--validate`):**
 
 - **Errors:** Issues with multiple status labels (requires manual fix)
 - **Warnings:** Bot processes exceeding their stale timeout threshold
+
+```bash
+mcp-coder gh-tool define-labels --validate
+```
+
+**All operations (`--all`):**
+
+Run `--init`, `--validate`, and `--generate-github-actions` together:
+
+```bash
+mcp-coder gh-tool define-labels --all
+```
 
 ### Stale Timeout Configuration
 
@@ -199,7 +218,13 @@ Add new feature to main branch
 
 ### Required Actions
 
-Set up these two workflows for full automation:
+> **Tip:** You can generate these workflow files automatically:
+> ```bash
+> mcp-coder gh-tool define-labels --generate-github-actions
+> ```
+> This writes `label-new-issues.yml` and `approve-command.yml` to `.github/workflows/` based on your label config.
+
+Alternatively, set up these two workflows manually:
 
 #### 1. Auto-Label New Issues
 
