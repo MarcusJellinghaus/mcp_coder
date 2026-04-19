@@ -74,6 +74,14 @@ def get_prompts_config(project_dir: Path) -> PromptsConfig:
     )
 
 
+@dataclass(frozen=True)
+class ImplementConfig:
+    """Configuration for the implement workflow."""
+
+    format_code: bool
+    check_type_hints: bool
+
+
 def get_github_install_config(project_dir: Path) -> GitHubInstallConfig:
     """Read [tool.mcp-coder.install-from-github] from pyproject.toml.
 
@@ -97,4 +105,30 @@ def get_github_install_config(project_dir: Path) -> GitHubInstallConfig:
     return GitHubInstallConfig(
         packages=gh.get("packages", []),
         packages_no_deps=gh.get("packages-no-deps", []),
+    )
+
+
+def get_implement_config(project_dir: Path) -> ImplementConfig:
+    """Read [tool.mcp-coder.implement] from pyproject.toml.
+
+    Args:
+        project_dir: Path to directory containing pyproject.toml.
+
+    Returns:
+        ImplementConfig with format_code and check_type_hints booleans.
+    """
+    path = project_dir / "pyproject.toml"
+    if not path.exists():
+        return ImplementConfig(format_code=False, check_type_hints=False)
+
+    try:
+        with open(path, "rb") as f:
+            data = tomllib.load(f)
+    except (tomllib.TOMLDecodeError, OSError):
+        return ImplementConfig(format_code=False, check_type_hints=False)
+
+    section = data.get("tool", {}).get("mcp-coder", {}).get("implement", {})
+    return ImplementConfig(
+        format_code=section.get("format_code", False),
+        check_type_hints=section.get("check_type_hints", False),
     )

@@ -123,10 +123,14 @@ def _render_output_value(value: object) -> list[str]:
                     lines.append(f"{key}:")
                     for sub in rendered:
                         lines.append(f"  {sub}")
+            elif isinstance(child, str):
+                lines.append(f"{key}: {child}")
             else:
                 lines.append(f"{key}: {json.dumps(child)}")
         return lines
     if isinstance(value, list):
+        if all(isinstance(item, str) for item in value):
+            return list(value)
         compact = json.dumps(value)
         if len(compact) <= _MAX_INLINE_LEN:
             return [compact]

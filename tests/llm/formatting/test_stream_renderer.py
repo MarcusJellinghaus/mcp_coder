@@ -193,7 +193,7 @@ class TestRenderToolOutputRenderer:
         """Non-`result` keys render as extras below a blank separator."""
         data = {"result": "ok", "meta": "x"}
         lines, total = _render_tool_output(json.dumps(data))
-        assert lines == ["ok", "", 'meta: "x"']
+        assert lines == ["ok", "", "meta: x"]
         assert total == 3
 
     def test_result_dict_with_multiline_diff(self) -> None:
@@ -206,13 +206,13 @@ class TestRenderToolOutputRenderer:
     def test_no_text_unwrap(self) -> None:
         """`{"text": ...}` is not treated as an envelope — shown as key/value."""
         lines, total = _render_tool_output(json.dumps({"text": "hello"}))
-        assert lines == ['text: "hello"']
+        assert lines == ["text: hello"]
         assert total == 1
 
     def test_no_content_unwrap(self) -> None:
         """`{"content": ...}` is not treated as an envelope — shown as key/value."""
         lines, total = _render_tool_output(json.dumps({"content": "hello"}))
-        assert lines == ['content: "hello"']
+        assert lines == ["content: hello"]
         assert total == 1
 
     def test_full_mode_no_truncation(self) -> None:
@@ -422,7 +422,34 @@ class TestRenderOutputValue:
         assert result[1:] == [f"  {line}" for line in expected_inner]
 
     def test_string_value_in_dict(self) -> None:
-        assert _render_output_value({"key": "simple"}) == ['key: "simple"']
+        assert _render_output_value({"key": "simple"}) == ["key: simple"]
+
+    def test_string_value_no_json_escaping(self) -> None:
+        """String values in dicts render without JSON escaping (no double backslashes)."""
+        result = _render_output_value({"file_path": "C:\\Users\\test\\file.py"})
+        assert result == ["file_path: C:\\Users\\test\\file.py"]
+
+    def test_list_of_strings_plain(self) -> None:
+        """List of strings renders as plain lines, not JSON array."""
+        result = _render_output_value(["file_a.py", "file_b.py", "dir/file_c.py"])
+        assert result == ["file_a.py", "file_b.py", "dir/file_c.py"]
+
+    def test_mixed_list_still_uses_json(self) -> None:
+        """Lists with non-string items still use JSON formatting."""
+        result = _render_output_value([1, 2, 3])
+        assert result == ["[1, 2, 3]"]
+
+    def test_list_with_dicts_still_uses_json(self) -> None:
+        """Lists containing dicts still use JSON formatting."""
+        result = _render_output_value([{"a": 1}])
+        assert result == ['[{"a": 1}]']
+
+    def test_long_list_with_dicts_expanded(self) -> None:
+        """Long lists with dicts use expanded JSON formatting."""
+        value = [{"key": f"value_{i}"} for i in range(10)]
+        result = _render_output_value(value)
+        expected = json.dumps(value, indent=2).splitlines()
+        assert result == expected
 
 
 class TestFormatToolStart:

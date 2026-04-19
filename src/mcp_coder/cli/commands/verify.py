@@ -24,6 +24,7 @@ from ...llm.providers.claude.claude_cli_verification import verify_claude
 from ...llm.providers.claude.claude_executable_finder import find_claude_executable
 from ...prompts.prompt_loader import get_project_prompt_path, is_claude_md, load_prompts
 from ...utils.mcp_verification import ClaudeMCPStatus, parse_claude_mcp_list
+from ...utils.pyproject_config import get_implement_config
 from ...utils.user_config import verify_config
 from ..utils import resolve_llm_method, resolve_mcp_config_path
 
@@ -98,6 +99,35 @@ def _print_environment_section() -> None:
         except PackageNotFoundError:
             value = "[ERR] not installed"
         print(f"  {pkg:<20s} {value}")
+
+
+def _print_project_section(project_dir: Path, symbols: dict[str, str]) -> None:
+    """Print the PROJECT section showing language detection and tool config."""
+    print(_pad("PROJECT"))
+    pyproject_exists = (project_dir / "pyproject.toml").exists()
+    if pyproject_exists:
+        print(f"  {'pyproject.toml':<20s} {symbols['success']} found")
+        print(f"  {'Language':<20s} {symbols['success']} Python (detected)")
+        config = get_implement_config(project_dir)
+        print()
+        print("  [Python]")
+        if config.format_code:
+            print(f"    {'format_code':<18s} {symbols['success']} enabled")
+        else:
+            print(
+                f"    {'format_code':<18s} {symbols['warning']}"
+                " not configured (default: disabled)"
+            )
+        if config.check_type_hints:
+            print(f"    {'check_type_hints':<18s} {symbols['success']} enabled")
+        else:
+            print(
+                f"    {'check_type_hints':<18s} {symbols['warning']}"
+                " not configured (default: disabled)"
+            )
+    else:
+        print(f"  {'pyproject.toml':<20s} {symbols['warning']} not found")
+        print(f"  {'Language':<20s} {symbols['success']} (none detected)")
 
 
 def _pad(title: str) -> str:
@@ -488,6 +518,9 @@ def execute_verify(args: argparse.Namespace) -> int:
                 " project prompt is CLAUDE.md (will skip for Claude)"
             )
     print("\n".join(prompt_lines))
+
+    # 0c. Project configuration section
+    _print_project_section(project_dir, symbols)
 
     # 1. Resolve active provider (already done above)
 

@@ -17,3 +17,15 @@ def test_pyproject_install_from_github_config_exists() -> None:
 
     assert "packages-no-deps" in install_from_github
     assert isinstance(install_from_github["packages-no-deps"], list)
+
+
+def test_pyproject_implement_config_exists() -> None:
+    """Verify [tool.mcp-coder.implement] section exists with expected keys."""
+    pyproject_path = Path(__file__).parent.parent / "pyproject.toml"
+    with open(pyproject_path, "rb") as f:
+        config = tomllib.load(f)
+
+    implement = config["tool"]["mcp-coder"]["implement"]
+
+    assert implement["format_code"] is True
+    assert implement["check_type_hints"] is True
