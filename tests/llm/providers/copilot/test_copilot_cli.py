@@ -80,7 +80,7 @@ class TestParseCopilotJsonlOutput:
             m for m in result["messages"] if m.get("type") == "assistant.message"
         ]
         assert len(assistant_msgs) == 1
-        assert "toolRequests" in assistant_msgs[0]["message"]
+        assert "toolRequests" in assistant_msgs[0]["data"]
         # tool.execution_complete should also be in messages
         tool_msgs = [
             m for m in result["messages"] if m.get("type") == "tool.execution_complete"
@@ -112,7 +112,7 @@ class TestParseCopilotJsonlOutput:
             json.dumps(
                 {
                     "type": "assistant.message",
-                    "message": {"content": [{"type": "text", "text": "hello"}]},
+                    "data": {"content": "hello", "toolRequests": []},
                 }
             ),
         ]

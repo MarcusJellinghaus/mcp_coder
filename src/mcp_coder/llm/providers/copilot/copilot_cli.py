@@ -86,11 +86,14 @@ def parse_copilot_jsonl_output(lines: list[str]) -> ParsedCopilotResponse:
         msg_type = parsed.get("type", "")
 
         if msg_type == "assistant.message":
-            message = parsed.get("message", {})
-            content_blocks = message.get("content", [])
-            for block in content_blocks:
-                if isinstance(block, dict) and block.get("text"):
-                    text_parts.append(block["text"])
+            data = parsed.get("data", {})
+            content = data.get("content", "")
+            if isinstance(content, str) and content:
+                text_parts.append(content)
+            elif isinstance(content, list):
+                for block in content:
+                    if isinstance(block, dict) and block.get("text"):
+                        text_parts.append(block["text"])
 
         elif msg_type == "result":
             raw_result = parsed

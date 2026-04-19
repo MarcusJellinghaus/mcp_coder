@@ -46,14 +46,17 @@ def _map_copilot_message_to_event(
     msg_type = msg.get("type", "")
 
     if msg_type == "assistant.message":
-        message = msg.get("message", {})
-        # Text content blocks
-        content_blocks = message.get("content", [])
-        for block in content_blocks:
-            if isinstance(block, dict) and block.get("text"):
-                yield {"type": "text_delta", "text": block["text"]}
+        data = msg.get("data", {})
+        # Text content — string in real output, list in some formats
+        content = data.get("content", "")
+        if isinstance(content, str) and content:
+            yield {"type": "text_delta", "text": content}
+        elif isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict) and block.get("text"):
+                    yield {"type": "text_delta", "text": block["text"]}
         # Tool requests
-        tool_requests = message.get("toolRequests", [])
+        tool_requests = data.get("toolRequests", [])
         for tool_req in tool_requests:
             if isinstance(tool_req, dict):
                 yield {
@@ -85,7 +88,10 @@ def _map_copilot_message_to_event(
 
     elif msg_type == "session.info":
         # Check for unknown-tool warnings
-        info_message = msg.get("message", "")
+        info_data = msg.get("data", {})
+        info_message = (
+            info_data.get("message", "") if isinstance(info_data, dict) else ""
+        )
         if isinstance(info_message, str) and "unknown tool" in info_message.lower():
             logger.warning("Copilot unknown tool warning: %s", info_message)
             yield {"type": "error", "message": info_message}

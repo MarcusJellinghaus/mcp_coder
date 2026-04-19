@@ -25,22 +25,25 @@ class TestMapAssistantMessageText:
     def test_map_assistant_message_text(self) -> None:
         msg: dict[str, Any] = {
             "type": "assistant.message",
-            "message": {
-                "content": [{"type": "text", "text": "Hello world"}],
+            "data": {
+                "content": "Hello world",
+                "toolRequests": [],
             },
         }
         events = list(_map_copilot_message_to_event(msg))
         assert len(events) == 1
         assert events[0] == {"type": "text_delta", "text": "Hello world"}
 
-    def test_map_assistant_message_multiple_text_blocks(self) -> None:
+    def test_map_assistant_message_content_list_fallback(self) -> None:
+        """Content as list of blocks is also handled."""
         msg: dict[str, Any] = {
             "type": "assistant.message",
-            "message": {
+            "data": {
                 "content": [
                     {"type": "text", "text": "Part 1"},
                     {"type": "text", "text": "Part 2"},
                 ],
+                "toolRequests": [],
             },
         }
         events = list(_map_copilot_message_to_event(msg))
@@ -55,8 +58,8 @@ class TestMapAssistantMessageToolRequest:
     def test_map_assistant_message_tool_request(self) -> None:
         msg: dict[str, Any] = {
             "type": "assistant.message",
-            "message": {
-                "content": [],
+            "data": {
+                "content": "",
                 "toolRequests": [
                     {"id": "t1", "name": "read_file", "args": {"path": "foo.py"}}
                 ],
@@ -73,8 +76,8 @@ class TestMapAssistantMessageToolRequest:
     def test_map_assistant_message_text_and_tool(self) -> None:
         msg: dict[str, Any] = {
             "type": "assistant.message",
-            "message": {
-                "content": [{"type": "text", "text": "Reading file..."}],
+            "data": {
+                "content": "Reading file...",
                 "toolRequests": [
                     {"id": "t1", "name": "read_file", "args": {"path": "bar.py"}}
                 ],
@@ -138,7 +141,7 @@ class TestMapSessionInfoUnknownToolWarning:
     ) -> None:
         msg: dict[str, Any] = {
             "type": "session.info",
-            "message": "Unknown tool 'custom_tool' not available",
+            "data": {"message": "Unknown tool 'custom_tool' not available"},
         }
         with caplog.at_level(logging.WARNING):
             events = list(_map_copilot_message_to_event(msg))
@@ -150,7 +153,7 @@ class TestMapSessionInfoUnknownToolWarning:
     def test_map_session_info_no_unknown_tool(self) -> None:
         msg: dict[str, Any] = {
             "type": "session.info",
-            "message": "Session started successfully",
+            "data": {"message": "Session started successfully"},
         }
         events = list(_map_copilot_message_to_event(msg))
         assert len(events) == 0
@@ -269,7 +272,7 @@ class TestStreamYieldsTextAndDone:
             json.dumps(
                 {
                     "type": "assistant.message",
-                    "message": {"content": [{"type": "text", "text": "Hello"}]},
+                    "data": {"content": "Hello", "toolRequests": []},
                 }
             ),
             json.dumps(

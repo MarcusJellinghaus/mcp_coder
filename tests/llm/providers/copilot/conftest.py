@@ -28,15 +28,16 @@ def make_copilot_jsonl_output() -> Callable[..., list[str]]:
             for etype in extra_ephemeral_types:
                 lines.append(json.dumps({"type": etype, "data": "ephemeral"}))
 
-        # assistant.message with text content
+        # assistant.message with text content (real Copilot format: data.content is a string)
         assistant_msg: dict[str, Any] = {
             "type": "assistant.message",
-            "message": {
-                "content": [{"type": "text", "text": text}],
+            "data": {
+                "content": text,
+                "toolRequests": [],
             },
         }
         if include_tool_request:
-            assistant_msg["message"]["toolRequests"] = [
+            assistant_msg["data"]["toolRequests"] = [
                 {"id": "tool-1", "name": "read_file", "args": {"path": "foo.py"}}
             ]
         lines.append(json.dumps(assistant_msg))
