@@ -82,6 +82,9 @@ def validate_labels_config(labels_config: Dict[str, Any]) -> None:
     1. Exactly one label has "default": true
     2. Each "promotable": true label has a next label in workflow_labels list
     3. No promotable label's next target has "failure": true
+
+    Raises:
+        ValueError: If any label config constraint is violated.
     """
     labels = labels_config["workflow_labels"]
 
@@ -111,7 +114,8 @@ def validate_labels_config(labels_config: Dict[str, Any]) -> None:
 def _get_labels_config_from_pyproject(project_dir: Path) -> Optional[Path]:
     """Read labels-config from [tool.mcp-coder] in pyproject.toml.
 
-    Returns absolute Path if configured and file exists, None otherwise.
+    Returns:
+        Absolute Path if configured and file exists, None otherwise.
     """
     path = project_dir / "pyproject.toml"
     if not path.exists():
