@@ -122,9 +122,15 @@ depends_on = []
 
 ### Update dependants
 
-Modules that depend on `mcp_coder.mcp_tools_py` or will depend on `mcp_coder.mcp_workspace_git` may need `depends_on` updates. Check:
-- `mcp_coder.utils` — currently depends on `config`, `constants`. After this, `utils/__init__.py` imports from `mcp_workspace_git`, so add `{ path = "mcp_coder.mcp_workspace_git" }` to its depends_on.
-- `mcp_coder.workflows` already has `mcp_coder.mcp_tools_py` in depends_on — no change needed since layer hierarchy handles it.
+The following 7 modules import (directly or transitively) from `mcp_coder.mcp_workspace_git` and each needs `{ path = "mcp_coder.mcp_workspace_git" }` added to their `depends_on` in `tach.toml`:
+
+1. `mcp_coder` (root) — `__init__.py` re-exports git symbols from shim
+2. `mcp_coder.cli` — `cli/utils.py` and commands import from shim
+3. `mcp_coder.workflows` — multiple workflow modules import from shim
+4. `mcp_coder.workflow_utils` — `commit_operations.py`, `base_branch.py`, `failure_handling.py` import from shim
+5. `mcp_coder.checks` — `branch_status.py` imports from shim
+6. `mcp_coder.utils` — `utils/__init__.py` and `git_utils.py` source from shim
+7. `tests` — test files import from shim
 
 Also update the layered architecture contract in `.importlinter`. Both shims (`mcp_coder.mcp_tools_py` and `mcp_coder.mcp_workspace_git`) should be on the **same layer below** `utils`, matching `tach.toml` where both are in `shim_workspace` (below `infrastructure`):
 ```

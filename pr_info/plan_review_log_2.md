@@ -56,4 +56,25 @@
 - step_5.md: Added `tests` to depends_on list, aligned importlinter layers
 - summary.md: Added test_git_tool.py to modified files
 
+**Status**: committed
+
+## Round 3 — 2026-04-19
+
+**Findings**:
+1. (Improvement) Step 5 "Update dependants" section doesn't match the 7-module list — only explicitly adds to `mcp_coder.utils`, dismisses `workflows` with "layer hierarchy handles it"
+2. (Nit) Step 3 table misleading about `test_check_branch_status_pr_waiting.py` — imports are inside-method lazy imports, not module-level
+3. (Nit) Summary `cli/utils.py` description says "(lazy import)" but file has both top-level and lazy imports
+
+**Decisions**:
+- Finding 1 → accepted: replaced with explicit 7-module list
+- Finding 2 → accepted: clarified as inside-method lazy imports
+- Finding 3 → accepted: simplified to "Import from shim"
+
+**User decisions**: None needed.
+
+**Changes**:
+- step_5.md: Explicit 7-module list in "Update dependants"
+- step_3.md: Clarified lazy import type for test_check_branch_status_pr_waiting.py
+- summary.md: Fixed cli/utils.py description
+
 **Status**: pending commit

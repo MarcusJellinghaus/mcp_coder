@@ -89,7 +89,7 @@ Note: `is_git_repository`, `create_branch`, `push_branch` were previously listed
 | `src/mcp_coder/utils/github_operations/ci_results_manager.py` | Import from shim |
 | `src/mcp_coder/utils/github_operations/pr_manager.py` | Import from shim |
 | `src/mcp_coder/utils/github_operations/issues/manager.py` | Import from shim |
-| `src/mcp_coder/cli/utils.py` | Import from shim (lazy import) |
+| `src/mcp_coder/cli/utils.py` | Import from shim |
 | `src/mcp_coder/cli/commands/set_status.py` | Import from shim |
 | `src/mcp_coder/cli/commands/gh_tool.py` | Import from shim |
 | `src/mcp_coder/cli/commands/coordinator/issue_stats.py` | Import from shim |
