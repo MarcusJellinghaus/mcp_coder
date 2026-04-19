@@ -67,7 +67,7 @@ To:
 from .mcp_workspace_git import (CommitResult, commit_all_changes, ...)
 ```
 
-Note: `is_git_repository`, `create_branch`, and `push_branch` are in the shim (they have consumers). Source them from the shim in both `utils/__init__.py` and root `__init__.py`.
+Note: `is_git_repository` is in the shim and currently re-exported from root `__init__.py` — source it from the shim there. `create_branch` and `push_branch` are in the shim but not in `utils/__init__.py` or root `__init__.py` — no re-export changes needed for them.
 
 ### Test files updated alongside source changes
 
@@ -81,7 +81,6 @@ These test files use `@patch` targets that break when the corresponding source f
 | `tests/utils/github_operations/test_issue_branch_manager.py` | `@patch("mcp_coder.utils.git_operations.is_git_repository")` (multiple uses) | `@patch("mcp_coder.utils.github_operations.base_manager.is_git_repository")` (multiple `@patch` uses -- patch where the symbol is looked up in `base_manager.py`) |
 | `tests/utils/github_operations/issues/conftest.py` | `@patch("mcp_coder.utils.git_operations.is_git_repository")` | `@patch("mcp_coder.utils.github_operations.base_manager.is_git_repository")` (fixture-level patch -- patch where the symbol is looked up in `base_manager.py`) |
 | `tests/utils/github_operations/test_issue_manager_label_update.py` | `@patch("mcp_coder.utils.github_operations.base_manager.git_operations.is_git_repository")` | `@patch("mcp_coder.utils.github_operations.base_manager.is_git_repository")` (same base_manager pattern) |
-| `tests/cli/test_utils.py` | `@patch("mcp_coder.utils.git_operations.branch_queries.get_current_branch_name")` | `@patch("mcp_coder.mcp_workspace_git.get_current_branch_name")` (multiple `@patch` uses; breaks when `cli/utils.py` changes imports in this step) |
 
 ## WHAT — The transformation pattern
 

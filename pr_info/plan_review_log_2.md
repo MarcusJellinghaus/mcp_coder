@@ -77,4 +77,22 @@
 - step_3.md: Clarified lazy import type for test_check_branch_status_pr_waiting.py
 - summary.md: Fixed cli/utils.py description
 
+**Status**: committed
+
+## Round 4 — 2026-04-19
+
+**Findings**:
+1. (Improvement) Contradictory root `__init__.py` note — says to source `create_branch`/`push_branch` from shim in root `__init__.py`, but they're not there; also contradicts clarification paragraph about `utils/__init__.py`
+2. (Improvement) `tests/cli/test_utils.py` phantom @patch in step 2 — actual patches use import-destination path; 3 patches DO reference `git_operations.branch_queries` but belong in step 3 (source module not deleted until step 4)
+
+**Decisions**:
+- Finding 1 → accepted: fixed note to only mention `is_git_repository` for root `__init__.py`
+- Finding 2 → accepted: moved `test_utils.py` from step 2 to step 3 with correct @patch targets
+
+**User decisions**: None needed.
+
+**Changes**:
+- step_2.md: Fixed root `__init__.py` note, removed test_utils.py from test table
+- step_3.md: Added test_utils.py with correct @patch details, removed from "already handled" note
+
 **Status**: pending commit
