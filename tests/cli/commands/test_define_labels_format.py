@@ -38,6 +38,7 @@ class TestFormatValidationSummary:
             repo_url,
             init_requested=True,
             validate_requested=True,
+            gen_actions_requested=False,
         )
 
         assert "Created=2" in result
@@ -66,6 +67,7 @@ class TestFormatValidationSummary:
             repo_url,
             init_requested=True,
             validate_requested=True,
+            gen_actions_requested=False,
         )
 
         assert "Issues initialized: 3" in result
@@ -96,6 +98,7 @@ class TestFormatValidationSummary:
             repo_url,
             init_requested=True,
             validate_requested=True,
+            gen_actions_requested=False,
         )
 
         assert "Errors (multiple status labels): 1" in result
@@ -131,6 +134,7 @@ class TestFormatValidationSummary:
             repo_url,
             init_requested=True,
             validate_requested=True,
+            gen_actions_requested=False,
         )
 
         assert "Warnings (stale bot processes): 1" in result
@@ -160,6 +164,7 @@ class TestFormatValidationSummary:
             repo_url,
             init_requested=True,
             validate_requested=True,
+            gen_actions_requested=False,
         )
 
         # Should not contain error or warning sections
@@ -187,6 +192,7 @@ class TestFormatValidationSummary:
             repo_url,
             init_requested=False,
             validate_requested=True,
+            gen_actions_requested=False,
         )
 
         assert "Issues initialized: skipped" in result
@@ -212,6 +218,7 @@ class TestFormatValidationSummary:
             repo_url,
             init_requested=True,
             validate_requested=False,
+            gen_actions_requested=False,
         )
 
         # Should not contain error or warning sections when validate not requested
@@ -239,6 +246,7 @@ class TestFormatValidationSummary:
             repo_url,
             init_requested=True,
             validate_requested=True,
+            gen_actions_requested=False,
         )
 
         assert "Issues initialized: 2" in result

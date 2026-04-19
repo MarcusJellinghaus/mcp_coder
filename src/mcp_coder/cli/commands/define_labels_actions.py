@@ -135,7 +135,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issue.number,
-                body: `✅ Status promoted: \\\\`${{oldStatus}}\\\\` → \\\\`${{newStatus}}\\\\`\\\\n\\\\nThe bot can now pick up this issue for the next step.`
+                body: `✅ Status promoted: \\`${{oldStatus}}\\` → \\`${{newStatus}}\\`\\nThe bot can now pick up this issue for the next step.`
               }});
             }} else {{
               // No matching status found
@@ -143,7 +143,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issue.number,
-                body: `⚠️ Cannot promote issue. The issue must have one of these statuses:\\\\n{status_list}\\\\n\\\\nCurrent labels: ${{labels.filter(l => l.startsWith('status-')).join(', ') || 'none'}}`
+                body: `⚠️ Cannot promote issue. The issue must have one of these statuses:\\n{status_list}\\n\\nCurrent labels: ${{labels.filter(l => l.startsWith('status-')).join(', ') || 'none'}}`
               }});
             }}
 """

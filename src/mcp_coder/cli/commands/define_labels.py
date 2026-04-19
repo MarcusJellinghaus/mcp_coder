@@ -24,7 +24,7 @@ from ...utils.github_operations.label_config import (
 )
 from ...utils.github_operations.labels_manager import LabelsManager
 from ...workflows.utils import resolve_project_dir
-from .define_labels_actions import build_promotions, write_github_actions
+from .define_labels_actions import write_github_actions
 
 logger = logging.getLogger(__name__)
 
@@ -267,6 +267,7 @@ def format_validation_summary(
     *,
     init_requested: bool,
     validate_requested: bool,
+    gen_actions_requested: bool,
 ) -> str:
     """Format the complete summary output.
 
@@ -276,6 +277,7 @@ def format_validation_summary(
         repo_url: Repository URL (reserved for future use)
         init_requested: Whether --init was requested
         validate_requested: Whether --validate was requested
+        gen_actions_requested: Whether --generate-github-actions was requested
 
     Returns:
         Formatted summary string for printing
@@ -300,6 +302,18 @@ def format_validation_summary(
         lines.append(f"  Issues initialized: {initialized_count}")
     else:
         lines.append("  Issues initialized: skipped")
+
+    # Show validation status
+    if validate_requested:
+        lines.append("  Validation: checked")
+    else:
+        lines.append("  Validation: skipped")
+
+    # Show GitHub Actions status
+    if gen_actions_requested:
+        lines.append("  GitHub Actions: generated")
+    else:
+        lines.append("  GitHub Actions: skipped")
 
     # Only show errors/warnings when validate was requested
     if validate_requested:
@@ -624,6 +638,7 @@ def execute_define_labels(args: argparse.Namespace) -> int:
             repo_url,
             init_requested=init,
             validate_requested=validate,
+            gen_actions_requested=gen_actions,
         )
         print(summary)
 
