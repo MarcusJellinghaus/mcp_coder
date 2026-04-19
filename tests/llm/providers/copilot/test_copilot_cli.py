@@ -1,15 +1,23 @@
-"""Tests for Copilot CLI JSONL parser and tool permission converter."""
+"""Tests for Copilot CLI JSONL parser, tool permission converter, and command builder."""
 
 import json
 import logging
+from collections.abc import Callable
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from mcp_coder.llm.providers.copilot.copilot_cli import (
+    COPILOT_CMD_LINE_LIMIT,
+    _read_settings_allow,
+    ask_copilot_cli,
+    build_copilot_command,
     convert_settings_to_copilot_tools,
     parse_copilot_jsonl_line,
     parse_copilot_jsonl_output,
 )
+from mcp_coder.utils.subprocess_runner import CalledProcessError, TimeoutExpired
 
 
 class TestParseCopilotJsonlLine:
@@ -187,3 +195,329 @@ class TestConvertSettingsToCopilotTools:
         result = convert_settings_to_copilot_tools([])
         assert result["available_tools"] == []
         assert result["allow_tools"] == []
+
+
+class TestBuildCopilotCommand:
+    """Tests for build_copilot_command."""
+
+    def test_build_basic_command(self) -> None:
+        """Minimal args produce correct flag order."""
+        cmd = build_copilot_command("hello", "/usr/bin/copilot")
+        assert cmd == [
+            "/usr/bin/copilot",
+            "-p",
+            "hello",
+            "--output-format",
+            "json",
+            "-s",
+            "--allow-all-tools",
+        ]
+
+    def test_build_command_with_session_id(self) -> None:
+        """--resume=<id> included."""
+        cmd = build_copilot_command("hello", "copilot", session_id="sess-123")
+        assert "--resume=sess-123" in cmd
+
+    def test_build_command_with_available_tools(self) -> None:
+        """--available-tools= comma-separated."""
+        cmd = build_copilot_command(
+            "hello", "copilot", available_tools=["workspace-read_file", "tools-py-run"]
+        )
+        assert "--available-tools=workspace-read_file,tools-py-run" in cmd
+
+    def test_build_command_with_allow_tools(self) -> None:
+        """Multiple --allow-tool= flags."""
+        cmd = build_copilot_command(
+            "hello", "copilot", allow_tools=["shell(git diff:*)", "shell(*)"]
+        )
+        assert "--allow-tool=shell(git diff:*)" in cmd
+        assert "--allow-tool=shell(*)" in cmd
+
+    def test_build_command_always_includes_s_flag(self) -> None:
+        """-s always present."""
+        cmd = build_copilot_command("hello", "copilot")
+        assert "-s" in cmd
+
+    def test_build_command_always_includes_allow_all_tools(self) -> None:
+        """--allow-all-tools always present."""
+        cmd = build_copilot_command("hello", "copilot")
+        assert "--allow-all-tools" in cmd
+
+    def test_build_command_empty_cmd_raises(self) -> None:
+        """ValueError for empty copilot_cmd."""
+        with pytest.raises(ValueError, match="copilot_cmd cannot be empty"):
+            build_copilot_command("hello", "")
+        with pytest.raises(ValueError, match="copilot_cmd cannot be empty"):
+            build_copilot_command("hello", "   ")
+
+    def test_build_command_exceeds_8kb_raises(self) -> None:
+        """ValueError with guidance message."""
+        # Create a prompt that will exceed 8KB
+        long_prompt = "x" * (COPILOT_CMD_LINE_LIMIT + 100)
+        with pytest.raises(ValueError, match="exceeds.*char limit"):
+            build_copilot_command(long_prompt, "copilot")
+
+
+class TestReadSettingsAllow:
+    """Tests for _read_settings_allow."""
+
+    def test_read_settings_allow_returns_list(self, tmp_path: Path) -> None:
+        """Mock file with permissions.allow entries."""
+        claude_dir = tmp_path / ".claude"
+        claude_dir.mkdir()
+        settings = {
+            "permissions": {"allow": ["mcp__workspace__read_file", "Bash(git diff:*)"]}
+        }
+        (claude_dir / "settings.local.json").write_text(
+            json.dumps(settings), encoding="utf-8"
+        )
+        result = _read_settings_allow(str(tmp_path))
+        assert result == ["mcp__workspace__read_file", "Bash(git diff:*)"]
+
+    def test_read_settings_allow_file_missing_returns_none(
+        self, tmp_path: Path
+    ) -> None:
+        """No file → None."""
+        result = _read_settings_allow(str(tmp_path))
+        assert result is None
+
+    def test_read_settings_allow_no_permissions_key_returns_none(
+        self, tmp_path: Path
+    ) -> None:
+        """JSON without permissions → None."""
+        claude_dir = tmp_path / ".claude"
+        claude_dir.mkdir()
+        (claude_dir / "settings.local.json").write_text(
+            json.dumps({"other": "data"}), encoding="utf-8"
+        )
+        result = _read_settings_allow(str(tmp_path))
+        assert result is None
+
+
+class TestAskCopilotCli:
+    """Tests for ask_copilot_cli (mocked subprocess)."""
+
+    def _make_mock_result(
+        self,
+        make_copilot_jsonl_output: Callable[..., list[str]],
+        text: str = "Hello from Copilot",
+        session_id: str = "test-session-123",
+    ) -> MagicMock:
+        """Create a mock CommandResult with JSONL output."""
+        lines = make_copilot_jsonl_output(text=text, session_id=session_id)
+        mock_result = MagicMock()
+        mock_result.stdout = "\n".join(lines)
+        mock_result.stderr = ""
+        mock_result.return_code = 0
+        mock_result.timed_out = False
+        return mock_result
+
+    @patch(
+        "mcp_coder.llm.providers.copilot.copilot_cli._read_settings_allow",
+        return_value=None,
+    )
+    @patch("mcp_coder.llm.providers.copilot.copilot_cli.execute_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.copilot.copilot_cli.find_executable",
+        return_value="/usr/bin/copilot",
+    )
+    def test_ask_copilot_cli_success(
+        self,
+        mock_find: MagicMock,
+        mock_exec: MagicMock,
+        mock_settings: MagicMock,
+        make_copilot_jsonl_output: Callable[..., list[str]],
+        tmp_path: Path,
+    ) -> None:
+        """Mock subprocess, verify LLMResponseDict structure."""
+        mock_exec.return_value = self._make_mock_result(make_copilot_jsonl_output)
+        result = ask_copilot_cli(
+            "What is 2+2?", logs_dir=str(tmp_path), cwd=str(tmp_path)
+        )
+        assert result["provider"] == "copilot"
+        assert result["text"] == "Hello from Copilot"
+        assert result["version"] == "1.0"
+        assert "timestamp" in result
+        assert "raw_response" in result
+
+    @patch(
+        "mcp_coder.llm.providers.copilot.copilot_cli._read_settings_allow",
+        return_value=None,
+    )
+    @patch("mcp_coder.llm.providers.copilot.copilot_cli.execute_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.copilot.copilot_cli.find_executable",
+        return_value="/usr/bin/copilot",
+    )
+    def test_ask_copilot_cli_session_id_returned(
+        self,
+        mock_find: MagicMock,
+        mock_exec: MagicMock,
+        mock_settings: MagicMock,
+        make_copilot_jsonl_output: Callable[..., list[str]],
+        tmp_path: Path,
+    ) -> None:
+        """Verify session_id from JSONL result."""
+        mock_exec.return_value = self._make_mock_result(
+            make_copilot_jsonl_output, session_id="copilot-sess-456"
+        )
+        result = ask_copilot_cli("hello", logs_dir=str(tmp_path), cwd=str(tmp_path))
+        assert result["session_id"] == "copilot-sess-456"
+
+    @patch(
+        "mcp_coder.llm.providers.copilot.copilot_cli._read_settings_allow",
+        return_value=None,
+    )
+    @patch("mcp_coder.llm.providers.copilot.copilot_cli.execute_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.copilot.copilot_cli.find_executable",
+        return_value="/usr/bin/copilot",
+    )
+    def test_ask_copilot_cli_system_prompt_prepended(
+        self,
+        mock_find: MagicMock,
+        mock_exec: MagicMock,
+        mock_settings: MagicMock,
+        make_copilot_jsonl_output: Callable[..., list[str]],
+        tmp_path: Path,
+    ) -> None:
+        """Verify prompt starts with system prompt."""
+        mock_exec.return_value = self._make_mock_result(make_copilot_jsonl_output)
+        ask_copilot_cli(
+            "What is 2+2?",
+            system_prompt="You are a calculator",
+            logs_dir=str(tmp_path),
+            cwd=str(tmp_path),
+        )
+        # Check the command that was passed to execute_subprocess
+        call_args = mock_exec.call_args[0][0]
+        # -p arg is at index 2
+        prompt_arg = call_args[2]
+        assert prompt_arg.startswith("You are a calculator")
+        assert "What is 2+2?" in prompt_arg
+
+    @patch(
+        "mcp_coder.llm.providers.copilot.copilot_cli._read_settings_allow",
+        return_value=None,
+    )
+    @patch("mcp_coder.llm.providers.copilot.copilot_cli.execute_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.copilot.copilot_cli.find_executable",
+        return_value="/usr/bin/copilot",
+    )
+    def test_ask_copilot_cli_system_prompt_skipped_on_resume(
+        self,
+        mock_find: MagicMock,
+        mock_exec: MagicMock,
+        mock_settings: MagicMock,
+        make_copilot_jsonl_output: Callable[..., list[str]],
+        tmp_path: Path,
+    ) -> None:
+        """session_id set → no system prompt."""
+        mock_exec.return_value = self._make_mock_result(make_copilot_jsonl_output)
+        ask_copilot_cli(
+            "What is 2+2?",
+            session_id="existing-session",
+            system_prompt="You are a calculator",
+            logs_dir=str(tmp_path),
+            cwd=str(tmp_path),
+        )
+        call_args = mock_exec.call_args[0][0]
+        prompt_arg = call_args[2]
+        # System prompt should NOT be prepended on resume
+        assert not prompt_arg.startswith("You are a calculator")
+        assert prompt_arg == "What is 2+2?"
+
+    def test_ask_copilot_cli_empty_question_raises(self) -> None:
+        """ValueError for empty question."""
+        with pytest.raises(ValueError, match="empty"):
+            ask_copilot_cli("")
+        with pytest.raises(ValueError, match="empty"):
+            ask_copilot_cli("   ")
+
+    @patch(
+        "mcp_coder.llm.providers.copilot.copilot_cli._read_settings_allow",
+        return_value=None,
+    )
+    @patch("mcp_coder.llm.providers.copilot.copilot_cli.execute_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.copilot.copilot_cli.find_executable",
+        return_value="/usr/bin/copilot",
+    )
+    def test_ask_copilot_cli_timeout_raises(
+        self,
+        mock_find: MagicMock,
+        mock_exec: MagicMock,
+        mock_settings: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """TimeoutExpired propagated."""
+        mock_result = MagicMock()
+        mock_result.stdout = ""
+        mock_result.stderr = ""
+        mock_result.return_code = 0
+        mock_result.timed_out = True
+        mock_exec.return_value = mock_result
+        with pytest.raises(TimeoutExpired):
+            ask_copilot_cli("hello", logs_dir=str(tmp_path), cwd=str(tmp_path))
+
+    @patch(
+        "mcp_coder.llm.providers.copilot.copilot_cli._read_settings_allow",
+        return_value=None,
+    )
+    @patch("mcp_coder.llm.providers.copilot.copilot_cli.execute_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.copilot.copilot_cli.find_executable",
+        return_value="/usr/bin/copilot",
+    )
+    def test_ask_copilot_cli_nonzero_exit_raises(
+        self,
+        mock_find: MagicMock,
+        mock_exec: MagicMock,
+        mock_settings: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """CalledProcessError with stream file path."""
+        mock_result = MagicMock()
+        mock_result.stdout = ""
+        mock_result.stderr = "error occurred"
+        mock_result.return_code = 1
+        mock_result.timed_out = False
+        mock_exec.return_value = mock_result
+        with pytest.raises(CalledProcessError) as exc_info:
+            ask_copilot_cli("hello", logs_dir=str(tmp_path), cwd=str(tmp_path))
+        assert "Stream file" in str(exc_info.value.stderr)
+
+    @patch(
+        "mcp_coder.llm.providers.copilot.copilot_cli._read_settings_allow",
+        return_value=None,
+    )
+    @patch("mcp_coder.llm.providers.copilot.copilot_cli.execute_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.copilot.copilot_cli.find_executable",
+        return_value="/usr/bin/copilot",
+    )
+    def test_ask_copilot_cli_saves_jsonl_log(
+        self,
+        mock_find: MagicMock,
+        mock_exec: MagicMock,
+        mock_settings: MagicMock,
+        make_copilot_jsonl_output: Callable[..., list[str]],
+        tmp_path: Path,
+    ) -> None:
+        """Verify log file written."""
+        mock_exec.return_value = self._make_mock_result(make_copilot_jsonl_output)
+        ask_copilot_cli("hello", logs_dir=str(tmp_path), cwd=str(tmp_path))
+        # Check that a .ndjson file was created in the copilot-sessions subdir
+        session_dir = tmp_path / "copilot-sessions"
+        ndjson_files = list(session_dir.glob("*.ndjson"))
+        assert len(ndjson_files) == 1
+
+    @patch(
+        "mcp_coder.llm.providers.copilot.copilot_cli.find_executable",
+        side_effect=FileNotFoundError("not found"),
+    )
+    def test_ask_copilot_cli_not_found_raises(self, mock_find: MagicMock) -> None:
+        """FileNotFoundError from find_executable."""
+        with pytest.raises(FileNotFoundError):
+            ask_copilot_cli("hello")

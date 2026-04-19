@@ -47,9 +47,9 @@ See [step_4.md](./steps/step_4.md)
 
 ### Step 5: Copilot command builder + `ask_copilot_cli()`
 See [step_5.md](./steps/step_5.md)
-- [ ] Implementation: move `logging_utils.py` to `llm/`, add `build_copilot_command()`, `ask_copilot_cli()`, `_read_settings_allow()` + update imports + tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move `logging_utils.py` to `llm/`, add `build_copilot_command()`, `ask_copilot_cli()`, `_read_settings_allow()` + update imports + tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: Copilot streaming
 See [step_6.md](./steps/step_6.md)
