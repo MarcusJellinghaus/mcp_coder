@@ -21,6 +21,31 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Add `ImplementConfig` and `get_implement_config()` to pyproject_config.py
+- [ ] Implementation: add `ImplementConfig` dataclass and `get_implement_config()` function with tests ([step_1.md](./steps/step_1.md))
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Gate formatting and mypy in task_processing.py
+- [ ] Implementation: add `format_code`/`check_type_hints` params to `process_single_task()` and `process_task_with_retry()`, gate Steps 7-8, update existing tests ([step_2.md](./steps/step_2.md))
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Read config in core.py and pass booleans down
+- [ ] Implementation: import and call `get_implement_config()` in `run_implement_workflow()`, pass config to `process_task_with_retry()`, gate Step 5 final mypy/formatting ([step_3.md](./steps/step_3.md))
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Add PROJECT section to verify command
+- [ ] Implementation: add `_print_project_section()` to verify.py, call from `execute_verify()` after PROMPTS section ([step_4.md](./steps/step_4.md))
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: Add `[tool.mcp-coder.implement]` to pyproject.toml
+- [ ] Implementation: add `[tool.mcp-coder.implement]` section with `format_code = true` and `check_type_hints = true`, add verification test ([step_5.md](./steps/step_5.md))
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review: verify all steps integrated correctly
+- [ ] PR summary prepared
