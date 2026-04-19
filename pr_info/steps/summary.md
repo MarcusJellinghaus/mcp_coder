@@ -25,5 +25,4 @@ Not applicable — these are declarative config files with no testable logic.
 
 | Step | Description | Commit |
 |------|-------------|--------|
-| 1 | Migrate `.mcp.json` reference-project args to new KV format | `chore(config): migrate .mcp.json reference-projects to KV format with URLs` |
-| 2 | Add `search_reference_files` permission to settings | `chore(config): add search_reference_files permission` |
+| 1 | Migrate `.mcp.json` reference-project args to new KV format and add `search_reference_files` permission | `chore(config): migrate .mcp.json to KV format and add search_reference_files permission` |
