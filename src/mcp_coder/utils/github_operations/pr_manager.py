@@ -132,7 +132,6 @@ class PullRequestManager(BaseGitHubManager):
         return True
 
     @log_function_call
-    @_handle_github_errors(lambda: cast(PullRequestData, {}))
     def create_pull_request(
         self,
         title: str,
@@ -149,7 +148,7 @@ class PullRequestManager(BaseGitHubManager):
             body: Description/body of the pull request (optional)
 
         Returns:
-            PullRequestData containing pull request information or empty dict on failure.
+            PullRequestData containing pull request information.
 
             Success response includes:
             - number: PR number (int)
@@ -165,61 +164,58 @@ class PullRequestManager(BaseGitHubManager):
             - mergeable: Whether PR can be merged (bool)
             - merged: Whether PR is already merged (bool)
             - draft: Whether PR is a draft (bool)
+
+        Raises:
+            ValueError: If validation fails (invalid title, branch names, or repository access)
+            GithubException: If the GitHub API call fails
         """
         # Resolve base_branch if not provided
         if base_branch is None:
             if self.project_dir is None:
-                logger.error("project_dir required for default branch resolution")
-                return cast(PullRequestData, {})
+                raise ValueError("project_dir required for default branch resolution")
             resolved_base = get_default_branch_name(self.project_dir)
             if resolved_base is None:
-                logger.error("Could not determine default branch for repository")
-                return cast(PullRequestData, {})
+                raise ValueError("Could not determine default branch for repository")
             base_branch = resolved_base
             logger.debug(f"Using repository default branch: {base_branch}")
 
         # Validate title
         if not isinstance(title, str) or not title.strip():
-            logger.error(f"Invalid PR title: '{title}'. Must be a non-empty string.")
-            return cast(PullRequestData, {})
+            raise ValueError(
+                f"Invalid PR title: '{title}'. Must be a non-empty string."
+            )
 
         # Validate branch names
         if not self._validate_branch_name(head_branch):
-            return cast(PullRequestData, {})
+            raise ValueError(f"Invalid head branch name: '{head_branch}'")
         if not self._validate_branch_name(base_branch):
-            return cast(PullRequestData, {})
+            raise ValueError(f"Invalid base branch name: '{base_branch}'")
 
-        try:
-            repo = self._get_repository()
-            if repo is None:
-                return cast(PullRequestData, {})
+        repo = self._get_repository()
+        if repo is None:
+            raise ValueError("Could not access GitHub repository")
 
-            # Create the pull request using GitHub API
-            pr = repo.create_pull(
-                title=title, body=body, head=head_branch, base=base_branch
-            )
+        # Create the pull request using GitHub API
+        pr = repo.create_pull(
+            title=title, body=body, head=head_branch, base=base_branch
+        )
 
-            # Return structured dictionary with PR information
-            return {
-                "number": pr.number,
-                "title": pr.title,
-                "body": pr.body,
-                "state": pr.state,
-                "head_branch": pr.head.ref,
-                "base_branch": pr.base.ref,
-                "url": pr.html_url,
-                "created_at": pr.created_at.isoformat() if pr.created_at else None,
-                "updated_at": pr.updated_at.isoformat() if pr.updated_at else None,
-                "user": pr.user.login if pr.user else None,
-                "mergeable": pr.mergeable,
-                "merged": pr.merged,
-                "draft": pr.draft,
-            }
-
-        except GithubException as e:
-            # Log the error and return empty dict on failure
-            logger.error(f"GitHub API error creating pull request: {e}")
-            return cast(PullRequestData, {})
+        # Return structured dictionary with PR information
+        return {
+            "number": pr.number,
+            "title": pr.title,
+            "body": pr.body,
+            "state": pr.state,
+            "head_branch": pr.head.ref,
+            "base_branch": pr.base.ref,
+            "url": pr.html_url,
+            "created_at": pr.created_at.isoformat() if pr.created_at else None,
+            "updated_at": pr.updated_at.isoformat() if pr.updated_at else None,
+            "user": pr.user.login if pr.user else None,
+            "mergeable": pr.mergeable,
+            "merged": pr.merged,
+            "draft": pr.draft,
+        }
 
     @log_function_call
     @_handle_github_errors(lambda: cast(PullRequestData, {}))

@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Remove error swallowing from `PullRequestManager.create_pull_request()`
-- [ ] Implementation: remove decorator + exception catch, convert `return {}` to `raise ValueError`, update tests in `test_pr_manager.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: remove decorator + exception catch, convert `return {}` to `raise ValueError`, update tests in `test_pr_manager.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Change `core.py` wrapper to return `(result, error_msg)` tuple
 - [ ] Implementation: change return type to `tuple[PullRequestData | None, str | None]`, update `test_repository.py`
