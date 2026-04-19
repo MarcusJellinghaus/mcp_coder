@@ -22,8 +22,8 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Migrate .mcp.json to KV format and add search_reference_files permission
-- [ ] Implementation: migrate 4 reference-project values to KV format and add permission
-- [ ] Commit message prepared
+- [x] Implementation: migrate 4 reference-project values to KV format and add permission
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review
