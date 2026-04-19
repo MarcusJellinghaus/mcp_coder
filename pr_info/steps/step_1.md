@@ -45,6 +45,8 @@ def parse_llm_method(llm_method: str) -> str:
 ### `src/mcp_coder/cli/parsers.py`
 Replace all 8 occurrences of `choices=["claude", "langchain"]` with `choices=sorted(SUPPORTED_PROVIDERS)`. Import from `..llm.types`.
 
+**Note:** This changes `--help` output for all 8 subcommands to show `[claude, copilot, langchain]`. Verify no snapshot/golden-file tests capture CLI help text.
+
 ### `src/mcp_coder/cli/utils.py`
 Remove `_VALID_PROVIDERS = {"claude", "langchain"}`. Import and use `SUPPORTED_PROVIDERS` from `..llm.types`.
 

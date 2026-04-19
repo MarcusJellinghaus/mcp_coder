@@ -72,10 +72,14 @@ Copilot emits different JSONL types than Claude. The streaming module maps:
 | File | Change |
 |---|---|
 | `src/mcp_coder/llm/types.py` | Add `SUPPORTED_PROVIDERS` constant |
-| `src/mcp_coder/llm/providers/claude/claude_executable_finder.py` | Use shared `find_executable()` as first-try |
 | `src/mcp_coder/llm/session/resolver.py` | Add `"copilot"` + use `SUPPORTED_PROVIDERS` |
 | `src/mcp_coder/cli/parsers.py` | Replace 8× hardcoded `choices` with `SUPPORTED_PROVIDERS` |
 | `src/mcp_coder/cli/utils.py` | Replace `_VALID_PROVIDERS` with `SUPPORTED_PROVIDERS` |
+| `src/mcp_coder/llm/log_utils.py` | New — extracted shared log utilities (sanitize_branch_identifier, DEFAULT_LOGS_DIR) |
+| `src/mcp_coder/llm/logging_utils.py` | Moved from `providers/claude/logging_utils.py` — shared LLM logging |
+| `src/mcp_coder/llm/providers/claude/claude_code_cli_log_paths.py` | Update imports to use `llm.log_utils` |
+| `src/mcp_coder/llm/providers/claude/claude_code_cli.py` | Update imports to use `llm.logging_utils` |
+| `src/mcp_coder/llm/providers/claude/claude_code_cli_streaming.py` | Update imports to use `llm.logging_utils` |
 | `src/mcp_coder/llm/interface.py` | Add `"copilot"` dispatch in `prompt_llm()` and `prompt_llm_stream()` |
 | `pyproject.toml` | Add `copilot_cli_integration` marker |
 | `tests/llm/test_interface.py` | Update unsupported-provider tests |

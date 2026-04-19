@@ -22,7 +22,7 @@
 2. Add `elif provider == "copilot":` branch after the `langchain` branch
 3. Lazy-import `ask_copilot_cli` from `.providers.copilot`
 4. Build system prompt for Copilot: use `system_prompt` only (skip `project_prompt` — Copilot reads CLAUDE.md natively). Pass `None` if `session_id` is set (skip on resume).
-5. Read `settings_allow` from `.claude/settings.local.json` if `execution_dir` or `cwd` is available
+5. Pass `execution_dir` to `ask_copilot_cli()` — the copilot module reads `.claude/settings.local.json` internally
 6. Call `ask_copilot_cli()` with appropriate parameters
 7. Wrap `TimeoutExpired` in `LLMTimeoutError` (same pattern as Claude)
 
@@ -34,9 +34,12 @@
 4. Same system prompt logic as `prompt_llm()`
 5. Yield from `ask_copilot_cli_stream()`
 
-### Settings.local.json reading helper
+### Settings.local.json reading (in copilot module, not interface.py)
+
+`_read_settings_allow()` lives in `copilot_cli.py`, not `interface.py`. The interface just passes `execution_dir` to the copilot functions, and they read the settings internally. This keeps the settings-reading logic close to the tool converter that consumes it.
 
 ```python
+# In copilot_cli.py:
 def _read_settings_allow(execution_dir: str | None) -> list[str] | None:
     """Read permissions.allow from .claude/settings.local.json.
 
@@ -48,7 +51,8 @@ def _read_settings_allow(execution_dir: str | None) -> list[str] | None:
 
 - Import `SUPPORTED_PROVIDERS` from `.types`
 - Lazy-import copilot functions inside the `elif provider == "copilot":` branch
-- `_read_settings_allow()` is a private helper in interface.py — reads JSON, extracts `permissions.allow` list
+- `_read_settings_allow()` lives in `copilot_cli.py` (not interface.py) — reads JSON, extracts `permissions.allow` list
+- `interface.py` passes `execution_dir` to `ask_copilot_cli()`, which calls `_read_settings_allow()` internally
 
 ## ALGORITHM
 
@@ -56,13 +60,13 @@ def _read_settings_allow(execution_dir: str | None) -> list[str] | None:
 ```
 1. Derive logs_dir from env_vars MCP_CODER_PROJECT_DIR (same as Claude)
 2. Build copilot_system_prompt: system_prompt if session_id is None, else None
-3. Read settings_allow from .claude/settings.local.json via _read_settings_allow()
+3. Pass execution_dir to ask_copilot_cli() (it reads settings.local.json internally)
 4. Call ask_copilot_cli(question, session_id, timeout, env_vars, cwd=execution_dir,
-     logs_dir, branch_name, system_prompt=copilot_system_prompt, settings_allow)
+     logs_dir, branch_name, system_prompt=copilot_system_prompt, execution_dir=execution_dir)
 5. Catch TimeoutExpired → raise LLMTimeoutError
 ```
 
-### _read_settings_allow
+### _read_settings_allow (in copilot_cli.py)
 ```
 1. Determine base_dir from execution_dir or cwd
 2. Read base_dir / ".claude" / "settings.local.json"
@@ -72,7 +76,8 @@ def _read_settings_allow(execution_dir: str | None) -> list[str] | None:
 
 ## DATA
 
-- `_read_settings_allow()` returns `list[str] | None`
+- `_read_settings_allow()` returns `list[str] | None` (lives in `copilot_cli.py`)
+- `ask_copilot_cli()` accepts `execution_dir` parameter and calls `_read_settings_allow()` internally
 - Copilot branch produces same `LLMResponseDict` as other providers
 - Error message in unsupported-provider ValueError now lists all three providers
 
@@ -97,7 +102,7 @@ def _read_settings_allow(execution_dir: str | None) -> list[str] | None:
 - `test_prompt_llm_accepts_copilot_provider` — no ValueError for provider="copilot"
 - `test_prompt_llm_stream_accepts_copilot_provider` — no ValueError for provider="copilot"
 
-#### Settings reading
+#### Settings reading (tests in test_copilot_cli.py, not test_interface.py)
 - `test_read_settings_allow_returns_list` — mock file with permissions.allow entries
 - `test_read_settings_allow_file_missing_returns_none` — no file → None
 - `test_read_settings_allow_no_permissions_key_returns_none` — JSON without permissions → None

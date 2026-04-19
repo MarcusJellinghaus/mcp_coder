@@ -6,12 +6,17 @@
 
 > Implement Step 5 of the Copilot CLI provider (issue #847). See `pr_info/steps/summary.md` for full context.
 >
-> Add the command builder function and the main `ask_copilot_cli()` entry point to `copilot_cli.py`. The command builder constructs the Copilot CLI invocation with all flags. `ask_copilot_cli()` orchestrates: find executable, build command, check 8KB limit, execute subprocess, save JSONL log, parse output, return LLMResponseDict. Follow TDD.
+> Add the command builder function and the main `ask_copilot_cli()` entry point to `copilot_cli.py`. First, move `logging_utils.py` from `providers/claude/` up to `llm/` so it can be shared by both providers. The command builder constructs the Copilot CLI invocation with all flags. `ask_copilot_cli()` orchestrates: find executable, build command, check 8KB limit, execute subprocess, save JSONL log, parse output, return LLMResponseDict. Follow TDD.
 
 ## WHERE
 
+### New files
+- `src/mcp_coder/llm/logging_utils.py` (moved from `providers/claude/logging_utils.py`)
+
 ### Modified files
 - `src/mcp_coder/llm/providers/copilot/copilot_cli.py` (add command builder + ask function)
+- `src/mcp_coder/llm/providers/claude/claude_code_cli.py` (update imports to use `llm.logging_utils`)
+- `src/mcp_coder/llm/providers/claude/claude_code_cli_streaming.py` (update imports to use `llm.logging_utils`)
 - `tests/llm/providers/copilot/test_copilot_cli.py` (add command builder + ask tests)
 
 ## WHAT
@@ -61,7 +66,7 @@ def ask_copilot_cli(
     logs_dir: str | None = None,
     branch_name: str | None = None,
     system_prompt: str | None = None,
-    settings_allow: list[str] | None = None,
+    execution_dir: str | None = None,
 ) -> LLMResponseDict:
     """Ask Copilot CLI with session support and JSONL logging.
 
@@ -74,7 +79,7 @@ def ask_copilot_cli(
         logs_dir: Log directory for JSONL files
         branch_name: Git branch for log filename context
         system_prompt: System prompt to prepend to question (skipped on resume)
-        settings_allow: Permission entries from settings.local.json to convert
+        execution_dir: Directory to read .claude/settings.local.json from
 
     Returns:
         LLMResponseDict with text, session_id, provider="copilot", raw_response
@@ -89,11 +94,15 @@ def ask_copilot_cli(
 
 ## HOW
 
+- **Sub-step 5a (move logging_utils):** Move `src/mcp_coder/llm/providers/claude/logging_utils.py` to `src/mcp_coder/llm/logging_utils.py` (use `mcp__tools-py__move_module` during implementation). Update imports in `claude_code_cli.py` and `claude_code_cli_streaming.py` to use `...logging_utils` (or absolute `mcp_coder.llm.logging_utils`). If `tests/llm/providers/claude/test_logging_utils.py` exists, move it to `tests/llm/test_logging_utils.py`.
+- **Sub-step 5b (command builder + ask function):** Add the command builder and `ask_copilot_cli()` entry point.
+
+### Imports
 - Imports `find_executable` from `mcp_coder.utils.executable_finder`
 - Imports `execute_subprocess`, `CommandOptions`, `TimeoutExpired`, `CalledProcessError` from subprocess_runner
 - Imports `LLMResponseDict`, `LLM_RESPONSE_VERSION` from `...types`
 - Imports `get_stream_log_path` from `.copilot_cli_log_paths`
-- Imports `logging_utils` from `..claude.logging_utils` (shared — not Claude-specific)
+- Imports `logging_utils` from `...logging_utils` (shared at `llm/` level)
 
 ## ALGORITHM
 
@@ -103,7 +112,7 @@ def ask_copilot_cli(
 2. If available_tools: append --available-tools=<comma-separated>
 3. For each allow_tool: append --allow-tool=<entry>
 4. If session_id: append --resume=<session_id>
-5. Check sum of arg lengths; if > 8KB raise ValueError with guidance
+5. Measure total command line length: join all args with spaces (approximating `CreateProcess` behavior on Windows, which measures the full command string including executable path and all arguments); if > 8KB raise ValueError with guidance
 6. Return command list
 ```
 
@@ -112,7 +121,7 @@ def ask_copilot_cli(
 1. Validate inputs (empty question, timeout <= 0)
 2. Find copilot via find_executable("copilot", install_hint=...)
 3. Build prompt: if session_id is None and system_prompt set, prepend system_prompt to question
-4. Convert settings_allow via convert_settings_to_copilot_tools() if provided
+4. Read settings_allow via _read_settings_allow(execution_dir), convert via convert_settings_to_copilot_tools()
 5. Build command via build_copilot_command()
 6. Execute subprocess with cwd=cwd, save stdout to JSONL log file
 7. Parse output via parse_copilot_jsonl_output(), build and return LLMResponseDict

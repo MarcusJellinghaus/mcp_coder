@@ -6,15 +6,20 @@
 
 > Implement Step 3 of the Copilot CLI provider (issue #847). See `pr_info/steps/summary.md` for full context.
 >
-> Create `src/mcp_coder/llm/providers/copilot/copilot_cli_log_paths.py` with log path generation for `logs/copilot-sessions/`. Mirror the pattern from `claude_code_cli_log_paths.py` but with `copilot-sessions` subdirectory. Also create the package `__init__.py` (empty for now). Follow TDD.
+> Create `src/mcp_coder/llm/providers/copilot/copilot_cli_log_paths.py` with log path generation for `logs/copilot-sessions/`. First, extract shared log utilities (`sanitize_branch_identifier`, `DEFAULT_LOGS_DIR`) from `claude_code_cli_log_paths.py` into a new `src/mcp_coder/llm/log_utils.py` module. Update `claude_code_cli_log_paths.py` to import from `..log_utils`. The copilot module then imports from `...log_utils`. Also create the package `__init__.py` (empty for now). Follow TDD.
 
 ## WHERE
 
 ### New files
+- `src/mcp_coder/llm/log_utils.py`
 - `src/mcp_coder/llm/providers/copilot/__init__.py`
 - `src/mcp_coder/llm/providers/copilot/copilot_cli_log_paths.py`
+- `tests/llm/test_log_utils.py`
 - `tests/llm/providers/copilot/__init__.py`
 - `tests/llm/providers/copilot/test_copilot_cli_log_paths.py`
+
+### Modified files
+- `src/mcp_coder/llm/providers/claude/claude_code_cli_log_paths.py` (import from `...log_utils` instead of defining locally)
 
 ## WHAT
 
@@ -34,7 +39,18 @@ def get_stream_log_path(
     """
 ```
 
-Reuse `sanitize_branch_identifier` from Claude's log paths module (import it — it's a pure string utility, not Claude-specific).
+Import shared utilities from the new `log_utils` module (two levels up from copilot package).
+
+### `src/mcp_coder/llm/log_utils.py`
+```python
+"""Shared log utilities for LLM providers."""
+
+DEFAULT_LOGS_DIR: str = "logs"
+
+def sanitize_branch_identifier(branch_name: str) -> str:
+    """Sanitize a git branch name for use in filenames."""
+```
+Extracted from `claude_code_cli_log_paths.py` — these are provider-agnostic utilities.
 
 ### `src/mcp_coder/llm/providers/copilot/__init__.py`
 ```python
@@ -43,8 +59,8 @@ Reuse `sanitize_branch_identifier` from Claude's log paths module (import it —
 
 ## HOW
 
-- Import `sanitize_branch_identifier` from `..claude.claude_code_cli_log_paths` to avoid duplication.
-- Import `DEFAULT_LOGS_DIR` from the same module (it's a generic constant `"logs"`).
+- **Sub-step 3a (extract shared utilities):** Extract `sanitize_branch_identifier` and `DEFAULT_LOGS_DIR` from `claude_code_cli_log_paths.py` into `src/mcp_coder/llm/log_utils.py`. Update `claude_code_cli_log_paths.py` to `from ...log_utils import sanitize_branch_identifier, DEFAULT_LOGS_DIR`.
+- **Sub-step 3b (copilot log paths):** Create `copilot_cli_log_paths.py` importing from `...log_utils` (three dots — up from `providers/copilot/` to `llm/`).
 
 ## ALGORITHM
 
@@ -62,6 +78,12 @@ Reuse `sanitize_branch_identifier` from Claude's log paths module (import it —
 - Output: `Path` to `logs/copilot-sessions/session_YYYYMMDD_HHMMSS_NNNNNN[_BRANCH].ndjson`
 
 ## Tests
+
+### `tests/llm/test_log_utils.py`
+- `test_sanitize_branch_identifier_simple` — `"main"` → `"main"`
+- `test_sanitize_branch_identifier_slashes` — `"feature/foo"` → `"feature_foo"`
+- `test_sanitize_branch_identifier_special_chars` — strips/replaces non-alphanumeric
+- `test_default_logs_dir_value` — `DEFAULT_LOGS_DIR == "logs"`
 
 ### `tests/llm/providers/copilot/test_copilot_cli_log_paths.py`
 

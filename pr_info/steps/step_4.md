@@ -120,6 +120,7 @@ def convert_settings_to_copilot_tools(
 | `mcp__tools-py__run_pytest_check` | `available_tools` | `tools-py-run_pytest_check` |
 | `mcp__obsidian-wiki__read-note` | `available_tools` | `obsidian-wiki-read-note` |
 | `Bash(git diff:*)` | `allow_tools` | `shell(git diff:*)` |
+| `Bash(*)` | `allow_tools` | `shell(*)` |
 | `Skill(commit_push)` | (skipped) | warning logged |
 | `WebFetch(domain:*)` | (skipped) | warning logged |
 
@@ -146,6 +147,7 @@ Factory fixture `make_copilot_jsonl_output` that creates valid canned JSONL stri
 - `test_convert_mcp_tool_hyphenated_server` — `mcp__tools-py__run_pytest_check` → `tools-py-run_pytest_check`
 - `test_convert_mcp_tool_hyphenated_server_name` — `mcp__obsidian-wiki__read-note` → `obsidian-wiki-read-note`
 - `test_convert_bash_to_shell` — `Bash(git diff:*)` → `shell(git diff:*)`
+- `test_convert_bash_wildcard` — `Bash(*)` → `shell(*)`
 - `test_convert_skill_skipped_with_warning` — `Skill(commit_push)` skipped, warning logged
 - `test_convert_webfetch_skipped_with_warning` — `WebFetch(domain:*)` skipped, warning logged
 - `test_convert_mixed_entries` — real-world mix from settings.local.json
