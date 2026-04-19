@@ -32,5 +32,5 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ## Pull Request
-- [ ] PR review: verify all steps committed and pushed
+- [x] PR review: verify all steps committed and pushed
 - [ ] PR summary prepared
