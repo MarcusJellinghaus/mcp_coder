@@ -74,34 +74,11 @@ modules =
 # -----------------------------------------------------------------------------
 # Contract: MCP Workspace Git Operations Isolation
 # -----------------------------------------------------------------------------
-# Only the shim (mcp_workspace_git) may import from mcp_workspace.git_operations.
-# All other modules must use the shim as an abstraction layer.
-#
-# Why this matters:
-# - Single entry point for git operations
-# - Keeps external package usage contained
-# - Makes it easy to swap implementations
+# TODO(Step 4): Re-add when shim imports from mcp_workspace.git_operations.
+# Currently blocked: import-linter v2.11 doesn't support external subpackage
+# paths in forbidden_modules, and unmatched ignore_imports cause exit code 1.
+# The layered architecture contract enforces shim positioning in the meantime.
 # -----------------------------------------------------------------------------
-[importlinter:contract:mcp_workspace_git_isolation]
-name = MCP Workspace Git Operations Isolation
-type = forbidden
-source_modules =
-    mcp_coder
-forbidden_modules =
-    mcp_workspace.git_operations
-ignore_imports =
-    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations
-    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations.core
-    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations.repository_status
-    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations.branch_queries
-    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations.branches
-    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations.commits
-    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations.diffs
-    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations.compact_diffs
-    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations.remotes
-    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations.staging
-    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations.workflows
-    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations.parent_branch_detection
 
 # -----------------------------------------------------------------------------
 # Contract: Jenkins Operations Independence
@@ -208,7 +185,6 @@ forbidden_modules =
     gitdb
 ignore_imports =
     mcp_coder.utils.git_operations.** -> git
-    mcp_coder.utils.git_operations.** -> gitdb
 
 # -----------------------------------------------------------------------------
 # Contract: Jenkins Library Isolation
