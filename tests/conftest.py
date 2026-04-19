@@ -379,3 +379,14 @@ def require_claude_cli() -> None:
             f"Claude CLI not installed: {e}\n"
             "Install with: npm install -g @anthropic-ai/claude-code"
         )
+
+
+@pytest.fixture
+def require_copilot_cli() -> None:
+    """Skip test if Copilot CLI is not installed."""
+    from mcp_coder.utils.executable_finder import find_executable
+
+    try:
+        find_executable("copilot", install_hint="")
+    except FileNotFoundError:
+        pytest.skip("Copilot CLI not installed")

@@ -154,7 +154,7 @@ type = forbidden
 source_modules =
     mcp_coder.llm.mlflow_logger
 forbidden_modules =
-    mcp_coder.llm.providers.claude.logging_utils
+    mcp_coder.llm.logging_utils
     mcp_coder.cli.commands.prompt
 
 

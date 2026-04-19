@@ -11,6 +11,8 @@ import argparse
 import sys
 from typing import Any, NoReturn
 
+from ..llm.types import SUPPORTED_PROVIDERS
+
 
 class HelpHintArgumentParser(argparse.ArgumentParser):
     """ArgumentParser subclass that appends a help hint on errors.
@@ -93,7 +95,7 @@ def add_prompt_parser(subparsers: Any) -> None:
     )
     prompt_parser.add_argument(
         "--llm-method",
-        choices=["claude", "langchain"],
+        choices=sorted(SUPPORTED_PROVIDERS),
         default=None,
         metavar="METHOD",
         help="LLM method override. If omitted, uses config default_provider or claude",
@@ -144,7 +146,7 @@ def add_commit_parsers(subparsers: Any) -> None:
     )
     auto_parser.add_argument(
         "--llm-method",
-        choices=["claude", "langchain"],
+        choices=sorted(SUPPORTED_PROVIDERS),
         default=None,
         help="LLM method override. If omitted, uses config default_provider or claude",
     )
@@ -190,7 +192,7 @@ def add_implement_parser(subparsers: Any) -> None:
     )
     implement_parser.add_argument(
         "--llm-method",
-        choices=["claude", "langchain"],
+        choices=sorted(SUPPORTED_PROVIDERS),
         default=None,
         help="LLM method override. If omitted, uses config default_provider or claude",
     )
@@ -238,7 +240,7 @@ def add_create_plan_parser(subparsers: Any) -> None:
     )
     create_plan_parser.add_argument(
         "--llm-method",
-        choices=["claude", "langchain"],
+        choices=sorted(SUPPORTED_PROVIDERS),
         default=None,
         help="LLM method override. If omitted, uses config default_provider or claude",
     )
@@ -283,7 +285,7 @@ def add_create_pr_parser(subparsers: Any) -> None:
     )
     create_pr_parser.add_argument(
         "--llm-method",
-        choices=["claude", "langchain"],
+        choices=sorted(SUPPORTED_PROVIDERS),
         default=None,
         help="LLM method override. If omitted, uses config default_provider or claude",
     )
@@ -445,7 +447,7 @@ def add_check_parsers(subparsers: Any) -> None:
     )
     branch_status_parser.add_argument(
         "--llm-method",
-        choices=["claude", "langchain"],
+        choices=sorted(SUPPORTED_PROVIDERS),
         default=None,
         help="LLM method override. If omitted, uses config default_provider or claude",
     )
@@ -525,7 +527,7 @@ def add_verify_parser(subparsers: Any) -> None:
     )
     verify_parser.add_argument(
         "--llm-method",
-        choices=["claude", "langchain"],
+        choices=sorted(SUPPORTED_PROVIDERS),
         default=None,
         metavar="METHOD",
         help="LLM method override. If omitted, uses config default_provider or claude",
@@ -637,7 +639,7 @@ def add_icoder_parser(subparsers: Any) -> None:
     )
     icoder_parser.add_argument(
         "--llm-method",
-        choices=["claude", "langchain"],
+        choices=sorted(SUPPORTED_PROVIDERS),
         default=None,
         metavar="METHOD",
         help="LLM method override. If omitted, uses config default_provider or claude",

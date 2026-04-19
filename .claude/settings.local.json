@@ -2,7 +2,6 @@
   "permissions": {
     "allow": [
       "Bash(./tools/pycycle_check.sh:*)",
-      "Bash(./tools/ruff_check.sh:*)",
       "Bash(./tools/tach_check.sh:*)",
       "Bash(find:*)",
       "Bash(gh issue list:*)",

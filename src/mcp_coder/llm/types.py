@@ -12,8 +12,12 @@ __all__ = [
     "LLM_RESPONSE_VERSION",
     "ResponseAssembler",
     "StreamEvent",
+    "SUPPORTED_PROVIDERS",
     "UsageInfo",
 ]
+
+
+SUPPORTED_PROVIDERS: frozenset[str] = frozenset({"claude", "langchain", "copilot"})
 
 
 class UsageInfo(TypedDict, total=False):

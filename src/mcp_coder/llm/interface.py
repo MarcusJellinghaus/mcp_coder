@@ -13,7 +13,7 @@ from .mlflow_conversation_logger import mlflow_conversation
 from .providers.claude.claude_code_cli import ask_claude_code_cli
 
 # Serialization functions are now in .serialization module
-from .types import LLMResponseDict, StreamEvent
+from .types import SUPPORTED_PROVIDERS, LLMResponseDict, StreamEvent
 
 if TYPE_CHECKING:
     from mcp_coder.utils.pyproject_config import PromptsConfig
@@ -158,9 +158,10 @@ def prompt_llm(
         system_prompt, project_prompt, prompts_config = load_prompts(Path(project_dir))
 
     # Unsupported provider check — before context manager (no MLflow run needed)
-    if provider not in ("claude", "langchain"):
+    if provider not in SUPPORTED_PROVIDERS:
         raise ValueError(
-            f"Unsupported provider: {provider}. Supported: 'claude', 'langchain'"
+            f"Unsupported provider: {provider}. "
+            f"Supported: {', '.join(repr(p) for p in sorted(SUPPORTED_PROVIDERS))}"
         )
 
     metadata = {"branch_name": branch_name, "working_directory": execution_dir}
@@ -183,6 +184,42 @@ def prompt_llm(
                     project_prompt=project_prompt,
                 )
             except asyncio.TimeoutError as e:
+                logger.error("LLM request timed out after %ds", timeout)
+                logger.error(
+                    "Prompt length: %d characters (%d words)",
+                    len(question),
+                    len(question.split()),
+                )
+                logger.error("LLM provider: %s", provider)
+                logger.error(
+                    "Consider: checking network, simplifying prompt, increasing timeout"
+                )
+                raise LLMTimeoutError(f"LLM request timed out after {timeout}s") from e
+        elif provider == "copilot":
+            from .providers.copilot import ask_copilot_cli  # noqa: PLC0415
+
+            # Derive logs_dir from env_vars (same as Claude)
+            logs_dir = None
+            if env_vars and "MCP_CODER_PROJECT_DIR" in env_vars:
+                logs_dir = str(Path(env_vars["MCP_CODER_PROJECT_DIR"]) / "logs")
+
+            # System prompt: pass on new sessions only; skip project prompt
+            # (Copilot reads CLAUDE.md natively)
+            copilot_system_prompt = system_prompt if session_id is None else None
+
+            try:
+                response = ask_copilot_cli(
+                    question,
+                    session_id=session_id,
+                    timeout=timeout,
+                    env_vars=env_vars,
+                    cwd=execution_dir,
+                    logs_dir=logs_dir,
+                    branch_name=branch_name,
+                    system_prompt=copilot_system_prompt,
+                    execution_dir=execution_dir,
+                )
+            except TimeoutExpired as e:
                 logger.error("LLM request timed out after %ds", timeout)
                 logger.error(
                     "Prompt length: %d characters (%d words)",
@@ -285,9 +322,10 @@ def prompt_llm_stream(
 
         system_prompt, project_prompt, prompts_config = load_prompts(Path(project_dir))
 
-    if provider not in ("claude", "langchain"):
+    if provider not in SUPPORTED_PROVIDERS:
         raise ValueError(
-            f"Unsupported provider: {provider}. Supported: 'claude', 'langchain'"
+            f"Unsupported provider: {provider}. "
+            f"Supported: {', '.join(repr(p) for p in sorted(SUPPORTED_PROVIDERS))}"
         )
 
     if provider == "langchain":
@@ -305,6 +343,25 @@ def prompt_llm_stream(
             tools=tools,
             system_prompt=system_prompt,
             project_prompt=project_prompt,
+        )
+    elif provider == "copilot":
+        from .providers.copilot import (  # noqa: PLC0415
+            ask_copilot_cli_stream,
+        )
+
+        # System prompt: pass on new sessions only; skip project prompt
+        # (Copilot reads CLAUDE.md natively)
+        copilot_system_prompt = system_prompt if session_id is None else None
+
+        yield from ask_copilot_cli_stream(
+            question,
+            session_id=session_id,
+            timeout=timeout,
+            env_vars=env_vars,
+            cwd=execution_dir,
+            branch_name=branch_name,
+            system_prompt=copilot_system_prompt,
+            execution_dir=execution_dir,
         )
     else:
         from .providers.claude.claude_code_cli_streaming import (  # noqa: PLC0415
