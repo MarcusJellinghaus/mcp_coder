@@ -4,6 +4,7 @@
 import argparse
 import sys
 from contextlib import ExitStack
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -12,6 +13,7 @@ import pytest
 from mcp_coder.cli.commands.verify import (
     _looks_like_key,
     _print_environment_section,
+    _print_project_section,
     _prompt_source,
     execute_verify,
 )
@@ -468,3 +470,64 @@ class TestConfigGrouping:
         assert not any(line.startswith("    [OK]              ") for line in lines)
         # Must not double the [OK] prefix
         assert not any("[OK] [OK]" in line for line in lines)
+
+
+# ── Project section tests ───────────────────────────────────────────
+
+
+class TestProjectSection:
+    """Tests for the _print_project_section helper."""
+
+    def test_project_section_python_both_enabled(
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """pyproject.toml with both options true shows [OK] enabled."""
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            "[tool.mcp-coder.implement]\n"
+            "format_code = true\n"
+            "check_type_hints = true\n",
+            encoding="utf-8",
+        )
+        symbols = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
+        _print_project_section(tmp_path, symbols)
+        out = capsys.readouterr().out
+        assert "=== PROJECT" in out
+        assert "[OK] found" in out
+        assert "[OK] Python (detected)" in out
+        assert "format_code" in out and "[OK] enabled" in out
+        assert "check_type_hints" in out and "[OK] enabled" in out
+
+    def test_project_section_python_defaults(
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """pyproject.toml without implement section shows [WARN] not configured."""
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+        symbols = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
+        _print_project_section(tmp_path, symbols)
+        out = capsys.readouterr().out
+        assert "[OK] found" in out
+        assert "[OK] Python (detected)" in out
+        assert "[WARN] not configured (default: disabled)" in out
+        # Both should be "not configured"
+        lines = [l for l in out.splitlines() if "not configured" in l]
+        assert len(lines) == 2
+
+    def test_project_section_non_python(
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """No pyproject.toml shows [WARN] not found and (none detected)."""
+        symbols = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
+        _print_project_section(tmp_path, symbols)
+        out = capsys.readouterr().out
+        assert "[WARN] not found" in out
+        assert "(none detected)" in out
+        # Should NOT show [Python] subsection
+        assert "[Python]" not in out

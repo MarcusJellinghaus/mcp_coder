@@ -394,6 +394,8 @@ def process_single_task(
     mcp_config: str | None = None,
     execution_dir: Optional[Path] = None,
     attempt: int = 1,
+    format_code: bool = False,
+    check_type_hints: bool = False,
 ) -> tuple[bool, str]:
     """Process a single implementation task.
 
@@ -403,6 +405,8 @@ def process_single_task(
         mcp_config: Optional path to MCP configuration file
         execution_dir: Optional working directory for Claude subprocess
         attempt: 1-based attempt number; appends retry reminder when > 1
+        format_code: If True, run code formatters after implementation
+        check_type_hints: If True, run mypy type checking after implementation
 
     Returns:
         Tuple of (success, reason) where:
@@ -513,19 +517,22 @@ Please implement this task step by step."""
         return False, "error"
 
     # Step 7: Run mypy check and fixes (each fix will be saved separately)
-    if RUN_MYPY_AFTER_EACH_TASK:
+    if check_type_hints and RUN_MYPY_AFTER_EACH_TASK:
         if not check_and_fix_mypy(
             project_dir, step_num, provider, env_vars, mcp_config, execution_dir
         ):
             logger.warning(
                 "Mypy check failed or found unresolved issues - continuing anyway"
             )
+    elif not check_type_hints:
+        logger.info("Skipping mypy check (check_type_hints disabled)")
     else:
         logger.info("Skipping mypy check (will run after all tasks complete)")
 
     # Step 8: Run formatters
-    if not run_formatters(project_dir):
-        return False, "error"
+    if format_code:
+        if not run_formatters(project_dir):
+            return False, "error"
 
     # Step 9: Commit changes
     if not commit_changes(project_dir, provider):
@@ -544,6 +551,8 @@ def process_task_with_retry(
     provider: str,
     mcp_config: str | None = None,
     execution_dir: Optional[Path] = None,
+    format_code: bool = False,
+    check_type_hints: bool = False,
 ) -> tuple[bool, str]:
     """Process a single task with bounded retry on zero-change results.
 
@@ -562,6 +571,8 @@ def process_task_with_retry(
             mcp_config=mcp_config,
             execution_dir=execution_dir,
             attempt=attempt,
+            format_code=format_code,
+            check_type_hints=check_type_hints,
         )
         if reason != "no_changes":
             return success, reason

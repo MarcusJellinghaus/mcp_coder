@@ -27,6 +27,7 @@ from mcp_coder.utils.git_operations.branch_queries import (
 )
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.github_operations.issues import IssueManager
+from mcp_coder.utils.pyproject_config import get_implement_config
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.commit_operations import generate_commit_message_with_llm
 from mcp_coder.workflow_utils.failure_handling import (
@@ -553,6 +554,9 @@ def run_implement_workflow(
         logger.debug("Could not register SIGTERM handler")
 
     try:
+        # Read implement config from pyproject.toml
+        implement_config = get_implement_config(project_dir)
+
         # Step 2: Prepare task tracker if needed
         if not prepare_task_tracker(project_dir, provider, mcp_config, execution_dir):
             _handle_workflow_failure(
@@ -586,7 +590,12 @@ def run_implement_workflow(
         # Step 4: Process all incomplete tasks in a loop
         while True:
             success, reason = process_task_with_retry(
-                project_dir, provider, mcp_config, execution_dir
+                project_dir,
+                provider,
+                mcp_config,
+                execution_dir,
+                format_code=implement_config.format_code,
+                check_type_hints=implement_config.check_type_hints,
             )
 
             if not success:
@@ -658,7 +667,11 @@ def run_implement_workflow(
             log_progress_summary(project_dir)
 
         # Step 5: Run final mypy check if not running after each task
-        if not RUN_MYPY_AFTER_EACH_TASK and completed_tasks > 0:
+        if (
+            not RUN_MYPY_AFTER_EACH_TASK
+            and completed_tasks > 0
+            and implement_config.check_type_hints
+        ):
             logger.info("Running final mypy check after all tasks...")
             env_vars = prepare_llm_environment(project_dir)
 
@@ -676,7 +689,7 @@ def run_implement_workflow(
                 )
 
             # Format code after mypy fixes
-            if not run_formatters(project_dir):
+            if implement_config.format_code and not run_formatters(project_dir):
                 logger.error("Formatting failed after final mypy check")
                 _handle_workflow_failure(
                     WorkflowFailure(
