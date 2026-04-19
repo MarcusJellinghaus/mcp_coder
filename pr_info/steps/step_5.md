@@ -28,6 +28,14 @@ Changes to the function body:
 
 Add keyword arguments `init_requested: bool` and `validate_requested: bool`. When an operation was not requested, show "skipped" instead of count.
 
+### Update existing format tests
+
+All 5 existing tests in `tests/cli/commands/test_define_labels_format.py` must be updated to pass the new `init_requested` and `validate_requested` kwargs to `format_validation_summary`.
+
+### Update existing execute tests
+
+Existing tests in `tests/cli/commands/test_define_labels_execute.py` and `tests/cli/commands/test_define_labels.py` must update their mock `Namespace` objects to include the new flags (`init`, `validate`, `all`, `config`, `generate_github_actions`). Tests that expect `IssueManager` to be called should set `init=True` or `validate=True` in the Namespace.
+
 ### New import in `define_labels.py`
 
 ```python
@@ -60,7 +68,12 @@ labels_config = load_labels_config(config_path)
 validate_labels_config(labels_config)  # always runs, raises ValueError on error
 
 # Find default label from config
-default_label = next(l for l in labels_config["workflow_labels"] if l.get("default"))
+# Defensive: use next(..., None) with explicit check, rather than bare next()
+# which would raise StopIteration. Even though validate_labels_config runs first,
+# defensive coding is appropriate here.
+default_label = next((l for l in labels_config["workflow_labels"] if l.get("default")), None)
+if default_label is None:
+    raise ValueError("No label with 'default: true' found in labels config")
 created_label_name = default_label["name"]
 
 # Gate IssueManager

@@ -121,6 +121,20 @@ return [str(p) for p in files_to_write]
 - `generate_approve_command_yml([("status-01:created", "status-02:awaiting-planning"), ...])` returns YAML with promotion map
 - `build_promotions(config)` returns `[("status-01:created", "status-02:awaiting-planning"), ("status-04:plan-review", "status-05:plan-ready"), ("status-07:code-review", "status-08:ready-pr")]`
 
+## Important notes
+
+### File size check
+
+After adding the GitHub Action generation functions, `define_labels.py` must be checked against the 750-line limit (`mcp-coder check file-size --max-lines 750`). If it exceeds the limit, extract generation functions to a separate module.
+
+### DRY with `validate_labels_config`
+
+`build_promotions` duplicates the promotable iteration logic from `validate_labels_config` (Step 2). Consider having `validate_labels_config` return the promotions list, or extract a shared helper like `_iter_promotable_pairs()`.
+
+### Reference existing workflow files
+
+Check if `.github/workflows/label-new-issues.yml` and `.github/workflows/approve-command.yml` exist in the repo and use them as the template reference for what the generated output should look like.
+
 ## Tests (TDD — write first)
 
 ```python

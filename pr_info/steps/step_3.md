@@ -27,6 +27,12 @@ def get_labels_config_path(
     """
 ```
 
+### New imports
+
+```python
+import tomllib
+```
+
 ### New private helper
 
 ```python
@@ -65,17 +71,26 @@ return resources.files("mcp_coder.config") / "labels.json"
 ```
 path = project_dir / "pyproject.toml"
 if not path.exists(): return None
-data = tomllib.load(path)
+try:
+    data = tomllib.load(path)
+except (tomllib.TOMLDecodeError, OSError):
+    return None
 config_value = data["tool"]["mcp-coder"]["labels-config"]  # may KeyError → None
 resolved = project_dir / config_value
 return resolved if resolved.exists() else None
 ```
+
+> **Note:** TOML loading must be wrapped in `try/except (tomllib.TOMLDecodeError, OSError)` returning `None` on failure, consistent with the existing pattern in `pyproject_config.py`.
 
 ## DATA
 
 - Input: `project_dir: Optional[Path]`, `config_override: Optional[Path]`
 - Output: `Path | Traversable` pointing to labels.json
 - Raises: `FileNotFoundError` if `config_override` is given but doesn't exist
+
+### Module docstring update
+
+The 40+ line module docstring in `label_config.py` must be updated to reflect the new resolution order. It currently documents the old `workflows/config/labels.json` convention which is being removed in this step.
 
 ## Tests (TDD — write first)
 
@@ -103,6 +118,9 @@ class TestConfigDiscovery:
         
     def test_old_workflows_config_not_used(self, tmp_path):
         """workflows/config/labels.json is NOT used even if it exists (breaking change)."""
+        
+    def test_malformed_pyproject_toml_falls_back(self, tmp_path):
+        """Invalid TOML content in pyproject.toml causes graceful fallback to bundled config."""
 ```
 
 ## Verification

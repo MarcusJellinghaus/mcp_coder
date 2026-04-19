@@ -7,7 +7,7 @@
 ## WHERE
 
 - `src/mcp_coder/cli/gh_parsers.py` — modify `define_labels_parser`
-- `tests/cli/test_parsers.py` — add parser tests (if define-labels parsing is tested there, otherwise `tests/cli/commands/test_define_labels.py`)
+- `tests/cli/test_parsers.py` — add parser tests (this file already exists; parser tests belong in `tests/cli/`, not `tests/cli/commands/`)
 
 ## WHAT
 
