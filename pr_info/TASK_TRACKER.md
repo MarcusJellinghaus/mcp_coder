@@ -49,10 +49,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 5: Update architecture configs
-- [ ] Implementation: update `.importlinter` — remove `git_local` and `git_operations_internal_layering` contracts, add `mcp_workspace_git_isolation`, update `git_library_isolation` and `jenkins_independence`, update layered architecture
-- [ ] Implementation: update `tach.toml` — add `shim_workspace` layer, move `mcp_tools_py`, add `mcp_workspace_git`, update dependants
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: update `.importlinter` — remove `git_local` and `git_operations_internal_layering` contracts, add `mcp_workspace_git_isolation`, update `git_library_isolation` and `jenkins_independence`, update layered architecture
+- [x] Implementation: update `tach.toml` — add `shim_workspace` layer, move `mcp_tools_py`, add `mcp_workspace_git`, update dependants
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: verify all steps complete, all checks green

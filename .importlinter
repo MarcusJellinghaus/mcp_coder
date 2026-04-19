@@ -38,7 +38,8 @@ layers =
     mcp_coder.workflow_utils
     mcp_coder.llm | mcp_coder.prompt_manager
     mcp_coder.prompts
-    mcp_coder.utils | mcp_coder.mcp_tools_py
+    mcp_coder.utils
+    mcp_coder.mcp_tools_py | mcp_coder.mcp_workspace_git
     mcp_coder.config | mcp_coder.constants
 ignore_imports =
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.ui.app
@@ -70,57 +71,36 @@ modules =
     mcp_coder.utils.jenkins_operations
 
 # -----------------------------------------------------------------------------
-# Contract: Git Operations Local Independence
+# Contract: MCP Workspace Git Operations Isolation
 # -----------------------------------------------------------------------------
-# Local git operations should not depend on remote service integrations.
-# Git operations work with the local repository only.
+# Only the shim (mcp_workspace_git) may import from mcp_workspace.git_operations.
+# All other modules must use the shim as an abstraction layer.
 #
 # Why this matters:
-# - Keeps git operations usable offline
-# - Maintains clear separation between local and remote operations
-# - Allows testing git operations without network mocking
+# - Single entry point for git operations
+# - Keeps external package usage contained
+# - Makes it easy to swap implementations
 # -----------------------------------------------------------------------------
-[importlinter:contract:git_local]
-name = Git Operations Local Independence
+[importlinter:contract:mcp_workspace_git_isolation]
+name = MCP Workspace Git Operations Isolation
 type = forbidden
 source_modules =
-    mcp_coder.utils.git_operations
+    mcp_coder
 forbidden_modules =
-    mcp_coder.utils.github_operations
-    mcp_coder.utils.jenkins_operations
-
-# -----------------------------------------------------------------------------
-# Contract: Git Operations Internal Layering
-# -----------------------------------------------------------------------------
-# Enforces the internal layering within git_operations:
-# - Orchestration layer (workflows) can import from any git_operations module
-# - Command modules (branches, remotes, commits, staging, file_tracking, diffs)
-#   can import from branch_queries, parent_branch_detection, repository_status, and core
-# - Reader sub-modules (branch_queries, parent_branch_detection) depend on repository_status and core
-# - No imports between modules in the same layer
-#
-# Architecture:
-#   Layer 0: workflows (orchestration)
-#   Layer 1: branches | remotes | commits | staging | file_tracking | diffs
-#   Layer 2: branch_queries | parent_branch_detection (depend on repository_status)
-#   Layer 3: repository_status (foundational read-only checks)
-#   Layer 4: core
-#
-# Note on sub-layers (Layer 2/3): When splitting a large module (e.g. readers.py)
-# into smaller files, the split modules may depend on each other. Use sub-layers
-# to model this: put the dependency (repository_status) on a lower layer than its
-# consumers (branch_queries, parent_branch_detection). Pipe (|) enforces
-# independence between siblings; separate lines enforce direction.
-# -----------------------------------------------------------------------------
-[importlinter:contract:git_operations_internal_layering]
-name = Git Operations Internal Layering
-type = layers
-layers =
-    mcp_coder.utils.git_operations.workflows
-    mcp_coder.utils.git_operations.branches | mcp_coder.utils.git_operations.remotes | mcp_coder.utils.git_operations.commits | mcp_coder.utils.git_operations.staging | mcp_coder.utils.git_operations.file_tracking | mcp_coder.utils.git_operations.diffs
-    mcp_coder.utils.git_operations.branch_queries | mcp_coder.utils.git_operations.parent_branch_detection
-    mcp_coder.utils.git_operations.repository_status
-    mcp_coder.utils.git_operations.core
+    mcp_workspace.git_operations
+ignore_imports =
+    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations
+    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations.core
+    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations.repository_status
+    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations.branch_queries
+    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations.branches
+    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations.commits
+    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations.diffs
+    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations.compact_diffs
+    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations.remotes
+    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations.staging
+    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations.workflows
+    mcp_coder.mcp_workspace_git -> mcp_workspace.git_operations.parent_branch_detection
 
 # -----------------------------------------------------------------------------
 # Contract: Jenkins Operations Independence
@@ -139,7 +119,7 @@ type = forbidden
 source_modules =
     mcp_coder.utils.jenkins_operations
 forbidden_modules =
-    mcp_coder.utils.git_operations
+    mcp_coder.mcp_workspace_git
     mcp_coder.utils.github_operations
 
 # -----------------------------------------------------------------------------
@@ -224,8 +204,7 @@ source_modules =
     mcp_coder
 forbidden_modules =
     git
-ignore_imports =
-    mcp_coder.utils.git_operations.** -> git
+    gitdb
 
 # -----------------------------------------------------------------------------
 # Contract: Jenkins Library Isolation
