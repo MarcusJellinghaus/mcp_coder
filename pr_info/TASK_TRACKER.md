@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 4: Add PROJECT section to verify command
-- [ ] Implementation: add `_print_project_section()` to verify.py, call from `execute_verify()` after PROMPTS section ([step_4.md](./steps/step_4.md))
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `_print_project_section()` to verify.py, call from `execute_verify()` after PROMPTS section ([step_4.md](./steps/step_4.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Add `[tool.mcp-coder.implement]` to pyproject.toml
 - [ ] Implementation: add `[tool.mcp-coder.implement]` section with `format_code = true` and `check_type_hints = true`, add verification test ([step_5.md](./steps/step_5.md))
