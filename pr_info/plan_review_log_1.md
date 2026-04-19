@@ -68,5 +68,25 @@
 - `step_3.md`: Added re-export strategy guidance and existing test dedup note
 - `summary.md`: Moved `log_utils.py` to Files Created, added `claude_code_api.py` and `.importlinter` to Files Modified
 
+**Status**: committed (8a7ce7d)
+
+## Round 3 — 2026-04-19
+
+**Findings** (5 actionable):
+- #1 (Medium): `claude_code_cli_streaming.py` doesn't import `logging_utils` — phantom modification in step 5 and summary
+- #2 (Medium): Summary missing 3 created test files (test_types.py, test_log_utils.py, test_copilot_cli_log_paths.py)
+- #3 (Low): `test_logging_utils.py` move and caplog logger name change not in summary
+- #4 (Low): `logging_utils.py` misclassified as "Modified" instead of "Created (moved)" in summary
+- #5 (Low): `copilot_cli_integration` marker not in recommended exclusion patterns
+
+**Decisions**: All accepted — straightforward consistency fixes
+
+**User decisions**: None needed
+
+**Changes**:
+- `step_5.md`: Removed phantom `claude_code_cli_streaming.py` from modified files and sub-step 5a
+- `step_1.md`: Added note about updating exclusion patterns for `copilot_cli_integration`
+- `summary.md`: Removed phantom streaming file row, added 3 missing test files to Created, reclassified logging_utils.py as Created, added test_logging_utils.py move
+
 **Status**: pending commit
 

@@ -56,6 +56,8 @@ Add marker:
 "copilot_cli_integration: tests that use real Copilot CLI executable (slow)",
 ```
 
+**Note:** Also update the recommended unit test exclusion pattern in `pyproject.toml` (line ~160) and `.claude/CLAUDE.md` pytest section to include `copilot_cli_integration` in the `not` marker list.
+
 ## HOW
 
 - `parsers.py`: Add `from ..llm.types import SUPPORTED_PROVIDERS` at top (after `__future__` import).

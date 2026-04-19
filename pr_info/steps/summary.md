@@ -67,6 +67,10 @@ Copilot emits different JSONL types than Claude. The streaming module maps:
 | `tests/llm/providers/copilot/test_copilot_cli_streaming.py` | Unit tests: streaming + event mapping |
 | `src/mcp_coder/llm/log_utils.py` | Shared log utilities (sanitize_branch_identifier, DEFAULT_LOGS_DIR) |
 | `tests/utils/test_executable_finder.py` | Unit tests: shared executable finder |
+| `tests/llm/test_types.py` | Unit tests for SUPPORTED_PROVIDERS constant |
+| `tests/llm/test_log_utils.py` | Unit tests for shared log utilities |
+| `tests/llm/providers/copilot/test_copilot_cli_log_paths.py` | Unit tests for Copilot log path generation |
+| `src/mcp_coder/llm/logging_utils.py` | Moved from `providers/claude/logging_utils.py` — shared LLM logging utilities |
 
 ## Files Modified
 
@@ -76,10 +80,8 @@ Copilot emits different JSONL types than Claude. The streaming module maps:
 | `src/mcp_coder/llm/session/resolver.py` | Add `"copilot"` + use `SUPPORTED_PROVIDERS` |
 | `src/mcp_coder/cli/parsers.py` | Replace 8× hardcoded `choices` with `SUPPORTED_PROVIDERS` |
 | `src/mcp_coder/cli/utils.py` | Replace `_VALID_PROVIDERS` with `SUPPORTED_PROVIDERS` |
-| `src/mcp_coder/llm/logging_utils.py` | Moved from `providers/claude/logging_utils.py` to `llm/` level — shared LLM logging across providers |
 | `src/mcp_coder/llm/providers/claude/claude_code_cli_log_paths.py` | Update imports to use `llm.log_utils` |
 | `src/mcp_coder/llm/providers/claude/claude_code_cli.py` | Update imports to use `llm.logging_utils` |
-| `src/mcp_coder/llm/providers/claude/claude_code_cli_streaming.py` | Update imports to use `llm.logging_utils` |
 | `src/mcp_coder/llm/providers/claude/claude_code_api.py` | Update imports to use `llm.logging_utils` |
 | `.importlinter` | Update `mlflow_logger_no_cycles` contract path after logging_utils move |
 | `src/mcp_coder/llm/interface.py` | Add `"copilot"` dispatch in `prompt_llm()` and `prompt_llm_stream()` |
@@ -88,6 +90,7 @@ Copilot emits different JSONL types than Claude. The streaming module maps:
 | `tests/llm/session/test_resolver.py` | Add `"copilot"` tests |
 | `tests/cli/test_parsers.py` | Test `"copilot"` in choices |
 | `tests/cli/test_utils.py` | Test `"copilot"` in resolve_llm_method |
+| `tests/llm/test_logging_utils.py` | Moved from `tests/llm/providers/claude/test_logging_utils.py`; update caplog logger name from `mcp_coder.llm.providers.claude.logging_utils` to `mcp_coder.llm.logging_utils` |
 
 ## Implementation Steps
 
