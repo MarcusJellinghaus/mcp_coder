@@ -40,7 +40,7 @@ def test_load_labels_config_valid() -> None:
     assert isinstance(config, dict)
     assert "workflow_labels" in config
     assert isinstance(config["workflow_labels"], list)
-    assert len(config["workflow_labels"]) == 4  # Test fixture has 4 labels
+    assert len(config["workflow_labels"]) == 5  # Test fixture has 5 labels
 
     # Verify first label has required fields
     first_label = config["workflow_labels"][0]

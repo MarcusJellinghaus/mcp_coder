@@ -19,6 +19,9 @@
 | `description` | string | yes | Human-readable description |
 | `category` | string | yes | One of: `human_action`, `bot_pickup`, `bot_busy` |
 | `stale_timeout_minutes` | int | no | Timeout for `bot_busy` labels |
+| `default` | bool | no | Exactly one label must have `"default": true`. Used as the initial label for new issues. |
+| `promotable` | bool | no | Labels eligible for `/approve` promotion. Target is the next label in `workflow_labels` list. |
+| `failure` | bool | no | Marks failure state labels. Promotable labels cannot target failure labels. |
 | `vscodeclaude` | object | no | Present only on `human_action` labels |
 
 ## `vscodeclaude` Block

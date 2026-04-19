@@ -6,6 +6,8 @@
       "color": "10b981",
       "description": "Fresh issue, may need refinement",
       "category": "human_action",
+      "default": true,
+      "promotable": true,
       "vscodeclaude": {
         "emoji": "📝",
         "display_name": "ISSUE ANALYSIS",
@@ -35,6 +37,7 @@
       "color": "3b82f6",
       "description": "First implementation plan available for review/discussion",
       "category": "human_action",
+      "promotable": true,
       "vscodeclaude": {
         "emoji": "📋",
         "display_name": "PLAN REVIEW",
@@ -65,6 +68,7 @@
       "color": "f59e0b",
       "description": "Implementation complete, needs code review",
       "category": "human_action",
+      "promotable": true,
       "vscodeclaude": {
         "emoji": "🔍",
         "display_name": "CODE REVIEW",
@@ -107,6 +111,7 @@
       "color": "e99695",
       "description": "LLM timed out during planning",
       "category": "human_action",
+      "failure": true,
       "vscodeclaude": {
         "emoji": "⏱️",
         "display_name": "PLANNING LLM TIMEOUT",
@@ -121,6 +126,7 @@
       "color": "b60205",
       "description": "Planning prerequisites failed",
       "category": "human_action",
+      "failure": true,
       "vscodeclaude": {
         "emoji": "❌",
         "display_name": "PLANNING PREREQ FAILED",
@@ -135,6 +141,7 @@
       "color": "b60205",
       "description": "Plan generation failed",
       "category": "human_action",
+      "failure": true,
       "vscodeclaude": {
         "emoji": "❌",
         "display_name": "PLANNING FAILED",
@@ -149,6 +156,7 @@
       "color": "b60205",
       "description": "General implementation failure",
       "category": "human_action",
+      "failure": true,
       "vscodeclaude": {
         "emoji": "❌",
         "display_name": "IMPLEMENTING FAILED",
@@ -163,6 +171,7 @@
       "color": "b60205",
       "description": "Task tracker preparation failed",
       "category": "human_action",
+      "failure": true,
       "vscodeclaude": {
         "emoji": "❌",
         "display_name": "TASK TRACKER PREP FAILED",
@@ -177,6 +186,7 @@
       "color": "d93f0b",
       "description": "CI exhausted fix attempts, needs manual intervention",
       "category": "human_action",
+      "failure": true,
       "vscodeclaude": {
         "emoji": "🔧",
         "display_name": "CI FIX NEEDED",
@@ -191,6 +201,7 @@
       "color": "e99695",
       "description": "LLM API timeout during implementation",
       "category": "human_action",
+      "failure": true,
       "vscodeclaude": {
         "emoji": "⏱️",
         "display_name": "LLM TIMEOUT",
@@ -205,6 +216,7 @@
       "color": "d93f0b",
       "description": "LLM produced no file changes after multiple retry attempts",
       "category": "human_action",
+      "failure": true,
       "vscodeclaude": {
         "emoji": "🔄",
         "display_name": "NO CHANGES AFTER RETRIES",
@@ -219,6 +231,7 @@
       "color": "b60205",
       "description": "Pull request creation failed",
       "category": "human_action",
+      "failure": true,
       "vscodeclaude": {
         "emoji": "❌",
         "display_name": "PR CREATION FAILED",
