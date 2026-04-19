@@ -64,7 +64,12 @@ Add to `tests/workflows/implement/test_task_processing.py`:
 4. `test_process_single_task_runs_mypy_when_check_type_hints_true` — verify `check_and_fix_mypy` called (with `RUN_MYPY_AFTER_EACH_TASK=True` patched)
 5. `test_process_task_with_retry_forwards_config_params` — verify that `process_task_with_retry` passes `format_code` and `check_type_hints` through to `process_single_task`
 
-Update all existing tests that call `process_single_task()` or `process_task_with_retry()` to pass the new params (or rely on defaults).
+**Breaking tests:** The following existing tests assert that mypy/formatters are called but will fail because the new defaults are `False`. Update these to pass `format_code=True` and/or `check_type_hints=True` explicitly:
+- `test_process_single_task_success` — asserts both `mock_check_mypy` and `mock_run_formatters` called
+- `test_process_single_task_formatters_fail` — asserts `run_formatters` called
+- `test_full_task_processing_workflow` — asserts both called
+
+All other existing tests that rely on default behavior (mypy/formatters NOT called) will continue to pass without changes.
 
 ## LLM PROMPT
 ```

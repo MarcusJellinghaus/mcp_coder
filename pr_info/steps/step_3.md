@@ -22,7 +22,7 @@ See `pr_info/steps/summary.md` for full design. This step wires config into the 
 from mcp_coder.utils.pyproject_config import get_implement_config
 ```
 
-### Config read (after Step 1.5 rebase, before Step 2):
+### Config read (inside the try block, before Step 2 — prepare_task_tracker):
 ```python
 implement_config = get_implement_config(project_dir)
 ```
@@ -75,7 +75,9 @@ Add to `tests/workflows/implement/test_core.py`:
 3. `test_run_implement_workflow_skips_final_mypy_when_disabled` — `check_type_hints=False` → `check_and_fix_mypy` not called in Step 5
 4. `test_run_implement_workflow_skips_final_formatting_when_disabled` — `format_code=False` → `run_formatters` not called in Step 5
 
-Update existing `test_core.py` tests: all `TestRunImplementWorkflow` tests that reach past `check_prerequisites` will need a `@patch` for `get_implement_config` returning an `ImplementConfig(format_code=False, check_type_hints=False)` mock. There are approximately 7 such tests.
+**Updating existing tests:** `get_implement_config` handles missing `pyproject.toml` gracefully — it returns `ImplementConfig(format_code=False, check_type_hints=False)` when the file doesn't exist. Since most tests use fake paths like `Path("/test/project")`, the function works without mocking. Only tests that assert on `process_task_with_retry` call arguments (e.g., `test_run_implement_workflow_success` which checks positional args at the call site) need updating to also verify the new `format_code`/`check_type_hints` keyword arguments.
+
+**Note:** `test_run_implement_workflow_success` checks `process_task_with_retry` positional args via `call_args_list[0][0]`. Update this assertion to also verify the `format_code` and `check_type_hints` keyword arguments via `call_args_list[0][1]`.
 
 ## LLM PROMPT
 ```
