@@ -152,7 +152,7 @@ async def test_busy_indicator_resets_on_error_only_stream(
 ) -> None:
     """Busy indicator shows ready after stream yields only an error event (no done)."""
     error_only: list[list[StreamEvent]] = [
-        [{"type": "error", "error": "something went wrong"}],
+        [{"type": "error", "message": "something went wrong"}],
     ]
     app = make_icoder_app(responses=error_only)
     async with app.run_test() as pilot:
