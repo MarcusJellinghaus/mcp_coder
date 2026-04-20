@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Create tests for corrected merge-base parent detection
-- [ ] Implementation: create `tests/utils/git_operations/__init__.py` and `test_parent_branch_detection.py` with all test classes (direction fix, tiebreaker, threshold, edge cases)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `tests/utils/git_operations/__init__.py` and `test_parent_branch_detection.py` with all test classes (direction fix, tiebreaker, threshold, edge cases)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Fix the merge-base distance algorithm
 - [ ] Implementation: reverse distance direction, remove early exits, add default-branch tiebreaker, update docstrings in `parent_branch_detection.py`
