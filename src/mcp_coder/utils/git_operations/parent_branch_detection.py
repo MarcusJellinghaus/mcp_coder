@@ -1,7 +1,8 @@
 """Parent branch detection via merge-base analysis.
 
 Measures distance as merge_base → current_HEAD to find the branch with
-the most recent common ancestor relative to the current branch."""
+the most recent common ancestor relative to the current branch.
+"""
 
 # Maximum commits between merge-base and current branch HEAD to consider
 # the candidate as the parent branch. Higher values are more permissive but
