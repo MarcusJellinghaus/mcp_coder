@@ -49,6 +49,7 @@
       "mcp__workspace__read_reference_file",
       "mcp__workspace__save_file",
       "mcp__workspace__search_files",
+      "mcp__workspace__search_reference_files",
       "Skill(check_branch_status)",
       "Skill(commit_push)",
       "Skill(discuss)",
