@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Update busy indicator after ToolResult ([step_1.md](./steps/step_1.md))
-- [ ] Implementation: add test + production code for busy indicator update after ToolResult
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add test + production code for busy indicator update after ToolResult
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review

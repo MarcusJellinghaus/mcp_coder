@@ -147,6 +147,31 @@ async def test_tool_output_empty(
         assert "└ done" in joined
 
 
+async def test_busy_indicator_thinking_after_tool_result(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """Busy indicator shows 'Thinking about ...' after tool result is rendered."""
+    app = make_icoder_app(responses=[])
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        app._handle_stream_event(
+            {
+                "type": "tool_use_start",
+                "name": "mcp__workspace__read_file",
+                "args": {"file_path": "x.py"},
+            }
+        )
+        app._handle_stream_event(
+            {
+                "type": "tool_result",
+                "name": "mcp__workspace__read_file",
+                "output": '{"result": "hello"}',
+            }
+        )
+        indicator = app.query_one(BusyIndicator)
+        assert "Thinking about workspace > read_file..." in indicator.label_text
+
+
 async def test_busy_indicator_resets_on_error_only_stream(
     make_icoder_app: Callable[..., ICoderApp],
 ) -> None:

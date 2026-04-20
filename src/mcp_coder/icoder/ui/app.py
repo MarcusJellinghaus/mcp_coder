@@ -233,6 +233,7 @@ class ICoderApp(App[None]):
                 parts.append("└ done")
             body = "\n".join(parts)
             output.append_text(body, style=STYLE_TOOL_OUTPUT)
+            self.query_one(BusyIndicator).show_busy(f"Thinking about {action.name}...")
         elif isinstance(action, ErrorMessage):
             output.append_text(f"Error: {action.message}")
 
