@@ -10,6 +10,11 @@
 
 ## WHERE
 
+- `.claude/skills/issue_approve/SKILL.md`
+- `.claude/skills/implement_direct/SKILL.md`
+- `.claude/skills/plan_review_supervisor/SKILL.md`
+- `.claude/skills/implementation_review_supervisor/SKILL.md`
+- `.claude/skills/issue_update/SKILL.md`
 - `.claude/skills/rebase/SKILL.md`
 - `.claude/skills/issue_create/SKILL.md`
 - `.claude/skills/issue_analyse/SKILL.md`
@@ -19,14 +24,42 @@
 
 ## WHAT — Frontmatter `allowed-tools` changes
 
+### `/issue_approve` (SKILL.md)
+**Remove:** `Bash(gh issue view *)`
+**Add:** `mcp__workspace__github_issue_view`
+
+Write operations stay: `Bash(gh issue comment *)`, `Bash(MSYS_NO_PATHCONV=1 gh issue comment *)`.
+
+### `/implement_direct` (SKILL.md)
+**Remove:** `Bash(gh issue view *)`
+**Add:** `mcp__workspace__github_issue_view`
+
+Write operations stay: `Bash(mcp-coder gh-tool *)`.
+
+### `/plan_review_supervisor` (SKILL.md)
+**Remove:** `Bash(gh issue view *)`
+**Add:** `mcp__workspace__github_issue_view`
+
+### `/implementation_review_supervisor` (SKILL.md)
+**Remove:** `Bash(gh issue view *)`
+**Add:** `mcp__workspace__github_issue_view`
+
+Other Bash entries stay: `Bash(mcp-coder check branch-status *)`.
+
+### `/issue_update` (SKILL.md)
+**Remove:** `Bash(gh issue view *)`
+**Add:** `mcp__workspace__github_issue_view`
+
+Write operations stay: `Bash(gh issue edit *)`.
+
 ### `/rebase` (SKILL.md)
 **Remove:**
 - `Bash(git branch *)`
 - `Bash(git ls-files *)`
 - `Bash(git fetch *)`
 - `Bash(git rev-parse *)`
-- `Bash(gh run view *)`
-- `Bash(gh issue view *)`
+- `Bash(gh run view *)` (unused in body — removal only, no MCP replacement needed)
+- `Bash(gh issue view *)` (unused in body — removal only, no MCP replacement needed)
 
 **Add:**
 - `mcp__workspace__git`
@@ -62,10 +95,25 @@ Replace bash code blocks with explicit MCP parameter style. Examples of replacem
 | `` `git ls-remote --heads origin <branch>` `` | Call `mcp__workspace__git` with command `"ls-remote"` and args `["--heads", "origin", "<branch-name>"]` |
 | `` `gh issue view <number>` `` | Call `mcp__workspace__github_issue_view` with issue number |
 
+### `/issue_approve` body
+- Replace `gh issue view <issue_number>` with MCP call to `mcp__workspace__github_issue_view`
+
+### `/implement_direct` body
+- Replace `gh issue view <issue_number>` with MCP call to `mcp__workspace__github_issue_view`
+
+### `/plan_review_supervisor` body
+- Replace `gh issue view` reference with MCP call to `mcp__workspace__github_issue_view`
+
+### `/implementation_review_supervisor` body
+- Replace `gh issue view` reference with MCP call to `mcp__workspace__github_issue_view`
+
+### `/issue_update` body
+- Replace `gh issue view <issue_number> --json title,body` with MCP call to `mcp__workspace__github_issue_view`
+
 ### `/rebase` body
 - Replace `git fetch origin` with MCP call
 - Replace any `git branch`, `git ls-files`, `git rev-parse` occurrences with MCP calls
-- Remove `gh run view` and `gh issue view` references (no longer available in this skill)
+- No body changes needed for `gh run view` / `gh issue view` (only frontmatter removal — no body references exist)
 
 ### `/issue_create` body
 - Replace `git ls-remote --heads origin <branch-name>` with MCP call

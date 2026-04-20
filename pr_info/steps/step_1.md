@@ -42,9 +42,10 @@
 | `gh pr view` | `mcp__workspace__github_pr_view` |
 | `gh search` | `mcp__workspace__github_search` |
 
-**"Allowed commands via Bash tool" section** — remove `git commit / fetch / show / ls-tree` and `gh issue view / gh pr view / gh run view` lines. The section should keep only:
+**"Allowed commands via Bash tool" section** — remove `gh issue view / gh pr view / gh run view` line entirely. Replace `git commit / fetch / show / ls-tree` with `git commit / add / rebase / push` (keeping write operations, removing read-only ones now covered by MCP). Also update the preamble sentence: change `Skills that instruct bash commands (e.g. \`gh issue view\`) must also use Bash.` to `Skills that instruct bash commands (e.g. \`git commit\`) must also use Bash.` (since `gh issue view` is now an MCP tool, not a Bash command). The section should become:
 
 ```
+git commit / add / rebase / push
 mcp-coder check branch-status
 mcp-coder check file-size --max-lines 750
 mcp-coder gh-tool set-status <label>

@@ -19,6 +19,11 @@ Replace Bash-based read-only git and GitHub CLI commands with their MCP tool equ
 |------|--------|
 | `.claude/settings.local.json` | Remove 6 Bash permissions, add 5 MCP permissions |
 | `.claude/CLAUDE.md` | Add tool mapping rows, trim Bash-allowed section |
+| `.claude/skills/issue_approve/SKILL.md` | Replace `Bash(gh issue view *)` with `mcp__workspace__github_issue_view` |
+| `.claude/skills/implement_direct/SKILL.md` | Replace `Bash(gh issue view *)` with `mcp__workspace__github_issue_view` |
+| `.claude/skills/plan_review_supervisor/SKILL.md` | Replace `Bash(gh issue view *)` with `mcp__workspace__github_issue_view` |
+| `.claude/skills/implementation_review_supervisor/SKILL.md` | Replace `Bash(gh issue view *)` with `mcp__workspace__github_issue_view` |
+| `.claude/skills/issue_update/SKILL.md` | Replace `Bash(gh issue view *)` with `mcp__workspace__github_issue_view` |
 | `.claude/skills/rebase/SKILL.md` | Swap allowed-tools + replace bash commands with MCP calls |
 | `.claude/skills/issue_create/SKILL.md` | Swap allowed-tools + replace bash commands with MCP calls |
 | `.claude/skills/issue_analyse/SKILL.md` | Swap allowed-tools + replace bash commands with MCP calls |
