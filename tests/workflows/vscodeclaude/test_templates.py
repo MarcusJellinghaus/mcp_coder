@@ -4,8 +4,6 @@ from mcp_coder.workflows.vscodeclaude.templates import (
     AUTOMATED_RESUME_SECTION_WINDOWS,
     AUTOMATED_SECTION_WINDOWS,
     INTERACTIVE_ONLY_SECTION_WINDOWS,
-    INTERACTIVE_ONLY_WITH_COLOR_SECTION_WINDOWS,
-    INTERACTIVE_RESUME_WITH_COLOR_AND_COMMAND_WINDOWS,
     INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS,
     VENV_SECTION_WINDOWS,
 )
@@ -154,30 +152,6 @@ def test_venv_section_sets_uv_git_shallow() -> None:
     assert (
         "UV_GIT_SHALLOW=0" in VENV_SECTION_WINDOWS
     ), "VENV_SECTION_WINDOWS should set UV_GIT_SHALLOW=0 for setuptools_scm"
-
-
-def test_interactive_only_with_color_uses_delayed_expansion() -> None:
-    """Test that color template uses delayed expansion to embed newline in batch arg."""
-    assert "EnableDelayedExpansion" in INTERACTIVE_ONLY_WITH_COLOR_SECTION_WINDOWS
-    assert "{color}" in INTERACTIVE_ONLY_WITH_COLOR_SECTION_WINDOWS
-    assert "!LF!" in INTERACTIVE_ONLY_WITH_COLOR_SECTION_WINDOWS
-
-
-def test_interactive_resume_with_color_uses_delayed_expansion() -> None:
-    """Test that color resume template uses delayed expansion to embed newline."""
-    assert "EnableDelayedExpansion" in INTERACTIVE_RESUME_WITH_COLOR_AND_COMMAND_WINDOWS
-    assert "{color}" in INTERACTIVE_RESUME_WITH_COLOR_AND_COMMAND_WINDOWS
-    assert "!LF!" in INTERACTIVE_RESUME_WITH_COLOR_AND_COMMAND_WINDOWS
-
-
-def test_interactive_only_section_has_no_color_prefix() -> None:
-    """Test that base INTERACTIVE_ONLY_SECTION_WINDOWS has no color logic."""
-    assert "/color" not in INTERACTIVE_ONLY_SECTION_WINDOWS
-
-
-def test_interactive_resume_section_has_no_color_prefix() -> None:
-    """Test that base INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS has no color logic."""
-    assert "/color" not in INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS
 
 
 def test_venv_section_runs_editable_install() -> None:
