@@ -199,13 +199,19 @@ def _make_mock_stream(
     *,
     timed_out: bool = False,
     return_code: int = 0,
+    stderr: str = "",
 ) -> MagicMock:
     """Create a mock stream_subprocess return value."""
+    from mcp_coder.utils.subprocess_runner import CommandResult
+
     mock_stream = MagicMock()
     mock_stream.__iter__ = lambda self: iter(lines)
-    mock_stream.result = MagicMock()
-    mock_stream.result.timed_out = timed_out
-    mock_stream.result.return_code = return_code
+    mock_stream.result = CommandResult(
+        return_code=return_code,
+        stdout="",
+        stderr=stderr,
+        timed_out=timed_out,
+    )
     return mock_stream
 
 
@@ -357,6 +363,71 @@ class TestStreamWritesLogFile:
         assert log_file.exists()
         content = log_file.read_text(encoding="utf-8")
         assert lines[0] in content
+
+
+class TestStreamErrorEventIncludesStderr:
+    """Tests for stderr inclusion in streaming error events."""
+
+    @pytest.mark.usefixtures("_mock_copilot_deps")
+    def test_stream_error_event_includes_stderr(
+        self,
+        _mock_copilot_deps: dict[str, Any],
+        tmp_path: Any,
+    ) -> None:
+        """Error event message contains stderr when CLI fails."""
+        log_file = tmp_path / "stream.ndjson"
+        _mock_copilot_deps["mock_log_path"].return_value = log_file
+        _mock_copilot_deps["mock_stream"].return_value = _make_mock_stream(
+            [], return_code=1, stderr="auth failed"
+        )
+
+        events = list(ask_copilot_cli_stream("test question"))
+        error_events = [e for e in events if e.get("type") == "error"]
+        assert len(error_events) == 1
+        msg = str(error_events[0]["message"])
+        assert "CLI failed with code 1" in msg
+        assert "auth failed" in msg
+
+    @pytest.mark.usefixtures("_mock_copilot_deps")
+    def test_stream_error_event_without_stderr(
+        self,
+        _mock_copilot_deps: dict[str, Any],
+        tmp_path: Any,
+    ) -> None:
+        """Error event message has no trailing colon when stderr is empty."""
+        log_file = tmp_path / "stream.ndjson"
+        _mock_copilot_deps["mock_log_path"].return_value = log_file
+        _mock_copilot_deps["mock_stream"].return_value = _make_mock_stream(
+            [], return_code=1, stderr=""
+        )
+
+        events = list(ask_copilot_cli_stream("test question"))
+        error_events = [e for e in events if e.get("type") == "error"]
+        assert len(error_events) == 1
+        assert str(error_events[0]["message"]) == "CLI failed with code 1"
+
+    @pytest.mark.usefixtures("_mock_copilot_deps")
+    def test_stream_error_event_truncates_long_stderr(
+        self,
+        _mock_copilot_deps: dict[str, Any],
+        tmp_path: Any,
+    ) -> None:
+        """Error event message truncates stderr to 500 chars."""
+        log_file = tmp_path / "stream.ndjson"
+        _mock_copilot_deps["mock_log_path"].return_value = log_file
+        long_stderr = "x" * 1000
+        _mock_copilot_deps["mock_stream"].return_value = _make_mock_stream(
+            [], return_code=1, stderr=long_stderr
+        )
+
+        events = list(ask_copilot_cli_stream("test question"))
+        error_events = [e for e in events if e.get("type") == "error"]
+        assert len(error_events) == 1
+        msg = str(error_events[0]["message"])
+        assert "CLI failed with code 1" in msg
+        # The stderr portion should be at most 500 chars
+        stderr_part = msg.split(": ", 1)[1]
+        assert len(stderr_part) == 500
 
 
 class TestStreamInputValidation:
