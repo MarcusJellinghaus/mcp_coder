@@ -404,6 +404,51 @@ class TestStreamingErrorHandling:
 
         result = execute_prompt(_make_args(output_format="text"))
 
-        assert result == 0
+        assert result == 1
         captured = capsys.readouterr()
         assert "something went wrong" in captured.err
+
+    @patch(_RESOLVE_MCP)
+    @patch(_RESOLVE_LLM)
+    @patch(_PREPARE_ENV)
+    @patch(_STREAM)
+    def test_error_only_stream_returns_exit_code_1(
+        self,
+        mock_stream: Mock,
+        mock_env: Mock,
+        mock_llm: Mock,
+        mock_mcp: Mock,
+    ) -> None:
+        """Stream with only an error event (no done) returns exit code 1."""
+        mock_llm.return_value = ("claude", "cli")
+        mock_mcp.return_value = None
+        mock_env.return_value = {"MCP_CODER_PROJECT_DIR": "/t"}
+        events: list[dict[str, object]] = [
+            {"type": "error", "message": "CLI failed with code 1"},
+        ]
+        mock_stream.return_value = iter(events)
+
+        result = execute_prompt(_make_args(output_format="text"))
+
+        assert result == 1
+
+    @patch(_RESOLVE_MCP)
+    @patch(_RESOLVE_LLM)
+    @patch(_PREPARE_ENV)
+    @patch(_STREAM)
+    def test_successful_stream_returns_exit_code_0(
+        self,
+        mock_stream: Mock,
+        mock_env: Mock,
+        mock_llm: Mock,
+        mock_mcp: Mock,
+    ) -> None:
+        """Stream with text_delta and done returns exit code 0."""
+        mock_llm.return_value = ("claude", "cli")
+        mock_mcp.return_value = None
+        mock_env.return_value = {"MCP_CODER_PROJECT_DIR": "/t"}
+        mock_stream.return_value = iter(_stream_events(text="all good"))
+
+        result = execute_prompt(_make_args(output_format="text"))
+
+        assert result == 0
