@@ -92,10 +92,9 @@ class TestCreateStartupScript:
         )
 
         content = script_path.read_text(encoding="utf-8")
-        # Single command: interactive-only with issue number, no resume
-        assert (
-            'claude "/color yellow\n/implementation_review_supervisor 123"' in content
-        )
+        # Single command with color: uses delayed expansion for newline
+        assert "EnableDelayedExpansion" in content
+        assert "/color yellow!LF!/implementation_review_supervisor 123" in content
         # No automated step for single command
         assert "mcp-coder prompt" not in content
         # No step labels for single command
@@ -274,9 +273,9 @@ class TestCreateStartupScript:
         content = script_path.read_text(encoding="utf-8")
         # First command is automated
         assert "mcp-coder prompt" in content
-        # Last command is interactive resume with color prefix
+        # Last command is interactive resume with color via delayed expansion
         assert "claude --resume %SESSION_ID%" in content
-        assert "/color green\n/discuss" in content
+        assert "/color green!LF!/discuss" in content
         # Multi-command has step labels
         assert "Step 1" in content
 
@@ -306,10 +305,9 @@ class TestCreateStartupScript:
         content = script_path.read_text(encoding="utf-8")
         # No automated step for single command
         assert "mcp-coder prompt" not in content
-        # Interactive-only with issue number and color prefix
-        assert (
-            'claude "/color yellow\n/implementation_review_supervisor 123"' in content
-        )
+        # Interactive-only with color via delayed expansion
+        assert "EnableDelayedExpansion" in content
+        assert "/color yellow!LF!/implementation_review_supervisor 123" in content
         # No step labels
         assert "Step 1" not in content
         assert "Step 2" not in content
