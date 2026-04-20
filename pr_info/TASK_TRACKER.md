@@ -21,6 +21,11 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Update busy indicator after ToolResult ([step_1.md](./steps/step_1.md))
+- [ ] Implementation: add test + production code for busy indicator update after ToolResult
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review
+- [ ] PR summary
