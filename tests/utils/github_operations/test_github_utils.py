@@ -166,7 +166,7 @@ class TestPullRequestManagerUnit:
     """Unit tests for PullRequestManager with mocked dependencies."""
 
     def test_title_validation_empty_string(self, tmp_path: Path) -> None:
-        """Test that empty title returns empty dict."""
+        """Test that empty title raises ValueError."""
         # Setup git repo with mocked config
         git_dir = tmp_path / "git_dir"
         git_dir.mkdir()
@@ -178,12 +178,12 @@ class TestPullRequestManagerUnit:
             manager = PullRequestManager(git_dir)
 
             # Test empty title
-            result = manager.create_pull_request("", "feature-branch", "main")
-            assert not result  # Should return empty dict
+            with pytest.raises(ValueError, match="Invalid PR title"):
+                manager.create_pull_request("", "feature-branch", "main")
 
             # Test whitespace-only title
-            result = manager.create_pull_request("   ", "feature-branch", "main")
-            assert not result  # Should return empty dict
+            with pytest.raises(ValueError, match="Invalid PR title"):
+                manager.create_pull_request("   ", "feature-branch", "main")
 
     def test_branch_validation(self, tmp_path: Path) -> None:
         """Test branch name validation."""
@@ -198,16 +198,12 @@ class TestPullRequestManagerUnit:
             manager = PullRequestManager(git_dir)
 
             # Test invalid head branch
-            result = manager.create_pull_request(
-                "Valid Title", "invalid~branch", "main"
-            )
-            assert not result  # Should return empty dict
+            with pytest.raises(ValueError, match="Invalid head branch name"):
+                manager.create_pull_request("Valid Title", "invalid~branch", "main")
 
             # Test invalid base branch
-            result = manager.create_pull_request(
-                "Valid Title", "feature", "invalid^branch"
-            )
-            assert not result  # Should return empty dict
+            with pytest.raises(ValueError, match="Invalid base branch name"):
+                manager.create_pull_request("Valid Title", "feature", "invalid^branch")
 
     @patch("mcp_coder.utils.github_operations.base_manager.Github")
     def test_create_pull_request_success(
@@ -681,10 +677,8 @@ class TestPullRequestManagerIntegration:
         invalid_close_result = manager.close_pull_request(0)
         assert not invalid_close_result
 
-        invalid_create_result = manager.create_pull_request(
-            "title", "invalid~branch", "main"
-        )
-        assert not invalid_create_result
+        with pytest.raises(ValueError, match="Invalid head branch name"):
+            manager.create_pull_request("title", "invalid~branch", "main")
 
         invalid_list_result = manager.list_pull_requests(base_branch="invalid~branch")
         expected_empty_list: List[Dict[str, Any]] = []

@@ -232,7 +232,7 @@ class TestPullRequestManagerUnit:
             )
 
     def test_create_pull_request_empty_title(self, tmp_path: Path) -> None:
-        """Test that empty title returns empty dict."""
+        """Test that empty title raises ValueError."""
         git_dir = tmp_path / "git_dir"
         git_dir.mkdir()
         repo = git.Repo.init(git_dir)
@@ -243,15 +243,15 @@ class TestPullRequestManagerUnit:
             manager = PullRequestManager(git_dir)
 
             # Empty title
-            result = manager.create_pull_request("", "feature-branch", "main")
-            assert not result
+            with pytest.raises(ValueError, match="Invalid PR title"):
+                manager.create_pull_request("", "feature-branch", "main")
 
             # Whitespace-only title
-            result = manager.create_pull_request("   ", "feature-branch", "main")
-            assert not result
+            with pytest.raises(ValueError, match="Invalid PR title"):
+                manager.create_pull_request("   ", "feature-branch", "main")
 
     def test_create_pull_request_invalid_head_branch(self, tmp_path: Path) -> None:
-        """Test that invalid head branch returns empty dict."""
+        """Test that invalid head branch raises ValueError."""
         git_dir = tmp_path / "git_dir"
         git_dir.mkdir()
         repo = git.Repo.init(git_dir)
@@ -261,13 +261,11 @@ class TestPullRequestManagerUnit:
             mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
 
-            result = manager.create_pull_request(
-                "Valid Title", "invalid~branch", "main"
-            )
-            assert not result
+            with pytest.raises(ValueError, match="Invalid head branch"):
+                manager.create_pull_request("Valid Title", "invalid~branch", "main")
 
     def test_create_pull_request_invalid_base_branch(self, tmp_path: Path) -> None:
-        """Test that invalid base branch returns empty dict."""
+        """Test that invalid base branch raises ValueError."""
         git_dir = tmp_path / "git_dir"
         git_dir.mkdir()
         repo = git.Repo.init(git_dir)
@@ -277,10 +275,8 @@ class TestPullRequestManagerUnit:
             mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
 
-            result = manager.create_pull_request(
-                "Valid Title", "feature", "invalid^branch"
-            )
-            assert not result
+            with pytest.raises(ValueError, match="Invalid base branch"):
+                manager.create_pull_request("Valid Title", "feature", "invalid^branch")
 
     # ========================================
     # Get Pull Request Tests
@@ -469,10 +465,10 @@ class TestPullRequestManagerUnit:
     # ========================================
 
     @patch("mcp_coder.utils.github_operations.base_manager.Github")
-    def test_github_api_error_returns_empty(
+    def test_create_pull_request_github_api_error_propagates(
         self, mock_github: Mock, tmp_path: Path
     ) -> None:
-        """Test that GitHub API errors are handled gracefully."""
+        """Test that GitHub API errors propagate as GithubException."""
         git_dir = tmp_path / "git_dir"
         git_dir.mkdir()
         repo = git.Repo.init(git_dir)
@@ -492,9 +488,8 @@ class TestPullRequestManagerUnit:
             mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
 
-            # Errors should return empty dict
-            result = manager.create_pull_request("Test PR", "feature", "main")
-            assert not result
+            with pytest.raises(GithubException):
+                manager.create_pull_request("Test PR", "feature", "main")
 
 
 @pytest.mark.git_integration
@@ -588,10 +583,10 @@ class TestCreatePullRequestDefaultBranch:
 
     @patch("mcp_coder.utils.github_operations.base_manager.Github")
     @patch("mcp_coder.utils.github_operations.pr_manager.get_default_branch_name")
-    def test_create_pr_returns_empty_when_default_branch_unknown(
+    def test_create_pr_raises_when_default_branch_unknown(
         self, mock_get_default: Mock, mock_github: Mock, tmp_path: Path
     ) -> None:
-        """When default branch cannot be determined, returns empty dict."""
+        """When default branch cannot be determined, raises ValueError."""
         git_dir = tmp_path / "git_dir"
         git_dir.mkdir()
         repo = git.Repo.init(git_dir)
@@ -609,15 +604,13 @@ class TestCreatePullRequestDefaultBranch:
             mock_config.return_value = {("github", "token"): "dummy-token"}
             manager = PullRequestManager(git_dir)
 
-            result = manager.create_pull_request(
-                title="Test PR",
-                head_branch="feature-branch",
-                base_branch=None,
-                body="Body",
-            )
-
-            # Should return empty dict (falsy)
-            assert not result
+            with pytest.raises(ValueError, match="Could not determine default branch"):
+                manager.create_pull_request(
+                    title="Test PR",
+                    head_branch="feature-branch",
+                    base_branch=None,
+                    body="Body",
+                )
 
             # PR creation should not be attempted
             mock_repo.create_pull.assert_not_called()

@@ -405,7 +405,10 @@ class TestWorkflowMainFunction:
         mock_cleanup.return_value = True
         mock_clean.return_value = True  # Clean directory, no commit needed
         mock_git_push.return_value = {"success": True}  # Push succeeds
-        mock_create_pr.return_value = None  # PR creation fails
+        mock_create_pr.return_value = (
+            None,
+            "Failed to create pull request",
+        )  # PR creation fails
 
         from mcp_coder.workflows.create_pr.core import run_create_pr_workflow
 
