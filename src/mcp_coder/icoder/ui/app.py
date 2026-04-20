@@ -176,6 +176,8 @@ class ICoderApp(App[None]):
                 self.call_from_thread(self._append_cancelled_marker)
                 self.call_from_thread(self._reset_busy_indicator)
                 self.call_from_thread(self._append_blank_line)
+            elif not _error_handled:
+                self.call_from_thread(self._reset_busy_indicator)
 
     def _append_blank_line(self) -> None:
         """Write an empty line to the output log for visual spacing."""

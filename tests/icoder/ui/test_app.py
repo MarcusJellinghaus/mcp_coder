@@ -10,6 +10,7 @@ from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.core.event_log import EventLog
 from mcp_coder.icoder.services.llm_service import FakeLLMService
 from mcp_coder.icoder.ui.app import ICoderApp
+from mcp_coder.icoder.ui.widgets.busy_indicator import BusyIndicator
 from mcp_coder.icoder.ui.widgets.output_log import OutputLog
 from mcp_coder.llm.types import StreamEvent
 
@@ -144,3 +145,21 @@ async def test_tool_output_empty(
         lines = app.query_one(OutputLog).recorded_lines
         joined = "\n".join(lines)
         assert "└ done" in joined
+
+
+async def test_busy_indicator_resets_on_error_only_stream(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """Busy indicator shows ready after stream yields only an error event (no done)."""
+    error_only: list[list[StreamEvent]] = [
+        [{"type": "error", "message": "something went wrong"}],
+    ]
+    app = make_icoder_app(responses=error_only)
+    async with app.run_test() as pilot:
+        # Type input and press enter to trigger _stream_llm
+        await pilot.press("h", "i")
+        await pilot.press("enter")
+        # Allow the background worker to finish
+        await pilot.pause(delay=0.5)
+        indicator = app.query_one(BusyIndicator)
+        assert indicator.label_text == "✓ Ready"

@@ -22,6 +22,9 @@ from mcp_coder.llm.providers.claude.claude_code_cli_log_paths import (
     get_stream_log_path,
     sanitize_branch_identifier,
 )
+from mcp_coder.llm.providers.claude.claude_code_cli_streaming import (
+    ask_claude_code_cli_stream,
+)
 from mcp_coder.utils.subprocess_runner import CalledProcessError, CommandResult
 
 from .conftest import StreamJsonFactory
@@ -188,6 +191,123 @@ class TestCreateResponseDictFromStream:
         assert result["raw_response"]["stream_file"] == "/path/to/file.ndjson"
         assert result["raw_response"]["duration_ms"] == 1000
         assert result["raw_response"]["total_cost_usd"] == 0.05
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Streaming error event tests (mocked subprocess)
+# ──────────────────────────────────────────────────────────────────────
+
+
+def _make_mock_stream(
+    lines: list[str],
+    *,
+    timed_out: bool = False,
+    return_code: int = 0,
+    stderr: str = "",
+) -> MagicMock:
+    """Create a mock stream_subprocess return value."""
+    mock_stream = MagicMock()
+    mock_stream.__iter__ = lambda self: iter(lines)
+    mock_stream.result = CommandResult(
+        return_code=return_code,
+        stdout="",
+        stderr=stderr,
+        timed_out=timed_out,
+    )
+    return mock_stream
+
+
+class TestStreamErrorEventIncludesStderr:
+    """Tests for stderr inclusion in streaming error events."""
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
+        return_value="claude",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
+    )
+    def test_stream_error_event_includes_stderr(
+        self,
+        mock_stream_sub: MagicMock,
+        mock_log_path: MagicMock,
+        _mock_find: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Error event message contains stderr when CLI fails."""
+        mock_log_path.return_value = tmp_path / "stream.ndjson"
+        mock_stream_sub.return_value = _make_mock_stream(
+            [], return_code=1, stderr="auth failed"
+        )
+
+        events = list(ask_claude_code_cli_stream("test question"))
+        error_events = [e for e in events if e.get("type") == "error"]
+        assert len(error_events) == 1
+        msg = str(error_events[0]["message"])
+        assert "CLI failed with code 1" in msg
+        assert "auth failed" in msg
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
+        return_value="claude",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
+    )
+    def test_stream_error_event_without_stderr(
+        self,
+        mock_stream_sub: MagicMock,
+        mock_log_path: MagicMock,
+        _mock_find: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Error event message has no trailing colon when stderr is empty."""
+        mock_log_path.return_value = tmp_path / "stream.ndjson"
+        mock_stream_sub.return_value = _make_mock_stream([], return_code=1, stderr="")
+
+        events = list(ask_claude_code_cli_stream("test question"))
+        error_events = [e for e in events if e.get("type") == "error"]
+        assert len(error_events) == 1
+        assert str(error_events[0]["message"]) == "CLI failed with code 1"
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
+        return_value="claude",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
+    )
+    def test_stream_error_event_truncates_long_stderr(
+        self,
+        mock_stream_sub: MagicMock,
+        mock_log_path: MagicMock,
+        _mock_find: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Error event message truncates stderr to 500 chars."""
+        mock_log_path.return_value = tmp_path / "stream.ndjson"
+        long_stderr = "x" * 1000
+        mock_stream_sub.return_value = _make_mock_stream(
+            [], return_code=1, stderr=long_stderr
+        )
+
+        events = list(ask_claude_code_cli_stream("test question"))
+        error_events = [e for e in events if e.get("type") == "error"]
+        assert len(error_events) == 1
+        msg = str(error_events[0]["message"])
+        assert "CLI failed with code 1" in msg
+        # The stderr portion should be at most 500 chars
+        stderr_part = msg.split(": ", 1)[1]
+        assert len(stderr_part) == 500
 
 
 class TestStreamFileWriting:

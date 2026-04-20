@@ -171,6 +171,10 @@ def execute_prompt(
                 )
                 logger.info("Response stored to: %s", stored_path)
 
+            if assembler.has_error:
+                logger.error("Prompt command completed with errors")
+                return 1
+
         elif output_format == "session-id":
             # Session ID only mode - return only the session_id for shell script capture
             response_dict = prompt_llm(

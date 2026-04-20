@@ -147,7 +147,7 @@ def ask_claude_code_cli_stream(
             ),
         }
     elif cmd_result.return_code != 0:
-        yield {
-            "type": "error",
-            "message": f"CLI failed with code {cmd_result.return_code}",
-        }
+        error_msg = f"CLI failed with code {cmd_result.return_code}"
+        if cmd_result.stderr:
+            error_msg += f": {cmd_result.stderr[:500]}"
+        yield {"type": "error", "message": error_msg}

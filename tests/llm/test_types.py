@@ -280,6 +280,30 @@ class TestResponseAssemblerToolTrace:
         assert len(tool_trace) == 2
 
 
+# --- ResponseAssembler.has_error tests ---
+
+
+def test_response_assembler_has_error_false_initially() -> None:
+    """New assembler has_error is False."""
+    assembler = ResponseAssembler(provider="claude")
+    assert assembler.has_error is False
+
+
+def test_response_assembler_has_error_true_after_error_event() -> None:
+    """After adding an error event, has_error is True."""
+    assembler = ResponseAssembler(provider="claude")
+    assembler.add({"type": "error", "message": "Connection reset"})
+    assert assembler.has_error is True
+
+
+def test_response_assembler_has_error_false_without_error() -> None:
+    """After text_delta + done events (no error), has_error is False."""
+    assembler = ResponseAssembler(provider="claude")
+    assembler.add({"type": "text_delta", "text": "Hello"})
+    assembler.add({"type": "done", "usage": {}, "session_id": "s1"})
+    assert assembler.has_error is False
+
+
 # --- UsageInfo tests ---
 
 
