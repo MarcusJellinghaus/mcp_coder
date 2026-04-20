@@ -151,7 +151,20 @@ INTERACTIVE_ONLY_SECTION_WINDOWS = r"""echo.
 echo Running: {command} {issue_number}
 echo.
 
-claude "{color_prefix}{command} {issue_number}"
+claude "{command} {issue_number}"
+"""
+
+# Single-command flow with color (delayed expansion embeds newline in argument)
+INTERACTIVE_ONLY_WITH_COLOR_SECTION_WINDOWS = r"""echo.
+echo Running: {command} {issue_number}
+echo.
+
+setlocal EnableDelayedExpansion
+set LF=^
+
+
+claude "/color {color}!LF!{command} {issue_number}"
+endlocal
 """
 
 # Middle commands in multi-command flow for Windows (automated session resume)
@@ -177,7 +190,22 @@ echo You can now interact with Claude directly.
 echo The conversation context from previous steps is preserved.
 echo.
 
-claude --resume %SESSION_ID% "{color_prefix}{command}"
+claude --resume %SESSION_ID% "{command}"
+"""
+
+# Last command in multi-command flow with color
+INTERACTIVE_RESUME_WITH_COLOR_AND_COMMAND_WINDOWS = r"""echo.
+echo === Step {step_number}: Interactive Session ===
+echo You can now interact with Claude directly.
+echo The conversation context from previous steps is preserved.
+echo.
+
+setlocal EnableDelayedExpansion
+set LF=^
+
+
+claude --resume %SESSION_ID% "/color {color}!LF!{command}"
+endlocal
 """
 
 # Main startup script for Windows (with venv and mcp-coder)

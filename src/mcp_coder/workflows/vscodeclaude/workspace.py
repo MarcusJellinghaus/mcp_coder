@@ -514,6 +514,8 @@ def create_startup_script(
         AUTOMATED_RESUME_SECTION_WINDOWS,
         AUTOMATED_SECTION_WINDOWS,
         INTERACTIVE_ONLY_SECTION_WINDOWS,
+        INTERACTIVE_ONLY_WITH_COLOR_SECTION_WINDOWS,
+        INTERACTIVE_RESUME_WITH_COLOR_AND_COMMAND_WINDOWS,
         INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS,
         INTERVENTION_SCRIPT_WINDOWS,
         STARTUP_SCRIPT_WINDOWS,
@@ -527,9 +529,8 @@ def create_startup_script(
     commands = config.get("commands", []) if config else []
     emoji = config["emoji"] if config else "📋"
 
-    # Build color prefix for interactive templates
+    # Color for interactive templates (used to select color-aware template variant)
     color = config.get("color") if config else None
-    color_prefix = f"/color {color}\n" if color else ""
 
     # Default: use raw title (for non-Windows platforms when implemented)
     title_display = issue_title[:58] if len(issue_title) > 58 else issue_title
@@ -582,11 +583,19 @@ def create_startup_script(
             # Build command sections based on commands list
             if len(commands) == 1:
                 # Single command: interactive only, no step labels
-                command_sections = INTERACTIVE_ONLY_SECTION_WINDOWS.format(
-                    command=commands[0],
-                    issue_number=issue_number,
-                    color_prefix=color_prefix,
-                )
+                if color:
+                    command_sections = (
+                        INTERACTIVE_ONLY_WITH_COLOR_SECTION_WINDOWS.format(
+                            command=commands[0],
+                            issue_number=issue_number,
+                            color=color,
+                        )
+                    )
+                else:
+                    command_sections = INTERACTIVE_ONLY_SECTION_WINDOWS.format(
+                        command=commands[0],
+                        issue_number=issue_number,
+                    )
             elif len(commands) > 1:
                 sections = []
                 for i, cmd in enumerate(commands):
@@ -610,13 +619,21 @@ def create_startup_script(
                             )
                         )
                     if is_last:
-                        sections.append(
-                            INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS.format(
-                                command=cmd,
-                                step_number=step_number,
-                                color_prefix=color_prefix,
+                        if color:
+                            sections.append(
+                                INTERACTIVE_RESUME_WITH_COLOR_AND_COMMAND_WINDOWS.format(
+                                    command=cmd,
+                                    step_number=step_number,
+                                    color=color,
+                                )
                             )
-                        )
+                        else:
+                            sections.append(
+                                INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS.format(
+                                    command=cmd,
+                                    step_number=step_number,
+                                )
+                            )
                 command_sections = "\n".join(sections)
             else:
                 command_sections = ""
