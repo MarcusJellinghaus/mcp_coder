@@ -12,7 +12,8 @@
         "emoji": "📝",
         "display_name": "ISSUE ANALYSIS",
         "stage_short": "new",
-        "commands": ["/issue_analyse", "/discuss"]
+        "commands": ["/issue_analyse", "/discuss"],
+        "color": "green"
       }
     },
     {
@@ -42,7 +43,8 @@
         "display_name": "PLAN REVIEW",
         "stage_short": "plan",
         "commands": ["/plan_review_supervisor"],
-        "requires_branch": true
+        "requires_branch": true,
+        "color": "blue"
       }
     },
     {
@@ -72,7 +74,8 @@
         "display_name": "CODE REVIEW",
         "stage_short": "review",
         "commands": ["/implementation_review_supervisor"],
-        "requires_branch": true
+        "requires_branch": true,
+        "color": "yellow"
       }
     },
     {
