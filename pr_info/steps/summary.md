@@ -14,7 +14,7 @@ Reverse the distance measurement to `merge_base → current_HEAD`. The true pare
 
 1. **Reverse distance direction** — Change `iter_commits(merge_base..candidate_HEAD)` to `iter_commits(merge_base..current_HEAD)` in both local and remote branch loops
 2. **Remove early exits** — Delete `if distance == 0: return` blocks (multiple candidates can tie at distance=0 with new metric)
-3. **Add tiebreaker** — Sort by `(distance, 0 if default_branch else 1)` so the default branch wins on equal distance
+3. **Add tiebreaker** — Sort by `(distance, 0 if name == default_branch else 1)` so the default branch wins on equal distance
 4. **New import** — `get_default_branch_name` from `.branch_queries` (sibling module, no new dependency)
 
 The function signature, return type, threshold constant (20), and all callers remain unchanged.

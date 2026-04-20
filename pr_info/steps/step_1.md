@@ -39,7 +39,7 @@ Tests use `unittest.mock` to patch `_safe_repo_context`, `is_git_repository`, an
 Import `detect_parent_branch_via_merge_base` and `MERGE_BASE_DISTANCE_THRESHOLD` from `mcp_coder.utils.git_operations.parent_branch_detection`. Patch at the module level:
 - `mcp_coder.utils.git_operations.parent_branch_detection.is_git_repository`
 - `mcp_coder.utils.git_operations.parent_branch_detection._safe_repo_context`
-- `mcp_coder.utils.git_operations.parent_branch_detection.get_default_branch_name` (will exist after step 2 adds the import)
+- `mcp_coder.utils.git_operations.parent_branch_detection.get_default_branch_name` — use `create=True` on this patch since the import doesn't exist yet in step 1
 
 ## ALGORITHM (mock setup pattern)
 
@@ -85,6 +85,9 @@ in tests/utils/test_git_utils.py (class-based, type hints on all methods).
 
 Do NOT patch at `mcp_coder.utils.git_operations.branch_queries` — patch at the
 module where it will be used.
+
+Since `get_default_branch_name` is not yet imported in the source module during
+step 1, use `create=True` on the patch decorator to avoid AttributeError.
 
 After creating the files, run pylint, mypy, and pytest (unit tests only).
 The tests are expected to FAIL at this point since the source code fix hasn't

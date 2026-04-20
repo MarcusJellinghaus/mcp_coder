@@ -12,7 +12,7 @@ Apply the algorithm fix in `parent_branch_detection.py`. After this step, all te
 
 ## WHAT
 
-Four mechanical changes to `detect_parent_branch_via_merge_base()`:
+Five mechanical changes to `detect_parent_branch_via_merge_base()`:
 
 ### 1. Add import
 
@@ -56,6 +56,16 @@ to:
 candidates_passing.sort(key=lambda x: (x[1], 0 if x[0] == default_branch else 1))
 ```
 
+### 5. Update docstring and inline comments
+
+Update text that references the old distance direction:
+
+- **Docstring** (lines ~23-27): Change "closest to the merge-base" / "candidate branch HEAD" to reflect the new direction (merge-base → current HEAD).
+- **Threshold docstring** (lines ~32-34): Change "candidate branch HEAD" to "current branch HEAD".
+- **Local branch comment** (line ~77): Update "Count commits from merge-base to branch HEAD" → "Count commits from merge-base to current HEAD".
+- **Remote branch comment** (line ~133): Same update as local.
+- **Module docstring** (lines ~3-6): Update if it references the old direction.
+
 ## ALGORITHM
 
 ```python
@@ -67,7 +77,7 @@ def detect_parent_branch_via_merge_base(project_dir, current_branch, threshold=2
         distance = count(merge_base..current_commit)  # REVERSED from old code
         if distance <= threshold:
             candidates.append((name, distance))
-    candidates.sort(key=(distance, 0 if default_branch else 1))
+    candidates.sort(key=(distance, 0 if name == default_branch else 1))
     return candidates[0].name if candidates else None
 ```
 
@@ -97,6 +107,9 @@ four changes described in step_2.md:
 3. Delete both `if distance == 0: return` early-exit blocks
 4. Add `default_branch = get_default_branch_name(project_dir)` before the loops,
    and change the sort key to `(x[1], 0 if x[0] == default_branch else 1)`
+5. Update the function docstring, threshold docstring, and inline comments
+   (lines ~23-27, ~32-34, ~77, ~133, and module docstring ~3-6) to reflect
+   the new distance direction (merge_base → current_HEAD, not candidate_HEAD)
 
 After editing, run pylint, mypy, and pytest (unit tests only).
 All tests must pass, including the new tests from step 1.
