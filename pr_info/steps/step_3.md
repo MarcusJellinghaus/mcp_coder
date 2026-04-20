@@ -9,38 +9,44 @@
 
 ## WHERE
 
-- **Production**: `src/mcp_coder/cli/commands/prompt.py` — `execute_prompt` function, streaming block
+- **Production**: `src/mcp_coder/cli/commands/prompt.py` — `execute_prompt` function, lines ~168-172 (inside the `if output_format in ("rendered", "text", "ndjson", "json-raw")` block, after `store_response` handling)
 - **Tests**: `tests/cli/commands/test_prompt_streaming.py`
 
 ## WHAT
 
-After the streaming loop and MLflow logging, check `assembler.has_error` before returning:
+Inside the streaming `if output_format in (...)` block (after store_response handling, ~line 172), add an early return on error:
 
 ```python
-# After MLflow logging and store_response handling, replace unconditional return 0:
-if assembler.has_error:
-    logger.error("Prompt command completed with errors")
-    return 1
+            # Inside the streaming if-block, after MLflow/store_response (line ~172):
+            if assembler.has_error:
+                logger.error("Prompt command completed with errors")
+                return 1
 
-logger.info("Prompt command completed successfully")
-return 0
+        # ... other elif branches (session-id, json) unchanged ...
+
+        # Shared return 0 at end of function stays — serves all format branches:
+        logger.info("Prompt command completed successfully")
+        return 0
 ```
+
+The `assembler` variable only exists inside the streaming block, so the check **must** be an early return there — not at the shared `return 0` which also serves `session-id` and `json` branches.
 
 ## HOW
 
 - `assembler` is already instantiated as `ResponseAssembler(provider)` at line ~121 of prompt.py
 - `assembler.has_error` comes from Step 1
-- The check goes after the MLflow/store_response block but before the final `return 0`
-- The existing `logger.info("Prompt command completed successfully")` should only run when there's no error
+- The check goes as an **early return inside the streaming `if` block**, after store_response (line ~172), not at the shared `return 0`
+- The shared `logger.info("Prompt command completed successfully")` and `return 0` at lines 219-220 remain unchanged — they serve all format branches
+- On error, the early return at line ~173 skips the shared success log
 
 ## ALGORITHM
 
 ```
-1. Stream events into assembler (existing loop)
-2. Build llm_response = assembler.result() (existing)
-3. Do MLflow logging and store_response (existing)
-4. If assembler.has_error → log error, return 1
-5. Else → log success, return 0
+1. Stream events into assembler (existing loop, lines 141-153)
+2. Build llm_response = assembler.result() (existing, line 155)
+3. Do MLflow logging and store_response (existing, lines 157-172)
+4. Inside streaming block: if assembler.has_error → log error, return 1 (early return)
+5. Shared return 0 at end of function (line 220) remains for all format branches
 ```
 
 ## DATA
