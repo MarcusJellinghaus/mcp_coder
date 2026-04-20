@@ -122,6 +122,11 @@ class ResponseAssembler:
             if isinstance(message, str):
                 self._error = message
 
+    @property
+    def has_error(self) -> bool:
+        """Whether an error event was received during streaming."""
+        return self._error is not None
+
     def result(self) -> LLMResponseDict:
         """Build and return the final LLMResponseDict from accumulated events.
 
