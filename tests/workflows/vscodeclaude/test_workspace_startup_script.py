@@ -92,9 +92,8 @@ class TestCreateStartupScript:
         )
 
         content = script_path.read_text(encoding="utf-8")
-        # Single command with color: uses delayed expansion for newline
-        assert "EnableDelayedExpansion" in content
-        assert "/color yellow!LF!/implementation_review_supervisor 123" in content
+        # Single command: interactive only with issue number
+        assert 'claude "/implementation_review_supervisor 123"' in content
         # No automated step for single command
         assert "mcp-coder prompt" not in content
         # No step labels for single command
@@ -273,9 +272,9 @@ class TestCreateStartupScript:
         content = script_path.read_text(encoding="utf-8")
         # First command is automated
         assert "mcp-coder prompt" in content
-        # Last command is interactive resume with color via delayed expansion
+        # Last command is interactive resume
         assert "claude --resume %SESSION_ID%" in content
-        assert "/color green!LF!/discuss" in content
+        assert "/discuss" in content
         # Multi-command has step labels
         assert "Step 1" in content
 
@@ -305,9 +304,8 @@ class TestCreateStartupScript:
         content = script_path.read_text(encoding="utf-8")
         # No automated step for single command
         assert "mcp-coder prompt" not in content
-        # Interactive-only with color via delayed expansion
-        assert "EnableDelayedExpansion" in content
-        assert "/color yellow!LF!/implementation_review_supervisor 123" in content
+        # Interactive-only with issue number
+        assert 'claude "/implementation_review_supervisor 123"' in content
         # No step labels
         assert "Step 1" not in content
         assert "Step 2" not in content
@@ -470,58 +468,6 @@ class TestCreateStartupScript:
                 issue_url="https://github.com/test/repo/issues/1",
                 is_intervention=False,
             )
-
-    @pytest.mark.parametrize(
-        "config_dict,status",
-        [
-            pytest.param(
-                {
-                    "status-no-color": {
-                        "emoji": "\U0001f4cb",
-                        "display_name": "NO COLOR",
-                        "stage_short": "nc",
-                        "commands": ["/some_command"],
-                    },
-                },
-                "status-no-color",
-                id="config-without-color-key",
-            ),
-            pytest.param(
-                {},
-                "status-unknown",
-                id="config-returns-none",
-            ),
-        ],
-    )
-    def test_no_color_config_produces_no_prefix(
-        self,
-        tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
-        config_dict: dict[str, dict[str, Any]],
-        status: str,
-    ) -> None:
-        """No /color line appears when config has no color key or returns None."""
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
-            lambda: "Windows",
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.workspace.get_vscodeclaude_config",
-            config_dict.get,
-        )
-
-        script_path = create_startup_script(
-            folder_path=tmp_path,
-            issue_number=1,
-            issue_title="No color test",
-            status=status,
-            repo_name="test-repo",
-            issue_url="https://github.com/test/repo/issues/1",
-            is_intervention=False,
-        )
-
-        content = script_path.read_text(encoding="utf-8")
-        assert "/color" not in content
 
     def test_invalid_commands_element_raises_error(
         self,
