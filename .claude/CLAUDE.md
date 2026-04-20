@@ -32,6 +32,10 @@ Use MCP tools for **all** operations. Never use `Read`, `Write`, `Edit`, or `Bas
 | Format code (black+isort) | `mcp__tools-py__run_format_code` |
 | Get library source | `mcp__tools-py__get_library_source` |
 | Refactoring | `mcp__tools-py__move_symbol`, `move_module`, `rename_symbol`, `list_symbols`, `find_references` |
+| Git status | `mcp__workspace__git_status` |
+| Git diff (includes compact diff) | `mcp__workspace__git_diff` |
+| Git log | `mcp__workspace__git_log` |
+| Git merge-base | `mcp__workspace__git_merge_base` |
 
 ## Code quality checks
 
@@ -66,9 +70,8 @@ When debugging test failures, add `"-v", "-s", "--tb=short"` to extra_args.
 **Allowed commands via Bash tool.** These have no MCP equivalent — use Bash directly. Skills that instruct bash commands (e.g. `gh issue view`) must also use Bash.
 
 ```
-git status / diff / commit / log / fetch / ls-tree
+git commit / fetch / show / ls-tree
 gh issue view / gh pr view / gh run view
-mcp-coder git-tool compact-diff
 mcp-coder check branch-status
 mcp-coder check file-size --max-lines 750
 mcp-coder gh-tool set-status <label>
@@ -78,7 +81,7 @@ mcp-coder gh-tool set-status <label>
 
 **Calling mcp-coder:** bare `mcp-coder` uses the tool env (stable install). To test local source changes, use `.venv\Scripts\python -m mcp_coder <args>`. See [`docs/environments/environments.md`](../docs/environments/environments.md#calling-mcp-coder-explicitly).
 
-**Compact diff:** use `mcp-coder git-tool compact-diff` instead of `git diff` for code review. Detects moved code, collapses unchanged blocks. Supports `--exclude PATTERN`.
+**Compact diff:** use `mcp__workspace__git_diff` for code review. Has compact diff built-in with exclude pattern support.
 
 **Before every commit:** run `mcp__tools-py__run_format_code`, then stage and commit.
 
