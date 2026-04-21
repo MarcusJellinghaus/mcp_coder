@@ -585,11 +585,7 @@ Each step consists of two main phases:
 
 **Tools:**
 
-- `tools/checks2clipboard.bat` - **Primary tool**: Run all checks (pylint, pytest, mypy) and copy results to clipboard for LLM analysis
-  - Handles test side effects checking
-  - Provides structured output for LLM review
-  - Sequential execution: pylint → pytest → mypy
-  - Only proceeds if previous checks pass
+- Run all checks (pylint, pytest, mypy) via MCP tools
 
 **Implementation Prompt Template using task tracker**
 
@@ -794,7 +790,7 @@ flowchart TD
     class Fundamental pathFundamental
 ```
 
-**Tools:** `pr_review.bat`, checks2clipboard.bat  
+**Tools:** MCP code quality checks  
 
 **Two review modes:**
 - `/implementation_review` — human-supervised: Claude presents findings, you review and decide what to act on.
@@ -954,7 +950,6 @@ Run certain checks in an automated way and deal with possibly highlighted issues
 **Process:**
 
 - Review the entire pull request for the feature via an LLM prompt
-  - `tools/pr_review.bat` - Generate detailed PR review prompt with git diff
 - Review of LLM review output, decide on next steps based on findings
 
 **Tools:**
@@ -1019,11 +1014,9 @@ flowchart LR
 
 **Tools:**
 
-- `tools/pr_summary.bat` - Generate PR summary creation prompt
+- Generate PR summary via LLM prompt
   - Reads PR_Info folder context
   - Includes full git diff for comprehensive summary
-  - Saves result as `PR_Info/summary.md`
-  - Provides structured prompt for LLM summary generation
   - Cleans up development artifacts: deletes `steps/` subfolder and clears Tasks section from `TASK_TRACKER.md`
   - commit everything except `PR_Info/summary.md` with commit message
 

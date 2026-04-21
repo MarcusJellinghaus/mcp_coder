@@ -56,8 +56,8 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
   - [ ] Fix any highlighted issues
 
 - [ ] **Create and Review Pull Request**
-  - [ ] Generate PR review using tools/pr_review.bat
+  - [ ] Generate PR review
   - [ ] Address any issues found in LLM review
-  - [ ] Create PR summary using tools/pr_summary.bat
+  - [ ] Create PR summary
   - [ ] Clean up PR_Info folder (remove steps/ directory)
   - [ ] Create final pull request with proper description
