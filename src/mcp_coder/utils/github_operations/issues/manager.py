@@ -9,14 +9,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-from mcp_coder.mcp_workspace_git import (
-    extract_issue_number_from_branch,
-    get_current_branch_name,
-)
-from mcp_coder.utils.github_operations.label_config import (
+from mcp_coder.config.label_config import (
     build_label_lookups,
     get_labels_config_path,
     load_labels_config,
+)
+from mcp_coder.mcp_workspace_git import (
+    extract_issue_number_from_branch,
+    get_current_branch_name,
 )
 from mcp_coder.utils.log_utils import log_function_call
 

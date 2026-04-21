@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: Relocate `label_config.py` to `config/` package
-- [ ] Implementation: move label_config.py and update all imports ([step_2.md](./steps/step_2.md))
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move label_config.py and update all imports ([step_2.md](./steps/step_2.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Build `label_transitions.py` + migrate label update tests
 - [ ] Implementation: extract standalone update_workflow_label function and migrate tests ([step_3.md](./steps/step_3.md))

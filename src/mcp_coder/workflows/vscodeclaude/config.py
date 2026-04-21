@@ -6,8 +6,8 @@ import re
 from pathlib import Path
 from typing import Any, cast
 
+from ...config.label_config import load_labels_config
 from ...utils.github_operations import get_authenticated_username
-from ...utils.github_operations.label_config import load_labels_config
 from ...utils.user_config import get_config_file_path, get_config_values, load_config
 from .types import (
     DEFAULT_MAX_SESSIONS,
@@ -24,7 +24,7 @@ def _load_labels_config() -> dict[str, Any]:
     Returns:
         Labels config dict with workflow_labels and ignore_labels
     """
-    from ...utils.github_operations.label_config import get_labels_config_path
+    from ...config.label_config import get_labels_config_path
 
     result: dict[str, Any] = load_labels_config(get_labels_config_path(None))
     return result

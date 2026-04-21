@@ -10,6 +10,7 @@ import logging
 from typing import List, Optional
 from urllib.parse import quote
 
+from ....config.label_config import load_labels_config
 from ....utils.github_operations.github_utils import parse_github_url
 from ....utils.github_operations.issues import (
     IssueBranchManager,
@@ -17,7 +18,6 @@ from ....utils.github_operations.issues import (
     IssueManager,
     get_all_cached_issues,
 )
-from ....utils.github_operations.label_config import load_labels_config
 from ....utils.jenkins_operations.client import JenkinsClient
 from ....utils.user_config import get_config_file_path, get_config_values
 from .command_templates import (
@@ -193,7 +193,7 @@ def _filter_eligible_issues(issues: List[IssueData]) -> List[IssueData]:
         List of eligible issues sorted by priority
     """
     # Load label configuration
-    from ....utils.github_operations.label_config import get_labels_config_path
+    from ....config.label_config import get_labels_config_path
 
     labels_config = load_labels_config(get_labels_config_path(None))
 
@@ -265,7 +265,7 @@ def get_eligible_issues(
     """
     # Load label configuration
     # Uses bundled package config (coordinator operates without local project context)
-    from ....utils.github_operations.label_config import get_labels_config_path
+    from ....config.label_config import get_labels_config_path
 
     labels_config = load_labels_config(get_labels_config_path(None))
 

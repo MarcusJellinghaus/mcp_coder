@@ -24,7 +24,7 @@ def full_labels_config(labels_config_path: Path) -> Dict[str, Any]:
     Returns:
         Dict with 'workflow_labels' matching the structure from config/labels.json
     """
-    from mcp_coder.utils.github_operations.label_config import load_labels_config
+    from mcp_coder.config.label_config import load_labels_config
 
     return load_labels_config(labels_config_path)
 

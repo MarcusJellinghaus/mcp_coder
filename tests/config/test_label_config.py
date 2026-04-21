@@ -1,4 +1,4 @@
-"""Tests for workflows/label_config.py shared configuration loading module."""
+"""Tests for config/label_config.py shared configuration loading module."""
 
 # ruff: noqa: S324
 
@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from mcp_coder.utils.github_operations.label_config import (
+from mcp_coder.config.label_config import (
     _get_labels_config_from_pyproject,
     get_labels_config_path,
     load_labels_config,
