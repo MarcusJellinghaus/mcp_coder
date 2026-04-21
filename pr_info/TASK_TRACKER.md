@@ -47,9 +47,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 6: Delete local `github_operations/` + old tests
-- [ ] Implementation: delete src and test directories, verify no remaining imports ([step_6.md](./steps/step_6.md))
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: delete src and test directories, verify no remaining imports ([step_6.md](./steps/step_6.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: Update `.importlinter` and `tach.toml`
 - [ ] Implementation: update architecture configs for github shim ([step_7.md](./steps/step_7.md))
