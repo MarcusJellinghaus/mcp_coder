@@ -32,3 +32,27 @@ Review of the implementation plan for "Consume github_operations via shim + rebu
 - `summary.md`: Added missing source files to table, added test file update note
 
 **Status**: committed
+
+## Round 2 — 2026-04-21
+
+**Findings**:
+- (critical) Step 2 missing 5 test files that import from `label_config`: `test_define_labels.py`, `test_define_labels_config.py`, `test_define_labels_label_changes.py`, `test_set_status.py`, `test_set_status_from_status.py`.
+- (improvement) Step 3 test list heading still said "all 11" instead of "all 12" (incomplete round 1 fix).
+- (improvement) Step 4 listed `test_gh_tool*.py` but that file doesn't import from `github_operations` — false entry.
+- (improvement) Step 4 missing `test_closed_issues_integration.py` and `test_launch_vscode_env_vars.py` from vscodeclaude test list.
+- (note) `tests/cli/commands/coordinator/test_core.py` has logger name strings referencing `mcp_coder.utils.github_operations.issues.cache` — may need updating.
+- (note) Summary didn't note Step 2's test file updates separately from Step 4's.
+
+**Decisions**:
+- All findings accepted as straightforward improvements.
+- `issue_stats.py` was already in Step 2's table (confirmed present).
+
+**User decisions**: None required.
+
+**Changes**:
+- `step_2.md`: Added 5 test files section for label_config imports
+- `step_3.md`: Fixed heading from "all 11" to "all 12"
+- `step_4.md`: Removed `test_gh_tool*.py`, added 2 missing vscodeclaude test files, added logger name note
+- `summary.md`: Added note about Step 2 test file updates
+
+**Status**: committed

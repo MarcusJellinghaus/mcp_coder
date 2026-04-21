@@ -30,6 +30,16 @@ No code changes to `label_config.py` itself — only move the file and update im
 | `src/mcp_coder/utils/github_operations/issues/manager.py` | `..label_config` → `mcp_coder.config.label_config` |
 | `tests/config/test_label_config.py` (relocated) | `mcp_coder.utils.github_operations.label_config` | `mcp_coder.config.label_config` |
 
+### Test files that import from `label_config` (update all):
+
+| File | Old import / mock target | New import / mock target |
+|------|-------------------------|-------------------------|
+| `tests/cli/commands/test_define_labels.py` | `mcp_coder.utils.github_operations.label_config.load_labels_config` (mock target) | `mcp_coder.config.label_config.load_labels_config` |
+| `tests/cli/commands/test_define_labels_config.py` | `mcp_coder.utils.github_operations.label_config` | `mcp_coder.config.label_config` |
+| `tests/cli/commands/test_define_labels_label_changes.py` | `mcp_coder.utils.github_operations.label_config` | `mcp_coder.config.label_config` |
+| `tests/cli/commands/test_set_status.py` | lazy import of `mcp_coder.utils.github_operations.label_config` | `mcp_coder.config.label_config` |
+| `tests/cli/commands/test_set_status_from_status.py` | lazy import of `mcp_coder.utils.github_operations.label_config` | `mcp_coder.config.label_config` |
+
 **Note**: The import in `issues/manager.py` changes temporarily — that file will be deleted in Step 6.
 
 **Note**: Several files have lazy imports of `label_config` functions inside function bodies (e.g., `get_labels_config_path` imported inline). These must also be updated:

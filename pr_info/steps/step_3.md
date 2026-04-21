@@ -84,7 +84,7 @@ Migrate `TestIssueManagerLabelUpdate` class (12 tests) from `test_issue_manager_
 - The `transition_issue_label` method is what the new function calls (instead of going through `get_issue` + `set_labels`), so tests that mock `set_labels` need to be updated to mock `transition_issue_label` on IssueManager
 - Tests that assert on `set_labels` call args need adaptation for `transition_issue_label` args
 
-**Test list (all 11):**
+**Test list (all 12):**
 1. `test_update_workflow_label_success_happy_path`
 2. `test_update_workflow_label_invalid_branch_name`
 3. `test_update_workflow_label_branch_not_linked`

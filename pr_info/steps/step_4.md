@@ -79,13 +79,15 @@ Test files that import from `mcp_coder.utils.github_operations` must also be upd
 
 Key test directories with affected files:
 - `tests/checks/` — `test_branch_status.py`
-- `tests/cli/commands/` — `test_define_labels*.py`, `test_set_status*.py`, `test_gh_tool*.py`
+- `tests/cli/commands/` — `test_define_labels*.py`, `test_set_status*.py`
 - `tests/cli/commands/coordinator/` — `test_commands.py`, `test_core.py`, `test_integration.py`, `test_issue_stats.py`
 - `tests/integration/` — `test_execution_dir_integration.py`
 - `tests/workflows/create_plan/` — `test_main.py`, `test_prerequisites.py`, `test_prompt_execution.py`
 - `tests/workflows/implement/` — `test_ci_check.py`
-- `tests/workflows/vscodeclaude/` — `test_cache_aware.py`, `test_cleanup.py`, `test_helpers.py`, `test_issues.py`, `test_session_launch*.py`, `test_session_restart*.py`, `test_status_display.py`, etc.
+- `tests/workflows/vscodeclaude/` — `test_cache_aware.py`, `test_cleanup.py`, `test_closed_issues_integration.py`, `test_helpers.py`, `test_issues.py`, `test_launch_vscode_env_vars.py`, `test_session_launch*.py`, `test_session_restart*.py`, `test_status_display.py`, etc.
 - `tests/workflow_utils/` — `test_base_branch.py`
+
+**Note**: `tests/cli/commands/coordinator/test_core.py` contains logger name strings like `"mcp_coder.utils.github_operations.issues.cache"` that may need updating to the `mcp_workspace` logger name after the shim migration.
 
 **Important**: Mock targets in tests must also be updated. For example, `@patch("mcp_coder.utils.github_operations.issues.IssueManager")` → `@patch("mcp_coder.mcp_workspace_github.IssueManager")`. However, some mocks should target the **consumer module's import** instead, depending on test patterns.
 

@@ -100,6 +100,8 @@ After:  workflows → mcp_workspace_github (shim) → mcp_workspace.github_opera
 | `.importlinter` | Architecture config updates |
 | `tach.toml` | Architecture config updates |
 
+**Note**: Step 2 also updates ~5 test files that import from `label_config` (e.g., `test_define_labels*.py`, `test_set_status*.py`) — not just Step 4's ~30 test files.
+
 **Note**: ~30 test files outside `tests/utils/github_operations/` also need import updates to use `mcp_coder.mcp_workspace_github` (covered in Step 4).
 
 ## Folders / Files Deleted
