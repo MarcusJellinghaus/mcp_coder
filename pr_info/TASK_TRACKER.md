@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Replace Shared Libraries section in CLAUDE.md
-- [ ] Implementation (edit `.claude/CLAUDE.md` — replace `## Shared Libraries` section with expanded version)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (edit `.claude/CLAUDE.md` — replace `## Shared Libraries` section with expanded version)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review

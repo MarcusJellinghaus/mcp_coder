@@ -102,7 +102,18 @@ Never conflate the two. Use `--execution-dir` when workspace and project differ.
 
 ## Shared Libraries
 
-`subprocess_runner`, `subprocess_streaming`, and `log_utils` in `src/mcp_coder/utils/` are thin shims over `mcp-coder-utils`. Always import through the local shims (`from mcp_coder.utils.<module> import ...`), not from `mcp_coder_utils` directly. Enforced by import-linter (`mcp_coder_utils_isolation` contract).
+This repo uses `mcp-coder-utils` for subprocess execution, logging, and redaction. Three shim modules in `src/mcp_coder/utils/` re-export the upstream API:
+
+| Shim module | Upstream module | Key imports |
+|-------------|-----------------|-------------|
+| `mcp_coder.utils.subprocess_runner` | `mcp_coder_utils.subprocess_runner` | `execute_command`, `execute_subprocess`, `CommandResult`, `CommandOptions`, `launch_process`, `prepare_env` |
+| `mcp_coder.utils.subprocess_streaming` | `mcp_coder_utils.subprocess_streaming` | `stream_subprocess`, `StreamResult` |
+| `mcp_coder.utils.log_utils` | `mcp_coder_utils.log_utils` + `redaction` | `setup_logging`, `log_function_call`, `OUTPUT`, `REDACTED_VALUE`, `RedactableDict` |
+
+**Rules:**
+- Always import through the local shims (`from mcp_coder.utils.<module> import ...`), never from `mcp_coder_utils` directly. Enforced by import-linter (`mcp_coder_utils_isolation` contract).
+- Do not reimplement utilities that exist in mcp-coder-utils. When in doubt, check the source first.
+- Full source: reference project `p_coder-utils` — use `mcp__workspace__read_reference_file`.
 
 ## Writing style
 
