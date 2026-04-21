@@ -1823,6 +1823,7 @@ class TestHandleWorkflowFailure:
 class TestRunImplementWorkflowLabelTransitions:
     """Test that labels always transition on success/failure."""
 
+    @patch("mcp_coder.workflows.implement.core.update_workflow_label")
     @patch("mcp_coder.workflows.implement.core.IssueManager")
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci")
     @patch("mcp_coder.workflows.implement.core.run_finalisation")
@@ -1847,6 +1848,7 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_finalise: MagicMock,
         mock_ci: MagicMock,
         mock_issue_cls: MagicMock,
+        mock_update_label: MagicMock,
     ) -> None:
         """On success with update_issue_labels=True, label transitions to code_review."""
         mock_git_clean.return_value = True
@@ -1866,7 +1868,8 @@ class TestRunImplementWorkflowLabelTransitions:
         )
 
         assert result == 0
-        mock_manager.update_workflow_label.assert_called_once_with(
+        mock_update_label.assert_called_once_with(
+            mock_manager,
             from_label_id="implementing",
             to_label_id="code_review",
         )

@@ -214,6 +214,13 @@ python_version = "3.11"
 disable_error_code = ["import-untyped"]
 
 [[tool.mypy.overrides]]
+module = ["mcp_coder.mcp_workspace_github"]
+# Sentinel fallback assignments intentionally conflict with the try-branch types;
+# which error code fires (assignment vs misc) depends on whether the name is a
+# class or callable, so we suppress unused-ignore for this module.
+disable_error_code = ["assignment", "misc", "unused-ignore"]
+
+[[tool.mypy.overrides]]
 module = ["pytest.*"]
 ignore_missing_imports = true
 

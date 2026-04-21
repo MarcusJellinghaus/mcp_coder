@@ -94,6 +94,7 @@ class TestHandleWorkflowFailure:
         assert "prerequisites" in caplog.text
         assert "Something went wrong" in caplog.text
 
+    @patch("mcp_coder.workflow_utils.failure_handling.update_workflow_label")
     @patch("mcp_coder.workflow_utils.failure_handling.IssueManager")
     @patch("mcp_coder.workflow_utils.failure_handling.get_current_branch_name")
     @patch("mcp_coder.workflow_utils.failure_handling.extract_issue_number_from_branch")
@@ -102,6 +103,7 @@ class TestHandleWorkflowFailure:
         _mock_extract: MagicMock,
         _mock_branch: MagicMock,
         mock_issue_mgr_cls: MagicMock,
+        mock_update_label: MagicMock,
         failure: WorkflowFailure,
     ) -> None:
         _mock_branch.return_value = None
@@ -116,7 +118,8 @@ class TestHandleWorkflowFailure:
             update_issue_labels=True,
         )
 
-        mock_mgr.update_workflow_label.assert_called_once_with(
+        mock_update_label.assert_called_once_with(
+            mock_mgr,
             from_label_id="pr_creating",
             to_label_id="pr_creating_failed",
             validated_issue_number=None,
@@ -228,6 +231,7 @@ class TestHandleWorkflowFailure:
         mock_extract.assert_called_once_with("55-my-feature")
         mock_mgr.add_comment.assert_called_once_with(55, "Comment body")
 
+    @patch("mcp_coder.workflow_utils.failure_handling.update_workflow_label")
     @patch("mcp_coder.workflow_utils.failure_handling.IssueManager")
     @patch("mcp_coder.workflow_utils.failure_handling.get_current_branch_name")
     @patch("mcp_coder.workflow_utils.failure_handling.extract_issue_number_from_branch")
@@ -236,12 +240,13 @@ class TestHandleWorkflowFailure:
         _mock_extract: MagicMock,
         _mock_branch: MagicMock,
         mock_issue_mgr_cls: MagicMock,
+        mock_update_label: MagicMock,
         failure: WorkflowFailure,
     ) -> None:
         _mock_branch.return_value = None
         mock_mgr = MagicMock()
-        mock_mgr.update_workflow_label.side_effect = RuntimeError("GitHub API error")
         mock_issue_mgr_cls.return_value = mock_mgr
+        mock_update_label.side_effect = RuntimeError("GitHub API error")
 
         # Should not raise
         handle_workflow_failure(
