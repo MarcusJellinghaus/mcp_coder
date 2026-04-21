@@ -232,6 +232,10 @@ disable_error_code = ["unreachable", "union-attr"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
+module = ["mcp_workspace.github_operations", "mcp_workspace.github_operations.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
 module = ["mcp.server.fastmcp"]
 ignore_missing_imports = true
 

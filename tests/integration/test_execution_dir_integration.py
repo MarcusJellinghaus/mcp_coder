@@ -386,7 +386,7 @@ class TestSubprocessCwdParameter:
         tmp_path: Path,
     ) -> None:
         """Test create-plan workflow passes execution_dir to LLM calls."""
-        from mcp_coder.utils.github_operations.issues import IssueData
+        from mcp_coder.mcp_workspace_github import IssueData
         from mcp_coder.workflows.create_plan import run_create_plan_workflow
 
         # Setup
