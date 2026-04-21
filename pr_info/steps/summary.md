@@ -10,29 +10,23 @@ Fix stale documentation and config references left over from the github_operatio
 
 ## Verification Results
 
-During planning, each referenced file was checked for staleness:
+During planning, each referenced file was checked for staleness. The `github_operations` package still exists with all referenced files and paths intact.
 
 | # | File | Claimed stale | Verified? |
 |---|------|---------------|-----------|
-| 1 | `docs/getting-started/label-setup.md:92` | Import path `mcp_coder.utils.github_operations.label_config` "no longer exists locally" | **Needs re-verification** — file existed at planning time. May have been migrated since. |
-| 2 | `docs/architecture/architecture.md` | References `utils/github_operations/` as local dir and test path | **Needs re-verification** — directory existed at planning time. |
-| 3 | `docs/tests/issues.md` | References old test path `tests/utils/github_operations/test_github_utils.py` | **Needs re-verification** — file existed at planning time. |
+| 1 | `docs/getting-started/label-setup.md:92` | Import path `mcp_coder.utils.github_operations.label_config` "no longer exists locally" | **Verified — still valid, no change needed.** The `github_operations` package and `label_config.py` still exist at the referenced path. |
+| 2 | `docs/architecture/architecture.md` | References `utils/github_operations/` as local dir and test path | **Verified — still valid, no change needed.** The directory and all sub-modules still exist. |
+| 3 | `docs/tests/issues.md` | References old test path `tests/utils/github_operations/test_github_utils.py` | **Verified — still valid, no change needed.** The test file and class still exist at the referenced path. |
 | 4 | `.importlinter:321` | Comment says "only in github_operations" but contract also allows `jenkins_operations.client` | **Confirmed stale.** |
-
-**Important implementation note:** Items #1–#3 must be re-verified at implementation time. If the referenced files/paths still exist and are correct, those items should be skipped — do not "fix" references that point to real code. Only item #4 is unconditionally confirmed.
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
 | `.importlinter` | Update comment on Requests Library Isolation contract (line 321) |
-| `docs/getting-started/label-setup.md` | Update import example on line 92 (if path is confirmed stale) |
-| `docs/architecture/architecture.md` | Update directory/test path references (if confirmed stale) |
-| `docs/tests/issues.md` | Update test file path reference (if confirmed stale) |
 
-No files created. No files deleted.
+No other files need changes — the three doc references (label-setup.md, architecture.md, issues.md) all point to paths that still exist.
 
 ## Steps
 
-- **Step 1**: Fix `.importlinter` misleading comment (confirmed stale)
-- **Step 2**: Verify and fix stale doc references in all three doc files (conditional on verification)
+- **Step 1**: Fix `.importlinter` misleading comment (confirmed stale — single-step, single-commit task)
