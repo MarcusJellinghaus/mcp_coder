@@ -52,7 +52,6 @@ ignore_imports =
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.commands.info
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.commands.color
     mcp_coder.mcp_workspace_git -> mcp_coder.utils.git_operations.**
-    mcp_coder.mcp_workspace_github -> mcp_workspace.github_operations.**
 
 # -----------------------------------------------------------------------------
 # Contract: External Service Integrations Independence
@@ -162,11 +161,9 @@ source_modules =
 # forbidden_modules: which external packages are forbidden
 forbidden_modules =
     github
-# ignore_imports: exceptions - github_operations.** can import github
 # Note: The shim (mcp_workspace_github) re-exports from mcp_workspace.github_operations
-# which internally uses PyGithub. The shim itself doesn't import github directly.
-ignore_imports =
-    mcp_coder.mcp_workspace_github -> github
+# which internally uses PyGithub. The shim itself doesn't import github directly,
+# so no ignore_imports entry is needed here.
 
 # -----------------------------------------------------------------------------
 # Contract: GitPython Library Isolation

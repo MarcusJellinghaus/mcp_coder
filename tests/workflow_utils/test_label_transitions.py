@@ -53,13 +53,6 @@ MOCK_LABELS_CONFIG: Dict[str, Any] = {
     "ignore_labels": [],
 }
 
-# All workflow label names from the config
-ALL_WORKFLOW_NAMES = {
-    "status-06:implementing",
-    "status-07:code-review",
-    "status-03:planning",
-    "status-04:plan-review",
-}
 
 
 @pytest.fixture

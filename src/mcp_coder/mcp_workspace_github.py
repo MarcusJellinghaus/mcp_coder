@@ -21,10 +21,6 @@ from mcp_workspace.github_operations import (
 # CI results submodule (TypedDicts + helpers)
 from mcp_workspace.github_operations.ci_results_manager import (
     JobData,
-    RunData,
-    StepData,
-    aggregate_conclusion,
-    filter_runs_by_head_sha,
 )
 
 # GitHub utils submodule
@@ -36,10 +32,8 @@ from mcp_workspace.github_operations.github_utils import (
 
 # Issues subpackage
 from mcp_workspace.github_operations.issues import (
-    BranchCreationResult,
     CacheData,
     CommentData,
-    EventData,
     IssueBranchManager,
     IssueData,
     IssueEventType,
@@ -48,10 +42,7 @@ from mcp_workspace.github_operations.issues import (
     _load_cache_file,
     _log_stale_cache_entries,
     _save_cache_file,
-    create_empty_issue_data,
-    generate_branch_name_from_issue,
     get_all_cached_issues,
-    parse_base_branch,
     update_issue_labels_in_cache,
 )
 
@@ -67,11 +58,7 @@ __all__: List[str] = [
     # CI results
     "CIResultsManager",
     "CIStatusData",
-    "StepData",
     "JobData",
-    "RunData",
-    "filter_runs_by_head_sha",
-    "aggregate_conclusion",
     # Labels
     "LabelData",
     "LabelsManager",
@@ -89,14 +76,9 @@ __all__: List[str] = [
     "IssueEventType",
     "IssueData",
     "CommentData",
-    "EventData",
-    "BranchCreationResult",
     "CacheData",
-    "create_empty_issue_data",
-    "generate_branch_name_from_issue",
     "get_all_cached_issues",
     "update_issue_labels_in_cache",
-    "parse_base_branch",
     # Cache internals (used by tests)
     "_get_cache_file_path",
     "_load_cache_file",
