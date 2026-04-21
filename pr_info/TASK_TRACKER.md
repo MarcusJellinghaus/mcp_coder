@@ -21,6 +21,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+- [x] [Step 1: Update settings and CLAUDE.md](./steps/step_1.md)
+- [x] [Step 2: Update skill files to use MCP tools](./steps/step_2.md)
 
 ## Pull Request

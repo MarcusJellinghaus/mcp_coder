@@ -18,11 +18,9 @@ These are the additional git permissions needed specifically for rebase operatio
 # Status and investigation (MCP tools for read-only operations)
 mcp__workspace__git_status
 mcp__workspace__git_log
-Bash(git branch:*)
-Bash(git ls-files:*)
+mcp__workspace__git  # read-only: fetch, branch, ls-files, rev-parse
 
-# Fetching and rebasing
-Bash(git fetch:*)
+# Rebasing
 Bash(git rebase:*)
 
 # Staging and committing
