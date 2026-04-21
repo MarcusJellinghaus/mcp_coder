@@ -36,6 +36,11 @@ Use MCP tools for **all** operations. Never use `Read`, `Write`, `Edit`, or `Bas
 | Git diff (includes compact diff) | `mcp__workspace__git_diff` |
 | Git log | `mcp__workspace__git_log` |
 | Git merge-base | `mcp__workspace__git_merge_base` |
+| Git read-only (fetch, ls-tree, show, ls-files, ls-remote, rev-parse, branch list) | `mcp__workspace__git` |
+| `gh issue view` | `mcp__workspace__github_issue_view` |
+| `gh issue list` | `mcp__workspace__github_issue_list` |
+| `gh pr view` | `mcp__workspace__github_pr_view` |
+| `gh search` | `mcp__workspace__github_search` |
 
 ## Code quality checks
 
@@ -67,11 +72,10 @@ When debugging test failures, add `"-v", "-s", "--tb=short"` to extra_args.
 
 ## Git operations
 
-**Allowed commands via Bash tool.** These have no MCP equivalent — use Bash directly. Skills that instruct bash commands (e.g. `gh issue view`) must also use Bash.
+**Allowed commands via Bash tool.** These have no MCP equivalent — use Bash directly. Skills that instruct bash commands (e.g. `git commit`) must also use Bash.
 
 ```
-git commit / fetch / show / ls-tree
-gh issue view / gh pr view / gh run view
+git commit / add / rebase / push
 mcp-coder check branch-status
 mcp-coder check file-size --max-lines 750
 mcp-coder gh-tool set-status <label>

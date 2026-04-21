@@ -2,7 +2,7 @@
 description: Code review of implementation with compact diff analysis
 disable-model-invocation: true
 allowed-tools:
-  - "Bash(git fetch *)"
+  - mcp__workspace__git
   - mcp__workspace__git_status
   - mcp__workspace__git_diff
   - "Bash(mcp-coder check branch-status *)"
@@ -15,9 +15,7 @@ allowed-tools:
 # Implementation Review (Code Review)
 
 **First, ensure we're up to date:**
-```bash
-git fetch
-```
+Call `mcp__workspace__git` with command `"fetch"` and args `["origin"]`.
 Use `mcp__workspace__git_status` to check working directory state.
 ```bash
 mcp-coder check branch-status --llm-truncate
