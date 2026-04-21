@@ -6,14 +6,13 @@ Tests the extracted function in mcp_coder.workflow_utils.label_transitions.
 
 from pathlib import Path
 from typing import Any, Dict
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
 from mcp_coder.mcp_workspace_github import (
     BaseGitHubManager,
     IssueBranchManager,
-    IssueData,
     IssueManager,
 )
 from mcp_coder.workflow_utils.label_transitions import update_workflow_label
@@ -52,7 +51,6 @@ MOCK_LABELS_CONFIG: Dict[str, Any] = {
     ],
     "ignore_labels": [],
 }
-
 
 
 @pytest.fixture
@@ -101,7 +99,6 @@ class TestLabelTransitions:
     ) -> None:
         """Tests successful label transition with all prerequisites met."""
         with (
-            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.workflow_utils.label_transitions.load_labels_config",
@@ -118,9 +115,7 @@ class TestLabelTransitions:
                 IssueManager, "transition_issue_label", return_value=True
             ) as mock_transition,
         ):
-            mock_config.return_value = {("github", "token"): "dummy-token"}
-
-            manager = IssueManager(project_dir=tmp_path)
+            manager = IssueManager(project_dir=tmp_path, github_token="dummy-token")
             result = update_workflow_label(manager, "implementing", "code_review")
 
             assert result is True
@@ -143,7 +138,6 @@ class TestLabelTransitions:
     ) -> None:
         """Tests branch name that doesn't match {number}-{title} pattern."""
         with (
-            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.workflow_utils.label_transitions.load_labels_config",
@@ -154,9 +148,7 @@ class TestLabelTransitions:
                 return_value="feature-branch",  # No issue number
             ),
         ):
-            mock_config.return_value = {("github", "token"): "dummy-token"}
-
-            manager = IssueManager(project_dir=tmp_path)
+            manager = IssueManager(project_dir=tmp_path, github_token="dummy-token")
             result = update_workflow_label(manager, "implementing", "code_review")
 
             assert result is False
@@ -171,7 +163,6 @@ class TestLabelTransitions:
     ) -> None:
         """Tests branch that exists but isn't linked to the issue."""
         with (
-            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.workflow_utils.label_transitions.load_labels_config",
@@ -187,9 +178,7 @@ class TestLabelTransitions:
                 return_value="123-feature",
             ),
         ):
-            mock_config.return_value = {("github", "token"): "dummy-token"}
-
-            manager = IssueManager(project_dir=tmp_path)
+            manager = IssueManager(project_dir=tmp_path, github_token="dummy-token")
             result = update_workflow_label(manager, "implementing", "code_review")
 
             assert result is False
@@ -204,7 +193,6 @@ class TestLabelTransitions:
     ) -> None:
         """Tests idempotent behavior - transition_issue_label handles this."""
         with (
-            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.workflow_utils.label_transitions.load_labels_config",
@@ -221,9 +209,7 @@ class TestLabelTransitions:
                 IssueManager, "transition_issue_label", return_value=True
             ) as mock_transition,
         ):
-            mock_config.return_value = {("github", "token"): "dummy-token"}
-
-            manager = IssueManager(project_dir=tmp_path)
+            manager = IssueManager(project_dir=tmp_path, github_token="dummy-token")
             result = update_workflow_label(manager, "implementing", "code_review")
 
             # transition_issue_label handles idempotency internally
@@ -239,7 +225,6 @@ class TestLabelTransitions:
     ) -> None:
         """Tests transition when issue doesn't have source label."""
         with (
-            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.workflow_utils.label_transitions.load_labels_config",
@@ -256,9 +241,7 @@ class TestLabelTransitions:
                 IssueManager, "transition_issue_label", return_value=True
             ) as mock_transition,
         ):
-            mock_config.return_value = {("github", "token"): "dummy-token"}
-
-            manager = IssueManager(project_dir=tmp_path)
+            manager = IssueManager(project_dir=tmp_path, github_token="dummy-token")
             result = update_workflow_label(manager, "implementing", "code_review")
 
             assert result is True
@@ -275,7 +258,6 @@ class TestLabelTransitions:
     ) -> None:
         """Tests when internal_id doesn't exist in labels.json."""
         with (
-            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.workflow_utils.label_transitions.load_labels_config",
@@ -289,9 +271,7 @@ class TestLabelTransitions:
                 return_value="123-feature",
             ),
         ):
-            mock_config.return_value = {("github", "token"): "dummy-token"}
-
-            manager = IssueManager(project_dir=tmp_path)
+            manager = IssueManager(project_dir=tmp_path, github_token="dummy-token")
             result = update_workflow_label(manager, "invalid_source", "invalid_target")
 
             assert result is False
@@ -308,7 +288,6 @@ class TestLabelTransitions:
         from github.GithubException import GithubException
 
         with (
-            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.workflow_utils.label_transitions.load_labels_config",
@@ -327,9 +306,7 @@ class TestLabelTransitions:
                 side_effect=GithubException(500, "API Error"),
             ),
         ):
-            mock_config.return_value = {("github", "token"): "dummy-token"}
-
-            manager = IssueManager(project_dir=tmp_path)
+            manager = IssueManager(project_dir=tmp_path, github_token="dummy-token")
             result = update_workflow_label(manager, "implementing", "code_review")
 
             assert result is False
@@ -344,7 +321,6 @@ class TestLabelTransitions:
     ) -> None:
         """Tests automatic branch name detection from git."""
         with (
-            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.workflow_utils.label_transitions.load_labels_config",
@@ -361,9 +337,7 @@ class TestLabelTransitions:
                 IssueManager, "transition_issue_label", return_value=True
             ) as mock_transition,
         ):
-            mock_config.return_value = {("github", "token"): "dummy-token"}
-
-            manager = IssueManager(project_dir=tmp_path)
+            manager = IssueManager(project_dir=tmp_path, github_token="dummy-token")
             result = update_workflow_label(manager, "implementing", "code_review")
 
             assert result is True
@@ -383,7 +357,6 @@ class TestLabelTransitions:
         and passes it to transition_issue_label, which handles the actual removal.
         """
         with (
-            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.workflow_utils.label_transitions.load_labels_config",
@@ -400,9 +373,7 @@ class TestLabelTransitions:
                 IssueManager, "transition_issue_label", return_value=True
             ) as mock_transition,
         ):
-            mock_config.return_value = {("github", "token"): "dummy-token"}
-
-            manager = IssueManager(project_dir=tmp_path)
+            manager = IssueManager(project_dir=tmp_path, github_token="dummy-token")
             result = update_workflow_label(manager, "implementing", "code_review")
 
             assert result is True
@@ -424,7 +395,6 @@ class TestLabelTransitions:
     ) -> None:
         """Tests that validated_issue_number skips branch linkage validation."""
         with (
-            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.workflow_utils.label_transitions.load_labels_config",
@@ -437,9 +407,7 @@ class TestLabelTransitions:
                 IssueManager, "transition_issue_label", return_value=True
             ) as mock_transition,
         ):
-            mock_config.return_value = {("github", "token"): "dummy-token"}
-
-            manager = IssueManager(project_dir=tmp_path)
+            manager = IssueManager(project_dir=tmp_path, github_token="dummy-token")
             result = update_workflow_label(
                 manager, "implementing", "code_review", validated_issue_number=123
             )
@@ -460,7 +428,6 @@ class TestLabelTransitions:
     ) -> None:
         """Tests that invalid validated_issue_number fails gracefully."""
         with (
-            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.workflow_utils.label_transitions.load_labels_config",
@@ -468,9 +435,7 @@ class TestLabelTransitions:
             ),
             patch.object(IssueManager, "transition_issue_label", return_value=False),
         ):
-            mock_config.return_value = {("github", "token"): "dummy-token"}
-
-            manager = IssueManager(project_dir=tmp_path)
+            manager = IssueManager(project_dir=tmp_path, github_token="dummy-token")
             result = update_workflow_label(
                 manager, "implementing", "code_review", validated_issue_number=99999
             )
@@ -486,7 +451,6 @@ class TestLabelTransitions:
         so label update succeeds despite empty linkedBranches.
         """
         with (
-            patch("mcp_coder.utils.user_config.get_config_values") as mock_config,
             patch.object(IssueManager, "_get_repository", return_value=mock_github),
             patch(
                 "mcp_coder.workflow_utils.label_transitions.load_labels_config",
@@ -497,9 +461,7 @@ class TestLabelTransitions:
                 IssueManager, "transition_issue_label", return_value=True
             ) as mock_transition,
         ):
-            mock_config.return_value = {("github", "token"): "dummy-token"}
-
-            manager = IssueManager(project_dir=tmp_path)
+            manager = IssueManager(project_dir=tmp_path, github_token="dummy-token")
             result = update_workflow_label(
                 manager, "implementing", "code_review", validated_issue_number=123
             )
