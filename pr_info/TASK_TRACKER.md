@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Create shim `mcp_workspace_github.py` + smoke tests
-- [ ] Implementation: create shim module and smoke tests ([step_1.md](./steps/step_1.md))
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create shim module and smoke tests ([step_1.md](./steps/step_1.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Relocate `label_config.py` to `config/` package
 - [ ] Implementation: move label_config.py and update all imports ([step_2.md](./steps/step_2.md))
