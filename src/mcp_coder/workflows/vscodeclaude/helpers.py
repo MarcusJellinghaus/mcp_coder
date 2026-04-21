@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ...utils.github_operations.issues import IssueData
+from ...mcp_workspace_github import IssueData
 from .config import get_vscodeclaude_config
 from .types import VSCodeClaudeSession
 

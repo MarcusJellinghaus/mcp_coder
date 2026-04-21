@@ -23,9 +23,9 @@ from mcp_coder.mcp_workspace_git import (
     get_full_status,
     rebase_onto_branch,
 )
+from mcp_coder.mcp_workspace_github import IssueManager
 from mcp_coder.prompt_manager import get_prompt, get_prompt_with_substitutions
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
-from mcp_coder.utils.github_operations.issues import IssueManager
 from mcp_coder.utils.pyproject_config import get_implement_config
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.commit_operations import generate_commit_message_with_llm

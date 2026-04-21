@@ -31,13 +31,12 @@ from .mcp_workspace_git import (
     git_push,
     is_git_repository,
 )
+from .mcp_workspace_github import CommentData, IssueData, IssueManager, LabelData
 from .prompt_manager import (
     get_prompt,
     validate_prompt_directory,
     validate_prompt_markdown,
 )
-from .utils.github_operations.issues import CommentData, IssueData, IssueManager
-from .utils.github_operations.labels_manager import LabelData
 from .utils.subprocess_runner import (
     CommandOptions,
     CommandResult,

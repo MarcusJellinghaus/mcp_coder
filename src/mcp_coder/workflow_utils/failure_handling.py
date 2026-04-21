@@ -12,7 +12,7 @@ from mcp_coder.mcp_workspace_git import (
     extract_issue_number_from_branch,
     get_current_branch_name,
 )
-from mcp_coder.utils.github_operations.issues import IssueManager
+from mcp_coder.mcp_workspace_github import IssueManager
 from mcp_coder.utils.subprocess_runner import execute_command
 
 logger = logging.getLogger(__name__)

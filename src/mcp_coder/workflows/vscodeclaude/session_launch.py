@@ -5,7 +5,7 @@ import platform
 import shutil
 from pathlib import Path
 
-from ...utils.github_operations.issues import (
+from ...mcp_workspace_github import (
     IssueBranchManager,
     IssueData,
     IssueManager,

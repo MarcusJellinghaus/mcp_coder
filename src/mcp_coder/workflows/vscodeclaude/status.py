@@ -5,7 +5,7 @@ from pathlib import Path
 
 from tabulate import tabulate
 
-from ...utils.github_operations.issues import IssueData, IssueManager
+from ...mcp_workspace_github import IssueData, IssueManager
 from ...utils.subprocess_runner import CommandOptions, execute_subprocess
 from .helpers import get_issue_status, load_to_be_deleted
 from .issues import is_status_eligible_for_session, status_requires_linked_branch

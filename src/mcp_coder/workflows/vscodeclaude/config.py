@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from ...config.label_config import load_labels_config
-from ...utils.github_operations import get_authenticated_username
+from ...mcp_workspace_github import get_authenticated_username
 from ...utils.user_config import get_config_file_path, get_config_values, load_config
 from .types import (
     DEFAULT_MAX_SESSIONS,

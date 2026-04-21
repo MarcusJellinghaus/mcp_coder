@@ -26,7 +26,7 @@ from mcp_coder.cli.commands.coordinator import (
     execute_coordinator_test,
     format_job_output,
 )
-from mcp_coder.utils.github_operations.issues import IssueData
+from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.utils.jenkins_operations.models import JobStatus
 from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeConfig
 

@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 
 from mcp_coder.llm.interface import LLMTimeoutError
-from mcp_coder.utils.github_operations.issues import IssueData
+from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.workflows.create_plan import (
     _load_prompt_or_exit,
     format_initial_prompt,

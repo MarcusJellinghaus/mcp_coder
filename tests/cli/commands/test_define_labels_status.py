@@ -11,7 +11,7 @@ from mcp_coder.cli.commands.define_labels import (
     check_status_labels,
     initialize_issues,
 )
-from mcp_coder.utils.github_operations.issues import IssueData
+from mcp_coder.mcp_workspace_github import IssueData
 
 
 class TestCheckStatusLabels:

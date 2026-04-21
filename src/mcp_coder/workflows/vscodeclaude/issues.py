@@ -5,11 +5,11 @@ import re
 from typing import Any
 
 from ...config.label_config import load_labels_config
-from ...utils.github_operations.github_utils import RepoIdentifier
-from ...utils.github_operations.issues import (
+from ...mcp_workspace_github import (
     IssueBranchManager,
     IssueData,
     IssueManager,
+    RepoIdentifier,
     get_all_cached_issues,
 )
 from ...utils.user_config import get_cache_refresh_minutes, load_config

@@ -10,7 +10,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mcp_coder.utils.github_operations.issues.types import IssueData
+from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.workflows.vscodeclaude.session_launch import (
     launch_vscode,
     prepare_and_launch_session,

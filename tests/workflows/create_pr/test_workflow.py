@@ -190,7 +190,7 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.commit_all_changes")
-    @patch("mcp_coder.utils.github_operations.issues.IssueManager")
+    @patch("mcp_coder.mcp_workspace_github.IssueManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     def test_workflow_caches_issue_number_before_pr_creation(
@@ -250,7 +250,7 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.commit_all_changes")
-    @patch("mcp_coder.utils.github_operations.issues.IssueManager")
+    @patch("mcp_coder.mcp_workspace_github.IssueManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     def test_workflow_skips_label_update_when_not_linked(
@@ -309,7 +309,7 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
-    @patch("mcp_coder.utils.github_operations.issues.IssueManager")
+    @patch("mcp_coder.mcp_workspace_github.IssueManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     def test_workflow_fallback_finds_issue_via_closing_references(
@@ -371,7 +371,7 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
-    @patch("mcp_coder.utils.github_operations.issues.IssueManager")
+    @patch("mcp_coder.mcp_workspace_github.IssueManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     def test_workflow_fallback_multiple_closing_issues_uses_first(

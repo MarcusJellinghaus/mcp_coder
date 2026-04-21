@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from mcp_coder.utils.github_operations.issues import IssueData
+from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.workflows.create_plan import (
     _format_failure_comment,
     _handle_workflow_failure,

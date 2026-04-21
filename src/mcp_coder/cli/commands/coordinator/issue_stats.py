@@ -17,7 +17,7 @@ from ....config.label_config import (
     get_labels_config_path,
     load_labels_config,
 )
-from ....utils.github_operations.issues import IssueData, IssueManager
+from ....mcp_workspace_github import IssueData, IssueManager
 from ....workflows.utils import resolve_project_dir
 
 logger = logging.getLogger(__name__)

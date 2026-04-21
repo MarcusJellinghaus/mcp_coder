@@ -13,7 +13,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from mcp_coder.cli.commands.define_labels import validate_issues
-from mcp_coder.utils.github_operations.issues import IssueData
+from mcp_coder.mcp_workspace_github import IssueData
 
 
 class TestValidateIssues:

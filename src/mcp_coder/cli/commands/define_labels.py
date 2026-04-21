@@ -17,12 +17,12 @@ from ...config.label_config import (
     load_labels_config,
     validate_labels_config,
 )
-from ...utils.github_operations.issues import (
+from ...mcp_workspace_github import (
     IssueData,
     IssueEventType,
     IssueManager,
+    LabelsManager,
 )
-from ...utils.github_operations.labels_manager import LabelsManager
 from ...workflows.utils import resolve_project_dir
 from .define_labels_actions import write_github_actions
 

@@ -20,7 +20,7 @@ from ...config.label_config import (
     load_labels_config,
 )
 from ...constants import DEFAULT_IGNORED_BUILD_ARTIFACTS
-from ...utils.github_operations.issues import IssueManager
+from ...mcp_workspace_github import IssueManager
 from ...utils.log_utils import OUTPUT
 from ...workflows.utils import resolve_project_dir
 

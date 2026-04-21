@@ -13,7 +13,7 @@ import pytest
 from mcp_coder.cli.commands.coordinator import (
     execute_coordinator_run,
 )
-from mcp_coder.utils.github_operations.issues import IssueData
+from mcp_coder.mcp_workspace_github import IssueData
 
 
 class TestCoordinatorRunCacheIntegration:

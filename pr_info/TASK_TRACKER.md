@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 4: Update all consumer imports to use shim
-- [ ] Implementation: switch all github_operations imports to mcp_workspace_github ([step_4.md](./steps/step_4.md))
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: switch all github_operations imports to mcp_workspace_github ([step_4.md](./steps/step_4.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Update `update_workflow_label` call sites
 - [ ] Implementation: switch 4 call sites to standalone function ([step_5.md](./steps/step_5.md))

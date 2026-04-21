@@ -8,7 +8,7 @@ from mcp_coder.checks.branch_status import (
     get_failed_jobs_summary,
     truncate_ci_details,
 )
-from mcp_coder.utils.github_operations.ci_results_manager import JobData
+from mcp_coder.mcp_workspace_github import JobData
 
 
 class TestTruncateCiDetails:

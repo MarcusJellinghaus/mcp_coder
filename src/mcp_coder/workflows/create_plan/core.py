@@ -20,12 +20,12 @@ from mcp_coder.mcp_workspace_git import (
     git_push,
     is_working_directory_clean,
 )
-from mcp_coder.prompt_manager import get_prompt
-from mcp_coder.utils.git_utils import get_branch_name_for_logging
-from mcp_coder.utils.github_operations.issues import (
+from mcp_coder.mcp_workspace_github import (
     IssueData,
     IssueManager,
 )
+from mcp_coder.prompt_manager import get_prompt
+from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.workflow_utils.failure_handling import (
     WorkflowFailure as SharedWorkflowFailure,
 )

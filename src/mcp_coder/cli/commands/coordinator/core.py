@@ -11,12 +11,12 @@ from typing import List, Optional
 from urllib.parse import quote
 
 from ....config.label_config import load_labels_config
-from ....utils.github_operations.github_utils import parse_github_url
-from ....utils.github_operations.issues import (
+from ....mcp_workspace_github import (
     IssueBranchManager,
     IssueData,
     IssueManager,
     get_all_cached_issues,
+    parse_github_url,
 )
 from ....utils.jenkins_operations.client import JenkinsClient
 from ....utils.user_config import get_config_file_path, get_config_values

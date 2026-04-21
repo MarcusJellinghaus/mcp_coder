@@ -8,11 +8,11 @@ import argparse
 import logging
 from typing import Any, List, Optional
 
-from ....utils.github_operations.github_utils import RepoIdentifier
-from ....utils.github_operations.issues import (
+from ....mcp_workspace_github import (
     IssueBranchManager,
     IssueData,
     IssueManager,
+    RepoIdentifier,
     get_all_cached_issues,
     update_issue_labels_in_cache,
 )

@@ -3,13 +3,12 @@
 import logging
 from pathlib import Path
 
+from ...mcp_workspace_github import IssueData, IssueManager, get_all_cached_issues
 from ...utils.folder_deletion import (
     DeletionFailureReason,
     is_directory_empty,
     safe_delete_folder,
 )
-from ...utils.github_operations.issues import IssueData, IssueManager
-from ...utils.github_operations.issues.cache import get_all_cached_issues
 from .config import _get_configured_repos, get_github_username
 from .helpers import (
     add_to_be_deleted,
