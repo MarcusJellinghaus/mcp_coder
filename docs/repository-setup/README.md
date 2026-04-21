@@ -37,7 +37,6 @@ This guide covers the **mandatory** and **optional** components for integrating 
 | Generic repo conventions: `.gitattributes`, `.gitignore`, file size | [repo.md](repo.md) | Any downstream repo |
 | Python-specific: `pyproject.toml`, linters, formatters, architecture enforcement | [python.md](python.md) | Python downstream repos only |
 | mcp-coder repo internals: design docs, mlflow tools, internal scripts | [internal.md](internal.md) | Not for downstream use |
-| Legacy / to-be-reviewed files | [to-be-reviewed.md](to-be-reviewed.md) | Not for downstream use |
 
 ## Files Shared With Other Projects
 
@@ -47,7 +46,6 @@ The following files in this repository serve as references/templates for other p
 - **G** = General — applies to any downstream repo using mcp-coder
 - **P** = Python — only applies to Python downstream projects
 - **I** = Internal — used in mcp-coder repo only, not for downstream use
-- **L** = Legacy / to-be-reviewed
 
 | File / Folder | Cat | Mandatory? | Copy as-is? | What to adjust |
 |---|---|---|---|---|
@@ -83,9 +81,6 @@ The following files in this repository serve as references/templates for other p
 | `.run/` | I | — | — | IDE configs, mcp-coder repo only |
 | `.github/workflows/langchain-integration.yml` | I | — | — | mcp-coder repo only |
 | `.github/workflows/publish.yml` | I | — | — | mcp-coder repo only |
-| `tools/commit_summary.bat`, `pr_summary.bat`, `pr_review.bat`, `pr_review_highlevel.bat` | L | — | — | Legacy |
-| `tools/check_version.bat`, `test_prompt.bat`, `docstring_stats.sh`, `debug_*.py` | L | — | — | To review |
-| `requirements-beta.txt` | L | — | — | To review |
 
 **Notes:**
 

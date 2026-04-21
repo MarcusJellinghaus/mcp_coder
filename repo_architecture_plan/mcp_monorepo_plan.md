@@ -212,7 +212,6 @@ Proposed restructure:
 | `docs/repository-setup/claude-code.md` | How-to for downstream | Unchanged in content, but points at the canonical files at workspace root |
 | `docs/repository-setup/python.md` | Python-specific setup for downstream | Unchanged |
 | `docs/repository-setup/internal.md` | "mcp-coder repo internals" | Repurposed as "mcp-suite monorepo internals" (workspace layout, how to add a package, release flow) |
-| `docs/repository-setup/to-be-reviewed.md` | Legacy | Clean up during migration |
 
 **No new sync mechanism.** Downstream still pulls manually. But because the template files are *also* the files running the monorepo itself, drift between "what we ship as template" and "what we actually use" drops to zero by construction.
 

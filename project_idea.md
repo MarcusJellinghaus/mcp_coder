@@ -131,8 +131,7 @@ Sub functions
       - probably checking `is_git_repository(project_dir: Path)` from [git_operations` in mcp-workspace](https://github.com/MarcusJellinghaus/mcp-workspace/blob/main/src/mcp_workspace/file_tools/git_operations.py)
     - with specified check for `files to commit?` (subfunction)
     - others
-- `Get diff` - similar to `tools\commit_summary.bat`, all changes should be identified and put into a git diff (??) style string
-  - to be analysed further, batch file implementation already exists
+- `Get diff` - all changes should be identified and put into a git diff style string
   - will be part of `git_operations`
   - prompt should be added from `prompt_manager`
 - `Prompt manager`

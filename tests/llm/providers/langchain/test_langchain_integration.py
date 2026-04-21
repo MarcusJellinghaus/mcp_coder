@@ -93,7 +93,7 @@ class TestLangchainIntegration:
 
 
 # ---------------------------------------------------------------------------
-# Agent mode integration tests (mirrors tools/test_prompt.bat)
+# Agent mode integration tests
 # ---------------------------------------------------------------------------
 
 
@@ -139,7 +139,6 @@ def _create_agent_mcp_config(tmp_path: Path) -> tuple[str, Path]:
 class TestAgentModeIntegration:
     """End-to-end agent mode tests with real MCP servers and LLM API.
 
-    Mirrors the manual tests in ``tools/test_prompt.bat``.
     Skipped when credentials or MCP server are unavailable.
     """
 
