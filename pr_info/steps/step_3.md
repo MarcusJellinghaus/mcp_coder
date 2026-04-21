@@ -4,7 +4,7 @@
 
 ## Goal
 
-Extract `IssueManager.update_workflow_label()` into a standalone function in `workflow_utils/label_transitions.py`. Migrate the 11 label update tests from `tests/utils/github_operations/test_issue_manager_label_update.py` to `tests/workflow_utils/test_label_transitions.py`.
+Extract `IssueManager.update_workflow_label()` into a standalone function in `workflow_utils/label_transitions.py`. Migrate the 12 label update tests from `tests/utils/github_operations/test_issue_manager_label_update.py` to `tests/workflow_utils/test_label_transitions.py`.
 
 ## WHERE
 
@@ -74,7 +74,7 @@ The function is extracted from `IssueManager.update_workflow_label()` in `src/mc
 
 ## Test Migration
 
-Migrate `TestIssueManagerLabelUpdate` class (11 tests) from `test_issue_manager_label_update.py`:
+Migrate `TestIssueManagerLabelUpdate` class (12 tests) from `test_issue_manager_label_update.py`:
 
 **Key changes in tests:**
 - Import `update_workflow_label` from `mcp_coder.workflow_utils.label_transitions` instead of calling `manager.update_workflow_label(...)`
@@ -95,7 +95,8 @@ Migrate `TestIssueManagerLabelUpdate` class (11 tests) from `test_issue_manager_
 8. `test_update_workflow_label_no_branch_provided`
 9. `test_update_workflow_label_removes_different_workflow_label`
 10. `test_update_workflow_label_with_validated_issue_number`
-11. `test_update_workflow_label_validated_issue_number_invalid` (+ race condition test = 11 total, verify exact count)
+11. `test_update_workflow_label_validated_issue_number_invalid`
+12. `test_update_workflow_label_race_condition_scenario`
 
 ## Commit
 
@@ -110,7 +111,7 @@ Read pr_info/steps/summary.md for full context, then implement step 3 from pr_in
 
 Extract update_workflow_label from IssueManager into a standalone function.
 The behavior must be identical to the existing method.
-Migrate the 11 tests, adapting mock targets to the new function location.
+Migrate the 12 tests, adapting mock targets to the new function location.
 Both the old method and the new function should work simultaneously at this step.
 Run all checks (pylint, mypy, pytest unit tests) after implementation.
 ```

@@ -32,6 +32,11 @@ No code changes to `label_config.py` itself — only move the file and update im
 
 **Note**: The import in `issues/manager.py` changes temporarily — that file will be deleted in Step 6.
 
+**Note**: Several files have lazy imports of `label_config` functions inside function bodies (e.g., `get_labels_config_path` imported inline). These must also be updated:
+- `src/mcp_coder/cli/commands/coordinator/core.py` — lazy imports at ~lines 196, 268
+- `src/mcp_coder/workflows/vscodeclaude/config.py` — lazy import at ~line 27
+- `src/mcp_coder/workflows/vscodeclaude/issues.py` — lazy import at ~line 31
+
 ## HOW
 
 1. Copy `label_config.py` to `config/label_config.py`

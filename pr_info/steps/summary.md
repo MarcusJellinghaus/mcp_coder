@@ -88,11 +88,19 @@ After:  workflows → mcp_workspace_github (shim) → mcp_workspace.github_opera
 | `src/mcp_coder/workflows/vscodeclaude/session_launch.py` | Import path update |
 | `src/mcp_coder/workflows/vscodeclaude/session_restart.py` | Import path update |
 | `src/mcp_coder/workflows/vscodeclaude/status.py` | Import path update |
+| `src/mcp_coder/__init__.py` | Import path update |
 | `src/mcp_coder/checks/branch_status.py` | Import path update |
+| `src/mcp_coder/checks/ci_log_parser.py` | Import path update (TYPE_CHECKING) |
 | `src/mcp_coder/workflow_utils/failure_handling.py` | Import path + update_workflow_label call |
+| `src/mcp_coder/workflow_utils/base_branch.py` | Import path update |
+| `src/mcp_coder/cli/commands/gh_tool.py` | Import path update |
+| `src/mcp_coder/cli/commands/coordinator/commands.py` | Import path update |
+| `src/mcp_coder/workflows/vscodeclaude/helpers.py` | Import path update |
 | `src/mcp_coder/utils/__init__.py` | Remove `github_operations` re-export |
 | `.importlinter` | Architecture config updates |
 | `tach.toml` | Architecture config updates |
+
+**Note**: ~30 test files outside `tests/utils/github_operations/` also need import updates to use `mcp_coder.mcp_workspace_github` (covered in Step 4).
 
 ## Folders / Files Deleted
 

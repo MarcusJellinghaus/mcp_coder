@@ -24,7 +24,7 @@ All files in `src/` that import from `mcp_coder.utils.github_operations`. Each f
 | `mcp_coder.utils.github_operations.github_utils` | `mcp_coder.mcp_workspace_github` |
 | `mcp_coder.utils.github_operations.labels_manager` | `mcp_coder.mcp_workspace_github` |
 
-### Files to update (14 files)
+### Files to update (25 files)
 
 **CLI commands:**
 1. `src/mcp_coder/cli/commands/define_labels.py` — `IssueData`, `IssueEventType`, `IssueManager`, `LabelsManager`
@@ -54,8 +54,42 @@ All files in `src/` that import from `mcp_coder.utils.github_operations`. Each f
 **Workflow utils:**
 18. `src/mcp_coder/workflow_utils/failure_handling.py` — `IssueManager`
 
+**Package init:**
+19. `src/mcp_coder/__init__.py` — imports `CommentData`, `IssueData`, `IssueManager` from `.utils.github_operations.issues` and `LabelData` from `.utils.github_operations.labels_manager`. Change to import from `.mcp_workspace_github`
+
 **Utils __init__:**
-19. `src/mcp_coder/utils/__init__.py` — Remove `from .github_operations import PullRequestManager` and its `__all__` entry
+20. `src/mcp_coder/utils/__init__.py` — Remove `from .github_operations import PullRequestManager` and its `__all__` entry
+
+**Additional CLI commands:**
+21. `src/mcp_coder/cli/commands/gh_tool.py` — imports `IssueBranchManager`, `IssueManager` from `...utils.github_operations.issues.*`
+22. `src/mcp_coder/cli/commands/coordinator/commands.py` — imports `RepoIdentifier`, `IssueBranchManager`, `IssueData`, `IssueManager`, `get_all_cached_issues`, `update_issue_labels_in_cache` from `....utils.github_operations`
+
+**Additional workflows:**
+23. `src/mcp_coder/workflows/vscodeclaude/helpers.py` — imports `IssueData` from `...utils.github_operations.issues`
+
+**Additional workflow utils:**
+24. `src/mcp_coder/workflow_utils/base_branch.py` — imports `IssueData`, `IssueManager`, `PullRequestManager` from `mcp_coder.utils.github_operations.*`
+
+**Additional checks:**
+25. `src/mcp_coder/checks/ci_log_parser.py` — imports `CIResultsManager` in TYPE_CHECKING block
+
+### Test files to update (~30 files)
+
+Test files that import from `mcp_coder.utils.github_operations` must also be updated to import from `mcp_coder.mcp_workspace_github`. After making source changes, grep `tests/` for remaining `github_operations` imports (excluding `tests/utils/github_operations/` which is deleted in Step 6).
+
+Key test directories with affected files:
+- `tests/checks/` — `test_branch_status.py`
+- `tests/cli/commands/` — `test_define_labels*.py`, `test_set_status*.py`, `test_gh_tool*.py`
+- `tests/cli/commands/coordinator/` — `test_commands.py`, `test_core.py`, `test_integration.py`, `test_issue_stats.py`
+- `tests/integration/` — `test_execution_dir_integration.py`
+- `tests/workflows/create_plan/` — `test_main.py`, `test_prerequisites.py`, `test_prompt_execution.py`
+- `tests/workflows/implement/` — `test_ci_check.py`
+- `tests/workflows/vscodeclaude/` — `test_cache_aware.py`, `test_cleanup.py`, `test_helpers.py`, `test_issues.py`, `test_session_launch*.py`, `test_session_restart*.py`, `test_status_display.py`, etc.
+- `tests/workflow_utils/` — `test_base_branch.py`
+
+**Important**: Mock targets in tests must also be updated. For example, `@patch("mcp_coder.utils.github_operations.issues.IssueManager")` → `@patch("mcp_coder.mcp_workspace_github.IssueManager")`. However, some mocks should target the **consumer module's import** instead, depending on test patterns.
+
+Use `grep -r "github_operations" tests/ --include="*.py"` to find all affected files. Exclude `tests/utils/github_operations/` from the update (those are deleted in Step 6).
 
 ## HOW
 
