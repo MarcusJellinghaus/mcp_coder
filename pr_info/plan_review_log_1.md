@@ -56,3 +56,32 @@ Review of the implementation plan for "Consume github_operations via shim + rebu
 - `summary.md`: Added note about Step 2 test file updates
 
 **Status**: committed
+
+## Round 3 — 2026-04-21 (verification)
+
+**Findings**: None — all round 1 and round 2 fixes verified correct.
+
+**Verification**:
+- Grep of `github_operations` across `src/` (50 matches) and `tests/` (81 matches) confirms all files are covered by the plan.
+- Source files: All 25 in Step 4 accounted for. Label_config imports correctly split between Steps 2 and 4.
+- Test files: ~5 in Step 2 (label_config), ~29 in Step 4 (shim), remainder in `tests/utils/github_operations/` deleted in Step 6.
+- Config files: `.importlinter` and `tach.toml` covered by Step 7.
+- Step numbering, cross-references, and summary all consistent.
+
+**Changes**: None.
+
+**Status**: no changes needed
+
+## Final Status
+
+**Rounds run**: 3 (2 with changes, 1 verification)
+**Commits produced**: 2 (`da8f266`, `bf57e25`)
+**Plan status**: Ready for implementation
+
+**Key improvements made**:
+1. Added ~30 missing test file import updates to Step 4 (would have broken all tests after Step 6 deletion)
+2. Added 5 missing test files for `label_config` imports to Step 2
+3. Added 6 missing source files to Step 4 (including root `__init__.py` — would have broken `import mcp_coder`)
+4. Fixed Step 7 import-linter proposals to account for v2.11 limitations
+5. Removed out-of-scope git shim tach.toml change
+6. Fixed test count (11→12), added lazy import notes, updated summary
