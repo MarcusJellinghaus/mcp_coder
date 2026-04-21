@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: Build `label_transitions.py` + migrate label update tests
-- [ ] Implementation: extract standalone update_workflow_label function and migrate tests ([step_3.md](./steps/step_3.md))
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: extract standalone update_workflow_label function and migrate tests ([step_3.md](./steps/step_3.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Update all consumer imports to use shim
 - [ ] Implementation: switch all github_operations imports to mcp_workspace_github ([step_4.md](./steps/step_4.md))
