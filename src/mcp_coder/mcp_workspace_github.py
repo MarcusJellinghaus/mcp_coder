@@ -87,6 +87,10 @@ except ImportError:
             raise self._error()
 
         def __getattr__(self, item: str) -> Any:
+            # Allow Python's typing machinery to probe for dunder attributes
+            # (e.g. __typing_subst__) without raising ImportError.
+            if item.startswith("__") and item.endswith("__"):
+                raise AttributeError(item)
             raise self._error()
 
         def __instancecheck__(self, instance: Any) -> bool:
