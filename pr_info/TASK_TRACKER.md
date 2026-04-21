@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Fix `.importlinter` misleading comment
-- [ ] Implementation: update comment on Requests Library Isolation contract to mention both `github_operations` and `jenkins_operations`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: update comment on Requests Library Isolation contract to mention both `github_operations` and `jenkins_operations`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review

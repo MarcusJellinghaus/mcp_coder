@@ -318,7 +318,7 @@ ignore_imports =
 # -----------------------------------------------------------------------------
 # Contract: Requests Library Isolation
 # -----------------------------------------------------------------------------
-# The 'requests' library should only be used in github_operations.
+# The 'requests' library should only be used in github_operations and jenkins_operations.
 # -----------------------------------------------------------------------------
 [importlinter:contract:requests_library_isolation]
 name = Requests Library Isolation
