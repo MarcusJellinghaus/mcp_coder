@@ -45,10 +45,27 @@ Consume github_operations via shim + rebuild update_workflow_label (part 5 of 5)
 
 **Decisions**: All confirmations, no changes needed
 **Changes**: None
+**Status**: No changes needed
+
+## CI fix — 2026-04-21
+**Issue**: CI failing — black formatting + 12 tests failing with `ValueError: GitHub token not found`
+**Root cause**: Tests constructed `IssueManager(project_dir=tmp_path)` which internally calls `get_github_token()`. In CI (no GITHUB_TOKEN), this raised ValueError. Tests were mocking `get_config_values` but that's not what `BaseGitHubManager.__init__` calls.
+**Fix**: Pass `github_token="dummy-token"` explicitly to all IssueManager constructors (uses class's own API, cleaner than mocking). Removed unnecessary mock_config patches and unused imports (MagicMock, IssueData). Applied black formatting.
+**Status**: Committed as 415ce2f
+
+## Round 3 — 2026-04-21
+**Findings**:
+- All 12 tests pass github_token to IssueManager — none missed
+- No remaining mock_config or get_config_values references
+- No unused imports remain
+- Test structure unchanged (no accidental behavior changes)
+
+**Decisions**: All confirmations, no changes needed
+**Changes**: None
 **Status**: No changes needed — review loop complete
 
 ## Final Status
-- **Rounds**: 2 (1 with code changes, 1 clean)
-- **Commits**: 1 (e1ffe33)
-- **Issues remaining**: None
+- **Rounds**: 3 (round 1 + CI fix produced code changes, round 2 and 3 clean)
+- **Commits**: 2 (e1ffe33 unused symbol cleanup, 415ce2f CI test fix)
+- **Issues remaining**: Rebase onto main needed (1 commit behind)
 
