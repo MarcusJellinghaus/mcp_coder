@@ -31,6 +31,7 @@ from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
+from mcp_coder.workflow_utils.label_transitions import update_workflow_label
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerFileNotFoundError,
     get_incomplete_tasks,
@@ -662,7 +663,8 @@ def run_create_pr_workflow(
                     from mcp_coder.mcp_workspace_github import IssueManager
 
                     issue_manager = IssueManager(project_dir)
-                    success = issue_manager.update_workflow_label(
+                    success = update_workflow_label(
+                        issue_manager,
                         from_label_id="pr_creating",
                         to_label_id="pr_created",
                         validated_issue_number=cached_issue_number,

@@ -13,7 +13,7 @@ from mcp_coder.mcp_workspace_git import (
     get_current_branch_name,
 )
 from mcp_coder.mcp_workspace_github import IssueManager
-from mcp_coder.utils.subprocess_runner import execute_command
+from mcp_coder.workflow_utils.label_transitions import update_workflow_label
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +124,8 @@ def handle_workflow_failure(
         # 4. Set failure label (non-blocking)
         if needs_label_update:
             try:
-                issue_manager.update_workflow_label(
+                update_workflow_label(
+                    issue_manager,
                     from_label_id=from_label_id,
                     to_label_id=failure.category,
                     validated_issue_number=resolved_issue_number,

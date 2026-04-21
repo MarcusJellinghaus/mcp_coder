@@ -34,6 +34,7 @@ from mcp_coder.workflow_utils.failure_handling import (
     get_diff_stat,
     handle_workflow_failure,
 )
+from mcp_coder.workflow_utils.label_transitions import update_workflow_label
 
 from .constants import FailureCategory, WorkflowFailure
 from .prerequisites import (
@@ -705,7 +706,8 @@ def run_create_plan_workflow(
         logger.info("Updating GitHub issue label...")
         try:
             issue_manager = IssueManager(project_dir)
-            success = issue_manager.update_workflow_label(
+            success = update_workflow_label(
+                issue_manager,
                 from_label_id="planning",
                 to_label_id="plan_review",
                 validated_issue_number=issue_number,

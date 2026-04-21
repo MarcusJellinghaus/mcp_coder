@@ -10,7 +10,8 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from mcp_coder.utils.github_operations.issues import (
+from mcp_coder.mcp_workspace_github import (
+    BaseGitHubManager,
     IssueBranchManager,
     IssueData,
     IssueManager,
@@ -81,10 +82,16 @@ def mock_github() -> Mock:
 
 @pytest.fixture
 def _mock_git_repo() -> Any:
-    """Mock is_git_repository to avoid subprocess calls."""
-    with patch(
-        "mcp_coder.utils.github_operations.base_manager.is_git_repository",
-        return_value=True,
+    """Mock _init_with_project_dir to avoid git repository checks."""
+
+    def _fake_init(self: Any, project_dir: Any) -> None:
+        self.project_dir = project_dir
+        self._repo_full_name = None  # pylint: disable=protected-access
+
+    with patch.object(
+        BaseGitHubManager,
+        "_init_with_project_dir",
+        _fake_init,
     ):
         yield
 
