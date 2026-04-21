@@ -342,7 +342,7 @@ def cleanup_repository(project_dir: Path) -> bool:
 
 def create_pull_request(
     project_dir: Path, title: str, body: str
-) -> tuple[PullRequestData | None, str | None]:
+) -> Tuple[Optional[PullRequestData], Optional[str]]:
     """Create GitHub pull request using PullRequestManager.
 
     Args:
