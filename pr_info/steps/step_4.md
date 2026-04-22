@@ -109,16 +109,19 @@ No data structure changes.
 Read pr_info/steps/summary.md for full context, then implement pr_info/steps/step_4.md.
 
 Delete the local git_operations package and clean up configs:
-1. Delete all 13 files in src/mcp_coder/utils/git_operations/
-2. Delete tests/utils/git_operations/ (2 files) — if mcp-workspace#135 has
-   NOT merged, keep test files and add a TODO comment instead
-3. In .importlinter:
+
+**Important**: Edit config files before deleting source files — unmatched `ignore_imports` in the `forbidden` contract cause lint-imports to fail.
+
+1. In .importlinter:
    a. Remove `mcp_coder.mcp_workspace_git -> mcp_coder.utils.git_operations.**`
       from layered_architecture ignore_imports
    b. Remove `ignore_imports` entirely from git_library_isolation contract
       (forbid git/gitdb everywhere, zero exceptions)
    c. Update the TODO comment for the git operations isolation section
-4. In vulture_whitelist.py: remove PushResult and stage_specific_files entries
+2. In vulture_whitelist.py: remove PushResult and stage_specific_files entries
+3. Delete all 13 files in src/mcp_coder/utils/git_operations/
+4. Delete tests/utils/git_operations/ (2 files) — if mcp-workspace#135 has
+   NOT merged, keep test files and add a TODO comment instead
 5. Run all checks (pylint, mypy, pytest, lint-imports)
 ```
 
