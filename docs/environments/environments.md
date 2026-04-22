@@ -6,7 +6,7 @@ When mcp-coder works on a project, two distinct Python environments are involved
 
 ### 1. Tool Environment
 
-Where mcp-coder and MCP servers are installed. Provides the tooling.
+For **running** mcp-coder and related tools. This is the stable, installed version.
 
 Example: `C:\Jenkins\environments\mcp-coder-dev\.venv` (Python 3.13)
 
@@ -14,11 +14,9 @@ Example: `C:\Jenkins\environments\mcp-coder-dev\.venv` (Python 3.13)
 
 ### 2. Project Environment
 
-Where the project's dependencies live. May or may not be inside the project directory.
+For **developing** a new version of mcp-coder and related tools. This is where you install updated dependencies to test against. Lives at `<project_directory>\.venv`.
 
-Examples:
-- `C:\Users\Marcus\Documents\VSCC\mcp_coder_598\.venv` — inside project dir
-- `C:\Jenkins\environments\some-project\.venv` — separate location
+Example: `C:\Users\Marcus\Documents\VSCC\mcp_coder_598\.venv`
 
 **Contains:** the project's library dependencies.
 
