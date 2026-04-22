@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `refactor: replace GitPython with subprocess in get_diff_stat (#886)`
 
 ### Step 2: Flip shim imports to `mcp_workspace.git_operations`
-- [ ] Implementation: change all imports in `mcp_workspace_git.py` from local to external package, drop `_safe_repo_context`, update smoke test (29→28)
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `refactor: flip git shim to mcp_workspace.git_operations (#886)`
+- [x] Implementation: change all imports in `mcp_workspace_git.py` from local to external package, drop `_safe_repo_context`, update smoke test (29→28)
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit: `refactor: flip git shim to mcp_workspace.git_operations (#886)`
 
 ### Step 3: Fix 5 bypass files to import through shim
 - [ ] Implementation: reroute imports in `git_utils.py`, `base_manager.py`, `ci_results_manager.py`, `pr_manager.py`, `issues/manager.py`
