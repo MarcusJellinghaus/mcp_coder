@@ -12,11 +12,11 @@ from mcp_coder.config.label_config import (
     get_labels_config_path,
     load_labels_config,
 )
-from mcp_coder.mcp_workspace_github import IssueBranchManager, IssueManager
-from mcp_coder.utils.git_operations.branch_queries import (
+from mcp_coder.mcp_workspace_git import (
     extract_issue_number_from_branch,
     get_current_branch_name,
 )
+from mcp_coder.mcp_workspace_github import IssueBranchManager, IssueManager
 
 logger = logging.getLogger(__name__)
 

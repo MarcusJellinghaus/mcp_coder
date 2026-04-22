@@ -13,6 +13,7 @@ from mcp_coder.mcp_workspace_git import (
     get_current_branch_name,
 )
 from mcp_coder.mcp_workspace_github import IssueManager
+from mcp_coder.utils.subprocess_runner import execute_command
 from mcp_coder.workflow_utils.label_transitions import update_workflow_label
 
 logger = logging.getLogger(__name__)
