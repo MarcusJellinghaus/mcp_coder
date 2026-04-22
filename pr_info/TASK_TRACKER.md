@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `refactor: flip git shim to mcp_workspace.git_operations (#886)`
 
 ### Step 3: Fix 5 bypass files to import through shim
-- [ ] Implementation: reroute imports in `git_utils.py`, `base_manager.py`, `ci_results_manager.py`, `pr_manager.py`, `issues/manager.py`
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `refactor: route git imports through shim in 5 bypass files (#886)`
+- [x] Implementation: reroute imports in `git_utils.py`, `base_manager.py`, `ci_results_manager.py`, `pr_manager.py`, `issues/manager.py`
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit: `refactor: route git imports through shim in 5 bypass files (#886)`
 
 ### Step 4: Delete local `git_operations` + cleanup configs
 - [ ] Implementation: edit `.importlinter` and `vulture_whitelist.py`, delete `src/mcp_coder/utils/git_operations/` and `tests/utils/git_operations/`

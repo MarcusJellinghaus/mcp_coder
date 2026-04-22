@@ -3,7 +3,7 @@
 import logging
 from pathlib import Path
 
-from mcp_coder.utils.git_operations.branch_queries import get_current_branch_name
+from mcp_coder.mcp_workspace_git import get_current_branch_name
 
 logger = logging.getLogger(__name__)
 
