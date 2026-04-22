@@ -170,8 +170,8 @@ ignore_imports =
 # -----------------------------------------------------------------------------
 # Contract: GitPython Library Isolation
 # -----------------------------------------------------------------------------
-# The 'git' package (GitPython) should only be imported by git_operations.
-# Other modules should use git_operations as an abstraction layer.
+# GitPython must not be imported anywhere in mcp_coder.
+# Git functionality lives in the external mcp_workspace package.
 # -----------------------------------------------------------------------------
 [importlinter:contract:git_library_isolation]
 name = GitPython Library Isolation
