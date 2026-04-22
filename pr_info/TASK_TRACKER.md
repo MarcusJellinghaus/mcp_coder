@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Refactor `failure_handling.py` — replace GitPython with subprocess
-- [ ] Implementation: replace `_safe_repo_context` with `execute_command` in `get_diff_stat()`, update tests
-- [ ] Quality checks pass: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `refactor: replace GitPython with subprocess in get_diff_stat (#886)`
+- [x] Implementation: replace `_safe_repo_context` with `execute_command` in `get_diff_stat()`, update tests
+- [x] Quality checks pass: pylint, pytest, mypy — fix all issues
+- [x] Commit: `refactor: replace GitPython with subprocess in get_diff_stat (#886)`
 
 ### Step 2: Flip shim imports to `mcp_workspace.git_operations`
 - [ ] Implementation: change all imports in `mcp_workspace_git.py` from local to external package, drop `_safe_repo_context`, update smoke test (29→28)

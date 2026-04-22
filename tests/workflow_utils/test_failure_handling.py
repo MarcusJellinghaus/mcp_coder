@@ -32,24 +32,23 @@ class TestFormatElapsedTime:
 class TestGetDiffStat:
     """Tests for get_diff_stat."""
 
-    @patch("mcp_coder.workflow_utils.failure_handling._safe_repo_context")
-    def test_returns_diff_stat(self, mock_repo_ctx: MagicMock) -> None:
-        mock_repo = MagicMock()
-        mock_repo.git.diff.return_value = " file.py | 2 +-\n 1 file changed"
-        mock_repo_ctx.return_value.__enter__ = MagicMock(return_value=mock_repo)
-        mock_repo_ctx.return_value.__exit__ = MagicMock(return_value=False)
+    @patch("mcp_coder.workflow_utils.failure_handling.execute_command")
+    def test_returns_diff_stat(self, mock_exec: MagicMock) -> None:
+        mock_exec.return_value = MagicMock(
+            return_code=0, stdout=" file.py | 2 +-\n 1 file changed"
+        )
 
         result = get_diff_stat(Path("/fake/project"))
 
         assert result == " file.py | 2 +-\n 1 file changed"
-        mock_repo.git.diff.assert_called_once_with("HEAD", "--stat")
-
-    @patch("mcp_coder.workflow_utils.failure_handling._safe_repo_context")
-    def test_returns_empty_on_error(self, mock_repo_ctx: MagicMock) -> None:
-        mock_repo_ctx.return_value.__enter__ = MagicMock(
-            side_effect=Exception("git error")
+        mock_exec.assert_called_once_with(
+            ["git", "diff", "HEAD", "--stat"],
+            cwd=str(Path("/fake/project")),
         )
-        mock_repo_ctx.return_value.__exit__ = MagicMock(return_value=False)
+
+    @patch("mcp_coder.workflow_utils.failure_handling.execute_command")
+    def test_returns_empty_on_error(self, mock_exec: MagicMock) -> None:
+        mock_exec.return_value = MagicMock(return_code=1, stdout="", stderr="error")
 
         result = get_diff_stat(Path("/fake/project"))
 
