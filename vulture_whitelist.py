@@ -211,9 +211,6 @@ _.__getattr__
 # repository.py - Variable used in git status parsing
 _.index_status
 
-# git_operations - Dead code to be removed in Step 4
-_.PushResult
-_.stage_specific_files
 
 # =============================================================================
 # FALSE POSITIVES - GitPython Mock Patterns

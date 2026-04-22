@@ -28,32 +28,17 @@ class TestModuleIntegration:
         assert CommitResult is not None
 
     def test_utils_module_import(self) -> None:
-        """Test importing surviving re-exports from utils module."""
-        from mcp_coder.utils import (
-            CommitResult,
-            branch_exists,
-            checkout_branch,
-            commit_all_changes,
-            commit_staged_files,
-            fetch_remote,
-            get_branch_diff,
-            get_current_branch_name,
-            get_default_branch_name,
-            get_full_status,
-            get_git_diff_for_commit,
-            get_github_repository_url,
-            git_push,
-            is_working_directory_clean,
-            stage_all_changes,
-        )
+        """Test that utils no longer re-exports git operations (removed in step 4)."""
+        import mcp_coder.utils as utils
 
-        # Verify functions are callable
-        assert callable(commit_all_changes)
-        assert callable(commit_staged_files)
-        assert callable(get_full_status)
+        # Git operations are no longer re-exported from utils
+        assert not hasattr(utils, "CommitResult")
+        assert not hasattr(utils, "branch_exists")
+        assert not hasattr(utils, "commit_all_changes")
 
-        # Verify CommitResult is available
-        assert CommitResult is not None
+        # Non-git utilities are still available
+        assert hasattr(utils, "execute_command")
+        assert hasattr(utils, "setup_logging")
 
     def test_main_package_public_api_import(self) -> None:
         """Test importing public API from main mcp_coder package."""
@@ -121,7 +106,7 @@ class TestModuleIntegration:
         assert hasattr(utils_module, "__all__")
         utils_all = utils_module.__all__
 
-        # Verify surviving git functions are in utils __all__
+        # Git operations are no longer re-exported from utils (removed in step 4)
         git_functions = [
             "CommitResult",
             "branch_exists",
@@ -141,24 +126,9 @@ class TestModuleIntegration:
         ]
 
         for func_name in git_functions:
-            assert func_name in utils_all, f"{func_name} not in utils.__all__"
-            assert hasattr(
-                utils_module, func_name
-            ), f"{func_name} not available in utils module"
-
-        # Verify dead symbols are removed from utils __all__
-        dead_symbols = [
-            "git_move",
-            "is_file_tracked",
-            "get_staged_changes",
-            "get_unstaged_changes",
-            "stage_specific_files",
-        ]
-
-        for func_name in dead_symbols:
             assert (
                 func_name not in utils_all
-            ), f"{func_name} should be removed from utils.__all__"
+            ), f"{func_name} should not be in utils.__all__ (use mcp_workspace_git)"
 
         # Check main module has __all__ defined
         assert hasattr(main_module, "__all__")

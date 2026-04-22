@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `refactor: route git imports through shim in 5 bypass files (#886)`
 
 ### Step 4: Delete local `git_operations` + cleanup configs
-- [ ] Implementation: edit `.importlinter` and `vulture_whitelist.py`, delete `src/mcp_coder/utils/git_operations/` and `tests/utils/git_operations/`
-- [ ] Quality checks pass: pylint, pytest, mypy, lint-imports — fix all issues
-- [ ] Commit: `refactor: delete local git_operations and clean up configs (#886)`
+- [x] Implementation: edit `.importlinter` and `vulture_whitelist.py`, delete `src/mcp_coder/utils/git_operations/` and `tests/utils/git_operations/`
+- [x] Quality checks pass: pylint, pytest, mypy, lint-imports — fix all issues
+- [x] Commit: `refactor: delete local git_operations and clean up configs (#886)`
 
 ## Pull Request
 - [ ] PR review: verify all steps merged cleanly, no regressions
