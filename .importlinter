@@ -51,7 +51,6 @@ ignore_imports =
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.skills
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.commands.info
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.commands.color
-    mcp_coder.mcp_workspace_git -> mcp_coder.utils.git_operations.**
 
 # -----------------------------------------------------------------------------
 # Contract: External Service Integrations Independence
@@ -74,10 +73,9 @@ modules =
 # -----------------------------------------------------------------------------
 # Contract: MCP Workspace Git Operations Isolation
 # -----------------------------------------------------------------------------
-# TODO(Step 4): Re-add when shim imports from mcp_workspace.git_operations.
-# Currently blocked: import-linter v2.11 doesn't support external subpackage
-# paths in forbidden_modules, and unmatched ignore_imports cause exit code 1.
-# The layered architecture contract enforces shim positioning in the meantime.
+# TODO: Cannot enforce shim-only access to mcp_workspace.git_operations.
+# import-linter v2.11 (grimp) doesn't resolve external subpackage paths.
+# Enforcement relies on code review + layered architecture contract.
 # -----------------------------------------------------------------------------
 
 # -----------------------------------------------------------------------------
@@ -172,8 +170,8 @@ ignore_imports =
 # -----------------------------------------------------------------------------
 # Contract: GitPython Library Isolation
 # -----------------------------------------------------------------------------
-# The 'git' package (GitPython) should only be imported by git_operations.
-# Other modules should use git_operations as an abstraction layer.
+# GitPython must not be imported anywhere in mcp_coder.
+# Git functionality lives in the external mcp_workspace package.
 # -----------------------------------------------------------------------------
 [importlinter:contract:git_library_isolation]
 name = GitPython Library Isolation
@@ -183,8 +181,6 @@ source_modules =
 forbidden_modules =
     git
     gitdb
-ignore_imports =
-    mcp_coder.utils.git_operations.** -> git
 
 # -----------------------------------------------------------------------------
 # Contract: Jenkins Library Isolation

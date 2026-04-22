@@ -10,7 +10,7 @@ from typing import List, Optional, TypedDict, cast
 
 from github.GithubException import GithubException
 
-from mcp_coder.utils.git_operations import (
+from mcp_coder.mcp_workspace_git import (
     get_default_branch_name,
     get_github_repository_url,
 )

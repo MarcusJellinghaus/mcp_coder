@@ -184,11 +184,11 @@ depends_on = [
 [[modules]]
 path = "mcp_coder.utils"
 layer = "infrastructure"
-# General infrastructure utilities: git operations, github API, subprocess runner.
+# General infrastructure utilities: github API, subprocess runner.
 # These are technical implementations that support domain and application layers.
 # Note: __init__.py re-exports from submodules but these are not architectural deps.
-# TODO(Step 4): Add mcp_workspace_git dependency when utils imports from shim.
 depends_on = [
+    { path = "mcp_coder.mcp_workspace_git" }, # Git operations via shim
     { path = "mcp_coder.config" },    # Access configuration for git/github
     { path = "mcp_coder.constants" }, # Shared constants
 ]
@@ -210,13 +210,10 @@ depends_on = [
 
 [[modules]]
 path = "mcp_coder.mcp_workspace_git"
-# TODO(Step 4): Move back to shim_workspace when shim imports from mcp_workspace.
-layer = "infrastructure"
-# Git operations shim. Wraps mcp_workspace.git_operations.
-# Temporarily in infrastructure layer because shim imports from local git_operations.
-depends_on = [
-    { path = "mcp_coder.utils" },  # Temporary: shim imports from local git_operations until Step 4
-]
+layer = "shim_workspace"
+# Git operations shim. Wraps external mcp_workspace.git_operations.
+# No internal dependencies — all git functionality lives in the external package.
+depends_on = []
 
 # =============================================================================
 # Layer 5: FOUNDATION
@@ -282,7 +279,7 @@ depends_on = [
 # -----------------------------------------------------------------------------
 # REFACTORING: Split utils into separate top-level modules
 # -----------------------------------------------------------------------------
-# Current: mcp_coder.utils contains git_operations, github_operations, 
+# Current: mcp_coder.utils contains github_operations, 
 #          jenkins_operations as submodules plus generic utilities.
 #
 # Proposed: Move to top-level modules for clearer architecture:

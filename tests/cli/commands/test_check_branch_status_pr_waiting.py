@@ -106,8 +106,8 @@ class TestWaitForPrParserArgs:
 class TestHasRemoteTrackingBranch:
     """Tests for has_remote_tracking_branch utility."""
 
-    @patch("mcp_coder.utils.git_operations.branch_queries._safe_repo_context")
-    @patch("mcp_coder.utils.git_operations.branch_queries.is_git_repository")
+    @patch("mcp_workspace.git_operations.branch_queries._safe_repo_context")
+    @patch("mcp_workspace.git_operations.branch_queries.is_git_repository")
     def test_has_remote_tracking_branch_true(
         self, mock_is_git: Mock, mock_ctx: Mock
     ) -> None:
@@ -123,8 +123,8 @@ class TestHasRemoteTrackingBranch:
 
         assert has_remote_tracking_branch(Path("/test")) is True
 
-    @patch("mcp_coder.utils.git_operations.branch_queries._safe_repo_context")
-    @patch("mcp_coder.utils.git_operations.branch_queries.is_git_repository")
+    @patch("mcp_workspace.git_operations.branch_queries._safe_repo_context")
+    @patch("mcp_workspace.git_operations.branch_queries.is_git_repository")
     def test_has_remote_tracking_branch_false(
         self, mock_is_git: Mock, mock_ctx: Mock
     ) -> None:

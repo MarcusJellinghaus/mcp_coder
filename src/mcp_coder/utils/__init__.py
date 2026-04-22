@@ -1,6 +1,6 @@
 """Utilities module for MCP Coder.
 
-This module provides various utility functions including git operations,
+This module provides various utility functions including
 subprocess execution, and other helper functions.
 
 Import Organization:
@@ -29,23 +29,6 @@ from .subprocess_runner import (
 from .user_config import create_default_config, get_config_file_path, get_config_values
 from .mlflow_config_loader import load_mlflow_config
 from .folder_deletion import DeletionFailureReason, DeletionResult, safe_delete_folder
-from .git_operations import (
-    CommitResult,
-    branch_exists,
-    checkout_branch,
-    commit_all_changes,
-    commit_staged_files,
-    fetch_remote,
-    get_branch_diff,
-    get_current_branch_name,
-    get_default_branch_name,
-    get_full_status,
-    get_git_diff_for_commit,
-    get_github_repository_url,
-    git_push,
-    is_working_directory_clean,
-    stage_all_changes,
-)
 
 from .github_operations import PullRequestManager
 from .jenkins_operations import (
@@ -60,22 +43,6 @@ __all__ = [
     "get_clipboard_text",
     "parse_commit_message",
     "validate_commit_message",
-    # Git operations
-    "CommitResult",
-    "branch_exists",
-    "checkout_branch",
-    "commit_all_changes",
-    "commit_staged_files",
-    "fetch_remote",
-    "get_branch_diff",
-    "get_current_branch_name",
-    "get_default_branch_name",
-    "get_full_status",
-    "get_git_diff_for_commit",
-    "get_github_repository_url",
-    "git_push",
-    "is_working_directory_clean",
-    "stage_all_changes",
     # Logging utilities
     "OUTPUT",
     "log_function_call",

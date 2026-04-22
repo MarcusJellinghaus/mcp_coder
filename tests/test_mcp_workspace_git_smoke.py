@@ -28,4 +28,4 @@ def test_all_exports_defined() -> None:
     """__all__ has expected count."""
     from mcp_coder.mcp_workspace_git import __all__
 
-    assert len(__all__) == 29  # 28 symbols + 1 constant
+    assert len(__all__) == 28

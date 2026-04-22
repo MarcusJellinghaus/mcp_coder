@@ -13,9 +13,8 @@ from github import Auth, Github
 from github.GithubException import GithubException
 from github.Repository import Repository
 
+from mcp_coder.mcp_workspace_git import get_github_repository_url, is_git_repository
 from mcp_coder.utils import user_config
-from mcp_coder.utils.git_operations.remotes import get_github_repository_url
-from mcp_coder.utils.git_operations.repository_status import is_git_repository
 from mcp_coder.utils.log_utils import log_function_call
 
 from .github_utils import parse_github_url

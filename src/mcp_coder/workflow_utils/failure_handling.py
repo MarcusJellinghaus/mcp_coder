@@ -9,11 +9,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from mcp_coder.mcp_workspace_git import (
-    _safe_repo_context,
     extract_issue_number_from_branch,
     get_current_branch_name,
 )
 from mcp_coder.utils.github_operations.issues import IssueManager
+from mcp_coder.utils.subprocess_runner import execute_command
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +42,12 @@ def get_diff_stat(project_dir: Path) -> str:
         Diff stat output, or empty string on error.
     """
     try:
-        with _safe_repo_context(project_dir) as repo:
-            return str(repo.git.diff("HEAD", "--stat"))
+        result = execute_command(
+            ["git", "diff", "HEAD", "--stat"], cwd=str(project_dir)
+        )
+        if result.return_code == 0:
+            return result.stdout
+        return ""
     except Exception:  # pylint: disable=broad-exception-caught
         return ""
 
