@@ -115,6 +115,7 @@ jobs:
           
       - name: Install latest GitHub dependencies
         run: |
+          uv pip install --system "mcp-coder-utils @ git+https://github.com/MarcusJellinghaus/mcp-coder-utils.git"
           uv pip install --system "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"
           uv pip install --system --no-deps "mcp-tools-py @ git+https://github.com/MarcusJellinghaus/mcp-tools-py.git"
 
@@ -158,6 +159,7 @@ jobs:
           
       - name: Install latest GitHub dependencies
         run: |
+          uv pip install --system "mcp-coder-utils @ git+https://github.com/MarcusJellinghaus/mcp-coder-utils.git"
           uv pip install --system "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"
           uv pip install --system --no-deps "mcp-tools-py @ git+https://github.com/MarcusJellinghaus/mcp-tools-py.git"
 
