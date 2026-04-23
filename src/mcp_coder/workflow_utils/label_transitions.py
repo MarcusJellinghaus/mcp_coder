@@ -16,7 +16,11 @@ from mcp_coder.mcp_workspace_git import (
     extract_issue_number_from_branch,
     get_current_branch_name,
 )
-from mcp_coder.mcp_workspace_github import IssueBranchManager, IssueManager
+from mcp_coder.mcp_workspace_github import (
+    BaseGitHubManager,
+    IssueBranchManager,
+    IssueManager,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -91,8 +95,14 @@ def update_workflow_label(
             if issue_manager._repo_full_name is not None:
                 repo_url = f"https://github.com/{issue_manager._repo_full_name}.git"
 
-            branch_manager = IssueBranchManager(
-                project_dir=issue_manager.project_dir, repo_url=repo_url
+            # IssueBranchManager.__init__ doesn't accept github_token,
+            # so init via BaseGitHubManager to reuse the existing token.
+            branch_manager = IssueBranchManager.__new__(IssueBranchManager)
+            BaseGitHubManager.__init__(
+                branch_manager,
+                project_dir=issue_manager.project_dir,
+                repo_url=repo_url,
+                github_token=issue_manager.github_token,
             )
             linked_branches = branch_manager.get_linked_branches(issue_number)
 
