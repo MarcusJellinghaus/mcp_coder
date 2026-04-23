@@ -51,7 +51,6 @@ ignore_imports =
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.skills
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.commands.info
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.commands.color
-    mcp_coder.mcp_workspace_git -> mcp_coder.utils.git_operations.**
 
 # -----------------------------------------------------------------------------
 # Contract: External Service Integrations Independence
