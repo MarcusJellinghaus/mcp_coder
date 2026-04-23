@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 from mcp_coder.mcp_workspace_git import checkout_branch
-from mcp_coder.utils.github_operations.issues import (
+from mcp_coder.mcp_workspace_github import (
     IssueBranchManager,
     IssueData,
     IssueManager,

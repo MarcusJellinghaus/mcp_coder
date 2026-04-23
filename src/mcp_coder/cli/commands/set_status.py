@@ -15,12 +15,12 @@ from mcp_coder.mcp_workspace_git import (
     is_working_directory_clean,
 )
 
-from ...constants import DEFAULT_IGNORED_BUILD_ARTIFACTS
-from ...utils.github_operations.issues import IssueManager
-from ...utils.github_operations.label_config import (
+from ...config.label_config import (
     get_labels_config_path,
     load_labels_config,
 )
+from ...constants import DEFAULT_IGNORED_BUILD_ARTIFACTS
+from ...mcp_workspace_github import IssueManager
 from ...utils.log_utils import OUTPUT
 from ...workflows.utils import resolve_project_dir
 

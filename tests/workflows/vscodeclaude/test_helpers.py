@@ -2,7 +2,7 @@
 
 import pytest
 
-from mcp_coder.utils.github_operations.issues import IssueData
+from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.workflows.vscodeclaude.config import (
     get_repo_full_name,
     get_repo_short_name,

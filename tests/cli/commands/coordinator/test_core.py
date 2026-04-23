@@ -35,7 +35,7 @@ from mcp_coder.cli.commands.coordinator.command_templates import (
     IMPLEMENT_COMMAND_TEMPLATE,
     IMPLEMENT_COMMAND_WINDOWS,
 )
-from mcp_coder.utils.github_operations.issues import (
+from mcp_coder.mcp_workspace_github import (
     CacheData,
     IssueData,
     _get_cache_file_path,
@@ -701,7 +701,7 @@ class TestCacheFilePath:
 
     def test_get_cache_file_path_basic(self) -> None:
         """Test basic cache file path generation."""
-        from mcp_coder.utils.github_operations.github_utils import RepoIdentifier
+        from mcp_coder.mcp_workspace_github import RepoIdentifier
 
         repo_identifier = RepoIdentifier.from_full_name("owner/repo")
         path = _get_cache_file_path(repo_identifier)
@@ -713,7 +713,7 @@ class TestCacheFilePath:
 
     def test_get_cache_file_path_complex_names(self) -> None:
         """Test cache file path with complex repository names."""
-        from mcp_coder.utils.github_operations.github_utils import RepoIdentifier
+        from mcp_coder.mcp_workspace_github import RepoIdentifier
 
         test_cases = [
             ("anthropics/claude-code", "anthropics_claude-code.issues.json"),
@@ -826,7 +826,7 @@ class TestStalenessLogging:
     ) -> None:
         """Test logging when issue state changes."""
         caplog.set_level(
-            logging.INFO, logger="mcp_coder.utils.github_operations.issues.cache"
+            logging.INFO, logger="mcp_workspace.github_operations.issues.cache"
         )
 
         cached_issues: Dict[str, IssueData] = {
@@ -869,7 +869,7 @@ class TestStalenessLogging:
     ) -> None:
         """Test logging when issue labels change."""
         caplog.set_level(
-            logging.INFO, logger="mcp_coder.utils.github_operations.issues.cache"
+            logging.INFO, logger="mcp_workspace.github_operations.issues.cache"
         )
 
         cached_issues: Dict[str, IssueData] = {

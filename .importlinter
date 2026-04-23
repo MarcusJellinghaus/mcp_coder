@@ -39,7 +39,7 @@ layers =
     mcp_coder.llm | mcp_coder.prompt_manager
     mcp_coder.prompts
     mcp_coder.utils
-    mcp_coder.mcp_tools_py | mcp_coder.mcp_workspace_git
+    mcp_coder.mcp_tools_py | mcp_coder.mcp_workspace_git | mcp_coder.mcp_workspace_github
     mcp_coder.config | mcp_coder.constants
 ignore_imports =
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.ui.app
@@ -55,20 +55,9 @@ ignore_imports =
 # -----------------------------------------------------------------------------
 # Contract: External Service Integrations Independence
 # -----------------------------------------------------------------------------
-# GitHub and Jenkins integrations should not depend on each other.
-# They are separate external services with independent APIs.
-#
-# Why this matters:
-# - Allows using one service without the other
-# - Keeps external service integrations focused
-# - Easier to add new integrations without entangling existing ones
+# Removed: github_operations no longer exists as a local module.
+# Jenkins independence is enforced by the jenkins_independence contract below.
 # -----------------------------------------------------------------------------
-[importlinter:contract:external_services]
-name = External Service Integrations Independence
-type = independence
-modules =
-    mcp_coder.utils.github_operations
-    mcp_coder.utils.jenkins_operations
 
 # -----------------------------------------------------------------------------
 # Contract: MCP Workspace Git Operations Isolation
@@ -76,6 +65,14 @@ modules =
 # TODO: Cannot enforce shim-only access to mcp_workspace.git_operations.
 # import-linter v2.11 (grimp) doesn't resolve external subpackage paths.
 # Enforcement relies on code review + layered architecture contract.
+# -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# Contract: MCP Workspace GitHub Operations Isolation
+# -----------------------------------------------------------------------------
+# TODO: Re-add when import-linter supports external subpackage paths in
+# forbidden_modules. Same limitation as the git shim contract above.
+# The layered architecture contract enforces shim positioning in the meantime.
 # -----------------------------------------------------------------------------
 
 # -----------------------------------------------------------------------------
@@ -96,7 +93,7 @@ source_modules =
     mcp_coder.utils.jenkins_operations
 forbidden_modules =
     mcp_coder.mcp_workspace_git
-    mcp_coder.utils.github_operations
+    mcp_coder.mcp_workspace_github
 
 # -----------------------------------------------------------------------------
 # Contract: MLflow Logger No Import Cycles
@@ -163,9 +160,9 @@ source_modules =
 # forbidden_modules: which external packages are forbidden
 forbidden_modules =
     github
-# ignore_imports: exceptions - github_operations.** can import github
-ignore_imports =
-    mcp_coder.utils.github_operations.** -> github
+# Note: The shim (mcp_workspace_github) re-exports from mcp_workspace.github_operations
+# which internally uses PyGithub. The shim itself doesn't import github directly,
+# so no ignore_imports entry is needed here.
 
 # -----------------------------------------------------------------------------
 # Contract: GitPython Library Isolation
@@ -324,7 +321,6 @@ source_modules =
 forbidden_modules =
     requests
 ignore_imports =
-    mcp_coder.utils.github_operations.** -> requests
     mcp_coder.utils.jenkins_operations.client -> requests
 
 # -----------------------------------------------------------------------------

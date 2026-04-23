@@ -23,9 +23,9 @@ from mcp_coder.mcp_workspace_git import (
     get_full_status,
     rebase_onto_branch,
 )
+from mcp_coder.mcp_workspace_github import IssueManager
 from mcp_coder.prompt_manager import get_prompt, get_prompt_with_substitutions
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
-from mcp_coder.utils.github_operations.issues import IssueManager
 from mcp_coder.utils.pyproject_config import get_implement_config
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.commit_operations import generate_commit_message_with_llm
@@ -37,6 +37,7 @@ from mcp_coder.workflow_utils.failure_handling import (
     get_diff_stat,
     handle_workflow_failure,
 )
+from mcp_coder.workflow_utils.label_transitions import update_workflow_label
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerFileNotFoundError,
     get_step_progress,
@@ -799,7 +800,8 @@ def run_implement_workflow(
         if update_issue_labels:
             try:
                 issue_manager = IssueManager(project_dir)
-                issue_manager.update_workflow_label(
+                update_workflow_label(
+                    issue_manager,
                     from_label_id="implementing",
                     to_label_id="code_review",
                 )

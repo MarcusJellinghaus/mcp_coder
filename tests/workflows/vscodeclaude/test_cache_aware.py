@@ -2,7 +2,7 @@
 
 from unittest.mock import Mock
 
-from mcp_coder.utils.github_operations.issues import IssueData
+from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.workflows.vscodeclaude.status import (
     get_issue_current_status,
     is_issue_closed,

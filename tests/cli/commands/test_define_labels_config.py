@@ -7,7 +7,7 @@ Tests cover:
 
 from pathlib import Path
 
-from mcp_coder.utils.github_operations.label_config import load_labels_config
+from mcp_coder.config.label_config import load_labels_config
 
 
 class TestStaleTimeoutConfiguration:

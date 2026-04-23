@@ -24,8 +24,7 @@ from mcp_coder.mcp_workspace_git import (
     get_current_branch_name,
     needs_rebase,
 )
-from mcp_coder.utils.github_operations.ci_results_manager import CIResultsManager
-from mcp_coder.utils.github_operations.issues import IssueData, IssueManager
+from mcp_coder.mcp_workspace_github import CIResultsManager, IssueData, IssueManager
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerFileNotFoundError,

@@ -16,12 +16,12 @@ from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import prompt_llm
 from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_workspace_git import get_latest_commit_sha
-from mcp_coder.prompt_manager import get_prompt_with_substitutions
-from mcp_coder.utils.git_utils import get_branch_name_for_logging
-from mcp_coder.utils.github_operations.ci_results_manager import (
+from mcp_coder.mcp_workspace_github import (
     CIResultsManager,
     CIStatusData,
 )
+from mcp_coder.prompt_manager import get_prompt_with_substitutions
+from mcp_coder.utils.git_utils import get_branch_name_for_logging
 
 from .constants import (
     CI_MAX_FIX_ATTEMPTS,

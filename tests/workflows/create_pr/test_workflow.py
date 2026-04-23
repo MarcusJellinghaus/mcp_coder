@@ -182,6 +182,7 @@ class TestRunCreatePrWorkflow:
         # Verify execution_dir was passed to generate_pr_summary
         mock_generate.assert_called_once_with(tmp_path, "claude", None, exec_dir)
 
+    @patch("mcp_coder.workflows.create_pr.core.update_workflow_label")
     @patch("mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
     @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
@@ -190,7 +191,7 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.commit_all_changes")
-    @patch("mcp_coder.utils.github_operations.issues.IssueManager")
+    @patch("mcp_coder.mcp_workspace_github.IssueManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     def test_workflow_caches_issue_number_before_pr_creation(
@@ -206,6 +207,7 @@ class TestRunCreatePrWorkflow:
         mock_generate: MagicMock,
         mock_prereqs: MagicMock,
         mock_validate: MagicMock,
+        mock_update_label: MagicMock,
     ) -> None:
         """Tests that workflow caches issue number before PR creation."""
         # Setup: Mock validate_branch_issue_linkage to return 123
@@ -225,7 +227,7 @@ class TestRunCreatePrWorkflow:
         # Setup IssueManager mock
         mock_issue_manager = MagicMock()
         mock_issue_manager_class.return_value = mock_issue_manager
-        mock_issue_manager.update_workflow_label.return_value = True
+        mock_update_label.return_value = True
 
         # Call: run_create_pr_workflow(..., update_issue_labels=True)
         result = run_create_pr_workflow(
@@ -235,7 +237,8 @@ class TestRunCreatePrWorkflow:
         # Assert: update_workflow_label called with validated_issue_number=123
         assert result == 0
         mock_validate.assert_called_once_with(Path("/test"))
-        mock_issue_manager.update_workflow_label.assert_called_once_with(
+        mock_update_label.assert_called_once_with(
+            mock_issue_manager,
             from_label_id="pr_creating",
             to_label_id="pr_created",
             validated_issue_number=123,
@@ -250,7 +253,7 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.commit_all_changes")
-    @patch("mcp_coder.utils.github_operations.issues.IssueManager")
+    @patch("mcp_coder.mcp_workspace_github.IssueManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     def test_workflow_skips_label_update_when_not_linked(
@@ -301,6 +304,7 @@ class TestRunCreatePrWorkflow:
         mock_validate.assert_called_once_with(Path("/test"))
         mock_issue_manager.update_workflow_label.assert_not_called()
 
+    @patch("mcp_coder.workflows.create_pr.core.update_workflow_label")
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
@@ -309,7 +313,7 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
-    @patch("mcp_coder.utils.github_operations.issues.IssueManager")
+    @patch("mcp_coder.mcp_workspace_github.IssueManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     def test_workflow_fallback_finds_issue_via_closing_references(
@@ -325,6 +329,7 @@ class TestRunCreatePrWorkflow:
         mock_prereqs: MagicMock,
         mock_validate: MagicMock,
         mock_pr_manager_class: MagicMock,
+        mock_update_label: MagicMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Tests fallback queries closingIssuesReferences and finds issue."""
@@ -347,7 +352,7 @@ class TestRunCreatePrWorkflow:
 
         mock_issue_manager = MagicMock()
         mock_issue_manager_class.return_value = mock_issue_manager
-        mock_issue_manager.update_workflow_label.return_value = True
+        mock_update_label.return_value = True
 
         with caplog.at_level(logging.DEBUG):
             result = run_create_pr_workflow(
@@ -356,13 +361,15 @@ class TestRunCreatePrWorkflow:
 
         assert result == 0
         mock_pr_mgr.get_closing_issue_numbers.assert_called_once_with(42)
-        mock_issue_manager.update_workflow_label.assert_called_once_with(
+        mock_update_label.assert_called_once_with(
+            mock_issue_manager,
             from_label_id="pr_creating",
             to_label_id="pr_created",
             validated_issue_number=92,
         )
         assert "completed successfully!" in caplog.text
 
+    @patch("mcp_coder.workflows.create_pr.core.update_workflow_label")
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
@@ -371,7 +378,7 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
-    @patch("mcp_coder.utils.github_operations.issues.IssueManager")
+    @patch("mcp_coder.mcp_workspace_github.IssueManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     def test_workflow_fallback_multiple_closing_issues_uses_first(
@@ -387,6 +394,7 @@ class TestRunCreatePrWorkflow:
         mock_prereqs: MagicMock,
         mock_validate: MagicMock,
         mock_pr_manager_class: MagicMock,
+        mock_update_label: MagicMock,
     ) -> None:
         """Tests fallback with multiple closing issues uses first."""
         mock_validate.return_value = None
@@ -408,14 +416,15 @@ class TestRunCreatePrWorkflow:
 
         mock_issue_manager = MagicMock()
         mock_issue_manager_class.return_value = mock_issue_manager
-        mock_issue_manager.update_workflow_label.return_value = True
+        mock_update_label.return_value = True
 
         result = run_create_pr_workflow(
             Path("/test"), "claude", update_issue_labels=True
         )
 
         assert result == 0
-        mock_issue_manager.update_workflow_label.assert_called_once_with(
+        mock_update_label.assert_called_once_with(
+            mock_issue_manager,
             from_label_id="pr_creating",
             to_label_id="pr_created",
             validated_issue_number=92,
@@ -530,7 +539,7 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
-    @patch("mcp_coder.utils.github_operations.issues.IssueManager")
+    @patch("mcp_coder.mcp_workspace_github.IssueManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     def test_workflow_skips_fallback_when_issue_already_found(

@@ -27,7 +27,7 @@ from mcp_coder.checks.branch_status import (
     create_empty_report,
     truncate_ci_details,
 )
-from mcp_coder.utils.github_operations.issues import IssueData
+from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.workflow_utils.task_tracker import TaskTrackerStatus
 
 

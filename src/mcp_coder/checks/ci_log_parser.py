@@ -11,7 +11,7 @@ import re
 from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Tuple
 
 if TYPE_CHECKING:
-    from mcp_coder.utils.github_operations.ci_results_manager import CIResultsManager
+    from mcp_coder.mcp_workspace_github import CIResultsManager
 
 logger = logging.getLogger(__name__)
 

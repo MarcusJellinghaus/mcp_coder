@@ -5,7 +5,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import NamedTuple
 
-from ...utils.github_operations.issues import (
+from ...mcp_workspace_github import (
     IssueBranchManager,
     IssueData,
     IssueManager,

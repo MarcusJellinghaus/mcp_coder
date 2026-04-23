@@ -21,11 +21,11 @@ from ...checks.branch_status import (
     CIStatus,
     collect_branch_status,
 )
-from ...utils.github_operations.ci_results_manager import (
+from ...mcp_workspace_github import (
     CIResultsManager,
     CIStatusData,
+    PullRequestManager,
 )
-from ...utils.github_operations.pr_manager import PullRequestManager
 from ...utils.log_utils import OUTPUT
 from ...workflows.implement.ci_operations import check_and_fix_ci
 from ...workflows.utils import resolve_project_dir

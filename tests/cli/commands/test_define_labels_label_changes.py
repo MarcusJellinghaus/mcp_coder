@@ -14,7 +14,7 @@ from mcp_coder.cli.commands.define_labels import (
     apply_labels,
     calculate_label_changes,
 )
-from mcp_coder.utils.github_operations.label_config import load_labels_config
+from mcp_coder.config.label_config import load_labels_config
 
 
 class TestCalculateLabelChanges:

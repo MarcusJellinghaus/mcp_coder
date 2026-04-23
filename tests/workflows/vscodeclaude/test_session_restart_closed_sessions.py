@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from mcp_coder.utils.github_operations.issues import IssueData
+from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.workflows.vscodeclaude.session_restart import (
     BranchPrepResult,
     restart_closed_sessions,

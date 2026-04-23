@@ -65,6 +65,7 @@ depends_on = [
     { path = "mcp_coder.constants" },     # Shared constants
     { path = "mcp_coder.mcp_tools_py" }, # MCP code checking tools
     { path = "mcp_coder.mcp_workspace_git" }, # Git operations shim
+    { path = "mcp_coder.mcp_workspace_github" }, # GitHub operations shim
     { path = "mcp_coder.icoder" },       # Interactive TUI
 ]
 
@@ -97,6 +98,7 @@ depends_on = [
     { path = "mcp_coder.llm" },           # LLM for code generation
     { path = "mcp_coder.mcp_tools_py" },  # MCP tools (formatter shim, mypy)
     { path = "mcp_coder.mcp_workspace_git" }, # Git operations shim
+    { path = "mcp_coder.mcp_workspace_github" }, # GitHub operations shim
     { path = "mcp_coder.prompt_manager" }, # Load workflow-specific prompts
     { path = "mcp_coder.utils" },         # Git, GitHub operations
     { path = "mcp_coder.config" },        # Access configuration
@@ -113,6 +115,7 @@ depends_on = [
     { path = "mcp_coder.prompt_manager" }, # Prompt management
     { path = "mcp_coder.utils" },         # General utilities
     { path = "mcp_coder.mcp_workspace_git" }, # Git operations shim
+    { path = "mcp_coder.mcp_workspace_github" }, # GitHub operations shim
     { path = "mcp_coder.config" },        # Configuration access
     { path = "mcp_coder.constants" },     # Shared constants
 ]
@@ -124,6 +127,7 @@ layer = "application"
 depends_on = [
     { path = "mcp_coder.mcp_workspace" }, # MCP workspace file utilities
     { path = "mcp_coder.mcp_workspace_git" }, # Git operations shim
+    { path = "mcp_coder.mcp_workspace_github" }, # GitHub operations shim
     { path = "mcp_coder.workflow_utils" },
     { path = "mcp_coder.utils" },
     { path = "mcp_coder.config" },
@@ -209,6 +213,13 @@ depends_on = [
 ]
 
 [[modules]]
+path = "mcp_coder.mcp_workspace_github"
+layer = "shim_workspace"
+# GitHub operations shim. Wraps mcp_workspace.github_operations.
+# No internal dependencies - imports only from external mcp_workspace package.
+depends_on = []
+
+[[modules]]
 path = "mcp_coder.mcp_workspace_git"
 layer = "shim_workspace"
 # Git operations shim. Wraps external mcp_workspace.git_operations.
@@ -266,6 +277,7 @@ depends_on = [
     { path = "mcp_coder.workflow_utils" },  # Export commit operations
     { path = "mcp_coder.mcp_workspace" },   # Export mcp_workspace utilities
     { path = "mcp_coder.mcp_workspace_git" }, # Export git operations shim
+    { path = "mcp_coder.mcp_workspace_github" }, # Export github operations shim
 ]
 
 
@@ -416,6 +428,7 @@ depends_on = [
     { path = "mcp_coder.constants" },
     { path = "mcp_coder.mcp_tools_py" },
     { path = "mcp_coder.mcp_workspace_git" },
+    { path = "mcp_coder.mcp_workspace_github" },
     { path = "mcp_coder.icoder" },
     { path = "mcp_coder.prompts" },
 ]

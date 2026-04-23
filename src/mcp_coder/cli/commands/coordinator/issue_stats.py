@@ -13,11 +13,11 @@ from typing import Any
 
 from mcp_coder.mcp_workspace_git import get_github_repository_url
 
-from ....utils.github_operations.issues import IssueData, IssueManager
-from ....utils.github_operations.label_config import (
+from ....config.label_config import (
     get_labels_config_path,
     load_labels_config,
 )
+from ....mcp_workspace_github import IssueData, IssueManager
 from ....workflows.utils import resolve_project_dir
 
 logger = logging.getLogger(__name__)

@@ -252,3 +252,14 @@ _._mock_externals
 
 # tests/icoder/conftest.py - Autouse fixture to prevent store_session disk writes
 _._no_store_session
+
+# conftest.py - Fixtures for GitHub integration test setup
+_.github_test_setup
+_.create_github_manager
+
+# workflows/vscodeclaude/types.py - TypedDict field
+_.started_at
+
+# test_session_restart_branch_integration.py - Unpacked but unused in test assertion
+_.user
+

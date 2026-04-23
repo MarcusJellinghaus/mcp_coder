@@ -11,18 +11,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, TypedDict
 
-from ...utils.github_operations.issues import (
-    IssueData,
-    IssueEventType,
-    IssueManager,
-)
-from ...utils.github_operations.label_config import (
+from ...config.label_config import (
     build_label_lookups,
     get_labels_config_path,
     load_labels_config,
     validate_labels_config,
 )
-from ...utils.github_operations.labels_manager import LabelsManager
+from ...mcp_workspace_github import (
+    IssueData,
+    IssueEventType,
+    IssueManager,
+    LabelsManager,
+)
 from ...workflows.utils import resolve_project_dir
 from .define_labels_actions import write_github_actions
 

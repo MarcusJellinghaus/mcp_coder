@@ -8,8 +8,7 @@ import logging
 
 from mcp_coder.mcp_workspace_git import checkout_branch, fetch_remote
 
-from ...utils.github_operations.issues.branch_manager import IssueBranchManager
-from ...utils.github_operations.issues.manager import IssueManager
+from ...mcp_workspace_github import IssueBranchManager, IssueManager
 from ...workflow_utils.base_branch import detect_base_branch
 from ...workflows.utils import resolve_project_dir
 

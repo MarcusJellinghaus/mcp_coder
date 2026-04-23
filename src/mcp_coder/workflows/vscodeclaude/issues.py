@@ -4,14 +4,14 @@ import logging
 import re
 from typing import Any
 
-from ...utils.github_operations.github_utils import RepoIdentifier
-from ...utils.github_operations.issues import (
+from ...config.label_config import load_labels_config
+from ...mcp_workspace_github import (
     IssueBranchManager,
     IssueData,
     IssueManager,
+    RepoIdentifier,
     get_all_cached_issues,
 )
-from ...utils.github_operations.label_config import load_labels_config
 from ...utils.user_config import get_cache_refresh_minutes, load_config
 from .config import (
     get_github_username,
@@ -28,7 +28,7 @@ def _load_labels_config() -> dict[str, Any]:
     Returns:
         Labels config dict with workflow_labels and ignore_labels
     """
-    from ...utils.github_operations.label_config import get_labels_config_path
+    from ...config.label_config import get_labels_config_path
 
     result: dict[str, Any] = load_labels_config(get_labels_config_path(None))
     return result

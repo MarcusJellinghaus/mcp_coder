@@ -37,10 +37,13 @@ if TYPE_CHECKING:
         parse_llm_commit_response,
         strip_claude_footers,
     )
+    from .label_transitions import update_workflow_label as update_workflow_label
 
 __all__ = [
     # Base branch detection
     "detect_base_branch",
+    # Label transitions
+    "update_workflow_label",
     # Failure handling
     "WorkflowFailure",
     "format_elapsed_time",
@@ -81,4 +84,8 @@ def __getattr__(name: str) -> Any:
         from . import commit_operations
 
         return getattr(commit_operations, name)
+    if name == "update_workflow_label":
+        from .label_transitions import update_workflow_label
+
+        return update_workflow_label
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
