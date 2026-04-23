@@ -21,6 +21,10 @@ Use MCP tools for **all** operations. Never use `Read`, `Write`, `Edit`, or `Bas
 | Read reference project | `mcp__workspace__read_reference_file` |
 | List reference dir | `mcp__workspace__list_reference_directory` |
 | Get reference projects | `mcp__workspace__get_reference_projects` |
+| Search reference files | `mcp__workspace__search_reference_files` |
+| Get base branch | `mcp__workspace__get_base_branch` |
+| Check file size | `mcp__workspace__check_file_size` |
+| Check branch status | `mcp__workspace__check_branch_status` |
 | Run pytest | `mcp__tools-py__run_pytest_check` |
 | Run pylint | `mcp__tools-py__run_pylint_check` |
 | Run mypy | `mcp__tools-py__run_mypy_check` |
@@ -32,10 +36,6 @@ Use MCP tools for **all** operations. Never use `Read`, `Write`, `Edit`, or `Bas
 | Format code (black+isort) | `mcp__tools-py__run_format_code` |
 | Get library source | `mcp__tools-py__get_library_source` |
 | Refactoring | `mcp__tools-py__move_symbol`, `move_module`, `rename_symbol`, `list_symbols`, `find_references` |
-| Git status | `mcp__workspace__git_status` |
-| Git diff (includes compact diff) | `mcp__workspace__git_diff` |
-| Git log | `mcp__workspace__git_log` |
-| Git merge-base | `mcp__workspace__git_merge_base` |
 | Git read-only (fetch, ls-tree, show, ls-files, ls-remote, rev-parse, branch list) | `mcp__workspace__git` |
 | `gh issue view` | `mcp__workspace__github_issue_view` |
 | `gh issue list` | `mcp__workspace__github_issue_list` |
@@ -76,8 +76,6 @@ When debugging test failures, add `"-v", "-s", "--tb=short"` to extra_args.
 
 ```
 git commit / add / rebase / push
-mcp-coder check branch-status
-mcp-coder check file-size --max-lines 750
 mcp-coder gh-tool set-status <label>
 ```
 
@@ -85,7 +83,7 @@ mcp-coder gh-tool set-status <label>
 
 **Calling mcp-coder:** bare `mcp-coder` uses the tool env (stable install). To test local source changes, use `.venv\Scripts\python -m mcp_coder <args>`. See [`docs/environments/environments.md`](../docs/environments/environments.md#calling-mcp-coder-explicitly).
 
-**Compact diff:** use `mcp__workspace__git_diff` for code review. Has compact diff built-in with exclude pattern support.
+**Compact diff:** use `mcp__workspace__git` for code review. Has compact diff built-in with exclude pattern support.
 
 **Before every commit:** run `mcp__tools-py__run_format_code`, then stage and commit.
 

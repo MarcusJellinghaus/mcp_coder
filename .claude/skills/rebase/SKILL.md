@@ -2,8 +2,6 @@
 description: Rebase feature branch onto base branch with conflict resolution
 disable-model-invocation: true
 allowed-tools:
-  - mcp__workspace__git_status
-  - mcp__workspace__git_log
   - mcp__workspace__git
   - "Bash(git rebase *)"
   - "Bash(git add *)"
@@ -15,7 +13,6 @@ allowed-tools:
   - "Bash(git restore *)"
   - "Bash(git stash *)"
   - "Bash(git push --force-with-lease *)"
-  - mcp__workspace__git_diff
   - mcp__tools-py__run_format_code
   - "Bash(mcp-coder gh-tool get-base-branch *)"
   - mcp__tools-py__run_pylint_check
@@ -37,7 +34,7 @@ allowed-tools:
 
 ## First Step
 
-Call `mcp__workspace__git_status` before doing anything else.
+Call `mcp__workspace__git` with command `"status"` before doing anything else.
 
 Rebase the current feature branch onto its base branch and resolve conflicts.
 
