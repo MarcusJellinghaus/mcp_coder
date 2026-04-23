@@ -21,6 +21,7 @@ Usage:
     python tools/safe_delete_folder.py <folder_path>                    # diagnose
     python tools/safe_delete_folder.py <folder_path> --delete           # delete
     python tools/safe_delete_folder.py <folder_path> --delete -k        # delete + kill
+    python tools/safe_delete_folder.py --retry-pending <workspace_base> # retry .to_be_deleted
 
 Note: --kill-lockers (-k) is STRONGLY RECOMMENDED when using --delete.
       Without it, locked files will cause deletion to fail.
@@ -767,6 +768,140 @@ def _print_deletion_summary(
         print(f"  [FAIL] DELETION FAILED: {message}")
 
 
+# =============================================================================
+# Retry Pending (.to_be_deleted)
+# =============================================================================
+
+_TO_BE_DELETED_FILENAME = ".to_be_deleted"
+
+
+def _load_to_be_deleted(workspace_base: Path) -> set[str]:
+    """Load folder names from .to_be_deleted registry."""
+    path = workspace_base / _TO_BE_DELETED_FILENAME
+    try:
+        return {line.strip() for line in path.read_text().splitlines() if line.strip()}
+    except FileNotFoundError:
+        return set()
+    except (OSError, UnicodeDecodeError) as e:
+        print(f"  Warning: Failed to read {path}: {e}")
+        return set()
+
+
+def _save_to_be_deleted(workspace_base: Path, entries: set[str]) -> None:
+    """Write remaining entries back to .to_be_deleted, or delete if empty."""
+    path = workspace_base / _TO_BE_DELETED_FILENAME
+    if not entries:
+        path.unlink(missing_ok=True)
+        return
+    path.write_text("\n".join(sorted(entries)) + "\n")
+
+
+def _retry_pending(
+    workspace_base_str: str,
+    quiet: bool = False,
+    no_cleanup: bool = False,
+) -> int:
+    """Process all folders listed in .to_be_deleted.
+
+    For each entry:
+    - If folder is gone: remove stale entry
+    - If folder exists: attempt delete with kill-lockers, remove entry on success
+
+    Returns exit code (0 = all succeeded, 1 = some failures).
+    """
+    workspace_base = Path(workspace_base_str).resolve()
+    if not workspace_base.is_dir():
+        print(f"Error: workspace base does not exist: {workspace_base}")
+        return 1
+
+    registry_path = workspace_base / _TO_BE_DELETED_FILENAME
+    entries = _load_to_be_deleted(workspace_base)
+    if not entries:
+        if not registry_path.exists():
+            print(f"Warning: {registry_path} not found")
+        else:
+            print(f"No pending deletions in {registry_path}")
+        return 0
+
+    if not quiet:
+        print(f"Found {len(entries)} pending deletion(s) in {workspace_base / _TO_BE_DELETED_FILENAME}")
+
+    exit_code = 0
+    remaining = set(entries)
+    any_deletions = False
+
+    for folder_name in sorted(entries):
+        folder_path = workspace_base / folder_name
+
+        if not quiet:
+            print(f"\n{'=' * 50}")
+            print(f"Processing: {folder_path}")
+            print("=" * 50)
+
+        if not folder_path.exists():
+            print(f"  [OK] Already gone, removing stale entry")
+            remaining.discard(folder_name)
+            continue
+
+        any_deletions = True
+
+        # Delete .code-workspace file if present (matches cleanup.py behavior)
+        workspace_file = workspace_base / f"{folder_name}.code-workspace"
+        if workspace_file.exists():
+            try:
+                workspace_file.unlink()
+                if not quiet:
+                    print(f"  Deleted workspace file: {workspace_file.name}")
+            except OSError as e:
+                print(f"  Warning: Failed to delete workspace file: {e}")
+
+        print(f"  Deleting {folder_path}...")
+        success, message, moved_files, killed_procs = _delete_folder(
+            folder_path, kill_lockers=True, quiet=quiet
+        )
+
+        if not quiet:
+            _print_deletion_summary(folder_path, success, message, moved_files, killed_procs)
+
+        if success:
+            remaining.discard(folder_name)
+        else:
+            exit_code = 1
+
+    # Update .to_be_deleted with remaining entries
+    _save_to_be_deleted(workspace_base, remaining)
+
+    # Post-cleanup staging
+    if any_deletions and not no_cleanup:
+        staging_dir = _get_staging_dir()
+        if staging_dir.exists():
+            if not quiet:
+                print(f"\n{'=' * 50}")
+                print("Cleaning up staging directory...")
+                print("=" * 50)
+
+            deleted, still_locked = _cleanup_staging(quiet=quiet)
+
+            if not quiet:
+                if deleted > 0 or still_locked > 0:
+                    print(f"  Cleaned: {deleted} item(s)")
+                    if still_locked > 0:
+                        print(f"  Still locked: {still_locked} item(s) (will retry next run)")
+                else:
+                    print("  Staging directory is empty")
+
+    # Summary
+    removed_count = len(entries) - len(remaining)
+    if not quiet:
+        print(f"\n{'=' * 50}")
+        print(f"Retry summary: {removed_count}/{len(entries)} entries resolved")
+        if remaining:
+            print(f"  Still pending: {', '.join(sorted(remaining))}")
+        print("=" * 50)
+
+    return exit_code
+
+
 def main() -> int:
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -780,11 +915,14 @@ Examples:
     # Delete after killing lockers (RECOMMENDED)
     python tools/safe_delete_folder.py "C:\\path\\folder" --delete --kill-lockers
 
+    # Retry all pending deletions from .to_be_deleted
+    python tools/safe_delete_folder.py --retry-pending "C:\\path\\workspace"
+
 Note: --kill-lockers (-k) is STRONGLY RECOMMENDED when using --delete.
       Without it, locked files will cause deletion to fail.
         """,
     )
-    parser.add_argument("paths", nargs="+", help="Folder path(s) to process")
+    parser.add_argument("paths", nargs="*", help="Folder path(s) to process")
     parser.add_argument("--delete", action="store_true", help="Delete the folder(s)")
     parser.add_argument(
         "--kill-lockers", "-k", action="store_true", help="Kill locking processes"
@@ -793,8 +931,21 @@ Note: --kill-lockers (-k) is STRONGLY RECOMMENDED when using --delete.
     parser.add_argument(
         "--no-cleanup", action="store_true", help="Skip cleanup of staging directory"
     )
+    parser.add_argument(
+        "--retry-pending",
+        metavar="WORKSPACE_BASE",
+        help="Read .to_be_deleted from WORKSPACE_BASE and delete listed folders (implies --delete -k)",
+    )
 
     args = parser.parse_args()
+
+    if not args.paths and not args.retry_pending:
+        parser.error("either paths or --retry-pending is required")
+
+    # --retry-pending mode: read .to_be_deleted and process each entry
+    if args.retry_pending:
+        return _retry_pending(args.retry_pending, quiet=args.quiet, no_cleanup=args.no_cleanup)
+
     exit_code = 0
     any_deletions = False
 
