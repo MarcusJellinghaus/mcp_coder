@@ -34,16 +34,19 @@ from mcp_coder.mcp_workspace_git import (
 
 ```
 branch = get_current_branch_name(project_dir)
+if branch is None → log error "Cannot push: not on a branch", return 2
 default = get_default_branch_name(project_dir)  # may return None
 blocked = {default} if default else {"main", "master"}
 if branch in blocked → log error, return 2
-if not has_remote_tracking_branch(branch, project_dir):
+if not has_remote_tracking_branch(project_dir):
     success = push_branch(branch, project_dir, set_upstream=True)  # returns bool
 else:
     result = git_push(project_dir)  # returns dict
     success = result["success"]
 if success → log "Pushed to origin/<branch>", return 0
-else → log "Failed to push to origin: <error>", return 2
+else:
+    if using git_push path → log f"Failed to push to origin: {result.get('error', 'unknown error')}", return 2
+    if using push_branch path → log "Failed to push to origin: push failed", return 2
 ```
 
 ## DATA
@@ -64,6 +67,7 @@ Add `TestPushAfterCommit` class in `tests/cli/commands/test_commit.py`. All test
 5. **`test_push_refused_fallback_master`** — `get_default_branch_name` returns `None`, `get_current_branch_name` returns `"master"`. Assert returns 2.
 6. **`test_push_failure_with_tracking`** — `git_push` returns `{"success": False, "error": "rejected"}`. Assert returns 2, log contains `"Failed to push"`.
 7. **`test_push_failure_new_branch`** — `push_branch` returns `False`. Assert returns 2, log contains `"Failed to push"`.
+8. **`test_push_refused_on_detached_head`** — `get_current_branch_name` returns `None`. Assert returns 2, log contains error about not being on a branch.
 
 ## Commit
 
