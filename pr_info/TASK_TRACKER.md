@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat(cli): add _push_after_commit helper with safety guards`
 
 ### Step 3: Wire `--push` into execute functions + integration tests
-- [ ] Implementation: add push call to both execute functions + tests in `test_commit.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(cli): integrate --push into commit auto and clipboard`
+- [x] Implementation: add push call to both execute functions + tests in `test_commit.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(cli): integrate --push into commit auto and clipboard`
 
 ## Pull Request
 - [ ] PR review: verify all steps complete and checks pass

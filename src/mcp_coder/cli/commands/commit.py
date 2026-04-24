@@ -133,6 +133,12 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
         logger.log(OUTPUT, "Message: %s", first_line)
     else:
         logger.log(OUTPUT, "Message: %s (%s lines)", first_line, total_lines)
+
+    if getattr(args, "push", False):
+        push_result = _push_after_commit(project_dir)
+        if push_result != 0:
+            return push_result
+
     return 0
 
 
@@ -211,6 +217,11 @@ def execute_commit_clipboard(args: argparse.Namespace) -> int:
     logger.log(OUTPUT, "SUCCESS: Successfully committed with message: %s", summary)
     if commit_result["commit_hash"]:
         logger.log(OUTPUT, "COMMIT: %s", commit_result["commit_hash"])
+
+    if getattr(args, "push", False):
+        push_result = _push_after_commit(project_dir)
+        if push_result != 0:
+            return push_result
 
     return 0
 

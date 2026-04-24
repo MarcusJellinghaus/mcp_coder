@@ -14,6 +14,7 @@ import pytest
 from mcp_coder.cli.commands.commit import (
     _push_after_commit,
     execute_commit_auto,
+    execute_commit_clipboard,
     validate_git_repository,
 )
 from mcp_coder.cli.main import create_parser
@@ -1078,3 +1079,208 @@ class TestPushAfterCommit:
 
         assert result == 2
         assert "not on a branch" in caplog.text
+
+
+class TestCommitAutoPush:
+    """Tests for --push integration in execute_commit_auto."""
+
+    @patch(f"{MODULE}.validate_git_repository", return_value=(True, None))
+    @patch(f"{MODULE}.resolve_llm_method", return_value=("claude", "cli"))
+    @patch(f"{MODULE}.parse_llm_method_from_args", return_value="claude")
+    @patch(
+        f"{MODULE}.generate_commit_message_with_llm",
+        return_value=(True, "feat: test", None),
+    )
+    @patch(
+        f"{MODULE}.commit_staged_files",
+        return_value={"success": True, "commit_hash": "abc123", "error": None},
+    )
+    @patch(f"{MODULE}._push_after_commit", return_value=0)
+    def test_commit_auto_push_called_on_success(
+        self,
+        mock_push: Mock,
+        mock_commit: Mock,
+        mock_generate: Mock,
+        mock_parse: Mock,
+        mock_resolve: Mock,
+        mock_validate: Mock,
+    ) -> None:
+        """Push is called after successful commit when --push is set."""
+        args = argparse.Namespace(
+            preview=False, llm_method="claude", project_dir="/repo", push=True
+        )
+        result = execute_commit_auto(args)
+
+        assert result == 0
+        mock_push.assert_called_once_with(Path("/repo"))
+
+    @patch(f"{MODULE}.validate_git_repository", return_value=(True, None))
+    @patch(f"{MODULE}.resolve_llm_method", return_value=("claude", "cli"))
+    @patch(f"{MODULE}.parse_llm_method_from_args", return_value="claude")
+    @patch(
+        f"{MODULE}.generate_commit_message_with_llm",
+        return_value=(True, "feat: test", None),
+    )
+    @patch(
+        f"{MODULE}.commit_staged_files",
+        return_value={"success": True, "commit_hash": "abc123", "error": None},
+    )
+    @patch(f"{MODULE}._push_after_commit", return_value=2)
+    def test_commit_auto_push_failure_returns_2(
+        self,
+        mock_push: Mock,
+        mock_commit: Mock,
+        mock_generate: Mock,
+        mock_parse: Mock,
+        mock_resolve: Mock,
+        mock_validate: Mock,
+    ) -> None:
+        """Push failure propagates its exit code."""
+        args = argparse.Namespace(
+            preview=False, llm_method="claude", project_dir="/repo", push=True
+        )
+        result = execute_commit_auto(args)
+
+        assert result == 2
+
+    @patch(f"{MODULE}.validate_git_repository", return_value=(True, None))
+    @patch(f"{MODULE}.resolve_llm_method", return_value=("claude", "cli"))
+    @patch(f"{MODULE}.parse_llm_method_from_args", return_value="claude")
+    @patch(
+        f"{MODULE}.generate_commit_message_with_llm",
+        return_value=(True, "feat: test", None),
+    )
+    @patch(
+        f"{MODULE}.commit_staged_files",
+        return_value={"success": True, "commit_hash": "abc123", "error": None},
+    )
+    @patch(f"{MODULE}._push_after_commit")
+    def test_commit_auto_no_push_flag(
+        self,
+        mock_push: Mock,
+        mock_commit: Mock,
+        mock_generate: Mock,
+        mock_parse: Mock,
+        mock_resolve: Mock,
+        mock_validate: Mock,
+    ) -> None:
+        """Push is NOT called when --push is False."""
+        args = argparse.Namespace(
+            preview=False, llm_method="claude", project_dir="/repo", push=False
+        )
+        result = execute_commit_auto(args)
+
+        assert result == 0
+        mock_push.assert_not_called()
+
+    @patch(f"{MODULE}.validate_git_repository", return_value=(True, None))
+    @patch(f"{MODULE}.resolve_llm_method", return_value=("claude", "cli"))
+    @patch(f"{MODULE}.parse_llm_method_from_args", return_value="claude")
+    @patch(
+        f"{MODULE}.generate_commit_message_with_llm",
+        return_value=(False, "", "LLM error"),
+    )
+    @patch(f"{MODULE}._push_after_commit")
+    def test_commit_auto_push_not_called_on_commit_failure(
+        self,
+        mock_push: Mock,
+        mock_generate: Mock,
+        mock_parse: Mock,
+        mock_resolve: Mock,
+        mock_validate: Mock,
+    ) -> None:
+        """Push is NOT called when commit generation fails."""
+        args = argparse.Namespace(
+            preview=False, llm_method="claude", project_dir="/repo", push=True
+        )
+        result = execute_commit_auto(args)
+
+        assert result == 2
+        mock_push.assert_not_called()
+
+
+class TestCommitClipboardPush:
+    """Tests for --push integration in execute_commit_clipboard."""
+
+    @patch(f"{MODULE}.validate_git_repository", return_value=(True, None))
+    @patch(
+        f"{MODULE}.get_commit_message_from_clipboard",
+        return_value=(True, "feat: clipboard", None),
+    )
+    @patch(f"{MODULE}.stage_all_changes", return_value=True)
+    @patch(
+        f"{MODULE}.commit_staged_files",
+        return_value={"success": True, "commit_hash": "def456", "error": None},
+    )
+    @patch(f"{MODULE}.parse_commit_message", return_value=("feat: clipboard", None))
+    @patch(f"{MODULE}._push_after_commit", return_value=0)
+    def test_commit_clipboard_push_called_on_success(
+        self,
+        mock_push: Mock,
+        mock_parse_msg: Mock,
+        mock_commit: Mock,
+        mock_stage: Mock,
+        mock_clipboard: Mock,
+        mock_validate: Mock,
+    ) -> None:
+        """Push is called after successful clipboard commit when --push is set."""
+        args = argparse.Namespace(project_dir="/repo", push=True)
+        result = execute_commit_clipboard(args)
+
+        assert result == 0
+        mock_push.assert_called_once_with(Path("/repo"))
+
+    @patch(f"{MODULE}.validate_git_repository", return_value=(True, None))
+    @patch(
+        f"{MODULE}.get_commit_message_from_clipboard",
+        return_value=(True, "feat: clipboard", None),
+    )
+    @patch(f"{MODULE}.stage_all_changes", return_value=True)
+    @patch(
+        f"{MODULE}.commit_staged_files",
+        return_value={"success": True, "commit_hash": "def456", "error": None},
+    )
+    @patch(f"{MODULE}.parse_commit_message", return_value=("feat: clipboard", None))
+    @patch(f"{MODULE}._push_after_commit", return_value=2)
+    def test_commit_clipboard_push_failure_returns_2(
+        self,
+        mock_push: Mock,
+        mock_parse_msg: Mock,
+        mock_commit: Mock,
+        mock_stage: Mock,
+        mock_clipboard: Mock,
+        mock_validate: Mock,
+    ) -> None:
+        """Push failure propagates its exit code."""
+        args = argparse.Namespace(project_dir="/repo", push=True)
+        result = execute_commit_clipboard(args)
+
+        assert result == 2
+
+    @patch(f"{MODULE}.validate_git_repository", return_value=(True, None))
+    @patch(
+        f"{MODULE}.get_commit_message_from_clipboard",
+        return_value=(True, "feat: clipboard", None),
+    )
+    @patch(f"{MODULE}.stage_all_changes", return_value=True)
+    @patch(
+        f"{MODULE}.commit_staged_files",
+        return_value={"success": True, "commit_hash": "def456", "error": None},
+    )
+    @patch(f"{MODULE}.parse_commit_message", return_value=("feat: clipboard", None))
+    @patch(f"{MODULE}._push_after_commit")
+    def test_commit_clipboard_no_push_flag(
+        self,
+        mock_push: Mock,
+        mock_parse_msg: Mock,
+        mock_commit: Mock,
+        mock_stage: Mock,
+        mock_clipboard: Mock,
+        mock_validate: Mock,
+    ) -> None:
+        """Push is NOT called when --push is False."""
+        args = argparse.Namespace(project_dir="/repo", push=False)
+        result = execute_commit_clipboard(args)
+
+        assert result == 0
+        mock_push.assert_not_called()
