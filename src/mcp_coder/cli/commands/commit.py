@@ -7,8 +7,13 @@ from typing import Optional, Tuple
 
 from mcp_coder.mcp_workspace_git import (
     commit_staged_files,
+    get_current_branch_name,
+    get_default_branch_name,
     get_git_diff_for_commit,
+    git_push,
+    has_remote_tracking_branch,
     is_git_repository,
+    push_branch,
     stage_all_changes,
 )
 
@@ -26,6 +31,39 @@ from ..utils import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _push_after_commit(project_dir: Path) -> int:
+    """Push the current branch to origin after a successful commit.
+
+    Returns:
+        Exit code (0 for success, 2 for failure).
+    """
+    branch = get_current_branch_name(project_dir)
+    if branch is None:
+        logger.error("Cannot push: not on a branch")
+        return 2
+
+    default = get_default_branch_name(project_dir)
+    blocked = {default} if default else {"main", "master"}
+    if branch in blocked:
+        logger.error("Refusing to push to protected branch '%s'", branch)
+        return 2
+
+    if not has_remote_tracking_branch(project_dir):
+        success = push_branch(branch, project_dir, set_upstream=True)
+        if success:
+            logger.info("Pushed to origin/%s", branch)
+            return 0
+        logger.error("Failed to push to origin: push failed")
+        return 2
+
+    result = git_push(project_dir)
+    if result["success"]:
+        logger.info("Pushed to origin/%s", branch)
+        return 0
+    logger.error("Failed to push to origin: %s", result.get("error", "unknown error"))
+    return 2
 
 
 def execute_commit_auto(args: argparse.Namespace) -> int:

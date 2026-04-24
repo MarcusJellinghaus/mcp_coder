@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit: `feat(cli): add --push flag to commit auto and clipboard parsers`
 
 ### Step 2: Add `_push_after_commit` helper with unit tests
-- [ ] Implementation: add helper to `commit.py` + tests in `test_commit.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(cli): add _push_after_commit helper with safety guards`
+- [x] Implementation: add helper to `commit.py` + tests in `test_commit.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(cli): add _push_after_commit helper with safety guards`
 
 ### Step 3: Wire `--push` into execute functions + integration tests
 - [ ] Implementation: add push call to both execute functions + tests in `test_commit.py`

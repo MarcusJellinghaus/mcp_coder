@@ -11,7 +11,11 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from mcp_coder.cli.commands.commit import execute_commit_auto, validate_git_repository
+from mcp_coder.cli.commands.commit import (
+    _push_after_commit,
+    execute_commit_auto,
+    validate_git_repository,
+)
 from mcp_coder.cli.main import create_parser
 from mcp_coder.workflow_utils.commit_operations import (
     generate_commit_message_with_llm,
@@ -929,3 +933,148 @@ class TestCommitAutoExecutionDir:
         captured_out: str = captured.out or ""
         assert "Generated commit message:" in captured_out
         assert "SUCCESS: Commit created: abc1234" in caplog.text
+
+
+MODULE = "mcp_coder.cli.commands.commit"
+
+
+class TestPushAfterCommit:
+    """Tests for _push_after_commit helper function."""
+
+    @patch(f"{MODULE}.get_current_branch_name", return_value="feature/foo")
+    @patch(f"{MODULE}.get_default_branch_name", return_value="main")
+    @patch(f"{MODULE}.has_remote_tracking_branch", return_value=True)
+    @patch(f"{MODULE}.git_push", return_value={"success": True})
+    def test_push_success_with_tracking_branch(
+        self,
+        mock_git_push: Mock,
+        mock_has_tracking: Mock,
+        mock_default: Mock,
+        mock_current: Mock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Push succeeds when tracking branch exists and git_push succeeds."""
+        with caplog.at_level(logging.INFO):
+            result = _push_after_commit(Path("/test/repo"))
+
+        assert result == 0
+        assert "Pushed to origin/" in caplog.text
+        mock_git_push.assert_called_once_with(Path("/test/repo"))
+
+    @patch(f"{MODULE}.get_current_branch_name", return_value="feature/bar")
+    @patch(f"{MODULE}.get_default_branch_name", return_value="main")
+    @patch(f"{MODULE}.has_remote_tracking_branch", return_value=False)
+    @patch(f"{MODULE}.push_branch", return_value=True)
+    def test_push_success_new_branch(
+        self,
+        mock_push_branch: Mock,
+        mock_has_tracking: Mock,
+        mock_default: Mock,
+        mock_current: Mock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Push succeeds for new branch without tracking, sets upstream."""
+        with caplog.at_level(logging.INFO):
+            result = _push_after_commit(Path("/test/repo"))
+
+        assert result == 0
+        mock_push_branch.assert_called_once_with(
+            "feature/bar", Path("/test/repo"), set_upstream=True
+        )
+
+    @patch(f"{MODULE}.get_current_branch_name", return_value="main")
+    @patch(f"{MODULE}.get_default_branch_name", return_value="main")
+    def test_push_refused_on_default_branch(
+        self,
+        mock_default: Mock,
+        mock_current: Mock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Push is refused when on the default branch."""
+        with caplog.at_level(logging.ERROR):
+            result = _push_after_commit(Path("/test/repo"))
+
+        assert result == 2
+        assert "protected branch" in caplog.text
+
+    @patch(f"{MODULE}.get_current_branch_name", return_value="main")
+    @patch(f"{MODULE}.get_default_branch_name", return_value=None)
+    def test_push_refused_fallback_main(
+        self,
+        mock_default: Mock,
+        mock_current: Mock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Push is refused on 'main' when default branch detection returns None."""
+        with caplog.at_level(logging.ERROR):
+            result = _push_after_commit(Path("/test/repo"))
+
+        assert result == 2
+
+    @patch(f"{MODULE}.get_current_branch_name", return_value="master")
+    @patch(f"{MODULE}.get_default_branch_name", return_value=None)
+    def test_push_refused_fallback_master(
+        self,
+        mock_default: Mock,
+        mock_current: Mock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Push is refused on 'master' when default branch detection returns None."""
+        with caplog.at_level(logging.ERROR):
+            result = _push_after_commit(Path("/test/repo"))
+
+        assert result == 2
+
+    @patch(f"{MODULE}.get_current_branch_name", return_value="feature/foo")
+    @patch(f"{MODULE}.get_default_branch_name", return_value="main")
+    @patch(f"{MODULE}.has_remote_tracking_branch", return_value=True)
+    @patch(
+        f"{MODULE}.git_push",
+        return_value={"success": False, "error": "rejected"},
+    )
+    def test_push_failure_with_tracking(
+        self,
+        mock_git_push: Mock,
+        mock_has_tracking: Mock,
+        mock_default: Mock,
+        mock_current: Mock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Push fails when git_push returns failure."""
+        with caplog.at_level(logging.ERROR):
+            result = _push_after_commit(Path("/test/repo"))
+
+        assert result == 2
+        assert "Failed to push" in caplog.text
+
+    @patch(f"{MODULE}.get_current_branch_name", return_value="feature/bar")
+    @patch(f"{MODULE}.get_default_branch_name", return_value="main")
+    @patch(f"{MODULE}.has_remote_tracking_branch", return_value=False)
+    @patch(f"{MODULE}.push_branch", return_value=False)
+    def test_push_failure_new_branch(
+        self,
+        mock_push_branch: Mock,
+        mock_has_tracking: Mock,
+        mock_default: Mock,
+        mock_current: Mock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Push fails when push_branch returns False."""
+        with caplog.at_level(logging.ERROR):
+            result = _push_after_commit(Path("/test/repo"))
+
+        assert result == 2
+        assert "Failed to push" in caplog.text
+
+    @patch(f"{MODULE}.get_current_branch_name", return_value=None)
+    def test_push_refused_on_detached_head(
+        self,
+        mock_current: Mock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Push is refused when not on a branch (detached HEAD)."""
+        with caplog.at_level(logging.ERROR):
+            result = _push_after_commit(Path("/test/repo"))
+
+        assert result == 2
+        assert "not on a branch" in caplog.text
