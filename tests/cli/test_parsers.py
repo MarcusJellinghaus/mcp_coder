@@ -230,6 +230,35 @@ class TestBooleanOptionalFlags:
             assert args.post_issue_comments is None
 
 
+class TestCommitPushFlag:
+    """Tests for --push flag on commit auto and commit clipboard."""
+
+    def _parse(self, *args: str) -> argparse.Namespace:
+        """Parse CLI args using the full parser."""
+        parser = create_parser()
+        return parser.parse_args(list(args))
+
+    def test_commit_auto_accepts_push_flag(self) -> None:
+        """commit auto --push sets args.push=True."""
+        args = self._parse("commit", "auto", "--push")
+        assert args.push is True
+
+    def test_commit_clipboard_accepts_push_flag(self) -> None:
+        """commit clipboard --push sets args.push=True."""
+        args = self._parse("commit", "clipboard", "--push")
+        assert args.push is True
+
+    def test_commit_auto_push_default_false(self) -> None:
+        """commit auto without --push defaults to False."""
+        args = self._parse("commit", "auto")
+        assert args.push is False
+
+    def test_commit_clipboard_push_default_false(self) -> None:
+        """commit clipboard without --push defaults to False."""
+        args = self._parse("commit", "clipboard")
+        assert args.push is False
+
+
 class TestLlmMethodCopilotChoice:
     """Tests for --llm-method copilot acceptance in parsers."""
 

@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Add `--push` flag to commit parsers
-- [ ] Implementation: add `--push` to both parsers + tests in `test_parsers.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit: `feat(cli): add --push flag to commit auto and clipboard parsers`
+- [x] Implementation: add `--push` to both parsers + tests in `test_parsers.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit: `feat(cli): add --push flag to commit auto and clipboard parsers`
 
 ### Step 2: Add `_push_after_commit` helper with unit tests
 - [ ] Implementation: add helper to `commit.py` + tests in `test_commit.py`
