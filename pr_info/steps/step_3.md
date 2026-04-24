@@ -30,7 +30,7 @@ Using `getattr` avoids breaking existing tests that build `argparse.Namespace` w
 
 ```
 # (end of existing execute function, after successful commit)
-if args.push:
+if getattr(args, "push", False):
     result = _push_after_commit(project_dir)
     if result != 0: return result
 return 0
