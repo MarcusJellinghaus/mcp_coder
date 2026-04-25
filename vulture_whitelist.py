@@ -127,6 +127,11 @@ _.require_copilot_cli
 # test_copilot_cli.py - @patch decorator requires accepting the mock parameter
 _.mock_settings
 
+# test_commit.py - @patch decorator parameters for push/clipboard tests
+_.mock_has_tracking
+_.mock_parse_msg
+_.mock_clipboard
+
 # test_issue_manager_label_update.py - Fixture used for side effect (patching)
 _._mock_git_repo
 

@@ -162,6 +162,11 @@ def add_commit_parsers(subparsers: Any) -> None:
         default=None,
         help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
     )
+    auto_parser.add_argument(
+        "--push",
+        action="store_true",
+        help="Push to origin after successful commit",
+    )
 
     # commit clipboard command
     clipboard_parser = commit_subparsers.add_parser(
@@ -174,6 +179,11 @@ def add_commit_parsers(subparsers: Any) -> None:
         type=str,
         default=None,
         help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
+    )
+    clipboard_parser.add_argument(
+        "--push",
+        action="store_true",
+        help="Push to origin after successful commit",
     )
 
 
