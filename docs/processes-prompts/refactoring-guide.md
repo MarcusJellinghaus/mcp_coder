@@ -97,8 +97,16 @@ Suppresses moved-code blocks from the diff output. After a pure refactoring, the
 
 #### File Size Check
 
+**For humans / CI:**
+
 ```bash
 mcp-coder check file-size --max-lines 750
+```
+
+**For LLM sessions (MCP tools):**
+
+```
+mcp__workspace__check_file_size
 ```
 
 Verifies all tracked Python files are under the line threshold. If split files were previously in `.large-files-allowlist`, remove those entries. Stale entries are reported automatically.
@@ -167,7 +175,7 @@ Before merging a refactoring PR:
 - [ ] `lint-imports` passes
 - [ ] `tach check` passes
 - [ ] All unit tests pass
-- [ ] `mcp-coder check file-size --max-lines 750` passes
+- [ ] File size check passes (`mcp-coder check file-size --max-lines 750` or `mcp__workspace__check_file_size`)
 - [ ] `.large-files-allowlist` updated (remove entries for split files)
 - [ ] `.importlinter` updated if modules were split (sub-layers)
 - [ ] PR diff is under 25,000 tokens
