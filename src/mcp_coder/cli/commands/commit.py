@@ -53,14 +53,14 @@ def _push_after_commit(project_dir: Path) -> int:
     if not has_remote_tracking_branch(project_dir):
         success = push_branch(branch, project_dir, set_upstream=True)
         if success:
-            logger.info("Pushed to origin/%s", branch)
+            logger.log(OUTPUT, "Pushed to origin/%s", branch)
             return 0
         logger.error("Failed to push to origin: push failed")
         return 2
 
     result = git_push(project_dir)
     if result["success"]:
-        logger.info("Pushed to origin/%s", branch)
+        logger.log(OUTPUT, "Pushed to origin/%s", branch)
         return 0
     logger.error("Failed to push to origin: %s", result.get("error", "unknown error"))
     return 2

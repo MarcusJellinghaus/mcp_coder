@@ -1284,3 +1284,29 @@ class TestCommitClipboardPush:
 
         assert result == 0
         mock_push.assert_not_called()
+
+    @patch(f"{MODULE}.validate_git_repository", return_value=(True, None))
+    @patch(
+        f"{MODULE}.get_commit_message_from_clipboard",
+        return_value=(True, "feat: clipboard", None),
+    )
+    @patch(f"{MODULE}.stage_all_changes", return_value=True)
+    @patch(
+        f"{MODULE}.commit_staged_files",
+        return_value={"success": False, "commit_hash": None, "error": "commit failed"},
+    )
+    @patch(f"{MODULE}._push_after_commit")
+    def test_commit_clipboard_push_not_called_on_commit_failure(
+        self,
+        mock_push: Mock,
+        mock_commit: Mock,
+        mock_stage: Mock,
+        mock_clipboard: Mock,
+        mock_validate: Mock,
+    ) -> None:
+        """Push is NOT called when commit fails."""
+        args = argparse.Namespace(project_dir="/repo", push=True)
+        result = execute_commit_clipboard(args)
+
+        assert result == 2
+        mock_push.assert_not_called()
