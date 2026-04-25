@@ -21,6 +21,16 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Fix langchain tool output extraction
+- [ ] Implementation: TDD tests + cascading content extraction in `agent.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Enhance iCoder event log with stream events
+- [ ] Implementation: TDD tests + `event_log.emit` in `app_core.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review and approval
+- [ ] PR summary prepared
