@@ -982,6 +982,7 @@ class TestPushAfterCommit:
         mock_push_branch.assert_called_once_with(
             "feature/bar", Path("/test/repo"), set_upstream=True
         )
+        assert "Pushed to origin/" in caplog.text
 
     @patch(f"{MODULE}.get_current_branch_name", return_value="main")
     @patch(f"{MODULE}.get_default_branch_name", return_value="main")

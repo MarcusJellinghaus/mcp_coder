@@ -70,7 +70,7 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
     """Execute commit auto command with optional preview.
 
     Returns:
-        Exit code (0 for success, 1 for validation error, 2 for commit/LLM error).
+        Exit code (0 for success, 1 for validation error, 2 for commit/LLM/push error).
     """
     logger.info("Starting commit auto with preview=%s", args.preview)
 
@@ -183,7 +183,7 @@ def execute_commit_clipboard(args: argparse.Namespace) -> int:
     """Execute commit clipboard command.
 
     Returns:
-        Exit code (0 for success, 1 for validation error, 2 for commit error).
+        Exit code (0 for success, 1 for validation error, 2 for commit/push error).
     """
     logger.info("Starting commit clipboard")
 
