@@ -429,3 +429,46 @@ def test_handle_input_returns_llm_text(app_core: AppCore) -> None:
     response = app_core.handle_input("/skill_test")
     assert response.send_to_llm is True
     assert response.llm_text == "override"
+
+
+def test_stream_events_logged(event_log: EventLog) -> None:
+    """stream_llm() logs stream events (except raw_line) to the event log."""
+    fake_llm = FakeLLMService(
+        responses=[
+            [
+                {"type": "text_delta", "text": "hello"},
+                {"type": "tool_use_start", "name": "read_file"},
+                {"type": "tool_result", "output": "content"},
+                {"type": "done", "usage": {"input_tokens": 10, "output_tokens": 5}},
+            ]
+        ]
+    )
+    core = AppCore(llm_service=fake_llm, event_log=event_log)
+    list(core.stream_llm("hello"))
+
+    stream_entries = [e for e in event_log.entries if e.event == "stream_event"]
+    logged_types = [e.data.get("type") for e in stream_entries]
+    assert "text_delta" in logged_types
+    assert "tool_use_start" in logged_types
+    assert "tool_result" in logged_types
+    assert "done" in logged_types
+
+
+def test_raw_line_events_not_logged(event_log: EventLog) -> None:
+    """raw_line events are excluded from stream_event logging."""
+    fake_llm = FakeLLMService(
+        responses=[
+            [
+                {"type": "raw_line", "line": "some raw output"},
+                {"type": "text_delta", "text": "hello"},
+                {"type": "done"},
+            ]
+        ]
+    )
+    core = AppCore(llm_service=fake_llm, event_log=event_log)
+    list(core.stream_llm("hello"))
+
+    stream_entries = [e for e in event_log.entries if e.event == "stream_event"]
+    logged_types = [e.data.get("type") for e in stream_entries]
+    assert "text_delta" in logged_types
+    assert "raw_line" not in logged_types
