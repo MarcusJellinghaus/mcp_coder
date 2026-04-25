@@ -9,13 +9,12 @@ instead of extracting the actual tool content.
 **Current:** `content=[{'type': 'text', 'text': 'true', 'id': 'lc_8c8dd727-...'}] name='save_file' ...`
 **Expected:** `{"result": true}`
 
-## Scope — 3 changes
+## Scope — 2 changes
 
 1. **Fix langchain tool output extraction** (`agent.py`) — Replace `str(output)` with
    cascading content extraction from the ToolMessage object.
 2. **Enhance iCoder event log** (`app_core.py`) — Log stream events (excluding `raw_line`)
    to JSONL for debugging/replay.
-3. **Delete test log files** — Remove 3 analysis log files from repo root.
 
 ## Architecture / Design Changes
 
@@ -40,18 +39,9 @@ instead of extracting the actual tool content.
 | `tests/llm/providers/langchain/test_langchain_agent_streaming.py` | Add tests for extraction cases |
 | `tests/icoder/test_app_core.py` | Add test for stream event logging |
 
-## Files Deleted
-
-| File | Reason |
-|------|--------|
-| `icoder_2026-04-25T11-32-14.jsonl` | Analysis artifact |
-| `json-raw.log` | Analysis artifact |
-| `ndjson.log` | Analysis artifact |
-
 ## Implementation Steps
 
 | Step | Description |
 |------|-------------|
 | 1 | Fix langchain tool output extraction (TDD: tests first, then `agent.py` fix) |
 | 2 | Enhance iCoder stream event logging (TDD: test first, then `app_core.py` change) |
-| 3 | Delete 3 analysis log files from repo root |

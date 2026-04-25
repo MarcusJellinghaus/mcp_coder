@@ -27,17 +27,17 @@ Store result in a local `result_text` variable, use it in both places.
 ## ALGORITHM (extraction cascade)
 
 ```
-output = event["data"]["output"]
+result_text = None
 if hasattr(output, "artifact") and isinstance(output.artifact, dict):
     sc = output.artifact.get("structured_content")
     if sc is not None:
         result_text = json.dumps(sc)
-    else: fall through
-if not yet resolved and hasattr(output, "content") and isinstance(output.content, list):
-    result_text = "\n".join(b["text"] for b in output.content if isinstance(b, dict) and b.get("type") == "text")
-elif not yet resolved and hasattr(output, "content") and isinstance(output.content, str):
-    result_text = output.content
-else:
+if result_text is None and hasattr(output, "content"):
+    if isinstance(output.content, list):
+        result_text = "\n".join(b["text"] for b in output.content if isinstance(b, dict) and b.get("type") == "text")
+    elif isinstance(output.content, str):
+        result_text = output.content
+if result_text is None:
     result_text = str(output)
 ```
 
@@ -56,17 +56,23 @@ Add to `TestRunAgentStream` in `test_langchain_agent_streaming.py`:
 1. **`test_tool_result_structured_content`** — Mock output with `artifact={"structured_content": {"result": True}}`.
    Assert yielded output is `'{"result": true}'`.
 
-2. **`test_tool_result_content_blocks`** — Mock output with `content=[{"type": "text", "text": "hello"}]` (as a real list, not MagicMock).
-   Assert yielded output is `"hello"`.
+2. **`test_tool_result_content_blocks`** — Parameterized (or two variants) covering:
+   - Variant A: `content=[{"type": "text", "text": "hello"}]` → assert output is `"hello"`
+   - Variant B: `content=[{"type": "text", "text": "line1"}, {"type": "image", "url": "..."}, {"type": "text", "text": "line2"}]` → assert output is `"line1\nline2"` (non-text blocks filtered out)
 
 3. **`test_tool_result_content_string`** — Mock output with `content="plain text"` (a real string, not MagicMock).
    Assert yielded output is `"plain text"`.
 
-4. **`test_tool_result_fallback`** — Mock output with no `artifact`, no `content`.
+4. **`test_tool_result_artifact_without_structured_content`** — Mock output with
+   `artifact={"other_key": "value"}` and `content="fallback text"`. Assert output is
+   `"fallback text"` (verifies cascade falls through from artifact to content).
+
+5. **`test_tool_result_fallback`** — Mock output with no `artifact`, no `content`.
    Assert yielded output is `str(output_mock)`.
 
-5. **Update `test_tool_result_from_on_tool_end`** — Add assertion on `tool_results[0]["output"]`
-   to verify it's not the raw pydantic repr.
+6. **Update `test_tool_result_from_on_tool_end`** — Set the mock output's attributes
+   (e.g., `output_mock.content = "test result"`) so it exercises the content-string
+   extraction path, and assert `tool_results[0]["output"] == "test result"`.
 
 Each test follows the existing pattern: build `events` list → `_patch_run_agent_stream(events)` →
 collect async results → filter `tool_result` events → assert `output` field.

@@ -52,17 +52,20 @@ The JSONL line looks like: `{"t": 1.23, "event": "stream_event", "type": "text_d
 
 Add to `tests/icoder/test_app_core.py`:
 
-1. **`test_stream_events_logged`** — Use `FakeLLMService` with canned response containing
-   `text_delta` and `done` events. Call `stream_llm()`. Assert `event_log.entries` contains
-   entries with `event == "stream_event"`. Verify both `text_delta` and `done` types appear
-   in the logged data.
+1. **`test_stream_events_logged`** — Create a `FakeLLMService` with a custom event list
+   containing `text_delta`, `tool_use_start`, `tool_result`, and `done` events. Build an
+   `AppCore` from it. Call `stream_llm()`. Assert `event_log.entries` contains entries with
+   `event == "stream_event"`. Verify that multiple event types (`text_delta`, `tool_use_start`,
+   `tool_result`, `done`) appear in the logged data.
 
-2. **`test_raw_line_events_not_logged`** — Use `FakeLLMService` with a response that includes
-   a `{"type": "raw_line", ...}` event. Call `stream_llm()`. Assert no `stream_event` entry
-   has `data["type"] == "raw_line"`.
+2. **`test_raw_line_events_not_logged`** — Create a `FakeLLMService` with a custom event list
+   that includes both a `{"type": "raw_line", ...}` event and a `{"type": "text_delta", ...}`
+   event. Build an `AppCore` from it. Call `stream_llm()`. Assert that `text_delta` appears
+   in the logged `stream_event` entries but `raw_line` does not.
 
-Both tests use the existing `app_core` / `event_log` fixtures from `conftest.py`.
-The `FakeLLMService` accepts custom response lists via `responses=` parameter.
+Both tests create their own `FakeLLMService(responses=...)` with custom event lists
+and build an `AppCore` from it, following the pattern in `test_stream_llm_updates_token_usage`.
+They use the `event_log` fixture from conftest.
 
 ## Commit
 
