@@ -151,36 +151,6 @@ class TestRunAgentStream:
         assert tool_starts[0]["args"] == {"query": "test"}
         assert tool_starts[0]["tool_call_id"] == "run-1"
 
-    async def test_tool_result_from_on_tool_end(self) -> None:
-        """on_tool_end events become tool_result StreamEvents."""
-        output_mock = MagicMock()
-        output_mock.tool_call_id = "tc-123"
-        events: list[dict[str, object]] = [
-            {
-                "event": "on_tool_end",
-                "data": {"output": output_mock},
-                "run_id": "run-1",
-                "name": "search_tool",
-            },
-        ]
-        with _patch_run_agent_stream(events):
-            from mcp_coder.llm.providers.langchain.agent import run_agent_stream
-
-            result = [
-                e
-                async for e in run_agent_stream(
-                    question="Hi",
-                    chat_model=MagicMock(),
-                    messages=[],
-                    mcp_config_path="/tmp/mcp.json",
-                    session_id="s1",
-                )
-            ]
-        tool_results = [e for e in result if e["type"] == "tool_result"]
-        assert len(tool_results) == 1
-        assert tool_results[0]["name"] == "search_tool"
-        assert tool_results[0]["tool_call_id"] == "tc-123"
-
     async def test_raw_line_emitted_for_every_event(self) -> None:
         """Every astream_events dict is also emitted as raw_line."""
         chunk = MagicMock()

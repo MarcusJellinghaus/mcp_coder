@@ -532,10 +532,29 @@ async def run_agent_stream(
                 run_id = event.get("run_id", "")
                 name = event.get("name", "")
                 tool_call_id = getattr(output, "tool_call_id", None) or run_id
+
+                # Cascading content extraction from ToolMessage
+                result_text: str | None = None
+                if hasattr(output, "artifact") and isinstance(output.artifact, dict):
+                    sc = output.artifact.get("structured_content")
+                    if sc is not None:
+                        result_text = json.dumps(sc)
+                if result_text is None and hasattr(output, "content"):
+                    if isinstance(output.content, list):
+                        result_text = "\n".join(
+                            b["text"]
+                            for b in output.content
+                            if isinstance(b, dict) and b.get("type") == "text"
+                        )
+                    elif isinstance(output.content, str):
+                        result_text = output.content
+                if result_text is None:
+                    result_text = str(output)
+
                 tool_results_list.append(
                     {
                         "name": name,
-                        "output": str(output),
+                        "output": result_text,
                         "tool_call_id": tool_call_id,
                         "run_id": run_id,
                     }
@@ -543,7 +562,7 @@ async def run_agent_stream(
                 yield {
                     "type": "tool_result",
                     "name": name,
-                    "output": str(output),
+                    "output": result_text,
                     "tool_call_id": tool_call_id,
                 }
 

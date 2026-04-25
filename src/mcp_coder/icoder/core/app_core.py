@@ -90,6 +90,8 @@ class AppCore:
 
         for event in self._llm_service.stream(text):
             assembler.add(event)
+            if event.get("type") != "raw_line":
+                self._event_log.emit("stream_event", **event)
             if event.get("type") == "done":
                 usage = event.get("usage", {})
                 if isinstance(usage, dict):
