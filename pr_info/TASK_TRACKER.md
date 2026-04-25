@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Fix langchain tool output extraction
-- [ ] Implementation: TDD tests + cascading content extraction in `agent.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: TDD tests + cascading content extraction in `agent.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Enhance iCoder event log with stream events
 - [ ] Implementation: TDD tests + `event_log.emit` in `app_core.py`
