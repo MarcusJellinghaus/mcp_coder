@@ -43,4 +43,21 @@ Reviewing the 5-step plan for removing `install_from_github` session state and s
 - `pr_info/steps/step_5.md`: Added `test_commands.py` to WHERE and test changes
 - `pr_info/steps/summary.md`: Fixed test path, added 8 new test files to table
 
+**Status**: Committed (1bade7b)
+
+## Round 3 — 2026-04-26
+**Findings**:
+- Step 1 removes `install_from_github` from `build_session()` but doesn't update the call site at `session_launch.py:227`. Tests would fail between Steps 1 and 3 with `TypeError: build_session() got an unexpected keyword argument`.
+- Review artifact `review_round_3.md` created in steps folder — should be deleted.
+
+**Decisions**:
+- Call site fix: **Accept** — each step must leave checks green (planning principles). Add minimal `session_launch.py` change to Step 1.
+- Review artifact: **Accept** — delete from steps folder.
+
+**User decisions**: None needed.
+
+**Changes**:
+- `pr_info/steps/step_1.md`: Added `session_launch.py` to WHERE, added subsection for removing `build_session()` kwarg at line ~227 (scoped explicitly — full rework in Step 3).
+- Deleted `pr_info/steps/review_round_3.md` (review artifact).
+
 **Status**: Committing...

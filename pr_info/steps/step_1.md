@@ -11,6 +11,7 @@ This step removes the `install_from_github` field from the session TypedDict and
 ## WHERE
 - `src/mcp_coder/workflows/vscodeclaude/types.py`
 - `src/mcp_coder/workflows/vscodeclaude/helpers.py`
+- `src/mcp_coder/workflows/vscodeclaude/session_launch.py` *(minimal change — only the `build_session()` call site; full rework happens in Step 3)*
 - `tests/workflows/vscodeclaude/test_types.py`
 - `tests/workflows/vscodeclaude/test_helpers.py`
 - `tests/workflows/vscodeclaude/test_cleanup.py`
@@ -49,6 +50,24 @@ def build_session(
 ) -> VSCodeClaudeSession:
 ```
 Remove `"install_from_github": install_from_github` from the returned dict.
+
+### `session_launch.py` — Remove kwarg from `build_session()` call site
+
+At line ~227, the `build_session()` call passes `install_from_github=install_from_github`. Delete that kwarg:
+
+```python
+        session = build_session(
+            folder=folder_str,
+            repo=repo_full_name,
+            issue_number=issue_number,
+            status=status,
+            vscode_pid=pid,
+            is_intervention=is_intervention,
+            # install_from_github=install_from_github,  ← DELETE THIS LINE
+        )
+```
+
+**This is ONLY the `build_session()` call site.** Do not touch anything else in `session_launch.py` — the remaining changes to this file (removing the `install_from_github` parameter from `launch_session()` itself and its callers) happen in Step 3.
 
 ## HOW
 - Direct field deletion in TypedDict
