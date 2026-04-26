@@ -7,9 +7,9 @@ allowed-tools:
   - mcp__workspace__github_issue_view
   - mcp__workspace__save_file
   - mcp__workspace__delete_this_file
-  - Read
-  - Glob
-  - Grep
+  - mcp__workspace__read_file
+  - mcp__workspace__list_directory
+  - mcp__workspace__search_files
 ---
 
 # Update GitHub Issue

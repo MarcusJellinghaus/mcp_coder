@@ -1,8 +1,6 @@
 {
   "permissions": {
     "allow": [
-      "Bash(./tools/pycycle_check.sh:*)",
-      "Bash(./tools/tach_check.sh:*)",
       "Bash(mcp-coder gh-tool:*)",
       "Bash(start docs/architecture/dependency_graph.html)",
       "Bash(tach check:*)",
