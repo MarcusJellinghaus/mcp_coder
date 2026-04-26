@@ -83,9 +83,6 @@ and remove `install_from_github=install_from_github` from the `create_startup_sc
 ### `test_session_launch_regenerate.py`
 - `mock_session` fixture: Remove `"install_from_github": False` from session dict
 
-### `test_session_restart.py`
-- `test_prepare_and_launch_session_success` (line 99-112): Verify session dict doesn't contain `install_from_github` field (it already doesn't pass it — just verify no assertion on it)
-
 ## Commit message
 ```
 fix(vscodeclaude): thread skip_github_install through session launch (#885)

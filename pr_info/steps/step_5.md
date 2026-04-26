@@ -11,7 +11,7 @@ Replace `--install-from-github` with `--no-install-from-github` in the CLI parse
 ## WHERE
 - `src/mcp_coder/cli/parsers.py`
 - `src/mcp_coder/cli/commands/coordinator/commands.py`
-- `tests/cli/commands/coordinator/test_vscodeclaude_cli.py` (if it tests the flag)
+- `tests/cli/commands/coordinator/test_vscodeclaude_cli.py`
 
 ## WHAT
 
@@ -75,22 +75,7 @@ And pass `skip_github_install=skip_github_install` to `prepare_and_launch_sessio
 ## Test changes
 
 ### `test_vscodeclaude_cli.py`
-Check if any tests reference `--install-from-github` or `install_from_github` — update to use `--no-install-from-github` / `no_install_from_github`. If no tests exist for this flag, add a simple parser test confirming the flag is recognized and defaults to `False`.
-
-### Parser test (if needed)
-```python
-def test_no_install_from_github_flag_default(self) -> None:
-    """--no-install-from-github defaults to False."""
-    parser = create_parser()
-    args = parser.parse_args(["vscodeclaude", "launch"])
-    assert args.no_install_from_github is False
-
-def test_no_install_from_github_flag_set(self) -> None:
-    """--no-install-from-github sets to True."""
-    parser = create_parser()
-    args = parser.parse_args(["vscodeclaude", "launch", "--no-install-from-github"])
-    assert args.no_install_from_github is True
-```
+Three existing tests at lines 336-365 reference `--install-from-github` / `install_from_github`. Update all three to use `--no-install-from-github` / `no_install_from_github` and adjust assertions to match the new opt-out semantics.
 
 ## Commit message
 ```
