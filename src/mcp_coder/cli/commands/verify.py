@@ -148,33 +148,24 @@ _KEY_REGEX = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 def _looks_like_key(token: str) -> bool:
-    """Return True if ``token`` looks like a Python-identifier key.
-
-    The token must match ``^[A-Za-z_][A-Za-z0-9_]*$`` and must not be a
-    reserved Python keyword (which would make rendering it as a key column
-    misleading, e.g. ``not configured``).
-    """
+    """Return True if *token* is a non-keyword Python identifier."""
     return bool(_KEY_REGEX.match(token)) and not keyword.iskeyword(token)
 
 
 _LABEL_MAP: dict[str, str] = {
-    # Claude section
     "cli_found": "Claude CLI Found",
     "cli_path": "Path",
     "cli_version": "Version",
     "cli_works": "Executable Works",
     "api_integration": "API Integration",
-    # LangChain section
     "backend": "Backend",
     "model": "Model",
     "api_key": "API key",
     "langchain_core": "LangChain core",
     "backend_package": "Backend package",
     "available_models": "Available models",
-    # MCP adapter section
     "mcp_adapters": "MCP adapters",
     "langgraph": "LangGraph",
-    # MLflow section
     "installed": "MLflow installed",
     "enabled": "MLflow enabled",
     "tracking_uri": "Tracking URI",
@@ -182,7 +173,6 @@ _LABEL_MAP: dict[str, str] = {
     "experiment": "Experiment",
     "artifact_location": "Artifact location",
     "tracking_data": "Tracking data",
-    # GitHub section
     "token_configured": "Token configured",
     "authenticated_user": "Authenticated user",
     "repo_url": "Repo URL",
