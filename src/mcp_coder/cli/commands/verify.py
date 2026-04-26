@@ -1,7 +1,7 @@
 """Verify command for the MCP Coder CLI.
 
-Orchestrates three domain verification functions (Claude CLI, LangChain,
-MLflow) and formats their output for the terminal.
+Orchestrates four domain verification functions (Claude CLI, LangChain,
+MLflow, GitHub) and formats their output for the terminal.
 """
 
 import argparse
@@ -22,6 +22,7 @@ from ...llm.interface import prompt_llm
 from ...llm.mlflow_logger import verify_mlflow
 from ...llm.providers.claude.claude_cli_verification import verify_claude
 from ...llm.providers.claude.claude_executable_finder import find_claude_executable
+from ...mcp_workspace_github import verify_github
 from ...prompts.prompt_loader import get_project_prompt_path, is_claude_md, load_prompts
 from ...utils.mcp_verification import ClaudeMCPStatus, parse_claude_mcp_list
 from ...utils.pyproject_config import get_implement_config
@@ -539,6 +540,10 @@ def execute_verify(args: argparse.Namespace) -> int:
     # 0c. Project configuration section
     _print_project_section(project_dir, symbols)
 
+    # 0d. GitHub verification section
+    github_result = verify_github(project_dir)
+    print(_format_section("GITHUB", github_result, symbols))
+
     # 1. Resolve active provider (already done above)
 
     # 2. Claude CLI verification (conditional on provider)
@@ -719,6 +724,9 @@ def execute_verify(args: argparse.Namespace) -> int:
 
     # 5. Collect and display install hints
     all_hints: list[str] = []
+    all_hints.extend(
+        _collect_install_hints(github_result)
+    )  # unconditional — always called
     if langchain_result:
         all_hints.extend(_collect_install_hints(langchain_result))
     if active_provider == "claude":
@@ -744,6 +752,7 @@ def execute_verify(args: argparse.Namespace) -> int:
         mcp_result=mcp_result,
         config_has_error=config_result["has_error"],
         claude_mcp_ok=claude_mcp_ok,
+        github_result=github_result,
     )
     logger.info("Verify command completed with exit code %d", exit_code)
     return exit_code

@@ -118,6 +118,11 @@ def _mlflow_enabled_broken() -> dict[str, Any]:
     }
 
 
+def _github_ok_default() -> dict[str, Any]:
+    """Neutral GitHub result for tests that don't care about GitHub."""
+    return {"overall_ok": True}
+
+
 class TestVerifyOrchestration:
     """Tests for the verify CLI orchestrator."""
 
@@ -125,6 +130,12 @@ class TestVerifyOrchestration:
     def _mock_resolve_mcp(self) -> Any:
         """Default: resolve_mcp_config_path returns None (no MCP config)."""
         with patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None):
+            yield
+
+    @pytest.fixture(autouse=True)
+    def _mock_github(self) -> Any:
+        """Default: verify_github returns neutral ok result."""
+        with patch(f"{_VERIFY}.verify_github", return_value=_github_ok_default()):
             yield
 
     @patch(f"{_VERIFY}.find_claude_executable", return_value=None)
@@ -511,6 +522,12 @@ class TestVerifyTestPromptFailure:
         with patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None):
             yield
 
+    @pytest.fixture(autouse=True)
+    def _mock_github(self) -> Any:
+        """Default: verify_github returns neutral ok result."""
+        with patch(f"{_VERIFY}.verify_github", return_value=_github_ok_default()):
+            yield
+
     @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
@@ -627,6 +644,12 @@ class TestConditionalClaudeDisplay:
         with patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None):
             yield
 
+    @pytest.fixture(autouse=True)
+    def _mock_github(self) -> Any:
+        """Default: verify_github returns neutral ok result."""
+        with patch(f"{_VERIFY}.verify_github", return_value=_github_ok_default()):
+            yield
+
     @patch(f"{_VERIFY}.find_claude_executable")
     @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
@@ -722,6 +745,12 @@ class TestInstallSummaryBlock:
     def _mock_resolve_mcp(self) -> Any:
         """Default: resolve_mcp_config_path returns None (no MCP config)."""
         with patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None):
+            yield
+
+    @pytest.fixture(autouse=True)
+    def _mock_github(self) -> Any:
+        """Default: verify_github returns neutral ok result."""
+        with patch(f"{_VERIFY}.verify_github", return_value=_github_ok_default()):
             yield
 
     @patch(f"{_VERIFY}.find_claude_executable", return_value=None)
@@ -828,6 +857,12 @@ class TestVerifyMcpAllProviders:
     def _mock_resolve_mcp(self) -> Any:
         """Default: resolve_mcp_config_path returns None (no MCP config)."""
         with patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None):
+            yield
+
+    @pytest.fixture(autouse=True)
+    def _mock_github(self) -> Any:
+        """Default: verify_github returns neutral ok result."""
+        with patch(f"{_VERIFY}.verify_github", return_value=_github_ok_default()):
             yield
 
     @patch(f"{_VERIFY}.log_to_mlflow", create=True)
@@ -1022,6 +1057,12 @@ class TestVerifyMcpAllProviders:
 
 class TestMcpConfigWarnings:
     """Tests for ``_collect_mcp_warnings`` parser and rendered section."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_github(self) -> Any:
+        """Default: verify_github returns neutral ok result."""
+        with patch(f"{_VERIFY}.verify_github", return_value=_github_ok_default()):
+            yield
 
     def test_none_path_returns_empty(self) -> None:
         assert _collect_mcp_warnings(None) == []
@@ -1249,3 +1290,156 @@ class TestDropUnexpandedFilter:
             "x", logging.WARNING, "", 0, "normal warning", None, None
         )
         assert f.filter(rec) is True
+
+
+def _github_ok() -> dict[str, Any]:
+    """Return a GitHub verification result with overall_ok=True."""
+    return {
+        "token_configured": {"ok": True, "value": "ghp_***", "severity": "error"},
+        "authenticated_user": {"ok": True, "value": "octocat", "severity": "error"},
+        "repo_url": {"ok": True, "value": "owner/repo", "severity": "error"},
+        "repo_accessible": {"ok": True, "value": "accessible", "severity": "error"},
+        "branch_protection": {
+            "ok": True,
+            "value": "enabled",
+            "severity": "warning",
+        },
+        "overall_ok": True,
+    }
+
+
+def _github_fail() -> dict[str, Any]:
+    """Return a GitHub verification result with overall_ok=False."""
+    return {
+        "token_configured": {
+            "ok": False,
+            "value": "not set",
+            "severity": "error",
+            "install_hint": "pip install PyGithub",
+        },
+        "overall_ok": False,
+    }
+
+
+class TestVerifyGitHubOrchestration:
+    """Tests for GitHub section wiring in execute_verify (Step 3)."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_resolve_mcp(self) -> Any:
+        """Default: resolve_mcp_config_path returns None (no MCP config)."""
+        with patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None):
+            yield
+
+    @patch(f"{_VERIFY}.verify_github")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    def test_github_section_displayed_after_project(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        mock_github: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """GITHUB section appears after PROJECT and before LLM PROVIDER."""
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+        mock_github.return_value = _github_ok()
+
+        execute_verify(_make_args())
+        output = capsys.readouterr().out
+
+        assert "=== GITHUB" in output
+        project_pos = output.index("PROJECT")
+        github_pos = output.index("=== GITHUB")
+        llm_pos = output.index("LLM PROVIDER")
+        assert project_pos < github_pos < llm_pos
+
+    @patch(f"{_VERIFY}.verify_github")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    def test_verify_github_called_with_project_dir(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        mock_github: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """verify_github is called with the resolved project_dir Path."""
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+        mock_github.return_value = _github_ok()
+
+        execute_verify(_make_args(project_dir=str(tmp_path)))
+
+        mock_github.assert_called_once_with(tmp_path)
+
+    @patch(f"{_VERIFY}.verify_github")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    def test_github_install_hints_collected(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        mock_github: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Install hints from github_result appear in INSTALL INSTRUCTIONS."""
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+        mock_github.return_value = _github_fail()
+
+        execute_verify(_make_args())
+        output = capsys.readouterr().out
+
+        assert "INSTALL INSTRUCTIONS" in output
+        assert "PyGithub" in output
+
+    @patch(f"{_VERIFY}.verify_github")
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    def test_github_failure_causes_exit_1(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        mock_github: MagicMock,
+    ) -> None:
+        """When verify_github returns overall_ok=False, exit code is 1."""
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+        mock_github.return_value = _github_fail()
+
+        result = execute_verify(_make_args())
+
+        assert result == 1
