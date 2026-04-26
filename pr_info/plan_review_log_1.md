@@ -60,4 +60,20 @@ Reviewing the 5-step plan for removing `install_from_github` session state and s
 - `pr_info/steps/step_1.md`: Added `session_launch.py` to WHERE, added subsection for removing `build_session()` kwarg at line ~227 (scoped explicitly — full rework in Step 3).
 - Deleted `pr_info/steps/review_round_3.md` (review artifact).
 
+**Status**: Committed
+
+## Round 4 — 2026-04-26
+**Findings**:
+- Step 2 renames `create_startup_script()`'s parameter from `install_from_github` to `skip_github_install`, but the two call sites in `session_launch.py` (line ~196 in `prepare_and_launch_session()` and line ~452 in `regenerate_session_files()`) are not updated until Step 3. Between Steps 2 and 3, mypy would flag `Unexpected keyword argument "install_from_github" for "create_startup_script"` and runtime would produce `TypeError`. This is the exact same pattern as the Round 3 finding (Step 1 changed `build_session()` signature but didn't update the call site).
+- No other issues found. All file paths verified against codebase. `test_pyproject_config.py` correctly excluded (tests pyproject.toml config section, not the Python parameter). Occurrence counts for mechanical test cleanup match the search results. Step ordering respects dependencies after the fix above.
+
+**Decisions**:
+- Call site fix: **Accept** — add minimal `session_launch.py` changes to Step 2 (rename kwarg at the two `create_startup_script()` call sites). Update Step 3 instructions to reflect that the kwarg was already renamed.
+
+**User decisions**: None needed.
+
+**Changes**:
+- `pr_info/steps/step_2.md`: Added `session_launch.py` to WHERE, added subsection for renaming `create_startup_script()` kwarg from `install_from_github=` to `skip_github_install=` at both call sites (lines ~196 and ~452). Scoped explicitly — full rework in Step 3.
+- `pr_info/steps/step_3.md`: Updated `prepare_and_launch_session()` changes to note that the kwarg was already renamed in Step 2 (now just update the variable name). Updated `regenerate_session_files()` to reference the Step 2 kwarg rename. Updated ALGORITHM, LLM prompt, and commit message to remove stale references.
+
 **Status**: Committing...

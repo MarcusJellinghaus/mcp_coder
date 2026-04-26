@@ -6,7 +6,7 @@ See `pr_info/steps/summary.md` for full issue context (#885).
 Thread `skip_github_install` through `prepare_and_launch_session()` and `process_eligible_issues()`. Remove `install_from_github` from `regenerate_session_files()` (restarts always auto-detect).
 
 ## LLM Prompt
-> Implement Step 3 of issue #885 (see `pr_info/steps/summary.md` and this file `pr_info/steps/step_3.md`). Update `session_launch.py`: rename `install_from_github` to `skip_github_install` in `prepare_and_launch_session()` and `process_eligible_issues()`. Remove `install_from_github` from `regenerate_session_files()` and `build_session()` calls. Update tests first (TDD), then source. Run all three code quality checks.
+> Implement Step 3 of issue #885 (see `pr_info/steps/summary.md` and this file `pr_info/steps/step_3.md`). Update `session_launch.py`: rename `install_from_github` to `skip_github_install` in `prepare_and_launch_session()` and `process_eligible_issues()` signatures. Remove `install_from_github` from `regenerate_session_files()`. Note: `build_session()` kwarg was already removed in Step 1, and `create_startup_script()` kwarg was already renamed in Step 2. Update tests first (TDD), then source. Run all three code quality checks.
 
 ## WHERE
 - `src/mcp_coder/workflows/vscodeclaude/session_launch.py`
@@ -25,8 +25,8 @@ def prepare_and_launch_session(
 ```
 
 Changes inside the function:
-- Pass `skip_github_install=skip_github_install` to `create_startup_script()` (instead of `install_from_github=install_from_github`)
-- Remove `install_from_github=install_from_github` from `build_session()` call
+- Update `create_startup_script()` call: the kwarg was already renamed to `skip_github_install=` in Step 2 — now update the variable from `install_from_github` to `skip_github_install` (i.e., `skip_github_install=install_from_github` becomes `skip_github_install=skip_github_install`)
+- The `build_session()` call's `install_from_github=install_from_github` kwarg was already removed in Step 1
 
 ### `session_launch.py` — `process_eligible_issues()`
 ```python
@@ -41,19 +41,18 @@ Change inside the function:
 - Pass `skip_github_install=skip_github_install` to `prepare_and_launch_session()` (instead of `install_from_github=install_from_github`)
 
 ### `session_launch.py` — `regenerate_session_files()`
-Remove these two lines:
+Remove this line:
 ```python
 install_from_github = session.get("install_from_github", False)
 ```
-and remove `install_from_github=install_from_github` from the `create_startup_script()` call.
+And remove `skip_github_install=install_from_github` from the `create_startup_script()` call (the kwarg was renamed from `install_from_github=` to `skip_github_install=` in Step 2 — now remove it entirely).
 (Auto-detect is the correct behavior on regenerate — if pyproject.toml changed, you want current state.)
 
 ## ALGORITHM
 ```
-1. prepare_and_launch_session: accept skip_github_install, pass to create_startup_script
-2. process_eligible_issues: accept skip_github_install, pass to prepare_and_launch_session
-3. regenerate_session_files: no param — always auto-detect from pyproject.toml
-4. build_session calls: remove install_from_github kwarg
+1. prepare_and_launch_session: rename param to skip_github_install, update variable in create_startup_script call
+2. process_eligible_issues: rename param to skip_github_install, pass to prepare_and_launch_session
+3. regenerate_session_files: remove install_from_github variable and skip_github_install kwarg from create_startup_script call
 ```
 
 ## Test changes
@@ -91,5 +90,4 @@ Rename install_from_github to skip_github_install in
 prepare_and_launch_session() and process_eligible_issues().
 Remove install_from_github from regenerate_session_files() — restarts
 always auto-detect from pyproject.toml.
-Remove install_from_github from build_session() calls.
 ```
