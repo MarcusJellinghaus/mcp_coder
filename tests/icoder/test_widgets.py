@@ -279,6 +279,62 @@ def test_count_trailing_backslashes(text: str, expected: int) -> None:
     assert _count_trailing_backslashes(text) == expected
 
 
+# --- Backslash+Enter mid-cursor tests ---
+
+
+@pytest.mark.asyncio
+async def test_backslash_enter_mid_text_inserts_newline() -> None:
+    """Single backslash before cursor mid-text inserts newline at cursor position."""
+    messages: list[InputArea.InputSubmitted] = []
+
+    class SubmitApp(WidgetTestApp):
+        def on_input_area_input_submitted(
+            self, message: InputArea.InputSubmitted
+        ) -> None:
+            messages.append(message)
+
+    app = SubmitApp()
+    async with app.run_test() as pilot:
+        input_area = app.query_one(InputArea)
+        input_area.focus()
+        await pilot.pause()
+        input_area.load_text("ABC \\DEF")
+        # Position cursor after the backslash (col 5: A=0,B=1,C=2,' '=3,'\\'=4)
+        input_area.move_cursor((0, 5))
+        await pilot.pause()
+        await pilot.press("enter")
+        await pilot.pause()
+        assert len(messages) == 0, "Expected no submit for single backslash"
+        assert input_area.text == "ABC \nDEF"
+
+
+@pytest.mark.asyncio
+async def test_backslash_enter_mid_text_double_backslash_submits() -> None:
+    """Double backslash before cursor mid-text strips one and submits."""
+    messages: list[InputArea.InputSubmitted] = []
+
+    class SubmitApp(WidgetTestApp):
+        def on_input_area_input_submitted(
+            self, message: InputArea.InputSubmitted
+        ) -> None:
+            messages.append(message)
+
+    app = SubmitApp()
+    async with app.run_test() as pilot:
+        input_area = app.query_one(InputArea)
+        input_area.focus()
+        await pilot.pause()
+        input_area.load_text("ABC \\\\DEF")
+        # Position cursor after two backslashes (col 6)
+        input_area.move_cursor((0, 6))
+        await pilot.pause()
+        await pilot.press("enter")
+        await pilot.pause()
+        assert len(messages) == 1, "Expected submit for double backslash"
+        assert messages[0].text == "ABC \\DEF"
+        assert input_area.text == ""
+
+
 # --- Backslash+Enter newline escape tests ---
 
 
