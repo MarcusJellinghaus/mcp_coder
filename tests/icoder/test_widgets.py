@@ -163,6 +163,40 @@ async def test_input_area_grows_with_multiline() -> None:
         assert input_area.styles.height != initial_height
 
 
+@pytest.mark.asyncio
+async def test_input_area_grows_with_wrapped_long_line() -> None:
+    """InputArea height accounts for visual wrapping, not just logical lines."""
+
+    class NarrowApp(App[None]):
+        def compose(self) -> ComposeResult:
+            yield InputArea()
+
+    app = NarrowApp()
+    async with app.run_test(size=(40, 20)) as pilot:
+        input_area = app.query_one(InputArea)
+        input_area.focus()
+        await pilot.pause()
+        # Single logical line that wraps multiple times in a 40-col terminal
+        long_line = "A" * 120
+        input_area.insert(long_line)
+        await pilot.pause()
+        # With only 1 logical line, document.line_count would be 1
+        # so old height would be 1+2=3.
+        # With wrapping, virtual_size.height should be > 1, giving a larger height.
+        assert input_area.document.line_count == 1
+        height_val = input_area.styles.height
+        assert height_val is not None
+        # Height should be more than what logical line_count + 2 would give
+        # logical would give Scalar(3, ...), wrapped should give more
+        from textual.css.scalar import Scalar
+
+        if isinstance(height_val, Scalar):
+            resolved = int(height_val.value)
+        else:
+            resolved = int(height_val)
+        assert resolved > 3, f"Expected height > 3 for wrapped line, got {resolved}"
+
+
 # --- History key integration tests ---
 
 
@@ -277,6 +311,62 @@ async def test_input_area_no_registry_backward_compat() -> None:
 def test_count_trailing_backslashes(text: str, expected: int) -> None:
     """_count_trailing_backslashes counts consecutive trailing backslashes."""
     assert _count_trailing_backslashes(text) == expected
+
+
+# --- Backslash+Enter mid-cursor tests ---
+
+
+@pytest.mark.asyncio
+async def test_backslash_enter_mid_text_inserts_newline() -> None:
+    """Single backslash before cursor mid-text inserts newline at cursor position."""
+    messages: list[InputArea.InputSubmitted] = []
+
+    class SubmitApp(WidgetTestApp):
+        def on_input_area_input_submitted(
+            self, message: InputArea.InputSubmitted
+        ) -> None:
+            messages.append(message)
+
+    app = SubmitApp()
+    async with app.run_test() as pilot:
+        input_area = app.query_one(InputArea)
+        input_area.focus()
+        await pilot.pause()
+        input_area.load_text("ABC \\DEF")
+        # Position cursor after the backslash (col 5: A=0,B=1,C=2,' '=3,'\\'=4)
+        input_area.move_cursor((0, 5))
+        await pilot.pause()
+        await pilot.press("enter")
+        await pilot.pause()
+        assert len(messages) == 0, "Expected no submit for single backslash"
+        assert input_area.text == "ABC \nDEF"
+
+
+@pytest.mark.asyncio
+async def test_backslash_enter_mid_text_double_backslash_submits() -> None:
+    """Double backslash before cursor mid-text strips one and submits."""
+    messages: list[InputArea.InputSubmitted] = []
+
+    class SubmitApp(WidgetTestApp):
+        def on_input_area_input_submitted(
+            self, message: InputArea.InputSubmitted
+        ) -> None:
+            messages.append(message)
+
+    app = SubmitApp()
+    async with app.run_test() as pilot:
+        input_area = app.query_one(InputArea)
+        input_area.focus()
+        await pilot.pause()
+        input_area.load_text("ABC \\\\DEF")
+        # Position cursor after two backslashes (col 6)
+        input_area.move_cursor((0, 6))
+        await pilot.pause()
+        await pilot.press("enter")
+        await pilot.pause()
+        assert len(messages) == 1, "Expected submit for double backslash"
+        assert messages[0].text == "ABC \\DEF"
+        assert input_area.text == ""
 
 
 # --- Backslash+Enter newline escape tests ---

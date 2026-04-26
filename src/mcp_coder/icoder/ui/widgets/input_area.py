@@ -71,9 +71,10 @@ class InputArea(TextArea):
         """Resize height to match content, capped at 1/3 of screen."""
         if not self.screen:
             return
-        line_count = self.document.line_count
+        visual_lines = self.virtual_size.height
         max_lines = max(1, self.screen.size.height // 3)
-        self.styles.height = min(line_count + 2, max_lines)
+        self.styles.height = min(visual_lines + 2, max_lines)
+        self.scroll_cursor_visible()
 
         if self._registry is None:
             return
@@ -192,16 +193,19 @@ class InputArea(TextArea):
                         self._event_log.emit("autocomplete_hidden", reason="submit")
             event.stop()
             event.prevent_default()
-            raw = self.text
-            trailing = _count_trailing_backslashes(raw)
+            cursor_loc = self.selection.end
+            row, col = cursor_loc
+            # Build text before cursor to count trailing backslashes
+            lines = [self.document.get_line(i) for i in range(row + 1)]
+            lines[-1] = lines[-1][:col]
+            text_before_cursor = "\n".join(lines)
+            trailing = _count_trailing_backslashes(text_before_cursor)
             if trailing > 0:
-                text_without_last = raw[:-1]
+                backslash_loc = (row, col - 1)
                 if trailing % 2 == 1:
-                    self.load_text(text_without_last)
-                    end = self.document.end
-                    self._replace_via_keyboard("\n", end, end)
+                    self._replace_via_keyboard("\n", backslash_loc, cursor_loc)
                     return
-                self.text = text_without_last
+                self._replace_via_keyboard("", backslash_loc, cursor_loc)
             text = self.text.strip()
             if text:
                 self.post_message(self.InputSubmitted(text))
