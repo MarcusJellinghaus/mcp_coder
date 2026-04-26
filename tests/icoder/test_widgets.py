@@ -163,6 +163,40 @@ async def test_input_area_grows_with_multiline() -> None:
         assert input_area.styles.height != initial_height
 
 
+@pytest.mark.asyncio
+async def test_input_area_grows_with_wrapped_long_line() -> None:
+    """InputArea height accounts for visual wrapping, not just logical lines."""
+
+    class NarrowApp(App[None]):
+        def compose(self) -> ComposeResult:
+            yield InputArea()
+
+    app = NarrowApp()
+    async with app.run_test(size=(40, 20)) as pilot:
+        input_area = app.query_one(InputArea)
+        input_area.focus()
+        await pilot.pause()
+        # Single logical line that wraps multiple times in a 40-col terminal
+        long_line = "A" * 120
+        input_area.insert(long_line)
+        await pilot.pause()
+        # With only 1 logical line, document.line_count would be 1
+        # so old height would be 1+2=3.
+        # With wrapping, virtual_size.height should be > 1, giving a larger height.
+        assert input_area.document.line_count == 1
+        height_val = input_area.styles.height
+        assert height_val is not None
+        # Height should be more than what logical line_count + 2 would give
+        # logical would give Scalar(3, ...), wrapped should give more
+        from textual.css.scalar import Scalar
+
+        if isinstance(height_val, Scalar):
+            resolved = int(height_val.value)
+        else:
+            resolved = int(height_val)
+        assert resolved > 3, f"Expected height > 3 for wrapped line, got {resolved}"
+
+
 # --- History key integration tests ---
 
 
