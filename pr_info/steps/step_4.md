@@ -6,7 +6,7 @@ See `pr_info/steps/summary.md` for full issue context (#885).
 Remove `install_from_github` from the `updated_session` dict constructed in `restart_closed_sessions()`.
 
 ## LLM Prompt
-> Implement Step 4 of issue #885 (see `pr_info/steps/summary.md` and this file `pr_info/steps/step_4.md`). Remove `install_from_github` from the session reconstruction dict in `session_restart.py`. Update tests first (TDD), then source. Run all three code quality checks.
+> Implement Step 4 of issue #885 (see `pr_info/steps/summary.md` and this file `pr_info/steps/step_4.md`). The source change in `session_restart.py` was already done in Step 1. Remove `install_from_github` from test session dicts in `test_session_restart.py` and `test_session_restart_closed_sessions.py`. Run all three code quality checks.
 
 ## WHERE
 - `src/mcp_coder/workflows/vscodeclaude/session_restart.py`
@@ -15,25 +15,11 @@ Remove `install_from_github` from the `updated_session` dict constructed in `res
 
 ## WHAT
 
-### `session_restart.py` — `restart_closed_sessions()`
+### `session_restart.py` — Source change already done in Step 1
 
-In the `updated_session` dict construction (around line 340), remove:
-```python
-"install_from_github": session.get("install_from_github", False),
-```
+The `"install_from_github": session.get("install_from_github", False)` line was already removed from the `updated_session` dict in Step 1 (to prevent mypy failure after TypedDict field removal). No source changes needed here.
 
-The dict should become:
-```python
-updated_session: VSCodeClaudeSession = {
-    "folder": session["folder"],
-    "repo": session["repo"],
-    "issue_number": session["issue_number"],
-    "status": session["status"],
-    "vscode_pid": new_pid,
-    "started_at": session["started_at"],
-    "is_intervention": session.get("is_intervention", False),
-}
-```
+This step now only contains test changes.
 
 ## Test changes
 
@@ -47,9 +33,9 @@ Remove `"install_from_github": False` (and variants) from all session dict liter
 
 ## Commit message
 ```
-fix(vscodeclaude): remove install_from_github from session restart (#885)
+fix(vscodeclaude): remove install_from_github from session restart tests (#885)
 
-Remove install_from_github from the session reconstruction dict in
-restart_closed_sessions(). Install behavior is derived from
-pyproject.toml at generation time, not stored state.
+Remove install_from_github from session dict literals in
+test_session_restart.py and test_session_restart_closed_sessions.py.
+The source change in session_restart.py was already done in Step 1.
 ```

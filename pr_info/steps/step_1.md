@@ -6,7 +6,7 @@ See `pr_info/steps/summary.md` for full issue context (#885).
 This step removes the `install_from_github` field from the session TypedDict and the `build_session()` helper. This is the foundation — all later steps depend on this field being gone.
 
 ## LLM Prompt
-> Implement Step 1 of issue #885 (see `pr_info/steps/summary.md` and this file `pr_info/steps/step_1.md`). Remove the `install_from_github` field from `VSCodeClaudeSession` TypedDict and the `build_session()` function. Update all tests first (TDD), then update the source files. Run all three code quality checks after changes.
+> Implement Step 1 of issue #885 (see `pr_info/steps/summary.md` and this file `pr_info/steps/step_1.md`). Remove the `install_from_github` field from `VSCodeClaudeSession` TypedDict and the `build_session()` function. Also remove the `install_from_github` line from the `updated_session` dict in `session_restart.py` to prevent mypy failure. Update all tests first (TDD), then update the source files. Run all three code quality checks after changes.
 
 ## WHERE
 - `src/mcp_coder/workflows/vscodeclaude/types.py`
@@ -21,6 +21,7 @@ This step removes the `install_from_github` field from the session TypedDict and
 - `tests/workflows/vscodeclaude/test_closed_issues_integration.py`
 - `tests/workflows/vscodeclaude/test_cache_aware.py`
 - `tests/workflows/vscodeclaude/test_session_restart_branch_integration.py`
+- `src/mcp_coder/workflows/vscodeclaude/session_restart.py`
 - `tests/workflows/vscodeclaude/test_session_launch.py`
 
 ## WHAT
@@ -89,6 +90,12 @@ install_from_github = session.get("install_from_github", False)
 
 The function will then use `create_startup_script()`'s default `install_from_github=False` — functionally equivalent, since auto-detect isn't implemented until Step 2.
 
+### `session_restart.py` — Remove field from `updated_session` dict
+
+In `restart_closed_sessions()`, delete the `"install_from_github": session.get("install_from_github", False),` line from the `updated_session` dict (around line 435). This prevents mypy failure between Steps 1 and 4.
+
+Scope: only this one line change. The test cleanup for `test_session_restart.py` and `test_session_restart_closed_sessions.py` remains in Step 4.
+
 ## HOW
 - Direct field deletion in TypedDict
 - Parameter removal from function signature
@@ -129,6 +136,7 @@ fix(vscodeclaude): remove install_from_github from session state (#885)
 
 Remove install_from_github field from VSCodeClaudeSession TypedDict
 and build_session() helper. Also clean up regenerate_session_files()
-to stop reading the deleted field. Install behavior will be derived
-from pyproject.toml at script generation time, not stored as session state.
+and the updated_session dict in session_restart.py to stop reading
+the deleted field. Install behavior will be derived from pyproject.toml
+at script generation time, not stored as session state.
 ```

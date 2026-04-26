@@ -6,10 +6,11 @@ See `pr_info/steps/summary.md` for full issue context (#885).
 Thread `skip_github_install` through `prepare_and_launch_session()` and `process_eligible_issues()`. (`regenerate_session_files()` was already cleaned up in Step 1.)
 
 ## LLM Prompt
-> Implement Step 3 of issue #885 (see `pr_info/steps/summary.md` and this file `pr_info/steps/step_3.md`). Update `session_launch.py`: rename `install_from_github` to `skip_github_install` in `prepare_and_launch_session()` and `process_eligible_issues()` signatures. Note: `build_session()` kwarg was already removed in Step 1, `create_startup_script()` kwarg was already renamed in Step 2, and `regenerate_session_files()` was already cleaned up in Step 1. Update tests first (TDD), then source. Run all three code quality checks.
+> Implement Step 3 of issue #885 (see `pr_info/steps/summary.md` and this file `pr_info/steps/step_3.md`). Update `session_launch.py`: rename `install_from_github` to `skip_github_install` in `prepare_and_launch_session()` and `process_eligible_issues()` signatures. Also update `commands.py` call-site kwargs from `install_from_github=` to `skip_github_install=` to prevent TypeError. Note: `build_session()` kwarg was already removed in Step 1, `create_startup_script()` kwarg was already renamed in Step 2, and `regenerate_session_files()` was already cleaned up in Step 1. Update tests first (TDD), then source. Run all three code quality checks.
 
 ## WHERE
 - `src/mcp_coder/workflows/vscodeclaude/session_launch.py`
+- `src/mcp_coder/cli/commands/coordinator/commands.py`
 - `tests/workflows/vscodeclaude/test_session_launch.py`
 - `tests/workflows/vscodeclaude/test_session_launch_regenerate.py`
 
@@ -47,6 +48,15 @@ The `regenerate_session_files()` cleanup was already completed in Step 1:
 - The `install_from_github=install_from_github` kwarg was removed from the `create_startup_script()` call
 
 The function now calls `create_startup_script()` without any install flag (auto-detect via default). No further changes needed here.
+
+### `commands.py` — Update call-site kwargs
+
+The function signatures renamed in this step are called from `commands.py`. Update the kwargs to prevent TypeError between Steps 3 and 5:
+
+- At line ~600 (`execute_coordinator_vscodeclaude`): change `install_from_github=install_from_github` to `skip_github_install=install_from_github` in the `process_eligible_issues()` call
+- At line ~759 (`_handle_intervention_mode`): change `install_from_github=install_from_github` to `skip_github_install=install_from_github` in the `prepare_and_launch_session()` call
+
+Scope: only the kwarg names change. The variable rename (`install_from_github` → `skip_github_install`) and CLI flag change happen in Step 5.
 
 ## ALGORITHM
 ```
@@ -89,4 +99,5 @@ fix(vscodeclaude): thread skip_github_install through session launch (#885)
 
 Rename install_from_github to skip_github_install in
 prepare_and_launch_session() and process_eligible_issues().
+Also update commands.py call-site kwargs to match.
 ```

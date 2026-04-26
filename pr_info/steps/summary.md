@@ -62,8 +62,8 @@ CLI --no-install-from-github flag (opt-out escape hatch, not persisted)
 
 ## Implementation Order
 
-1. **Step 1**: Remove `install_from_github` from session state (`types.py`, `helpers.py`) + `session_launch.py` `build_session()` call site + tests
+1. **Step 1**: Remove `install_from_github` from session state (`types.py`, `helpers.py`) + `session_launch.py` `build_session()` call site + minimal `session_restart.py` fix (remove field from `updated_session` dict to prevent mypy failure) + tests
 2. **Step 2**: Fix the core bug in `workspace.py` (remove guard, rename param, add comment) + `session_launch.py` `create_startup_script()` call site kwargs + tests
-3. **Step 3**: Update `session_launch.py` (rename function signature params, remove from `regenerate_session_files`) + tests
-4. **Step 4**: Update `session_restart.py` (remove from session reconstruction) + tests
-5. **Step 5**: Update CLI layer (`parsers.py`, `commands.py`) + tests
+3. **Step 3**: Update `session_launch.py` (rename function signature params, remove from `regenerate_session_files`) + minimal `commands.py` call-site kwarg fixes (prevent TypeError) + tests
+4. **Step 4**: Update `session_restart.py` tests (source change already done in Step 1) + tests
+5. **Step 5**: Update CLI layer (`parsers.py`, `commands.py` variable renames) + tests

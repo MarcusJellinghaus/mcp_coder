@@ -38,6 +38,8 @@ launch_parser.add_argument(
 
 ### `commands.py` — `execute_coordinator_vscodeclaude()`
 
+The call-site kwargs were already renamed from `install_from_github=` to `skip_github_install=` in Step 3. Now rename the variable itself:
+
 Replace:
 ```python
 install_from_github = getattr(args, "install_from_github", False)
@@ -48,10 +50,12 @@ With:
 skip_github_install = getattr(args, "no_install_from_github", False)
 ```
 
-And pass `skip_github_install=skip_github_install` to `process_eligible_issues()`.
+The `skip_github_install=skip_github_install` call to `process_eligible_issues()` is already correct from Step 3 (it was `skip_github_install=install_from_github` — now update to `skip_github_install=skip_github_install`).
 
 ### `commands.py` — `_handle_intervention_mode()`
 
+Same as above — the kwarg was already renamed in Step 3. Now rename the variable:
+
 Replace:
 ```python
 install_from_github = getattr(args, "install_from_github", False)
@@ -62,7 +66,7 @@ With:
 skip_github_install = getattr(args, "no_install_from_github", False)
 ```
 
-And pass `skip_github_install=skip_github_install` to `prepare_and_launch_session()`.
+The `skip_github_install=skip_github_install` call to `prepare_and_launch_session()` is already correct from Step 3.
 
 ## ALGORITHM
 ```
