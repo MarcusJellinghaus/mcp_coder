@@ -127,6 +127,17 @@ class TestVerifyEndToEnd:
         with patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None):
             yield
 
+    @pytest.fixture(autouse=True)
+    def _mock_verify_github(self) -> Any:
+        with patch(
+            f"{_VERIFY}.verify_github",
+            return_value={
+                "token_configured": {"ok": True, "value": "configured"},
+                "overall_ok": True,
+            },
+        ):
+            yield
+
     @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
     @patch(f"{_VERIFY}.verify_mlflow")
@@ -436,6 +447,13 @@ class TestExitCodeMatrix:
                     enabled=mlflow_enabled,
                     healthy=mlflow_healthy,
                 ),
+            ),
+            patch(
+                f"{_VERIFY}.verify_github",
+                return_value={
+                    "token_configured": {"ok": True, "value": "configured"},
+                    "overall_ok": True,
+                },
             ),
         ):
             return main()

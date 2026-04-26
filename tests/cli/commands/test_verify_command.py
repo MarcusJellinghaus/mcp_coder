@@ -38,6 +38,17 @@ def _minimal_llm_response() -> dict[str, Any]:
 class TestExecuteVerify:
     """Test the execute_verify function."""
 
+    @pytest.fixture(autouse=True)
+    def _mock_verify_github(self) -> Any:
+        with patch(
+            "mcp_coder.cli.commands.verify.verify_github",
+            return_value={
+                "token_configured": {"ok": True, "value": "configured"},
+                "overall_ok": True,
+            },
+        ):
+            yield
+
     @patch(
         "mcp_coder.cli.commands.verify.prompt_llm",
         return_value={
@@ -222,6 +233,17 @@ def _config_ok() -> dict[str, Any]:
 class TestProviderAwareMcpSections:
     """Integration tests for provider-aware MCP section ordering."""
 
+    @pytest.fixture(autouse=True)
+    def _mock_verify_github(self) -> Any:
+        with patch(
+            f"{_VERIFY}.verify_github",
+            return_value={
+                "token_configured": {"ok": True, "value": "configured"},
+                "overall_ok": True,
+            },
+        ):
+            yield
+
     @patch(f"{_VERIFY}.verify_config", return_value=_config_ok())
     @patch(f"{_VERIFY}.prompt_llm", return_value=_minimal_llm_response())
     @patch(f"{_VERIFY}.verify_mlflow", return_value=_mlflow_not_installed())
@@ -360,6 +382,17 @@ class TestProviderAwareMcpSections:
 
 class TestClaudeMcpParserFailedExitCode:
     """Test that execute_verify passes claude_mcp_ok=False when parser fails."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_verify_github(self) -> Any:
+        with patch(
+            f"{_VERIFY}.verify_github",
+            return_value={
+                "token_configured": {"ok": True, "value": "configured"},
+                "overall_ok": True,
+            },
+        ):
+            yield
 
     @patch(f"{_VERIFY}.verify_config", return_value=_config_ok())
     @patch(f"{_VERIFY}.prompt_llm", return_value=_minimal_llm_response())

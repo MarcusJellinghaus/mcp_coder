@@ -66,6 +66,17 @@ def _mlflow_not_installed() -> dict[str, Any]:
 class TestVerifyUsesSharedResolveLlmMethod:
     """Tests that verify.py uses the shared resolve_llm_method()."""
 
+    @pytest.fixture(autouse=True)
+    def _mock_verify_github(self) -> Any:
+        with patch(
+            f"{_VERIFY}.verify_github",
+            return_value={
+                "token_configured": {"ok": True, "value": "configured"},
+                "overall_ok": True,
+            },
+        ):
+            yield
+
     @patch(f"{_VERIFY}.verify_config")
     @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
