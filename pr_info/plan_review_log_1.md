@@ -13,6 +13,21 @@
 **Decisions**: All 6 accepted findings applied as straightforward improvements. No design/scope changes. 3 findings skipped.
 **User decisions**: None needed — all changes were within existing scope.
 **Changes**: Updated `pr_info/steps/step_1.md` (3 findings) and `pr_info/steps/step_2.md` (3 findings).
+**Status**: Committed (fb0031c)
+
+## Round 2 — 2026-04-26
+**Findings**:
+- [Critical] Step 1: `Location(row, col - 1)` is a type alias, not a constructor — will raise TypeError at runtime
+- [Accept] Step 1: `col == 0` edge case — unlikely to occur, implementer can handle
+- [Accept] Step 1: "text before cursor" extraction unspecified — implementer detail
+- [Accept] Step 1: Even case triggers spurious `on_text_area_changed` — matches existing pattern
+- [Skip] Step 2: `virtual_size.height` timing verified correct
+- [Skip] Summary and steps are consistent
+- [Skip] Round 1 fixes verified correctly applied
+
+**Decisions**: 1 critical fix applied (Location → tuple syntax). 3 accept findings skipped as implementer details. 3 verifications passed.
+**User decisions**: None needed.
+**Changes**: Fixed `Location(row, col - 1)` → `(row, col - 1)` in step_1.md HOW and ALGORITHM sections.
 **Status**: Pending commit
 # Plan Review Log — Issue #896
 

@@ -37,10 +37,10 @@ Note: `_count_trailing_backslashes` is called on the substring of text before th
 The cursor position is available via `self.selection.end` which returns a `(row, col)` Location. To get the text before the cursor, extract the substring using document lines or flat offset. The key insight is to use `_replace_via_keyboard` for mutations instead of `load_text`, since `load_text` destroys undo history.
 
 ```python
-cursor_loc = self.selection.end          # Location(row, col)
+cursor_loc = self.selection.end          # (row, col) tuple
 row, col = cursor_loc
 # backslash is one character before cursor
-backslash_loc = Location(row, col - 1)   # assumes backslash is on same line
+backslash_loc = (row, col - 1)           # assumes backslash is on same line
 
 # For odd backslash (insert newline):
 self._replace_via_keyboard("\n", backslash_loc, cursor_loc)
@@ -55,9 +55,9 @@ self._replace_via_keyboard("", backslash_loc, cursor_loc)
 
 ```
 1. event.stop() + event.prevent_default()
-2. cursor_loc = self.selection.end  # (row, col) Location
-3. Compute the Location of the character before cursor (the backslash):
-   backslash_loc = Location(row, col - 1)
+2. cursor_loc = self.selection.end  # (row, col) tuple
+3. Compute the location of the character before cursor (the backslash):
+   row, col = cursor_loc; backslash_loc = (row, col - 1)
 4. Extract text before cursor to count trailing backslashes
 5. trailing = _count_trailing_backslashes(text_before_cursor)
 6. if trailing == 0 → submit as normal (strip, post message, clear)
