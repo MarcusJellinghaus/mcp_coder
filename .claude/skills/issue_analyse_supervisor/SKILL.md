@@ -64,7 +64,7 @@ You are a technical lead supervising a software engineer (subagent). You do not 
 **Status**: {continuing / no new questions}
 ```
 
-**Subagent instructions:** Remind subagents to follow CLAUDE.md (MCP tools, no `cd` prefix, approved commands only).
+**Subagent instructions:** When launching subagents, instruct them to follow CLAUDE.md — especially the MCP tool requirements (use `mcp__workspace__*` tools, not native file tools). Also remind them: no `cd` prefix, approved commands only.
 
 **Triage Guidelines:**
 
