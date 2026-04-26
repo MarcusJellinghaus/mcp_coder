@@ -369,12 +369,14 @@ def _compute_exit_code(
     mcp_result: dict[str, Any] | None = None,
     config_has_error: bool = False,
     claude_mcp_ok: bool | None = None,
+    github_result: dict[str, Any] | None = None,
 ) -> int:
     """Compute CLI exit code from verification results.
 
     Exit 1 when the config has errors, the active provider fails, when MLflow
-    is enabled but broken, when the test prompt failed, or when MCP servers
-    failed (langchain only), or when Claude MCP servers failed (claude only).
+    is enabled but broken, when the test prompt failed, when GitHub verification
+    failed, when MCP servers failed (langchain only), or when Claude MCP
+    servers failed (claude only).
 
     Args:
         active_provider: The active LLM provider name.
@@ -386,6 +388,7 @@ def _compute_exit_code(
         config_has_error: Whether config verification found errors (invalid TOML).
         claude_mcp_ok: Claude MCP server status. None=not checked (no effect),
             True=all ok, False=failure (exit 1 when claude active).
+        github_result: GitHub verification result dict, or None.
 
     Returns:
         Exit code (0 if all checks pass, 1 if any critical check failed).
@@ -396,6 +399,10 @@ def _compute_exit_code(
 
     # Test prompt failure always means exit 1
     if not test_prompt_ok:
+        return 1
+
+    # GitHub failure always means exit 1 (provider-independent)
+    if github_result is not None and not github_result.get("overall_ok"):
         return 1
 
     # Active provider determines primary pass/fail

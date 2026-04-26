@@ -344,6 +344,69 @@ class TestComputeExitCode:
             == 0
         )
 
+    def test_github_failure_returns_exit_1(self) -> None:
+        """Exit 1 when github_result overall_ok is False."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _claude_ok(),
+                None,
+                _mlflow_not_installed(),
+                github_result={"overall_ok": False},
+            )
+            == 1
+        )
+
+    def test_github_ok_does_not_affect_exit(self) -> None:
+        """Exit 0 when github_result overall_ok is True."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _claude_ok(),
+                None,
+                _mlflow_not_installed(),
+                github_result={"overall_ok": True},
+            )
+            == 0
+        )
+
+    def test_github_none_does_not_affect_exit(self) -> None:
+        """Exit 0 when github_result is None (default)."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _claude_ok(),
+                None,
+                _mlflow_not_installed(),
+                github_result=None,
+            )
+            == 0
+        )
+
+    def test_github_failure_exit_1_regardless_of_provider(self) -> None:
+        """Exit 1 when github_result fails for both claude and langchain."""
+        github_fail = {"overall_ok": False}
+        assert (
+            _compute_exit_code(
+                "claude",
+                _claude_ok(),
+                None,
+                _mlflow_not_installed(),
+                github_result=github_fail,
+            )
+            == 1
+        )
+        assert (
+            _compute_exit_code(
+                "langchain",
+                _claude_ok(),
+                _langchain_ok(),
+                _mlflow_not_installed(),
+                github_result=github_fail,
+            )
+            == 1
+        )
+
 
 class TestMcpServersInVerify:
     """Tests for MCP server health check integration in execute_verify."""
