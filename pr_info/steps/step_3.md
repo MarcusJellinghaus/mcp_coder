@@ -1,12 +1,12 @@
-# Step 3: Update `session_launch.py` — rename param, remove from regenerate
+# Step 3: Update `session_launch.py` — rename param in launch functions
 
 ## Context
 See `pr_info/steps/summary.md` for full issue context (#885).
 
-Thread `skip_github_install` through `prepare_and_launch_session()` and `process_eligible_issues()`. Remove `install_from_github` from `regenerate_session_files()` (restarts always auto-detect).
+Thread `skip_github_install` through `prepare_and_launch_session()` and `process_eligible_issues()`. (`regenerate_session_files()` was already cleaned up in Step 1.)
 
 ## LLM Prompt
-> Implement Step 3 of issue #885 (see `pr_info/steps/summary.md` and this file `pr_info/steps/step_3.md`). Update `session_launch.py`: rename `install_from_github` to `skip_github_install` in `prepare_and_launch_session()` and `process_eligible_issues()` signatures. Remove `install_from_github` from `regenerate_session_files()`. Note: `build_session()` kwarg was already removed in Step 1, and `create_startup_script()` kwarg was already renamed in Step 2. Update tests first (TDD), then source. Run all three code quality checks.
+> Implement Step 3 of issue #885 (see `pr_info/steps/summary.md` and this file `pr_info/steps/step_3.md`). Update `session_launch.py`: rename `install_from_github` to `skip_github_install` in `prepare_and_launch_session()` and `process_eligible_issues()` signatures. Note: `build_session()` kwarg was already removed in Step 1, `create_startup_script()` kwarg was already renamed in Step 2, and `regenerate_session_files()` was already cleaned up in Step 1. Update tests first (TDD), then source. Run all three code quality checks.
 
 ## WHERE
 - `src/mcp_coder/workflows/vscodeclaude/session_launch.py`
@@ -40,19 +40,19 @@ def process_eligible_issues(
 Change inside the function:
 - Pass `skip_github_install=skip_github_install` to `prepare_and_launch_session()` (instead of `install_from_github=install_from_github`)
 
-### `session_launch.py` — `regenerate_session_files()`
-Remove this line:
-```python
-install_from_github = session.get("install_from_github", False)
-```
-And remove `skip_github_install=install_from_github` from the `create_startup_script()` call (the kwarg was renamed from `install_from_github=` to `skip_github_install=` in Step 2 — now remove it entirely).
-(Auto-detect is the correct behavior on regenerate — if pyproject.toml changed, you want current state.)
+### `session_launch.py` — `regenerate_session_files()` *(no changes needed)*
+
+The `regenerate_session_files()` cleanup was already completed in Step 1:
+- The `install_from_github = session.get("install_from_github", False)` line was deleted
+- The `install_from_github=install_from_github` kwarg was removed from the `create_startup_script()` call
+
+The function now calls `create_startup_script()` without any install flag (auto-detect via default). No further changes needed here.
 
 ## ALGORITHM
 ```
 1. prepare_and_launch_session: rename param to skip_github_install, update variable in create_startup_script call
 2. process_eligible_issues: rename param to skip_github_install, pass to prepare_and_launch_session
-3. regenerate_session_files: remove install_from_github variable and skip_github_install kwarg from create_startup_script call
+(regenerate_session_files was already cleaned up in Step 1 — no action here)
 ```
 
 ## Test changes
@@ -74,13 +74,14 @@ And remove `skip_github_install=install_from_github` from the `create_startup_sc
 
 4. **`test_regenerate_session_files_reads_install_from_github_from_session`**:
    - Rewrite: verify `create_startup_script` is called **without** `skip_github_install` (or with default `False`)
-   - Remove `"install_from_github": True` from session dict
+   - The `"install_from_github": True` was already removed from the session dict in Step 1 (mechanical cleanup)
 
 5. **`test_regenerate_session_files_with_install_from_github_false`**:
    - **Delete this test** — regenerate no longer reads from session, always auto-detects
+   - (The `"install_from_github": False` in its session dict was already removed in Step 1)
 
 ### `test_session_launch_regenerate.py`
-- `mock_session` fixture: Remove `"install_from_github": False` from session dict
+- `mock_session` fixture: `"install_from_github": False` was already removed from session dict in Step 1 (mechanical cleanup). No changes needed here.
 
 ## Commit message
 ```
@@ -88,6 +89,4 @@ fix(vscodeclaude): thread skip_github_install through session launch (#885)
 
 Rename install_from_github to skip_github_install in
 prepare_and_launch_session() and process_eligible_issues().
-Remove install_from_github from regenerate_session_files() — restarts
-always auto-detect from pyproject.toml.
 ```

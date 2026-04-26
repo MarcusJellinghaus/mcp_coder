@@ -11,7 +11,7 @@ This step removes the `install_from_github` field from the session TypedDict and
 ## WHERE
 - `src/mcp_coder/workflows/vscodeclaude/types.py`
 - `src/mcp_coder/workflows/vscodeclaude/helpers.py`
-- `src/mcp_coder/workflows/vscodeclaude/session_launch.py` *(minimal change — only the `build_session()` call site; full rework happens in Step 3)*
+- `src/mcp_coder/workflows/vscodeclaude/session_launch.py` *(two changes: remove `build_session()` kwarg AND clean up `regenerate_session_files()` — see WHAT section)*
 - `tests/workflows/vscodeclaude/test_types.py`
 - `tests/workflows/vscodeclaude/test_helpers.py`
 - `tests/workflows/vscodeclaude/test_cleanup.py`
@@ -21,6 +21,7 @@ This step removes the `install_from_github` field from the session TypedDict and
 - `tests/workflows/vscodeclaude/test_closed_issues_integration.py`
 - `tests/workflows/vscodeclaude/test_cache_aware.py`
 - `tests/workflows/vscodeclaude/test_session_restart_branch_integration.py`
+- `tests/workflows/vscodeclaude/test_session_launch.py`
 
 ## WHAT
 
@@ -67,7 +68,26 @@ At line ~227, the `build_session()` call passes `install_from_github=install_fro
         )
 ```
 
-**This is ONLY the `build_session()` call site.** Do not touch anything else in `session_launch.py` — the remaining changes to this file (removing the `install_from_github` parameter from `launch_session()` itself and its callers) happen in Step 3.
+**`build_session()` call site only** — do not touch the `prepare_and_launch_session()` or `process_eligible_issues()` signatures yet (those happen in Step 3).
+
+### `session_launch.py` — Remove `install_from_github` from `regenerate_session_files()`
+
+With `install_from_github` removed from the `VSCodeClaudeSession` TypedDict, `session.get("install_from_github", False)` in `regenerate_session_files()` will fail mypy. Clean this up now:
+
+1. **Delete** this line (~line 428):
+```python
+install_from_github = session.get("install_from_github", False)
+```
+
+2. **Remove** the `install_from_github=install_from_github` kwarg from the `create_startup_script()` call (~line 452):
+```python
+    script_path = create_startup_script(
+        ...
+        # install_from_github=install_from_github,  ← DELETE THIS LINE
+    )
+```
+
+The function will then use `create_startup_script()`'s default `install_from_github=False` — functionally equivalent, since auto-detect isn't implemented until Step 2.
 
 ## HOW
 - Direct field deletion in TypedDict
@@ -97,6 +117,9 @@ When the `install_from_github` field is deleted from `VSCodeClaudeSession`, ever
 | `tests/workflows/vscodeclaude/test_closed_issues_integration.py` | 6 |
 | `tests/workflows/vscodeclaude/test_cache_aware.py` | 4 |
 | `tests/workflows/vscodeclaude/test_session_restart_branch_integration.py` | 3 |
+| `tests/workflows/vscodeclaude/test_session_launch.py` | 2 |
+
+The `test_session_launch.py` occurrences are in the `regenerate_session_files` tests — two session dicts (lines ~445 and ~509) contain `"install_from_github"` that must be removed when the TypedDict field is deleted.
 
 The change is purely mechanical: search for `"install_from_github": False,` (and variants like `"install_from_github": True,`) in each file and delete the line. No logic changes needed — these are just session dict literals that must match the updated TypedDict.
 
@@ -105,6 +128,7 @@ The change is purely mechanical: search for `"install_from_github": False,` (and
 fix(vscodeclaude): remove install_from_github from session state (#885)
 
 Remove install_from_github field from VSCodeClaudeSession TypedDict
-and build_session() helper. Install behavior will be derived from
-pyproject.toml at script generation time, not stored as session state.
+and build_session() helper. Also clean up regenerate_session_files()
+to stop reading the deleted field. Install behavior will be derived
+from pyproject.toml at script generation time, not stored as session state.
 ```

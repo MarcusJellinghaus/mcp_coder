@@ -76,4 +76,24 @@ Reviewing the 5-step plan for removing `install_from_github` session state and s
 - `pr_info/steps/step_2.md`: Added `session_launch.py` to WHERE, added subsection for renaming `create_startup_script()` kwarg from `install_from_github=` to `skip_github_install=` at both call sites (lines ~196 and ~452). Scoped explicitly — full rework in Step 3.
 - `pr_info/steps/step_3.md`: Updated `prepare_and_launch_session()` changes to note that the kwarg was already renamed in Step 2 (now just update the variable name). Updated `regenerate_session_files()` to reference the Step 2 kwarg rename. Updated ALGORITHM, LLM prompt, and commit message to remove stale references.
 
+**Status**: Committed (b8e2dcd)
+
+## Round 5 — 2026-04-26
+**Findings**:
+- BLOCKING: `regenerate_session_files()` reads `session.get("install_from_github", False)` — mypy fails after Step 1 removes the TypedDict field. Cleanup wasn't scheduled until Step 3.
+- BLOCKING: Two session dicts in `test_session_launch.py` (regenerate tests, lines ~445/509) have `install_from_github` — not covered until Step 3.
+- Cross-step ripple: Step 2's `session_launch.py` section had two call sites; now only one (prepare_and_launch_session). Step 3's `regenerate_session_files()` section is now a no-op.
+
+**Decisions**:
+- regenerate cleanup: **Accept** — move from Step 3 to Step 1
+- test_session_launch.py dicts: **Accept** — add to Step 1's mechanical cleanup
+- Steps 2/3 updates: **Accept** — simplify to reflect
+
+**User decisions**: None needed.
+
+**Changes**:
+- `pr_info/steps/step_1.md`: Added regenerate_session_files() cleanup + test_session_launch.py to mechanical cleanup
+- `pr_info/steps/step_2.md`: Simplified to only prepare_and_launch_session() call site
+- `pr_info/steps/step_3.md`: Replaced regenerate section with "already done in Step 1" note
+
 **Status**: Committing...

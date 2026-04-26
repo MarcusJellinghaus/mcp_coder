@@ -10,7 +10,7 @@ This is the core bug fix. Remove the `if install_from_github:` guard so `_build_
 
 ## WHERE
 - `src/mcp_coder/workflows/vscodeclaude/workspace.py`
-- `src/mcp_coder/workflows/vscodeclaude/session_launch.py` *(minimal change — only the `create_startup_script()` call sites; full rework happens in Step 3)*
+- `src/mcp_coder/workflows/vscodeclaude/session_launch.py` *(minimal change — only the `prepare_and_launch_session()` call site; `regenerate_session_files()` was cleaned in Step 1, full rework in Step 3)*
 - `tests/workflows/vscodeclaude/test_workspace_startup_script_github.py`
 
 ## WHAT
@@ -53,9 +53,9 @@ skip_github_install: If True, skip reading [tool.mcp-coder.install-from-github]
 # uv pip install commands above to force re-fetch from GitHub.
 ```
 
-### `session_launch.py` — Update `create_startup_script()` call sites
+### `session_launch.py` — Update `create_startup_script()` call site
 
-This is ONLY updating the kwarg name at the two call sites. Do not touch anything else in `session_launch.py` — the remaining changes to this file (renaming the `install_from_github` parameter in function signatures) happen in Step 3.
+This is ONLY updating the kwarg name at the `prepare_and_launch_session()` call site. Do not touch anything else in `session_launch.py` — the remaining changes to this file (renaming the `install_from_github` parameter in function signatures) happen in Step 3.
 
 **In `prepare_and_launch_session()`** (line ~196), change:
 ```python
@@ -67,15 +67,7 @@ skip_github_install=install_from_github,
 ```
 (Note: the *variable* is still called `install_from_github` at this point because the function signature hasn't been renamed yet — that happens in Step 3. We're only fixing the kwarg name to match `create_startup_script()`'s renamed parameter.)
 
-**In `regenerate_session_files()`** (line ~452), change:
-```python
-install_from_github=install_from_github,
-```
-to:
-```python
-skip_github_install=install_from_github,
-```
-(Same note: the local variable `install_from_github` still exists here until Step 3 removes it.)
+**`regenerate_session_files()` is already clean** — Step 1 removed the `install_from_github` variable and the `install_from_github=install_from_github` kwarg from `create_startup_script()`. The function now calls `create_startup_script()` without any install flag, relying on the default (`False` before this step, `False` for `skip_github_install` after). No changes needed here.
 
 ## ALGORITHM
 ```
