@@ -92,8 +92,8 @@ def update_workflow_label(
 
             # Step 3: Verify branch is linked to the issue
             repo_url = None
-            if issue_manager._repo_full_name is not None:
-                repo_url = f"https://github.com/{issue_manager._repo_full_name}.git"
+            if issue_manager._cached_repo_identifier is not None:
+                repo_url = issue_manager._cached_repo_identifier.https_url
 
             # IssueBranchManager.__init__ doesn't accept github_token,
             # so init via BaseGitHubManager to reuse the existing token.

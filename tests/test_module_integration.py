@@ -119,7 +119,7 @@ class TestModuleIntegration:
             "get_default_branch_name",
             "get_full_status",
             "get_git_diff_for_commit",
-            "get_github_repository_url",
+            "get_repository_identifier",
             "git_push",
             "is_working_directory_clean",
             "stage_all_changes",

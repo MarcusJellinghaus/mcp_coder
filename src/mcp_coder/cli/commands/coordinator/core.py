@@ -15,8 +15,8 @@ from ....mcp_workspace_github import (
     IssueBranchManager,
     IssueData,
     IssueManager,
+    RepoIdentifier,
     get_all_cached_issues,
-    parse_github_url,
 )
 from ....utils.jenkins_operations.client import JenkinsClient
 from ....utils.user_config import get_config_file_path, get_config_values
@@ -400,14 +400,15 @@ def dispatch_workflow(
         branch_name = "main"
     else:  # from_issue
         # Parse repo URL to extract owner and name for branch resolution
-        parsed_url = parse_github_url(repo_config["repo_url"])
-        if not parsed_url:
+        try:
+            repo_id = RepoIdentifier.from_repo_url(repo_config["repo_url"])
+        except ValueError:
             logger.error(
                 f"Invalid GitHub URL in repo config: {repo_config['repo_url']}"
             )
             return
 
-        repo_owner, repo_name = parsed_url
+        repo_owner, repo_name = repo_id.owner, repo_id.repo_name
 
         # Resolve branch with PR fallback (checks linkedBranches then draft/open PRs)
         resolved_branch = branch_manager.get_branch_with_pr_fallback(

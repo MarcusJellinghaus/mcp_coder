@@ -549,9 +549,9 @@ class TestDispatchWorkflow:
         assert "git pull" in command
         assert "mcp-coder --log-level INFO create-plan 123" in command
 
-    @patch("mcp_coder.cli.commands.coordinator.core.parse_github_url")
+    @patch("mcp_coder.cli.commands.coordinator.core.RepoIdentifier")
     def test_dispatch_workflow_handles_missing_branch_gracefully(
-        self, mock_parse_url: MagicMock, caplog: pytest.LogCaptureFixture
+        self, mock_repo_id_cls: MagicMock, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test that dispatch_workflow logs error and returns early when no branch found."""
         # Setup - Mock issue with status-08:ready-pr label (requires branch)
@@ -582,8 +582,9 @@ class TestDispatchWorkflow:
         mock_issue_mgr = MagicMock()
         mock_branch_mgr = MagicMock()
 
-        # Mock parse_github_url to return owner and repo
-        mock_parse_url.return_value = ("test", "repo")
+        # Mock RepoIdentifier.from_repo_url to return identifier with owner and repo
+        mock_repo_id = MagicMock(owner="test", repo_name="repo")
+        mock_repo_id_cls.from_repo_url.return_value = mock_repo_id
 
         # Mock get_branch_with_pr_fallback to return None (missing branch scenario)
         mock_branch_mgr.get_branch_with_pr_fallback.return_value = None
@@ -602,8 +603,10 @@ class TestDispatchWorkflow:
             log_level="INFO",
         )
 
-        # Verify parse_github_url was called
-        mock_parse_url.assert_called_once_with("https://github.com/test/repo.git")
+        # Verify RepoIdentifier.from_repo_url was called
+        mock_repo_id_cls.from_repo_url.assert_called_once_with(
+            "https://github.com/test/repo.git"
+        )
 
         # Verify branch manager was called with correct parameters
         mock_branch_mgr.get_branch_with_pr_fallback.assert_called_once_with(
@@ -620,9 +623,9 @@ class TestDispatchWorkflow:
         mock_issue_mgr.remove_labels.assert_not_called()
         mock_issue_mgr.add_labels.assert_not_called()
 
-    @patch("mcp_coder.cli.commands.coordinator.core.parse_github_url")
+    @patch("mcp_coder.cli.commands.coordinator.core.RepoIdentifier")
     def test_dispatch_workflow_preserves_existing_behavior_with_valid_branch(
-        self, mock_parse_url: MagicMock
+        self, mock_repo_id_cls: MagicMock
     ) -> None:
         """Test that existing functionality works unchanged when branch exists."""
         # Setup - Mock issue with status-05:plan-ready label (requires branch)
@@ -653,8 +656,9 @@ class TestDispatchWorkflow:
         mock_issue_mgr = MagicMock()
         mock_branch_mgr = MagicMock()
 
-        # Mock parse_github_url to return owner and repo
-        mock_parse_url.return_value = ("test", "repo")
+        # Mock RepoIdentifier.from_repo_url to return identifier with owner and repo
+        mock_repo_id = MagicMock(owner="test", repo_name="repo")
+        mock_repo_id_cls.from_repo_url.return_value = mock_repo_id
 
         # Mock get_branch_with_pr_fallback to return valid branch
         mock_branch_mgr.get_branch_with_pr_fallback.return_value = "feature/issue-123"
@@ -675,8 +679,10 @@ class TestDispatchWorkflow:
             log_level="INFO",
         )
 
-        # Verify parse_github_url was called
-        mock_parse_url.assert_called_once_with("https://github.com/test/repo.git")
+        # Verify RepoIdentifier.from_repo_url was called
+        mock_repo_id_cls.from_repo_url.assert_called_once_with(
+            "https://github.com/test/repo.git"
+        )
 
         # Verify branch manager was called with correct parameters
         mock_branch_mgr.get_branch_with_pr_fallback.assert_called_once_with(

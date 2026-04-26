@@ -51,7 +51,7 @@ from mcp_workspace.git_operations.parent_branch_detection import (
 # Remotes
 from mcp_workspace.git_operations.remotes import (
     fetch_remote,
-    get_github_repository_url,
+    get_repository_identifier,
     git_push,
     push_branch,
     rebase_onto_branch,
@@ -90,7 +90,7 @@ __all__ = [
     "get_git_diff_for_commit",
     "get_compact_diff",
     "fetch_remote",
-    "get_github_repository_url",
+    "get_repository_identifier",
     "git_push",
     "push_branch",
     "rebase_onto_branch",

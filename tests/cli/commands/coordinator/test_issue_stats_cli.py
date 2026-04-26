@@ -8,7 +8,7 @@ Tests cover:
 import argparse
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -156,8 +156,8 @@ class TestExecuteCoordinatorIssueStats:
         # Mock the dependencies
         with (
             patch(
-                "mcp_coder.cli.commands.coordinator.issue_stats.get_github_repository_url"
-            ) as mock_get_url,
+                "mcp_coder.cli.commands.coordinator.issue_stats.get_repository_identifier"
+            ) as mock_get_id,
             patch(
                 "mcp_coder.cli.commands.coordinator.issue_stats.get_labels_config_path"
             ) as mock_config_path,
@@ -168,7 +168,9 @@ class TestExecuteCoordinatorIssueStats:
                 "mcp_coder.cli.commands.coordinator.issue_stats.IssueManager"
             ) as mock_issue_manager,
         ):
-            mock_get_url.return_value = "https://github.com/owner/repo"
+            mock_get_id.return_value = MagicMock(
+                https_url="https://github.com/owner/repo"
+            )
             mock_config_path.return_value = Path("/fake/labels.json")
             mock_load_config.return_value = test_labels_config
             mock_issue_manager.return_value.list_issues.return_value = []
@@ -214,8 +216,8 @@ class TestExecuteCoordinatorIssueStats:
 
         with (
             patch(
-                "mcp_coder.cli.commands.coordinator.issue_stats.get_github_repository_url"
-            ) as mock_get_url,
+                "mcp_coder.cli.commands.coordinator.issue_stats.get_repository_identifier"
+            ) as mock_get_id,
             patch(
                 "mcp_coder.cli.commands.coordinator.issue_stats.get_labels_config_path"
             ) as mock_config_path,
@@ -229,7 +231,9 @@ class TestExecuteCoordinatorIssueStats:
                 "mcp_coder.cli.commands.coordinator.issue_stats.display_statistics"
             ) as mock_display,
         ):
-            mock_get_url.return_value = "https://github.com/owner/repo"
+            mock_get_id.return_value = MagicMock(
+                https_url="https://github.com/owner/repo"
+            )
             mock_config_path.return_value = Path("/fake/labels.json")
             mock_load_config.return_value = test_labels_config
             mock_issue_manager.return_value.list_issues.return_value = []
@@ -261,8 +265,8 @@ class TestExecuteCoordinatorIssueStats:
 
         with (
             patch(
-                "mcp_coder.cli.commands.coordinator.issue_stats.get_github_repository_url"
-            ) as mock_get_url,
+                "mcp_coder.cli.commands.coordinator.issue_stats.get_repository_identifier"
+            ) as mock_get_id,
             patch(
                 "mcp_coder.cli.commands.coordinator.issue_stats.get_labels_config_path"
             ) as mock_config_path,
@@ -276,7 +280,9 @@ class TestExecuteCoordinatorIssueStats:
                 "mcp_coder.cli.commands.coordinator.issue_stats.display_statistics"
             ) as mock_display,
         ):
-            mock_get_url.return_value = "https://github.com/owner/repo"
+            mock_get_id.return_value = MagicMock(
+                https_url="https://github.com/owner/repo"
+            )
             mock_config_path.return_value = Path("/fake/labels.json")
             mock_load_config.return_value = test_labels_config
             mock_issue_manager.return_value.list_issues.return_value = []

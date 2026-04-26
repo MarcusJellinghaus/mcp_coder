@@ -11,7 +11,7 @@ import argparse
 import logging
 from typing import Any
 
-from mcp_coder.mcp_workspace_git import get_github_repository_url
+from mcp_coder.mcp_workspace_git import get_repository_identifier
 
 from ....config.label_config import (
     get_labels_config_path,
@@ -298,11 +298,12 @@ def execute_coordinator_issue_stats(args: argparse.Namespace) -> int:
         logger.info(f"Project directory: {project_dir}")
 
         # Get repository URL from git remote
-        repo_url = get_github_repository_url(project_dir)
-        if not repo_url:
+        identifier = get_repository_identifier(project_dir)
+        if not identifier:
             raise ValueError(
                 "Could not determine GitHub repository URL from git remote"
             )
+        repo_url = identifier.https_url
         logger.info(f"Repository URL: {repo_url}")
 
         # Load labels configuration
