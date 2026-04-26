@@ -11,6 +11,7 @@ Remove `install_from_github` from the `updated_session` dict constructed in `res
 ## WHERE
 - `src/mcp_coder/workflows/vscodeclaude/session_restart.py`
 - `tests/workflows/vscodeclaude/test_session_restart_closed_sessions.py`
+- `tests/workflows/vscodeclaude/test_session_restart.py`
 
 ## WHAT
 
@@ -39,6 +40,10 @@ updated_session: VSCodeClaudeSession = {
 ### `test_session_restart_closed_sessions.py`
 
 Remove `"install_from_github": False` from all session dict literals in this file. Search for all occurrences — there are session dicts in multiple test methods.
+
+### `test_session_restart.py`
+
+Remove `"install_from_github": False` (and variants) from all session dict literals (~11 occurrences). Same mechanical cleanup as above — these are session dicts that must match the updated TypedDict after field removal.
 
 ## Commit message
 ```

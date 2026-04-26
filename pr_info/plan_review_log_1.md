@@ -21,4 +21,26 @@ Reviewing the 5-step plan for removing `install_from_github` session state and s
 - `pr_info/steps/step_5.md`: Made test file path definitive, removed speculative parser test sample, replaced with clear instructions for updating 3 existing tests.
 - `pr_info/steps/step_3.md`: Removed `test_session_restart.py` subsection from test changes.
 
+**Status**: Committed (7d45ac7)
+
+## Round 2 — 2026-04-26
+**Findings**:
+- CRITICAL: 9 test files with `install_from_github` references (~130 occurrences) missing from the plan. When Step 1 removes the TypedDict field, these would all break with no guidance for the implementer.
+- MINOR: Summary table has wrong test path (`tests/cli/test_parsers.py` instead of `tests/cli/commands/coordinator/test_vscodeclaude_cli.py`).
+
+**Decisions**:
+- Missing test files: **Accept** — distributed across the appropriate steps:
+  - Step 1: 7 files with mechanical session dict cleanup (~110 occurrences)
+  - Step 4: `test_session_restart.py` (~11 occurrences)
+  - Step 5: `test_commands.py` (~9 refs testing parameter threading)
+- Summary table wrong path: **Accept** — straightforward fix
+
+**User decisions**: None needed.
+
+**Changes**:
+- `pr_info/steps/step_1.md`: Added 7 test files to WHERE, added "Mechanical test cleanup" subsection
+- `pr_info/steps/step_4.md`: Added `test_session_restart.py` to WHERE and test changes
+- `pr_info/steps/step_5.md`: Added `test_commands.py` to WHERE and test changes
+- `pr_info/steps/summary.md`: Fixed test path, added 8 new test files to table
+
 **Status**: Committing...

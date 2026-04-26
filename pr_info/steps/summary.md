@@ -50,7 +50,15 @@ CLI --no-install-from-github flag (opt-out escape hatch, not persisted)
 | `tests/workflows/vscodeclaude/test_session_launch_regenerate.py` | Remove `install_from_github` from session fixture |
 | `tests/workflows/vscodeclaude/test_session_restart.py` | Remove `install_from_github` from session dicts |
 | `tests/workflows/vscodeclaude/test_session_restart_closed_sessions.py` | Remove `install_from_github` from session dicts |
-| `tests/cli/test_parsers.py` | Test new `--no-install-from-github` flag (if parser tests exist for this) |
+| `tests/cli/commands/coordinator/test_vscodeclaude_cli.py` | Update 3 tests to use `--no-install-from-github` / `no_install_from_github` with opt-out semantics |
+| `tests/cli/commands/coordinator/test_commands.py` | Update ~9 references: rename `install_from_github` to `skip_github_install` / `no_install_from_github` in parameter threading tests |
+| `tests/workflows/vscodeclaude/test_cleanup.py` | Remove `"install_from_github": False` from ~39 session dict literals |
+| `tests/workflows/vscodeclaude/test_status_display.py` | Remove `"install_from_github": False` from ~29 session dict literals |
+| `tests/workflows/vscodeclaude/test_sessions.py` | Remove `"install_from_github": False` from ~22 session dict literals |
+| `tests/workflows/vscodeclaude/test_session_restart_cache.py` | Remove `"install_from_github": False` from ~7 session dict literals |
+| `tests/workflows/vscodeclaude/test_closed_issues_integration.py` | Remove `"install_from_github": False` from ~6 session dict literals |
+| `tests/workflows/vscodeclaude/test_cache_aware.py` | Remove `"install_from_github": False` from ~4 session dict literals |
+| `tests/workflows/vscodeclaude/test_session_restart_branch_integration.py` | Remove `"install_from_github": False` from ~3 session dict literals |
 
 ## Implementation Order
 

@@ -12,6 +12,7 @@ Replace `--install-from-github` with `--no-install-from-github` in the CLI parse
 - `src/mcp_coder/cli/parsers.py`
 - `src/mcp_coder/cli/commands/coordinator/commands.py`
 - `tests/cli/commands/coordinator/test_vscodeclaude_cli.py`
+- `tests/cli/commands/coordinator/test_commands.py`
 
 ## WHAT
 
@@ -76,6 +77,12 @@ And pass `skip_github_install=skip_github_install` to `prepare_and_launch_sessio
 
 ### `test_vscodeclaude_cli.py`
 Three existing tests at lines 336-365 reference `--install-from-github` / `install_from_github`. Update all three to use `--no-install-from-github` / `no_install_from_github` and adjust assertions to match the new opt-out semantics.
+
+### `test_commands.py`
+This file has ~9 references that test `install_from_github` parameter threading through `process_eligible_issues()` and `_handle_intervention_mode()`. Update these to use `skip_github_install` / `no_install_from_github` to match the renamed parameter and new CLI flag. Key changes:
+- Replace `install_from_github=` keyword args with `skip_github_install=`
+- Update mock assertions that verify the parameter is passed through
+- Update `getattr(args, "install_from_github", ...)` references to `getattr(args, "no_install_from_github", ...)`
 
 ## Commit message
 ```
