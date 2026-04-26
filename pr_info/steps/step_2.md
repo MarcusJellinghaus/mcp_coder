@@ -52,6 +52,6 @@ Add `TestGitHubLabelMappings` class in `test_verify_format_section.py`:
 
 1. `test_all_github_keys_in_label_map` — assert all 9 keys exist in `_LABEL_MAP`
 2. `test_format_section_renders_github_labels` — call `_format_section("GITHUB", sample_result, symbols)` with a few entries (e.g. `token_configured`, `repo_accessible`) and assert the human labels appear in output
-3. `test_format_section_github_warning_entry` — entry with `ok=None` renders `[WARN]` symbol (for branch protection warnings)
+3. `test_format_section_github_error_entry` — entry with `ok=False` renders `[ERR]` symbol (for error-severity checks like token/auth)
 
 Use existing `_symbols()` helper pattern from the file.

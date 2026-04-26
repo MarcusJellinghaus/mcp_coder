@@ -34,8 +34,12 @@ print(_format_section("GITHUB", github_result, symbols))
 
 ### Install hints — add github_result to collection (line ~704):
 
+Unconditional — no `if` guard needed. `verify_github()` is always called, so `github_result` is always a dict. Place **before** the existing conditional block:
+
 ```python
-all_hints.extend(_collect_install_hints(github_result))
+all_hints.extend(_collect_install_hints(github_result))  # unconditional — always called
+if langchain_result:
+    all_hints.extend(_collect_install_hints(langchain_result))
 ```
 
 ### Exit code — pass to `_compute_exit_code()` call (line ~721):
