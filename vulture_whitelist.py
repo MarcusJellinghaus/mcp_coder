@@ -38,8 +38,9 @@ _.get_run_logs
 # issue_branch_manager.py - Branch operations
 _.delete_linked_branch
 
-# github_utils.py - URL utilities (inverse of parse_github_url)
-_.format_github_https_url
+# github_operations - verification (re-exported via shim)
+_.verify_github
+_.CheckResult
 
 # =============================================================================
 # API COMPLETENESS - IssueEventType Enum Values

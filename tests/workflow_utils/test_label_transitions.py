@@ -73,16 +73,10 @@ def mock_github() -> Mock:
 
 @pytest.fixture
 def _mock_git_repo() -> Any:
-    """Mock _init_with_project_dir to avoid git repository checks."""
-
-    def _fake_init(self: Any, project_dir: Any) -> None:
-        self.project_dir = project_dir
-        self._repo_full_name = None  # pylint: disable=protected-access
-
-    with patch.object(
-        BaseGitHubManager,
-        "_init_with_project_dir",
-        _fake_init,
+    """Mock git repository check to avoid real I/O."""
+    with patch(
+        "mcp_workspace.git_operations.is_git_repository",
+        return_value=True,
     ):
         yield
 

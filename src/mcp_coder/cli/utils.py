@@ -9,7 +9,7 @@ import logging
 import os
 from pathlib import Path
 
-from mcp_coder.mcp_workspace_git import get_github_repository_url
+from mcp_coder.mcp_workspace_git import get_repository_identifier
 
 from ..llm.session import parse_llm_method
 from ..llm.types import SUPPORTED_PROVIDERS
@@ -79,7 +79,8 @@ def resolve_issue_interaction_flags(
     # Get config values (default False)
     cfg_labels = False
     cfg_comments = False
-    repo_url = get_github_repository_url(project_dir)
+    identifier = get_repository_identifier(project_dir)
+    repo_url = identifier.https_url if identifier else None
     if repo_url:
         section = find_repo_section_by_url(repo_url)
         if section:

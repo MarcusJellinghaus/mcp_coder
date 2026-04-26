@@ -436,7 +436,7 @@ class TestResolveExecutionDir:
 class TestResolveIssueInteractionFlags:
     """Test cases for resolve_issue_interaction_flags function."""
 
-    @patch("mcp_coder.cli.utils.get_github_repository_url", return_value=None)
+    @patch("mcp_coder.cli.utils.get_repository_identifier", return_value=None)
     def test_defaults_to_false_false_when_no_cli_no_config(
         self, _mock_git_url: MagicMock
     ) -> None:
@@ -455,8 +455,8 @@ class TestResolveIssueInteractionFlags:
         return_value="coordinator.repos.myrepo",
     )
     @patch(
-        "mcp_coder.cli.utils.get_github_repository_url",
-        return_value="https://github.com/org/repo",
+        "mcp_coder.cli.utils.get_repository_identifier",
+        return_value=MagicMock(https_url="https://github.com/org/repo"),
     )
     def test_cli_flags_override_config(
         self,
@@ -483,8 +483,8 @@ class TestResolveIssueInteractionFlags:
         return_value="coordinator.repos.myrepo",
     )
     @patch(
-        "mcp_coder.cli.utils.get_github_repository_url",
-        return_value="https://github.com/org/repo",
+        "mcp_coder.cli.utils.get_repository_identifier",
+        return_value=MagicMock(https_url="https://github.com/org/repo"),
     )
     def test_config_values_used_when_cli_none(
         self,
@@ -511,8 +511,8 @@ class TestResolveIssueInteractionFlags:
         return_value="coordinator.repos.myrepo",
     )
     @patch(
-        "mcp_coder.cli.utils.get_github_repository_url",
-        return_value="https://github.com/org/repo",
+        "mcp_coder.cli.utils.get_repository_identifier",
+        return_value=MagicMock(https_url="https://github.com/org/repo"),
     )
     def test_cli_true_overrides_config_false(
         self,
@@ -533,11 +533,11 @@ class TestResolveIssueInteractionFlags:
         result = resolve_issue_interaction_flags(args, Path("/tmp/project"))
         assert result == (True, True)
 
-    @patch("mcp_coder.cli.utils.get_github_repository_url", return_value=None)
+    @patch("mcp_coder.cli.utils.get_repository_identifier", return_value=None)
     def test_no_git_remote_falls_back_to_defaults(
         self, _mock_git_url: MagicMock
     ) -> None:
-        """get_github_repository_url returns None -> (False, False)."""
+        """get_repository_identifier returns None -> (False, False)."""
         args = MagicMock(
             spec=["update_issue_labels", "post_issue_comments"],
             update_issue_labels=None,
@@ -548,8 +548,8 @@ class TestResolveIssueInteractionFlags:
 
     @patch("mcp_coder.cli.utils.find_repo_section_by_url", return_value=None)
     @patch(
-        "mcp_coder.cli.utils.get_github_repository_url",
-        return_value="https://github.com/org/unknown-repo",
+        "mcp_coder.cli.utils.get_repository_identifier",
+        return_value=MagicMock(https_url="https://github.com/org/unknown-repo"),
     )
     def test_no_matching_repo_section_falls_back_to_defaults(
         self, _mock_git_url: MagicMock, mock_find: MagicMock
@@ -569,8 +569,8 @@ class TestResolveIssueInteractionFlags:
         return_value="coordinator.repos.myrepo",
     )
     @patch(
-        "mcp_coder.cli.utils.get_github_repository_url",
-        return_value="https://github.com/org/repo",
+        "mcp_coder.cli.utils.get_repository_identifier",
+        return_value=MagicMock(https_url="https://github.com/org/repo"),
     )
     def test_partial_cli_override(
         self,

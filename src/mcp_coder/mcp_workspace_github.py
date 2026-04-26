@@ -9,6 +9,7 @@ from typing import List
 # Top-level package exports
 from mcp_workspace.github_operations import (
     BaseGitHubManager,
+    CheckResult,
     CIResultsManager,
     CIStatusData,
     LabelData,
@@ -16,18 +17,12 @@ from mcp_workspace.github_operations import (
     PullRequestManager,
     RepoIdentifier,
     get_authenticated_username,
+    verify_github,
 )
 
 # CI results submodule (TypedDicts + helpers)
 from mcp_workspace.github_operations.ci_results_manager import (
     JobData,
-)
-
-# GitHub utils submodule
-from mcp_workspace.github_operations.github_utils import (
-    format_github_https_url,
-    get_repo_full_name,
-    parse_github_url,
 )
 
 # Issues subpackage
@@ -55,6 +50,9 @@ __all__: List[str] = [
     # Base manager
     "BaseGitHubManager",
     "get_authenticated_username",
+    # Verification
+    "CheckResult",
+    "verify_github",
     # CI results
     "CIResultsManager",
     "CIStatusData",
@@ -67,9 +65,6 @@ __all__: List[str] = [
     "PullRequestData",
     # Repository
     "RepoIdentifier",
-    "parse_github_url",
-    "format_github_https_url",
-    "get_repo_full_name",
     # Issues
     "IssueManager",
     "IssueBranchManager",
