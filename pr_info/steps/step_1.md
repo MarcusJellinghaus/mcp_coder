@@ -25,41 +25,49 @@ trailing = _count_trailing_backslashes(raw)
 
 New logic — compute text before cursor, count backslashes there:
 ```python
-cursor_loc = self.selection.end          # (row, col) tuple
-before, after = self._split_at_cursor()  # helper or inline
-trailing = _count_trailing_backslashes(before)
+cursor_loc = self.selection.end          # (row, col) Location
+# count backslashes before cursor using text-before-cursor
+trailing = _count_trailing_backslashes(text_before_cursor)
 ```
+
+Note: `_count_trailing_backslashes` is called on the substring of text before the cursor position, extracted using the cursor's `(row, col)` Location.
 
 ## HOW
 
-The cursor position is available via `self.selection.end` which returns a `(row, col)` Location. To get the flat text offset, use `self.document.get_index_from_location(location)` or reconstruct from text lines. The simplest approach:
+The cursor position is available via `self.selection.end` which returns a `(row, col)` Location. To get the text before the cursor, extract the substring using document lines or flat offset. The key insight is to use `_replace_via_keyboard` for mutations instead of `load_text`, since `load_text` destroys undo history.
 
 ```python
-# Get text before and after cursor using document lines
-row, col = self.selection.end
-lines = self.text.split("\n")  # or self.document access
-before = "\n".join(lines[:row]) + ("\n" if row > 0 else "") + lines[row][:col]
-after = lines[row][col:] + "\n".join([""] + lines[row+1:]) if row < len(lines)-1 else lines[row][col:]
+cursor_loc = self.selection.end          # Location(row, col)
+row, col = cursor_loc
+# backslash is one character before cursor
+backslash_loc = Location(row, col - 1)   # assumes backslash is on same line
+
+# For odd backslash (insert newline):
+self._replace_via_keyboard("\n", backslash_loc, cursor_loc)
+
+# For even backslash (remove backslash, then submit):
+self._replace_via_keyboard("", backslash_loc, cursor_loc)
 ```
 
-Or more simply, convert to flat offset:
-```python
-text = self.text
-offset = sum(len(lines[i]) + 1 for i in range(row)) + col  # +1 for \n
-before = text[:offset]
-after = text[offset:]
-```
+**Why `_replace_via_keyboard`?** It preserves undo history and is already used by the `Shift+Enter` handler. Using `load_text` would reset the undo stack, breaking user expectations for Ctrl+Z.
 
 ## ALGORITHM (Enter handler, backslash section)
 
 ```
 1. event.stop() + event.prevent_default()
-2. cursor_loc = self.selection.end  # (row, col)
-3. Compute flat offset from cursor_loc; split self.text into before/after
-4. trailing = _count_trailing_backslashes(before)
-5. if trailing == 0 → submit as normal (strip, post message, clear)
-6. if trailing odd → remove last \ from before, rebuild text as before[:-1] + "\n" + after, load_text + reposition cursor
-7. if trailing even → remove last \ from before, rebuild text as before[:-1] + after, submit stripped text
+2. cursor_loc = self.selection.end  # (row, col) Location
+3. Compute the Location of the character before cursor (the backslash):
+   backslash_loc = Location(row, col - 1)
+4. Extract text before cursor to count trailing backslashes
+5. trailing = _count_trailing_backslashes(text_before_cursor)
+6. if trailing == 0 → submit as normal (strip, post message, clear)
+7. if trailing odd → self._replace_via_keyboard("\n", backslash_loc, cursor_loc)
+   — single atomic edit: removes backslash, inserts newline, preserves undo
+8. if trailing even → compute backslash_loc (one character before cursor)
+   → self._replace_via_keyboard("", backslash_loc, cursor_loc) to remove backslash
+   → text = self.text.strip()
+   → self.post_message(InputArea.Submitted(text))
+   → self.clear()
 ```
 
 ## DATA

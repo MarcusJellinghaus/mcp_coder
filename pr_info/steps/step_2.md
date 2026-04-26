@@ -33,10 +33,14 @@ self.styles.height = min(visual_lines + 2, max_lines)
 self.scroll_cursor_visible()
 ```
 
+> The `+2` offset accounts for widget chrome (border + padding) and remains valid with visual line counts.
+
 ## HOW
 
 - `self.virtual_size.height` — Textual `Widget` property that returns the height of the virtual (scrollable) content in rows. For `TextArea`, this accounts for soft-wrapped lines via `WrappedDocument`.
 - `self.scroll_cursor_visible()` — Textual `TextArea` built-in method. Scrolls the minimum amount to make the cursor visible. No-op when cursor is already in view.
+
+> If direct calling doesn't scroll reliably in testing (because layout reflow hasn't completed), use `self.call_after_refresh(self.scroll_cursor_visible)` as a fallback.
 
 ## ALGORITHM
 
@@ -60,7 +64,8 @@ self.scroll_cursor_visible()
 The existing test already verifies height changes with multiline content. It should still pass since `virtual_size.height >= document.line_count`.
 
 ### New test: `test_input_area_grows_with_wrapped_long_line`
-- Insert a single long line (no `\n`) that exceeds the widget width
+- Use `run_test(size=(40, 20))` to guarantee a known widget width for deterministic wrapping
+- Insert a single long line (no `\n`) that clearly exceeds 40 characters to ensure wrapping occurs
 - Assert that `styles.height` is greater than what `document.line_count + 2` would give (i.e., it accounts for visual wrapping)
 - This validates that `virtual_size.height` is used, not `document.line_count`
 
