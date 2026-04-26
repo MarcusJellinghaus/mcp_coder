@@ -153,19 +153,23 @@ def _looks_like_key(token: str) -> bool:
 
 
 _LABEL_MAP: dict[str, str] = {
+    # Claude section
     "cli_found": "Claude CLI Found",
     "cli_path": "Path",
     "cli_version": "Version",
     "cli_works": "Executable Works",
     "api_integration": "API Integration",
+    # LangChain section
     "backend": "Backend",
     "model": "Model",
     "api_key": "API key",
     "langchain_core": "LangChain core",
     "backend_package": "Backend package",
     "available_models": "Available models",
+    # MCP adapter section
     "mcp_adapters": "MCP adapters",
     "langgraph": "LangGraph",
+    # MLflow section
     "installed": "MLflow installed",
     "enabled": "MLflow enabled",
     "tracking_uri": "Tracking URI",
@@ -173,6 +177,7 @@ _LABEL_MAP: dict[str, str] = {
     "experiment": "Experiment",
     "artifact_location": "Artifact location",
     "tracking_data": "Tracking data",
+    # GitHub section
     "token_configured": "Token configured",
     "authenticated_user": "Authenticated user",
     "repo_url": "Repo URL",
@@ -714,9 +719,7 @@ def execute_verify(args: argparse.Namespace) -> int:
 
     # 5. Collect and display install hints
     all_hints: list[str] = []
-    all_hints.extend(
-        _collect_install_hints(github_result)
-    )  # unconditional — always called
+    all_hints.extend(_collect_install_hints(github_result))
     if langchain_result:
         all_hints.extend(_collect_install_hints(langchain_result))
     if active_provider == "claude":
