@@ -348,17 +348,6 @@ class TestComputeExitCode:
 class TestMcpServersInVerify:
     """Tests for MCP server health check integration in execute_verify."""
 
-    @pytest.fixture(autouse=True)
-    def _mock_verify_github(self) -> Any:
-        with patch(
-            f"{_VERIFY}.verify_github",
-            return_value={
-                "token_configured": {"ok": True, "value": "configured"},
-                "overall_ok": True,
-            },
-        ):
-            yield
-
     @patch(f"{_VERIFY}.parse_claude_mcp_list")
     @patch(f"{_VERIFY}.prepare_llm_environment", return_value={"K": "V"})
     @patch(f"{_VERIFY}.log_to_mlflow", create=True)
@@ -488,17 +477,6 @@ class TestConfigSectionInVerify:
         with patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None):
             yield
 
-    @pytest.fixture(autouse=True)
-    def _mock_verify_github(self) -> Any:
-        with patch(
-            f"{_VERIFY}.verify_github",
-            return_value={
-                "token_configured": {"ok": True, "value": "configured"},
-                "overall_ok": True,
-            },
-        ):
-            yield
-
     @patch(f"{_VERIFY}.verify_config")
     @patch(f"{_VERIFY}.log_to_mlflow", create=True)
     @patch(f"{_VERIFY}.prompt_llm")
@@ -588,17 +566,6 @@ class TestConfigSectionInVerify:
 
 class TestMcpEditSmokeTest:
     """Tests for _run_mcp_edit_smoke_test function."""
-
-    @pytest.fixture(autouse=True)
-    def _mock_verify_github(self) -> Any:
-        with patch(
-            f"{_VERIFY}.verify_github",
-            return_value={
-                "token_configured": {"ok": True, "value": "configured"},
-                "overall_ok": True,
-            },
-        ):
-            yield
 
     def _symbols(self) -> dict[str, str]:
         return {"success": "[OK]", "failure": "[FAIL]", "warning": "[WARN]"}
