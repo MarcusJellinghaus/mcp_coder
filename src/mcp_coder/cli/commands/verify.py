@@ -181,6 +181,16 @@ _LABEL_MAP: dict[str, str] = {
     "experiment": "Experiment",
     "artifact_location": "Artifact location",
     "tracking_data": "Tracking data",
+    # GitHub section
+    "token_configured": "Token configured",
+    "authenticated_user": "Authenticated user",
+    "repo_url": "Repo URL",
+    "repo_accessible": "Repo accessible",
+    "branch_protection": "Branch protection",
+    "ci_checks_required": "CI checks required",
+    "strict_mode": "Strict mode",
+    "force_push": "Force push",
+    "branch_deletion": "Branch deletion",
 }
 
 

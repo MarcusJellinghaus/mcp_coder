@@ -471,3 +471,56 @@ class TestFormatMcpSectionForCompleteness:
         )
         assert "for completeness" in output
         assert "via langchain-mcp-adapters" in output
+
+
+class TestGitHubLabelMappings:
+    """Tests for GitHub label mappings in _format_section (Step 2)."""
+
+    _GITHUB_KEYS = (
+        "token_configured",
+        "authenticated_user",
+        "repo_url",
+        "repo_accessible",
+        "branch_protection",
+        "ci_checks_required",
+        "strict_mode",
+        "force_push",
+        "branch_deletion",
+    )
+
+    def _symbols(self) -> dict[str, str]:
+        return {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
+
+    def test_all_github_keys_in_label_map(self) -> None:
+        """All 9 GitHub check keys exist in _LABEL_MAP."""
+        from mcp_coder.cli.commands.verify import _LABEL_MAP
+
+        for key in self._GITHUB_KEYS:
+            assert key in _LABEL_MAP, f"Missing key: {key}"
+
+    def test_format_section_renders_github_labels(self) -> None:
+        """_format_section renders human-readable labels for GitHub entries."""
+        result: dict[str, Any] = {
+            "token_configured": {"ok": True, "value": "YES"},
+            "repo_accessible": {"ok": True, "value": "owner/repo"},
+            "overall_ok": True,
+        }
+        output = _format_section("GITHUB", result, self._symbols())
+        assert "Token configured" in output
+        assert "Repo accessible" in output
+        assert "[OK]" in output
+
+    def test_format_section_github_error_entry(self) -> None:
+        """Entry with ok=False renders [ERR] symbol."""
+        result: dict[str, Any] = {
+            "token_configured": {
+                "ok": False,
+                "value": "not set",
+                "error": "GITHUB_TOKEN not found",
+            },
+            "overall_ok": False,
+        }
+        output = _format_section("GITHUB", result, self._symbols())
+        assert "Token configured" in output
+        assert "[ERR]" in output
+        assert "GITHUB_TOKEN not found" in output
