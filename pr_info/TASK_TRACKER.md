@@ -41,9 +41,9 @@ See [step_2.md](./steps/step_2.md) for details.
 
 See [step_3.md](./steps/step_3.md) for details.
 
-- [ ] Implementation (create `test_claude_code_cli_streaming_integration.py` with three integration tests)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (create `test_claude_code_cli_streaming_integration.py` with three integration tests)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: iCoder `RealLLMService.stream()` smoke test
 
