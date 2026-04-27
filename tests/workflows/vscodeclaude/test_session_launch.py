@@ -173,8 +173,8 @@ class TestLaunch:
         assert captured_env is None
 
 
-class TestInstallFromGithubThreading:
-    """Tests for install_from_github parameter threading through session launch functions."""
+class TestSkipGithubInstallThreading:
+    """Tests for skip_github_install parameter threading through session launch functions."""
 
     def test_prepare_and_launch_session_passes_skip_github_install_to_startup_script(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

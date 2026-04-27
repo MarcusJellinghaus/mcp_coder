@@ -263,8 +263,8 @@ class TestExecuteCoordinatorRun:
         assert "Created default config file" in caplog.text
 
 
-class TestInstallFromGithubWiring:
-    """Tests for --install-from-github flag wiring through commands."""
+class TestSkipGithubInstallWiring:
+    """Tests for --no-install-from-github flag wiring through commands."""
 
     @patch("mcp_coder.cli.commands.coordinator.commands.process_eligible_issues")
     @patch("mcp_coder.cli.commands.coordinator.commands.restart_closed_sessions")
@@ -275,7 +275,7 @@ class TestInstallFromGithubWiring:
     @patch("mcp_coder.cli.commands.coordinator.commands.load_vscodeclaude_config")
     @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
     @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
-    def test_execute_coordinator_vscodeclaude_passes_install_from_github(
+    def test_execute_coordinator_vscodeclaude_passes_skip_github_install(
         self,
         mock_create_config: MagicMock,
         mock_load_repo: MagicMock,
@@ -287,7 +287,7 @@ class TestInstallFromGithubWiring:
         mock_restart: MagicMock,
         mock_process: MagicMock,
     ) -> None:
-        """execute_coordinator_vscodeclaude passes install_from_github to process_eligible_issues."""
+        """execute_coordinator_vscodeclaude passes skip_github_install to process_eligible_issues."""
         mock_create_config.return_value = False
         mock_load_vsc_config.return_value = {
             "workspace_base": "/tmp",
@@ -329,7 +329,7 @@ class TestInstallFromGithubWiring:
     @patch("mcp_coder.cli.commands.coordinator.commands.IssueBranchManager")
     @patch("mcp_coder.cli.commands.coordinator.commands.IssueManager")
     @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
-    def test_handle_intervention_mode_passes_install_from_github(
+    def test_handle_intervention_mode_passes_skip_github_install(
         self,
         mock_load_repo: MagicMock,
         mock_issue_mgr_cls: MagicMock,
@@ -337,7 +337,7 @@ class TestInstallFromGithubWiring:
         mock_load_repo_vsc: MagicMock,
         mock_prepare: MagicMock,
     ) -> None:
-        """_handle_intervention_mode passes install_from_github to prepare_and_launch_session."""
+        """_handle_intervention_mode passes skip_github_install to prepare_and_launch_session."""
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/owner/repo.git",
         }
@@ -363,7 +363,6 @@ class TestInstallFromGithubWiring:
             "status": "open",
             "vscode_pid": 1234,
             "is_intervention": True,
-            "install_from_github": True,
             "started_at": "2024-01-01",
         }
 
