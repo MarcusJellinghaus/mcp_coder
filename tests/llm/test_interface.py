@@ -866,6 +866,82 @@ class TestPromptLLMLogsDirDerivation:
         assert result["text"] == "Response with no env vars"
 
 
+class TestPromptLLMStreamLogsDirDerivation:
+    """Tests for logs_dir derivation from env_vars in prompt_llm_stream."""
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.ask_claude_code_cli_stream"
+    )
+    def test_logs_dir_derived_from_env_vars_project_dir(
+        self, mock_stream: MagicMock
+    ) -> None:
+        """When env_vars has MCP_CODER_PROJECT_DIR, logs_dir is derived and passed."""
+        mock_stream.return_value = iter([{"type": "done", "usage": {}}])
+        test_env_vars = {"MCP_CODER_PROJECT_DIR": "/home/user/mcp-coder"}
+
+        list(prompt_llm_stream("Test question", env_vars=test_env_vars))
+
+        mock_stream.assert_called_once_with(
+            "Test question",
+            session_id=None,
+            timeout=30,
+            env_vars=test_env_vars,
+            cwd=None,
+            mcp_config=None,
+            branch_name=None,
+            logs_dir=str(Path("/home/user/mcp-coder") / "logs"),
+            append_system_prompt=None,
+            system_prompt_replace=None,
+        )
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.ask_claude_code_cli_stream"
+    )
+    def test_logs_dir_none_when_env_vars_missing_project_dir(
+        self, mock_stream: MagicMock
+    ) -> None:
+        """When env_vars lacks MCP_CODER_PROJECT_DIR, logs_dir=None."""
+        mock_stream.return_value = iter([{"type": "done", "usage": {}}])
+        test_env_vars = {"OTHER_VAR": "some_value"}
+
+        list(prompt_llm_stream("Test question", env_vars=test_env_vars))
+
+        mock_stream.assert_called_once_with(
+            "Test question",
+            session_id=None,
+            timeout=30,
+            env_vars=test_env_vars,
+            cwd=None,
+            mcp_config=None,
+            branch_name=None,
+            logs_dir=None,
+            append_system_prompt=None,
+            system_prompt_replace=None,
+        )
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.ask_claude_code_cli_stream"
+    )
+    def test_logs_dir_none_when_env_vars_is_none(self, mock_stream: MagicMock) -> None:
+        """When env_vars is None, logs_dir=None (backward compat)."""
+        mock_stream.return_value = iter([{"type": "done", "usage": {}}])
+
+        list(prompt_llm_stream("Test question", env_vars=None))
+
+        mock_stream.assert_called_once_with(
+            "Test question",
+            session_id=None,
+            timeout=30,
+            env_vars=None,
+            cwd=None,
+            mcp_config=None,
+            branch_name=None,
+            logs_dir=None,
+            append_system_prompt=None,
+            system_prompt_replace=None,
+        )
+
+
 class TestPromptLlmLangchainRouting:
     """Test that prompt_llm correctly routes to the langchain provider."""
 
