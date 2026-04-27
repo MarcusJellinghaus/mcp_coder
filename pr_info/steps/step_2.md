@@ -21,6 +21,7 @@
 
 - Place `_BRANCH_PROTECTION_CHILDREN` right after `_LABEL_MAP` (before `_format_section`)
 - Modify the loop inside `_format_section` — no signature changes
+- The loop relies on dict insertion order (branch_protection before children), which is guaranteed by the upstream `verify_github()`
 
 ## ALGORITHM
 
@@ -29,6 +30,8 @@ _BRANCH_PROTECTION_CHILDREN = frozenset({"ci_checks_required", "strict_mode", "f
 
 # Inside _format_section loop, before existing rendering:
 bp_ok = None  # track branch_protection parent state
+# NOTE: relies on dict insertion order — branch_protection must precede its children
+# in the result dict. This is guaranteed by verify_github() in mcp-workspace.
 
 for key, entry in result.items():
     ...existing skip logic...
