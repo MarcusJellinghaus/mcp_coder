@@ -458,6 +458,8 @@ def _build_github_install_section(folder_path: Path) -> str:
         lines.append(f"uv pip install --no-deps {quoted}")
     lines.append("uv pip install -e . --no-deps")
 
+    # NOTE: If stale git cache becomes an issue, add --reinstall to the
+    # uv pip install commands above to force re-fetch from GitHub.
     return "\n".join(lines)
 
 
@@ -472,7 +474,7 @@ def create_startup_script(
     timeout: int = DEFAULT_PROMPT_TIMEOUT,
     mcp_coder_install_path: Path | None = None,
     session_folder_path: Path | None = None,
-    install_from_github: bool = False,
+    skip_github_install: bool = False,
 ) -> Path:
     """Create platform-specific startup script.
 
@@ -489,8 +491,8 @@ def create_startup_script(
             (for finding the executable, separate from session folder)
         session_folder_path: Path to session folder for MCP environment variables
             (overrides folder_path if provided, used for MCP_CODER_PROJECT_DIR)
-        install_from_github: If True, read [tool.mcp-coder.install-from-github] from the repo's
-            pyproject.toml and inject uv pip install commands for GitHub packages.
+        skip_github_install: If True, skip reading [tool.mcp-coder.install-from-github]
+            from pyproject.toml. Default False (auto-detect).
 
     Returns:
         Path to created script (.bat or .sh)
@@ -548,8 +550,8 @@ def create_startup_script(
             session_folder_path=str(session_path),
         )
 
-        # Inject GitHub override install commands when install_from_github is True
-        if install_from_github:
+        # Auto-detect GitHub override install commands from pyproject.toml
+        if not skip_github_install:
             github_install_section = _build_github_install_section(folder_path)
             venv_section = venv_section + github_install_section
 

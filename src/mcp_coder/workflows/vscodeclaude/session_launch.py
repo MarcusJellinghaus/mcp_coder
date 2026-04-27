@@ -193,7 +193,7 @@ def prepare_and_launch_session(
             is_intervention=is_intervention,
             timeout=DEFAULT_PROMPT_TIMEOUT,
             session_folder_path=folder_path,
-            install_from_github=install_from_github,
+            skip_github_install=install_from_github,
         )
 
         # Create VSCode task

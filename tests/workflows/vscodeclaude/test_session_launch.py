@@ -265,7 +265,7 @@ class TestInstallFromGithubThreading:
         )
 
         mock_create_startup.assert_called_once()
-        assert mock_create_startup.call_args.kwargs["install_from_github"] is True
+        assert mock_create_startup.call_args.kwargs["skip_github_install"] is True
 
     def test_process_eligible_issues_passes_install_from_github(
         self, monkeypatch: pytest.MonkeyPatch
