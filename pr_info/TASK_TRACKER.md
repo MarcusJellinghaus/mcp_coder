@@ -21,7 +21,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-- [ ] [Step 1: Tests for nested branch protection rendering](steps/step_1.md)
+- [x] [Step 1: Tests for nested branch protection rendering](steps/step_1.md)
 - [ ] [Step 2: Implement nested rendering in _format_section](steps/step_2.md)
 
 ## Pull Request

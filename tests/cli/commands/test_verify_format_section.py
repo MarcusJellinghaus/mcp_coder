@@ -473,6 +473,109 @@ class TestFormatMcpSectionForCompleteness:
         assert "via langchain-mcp-adapters" in output
 
 
+class TestBranchProtectionNesting:
+    """Tests for branch protection nested rendering in _format_section (#899)."""
+
+    def _symbols(self) -> dict[str, str]:
+        return {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
+
+    def test_children_indented_when_parent_ok(self) -> None:
+        """Children render at 4-space indent under parent when ok=True."""
+        result: dict[str, Any] = {
+            "branch_protection": {"ok": True, "value": "main protected"},
+            "ci_checks_required": {"ok": True, "value": "8 checks configured"},
+            "strict_mode": {"ok": True, "value": "enabled"},
+            "force_push": {"ok": True, "value": "disabled"},
+            "branch_deletion": {"ok": True, "value": "disabled"},
+            "overall_ok": True,
+        }
+        output = _format_section("GITHUB", result, self._symbols())
+        lines = output.split("\n")
+        # Parent at 2-space indent
+        parent_lines = [l for l in lines if "Branch protection" in l]
+        assert len(parent_lines) == 1
+        assert parent_lines[0].startswith("  ")
+        assert "[OK]" in parent_lines[0]
+        # Children at 4-space indent
+        for child_label in ("CI checks required", "Force push", "Branch deletion"):
+            child_lines = [l for l in lines if child_label in l]
+            assert len(child_lines) == 1, f"Expected 1 line for {child_label}"
+            assert child_lines[0].startswith(
+                "    "
+            ), f"{child_label} should be at 4-space indent"
+
+    def test_children_suppressed_when_parent_fails(self) -> None:
+        """Only parent line appears when branch_protection ok=False."""
+        result: dict[str, Any] = {
+            "branch_protection": {"ok": False, "value": "main is not protected"},
+            "ci_checks_required": {
+                "ok": False,
+                "value": "unknown",
+                "error": "no protection",
+            },
+            "strict_mode": {
+                "ok": False,
+                "value": "unknown",
+                "error": "no protection",
+            },
+            "force_push": {
+                "ok": False,
+                "value": "unknown",
+                "error": "no protection",
+            },
+            "branch_deletion": {
+                "ok": False,
+                "value": "unknown",
+                "error": "no protection",
+            },
+            "overall_ok": False,
+        }
+        output = _format_section("GITHUB", result, self._symbols())
+        # Parent line present
+        assert "Branch protection" in output
+        # Children suppressed
+        assert "CI checks required" not in output
+        assert "Strict mode" not in output
+        assert "Force push" not in output
+        assert "Branch deletion" not in output
+
+    def test_strict_mode_no_symbol(self) -> None:
+        """strict_mode renders value only — no [OK]/[ERR]/[WARN] symbol."""
+        result: dict[str, Any] = {
+            "branch_protection": {"ok": True, "value": "main protected"},
+            "ci_checks_required": {"ok": True, "value": "8 checks configured"},
+            "strict_mode": {"ok": True, "value": "enabled"},
+            "force_push": {"ok": True, "value": "disabled"},
+            "branch_deletion": {"ok": True, "value": "disabled"},
+            "overall_ok": True,
+        }
+        output = _format_section("GITHUB", result, self._symbols())
+        lines = output.split("\n")
+        strict_lines = [l for l in lines if "Strict mode" in l]
+        assert len(strict_lines) == 1
+        strict_line = strict_lines[0]
+        assert "enabled" in strict_line
+        assert "[OK]" not in strict_line
+        assert "[ERR]" not in strict_line
+        assert "[WARN]" not in strict_line
+
+    def test_non_github_section_unaffected(self) -> None:
+        """Claude section entries remain flat at 2-space indent."""
+        result: dict[str, Any] = {
+            "cli_found": {"ok": True, "value": "YES"},
+            "cli_version": {"ok": True, "value": "1.0.0"},
+            "overall_ok": True,
+        }
+        output = _format_section("BASIC VERIFICATION", result, self._symbols())
+        lines = output.split("\n")
+        content_lines = [l for l in lines if l.strip() and not l.startswith("===")]
+        for line in content_lines:
+            assert line.startswith("  "), f"Expected 2-space indent: {line!r}"
+            assert not line.startswith(
+                "    "
+            ), f"Non-GitHub entry should not be at 4-space indent: {line!r}"
+
+
 class TestGitHubLabelMappings:
     """Tests for GitHub label mappings in _format_section (Step 2)."""
 
