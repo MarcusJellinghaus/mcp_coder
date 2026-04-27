@@ -180,6 +180,7 @@ _LABEL_MAP: dict[str, str] = {
     "strict_mode": "Strict mode",
     "force_push": "Force push",
     "branch_deletion": "Branch deletion",
+    "auto_delete_branches": "Auto-delete branches",
 }
 
 
