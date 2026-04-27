@@ -65,7 +65,6 @@ class TestCleanup:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": "2024-01-01T00:00:00Z"}
         sessions_file.write_text(json.dumps(store))
@@ -110,7 +109,6 @@ class TestCleanup:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": "2024-01-01T00:00:00Z"}
         sessions_file.write_text(json.dumps(store))
@@ -145,7 +143,6 @@ class TestCleanup:
             "vscode_pid": 1234,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": "2024-01-01T00:00:00Z"}
         sessions_file.write_text(json.dumps(store))
@@ -166,7 +163,6 @@ class TestCleanup:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         # Create the folder
@@ -198,7 +194,6 @@ class TestCleanup:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         (tmp_path / "dirty_folder").mkdir()
@@ -228,7 +223,6 @@ class TestCleanup:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         (tmp_path / "clean_folder").mkdir()
@@ -268,7 +262,6 @@ class TestCleanup:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         monkeypatch.setattr(
@@ -295,7 +288,6 @@ class TestCleanup:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         monkeypatch.setattr(
@@ -340,7 +332,6 @@ class TestCleanup:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         result = delete_session_folder(session, workspace_base=str(tmp_path))
@@ -379,7 +370,6 @@ class TestCleanup:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         # Folder does NOT exist (don't create it)
@@ -412,7 +402,6 @@ class TestCleanup:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         no_git_folder = tmp_path / "no_git_folder"
@@ -446,7 +435,6 @@ class TestCleanup:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         error_folder = tmp_path / "error_folder"
@@ -477,7 +465,6 @@ class TestCleanup:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         (tmp_path / "no_git_folder").mkdir()  # empty folder, no files
@@ -511,7 +498,6 @@ class TestCleanup:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         (tmp_path / "no_git_folder").mkdir()  # empty folder, no files
@@ -538,7 +524,6 @@ class TestCleanup:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         (tmp_path / "error_folder").mkdir()  # empty folder, no files
@@ -572,7 +557,6 @@ class TestCleanup:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         (tmp_path / "error_folder").mkdir()  # empty folder, no files
@@ -613,7 +597,6 @@ class TestGetStaleSessions:
                     "vscode_pid": None,
                     "started_at": "2024-01-01T00:00:00Z",
                     "is_intervention": False,
-                    "install_from_github": False,
                 }
             ],
             "last_updated": "",
@@ -685,7 +668,6 @@ class TestGetStaleSessions:
                     "vscode_pid": None,
                     "started_at": "2024-01-01T00:00:00Z",
                     "is_intervention": False,
-                    "install_from_github": False,
                 }
             ],
             "last_updated": "",
@@ -752,7 +734,6 @@ class TestGetStaleSessions:
                     "vscode_pid": None,
                     "started_at": "2024-01-01T00:00:00Z",
                     "is_intervention": False,
-                    "install_from_github": False,
                 }
             ],
             "last_updated": "",
@@ -819,7 +800,6 @@ class TestGetStaleSessions:
                     "vscode_pid": 1234,
                     "started_at": "2024-01-01T00:00:00Z",
                     "is_intervention": False,
-                    "install_from_github": False,
                 }
             ],
             "last_updated": "",
@@ -880,7 +860,6 @@ class TestGetStaleSessions:
                     "vscode_pid": None,
                     "started_at": "2024-01-01T00:00:00Z",
                     "is_intervention": False,
-                    "install_from_github": False,
                 }
             ],
             "last_updated": "",
@@ -958,7 +937,6 @@ class TestGetStaleSessions:
                     "vscode_pid": None,
                     "started_at": "2024-01-01T00:00:00Z",
                     "is_intervention": False,
-                    "install_from_github": False,
                 }
             ],
             "last_updated": "",
@@ -1032,7 +1010,6 @@ class TestGetStaleSessions:
                     "vscode_pid": None,
                     "started_at": "2024-01-01T00:00:00Z",
                     "is_intervention": False,
-                    "install_from_github": False,
                 }
             ],
             "last_updated": "",
@@ -1106,7 +1083,6 @@ class TestGetStaleSessions:
                     "vscode_pid": None,
                     "started_at": "2024-01-01T00:00:00Z",
                     "is_intervention": False,
-                    "install_from_github": False,
                 }
             ],
             "last_updated": "",
@@ -1180,7 +1156,6 @@ class TestGetStaleSessions:
                     "vscode_pid": None,
                     "started_at": "2024-01-01T00:00:00Z",
                     "is_intervention": False,
-                    "install_from_github": False,
                 }
             ],
             "last_updated": "",
@@ -1269,7 +1244,6 @@ class TestGetStaleSessions:
                     "vscode_pid": 9999,
                     "started_at": "2024-01-01T00:00:00Z",
                     "is_intervention": False,
-                    "install_from_github": False,
                 }
             ],
             "last_updated": "",
@@ -1324,7 +1298,6 @@ class TestGetStaleSessions:
                     "vscode_pid": None,
                     "started_at": "2024-01-01T00:00:00Z",
                     "is_intervention": False,
-                    "install_from_github": False,
                 }
             ],
             "last_updated": "",
@@ -1403,7 +1376,6 @@ class TestGetStaleSessions:
                     "vscode_pid": None,
                     "started_at": "2024-01-01T00:00:00Z",
                     "is_intervention": False,
-                    "install_from_github": False,
                 }
             ],
             "last_updated": "",
@@ -1468,7 +1440,6 @@ class TestGetStaleSessions:
                     "vscode_pid": None,
                     "started_at": "2024-01-01T00:00:00Z",
                     "is_intervention": False,
-                    "install_from_github": False,
                 }
             ],
             "last_updated": "",
@@ -1541,7 +1512,6 @@ class TestGetStaleSessions:
                     "vscode_pid": None,
                     "started_at": "2024-01-01T00:00:00Z",
                     "is_intervention": False,
-                    "install_from_github": False,
                 }
             ],
             "last_updated": "",
@@ -1615,7 +1585,6 @@ class TestGetStaleSessions:
                     "vscode_pid": None,
                     "started_at": "2024-01-01T00:00:00Z",
                     "is_intervention": False,
-                    "install_from_github": False,
                 }
             ],
             "last_updated": "",
@@ -1685,7 +1654,6 @@ class TestGetStaleSessions:
                     "vscode_pid": None,
                     "started_at": "2024-01-01T00:00:00Z",
                     "is_intervention": False,
-                    "install_from_github": False,
                 }
             ],
             "last_updated": "",
@@ -1738,7 +1706,6 @@ class TestGetStaleSessions:
                     "vscode_pid": None,
                     "started_at": "2024-01-01T00:00:00Z",
                     "is_intervention": False,
-                    "install_from_github": False,
                 }
             ],
             "last_updated": "",
@@ -1807,7 +1774,6 @@ class TestGetStaleSessions:
                     "vscode_pid": None,
                     "started_at": "2024-01-01T00:00:00Z",
                     "is_intervention": False,
-                    "install_from_github": False,
                 }
             ],
             "last_updated": "",
@@ -1970,7 +1936,6 @@ class TestSoftDeleteAndRetry:
             "vscode_pid": 0,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         # Mock safe_delete_folder to fail
@@ -2014,7 +1979,6 @@ class TestSoftDeleteAndRetry:
             "vscode_pid": 0,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         monkeypatch.setattr(
@@ -2055,7 +2019,6 @@ class TestSoftDeleteAndRetry:
             "vscode_pid": 0,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         monkeypatch.setattr(
@@ -2088,7 +2051,6 @@ class TestSoftDeleteAndRetry:
             "vscode_pid": 0,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         # Make workspace file unlink raise OSError
@@ -2152,7 +2114,6 @@ class TestSoftDeleteAndRetry:
             "vscode_pid": 0,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         # First call: deletion fails, session is stale+clean

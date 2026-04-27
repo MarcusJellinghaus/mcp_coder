@@ -90,7 +90,6 @@ class TestSessionManagement:
             "vscode_pid": 1234,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         store: VSCodeClaudeSessionStore = {
@@ -132,7 +131,6 @@ class TestSessionManagement:
             "vscode_pid": None,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
         sessions_file.write_text(json.dumps(store))
@@ -172,7 +170,6 @@ class TestSessionManagement:
             "vscode_pid": 5678,
             "started_at": "2024-01-22T11:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         add_session(session)
@@ -199,7 +196,6 @@ class TestSessionManagement:
             "vscode_pid": None,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
         sessions_file.write_text(json.dumps(store))
@@ -264,7 +260,6 @@ class TestSessionManagement:
                 "vscode_pid": 1111,
                 "started_at": "2024-01-01T00:00:00Z",
                 "is_intervention": False,
-                "install_from_github": False,
             },
             {
                 "folder": str(tmp_path / "session_b"),  # folder not created
@@ -274,7 +269,6 @@ class TestSessionManagement:
                 "vscode_pid": 2222,
                 "started_at": "2024-01-01T00:00:00Z",
                 "is_intervention": False,
-                "install_from_github": False,
             },
         ]
         store = {"sessions": sessions, "last_updated": "2024-01-22T10:30:00Z"}
@@ -301,7 +295,6 @@ class TestSessionManagement:
             "vscode_pid": None,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
         sessions_file.write_text(json.dumps(store))
@@ -412,7 +405,6 @@ class TestUpdateSessionStatus:
                     "vscode_pid": 1234,
                     "started_at": "2024-01-01T00:00:00Z",
                     "is_intervention": False,
-                    "install_from_github": False,
                 }
             ],
             "last_updated": "",
@@ -465,7 +457,6 @@ class TestUpdateSessionStatus:
                     "vscode_pid": 1234,
                     "started_at": "2024-01-01T00:00:00Z",
                     "is_intervention": False,
-                    "install_from_github": False,
                 },
                 {
                     "folder": "/workspace/repo_456",
@@ -475,7 +466,6 @@ class TestUpdateSessionStatus:
                     "vscode_pid": 5678,
                     "started_at": "2024-01-01T00:00:00Z",
                     "is_intervention": False,
-                    "install_from_github": False,
                 },
             ],
             "last_updated": "",
@@ -510,7 +500,6 @@ class TestUpdateSessionStatus:
                     "vscode_pid": 1234,
                     "started_at": "2024-01-01T00:00:00Z",
                     "is_intervention": False,
-                    "install_from_github": False,
                 }
             ],
             "last_updated": "old-timestamp",
@@ -810,7 +799,6 @@ class TestGetSessionForIssueSoftDelete:
             "vscode_pid": None,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
         sessions_file.write_text(json.dumps(store))
@@ -843,7 +831,6 @@ class TestGetSessionForIssueSoftDelete:
             "vscode_pid": None,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
         sessions_file.write_text(json.dumps(store))
@@ -877,7 +864,6 @@ class TestGetSessionForIssueSoftDelete:
             "vscode_pid": None,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         session2 = {
             "folder": str(workspace_base / "repo_42-folder1"),
@@ -887,7 +873,6 @@ class TestGetSessionForIssueSoftDelete:
             "vscode_pid": None,
             "started_at": "2024-01-22T11:30:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {
             "sessions": [session1, session2],
@@ -970,7 +955,6 @@ class TestWarnOrphanFolders:
             "vscode_pid": None,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": ""}
         sessions_file.write_text(json.dumps(store))
@@ -1090,7 +1074,6 @@ class TestIsSessionActiveFallbackChain:
             "vscode_pid": 28036,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         monkeypatch.setattr(
@@ -1139,7 +1122,6 @@ class TestIsSessionActiveFallbackChain:
             "vscode_pid": 28036,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         update_mock = MagicMock()
@@ -1202,7 +1184,6 @@ class TestIsSessionActiveFallbackChain:
             "vscode_pid": 28036,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         monkeypatch.setattr(
@@ -1254,7 +1235,6 @@ class TestIsSessionActiveFallbackChain:
             "vscode_pid": 1234,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         monkeypatch.setattr(
@@ -1306,7 +1286,6 @@ class TestIsSessionActiveFallbackChain:
             "status": "s",
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
             **session_data,
         }
 
@@ -1343,7 +1322,6 @@ class TestIsSessionActiveFallbackChain:
             "vscode_pid": 1234,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         monkeypatch.setattr(

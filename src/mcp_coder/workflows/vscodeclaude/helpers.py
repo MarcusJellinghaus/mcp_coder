@@ -66,7 +66,6 @@ def build_session(
     status: str,
     vscode_pid: int,
     is_intervention: bool,
-    install_from_github: bool = False,
 ) -> VSCodeClaudeSession:
     """Build a session dictionary.
 
@@ -77,7 +76,6 @@ def build_session(
         status: Status label
         vscode_pid: VSCode process ID
         is_intervention: If True, intervention mode
-        install_from_github: If True, install MCP packages from GitHub repos instead of PyPI
 
     Returns:
         VSCodeClaudeSession dict
@@ -90,7 +88,6 @@ def build_session(
         "vscode_pid": vscode_pid,
         "started_at": datetime.now(timezone.utc).isoformat(),
         "is_intervention": is_intervention,
-        "install_from_github": install_from_github,
     }
 
 

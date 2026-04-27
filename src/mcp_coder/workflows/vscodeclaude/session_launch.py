@@ -224,7 +224,6 @@ def prepare_and_launch_session(
             status=status,
             vscode_pid=pid,
             is_intervention=is_intervention,
-            install_from_github=install_from_github,
         )
         add_session(session)
 
@@ -425,7 +424,6 @@ def regenerate_session_files(
     issue_url = issue.get("url", "")
     status = get_issue_status(issue)
     is_intervention = session.get("is_intervention", False)
-    install_from_github = session.get("install_from_github", False)
 
     # Get current branch from git
     try:
@@ -449,7 +447,6 @@ def regenerate_session_files(
         is_intervention=is_intervention,
         timeout=DEFAULT_PROMPT_TIMEOUT,
         session_folder_path=folder_path,
-        install_from_github=install_from_github,
     )
 
     # Regenerate VSCode task
