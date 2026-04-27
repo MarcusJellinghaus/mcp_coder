@@ -87,7 +87,6 @@ class TestCacheAwareFunctions:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         # Should NOT be stale since status matches
@@ -120,7 +119,6 @@ class TestCacheAwareFunctions:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         # Should BE stale since status differs
@@ -153,7 +151,6 @@ class TestCacheAwareFunctions:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         result = is_issue_closed(session, cached_issues=cached_issues)
@@ -185,7 +182,6 @@ class TestCacheAwareFunctions:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         result = is_issue_closed(session, cached_issues=cached_issues)

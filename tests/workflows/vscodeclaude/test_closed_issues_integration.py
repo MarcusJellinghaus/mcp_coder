@@ -53,7 +53,6 @@ class TestClosedIssueIntegration:
                 "vscode_pid": 9999,  # Non-existent PID
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
-                "install_from_github": False,
             }
         ]
 
@@ -190,7 +189,6 @@ class TestClosedIssueIntegration:
                 "vscode_pid": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
-                "install_from_github": False,
             }
         ]
 
@@ -262,7 +260,6 @@ class TestClosedIssueIntegration:
                 "vscode_pid": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
-                "install_from_github": False,
             },
             {
                 "folder": "/path/to/owner-repo-408",
@@ -272,7 +269,6 @@ class TestClosedIssueIntegration:
                 "vscode_pid": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
-                "install_from_github": False,
             },
             {
                 "folder": "/path/to/owner-repo-100",
@@ -282,7 +278,6 @@ class TestClosedIssueIntegration:
                 "vscode_pid": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
-                "install_from_github": False,
             },
         ]
 
@@ -405,7 +400,6 @@ class TestClosedIssueIntegration:
                 "vscode_pid": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
-                "install_from_github": False,
             }
         ]
 

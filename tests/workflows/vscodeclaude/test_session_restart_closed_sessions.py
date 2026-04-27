@@ -96,7 +96,6 @@ class TestRestartClosedSessionsBranchHandling:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": ""}
         sessions_file.write_text(json.dumps(store))
@@ -176,7 +175,6 @@ class TestRestartClosedSessionsBranchHandling:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": ""}
         sessions_file.write_text(json.dumps(store))
@@ -256,7 +254,6 @@ class TestRestartClosedSessionsBranchHandling:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": ""}
         sessions_file.write_text(json.dumps(store))
@@ -380,7 +377,6 @@ class TestRestartClosedSessionsBranchHandling:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": ""}
         sessions_file.write_text(json.dumps(store))
@@ -447,7 +443,6 @@ class TestRestartClosedSessionsBranchHandling:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": True,  # Intervention session
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": ""}
         sessions_file.write_text(json.dumps(store))
@@ -495,7 +490,6 @@ class TestRestartClosedSessionsBranchHandling:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
 
         issue: IssueData = {

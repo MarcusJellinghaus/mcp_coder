@@ -289,7 +289,6 @@ class TestSessionRestart:
             "vscode_pid": 1234,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
         sessions_file.write_text(json.dumps(store))
@@ -338,7 +337,6 @@ class TestSessionRestart:
             "vscode_pid": 1234,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
         sessions_file.write_text(json.dumps(store))
@@ -407,7 +405,6 @@ class TestSessionRestart:
             "vscode_pid": 1234,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
         sessions_file.write_text(json.dumps(store))
@@ -463,7 +460,6 @@ class TestSessionRestart:
             "vscode_pid": 1234,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
         sessions_file.write_text(json.dumps(store))
@@ -536,7 +532,6 @@ class TestSessionRestart:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": ""}
         sessions_file.write_text(json.dumps(store))
@@ -609,7 +604,6 @@ class TestSessionRestart:
             "vscode_pid": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": ""}
         sessions_file.write_text(json.dumps(store))
@@ -669,7 +663,6 @@ class TestSessionRestart:
             "vscode_pid": 1234,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
         sessions_file.write_text(json.dumps(store))
@@ -728,7 +721,6 @@ class TestSessionRestart:
             "vscode_pid": 1234,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
         sessions_file.write_text(json.dumps(store))
@@ -787,7 +779,6 @@ class TestSessionRestart:
             "vscode_pid": 1234,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
         sessions_file.write_text(json.dumps(store))
@@ -861,7 +852,6 @@ class TestSessionRestart:
             "vscode_pid": 1234,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
         sessions_file.write_text(json.dumps(store))
@@ -944,7 +934,6 @@ class TestSessionRestart:
             "vscode_pid": 1234,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
-            "install_from_github": False,
         }
         store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
         sessions_file.write_text(json.dumps(store))
