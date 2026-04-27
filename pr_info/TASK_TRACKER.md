@@ -21,6 +21,39 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Bump `mcp-coder-utils` dependency
+
+See [step_1.md](./steps/step_1.md) for details.
+
+- [ ] Implementation (update `mcp-coder-utils` constraint in `pyproject.toml`)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Rename misleading test file
+
+See [step_2.md](./steps/step_2.md) for details.
+
+- [ ] Implementation (rename `test_claude_cli_stream_integration.py` → `test_claude_cli_stream_logging_integration.py`)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Real-CLI streaming integration tests
+
+See [step_3.md](./steps/step_3.md) for details.
+
+- [ ] Implementation (create `test_claude_code_cli_streaming_integration.py` with three integration tests)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: iCoder `RealLLMService.stream()` smoke test
+
+See [step_4.md](./steps/step_4.md) for details.
+
+- [ ] Implementation (append `test_real_llm_service_stream_smoke` to `tests/icoder/test_llm_service.py`)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review completed
+- [ ] PR summary prepared
