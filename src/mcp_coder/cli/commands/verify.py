@@ -1,7 +1,7 @@
 """Verify command for the MCP Coder CLI.
 
-Orchestrates three domain verification functions (Claude CLI, LangChain,
-MLflow) and formats their output for the terminal.
+Orchestrates four domain verification functions (Claude CLI, LangChain,
+MLflow, GitHub) and formats their output for the terminal.
 """
 
 import argparse
@@ -22,6 +22,7 @@ from ...llm.interface import prompt_llm
 from ...llm.mlflow_logger import verify_mlflow
 from ...llm.providers.claude.claude_cli_verification import verify_claude
 from ...llm.providers.claude.claude_executable_finder import find_claude_executable
+from ...mcp_workspace_github import verify_github
 from ...prompts.prompt_loader import get_project_prompt_path, is_claude_md, load_prompts
 from ...utils.mcp_verification import ClaudeMCPStatus, parse_claude_mcp_list
 from ...utils.pyproject_config import get_implement_config
@@ -131,14 +132,7 @@ def _print_project_section(project_dir: Path, symbols: dict[str, str]) -> None:
 
 
 def _pad(title: str) -> str:
-    r"""Return a section header line padded to 60 chars with '=' (never truncated).
-
-    Args:
-        title: Section title (without surrounding '===').
-
-    Returns:
-        Header line prefixed with '\n' for the required blank line above.
-    """
+    r"""Return a section header line padded to 60 chars with '='."""
     prefix = f"=== {title} "
     return "\n" + prefix + "=" * max(0, 60 - len(prefix))
 
@@ -147,12 +141,7 @@ _KEY_REGEX = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 def _looks_like_key(token: str) -> bool:
-    """Return True if ``token`` looks like a Python-identifier key.
-
-    The token must match ``^[A-Za-z_][A-Za-z0-9_]*$`` and must not be a
-    reserved Python keyword (which would make rendering it as a key column
-    misleading, e.g. ``not configured``).
-    """
+    """Return True if *token* is a non-keyword Python identifier."""
     return bool(_KEY_REGEX.match(token)) and not keyword.iskeyword(token)
 
 
@@ -181,6 +170,16 @@ _LABEL_MAP: dict[str, str] = {
     "experiment": "Experiment",
     "artifact_location": "Artifact location",
     "tracking_data": "Tracking data",
+    # GitHub section
+    "token_configured": "Token configured",
+    "authenticated_user": "Authenticated user",
+    "repo_url": "Repo URL",
+    "repo_accessible": "Repo accessible",
+    "branch_protection": "Branch protection",
+    "ci_checks_required": "CI checks required",
+    "strict_mode": "Strict mode",
+    "force_push": "Force push",
+    "branch_deletion": "Branch deletion",
 }
 
 
@@ -369,12 +368,14 @@ def _compute_exit_code(
     mcp_result: dict[str, Any] | None = None,
     config_has_error: bool = False,
     claude_mcp_ok: bool | None = None,
+    github_result: dict[str, Any] | None = None,
 ) -> int:
     """Compute CLI exit code from verification results.
 
     Exit 1 when the config has errors, the active provider fails, when MLflow
-    is enabled but broken, when the test prompt failed, or when MCP servers
-    failed (langchain only), or when Claude MCP servers failed (claude only).
+    is enabled but broken, when the test prompt failed, when GitHub verification
+    failed, when MCP servers failed (langchain only), or when Claude MCP
+    servers failed (claude only).
 
     Args:
         active_provider: The active LLM provider name.
@@ -386,6 +387,7 @@ def _compute_exit_code(
         config_has_error: Whether config verification found errors (invalid TOML).
         claude_mcp_ok: Claude MCP server status. None=not checked (no effect),
             True=all ok, False=failure (exit 1 when claude active).
+        github_result: GitHub verification result dict, or None.
 
     Returns:
         Exit code (0 if all checks pass, 1 if any critical check failed).
@@ -396,6 +398,10 @@ def _compute_exit_code(
 
     # Test prompt failure always means exit 1
     if not test_prompt_ok:
+        return 1
+
+    # GitHub failure always means exit 1 (provider-independent)
+    if github_result is not None and not github_result.get("overall_ok"):
         return 1
 
     # Active provider determines primary pass/fail
@@ -521,6 +527,10 @@ def execute_verify(args: argparse.Namespace) -> int:
 
     # 0c. Project configuration section
     _print_project_section(project_dir, symbols)
+
+    # 0d. GitHub verification section
+    github_result = verify_github(project_dir)
+    print(_format_section("GITHUB", github_result, symbols))
 
     # 1. Resolve active provider (already done above)
 
@@ -702,6 +712,7 @@ def execute_verify(args: argparse.Namespace) -> int:
 
     # 5. Collect and display install hints
     all_hints: list[str] = []
+    all_hints.extend(_collect_install_hints(github_result))
     if langchain_result:
         all_hints.extend(_collect_install_hints(langchain_result))
     if active_provider == "claude":
@@ -727,6 +738,7 @@ def execute_verify(args: argparse.Namespace) -> int:
         mcp_result=mcp_result,
         config_has_error=config_result["has_error"],
         claude_mcp_ok=claude_mcp_ok,
+        github_result=github_result,
     )
     logger.info("Verify command completed with exit code %d", exit_code)
     return exit_code

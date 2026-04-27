@@ -69,3 +69,20 @@ def _mock_verify_config() -> Generator[MagicMock, None, None]:
         "mcp_coder.cli.commands.verify.verify_config", return_value=default
     ) as mock:
         yield mock
+
+
+@pytest.fixture(autouse=True)
+def _mock_verify_github() -> Generator[MagicMock, None, None]:
+    """Auto-mock verify_github to return a default OK result.
+
+    Tests that need a specific GitHub result can override by patching
+    verify_github explicitly inside the test body.
+    """
+    default = {
+        "token_configured": {"ok": True, "value": "configured"},
+        "overall_ok": True,
+    }
+    with patch(
+        "mcp_coder.cli.commands.verify.verify_github", return_value=default
+    ) as mock:
+        yield mock

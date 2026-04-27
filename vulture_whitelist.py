@@ -148,6 +148,12 @@ _.isolate_mlflow_artifacts
 # cli/commands/conftest.py - Autouse fixture to mock verify_config
 _._mock_verify_config
 
+# cli/commands/conftest.py - Autouse fixture to mock verify_github
+_._mock_verify_github
+
+# test_verify_orchestration.py - Autouse fixture to mock verify_github per class
+_._mock_github
+
 # test_verify_*.py - Autouse fixture to mock resolve_mcp_config_path
 _._mock_resolve_mcp
 
