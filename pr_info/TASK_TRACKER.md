@@ -49,9 +49,9 @@ See [step_3.md](./steps/step_3.md) for details.
 
 See [step_4.md](./steps/step_4.md) for details.
 
-- [ ] Implementation (append `test_real_llm_service_stream_smoke` to `tests/icoder/test_llm_service.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (append `test_real_llm_service_stream_smoke` to `tests/icoder/test_llm_service.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

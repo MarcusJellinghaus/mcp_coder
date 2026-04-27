@@ -323,3 +323,13 @@ def test_fake_falls_back_to_default_after_canned_exhausted() -> None:
     # Second call should use default
     second = list(service.stream("q2"))
     assert second[0]["text"] == "fake response"
+
+
+@pytest.mark.claude_cli_integration
+def test_real_llm_service_stream_smoke() -> None:
+    """Smoke test: RealLLMService.stream() works end-to-end with the live Claude CLI."""
+    service = RealLLMService(provider="claude", timeout=60)
+    events = list(service.stream("Reply 'ok'."))
+    assert any(e["type"] == "text_delta" for e in events)
+    assert any(e["type"] == "done" for e in events)
+    assert service.session_id
