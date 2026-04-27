@@ -13,7 +13,7 @@ import pytest
 from mcp_coder.cli.commands.coordinator import (
     execute_coordinator_run,
 )
-from mcp_coder.mcp_workspace_github import IssueData
+from mcp_coder.mcp_workspace_github import IssueData, RepoIdentifier
 
 
 class TestCoordinatorRunCacheIntegration:
@@ -360,7 +360,7 @@ class TestCacheUpdateIntegration:
 
         # Verify - cache update was called with correct parameters
         mock_update_cache.assert_called_once_with(
-            repo_full_name="user/test_repo",
+            RepoIdentifier.from_full_name("user/test_repo"),
             issue_number=123,
             old_label="status-02:awaiting-planning",
             new_label="status-03:planning",
@@ -451,7 +451,7 @@ class TestCacheUpdateIntegration:
 
         # Verify - cache update was attempted
         mock_update_cache.assert_called_once_with(
-            repo_full_name="user/test_repo",
+            RepoIdentifier.from_full_name("user/test_repo"),
             issue_number=456,
             old_label="status-05:plan-ready",
             new_label="status-06:implementing",
@@ -587,7 +587,7 @@ class TestCacheUpdateIntegration:
         assert mock_update_cache.call_count == 3
         actual_calls = [
             (
-                call[1]["repo_full_name"],
+                call[0][0].full_name,
                 call[1]["issue_number"],
                 call[1]["old_label"],
                 call[1]["new_label"],

@@ -5,6 +5,7 @@ restart_closed_sessions() integration with the cache.
 """
 
 from pathlib import Path
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -135,16 +136,16 @@ class TestBuildCachedIssuesByRepo:
 
             # Mock get_all_cached_issues to return different issues for different repos
             def get_cache_side_effect(
-                repo_full_name: str,
+                repo_identifier: Any,
                 issue_manager: Mock,
                 force_refresh: bool,
                 cache_refresh_minutes: int,
                 additional_issues: list[int],
             ) -> list[IssueData]:
-                if repo_full_name == "owner/repo":
+                if repo_identifier.full_name == "owner/repo":
                     # Return both session issues (414, 408) and an open issue (100)
                     return [issue_414, issue_408, issue_100]
-                elif repo_full_name == "other/repo":
+                elif repo_identifier.full_name == "other/repo":
                     # Return session issue (123)
                     return [issue_123]
                 return []
@@ -162,14 +163,14 @@ class TestBuildCachedIssuesByRepo:
 
             # First call should be for "owner/repo" with additional_issues=[414, 408]
             owner_repo_call = next(
-                (c for c in calls if c.kwargs["repo_full_name"] == "owner/repo"), None
+                (c for c in calls if c.args[0].full_name == "owner/repo"), None
             )
             assert owner_repo_call is not None
             assert set(owner_repo_call.kwargs["additional_issues"]) == {414, 408}
 
             # Second call should be for "other/repo" with additional_issues=[123]
             other_repo_call = next(
-                (c for c in calls if c.kwargs["repo_full_name"] == "other/repo"), None
+                (c for c in calls if c.args[0].full_name == "other/repo"), None
             )
             assert other_repo_call is not None
             assert other_repo_call.kwargs["additional_issues"] == [123]

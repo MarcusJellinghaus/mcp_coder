@@ -9,6 +9,7 @@ from ...mcp_workspace_github import (
     IssueBranchManager,
     IssueData,
     IssueManager,
+    RepoIdentifier,
     get_all_cached_issues,
 )
 from ...utils.subprocess_runner import (
@@ -318,7 +319,7 @@ def process_eligible_issues(
             "process_eligible_issues: no pre-fetched issues provided, fetching from cache"
         )
         all_cached_issues = get_all_cached_issues(
-            repo_full_name=repo_full_name,
+            RepoIdentifier.from_full_name(repo_full_name),
             issue_manager=issue_manager,
             force_refresh=False,
             cache_refresh_minutes=get_cache_refresh_minutes(),

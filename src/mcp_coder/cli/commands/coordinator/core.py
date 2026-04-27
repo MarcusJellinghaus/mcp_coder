@@ -347,7 +347,7 @@ def get_cached_eligible_issues(
     """
     try:
         all_issues = get_all_cached_issues(
-            repo_full_name=repo_full_name,
+            RepoIdentifier.from_full_name(repo_full_name),
             issue_manager=issue_manager,
             force_refresh=force_refresh,
             cache_refresh_minutes=cache_refresh_minutes,

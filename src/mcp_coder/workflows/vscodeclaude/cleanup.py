@@ -3,7 +3,12 @@
 import logging
 from pathlib import Path
 
-from ...mcp_workspace_github import IssueData, IssueManager, get_all_cached_issues
+from ...mcp_workspace_github import (
+    IssueData,
+    IssueManager,
+    RepoIdentifier,
+    get_all_cached_issues,
+)
 from ...utils.folder_deletion import (
     DeletionFailureReason,
     is_directory_empty,
@@ -110,7 +115,7 @@ def get_stale_sessions(
                     repo_url = f"https://github.com/{repo_full_name}"
                     issue_manager = IssueManager(repo_url=repo_url)
                     fetched = get_all_cached_issues(
-                        repo_full_name=repo_full_name,
+                        RepoIdentifier.from_full_name(repo_full_name),
                         issue_manager=issue_manager,
                         additional_issues=[issue_number],
                     )
