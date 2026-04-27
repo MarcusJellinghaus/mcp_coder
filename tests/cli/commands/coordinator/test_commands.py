@@ -311,7 +311,7 @@ class TestInstallFromGithubWiring:
             cleanup=False,
             intervene=False,
             issue=None,
-            install_from_github=True,
+            no_install_from_github=True,
         )
 
         from mcp_coder.cli.commands.coordinator.commands import (
@@ -371,7 +371,7 @@ class TestInstallFromGithubWiring:
             repo="mcp_coder",
             issue=42,
             intervene=True,
-            install_from_github=True,
+            no_install_from_github=True,
         )
         vscodeclaude_config: VSCodeClaudeConfig = {
             "workspace_base": "/tmp",
