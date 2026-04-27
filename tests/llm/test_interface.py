@@ -1247,6 +1247,7 @@ class TestPromptLlmStream:
             cwd=None,
             mcp_config=None,
             branch_name=None,
+            logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
         )
@@ -1319,6 +1320,7 @@ class TestPromptLlmStream:
             cwd="/work",
             mcp_config="/mcp.json",
             branch_name="main",
+            logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
         )
@@ -1399,6 +1401,7 @@ class TestPromptLlmStreamToolsParam:
             cwd=None,
             mcp_config=None,
             branch_name=None,
+            logs_dir=None,
             append_system_prompt=None,
             system_prompt_replace=None,
         )
@@ -1529,6 +1532,7 @@ class TestPromptLlmProjectDir:
             cwd=None,
             mcp_config=None,
             branch_name=None,
+            logs_dir=None,
             append_system_prompt=expected_combined,
             system_prompt_replace=None,
         )
@@ -1788,6 +1792,7 @@ class TestPromptLlmCopilotRouting:
             timeout=30,
             env_vars=None,
             cwd=None,
+            logs_dir=None,
             branch_name=None,
             system_prompt=None,
             execution_dir=None,

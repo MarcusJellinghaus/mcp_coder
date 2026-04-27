@@ -349,6 +349,11 @@ def prompt_llm_stream(
             ask_copilot_cli_stream,
         )
 
+        # Derive logs_dir from env_vars (same as Claude)
+        logs_dir = None
+        if env_vars and "MCP_CODER_PROJECT_DIR" in env_vars:
+            logs_dir = str(Path(env_vars["MCP_CODER_PROJECT_DIR"]) / "logs")
+
         # System prompt: pass on new sessions only; skip project prompt
         # (Copilot reads CLAUDE.md natively)
         copilot_system_prompt = system_prompt if session_id is None else None
@@ -359,6 +364,7 @@ def prompt_llm_stream(
             timeout=timeout,
             env_vars=env_vars,
             cwd=execution_dir,
+            logs_dir=logs_dir,
             branch_name=branch_name,
             system_prompt=copilot_system_prompt,
             execution_dir=execution_dir,
@@ -367,6 +373,11 @@ def prompt_llm_stream(
         from .providers.claude.claude_code_cli_streaming import (  # noqa: PLC0415
             ask_claude_code_cli_stream,
         )
+
+        # Derive logs_dir from env_vars to store logs in mcp-coder's project dir
+        logs_dir = None
+        if env_vars and "MCP_CODER_PROJECT_DIR" in env_vars:
+            logs_dir = str(Path(env_vars["MCP_CODER_PROJECT_DIR"]) / "logs")
 
         # Build system prompt flags for Claude CLI
         claude_append: str | None = None
@@ -384,6 +395,7 @@ def prompt_llm_stream(
             cwd=execution_dir,
             mcp_config=mcp_config,
             branch_name=branch_name,
+            logs_dir=logs_dir,
             append_system_prompt=claude_append,
             system_prompt_replace=claude_replace,
         )
