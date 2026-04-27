@@ -38,6 +38,7 @@ from mcp_coder.cli.commands.coordinator.command_templates import (
 from mcp_coder.mcp_workspace_github import (
     CacheData,
     IssueData,
+    RepoIdentifier,
     _get_cache_file_path,
     _load_cache_file,
     _log_stale_cache_entries,
@@ -713,7 +714,7 @@ class TestCacheFilePath:
         path = _get_cache_file_path(repo_identifier)
 
         expected_dir = Path.home() / ".mcp_coder" / "coordinator_cache"
-        expected_file = expected_dir / "owner_repo.issues.json"
+        expected_file = expected_dir / "github_com_owner_repo.issues.json"
 
         assert path == expected_file
 
@@ -722,9 +723,18 @@ class TestCacheFilePath:
         from mcp_coder.mcp_workspace_github import RepoIdentifier
 
         test_cases = [
-            ("anthropics/claude-code", "anthropics_claude-code.issues.json"),
-            ("user/repo-with-dashes", "user_repo-with-dashes.issues.json"),
-            ("org/very.long.repo.name", "org_very.long.repo.name.issues.json"),
+            (
+                "anthropics/claude-code",
+                "github_com_anthropics_claude-code.issues.json",
+            ),
+            (
+                "user/repo-with-dashes",
+                "github_com_user_repo-with-dashes.issues.json",
+            ),
+            (
+                "org/very.long.repo.name",
+                "github_com_org_very.long.repo.name.issues.json",
+            ),
         ]
 
         for full_name, expected_filename in test_cases:
@@ -971,7 +981,7 @@ class TestGetCachedEligibleIssues:
 
             assert result == [sample_issue]
             mock_get_all.assert_called_once_with(
-                repo_full_name="owner/repo",
+                RepoIdentifier.from_full_name("owner/repo"),
                 issue_manager=mock_issue_manager,
                 force_refresh=False,
                 cache_refresh_minutes=1440,
@@ -999,7 +1009,7 @@ class TestGetCachedEligibleIssues:
 
             assert result == [sample_issue]
             mock_get_all.assert_called_once_with(
-                repo_full_name="owner/repo",
+                RepoIdentifier.from_full_name("owner/repo"),
                 issue_manager=mock_issue_manager,
                 force_refresh=True,
                 cache_refresh_minutes=1440,
@@ -1026,7 +1036,7 @@ class TestGetCachedEligibleIssues:
 
             assert result == [sample_issue]
             mock_get_all.assert_called_once_with(
-                repo_full_name="owner/repo",
+                RepoIdentifier.from_full_name("owner/repo"),
                 issue_manager=mock_issue_manager,
                 force_refresh=False,
                 cache_refresh_minutes=720,

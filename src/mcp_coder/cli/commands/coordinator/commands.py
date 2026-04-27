@@ -326,7 +326,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                     # Update cache with new labels immediately after successful dispatch
                     try:
                         update_issue_labels_in_cache(
-                            repo_full_name=repo_full_name,
+                            RepoIdentifier.from_full_name(repo_full_name),
                             issue_number=issue["number"],
                             old_label=current_label,
                             new_label=workflow_config["next_label"],
@@ -445,7 +445,7 @@ def _build_cached_issues_by_repo(
             # Create issue manager and fetch cached issues
             issue_manager_instance: IssueManager = IssueManager(repo_url=repo_url)
             all_issues = get_all_cached_issues(
-                repo_full_name=repo_full_name,
+                RepoIdentifier.from_full_name(repo_full_name),
                 issue_manager=issue_manager_instance,
                 force_refresh=False,
                 cache_refresh_minutes=get_cache_refresh_minutes(),

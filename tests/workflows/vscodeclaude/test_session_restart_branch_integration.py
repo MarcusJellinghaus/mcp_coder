@@ -213,7 +213,7 @@ class TestBranchHandlingIntegration:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_all_cached_issues",
-            lambda **kwargs: mock_issues,
+            lambda *args, **kwargs: mock_issues,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch._filter_eligible_vscodeclaude_issues",

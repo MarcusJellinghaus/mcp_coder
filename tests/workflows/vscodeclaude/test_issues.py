@@ -5,7 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from mcp_coder.mcp_workspace_github import IssueData
+from mcp_coder.mcp_workspace_github import IssueData, RepoIdentifier
 from mcp_coder.workflows.vscodeclaude.issues import (
     _filter_eligible_vscodeclaude_issues,
     build_eligible_issues_with_branch_check,
@@ -439,7 +439,7 @@ class TestGetCachedEligibleVscodeclaudeIssues:
 
         # Verify cache was called
         mock_get_all_cached.assert_called_once_with(
-            repo_full_name="owner/repo",
+            RepoIdentifier.from_full_name("owner/repo"),
             issue_manager=mock_issue_manager,
             force_refresh=False,
             cache_refresh_minutes=1440,

@@ -9,6 +9,7 @@ from ...mcp_workspace_github import (
     IssueBranchManager,
     IssueData,
     IssueManager,
+    RepoIdentifier,
     get_all_cached_issues,
 )
 from ...utils.subprocess_runner import (
@@ -172,7 +173,7 @@ def _build_cached_issues_by_repo(
 
             # Fetch with additional_issues to include closed session issues
             all_issues = get_all_cached_issues(
-                repo_full_name=repo_full_name,
+                RepoIdentifier.from_full_name(repo_full_name),
                 issue_manager=issue_manager,
                 force_refresh=False,
                 cache_refresh_minutes=get_cache_refresh_minutes(),
@@ -309,7 +310,7 @@ def restart_closed_sessions(
                 )
                 issue_manager = IssueManager(repo_url=repo_url)
                 fetched = get_all_cached_issues(
-                    repo_full_name=repo_full_name,
+                    RepoIdentifier.from_full_name(repo_full_name),
                     issue_manager=issue_manager,
                     additional_issues=[issue_number],
                 )
