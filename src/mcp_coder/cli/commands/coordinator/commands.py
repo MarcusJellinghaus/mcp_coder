@@ -597,7 +597,7 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
                 vscodeclaude_config=vscodeclaude_config,
                 max_sessions=max_sessions,
                 all_cached_issues=all_cached_issues,
-                install_from_github=install_from_github,
+                skip_github_install=install_from_github,
             )
             total_started.extend(started)
 
@@ -756,7 +756,7 @@ def _handle_intervention_mode(
         repo_vscodeclaude_config=repo_vscodeclaude_config,
         branch_name=branch_name,
         is_intervention=True,
-        install_from_github=install_from_github,
+        skip_github_install=install_from_github,
     )
 
     logger.log(OUTPUT, "Started intervention session: #%s", session["issue_number"])

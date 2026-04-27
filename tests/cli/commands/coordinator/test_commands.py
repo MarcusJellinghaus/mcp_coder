@@ -322,7 +322,7 @@ class TestInstallFromGithubWiring:
 
         mock_process.assert_called_once()
         call_kwargs = mock_process.call_args[1]
-        assert call_kwargs["install_from_github"] is True
+        assert call_kwargs["skip_github_install"] is True
 
     @patch("mcp_coder.cli.commands.coordinator.commands.prepare_and_launch_session")
     @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_vscodeclaude_config")
@@ -386,7 +386,7 @@ class TestInstallFromGithubWiring:
 
         mock_prepare.assert_called_once()
         call_kwargs = mock_prepare.call_args[1]
-        assert call_kwargs["install_from_github"] is True
+        assert call_kwargs["skip_github_install"] is True
 
 
 class TestTemplateWatchdogLines:

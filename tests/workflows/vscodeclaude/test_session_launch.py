@@ -176,10 +176,10 @@ class TestLaunch:
 class TestInstallFromGithubThreading:
     """Tests for install_from_github parameter threading through session launch functions."""
 
-    def test_prepare_and_launch_session_passes_install_from_github_to_startup_script(
+    def test_prepare_and_launch_session_passes_skip_github_install_to_startup_script(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """prepare_and_launch_session passes install_from_github=True to create_startup_script."""
+        """prepare_and_launch_session passes skip_github_install=True to create_startup_script."""
         from unittest.mock import patch
 
         folder_path = tmp_path / "repo_42"
@@ -261,16 +261,16 @@ class TestInstallFromGithubThreading:
             vscodeclaude_config={"workspace_base": str(tmp_path), "max_sessions": 3},
             repo_vscodeclaude_config={},
             branch_name=None,
-            install_from_github=True,
+            skip_github_install=True,
         )
 
         mock_create_startup.assert_called_once()
         assert mock_create_startup.call_args.kwargs["skip_github_install"] is True
 
-    def test_process_eligible_issues_passes_install_from_github(
+    def test_process_eligible_issues_passes_skip_github_install(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """process_eligible_issues passes install_from_github=True to prepare_and_launch_session."""
+        """process_eligible_issues passes skip_github_install=True to prepare_and_launch_session."""
         mock_issue: IssueData = {
             "number": 123,
             "title": "Test Issue",
@@ -333,8 +333,8 @@ class TestInstallFromGithubThreading:
             repo_config={"repo_url": "https://github.com/owner/repo"},
             vscodeclaude_config={"workspace_base": "/tmp", "max_sessions": 3},
             max_sessions=3,
-            install_from_github=True,
+            skip_github_install=True,
         )
 
         mock_launch.assert_called_once()
-        assert mock_launch.call_args.kwargs["install_from_github"] is True
+        assert mock_launch.call_args.kwargs["skip_github_install"] is True
