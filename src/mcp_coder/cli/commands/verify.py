@@ -183,6 +183,11 @@ _LABEL_MAP: dict[str, str] = {
 }
 
 
+_BRANCH_PROTECTION_CHILDREN = frozenset(
+    {"ci_checks_required", "strict_mode", "force_push", "branch_deletion"}
+)
+
+
 def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str]) -> str:
     """Format a verification section for terminal output.
 
@@ -195,6 +200,10 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
         Formatted multi-line string for the section.
     """
     lines: list[str] = [_pad(title)]
+    bp_ok: bool | None = None  # track branch_protection parent state
+    # NOTE: relies on dict insertion order — branch_protection must precede its
+    # children in the result dict. This is guaranteed by verify_github() in
+    # mcp-workspace.
     for key, entry in result.items():
         if key == "overall_ok":
             continue
@@ -203,6 +212,26 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
         label = _LABEL_MAP.get(key, key)
         ok = entry.get("ok")
         value = entry.get("value", "")
+        if key == "branch_protection":
+            bp_ok = ok
+        elif key in _BRANCH_PROTECTION_CHILDREN:
+            if bp_ok is False:
+                continue  # suppress children when parent failed
+            if key == "strict_mode":
+                lines.append(f"    {label:<20s} {value}")
+            else:
+                if ok is True:
+                    symbol = symbols["success"]
+                elif ok is False:
+                    symbol = symbols["failure"]
+                else:
+                    symbol = symbols["warning"]
+                line = f"    {label:<20s} {symbol} {value}"
+                error = entry.get("error")
+                if error and ok is False:
+                    line += f" ({error})"
+                lines.append(line)
+            continue
         if ok is True:
             symbol = symbols["success"]
         elif ok is False:
