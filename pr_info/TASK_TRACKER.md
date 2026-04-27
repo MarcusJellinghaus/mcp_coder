@@ -33,9 +33,9 @@ See [step_1.md](./steps/step_1.md) for details.
 
 See [step_2.md](./steps/step_2.md) for details.
 
-- [ ] Implementation (rename `test_claude_cli_stream_integration.py` → `test_claude_cli_stream_logging_integration.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (rename `test_claude_cli_stream_integration.py` → `test_claude_cli_stream_logging_integration.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Real-CLI streaming integration tests
 
