@@ -65,25 +65,40 @@ Cover at minimum:
   value column on Python version / Executable / Virtualenv / package
   versions all match.
 * `_print_project_section` — same, mixed `format_code` / `check_type_hints`.
-* `_format_mcp_section` (warnings render path) — long label
-  (`langchain-mcp-adapters / PYTHONPATH`) and short label in the same
-  section; assert the value column matches across both rows AND equals
-  `2 + max_label_len + 1 + _MARKER_SLOT_WIDTH + 1`.
+* MCP CONFIG WARNINGS render path (inline in `execute_verify`,
+  post-Step-4 migration) — exercise with a long synthetic label like
+  `langchain-mcp-adapters / VERY_LONG_VAR` to trigger the per-section
+  dynamic `label_width`. Assert per-row column equality within the
+  section using the dynamic width formula
+  `2 + section_label_width + 1 + _MARKER_SLOT_WIDTH + 1`. This bullet
+  is a per-section invariant (not a per-formatter Layer-1 case): the
+  MCP warnings path uses a per-section `label_width` and is asserted
+  with that section's specific expected column, not the global
+  `_VALUE_COLUMN_INDENT`.
 
 Parameterize over marker presence and marker type so a regression in any
 single branch fails a specific case.
 
-Helper for the assertions:
+Helper for the assertions (pinned definition — implementer must use
+this exact form, not a sketch):
 
 ```python
-def _value_column_index(line: str) -> int:
-    """Index where the value text begins (after marker slot + 1 space)."""
-    # Use a regex or fixed offset based on _LABEL_WIDTH + _MARKER_SLOT_WIDTH.
+def _value_column_index(line: str, *, label_width: int = _LABEL_WIDTH) -> int:
+    """Return the 0-indexed column where the value begins on a tabular row.
+
+    Layout: [indent][label.ljust(label_width)][space][marker.ljust(_MARKER_SLOT_WIDTH)][space][value]
+    The value column is at indent + label_width + 1 + _MARKER_SLOT_WIDTH + 1.
+    For test parametrization, callers should pass the section's label_width
+    explicitly when the section uses a dynamic width (e.g. MCP CONFIG WARNINGS).
+    """
+    indent = len(line) - len(line.lstrip(" "))
+    return indent + label_width + 1 + _MARKER_SLOT_WIDTH + 1
 ```
 
-Or, even simpler: pick a known-distinct value substring per row (e.g. a
-UUID or a marker word) and assert `line.index(value)` is identical across
-rows.
+Note: this returns the *expected* column based on layout constants;
+tests assert that the actual value substring appears at this expected
+position; if it does not, the assertion fails and identifies the
+misaligned row.
 
 ### Layer 2 — `TestExecuteVerifyAlignmentSmoke` (one end-to-end)
 
@@ -101,7 +116,7 @@ going through a helper.
 
    ```python
    import re
-   if re.match(r"^  \[[A-Za-z][A-Za-z0-9_.]*\]\s*$", line):
+   if re.match(r"^  \[[A-Za-z][A-Za-z0-9_.\-]*\]\s*$", line):
        continue
    ```
 
@@ -196,16 +211,20 @@ is one shared value column **per indent level**.
 ```
 from collections import defaultdict
 
-def _value_column_index(line: str) -> int:
+def _value_column_index(line: str, *, label_width: int = _LABEL_WIDTH) -> int:
     # column where the value begins; for label-less rows the marker is at label_width+1
-    return ...  # extracted from the line layout
+    indent = len(line) - len(line.lstrip(" "))
+    return indent + label_width + 1 + _MARKER_SLOT_WIDTH + 1
 
 lines = formatter(...).split("\n")
+# the indent allow-list `(2, 4)` excludes continuation lines like the
+# install-hint at indent=32, which are intentionally not tabular.
 content_lines = [
     l for l in lines
-    if l
-    and not l.startswith("=== ")
-    and not re.match(r"^  \[[A-Za-z][A-Za-z0-9_.]*\]\s*$", l)
+    if l                                                     # not blank
+    and not l.startswith("=== ")                             # section header
+    and not re.match(r"^  \[[A-Za-z0-9_.\-]+\]\s*$", l)      # group header (see F3)
+    and (len(l) - len(l.lstrip(" "))) in (2, 4)              # tabular indent only
 ]
 
 by_indent: dict[int, list[int]] = defaultdict(list)
@@ -242,7 +261,7 @@ NOTICE_PREFIXES = (
     "Run with --debug",
     "pip install ",
 )
-GROUP_HEADER_RE = re.compile(r"^  \[[A-Za-z][A-Za-z0-9_.]*\]\s*$")
+GROUP_HEADER_RE = re.compile(r"^  \[[A-Za-z][A-Za-z0-9_.\-]*\]\s*$")
 
 captured = run_execute_verify_with_mocks()  # uses _make_verify_mocks()
 section = None

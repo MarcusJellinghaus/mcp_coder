@@ -91,3 +91,22 @@ Started: 2026-04-28
 - step_6.md: Layer 1 ALGORITHM rewritten to group lines by indent before asserting per-indent column equality; Layer 2 generalizes the Python group-header filter to any `[name]` line; expected value column derived from _LABEL_WIDTH / _MARKER_SLOT_WIDTH (or `_VALUE_COLUMN_INDENT + (indent - 2)`).
 
 **Status**: pending commit
+
+## Round 4 — 2026-04-28
+
+**Findings**:
+- F1 [real, correctness] Step 6 Layer 1 indent-grouping does not filter install-hint continuation lines (indent=_VALUE_COLUMN_INDENT=32), causing spurious assertion failures on _format_section fixtures that include a failed entry with install_hint.
+- F2 [nit, accuracy] Layer 1 bullet labels the MCP warnings render path as "_format_mcp_section (warnings render path)"; the warnings rendering is inline in execute_verify post-Step-4, not in _format_mcp_section.
+- F3 [nit, completeness] Group-header regex does not allow hyphens; user-config section names like [my-section] would be misidentified as tabular rows.
+- F4 [nit, clarity] _value_column_index helper is sketched ("use a regex or fixed offset") without a pinned definition.
+
+**Decisions**:
+- F1-F4: accept (mechanical correctness/clarity fixes; no design choices).
+
+**User decisions**:
+- None this round.
+
+**Changes**:
+- step_6.md: Layer 1 algorithm filters content_lines to only indent-2/4 tabular rows (excludes install-hint continuations); MCP CONFIG WARNINGS bullet relabeled with "(inline in execute_verify, post-Step-4 migration)" and tagged as per-section invariant; group-header regex character class extended to include hyphens; _value_column_index pinned to derived-from-constants definition with explicit docstring.
+
+**Status**: pending commit
