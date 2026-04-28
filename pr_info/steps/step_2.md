@@ -7,7 +7,7 @@
 ## WHERE
 
 - Source: `src/mcp_coder/icoder/ui/app.py` (around line 106, in `on_mount`)
-- Test:   `tests/icoder/ui/test_app.py` (mirrors src structure per planning principle). No banner-output assertion exists there today — add a new focused test using the existing `make_icoder_app` fixture and `OutputLog.recorded_lines`.
+- Test:   `tests/icoder/ui/test_app.py` (mirrors src structure per planning principle). No banner-output assertion exists there today. **Two changes** to this file: extend the `make_icoder_app` factory to accept an optional `runtime_info` kwarg (so the banner branch in `on_mount` can render), and add a new focused test using that kwarg plus `OutputLog.recorded_lines`.
 
 ## WHAT
 
@@ -59,22 +59,74 @@ The `OutputLog` receives `"\n".join(lines)` styled `dim`. The new line shape:
 
 ## Tests
 
-Add a new focused test `test_banner_renders_mcp_coder_utils_version` in `tests/icoder/ui/test_app.py` (the file mirrors `src/mcp_coder/icoder/ui/app.py`). It uses the existing `make_icoder_app` fixture, runs the app via `app.run_test()`, and asserts that `OutputLog.recorded_lines` (joined with newlines) contains an `mcp-coder-utils <version>` line:
+Two changes to `tests/icoder/ui/test_app.py` (the file mirrors `src/mcp_coder/icoder/ui/app.py`):
+
+### 1. Extend `make_icoder_app` to accept an optional `runtime_info`
+
+The current factory builds `AppCore(llm_service=llm, event_log=event_log)` with no `runtime_info`, so `on_mount`'s `if self._core.runtime_info:` gate skips the banner block entirely. Extend the factory to forward an optional `runtime_info` kwarg through to `AppCore`. The default (kwarg omitted / `None`) **must remain unchanged** so all existing tests in this file continue to pass without edits:
+
+```python
+@pytest.fixture
+def make_icoder_app(
+    event_log: EventLog,
+) -> Callable[..., ICoderApp]:
+    """Factory to create ICoderApp with custom FakeLLM responses."""
+
+    def _factory(
+        *,
+        responses: list[list[StreamEvent]] | None = None,
+        runtime_info: RuntimeInfo | None = None,   # ← NEW
+    ) -> ICoderApp:
+        llm = FakeLLMService(responses=responses or [])
+        return ICoderApp(
+            AppCore(
+                llm_service=llm,
+                event_log=event_log,
+                runtime_info=runtime_info,         # ← NEW (None preserves old behavior)
+            ),
+        )
+
+    return _factory
+```
+
+Add `from mcp_coder.icoder.env_setup import RuntimeInfo` (and `MCPServerInfo` if needed) to the imports at the top of the file.
+
+### 2. Add the new banner-output test
+
+It uses the extended factory to inject a `RuntimeInfo` with `mcp_coder_utils_version` populated, runs the app via `app.run_test()`, and asserts that `OutputLog.recorded_lines` contains an `mcp-coder-utils <version>` line:
 
 ```python
 async def test_banner_renders_mcp_coder_utils_version(
     make_icoder_app: Callable[..., ICoderApp],
 ) -> None:
     """on_mount banner includes the mcp-coder-utils version line."""
-    app = make_icoder_app(responses=[])
+    runtime_info = RuntimeInfo(
+        mcp_coder_version="9.9.9",
+        mcp_coder_utils_version="1.2.3",
+        python_version="3.12.0",
+        claude_code_version="unknown",
+        tool_env_path="/tmp/tool-env",
+        project_venv_path="/tmp/proj-venv",
+        project_dir="/tmp/proj",
+        env_vars={},
+        mcp_servers=[],
+    )
+    app = make_icoder_app(responses=[], runtime_info=runtime_info)
     async with app.run_test() as pilot:
         await pilot.pause()
         lines = app.query_one(OutputLog).recorded_lines
         joined = "\n".join(lines)
-        assert any(line.startswith("mcp-coder-utils ") for line in lines), joined
+        assert any(line.startswith("mcp-coder-utils 1.2.3") for line in lines), joined
 ```
 
-If `make_icoder_app` does not already provide a `RuntimeInfo` with `mcp_coder_utils_version` populated, extend the factory (or pass a stub `AppCore`) so the banner can render the new line. No other test file needs to be touched.
+> Field set matches `RuntimeInfo` after Step 1 lands (new `mcp_coder_utils_version` placed right after `mcp_coder_version`; `mcp_connection_status` left at its `None` default).
+
+No other test file needs to be touched.
+
+## Files modified
+
+- `src/mcp_coder/icoder/ui/app.py` — one new line in the `on_mount` `lines` list.
+- `tests/icoder/ui/test_app.py` — extend `make_icoder_app` factory with optional `runtime_info` kwarg AND add the new `test_banner_renders_mcp_coder_utils_version` test (plus the `RuntimeInfo` import).
 
 ## Acceptance
 

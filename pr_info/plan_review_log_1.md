@@ -26,3 +26,20 @@
 - `pr_info/steps/step_1.md`: appended one-line reviewer note that routing `mcp-coder` through `_get_package_version` makes its lookup graceful (previously raised `PackageNotFoundError`).
 
 **Status**: committed
+
+## Round 2 — 2026-04-28
+
+**Findings**:
+- Round 1 fixes (step_1 graceful-mcp-coder note + step_2 concrete test path) verified coherent and correct
+- Step 2's new test relied on `make_icoder_app` providing a populated `runtime_info`, but the factory builds `AppCore(llm_service=llm, event_log=event_log)` with no `runtime_info`, and `on_mount` gates the banner block on `if self._core.runtime_info:` — so the test would silently emit zero banner lines and the assertion would fail
+- Step 2 still hedged: "If `make_icoder_app` does not already provide a `RuntimeInfo`…, extend the factory" — needed to commit to the extension explicitly
+
+**Decisions**:
+- Accept (fix): make the `make_icoder_app` factory extension concrete, not conditional; spell out the new optional `runtime_info` kwarg and update the test snippet to pass a fully populated `RuntimeInfo`
+
+**User decisions**: none — straightforward correctness fix, no design question
+
+**Changes**:
+- `pr_info/steps/step_2.md`: replaced hedged "If…" language with two concrete sub-sections — (1) extend `make_icoder_app` to accept `runtime_info: RuntimeInfo | None = None` and pass it through to `AppCore` (default `None` keeps existing tests intact), (2) the new test constructs the full post-Step-1 `RuntimeInfo` (all 9 fields) and passes it via `runtime_info=`. Added a "Files modified" section noting both `app.py` and `test_app.py` are touched.
+
+**Status**: committed
