@@ -94,15 +94,16 @@ class _DropUnexpandedWarnings(logging.Filter):
         return "unexpanded variable" not in record.getMessage()
 
 
-def _collect_mcp_warnings(mcp_json_path: str | None) -> list[str]:
+def _collect_mcp_warnings(mcp_json_path: str | None) -> list[tuple[str, str]]:
     """Parse ``.mcp.json`` for unresolved ``${...}`` placeholders in env values.
 
     Args:
         mcp_json_path: Path to ``.mcp.json`` (or None).
 
     Returns:
-        Pre-formatted lines ``"server / env_var  unresolved_template"``; empty
-        if there are no findings or the file is missing/invalid.
+        List of ``(label, value)`` pairs where ``label`` has the form
+        ``"<server> / <env_var>"`` and ``value`` is the unresolved template.
+        Empty if there are no findings or the file is missing/invalid.
     """
     if mcp_json_path is None:
         return []
@@ -110,12 +111,12 @@ def _collect_mcp_warnings(mcp_json_path: str | None) -> list[str]:
         data = json.loads(Path(mcp_json_path).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return []
-    lines: list[str] = []
+    findings: list[tuple[str, str]] = []
     for server_name, server in data.get("mcpServers", {}).items():
         for env_var, value in server.get("env", {}).items():
             if isinstance(value, str) and re.search(r"\$\{[^}]+\}", value):
-                lines.append(f"{server_name} / {env_var}  {value}")
-    return lines
+                findings.append((f"{server_name} / {env_var}", value))
+    return findings
 
 
 def _print_environment_section() -> None:
@@ -436,13 +437,20 @@ def _run_mcp_edit_smoke_test(
         content = test_file.read_text(encoding="utf-8")
         pos_a, pos_b, pos_c = content.find("A"), content.find("B"), content.find("C")
         if pos_a < pos_b < pos_c:
-            return f"  {label:<20s} {symbols['success']} edit verified"
-        return (
-            f"  {label:<20s} {symbols['warning']}"
-            " edit not verified (B not found between A and C)"
+            return _format_row(label, symbols["success"], "edit verified", indent=2)
+        return _format_row(
+            label,
+            symbols["warning"],
+            "edit not verified (B not found between A and C)",
+            indent=2,
         )
     except Exception as exc:  # pylint: disable=broad-except
-        return f"  {label:<20s} {symbols['warning']} edit not verified ({exc})"
+        return _format_row(
+            label,
+            symbols["warning"],
+            f"edit not verified ({exc})",
+            indent=2,
+        )
     finally:
         test_file.unlink(missing_ok=True)
 
@@ -748,8 +756,19 @@ def execute_verify(args: argparse.Namespace) -> int:
         warnings = _collect_mcp_warnings(mcp_config_resolved)
         if warnings:
             print(_pad("MCP CONFIG WARNINGS"))
-            for warning_line in warnings:
-                print(f"  {warning_line}")
+            section_label_width = max(
+                _LABEL_WIDTH, max(len(label) for label, _ in warnings)
+            )
+            for label, value in warnings:
+                print(
+                    _format_row(
+                        label,
+                        symbols["warning"],
+                        value,
+                        indent=2,
+                        label_width=section_label_width,
+                    )
+                )
 
     # 3b. MCP edit smoke test (informational only)
     if mcp_config_resolved:
