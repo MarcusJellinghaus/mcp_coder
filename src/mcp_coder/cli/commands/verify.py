@@ -46,16 +46,23 @@ def _format_row_prefix(
 ) -> str:
     """Render the column-aligned prefix portion of a tabular row.
 
-    Returns ``indent + label_field + " " + marker_field + " "`` WITHOUT
-    rstrip — the trailing space and the full marker-slot padding are
-    preserved. Used directly by callers that need the prefix without a
-    value (e.g. ``textwrap.wrap`` continuation indent).
-
     Empty marker is padded to ``_MARKER_SLOT_WIDTH`` so the value column
     starts at the same horizontal position regardless of marker presence.
     Labels longer than ``label_width`` overrun (no truncation) — keep
     labels concise, or pass a wider ``label_width`` for sections whose
     labels are known to exceed the default.
+
+    Args:
+        label: Row label (may be empty for label-less rows).
+        marker: Status marker (e.g. ``[OK]``, ``[ERR]``, ``[WARN]``, or "").
+        indent: Number of leading spaces.
+        label_width: Minimum width of the label column.
+
+    Returns:
+        ``indent + label_field + " " + marker_field + " "`` WITHOUT
+        rstrip — the trailing space and the full marker-slot padding are
+        preserved. Used directly by callers that need the prefix without
+        a value (e.g. ``textwrap.wrap`` continuation indent).
     """
     return f"{' ' * indent}{label:<{label_width}s} {marker:<{_MARKER_SLOT_WIDTH}s} "
 
@@ -69,6 +76,16 @@ def _format_row(
     rstrips trailing whitespace. Label-less rows pass ``label=""``;
     the empty label is padded so the value column aligns with
     neighbouring labeled rows.
+
+    Args:
+        label: Row label (may be empty for label-less rows).
+        marker: Status marker (e.g. ``[OK]``, ``[ERR]``, ``[WARN]``, or "").
+        value: Row value text.
+        indent: Number of leading spaces.
+        label_width: Minimum width of the label column.
+
+    Returns:
+        Formatted row string with trailing whitespace stripped.
     """
     return (
         _format_row_prefix(label, marker, indent=indent, label_width=label_width)
@@ -148,7 +165,12 @@ def _print_environment_section() -> None:
 
 
 def _print_project_section(project_dir: Path, symbols: dict[str, str]) -> None:
-    """Print the PROJECT section showing language detection and tool config."""
+    """Print the PROJECT section showing language detection and tool config.
+
+    Args:
+        project_dir: Path to the project directory.
+        symbols: Dict with 'success', 'failure', 'warning' keys.
+    """
     print(_pad("PROJECT"))
     pyproject_exists = (project_dir / "pyproject.toml").exists()
     if pyproject_exists:
@@ -531,6 +553,9 @@ def _compute_exit_code(
 def _collect_install_hints(result: dict[str, Any]) -> list[str]:
     """Collect install_hint values from failed entries in a verification result.
 
+    Args:
+        result: Verification result dict from a domain verify function.
+
     Returns:
         List of install hint strings from failed entries.
     """
@@ -543,6 +568,10 @@ def _collect_install_hints(result: dict[str, Any]) -> list[str]:
 
 def _prompt_source(configured: str | None, default_label: str) -> str:
     """Format a prompt source for display.
+
+    Args:
+        configured: Configured prompt path, or None if not set.
+        default_label: Label shown in parentheses when ``configured`` is None.
 
     Returns:
         The configured path, or the default_label in parentheses.
