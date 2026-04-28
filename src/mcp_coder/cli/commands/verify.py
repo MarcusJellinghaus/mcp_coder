@@ -332,7 +332,9 @@ def _format_mcp_section(
             tool_names = entry.get("tool_names")
             if tool_names:
                 lines.append(
-                    f"  {name:<20s} {symbol} {len(tool_names)} tools available"
+                    _format_row(
+                        name, symbol, f"{len(tool_names)} tools available", indent=2
+                    )
                 )
                 for tool_name, desc in tool_names:
                     if desc:
@@ -340,7 +342,7 @@ def _format_mcp_section(
                     else:
                         lines.append(f"    {tool_name}")
             else:
-                lines.append(f"  {name:<20s} {symbol} {value}")
+                lines.append(_format_row(name, symbol, value, indent=2))
     else:
         for name, entry in servers.items():
             ok = entry.get("ok")
@@ -348,7 +350,7 @@ def _format_mcp_section(
             symbol = symbols["success"] if ok else symbols["failure"]
             tool_names = entry.get("tool_names")
             if tool_names:
-                prefix = f"  {name:<20s} {symbol} "
+                prefix = _format_row_prefix(name, symbol, indent=2)
                 names_only = [n for n, _d in tool_names]
                 tools_text = f"{len(tool_names)} tools: {', '.join(names_only)}"
                 wrapped = textwrap.wrap(
@@ -359,7 +361,7 @@ def _format_mcp_section(
                 )
                 lines.extend(wrapped)
             else:
-                lines.append(f"  {name:<20s} {symbol} {value}")
+                lines.append(_format_row(name, symbol, value, indent=2))
     return "\n".join(lines)
 
 
@@ -383,7 +385,7 @@ def _format_claude_mcp_section(
     lines: list[str] = [_pad(f"MCP SERVERS (via Claude Code{title_suffix})")]
     for status in statuses:
         symbol = symbols["success"] if status.ok else symbols["failure"]
-        lines.append(f"  {status.name:<20s} {symbol} {status.status_text}")
+        lines.append(_format_row(status.name, symbol, status.status_text, indent=2))
     return "\n".join(lines)
 
 

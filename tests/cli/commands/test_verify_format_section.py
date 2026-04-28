@@ -451,16 +451,16 @@ class TestFormatClaudeMcpSection:
         assert "via Claude Code" in output
 
     def test_server_names_left_aligned(self) -> None:
-        """Server names use {name:<20s} alignment."""
+        """Server names use _LABEL_WIDTH (22) alignment."""
         statuses = [
             ClaudeMCPStatus(name="mcp-tools-py", status_text="Connected", ok=True),
         ]
         output = _format_claude_mcp_section(statuses, self._symbols())
-        # Name should be padded to 20 chars
+        # Name should be padded to 22 chars
         lines = output.split("\n")
         server_line = [l for l in lines if "mcp-tools-py" in l][0]
-        # "  mcp-tools-py" + padding + " [OK] Connected"
-        assert "mcp-tools-py      " in server_line
+        # "  mcp-tools-py" + padding (10 spaces) + " [OK] Connected"
+        assert "mcp-tools-py          " in server_line
 
 
 class TestFormatMcpSectionForCompleteness:
