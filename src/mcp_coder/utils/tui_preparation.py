@@ -116,9 +116,10 @@ class TuiChecker:
 
     def _check_macos_terminal_app(self) -> None:
         """Warn if running in macOS Terminal.app."""
-        if sys.platform != "darwin":
-            return
-        if os.environ.get("TERM_PROGRAM") == "Apple_Terminal":
+        if (
+            sys.platform == "darwin"
+            and os.environ.get("TERM_PROGRAM") == "Apple_Terminal"
+        ):
             self._warnings.append(
                 "macOS Terminal.app has limited mouse reporting"
                 " — consider iTerm2 or Kitty for full TUI support."
