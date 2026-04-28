@@ -41,9 +41,9 @@ See [step_2.md](./steps/step_2.md) for details.
 
 See [step_3.md](./steps/step_3.md) for details.
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Change `_collect_mcp_warnings` Return Type and Migrate `_run_mcp_edit_smoke_test`
 

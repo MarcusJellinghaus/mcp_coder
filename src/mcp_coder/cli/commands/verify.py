@@ -129,19 +129,21 @@ def _print_environment_section() -> None:
     python_version = (
         f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     )
-    print(f"  {'Python version':<20s} {python_version}")
-    print(f"  {'Executable':<20s} {sys.executable}")
+    print(_format_row("Python version", "", python_version, indent=2))
+    print(_format_row("Executable", "", sys.executable, indent=2))
     virtualenv = sys.prefix if sys.prefix != sys.base_prefix else "(none)"
-    print(f"  {'Virtualenv':<20s} {virtualenv}")
+    print(_format_row("Virtualenv", "", virtualenv, indent=2))
     pythonpath = os.environ.get("PYTHONPATH") or "(not set)"
-    print(f"  {'PYTHONPATH':<20s} {pythonpath}")
+    print(_format_row("PYTHONPATH", "", pythonpath, indent=2))
     print()
     for pkg in _ENVIRONMENT_PACKAGES:
         try:
             value = version(pkg)
+            print(_format_row(pkg, "", value, indent=2))
         except PackageNotFoundError:
-            value = "[ERR] not installed"
-        print(f"  {pkg:<20s} {value}")
+            print(
+                _format_row(pkg, STATUS_SYMBOLS["failure"], "not installed", indent=2)
+            )
 
 
 def _print_project_section(project_dir: Path, symbols: dict[str, str]) -> None:
@@ -149,28 +151,40 @@ def _print_project_section(project_dir: Path, symbols: dict[str, str]) -> None:
     print(_pad("PROJECT"))
     pyproject_exists = (project_dir / "pyproject.toml").exists()
     if pyproject_exists:
-        print(f"  {'pyproject.toml':<20s} {symbols['success']} found")
-        print(f"  {'Language':<20s} {symbols['success']} Python (detected)")
+        print(_format_row("pyproject.toml", symbols["success"], "found", indent=2))
+        print(
+            _format_row("Language", symbols["success"], "Python (detected)", indent=2)
+        )
         config = get_implement_config(project_dir)
         print()
         print("  [Python]")
         if config.format_code:
-            print(f"    {'format_code':<18s} {symbols['success']} enabled")
+            print(_format_row("format_code", symbols["success"], "enabled", indent=4))
         else:
             print(
-                f"    {'format_code':<18s} {symbols['warning']}"
-                " not configured (default: disabled)"
+                _format_row(
+                    "format_code",
+                    symbols["warning"],
+                    "not configured (default: disabled)",
+                    indent=4,
+                )
             )
         if config.check_type_hints:
-            print(f"    {'check_type_hints':<18s} {symbols['success']} enabled")
+            print(
+                _format_row("check_type_hints", symbols["success"], "enabled", indent=4)
+            )
         else:
             print(
-                f"    {'check_type_hints':<18s} {symbols['warning']}"
-                " not configured (default: disabled)"
+                _format_row(
+                    "check_type_hints",
+                    symbols["warning"],
+                    "not configured (default: disabled)",
+                    indent=4,
+                )
             )
     else:
-        print(f"  {'pyproject.toml':<20s} {symbols['warning']} not found")
-        print(f"  {'Language':<20s} {symbols['success']} (none detected)")
+        print(_format_row("pyproject.toml", symbols["warning"], "not found", indent=2))
+        print(_format_row("Language", symbols["success"], "(none detected)", indent=2))
 
 
 def _pad(title: str) -> str:
