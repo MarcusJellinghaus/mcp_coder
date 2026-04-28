@@ -55,5 +55,5 @@ See [step_4.md](./steps/step_4.md) for details.
 
 ## Pull Request
 
-- [ ] PR review completed
+- [x] PR review completed
 - [ ] PR summary prepared
