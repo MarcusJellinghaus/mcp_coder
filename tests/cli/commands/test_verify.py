@@ -465,11 +465,11 @@ class TestConfigGrouping:
         out = _run_verify_with_entries(self._entries(), capsys)
         lines = _config_block(out)
         token_line = next(line for line in lines if line.startswith("    token"))
-        # The line should show: "    token              [OK] configured (config.toml)"
-        # The key column stops before configured
-        assert "token" in token_line
-        # Key column is padded to 18 chars, then the symbol, then the rest
-        assert "[OK] configured (config.toml)" in token_line
+        # Migrated to _format_row("token", "[OK]", "configured (config.toml)", indent=4)
+        assert (
+            _format_row("token", "[OK]", "configured (config.toml)", indent=4)
+            in token_line
+        )
 
     def test_config_file_row_outside_groups(
         self, capsys: pytest.CaptureFixture[str]
@@ -523,10 +523,12 @@ class TestConfigGrouping:
         ]
         out = _run_verify_with_entries(entries, capsys)
         lines = _config_block(out)
-        # Must contain the exact indented line with a single [OK] status symbol
-        assert "    [OK] 6 repos configured" in lines
-        # Must not be split at "6" (i.e., no "[OK]              <symbol> 6 repos")
-        assert not any(line.startswith("    [OK]              ") for line in lines)
+        # Must contain the exact label-less row rendered by _format_row
+        assert _format_row("", "[OK]", "6 repos configured", indent=4) in lines
+        # Must not be rendered as a key/value split (no "[OK]" in the key column)
+        assert not any(
+            line.startswith("    [OK]") and "[OK]" in line[8:] for line in lines
+        )
         # Must not double the [OK] prefix
         assert not any("[OK] [OK]" in line for line in lines)
 

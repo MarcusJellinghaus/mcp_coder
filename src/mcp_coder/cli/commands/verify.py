@@ -585,14 +585,14 @@ def execute_verify(args: argparse.Namespace) -> int:
                 last_label = label
             first, _sep, rest = value.partition(" ")
             if _looks_like_key(first) and rest:
-                print(f"    {first:<18s} {symbol} {rest}")
+                print(_format_row(first, symbol, rest, indent=4))
             elif symbol.strip():
-                print(f"    {symbol} {value}")
+                print(_format_row("", symbol, value, indent=4))
             else:
-                print(f"    {value}")
+                print(_format_row("", "", value, indent=4))
         else:
             # Top-level rows (Config file, Expected path, Hint, Parse error)
-            print(f"  {label:<20s} {symbol} {value}")
+            print(_format_row(label, symbol, value, indent=2))
 
     # 0b. Prompt configuration section
     project_dir = Path(args.project_dir).resolve() if args.project_dir else Path.cwd()
@@ -601,23 +601,39 @@ def execute_verify(args: argparse.Namespace) -> int:
 
     prompt_lines = [_pad("PROMPTS")]
     prompt_lines.append(
-        f"  {'System prompt':<20s} {symbols['success']}"
-        f" {_prompt_source(prompt_config.system_prompt, 'shipped default')}"
+        _format_row(
+            "System prompt",
+            symbols["success"],
+            _prompt_source(prompt_config.system_prompt, "shipped default"),
+            indent=2,
+        )
     )
     prompt_lines.append(
-        f"  {'Project prompt':<20s} {symbols['success']}"
-        f" {_prompt_source(prompt_config.project_prompt, 'shipped default')}"
+        _format_row(
+            "Project prompt",
+            symbols["success"],
+            _prompt_source(prompt_config.project_prompt, "shipped default"),
+            indent=2,
+        )
     )
     prompt_lines.append(
-        f"  {'Claude mode':<20s} {symbols['success']}"
-        f" {prompt_config.claude_system_prompt_mode}"
+        _format_row(
+            "Claude mode",
+            symbols["success"],
+            prompt_config.claude_system_prompt_mode,
+            indent=2,
+        )
     )
     if active_provider == "claude" and prompt_config.project_prompt:
         prompt_path = get_project_prompt_path(project_dir)
         if is_claude_md(prompt_path, str(project_dir)):
             prompt_lines.append(
-                f"  {'Redundancy':<20s} {symbols['warning']}"
-                " project prompt is CLAUDE.md (will skip for Claude)"
+                _format_row(
+                    "Redundancy",
+                    symbols["warning"],
+                    "project prompt is CLAUDE.md (will skip for Claude)",
+                    indent=2,
+                )
             )
     print("\n".join(prompt_lines))
 
@@ -645,7 +661,12 @@ def execute_verify(args: argparse.Namespace) -> int:
     langchain_result: dict[str, Any] | None = None
     print(_pad("LLM PROVIDER"))
     print(
-        f"  {'Active provider':<20s} {symbols['success']} {active_provider} (from {source})"
+        _format_row(
+            "Active provider",
+            symbols["success"],
+            f"{active_provider} (from {source})",
+            indent=2,
+        )
     )
     # 2a. Resolve MCP config for ALL providers (before provider branch)
     mcp_config_resolved = resolve_mcp_config_path(
@@ -713,8 +734,13 @@ def execute_verify(args: argparse.Namespace) -> int:
             else:
                 print(_pad("MCP SERVERS (via langchain-mcp-adapters)"))
                 print(
-                    f"  {symbols['warning']} server health check skipped"
-                    " (langchain-mcp-adapters not installed)"
+                    _format_row(
+                        "",
+                        symbols["warning"],
+                        "server health check skipped"
+                        " (langchain-mcp-adapters not installed)",
+                        indent=2,
+                    )
                 )
         else:
             # LangChain MCP section first (primary)
@@ -730,8 +756,13 @@ def execute_verify(args: argparse.Namespace) -> int:
             else:
                 print(_pad("MCP SERVERS (via langchain-mcp-adapters)"))
                 print(
-                    f"  {symbols['warning']} server health check skipped"
-                    " (langchain-mcp-adapters not installed)"
+                    _format_row(
+                        "",
+                        symbols["warning"],
+                        "server health check skipped"
+                        " (langchain-mcp-adapters not installed)",
+                        indent=2,
+                    )
                 )
             # Claude MCP section second (for completeness)
             if claude_mcp is not None:
@@ -792,7 +823,7 @@ def execute_verify(args: argparse.Namespace) -> int:
             mcp_config=mcp_config_resolved,
             execution_dir=str(project_dir),
         )
-        print(f"  {'Test prompt':<20s} {symbols['success']} responded OK")
+        print(_format_row("Test prompt", symbols["success"], "responded OK", indent=2))
     except Exception as exc:  # pylint: disable=broad-except
         test_prompt_ok = False
         # Only classify connection-related exceptions
@@ -809,7 +840,14 @@ def execute_verify(args: argparse.Namespace) -> int:
                 category = "Connection error"
         else:
             category = f"{type(exc).__name__}: {exc}"
-        print(f"  {'Test prompt':<20s} {symbols['failure']} FAILED ({category})")
+        print(
+            _format_row(
+                "Test prompt",
+                symbols["failure"],
+                f"FAILED ({category})",
+                indent=2,
+            )
+        )
         logger.debug("Test prompt failure details: %s", exc, exc_info=True)
         print("  Run with --debug for detailed diagnostics.")
 
