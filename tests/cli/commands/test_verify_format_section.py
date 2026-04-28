@@ -2,6 +2,8 @@
 
 from typing import Any
 
+import pytest
+
 from mcp_coder.cli.commands.verify import (
     _collect_install_hints,
     _format_claude_mcp_section,
@@ -589,6 +591,7 @@ class TestGitHubLabelMappings:
         "strict_mode",
         "force_push",
         "branch_deletion",
+        "auto_delete_branches",
     )
 
     def _symbols(self) -> dict[str, str]:
@@ -627,3 +630,53 @@ class TestGitHubLabelMappings:
         assert "Token configured" in output
         assert "[ERR]" in output
         assert "GITHUB_TOKEN not found" in output
+
+
+class TestAutoDeleteBranches:
+    """Tests for auto_delete_branches rendering at top level of GITHUB section (#917)."""
+
+    def _symbols(self) -> dict[str, str]:
+        return {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
+
+    @pytest.mark.parametrize(
+        "entry, expected_line",
+        [
+            (
+                {"ok": True, "value": "enabled"},
+                "  Auto-delete branches [OK] enabled",
+            ),
+            (
+                {"ok": False, "value": "disabled"},
+                "  Auto-delete branches [ERR] disabled",
+            ),
+            (
+                {
+                    "ok": False,
+                    "value": "unknown",
+                    "error": "repository not accessible",
+                },
+                "  Auto-delete branches [ERR] unknown (repository not accessible)",
+            ),
+        ],
+    )
+    def test_auto_delete_branches_value_cases(
+        self, entry: dict[str, Any], expected_line: str
+    ) -> None:
+        """Top-level rendering: 2-space indent, symbol from ok, value, optional error suffix."""
+        result: dict[str, Any] = {
+            "auto_delete_branches": entry,
+            "overall_ok": entry["ok"] is True,
+        }
+        output = _format_section("GITHUB", result, self._symbols())
+        assert expected_line in output
+
+    def test_renders_when_branch_protection_failed(self) -> None:
+        """auto_delete_branches must NOT be suppressed when branch_protection.ok=False."""
+        result: dict[str, Any] = {
+            "branch_protection": {"ok": False, "value": "main is not protected"},
+            "auto_delete_branches": {"ok": True, "value": "enabled"},
+            "overall_ok": False,
+        }
+        output = _format_section("GITHUB", result, self._symbols())
+        assert "Auto-delete branches" in output
+        assert "[OK] enabled" in output
