@@ -18,18 +18,22 @@
   to invariant assertions. Does not duplicate the string-pinned tests
   already in `test_verify_format_section.py` and friends.
 * **Shared fixture (new):** `tests/cli/commands/conftest.py` —
-  introduces a **new** `_make_verify_mocks()` helper AND hosts the
-  shared alignment-test helpers `_expected_value_column(indent, *,
-  label_width)` and `_assert_value_at_column(line, expected_col)`. The
-  same helpers are used by Step 3's cross-row alignment test and by
-  this step's Layer 1 / Layer 2 — keeping them in conftest.py avoids
-  duplication. `_make_verify_mocks()` does not exist in
+  introduces a **new** `_make_verify_mocks()` helper. The shared
+  alignment-test helpers `_expected_value_column(indent, *,
+  label_width)` and `_assert_value_at_column(line, expected_col)` are
+  introduced in Step 3 (`tests/cli/commands/conftest.py`); Step 6
+  reuses them. `_make_verify_mocks()` does not exist in
   `test_verify_orchestration.py` today — Step 6 introduces it fresh.
   The helper must mirror the `@patch` decorator stack currently used in
   `test_verify_orchestration.py` so a single call sets up the full mock
-  surface that `execute_verify` interacts with. At minimum:
+  surface that `execute_verify` interacts with.
 
-  - `verify_github`
+  Note: `tests/cli/commands/conftest.py` already provides autouse
+  fixtures `_mock_verify_config` and `_mock_verify_github` that patch
+  `verify_config` and `verify_github` to default-OK results.
+  `_make_verify_mocks()` should NOT re-patch those — instead, compose
+  with the existing fixtures by patching only the *additional* surface:
+
   - `verify_mcp_servers`
   - `verify_mlflow`
   - `verify_claude`
@@ -91,41 +95,8 @@ lands at `expected_col` (with whitespace at `expected_col - 1`). A
 producer that drifts from the helper signature (e.g. a hand-rolled
 `f-string` with wrong widths) is detected.
 
-Pinned definitions — implementer must use these exact forms, not a
-sketch:
-
-```python
-def _expected_value_column(indent: int, *, label_width: int = _LABEL_WIDTH) -> int:
-    """Return the 0-indexed column where the value SHOULD begin, derived
-    purely from layout constants.
-
-    Layout: [indent][label.ljust(label_width)][space][marker.ljust(_MARKER_SLOT_WIDTH)][space][value]
-    The expected value column is indent + label_width + 1 + _MARKER_SLOT_WIDTH + 1.
-    For test parametrization, callers should pass the section's label_width
-    explicitly when the section uses a dynamic width (e.g. MCP CONFIG WARNINGS).
-
-    NOTE: this does NOT inspect the line — it computes the contract from
-    constants only. Use `_assert_value_at_column` to verify a real line
-    against this expected column.
-    """
-    return indent + label_width + 1 + _MARKER_SLOT_WIDTH + 1
-
-
-def _assert_value_at_column(line: str, expected_col: int) -> None:
-    """Assert that `line` has a non-whitespace character at `expected_col`
-    and a whitespace character at `expected_col - 1`. Catches drift in both
-    directions (prefix overflow → boundary fails; value-too-short →
-    expected_col is whitespace)."""
-    assert expected_col < len(line), (
-        f"line shorter than expected value column {expected_col}: {line!r}"
-    )
-    assert line[expected_col - 1].isspace(), (
-        f"prefix overflowed past col {expected_col - 1} (expected space): {line!r}"
-    )
-    assert not line[expected_col].isspace(), (
-        f"value missing at col {expected_col} (expected non-space): {line!r}"
-    )
-```
+These helpers are introduced in Step 3
+(`tests/cli/commands/conftest.py`); Step 6 reuses them.
 
 The two helpers together form an actual alignment check: the expected
 column comes from constants, the assertion inspects the line. If
@@ -235,12 +206,18 @@ asserted in `step_4.md`'s unit tests.
   step_4.md's unit tests). Existing tests in
   `test_verify_orchestration.py` are NOT migrated to use the helper in
   this commit (adopt-not-rewrite).
-* Place `_assert_value_at_column(line, expected_col)` and
-  `_expected_value_column(indent, *, label_width)` in
-  `tests/cli/commands/conftest.py` (or another shared location). They
-  are imported by both Layer 1 and Layer 2 here in step_6, and by
-  Step 3's cross-row alignment test — the same helper across all three
-  steps avoids duplication.
+
+  Note: `tests/cli/commands/conftest.py` already provides autouse
+  fixtures `_mock_verify_config` and `_mock_verify_github` that patch
+  `verify_config` and `verify_github` to default-OK results.
+  `_make_verify_mocks()` should NOT re-patch those — instead, compose
+  with the existing fixtures by patching only the *additional* surface
+  listed above (drop `verify_github` from the patch list; it is already
+  covered).
+* `_assert_value_at_column(line, expected_col)` and
+  `_expected_value_column(indent, *, label_width)` are introduced in
+  Step 3 (`tests/cli/commands/conftest.py`). Step 6 imports them from
+  there; do NOT redefine.
 * Importing private helpers (`_format_row`, `_format_row_prefix`,
   `_format_section`, etc.) from `verify.py` is fine — these are tests
   of internal contracts.

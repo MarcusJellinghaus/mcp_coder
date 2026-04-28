@@ -17,6 +17,12 @@
   assertions on environment/project rows, if any).
   Add a new minimal test class in `test_verify_format_section.py` if no
   unit-level test exists for these `_print_*` functions yet.
+* **Shared test helpers (new):** `tests/cli/commands/conftest.py` —
+  introduce `_expected_value_column(indent: int, *, label_width: int =
+  _LABEL_WIDTH) -> int` and `_assert_value_at_column(line: str,
+  expected_col: int) -> None`. Both helpers are reused by Step 6's
+  per-formatter and smoke-test layers (introduced here in Step 3 in
+  conftest.py; Step 6 reuses).
 
 ## WHAT
 
@@ -61,6 +67,47 @@ else:
 * `STATUS_SYMBOLS` is already imported at module scope; `_format_row`
   exists from Step 1.
 * No signature changes.
+* Introduce the shared alignment-test helpers in
+  `tests/cli/commands/conftest.py`. Pin these exact implementations —
+  Step 6 reuses them as-is (do NOT re-define in step_6.md):
+
+  ```python
+  def _expected_value_column(indent: int, *, label_width: int = _LABEL_WIDTH) -> int:
+      """Return the 0-indexed column where the value SHOULD begin, derived
+      purely from layout constants.
+
+      Layout: [indent][label.ljust(label_width)][space][marker.ljust(_MARKER_SLOT_WIDTH)][space][value]
+      The expected value column is indent + label_width + 1 + _MARKER_SLOT_WIDTH + 1.
+      For test parametrization, callers should pass the section's label_width
+      explicitly when the section uses a dynamic width (e.g. MCP CONFIG WARNINGS).
+
+      NOTE: this does NOT inspect the line — it computes the contract from
+      constants only. Use `_assert_value_at_column` to verify a real line
+      against this expected column.
+      """
+      return indent + label_width + 1 + _MARKER_SLOT_WIDTH + 1
+
+
+  def _assert_value_at_column(line: str, expected_col: int) -> None:
+      """Assert that `line` has a non-whitespace character at `expected_col`
+      and a whitespace character at `expected_col - 1`. Catches drift in both
+      directions."""
+      assert expected_col >= 1, f"expected_col must be >= 1; got {expected_col}"
+      assert expected_col < len(line), (
+          f"line shorter than expected value column {expected_col}: {line!r}"
+      )
+      assert line[expected_col - 1].isspace(), (
+          f"prefix overflowed past col {expected_col - 1} (expected space): {line!r}"
+      )
+      assert not line[expected_col].isspace(), (
+          f"value missing at col {expected_col} (expected non-space): {line!r}"
+      )
+  ```
+
+  The `assert expected_col >= 1` precondition guards against negative-index
+  wraparound in `line[expected_col - 1]` — without it, a caller passing
+  `expected_col=0` would silently read the last character of the line via
+  Python's negative-index semantics.
 
 ## ALGORITHM
 
@@ -82,19 +129,22 @@ Both functions still return `None` (they `print` directly).
     alignment within the section),
   - rows without a marker still align with the [ERR] not-installed row.
 
-  Use the shared `_assert_value_at_column(line, expected_col)` helper
-  from `tests/cli/commands/conftest.py` (introduced by Step 6 — keep it
-  there to avoid duplication; the same helper is used by Step 6's
-  Layer 1 / Layer 2). Derive `expected_col` from constants:
+  Use the shared `_assert_value_at_column(line, expected_col)` and
+  `_expected_value_column(indent)` helpers from
+  `tests/cli/commands/conftest.py` (introduced here in Step 3; Step 6
+  reuses them in its Layer 1 / Layer 2 layers). Derive `expected_col`
+  via the helper:
 
   ```python
   from mcp_coder.cli.commands.verify import (
       _LABEL_WIDTH, _MARKER_SLOT_WIDTH, _VALUE_COLUMN_INDENT,
   )
-  from tests.cli.commands.conftest import _assert_value_at_column
+  from tests.cli.commands.conftest import (
+      _assert_value_at_column, _expected_value_column,
+  )
 
-  expected_col = 2 + _LABEL_WIDTH + 1 + _MARKER_SLOT_WIDTH + 1
-  # equivalently: _VALUE_COLUMN_INDENT
+  expected_col = _expected_value_column(indent=2)
+  # (equivalent to _VALUE_COLUMN_INDENT)
   for line in (python_version_line, mcp_coder_line):
       _assert_value_at_column(line, expected_col)
   ```
@@ -107,7 +157,8 @@ Both functions still return `None` (they `print` directly).
   that `format_code` and `check_type_hints` align (the current code mixes
   18- and 20-wide which this step normalises to 22). Use the same
   `_assert_value_at_column` helper from `conftest.py`, with
-  `expected_col = _VALUE_COLUMN_INDENT + 2` for the indent=4 sub-rows.
+  `expected_col = _expected_value_column(indent=4)` for the indent=4
+  sub-rows (equivalent to `_VALUE_COLUMN_INDENT + 2`).
 * **Pinned exact-string assertion (regression guard).** Add at least one
   assertion that pins the post-migration output for an installed-package
   row, e.g.:

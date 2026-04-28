@@ -134,3 +134,25 @@ Started: 2026-04-28
 - summary.md: tests/cli/commands/conftest.py hosts both _make_verify_mocks() and _assert_value_at_column / _expected_value_column.
 
 **Status**: pending commit
+
+## Round 6 — 2026-04-28
+
+**Findings**:
+- F1 [real, sequencing] step_3.md imports _assert_value_at_column from conftest.py and says "introduced by Step 6" — but Step 3 lands BEFORE Step 6, so the import would fail at Step 3 commit time.
+- F2 [nit, symmetry] Step 3 hand-derives expected_col = 2 + _LABEL_WIDTH + 1 + _MARKER_SLOT_WIDTH + 1 instead of calling _expected_value_column(indent=2) — minor consistency drift with Step 6.
+- F3 [real, fixture composition] _make_verify_mocks() patches verify_github but conftest.py already has an autouse _mock_verify_github fixture; double-patching is fragile and the plan is silent on the overlap.
+- F4 [nit, defensive] _assert_value_at_column reads line[expected_col - 1] without guarding expected_col >= 1; Python's negative-index wraparound would silently read the last char of the line.
+
+**Decisions**:
+- F1, F3: accept (real correctness issues — sequencing bug + fixture conflict).
+- F2, F4: accept (small consistency / defensive-coding fixes).
+
+**User decisions**:
+- None this round.
+
+**Changes**:
+- step_3.md: introduces _expected_value_column and _assert_value_at_column in tests/cli/commands/conftest.py (moved from Step 6); cross-row alignment test now calls _expected_value_column(indent=2) instead of hand-deriving; helper guards expected_col >= 1.
+- step_6.md: removes helper definitions (now reuses Step 3's); _make_verify_mocks() patch list no longer includes verify_github (already covered by autouse _mock_verify_github fixture); explicit note about composition with existing autouse fixtures.
+- summary.md: tests/cli/commands/conftest.py row split: Step 3 hosts alignment helpers; Step 6 adds _make_verify_mocks().
+
+**Status**: pending commit
