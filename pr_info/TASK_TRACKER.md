@@ -21,6 +21,56 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Add Helpers, Bump `_pad`, Migrate `_format_section`
+
+See [step_1.md](./steps/step_1.md) for details.
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Migrate `_format_mcp_section` and `_format_claude_mcp_section`
+
+See [step_2.md](./steps/step_2.md) for details.
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Migrate `_print_environment_section` and `_print_project_section`
+
+See [step_3.md](./steps/step_3.md) for details.
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Change `_collect_mcp_warnings` Return Type and Migrate `_run_mcp_edit_smoke_test`
+
+See [step_4.md](./steps/step_4.md) for details.
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: Migrate `execute_verify` Inline Rows (CONFIG, PROMPTS, LLM PROVIDER, Test prompt)
+
+See [step_5.md](./steps/step_5.md) for details.
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 6: Alignment-Invariant Tests
+
+See [step_6.md](./steps/step_6.md) for details.
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review
+- [ ] PR summary
+
