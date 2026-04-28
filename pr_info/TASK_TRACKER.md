@@ -71,6 +71,6 @@ See [step_6.md](./steps/step_6.md) for details.
 
 ## Pull Request
 
-- [ ] PR review
+- [x] PR review
 - [ ] PR summary
 
