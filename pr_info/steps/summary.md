@@ -55,3 +55,7 @@ No source modules under `src/`, no folders, no scripts.
 3. **Step 3** — Modify `ci.yml` mypy matrix entry to use `.[typecheck]`
 
 Each step is one commit. Steps 2 and 3 could swap order but Step 1 must come first.
+
+## Notes
+
+- The latent mypy unreachable warning at `src/mcp_coder/utils/tui_preparation.py:121` was fixed pre-implementation in commit `ebd92e0` (platform-guard restructure). All steps verify with green mypy.

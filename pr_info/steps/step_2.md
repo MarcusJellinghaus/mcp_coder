@@ -95,16 +95,18 @@ jobs:
 YAML changes don't trigger Python checks meaningfully, but per CLAUDE.md, still run all three after the edit (they should be no-ops):
 
 ```
-mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"])
+mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not jenkins_integration and not langchain_integration and not llm_integration and not textual_integration"])
 mcp__tools-py__run_pylint_check
 mcp__tools-py__run_mypy_check
 ```
 
-Optional sanity check — confirm the YAML parses (locally, not via GitHub):
+Optional sanity check — confirm the workflow file is present and well-formed using only the stdlib (`pyyaml` is not in any extra of this repo):
 
 ```bash
-python -c "import yaml; yaml.safe_load(open('.github/workflows/upstream-mypy-check.yml'))"
+python -c "from pathlib import Path; assert Path('.github/workflows/upstream-mypy-check.yml').read_text().startswith('name:'), 'workflow file missing name: header'"
 ```
+
+GitHub itself validates the YAML on push, so this is a soft smoke test only.
 
 The actual `workflow_dispatch` smoke test (acceptance criterion 4) is performed by the user in the GitHub Actions UI **after** the PR merges — call it out in the PR description.
 

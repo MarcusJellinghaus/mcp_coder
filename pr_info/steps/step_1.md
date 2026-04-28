@@ -67,10 +67,18 @@ def test_pyproject_typecheck_extra_exists() -> None:
 
 ## Verification
 
-After editing, run **all three** quality checks per CLAUDE.md:
+First, prove the new extra is well-formed end-to-end by installing it:
 
 ```
-mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"])
+pip install -e .[typecheck]
+```
+
+(or `uv pip install -e .[typecheck]`). Confirm the install completes without errors. This proves the new `[typecheck]` extra is well-formed and the self-referential `mcp-coder[types]` resolves.
+
+Then run **all three** quality checks per CLAUDE.md:
+
+```
+mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not jenkins_integration and not langchain_integration and not llm_integration and not textual_integration"])
 mcp__tools-py__run_pylint_check
 mcp__tools-py__run_mypy_check
 ```

@@ -32,21 +32,65 @@ Change it to:
 
 ### Change 2 — switch the shared install step to use the matrix field with a fallback
 
-Find the install step in the `test` job (currently around lines 124–125):
+Find the install step in the `test` job (currently around lines 123–124).
+
+**Note:** the `test` job and `architecture` job both contain `Install dependencies` steps with **identical** text (`uv pip install --system ".[dev,langchain]"`), and the surrounding step blocks (`Install latest GitHub dependencies` above, `Environment info` / `Run ${{ matrix.check.name }}` below) are also identical between the two jobs. A bare snippet of the install step alone — or with its immediate neighbours — is **non-unique** and would cause `mcp__workspace__edit_file` to error.
+
+To make the match unique to the `test` job, the `old_string` below anchors on the `no-url-deps` matrix entry — that matrix line exists only in the `test` job — and extends down to the install step. Apply Change 2 **after** Change 1 (Change 1 only touches the mypy matrix line, which sits above `no-url-deps`, so `no-url-deps` is still present and untouched).
+
+`old_string` (multiline, must match exactly):
 
 ```yaml
+          - {name: "no-url-deps", cmd: "python tools/check_no_url_deps.py"}
+    name: ${{ matrix.check.name }}
+    steps:
+      - uses: actions/checkout@v6
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: 3.11
+          
+      - name: Install latest GitHub dependencies
+        run: |
+          uv pip install --system "mcp-coder-utils @ git+https://github.com/MarcusJellinghaus/mcp-coder-utils.git"
+          uv pip install --system "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"
+          uv pip install --system --no-deps "mcp-tools-py @ git+https://github.com/MarcusJellinghaus/mcp-tools-py.git"
+
       - name: Install dependencies
         run: uv pip install --system ".[dev,langchain]"
 ```
 
-Change it to:
+`new_string` — same block, only the final `run:` line of the install step changed:
 
 ```yaml
+          - {name: "no-url-deps", cmd: "python tools/check_no_url_deps.py"}
+    name: ${{ matrix.check.name }}
+    steps:
+      - uses: actions/checkout@v6
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: 3.11
+          
+      - name: Install latest GitHub dependencies
+        run: |
+          uv pip install --system "mcp-coder-utils @ git+https://github.com/MarcusJellinghaus/mcp-coder-utils.git"
+          uv pip install --system "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"
+          uv pip install --system --no-deps "mcp-tools-py @ git+https://github.com/MarcusJellinghaus/mcp-tools-py.git"
+
       - name: Install dependencies
         run: uv pip install --system "${{ matrix.check.install || '.[dev,langchain]' }}"
 ```
 
-When `matrix.check.install` is unset (the 7 untouched entries), it evaluates to empty string and `||` returns the original `.[dev,langchain]`. When set (mypy entry only), it returns `.[typecheck]`.
+When `matrix.check.install` is unset (the 7 untouched entries), it evaluates to empty string and `||` returns the original `.[dev,langchain]`. When set (mypy entry only), it returns `.[typecheck]`. Net diff is still **1 line changed** in the install step (plus Change 1's matrix-line edit = 2 lines total).
 
 ### Do NOT touch
 
@@ -57,7 +101,7 @@ When `matrix.check.install` is unset (the 7 untouched entries), it evaluates to 
 
 ## HOW
 
-- Use `mcp__workspace__edit_file` with the exact `old_string` / `new_string` for both edits — the matrix entry line is unique, and the install step text is unique within the `test` job.
+- Use `mcp__workspace__edit_file` with the exact `old_string` / `new_string` for both edits — the mypy matrix entry line is unique, and Change 2's `old_string` anchors on the `no-url-deps` matrix entry to disambiguate the `test` job's install step from the `architecture` job's identical install step.
 - After both edits, the diff should be exactly **2 lines changed** (one in the matrix block, one in the install step).
 
 ## ALGORITHM (CI behavior after change)
@@ -84,7 +128,7 @@ The mypy job will now see only: mypy, the 3 upstream-from-git packages, type stu
 After editing, run **all three** quality checks per CLAUDE.md:
 
 ```
-mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"])
+mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not jenkins_integration and not langchain_integration and not llm_integration and not textual_integration"])
 mcp__tools-py__run_pylint_check
 mcp__tools-py__run_mypy_check
 ```
