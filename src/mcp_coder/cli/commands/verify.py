@@ -37,6 +37,48 @@ STATUS_SYMBOLS: dict[str, str] = {
     "warning": "[WARN]",
 }
 
+_MARKER_SLOT_WIDTH: int = max(len(v) for v in STATUS_SYMBOLS.values())
+_LABEL_WIDTH: int = 22  # global minimum label slot; sections may widen via label_width=
+
+
+def _format_row_prefix(
+    label: str, marker: str, *, indent: int, label_width: int = _LABEL_WIDTH
+) -> str:
+    """Render the column-aligned prefix portion of a tabular row.
+
+    Returns ``indent + label_field + " " + marker_field + " "`` WITHOUT
+    rstrip — the trailing space and the full marker-slot padding are
+    preserved. Used directly by callers that need the prefix without a
+    value (e.g. ``textwrap.wrap`` continuation indent).
+
+    Empty marker is padded to ``_MARKER_SLOT_WIDTH`` so the value column
+    starts at the same horizontal position regardless of marker presence.
+    Labels longer than ``label_width`` overrun (no truncation) — keep
+    labels concise, or pass a wider ``label_width`` for sections whose
+    labels are known to exceed the default.
+    """
+    return f"{' ' * indent}{label:<{label_width}s} {marker:<{_MARKER_SLOT_WIDTH}s} "
+
+
+def _format_row(
+    label: str, marker: str, value: str, *, indent: int, label_width: int = _LABEL_WIDTH
+) -> str:
+    """Render a tabular row (labeled or label-less).
+
+    Composed on top of ``_format_row_prefix``; appends the value and
+    rstrips trailing whitespace. Label-less rows pass ``label=""``;
+    the empty label is padded so the value column aligns with
+    neighbouring labeled rows.
+    """
+    return (
+        _format_row_prefix(label, marker, indent=indent, label_width=label_width)
+        + value
+    ).rstrip()
+
+
+_VALUE_COLUMN_INDENT: int = len(_format_row_prefix("", "", indent=2))
+
+
 _ENVIRONMENT_PACKAGES: tuple[str, ...] = (
     "mcp-coder",
     "mcp-coder-utils",
@@ -132,9 +174,9 @@ def _print_project_section(project_dir: Path, symbols: dict[str, str]) -> None:
 
 
 def _pad(title: str) -> str:
-    r"""Return a section header line padded to 60 chars with '='."""
+    r"""Return a section header line padded to 75 chars with '='."""
     prefix = f"=== {title} "
-    return "\n" + prefix + "=" * max(0, 60 - len(prefix))
+    return "\n" + prefix + "=" * max(0, 75 - len(prefix))
 
 
 _KEY_REGEX = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -212,14 +254,14 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
             continue
         label = _LABEL_MAP.get(key, key)
         ok = entry.get("ok")
-        value = entry.get("value", "")
+        value = str(entry.get("value", ""))
         if key == "branch_protection":
             bp_ok = ok
         elif key in _BRANCH_PROTECTION_CHILDREN:
             if bp_ok is False:
                 continue  # suppress children when parent failed
             if key == "strict_mode":
-                lines.append(f"    {label:<20s} {value}")
+                lines.append(_format_row(label, "", value, indent=4))
             else:
                 if ok is True:
                     symbol = symbols["success"]
@@ -227,11 +269,11 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
                     symbol = symbols["failure"]
                 else:
                     symbol = symbols["warning"]
-                line = f"    {label:<20s} {symbol} {value}"
+                row_value = value
                 error = entry.get("error")
                 if error and ok is False:
-                    line += f" ({error})"
-                lines.append(line)
+                    row_value = f"{value} ({error})"
+                lines.append(_format_row(label, symbol, row_value, indent=4))
             continue
         if ok is True:
             symbol = symbols["success"]
@@ -239,13 +281,13 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
             symbol = symbols["failure"]
         else:
             symbol = symbols["warning"]
-        line = f"  {label:<20s} {symbol} {value}"
+        row_value = value
         error = entry.get("error")
         if error and ok is False:
-            line += f" ({error})"
-        lines.append(line)
+            row_value = f"{value} ({error})"
+        lines.append(_format_row(label, symbol, row_value, indent=2))
         if ok is False and "install_hint" in entry:
-            lines.append(f"                           -> {entry['install_hint']}")
+            lines.append(f"{' ' * _VALUE_COLUMN_INDENT}-> {entry['install_hint']}")
     return "\n".join(lines)
 
 
