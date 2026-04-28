@@ -37,6 +37,65 @@ STATUS_SYMBOLS: dict[str, str] = {
     "warning": "[WARN]",
 }
 
+_MARKER_SLOT_WIDTH: int = max(len(v) for v in STATUS_SYMBOLS.values())
+_LABEL_WIDTH: int = 22  # global minimum label slot; sections may widen via label_width=
+
+
+def _format_row_prefix(
+    label: str, marker: str, *, indent: int, label_width: int = _LABEL_WIDTH
+) -> str:
+    """Render the column-aligned prefix portion of a tabular row.
+
+    Empty marker is padded to ``_MARKER_SLOT_WIDTH`` so the value column
+    starts at the same horizontal position regardless of marker presence.
+    Labels longer than ``label_width`` overrun (no truncation) — keep
+    labels concise, or pass a wider ``label_width`` for sections whose
+    labels are known to exceed the default.
+
+    Args:
+        label: Row label (may be empty for label-less rows).
+        marker: Status marker (e.g. ``[OK]``, ``[ERR]``, ``[WARN]``, or "").
+        indent: Number of leading spaces.
+        label_width: Minimum width of the label column.
+
+    Returns:
+        ``indent + label_field + " " + marker_field + " "`` WITHOUT
+        rstrip — the trailing space and the full marker-slot padding are
+        preserved. Used directly by callers that need the prefix without
+        a value (e.g. ``textwrap.wrap`` continuation indent).
+    """
+    return f"{' ' * indent}{label:<{label_width}s} {marker:<{_MARKER_SLOT_WIDTH}s} "
+
+
+def _format_row(
+    label: str, marker: str, value: str, *, indent: int, label_width: int = _LABEL_WIDTH
+) -> str:
+    """Render a tabular row (labeled or label-less).
+
+    Composed on top of ``_format_row_prefix``; appends the value and
+    rstrips trailing whitespace. Label-less rows pass ``label=""``;
+    the empty label is padded so the value column aligns with
+    neighbouring labeled rows.
+
+    Args:
+        label: Row label (may be empty for label-less rows).
+        marker: Status marker (e.g. ``[OK]``, ``[ERR]``, ``[WARN]``, or "").
+        value: Row value text.
+        indent: Number of leading spaces.
+        label_width: Minimum width of the label column.
+
+    Returns:
+        Formatted row string with trailing whitespace stripped.
+    """
+    return (
+        _format_row_prefix(label, marker, indent=indent, label_width=label_width)
+        + value
+    ).rstrip()
+
+
+_VALUE_COLUMN_INDENT: int = len(_format_row_prefix("", "", indent=2))
+
+
 _ENVIRONMENT_PACKAGES: tuple[str, ...] = (
     "mcp-coder",
     "mcp-coder-utils",
@@ -52,15 +111,16 @@ class _DropUnexpandedWarnings(logging.Filter):
         return "unexpanded variable" not in record.getMessage()
 
 
-def _collect_mcp_warnings(mcp_json_path: str | None) -> list[str]:
+def _collect_mcp_warnings(mcp_json_path: str | None) -> list[tuple[str, str]]:
     """Parse ``.mcp.json`` for unresolved ``${...}`` placeholders in env values.
 
     Args:
         mcp_json_path: Path to ``.mcp.json`` (or None).
 
     Returns:
-        Pre-formatted lines ``"server / env_var  unresolved_template"``; empty
-        if there are no findings or the file is missing/invalid.
+        List of ``(label, value)`` pairs where ``label`` has the form
+        ``"<server> / <env_var>"`` and ``value`` is the unresolved template.
+        Empty if there are no findings or the file is missing/invalid.
     """
     if mcp_json_path is None:
         return []
@@ -68,12 +128,12 @@ def _collect_mcp_warnings(mcp_json_path: str | None) -> list[str]:
         data = json.loads(Path(mcp_json_path).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return []
-    lines: list[str] = []
+    findings: list[tuple[str, str]] = []
     for server_name, server in data.get("mcpServers", {}).items():
         for env_var, value in server.get("env", {}).items():
             if isinstance(value, str) and re.search(r"\$\{[^}]+\}", value):
-                lines.append(f"{server_name} / {env_var}  {value}")
-    return lines
+                findings.append((f"{server_name} / {env_var}", value))
+    return findings
 
 
 def _print_environment_section() -> None:
@@ -87,54 +147,73 @@ def _print_environment_section() -> None:
     python_version = (
         f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     )
-    print(f"  {'Python version':<20s} {python_version}")
-    print(f"  {'Executable':<20s} {sys.executable}")
+    print(_format_row("Python version", "", python_version, indent=2))
+    print(_format_row("Executable", "", sys.executable, indent=2))
     virtualenv = sys.prefix if sys.prefix != sys.base_prefix else "(none)"
-    print(f"  {'Virtualenv':<20s} {virtualenv}")
+    print(_format_row("Virtualenv", "", virtualenv, indent=2))
     pythonpath = os.environ.get("PYTHONPATH") or "(not set)"
-    print(f"  {'PYTHONPATH':<20s} {pythonpath}")
+    print(_format_row("PYTHONPATH", "", pythonpath, indent=2))
     print()
     for pkg in _ENVIRONMENT_PACKAGES:
         try:
             value = version(pkg)
+            print(_format_row(pkg, "", value, indent=2))
         except PackageNotFoundError:
-            value = "[ERR] not installed"
-        print(f"  {pkg:<20s} {value}")
+            print(
+                _format_row(pkg, STATUS_SYMBOLS["failure"], "not installed", indent=2)
+            )
 
 
 def _print_project_section(project_dir: Path, symbols: dict[str, str]) -> None:
-    """Print the PROJECT section showing language detection and tool config."""
+    """Print the PROJECT section showing language detection and tool config.
+
+    Args:
+        project_dir: Path to the project directory.
+        symbols: Dict with 'success', 'failure', 'warning' keys.
+    """
     print(_pad("PROJECT"))
     pyproject_exists = (project_dir / "pyproject.toml").exists()
     if pyproject_exists:
-        print(f"  {'pyproject.toml':<20s} {symbols['success']} found")
-        print(f"  {'Language':<20s} {symbols['success']} Python (detected)")
+        print(_format_row("pyproject.toml", symbols["success"], "found", indent=2))
+        print(
+            _format_row("Language", symbols["success"], "Python (detected)", indent=2)
+        )
         config = get_implement_config(project_dir)
         print()
         print("  [Python]")
         if config.format_code:
-            print(f"    {'format_code':<18s} {symbols['success']} enabled")
+            print(_format_row("format_code", symbols["success"], "enabled", indent=4))
         else:
             print(
-                f"    {'format_code':<18s} {symbols['warning']}"
-                " not configured (default: disabled)"
+                _format_row(
+                    "format_code",
+                    symbols["warning"],
+                    "not configured (default: disabled)",
+                    indent=4,
+                )
             )
         if config.check_type_hints:
-            print(f"    {'check_type_hints':<18s} {symbols['success']} enabled")
+            print(
+                _format_row("check_type_hints", symbols["success"], "enabled", indent=4)
+            )
         else:
             print(
-                f"    {'check_type_hints':<18s} {symbols['warning']}"
-                " not configured (default: disabled)"
+                _format_row(
+                    "check_type_hints",
+                    symbols["warning"],
+                    "not configured (default: disabled)",
+                    indent=4,
+                )
             )
     else:
-        print(f"  {'pyproject.toml':<20s} {symbols['warning']} not found")
-        print(f"  {'Language':<20s} {symbols['success']} (none detected)")
+        print(_format_row("pyproject.toml", symbols["warning"], "not found", indent=2))
+        print(_format_row("Language", symbols["success"], "(none detected)", indent=2))
 
 
 def _pad(title: str) -> str:
-    r"""Return a section header line padded to 60 chars with '='."""
+    r"""Return a section header line padded to 75 chars with '='."""
     prefix = f"=== {title} "
-    return "\n" + prefix + "=" * max(0, 60 - len(prefix))
+    return "\n" + prefix + "=" * max(0, 75 - len(prefix))
 
 
 _KEY_REGEX = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -212,14 +291,14 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
             continue
         label = _LABEL_MAP.get(key, key)
         ok = entry.get("ok")
-        value = entry.get("value", "")
+        value = str(entry.get("value", ""))
         if key == "branch_protection":
             bp_ok = ok
         elif key in _BRANCH_PROTECTION_CHILDREN:
             if bp_ok is False:
                 continue  # suppress children when parent failed
             if key == "strict_mode":
-                lines.append(f"    {label:<20s} {value}")
+                lines.append(_format_row(label, "", value, indent=4))
             else:
                 if ok is True:
                     symbol = symbols["success"]
@@ -227,11 +306,11 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
                     symbol = symbols["failure"]
                 else:
                     symbol = symbols["warning"]
-                line = f"    {label:<20s} {symbol} {value}"
+                row_value = value
                 error = entry.get("error")
                 if error and ok is False:
-                    line += f" ({error})"
-                lines.append(line)
+                    row_value = f"{value} ({error})"
+                lines.append(_format_row(label, symbol, row_value, indent=4))
             continue
         if ok is True:
             symbol = symbols["success"]
@@ -239,13 +318,13 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
             symbol = symbols["failure"]
         else:
             symbol = symbols["warning"]
-        line = f"  {label:<20s} {symbol} {value}"
+        row_value = value
         error = entry.get("error")
         if error and ok is False:
-            line += f" ({error})"
-        lines.append(line)
+            row_value = f"{value} ({error})"
+        lines.append(_format_row(label, symbol, row_value, indent=2))
         if ok is False and "install_hint" in entry:
-            lines.append(f"                           -> {entry['install_hint']}")
+            lines.append(f"{' ' * _VALUE_COLUMN_INDENT}-> {entry['install_hint']}")
     return "\n".join(lines)
 
 
@@ -290,7 +369,9 @@ def _format_mcp_section(
             tool_names = entry.get("tool_names")
             if tool_names:
                 lines.append(
-                    f"  {name:<20s} {symbol} {len(tool_names)} tools available"
+                    _format_row(
+                        name, symbol, f"{len(tool_names)} tools available", indent=2
+                    )
                 )
                 for tool_name, desc in tool_names:
                     if desc:
@@ -298,7 +379,7 @@ def _format_mcp_section(
                     else:
                         lines.append(f"    {tool_name}")
             else:
-                lines.append(f"  {name:<20s} {symbol} {value}")
+                lines.append(_format_row(name, symbol, value, indent=2))
     else:
         for name, entry in servers.items():
             ok = entry.get("ok")
@@ -306,7 +387,7 @@ def _format_mcp_section(
             symbol = symbols["success"] if ok else symbols["failure"]
             tool_names = entry.get("tool_names")
             if tool_names:
-                prefix = f"  {name:<20s} {symbol} "
+                prefix = _format_row_prefix(name, symbol, indent=2)
                 names_only = [n for n, _d in tool_names]
                 tools_text = f"{len(tool_names)} tools: {', '.join(names_only)}"
                 wrapped = textwrap.wrap(
@@ -317,7 +398,7 @@ def _format_mcp_section(
                 )
                 lines.extend(wrapped)
             else:
-                lines.append(f"  {name:<20s} {symbol} {value}")
+                lines.append(_format_row(name, symbol, value, indent=2))
     return "\n".join(lines)
 
 
@@ -341,7 +422,7 @@ def _format_claude_mcp_section(
     lines: list[str] = [_pad(f"MCP SERVERS (via Claude Code{title_suffix})")]
     for status in statuses:
         symbol = symbols["success"] if status.ok else symbols["failure"]
-        lines.append(f"  {status.name:<20s} {symbol} {status.status_text}")
+        lines.append(_format_row(status.name, symbol, status.status_text, indent=2))
     return "\n".join(lines)
 
 
@@ -378,13 +459,20 @@ def _run_mcp_edit_smoke_test(
         content = test_file.read_text(encoding="utf-8")
         pos_a, pos_b, pos_c = content.find("A"), content.find("B"), content.find("C")
         if pos_a < pos_b < pos_c:
-            return f"  {label:<20s} {symbols['success']} edit verified"
-        return (
-            f"  {label:<20s} {symbols['warning']}"
-            " edit not verified (B not found between A and C)"
+            return _format_row(label, symbols["success"], "edit verified", indent=2)
+        return _format_row(
+            label,
+            symbols["warning"],
+            "edit not verified (B not found between A and C)",
+            indent=2,
         )
     except Exception as exc:  # pylint: disable=broad-except
-        return f"  {label:<20s} {symbols['warning']} edit not verified ({exc})"
+        return _format_row(
+            label,
+            symbols["warning"],
+            f"edit not verified ({exc})",
+            indent=2,
+        )
     finally:
         test_file.unlink(missing_ok=True)
 
@@ -465,6 +553,9 @@ def _compute_exit_code(
 def _collect_install_hints(result: dict[str, Any]) -> list[str]:
     """Collect install_hint values from failed entries in a verification result.
 
+    Args:
+        result: Verification result dict from a domain verify function.
+
     Returns:
         List of install hint strings from failed entries.
     """
@@ -477,6 +568,10 @@ def _collect_install_hints(result: dict[str, Any]) -> list[str]:
 
 def _prompt_source(configured: str | None, default_label: str) -> str:
     """Format a prompt source for display.
+
+    Args:
+        configured: Configured prompt path, or None if not set.
+        default_label: Label shown in parentheses when ``configured`` is None.
 
     Returns:
         The configured path, or the default_label in parentheses.
@@ -519,14 +614,14 @@ def execute_verify(args: argparse.Namespace) -> int:
                 last_label = label
             first, _sep, rest = value.partition(" ")
             if _looks_like_key(first) and rest:
-                print(f"    {first:<18s} {symbol} {rest}")
+                print(_format_row(first, symbol, rest, indent=4))
             elif symbol.strip():
-                print(f"    {symbol} {value}")
+                print(_format_row("", symbol, value, indent=4))
             else:
-                print(f"    {value}")
+                print(_format_row("", "", value, indent=4))
         else:
             # Top-level rows (Config file, Expected path, Hint, Parse error)
-            print(f"  {label:<20s} {symbol} {value}")
+            print(_format_row(label, symbol, value, indent=2))
 
     # 0b. Prompt configuration section
     project_dir = Path(args.project_dir).resolve() if args.project_dir else Path.cwd()
@@ -535,23 +630,39 @@ def execute_verify(args: argparse.Namespace) -> int:
 
     prompt_lines = [_pad("PROMPTS")]
     prompt_lines.append(
-        f"  {'System prompt':<20s} {symbols['success']}"
-        f" {_prompt_source(prompt_config.system_prompt, 'shipped default')}"
+        _format_row(
+            "System prompt",
+            symbols["success"],
+            _prompt_source(prompt_config.system_prompt, "shipped default"),
+            indent=2,
+        )
     )
     prompt_lines.append(
-        f"  {'Project prompt':<20s} {symbols['success']}"
-        f" {_prompt_source(prompt_config.project_prompt, 'shipped default')}"
+        _format_row(
+            "Project prompt",
+            symbols["success"],
+            _prompt_source(prompt_config.project_prompt, "shipped default"),
+            indent=2,
+        )
     )
     prompt_lines.append(
-        f"  {'Claude mode':<20s} {symbols['success']}"
-        f" {prompt_config.claude_system_prompt_mode}"
+        _format_row(
+            "Claude mode",
+            symbols["success"],
+            prompt_config.claude_system_prompt_mode,
+            indent=2,
+        )
     )
     if active_provider == "claude" and prompt_config.project_prompt:
         prompt_path = get_project_prompt_path(project_dir)
         if is_claude_md(prompt_path, str(project_dir)):
             prompt_lines.append(
-                f"  {'Redundancy':<20s} {symbols['warning']}"
-                " project prompt is CLAUDE.md (will skip for Claude)"
+                _format_row(
+                    "Redundancy",
+                    symbols["warning"],
+                    "project prompt is CLAUDE.md (will skip for Claude)",
+                    indent=2,
+                )
             )
     print("\n".join(prompt_lines))
 
@@ -579,7 +690,12 @@ def execute_verify(args: argparse.Namespace) -> int:
     langchain_result: dict[str, Any] | None = None
     print(_pad("LLM PROVIDER"))
     print(
-        f"  {'Active provider':<20s} {symbols['success']} {active_provider} (from {source})"
+        _format_row(
+            "Active provider",
+            symbols["success"],
+            f"{active_provider} (from {source})",
+            indent=2,
+        )
     )
     # 2a. Resolve MCP config for ALL providers (before provider branch)
     mcp_config_resolved = resolve_mcp_config_path(
@@ -647,8 +763,13 @@ def execute_verify(args: argparse.Namespace) -> int:
             else:
                 print(_pad("MCP SERVERS (via langchain-mcp-adapters)"))
                 print(
-                    f"  {symbols['warning']} server health check skipped"
-                    " (langchain-mcp-adapters not installed)"
+                    _format_row(
+                        "",
+                        symbols["warning"],
+                        "server health check skipped"
+                        " (langchain-mcp-adapters not installed)",
+                        indent=2,
+                    )
                 )
         else:
             # LangChain MCP section first (primary)
@@ -664,8 +785,13 @@ def execute_verify(args: argparse.Namespace) -> int:
             else:
                 print(_pad("MCP SERVERS (via langchain-mcp-adapters)"))
                 print(
-                    f"  {symbols['warning']} server health check skipped"
-                    " (langchain-mcp-adapters not installed)"
+                    _format_row(
+                        "",
+                        symbols["warning"],
+                        "server health check skipped"
+                        " (langchain-mcp-adapters not installed)",
+                        indent=2,
+                    )
                 )
             # Claude MCP section second (for completeness)
             if claude_mcp is not None:
@@ -690,8 +816,19 @@ def execute_verify(args: argparse.Namespace) -> int:
         warnings = _collect_mcp_warnings(mcp_config_resolved)
         if warnings:
             print(_pad("MCP CONFIG WARNINGS"))
-            for warning_line in warnings:
-                print(f"  {warning_line}")
+            section_label_width = max(
+                _LABEL_WIDTH, max(len(label) for label, _ in warnings)
+            )
+            for label, value in warnings:
+                print(
+                    _format_row(
+                        label,
+                        symbols["warning"],
+                        value,
+                        indent=2,
+                        label_width=section_label_width,
+                    )
+                )
 
     # 3b. MCP edit smoke test (informational only)
     if mcp_config_resolved:
@@ -715,7 +852,7 @@ def execute_verify(args: argparse.Namespace) -> int:
             mcp_config=mcp_config_resolved,
             execution_dir=str(project_dir),
         )
-        print(f"  {'Test prompt':<20s} {symbols['success']} responded OK")
+        print(_format_row("Test prompt", symbols["success"], "responded OK", indent=2))
     except Exception as exc:  # pylint: disable=broad-except
         test_prompt_ok = False
         # Only classify connection-related exceptions
@@ -732,7 +869,14 @@ def execute_verify(args: argparse.Namespace) -> int:
                 category = "Connection error"
         else:
             category = f"{type(exc).__name__}: {exc}"
-        print(f"  {'Test prompt':<20s} {symbols['failure']} FAILED ({category})")
+        print(
+            _format_row(
+                "Test prompt",
+                symbols["failure"],
+                f"FAILED ({category})",
+                indent=2,
+            )
+        )
         logger.debug("Test prompt failure details: %s", exc, exc_info=True)
         print("  Run with --debug for detailed diagnostics.")
 

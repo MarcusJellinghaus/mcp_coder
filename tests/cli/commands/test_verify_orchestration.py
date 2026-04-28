@@ -1090,7 +1090,7 @@ class TestMcpConfigWarnings:
             encoding="utf-8",
         )
         result = _collect_mcp_warnings(str(p))
-        assert result == ["tools-py / PYTHONPATH  ${MCP_CODER_PROJECT_DIR}/src"]
+        assert result == [("tools-py / PYTHONPATH", "${MCP_CODER_PROJECT_DIR}/src")]
 
     def test_no_placeholders_returns_empty(self, tmp_path: Path) -> None:
         p = tmp_path / ".mcp.json"
@@ -1115,8 +1115,8 @@ class TestMcpConfigWarnings:
         )
         result = _collect_mcp_warnings(str(p))
         assert result == [
-            "srv-a / PYTHONPATH  ${VAR_A}/src",
-            "srv-b / LIBPATH  ${VAR_B}\\Lib\\",
+            ("srv-a / PYTHONPATH", "${VAR_A}/src"),
+            ("srv-b / LIBPATH", "${VAR_B}\\Lib\\"),
         ]
 
     @patch(f"{_VERIFY}._run_mcp_edit_smoke_test", return_value="  smoke")
@@ -1206,7 +1206,8 @@ class TestMcpConfigWarnings:
             execute_verify(_make_args(mcp_config=str(mcp_json)))
         output = capsys.readouterr().out
         assert "MCP CONFIG WARNINGS" in output
-        assert "tools-py / PYTHONPATH  ${MCP_CODER_PROJECT_DIR}/src" in output
+        assert "tools-py / PYTHONPATH" in output
+        assert "${MCP_CODER_PROJECT_DIR}/src" in output
 
     @patch(f"{_VERIFY}._run_mcp_edit_smoke_test", return_value="  smoke")
     @patch(f"{_VERIFY}.parse_claude_mcp_list", return_value=[])
@@ -1266,6 +1267,79 @@ class TestMcpConfigWarnings:
         assert not any(
             isinstance(f, _DropUnexpandedWarnings) for f in lc_logger.filters
         )
+
+
+class TestMcpConfigWarningsDynamicWidth:
+    """Tests for per-section dynamic label width in MCP CONFIG WARNINGS."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_github(self) -> Any:
+        with patch(f"{_VERIFY}.verify_github", return_value=_github_ok_default()):
+            yield
+
+    @patch(f"{_VERIFY}._run_mcp_edit_smoke_test", return_value="  smoke")
+    @patch(f"{_VERIFY}.parse_claude_mcp_list", return_value=[])
+    @patch(f"{_VERIFY}.prepare_llm_environment", return_value={})
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_LC_VERIFY}.verify_mcp_servers")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    def test_long_label_widens_section_value_column(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_mcp_servers: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        _mock_env: MagicMock,
+        _mock_parse: MagicMock,
+        _mock_smoke: MagicMock,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """A long label widens the section's value column; rows align consistently."""
+        from mcp_coder.cli.commands.verify import _LABEL_WIDTH, _MARKER_SLOT_WIDTH
+
+        long_server = "langchain-mcp-adapters"
+        short_server = "srv"
+        mcp_json = tmp_path / ".mcp.json"
+        mcp_json.write_text(
+            json.dumps(
+                {
+                    "mcpServers": {
+                        long_server: {"env": {"PYTHONPATH": "${VAR_A}/src"}},
+                        short_server: {"env": {"X": "${VAR_B}"}},
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_mcp_servers.return_value = _mcp_servers_ok()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+
+        with patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=str(mcp_json)):
+            execute_verify(_make_args(mcp_config=str(mcp_json)))
+
+        output = capsys.readouterr().out
+        lines = output.splitlines()
+        long_label = f"{long_server} / PYTHONPATH"
+        short_label = f"{short_server} / X"
+        long_line = next(l for l in lines if long_label in l)
+        short_line = next(l for l in lines if short_label in l)
+
+        # All rows in this section align at the same value column.
+        assert long_line.index("${VAR_A}") == short_line.index("${VAR_B}")
+
+        # That column equals 2 + max_label_len + 1 + _MARKER_SLOT_WIDTH + 1.
+        section_label_width = max(_LABEL_WIDTH, len(long_label))
+        expected_col = 2 + section_label_width + 1 + _MARKER_SLOT_WIDTH + 1
+        assert long_line.index("${VAR_A}") == expected_col
 
 
 class TestDropUnexpandedFilter:

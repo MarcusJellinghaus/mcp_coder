@@ -11,6 +11,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.cli.commands.verify import (
+    _LABEL_WIDTH,
+    _MARKER_SLOT_WIDTH,
+    _VALUE_COLUMN_INDENT,
+    _format_row,
     _looks_like_key,
     _print_environment_section,
     _print_project_section,
@@ -19,6 +23,10 @@ from mcp_coder.cli.commands.verify import (
 )
 from mcp_coder.cli.main import main
 from mcp_coder.utils.pyproject_config import PromptsConfig
+from tests.cli.commands.conftest import (
+    _assert_value_at_column,
+    _expected_value_column,
+)
 
 
 class TestVerifyCommandIntegration:
@@ -256,7 +264,8 @@ class TestEnvironmentSection:
 
         monkeypatch.setattr("mcp_coder.cli.commands.verify.version", fake_version)
         _print_environment_section()
-        assert "[ERR] not installed" in capsys.readouterr().out
+        out = capsys.readouterr().out
+        assert _format_row("mcp-tools-py", "[ERR]", "not installed", indent=2) in out
 
     def test_virtualenv_none_when_not_in_venv(
         self,
@@ -267,6 +276,56 @@ class TestEnvironmentSection:
         monkeypatch.setattr(sys, "base_prefix", "/usr")
         _print_environment_section()
         assert "(none)" in capsys.readouterr().out
+
+    def test_value_column_aligned_across_rows(
+        self,
+        capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Python version row and mcp-coder package row share the same value column."""
+
+        def fake_version(pkg: str) -> str:
+            return "1.2.3"
+
+        monkeypatch.setattr("mcp_coder.cli.commands.verify.version", fake_version)
+        _print_environment_section()
+        lines = capsys.readouterr().out.splitlines()
+        python_line = next(l for l in lines if "Python version" in l)
+        mcp_coder_line = next(l for l in lines if l.lstrip().startswith("mcp-coder "))
+        expected_col = _expected_value_column(indent=2)
+        assert expected_col == _VALUE_COLUMN_INDENT
+        for line in (python_line, mcp_coder_line):
+            _assert_value_at_column(line, expected_col)
+
+    def test_marker_row_aligns_with_no_marker_rows(
+        self,
+        capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """The [ERR] not-installed row aligns with no-marker rows at the same column."""
+        from importlib.metadata import PackageNotFoundError
+
+        def fake_version(pkg: str) -> str:
+            if pkg == "mcp-tools-py":
+                raise PackageNotFoundError(pkg)
+            return "1.2.3"
+
+        monkeypatch.setattr("mcp_coder.cli.commands.verify.version", fake_version)
+        _print_environment_section()
+        lines = capsys.readouterr().out.splitlines()
+        python_line = next(l for l in lines if "Python version" in l)
+        err_line = next(l for l in lines if "mcp-tools-py" in l)
+        expected_col = _expected_value_column(indent=2)
+        for line in (python_line, err_line):
+            _assert_value_at_column(line, expected_col)
+
+    def test_installed_package_row_pinned_exact_string(self) -> None:
+        """Derive expected post-migration string from constants and pin it."""
+        expected = (
+            f"  {'mcp-coder'.ljust(_LABEL_WIDTH)} "
+            f"{''.ljust(_MARKER_SLOT_WIDTH)} 1.2.3"
+        )
+        assert _format_row("mcp-coder", "", "1.2.3", indent=2) == expected
 
 
 class TestLooksLikeKey:
@@ -406,11 +465,11 @@ class TestConfigGrouping:
         out = _run_verify_with_entries(self._entries(), capsys)
         lines = _config_block(out)
         token_line = next(line for line in lines if line.startswith("    token"))
-        # The line should show: "    token              [OK] configured (config.toml)"
-        # The key column stops before configured
-        assert "token" in token_line
-        # Key column is padded to 18 chars, then the symbol, then the rest
-        assert "[OK] configured (config.toml)" in token_line
+        # Migrated to _format_row("token", "[OK]", "configured (config.toml)", indent=4)
+        assert (
+            _format_row("token", "[OK]", "configured (config.toml)", indent=4)
+            in token_line
+        )
 
     def test_config_file_row_outside_groups(
         self, capsys: pytest.CaptureFixture[str]
@@ -464,10 +523,12 @@ class TestConfigGrouping:
         ]
         out = _run_verify_with_entries(entries, capsys)
         lines = _config_block(out)
-        # Must contain the exact indented line with a single [OK] status symbol
-        assert "    [OK] 6 repos configured" in lines
-        # Must not be split at "6" (i.e., no "[OK]              <symbol> 6 repos")
-        assert not any(line.startswith("    [OK]              ") for line in lines)
+        # Must contain the exact label-less row rendered by _format_row
+        assert _format_row("", "[OK]", "6 repos configured", indent=4) in lines
+        # Must not be rendered as a key/value split (no "[OK]" in the key column)
+        assert not any(
+            line.startswith("    [OK]") and "[OK]" in line[8:] for line in lines
+        )
         # Must not double the [OK] prefix
         assert not any("[OK] [OK]" in line for line in lines)
 
@@ -495,10 +556,10 @@ class TestProjectSection:
         _print_project_section(tmp_path, symbols)
         out = capsys.readouterr().out
         assert "=== PROJECT" in out
-        assert "[OK] found" in out
-        assert "[OK] Python (detected)" in out
-        assert "format_code" in out and "[OK] enabled" in out
-        assert "check_type_hints" in out and "[OK] enabled" in out
+        assert _format_row("pyproject.toml", "[OK]", "found", indent=2) in out
+        assert _format_row("Language", "[OK]", "Python (detected)", indent=2) in out
+        assert _format_row("format_code", "[OK]", "enabled", indent=4) in out
+        assert _format_row("check_type_hints", "[OK]", "enabled", indent=4) in out
 
     def test_project_section_python_defaults(
         self,
@@ -511,9 +572,26 @@ class TestProjectSection:
         symbols = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
         _print_project_section(tmp_path, symbols)
         out = capsys.readouterr().out
-        assert "[OK] found" in out
-        assert "[OK] Python (detected)" in out
-        assert "[WARN] not configured (default: disabled)" in out
+        assert _format_row("pyproject.toml", "[OK]", "found", indent=2) in out
+        assert _format_row("Language", "[OK]", "Python (detected)", indent=2) in out
+        assert (
+            _format_row(
+                "format_code",
+                "[WARN]",
+                "not configured (default: disabled)",
+                indent=4,
+            )
+            in out
+        )
+        assert (
+            _format_row(
+                "check_type_hints",
+                "[WARN]",
+                "not configured (default: disabled)",
+                indent=4,
+            )
+            in out
+        )
         # Both should be "not configured"
         lines = [l for l in out.splitlines() if "not configured" in l]
         assert len(lines) == 2
@@ -527,7 +605,25 @@ class TestProjectSection:
         symbols = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
         _print_project_section(tmp_path, symbols)
         out = capsys.readouterr().out
-        assert "[WARN] not found" in out
-        assert "(none detected)" in out
+        assert _format_row("pyproject.toml", "[WARN]", "not found", indent=2) in out
+        assert _format_row("Language", "[OK]", "(none detected)", indent=2) in out
         # Should NOT show [Python] subsection
         assert "[Python]" not in out
+
+    def test_format_code_aligns_with_check_type_hints(
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """format_code and check_type_hints values land at the same column."""
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+        symbols = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
+        _print_project_section(tmp_path, symbols)
+        lines = capsys.readouterr().out.splitlines()
+        format_code_line = next(l for l in lines if "format_code" in l)
+        check_type_hints_line = next(l for l in lines if "check_type_hints" in l)
+        expected_col = _expected_value_column(indent=4)
+        assert expected_col == _VALUE_COLUMN_INDENT + 2
+        for line in (format_code_line, check_type_hints_line):
+            _assert_value_at_column(line, expected_col)
