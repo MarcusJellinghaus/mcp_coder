@@ -118,3 +118,5 @@ info = RuntimeInfo(
 - `mcp__tools-py__run_pylint_check` clean.
 - `mcp__tools-py__run_mypy_check` clean.
 - One commit, message e.g. `feat(icoder): add mcp_coder_utils_version to RuntimeInfo`.
+
+> **Reviewer note for the commit description:** routing `mcp-coder` through the new `_get_package_version` helper also makes its lookup graceful — previously `importlib.metadata.version("mcp-coder")` could raise `PackageNotFoundError`; it now falls back to `"unknown"` like the new `mcp-coder-utils` lookup.

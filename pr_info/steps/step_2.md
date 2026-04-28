@@ -2,12 +2,12 @@
 
 ## LLM Prompt
 
-> Read `pr_info/steps/summary.md` and this step (`pr_info/steps/step_2.md`) in full before making changes. Implement Step 2 only — add the `mcp-coder-utils` banner line to `ICoderApp.on_mount` and verify it renders correctly. Step 1 must already be merged (the `RuntimeInfo.mcp_coder_utils_version` field must exist). Follow TDD: if any existing banner-output test exists, extend it first; otherwise add a focused unit-style assertion. Run all three MCP quality checks until green. Produce **exactly one commit**. Do not touch `info.py` — that is Step 3.
+> Read `pr_info/steps/summary.md` and this step (`pr_info/steps/step_2.md`) in full before making changes. Implement Step 2 only — add the `mcp-coder-utils` banner line to `ICoderApp.on_mount` and verify it renders correctly. Step 1 must already be merged (the `RuntimeInfo.mcp_coder_utils_version` field must exist). Follow TDD: add the new banner-output test in `tests/icoder/ui/test_app.py` first, then implementation. Run all three MCP quality checks until green. Produce **exactly one commit**. Do not touch `info.py` — that is Step 3.
 
 ## WHERE
 
 - Source: `src/mcp_coder/icoder/ui/app.py` (around line 106, in `on_mount`)
-- Test:   reuse existing test infrastructure under `tests/icoder/` (e.g. `test_app_pilot.py` or a new minimal test). No new test file needed unless coverage gaps require it.
+- Test:   `tests/icoder/ui/test_app.py` (mirrors src structure per planning principle). No banner-output assertion exists there today — add a new focused test using the existing `make_icoder_app` fixture and `OutputLog.recorded_lines`.
 
 ## WHAT
 
@@ -59,15 +59,22 @@ The `OutputLog` receives `"\n".join(lines)` styled `dim`. The new line shape:
 
 ## Tests
 
-If a banner-rendering test already exists in `test_app_pilot.py` (or similar), extend it to assert:
+Add a new focused test `test_banner_renders_mcp_coder_utils_version` in `tests/icoder/ui/test_app.py` (the file mirrors `src/mcp_coder/icoder/ui/app.py`). It uses the existing `make_icoder_app` fixture, runs the app via `app.run_test()`, and asserts that `OutputLog.recorded_lines` (joined with newlines) contains an `mcp-coder-utils <version>` line:
 
 ```python
-assert any(line.startswith("mcp-coder-utils ") for line in recorded_lines)
+async def test_banner_renders_mcp_coder_utils_version(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """on_mount banner includes the mcp-coder-utils version line."""
+    app = make_icoder_app(responses=[])
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        lines = app.query_one(OutputLog).recorded_lines
+        joined = "\n".join(lines)
+        assert any(line.startswith("mcp-coder-utils ") for line in lines), joined
 ```
 
-If no such test exists, add a small focused test in `tests/icoder/ui/test_app.py` or `tests/icoder/test_app_pilot.py` using the existing `make_icoder_app` fixture and `OutputLog.recorded_lines`. Construct an `AppCore` whose `runtime_info` is a `RuntimeInfo(...)` with `mcp_coder_utils_version="0.1.8"` and assert the banner output contains the line.
-
-> **KISS note:** if extending an existing assertion is a one-liner, prefer that over a new test function.
+If `make_icoder_app` does not already provide a `RuntimeInfo` with `mcp_coder_utils_version` populated, extend the factory (or pass a stub `AppCore`) so the banner can render the new line. No other test file needs to be touched.
 
 ## Acceptance
 
