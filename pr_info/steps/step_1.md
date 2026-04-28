@@ -91,8 +91,11 @@ or `_MARKER_SLOT_WIDTH` ever changes, the install-hint follows along
 for free):
 
 ```python
-print(f"{' ' * _VALUE_COLUMN_INDENT}-> {entry['install_hint']}")
+lines.append(f"{' ' * _VALUE_COLUMN_INDENT}-> {entry['install_hint']}")
 ```
+
+Note: preserves the existing list-builder pattern in `_format_section`;
+do not switch to `print`.
 
 For `indent=2, _LABEL_WIDTH=22, _MARKER_SLOT_WIDTH=6`, the resulting
 indent is `2 + 22 + 1 + 6 + 1 = 32`. This is a deliberate cosmetic
@@ -168,17 +171,31 @@ In `tests/cli/commands/test_verify_format_section.py`:
     `[OK]`, `[WARN]`, `[ERR]` and assert each lands at the same column.
     This is the central invariant that fulfills the issue title — a
     label-less row aligns at the same value column as a labeled row.
-  - **Prefix length invariant** —
-    `len(_format_row_prefix("x", "[OK]", indent=2)) == 32`
-    (and `[WARN]`/`[ERR]` produce equal-length prefixes; the test should
-    parameterize over the three markers and assert the lengths match).
+  - **Prefix length invariant** — derive expected length from constants:
+
+    ```python
+    assert len(_format_row_prefix("x", "[OK]", indent=2)) == 2 + _LABEL_WIDTH + 1 + _MARKER_SLOT_WIDTH + 1
+    # equivalently: == _VALUE_COLUMN_INDENT
+    ```
+
+    `[WARN]`/`[ERR]` produce equal-length prefixes; the test should
+    parameterize over the three markers and assert the lengths match.
+    Note: expected lengths derive from the layout formula; do not
+    hand-count spaces in the test.
   - **Composition contract** — for any non-empty `value` not starting/ending
     with whitespace,
     `_format_row(label, marker, value, indent=2)` ==
     `(_format_row_prefix(label, marker, indent=2) + value).rstrip()`.
-  - **Custom `label_width`** —
+  - **Custom `label_width`** — derive expected length from constants:
+
+    ```python
+    assert len(_format_row_prefix("x", "[OK]", indent=2, label_width=30)) == 2 + 30 + 1 + _MARKER_SLOT_WIDTH + 1
+    ```
+
     `_format_row("very long label name", "[OK]", "v", indent=2, label_width=30)`
-    produces a value column at index `2 + 30 + 1 + 6 + 1 = 40`.
+    produces a value column at index `2 + 30 + 1 + _MARKER_SLOT_WIDTH + 1`.
+    Note: expected lengths derive from the layout formula; do not
+    hand-count spaces in the test.
 
 ## Verification
 

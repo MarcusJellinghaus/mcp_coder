@@ -70,3 +70,24 @@ Started: 2026-04-28
 - step_6.md: cross-section invariant value-column index updated 31→32 and 33→34; ^  \[ regex tightened to line.strip() == "[Python]"; pre-existing freeform notice lines explicitly excluded; _make_verify_mocks() reworded as a new helper (not an extraction) with explicit mock list.
 
 **Status**: pending commit
+
+## Round 3 — 2026-04-28
+
+**Findings**:
+- F1 [critical, correctness] Step 6 Layer 1 assertion (len(set(value_indices)) == 1) fails on mixed-indent formatters (_format_section: indent 2 + 4; _print_project_section: indent 2 + 4).
+- F2 [major, correctness] Step 1 install-hint pseudocode uses print(...) but the surrounding _format_section builds a list (lines.append). Verbatim transcription would change behavior.
+- F3 [minor, correctness] Step 6 cross-section filter excludes only [Python]; CONFIG section emits [mcp], [github], [jenkins], etc. Latent foot-gun if a future test mocks verify_config to return entries.
+- F4 [nit, DRY] Step 6 Layer 2 hard-codes expected = 32/34 instead of deriving from _LABEL_WIDTH / _MARKER_SLOT_WIDTH or _VALUE_COLUMN_INDENT.
+- F5 [nit, DRY/TDD] Step 1 TestFormatRowHelpers hand-writes literal 32 / 40 instead of deriving from constants — contradicts the plan's own derive-from-constants guidance.
+
+**Decisions**:
+- F1-F5: accept (mechanical / DRY / correctness fixes; no design choices).
+
+**User decisions**:
+- None this round.
+
+**Changes**:
+- step_1.md: install-hint pseudocode fixed (`print` → `lines.append`); TestFormatRowHelpers prefix-length and custom-label_width assertions derive expected from constants.
+- step_6.md: Layer 1 ALGORITHM rewritten to group lines by indent before asserting per-indent column equality; Layer 2 generalizes the Python group-header filter to any `[name]` line; expected value column derived from _LABEL_WIDTH / _MARKER_SLOT_WIDTH (or `_VALUE_COLUMN_INDENT + (indent - 2)`).
+
+**Status**: pending commit

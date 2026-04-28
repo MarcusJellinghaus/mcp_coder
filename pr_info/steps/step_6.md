@@ -97,12 +97,19 @@ going through a helper.
 **Filter using an explicit allow-list, not "lines that look tabular":**
 
 1. Skip lines that start with `"=== "` — section headers from `_pad`.
-2. Skip the Python group header — match `line.strip() == "[Python]"`.
-   This is the only known group-header line in the verify output today.
-   The previous broader `^  \[` rule is over-eager (it would skip a
-   real row whose label or marker happened to start with `[`); using
-   the exact-string check is precise. If other group headers are
-   added later, extend the rule explicitly.
+2. Skip group-header lines — match any line of the form `"  [name]"`:
+
+   ```python
+   import re
+   if re.match(r"^  \[[A-Za-z][A-Za-z0-9_.]*\]\s*$", line):
+       continue
+   ```
+
+   Note: matches both Project section's `[Python]` and CONFIG section's
+   `[mcp]`, `[github]`, `[jenkins]`, etc. The pattern requires the
+   bracketed name to be the entire line content (after the leading
+   2-space indent), which distinguishes it from tabular rows that may
+   include `[OK]`/`[WARN]`/`[ERR]` markers.
 3. **Skip pre-existing freeform notice lines** that are intentionally
    not tabular rows. After Q4=C drops the freeform helper, these
    remain plain `print` calls (they are not migrated by Step 5):
@@ -132,15 +139,26 @@ going through a helper.
 **Assertion (post Q2=B per-section dynamic width):**
 
 The value column index for a row is
-`indent + label_width + 1 + _MARKER_SLOT_WIDTH + 1`. With the defaults:
-* `indent=2`: `2 + 22 + 1 + 6 + 1 = 32`.
-* `indent=4`: `4 + 22 + 1 + 6 + 1 = 34`.
+`indent + label_width + 1 + _MARKER_SLOT_WIDTH + 1`. Derive expected
+from constants — never hard-code `32` / `34`:
+
+```python
+expected = _VALUE_COLUMN_INDENT + (indent - 2)
+# equivalently: indent + _LABEL_WIDTH + 1 + _MARKER_SLOT_WIDTH + 1
+```
+
+With the defaults this resolves to `32` at indent=2 and `34` at indent=4,
+but the test must read the value off the constant — if `_LABEL_WIDTH`
+or `_MARKER_SLOT_WIDTH` ever changes, the assertion follows along for
+free.
 
 * For lines emitted in the MCP CONFIG WARNINGS section: value column
-  index `>= 32` (the section may shift right when the longest label
-  exceeds `_LABEL_WIDTH`).
-* For all other indent=2 lines: value column index `== 32`.
-* For all indent=4 lines: value column index `== 34`.
+  index `>= expected` at indent=2 (the section may shift right when the
+  longest label exceeds `_LABEL_WIDTH`).
+* For all other indent=2 lines: value column index `== expected`
+  (= `_VALUE_COLUMN_INDENT`).
+* For all indent=4 lines: value column index `== expected`
+  (= `_VALUE_COLUMN_INDENT + 2`).
 
 Identifying "this line came from the MCP CONFIG WARNINGS section" is
 straightforward: track the most recent `=== ` header seen during the
@@ -167,33 +185,64 @@ scan.
 ## ALGORITHM
 
 ### Layer 1 — per-formatter (return-string formatters)
+
+Group lines by indent before asserting equality. Formatters like
+`_format_section` (top-level indent=2 + branch-protection children
+indent=4 including `strict_mode`) and `_print_project_section` (top-level
+indent=2 + sub-rows indent=4) emit mixed indents, so a single
+`len(set(...)) == 1` across all content lines would fail. The invariant
+is one shared value column **per indent level**.
+
 ```
+from collections import defaultdict
+
+def _value_column_index(line: str) -> int:
+    # column where the value begins; for label-less rows the marker is at label_width+1
+    return ...  # extracted from the line layout
+
 lines = formatter(...).split("\n")
 content_lines = [
     l for l in lines
     if l
     and not l.startswith("=== ")
-    and l.strip() != "[Python]"
+    and not re.match(r"^  \[[A-Za-z][A-Za-z0-9_.]*\]\s*$", l)
 ]
-value_indices = [_value_column_index(l) for l in content_lines]
-assert len(set(value_indices)) == 1
+
+by_indent: dict[int, list[int]] = defaultdict(list)
+for line in content_lines:
+    indent = len(line) - len(line.lstrip(" "))
+    by_indent[indent].append(_value_column_index(line))
+
+for indent, indices in by_indent.items():
+    expected = _VALUE_COLUMN_INDENT + (indent - 2)
+    # equivalently: indent + _LABEL_WIDTH + 1 + _MARKER_SLOT_WIDTH + 1
+    assert len(set(indices)) == 1, f"value column drifts within indent={indent}"
+    assert indices[0] == expected, f"indent={indent}: got {indices[0]}, expected {expected}"
 ```
+
+The assertion now runs once per (formatter, indent-level) pair instead
+of once per formatter. The "Cover at minimum" bullets that mix indent=2
+and indent=4 (`_format_section`, `_print_project_section`) become
+naturally compatible with the test rather than failure cases.
 
 ### Layer 1 — per-formatter (`_print_*` functions)
 ```
 formatter(...)            # writes to stdout via print()
 captured = capsys.readouterr().out
-# same filter + assertion as above
+# same indent-grouped filter + per-indent assertion as above
 ```
 
 ### Layer 2 — end-to-end smoke
 ```
+import re
+
 NOTICE_PREFIXES = (
     "Claude CLI:",
     "(uses Claude CLI",
     "Run with --debug",
     "pip install ",
 )
+GROUP_HEADER_RE = re.compile(r"^  \[[A-Za-z][A-Za-z0-9_.]*\]\s*$")
 
 captured = run_execute_verify_with_mocks()  # uses _make_verify_mocks()
 section = None
@@ -203,7 +252,9 @@ for line in captured.split("\n"):
         continue
     if not line:
         continue
-    if line.strip() == "[Python]":
+    if GROUP_HEADER_RE.match(line):
+        # matches Project section's [Python] and CONFIG section's [mcp],
+        # [github], [jenkins], etc.
         continue
     stripped = line.lstrip(" ")
     if any(stripped.startswith(p) for p in NOTICE_PREFIXES):
@@ -212,7 +263,8 @@ for line in captured.split("\n"):
     if indent not in (2, 4):
         continue
     col = _value_column_index(line)
-    expected = 32 if indent == 2 else 34
+    expected = _VALUE_COLUMN_INDENT + (indent - 2)
+    # equivalently: indent + _LABEL_WIDTH + 1 + _MARKER_SLOT_WIDTH + 1
     if section == "MCP CONFIG WARNINGS" and indent == 2:
         assert col >= expected, (line, col, section)
     else:
