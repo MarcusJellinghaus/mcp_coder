@@ -43,3 +43,26 @@
 - `pr_info/steps/step_2.md`: replaced hedged "If…" language with two concrete sub-sections — (1) extend `make_icoder_app` to accept `runtime_info: RuntimeInfo | None = None` and pass it through to `AppCore` (default `None` keeps existing tests intact), (2) the new test constructs the full post-Step-1 `RuntimeInfo` (all 9 fields) and passes it via `runtime_info=`. Added a "Files modified" section noting both `app.py` and `test_app.py` are touched.
 
 **Status**: committed
+
+## Round 3 — 2026-04-28
+
+**Findings**:
+- Round 2 fix (concrete `make_icoder_app` extension + fully populated `RuntimeInfo` in test) reads coherently and is consistent with the current source (`AppCore.__init__` already accepts `runtime_info` so no source change needed; banner gate `if self._core.runtime_info:` correctly exercised)
+- Cross-step consistency holds: step 1 adds `mcp_coder_utils_version` as 2nd required field of `RuntimeInfo`; step 2's test constructs exactly those 9 required fields in order; step 3's `runtime_info` fixture update matches; step 3's `import importlib.metadata` removal is safe (sole use is in `_format_info`)
+
+**Decisions**: none — no actionable findings
+
+**User decisions**: none
+
+**Changes**: none
+
+**Status**: no changes needed
+
+## Final Status
+
+- **Rounds run**: 3 (round 3 produced zero plan changes — loop terminated)
+- **Plan changes committed**: 2
+  - `348d1fa` — docs(plan): commit step_2 to ui/test_app.py and note graceful mcp-coder lookup
+  - `0353edc` — docs(plan): commit step_2 to extending make_icoder_app for banner test
+- **Outcome**: Plan in `pr_info/steps/` is ready for implementation. Three steps form a clean dependency chain (env_setup → ui/app banner → /info command), each leaves pylint/pytest/mypy green, tests mirror src structure, no design or requirements questions raised.
+- **No design or requirements questions were escalated to the user during the review.**
