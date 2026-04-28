@@ -81,9 +81,33 @@ Both functions still return `None` (they `print` directly).
     the `mcp-coder` package-version row's value column (cross-row
     alignment within the section),
   - rows without a marker still align with the [ERR] not-installed row.
+
+  Use the shared `_assert_value_at_column(line, expected_col)` helper
+  from `tests/cli/commands/conftest.py` (introduced by Step 6 — keep it
+  there to avoid duplication; the same helper is used by Step 6's
+  Layer 1 / Layer 2). Derive `expected_col` from constants:
+
+  ```python
+  from mcp_coder.cli.commands.verify import (
+      _LABEL_WIDTH, _MARKER_SLOT_WIDTH, _VALUE_COLUMN_INDENT,
+  )
+  from tests.cli.commands.conftest import _assert_value_at_column
+
+  expected_col = 2 + _LABEL_WIDTH + 1 + _MARKER_SLOT_WIDTH + 1
+  # equivalently: _VALUE_COLUMN_INDENT
+  for line in (python_version_line, mcp_coder_line):
+      _assert_value_at_column(line, expected_col)
+  ```
+
+  The helper inspects `line[expected_col - 1]` (must be whitespace) and
+  `line[expected_col]` (must be non-whitespace), so the test catches
+  both prefix-overflow and value-too-short drift on each row.
+
 * Add a small unit test for `_print_project_section` similarly checking
   that `format_code` and `check_type_hints` align (the current code mixes
-  18- and 20-wide which this step normalises to 22).
+  18- and 20-wide which this step normalises to 22). Use the same
+  `_assert_value_at_column` helper from `conftest.py`, with
+  `expected_col = _VALUE_COLUMN_INDENT + 2` for the indent=4 sub-rows.
 * **Pinned exact-string assertion (regression guard).** Add at least one
   assertion that pins the post-migration output for an installed-package
   row, e.g.:

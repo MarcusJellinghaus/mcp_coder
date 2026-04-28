@@ -17,10 +17,15 @@
 * **New file:** `tests/cli/commands/test_verify_alignment.py` — dedicated
   to invariant assertions. Does not duplicate the string-pinned tests
   already in `test_verify_format_section.py` and friends.
-* **Shared fixture (new):** `tests/cli/commands/conftest.py` — create a
-  **new** `_make_verify_mocks()` helper. This helper does not exist in
-  `test_verify_orchestration.py` today — Step 6 introduces it fresh. The
-  helper must mirror the `@patch` decorator stack currently used in
+* **Shared fixture (new):** `tests/cli/commands/conftest.py` —
+  introduces a **new** `_make_verify_mocks()` helper AND hosts the
+  shared alignment-test helpers `_expected_value_column(indent, *,
+  label_width)` and `_assert_value_at_column(line, expected_col)`. The
+  same helpers are used by Step 3's cross-row alignment test and by
+  this step's Layer 1 / Layer 2 — keeping them in conftest.py avoids
+  duplication. `_make_verify_mocks()` does not exist in
+  `test_verify_orchestration.py` today — Step 6 introduces it fresh.
+  The helper must mirror the `@patch` decorator stack currently used in
   `test_verify_orchestration.py` so a single call sets up the full mock
   surface that `execute_verify` interacts with. At minimum:
 
@@ -33,6 +38,9 @@
   - `prompt_llm`
   - `_run_mcp_edit_smoke_test`
   - `resolve_llm_method`
+  - `_collect_mcp_warnings` — patched to return an empty list so the
+    dynamic-width MCP CONFIG WARNINGS section is excluded from the
+    captured output (per-section invariant lives in step_4.md tests).
 
   The implementer must verify this list against the current decorators
   on `test_verify_orchestration.py` when implementing Step 6 and add any
@@ -65,49 +73,89 @@ Cover at minimum:
   value column on Python version / Executable / Virtualenv / package
   versions all match.
 * `_print_project_section` — same, mixed `format_code` / `check_type_hints`.
-* MCP CONFIG WARNINGS render path (inline in `execute_verify`,
-  post-Step-4 migration) — exercise with a long synthetic label like
-  `langchain-mcp-adapters / VERY_LONG_VAR` to trigger the per-section
-  dynamic `label_width`. Assert per-row column equality within the
-  section using the dynamic width formula
-  `2 + section_label_width + 1 + _MARKER_SLOT_WIDTH + 1`. This bullet
-  is a per-section invariant (not a per-formatter Layer-1 case): the
-  MCP warnings path uses a per-section `label_width` and is asserted
-  with that section's specific expected column, not the global
-  `_VALUE_COLUMN_INDENT`.
+
+> Note: MCP CONFIG WARNINGS uses a per-section dynamic `label_width`;
+> that invariant is asserted in `step_4.md` Tests, not here. Layer 1's
+> helpers default to `label_width=_LABEL_WIDTH=22`, which is the wrong
+> contract for the dynamic-width section.
 
 Parameterize over marker presence and marker type so a regression in any
 single branch fails a specific case.
 
-Helper for the assertions (pinned definition — implementer must use
-this exact form, not a sketch):
+Layer 1 uses two helpers, deliberately split so the test can compare
+what the layout *should* produce against what the line *does* produce:
+`_expected_value_column(indent)` returns the column from layout
+constants (it does NOT inspect the line); `_assert_value_at_column(line,
+expected_col)` inspects the actual line content and asserts the value
+lands at `expected_col` (with whitespace at `expected_col - 1`). A
+producer that drifts from the helper signature (e.g. a hand-rolled
+`f-string` with wrong widths) is detected.
+
+Pinned definitions — implementer must use these exact forms, not a
+sketch:
 
 ```python
-def _value_column_index(line: str, *, label_width: int = _LABEL_WIDTH) -> int:
-    """Return the 0-indexed column where the value begins on a tabular row.
+def _expected_value_column(indent: int, *, label_width: int = _LABEL_WIDTH) -> int:
+    """Return the 0-indexed column where the value SHOULD begin, derived
+    purely from layout constants.
 
     Layout: [indent][label.ljust(label_width)][space][marker.ljust(_MARKER_SLOT_WIDTH)][space][value]
-    The value column is at indent + label_width + 1 + _MARKER_SLOT_WIDTH + 1.
+    The expected value column is indent + label_width + 1 + _MARKER_SLOT_WIDTH + 1.
     For test parametrization, callers should pass the section's label_width
     explicitly when the section uses a dynamic width (e.g. MCP CONFIG WARNINGS).
+
+    NOTE: this does NOT inspect the line — it computes the contract from
+    constants only. Use `_assert_value_at_column` to verify a real line
+    against this expected column.
     """
-    indent = len(line) - len(line.lstrip(" "))
     return indent + label_width + 1 + _MARKER_SLOT_WIDTH + 1
+
+
+def _assert_value_at_column(line: str, expected_col: int) -> None:
+    """Assert that `line` has a non-whitespace character at `expected_col`
+    and a whitespace character at `expected_col - 1`. Catches drift in both
+    directions (prefix overflow → boundary fails; value-too-short →
+    expected_col is whitespace)."""
+    assert expected_col < len(line), (
+        f"line shorter than expected value column {expected_col}: {line!r}"
+    )
+    assert line[expected_col - 1].isspace(), (
+        f"prefix overflowed past col {expected_col - 1} (expected space): {line!r}"
+    )
+    assert not line[expected_col].isspace(), (
+        f"value missing at col {expected_col} (expected non-space): {line!r}"
+    )
 ```
 
-Note: this returns the *expected* column based on layout constants;
-tests assert that the actual value substring appears at this expected
-position; if it does not, the assertion fails and identifies the
-misaligned row.
+The two helpers together form an actual alignment check: the expected
+column comes from constants, the assertion inspects the line. If
+production code rendered with a wrong `label_width` or `marker_slot`,
+the boundary characters at `expected_col - 1` / `expected_col` would be
+wrong and the assertion fires. This is the contract Round 5 hardens —
+the previous single helper was tautological because it derived the
+expected column from the same formula the assertion compared against.
 
 ### Layer 2 — `TestExecuteVerifyAlignmentSmoke` (one end-to-end)
 
 Drive `execute_verify` exactly **once** with the shared
 `_make_verify_mocks()` fixture (extracted to `conftest.py`). Capture
 stdout. Assert: every emitted tabular row has its value column at the
-expected position. This catches regressions where a maintainer adds a raw
-`print(...)` directly in `execute_verify` (or anywhere else) instead of
-going through a helper.
+expected position, using the same `_expected_value_column` /
+`_assert_value_at_column` pair as Layer 1. This catches regressions
+where a maintainer adds a raw `print(...)` directly in `execute_verify`
+(or anywhere else) instead of going through a helper.
+
+**MCP CONFIG WARNINGS exemption.** The smoke test fixture mocks
+`_collect_mcp_warnings` to return an empty list — no MCP warnings are
+emitted, so the dynamic-width section never appears in the asserted
+output. This avoids false failures: Layer 2's helpers default to
+`label_width=_LABEL_WIDTH=22`, but the dynamic-width section may use a
+larger value (e.g. ~45 chars for `langchain-mcp-adapters / VERY_LONG_VAR`),
+and the boundary check would fail at the default. The per-section
+dynamic-width invariant lives in `step_4.md`'s unit tests where the
+expected column is computed from the section-specific `label_width`.
+This is the simplest fix — Layer 2 is a smoke test, not a comprehensive
+coverage tool, and per-section invariants belong in their unit tests.
 
 **Filter using an explicit allow-list, not "lines that look tabular":**
 
@@ -147,37 +195,30 @@ going through a helper.
 4. For remaining non-empty lines, parse the leading-whitespace count.
    Accept `2` or `4` as the indent. Anything else → skip (it's a
    freeform continuation, e.g. the `-> install_hint` line at indent 32).
-5. For each accepted line, compute the value-column index (first
-   non-whitespace character after the marker slot, or use the helper
-   above).
+5. For each accepted line, compute the expected value column from
+   constants via `_expected_value_column(indent)` and assert with
+   `_assert_value_at_column(line, expected_col)`.
 
-**Assertion (post Q2=B per-section dynamic width):**
+**Assertion:**
 
-The value column index for a row is
-`indent + label_width + 1 + _MARKER_SLOT_WIDTH + 1`. Derive expected
-from constants — never hard-code `32` / `34`:
+For each accepted line, the expected value column is
+`_expected_value_column(indent)` — i.e.
+`indent + _LABEL_WIDTH + 1 + _MARKER_SLOT_WIDTH + 1`. With the defaults
+this resolves to `32` at indent=2 and `34` at indent=4, but the test
+must read the value off the constant — if `_LABEL_WIDTH` or
+`_MARKER_SLOT_WIDTH` ever changes, the assertion follows along for free.
 
-```python
-expected = _VALUE_COLUMN_INDENT + (indent - 2)
-# equivalently: indent + _LABEL_WIDTH + 1 + _MARKER_SLOT_WIDTH + 1
-```
+`_assert_value_at_column(line, expected_col)` then inspects the line:
+it requires whitespace at `expected_col - 1` and a non-whitespace
+character at `expected_col`. The assertion is no longer tautological —
+the expected column is formula-derived, but the boundary check actually
+reads the line's content.
 
-With the defaults this resolves to `32` at indent=2 and `34` at indent=4,
-but the test must read the value off the constant — if `_LABEL_WIDTH`
-or `_MARKER_SLOT_WIDTH` ever changes, the assertion follows along for
-free.
-
-* For lines emitted in the MCP CONFIG WARNINGS section: value column
-  index `>= expected` at indent=2 (the section may shift right when the
-  longest label exceeds `_LABEL_WIDTH`).
-* For all other indent=2 lines: value column index `== expected`
-  (= `_VALUE_COLUMN_INDENT`).
-* For all indent=4 lines: value column index `== expected`
-  (= `_VALUE_COLUMN_INDENT + 2`).
-
-Identifying "this line came from the MCP CONFIG WARNINGS section" is
-straightforward: track the most recent `=== ` header seen during the
-scan.
+The Layer 2 fixture mocks `_collect_mcp_warnings` to return an empty
+list, so MCP CONFIG WARNINGS rows (which use a per-section dynamic
+`label_width`) never appear in the captured output. No section-aware
+exemption is needed in the loop. The dynamic-width invariant is
+asserted in `step_4.md`'s unit tests.
 
 ## HOW
 
@@ -186,9 +227,20 @@ scan.
   This helper does not exist in `test_verify_orchestration.py` today —
   Step 6 introduces it fresh. It must mirror the `@patch` decorator
   stack on the orchestration test class so a single call sets up the
-  full mock surface (see the WHERE section above for the list).
-  Existing tests in `test_verify_orchestration.py` are NOT migrated to
-  use the helper in this commit (adopt-not-rewrite).
+  full mock surface (see the WHERE section above for the list). The
+  helper must additionally patch `_collect_mcp_warnings` to return an
+  empty list so the dynamic-width MCP CONFIG WARNINGS section does not
+  appear in the captured output (Layer 2 cannot describe the
+  per-section dynamic `label_width`; that invariant lives in
+  step_4.md's unit tests). Existing tests in
+  `test_verify_orchestration.py` are NOT migrated to use the helper in
+  this commit (adopt-not-rewrite).
+* Place `_assert_value_at_column(line, expected_col)` and
+  `_expected_value_column(indent, *, label_width)` in
+  `tests/cli/commands/conftest.py` (or another shared location). They
+  are imported by both Layer 1 and Layer 2 here in step_6, and by
+  Step 3's cross-row alignment test — the same helper across all three
+  steps avoids duplication.
 * Importing private helpers (`_format_row`, `_format_row_prefix`,
   `_format_section`, etc.) from `verify.py` is fine — these are tests
   of internal contracts.
@@ -201,48 +253,51 @@ scan.
 
 ### Layer 1 — per-formatter (return-string formatters)
 
-Group lines by indent before asserting equality. Formatters like
-`_format_section` (top-level indent=2 + branch-protection children
-indent=4 including `strict_mode`) and `_print_project_section` (top-level
-indent=2 + sub-rows indent=4) emit mixed indents, so a single
-`len(set(...)) == 1` across all content lines would fail. The invariant
-is one shared value column **per indent level**.
+Group lines by indent, then assert each line lands its value at the
+expected column for that indent. Formatters like `_format_section`
+(top-level indent=2 + branch-protection children indent=4 including
+`strict_mode`) and `_print_project_section` (top-level indent=2 +
+sub-rows indent=4) emit mixed indents, so a single equality across all
+content lines would fail. The invariant is one shared value column
+**per indent level**, derived from constants and asserted against the
+actual line content.
 
 ```
 from collections import defaultdict
+import re
 
-def _value_column_index(line: str, *, label_width: int = _LABEL_WIDTH) -> int:
-    # column where the value begins; for label-less rows the marker is at label_width+1
+GROUP_HEADER_RE = re.compile(r"^  \[[A-Za-z][A-Za-z0-9_.\-]*\]\s*$")
+
+def _content_lines(output: str) -> list[str]:
+    return [
+        l for l in output.splitlines()
+        if l
+        and not l.startswith("=== ")
+        and not GROUP_HEADER_RE.match(l)
+        and (len(l) - len(l.lstrip(" "))) in (2, 4)
+    ]
+
+# For each formatter under test:
+lines = _content_lines(formatter_output)
+by_indent: dict[int, list[str]] = defaultdict(list)
+for line in lines:
     indent = len(line) - len(line.lstrip(" "))
-    return indent + label_width + 1 + _MARKER_SLOT_WIDTH + 1
+    by_indent[indent].append(line)
 
-lines = formatter(...).split("\n")
-# the indent allow-list `(2, 4)` excludes continuation lines like the
-# install-hint at indent=32, which are intentionally not tabular.
-content_lines = [
-    l for l in lines
-    if l                                                     # not blank
-    and not l.startswith("=== ")                             # section header
-    and not re.match(r"^  \[[A-Za-z0-9_.\-]+\]\s*$", l)      # group header (see F3)
-    and (len(l) - len(l.lstrip(" "))) in (2, 4)              # tabular indent only
-]
-
-by_indent: dict[int, list[int]] = defaultdict(list)
-for line in content_lines:
-    indent = len(line) - len(line.lstrip(" "))
-    by_indent[indent].append(_value_column_index(line))
-
-for indent, indices in by_indent.items():
-    expected = _VALUE_COLUMN_INDENT + (indent - 2)
-    # equivalently: indent + _LABEL_WIDTH + 1 + _MARKER_SLOT_WIDTH + 1
-    assert len(set(indices)) == 1, f"value column drifts within indent={indent}"
-    assert indices[0] == expected, f"indent={indent}: got {indices[0]}, expected {expected}"
+for indent, lines_at_indent in by_indent.items():
+    expected_col = _expected_value_column(indent)
+    for line in lines_at_indent:
+        _assert_value_at_column(line, expected_col)
 ```
 
-The assertion now runs once per (formatter, indent-level) pair instead
-of once per formatter. The "Cover at minimum" bullets that mix indent=2
-and indent=4 (`_format_section`, `_print_project_section`) become
-naturally compatible with the test rather than failure cases.
+The assertion is no longer tautological: `_expected_value_column` is
+formula-derived, but `_assert_value_at_column` actually inspects
+`line[expected_col-1]` and `line[expected_col]`. If production code
+rendered with a wrong `label_width` or `marker_slot`, the boundary
+characters would be wrong and the assertion fires. The "Cover at
+minimum" bullets that mix indent=2 and indent=4 (`_format_section`,
+`_print_project_section`) work naturally — each indent level is
+checked against its own expected column.
 
 ### Layer 1 — per-formatter (`_print_*` functions)
 ```
@@ -263,11 +318,15 @@ NOTICE_PREFIXES = (
 )
 GROUP_HEADER_RE = re.compile(r"^  \[[A-Za-z][A-Za-z0-9_.\-]*\]\s*$")
 
+# IMPORTANT: the Layer 2 fixture mocks `_collect_mcp_warnings` to return
+# an empty list. MCP CONFIG WARNINGS uses a per-section dynamic
+# `label_width` that the Layer 2 helpers (which use the default
+# `_LABEL_WIDTH=22`) cannot describe; the per-section invariant is
+# asserted in step_4.md's unit tests, not here.
+
 captured = run_execute_verify_with_mocks()  # uses _make_verify_mocks()
-section = None
 for line in captured.split("\n"):
     if line.startswith("=== "):
-        section = line.strip("= ").strip()
         continue
     if not line:
         continue
@@ -281,14 +340,17 @@ for line in captured.split("\n"):
     indent = len(line) - len(stripped)
     if indent not in (2, 4):
         continue
-    col = _value_column_index(line)
-    expected = _VALUE_COLUMN_INDENT + (indent - 2)
-    # equivalently: indent + _LABEL_WIDTH + 1 + _MARKER_SLOT_WIDTH + 1
-    if section == "MCP CONFIG WARNINGS" and indent == 2:
-        assert col >= expected, (line, col, section)
-    else:
-        assert col == expected, (line, col, section)
+    expected_col = _expected_value_column(indent)
+    _assert_value_at_column(line, expected_col)
 ```
+
+The smoke test mirrors Layer 1's pattern: `_expected_value_column` for
+the contract, `_assert_value_at_column` for the actual inspection. By
+mocking `_collect_mcp_warnings` to return an empty list, the
+dynamic-width MCP CONFIG WARNINGS rows never appear in the output, so
+no per-section exemption is needed. Layer 2 is a smoke test, not a
+comprehensive coverage tool — per-section invariants belong in their
+unit tests.
 
 ## DATA
 

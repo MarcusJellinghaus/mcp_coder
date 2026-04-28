@@ -110,3 +110,27 @@ Started: 2026-04-28
 - step_6.md: Layer 1 algorithm filters content_lines to only indent-2/4 tabular rows (excludes install-hint continuations); MCP CONFIG WARNINGS bullet relabeled with "(inline in execute_verify, post-Step-4 migration)" and tagged as per-section invariant; group-header regex character class extended to include hyphens; _value_column_index pinned to derived-from-constants definition with explicit docstring.
 
 **Status**: pending commit
+
+## Round 5 — 2026-04-28
+
+**Findings**:
+- F1 [critical, correctness] _value_column_index pinned in Round 4 is tautological: it derives `expected` from the same formula the assertion uses, so the test never catches drift. Test is a constants-consistency check, not an alignment-invariant check.
+- F2 [broken-as-pinned, correctness] MCP CONFIG WARNINGS Layer-1 bullet asserts a per-section dynamic-width invariant, but the Layer 1 algorithm uses default label_width=_LABEL_WIDTH=22; the assertion would always pass or always fail vacuously.
+- F3 [verified] Hyphen extension to group-header regex is safe — no ambiguity with [OK]/[WARN]/[ERR] markers due to `^  \[` anchor.
+- F4 [verified] Layer 1 indent allow-list (2, 4) correctly excludes install-hint at indent=32 and accepts all real tabular rows.
+- F5 [text-drift, same root as F1] Step 6 prose still describes _value_column_index as line-inspecting; pinned implementation is formula-only.
+- F6 [implementer-divergence] Step 3 cross-row alignment test silently relies on Step 6's helper but doesn't say which one; without a concrete inspection helper, implementer would invent something different.
+
+**Decisions**:
+- F1, F2, F5, F6: accept (correctness fixes; Round 4's pinning hardened the wrong contract).
+- F3, F4: verified resolved by Round 4; no change.
+
+**User decisions**:
+- None this round.
+
+**Changes**:
+- step_6.md: split `_value_column_index` into `_expected_value_column(indent, *, label_width)` (formula-derived expected column) AND `_assert_value_at_column(line, expected_col)` (line-inspecting boundary check); rewrote Layer 1 + Layer 2 algorithms to use both helpers (assertion now catches drift); removed MCP CONFIG WARNINGS bullet from Layer 1 (per-section dynamic-width invariant belongs in step_4.md unit tests); Layer 2 mocks _collect_mcp_warnings to return empty list to avoid asserting on dynamic-width section.
+- step_3.md: cross-row alignment test now uses _assert_value_at_column from shared conftest; expected column derived from constants.
+- summary.md: tests/cli/commands/conftest.py hosts both _make_verify_mocks() and _assert_value_at_column / _expected_value_column.
+
+**Status**: pending commit
