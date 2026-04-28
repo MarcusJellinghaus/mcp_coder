@@ -84,6 +84,22 @@ Both functions still return `None` (they `print` directly).
 * Add a small unit test for `_print_project_section` similarly checking
   that `format_code` and `check_type_hints` align (the current code mixes
   18- and 20-wide which this step normalises to 22).
+* **Pinned exact-string assertion (regression guard).** Add at least one
+  assertion that pins the post-migration output for an installed-package
+  row, e.g.:
+
+  ```python
+  expected = (
+      f"  {'mcp-coder'.ljust(_LABEL_WIDTH)} "
+      f"{''.ljust(_MARKER_SLOT_WIDTH)} 1.2.3"
+  )
+  assert _format_row("mcp-coder", "", "1.2.3", indent=2) == expected
+  ```
+
+  The point: **derive the expected string from the constants** (don't
+  hand-count spaces) and pin it so a future bug that uniformly shifts
+  the value column gets caught. Value `"1.2.3"` is non-empty so rstrip
+  is a no-op — the assertion stays a deterministic string check.
 
 ## Verification
 

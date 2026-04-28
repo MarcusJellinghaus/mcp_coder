@@ -14,25 +14,27 @@ position on every row, regardless of whether a status marker is present
 |-----------------------|--------------------------------------------------|--------------------------------------------------------------------|
 | `_MARKER_SLOT_WIDTH`  | `max(len(v) for v in STATUS_SYMBOLS.values())`   | Future-proof against new markers (e.g. `[INFO]`, `[CRIT]`).        |
 | `_LABEL_WIDTH`        | `22`                                             | Global minimum label slot. Sections (e.g. MCP CONFIG WARNINGS) may widen dynamically when their longest label exceeds this; see `label_width` kwarg in `_format_row` / `_format_row_prefix`. |
+| `_VALUE_COLUMN_INDENT`| `len(_format_row_prefix('', '', indent=2))`      | Derived constant: position of the first value-column character at indent=2. Used by free-form continuation lines (e.g. install-hint) so they line up under the value column without hand-counting spaces. |
 
-### Three private helpers (replacing all ad-hoc `:<20s` / `:<18s` formatting)
+### Two private helpers (replacing all ad-hoc `:<20s` / `:<18s` formatting)
 
 ```python
 _format_row_prefix(label: str, marker: str, *, indent: int, label_width: int = _LABEL_WIDTH) -> str
 _format_row(label: str, marker: str, value: str, *, indent: int, label_width: int = _LABEL_WIDTH) -> str
-_format_freeform_row(marker: str, value: str, *, indent: int) -> str
 ```
 
 * `_format_row_prefix` renders the column-aligned prefix only — the
   `indent + label_field + marker_field + trailing_space` portion of a row,
   WITHOUT rstrip. It is the building block used wherever the prefix alone
-  is required (notably `textwrap.wrap` continuation indent in Step 2).
+  is required (notably `textwrap.wrap` continuation indent in Step 2). It
+  is also the layout single-source-of-truth that `_format_row` composes
+  on top of.
 * `_format_row` is defined as a composition on top of `_format_row_prefix`:
   `(_format_row_prefix(label, marker, indent=indent, label_width=label_width) + value).rstrip()`.
-  This keeps a single source of truth for the layout formula.
-* `_format_freeform_row` renders label-less rows used only by the CONFIG section
-  (free-form hints / parse errors / multi-word values that don't split into key/value).
-  No leading 22-char label slot is wasted.
+  One row helper handles both labeled and label-less rows by passing
+  `label=''`. There is no separate `_format_freeform_row` — a wrapper that
+  delegates to `_format_row(label="", ...)` does not earn its own name once
+  the layouts are identical.
 * A code comment near `_format_row` warns that labels >`label_width` overrun
   (since `:<{label_width}s` does not truncate). For sections whose label
   set is unknown ahead of time, the caller should compute
@@ -75,9 +77,6 @@ Partial migration would break cross-section alignment. Sites:
    `server health check skipped (langchain-mcp-adapters not installed)`
    no-marker fallback rows in the MCP servers branch.
 
-Total: 10 distinct migration sites (was 9 — the additional one is the
-`server health check skipped` fallback identified in plan-review round 1).
-
 ### Public API
 
 None. All helpers are private (`_`-prefixed). No compatibility shims.
@@ -103,7 +102,7 @@ None. All helpers are private (`_`-prefixed). No compatibility shims.
 | `tests/cli/commands/test_verify_orchestration.py`     | Update string-pinned assertions; `TestMcpConfigWarnings` (lines 1093, 1117-1120) pins `list[str]` shape — migrate to `list[tuple[str, str]]` with new label format `"<server> / <env_var>"`. |
 | `tests/cli/commands/test_verify_exit_codes.py`        | Update if/where it asserts exact row strings.                  |
 | `tests/cli/commands/test_verify_exit_codes_github.py` | Update if/where it asserts exact row strings.                  |
-| `tests/cli/commands/conftest.py` (new or extended)    | Extract a shared `_make_verify_mocks()` fixture so the Step 6 end-to-end smoke test and existing orchestration tests can both import it. Existing tests don't need to migrate now. |
+| `tests/cli/commands/conftest.py` (new or extended)    | Create a new `_make_verify_mocks()` helper so the Step 6 end-to-end smoke test can import it. The helper does not exist in `test_verify_orchestration.py` today — Step 6 introduces it fresh, mirroring that file's `@patch` decorator stack. Existing orchestration tests are NOT migrated to use it now (adopt-not-rewrite). |
 
 (Source touched: **one** file. The bulk of the diff is test fixture updates.)
 
@@ -122,10 +121,13 @@ After each step, all three quality gates must pass: pylint, pytest, mypy.
 
 ## KISS Choices
 
-* **Three helpers, composed.** `_format_row_prefix` is the layout primitive;
-  `_format_row` composes value-append + rstrip on top; `_format_freeform_row`
-  handles label-less rows. A single mega-helper with `if label:` branching
-  would obscure intent at every call site.
+* **Two helpers, composed.** One row helper handles both labeled and
+  label-less rows by passing `label=''`. A second `_format_row_prefix`
+  exists for the textwrap continuation case (no rstrip) and is the layout
+  single-source-of-truth that `_format_row` composes on top of. Both
+  labeled and label-less rows align at the same value column index —
+  fulfills the issue title literally; KISS wins over micro-optimizing a
+  few characters of leading whitespace on CONFIG rows.
 * **`label_width` is an opt-in kwarg, not the default.** Almost every caller
   passes the implicit `_LABEL_WIDTH=22`. The MCP CONFIG WARNINGS section is
   the one site that must thread a wider value through (labels of the form

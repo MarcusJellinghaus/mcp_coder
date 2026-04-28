@@ -39,8 +39,11 @@ else:
 Migration:
 
 * (A) → `print(_format_row(first, symbol, rest, indent=4))`
-* (B) → `print(_format_freeform_row(symbol, value, indent=4))`
-* (C) → `print(_format_freeform_row("", value, indent=4))`
+* (B) → `print(_format_row("", symbol, value, indent=4))`
+* (C) → `print(_format_row("", "", value, indent=4))`
+
+Label-less rows pass `label=""` to `_format_row`; they align at the same
+value column as labeled rows (this is the issue's central invariant).
 
 The top-level rows (Config file, Expected path, Hint, Parse error):
 ```python
@@ -95,28 +98,26 @@ print(f"  server health check skipped (langchain-mcp-adapters not installed)")
 ```
 
 These are tabular rows by intent (sit under the section's other rows) but
-have no label and no marker — they are emitted as freeform indented
-strings today. Migrate both sites to:
+have no label — they are emitted as freeform indented strings today.
+Migrate both sites to:
 
 ```python
-print(_format_freeform_row(
+print(_format_row(
+    "",
     symbols["warning"],
     "server health check skipped (langchain-mcp-adapters not installed)",
     indent=2,
 ))
 ```
 
-(Use `_format_freeform_row` because there is no label to render — the
-marker plus message form a single freeform notice. If the existing code
-emits these without any marker, keep the migration symmetric: pass
-`marker=""` so the indent + value land in the same column geometry as
-neighbouring rows.) This was missed in the original Step 5 scope and was
-identified as F9 in plan-review round 1.
+Pass `label=""` so the value column aligns with neighbouring labeled
+rows in the same section. This was missed in the original Step 5 scope
+and was identified as F9 in plan-review round 1.
 
 ## HOW
 
-* `_format_row` and `_format_freeform_row` are already in `verify.py`
-  (Step 1).
+* `_format_row` is already in `verify.py` (Step 1). All label-less rows
+  pass `label=""` — there is no separate `_format_freeform_row` helper.
 * No new imports.
 * No control-flow changes.
 

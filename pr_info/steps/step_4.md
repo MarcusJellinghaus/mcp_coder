@@ -37,24 +37,37 @@ def _collect_mcp_warnings(mcp_json_path: str | None) -> list[tuple[str, str]]:
 ```
 
 Update the only caller in `execute_verify` (`verify.py` near
-`MCP CONFIG WARNINGS`). Labels of the form
-`<server> / <env_var>` can reach 35 chars (e.g.
+`MCP CONFIG WARNINGS`). The existing code already guards the whole
+block on `if mcp_config_resolved:`; preserve that guard so the
+section is only emitted when an MCP config path was resolved. Labels
+of the form `<server> / <env_var>` can reach 35 chars (e.g.
 `langchain-mcp-adapters / PYTHONPATH`), well past `_LABEL_WIDTH=22`.
 Compute a per-section `label_width` so the section's value column shifts
 consistently rather than overrunning row-by-row:
 
 ```python
-warnings = _collect_mcp_warnings(mcp_config_resolved)
-if warnings:
-    print(_pad("MCP CONFIG WARNINGS"))
-    section_label_width = max(
-        _LABEL_WIDTH, max((len(label) for label, _ in warnings), default=0)
-    )
-    for label, value in warnings:
-        print(_format_row(
-            label, "", value, indent=2, label_width=section_label_width
-        ))
+if mcp_config_resolved:
+    warnings = _collect_mcp_warnings(mcp_config_resolved)
+    if warnings:
+        print(_pad("MCP CONFIG WARNINGS"))
+        section_label_width = max(
+            _LABEL_WIDTH, max(len(label) for label, _ in warnings)
+        )
+        for label, value in warnings:
+            print(_format_row(
+                label, symbols["warning"], value,
+                indent=2, label_width=section_label_width,
+            ))
 ```
+
+The marker symbol must match the existing verify.py code — use the
+`symbols["warning"]` form (or whichever local alias the file uses, e.g.
+`STATUS_SYMBOLS["warning"]`) rather than the literal `"[WARN]"` so a
+future change to the symbol table cascades automatically.
+
+**Note:** MCP CONFIG WARNINGS uses direct `print(_format_row(...))` —
+no `textwrap.wrap` wrapping. Long unresolved values are emitted as a
+single line; this matches existing behavior.
 
 This is the Q2 design decision (round-1 plan review): per-section dynamic
 width, clamped to `_LABEL_WIDTH` minimum. Other sections continue to use
@@ -110,7 +123,7 @@ Substitution; logic unchanged.
   1. all rows in that section have the value column at the same
      horizontal index, and
   2. that index equals `2 + max_label_len + 1 + _MARKER_SLOT_WIDTH + 1`
-     (i.e. it shifts right of `31` and stays consistent within the
+     (i.e. it shifts right of `32` and stays consistent within the
      section).
 * Update any `test_verify_command.py` / `test_verify_integration.py`
   assertions that pin the smoke-test row format for the new widths.

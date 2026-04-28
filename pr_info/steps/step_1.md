@@ -48,7 +48,7 @@ def _format_row_prefix(
 def _format_row(
     label: str, marker: str, value: str, *, indent: int, label_width: int = _LABEL_WIDTH
 ) -> str:
-    """Render a labeled tabular row.
+    """Render a tabular row (labeled or label-less).
 
     Composed on top of ``_format_row_prefix``; appends the value and
     rstrips trailing whitespace. ``value`` is expected to be non-empty
@@ -57,6 +57,12 @@ def _format_row(
     `textwrap.wrap` continuation), call ``_format_row_prefix`` directly
     instead — calling ``_format_row`` with ``value=""`` would rstrip the
     trailing space the prefix needs.
+
+    Label-less rows (CONFIG section free-form hints / parse errors /
+    multi-word values that don't split into key/value) pass ``label=""``.
+    The empty label is padded to ``label_width`` so the value column
+    aligns with neighbouring labeled rows — this is the issue's central
+    invariant.
     """
     return (
         _format_row_prefix(label, marker, indent=indent, label_width=label_width)
@@ -64,12 +70,10 @@ def _format_row(
     ).rstrip()
 
 
-def _format_freeform_row(marker: str, value: str, *, indent: int) -> str:
-    """Render a label-less row (CONFIG section free-form hints/values).
-
-    Used when the row has no key/label component; avoids wasting 22 chars
-    of leading whitespace.
-    """
+# Derived constant — position of the first value-column character at indent=2.
+# Used by free-form continuation lines (e.g. install-hint) so they line up
+# under the value column without hand-counting spaces.
+_VALUE_COLUMN_INDENT: int = len(_format_row_prefix("", "", indent=2))
 ```
 
 Update existing `_pad`: change the padding target from **60** to **75**.
@@ -80,16 +84,21 @@ Migrate `_format_section` to use `_format_row` for:
 * `strict_mode` no-marker branch (currently passes empty marker via raw f-string).
 
 The install-hint continuation line currently sits at column 27 (matching
-the old 20+marker layout). Update it to column **32** so it visually
-aligns under the new value column. Pseudocode:
+the old 20+marker layout). Update it to align under the new value column.
+Use the derived `_VALUE_COLUMN_INDENT` constant defined above — never
+hard-code the integer (single source of truth wins; if `_LABEL_WIDTH`
+or `_MARKER_SLOT_WIDTH` ever changes, the install-hint follows along
+for free):
 
 ```python
-print(f"{' ' * 32}-> {entry['install_hint']}")
+print(f"{' ' * _VALUE_COLUMN_INDENT}-> {entry['install_hint']}")
 ```
 
-This is a deliberate cosmetic update tied to the wider value column —
-not a separate refactor. The install-hint line itself remains a freeform
-continuation, not a tabular row.
+For `indent=2, _LABEL_WIDTH=22, _MARKER_SLOT_WIDTH=6`, the resulting
+indent is `2 + 22 + 1 + 6 + 1 = 32`. This is a deliberate cosmetic
+update tied to the wider value column — not a separate refactor. The
+install-hint line itself remains a freeform continuation, not a
+tabular row.
 
 ## HOW
 
@@ -111,14 +120,12 @@ return (_format_row_prefix(label, marker, indent=indent, label_width=label_width
         + value).rstrip()
 ```
 
-## ALGORITHM (`_format_freeform_row`)
-
-```
-prefix = " " * indent
-if marker:
-    return f"{prefix}{marker:<{_MARKER_SLOT_WIDTH}s} {value}".rstrip()
-return f"{prefix}{value}".rstrip()
-```
+`_format_row` handles both labeled and label-less rows — call it with
+`label=""` for the latter. Verification: with `label="", marker="[WARN]",
+indent=2`, `_format_row_prefix` produces
+`"  " + "".ljust(22) + " " + "[WARN]".ljust(6) + " "`, putting the value
+character at column `2 + 22 + 1 + 6 + 1 = 32` — identical to a labeled
+row's value column.
 
 ## DATA
 
@@ -142,14 +149,25 @@ In `tests/cli/commands/test_verify_format_section.py`:
   `"  Auto-delete branches [OK] enabled"` become the new form. Strict-mode
   test now expects the value column to align with sibling rows even though
   no marker is rendered.
-* **Add new test class `TestFormatRowHelpers`** with cases:
-  - `_format_row("api_key", "[OK]", "configured", indent=2)` →
-    `"  api_key                 [OK]   configured"` (verify exact spacing).
+* **Add new test class `TestFormatRowHelpers`** with cases. **Important:**
+  expected strings in alignment tests should be constructed via
+  `f"{indent_pad}{label.ljust(_LABEL_WIDTH)} {marker.ljust(_MARKER_SLOT_WIDTH)} {value}".rstrip()`
+  (or an equivalent helper) rather than hard-coded with hand-counted
+  spaces — this keeps the tests aligned with whatever the constants
+  evaluate to and prevents off-by-one bugs when reading the diff.
+  - `_format_row("api_key", "[OK]", "configured", indent=2)` — derive the
+    expected string from the constants and assert equality (do NOT
+    hand-count spaces); also assert the value substring `"configured"`
+    starts at column `2 + _LABEL_WIDTH + 1 + _MARKER_SLOT_WIDTH + 1 = 32`.
   - `_format_row("endpoint", "", "not configured", indent=2)` — value column
-    starts at the same index as the previous case.
+    starts at the same index as the previous case (32).
   - `_format_row` with `[WARN]` and `[ERR]` — value columns identical.
-  - `_format_freeform_row("[WARN]", "stuff", indent=4)` — no label slot.
-  - `_format_freeform_row("", "free text", indent=4)` — pure indented value.
+  - **Label-less row (parametrized)** —
+    `_format_row("", "[WARN]", "value", indent=2)` produces a row whose
+    value substring `"value"` starts at index `32`. Parameterize over
+    `[OK]`, `[WARN]`, `[ERR]` and assert each lands at the same column.
+    This is the central invariant that fulfills the issue title — a
+    label-less row aligns at the same value column as a labeled row.
   - **Prefix length invariant** —
     `len(_format_row_prefix("x", "[OK]", indent=2)) == 32`
     (and `[WARN]`/`[ERR]` produce equal-length prefixes; the test should

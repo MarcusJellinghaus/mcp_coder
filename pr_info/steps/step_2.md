@@ -7,8 +7,9 @@
 ## LLM Prompt
 
 > Read `pr_info/steps/summary.md` for context and `pr_info/steps/step_2.md`
-> for this step. Step 1 is already merged; the helpers `_format_row` and
-> `_format_freeform_row` exist. Follow TDD: update tests first, then
+> for this step. Step 1 is already merged; the helpers `_format_row_prefix`
+> and `_format_row` exist (label-less rows pass `label=""` — there is no
+> separate `_format_freeform_row`). Follow TDD: update tests first, then
 > migrate the two formatters. Produce exactly one commit.
 
 ## WHERE
