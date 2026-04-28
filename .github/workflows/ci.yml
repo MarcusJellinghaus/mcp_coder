@@ -99,7 +99,7 @@ jobs:
           - {name: "ruff-docstrings", cmd: "ruff version && ruff check src tests"}
           - {name: "unit-tests", cmd: "pytest --version && pytest -m 'not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not langchain_integration and not llm_integration and not textual_integration' --junitxml=unit-tests.xml"}
           - {name: "integration-tests", cmd: "pytest --version && pytest -m 'git_integration or formatter_integration or github_integration' --junitxml=integration-tests.xml"}
-          - {name: "mypy", cmd: "mypy --version && mypy --strict src tests"}
+          - {name: "mypy", install: ".[typecheck]", cmd: "mypy --version && mypy --strict src tests"}
           - {name: "file-size", cmd: "mcp-coder check file-size --max-lines 750 --allowlist-file .large-files-allowlist"}
           - {name: "no-url-deps", cmd: "python tools/check_no_url_deps.py"}
     name: ${{ matrix.check.name }}
@@ -121,7 +121,7 @@ jobs:
           uv pip install --system --no-deps "mcp-tools-py @ git+https://github.com/MarcusJellinghaus/mcp-tools-py.git"
 
       - name: Install dependencies
-        run: uv pip install --system ".[dev,langchain]"
+        run: uv pip install --system "${{ matrix.check.install || '.[dev,langchain]' }}"
       
       - name: Environment info
         run: |
