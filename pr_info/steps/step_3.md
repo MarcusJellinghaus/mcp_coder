@@ -1,5 +1,9 @@
 # Step 3 — Migrate `_print_environment_section` and `_print_project_section`
 
+> **Note on line numbers:** all `verify.py:NNN` references in this step
+> point at the file at branch HEAD before Step 1 lands. Locate the target
+> by function name when implementing.
+
 ## LLM Prompt
 
 > Read `pr_info/steps/summary.md` and `pr_info/steps/step_3.md`. Steps 1

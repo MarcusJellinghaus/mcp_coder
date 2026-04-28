@@ -1,5 +1,10 @@
 # Step 1 — Add Helpers, Bump `_pad`, Migrate `_format_section`
 
+> **Note on line numbers:** all `verify.py:NNN` references in this step
+> point at the file at branch HEAD before Step 1 lands. When implementing,
+> locate the target by function name rather than relying on the line
+> number — Step 1's own edits will shift everything below.
+
 ## LLM Prompt
 
 > Read `pr_info/steps/summary.md` for context. Then implement Step 1 as
@@ -18,17 +23,45 @@ Add to `verify.py` (near the existing `STATUS_SYMBOLS` block):
 
 ```python
 _MARKER_SLOT_WIDTH: int = max(len(v) for v in STATUS_SYMBOLS.values())
-_LABEL_WIDTH: int = 22  # exact fit for "workspace / PYTHONPATH"; longer labels overrun
+_LABEL_WIDTH: int = 22  # global minimum label slot; sections may widen via label_width=
 
 
-def _format_row(label: str, marker: str, value: str, *, indent: int) -> str:
+def _format_row_prefix(
+    label: str, marker: str, *, indent: int, label_width: int = _LABEL_WIDTH
+) -> str:
+    """Render the column-aligned prefix portion of a tabular row.
+
+    Returns ``indent + label_field + " " + marker_field + " "`` WITHOUT
+    rstrip — the trailing space and the full marker-slot padding are
+    preserved. Used directly by callers that need the prefix without a
+    value (e.g. `textwrap.wrap` continuation indent).
+
+    Empty marker is padded to ``_MARKER_SLOT_WIDTH`` so the value column
+    starts at the same horizontal position regardless of marker presence.
+    Labels longer than ``label_width`` overrun (no truncation) — keep
+    labels concise, or pass a wider ``label_width`` for sections whose
+    labels are known to exceed the default.
+    """
+    return f"{' ' * indent}{label:<{label_width}s} {marker:<{_MARKER_SLOT_WIDTH}s} "
+
+
+def _format_row(
+    label: str, marker: str, value: str, *, indent: int, label_width: int = _LABEL_WIDTH
+) -> str:
     """Render a labeled tabular row.
 
-    Empty marker is padded to the marker slot width so the value column
-    starts at the same horizontal position regardless of marker presence.
-    Labels longer than _LABEL_WIDTH overrun (no truncation) — this is
-    accepted; keep labels concise.
+    Composed on top of ``_format_row_prefix``; appends the value and
+    rstrips trailing whitespace. ``value`` is expected to be non-empty
+    for tabular rows; the rstrip is intentional to drop any incidental
+    trailing whitespace from ``value``. For prefix-only use cases (e.g.
+    `textwrap.wrap` continuation), call ``_format_row_prefix`` directly
+    instead — calling ``_format_row`` with ``value=""`` would rstrip the
+    trailing space the prefix needs.
     """
+    return (
+        _format_row_prefix(label, marker, indent=indent, label_width=label_width)
+        + value
+    ).rstrip()
 
 
 def _format_freeform_row(marker: str, value: str, *, indent: int) -> str:
@@ -46,8 +79,17 @@ Migrate `_format_section` to use `_format_row` for:
 * branch-protection child rows (current 4-space indent),
 * `strict_mode` no-marker branch (currently passes empty marker via raw f-string).
 
-The install-hint continuation line (`-> {hint}` at column 27) stays as-is —
-it is not a tabular row.
+The install-hint continuation line currently sits at column 27 (matching
+the old 20+marker layout). Update it to column **32** so it visually
+aligns under the new value column. Pseudocode:
+
+```python
+print(f"{' ' * 32}-> {entry['install_hint']}")
+```
+
+This is a deliberate cosmetic update tied to the wider value column —
+not a separate refactor. The install-hint line itself remains a freeform
+continuation, not a tabular row.
 
 ## HOW
 
@@ -55,13 +97,18 @@ it is not a tabular row.
 * Helpers are private (`_`-prefixed); no `__all__` change.
 * Branch-protection children indent is `4`; top-level rows is `2`.
 
+## ALGORITHM (`_format_row_prefix`)
+
+```
+return f"{' ' * indent}{label:<{label_width}s} {marker:<{_MARKER_SLOT_WIDTH}s} "
+# NO rstrip; trailing space and full marker-slot padding preserved.
+```
+
 ## ALGORITHM (`_format_row`)
 
 ```
-prefix = " " * indent
-label_field = f"{label:<{_LABEL_WIDTH}s}"
-marker_field = f"{marker:<{_MARKER_SLOT_WIDTH}s}"
-return f"{prefix}{label_field} {marker_field} {value}".rstrip()
+return (_format_row_prefix(label, marker, indent=indent, label_width=label_width)
+        + value).rstrip()
 ```
 
 ## ALGORITHM (`_format_freeform_row`)
@@ -103,6 +150,17 @@ In `tests/cli/commands/test_verify_format_section.py`:
   - `_format_row` with `[WARN]` and `[ERR]` — value columns identical.
   - `_format_freeform_row("[WARN]", "stuff", indent=4)` — no label slot.
   - `_format_freeform_row("", "free text", indent=4)` — pure indented value.
+  - **Prefix length invariant** —
+    `len(_format_row_prefix("x", "[OK]", indent=2)) == 32`
+    (and `[WARN]`/`[ERR]` produce equal-length prefixes; the test should
+    parameterize over the three markers and assert the lengths match).
+  - **Composition contract** — for any non-empty `value` not starting/ending
+    with whitespace,
+    `_format_row(label, marker, value, indent=2)` ==
+    `(_format_row_prefix(label, marker, indent=2) + value).rstrip()`.
+  - **Custom `label_width`** —
+    `_format_row("very long label name", "[OK]", "v", indent=2, label_width=30)`
+    produces a value column at index `2 + 30 + 1 + 6 + 1 = 40`.
 
 ## Verification
 

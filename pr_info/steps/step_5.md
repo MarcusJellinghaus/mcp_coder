@@ -1,5 +1,9 @@
 # Step 5 — Migrate `execute_verify` Inline Rows (CONFIG, PROMPTS, LLM PROVIDER, Test prompt)
 
+> **Note on line numbers:** all `verify.py:NNN` references in this step
+> point at the file at branch HEAD before Step 1 lands. Locate the target
+> by function name when implementing.
+
 ## LLM Prompt
 
 > Read `pr_info/steps/summary.md` and `pr_info/steps/step_5.md`. Steps
@@ -80,6 +84,34 @@ print(f"  {'Test prompt':<20s} {symbols['failure']} FAILED ({category})")
 
 The diagnostic line `"  Run with --debug for detailed diagnostics."` stays
 unchanged (it is a freeform sentence, not a tabular row).
+
+### MCP servers — health-check skipped fallbacks (`verify.py:650-651, 666-668`)
+
+When `langchain-mcp-adapters` is not installed, the MCP servers branch
+emits a no-marker fallback row at two sites currently like:
+
+```python
+print(f"  server health check skipped (langchain-mcp-adapters not installed)")
+```
+
+These are tabular rows by intent (sit under the section's other rows) but
+have no label and no marker — they are emitted as freeform indented
+strings today. Migrate both sites to:
+
+```python
+print(_format_freeform_row(
+    symbols["warning"],
+    "server health check skipped (langchain-mcp-adapters not installed)",
+    indent=2,
+))
+```
+
+(Use `_format_freeform_row` because there is no label to render — the
+marker plus message form a single freeform notice. If the existing code
+emits these without any marker, keep the migration symmetric: pass
+`marker=""` so the indent + value land in the same column geometry as
+neighbouring rows.) This was missed in the original Step 5 scope and was
+identified as F9 in plan-review round 1.
 
 ## HOW
 

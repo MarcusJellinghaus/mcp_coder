@@ -1,5 +1,9 @@
 # Step 6 — Alignment-Invariant Tests
 
+> **Note on line numbers:** all `verify.py:NNN` references in this step
+> point at the file at branch HEAD before Step 1 lands. Locate the target
+> by function name when implementing.
+
 ## LLM Prompt
 
 > Read `pr_info/steps/summary.md` and `pr_info/steps/step_6.md`. Steps
@@ -9,26 +13,48 @@
 
 ## WHERE
 
-* **New file:** `tests/cli/commands/test_verify_alignment.py`
-
-This file is dedicated to invariant assertions. It does not duplicate the
-string-pinned tests that already exist in `test_verify_format_section.py`
-and the others.
+* **New file:** `tests/cli/commands/test_verify_alignment.py` — dedicated
+  to invariant assertions. Does not duplicate the string-pinned tests
+  already in `test_verify_format_section.py` and friends.
+* **Shared fixture (new or extended):** `tests/cli/commands/conftest.py`
+  — extracts `_make_verify_mocks()` (currently inlined in
+  `test_verify_orchestration.py` and similar files) so both the new
+  end-to-end smoke test and existing tests can import it.
+  **Adopt-not-rewrite:** existing tests don't need to migrate to the
+  shared fixture in this commit; the goal is just to make it importable.
 
 ## WHAT
 
-Add two test classes:
+Following the Q3 design decision (round-1 plan review), the test plan
+splits into two layers: parameterized per-formatter invariants (the
+workhorse — fast, no `execute_verify` mocking burden) plus one
+end-to-end smoke test.
 
-### `TestWithinSectionAlignment`
+### Layer 1 — `TestPerFormatterAlignment` (workhorse, parameterized)
 
-For each of the migrated formatter functions, render a section that mixes
-marker types, then assert the value column starts at the same horizontal
-index on every labeled row.
+For each formatter helper that emits tabular rows, assert the value-column
+invariant on the assembled output with stub inputs. These are unit tests:
+they don't drive `execute_verify`, so they run fast and don't require
+mocks beyond the stub data each formatter consumes.
 
-* `_format_section` with a result containing `[OK]`, `[ERR]`, `[WARN]`, and
-  the no-marker `strict_mode` branch.
-* `_format_mcp_section` with one `[OK]` and one `[WARN]` server.
-* `_format_claude_mcp_section` with one connected and one failed server.
+Cover at minimum:
+
+* `_format_section` — result mixing `[OK]`, `[ERR]`, `[WARN]`, and the
+  no-marker `strict_mode` branch.
+* `_format_mcp_section` — one `[OK]` and one `[WARN]` server, in both
+  wrap mode and per-tool list mode.
+* `_format_claude_mcp_section` — one connected and one failed server.
+* `_print_environment_section` — capture stdout via `capsys`, assert the
+  value column on Python version / Executable / Virtualenv / package
+  versions all match.
+* `_print_project_section` — same, mixed `format_code` / `check_type_hints`.
+* `_format_mcp_section` (warnings render path) — long label
+  (`langchain-mcp-adapters / PYTHONPATH`) and short label in the same
+  section; assert the value column matches across both rows AND equals
+  `2 + max_label_len + 1 + _MARKER_SLOT_WIDTH + 1`.
+
+Parameterize over marker presence and marker type so a regression in any
+single branch fails a specific case.
 
 Helper for the assertions:
 
@@ -38,58 +64,98 @@ def _value_column_index(line: str) -> int:
     # Use a regex or fixed offset based on _LABEL_WIDTH + _MARKER_SLOT_WIDTH.
 ```
 
-Or, even simpler: pick a known-distinct value substring per row (e.g. a UUID
-or a marker word) and assert `line.index(value)` is identical across rows.
+Or, even simpler: pick a known-distinct value substring per row (e.g. a
+UUID or a marker word) and assert `line.index(value)` is identical across
+rows.
 
-Parameterize over marker presence and marker type so a regression in any
-single branch fails a specific case.
+### Layer 2 — `TestExecuteVerifyAlignmentSmoke` (one end-to-end)
 
-### `TestCrossSectionAlignment`
+Drive `execute_verify` exactly **once** with the shared
+`_make_verify_mocks()` fixture (extracted to `conftest.py`). Capture
+stdout. Assert: every emitted tabular row has its value column at the
+expected position. This catches regressions where a maintainer adds a raw
+`print(...)` directly in `execute_verify` (or anywhere else) instead of
+going through a helper.
 
-Run `execute_verify` end-to-end (with the existing mock fixtures from
-`test_verify_command.py` — copy or import the fixture style). Capture
-stdout, then:
+**Filter using an explicit allow-list, not "lines that look tabular":**
 
-1. Filter to lines that look like tabular rows (start with `"  "` or
-   `"    "` and contain at least one `[OK]`/`[ERR]`/`[WARN]` OR a
-   non-empty value at the expected column).
-2. For each filtered line, compute the index of the first non-whitespace
-   character after the marker slot.
-3. Assert all such indices are equal (or fall into a small known set:
-   indent=2 vs indent=4 produce two distinct columns; both should be
-   internally consistent).
+1. Skip lines that start with `"=== "` — section headers from `_pad`.
+2. Skip lines that match `^  \[` — Environment group headers like
+   `"  [Python]"`.
+3. For remaining non-empty lines, parse the leading-whitespace count.
+   Accept `2` or `4` as the indent. Anything else → skip (it's a
+   freeform continuation, e.g. the `-> install_hint` line at indent 32).
+4. For each accepted line, compute the value-column index (first
+   non-whitespace character after the marker slot, or use the helper
+   above).
 
-If asserting a single global column is too brittle, weaken to: "every
-labeled row at indent=2 has the same value column; every labeled row at
-indent=4 has the same value column; the indent=4 column is exactly 2 chars
-right of the indent=2 column."
+**Assertion (post Q2=B per-section dynamic width):**
+
+* For lines emitted in the MCP CONFIG WARNINGS section: value column
+  index `>= 31` (the section may shift right when the longest label
+  exceeds `_LABEL_WIDTH`).
+* For all other indent=2 lines: value column index `== 31`
+  (`indent=2 + label_width=22 + ` `+ marker_slot=6 + ` ` = 31, so first
+  value char at index 31).
+* For all indent=4 lines: value column index `== 33` (`indent=4 + 22 +
+  1 + 6 + 1`).
+
+Identifying "this line came from the MCP CONFIG WARNINGS section" is
+straightforward: track the most recent `=== ` header seen during the
+scan.
 
 ## HOW
 
-* Reuse mocks from `test_verify_command.py` (or extract a shared
-  fixture). Importing private helpers (`_format_row`,
-  `_format_section`, etc.) is fine — these are tests of internal
-  contracts.
-* Use `capsys` for stdout capture in the cross-section test.
-* Keep the file under ~150 lines. KISS.
+* Extract `_make_verify_mocks()` to `tests/cli/commands/conftest.py`
+  so the new smoke test (and any future test) can import it without
+  copy-pasting the mock setup. Existing tests in
+  `test_verify_orchestration.py` keep working as-is — the function
+  is just relocated and re-exported, not rewritten.
+* Importing private helpers (`_format_row`, `_format_row_prefix`,
+  `_format_section`, etc.) from `verify.py` is fine — these are tests
+  of internal contracts.
+* Use `capsys` for stdout capture in the smoke test and in the
+  per-formatter tests that exercise `_print_*` functions.
+* Keep `test_verify_alignment.py` under ~200 lines. KISS — Layer 1
+  parameterized cases compress to a few `pytest.param(...)` entries.
 
 ## ALGORITHM
 
-Within-section invariant:
+### Layer 1 — per-formatter (return-string formatters)
 ```
 lines = formatter(...).split("\n")
-content_lines = [l for l in lines if l and not l.startswith("===")]
+content_lines = [l for l in lines if l and not l.startswith("=== ")
+                                       and not re.match(r"^  \[", l)]
 value_indices = [_value_column_index(l) for l in content_lines]
 assert len(set(value_indices)) == 1
 ```
 
-Cross-section invariant:
+### Layer 1 — per-formatter (`_print_*` functions)
 ```
-captured = run_execute_verify_with_mocks()
-rows_at_2 = [l for l in captured.split("\n") if l.startswith("  ") and not l.startswith("    ")]
-rows_at_4 = [l for l in captured.split("\n") if l.startswith("    ")]
-assert len({_value_column_index(l) for l in rows_at_2}) == 1
-assert len({_value_column_index(l) for l in rows_at_4}) == 1
+formatter(...)            # writes to stdout via print()
+captured = capsys.readouterr().out
+# same filter + assertion as above
+```
+
+### Layer 2 — end-to-end smoke
+```
+captured = run_execute_verify_with_mocks()  # uses _make_verify_mocks()
+section = None
+for line in captured.split("\n"):
+    if line.startswith("=== "):
+        section = line.strip("= ").strip()
+        continue
+    if not line or re.match(r"^  \[", line):
+        continue
+    indent = len(line) - len(line.lstrip(" "))
+    if indent not in (2, 4):
+        continue
+    col = _value_column_index(line)
+    expected = 31 if indent == 2 else 33
+    if section == "MCP CONFIG WARNINGS" and indent == 2:
+        assert col >= expected, (line, col, section)
+    else:
+        assert col == expected, (line, col, section)
 ```
 
 ## DATA

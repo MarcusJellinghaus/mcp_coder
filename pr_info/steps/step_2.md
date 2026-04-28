@@ -1,5 +1,9 @@
 # Step 2 — Migrate `_format_mcp_section` and `_format_claude_mcp_section`
 
+> **Note on line numbers:** all `verify.py:NNN` references in this step
+> point at the file at branch HEAD before Step 1 lands. Locate the target
+> by function name when implementing.
+
 ## LLM Prompt
 
 > Read `pr_info/steps/summary.md` for context and `pr_info/steps/step_2.md`
@@ -33,24 +37,23 @@ In `_format_claude_mcp_section`, line `verify.py:344`:
 ### Special case: `textwrap.wrap` prefix
 
 The wrap-mode branch currently builds a `prefix` string and feeds it to
-`textwrap.wrap` as `initial_indent`. The replacement must:
+`textwrap.wrap` as `initial_indent`. Use `_format_row_prefix` directly —
+it returns the column-aligned prefix WITH trailing space and WITHOUT
+rstrip, which is exactly what `textwrap.wrap` needs:
 
-1. Build the labeled row WITHOUT the value via `_format_row(name, symbol, "", indent=2)`,
-2. Strip the trailing whitespace from the helper output to get the prefix
-   (the helper `rstrip`s — call it with a placeholder value, or build the
-   prefix manually).
-
-Simplest: keep this prefix construction inline since textwrap needs the
-exact column-width string with trailing space. Pseudocode:
-
-```
-prefix = _format_row(name, symbol, "", indent=2) + " "
-# Compute value (tools text), then textwrap.wrap as before.
+```python
+prefix = _format_row_prefix(name, symbol, indent=2)
+# No need to append "+ ' '"; the helper already includes the trailing space.
+# No interaction with _format_row.rstrip() — that's only on _format_row.
+# Then compute value (tools text) and textwrap.wrap as before.
 ```
 
-Alternatively: format a one-liner via `_format_row(name, symbol, tools_text, indent=2)`
-first, then split/wrap it. The first approach is closer to the existing logic
-and keeps wrap behaviour identical.
+This was a Q1 design decision (round-1 plan review): we chose composition
+over duplicating the layout formula in two places. `_format_row` is now
+defined as
+`(_format_row_prefix(...) + value).rstrip()`, which means the prefix and
+the labeled row share a single source of truth for indent/label/marker
+geometry. The wrap-prefix site simply consumes the same primitive.
 
 ## HOW
 
@@ -84,11 +87,16 @@ Update `tests/cli/commands/test_verify_format_section.py`:
 * **`TestFormatClaudeMcpSection.test_server_names_left_aligned`** — currently
   asserts `"mcp-tools-py      "` (padded to 20). Update to padded-to-22.
 
-* **`TestFormatMcpSection.test_tool_names_wrap_at_80_columns`** — wrap is
-  bounded by `width=80`; the prefix is now wider (22 label + 6 marker = 28
-  vs old 20 + variable). Re-verify the test still passes given the wider
-  prefix; if `<= 80 chars` is now infeasible, update the test or accept that
-  wrapped lines may include the wider prefix.
+* **`TestFormatMcpSection.test_tool_names_wrap_at_80_columns`** — the
+  prefix is now exactly **32 chars** (`indent=2 + label_width=22 + ` `+
+  marker_slot=6 + ` `). With `width=80`, that leaves a budget of **48
+  chars per wrapped line** for the comma-joined tool names. Sample
+  fixture has ~7 tool-name slots averaging ~22 chars + `, ` separators;
+  this fits comfortably. Keep the test fixture at `width=80` and keep
+  the assertion `len(line) <= 80`. If a future tool name pushes a single
+  comma-joined token past the 48-char budget, **raise the test fixture's
+  width** — do NOT weaken the `<= 80` assertion. (The assertion is what
+  guards user-visible wrap behaviour; relaxing it would defeat the test.)
 
 ## Verification
 

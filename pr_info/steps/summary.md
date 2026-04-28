@@ -13,22 +13,31 @@ position on every row, regardless of whether a status marker is present
 | Name                  | Value                                            | Why                                                                |
 |-----------------------|--------------------------------------------------|--------------------------------------------------------------------|
 | `_MARKER_SLOT_WIDTH`  | `max(len(v) for v in STATUS_SYMBOLS.values())`   | Future-proof against new markers (e.g. `[INFO]`, `[CRIT]`).        |
-| `_LABEL_WIDTH`        | `22`                                             | Exact fit for the longest current label (`workspace / PYTHONPATH`).|
+| `_LABEL_WIDTH`        | `22`                                             | Global minimum label slot. Sections (e.g. MCP CONFIG WARNINGS) may widen dynamically when their longest label exceeds this; see `label_width` kwarg in `_format_row` / `_format_row_prefix`. |
 
-### Two private helpers (replacing all ad-hoc `:<20s` / `:<18s` formatting)
+### Three private helpers (replacing all ad-hoc `:<20s` / `:<18s` formatting)
 
 ```python
-_format_row(label: str, marker: str, value: str, *, indent: int) -> str
+_format_row_prefix(label: str, marker: str, *, indent: int, label_width: int = _LABEL_WIDTH) -> str
+_format_row(label: str, marker: str, value: str, *, indent: int, label_width: int = _LABEL_WIDTH) -> str
 _format_freeform_row(marker: str, value: str, *, indent: int) -> str
 ```
 
-* `_format_row` renders a labeled tabular row: `indent + label(22) + marker_slot(6) + value`.
-  Empty `marker` is padded to 6 chars so the value column is invariant.
+* `_format_row_prefix` renders the column-aligned prefix only — the
+  `indent + label_field + marker_field + trailing_space` portion of a row,
+  WITHOUT rstrip. It is the building block used wherever the prefix alone
+  is required (notably `textwrap.wrap` continuation indent in Step 2).
+* `_format_row` is defined as a composition on top of `_format_row_prefix`:
+  `(_format_row_prefix(label, marker, indent=indent, label_width=label_width) + value).rstrip()`.
+  This keeps a single source of truth for the layout formula.
 * `_format_freeform_row` renders label-less rows used only by the CONFIG section
   (free-form hints / parse errors / multi-word values that don't split into key/value).
   No leading 22-char label slot is wasted.
-* A code comment near `_format_row` warns that labels >22 chars overrun (since
-  `:<22s` does not truncate); accepted trade-off.
+* A code comment near `_format_row` warns that labels >`label_width` overrun
+  (since `:<{label_width}s` does not truncate). For sections whose label
+  set is unknown ahead of time, the caller should compute
+  `max(_LABEL_WIDTH, max(len(label) for label, _ in items))` and pass it
+  via `label_width=` so the section's value column shifts consistently.
 
 ### `_pad` bump
 
@@ -45,7 +54,7 @@ The only caller (`execute_verify`) is updated together.
 
 ### Migration scope
 
-**Every** tabular row in `verify.py` is routed through one of the two helpers.
+**Every** tabular row in `verify.py` is routed through one of the helpers.
 Partial migration would break cross-section alignment. Sites:
 
 1. `_format_section` — top-level rows, branch-protection child rows, and the
@@ -56,10 +65,18 @@ Partial migration would break cross-section alignment. Sites:
    PYTHONPATH / package versions.
 5. `_print_project_section` — pyproject.toml / Language / `format_code` /
    `check_type_hints`.
-6. `_collect_mcp_warnings` + caller — MCP CONFIG WARNINGS rendering.
+6. `_collect_mcp_warnings` + caller — MCP CONFIG WARNINGS rendering. The
+   caller computes a per-section `label_width` (clamped to `_LABEL_WIDTH`
+   minimum) so labels like `langchain-mcp-adapters / PYTHONPATH` (35 chars)
+   don't overrun.
 7. `_run_mcp_edit_smoke_test` — all 3 return paths.
 8. `execute_verify` — CONFIG section, PROMPTS section, LLM PROVIDER (Active
-   provider), and Test prompt success/failure paths.
+   provider), Test prompt success/failure paths, and the
+   `server health check skipped (langchain-mcp-adapters not installed)`
+   no-marker fallback rows in the MCP servers branch.
+
+Total: 10 distinct migration sites (was 9 — the additional one is the
+`server health check skipped` fallback identified in plan-review round 1).
 
 ### Public API
 
@@ -83,9 +100,10 @@ None. All helpers are private (`_`-prefixed). No compatibility shims.
 | `tests/cli/commands/test_verify_format_section.py`    | Update string-pinned assertions to new label/marker widths.    |
 | `tests/cli/commands/test_verify_command.py`           | Update string-pinned assertions.                               |
 | `tests/cli/commands/test_verify_integration.py`       | Update string-pinned assertions.                               |
-| `tests/cli/commands/test_verify_orchestration.py`     | Update if/where it asserts exact row strings.                  |
+| `tests/cli/commands/test_verify_orchestration.py`     | Update string-pinned assertions; `TestMcpConfigWarnings` (lines 1093, 1117-1120) pins `list[str]` shape — migrate to `list[tuple[str, str]]` with new label format `"<server> / <env_var>"`. |
 | `tests/cli/commands/test_verify_exit_codes.py`        | Update if/where it asserts exact row strings.                  |
 | `tests/cli/commands/test_verify_exit_codes_github.py` | Update if/where it asserts exact row strings.                  |
+| `tests/cli/commands/conftest.py` (new or extended)    | Extract a shared `_make_verify_mocks()` fixture so the Step 6 end-to-end smoke test and existing orchestration tests can both import it. Existing tests don't need to migrate now. |
 
 (Source touched: **one** file. The bulk of the diff is test fixture updates.)
 
@@ -104,12 +122,16 @@ After each step, all three quality gates must pass: pylint, pytest, mypy.
 
 ## KISS Choices
 
-* **Two helpers, not one.** A single helper with `if label:` branching would
-  collapse 12 lines into 8 but obscures intent at every call site.
-* **No `label_width` parameter.** The issue's draft signature includes one;
-  every caller uses 22, so we just use the `_LABEL_WIDTH` constant inside the
-  helper. Add a parameter the day a second value is actually needed.
-* **Hardcoded `_pad` width 75.** Same reason — no flag, no override.
+* **Three helpers, composed.** `_format_row_prefix` is the layout primitive;
+  `_format_row` composes value-append + rstrip on top; `_format_freeform_row`
+  handles label-less rows. A single mega-helper with `if label:` branching
+  would obscure intent at every call site.
+* **`label_width` is an opt-in kwarg, not the default.** Almost every caller
+  passes the implicit `_LABEL_WIDTH=22`. The MCP CONFIG WARNINGS section is
+  the one site that must thread a wider value through (labels of the form
+  `langchain-mcp-adapters / PYTHONPATH` reach 35 chars). Adding the kwarg
+  costs nothing at the unaware call sites.
+* **Hardcoded `_pad` width 75.** No flag, no override.
 * **No new test file until step 6.** Existing string-pinned tests already
   cover most surfaces; we update them in place. The new file holds only the
   alignment-invariant tests that genuinely don't belong elsewhere.
