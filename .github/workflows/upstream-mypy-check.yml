@@ -1,0 +1,46 @@
+name: Upstream mypy check
+
+# Triggered by repository_dispatch when an upstream package's main branch changes.
+# Upstream packages: mcp-coder-utils, mcp-workspace, mcp-tools-py.
+# Runs mypy --strict against the latest main of all three to detect interface breaks.
+# On failure: standard GitHub Actions email + red icon in the Actions tab.
+
+on:
+  repository_dispatch:
+    types: [upstream-main-updated]
+  workflow_dispatch:
+    inputs:
+      upstream:
+        description: 'Upstream that triggered this run (shown in the job name)'
+        required: false
+        default: 'manual'
+
+permissions:
+  contents: read
+
+jobs:
+  mypy-against-upstream-main:
+    name: mypy-against-upstream-${{ github.event.client_payload.upstream || github.event.inputs.upstream || github.event_name }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: 3.11
+
+      # Order matters: install upstream packages from git BEFORE `.[typecheck]`
+      # so uv's resolver doesn't replace them with PyPI versions. The base
+      # pyproject.toml has no version pins on these three packages, so any
+      # already-installed version satisfies the constraint.
+      - name: Install upstream packages from main
+        run: |
+          uv pip install --system "mcp-coder-utils @ git+https://github.com/MarcusJellinghaus/mcp-coder-utils.git"
+          uv pip install --system "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"
+          uv pip install --system --no-deps "mcp-tools-py @ git+https://github.com/MarcusJellinghaus/mcp-tools-py.git"
+
+      - name: Install mcp_coder with typecheck extra
+        run: uv pip install --system ".[typecheck]"
+
+      - name: Run mypy --strict
+        run: mypy --strict src tests

@@ -277,6 +277,7 @@ class TestExecutePrompt:
         assert result == 1
         assert "Claude API connection failed" in caplog.text
 
+    @patch("mcp_coder.cli.commands.prompt.mlflow_conversation")
     @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
@@ -291,9 +292,16 @@ class TestExecutePrompt:
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
         mock_resolve_mcp: Mock,
+        mock_mlflow_conversation: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test successful continuation from stored response file using session_id."""
+        # Prevent mlflow_conversation from triggering tomllib.load on the
+        # singleton's first init while builtins.open is mocked.
+        mock_mlflow_conversation.return_value.__enter__.return_value = {
+            "response_data": None,
+            "error": None,
+        }
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_resolve_mcp.return_value = None
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
@@ -381,6 +389,7 @@ class TestExecutePrompt:
             or "starting new conversation" in captured.out.lower()
         )
 
+    @patch("mcp_coder.cli.commands.prompt.mlflow_conversation")
     @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
@@ -395,9 +404,16 @@ class TestExecutePrompt:
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
         mock_resolve_mcp: Mock,
+        mock_mlflow_conversation: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test graceful handling when continue_from file contains invalid JSON."""
+        # Prevent mlflow_conversation from triggering tomllib.load on the
+        # singleton's first init while builtins.open is mocked.
+        mock_mlflow_conversation.return_value.__enter__.return_value = {
+            "response_data": None,
+            "error": None,
+        }
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_resolve_mcp.return_value = None
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
@@ -435,6 +451,7 @@ class TestExecutePrompt:
             or "starting new conversation" in captured.out.lower()
         )
 
+    @patch("mcp_coder.cli.commands.prompt.mlflow_conversation")
     @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
@@ -449,9 +466,16 @@ class TestExecutePrompt:
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
         mock_resolve_mcp: Mock,
+        mock_mlflow_conversation: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test graceful handling when continue_from file has missing session_id."""
+        # Prevent mlflow_conversation from triggering tomllib.load on the
+        # singleton's first init while builtins.open is mocked.
+        mock_mlflow_conversation.return_value.__enter__.return_value = {
+            "response_data": None,
+            "error": None,
+        }
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_resolve_mcp.return_value = None
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
@@ -487,6 +511,7 @@ class TestExecutePrompt:
         )
         # "Warning: No session_id found" now goes through logging, not stdout
 
+    @patch("mcp_coder.cli.commands.prompt.mlflow_conversation")
     @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
@@ -501,9 +526,16 @@ class TestExecutePrompt:
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
         mock_resolve_mcp: Mock,
+        mock_mlflow_conversation: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test continuation functionality works with ndjson output format."""
+        # Prevent mlflow_conversation from triggering tomllib.load on the
+        # singleton's first init while builtins.open is mocked.
+        mock_mlflow_conversation.return_value.__enter__.return_value = {
+            "response_data": None,
+            "error": None,
+        }
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_resolve_mcp.return_value = None
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
