@@ -82,7 +82,7 @@ class TestRaiseConnectionError:
         assert "OPENAI_API_KEY" in str(exc_info.value)
 
     def test_message_contains_ssl_hint(self) -> None:
-        """Error message includes unquoted SSL/truststore hint for SSL errors."""
+        """Error message includes OS-trust-store / env var SSL hint for SSL errors."""
         with pytest.raises(LLMConnectionError) as exc_info:
             raise_connection_error(
                 provider="OpenAI",
@@ -92,10 +92,9 @@ class TestRaiseConnectionError:
         message = str(exc_info.value)
         assert "truststore" in message
         assert "SSL_CERT_FILE" in message
-        # Hint must be pastable in cmd.exe / PowerShell / bash — no single quotes
-        # around the package spec.
-        assert "pip install mcp-coder[truststore]" in message
-        assert "'mcp-coder[truststore]'" not in message
+        assert "REQUESTS_CA_BUNDLE" in message
+        # Hint should no longer recommend an installable extra.
+        assert "pip install mcp-coder[truststore]" not in message
 
     def test_no_ssl_hint_for_non_ssl_error(self) -> None:
         """Error message omits SSL hint when the cause is not an SSL error."""

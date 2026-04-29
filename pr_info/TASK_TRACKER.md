@@ -42,9 +42,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 5: Refresh SSL-related documentation — [step_5.md](./steps/step_5.md)
-- [ ] Implementation (replace `_SSL_HINT` in `_exceptions.py` + refresh `gemini_backend.py` doc comment)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (replace `_SSL_HINT` in `_exceptions.py` + refresh `gemini_backend.py` doc comment)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: Render `token_source` in verify command — [step_6.md](./steps/step_6.md)
 - [ ] Implementation (`_format_section()` special case + 2 render tests)
