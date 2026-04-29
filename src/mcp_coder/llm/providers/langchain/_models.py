@@ -19,7 +19,6 @@ from ._exceptions import (
     raise_connection_error,
 )
 from ._http import create_http_client
-from ._ssl import ensure_truststore
 
 
 def list_gemini_models(api_key: str | None) -> list[str]:
@@ -44,7 +43,6 @@ def list_gemini_models(api_key: str | None) -> list[str]:
             "google-genai is required to list Gemini models.\n"
             "Install with: pip install 'mcp-coder[langchain]'"
         ) from exc
-    ensure_truststore()
     try:
         client = genai.Client(api_key=api_key)
         return [
@@ -80,7 +78,6 @@ def list_openai_models(api_key: str | None, endpoint: str | None = None) -> list
             "openai is required to list OpenAI models.\n"
             "Install with: pip install 'mcp-coder[langchain]'"
         ) from exc
-    ensure_truststore()
     try:
         client = openai.OpenAI(
             api_key=api_key if api_key else None,
@@ -118,7 +115,6 @@ def list_anthropic_models(api_key: str | None) -> list[str]:
             "anthropic is required to list Anthropic models.\n"
             "Install with: pip install 'mcp-coder[langchain]'"
         ) from exc
-    ensure_truststore()
     try:
         client = anthropic.Anthropic(
             api_key=api_key if api_key else None,

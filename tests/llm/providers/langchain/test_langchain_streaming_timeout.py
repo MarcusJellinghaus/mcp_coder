@@ -46,7 +46,6 @@ class TestTextStreamInactivityTimeout:
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
             patch(f"{_MOD_LC}.store_langchain_history"),
             patch(f"{_MOD_LC}._create_chat_model", return_value=mock_model),
-            patch(f"{_MOD_LC}.ensure_truststore"),
         ):
             from mcp_coder.llm.providers.langchain import _ask_text_stream
 
@@ -74,7 +73,6 @@ class TestTextStreamInactivityTimeout:
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
             patch(f"{_MOD_LC}.store_langchain_history"),
             patch(f"{_MOD_LC}._create_chat_model", return_value=mock_model),
-            patch(f"{_MOD_LC}.ensure_truststore"),
         ):
             from mcp_coder.llm.providers.langchain import _ask_text_stream
 

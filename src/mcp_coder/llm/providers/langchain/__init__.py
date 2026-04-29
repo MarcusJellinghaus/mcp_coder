@@ -36,7 +36,6 @@ from ._exceptions import (
     raise_auth_error,
     raise_connection_error,
 )
-from ._ssl import ensure_truststore
 from ._usage import _extract_usage
 
 if TYPE_CHECKING:
@@ -309,7 +308,6 @@ def _ask_text(
         (system_messages or []) + history_messages + [HumanMessage(content=question)]
     )
 
-    ensure_truststore()
     chat_model = _create_chat_model(config, timeout=timeout)
 
     try:
@@ -415,7 +413,6 @@ def _ask_agent(
 
     _check_agent_dependencies()
 
-    ensure_truststore()
     chat_model = _create_chat_model(config, timeout=timeout)
     history: list[dict[str, Any]] = load_langchain_history(session_id)
 
@@ -493,7 +490,6 @@ def _ask_agent_stream(
     from .agent import _check_agent_dependencies, run_agent_stream
 
     _check_agent_dependencies()
-    ensure_truststore()
     chat_model = _create_chat_model(config, timeout=timeout)
     history: list[dict[str, Any]] = load_langchain_history(session_id)
 
@@ -647,7 +643,6 @@ def _ask_text_stream(
         (system_messages or []) + history_messages + [HumanMessage(content=question)]
     )
 
-    ensure_truststore()
     chat_model = _create_chat_model(config, timeout=timeout)
 
     try:
