@@ -45,6 +45,10 @@ Update it to point at the new module:
 
 - Use `mcp__workspace__edit_file` with the exact existing strings as
   `old_string`.
+- While editing `_exceptions.py`, confirm the `_truststore_available()` probe
+  at ~line 228 matches the description (an `import truststore` inside the
+  function). If it has been refactored, adapt the import-linter
+  `truststore_isolation` allowlist accordingly.
 
 ## ALGORITHM
 

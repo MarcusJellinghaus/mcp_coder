@@ -120,6 +120,11 @@ log debug "truststore activated: using OS certificate store"
   missing, idempotency, debug log on first call, no log on second call.
 - Write/move the tests first, observe failure (module doesn't exist), then
   create `ssl_setup.py`.
+- After the move, the new `mcp_coder.utils.ssl_setup` module and the old
+  `mcp_coder.llm.providers.langchain._ssl` module coexist until Step 4 deletes
+  the old one. The relocated test only touches the new module's `_injected`
+  flag; the old module's flag is irrelevant to the moved test. The dual-module
+  coexistence between Step 2 and Step 4 is intentional and safe.
 
 ## Acceptance for this step
 

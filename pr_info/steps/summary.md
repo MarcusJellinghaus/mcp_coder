@@ -128,4 +128,5 @@ non-langchain HTTP):
 | 6 | Render GITHUB_TOKEN source in verify | `_format_section` special case + 2 tests |
 
 Each step is one commit. Each passes `pylint`, `pytest` (fast unit pattern), `mypy`,
-and `lint-imports` before being committed.
+and `lint-imports` before being committed. Run `mcp__tools-py__run_format_code`
+before staging each step's commit (per CLAUDE.md).

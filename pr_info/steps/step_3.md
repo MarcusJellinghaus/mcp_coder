@@ -32,10 +32,9 @@ def main() -> int:
         ...
 ```
 
-The `noqa` comment / `pylint: disable=import-outside-toplevel` may be needed
-depending on lint rules that flag function-scoped imports — match the style of
-existing function-scoped imports in this file (e.g. inside
-`_handle_check_command`, `_handle_gh_tool_command`).
+Match the existing style — the inline imports inside `_handle_check_command`
+and `_handle_gh_tool_command` use no `# noqa` or `# pylint: disable`. Do NOT
+add lint suppressions unless lint actually flags the line.
 
 ### `tests/cli/test_main.py` test
 

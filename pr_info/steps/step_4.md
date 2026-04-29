@@ -55,6 +55,10 @@
    **`test_langchain_agent_timeout.py`**:
    - Drop `patch(f"{_MOD_LC}.ensure_truststore")` lines from the `with (...)`
      mock stacks. The remaining mocks in each `with` block stand on their own.
+   - `tests/llm/providers/langchain/test_langchain_streaming.py` contains ~19
+     separate `patch(...ensure_truststore...)` lines across multiple
+     `with (...)` blocks — remove every occurrence in the file. Success signal:
+     `grep ensure_truststore` returns no matches in any of the three test files.
 
 ## HOW
 

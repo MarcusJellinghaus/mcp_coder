@@ -24,6 +24,7 @@
 - Insert `"truststore>=0.9.0"` into the core `dependencies` list, alphabetically
   adjacent to similar runtime libs (e.g. between `tabulate>=0.9.0` and
   `textual>=1.0.0`, or wherever fits the existing ordering).
+- Leave the `[[tool.mypy.overrides]] module = ["truststore"]` block (~line 305 in pyproject.toml) unchanged — truststore still lacks type stubs.
 
 ## ALGORITHM
 
