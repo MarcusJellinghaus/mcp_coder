@@ -62,7 +62,7 @@ mlflow = [
     "mlflow>=2.10.0",
 ]
 
-# LangChain shared runtime (langchain-core, MCP adapters, graph, HTTP, SSL)
+# LangChain shared runtime (langchain-core, MCP adapters, graph, HTTP)
 langchain-base = [
     "langchain-core>=0.3.0",
     "langchain-mcp-adapters>=0.1.0",
