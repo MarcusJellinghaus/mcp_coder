@@ -44,7 +44,10 @@ def _format_info(
     runtime_info: RuntimeInfo,
     mcp_manager: MCPManager | None,
 ) -> str:
-    """Build the /info output string. All values re-read live.
+    """Build the /info output string.
+
+    Versions are read from runtime_info (cached at startup); other
+    values (env, prompts, MCP server status) are re-read live.
 
     Returns:
         Formatted multi-line info string.
