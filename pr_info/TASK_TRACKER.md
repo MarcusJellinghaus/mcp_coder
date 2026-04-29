@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Promote `truststore` to core dependencies — [step_1.md](./steps/step_1.md)
-- [ ] Implementation (move `truststore>=0.9.0` from `[langchain-base]` extra into core `[project] dependencies`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (move `truststore>=0.9.0` from `[langchain-base]` extra into core `[project] dependencies`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Create `mcp_coder.utils.ssl_setup` + relocate tests + import-linter contract — [step_2.md](./steps/step_2.md)
 - [ ] Implementation (create `ssl_setup.py`, move test file with autouse fixture, update `.importlinter`)
