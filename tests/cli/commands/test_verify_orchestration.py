@@ -1054,6 +1054,64 @@ class TestVerifyMcpAllProviders:
         call_kwargs = mock_smoke_test.call_args
         assert call_kwargs[0][2] == "/fake/.mcp.json"  # mcp_config arg
 
+    @patch(
+        f"{_VERIFY}._run_mcp_edit_smoke_test",
+        return_value="  MCP edit smoke test  [OK] edit verified",
+    )
+    @patch(f"{_VERIFY}.parse_claude_mcp_list", return_value=[])
+    @patch(
+        f"{_VERIFY}.prepare_llm_environment",
+        return_value={
+            "MCP_CODER_PROJECT_DIR": "/proj",
+            "MCP_CODER_VENV_DIR": "/venv",
+            "MCP_CODER_VENV_PATH": "/venv/Scripts",
+        },
+    )
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.resolve_mcp_config_path", return_value="/fake/.mcp.json")
+    @patch(f"{_LC_VERIFY}.verify_mcp_servers")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    def test_env_vars_passed_to_smoke_test_and_test_prompt(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_mcp_servers: MagicMock,
+        mock_resolve_mcp: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        _mock_prepare_env: MagicMock,
+        _mock_claude_mcp: MagicMock,
+        mock_smoke_test: MagicMock,
+    ) -> None:
+        """env_vars from prepare_llm_environment flow to smoke test + test prompt.
+
+        Without these, MCP servers can't expand ${MCP_CODER_VENV_PATH} etc. in
+        .mcp.json, mirroring the env that icoder threads through RuntimeInfo.
+        """
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+        mock_mcp_servers.return_value = _mcp_servers_ok()
+
+        execute_verify(_make_args(mcp_config=".mcp.json"))
+
+        expected_env = {
+            "MCP_CODER_PROJECT_DIR": "/proj",
+            "MCP_CODER_VENV_DIR": "/venv",
+            "MCP_CODER_VENV_PATH": "/venv/Scripts",
+        }
+        # Smoke test received env_vars (kwarg)
+        smoke_kwargs = mock_smoke_test.call_args.kwargs
+        assert smoke_kwargs.get("env_vars") == expected_env
+        # Unified test prompt received env_vars (kwarg)
+        prompt_kwargs = mock_prompt_llm.call_args.kwargs
+        assert prompt_kwargs.get("env_vars") == expected_env
+
 
 class TestMcpConfigWarnings:
     """Tests for ``_collect_mcp_warnings`` parser and rendered section."""

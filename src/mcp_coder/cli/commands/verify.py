@@ -438,6 +438,7 @@ def _run_mcp_edit_smoke_test(
     mcp_config: str,
     execution_dir: str,
     symbols: dict[str, str],
+    env_vars: dict[str, str] | None = None,
 ) -> str:
     """Run MCP edit smoke test.
 
@@ -447,6 +448,8 @@ def _run_mcp_edit_smoke_test(
         mcp_config: Path to the MCP config file.
         execution_dir: Execution directory path.
         symbols: Dict with 'success', 'failure', 'warning' keys.
+        env_vars: Environment variables passed to the LLM subprocess so
+            ``${MCP_CODER_*}`` placeholders in ``.mcp.json`` resolve.
 
     Returns:
         Formatted output line for the smoke test result.
@@ -461,6 +464,7 @@ def _run_mcp_edit_smoke_test(
             timeout=60,
             mcp_config=mcp_config,
             execution_dir=execution_dir,
+            env_vars=env_vars,
         )
         content = test_file.read_text(encoding="utf-8")
         pos_a, pos_b, pos_c = content.find("A"), content.find("B"), content.find("C")
@@ -723,10 +727,13 @@ def execute_verify(args: argparse.Namespace) -> int:
     # 3a. MCP server health checks (provider-aware ordering)
     mcp_result: dict[str, Any] | None = None
     claude_mcp: list[ClaudeMCPStatus] | None = None
+    # Compute MCP_CODER_* env vars once: needed by the Claude/LangChain MCP
+    # health checks AND by the smoke test / test prompt below so .mcp.json
+    # placeholders like ${MCP_CODER_VENV_PATH} resolve in the subprocess.
+    env_vars = prepare_llm_environment(project_dir)
 
     if mcp_config_resolved:
         # Run Claude MCP list
-        env_vars = prepare_llm_environment(project_dir)
         claude_exe = find_claude_executable(return_none_if_not_found=True)
         claude_mcp = parse_claude_mcp_list(env_vars, claude_executable=claude_exe)
 
@@ -844,6 +851,7 @@ def execute_verify(args: argparse.Namespace) -> int:
             mcp_config_resolved,
             str(project_dir),
             symbols,
+            env_vars=env_vars,
         )
         print(smoke_line)
 
@@ -857,6 +865,7 @@ def execute_verify(args: argparse.Namespace) -> int:
             timeout=30,
             mcp_config=mcp_config_resolved,
             execution_dir=str(project_dir),
+            env_vars=env_vars,
         )
         print(_format_row("Test prompt", symbols["success"], "responded OK", indent=2))
     except Exception as exc:  # pylint: disable=broad-except
