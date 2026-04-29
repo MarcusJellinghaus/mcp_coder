@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib.metadata
 import os
 import sys
 from pathlib import Path
@@ -45,14 +44,18 @@ def _format_info(
     runtime_info: RuntimeInfo,
     mcp_manager: MCPManager | None,
 ) -> str:
-    """Build the /info output string. All values re-read live.
+    """Build the /info output string.
+
+    Versions are read from runtime_info (cached at startup); other
+    values (env, prompts, MCP server status) are re-read live.
 
     Returns:
         Formatted multi-line info string.
     """
     lines: list[str] = []
     lines.append("=== iCoder /info ===")
-    lines.append(f"mcp-coder version: {importlib.metadata.version('mcp-coder')}")
+    lines.append(f"mcp-coder version: {runtime_info.mcp_coder_version}")
+    lines.append(f"mcp-coder-utils version: {runtime_info.mcp_coder_utils_version}")
     lines.append(f"Python:            {sys.version} ({sys.executable})")
 
     lines.append("")

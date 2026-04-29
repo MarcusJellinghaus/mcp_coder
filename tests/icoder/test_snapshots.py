@@ -39,6 +39,7 @@ def _test_runtime_info() -> RuntimeInfo:
     """Return RuntimeInfo with fixed version for stable snapshots."""
     return RuntimeInfo(
         mcp_coder_version="0.0.0-test",
+        mcp_coder_utils_version="0.0.0-test",
         python_version="3.12.0",
         claude_code_version="0.0.0",
         tool_env_path="/test/tool",

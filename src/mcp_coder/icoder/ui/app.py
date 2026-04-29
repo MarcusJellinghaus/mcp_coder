@@ -104,6 +104,7 @@ class ICoderApp(App[None]):
             output = self.query_one(OutputLog)
             lines = [
                 f"mcp-coder {info.mcp_coder_version}",
+                f"mcp-coder-utils {info.mcp_coder_utils_version}",
                 *(
                     (
                         f"{s.name} {s.version}  {_connection_status_suffix(s.name, info.mcp_connection_status)}".rstrip()
