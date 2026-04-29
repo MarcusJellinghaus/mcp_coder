@@ -8,6 +8,7 @@ import pytest
 
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.core.event_log import EventLog
+from mcp_coder.icoder.env_setup import RuntimeInfo
 from mcp_coder.icoder.services.llm_service import FakeLLMService
 from mcp_coder.icoder.ui.app import ICoderApp
 from mcp_coder.icoder.ui.widgets.busy_indicator import BusyIndicator
@@ -26,10 +27,15 @@ def make_icoder_app(
     def _factory(
         *,
         responses: list[list[StreamEvent]] | None = None,
+        runtime_info: RuntimeInfo | None = None,
     ) -> ICoderApp:
         llm = FakeLLMService(responses=responses or [])
         return ICoderApp(
-            AppCore(llm_service=llm, event_log=event_log),
+            AppCore(
+                llm_service=llm,
+                event_log=event_log,
+                runtime_info=runtime_info,
+            ),
         )
 
     return _factory
@@ -170,6 +176,30 @@ async def test_busy_indicator_thinking_after_tool_result(
         )
         indicator = app.query_one(BusyIndicator)
         assert "Thinking about workspace > read_file..." in indicator.label_text
+
+
+async def test_banner_renders_mcp_coder_utils_version(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """on_mount banner includes the mcp-coder-utils version line."""
+    runtime_info = RuntimeInfo(
+        mcp_coder_version="9.9.9",
+        mcp_coder_utils_version="1.2.3",
+        python_version="3.12.0",
+        claude_code_version="unknown",
+        tool_env_path="/tmp/tool-env",
+        project_venv_path="/tmp/proj-venv",
+        project_dir="/tmp/proj",
+        env_vars={},
+        mcp_servers=[],
+    )
+    app = make_icoder_app(responses=[], runtime_info=runtime_info)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        joined = "\n".join(app.query_one(OutputLog).recorded_lines)
+        assert any(
+            line.startswith("mcp-coder-utils 1.2.3") for line in joined.splitlines()
+        ), joined
 
 
 async def test_busy_indicator_resets_on_error_only_stream(
