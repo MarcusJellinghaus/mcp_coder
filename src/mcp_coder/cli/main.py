@@ -309,6 +309,10 @@ def main() -> int:
     log_level = _resolve_log_level(args)
     setup_logging(log_level)
 
+    from ..utils.ssl_setup import ensure_truststore
+
+    ensure_truststore()
+
     try:
         logger.debug(
             f"Starting mcp-coder CLI: command={args.command}, log_level={args.log_level}"

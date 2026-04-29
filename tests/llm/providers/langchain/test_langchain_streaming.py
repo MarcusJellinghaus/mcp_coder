@@ -58,7 +58,6 @@ class TestAskLangchainStreamTextYieldsDeltas:
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
             patch(f"{_MOD_LC}.store_langchain_history"),
             patch(f"{_MOD_LC}._create_chat_model", return_value=mock_model),
-            patch(f"{_MOD_LC}.ensure_truststore"),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain_stream
 
@@ -84,7 +83,6 @@ class TestAskLangchainStreamTextYieldsRawLines:
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
             patch(f"{_MOD_LC}.store_langchain_history"),
             patch(f"{_MOD_LC}._create_chat_model", return_value=mock_model),
-            patch(f"{_MOD_LC}.ensure_truststore"),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain_stream
 
@@ -109,7 +107,6 @@ class TestAskLangchainStreamTextYieldsDone:
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
             patch(f"{_MOD_LC}.store_langchain_history"),
             patch(f"{_MOD_LC}._create_chat_model", return_value=mock_model),
-            patch(f"{_MOD_LC}.ensure_truststore"),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain_stream
 
@@ -135,7 +132,6 @@ class TestAskLangchainStreamTextStoresHistory:
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
             patch(f"{_MOD_LC}.store_langchain_history", store_mock),
             patch(f"{_MOD_LC}._create_chat_model", return_value=mock_model),
-            patch(f"{_MOD_LC}.ensure_truststore"),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain_stream
 
@@ -176,7 +172,6 @@ def _patch_ask_agent_stream(
         with (
             patch(f"{_MOD_LC}._load_langchain_config", return_value=_make_config()),
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
-            patch(f"{_MOD_LC}.ensure_truststore"),
             patch(f"{_MOD_LC}._create_chat_model", return_value=MagicMock()),
             patch(
                 f"{_MOD_LC}.agent._check_agent_dependencies",
@@ -280,7 +275,6 @@ class TestAskLangchainStreamAgentReal:
         with (
             patch(f"{_MOD_LC}._load_langchain_config", return_value=_make_config()),
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
-            patch(f"{_MOD_LC}.ensure_truststore"),
             patch(f"{_MOD_LC}._create_chat_model", return_value=MagicMock()),
             patch(f"{_MOD_LC}.agent._check_agent_dependencies"),
             patch(
@@ -323,7 +317,6 @@ class TestAskLangchainStreamAgentAuthError:
                 return_value=_make_config("anthropic"),
             ),
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
-            patch(f"{_MOD_LC}.ensure_truststore"),
             patch(f"{_MOD_LC}._create_chat_model", return_value=MagicMock()),
             patch(f"{_MOD_LC}.agent._check_agent_dependencies"),
             patch(
@@ -352,7 +345,6 @@ class TestAskLangchainStreamAgentTimeouts:
         with (
             patch(f"{_MOD_LC}._load_langchain_config", return_value=_make_config()),
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
-            patch(f"{_MOD_LC}.ensure_truststore"),
             patch(f"{_MOD_LC}._create_chat_model", return_value=MagicMock()),
             patch(f"{_MOD_LC}.agent._check_agent_dependencies"),
             patch(
@@ -377,7 +369,6 @@ class TestAskLangchainStreamAgentTimeouts:
         with (
             patch(f"{_MOD_LC}._load_langchain_config", return_value=_make_config()),
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
-            patch(f"{_MOD_LC}.ensure_truststore"),
             patch(f"{_MOD_LC}._create_chat_model", return_value=MagicMock()),
             patch(f"{_MOD_LC}.agent._check_agent_dependencies"),
             patch(
@@ -410,7 +401,6 @@ class TestAskLangchainStreamAgentTimeouts:
         with (
             patch(f"{_MOD_LC}._load_langchain_config", return_value=_make_config()),
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
-            patch(f"{_MOD_LC}.ensure_truststore"),
             patch(f"{_MOD_LC}._create_chat_model", return_value=MagicMock()),
             patch(f"{_MOD_LC}.agent._check_agent_dependencies"),
             patch(
@@ -444,7 +434,6 @@ class TestAskLangchainStreamRoutesToText:
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
             patch(f"{_MOD_LC}.store_langchain_history"),
             patch(f"{_MOD_LC}._create_chat_model", return_value=mock_model),
-            patch(f"{_MOD_LC}.ensure_truststore"),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain_stream
 
@@ -466,7 +455,6 @@ class TestAskLangchainStreamErrorHandling:
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
             patch(f"{_MOD_LC}.store_langchain_history"),
             patch(f"{_MOD_LC}._create_chat_model", return_value=mock_model),
-            patch(f"{_MOD_LC}.ensure_truststore"),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain_stream
 
@@ -493,7 +481,6 @@ class TestAskLangchainStreamToolsPassthrough:
         with (
             patch(f"{_MOD_LC}._load_langchain_config", return_value=_make_config()),
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
-            patch(f"{_MOD_LC}.ensure_truststore"),
             patch(f"{_MOD_LC}._create_chat_model", return_value=MagicMock()),
             patch(f"{_MOD_LC}.agent._check_agent_dependencies"),
             patch(
@@ -525,7 +512,6 @@ class TestAskLangchainStreamToolsPassthrough:
         with (
             patch(f"{_MOD_LC}._load_langchain_config", return_value=_make_config()),
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
-            patch(f"{_MOD_LC}.ensure_truststore"),
             patch(f"{_MOD_LC}._create_chat_model", return_value=MagicMock()),
             patch(f"{_MOD_LC}.agent._check_agent_dependencies"),
             patch(
@@ -550,7 +536,6 @@ class TestAskLangchainStreamToolsPassthrough:
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
             patch(f"{_MOD_LC}.store_langchain_history"),
             patch(f"{_MOD_LC}._create_chat_model", return_value=mock_model),
-            patch(f"{_MOD_LC}.ensure_truststore"),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain_stream
 
@@ -603,7 +588,6 @@ class TestAskLangchainStreamTextUsage:
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
             patch(f"{_MOD_LC}.store_langchain_history"),
             patch(f"{_MOD_LC}._create_chat_model", return_value=mock_model),
-            patch(f"{_MOD_LC}.ensure_truststore"),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain_stream
 
@@ -629,7 +613,6 @@ class TestAskLangchainStreamTextUsage:
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
             patch(f"{_MOD_LC}.store_langchain_history"),
             patch(f"{_MOD_LC}._create_chat_model", return_value=mock_model),
-            patch(f"{_MOD_LC}.ensure_truststore"),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain_stream
 
@@ -661,7 +644,6 @@ class TestAskLangchainStreamTextUsage:
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
             patch(f"{_MOD_LC}.store_langchain_history"),
             patch(f"{_MOD_LC}._create_chat_model", return_value=mock_model),
-            patch(f"{_MOD_LC}.ensure_truststore"),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain_stream
 
@@ -705,7 +687,6 @@ class TestAskTextStreamUsageFlowsToRawResponse:
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
             patch(f"{_MOD_LC}.store_langchain_history"),
             patch(f"{_MOD_LC}._create_chat_model", return_value=mock_model),
-            patch(f"{_MOD_LC}.ensure_truststore"),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain_stream
 

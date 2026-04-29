@@ -228,6 +228,101 @@ class TestVerifyShowsPromptSection:
         assert "CLAUDE.md" in output
 
 
+class TestVerifyGithubTokenSource:
+    """Tests for the token_source second-line rendering in the GITHUB section."""
+
+    @staticmethod
+    def _github_payload(token_source: str) -> dict[str, Any]:
+        return {
+            "token_configured": {
+                "ok": True,
+                "value": "configured (scopes: repo, workflow)",
+                "token_source": token_source,
+            },
+            "overall_ok": True,
+        }
+
+    @patch(f"{_VERIFY}.verify_mlflow", return_value={"overall_ok": True})
+    @patch(f"{_VERIFY}.prompt_llm", return_value=_minimal_llm_response())
+    @patch(f"{_VERIFY}.find_claude_executable", return_value=None)
+    @patch(f"{_VERIFY}.verify_claude", return_value=_claude_ok())
+    @patch(f"{_VERIFY}.verify_config", return_value={"entries": [], "has_error": False})
+    @patch(f"{_VERIFY}.resolve_llm_method", return_value=("claude", "default"))
+    @patch(
+        f"{_VERIFY}.load_prompts",
+        return_value=(
+            "sys content",
+            "proj content",
+            PromptsConfig(
+                system_prompt=None,
+                project_prompt=None,
+                claude_system_prompt_mode="append",
+            ),
+        ),
+    )
+    def test_token_source_env_renders_second_line(
+        self,
+        _mock_load: MagicMock,
+        _mock_resolve: MagicMock,
+        _mock_config: MagicMock,
+        _mock_claude: MagicMock,
+        _mock_find: MagicMock,
+        _mock_prompt: MagicMock,
+        _mock_mlflow: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """token_source='env' renders 'from GITHUB_TOKEN env var' at value column."""
+        with patch(
+            f"{_VERIFY}.verify_github",
+            return_value=self._github_payload("env"),
+        ):
+            execute_verify(_make_args())
+        output = capsys.readouterr().out
+        expected_line = f"{' ' * _VALUE_COLUMN_INDENT}from GITHUB_TOKEN env var"
+        assert expected_line in output.splitlines()
+        assert "configured (scopes: repo, workflow)" in output
+
+    @patch(f"{_VERIFY}.verify_mlflow", return_value={"overall_ok": True})
+    @patch(f"{_VERIFY}.prompt_llm", return_value=_minimal_llm_response())
+    @patch(f"{_VERIFY}.find_claude_executable", return_value=None)
+    @patch(f"{_VERIFY}.verify_claude", return_value=_claude_ok())
+    @patch(f"{_VERIFY}.verify_config", return_value={"entries": [], "has_error": False})
+    @patch(f"{_VERIFY}.resolve_llm_method", return_value=("claude", "default"))
+    @patch(
+        f"{_VERIFY}.load_prompts",
+        return_value=(
+            "sys content",
+            "proj content",
+            PromptsConfig(
+                system_prompt=None,
+                project_prompt=None,
+                claude_system_prompt_mode="append",
+            ),
+        ),
+    )
+    def test_token_source_config_renders_second_line(
+        self,
+        _mock_load: MagicMock,
+        _mock_resolve: MagicMock,
+        _mock_config: MagicMock,
+        _mock_claude: MagicMock,
+        _mock_find: MagicMock,
+        _mock_prompt: MagicMock,
+        _mock_mlflow: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """token_source='config' renders 'from ~/.mcp_coder/config.toml' (literal tilde)."""
+        with patch(
+            f"{_VERIFY}.verify_github",
+            return_value=self._github_payload("config"),
+        ):
+            execute_verify(_make_args())
+        output = capsys.readouterr().out
+        expected_line = f"{' ' * _VALUE_COLUMN_INDENT}from ~/.mcp_coder/config.toml"
+        assert expected_line in output.splitlines()
+        assert "configured (scopes: repo, workflow)" in output
+
+
 class TestEnvironmentSection:
     """Tests for the _print_environment_section helper."""
 

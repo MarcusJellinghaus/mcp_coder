@@ -323,6 +323,12 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
         if error and ok is False:
             row_value = f"{value} ({error})"
         lines.append(_format_row(label, symbol, row_value, indent=2))
+        if key == "token_configured" and entry.get("token_source"):
+            src = entry["token_source"]
+            suffix = (
+                "GITHUB_TOKEN env var" if src == "env" else "~/.mcp_coder/config.toml"
+            )
+            lines.append(f"{' ' * _VALUE_COLUMN_INDENT}from {suffix}")
         if ok is False and "install_hint" in entry:
             lines.append(f"{' ' * _VALUE_COLUMN_INDENT}-> {entry['install_hint']}")
     return "\n".join(lines)

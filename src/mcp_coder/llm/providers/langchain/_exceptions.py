@@ -69,9 +69,10 @@ except ImportError:
 # ---------------------------------------------------------------------------
 
 _SSL_HINT = (
-    "For SSL errors behind a corporate proxy, try:\n"
-    "  pip install mcp-coder[truststore]\n"
-    "  or set SSL_CERT_FILE / REQUESTS_CA_BUNDLE env var to your corporate CA bundle."
+    "For SSL errors behind a corporate proxy:\n"
+    "  - Ensure your corporate root CA is installed in the OS trust store\n"
+    "    (truststore reads it automatically).\n"
+    "  - Or set SSL_CERT_FILE / REQUESTS_CA_BUNDLE to your corporate CA bundle."
 )
 
 

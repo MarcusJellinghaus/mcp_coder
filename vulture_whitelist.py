@@ -166,6 +166,9 @@ _._mock_langchain_modules
 # test_crash_logging.py - Autouse fixture to reset crash_logging module state
 _._isolate_crash_logging_state
 
+# test_ssl_setup.py - Autouse fixture to reset ssl_setup._injected module state
+_._reset_injected
+
 # =============================================================================
 # API COMPLETENESS - CommandResult Dataclass Fields
 # =============================================================================

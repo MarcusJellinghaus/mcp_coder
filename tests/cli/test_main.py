@@ -301,6 +301,17 @@ class TestMain:
         assert result == 0
         mock_setup_logging.assert_called_once_with("ERROR")
 
+    def test_main_calls_ensure_truststore(self) -> None:
+        """main() activates truststore once before dispatching the command."""
+        with (
+            patch("mcp_coder.cli.main.execute_verify", return_value=0),
+            patch("mcp_coder.utils.ssl_setup.ensure_truststore") as mock_ts,
+            patch("sys.argv", ["mcp-coder", "verify"]),
+        ):
+            rc = main()
+        assert rc == 0
+        mock_ts.assert_called_once()
+
 
 class TestCLIEntryPoint:
     """Test CLI entry point configuration."""

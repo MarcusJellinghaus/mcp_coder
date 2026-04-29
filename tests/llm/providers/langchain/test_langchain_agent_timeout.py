@@ -34,7 +34,6 @@ class TestAgentStreamInactivityTimeout:
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
             patch(f"{_MOD_LC}.store_langchain_history"),
             patch(f"{_MOD_LC}._create_chat_model", return_value=mock_model),
-            patch(f"{_MOD_LC}.ensure_truststore"),
             patch(f"{_MOD_AGENT}._check_agent_dependencies"),
             patch(f"{_MOD_LC}.queue.Queue", return_value=empty_queue),
             patch(f"{_MOD_LC}.threading.Thread") as mock_thread_cls,
