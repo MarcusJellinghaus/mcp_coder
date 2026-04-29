@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: Wire `ensure_truststore()` into `cli/main.main()` — [step_3.md](./steps/step_3.md)
-- [ ] Implementation (add inline call in `main()` + new test in `tests/cli/test_main.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (add inline call in `main()` + new test in `tests/cli/test_main.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Decommission langchain SSL plumbing — [step_4.md](./steps/step_4.md)
 - [ ] Implementation (delete `_ssl.py`, remove 7 call sites, drop 5 test mocks, delete 2 obsolete test classes)
