@@ -21,7 +21,7 @@ def runtime_info() -> RuntimeInfo:
     """Minimal RuntimeInfo for testing."""
     return RuntimeInfo(
         mcp_coder_version="0.1.0",
-        mcp_coder_utils_version="0.1.0",
+        mcp_coder_utils_version="0.2.0",
         python_version="3.11.0",
         claude_code_version="1.0.0",
         tool_env_path="C:\\tool_env",
@@ -84,12 +84,7 @@ def test_info_command_registered(
 
 
 @patch("mcp_coder.icoder.core.commands.info.find_claude_executable", return_value=None)
-@patch(
-    "mcp_coder.icoder.core.commands.info.importlib.metadata.version",
-    return_value="1.2.3",
-)
-def test_info_shows_version(
-    _mock_version: object,
+def test_info_shows_versions(
     _mock_claude: object,
     registry: CommandRegistry,
     runtime_info: RuntimeInfo,
@@ -97,7 +92,8 @@ def test_info_shows_version(
     register_info(registry, runtime_info)
     result = registry.dispatch("/info")
     assert result is not None
-    assert "mcp-coder version: 1.2.3" in result.text
+    assert "mcp-coder version: 0.1.0" in result.text
+    assert "mcp-coder-utils version: 0.2.0" in result.text
 
 
 @patch("mcp_coder.icoder.core.commands.info.find_claude_executable", return_value=None)

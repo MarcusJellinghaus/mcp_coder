@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib.metadata
 import os
 import sys
 from pathlib import Path
@@ -52,7 +51,8 @@ def _format_info(
     """
     lines: list[str] = []
     lines.append("=== iCoder /info ===")
-    lines.append(f"mcp-coder version: {importlib.metadata.version('mcp-coder')}")
+    lines.append(f"mcp-coder version: {runtime_info.mcp_coder_version}")
+    lines.append(f"mcp-coder-utils version: {runtime_info.mcp_coder_utils_version}")
     lines.append(f"Python:            {sys.version} ({sys.executable})")
 
     lines.append("")
