@@ -1,4 +1,4 @@
-"""Tests for mcp_coder.llm.providers.langchain._ssl.
+"""Tests for mcp_coder.utils.ssl_setup.
 
 Tests ensure_truststore() idempotent helper for optional
 OS certificate store integration.
@@ -9,20 +9,26 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.llm.providers.langchain import _ssl
-from mcp_coder.llm.providers.langchain._ssl import ensure_truststore
+from mcp_coder.utils import ssl_setup
+from mcp_coder.utils.ssl_setup import ensure_truststore
+
+
+@pytest.fixture(autouse=True)
+def _reset_injected() -> None:
+    """Reset the global _injected flag before each test.
+
+    The CLI entry call (Step 3) flips this flag to True for the lifetime of
+    the pytest worker process; without this fixture, tests after CLI tests
+    in the same xdist worker would see an already-injected state.
+    """
+    ssl_setup._injected = False
 
 
 class TestEnsureTruststore:
     """Tests for ensure_truststore() helper."""
 
-    def _reset(self) -> None:
-        """Reset the module-level _injected flag before each test."""
-        _ssl._injected = False
-
     def test_calls_inject_when_truststore_available(self) -> None:
         """When truststore is installed, inject_into_ssl() is called."""
-        self._reset()
         mock_truststore = MagicMock()
         with patch.dict("sys.modules", {"truststore": mock_truststore}):
             ensure_truststore()
@@ -30,16 +36,14 @@ class TestEnsureTruststore:
 
     def test_noop_when_truststore_not_installed(self) -> None:
         """When truststore is not installed, no crash occurs."""
-        self._reset()
         # Setting sys.modules entry to None causes import to raise ImportError
         with patch.dict("sys.modules", {"truststore": None}):
             ensure_truststore()  # Should not raise
         # _injected should remain False
-        assert _ssl._injected is False
+        assert ssl_setup._injected is False
 
     def test_idempotent_only_calls_once(self) -> None:
         """Calling ensure_truststore() twice only calls inject_into_ssl() once."""
-        self._reset()
         mock_truststore = MagicMock()
         with patch.dict("sys.modules", {"truststore": mock_truststore}):
             ensure_truststore()
@@ -50,13 +54,10 @@ class TestEnsureTruststore:
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """First call logs a debug message mentioning truststore."""
-        self._reset()
         mock_truststore = MagicMock()
         with (
             patch.dict("sys.modules", {"truststore": mock_truststore}),
-            caplog.at_level(
-                logging.DEBUG, logger="mcp_coder.llm.providers.langchain._ssl"
-            ),
+            caplog.at_level(logging.DEBUG, logger="mcp_coder.utils.ssl_setup"),
         ):
             ensure_truststore()
         assert any("truststore" in record.message for record in caplog.records)
@@ -65,13 +66,10 @@ class TestEnsureTruststore:
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Second call does not produce a debug log."""
-        self._reset()
         mock_truststore = MagicMock()
         with (
             patch.dict("sys.modules", {"truststore": mock_truststore}),
-            caplog.at_level(
-                logging.DEBUG, logger="mcp_coder.llm.providers.langchain._ssl"
-            ),
+            caplog.at_level(logging.DEBUG, logger="mcp_coder.utils.ssl_setup"),
         ):
             ensure_truststore()
             caplog.clear()

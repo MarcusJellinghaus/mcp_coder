@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: Create `mcp_coder.utils.ssl_setup` + relocate tests + import-linter contract — [step_2.md](./steps/step_2.md)
-- [ ] Implementation (create `ssl_setup.py`, move test file with autouse fixture, update `.importlinter`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (create `ssl_setup.py`, move test file with autouse fixture, update `.importlinter`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Wire `ensure_truststore()` into `cli/main.main()` — [step_3.md](./steps/step_3.md)
 - [ ] Implementation (add inline call in `main()` + new test in `tests/cli/test_main.py`)
