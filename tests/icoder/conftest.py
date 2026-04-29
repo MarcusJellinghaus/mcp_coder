@@ -16,6 +16,7 @@ from mcp_coder.utils.mcp_verification import MCPServerInfo
 
 FAKE_RUNTIME_INFO = RuntimeInfo(
     mcp_coder_version="0.42.0",
+    mcp_coder_utils_version="0.42.0",
     python_version="3.12.0",
     claude_code_version="1.2.3",
     tool_env_path="/fake/tool",

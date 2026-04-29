@@ -34,6 +34,7 @@ class RuntimeInfo:
     """Runtime information gathered during iCoder startup."""
 
     mcp_coder_version: str
+    mcp_coder_utils_version: str
     python_version: str
     claude_code_version: str
     tool_env_path: str
@@ -42,6 +43,14 @@ class RuntimeInfo:
     env_vars: dict[str, str]
     mcp_servers: list[MCPServerInfo]
     mcp_connection_status: list[ClaudeMCPStatus] | None = None
+
+
+def _get_package_version(name: str) -> str:
+    """Return installed version of ``name``, or ``"unknown"`` if not found."""
+    try:
+        return importlib.metadata.version(name)
+    except importlib.metadata.PackageNotFoundError:
+        return "unknown"
 
 
 def _get_claude_code_version() -> str:
@@ -100,14 +109,16 @@ def setup_icoder_environment(project_dir: Path) -> RuntimeInfo:
         env_vars=effective, claude_executable=claude_exe
     )
 
-    version = importlib.metadata.version("mcp-coder")
+    mcp_coder_version = _get_package_version("mcp-coder")
+    mcp_coder_utils_version = _get_package_version("mcp-coder-utils")
     python_version = (
         f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     )
     claude_code_version = _get_claude_code_version()
 
     return RuntimeInfo(
-        mcp_coder_version=version,
+        mcp_coder_version=mcp_coder_version,
+        mcp_coder_utils_version=mcp_coder_utils_version,
         python_version=python_version,
         claude_code_version=claude_code_version,
         tool_env_path=str(tool_env),

@@ -126,6 +126,7 @@ def test_runtime_info_injected(fake_llm: FakeLLMService, event_log: EventLog) ->
     """Create AppCore with a RuntimeInfo instance, verify property returns it."""
     info = RuntimeInfo(
         mcp_coder_version="1.0.0",
+        mcp_coder_utils_version="1.0.0",
         python_version="3.12.0",
         claude_code_version="1.2.3",
         tool_env_path="/tool",

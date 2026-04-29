@@ -21,6 +21,7 @@ def runtime_info() -> RuntimeInfo:
     """Minimal RuntimeInfo for testing."""
     return RuntimeInfo(
         mcp_coder_version="0.1.0",
+        mcp_coder_utils_version="0.1.0",
         python_version="3.11.0",
         claude_code_version="1.0.0",
         tool_env_path="C:\\tool_env",

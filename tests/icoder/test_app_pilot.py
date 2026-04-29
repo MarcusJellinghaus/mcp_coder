@@ -470,6 +470,7 @@ async def test_tui_renders_runtime_info_on_mount(
     """TUI output log shows runtime info on mount when RuntimeInfo is provided."""
     info = RuntimeInfo(
         mcp_coder_version="0.42.0",
+        mcp_coder_utils_version="0.42.0",
         python_version="3.12.0",
         claude_code_version="1.2.3",
         tool_env_path="/fake/tool",
@@ -506,6 +507,7 @@ async def test_on_mount_shows_connection_status(
     """on_mount() renders inline connection status when mcp_connection_status is set."""
     info = RuntimeInfo(
         mcp_coder_version="0.42.0",
+        mcp_coder_utils_version="0.42.0",
         python_version="3.12.0",
         claude_code_version="1.2.3",
         tool_env_path="/fake/tool",
@@ -540,6 +542,7 @@ async def test_on_mount_no_connection_status_falls_back(
     """on_mount() with mcp_connection_status=None shows version-only (no crash)."""
     info = RuntimeInfo(
         mcp_coder_version="0.42.0",
+        mcp_coder_utils_version="0.42.0",
         python_version="3.12.0",
         claude_code_version="1.2.3",
         tool_env_path="/fake/tool",

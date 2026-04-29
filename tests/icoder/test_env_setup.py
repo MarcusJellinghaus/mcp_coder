@@ -8,8 +8,24 @@ from pathlib import Path
 
 import pytest
 
-from mcp_coder.icoder.env_setup import RuntimeInfo, setup_icoder_environment
+from mcp_coder.icoder.env_setup import (
+    RuntimeInfo,
+    _get_package_version,
+    setup_icoder_environment,
+)
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus, MCPServerInfo
+
+
+def test_get_package_version_known() -> None:
+    """Real installed package returns a non-empty, non-"unknown" version."""
+    result = _get_package_version("mcp-coder")
+    assert result != "unknown"
+    assert result  # non-empty
+
+
+def test_get_package_version_missing_returns_unknown() -> None:
+    """Non-existent package falls back to "unknown"."""
+    assert _get_package_version("definitely-not-a-real-pkg-xyz-926") == "unknown"
 
 
 @pytest.fixture()
@@ -92,6 +108,7 @@ class TestSetupIcoderEnvironment:
 
         assert isinstance(info, RuntimeInfo)
         assert info.mcp_coder_version == "0.42.0"
+        assert info.mcp_coder_utils_version == "0.42.0"
         assert (
             info.python_version
             == f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
@@ -196,6 +213,7 @@ class TestRuntimeInfoDefaults:
         """RuntimeInfo without mcp_connection_status defaults to None."""
         info = RuntimeInfo(
             mcp_coder_version="1.0",
+            mcp_coder_utils_version="1.0",
             python_version="3.12.0",
             claude_code_version="1.0",
             tool_env_path="/fake",
