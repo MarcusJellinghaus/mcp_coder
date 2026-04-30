@@ -41,3 +41,45 @@ Updated `pr_info/steps/step_1.md` only: tightened the Test 3 "absent fingerprint
 ### Status
 
 Pending commit.
+
+---
+
+## Round 2 — 2026-04-30
+
+### Findings
+
+- F16 (no-op): Round 1 fix F3 applied correctly. `step_1.md` lines 187-194 now use the anchored negative assertion `assert "from ~/.mcp_coder/config.toml (" not in output` for the `fingerprint-absent` case — clean and intent-revealing.
+- F17 (no-op): Round 1 fix F4 applied correctly. `step_1.md` lines 156-159 and 161-164 anchor `expected_in_suffix` on the full suffix line: `"from ~/.mcp_coder/config.toml (ghp_...a3f9)"` and `"from ~/.mcp_coder/config.toml (****)"`. No accidental substring leakage possible.
+- F18 (no-op): Round 1 fix F5 applied correctly. Test 2 has `id="success-renders-ok"` and `id="fallback-severity-warning-renders-err"`; Test 3 has `id="normal-token"`, `id="short-token-sentinel"`, `id="fingerprint-absent"`. All five pytest.param ids are descriptive and align with the test cases.
+- F19 (no-op): Round 1 fix F6 applied correctly. DoD item 6 (line 316) and LLM Prompt step 7 (line 356) both reference `mcp__tools-py__run_format_code`. No `format_all.sh` references remain.
+- F20 (no-op): Round 1 fix F7 applied correctly. DoD item 4 (line 314) marker exclusion list matches the CLAUDE.md fast-mode invocation verbatim, including `copilot_cli_integration`, `jenkins_integration`, `llm_integration`, `textual_integration`.
+- F21 (no-op): Round 1 fix F9 applied correctly. Test 2 lines 130-135 add `api_idx = output.find("API base URL")` / `token_idx = output.find("Token configured")` / `assert 0 <= api_idx < token_idx` — guards both presence and ordering with one cheap check.
+- F22 (no-op): Round 1 fix F11 applied correctly. Line 31 prescribes "top of the `# GitHub section` block ... before `token_configured`" with rationale (mirror data-shape ordering, keep diff readable).
+- F23 (no-op): The Test 2 fallback case expected value `"https://api.github.com (fallback - identifier unresolved) (Could not determine repository URL from git remote)"` assumes `_format_section`'s existing value+error concatenation pattern. Consistent with how other rows render today; not a plan defect.
+- F24 (no-op): Test 2's position assertion fixture (`{"token_configured": {"ok": True, "value": "configured"}}`, no `token_source`) is a minimal but valid configuration — the row label `"Token configured"` will still render via `_LABEL_MAP`, satisfying the position check.
+- F25 (no-op): No new gap surfaced by the position assertion — the dict in Test 2 only contains `api_base_url` + `token_configured` + `overall_ok`, so the assertion targets exactly the two relative positions that matter.
+
+### Decisions
+
+All round 2 findings are no-op observations. No plan changes warranted. Round 1's seven mechanical fixes (F3, F4, F5, F6, F7, F9, F11) are all applied correctly and produce the intended tightening.
+
+### User decisions
+
+None — no design or requirements questions surfaced this round.
+
+### Changes
+
+No plan changes — round 1 fixes verified clean. Plan is ready for user approval.
+
+### Status
+
+Ready for approval. No further plan-update rounds needed.
+
+
+## Final Status
+
+**Rounds run**: 2
+**Plan changes**: Round 1 — 6 mechanical fixes applied to `step_1.md` (F3, F4, F5, F6, F7, F9, F11). Round 2 — zero changes (round 1 fixes verified clean).
+**Commits produced**: 1 (round 1 plan fixes — `ebc29bb`). The Final Status / round 2 log update is a separate trailing commit on top of this.
+**Approval status**: Ready for user approval.
+**Open questions**: None — all design and requirements decisions remain consistent with the issue's Decisions table; no questions were raised in either round.
