@@ -34,7 +34,7 @@ type = layers
 layers =
     mcp_coder.cli | mcp_coder.icoder
     mcp_coder.workflows
-    mcp_coder.checks
+    mcp_coder.services | mcp_coder.checks
     mcp_coder.workflow_utils
     mcp_coder.llm | mcp_coder.prompt_manager
     mcp_coder.prompts

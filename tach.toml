@@ -67,6 +67,7 @@ depends_on = [
     { path = "mcp_coder.mcp_workspace_git" }, # Git operations shim
     { path = "mcp_coder.mcp_workspace_github" }, # GitHub operations shim
     { path = "mcp_coder.icoder" },       # Interactive TUI
+    { path = "mcp_coder.services" },     # Read-only data services (branch info, etc.)
 ]
 
 [[modules]]
@@ -77,6 +78,7 @@ layer = "presentation"
 depends_on = [
     { path = "mcp_coder.llm" },
     { path = "mcp_coder.prompts" },   # Prompt loading for info command
+    { path = "mcp_coder.services" },  # Branch-info data layer
 ]
 
 # =============================================================================
@@ -132,6 +134,16 @@ depends_on = [
     { path = "mcp_coder.utils" },
     { path = "mcp_coder.config" },
     { path = "mcp_coder.constants" },
+]
+
+[[modules]]
+path = "mcp_coder.services"
+layer = "application"
+# Read-only data services for cross-cutting state (branch info, etc.).
+# Consumers: icoder (now), vscodeclaude/web (later).
+depends_on = [
+    { path = "mcp_coder.mcp_workspace_git" },     # Git operations shim
+    { path = "mcp_coder.mcp_workspace_github" },  # GitHub operations shim
 ]
 
 # =============================================================================
@@ -431,6 +443,7 @@ depends_on = [
     { path = "mcp_coder.mcp_workspace_github" },
     { path = "mcp_coder.icoder" },
     { path = "mcp_coder.prompts" },
+    { path = "mcp_coder.services" },
 ]
 
 # -----------------------------------------------------------------------------

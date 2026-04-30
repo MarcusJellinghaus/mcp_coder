@@ -5,8 +5,8 @@ This module contains tests for:
 - Cache refresh settings (get_cache_refresh_minutes - moved to utils.user_config)
 - Issue filtering functions (get_eligible_issues)
 - Workflow dispatch function (dispatch_workflow)
-- Cache file operations (_get_cache_file_path, _load_cache_file, _save_cache_file)
-- Cache staleness logging (_log_stale_cache_entries)
+- Cache file operations (get_cache_file_path, load_cache_file, save_cache_file)
+- Cache staleness logging (log_stale_cache_entries)
 - Cached issue retrieval (get_cached_eligible_issues)
 """
 
@@ -39,10 +39,10 @@ from mcp_coder.mcp_workspace_github import (
     CacheData,
     IssueData,
     RepoIdentifier,
-    _get_cache_file_path,
-    _load_cache_file,
-    _log_stale_cache_entries,
-    _save_cache_file,
+    get_cache_file_path,
+    load_cache_file,
+    log_stale_cache_entries,
+    save_cache_file,
 )
 from mcp_coder.utils.user_config import get_cache_refresh_minutes
 
@@ -704,14 +704,14 @@ class TestDispatchWorkflow:
 
 
 class TestCacheFilePath:
-    """Tests for _get_cache_file_path function."""
+    """Tests for get_cache_file_path function."""
 
     def test_get_cache_file_path_basic(self) -> None:
         """Test basic cache file path generation."""
         from mcp_coder.mcp_workspace_github import RepoIdentifier
 
         repo_identifier = RepoIdentifier.from_full_name("owner/repo")
-        path = _get_cache_file_path(repo_identifier)
+        path = get_cache_file_path(repo_identifier)
 
         expected_dir = Path.home() / ".mcp_coder" / "coordinator_cache"
         expected_file = expected_dir / "github_com_owner_repo.issues.json"
@@ -739,7 +739,7 @@ class TestCacheFilePath:
 
         for full_name, expected_filename in test_cases:
             repo_identifier = RepoIdentifier.from_full_name(full_name)
-            path = _get_cache_file_path(repo_identifier)
+            path = get_cache_file_path(repo_identifier)
             assert path.name == expected_filename
 
 
@@ -750,7 +750,7 @@ class TestCacheFileOperations:
         """Test loading non-existent cache file returns empty structure."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_path = Path(tmpdir) / "nonexistent.json"
-            result = _load_cache_file(cache_path)
+            result = load_cache_file(cache_path)
 
             assert result == {
                 "last_checked": None,
@@ -783,7 +783,7 @@ class TestCacheFileOperations:
             cache_path = Path(tmpdir) / "cache.json"
             cache_path.write_text(json.dumps(sample_cache_data))
 
-            result = _load_cache_file(cache_path)
+            result = load_cache_file(cache_path)
             # Loaded cache gains last_full_refresh=None when not in file
             expected = {**sample_cache_data, "last_full_refresh": None}
             assert result == expected
@@ -794,7 +794,7 @@ class TestCacheFileOperations:
             cache_path = Path(tmpdir) / "invalid.json"
             cache_path.write_text("invalid json content")
 
-            result = _load_cache_file(cache_path)
+            result = load_cache_file(cache_path)
             assert result == {
                 "last_checked": None,
                 "last_full_refresh": None,
@@ -825,7 +825,7 @@ class TestCacheFileOperations:
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_path = Path(tmpdir) / "subdir" / "cache.json"
 
-            result = _save_cache_file(cache_path, sample_cache_data)
+            result = save_cache_file(cache_path, sample_cache_data)
             assert result is True
 
             # Verify file was created and data is correct
@@ -835,7 +835,7 @@ class TestCacheFileOperations:
 
 
 class TestStalenessLogging:
-    """Tests for _log_stale_cache_entries function."""
+    """Tests for log_stale_cache_entries function."""
 
     def test_log_stale_cache_entries_state_change(
         self, caplog: pytest.LogCaptureFixture
@@ -876,7 +876,7 @@ class TestStalenessLogging:
             }
         }
 
-        _log_stale_cache_entries(cached_issues, fresh_issues)
+        log_stale_cache_entries(cached_issues, fresh_issues)
 
         assert "Issue #123: cached state 'open' != actual 'closed'" in caplog.text
 
@@ -919,7 +919,7 @@ class TestStalenessLogging:
             }
         }
 
-        _log_stale_cache_entries(cached_issues, fresh_issues)
+        log_stale_cache_entries(cached_issues, fresh_issues)
 
         assert "Issue #123: cached labels" in caplog.text
         assert "status-02:awaiting-planning" in caplog.text
