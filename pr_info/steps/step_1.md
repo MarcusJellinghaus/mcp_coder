@@ -28,7 +28,7 @@ Add **one entry** in the GitHub section block (alongside `token_configured`, `au
 "api_base_url": "API base URL",
 ```
 
-No specific position required within the dict — `_LABEL_MAP` is a lookup table; insertion order does not affect rendering.
+Insert at the top of the `# GitHub section` block in `_LABEL_MAP` (verify.py around line 252), before `token_configured`. Although `_LABEL_MAP` is a lookup table where insertion order does not affect rendering, the existing dict groups entries by section with a `# GitHub section` comment — keep the new entry at the top of that block to mirror the data-shape ordering (`api_base_url` is the first key in the upstream result).
 
 ### B. `token_configured` suffix block (existing block at `verify.py:326-331`)
 
@@ -96,12 +96,13 @@ class TestApiBaseUrlRendering:
     @pytest.mark.parametrize(
         "entry, marker, value",
         [
-            (
+            pytest.param(
                 {"ok": True, "value": "https://api.example.ghe.com"},
                 "[OK]",
                 "https://api.example.ghe.com",
+                id="success-renders-ok",
             ),
-            (
+            pytest.param(
                 {
                     "ok": False,
                     "severity": "warning",
@@ -111,6 +112,7 @@ class TestApiBaseUrlRendering:
                 "[ERR]",  # symbol comes from ok=False, NOT from severity="warning"
                 "https://api.github.com (fallback - identifier unresolved) "
                 "(Could not determine repository URL from git remote)",
+                id="fallback-severity-warning-renders-err",
             ),
         ],
     )
@@ -119,11 +121,18 @@ class TestApiBaseUrlRendering:
     ) -> None:
         result: dict[str, Any] = {
             "api_base_url": entry,
+            "token_configured": {"ok": True, "value": "configured"},
             "overall_ok": entry["ok"] is True,
         }
         output = _format_section("GITHUB", result, self._symbols())
         expected_line = _format_row("API base URL", marker, value, indent=2)
         assert expected_line in output
+        # Position invariant: dict insertion order is load-bearing —
+        # upstream guarantees `api_base_url` is first key, so the rendered
+        # row must precede `Token configured`.
+        api_idx = output.find("API base URL")
+        token_idx = output.find("Token configured")
+        assert 0 <= api_idx < token_idx
 ```
 
 The fallback case proves the **`severity`-is-ignored** invariant: an entry with `severity="warning"` still renders `[ERR]` because `ok=False`.
@@ -143,9 +152,21 @@ class TestTokenFingerprintSuffix:
     @pytest.mark.parametrize(
         "fingerprint, expected_in_suffix",
         [
-            ("ghp_...a3f9", "(ghp_...a3f9)"),  # normal token
-            ("****", "(****)"),                 # short-token sentinel
-            (None, None),                       # field absent → no parens added
+            pytest.param(
+                "ghp_...a3f9",
+                "from ~/.mcp_coder/config.toml (ghp_...a3f9)",
+                id="normal-token",
+            ),
+            pytest.param(
+                "****",
+                "from ~/.mcp_coder/config.toml (****)",
+                id="short-token-sentinel",
+            ),
+            pytest.param(
+                None,
+                None,
+                id="fingerprint-absent",
+            ),
         ],
     )
     def test_fingerprint_appended_when_present(
@@ -166,16 +187,19 @@ class TestTokenFingerprintSuffix:
         # The 'from ...' suffix line must appear (existing behavior)
         assert "from ~/.mcp_coder/config.toml" in output
         if expected_in_suffix is None:
-            # No fingerprint → no parens on the suffix line
-            assert "from ~/.mcp_coder/config.toml\n" in output + "\n"
-            assert "(" not in [
-                ln for ln in output.split("\n") if "from ~/.mcp_coder" in ln
-            ][0].split("config.toml", 1)[1]
+            # No fingerprint → suffix line ends at config.toml with no
+            # trailing `(...)` parenthetical. Anchor to the full suffix
+            # line (with no parens after) — same anchoring approach as
+            # the fingerprint-present cases.
+            assert "from ~/.mcp_coder/config.toml (" not in output
         else:
+            # Anchor to the FULL suffix line: `from ~/.mcp_coder/config.toml (<fp>)`.
+            # This avoids passing on incidental `(****)` or `(ghp_...a3f9)`
+            # substrings that aren't actually attached to the suffix.
             assert expected_in_suffix in output
 ```
 
-(The `expected_in_suffix is None` branch tolerates the existing `from ~/.mcp_coder/config.toml` line continuing to render with no trailing `(...)`. The simpler assertion is fine — the goal is "no parens after `config.toml`".)
+(The `expected_in_suffix is None` branch asserts the negative form `"from ~/.mcp_coder/config.toml ("` does NOT appear in output, which cleanly expresses "no parens after `config.toml`" without brittle line-splitting.)
 
 ### Test 4: orchestration end-to-end
 
@@ -287,9 +311,9 @@ Only the inner `if entry has truthy token_fingerprint` branch is new. The `api_b
    - `TestTokenFingerprintSuffix.test_fingerprint_appended_when_present` (parametrized, 3 cases).
    - `TestVerifyOrchestration.test_github_section_renders_diagnostics`.
 3. `mcp__tools-py__run_pylint_check` — green.
-4. `mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"])` — green.
+4. `mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not jenkins_integration and not langchain_integration and not llm_integration and not textual_integration"])` — green.
 5. `mcp__tools-py__run_mypy_check` — green.
-6. `./tools/format_all.sh` run before commit; diff is formatting-only.
+6. `mcp__tools-py__run_format_code` run before commit; diff is formatting-only.
 7. One commit with a descriptive message (e.g., `verify: render API base URL and token fingerprint in GITHUB section (#933)`).
 
 ## LLM Prompt for executing this step
@@ -329,7 +353,7 @@ Implement step 1 in TDD order:
 
 6. Run pylint and mypy via the MCP tools; fix any issues.
 
-7. Run ./tools/format_all.sh; confirm the diff is formatting-only.
+7. Run `mcp__tools-py__run_format_code`; confirm the diff is formatting-only.
 
 8. Commit with a single message referencing #933.
 
