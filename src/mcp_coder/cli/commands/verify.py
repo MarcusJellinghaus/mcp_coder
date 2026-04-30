@@ -250,6 +250,7 @@ _LABEL_MAP: dict[str, str] = {
     "artifact_location": "Artifact location",
     "tracking_data": "Tracking data",
     # GitHub section
+    "api_base_url": "API base URL",
     "token_configured": "Token configured",
     "authenticated_user": "Authenticated user",
     "repo_url": "Repo URL",
@@ -328,6 +329,9 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
             suffix = (
                 "GITHUB_TOKEN env var" if src == "env" else "~/.mcp_coder/config.toml"
             )
+            fingerprint = entry.get("token_fingerprint")
+            if fingerprint:
+                suffix = f"{suffix} ({fingerprint})"
             lines.append(f"{' ' * _VALUE_COLUMN_INDENT}from {suffix}")
         if ok is False and "install_hint" in entry:
             lines.append(f"{' ' * _VALUE_COLUMN_INDENT}-> {entry['install_hint']}")
