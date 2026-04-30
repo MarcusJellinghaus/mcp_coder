@@ -136,7 +136,7 @@ _tick_branch_quick():
         try: info = service.fetch_info()
         except Exception: failed.add("issue"); info = None
         else: failed.discard("issue")
-        call_from_thread(apply, info)
+        call_from_thread(_apply_branch_state, info)
         if info and service.branch_changed(info.branch_name) and service.pr_enabled:
             run_pr_fetch(info.issue_number)
     run_worker(work, thread=True)
@@ -150,7 +150,8 @@ _on_refresh_pr():
         except Exception: failed.add("pr"); pr = None
         finally: service.end_pr_fetch()
         if gen != service.current_pr_fetch_generation: return   # stale → drop
-        loading.discard("pr"); call_from_thread(apply_pr, pr)
+        loading.discard("pr")
+        call_from_thread(_apply_branch_state, info, pr_number=pr)
     run_worker(work, thread=True)
 ```
 
@@ -204,6 +205,23 @@ Add to `tests/icoder/ui/test_app.py` (already
    - Unblock worker A — it returns PR #42, but `gen=1 !=
      current_pr_fetch_generation=3`, so its result is dropped.
    - Assert widget shows `PR #99` (worker B's result), never `PR #42`.
+10. `test_pr_fetch_race_via_2s_tick_dropped_on_toggle_off` — analogous to
+    #6/#9 but the PR worker is launched by the 2s branch tick rather than
+    by the refresh-PR button:
+    - Toggle PR on (gen → 1) and seed `last_branch=None` so the next
+      `_tick_branch_quick` triggers the auto PR fetch.
+    - Patch `fetch_info` to return a `BranchInfo` with branch
+      `"123-foo"` (so `branch_changed` returns True and the auto PR
+      fetch is kicked).
+    - Block the PR worker inside `fetch_pr` via a `threading.Event`.
+    - Toggle PR off — `set_pr_enabled(False)` increments the generation
+      to 2.
+    - Unblock the worker — it returns PR #42, but its captured
+      `gen=1 != current_pr_fetch_generation=2`, so the result is dropped
+      via the same generation check.
+    - Assert widget's PR zone stays `"—"` (never shows `PR #42`),
+      confirming the generation-token guard covers the 2s-tick code path
+      as well as the button path.
 
 In `tests/icoder/test_branch_info_service.py`, also add:
 

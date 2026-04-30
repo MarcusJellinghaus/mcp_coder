@@ -3,6 +3,38 @@
 Round-1 plan revisions confirmed by the user. Each entry: what was
 decided + the change number from the round-1 review.
 
+## Round 2 (consistency + Boy Scout)
+
+- **`fetch_pr` exception policy: propagate, don't swallow** (R2-#2). Step
+  3 previously had two contradictory phrasings; resolved by deleting the
+  "catches all exceptions internally" wording. The adapter is a
+  passthrough; the worker (Step 4) catches and updates the failed set.
+- **`_apply_branch_state` is the single rendering entrypoint** (R2-#3).
+  Step 4's ALGORITHM block now uses `_apply_branch_state` everywhere
+  (the stray `apply_pr` reference was a leftover from an earlier
+  draft). Both 2s-tick and refresh-PR paths call
+  `call_from_thread(_apply_branch_state, ...)`.
+- **`pr_fetch_generation` ownership: Step 3 forward-points to Step 4**
+  (R2-#4). `summary.md` keeps the field in the adapter description (it
+  describes the final shape — useful as a top-level overview); Step 3
+  adds a one-line note that race-protection state is added in Step 4.
+- **Add cache-miss test in Step 1** (R2-#5). Test 4b covers
+  `get_all_cached_issues` returning an empty dict (cache file missing
+  or no entries) — `BranchInfo` returns with all issue/cache fields
+  `None`, no exception.
+- **Add 2s-tick race test in Step 4** (R2-#6). Test #10 mirrors test
+  #6/#9 but launches the PR worker via `_tick_branch_quick` rather
+  than the refresh-PR button, confirming the generation-token guard
+  covers the auto-fetch path too.
+- **Boy Scout: drop underscore prefix on cache helpers in the shim's
+  public surface** (R2-#7, user-approved). Rename `_get_cache_file_path`
+  → `get_cache_file_path` and `_load_cache_file` → `load_cache_file`
+  in `src/mcp_coder/mcp_workspace_github.py`'s import block + `__all__`.
+  Upstream private names in `mcp_coder_utils` stay private — only the
+  shim exposes the public alias. Existing call site in
+  `tests/cli/commands/coordinator/test_core.py` updated. Rationale:
+  underscore prefix violated the public-API convention for re-exports.
+
 ## Architecture & Helpers
 
 - **PR lookup is a two-step call** (#1). `get_branch_with_pr_fallback`

@@ -39,3 +39,30 @@
 
 **Status:** Pending commit (to be handled by commit agent).
 
+## Round 2 — 2026-04-30
+
+**Findings (from /plan_review):**
+- Critical: Step 3 still referenced `get_pr_for_branch` (renamed to `get_pr_for_issue` in round 1) in three places — would break the import.
+- Improvement: Step 3 contained two contradictory exception-policy phrasings ("catches internally" vs. "lets propagate"); had to be reconciled.
+- Improvement: Step 4 ALGORITHM block called `apply_pr` while HOW prose specified `_apply_branch_state` — naming drift.
+- Improvement: `summary.md` listed `pr_fetch_generation` on the adapter, but Step 3 didn't mention it (added in Step 4) — reader confusion.
+- Improvement: Step 1 missing test for cache-miss path (`get_all_cached_issues` returns empty).
+- Improvement: Step 4 missing 2s-tick variant of the toggle-off mid-fetch race test.
+- Improvement (Boy Scout): Step 1 imported underscore-prefixed `_get_cache_file_path` / `_load_cache_file` from the shim — violates public-API convention.
+
+**Decisions:**
+- Accepted (autonomous): all critical + improvement items above.
+- Escalated to user: should the underscore-prefix cache helpers be promoted to public re-exports as a Boy Scout fix? (One question — single-decision impact.)
+
+**User decisions:**
+- Promote `_get_cache_file_path` / `_load_cache_file` to public re-exports (`get_cache_file_path` / `load_cache_file`) in `mcp_workspace_github.py`. Existing call sites updated as part of Step 1.
+
+**Changes (via /plan_update):**
+- `pr_info/steps/step_3.md` — renamed function references to `get_pr_for_issue`; resolved exception policy to "propagates"; added forward-pointer for `pr_fetch_generation` (added in Step 4).
+- `pr_info/steps/step_4.md` — replaced `apply_pr` with `_apply_branch_state` in ALGORITHM; added test #10 (`test_pr_fetch_race_via_2s_tick_dropped_on_toggle_off`).
+- `pr_info/steps/step_1.md` — added test 4b (`test_cache_miss_returns_branchinfo_with_none_issue_fields`); promoted cache helpers to public names; updated WHERE/HOW/ALGORITHM to use `get_cache_file_path` / `load_cache_file`; logged existing call sites for the rename.
+- `pr_info/steps/summary.md` — updated cache-helper names to public versions.
+- `pr_info/steps/Decisions.md` — appended "Round 2" section with the six round-2 decisions.
+
+**Status:** Pending commit (to be handled by commit agent).
+

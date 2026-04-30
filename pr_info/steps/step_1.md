@@ -20,7 +20,37 @@ tests/services/__init__.py                     (new, empty)
 tests/services/test_branch_info.py             (new)
 tach.toml                                      (modify)
 .importlinter                                  (modify)
+src/mcp_coder/mcp_workspace_github.py          (modify — Boy Scout: rename
+                                                public re-exports
+                                                `_get_cache_file_path` →
+                                                `get_cache_file_path` and
+                                                `_load_cache_file` →
+                                                `load_cache_file` in the
+                                                shim's import block and
+                                                `__all__`. Upstream
+                                                private names in
+                                                `mcp_coder_utils` stay
+                                                unchanged — only the shim
+                                                exposes the public alias.)
+tests/cli/commands/coordinator/test_core.py   (modify — existing call
+                                                sites: import + usages of
+                                                the two helpers; rename
+                                                to drop the underscore
+                                                prefix. Verified via
+                                                `mcp__workspace__search_files`
+                                                / `find_references`; this
+                                                is the only existing
+                                                caller in the codebase
+                                                besides the new
+                                                `services/branch_info.py`.)
 ```
+
+> **Boy Scout fix**: existing underscore prefix violated the public-API
+> convention (callers outside the defining module shouldn't reach for
+> `_`-prefixed names). The rename also touches existing call sites in
+> `tests/cli/commands/coordinator/test_core.py` — listed above for
+> visibility, but the rename itself is performed in the implementation
+> step (this plan only documents the scope).
 
 ## WHAT
 
@@ -68,10 +98,12 @@ name directly.
   leave `issue_*` fields as `None`. Hard failures must NOT raise from this
   function.
 - Cache `last_checked` is read from the cache JSON file. Use the existing
-  `_get_cache_file_path(repo_id)` helper re-exported from
-  `mcp_coder.mcp_workspace_github` to obtain the path; do **not** hardcode
-  `~/.mcp_coder/coordinator_cache/{owner-repo}.issues.json` in the data
-  layer. Read the JSON via `_load_cache_file` (also re-exported) or stdlib
+  `get_cache_file_path(repo_id)` helper re-exported from
+  `mcp_coder.mcp_workspace_github` (Boy Scout fix: renamed from
+  `_get_cache_file_path` — see WHERE block) to obtain the path; do **not**
+  hardcode `~/.mcp_coder/coordinator_cache/{owner-repo}.issues.json` in
+  the data layer. Read the JSON via `load_cache_file` (also re-exported,
+  renamed from `_load_cache_file`) or stdlib
   `json.loads(path.read_text(...))` — pick whichever the helper actually
   exposes.
 - `get_pr_for_issue` is a **two-step lookup**:
@@ -104,7 +136,8 @@ imports from exactly these internal modules:
   `is_working_directory_clean`, `get_repository_identifier`,
   `RepoIdentifier`.
 - `mcp_coder.mcp_workspace_github` — `get_all_cached_issues`,
-  `_get_cache_file_path`, `_load_cache_file`, `IssueBranchManager`,
+  `get_cache_file_path`, `load_cache_file` (both renamed from underscore
+  variants per the Boy Scout fix), `IssueBranchManager`,
   `PullRequestManager`, `PullRequestData`.
 - `mcp_coder.config` — only if needed for label name → color resolution; the
   data layer itself does NOT need it (label colors are resolved in the
@@ -166,8 +199,8 @@ get_branch_info(project_dir):
         try:
             repo_id = get_repository_identifier(project_dir)
             if repo_id is not None:
-                cache_file = _get_cache_file_path(repo_id)
-                data = _load_cache_file(cache_file)
+                cache_file = get_cache_file_path(repo_id)
+                data = load_cache_file(cache_file)
                 last_checked = parse_iso(data["last_checked"])
                 issue = get_all_cached_issues(repo_id, issue_manager).get(issue_number)
                 title = issue["title"]; label = first label starting with "status-"
@@ -207,12 +240,18 @@ In `tests/services/test_branch_info.py`:
 3. `test_branch_with_issue_populates_from_cache` — patch git +
    `get_repository_identifier` (returns a fake `RepoIdentifier`) +
    `get_all_cached_issues` to return a dict with the issue; patch
-   `_load_cache_file` to return `{"last_checked": "2026-04-30T10:00:00+00:00",
+   `load_cache_file` to return `{"last_checked": "2026-04-30T10:00:00+00:00",
    "issues": {...}}`; assert `issue_title`, `issue_status_label`, and
    `cache_last_checked` populated.
 4. `test_gh_failure_keeps_branch_fields_returns_none_for_issue` — patch
    `get_all_cached_issues` to raise; assert branch+dirty still set, issue
    fields all None, no exception raised.
+4b. `test_cache_miss_returns_branchinfo_with_none_issue_fields` — patch
+    `get_all_cached_issues` to return `{}` (cache file missing or no
+    entries) so the issue lookup misses; assert `BranchInfo` is still
+    returned with `issue_title=None`, `issue_status_label=None`, and
+    `cache_last_checked=None`, no exception raised. Branch+dirty still
+    populated.
 5. `test_dirty_detection_uses_shim` — patch `is_working_directory_clean` to
    return `False`; assert `BranchInfo.is_dirty is True`. Also assert with
    `True` → `is_dirty is False`. The data layer must NOT call

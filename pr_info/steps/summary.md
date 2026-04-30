@@ -63,9 +63,14 @@ The app owns timers and worker dispatch (mirrors existing `_stream_llm`):
 - `get_repository_identifier(project_dir)` from `mcp_workspace_git` —
   returns `Optional[RepoIdentifier]` with `owner`, `repo_name`,
   `https_url`. No `.git/config` parsing.
-- `_get_cache_file_path(repo_id)` from `mcp_workspace_github` — for the
+- `get_cache_file_path(repo_id)` from `mcp_workspace_github` — for the
   coordinator cache JSON path. No hardcoded
-  `~/.mcp_coder/coordinator_cache/<owner-repo>.issues.json`.
+  `~/.mcp_coder/coordinator_cache/<owner-repo>.issues.json`. (Boy Scout
+  fix: renamed from the previously private `_get_cache_file_path`; the
+  shim's public re-export drops the underscore. Companion helper
+  `load_cache_file` is renamed similarly. See Step 1 WHERE for the full
+  scope including existing call sites in
+  `tests/cli/commands/coordinator/test_core.py`.)
 - `IssueBranchManager.get_branch_with_pr_fallback(...)` →
   `PullRequestManager.find_pull_request_by_head(branch_name)` for the
   two-step issue→branch→PR lookup. The first call returns a branch name

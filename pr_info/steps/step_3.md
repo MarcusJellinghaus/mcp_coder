@@ -21,7 +21,7 @@ tests/icoder/test_branch_info_service.py               (new)
 # src/mcp_coder/icoder/services/branch_info_service.py
 from pathlib import Path
 
-from mcp_coder.services.branch_info import BranchInfo, get_branch_info, get_pr_for_branch
+from mcp_coder.services.branch_info import BranchInfo, get_branch_info, get_pr_for_issue
 
 class BranchInfoService:
     def __init__(self, project_dir: Path) -> None: ...
@@ -45,16 +45,16 @@ class BranchInfoService:
 
 - `__init__` stores `project_dir`. Initial state: `pr_enabled=False`,
   `issue_in_flight=False`, `pr_in_flight=False`, `last_branch=None`.
+- Note: race-protection state (`pr_fetch_generation`) is added in Step 4
+  on top of this adapter; it is intentionally absent here so Step 3 stays
+  a thin passthrough.
 - `fetch_info()` — passthrough to `get_branch_info(self.project_dir)`. Pure
   delegation, no state mutation. (App calls this from a worker thread.)
 - `fetch_pr(issue_number)` — passthrough to
-  `get_pr_for_branch(self.project_dir, issue_number)`. Catches all exceptions
-  internally and returns `None` on failure (call site only cares about success
-  vs failure for widget state — failure is signaled via the adapter's failed
-  flag tracked elsewhere by the app, this method just returns the data).
-
-  Actually simpler: let exceptions propagate, app catches and updates failed
-  set. **Choose this** — keeps adapter passthrough.
+  `get_pr_for_issue(self.project_dir, issue_number)`. Lets exceptions
+  propagate to the caller; the worker (in Step 4's app integration) is
+  responsible for catching and surfacing failures (adding `"pr"` to the
+  failed set). Keeps the adapter a trivial passthrough.
 - `set_pr_enabled(value)` updates the toggle. **Important**: when going from
   on→off, the next `fetch_pr` result that arrives must be ignored by the app
   (per issue: "drop in-flight result silently"). The adapter doesn't gate
@@ -114,7 +114,8 @@ class BranchInfoService:
 8. `test_fetch_info_delegates_to_data_layer` — patch
    `mcp_coder.services.branch_info.get_branch_info` (where the adapter
    imports it from); assert it was called once with `project_dir`.
-9. `test_fetch_pr_delegates_to_data_layer` — patch `get_pr_for_branch`;
-   assert called with `(project_dir, issue_number)`.
+9. `test_fetch_pr_delegates_to_data_layer` — patch `get_pr_for_issue`
+   (where the adapter imports it from); assert called with
+   `(project_dir, issue_number)`.
 
 Run unit tests + pylint + mypy. One commit.
