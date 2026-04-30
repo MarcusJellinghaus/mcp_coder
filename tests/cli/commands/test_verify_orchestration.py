@@ -512,6 +512,42 @@ class TestVerifyOrchestration:
             call_kwargs = mock_fmt.call_args
             assert call_kwargs.kwargs.get("list_mcp_tools") is True
 
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    def test_github_section_renders_diagnostics(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """api_base_url row and token_fingerprint suffix appear in rendered output."""
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+        github_with_diagnostics: dict[str, Any] = {
+            "api_base_url": {"ok": True, "value": "https://api.example.ghe.com"},
+            "token_configured": {
+                "ok": True,
+                "value": "configured (scopes: repo)",
+                "token_source": "config",
+                "token_fingerprint": "ghp_...a3f9",
+            },
+            "overall_ok": True,
+        }
+        with patch(f"{_VERIFY}.verify_github", return_value=github_with_diagnostics):
+            execute_verify(_make_args())
+        output = capsys.readouterr().out
+        assert "API base URL" in output
+        assert "https://api.example.ghe.com" in output
+        assert "ghp_...a3f9" in output
+
 
 class TestVerifyTestPromptFailure:
     """Tests for improved test prompt failure output (Step 5A)."""

@@ -191,6 +191,7 @@ class TestGitHubLabelMappings:
     """Tests for GitHub label mappings in _format_section (Step 2)."""
 
     _GITHUB_KEYS = (
+        "api_base_url",
         "token_configured",
         "authenticated_user",
         "repo_url",
@@ -286,3 +287,98 @@ class TestAutoDeleteBranches:
         assert (
             _format_row("Auto-delete branches", "[OK]", "enabled", indent=2) in output
         )
+
+
+class TestApiBaseUrlRendering:
+    """Tests for api_base_url row rendering in GITHUB section (#933)."""
+
+    def _symbols(self) -> dict[str, str]:
+        return {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
+
+    @pytest.mark.parametrize(
+        "entry, marker, value",
+        [
+            pytest.param(
+                {"ok": True, "value": "https://api.example.ghe.com"},
+                "[OK]",
+                "https://api.example.ghe.com",
+                id="success-renders-ok",
+            ),
+            pytest.param(
+                {
+                    "ok": False,
+                    "severity": "warning",
+                    "value": "https://api.github.com (fallback - identifier unresolved)",
+                    "error": "Could not determine repository URL from git remote",
+                },
+                "[ERR]",
+                "https://api.github.com (fallback - identifier unresolved) "
+                "(Could not determine repository URL from git remote)",
+                id="fallback-severity-warning-renders-err",
+            ),
+        ],
+    )
+    def test_api_base_url_value_cases(
+        self, entry: dict[str, Any], marker: str, value: str
+    ) -> None:
+        """api_base_url renders symbol from ok and precedes Token configured."""
+        result: dict[str, Any] = {
+            "api_base_url": entry,
+            "token_configured": {"ok": True, "value": "configured"},
+            "overall_ok": entry["ok"] is True,
+        }
+        output = _format_section("GITHUB", result, self._symbols())
+        expected_line = _format_row("API base URL", marker, value, indent=2)
+        assert expected_line in output
+        api_idx = output.find("API base URL")
+        token_idx = output.find("Token configured")
+        assert 0 <= api_idx < token_idx
+
+
+class TestTokenFingerprintSuffix:
+    """Tests for token_fingerprint suffix in GITHUB section (#933)."""
+
+    def _symbols(self) -> dict[str, str]:
+        return {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
+
+    @pytest.mark.parametrize(
+        "fingerprint, expected_in_suffix",
+        [
+            pytest.param(
+                "ghp_...a3f9",
+                "from ~/.mcp_coder/config.toml (ghp_...a3f9)",
+                id="normal-token",
+            ),
+            pytest.param(
+                "****",
+                "from ~/.mcp_coder/config.toml (****)",
+                id="short-token-sentinel",
+            ),
+            pytest.param(
+                None,
+                None,
+                id="fingerprint-absent",
+            ),
+        ],
+    )
+    def test_fingerprint_appended_when_present(
+        self, fingerprint: str | None, expected_in_suffix: str | None
+    ) -> None:
+        """Fingerprint is appended in parens to the 'from <source>' suffix."""
+        entry: dict[str, Any] = {
+            "ok": True,
+            "value": "configured (scopes: repo)",
+            "token_source": "config",
+        }
+        if fingerprint is not None:
+            entry["token_fingerprint"] = fingerprint
+        result: dict[str, Any] = {
+            "token_configured": entry,
+            "overall_ok": True,
+        }
+        output = _format_section("GITHUB", result, self._symbols())
+        assert "from ~/.mcp_coder/config.toml" in output
+        if expected_in_suffix is None:
+            assert "from ~/.mcp_coder/config.toml (" not in output
+        else:
+            assert expected_in_suffix in output
