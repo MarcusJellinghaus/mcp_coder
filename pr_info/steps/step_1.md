@@ -21,28 +21,58 @@ tests/services/test_branch_info.py             (new)
 tach.toml                                      (modify)
 .importlinter                                  (modify)
 src/mcp_coder/mcp_workspace_github.py          (modify — Boy Scout: rename
-                                                public re-exports
+                                                all four cache-helper
+                                                public re-exports:
                                                 `_get_cache_file_path` →
-                                                `get_cache_file_path` and
+                                                `get_cache_file_path`,
                                                 `_load_cache_file` →
-                                                `load_cache_file` in the
-                                                shim's import block and
-                                                `__all__`. Upstream
+                                                `load_cache_file`,
+                                                `_save_cache_file` →
+                                                `save_cache_file`,
+                                                `_log_stale_cache_entries`
+                                                → `log_stale_cache_entries`
+                                                in the shim's import block
+                                                and `__all__`. Upstream
                                                 private names in
                                                 `mcp_coder_utils` stay
                                                 unchanged — only the shim
-                                                exposes the public alias.)
+                                                exposes the public alias.
+                                                Boy Scout rename covers
+                                                all four cache shim
+                                                re-exports for consistency.)
 tests/cli/commands/coordinator/test_core.py   (modify — existing call
-                                                sites: import + usages of
-                                                the two helpers; rename
-                                                to drop the underscore
-                                                prefix. Verified via
-                                                `mcp__workspace__search_files`
-                                                / `find_references`; this
-                                                is the only existing
-                                                caller in the codebase
-                                                besides the new
-                                                `services/branch_info.py`.)
+                                                sites for all four
+                                                helpers: imports + usages
+                                                + module docstring +
+                                                test class docstrings +
+                                                test method names that
+                                                embed the helper name.
+                                                Concretely (verified via
+                                                `mcp__workspace__search_files`):
+                                                module docstring lines
+                                                referencing the helpers
+                                                (~lines 8–9), the import
+                                                block (~lines 42–45),
+                                                `_get_cache_file_path`
+                                                usages (~lines 707, 709,
+                                                714, 721, 742),
+                                                `_load_cache_file` usages
+                                                (~lines 749, 753, 761,
+                                                786, 791, 797),
+                                                `_save_cache_file` usages
+                                                (~lines 804, 828), and
+                                                `_log_stale_cache_entries`
+                                                usages (~lines 838, 840,
+                                                879, 883, 922). All occur
+                                                in this single file —
+                                                this is the only caller
+                                                in the codebase besides
+                                                the new
+                                                `services/branch_info.py`.
+                                                Listed for visibility;
+                                                the rename itself is
+                                                performed in the
+                                                implementation step.)
 ```
 
 > **Boy Scout fix**: existing underscore prefix violated the public-API
@@ -137,8 +167,10 @@ imports from exactly these internal modules:
   `RepoIdentifier`.
 - `mcp_coder.mcp_workspace_github` — `get_all_cached_issues`,
   `get_cache_file_path`, `load_cache_file` (both renamed from underscore
-  variants per the Boy Scout fix), `IssueBranchManager`,
-  `PullRequestManager`, `PullRequestData`.
+  variants per the Boy Scout fix; the same rename is also applied to the
+  two companion helpers `save_cache_file` and `log_stale_cache_entries`
+  for consistency, though `services/branch_info.py` does not call them),
+  `IssueBranchManager`, `PullRequestManager`, `PullRequestData`.
 - `mcp_coder.config` — only if needed for label name → color resolution; the
   data layer itself does NOT need it (label colors are resolved in the
   widget). **Likely omit.** Re-verify during implementation.

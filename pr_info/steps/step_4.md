@@ -30,10 +30,15 @@ docs/icoder/icoder.md                                (modify — Branch Info sec
 # additions in ICoderApp
 def __init__(self, app_core, *, format_tools=True, **kwargs):
     ...
-    project_dir = Path(app_core.runtime_info.project_dir) if app_core.runtime_info else Path.cwd()
-    self._branch_service = BranchInfoService(project_dir)
+    self._project_dir: Path = (
+        Path(app_core.runtime_info.project_dir)
+        if app_core.runtime_info
+        else Path.cwd()
+    )
+    self._branch_service = BranchInfoService(self._project_dir)
     self._branch_failed: set[str] = set()
     self._branch_loading: set[str] = set()
+    self._last_branch_info: BranchInfo | None = None
     self._last_pr_number: int | None = None
 
 def compose(self) -> ComposeResult:
@@ -57,7 +62,9 @@ def compose(self) -> ComposeResult:
         yield Static(f"v{version}", id="status-version")
         yield Static(r"\ + Enter = newline", id="status-hint")
     # ↓ NEW: yielded AFTER the status-bar with-block closes.
-    yield BranchInfoBar(project_dir)
+    # Uses `self._project_dir` set in __init__ — there is no local
+    # `project_dir` in compose() scope.
+    yield BranchInfoBar(self._project_dir)
 
 def on_mount(self) -> None:
     ...                                # existing logic
@@ -185,11 +192,24 @@ Add to `tests/icoder/ui/test_app.py` (already
 5. `test_toggle_pr_enables_lookup` — click toggle button; assert
    `service.pr_enabled` flips to True; assert PR zone updates from `"—"` to
    `"…"` or value.
-6. `test_pr_result_dropped_when_toggle_flipped_off_during_fetch` — patch
-   `fetch_pr` to set toggle off mid-call (i.e. call
-   `service.set_pr_enabled(False)` before returning); assert widget zone
-   stays `"—"`. The drop happens via the generation-token check, not via
-   `pr_enabled` directly.
+6. `test_pr_result_dropped_when_toggle_flipped_off_during_refresh_pr_button_fetch`
+   — covers the **refresh-PR button** launch path specifically (test #10
+   covers the same race via the 2s-tick path; both launch paths are
+   worth keeping).
+   - Pilot, toggle PR on, then click the **refresh-PR button** — this
+     calls `service.start_pr_fetch()` and the worker captures
+     `gen = service.current_pr_fetch_generation` (e.g. 1).
+   - Patch `fetch_pr` so that mid-call (before returning) it invokes
+     `service.set_pr_enabled(False)` — which increments the generation
+     to 2 — and then returns PR #42.
+   - Assert: at the moment the worker would have applied its result, the
+     captured `gen` (1) **no longer equals**
+     `service.pr_fetch_generation` (2), so `_apply_branch_state` is
+     never called with `pr_number=42`. Concretely, assert the widget's
+     PR zone stays `"—"` (never shows `"PR #42"`).
+   - The drop happens via the generation-token check, not via
+     `pr_enabled` directly. Complementary to test #10, which exercises
+     the same guard but via `_tick_branch_quick`.
 7. `test_branch_change_kicks_pr_fetch` — patch service so first `fetch_info`
    returns branch `"main"`, second returns `"123-foo"`; toggle on; advance
    timer; assert `fetch_pr` invoked once with `123`.

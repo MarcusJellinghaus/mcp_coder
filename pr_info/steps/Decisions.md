@@ -35,6 +35,45 @@ decided + the change number from the round-1 review.
   `tests/cli/commands/coordinator/test_core.py` updated. Rationale:
   underscore prefix violated the public-API convention for re-exports.
 
+## Round 3 (consistency + clarity)
+
+- **Step 4 `compose()` snippet uses `self._project_dir`** (R3-#1). The
+  earlier draft yielded `BranchInfoBar(project_dir)` from inside
+  `compose()` where no local `project_dir` is in scope. Fixed by
+  storing `self._project_dir: Path` in `__init__` (a plain attribute,
+  not buried inside the service) and consuming it from both
+  `BranchInfoService(self._project_dir)` and
+  `yield BranchInfoBar(self._project_dir)`. Snippet is now
+  copy-pasteable.
+- **Initialize `_last_branch_info` in Step 4's `__init__` block**
+  (R3-#2). The HOW section says `_apply_branch_state` "stores `info`
+  on `self`", but the init block didn't declare the attribute. Added
+  `self._last_branch_info: BranchInfo | None = None` alongside
+  `_last_pr_number`.
+- **Boy Scout rename completion: all four cache-shim re-exports**
+  (R3-#3). Round 2 promoted `_get_cache_file_path` and
+  `_load_cache_file` to public. The same shim file
+  (`src/mcp_coder/mcp_workspace_github.py`) also re-exports
+  `_save_cache_file` and `_log_stale_cache_entries` with the
+  underscore prefix; the same public-API rationale applies. Step 1 now
+  renames all four for consistency:
+  `_save_cache_file` → `save_cache_file` and
+  `_log_stale_cache_entries` → `log_stale_cache_entries`. Existing
+  call sites (all in
+  `tests/cli/commands/coordinator/test_core.py` — verified via
+  `mcp__workspace__search_files`) are listed in Step 1's WHERE block;
+  the rename itself happens in the implementation step.
+- **Tighten Step 4 test #6 to focus on the refresh-PR button path**
+  (R3-#4). Test #6 originally tested toggle-off mid-fetch via the
+  refresh-PR button; test #10 (added in Round 2) covers the same race
+  via the 2s-tick path. Kept both — both launch paths are worth
+  covering — and rewrote test #6's name and body so its
+  complementarity to test #10 is explicit. The generation-token
+  assertion is now specific: assert that the worker's captured
+  generation no longer equals `service.pr_fetch_generation` at the
+  moment the result would have been applied, so
+  `_apply_branch_state` is never called with `pr_number=42`.
+
 ## Architecture & Helpers
 
 - **PR lookup is a two-step call** (#1). `get_branch_with_pr_fallback`

@@ -66,3 +66,24 @@
 
 **Status:** Pending commit (to be handled by commit agent).
 
+## Round 3 — 2026-04-30
+
+**Findings (from /plan_review):**
+- Critical: Step 4's `compose()` snippet referenced an undefined local `project_dir` — un-runnable as written.
+- Improvement: Step 4's HOW described `_last_branch_info` but its init block didn't declare it.
+- Improvement: Round-2 Boy Scout rename was incomplete — `_save_cache_file` and `_log_stale_cache_entries` still underscore-prefixed in the same shim.
+- Improvement: Step 4 test #6 description was slightly stale after test #10 was added (overlapping coverage).
+
+**Decisions:**
+- All four items handled autonomously (no user escalation). The Boy Scout extension follows the round-2 user policy by simple analogy.
+
+**User decisions:** None (no items escalated).
+
+**Changes (via /plan_update):**
+- `pr_info/steps/step_4.md` — `__init__` now stores `self._project_dir`; `compose()` and `BranchInfoService` both consume it; snippet is copy-pasteable. Added `self._last_branch_info: BranchInfo | None = None` to init. Test #6 renamed and tightened (refresh-PR-button path explicit; generation-token assertion specific).
+- `pr_info/steps/step_1.md` — WHERE block extends Boy Scout rename to `save_cache_file` and `log_stale_cache_entries`; concrete call sites (in `tests/cli/commands/coordinator/test_core.py`) listed; HOW + summary.md updated for consistency.
+- `pr_info/steps/summary.md` — cache-helper public names propagated.
+- `pr_info/steps/Decisions.md` — appended Round 3 section (R3-#1 through R3-#4).
+
+**Status:** Pending commit (to be handled by commit agent).
+
