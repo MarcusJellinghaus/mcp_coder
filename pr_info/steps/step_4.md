@@ -13,8 +13,16 @@
 
 ```
 src/mcp_coder/icoder/ui/app.py                       (modify)
+src/mcp_coder/icoder/services/branch_info_service.py (modify — add pr-fetch generation token)
 tests/icoder/ui/test_app.py                          (modify — add new tests)
+tests/icoder/test_branch_info_service.py             (modify — add race-token test)
+docs/icoder/icoder.md                                (modify — Branch Info section)
 ```
+
+> Note: Step 5 (docs-only) was folded into this step per
+> `planning_principles.md` ("merge tiny or intertwined steps"). The doc
+> update ships in the same commit as the app integration. See the
+> "Documentation" sub-section at the end.
 
 ## WHAT
 
@@ -30,11 +38,30 @@ def __init__(self, app_core, *, format_tools=True, **kwargs):
 
 def compose(self) -> ComposeResult:
     ...
-    yield BranchInfoBar(project_dir)   # AFTER status-bar Horizontal
+    # The new BranchInfoBar is yielded as a SIBLING of (NOT inside) the
+    # existing `with Horizontal(id="status-bar")` block — i.e. it is the
+    # next yield after that with-block closes. Concretely, replace the
+    # tail of compose() with:
+    yield OutputLog()
+    yield Static(id="streaming-tail")
+    yield CommandAutocomplete()
+    yield BusyIndicator()
+    yield InputArea(
+        command_history=self._core.command_history,
+        registry=self._core.registry,
+        event_log=self._core.event_log,
+    )
+    version = self._get_version()
+    with Horizontal(id="status-bar"):
+        yield Static("↓0 ↑0 | total: ↓0 ↑0", id="status-tokens")
+        yield Static(f"v{version}", id="status-version")
+        yield Static(r"\ + Enter = newline", id="status-hint")
+    # ↓ NEW: yielded AFTER the status-bar with-block closes.
+    yield BranchInfoBar(project_dir)
 
 def on_mount(self) -> None:
     ...                                # existing logic
-    self.query_one(BranchInfoBar).update_state(None, None, False, set(), set())
+    self.query_one(BranchInfoBar).update_state(None)
     self.run_worker(self._tick_branch_full, thread=True)   # async first populate
     self.set_interval(2.0, self._tick_branch_quick)
     self.set_interval(30.0, self._tick_branch_full)
@@ -66,16 +93,40 @@ def on_branch_info_bar_toggle_pr(self, _: BranchInfoBar.TogglePR) -> None: ...
   Needs `issue_number` from last `BranchInfo`; if None, no-op.
 - **Toggle-PR handler**: flip `service.set_pr_enabled(not service.pr_enabled)`,
   re-render. If now enabled and we have an issue number, kick a PR fetch.
-- **Drop-on-toggle-off**: in PR worker thread, after `fetch_pr` returns,
-  before applying via `call_from_thread`, check
-  `if not self._branch_service.pr_enabled: return`. Result silently dropped.
+- **PR-fetch race protection (generation token)**: a fast
+  toggle-off / refresh-PR sequence could otherwise spawn two concurrent PR
+  workers and the wrong one might win. **Decision: monotonic
+  `pr_fetch_generation: int` on `BranchInfoService`**. Mechanism:
+  - `BranchInfoService` gains `self._pr_fetch_generation: int = 0` and a
+    method `start_pr_fetch() -> int` that increments and returns the new
+    generation. `current_pr_fetch_generation` is exposed as a read-only
+    property.
+  - When the app starts a PR worker, it calls
+    `gen = service.start_pr_fetch()` and the worker captures `gen` locally.
+  - Before applying the result via `call_from_thread`, the worker checks
+    `if gen != service.current_pr_fetch_generation: return` — silently
+    discards stale results.
+  - Toggling PR off **also** increments the generation
+    (`service.set_pr_enabled(False)` calls `_pr_fetch_generation += 1`
+    internally, invalidating any in-flight worker). This subsumes the old
+    "drop-on-toggle-off" check.
+  - This replaces the `pr_in_flight` boolean's role for race-protection;
+    the boolean (and `begin_pr_fetch`/`end_pr_fetch` from Step 3) can stay
+    for duplicate-click suppression but is no longer the race gate.
+  - **Why generation token over the early-cancel sentinel `current_pr_token:
+    object | None`**: an `int` is trivial to read, log, and assert in
+    tests; an opaque object identity has no equivalent advantage here. The
+    generation also gives a natural "how many PR fetches have started" metric
+    for future debugging.
 - **Worker pattern**: use `self.run_worker(callable, thread=True)`. Inside
   the callable, do I/O on the worker thread, then
   `self.call_from_thread(self._apply_branch_state, ...)` to update widget.
 - Helper `_apply_branch_state(info, pr_number=...)`: stores `info` on `self`,
-  recomputes `loading`/`failed` sets based on call site, calls
-  `widget.update_state(info, self._last_pr_number, service.pr_enabled,
-  loading, failed)`.
+  recomputes `loading`/`failed` sets based on call site, builds a
+  `BranchInfoView(info=info, pr_number=self._last_pr_number,
+  pr_enabled=service.pr_enabled, loading=frozenset(self._branch_loading),
+  failed=frozenset(self._branch_failed))`, calls
+  `widget.update_state(view)`.
 
 ## ALGORITHM
 
@@ -93,11 +144,12 @@ _tick_branch_quick():
 _on_refresh_pr():
     if not service.begin_pr_fetch(): return
     loading.add("pr"); render()
+    gen = service.start_pr_fetch()              # capture generation
     def work():
         try: pr = service.fetch_pr(info.issue_number)
         except Exception: failed.add("pr"); pr = None
         finally: service.end_pr_fetch()
-        if not service.pr_enabled: return       # drop silently
+        if gen != service.current_pr_fetch_generation: return   # stale → drop
         loading.discard("pr"); call_from_thread(apply_pr, pr)
     run_worker(work, thread=True)
 ```
@@ -110,6 +162,10 @@ _on_refresh_pr():
   `_branch_failed: set[str]`,
   `_last_branch_info: BranchInfo | None`,
   `_last_pr_number: int | None`.
+- New service state (added in this step on top of Step 3):
+  `_pr_fetch_generation: int` (incremented by `start_pr_fetch()` and by
+  `set_pr_enabled(False)`). Public read-only property
+  `current_pr_fetch_generation`.
 
 ## Tests (TDD — write first)
 
@@ -129,15 +185,66 @@ Add to `tests/icoder/ui/test_app.py` (already
    `service.pr_enabled` flips to True; assert PR zone updates from `"—"` to
    `"…"` or value.
 6. `test_pr_result_dropped_when_toggle_flipped_off_during_fetch` — patch
-   `fetch_pr` to set toggle off mid-call; assert widget zone stays `"—"`.
+   `fetch_pr` to set toggle off mid-call (i.e. call
+   `service.set_pr_enabled(False)` before returning); assert widget zone
+   stays `"—"`. The drop happens via the generation-token check, not via
+   `pr_enabled` directly.
 7. `test_branch_change_kicks_pr_fetch` — patch service so first `fetch_info`
    returns branch `"main"`, second returns `"123-foo"`; toggle on; advance
    timer; assert `fetch_pr` invoked once with `123`.
 8. `test_failed_fetch_shows_question_mark` — patch `fetch_info` to raise;
    trigger refresh; assert widget renders `"?"`.
+9. `test_pr_fetch_race_stale_result_dropped` — exercise the race scenario
+   directly:
+   - Pilot, toggle PR on, click refresh-PR (worker A starts, captures
+     `gen=1`).
+   - Block worker A inside `fetch_pr` via a `threading.Event`.
+   - Toggle PR off (gen → 2), then toggle on (gen → 3), then click
+     refresh-PR (worker B starts, captures `gen=3`, returns PR #99).
+   - Unblock worker A — it returns PR #42, but `gen=1 !=
+     current_pr_fetch_generation=3`, so its result is dropped.
+   - Assert widget shows `PR #99` (worker B's result), never `PR #42`.
+
+In `tests/icoder/test_branch_info_service.py`, also add:
+
+- `test_start_pr_fetch_increments_generation` — first call returns 1, second
+  returns 2, etc.
+- `test_set_pr_enabled_false_increments_generation` — toggling off bumps the
+  generation (so any in-flight worker is invalidated).
+- `test_set_pr_enabled_true_does_not_increment` — toggling on does NOT bump
+  the generation (only the next `start_pr_fetch()` does).
 
 Use Textual's `app.run_test()` pattern (existing tests in this file are a
 template). For timer tests, call `_tick_branch_quick` directly rather than
 waiting 2 seconds.
 
 Run textual_integration marker tests + unit tests + pylint + mypy. One commit.
+
+## Documentation
+
+This step also includes the user-facing doc edits previously planned as
+Step 5 (folded in per `planning_principles.md` — "merge tiny or intertwined
+steps"). Edit `docs/icoder/icoder.md`:
+
+- Add a new section titled **"Branch Info"** between "Status Line" and
+  "Slash Commands". Mirror the existing markdown style (tables, short
+  paragraphs).
+- **Field table** — four rows (Branch · State, Issue, PR, Cache age) with
+  example values and placeholder semantics (`…` loading, `?` failed, `—`
+  not applicable, `(no git)`, `(no issue)`).
+- **Button table** — three rows (Refresh issue, Refresh PR, PR toggle) with
+  their action.
+- **Update cadence** subsection listing `2s` (branch+dirty), `30s` (issue
+  cache refresh), branch-change (auto PR fetch when toggle on), on-click
+  (manual refresh).
+- **Note** that PR lookup is **off by default**, **not persisted** between
+  sessions, and **gated behind the toggle** for the auto/2s path — but the
+  refresh-PR button **fires regardless** of the toggle state (issue
+  requirement).
+- No screenshots required. Cross-link from `docs/iCoder.md` only if the
+  existing structure already cross-links other sections.
+
+The doc edits ship in the same commit as the app integration (no separate
+docs-only commit). After all code edits, re-run pytest/pylint/mypy to
+confirm nothing regressed; the doc change itself is markdown-only and has
+no test impact.

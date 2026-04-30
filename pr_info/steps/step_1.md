@@ -41,32 +41,116 @@ class BranchInfo:
     cache_last_checked: datetime | None  # from cache file; None when cache miss
 
 def get_branch_info(project_dir: Path) -> BranchInfo: ...
-def get_pr_for_branch(project_dir: Path, issue_number: int) -> int | None: ...
+def get_pr_for_issue(project_dir: Path, issue_number: int) -> int | None: ...
 ```
+
+Renamed from `get_pr_for_branch` to `get_pr_for_issue` because the lookup is
+keyed by issue number (which has a linked branch + linked PR), not by branch
+name directly.
 
 ## HOW
 
 - `get_branch_info` calls (via `mcp_coder.mcp_workspace_git`):
   `is_git_repository`, `get_current_branch_name`, `extract_issue_number_from_branch`.
-- For dirty check, run `git status --porcelain` via
-  `mcp_coder.utils.subprocess_runner.execute_subprocess` with `cwd=project_dir`
-  (matches pattern in `workflows/vscodeclaude/status.py:get_folder_git_status`).
-- For issue lookup, call `get_all_cached_issues(RepoIdentifier, issue_manager=...)`
-  from `mcp_coder.mcp_workspace_github`. Wrap in try/except — on any error, leave
-  `issue_*` fields as `None`. Hard failures must NOT raise from this function.
-- Cache `last_checked` is read from the cache JSON file at
-  `~/.mcp_coder/coordinator_cache/{owner-repo}.issues.json`. Use the existing
-  `_get_cache_file_path` and `_load_cache_file` helpers re-exported from
-  `mcp_coder.mcp_workspace_github`.
-- `get_pr_for_branch` constructs `IssueBranchManager(repo_url=...)` and calls
-  `get_branch_with_pr_fallback(...)`. Returns the PR number parsed out of the
-  resolved branch metadata, or `None`. Lets exceptions propagate (caller
-  decides what to do).
+- For dirty check, call `is_working_directory_clean(project_dir)` (re-exported
+  from `mcp_coder.mcp_workspace_git`) and negate the result. **Do not** shell
+  out via `execute_subprocess("git status --porcelain")` — the shim already
+  handles this. If at some point the plan needs the list of changed files,
+  use `get_full_status(project_dir)` instead (also re-exported).
+- For repo identity, call `get_repository_identifier(project_dir)` (re-exported
+  from `mcp_coder.mcp_workspace_git`). It returns `Optional[RepoIdentifier]`
+  with attributes `owner`, `repo_name`, `https_url`. **Do not** parse
+  `.git/config` manually. If `repo_id is None` (no remote), skip GH lookups
+  and return `BranchInfo` with `issue_*` and `cache_last_checked` set to
+  `None` (still populate `branch_name` + `is_dirty`).
+- For issue lookup, call `get_all_cached_issues(repo_id, issue_manager=...)`
+  from `mcp_coder.mcp_workspace_github`. Wrap in try/except — on any error,
+  leave `issue_*` fields as `None`. Hard failures must NOT raise from this
+  function.
+- Cache `last_checked` is read from the cache JSON file. Use the existing
+  `_get_cache_file_path(repo_id)` helper re-exported from
+  `mcp_coder.mcp_workspace_github` to obtain the path; do **not** hardcode
+  `~/.mcp_coder/coordinator_cache/{owner-repo}.issues.json` in the data
+  layer. Read the JSON via `_load_cache_file` (also re-exported) or stdlib
+  `json.loads(path.read_text(...))` — pick whichever the helper actually
+  exposes.
+- `get_pr_for_issue` is a **two-step lookup**:
+  1. **Branch lookup**: `IssueBranchManager(project_dir=project_dir,
+     repo_url=repo_id.https_url).get_branch_with_pr_fallback(issue_number,
+     repo_id.owner, repo_id.repo_name)` — returns `Optional[str]`, the
+     **linked branch name** (NOT a PR number).
+  2. **PR lookup**: if the branch name is non-None, call
+     `PullRequestManager(project_dir).find_pull_request_by_head(branch_name)`
+     which returns `list[PullRequestData]`. Read `.number` (or
+     `["number"]` depending on TypedDict shape) from the first item; if the
+     list is empty, return `None`.
+  Both `IssueBranchManager` and `PullRequestManager` are re-exported from
+  `src/mcp_coder/mcp_workspace_github.py`. Lets exceptions from either
+  step propagate to the caller (the adapter wraps them).
 - Tach: add `[[modules]]` entry for `mcp_coder.services` at the application
   layer (alongside `mcp_coder.checks`). Add it to the `depends_on` list of
-  `mcp_coder.icoder` and `mcp_coder.cli`.
+  `mcp_coder.icoder` and `mcp_coder.cli`. See "Tach + import-linter wiring"
+  below for the full deterministic depends_on list.
 - import-linter: add `mcp_coder.services` to the `layered_architecture` `layers`
   block at the same line as `mcp_coder.checks` (separated by `|`).
+
+### Tach + import-linter wiring (deterministic)
+
+After applying the helper changes above, the new `mcp_coder.services` module
+imports from exactly these internal modules:
+
+- `mcp_coder.mcp_workspace_git` — `is_git_repository`,
+  `get_current_branch_name`, `extract_issue_number_from_branch`,
+  `is_working_directory_clean`, `get_repository_identifier`,
+  `RepoIdentifier`.
+- `mcp_coder.mcp_workspace_github` — `get_all_cached_issues`,
+  `_get_cache_file_path`, `_load_cache_file`, `IssueBranchManager`,
+  `PullRequestManager`, `PullRequestData`.
+- `mcp_coder.config` — only if needed for label name → color resolution; the
+  data layer itself does NOT need it (label colors are resolved in the
+  widget). **Likely omit.** Re-verify during implementation.
+
+The data layer does **not** need `mcp_coder.utils` (no direct subprocess
+calls — dirty detection goes through the git shim).
+
+Tach `[[modules]]` block to add (place at application layer, after
+`mcp_coder.checks`):
+
+```toml
+[[modules]]
+path = "mcp_coder.services"
+layer = "application"
+# Application-layer read-only data services for cross-cutting state
+# (branch info, etc.). Consumers: icoder (now), vscodeclaude/web (later).
+depends_on = [
+    { path = "mcp_coder.mcp_workspace_git" },
+    { path = "mcp_coder.mcp_workspace_github" },
+    { path = "mcp_coder.constants" },     # optional; include only if used
+]
+```
+
+Then update `mcp_coder.icoder.depends_on` to add `{ path = "mcp_coder.services" }`,
+and update `mcp_coder.cli.depends_on` likewise (CLI imports `icoder` and may
+later import `services` for a future `/branchinfo` command).
+
+import-linter `layered_architecture` change — keep `mcp_coder.services` at
+the same layer as `mcp_coder.checks`:
+
+```ini
+layers =
+    mcp_coder.cli | mcp_coder.icoder
+    mcp_coder.workflows
+    mcp_coder.services | mcp_coder.checks
+    mcp_coder.workflow_utils
+    mcp_coder.llm | mcp_coder.prompt_manager
+    mcp_coder.prompts
+    mcp_coder.utils
+    mcp_coder.mcp_tools_py | mcp_coder.mcp_workspace_git | mcp_coder.mcp_workspace_github
+    mcp_coder.config | mcp_coder.constants
+```
+
+No "TBD" entries — if a dependency turns out to be unused at implementation
+time, drop it from the tach `depends_on` list before commit.
 
 ## ALGORITHM
 
@@ -75,25 +159,41 @@ get_branch_info(project_dir):
     if not is_git_repository(project_dir):
         return BranchInfo(is_git_repo=False, branch_name=None, ...all None)
     branch = get_current_branch_name(project_dir)
-    is_dirty = run("git status --porcelain", cwd=project_dir).stdout.strip() != ""
+    is_dirty = not is_working_directory_clean(project_dir)
     issue_number = extract_issue_number_from_branch(branch)
     title, label, last_checked = None, None, None
     if issue_number:
         try:
-            cache_file = _get_cache_file_path(repo_id)
-            data = _load_cache_file(cache_file)
-            last_checked = parse_iso(data["last_checked"])
-            issue = get_all_cached_issues(repo_id, issue_manager).get(issue_number)
-            title = issue["title"]; label = first label starting with "status-"
+            repo_id = get_repository_identifier(project_dir)
+            if repo_id is not None:
+                cache_file = _get_cache_file_path(repo_id)
+                data = _load_cache_file(cache_file)
+                last_checked = parse_iso(data["last_checked"])
+                issue = get_all_cached_issues(repo_id, issue_manager).get(issue_number)
+                title = issue["title"]; label = first label starting with "status-"
         except Exception: pass
     return BranchInfo(True, branch, is_dirty, issue_number, title, label, last_checked)
+
+
+get_pr_for_issue(project_dir, issue_number):
+    repo_id = get_repository_identifier(project_dir)
+    if repo_id is None: return None
+    mgr = IssueBranchManager(project_dir=project_dir, repo_url=repo_id.https_url)
+    branch_name = mgr.get_branch_with_pr_fallback(
+        issue_number, repo_id.owner, repo_id.repo_name
+    )
+    if branch_name is None: return None
+    prs = PullRequestManager(project_dir).find_pull_request_by_head(branch_name)
+    if not prs: return None
+    return prs[0].number       # or prs[0]["number"] if PullRequestData is a TypedDict
 ```
 
 ## DATA
 
 - `BranchInfo` (frozen dataclass) — see `WHAT` above.
-- `get_pr_for_branch` returns `int | None` — the PR number when a linked PR is
-  found, else `None`.
+- `get_pr_for_issue` returns `int | None` — the PR number when a linked PR is
+  found, else `None`. Two-step internal lookup (issue→branch→PR); see HOW
+  and ALGORITHM above.
 
 ## Tests (TDD — write first)
 
@@ -105,6 +205,7 @@ In `tests/services/test_branch_info.py`:
 2. `test_branch_without_issue_number` — patch git calls to return branch
    `"main"`; assert `issue_number is None`, no GH calls attempted.
 3. `test_branch_with_issue_populates_from_cache` — patch git +
+   `get_repository_identifier` (returns a fake `RepoIdentifier`) +
    `get_all_cached_issues` to return a dict with the issue; patch
    `_load_cache_file` to return `{"last_checked": "2026-04-30T10:00:00+00:00",
    "issues": {...}}`; assert `issue_title`, `issue_status_label`, and
@@ -112,12 +213,44 @@ In `tests/services/test_branch_info.py`:
 4. `test_gh_failure_keeps_branch_fields_returns_none_for_issue` — patch
    `get_all_cached_issues` to raise; assert branch+dirty still set, issue
    fields all None, no exception raised.
-5. `test_dirty_detection_uses_porcelain_output` — patch
-   `execute_subprocess` to return `" M file.py\n"`; assert `is_dirty=True`.
-6. `test_get_pr_for_branch_returns_pr_number` — patch
-   `IssueBranchManager.get_branch_with_pr_fallback` to return a branch name
-   matching e.g. `pr-123-...`; assert `123` returned. (If the helper instead
-   returns PR-number directly, test for that.)
+5. `test_dirty_detection_uses_shim` — patch `is_working_directory_clean` to
+   return `False`; assert `BranchInfo.is_dirty is True`. Also assert with
+   `True` → `is_dirty is False`. The data layer must NOT call
+   `execute_subprocess` directly — verify by patching it with a sentinel
+   raise on any call (the test should pass without ever invoking the
+   sentinel).
+6. `test_no_repo_remote_skips_gh_lookups` — patch
+   `get_repository_identifier` to return `None`; assert `issue_title`,
+   `issue_status_label`, `cache_last_checked` all `None` and no
+   `get_all_cached_issues` call attempted (use a `Mock(side_effect=AssertionError)`
+   sentinel).
+7. **Parameterized** `test_status_label_picks_first_status_prefix` — issue
+   carries multiple labels including more than one `status-*`-prefixed
+   label. Document the assumption: per `labels.json` only one workflow
+   status label should be present at a time, so the data layer picks the
+   **first** label whose name starts with `status-`. Cases:
+   - `["status-04:plan-review"]` → `"status-04:plan-review"`
+   - `["bug", "status-04:plan-review"]` → `"status-04:plan-review"`
+   - `["status-04:plan-review", "status-05:approved"]` →
+     `"status-04:plan-review"` (first wins; document workflow constraint)
+   - `[]` → `None`
+   - `["bug"]` → `None`
+8. `test_get_pr_for_issue_two_step_lookup` — patch
+   `get_repository_identifier` to return a fake `RepoIdentifier(owner="o",
+   repo_name="r", https_url="https://github.com/o/r.git")`; patch
+   `IssueBranchManager.get_branch_with_pr_fallback` to return
+   `"123-feature"`; patch
+   `PullRequestManager.find_pull_request_by_head` to return
+   `[PullRequestData(number=42, ...)]`; assert `42`.
+9. `test_get_pr_for_issue_returns_none_when_no_branch_link` — patch
+   `get_branch_with_pr_fallback` to return `None`; assert `None` and
+   `find_pull_request_by_head` NOT called.
+10. `test_get_pr_for_issue_returns_none_when_no_open_pr` — patch
+    `get_branch_with_pr_fallback` to return `"branch"`; patch
+    `find_pull_request_by_head` to return `[]`; assert `None`.
+11. `test_get_pr_for_issue_no_repo_remote` — patch
+    `get_repository_identifier` to return `None`; assert `None` and no
+    manager constructed.
 
 Run: `mcp__tools-py__run_pytest_check(extra_args=["-n","auto","-m","not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration and not llm_integration and not textual_integration"])`.
 Then pylint + mypy. Single commit when all green.
