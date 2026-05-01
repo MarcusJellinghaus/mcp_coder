@@ -47,11 +47,20 @@ class BranchInfoService:
         return get_branch_info(self._project_dir)
 
     def fetch_pr(self, issue_number: int) -> Optional[int]:
-        """Resolve the PR number linked to ``issue_number`` via the data layer."""
+        """Resolve the PR number linked to ``issue_number`` via the data layer.
+
+        Returns:
+            The linked PR number, or ``None`` if no PR is linked.
+        """
         return get_pr_for_issue(self._project_dir, issue_number)
 
     def begin_issue_fetch(self) -> bool:
-        """Mark an issue fetch as in-flight; return False if already running."""
+        """Mark an issue fetch as in-flight; return False if already running.
+
+        Returns:
+            ``True`` if the flag was set, ``False`` if a fetch was already
+            in-flight.
+        """
         if self._issue_in_flight:
             return False
         self._issue_in_flight = True
@@ -62,7 +71,12 @@ class BranchInfoService:
         self._issue_in_flight = False
 
     def begin_pr_fetch(self) -> bool:
-        """Mark a PR fetch as in-flight; return False if already running."""
+        """Mark a PR fetch as in-flight; return False if already running.
+
+        Returns:
+            ``True`` if the flag was set, ``False`` if a fetch was already
+            in-flight.
+        """
         if self._pr_in_flight:
             return False
         self._pr_in_flight = True

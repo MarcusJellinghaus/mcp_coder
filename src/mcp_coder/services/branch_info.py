@@ -78,6 +78,9 @@ def get_branch_info(project_dir: Path) -> BranchInfo:
 
     GitHub-side errors are swallowed: branch/dirty fields stay populated and
     the issue fields fall back to ``None`` so the UI can still render.
+
+    Returns:
+        A ``BranchInfo`` snapshot. Outside a git repo, returns ``_EMPTY``.
     """
     if not is_git_repository(project_dir):
         return _EMPTY
@@ -124,7 +127,12 @@ def get_branch_info(project_dir: Path) -> BranchInfo:
 
 
 def get_pr_for_issue(project_dir: Path, issue_number: int) -> Optional[int]:
-    """Resolve the PR number linked to ``issue_number`` (issue → branch → PR)."""
+    """Resolve the PR number linked to ``issue_number`` (issue → branch → PR).
+
+    Returns:
+        The PR number for the branch linked to ``issue_number``, or ``None``
+        if no repository, branch, or PR can be resolved.
+    """
     repo_id = get_repository_identifier(project_dir)
     if repo_id is None:
         return None

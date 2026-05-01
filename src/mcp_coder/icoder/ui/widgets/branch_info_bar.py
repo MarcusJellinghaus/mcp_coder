@@ -46,6 +46,9 @@ def _color_to_rich_hex(color: Color) -> str:
 
     Rich's style parser rejects 8-digit hex colors, so we strip the alpha
     channel that ``Color.hex`` includes for non-opaque colors.
+
+    Returns:
+        A 6-digit ``#rrggbb`` hex string accepted by Rich's style parser.
     """
     return f"#{color.r:02x}{color.g:02x}{color.b:02x}"
 
