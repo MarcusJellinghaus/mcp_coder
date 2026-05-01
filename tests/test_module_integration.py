@@ -97,6 +97,7 @@ class TestModuleIntegration:
         assert sample_result["success"] is True
         assert sample_result["commit_hash"] == "abc1234"
         assert sample_result["error"] is None
+        assert sample_result["error_category"] is None
 
     def test_all_exports_available(self) -> None:
         """Test that __all__ exports are properly defined and available."""
