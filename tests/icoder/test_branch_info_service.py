@@ -103,3 +103,31 @@ def test_fetch_pr_delegates_to_data_layer() -> None:
         result = service.fetch_pr(42)
     mock_fn.assert_called_once_with(PROJECT_DIR, 42)
     assert result == 99
+
+
+def test_start_pr_fetch_increments_generation() -> None:
+    """Successive start_pr_fetch calls return monotonically increasing tokens."""
+    service = BranchInfoService(PROJECT_DIR)
+    assert service.current_pr_fetch_generation == 0
+    assert service.start_pr_fetch() == 1
+    assert service.start_pr_fetch() == 2
+    assert service.current_pr_fetch_generation == 2
+
+
+def test_set_pr_enabled_false_increments_generation() -> None:
+    """Toggling PR off bumps the generation, invalidating in-flight workers."""
+    service = BranchInfoService(PROJECT_DIR)
+    service.set_pr_enabled(True)
+    gen_after_on = service.current_pr_fetch_generation
+    service.set_pr_enabled(False)
+    assert service.current_pr_fetch_generation == gen_after_on + 1
+
+
+def test_set_pr_enabled_true_does_not_increment() -> None:
+    """Toggling PR on does NOT bump the generation."""
+    service = BranchInfoService(PROJECT_DIR)
+    gen_before = service.current_pr_fetch_generation
+    service.set_pr_enabled(True)
+    assert service.current_pr_fetch_generation == gen_before
+    service.set_pr_enabled(True)
+    assert service.current_pr_fetch_generation == gen_before

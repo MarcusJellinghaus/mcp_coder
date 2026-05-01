@@ -18,6 +18,7 @@ from rich.text import Text
 from textual.app import ComposeResult
 from textual.color import Color
 from textual.containers import Horizontal, Vertical
+from textual.css.query import NoMatches
 from textual.message import Message
 from textual.widgets import Button, Static
 
@@ -169,7 +170,12 @@ class BranchInfoBar(Vertical):
         pr: str | Text,
         age: str | Text,
     ) -> None:
-        self.query_one("#branch-info-branch", Static).update(branch)
+        # Guard against being called before child widgets are mounted (e.g. via
+        # the App's on_mount running before BranchInfoBar.compose has yielded).
+        try:
+            self.query_one("#branch-info-branch", Static).update(branch)
+        except NoMatches:
+            return
         self.query_one("#branch-info-issue", Static).update(issue)
         self.query_one("#branch-info-pr", Static).update(pr)
         self.query_one("#branch-info-age", Static).update(age)

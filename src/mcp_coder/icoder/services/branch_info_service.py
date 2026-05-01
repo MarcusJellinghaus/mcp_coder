@@ -32,6 +32,7 @@ class BranchInfoService:
         self._issue_in_flight = False
         self._pr_in_flight = False
         self._last_branch: Optional[str] = None
+        self._pr_fetch_generation: int = 0
 
     @property
     def pr_enabled(self) -> bool:
@@ -39,8 +40,32 @@ class BranchInfoService:
         return self._pr_enabled
 
     def set_pr_enabled(self, value: bool) -> None:
-        """Update the PR toggle state."""
+        """Update the PR toggle state.
+
+        Toggling off bumps ``pr_fetch_generation`` so any in-flight PR worker
+        sees a stale generation and discards its result. Toggling on does not
+        bump the generation; the next ``start_pr_fetch()`` is the authoritative
+        bump.
+        """
+        if not value and self._pr_enabled:
+            self._pr_fetch_generation += 1
+            self._pr_in_flight = False
         self._pr_enabled = value
+
+    @property
+    def current_pr_fetch_generation(self) -> int:
+        """Current PR-fetch generation token (read-only)."""
+        return self._pr_fetch_generation
+
+    def start_pr_fetch(self) -> int:
+        """Bump the PR-fetch generation token and return the new value.
+
+        Returns:
+            The new generation, captured by the launching worker so it can
+            detect if a later toggle/refresh has invalidated its result.
+        """
+        self._pr_fetch_generation += 1
+        return self._pr_fetch_generation
 
     def fetch_info(self) -> BranchInfo:
         """Return the current ``BranchInfo`` snapshot from the data layer."""
