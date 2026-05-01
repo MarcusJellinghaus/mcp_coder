@@ -81,7 +81,7 @@ def verify_mcp_servers(venv_root: str | Path) -> list[MCPServerInfo]:
 
 # Regex pattern for parsing `claude mcp list` output lines.
 # Matches: "server-name: /path/to/exe args - ✓ Connected"
-#   Group 1: server name (e.g., "tools-py")
+#   Group 1: server name (e.g., "mcp-tools-py")
 #   Group 2: status icon (e.g., "✓", "✗", "!")
 #   Group 3: status text (e.g., "Connected", "Failed to start")
 _MCP_LIST_LINE_RE = re.compile(r"^(\S+):\s+.+\s+-\s+(\S+)\s+(.+)$")
@@ -163,11 +163,10 @@ def parse_claude_mcp_list(
             continue
         raw_name = match.group(1)
         status_text = match.group(3).strip()
-        canonical_name = f"mcp-{raw_name}"
-        if canonical_name in MCP_SERVER_NAMES:
+        if raw_name in MCP_SERVER_NAMES:
             statuses.append(
                 ClaudeMCPStatus(
-                    name=canonical_name,
+                    name=raw_name,
                     status_text=status_text,
                     ok=status_text == "Connected",
                 )

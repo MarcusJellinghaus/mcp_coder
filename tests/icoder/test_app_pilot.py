@@ -435,12 +435,12 @@ async def test_streaming_tool_event_mid_line(
                 {"type": "text_delta", "text": "before tool"},
                 {
                     "type": "tool_use_start",
-                    "name": "mcp__workspace__read_file",
+                    "name": "mcp__mcp-workspace__read_file",
                     "args": {"file_path": "x.py"},
                 },
                 {
                     "type": "tool_result",
-                    "name": "mcp__workspace__read_file",
+                    "name": "mcp__mcp-workspace__read_file",
                     "output": "content",
                 },
                 {"type": "text_delta", "text": "after tool"},
@@ -682,7 +682,7 @@ async def test_busy_indicator_shows_tool_name_during_tool_use(
         app._handle_stream_event(
             {
                 "type": "tool_use_start",
-                "name": "mcp__workspace__read_file",
+                "name": "mcp__mcp-workspace__read_file",
                 "args": {"file_path": "x.py"},
             }
         )
@@ -720,12 +720,12 @@ async def test_tool_result_renders_plain_text_by_default(
             [
                 {
                     "type": "tool_use_start",
-                    "name": "mcp__workspace__read_file",
+                    "name": "mcp__mcp-workspace__read_file",
                     "args": {"file_path": "x.py"},
                 },
                 {
                     "type": "tool_result",
-                    "name": "mcp__workspace__read_file",
+                    "name": "mcp__mcp-workspace__read_file",
                     "output": "# Header\n**bold text**",
                 },
                 {"type": "done"},
@@ -866,12 +866,12 @@ async def test_tool_result_renders_plain_text_when_no_format(
             [
                 {
                     "type": "tool_use_start",
-                    "name": "mcp__workspace__read_file",
+                    "name": "mcp__mcp-workspace__read_file",
                     "args": {"file_path": "x.py"},
                 },
                 {
                     "type": "tool_result",
-                    "name": "mcp__workspace__read_file",
+                    "name": "mcp__mcp-workspace__read_file",
                     "output": "# Header\n**bold text**",
                 },
                 {"type": "done"},

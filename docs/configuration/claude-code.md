@@ -126,11 +126,11 @@ This file configures Claude Code permissions and MCP server settings for your lo
 {
   "permissions": {
     "allow": [
-      "mcp__workspace__*",
-      "mcp__tools-py__run_format_code",
-      "mcp__tools-py__run_lint_imports_check",
-      "mcp__tools-py__run_vulture_check",
-      "mcp__tools-py__get_library_source",
+      "mcp__mcp-workspace__*",
+      "mcp__mcp-tools-py__run_format_code",
+      "mcp__mcp-tools-py__run_lint_imports_check",
+      "mcp__mcp-tools-py__run_vulture_check",
+      "mcp__mcp-tools-py__get_library_source",
       "Bash(git diff:*)",
       "Bash(git status:*)",
       "Skill(commit_push)",
@@ -139,8 +139,8 @@ This file configures Claude Code permissions and MCP server settings for your lo
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
-    "tools-py",
-    "workspace"
+    "mcp-tools-py",
+    "mcp-workspace"
   ]
 }
 ```
@@ -155,9 +155,9 @@ This file configures Claude Code permissions and MCP server settings for your lo
 
 **Security considerations:**
 
-- **Allow MCP servers**: Enable `mcp__workspace__*` and specific `mcp__tools-py__` tools for development workflows
+- **Allow MCP servers**: Enable `mcp__mcp-workspace__*` and specific `mcp__mcp-tools-py__` tools for development workflows
 - **Allow read-only commands**: `Bash(git diff:*)`, `Bash(git status:*)` are safe
-- **Allow formatting tools**: `mcp__tools-py__run_format_code` for code formatting via MCP
+- **Allow formatting tools**: `mcp__mcp-tools-py__run_format_code` for code formatting via MCP
 - **Restrict dangerous commands**: Do NOT allow unrestricted `Bash(*)` - this could modify files outside the project or execute arbitrary commands
 
 **Gitignore:** For your own projects, add to `.gitignore`:
@@ -202,7 +202,7 @@ These are used in `.mcp.json` to configure MCP servers with correct paths:
 ```json
 {
   "mcpServers": {
-    "tools-py": {
+    "mcp-tools-py": {
       "type": "stdio",
       "command": "${MCP_CODER_VENV_DIR}\\Scripts\\mcp-tools-py.exe",
       "args": [
@@ -216,7 +216,7 @@ These are used in `.mcp.json` to configure MCP servers with correct paths:
         "PYTHONPATH": "${MCP_CODER_PROJECT_DIR}/src"
       }
     },
-    "workspace": {
+    "mcp-workspace": {
       "type": "stdio",
       "command": "${MCP_CODER_VENV_DIR}/Scripts/mcp-workspace.exe",
       "args": [

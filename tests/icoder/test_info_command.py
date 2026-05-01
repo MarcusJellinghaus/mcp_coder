@@ -136,8 +136,8 @@ def test_info_shows_mcp_status(
 ) -> None:
     mock_manager = _make_mock_mcp_manager(
         [
-            MCPServerStatus(name="tools-py", tool_count=12, connected=True),
-            MCPServerStatus(name="workspace", tool_count=8, connected=False),
+            MCPServerStatus(name="mcp-tools-py", tool_count=12, connected=True),
+            MCPServerStatus(name="mcp-workspace", tool_count=8, connected=False),
         ]
     )
     register_info(registry, runtime_info, mcp_manager=mock_manager)
@@ -146,9 +146,9 @@ def test_info_shows_mcp_status(
     assert "MCP servers (langchain):" in result.text
     assert "\u2713" in result.text  # ✓
     assert "\u2717" in result.text  # ✗
-    assert "tools-py" in result.text
+    assert "mcp-tools-py" in result.text
     assert "12 tools" in result.text
-    assert "workspace" in result.text
+    assert "mcp-workspace" in result.text
     assert "8 tools" in result.text
 
 

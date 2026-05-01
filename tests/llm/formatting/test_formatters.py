@@ -314,7 +314,7 @@ class TestRenderedStreamFormat:
         print_stream_event(
             {
                 "type": "tool_use_start",
-                "name": "mcp__workspace__read_file",
+                "name": "mcp__mcp-workspace__read_file",
                 "args": {"file_path": "x.py"},
             },
             output_format="rendered",
@@ -335,7 +335,7 @@ class TestRenderedStreamFormat:
         print_stream_event(
             {
                 "type": "tool_use_start",
-                "name": "mcp__workspace__edit_file",
+                "name": "mcp__mcp-workspace__edit_file",
                 "args": {
                     "file_path": "a.py",
                     "old_text": val,

@@ -67,7 +67,7 @@ class TestVerifyMcpServers:
     def test_server_success(self, mock_load: MagicMock) -> None:
         """Server responds with tools → ok True, tool count reported."""
         mock_load.return_value = {
-            "tools-py": {
+            "mcp-tools-py": {
                 "command": sys.executable,
                 "args": ["-m", "tools"],
                 "transport": "stdio",
@@ -90,9 +90,9 @@ class TestVerifyMcpServers:
             result = verify_mcp_servers("/fake/path/.mcp.json")
 
         assert result["overall_ok"] is True
-        assert result["servers"]["tools-py"]["ok"] is True
-        assert result["servers"]["tools-py"]["tools"] == 5
-        assert "5 tools available" in result["servers"]["tools-py"]["value"]
+        assert result["servers"]["mcp-tools-py"]["ok"] is True
+        assert result["servers"]["mcp-tools-py"]["tools"] == 5
+        assert "5 tools available" in result["servers"]["mcp-tools-py"]["value"]
 
     @patch(
         "mcp_coder.llm.providers.langchain.verification._load_mcp_server_config",
@@ -195,7 +195,7 @@ class TestVerifyMcpServers:
     def test_server_success_includes_tool_names(self, mock_load: MagicMock) -> None:
         """Successful server result includes tool_names list."""
         mock_load.return_value = {
-            "tools-py": {
+            "mcp-tools-py": {
                 "command": sys.executable,
                 "args": ["-m", "tools"],
                 "transport": "stdio",
@@ -220,7 +220,7 @@ class TestVerifyMcpServers:
         ):
             result = verify_mcp_servers("/fake/path/.mcp.json")
 
-        server_result = result["servers"]["tools-py"]
+        server_result = result["servers"]["mcp-tools-py"]
         assert server_result["ok"] is True
         assert server_result["tool_names"] == [
             ("read_file", ""),
@@ -236,7 +236,7 @@ class TestVerifyMcpServers:
     ) -> None:
         """Successful server result includes tool descriptions in tuples."""
         mock_load.return_value = {
-            "workspace": {
+            "mcp-workspace": {
                 "command": sys.executable,
                 "args": ["-m", "workspace"],
                 "transport": "stdio",
@@ -265,7 +265,7 @@ class TestVerifyMcpServers:
         ):
             result = verify_mcp_servers("/fake/path/.mcp.json")
 
-        server_result = result["servers"]["workspace"]
+        server_result = result["servers"]["mcp-workspace"]
         assert server_result["ok"] is True
         assert server_result["tool_names"] == [
             ("read_file", "Read file contents"),

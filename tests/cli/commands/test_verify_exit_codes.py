@@ -116,7 +116,7 @@ def _mlflow_enabled_broken() -> dict[str, Any]:
 def _mcp_ok() -> dict[str, Any]:
     return {
         "servers": {
-            "tools-py": {"ok": True, "value": "5 tools available", "tools": 5},
+            "mcp-tools-py": {"ok": True, "value": "5 tools available", "tools": 5},
         },
         "overall_ok": True,
     }
@@ -387,7 +387,7 @@ class TestMcpServersInVerify:
         output = capsys.readouterr().out
 
         assert "MCP SERVERS" in output
-        assert "tools-py" in output
+        assert "mcp-tools-py" in output
         assert "5 tools available" in output
         mock_mcp_servers.assert_called_once_with("/fake/.mcp.json", env_vars={"K": "V"})
 

@@ -22,7 +22,7 @@ class ToolStart:
     """A tool invocation has begun."""
 
     display_name: str  # e.g. "workspace > read_file"
-    raw_name: str  # e.g. "mcp__workspace__read_file"
+    raw_name: str  # e.g. "mcp__mcp-workspace__read_file"
     args: dict[str, object]  # raw args from stream event
 
 

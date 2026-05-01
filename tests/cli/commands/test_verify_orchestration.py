@@ -454,7 +454,7 @@ class TestVerifyOrchestration:
         mock_mlflow.return_value = _mlflow_not_installed()
         mock_prompt_llm.return_value = _minimal_llm_response()
         mock_mcp_servers.return_value = {
-            "servers": {"tools-py": {"ok": True, "value": "5 tools", "tools": 5}},
+            "servers": {"mcp-tools-py": {"ok": True, "value": "5 tools", "tools": 5}},
             "overall_ok": True,
         }
         mock_verify_config.return_value = {
@@ -859,7 +859,7 @@ def _mcp_servers_ok() -> dict[str, Any]:
     """Return an MCP server health check result with overall_ok=True."""
     return {
         "servers": {
-            "tools-py": {
+            "mcp-tools-py": {
                 "ok": True,
                 "value": "3 tools",
                 "tool_names": [
@@ -877,7 +877,7 @@ def _mcp_servers_fail() -> dict[str, Any]:
     """Return an MCP server health check result with overall_ok=False."""
     return {
         "servers": {
-            "tools-py": {
+            "mcp-tools-py": {
                 "ok": False,
                 "value": "connection refused",
             }
@@ -1175,7 +1175,7 @@ class TestMcpConfigWarnings:
             json.dumps(
                 {
                     "mcpServers": {
-                        "tools-py": {
+                        "mcp-tools-py": {
                             "env": {"PYTHONPATH": "${MCP_CODER_PROJECT_DIR}/src"}
                         }
                     }
@@ -1184,7 +1184,7 @@ class TestMcpConfigWarnings:
             encoding="utf-8",
         )
         result = _collect_mcp_warnings(str(p))
-        assert result == [("tools-py / PYTHONPATH", "${MCP_CODER_PROJECT_DIR}/src")]
+        assert result == [("mcp-tools-py / PYTHONPATH", "${MCP_CODER_PROJECT_DIR}/src")]
 
     def test_no_placeholders_returns_empty(self, tmp_path: Path) -> None:
         p = tmp_path / ".mcp.json"
@@ -1282,7 +1282,7 @@ class TestMcpConfigWarnings:
             json.dumps(
                 {
                     "mcpServers": {
-                        "tools-py": {
+                        "mcp-tools-py": {
                             "env": {"PYTHONPATH": "${MCP_CODER_PROJECT_DIR}/src"}
                         }
                     }
@@ -1300,7 +1300,7 @@ class TestMcpConfigWarnings:
             execute_verify(_make_args(mcp_config=str(mcp_json)))
         output = capsys.readouterr().out
         assert "MCP CONFIG WARNINGS" in output
-        assert "tools-py / PYTHONPATH" in output
+        assert "mcp-tools-py / PYTHONPATH" in output
         assert "${MCP_CODER_PROJECT_DIR}/src" in output
 
     @patch(f"{_VERIFY}._run_mcp_edit_smoke_test", return_value="  smoke")

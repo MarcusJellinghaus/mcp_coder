@@ -16,11 +16,11 @@ The following `pyproject.toml` sections are read by the Python MCP tools and/or 
 
 | Section | Read by | Purpose |
 |---|---|---|
-| `[tool.black]` | `mcp__tools-py__run_format_code`, `tools/black.bat`, `pyproject_config.py` | Black formatter config |
-| `[tool.isort]` | `mcp__tools-py__run_format_code`, `tools/iSort.bat`, `pyproject_config.py` | isort config |
-| `[tool.pytest.ini_options]` | `mcp__tools-py__run_pytest_check`, pytest CLI | Pytest config (markers, options) |
-| `[tool.mypy]` | `mcp__tools-py__run_mypy_check`, mypy CLI | Mypy strict-mode config |
-| `[tool.pylint.main]` / `[tool.pylint.messages_control]` | `mcp__tools-py__run_pylint_check`, pylint CLI | Pylint config |
+| `[tool.black]` | `mcp__mcp-tools-py__run_format_code`, `tools/black.bat`, `pyproject_config.py` | Black formatter config |
+| `[tool.isort]` | `mcp__mcp-tools-py__run_format_code`, `tools/iSort.bat`, `pyproject_config.py` | isort config |
+| `[tool.pytest.ini_options]` | `mcp__mcp-tools-py__run_pytest_check`, pytest CLI | Pytest config (markers, options) |
+| `[tool.mypy]` | `mcp__mcp-tools-py__run_mypy_check`, mypy CLI | Mypy strict-mode config |
+| `[tool.pylint.main]` / `[tool.pylint.messages_control]` | `mcp__mcp-tools-py__run_pylint_check`, pylint CLI | Pylint config |
 | `[tool.ruff]` / `[tool.ruff.lint]` | `tools/ruff_check.sh` / `.bat` | Ruff lint + format config |
 | `[tool.mcp-coder.install-from-github]` | mcp-coder install process (`pyproject_config.py`) | GitHub-based dependency packages (`packages`, `packages-no-deps`) |
 | `[tool.mcp-coder.prompts]` | `prompt_loader.py`, `prompt` command, `icoder` | System/project prompt paths and Claude injection mode |
@@ -174,7 +174,7 @@ Convenience scripts for local development. Create a `tools/` directory with thes
 
 ### Formatting Tools
 
-> **Note:** These shell scripts are being phased out in favor of the `mcp__tools-py__run_format_code` MCP tool, which runs both isort and black. Prefer the MCP tool for new workflows. Shell scripts are kept for human developers and CI pipelines.
+> **Note:** These shell scripts are being phased out in favor of the `mcp__mcp-tools-py__run_format_code` MCP tool, which runs both isort and black. Prefer the MCP tool for new workflows. Shell scripts are kept for human developers and CI pipelines.
 
 | Script | Purpose | Category |
 |--------|---------|----------|
@@ -208,7 +208,7 @@ For the `[tool.black]` and `[tool.isort]` config items these tools read, see [Ke
 | `pylint_check_for_errors.bat` | Run pylint errors only | Optional (CI runs it) |
 | `mypy.bat` | Run type checking | Optional (CI runs it) |
 
-> **For Claude Code:** Use MCP tools where available: `mcp__tools-py__run_lint_imports_check` (replaces `lint_imports.sh`), `mcp__tools-py__run_vulture_check` (replaces `vulture_check.sh`), `mcp__tools-py__run_pylint_check`, `mcp__tools-py__run_mypy_check`.
+> **For Claude Code:** Use MCP tools where available: `mcp__mcp-tools-py__run_lint_imports_check` (replaces `lint_imports.sh`), `mcp__mcp-tools-py__run_vulture_check` (replaces `vulture_check.sh`), `mcp__mcp-tools-py__run_pylint_check`, `mcp__mcp-tools-py__run_mypy_check`.
 > Shell scripts are for human developers and CI pipelines. `tach_check.sh` and `pycycle_check.sh` have no MCP equivalents — run them via Bash when needed.
 
 ### Performance Analysis Tools
