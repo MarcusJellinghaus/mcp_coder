@@ -71,3 +71,24 @@
 - step_3.md: added "File-write isolation" block instructing tests to patch `get_sessions_file_path` or `update_session_pid` to avoid writes to real home directory; covers both invariant test and PID-refresh test.
 
 **Status**: Plan files updated; pending commit.
+
+
+## Round 3 — 2026-05-01
+
+**Findings**:
+- Improvement R3-1 — Step 2 lists only `test_session_launch_process_issues.py` (claimed 7 sites). Actual scope: 9 sites across 4 files. In particular `test_session_restart.py::test_process_eligible_issues_respects_max_sessions` patches `get_active_session_count` to return 2 — once the function is no longer called the patch is a silent no-op and the test exercises a different code path.
+- Skip — Redundancy of PID-refresh tests (helper-level + status integration). Both serve different purposes; per "test behavior, not implementation", keep both.
+- Skip — `__init__.py` `__all__` removal correctly handled in step 4.
+- Skip — Trivial line-number drift in step 1 (262-267 vs 264-267). Per planning_principles.md, ignore.
+
+**Decisions**:
+- R3-1 → ACCEPT: expand step 2 scope to all 4 test files; explain `monkeypatch.setattr → current_count=N` rewrite; call out max-sessions test explicitly.
+- Other findings → SKIP per principles.
+
+**User decisions**: None — autonomous-class factual scope correction.
+
+**Changes**:
+- step_2.md: WHERE block lists 4 test files; TDD block describes the rewrite pattern with explicit `monkeypatch.setattr` example and the canonical max-sessions case; Acceptance asserts no leftover patches; LLM Prompt updated.
+- summary.md: Tests-modified table now lists all 4 files for step 2; max-sessions test called out explicitly.
+
+**Status**: Plan files updated; pending commit.

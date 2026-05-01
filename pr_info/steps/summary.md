@@ -83,9 +83,10 @@ The intervention path (`_handle_intervention_mode`) bypasses the snapshot — it
 | File | Change |
 |---|---|
 | `tests/workflows/vscodeclaude/test_cleanup.py` | Replace `monkeypatch.setattr(... .is_session_active, ...)` with explicit `active_set=...` argument (~20 sites). |
-| `tests/workflows/vscodeclaude/test_session_launch_process_issues.py` | Replace `get_active_session_count` patches with explicit `current_count=...` argument (7 sites). |
-| `tests/workflows/vscodeclaude/test_session_restart.py` | Replace `is_session_active` patches with `active_set=...`. |
-| `tests/workflows/vscodeclaude/test_session_restart_branch_integration.py` | Same. |
+| `tests/workflows/vscodeclaude/test_session_launch_process_issues.py` | Replace `get_active_session_count` patches with explicit `current_count=...` argument (step 2). |
+| `tests/workflows/vscodeclaude/test_session_launch.py` | Replace `get_active_session_count` patch with explicit `current_count=...` argument (step 2). |
+| `tests/workflows/vscodeclaude/test_session_restart.py` | Replace `is_session_active` patches with `active_set=...`; also replace `get_active_session_count` patch in `test_process_eligible_issues_respects_max_sessions` with `current_count=2` (step 2). |
+| `tests/workflows/vscodeclaude/test_session_restart_branch_integration.py` | Replace `is_session_active` patches with `active_set=...`; also replace `get_active_session_count` patch with explicit `current_count=...` argument (step 2). |
 | `tests/workflows/vscodeclaude/test_session_restart_cache.py` | Same. |
 | `tests/workflows/vscodeclaude/test_session_restart_closed_sessions.py` | Same. |
 | `tests/workflows/vscodeclaude/test_status_display.py` | Same. Add explicit assertion that `update_session_pid` is called when stored PID is stale. |
