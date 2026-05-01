@@ -89,8 +89,8 @@ The intervention path (`_handle_intervention_mode`) bypasses the snapshot — it
 | `tests/workflows/vscodeclaude/test_session_restart_branch_integration.py` | Replace `is_session_active` patches with `active_set=...`; also replace `get_active_session_count` patch with explicit `current_count=...` argument (step 2). |
 | `tests/workflows/vscodeclaude/test_session_restart_cache.py` | Same. |
 | `tests/workflows/vscodeclaude/test_session_restart_closed_sessions.py` | Same. |
-| `tests/workflows/vscodeclaude/test_status_display.py` | Same. Add explicit assertion that `update_session_pid` is called when stored PID is stale. |
-| `tests/workflows/vscodeclaude/test_closed_issues_integration.py` | Same. |
+| `tests/workflows/vscodeclaude/test_status_display.py` | Replace 2 `status.is_session_active` patches at lines 42, 769 with explicit `active_set=...` argument (step 3). Add explicit assertion that `update_session_pid` is called when stored PID is stale. |
+| `tests/workflows/vscodeclaude/test_closed_issues_integration.py` | Replace 3 `session_restart.is_session_active` patches at lines 79, 332, 429 with explicit `active_set=...` argument (step 1 — all patches are in the `session_restart` namespace, not `status`). |
 | `tests/workflows/vscodeclaude/test_sessions.py` | Replace `test_get_active_session_count_with_mocked_pid_check` (line 224) with `test_build_active_session_set` (added in step 1); drop the old test in step 4. |
 
 ### Tests added

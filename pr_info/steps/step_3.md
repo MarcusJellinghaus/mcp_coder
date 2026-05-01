@@ -8,8 +8,7 @@
 ## WHERE
 - Modified: `src/mcp_coder/workflows/vscodeclaude/status.py`
 - Modified: `src/mcp_coder/cli/commands/coordinator/commands.py` (build snapshot in `execute_coordinator_vscodeclaude_status`)
-- Modified: `tests/workflows/vscodeclaude/test_status_display.py`
-- Modified: `tests/workflows/vscodeclaude/test_closed_issues_integration.py`
+- Modified: `tests/workflows/vscodeclaude/test_status_display.py` (2 `status.is_session_active` patches at lines 42, 769)
 - New or modified: invariant test (see below)
 - Possibly modified: a status test module — add the "status refreshes stale stored PID" assertion (see below)
 
@@ -103,7 +102,7 @@ This documents (and protects) the intentional new behaviour that status now refr
 
 ## TDD: Tests first
 
-In `test_status_display.py` and `test_closed_issues_integration.py`, replace `is_session_active` patches:
+In `test_status_display.py`, replace the 2 `status.is_session_active` patches at lines 42 and 769:
 
 Before:
 ```python
@@ -120,12 +119,14 @@ active_set = {s["folder"]: <bool> for s in sessions}
 display_status_table(sessions=..., active_set=active_set, ...)
 ```
 
+Note: `test_closed_issues_integration.py` is handled in step 1 — its `is_session_active` patches are all in the `session_restart` namespace, not the `status` namespace.
+
 Tests that depend on the cache-clear side effect inside `display_status_table` (none should — caches are sessions.py concern) should be removed.
 
 Add the two invariant tests and the status PID-refresh test as described above. Run pytest; confirm failures with the missing parameter, then implement. After implementation the invariant tests should pass with `call_count == N_sessions`; if they fail with `call_count > N`, find and fix the leftover `is_session_active` call site.
 
 ## Acceptance
-- `test_status_display.py` and `test_closed_issues_integration.py` pass.
+- `test_status_display.py` passes (2 `status.is_session_active` patches converted).
 - New invariant tests pass with `call_count == N_sessions` for both launch and status.
 - New status PID-refresh test passes (`update_session_pid` called with the freshly-detected PID).
 - pylint, pytest, mypy clean (with marker exclusion).
@@ -135,7 +136,7 @@ Add the two invariant tests and the status PID-refresh test as described above. 
 Read `pr_info/steps/summary.md` and `pr_info/steps/step_3.md`. Implement step 3 exactly as described.
 
 Apply TDD:
-1. Rewrite `is_session_active` patches in `tests/workflows/vscodeclaude/test_status_display.py` and `tests/workflows/vscodeclaude/test_closed_issues_integration.py` to pass an explicit `active_set` argument. Add the launch/status invariant tests (decide location: extend existing `tests/cli/commands/` test file if present, otherwise create `tests/workflows/vscodeclaude/test_active_set_invariant.py`). Add the status PID-refresh test. Run pytest, confirm failures.
+1. Rewrite the 2 `status.is_session_active` patches in `tests/workflows/vscodeclaude/test_status_display.py` (lines 42, 769) to pass an explicit `active_set` argument. Add the launch/status invariant tests (decide location: extend existing `tests/cli/commands/` test file if present, otherwise create `tests/workflows/vscodeclaude/test_active_set_invariant.py`). Add the status PID-refresh test. Run pytest, confirm failures.
 2. Update `display_status_table` signature in `status.py`: add `active_set` parameter, remove the cache-clear, replace the `is_session_active` lookup with `active_set.get(session["folder"], False)`. Drop the now-unused imports. In `commands.py`, build the snapshot at the top of `execute_coordinator_vscodeclaude_status` and pass it through.
 3. Run pylint, mypy, pytest (with marker exclusion). Fix until all green. If the invariant test reports `call_count > N`, find and fix the leftover call site before moving on.
 
