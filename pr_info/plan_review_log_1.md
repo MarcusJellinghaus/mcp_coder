@@ -41,3 +41,33 @@
 - summary.md: 4-step structure; `.get(folder, False)` rationale; status side-effect note; intervention-path note.
 
 **Status**: Plan files updated; pending commit.
+
+
+## Round 2 — 2026-05-01
+
+**Findings**:
+- Resolved-from-Round-1: All 9 Round 1 findings verified properly addressed (C1, C2, I1-I5, Q1-Q2).
+- Improvement I6 — Wrong test name: plan referenced `test_get_active_session_count` (~line 277) but actual test is `test_get_active_session_count_with_mocked_pid_check` at line 224.
+- Improvement I7 — Step 1 size: large but cohesive; splitting would re-introduce the C1 transient regression. Accept as-is.
+- Improvement I8 — `__init__.py` modifications span steps 1 and 4; summary table acceptable in aggregate.
+- Improvement I9 — Step 2 ordering verified safe (depends only on step 1).
+- Improvement I10 — Invariant test in step 3 patches `mcp_coder.workflows.vscodeclaude.sessions.is_session_active` but consumers may use `from .sessions import is_session_active`, binding name into their own namespace. Test correctness relies on no module other than `sessions.py` referencing the symbol after step 3.
+- Improvement I11 — Invariant + PID-refresh tests in step 3 may write to user's real `~/.mcp_coder/` because `update_session_pid` is not mocked.
+
+**Decisions**:
+- I6 → ACCEPT: fix test name everywhere it appears; update line reference to 224 or drop.
+- I7 → SKIP: cohesion wins over size; no change.
+- I8 → SKIP: minor; aggregate table is correct.
+- I9 → SKIP: confirmed correct, no change.
+- I10 → ACCEPT: add patching note to step 3 invariant test explaining the post-step-3 invariant and giving a debug recipe.
+- I11 → ACCEPT: add explicit instruction to patch `get_sessions_file_path` or `update_session_pid` in tests to sandbox file writes.
+
+**User decisions**: None — all autonomous-class (factual corrections + test-safety notes).
+
+**Changes**:
+- step_4.md: replaced `test_get_active_session_count` → `test_get_active_session_count_with_mocked_pid_check` (5 sites); line `~277` → `224`.
+- summary.md: same test-name fix in Files-modified table.
+- step_3.md: added "Patching note" explaining `from x import y` pitfall and post-step-3 invariant.
+- step_3.md: added "File-write isolation" block instructing tests to patch `get_sessions_file_path` or `update_session_pid` to avoid writes to real home directory; covers both invariant test and PID-refresh test.
+
+**Status**: Plan files updated; pending commit.

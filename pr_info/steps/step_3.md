@@ -54,6 +54,14 @@ display_status_table(sessions=sessions, ..., active_set=active_set, ...)
 
 **Location decision:** check first whether `tests/cli/commands/` already contains tests for `execute_coordinator_vscodeclaude` or `execute_coordinator_vscodeclaude_status`. If yes, extend that file. If no, create `tests/workflows/vscodeclaude/test_active_set_invariant.py`.
 
+**Patching note:** Other modules previously imported `is_session_active` via `from .sessions import is_session_active`, which binds the name into the consumer's namespace. After step 3 completes, the only remaining direct caller of `is_session_active` is `build_active_session_set` in `sessions.py` itself — so patching `mcp_coder.workflows.vscodeclaude.sessions.is_session_active` is sufficient. If the invariant test fails with `call_count > N`, search `src/` for stray `is_session_active` imports — a leftover binding in another module is the cause.
+
+**File-write isolation:** `build_active_session_set` calls `update_session_pid`, which writes to `get_sessions_file_path()` (resolves to `~/.mcp_coder/...`). Tests must patch one of:
+- `mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path` to return a `tmp_path`-based path, OR
+- `mcp_coder.workflows.vscodeclaude.sessions.update_session_pid` as a no-op `Mock`,
+
+to prevent writes to the developer's real home directory. This applies to **both** the invariant test (below) and the PID-refresh test (further down).
+
 **Test content (one test per command):**
 
 ```python

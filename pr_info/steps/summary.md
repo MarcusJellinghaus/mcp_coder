@@ -90,7 +90,7 @@ The intervention path (`_handle_intervention_mode`) bypasses the snapshot — it
 | `tests/workflows/vscodeclaude/test_session_restart_closed_sessions.py` | Same. |
 | `tests/workflows/vscodeclaude/test_status_display.py` | Same. Add explicit assertion that `update_session_pid` is called when stored PID is stale. |
 | `tests/workflows/vscodeclaude/test_closed_issues_integration.py` | Same. |
-| `tests/workflows/vscodeclaude/test_sessions.py` | Replace `test_get_active_session_count` (line 277) with `test_build_active_session_set` (added in step 1); drop the old test in step 4. |
+| `tests/workflows/vscodeclaude/test_sessions.py` | Replace `test_get_active_session_count_with_mocked_pid_check` (line 224) with `test_build_active_session_set` (added in step 1); drop the old test in step 4. |
 
 ### Tests added
 
