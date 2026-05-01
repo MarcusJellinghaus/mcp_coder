@@ -91,6 +91,7 @@ class TestModuleIntegration:
             "success": True,
             "commit_hash": "abc1234",
             "error": None,
+            "error_category": None,
         }
 
         assert sample_result["success"] is True
