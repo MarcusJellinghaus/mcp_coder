@@ -1,86 +1,44 @@
-# Step 4 — Thread `active_set` into `display_status_table` (status command)
+# Step 4 — Remove `get_active_session_count`
 
 ## Goal
-`vscodeclaude status` builds the snapshot once at command entry and passes it to `display_status_table`. The cache-clear inside `display_status_table` is removed (now handled by `build_active_session_set`).
+With all four call sites converted (steps 1-3), `get_active_session_count` is dead code. Remove it and clean up the old single-purpose test. The cross-flow invariant test was added in step 3, so this step is deletion-only — no new tests are added here.
 
 ## WHERE
-- Modified: `src/mcp_coder/workflows/vscodeclaude/status.py`
-- Modified: `src/mcp_coder/cli/commands/coordinator/commands.py` (build snapshot in `execute_coordinator_vscodeclaude_status`)
-- Modified: `tests/workflows/vscodeclaude/test_status_display.py`
-- Modified: `tests/workflows/vscodeclaude/test_closed_issues_integration.py`
+- Modified: `src/mcp_coder/workflows/vscodeclaude/sessions.py` (delete function)
+- Modified: `src/mcp_coder/workflows/vscodeclaude/__init__.py` (drop from `__all__` and from imports)
+- Modified: `src/mcp_coder/cli/commands/coordinator/commands.py` (drop unused import if still present)
+- Modified: `tests/workflows/vscodeclaude/test_sessions.py` (delete `test_get_active_session_count` at line ~277)
 
 ## WHAT
-```python
-# status.py
-def display_status_table(
-    sessions: list[VSCodeClaudeSession],
-    eligible_issues: list[tuple[str, IssueData]],
-    workspace_base: str,
-    active_set: dict[str, bool],
-    repo_filter: str | None = None,
-    cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
-    issues_without_branch: set[tuple[str, int]] | None = None,
-) -> None: ...
-```
-
-## HOW
-- In `status.py`:
-  - Drop these imports from `.sessions`: `clear_vscode_process_cache`, `clear_vscode_window_cache`, `is_session_active`.
-  - Remove the two `clear_vscode_*_cache()` calls at the top of `display_status_table` (lines 280-281) — the snapshot, built at command entry, has already cleared and refreshed them.
-  - Replace `is_running = is_session_active(session)` (line 333) with `is_running = active_set[session["folder"]]`.
-- In `commands.py` `execute_coordinator_vscodeclaude_status`:
-  - After `sessions = store["sessions"]`, call `active_set = build_active_session_set(sessions)`.
-  - Pass `active_set=active_set` as a kwarg into the `display_status_table(...)` call.
-
-## ALGORITHM (status command entry)
-```
-store = load_sessions()
-sessions = store["sessions"]
-active_set = build_active_session_set(sessions)
-# ... existing repo/cache build ...
-display_status_table(sessions=sessions, ..., active_set=active_set, ...)
-```
+- Delete `def get_active_session_count() -> int` from `sessions.py`.
+- Drop `"get_active_session_count"` from the `__all__` list and the corresponding import line in `src/mcp_coder/workflows/vscodeclaude/__init__.py`.
+- Drop `get_active_session_count` from the import block in `commands.py` (still referenced in commands.py? as of step 2 the call was removed; if pylint already flagged it as unused and step 2 dropped it, this is a no-op).
+- Delete the existing `test_get_active_session_count` test in `tests/workflows/vscodeclaude/test_sessions.py` (~line 277). It is superseded by `test_build_active_session_set` (added in step 1).
 
 ## DATA
-- `active_set: dict[str, bool]` keyed by `session["folder"]`. Required parameter.
-- Return type unchanged (`None`; prints to stdout).
+- No new tests in this step. The cross-flow invariant test (`is_session_active.call_count == N_sessions` for launch and status) lives in step 3, alongside the status conversion that completed the conversion of every call site.
 
 ## TDD: Tests first
 
-In `test_status_display.py` and `test_closed_issues_integration.py`, replace `is_session_active` patches:
-
-Before:
-```python
-monkeypatch.setattr(
-    "mcp_coder.workflows.vscodeclaude.status.is_session_active",
-    lambda s: <bool>,
-)
-display_status_table(sessions=..., ...)
-```
-
-After:
-```python
-active_set = {s["folder"]: <bool> for s in sessions}
-display_status_table(sessions=..., active_set=active_set, ...)
-```
-
-Tests that depend on the cache-clear side effect inside `display_status_table` (none should — caches are sessions.py concern) should be removed.
-
-Run pytest; confirm failures with the missing parameter, then implement.
+1. Confirm there are no remaining references to `get_active_session_count` in `src/` (use `Grep` / `mcp__workspace__search_files`). The only consumer left should be the `test_get_active_session_count` test that this step deletes.
+2. Run the existing test suite (with marker exclusion). The invariant test from step 3 should still report `call_count == N_sessions` once `get_active_session_count` is gone.
 
 ## Acceptance
-- `test_status_display.py` and `test_closed_issues_integration.py` pass.
+- The old `test_get_active_session_count` test is deleted.
+- `get_active_session_count` no longer appears anywhere in `src/`.
+- The step-3 invariant test still passes (`call_count == N_sessions`).
 - pylint, pytest, mypy clean (with marker exclusion).
 
 ## LLM Prompt
 
 Read `pr_info/steps/summary.md` and `pr_info/steps/step_4.md`. Implement step 4 exactly as described.
 
-Apply TDD:
-1. Rewrite `is_session_active` patches in `tests/workflows/vscodeclaude/test_status_display.py` and `tests/workflows/vscodeclaude/test_closed_issues_integration.py` to pass an explicit `active_set` argument. Run pytest, confirm failures.
-2. Update `display_status_table` signature in `status.py`: add `active_set` parameter, remove the cache-clear, replace the `is_session_active` lookup. Drop the now-unused imports. In `commands.py`, build the snapshot at the top of `execute_coordinator_vscodeclaude_status` and pass it through.
-3. Run pylint, mypy, pytest (with marker exclusion). Fix until all green.
+Approach:
+1. Confirm no remaining references to `get_active_session_count` in `src/` other than the function definition itself. If a reference remains in `commands.py` or anywhere else, that means a previous step missed something — fix that first.
+2. Delete `get_active_session_count` from `src/mcp_coder/workflows/vscodeclaude/sessions.py`.
+3. Drop `"get_active_session_count"` from `__all__` and from the imports in `src/mcp_coder/workflows/vscodeclaude/__init__.py`.
+4. Drop `get_active_session_count` from the imports in `src/mcp_coder/cli/commands/coordinator/commands.py` (if not already removed in step 2).
+5. Delete the existing `test_get_active_session_count` test in `tests/workflows/vscodeclaude/test_sessions.py` (~line 277).
+6. Run pylint, mypy, pytest (with marker exclusion). Fix until all green.
 
-Do not remove `get_active_session_count` from `sessions.py` or `__init__.py` yet — that is step 5.
-
-Commit message: `vscodeclaude: thread active_set into display_status_table`.
+Commit message: `vscodeclaude: remove dead get_active_session_count`.

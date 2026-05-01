@@ -1,92 +1,99 @@
-# Step 2 — Thread `active_set` into `restart_closed_sessions`
+# Step 2 — Thread `current_count` into `process_eligible_issues`
 
 ## Goal
-`restart_closed_sessions` reads activity from the snapshot built in step 1. Its internal cache-clear and in-loop PID-refresh are removed (now both handled by `build_active_session_set`).
+Eliminate the per-repo `get_active_session_count()` call inside `process_eligible_issues`. Capacity tracking moves to the caller (`commands.py`), which threads `current_count` across the per-repo loop and updates the final summary log. As a Boy Scout cleanup in the same commit, drop the dead local `current_count += 1` increment inside the inner launch loop (it is unreachable bookkeeping after the `available_slots` slice already caps `issues_to_start`).
 
 ## WHERE
-- Modified: `src/mcp_coder/workflows/vscodeclaude/session_restart.py`
-- Modified: `src/mcp_coder/cli/commands/coordinator/commands.py` (pass `active_set` to restart)
-- Modified: `tests/workflows/vscodeclaude/test_session_restart.py`
-- Modified: `tests/workflows/vscodeclaude/test_session_restart_branch_integration.py`
-- Modified: `tests/workflows/vscodeclaude/test_session_restart_cache.py`
-- Modified: `tests/workflows/vscodeclaude/test_session_restart_closed_sessions.py`
+- Modified: `src/mcp_coder/workflows/vscodeclaude/session_launch.py`
+- Modified: `src/mcp_coder/cli/commands/coordinator/commands.py` (init `current_count`, thread per-repo, update final summary)
+- Modified: `tests/workflows/vscodeclaude/test_session_launch_process_issues.py` (7 sites)
 
 ## WHAT
 ```python
-# session_restart.py
-def restart_closed_sessions(
-    active_set: dict[str, bool],
-    cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
+# session_launch.py
+def process_eligible_issues(
+    repo_name: str,
+    repo_config: dict[str, str],
+    vscodeclaude_config: VSCodeClaudeConfig,
+    max_sessions: int,
+    current_count: int,
+    all_cached_issues: list[IssueData] | None = None,
+    skip_github_install: bool = False,
 ) -> list[VSCodeClaudeSession]: ...
 ```
 
 ## HOW
-- In `session_restart.py`:
-  - Drop these imports from `.sessions`: `clear_vscode_process_cache`, `clear_vscode_window_cache`, `is_session_active`, `is_vscode_open_for_folder`, `update_session_pid` (the last three only if no longer referenced; keep `update_session_pid` since it's still used for the post-launch PID update).
-  - Remove the two `clear_vscode_*_cache()` calls near the top of `restart_closed_sessions` (they now live in `build_active_session_set`).
-  - Replace the block currently at `session_restart.py:262-267`:
+- In `session_launch.py`:
+  - Drop the import of `get_active_session_count` from `.sessions`.
+  - Remove the `current_count = get_active_session_count()` line at the top of `process_eligible_issues` (line 290) — `current_count` now arrives as a parameter.
+  - **Drop the `current_count += 1` line inside the inner launch loop.** It is dead bookkeeping: `issues_to_start` is already sliced to `available_slots = max_sessions - current_count`, so the local counter is never re-read after the slice. Boy Scout cleanup, included in this commit.
+- In `commands.py` `execute_coordinator_vscodeclaude`:
+  - After `restart_closed_sessions` returns, initialise:
     ```python
-    if is_session_active(session):
-        _, found_pid = is_vscode_open_for_folder(session["folder"])
-        if found_pid and found_pid != session.get("vscode_pid"):
-            update_session_pid(session["folder"], found_pid)
-        continue
+    current_count = sum(active_set.values()) + len(restarted)
+    ```
+    Note: `active_set` lookups elsewhere in the codebase use `.get(folder, False)`; here we use `sum(active_set.values())` which counts only the booleans actually present in the snapshot — consistent with the "missing key = inactive" convention.
+  - For each iteration of `for repo_name in repo_names`, pass `current_count=current_count` into `process_eligible_issues(...)`.
+  - After the call returns, increment: `current_count += len(started)`.
+  - Replace the final-summary call:
+    ```python
+    current = get_active_session_count()
+    logger.log(OUTPUT, "No new sessions started (active: %d/%d)", current, max_sessions)
     ```
     with:
     ```python
-    if active_set[session["folder"]]:
-        continue
+    logger.log(OUTPUT, "No new sessions started (active: %d/%d)", current_count, max_sessions)
     ```
-- In `commands.py` `execute_coordinator_vscodeclaude`:
-  - Pass `active_set=active_set` as a kwarg into the `restart_closed_sessions(...)` call (line 541).
+  - Do **not** remove the `get_active_session_count` import from `commands.py` yet — that happens in step 4 along with the symbol's deletion. (If pylint flags it as unused after this step, then remove it now; otherwise leave for step 4.)
 
-## ALGORITHM (relevant snippet inside the for-session loop)
+## ALGORITHM (relevant orchestration in `commands.py`)
 ```
-folder_path = Path(session["folder"])
-if active_set[session["folder"]]:
-    continue
-if not folder_path.exists():
-    remove_session(session["folder"])
-    continue
-# ... rest of restart logic unchanged ...
+restarted = restart_closed_sessions(active_set=active_set, cached_issues_by_repo=...)
+current_count = sum(active_set.values()) + len(restarted)
+for repo_name in repo_names:
+    started = process_eligible_issues(..., current_count=current_count, ...)
+    current_count += len(started)
+    total_started.extend(started)
+# final summary uses current_count
 ```
 
 ## DATA
-- `active_set` is `dict[str, bool]` keyed by `session["folder"]`. Required parameter.
-- Return value unchanged: `list[VSCodeClaudeSession]` of restarted sessions.
+- `current_count: int` — running count of active+restarted+newly-launched sessions across all repos in this command run.
+- Return type of `process_eligible_issues` unchanged: `list[VSCodeClaudeSession]`.
 
 ## TDD: Tests first
 
-For each test in the four `test_session_restart*.py` files that does:
+In `tests/workflows/vscodeclaude/test_session_launch_process_issues.py`, the 7 sites that look like:
 ```python
 monkeypatch.setattr(
-    "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
-    lambda s: <bool>,
+    "mcp_coder.workflows.vscodeclaude.session_launch.get_active_session_count",
+    lambda: <N>,
 )
+# or:
+mock.patch("mcp_coder.workflows.vscodeclaude.session_launch.get_active_session_count", return_value=<N>)
 ```
-or equivalent `mock.patch(...)`:
+become:
+- Remove the patch.
+- Pass `current_count=<N>` as a kwarg to the `process_eligible_issues(...)` call.
 
-1. Remove the patch.
-2. Build an `active_set` dict at test setup time: `{s["folder"]: <bool> for s in sessions}`.
-3. Pass `active_set=active_set` into `restart_closed_sessions(...)`.
+If a test currently mocks `get_active_session_count` to verify the "already at max" early-return, the equivalent is now: pass `current_count=max_sessions` and assert empty return.
 
-Tests that previously asserted on the in-loop PID-refresh behavior (e.g. that `update_session_pid` was called when an active session's stored PID was stale) belong to `build_active_session_set` (covered in step 1's `test_build_active_session_set`). If any such assertions exist in `test_session_restart*.py`, delete them — they are no longer the responsibility of `restart_closed_sessions`.
-
-Run tests; confirm they fail with the missing/wrong signature, then implement.
+Run pytest; confirm failures, then implement.
 
 ## Acceptance
-- All four `test_session_restart*.py` files pass.
-- pylint, pytest, mypy clean (use the `-m "not ..."` marker exclusion from CLAUDE.md).
+- All `test_session_launch_process_issues.py` tests pass.
+- The dead `current_count += 1` is gone from `process_eligible_issues`.
+- pylint, pytest, mypy clean (with marker exclusion).
 
 ## LLM Prompt
 
 Read `pr_info/steps/summary.md` and `pr_info/steps/step_2.md`. Implement step 2 exactly as described.
 
 Apply TDD:
-1. Rewrite the `is_session_active`/`mock.patch` patterns in `test_session_restart.py`, `test_session_restart_branch_integration.py`, `test_session_restart_cache.py`, `test_session_restart_closed_sessions.py` to pass an explicit `active_set` argument. Drop assertions that test the in-loop PID-refresh behavior (now belongs to `build_active_session_set`). Run pytest, confirm the relevant tests fail.
-2. Update `restart_closed_sessions` signature and internals in `session_restart.py`. Remove the cache-clear calls and the in-loop PID-refresh block. Update `commands.py` to pass `active_set=active_set` to the call.
-3. Run pylint, mypy, pytest (with the marker exclusion). Fix until all green.
+1. Update the 7 `get_active_session_count` patches in `tests/workflows/vscodeclaude/test_session_launch_process_issues.py` to pass `current_count=...` instead. Run pytest, confirm failures.
+2. Add the `current_count` parameter to `process_eligible_issues` in `session_launch.py`, remove the in-function `get_active_session_count()` call and import, and drop the dead `current_count += 1` increment inside the inner launch loop. In `commands.py`, initialise `current_count` after restart returns, thread it through the per-repo loop with `current_count += len(started)`, and update the final-summary log line.
+3. Run pylint, mypy, pytest (with marker exclusion). Fix until all green.
 
-Do not touch `process_eligible_issues`, `display_status_table`, `cleanup`, or `get_active_session_count` in this step.
+Do not remove `get_active_session_count` from `sessions.py` or `__init__.py` yet — that happens in step 4. If pylint complains about an unused import in `commands.py`, drop only that one import.
 
-Commit message: `vscodeclaude: thread active_set into restart_closed_sessions`.
+Commit message: `vscodeclaude: thread current_count through process_eligible_issues`.
