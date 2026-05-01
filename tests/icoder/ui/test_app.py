@@ -514,6 +514,176 @@ async def test_pr_fetch_race_via_2s_tick_dropped_on_toggle_off(
             assert app._last_pr_number is None
 
 
+async def test_pr_result_none_clears_stale_pr_number(
+    make_icoder_app: Callable[..., ICoderApp],
+    tmp_path: Path,
+) -> None:
+    """A successful PR worker returning ``None`` clears the previously stored PR.
+
+    Regression for the bug where ``_apply_branch_state`` only wrote the PR
+    number when it was non-None — so a refresh after the PR was deleted left
+    the bar showing the stale ``PR #N``.
+    """
+    runtime_info = _make_runtime_info(tmp_path)
+    app = make_icoder_app(runtime_info=runtime_info)
+    info = _make_branch_info(branch="42-x", issue_number=42, issue_title="t")
+
+    pr_results: list[Optional[int]] = [77, None]
+
+    def fetch_pr(self: BranchInfoService, _issue: int) -> Optional[int]:
+        return pr_results.pop(0)
+
+    with (
+        patch.object(BranchInfoService, "fetch_info", return_value=info),
+        patch.object(BranchInfoService, "fetch_pr", fetch_pr),
+    ):
+        async with app.run_test() as pilot:
+            await pilot.pause(delay=0.3)
+            # Toggle PR on → first fetch returns 77.
+            await pilot.click("#branch-toggle-pr")
+            await pilot.pause(delay=0.3)
+            assert app._last_pr_number == 77
+            assert _branch_zone(app, "pr") == "PR #77"
+            # Refresh-PR → second fetch returns None.
+            await pilot.click("#branch-refresh-pr")
+            await pilot.pause(delay=0.5)
+            assert app._last_pr_number is None
+            assert _branch_zone(app, "pr") == "PR —"
+
+
+async def test_stale_pr_worker_exception_does_not_set_failed_flag(
+    make_icoder_app: Callable[..., ICoderApp],
+    tmp_path: Path,
+) -> None:
+    """Stale PR worker that raises must not mutate ``_branch_failed``.
+
+    Regression for the bug where ``_branch_failed.add('pr')`` ran before the
+    generation-token check, so an invalidated worker still flipped the flag
+    that belongs to a fresher generation.
+    """
+    runtime_info = _make_runtime_info(tmp_path)
+    app = make_icoder_app(runtime_info=runtime_info)
+    info = _make_branch_info(branch="42-x", issue_number=42, issue_title="t")
+
+    block = threading.Event()
+
+    def fetch_pr_blocking_then_raise(
+        self: BranchInfoService, _issue: int
+    ) -> Optional[int]:
+        block.wait(timeout=5)
+        raise RuntimeError("network down")
+
+    with (
+        patch.object(BranchInfoService, "fetch_info", return_value=info),
+        patch.object(BranchInfoService, "fetch_pr", fetch_pr_blocking_then_raise),
+    ):
+        async with app.run_test() as pilot:
+            await pilot.pause(delay=0.3)
+            # Toggle PR on (gen=1, worker A in flight, blocked).
+            app.on_branch_info_bar_toggle_pr(BranchInfoBar.TogglePR())
+            await pilot.pause(delay=0.2)
+            # Toggle off (gen=2). Worker A is now stale.
+            app.on_branch_info_bar_toggle_pr(BranchInfoBar.TogglePR())
+            await pilot.pause(delay=0.1)
+            # Unblock worker A → it raises, but is stale → must exit silently.
+            block.set()
+            await pilot.pause(delay=0.5)
+            assert "pr" not in app._branch_failed
+
+
+async def test_stale_pr_worker_success_does_not_mutate_state(
+    make_icoder_app: Callable[..., ICoderApp],
+    tmp_path: Path,
+) -> None:
+    """Stale PR worker that succeeds must not write ``_last_pr_number``.
+
+    Sibling to ``test_pr_fetch_race_stale_result_dropped`` — verifies the
+    stale-worker exit path leaves all UI state untouched, not just the
+    rendered PR zone.
+    """
+    runtime_info = _make_runtime_info(tmp_path)
+    app = make_icoder_app(runtime_info=runtime_info)
+    info = _make_branch_info(branch="42-x", issue_number=42, issue_title="t")
+
+    block = threading.Event()
+
+    def fetch_pr_blocking(self: BranchInfoService, _issue: int) -> int:
+        block.wait(timeout=5)
+        return 42
+
+    with (
+        patch.object(BranchInfoService, "fetch_info", return_value=info),
+        patch.object(BranchInfoService, "fetch_pr", fetch_pr_blocking),
+    ):
+        async with app.run_test() as pilot:
+            await pilot.pause(delay=0.3)
+            # Toggle PR on (gen=1, worker A blocked).
+            app.on_branch_info_bar_toggle_pr(BranchInfoBar.TogglePR())
+            await pilot.pause(delay=0.2)
+            # Toggle off (gen=2). Worker A is stale.
+            app.on_branch_info_bar_toggle_pr(BranchInfoBar.TogglePR())
+            await pilot.pause(delay=0.1)
+            assert app._last_pr_number is None
+            # Unblock worker A → its 42 result must NOT be written.
+            block.set()
+            await pilot.pause(delay=0.5)
+            assert app._last_pr_number is None
+            assert "pr" not in app._branch_loading
+            assert "pr" not in app._branch_failed
+
+
+async def test_toggle_on_while_worker_in_flight_does_not_duplicate(
+    make_icoder_app: Callable[..., ICoderApp],
+    tmp_path: Path,
+) -> None:
+    """Toggle-on path is guarded by ``begin_pr_fetch`` like refresh-PR.
+
+    Spawn worker A via the refresh-PR button (which sets ``_pr_in_flight``),
+    then immediately toggle PR on/off/on. The toggle-on with a worker still
+    in flight must not spawn a duplicate worker.
+    """
+    runtime_info = _make_runtime_info(tmp_path)
+    app = make_icoder_app(runtime_info=runtime_info)
+    info = _make_branch_info(branch="42-x", issue_number=42, issue_title="t")
+
+    block = threading.Event()
+    pr_call_count = {"n": 0}
+
+    def fetch_pr_blocking(self: BranchInfoService, _issue: int) -> int:
+        pr_call_count["n"] += 1
+        block.wait(timeout=5)
+        return 77
+
+    with (
+        patch.object(BranchInfoService, "fetch_info", return_value=info),
+        patch.object(BranchInfoService, "fetch_pr", fetch_pr_blocking),
+    ):
+        async with app.run_test() as pilot:
+            await pilot.pause(delay=0.3)
+            # Toggle PR on → first worker (gen=1, in_flight=True).
+            app.on_branch_info_bar_toggle_pr(BranchInfoBar.TogglePR())
+            await pilot.pause(delay=0.2)
+            assert pr_call_count["n"] == 1
+            # User clicks toggle (now off) then toggle (now on) again before
+            # worker A finishes. Toggle-off resets _pr_in_flight=False, so
+            # the next toggle-on is allowed to spawn a fresh worker — but
+            # only one. After toggle-on, _pr_in_flight is True again, so a
+            # repeated toggle-on attempt (after another off+on) while the
+            # second worker is in flight must NOT add a third worker.
+            app.on_branch_info_bar_toggle_pr(BranchInfoBar.TogglePR())  # off
+            await pilot.pause(delay=0.05)
+            app.on_branch_info_bar_toggle_pr(BranchInfoBar.TogglePR())  # on (gen=3)
+            await pilot.pause(delay=0.2)
+            assert pr_call_count["n"] == 2
+            # Now drive a refresh-PR while worker B is still blocked: it must
+            # be rejected by begin_pr_fetch and not spawn a third worker.
+            app.on_branch_info_bar_refresh_pr(BranchInfoBar.RefreshPR())
+            await pilot.pause(delay=0.2)
+            assert pr_call_count["n"] == 2
+            block.set()
+            await pilot.pause(delay=0.5)
+
+
 def _make_runtime_info(project_dir: Path) -> RuntimeInfo:
     return RuntimeInfo(
         mcp_coder_version="9.9.9",

@@ -324,14 +324,9 @@ class ICoderApp(App[None]):
             info = None
         else:
             self._branch_failed.discard("issue")
+        # branch-changed detection and any auto-PR-kick happen on the UI thread
+        # inside _apply_branch_state to avoid racing _last_branch from workers.
         self.call_from_thread(self._apply_branch_state, info)
-        if (
-            info is not None
-            and self._branch_service.branch_changed(info.branch_name)
-            and self._branch_service.pr_enabled
-            and info.issue_number is not None
-        ):
-            self._launch_pr_worker(info.issue_number)
 
     def _branch_full_work(self) -> None:
         """Worker body for the 30s branch tick (with loading marker)."""
@@ -395,42 +390,71 @@ class ICoderApp(App[None]):
         if new_value:
             info = self._last_branch_info
             if info is not None and info.issue_number is not None:
-                self._launch_pr_worker(info.issue_number)
+                # Route through begin_pr_fetch so the in-flight guard is
+                # uniform across toggle-on and refresh-PR launch paths.
+                if self._branch_service.begin_pr_fetch():
+                    self._branch_loading.add("pr")
+                    self._render_branch_state()
+                    self._launch_pr_worker(info.issue_number)
 
     def _launch_pr_worker(self, issue_number: int) -> None:
         """Capture a PR-fetch generation and spawn the worker."""
         gen = self._branch_service.start_pr_fetch()
 
         def work() -> None:
+            pr_number: Optional[int] = None
+            raised = False
             try:
-                pr_number: Optional[int] = self._branch_service.fetch_pr(issue_number)
+                pr_number = self._branch_service.fetch_pr(issue_number)
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 logger.debug("fetch_pr failed: %s", exc)
-                self._branch_failed.add("pr")
-                pr_number = None
-            else:
-                self._branch_failed.discard("pr")
-            finally:
-                self._branch_service.end_pr_fetch()
+                raised = True
+            # Gate ALL shared-state mutations behind the generation check so a
+            # stale worker (invalidated by a newer toggle/refresh) never
+            # touches UI flags that belong to a fresher generation.
             if gen != self._branch_service.current_pr_fetch_generation:
                 return
+            self._branch_service.end_pr_fetch()
+            if raised:
+                self._branch_failed.add("pr")
+            else:
+                self._branch_failed.discard("pr")
             self._branch_loading.discard("pr")
-            self.call_from_thread(
-                self._apply_branch_state, self._last_branch_info, pr_number
-            )
+            self.call_from_thread(self._apply_pr_result, pr_number)
 
         self.run_worker(work, thread=True)
 
     def _apply_branch_state(
         self,
         info: Optional[BranchInfo],
-        pr_number: Optional[int] = None,
     ) -> None:
-        """Store new state and re-render the BranchInfoBar."""
+        """Store new branch info, re-render, and auto-kick a PR fetch on change.
+
+        Runs on the UI thread (via ``call_from_thread``). The branch-changed
+        check and any auto-PR-kick must live here, not in the worker thread,
+        so concurrent quick-ticks cannot race ``_last_branch`` or the PR-fetch
+        generation token.
+        """
         if info is not None:
             self._last_branch_info = info
-        if pr_number is not None:
-            self._last_pr_number = pr_number
+        self._render_branch_state()
+        if (
+            info is not None
+            and self._branch_service.branch_changed(info.branch_name)
+            and self._branch_service.pr_enabled
+            and info.issue_number is not None
+        ):
+            self._launch_pr_worker(info.issue_number)
+
+    def _apply_pr_result(self, pr_number: Optional[int]) -> None:
+        """Unconditionally store a PR worker's result and re-render.
+
+        Unlike ``_apply_branch_state``, this writes ``pr_number`` even when it
+        is ``None`` so a refresh that discovers the PR no longer exists clears
+        the previously cached value (otherwise the bar keeps showing the stale
+        ``PR #N``).
+        """
+        self._last_pr_number = pr_number
         self._render_branch_state()
 
     def _render_branch_state(self) -> None:
