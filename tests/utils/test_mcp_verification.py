@@ -251,21 +251,7 @@ class TestParseClaudeMcpList:
 
         assert result is not None
         names = {s.name for s in result}
-        # "claude.ai Gmail" should not appear
-        assert all(n.startswith("mcp-") for n in names)
-        assert "mcp-claude.ai Gmail" not in names
-
-    def test_maps_names_with_mcp_prefix(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(
-            "mcp_coder.utils.mcp_verification.execute_command",
-            lambda *_a, **_kw: self._make_result(stdout=_SAMPLE_OUTPUT),
-        )
-
-        result = parse_claude_mcp_list(env_vars={}, claude_executable="/usr/bin/claude")
-
-        assert result is not None
-        # Raw output has "mcp-tools-py", result should have "mcp-tools-py"
-        assert any(s.name == "mcp-tools-py" for s in result)
+        assert names == {"mcp-tools-py", "mcp-workspace"}
 
     def test_returns_none_when_claude_not_found(self) -> None:
         result = parse_claude_mcp_list(env_vars={}, claude_executable=None)
