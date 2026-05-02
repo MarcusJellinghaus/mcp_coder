@@ -217,13 +217,6 @@ python_version = "3.11"
 disable_error_code = ["import-untyped"]
 
 [[tool.mypy.overrides]]
-module = ["mcp_coder.mcp_workspace_github"]
-# Sentinel fallback assignments intentionally conflict with the try-branch types;
-# which error code fires (assignment vs misc) depends on whether the name is a
-# class or callable, so we suppress unused-ignore for this module.
-disable_error_code = ["assignment", "misc", "unused-ignore"]
-
-[[tool.mypy.overrides]]
 module = ["pytest.*"]
 ignore_missing_imports = true
 
@@ -232,10 +225,6 @@ module = ["tests.*"]
 # Disable unreachable warnings for test files due to mypy false positives with assertions
 # Disable union-attr for test files where mocked attributes are intentionally set
 disable_error_code = ["unreachable", "union-attr"]
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = ["mcp_workspace.github_operations", "mcp_workspace.github_operations.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
