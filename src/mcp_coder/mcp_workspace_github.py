@@ -33,10 +33,16 @@ from mcp_workspace.github_operations.issues import (
     IssueData,
     IssueEventType,
     IssueManager,
-    _get_cache_file_path,
-    _load_cache_file,
-    _log_stale_cache_entries,
-    _save_cache_file,
+)
+from mcp_workspace.github_operations.issues import (
+    _get_cache_file_path as get_cache_file_path,
+)
+from mcp_workspace.github_operations.issues import _load_cache_file as load_cache_file
+from mcp_workspace.github_operations.issues import (
+    _log_stale_cache_entries as log_stale_cache_entries,
+)
+from mcp_workspace.github_operations.issues import _save_cache_file as save_cache_file
+from mcp_workspace.github_operations.issues import (
     get_all_cached_issues,
     update_issue_labels_in_cache,
 )
@@ -74,9 +80,9 @@ __all__: List[str] = [
     "CacheData",
     "get_all_cached_issues",
     "update_issue_labels_in_cache",
-    # Cache internals (used by tests)
-    "_get_cache_file_path",
-    "_load_cache_file",
-    "_save_cache_file",
-    "_log_stale_cache_entries",
+    # Cache helpers (public re-exports drop the underscore)
+    "get_cache_file_path",
+    "load_cache_file",
+    "save_cache_file",
+    "log_stale_cache_entries",
 ]

@@ -254,9 +254,13 @@ _.compose
 _.on_mount
 _.on_input_area_input_submitted
 _.on_text_area_changed
+_.on_branch_info_bar_refresh_issue
 _.BINDINGS
 _.action_cancel_stream
 _.action_noop
+
+# icoder/ui/widgets/branch_info_bar.py - Textual button event handler
+_.on_button_pressed
 
 # tests/icoder/test_command_registry.py - Test command handler
 _.handle_test

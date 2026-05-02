@@ -56,4 +56,30 @@ BusyIndicator {
     background: #1e1e1e;
     color: #666666;
 }
+
+BranchInfoBar {
+    height: 2;
+    background: #1e1e1e;
+    color: #d4d4d4;
+}
+
+#branch-info-row {
+    height: 1;
+}
+
+#branch-info-row Static {
+    width: auto;
+    margin: 0 1 0 0;
+}
+
+#branch-info-controls {
+    height: 1;
+}
+
+#branch-info-controls Button {
+    height: 1;
+    min-width: 3;
+    border: none;
+    padding: 0 1;
+}
 """
