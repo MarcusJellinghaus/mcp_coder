@@ -184,7 +184,7 @@ async def test_busy_indicator_thinking_after_tool_result(
             }
         )
         indicator = app.query_one(BusyIndicator)
-        assert "Thinking about workspace > read_file..." in indicator.label_text
+        assert "Thinking about mcp-workspace > read_file..." in indicator.label_text
 
 
 async def test_banner_renders_mcp_coder_utils_version(
