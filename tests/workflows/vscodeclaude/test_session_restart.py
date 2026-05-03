@@ -274,15 +274,10 @@ class TestSessionRestart:
             lambda: sessions_file,
         )
 
-        # Mock vscode not running
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
-            lambda session: False,
-        )
-
         # Create session with non-existent folder
+        folder = str(tmp_path / "nonexistent")
         session = {
-            "folder": str(tmp_path / "nonexistent"),
+            "folder": folder,
             "repo": "owner/repo",
             "issue_number": 123,
             "status": "status-07:code-review",
@@ -293,7 +288,7 @@ class TestSessionRestart:
         store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
         sessions_file.write_text(json.dumps(store))
 
-        restarted = restart_closed_sessions()
+        restarted = restart_closed_sessions(active_set={folder: False})
 
         # No sessions restarted
         assert restarted == []
@@ -310,12 +305,6 @@ class TestSessionRestart:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
-        )
-
-        # Mock vscode not running
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
-            lambda session: False,
         )
 
         # Mock _get_configured_repos to return a different repo (not owner/unconfigured)
@@ -341,7 +330,7 @@ class TestSessionRestart:
         store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
         sessions_file.write_text(json.dumps(store))
 
-        restarted = restart_closed_sessions()
+        restarted = restart_closed_sessions(active_set={str(working_folder): False})
 
         # No sessions restarted because repo not in config
         assert restarted == []
@@ -358,12 +347,6 @@ class TestSessionRestart:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
-        )
-
-        # Mock vscode not running - patch at orchestrator since that's where it's imported
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
-            lambda session: False,
         )
 
         # Mock _get_configured_repos to return the test repo
@@ -427,7 +410,10 @@ class TestSessionRestart:
             "owner/repo": {123: cached_issue}
         }
 
-        restarted = restart_closed_sessions(cached_issues_by_repo=cached_issues)
+        restarted = restart_closed_sessions(
+            active_set={str(working_folder): False},
+            cached_issues_by_repo=cached_issues,
+        )
 
         assert len(restarted) == 1
         assert restarted[0]["vscode_pid"] == new_pid
@@ -446,14 +432,9 @@ class TestSessionRestart:
             lambda: sessions_file,
         )
 
-        # Mock vscode running
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
-            lambda session: True,
-        )
-
+        folder = str(tmp_path / "existing")
         session = {
-            "folder": str(tmp_path / "existing"),
+            "folder": folder,
             "repo": "owner/repo",
             "issue_number": 123,
             "status": "status-07:code-review",
@@ -464,7 +445,7 @@ class TestSessionRestart:
         store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
         sessions_file.write_text(json.dumps(store))
 
-        restarted = restart_closed_sessions()
+        restarted = restart_closed_sessions(active_set={folder: True})
 
         # No sessions restarted since vscode is running
         assert restarted == []
@@ -514,10 +495,6 @@ class TestSessionRestart:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
-            lambda session: False,
-        )
-        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
             lambda: {"owner/repo"},
         )
@@ -554,7 +531,10 @@ class TestSessionRestart:
             "owner/repo": {123: cached_issue}
         }
 
-        result = restart_closed_sessions(cached_issues_by_repo=cached_issues)
+        result = restart_closed_sessions(
+            active_set={str(working_folder): False},
+            cached_issues_by_repo=cached_issues,
+        )
 
         assert len(result) == 0  # Not restarted
 
@@ -566,10 +546,6 @@ class TestSessionRestart:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
-            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
@@ -626,7 +602,10 @@ class TestSessionRestart:
             "owner/repo": {123: cached_issue}
         }
 
-        restart_closed_sessions(cached_issues_by_repo=cached_issues)
+        restart_closed_sessions(
+            active_set={str(working_folder): False},
+            cached_issues_by_repo=cached_issues,
+        )
 
         # Verify status was updated
         assert len(status_updates) == 1
@@ -641,10 +620,6 @@ class TestSessionRestart:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
-            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
@@ -685,7 +660,10 @@ class TestSessionRestart:
             "owner/repo": {123: cached_issue}
         }
 
-        result = restart_closed_sessions(cached_issues_by_repo=cached_issues)
+        result = restart_closed_sessions(
+            active_set={str(working_folder): False},
+            cached_issues_by_repo=cached_issues,
+        )
 
         # Session should NOT be restarted because issue is closed
         assert len(result) == 0
@@ -698,10 +676,6 @@ class TestSessionRestart:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
-            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
@@ -743,7 +717,10 @@ class TestSessionRestart:
             "owner/repo": {456: cached_issue}
         }
 
-        result = restart_closed_sessions(cached_issues_by_repo=cached_issues)
+        result = restart_closed_sessions(
+            active_set={str(working_folder): False},
+            cached_issues_by_repo=cached_issues,
+        )
 
         # Session should NOT be restarted - bot stage is not eligible
         assert len(result) == 0
@@ -756,10 +733,6 @@ class TestSessionRestart:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
-            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
@@ -801,7 +774,10 @@ class TestSessionRestart:
             "owner/repo": {789: cached_issue}
         }
 
-        result = restart_closed_sessions(cached_issues_by_repo=cached_issues)
+        result = restart_closed_sessions(
+            active_set={str(working_folder): False},
+            cached_issues_by_repo=cached_issues,
+        )
 
         # Session should NOT be restarted - pr-created is not eligible
         assert len(result) == 0
@@ -814,10 +790,6 @@ class TestSessionRestart:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
-            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
@@ -874,7 +846,10 @@ class TestSessionRestart:
             "owner/repo": {101: cached_issue}
         }
 
-        result = restart_closed_sessions(cached_issues_by_repo=cached_issues)
+        result = restart_closed_sessions(
+            active_set={str(working_folder): False},
+            cached_issues_by_repo=cached_issues,
+        )
 
         # Session SHOULD be restarted - eligible status, open issue
         assert len(result) == 1
@@ -888,10 +863,6 @@ class TestSessionRestart:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
-            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
@@ -956,7 +927,10 @@ class TestSessionRestart:
             "owner/repo": {202: cached_issue}
         }
 
-        result = restart_closed_sessions(cached_issues_by_repo=cached_issues)
+        result = restart_closed_sessions(
+            active_set={str(working_folder): False},
+            cached_issues_by_repo=cached_issues,
+        )
 
         # Session SHOULD be restarted - both statuses are eligible
         assert len(result) == 1

@@ -26,7 +26,6 @@ from .issues import (
     is_status_eligible_for_session,
 )
 from .sessions import (
-    is_session_active,
     load_sessions,
     remove_session,
     warn_orphan_folders,
@@ -38,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_stale_sessions(
+    active_set: dict[str, bool],
     cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
 ) -> list[tuple[VSCodeClaudeSession, str, str]]:
     """Get stale sessions with git status.
@@ -51,6 +51,8 @@ def get_stale_sessions(
     - Ineligible (bot statuses or pr-created - no commands)
 
     Args:
+        active_set: Snapshot mapping session folder -> is_active. Sessions
+            recorded as active (or removed mid-flow) are skipped.
         cached_issues_by_repo: Optional cache of issues for state/blocked/eligibility detection
 
     Returns:
@@ -79,7 +81,7 @@ def get_stale_sessions(
         # If both the folder and workspace file are gone, the VSCode process is a
         # zombie (launched for this session but kept running after its files were
         # deleted). Don't let a zombie process block cleanup.
-        if is_session_active(session):
+        if active_set.get(session["folder"], False):
             continue
 
         # Skip sessions for unconfigured repos
@@ -278,6 +280,7 @@ def delete_session_folder(
 
 def cleanup_stale_sessions(
     workspace_base: str,
+    active_set: dict[str, bool],
     dry_run: bool = True,
     cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
 ) -> dict[str, list[str]]:
@@ -285,6 +288,7 @@ def cleanup_stale_sessions(
 
     Args:
         workspace_base: Path to workspace directory
+        active_set: Snapshot mapping session folder -> is_active.
         dry_run: If True, only report what would be deleted
         cached_issues_by_repo: Optional cache for blocked detection
 
@@ -335,7 +339,9 @@ def cleanup_stale_sessions(
                     to_be_deleted=to_be_deleted_set,
                 )
 
-    stale_sessions = get_stale_sessions(cached_issues_by_repo=cached_issues_by_repo)
+    stale_sessions = get_stale_sessions(
+        active_set=active_set, cached_issues_by_repo=cached_issues_by_repo
+    )
 
     for session, git_status, reason in stale_sessions:
         folder = session["folder"]

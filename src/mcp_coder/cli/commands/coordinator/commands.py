@@ -29,6 +29,7 @@ from ....utils.user_config import (
 from ....workflows.vscodeclaude import (
     VSCodeClaudeConfig,
     VSCodeClaudeSession,
+    build_active_session_set,
     cleanup_stale_sessions,
     get_active_session_count,
     load_repo_vscodeclaude_config,
@@ -515,6 +516,10 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         store = load_sessions()
         sessions_list = store["sessions"]
 
+        # Build active-session snapshot once at command entry. Used by cleanup
+        # and restart so each session is checked exactly once per command.
+        active_set = build_active_session_set(sessions_list)
+
         # Build cached issues for all repos (used for staleness checks)
         # Pass sessions so closed session issues are included (mirrors status command)
         cached_issues_by_repo, _ = _build_cached_issues_by_repo(
@@ -527,18 +532,22 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         if args.cleanup:
             cleanup_stale_sessions(
                 workspace_base=vscodeclaude_config["workspace_base"],
+                active_set=active_set,
                 dry_run=False,
                 cached_issues_by_repo=cached_issues_by_repo,
             )
         else:
             cleanup_stale_sessions(
                 workspace_base=vscodeclaude_config["workspace_base"],
+                active_set=active_set,
                 dry_run=True,
                 cached_issues_by_repo=cached_issues_by_repo,
             )
 
         # Step 2: Restart closed sessions (pass cache for staleness checks)
-        restarted = restart_closed_sessions(cached_issues_by_repo=cached_issues_by_repo)
+        restarted = restart_closed_sessions(
+            active_set=active_set, cached_issues_by_repo=cached_issues_by_repo
+        )
         for session in restarted:
             repo_short = session["repo"].split("/")[-1]
             logger.log(

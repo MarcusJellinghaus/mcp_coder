@@ -11,6 +11,7 @@ from mcp_coder.workflows.vscodeclaude.sessions import (
     VSCODE_PROCESS_NAMES,
     _get_vscode_processes,
     add_session,
+    build_active_session_set,
     check_vscode_running,
     clear_vscode_process_cache,
     get_active_session_count,
@@ -276,6 +277,95 @@ class TestSessionManagement:
 
         count = get_active_session_count()
         assert count == 1  # Only session_a: PID 1111 running + folder exists
+
+    def test_build_active_session_set(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Builds snapshot dict, calls is_session_active once per session, refreshes stale PID."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        # Track calls to is_session_active
+        active_calls: list[str] = []
+
+        def mock_is_session_active(session: VSCodeClaudeSession) -> bool:
+            active_calls.append(session["folder"])
+            # session_a (folder_a) is active, session_b is inactive
+            return session["folder"] == str(tmp_path / "session_a")
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.is_session_active",
+            mock_is_session_active,
+        )
+
+        # Track calls to is_vscode_open_for_folder for active sessions
+        # Return a different PID than stored to trigger update_session_pid
+        def mock_is_vscode_open_for_folder(folder: str) -> tuple[bool, int | None]:
+            return True, 5555  # Different from stored 1111
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_open_for_folder",
+            mock_is_vscode_open_for_folder,
+        )
+
+        # Track update_session_pid calls
+        pid_updates: list[tuple[str, int]] = []
+
+        def mock_update_session_pid(folder: str, pid: int) -> None:
+            pid_updates.append((folder, pid))
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.update_session_pid",
+            mock_update_session_pid,
+        )
+
+        # Persist a sessions store so update_session_pid would work if called
+        store = {
+            "sessions": [
+                {
+                    "folder": str(tmp_path / "session_a"),
+                    "repo": "o/r",
+                    "issue_number": 1,
+                    "status": "s",
+                    "vscode_pid": 1111,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                },
+                {
+                    "folder": str(tmp_path / "session_b"),
+                    "repo": "o/r",
+                    "issue_number": 2,
+                    "status": "s",
+                    "vscode_pid": 2222,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                },
+            ],
+            "last_updated": "2024-01-01T00:00:00Z",
+        }
+        sessions_file.write_text(json.dumps(store))
+
+        sessions: list[VSCodeClaudeSession] = list(store["sessions"])  # type: ignore[arg-type]
+
+        result = build_active_session_set(sessions)
+
+        # Snapshot has one entry per session, keyed by folder
+        assert set(result.keys()) == {
+            str(tmp_path / "session_a"),
+            str(tmp_path / "session_b"),
+        }
+        assert result[str(tmp_path / "session_a")] is True
+        assert result[str(tmp_path / "session_b")] is False
+
+        # is_session_active called exactly once per session
+        assert len(active_calls) == 2
+
+        # update_session_pid called only for the active session whose stored PID
+        # differs from the detected PID
+        assert pid_updates == [(str(tmp_path / "session_a"), 5555)]
 
     def test_update_session_pid(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

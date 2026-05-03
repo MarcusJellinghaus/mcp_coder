@@ -282,13 +282,12 @@ class TestRestartClosedSessions:
             "updated_at": "2025-12-31T08:00:00Z",
         }
 
+        active_set = {s["folder"]: False for s in sessions}
+
         with (
             patch(
                 "mcp_coder.workflows.vscodeclaude.session_restart.load_sessions"
             ) as mock_load,
-            patch(
-                "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active"
-            ) as mock_active,
             patch(
                 "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos"
             ) as mock_repos,
@@ -298,7 +297,6 @@ class TestRestartClosedSessions:
         ):
             # Setup mocks
             mock_load.return_value = {"sessions": sessions}
-            mock_active.return_value = False  # VSCode not running
             mock_repos.return_value = {"owner/repo"}
 
             # Mock _build_cached_issues_by_repo to return cache with both issues
@@ -307,7 +305,7 @@ class TestRestartClosedSessions:
             }
 
             # Call restart_closed_sessions without providing cache
-            restart_closed_sessions()
+            restart_closed_sessions(active_set=active_set)
 
             # Verify _build_cached_issues_by_repo was called with sessions
             mock_build_cache.assert_called_once_with(sessions)
@@ -356,13 +354,12 @@ class TestRestartClosedSessions:
         }
         provided_cache = {"owner/repo": {414: issue_414}}
 
+        active_set = {s["folder"]: False for s in sessions}
+
         with (
             patch(
                 "mcp_coder.workflows.vscodeclaude.session_restart.load_sessions"
             ) as mock_load,
-            patch(
-                "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active"
-            ) as mock_active,
             patch(
                 "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos"
             ) as mock_repos,
@@ -372,11 +369,12 @@ class TestRestartClosedSessions:
         ):
             # Setup mocks
             mock_load.return_value = {"sessions": sessions}
-            mock_active.return_value = False
             mock_repos.return_value = {"owner/repo"}
 
             # Call with provided cache
-            restart_closed_sessions(cached_issues_by_repo=provided_cache)
+            restart_closed_sessions(
+                active_set=active_set, cached_issues_by_repo=provided_cache
+            )
 
             # Verify _build_cached_issues_by_repo was NOT called
             mock_build_cache.assert_not_called()
@@ -432,13 +430,12 @@ class TestRestartClosedSessions:
             "updated_at": "2025-12-31T08:00:00Z",
         }
 
+        active_set = {s["folder"]: False for s in sessions}
+
         with (
             patch(
                 "mcp_coder.workflows.vscodeclaude.session_restart.load_sessions"
             ) as mock_load,
-            patch(
-                "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active"
-            ) as mock_active,
             patch(
                 "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos"
             ) as mock_repos,
@@ -452,13 +449,12 @@ class TestRestartClosedSessions:
         ):
             # Setup mocks
             mock_load.return_value = {"sessions": sessions}
-            mock_active.return_value = False
             mock_repos.return_value = {"owner/repo"}
             mock_build_cache.return_value = {"owner/repo": {414: issue_414}}
             mock_exists.return_value = True  # Folder exists
 
             # Call restart
-            result = restart_closed_sessions()
+            result = restart_closed_sessions(active_set=active_set)
 
             # Verify closed issue was skipped
             assert "Skipping closed issue #414" in caplog.text
@@ -495,7 +491,7 @@ class TestRestartClosedSessions:
             mock_load.return_value = {"sessions": []}
 
             # Call restart
-            result = restart_closed_sessions()
+            result = restart_closed_sessions(active_set={})
 
             # Verify no cache built
             mock_build_cache.assert_not_called()

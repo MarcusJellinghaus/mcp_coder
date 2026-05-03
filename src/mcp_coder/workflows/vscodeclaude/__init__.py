@@ -287,6 +287,7 @@ from .session_restart import (
 # Session management
 from .sessions import (
     add_session,
+    build_active_session_set,
     check_vscode_running,
     clear_vscode_process_cache,
     clear_vscode_window_cache,
@@ -360,6 +361,7 @@ __all__ = [
     "add_session",
     "remove_session",
     "get_active_session_count",
+    "build_active_session_set",
     "update_session_pid",
     "warn_orphan_folders",
     # Configuration

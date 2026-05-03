@@ -614,6 +614,29 @@ def get_active_session_count() -> int:
     return count
 
 
+def build_active_session_set(
+    sessions: list[VSCodeClaudeSession],
+) -> dict[str, bool]:
+    """Build active-set snapshot.
+
+    Side effects: clears VSCode window/process caches, may call
+    update_session_pid for active sessions whose stored PID differs
+    from the currently-detected PID.
+    """
+    clear_vscode_window_cache()
+    clear_vscode_process_cache()
+    logger.info("Checking %d session(s)...", len(sessions))
+    active_set: dict[str, bool] = {}
+    for session in sessions:
+        is_active = is_session_active(session)
+        active_set[session["folder"]] = is_active
+        if is_active:
+            _, found_pid = is_vscode_open_for_folder(session["folder"])
+            if found_pid is not None and found_pid != session.get("vscode_pid"):
+                update_session_pid(session["folder"], found_pid)
+    return active_set
+
+
 def update_session_pid(folder: str, pid: int) -> None:
     """Update VSCode PID for existing session.
 

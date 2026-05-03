@@ -49,10 +49,6 @@ class TestBranchHandlingIntegration:
 
         # Phase 2: Issue status changes to status-04 with linked branch
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
-            lambda session: False,
-        )
-        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
             lambda: {"owner/repo"},
         )
@@ -145,7 +141,10 @@ class TestBranchHandlingIntegration:
         }
 
         # Actually call restart_closed_sessions to trigger the restart flow
-        result = restart_closed_sessions(cached_issues_by_repo=cached_issues)
+        result = restart_closed_sessions(
+            active_set={str(working_folder): False},
+            cached_issues_by_repo=cached_issues,
+        )
 
         # Verify full lifecycle
         assert len(result) == 1
@@ -253,10 +252,6 @@ class TestBranchHandlingIntegration:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
-            lambda session: False,
-        )
-        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
             lambda: {"owner/repo"},
         )
@@ -316,7 +311,10 @@ class TestBranchHandlingIntegration:
             "owner/repo": {300: cached_issue}
         }
 
-        result = restart_closed_sessions(cached_issues_by_repo=cached_issues)
+        result = restart_closed_sessions(
+            active_set={str(working_folder): False},
+            cached_issues_by_repo=cached_issues,
+        )
 
         # Should NOT restart due to dirty repo
         assert len(result) == 0
@@ -399,10 +397,6 @@ class TestBranchHandlingIntegration:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
-            lambda session: False,
-        )
-        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
             lambda: {"owner/repo"},
         )
@@ -463,7 +457,10 @@ class TestBranchHandlingIntegration:
         }
 
         with caplog.at_level(logging.WARNING):
-            result = restart_closed_sessions(cached_issues_by_repo=cached_issues)
+            result = restart_closed_sessions(
+                active_set={str(working_folder): False},
+                cached_issues_by_repo=cached_issues,
+            )
 
         # Should skip - intervention flag doesn't bypass branch requirements
         assert len(result) == 0

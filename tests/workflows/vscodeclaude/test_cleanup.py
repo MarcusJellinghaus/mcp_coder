@@ -30,12 +30,6 @@ class TestCleanup:
             lambda: sessions_file,
         )
 
-        # Mock VSCode not running - patch at cleanup where it's imported
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
-            lambda session: False,
-        )
-
         # Mock session is stale - patch at cleanup where it's imported
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.is_session_stale",
@@ -69,7 +63,7 @@ class TestCleanup:
         store = {"sessions": [session], "last_updated": "2024-01-01T00:00:00Z"}
         sessions_file.write_text(json.dumps(store))
 
-        result = get_stale_sessions()
+        result = get_stale_sessions(active_set={str(stale_folder): False})
 
         assert len(result) == 1
         assert result[0][0]["folder"] == str(stale_folder)
@@ -84,12 +78,6 @@ class TestCleanup:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
-        )
-
-        # Mock VSCode not running
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
-            lambda session: False,
         )
 
         # Mock _get_configured_repos to return a DIFFERENT repo
@@ -113,7 +101,7 @@ class TestCleanup:
         store = {"sessions": [session], "last_updated": "2024-01-01T00:00:00Z"}
         sessions_file.write_text(json.dumps(store))
 
-        result = get_stale_sessions()
+        result = get_stale_sessions(active_set={str(stale_folder): False})
 
         # Session should be skipped (not checked for staleness)
         assert len(result) == 0
@@ -129,14 +117,9 @@ class TestCleanup:
             lambda: sessions_file,
         )
 
-        # Mock VSCode running - patch at cleanup where it's imported
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
-            lambda session: True,
-        )
-
+        folder = tmp_path / "folder"
         session = {
-            "folder": str(tmp_path / "folder"),
+            "folder": str(folder),
             "repo": "owner/repo",
             "issue_number": 123,
             "status": "status-07:code-review",
@@ -147,7 +130,7 @@ class TestCleanup:
         store = {"sessions": [session], "last_updated": "2024-01-01T00:00:00Z"}
         sessions_file.write_text(json.dumps(store))
 
-        result = get_stale_sessions()
+        result = get_stale_sessions(active_set={str(folder): True})
 
         assert len(result) == 0
 
@@ -170,12 +153,14 @@ class TestCleanup:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [
+            lambda active_set, cached_issues_by_repo=None: [
                 (stale_session, "Clean", "closed")
             ],  # Clean status
         )
 
-        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=True)
+        result = cleanup_stale_sessions(
+            workspace_base=str(tmp_path), active_set={}, dry_run=True
+        )
 
         # Folder should still exist
         assert (tmp_path / "stale_folder").exists()
@@ -200,12 +185,14 @@ class TestCleanup:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [
+            lambda active_set, cached_issues_by_repo=None: [
                 (dirty_session, "Dirty", "closed")
             ],  # Dirty status
         )
 
-        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=False)
+        result = cleanup_stale_sessions(
+            workspace_base=str(tmp_path), active_set={}, dry_run=False
+        )
 
         # Folder should still exist (dirty)
         assert (tmp_path / "dirty_folder").exists()
@@ -229,7 +216,7 @@ class TestCleanup:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [
+            lambda active_set, cached_issues_by_repo=None: [
                 (clean_session, "Clean", "closed")
             ],  # Clean status
         )
@@ -238,7 +225,9 @@ class TestCleanup:
             lambda s, workspace_base="", was_clean=False: True,
         )
 
-        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=False)
+        result = cleanup_stale_sessions(
+            workspace_base=str(tmp_path), active_set={}, dry_run=False
+        )
 
         assert str(tmp_path / "clean_folder") in result.get("deleted", [])
 
@@ -349,10 +338,12 @@ class TestCleanup:
         """Reports when no stale sessions."""
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [],
+            lambda active_set, cached_issues_by_repo=None: [],
         )
 
-        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=True)
+        result = cleanup_stale_sessions(
+            workspace_base=str(tmp_path), active_set={}, dry_run=True
+        )
 
         assert result == {"deleted": [], "skipped": []}
         captured = capsys.readouterr()
@@ -376,14 +367,18 @@ class TestCleanup:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [(missing_session, "Missing", "closed")],
+            lambda active_set, cached_issues_by_repo=None: [
+                (missing_session, "Missing", "closed")
+            ],
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.remove_session",
             lambda f: True,
         )
 
-        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=False)
+        result = cleanup_stale_sessions(
+            workspace_base=str(tmp_path), active_set={}, dry_run=False
+        )
 
         assert str(tmp_path / "missing_folder") in result.get("deleted", [])
 
@@ -410,10 +405,14 @@ class TestCleanup:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [(no_git_session, "No Git", "closed")],
+            lambda active_set, cached_issues_by_repo=None: [
+                (no_git_session, "No Git", "closed")
+            ],
         )
 
-        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=False)
+        result = cleanup_stale_sessions(
+            workspace_base=str(tmp_path), active_set={}, dry_run=False
+        )
 
         # Folder should still exist
         assert (tmp_path / "no_git_folder").exists()
@@ -443,10 +442,14 @@ class TestCleanup:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [(error_session, "Error", "blocked")],
+            lambda active_set, cached_issues_by_repo=None: [
+                (error_session, "Error", "blocked")
+            ],
         )
 
-        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=False)
+        result = cleanup_stale_sessions(
+            workspace_base=str(tmp_path), active_set={}, dry_run=False
+        )
 
         # Folder should still exist
         assert (tmp_path / "error_folder").exists()
@@ -471,14 +474,18 @@ class TestCleanup:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [(no_git_session, "No Git", "closed")],
+            lambda active_set, cached_issues_by_repo=None: [
+                (no_git_session, "No Git", "closed")
+            ],
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.delete_session_folder",
             lambda s, workspace_base="", was_clean=False: True,
         )
 
-        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=False)
+        result = cleanup_stale_sessions(
+            workspace_base=str(tmp_path), active_set={}, dry_run=False
+        )
 
         assert str(tmp_path / "no_git_folder") in result.get("deleted", [])
         assert str(tmp_path / "no_git_folder") not in result.get("skipped", [])
@@ -504,10 +511,14 @@ class TestCleanup:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [(no_git_session, "No Git", "closed")],
+            lambda active_set, cached_issues_by_repo=None: [
+                (no_git_session, "No Git", "closed")
+            ],
         )
 
-        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=True)
+        result = cleanup_stale_sessions(
+            workspace_base=str(tmp_path), active_set={}, dry_run=True
+        )
 
         assert result["deleted"] == []
         assert "Add --cleanup to delete" in capsys.readouterr().out
@@ -530,14 +541,18 @@ class TestCleanup:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [(error_session, "Error", "closed")],
+            lambda active_set, cached_issues_by_repo=None: [
+                (error_session, "Error", "closed")
+            ],
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.delete_session_folder",
             lambda s, workspace_base="", was_clean=False: True,
         )
 
-        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=False)
+        result = cleanup_stale_sessions(
+            workspace_base=str(tmp_path), active_set={}, dry_run=False
+        )
 
         assert str(tmp_path / "error_folder") in result.get("deleted", [])
         assert str(tmp_path / "error_folder") not in result.get("skipped", [])
@@ -563,12 +578,14 @@ class TestCleanup:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [
+            lambda active_set, cached_issues_by_repo=None: [
                 (error_session, "Error", "test-reason")
             ],
         )
 
-        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=True)
+        result = cleanup_stale_sessions(
+            workspace_base=str(tmp_path), active_set={}, dry_run=True
+        )
 
         assert result["deleted"] == []
         assert "Add --cleanup to delete" in capsys.readouterr().out
@@ -621,12 +638,9 @@ class TestGetStaleSessions:
         }
 
         # Create folder
-        (tmp_path / "repo_123").mkdir()
+        folder_path = tmp_path / "repo_123"
+        folder_path.mkdir()
 
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
-            lambda session: False,
-        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
             lambda: {"owner/repo"},
@@ -641,7 +655,10 @@ class TestGetStaleSessions:
             lambda s: False,
         )
 
-        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+        result = get_stale_sessions(
+            active_set={str(folder_path): False},
+            cached_issues_by_repo=mock_cached_issues,
+        )
 
         assert len(result) == 1
         session, git_status, _ = result[0]
@@ -691,12 +708,9 @@ class TestGetStaleSessions:
             "owner/repo": {456: mock_issue}
         }
 
-        (tmp_path / "repo_456").mkdir()
+        folder_path = tmp_path / "repo_456"
+        folder_path.mkdir()
 
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
-            lambda session: False,
-        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
             lambda: {"owner/repo"},
@@ -710,7 +724,10 @@ class TestGetStaleSessions:
             lambda s: False,
         )
 
-        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+        result = get_stale_sessions(
+            active_set={str(folder_path): False},
+            cached_issues_by_repo=mock_cached_issues,
+        )
 
         assert len(result) == 1
 
@@ -757,12 +774,9 @@ class TestGetStaleSessions:
             "owner/repo": {789: mock_issue}
         }
 
-        (tmp_path / "repo_789").mkdir()
+        folder_path = tmp_path / "repo_789"
+        folder_path.mkdir()
 
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
-            lambda session: False,
-        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
             lambda: {"owner/repo"},
@@ -776,7 +790,10 @@ class TestGetStaleSessions:
             lambda s: False,
         )
 
-        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+        result = get_stale_sessions(
+            active_set={str(folder_path): False},
+            cached_issues_by_repo=mock_cached_issues,
+        )
 
         assert len(result) == 1
 
@@ -825,18 +842,18 @@ class TestGetStaleSessions:
 
         # Create the folder so session artifacts exist — VSCode running WITH artifacts
         # is a healthy active session and should be skipped by cleanup.
-        (tmp_path / "repo_123").mkdir()
+        folder_path = tmp_path / "repo_123"
+        folder_path.mkdir()
 
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
-            lambda session: True,
-        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
             lambda: {"owner/repo"},
         )
 
-        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+        result = get_stale_sessions(
+            active_set={str(folder_path): True},
+            cached_issues_by_repo=mock_cached_issues,
+        )
 
         assert len(result) == 0
 
@@ -885,15 +902,12 @@ class TestGetStaleSessions:
         }
 
         # Create folder
-        (tmp_path / "repo_closed").mkdir()
+        folder_path = tmp_path / "repo_closed"
+        folder_path.mkdir()
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_github_username",
             lambda: "testuser",
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
-            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
@@ -910,7 +924,10 @@ class TestGetStaleSessions:
             lambda s: False,
         )
 
-        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+        result = get_stale_sessions(
+            active_set={str(folder_path): False},
+            cached_issues_by_repo=mock_cached_issues,
+        )
 
         assert len(result) == 1
         session, git_status, _ = result[0]
@@ -962,12 +979,9 @@ class TestGetStaleSessions:
         }
 
         # Create folder
-        (tmp_path / "repo_bot_pickup").mkdir()
+        folder_path = tmp_path / "repo_bot_pickup"
+        folder_path.mkdir()
 
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
-            lambda session: False,
-        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
             lambda: {"owner/repo"},
@@ -983,7 +997,10 @@ class TestGetStaleSessions:
             lambda s: False,
         )
 
-        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+        result = get_stale_sessions(
+            active_set={str(folder_path): False},
+            cached_issues_by_repo=mock_cached_issues,
+        )
 
         assert len(result) == 1
         session, git_status, _ = result[0]
@@ -1035,12 +1052,9 @@ class TestGetStaleSessions:
         }
 
         # Create folder
-        (tmp_path / "repo_bot_busy").mkdir()
+        folder_path = tmp_path / "repo_bot_busy"
+        folder_path.mkdir()
 
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
-            lambda session: False,
-        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
             lambda: {"owner/repo"},
@@ -1056,7 +1070,10 @@ class TestGetStaleSessions:
             lambda s: False,
         )
 
-        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+        result = get_stale_sessions(
+            active_set={str(folder_path): False},
+            cached_issues_by_repo=mock_cached_issues,
+        )
 
         assert len(result) == 1
         session, git_status, _ = result[0]
@@ -1108,12 +1125,9 @@ class TestGetStaleSessions:
         }
 
         # Create folder
-        (tmp_path / "repo_pr_created").mkdir()
+        folder_path = tmp_path / "repo_pr_created"
+        folder_path.mkdir()
 
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
-            lambda session: False,
-        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
             lambda: {"owner/repo"},
@@ -1129,7 +1143,10 @@ class TestGetStaleSessions:
             lambda s: False,
         )
 
-        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+        result = get_stale_sessions(
+            active_set={str(folder_path): False},
+            cached_issues_by_repo=mock_cached_issues,
+        )
 
         assert len(result) == 1
         session, git_status, _ = result[0]
@@ -1181,7 +1198,8 @@ class TestGetStaleSessions:
         }
 
         # Create folder
-        (tmp_path / "repo_closed").mkdir()
+        folder_path = tmp_path / "repo_closed"
+        folder_path.mkdir()
 
         # Track if is_session_stale is called
         stale_called: list[bool] = []
@@ -1193,10 +1211,6 @@ class TestGetStaleSessions:
             stale_called.append(True)
             return False
 
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
-            lambda session: False,
-        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
             lambda: {"owner/repo"},
@@ -1210,7 +1224,10 @@ class TestGetStaleSessions:
             mock_is_session_stale,
         )
 
-        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+        result = get_stale_sessions(
+            active_set={str(folder_path): False},
+            cached_issues_by_repo=mock_cached_issues,
+        )
 
         # Session should be included (closed issues are stale)
         assert len(result) == 1
@@ -1250,13 +1267,9 @@ class TestGetStaleSessions:
         }
         sessions_file.write_text(json.dumps(mock_sessions))
 
-        # VSCode PID is "running" but artifacts are gone — is_session_active returns False
-        # because session_has_artifacts() returns False (folder not created above).
-        # No need to patch is_session_active: the real implementation handles this correctly.
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.check_vscode_running",
-            lambda pid: True,  # PID alive (zombie)
-        )
+        # Zombie scenario: artifacts are gone, so the snapshot reports the
+        # session as inactive even if a VSCode process is still alive.
+        zombie_folder = str(tmp_path / "repo_zombie")
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
             lambda: {"owner/repo"},
@@ -1270,7 +1283,7 @@ class TestGetStaleSessions:
             lambda path: "Missing",
         )
 
-        result = get_stale_sessions()
+        result = get_stale_sessions(active_set={zombie_folder: False})
 
         # Zombie session must appear in stale list despite VSCode PID being alive
         assert len(result) == 1
@@ -1323,15 +1336,12 @@ class TestGetStaleSessions:
         }
 
         # Create folder
-        (tmp_path / "repo_eligible").mkdir()
+        folder_path = tmp_path / "repo_eligible"
+        folder_path.mkdir()
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_github_username",
             lambda: "testuser",
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
-            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
@@ -1347,7 +1357,10 @@ class TestGetStaleSessions:
             lambda s, cached_issues=None: False,
         )
 
-        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+        result = get_stale_sessions(
+            active_set={str(folder_path): False},
+            cached_issues_by_repo=mock_cached_issues,
+        )
 
         # Session should NOT be included - it's eligible and should restart
         assert len(result) == 0
@@ -1399,12 +1412,9 @@ class TestGetStaleSessions:
             "owner/repo": {101: mock_issue}
         }
 
-        (tmp_path / "repo_closed").mkdir()
+        folder_path = tmp_path / "repo_closed"
+        folder_path.mkdir()
 
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
-            lambda session: False,
-        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
             lambda: {"owner/repo"},
@@ -1414,7 +1424,10 @@ class TestGetStaleSessions:
             lambda path: "Clean",
         )
 
-        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+        result = get_stale_sessions(
+            active_set={str(folder_path): False},
+            cached_issues_by_repo=mock_cached_issues,
+        )
 
         assert len(result) == 1
         _, _, reason = result[0]
@@ -1463,15 +1476,12 @@ class TestGetStaleSessions:
             "owner/repo": {102: mock_issue}
         }
 
-        (tmp_path / "repo_blocked").mkdir()
+        folder_path = tmp_path / "repo_blocked"
+        folder_path.mkdir()
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_github_username",
             lambda: "testuser",
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
-            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
@@ -1486,7 +1496,10 @@ class TestGetStaleSessions:
             lambda s, cached_issues=None: False,
         )
 
-        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+        result = get_stale_sessions(
+            active_set={str(folder_path): False},
+            cached_issues_by_repo=mock_cached_issues,
+        )
 
         assert len(result) == 1
         _, _, reason = result[0]
@@ -1535,15 +1548,12 @@ class TestGetStaleSessions:
             "owner/repo": {103: mock_issue}
         }
 
-        (tmp_path / "repo_bot").mkdir()
+        folder_path = tmp_path / "repo_bot"
+        folder_path.mkdir()
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_github_username",
             lambda: "testuser",
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
-            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
@@ -1558,7 +1568,10 @@ class TestGetStaleSessions:
             lambda s, cached_issues=None: False,
         )
 
-        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+        result = get_stale_sessions(
+            active_set={str(folder_path): False},
+            cached_issues_by_repo=mock_cached_issues,
+        )
 
         assert len(result) == 1
         _, _, reason = result[0]
@@ -1608,15 +1621,12 @@ class TestGetStaleSessions:
             "owner/repo": {104: mock_issue}
         }
 
-        (tmp_path / "repo_stale").mkdir()
+        folder_path = tmp_path / "repo_stale"
+        folder_path.mkdir()
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_github_username",
             lambda: "testuser",
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
-            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
@@ -1628,7 +1638,10 @@ class TestGetStaleSessions:
         )
         # Do NOT mock is_session_stale — let it compute from real session/cache data
 
-        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+        result = get_stale_sessions(
+            active_set={str(folder_path): False},
+            cached_issues_by_repo=mock_cached_issues,
+        )
 
         assert len(result) == 1
         _, _, reason = result[0]
@@ -1660,12 +1673,9 @@ class TestGetStaleSessions:
         }
         sessions_file.write_text(json.dumps(mock_sessions))
 
-        (tmp_path / "repo_stale_no_cache").mkdir()
+        folder_path = tmp_path / "repo_stale_no_cache"
+        folder_path.mkdir()
 
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
-            lambda session: False,
-        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
             lambda: {"owner/repo"},
@@ -1680,7 +1690,7 @@ class TestGetStaleSessions:
         )
 
         # No cached_issues_by_repo passed
-        result = get_stale_sessions()
+        result = get_stale_sessions(active_set={str(folder_path): False})
 
         assert len(result) == 1
         _, _, reason = result[0]
@@ -1729,15 +1739,12 @@ class TestGetStaleSessions:
             "owner/repo": {106: mock_issue}
         }
 
-        (tmp_path / "repo_closed_blocked").mkdir()
+        folder_path = tmp_path / "repo_closed_blocked"
+        folder_path.mkdir()
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_github_username",
             lambda: "testuser",
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
-            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
@@ -1748,7 +1755,10 @@ class TestGetStaleSessions:
             lambda path: "Clean",
         )
 
-        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+        result = get_stale_sessions(
+            active_set={str(folder_path): False},
+            cached_issues_by_repo=mock_cached_issues,
+        )
 
         assert len(result) == 1
         _, _, reason = result[0]
@@ -1799,7 +1809,8 @@ class TestGetStaleSessions:
         }
 
         # Create folder
-        (tmp_path / "repo_unassigned").mkdir()
+        folder_path = tmp_path / "repo_unassigned"
+        folder_path.mkdir()
 
         # Mock github username
         monkeypatch.setattr(
@@ -1807,10 +1818,6 @@ class TestGetStaleSessions:
             lambda: "testuser",
         )
 
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.is_session_active",
-            lambda session: False,
-        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
             lambda: {"owner/repo"},
@@ -1824,7 +1831,10 @@ class TestGetStaleSessions:
             lambda s, cached_issues=None: False,
         )
 
-        result = get_stale_sessions(cached_issues_by_repo=mock_cached_issues)
+        result = get_stale_sessions(
+            active_set={str(folder_path): False},
+            cached_issues_by_repo=mock_cached_issues,
+        )
 
         # Session SHOULD be included because user is no longer assigned
         assert len(result) == 1
@@ -1856,7 +1866,7 @@ class TestSoftDeleteAndRetry:
         # Mock get_stale_sessions to return nothing (we only test retry)
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [],
+            lambda active_set, cached_issues_by_repo=None: [],
         )
 
         # Mock safe_delete_folder to succeed
@@ -1865,7 +1875,9 @@ class TestSoftDeleteAndRetry:
             lambda path: DeletionResult(success=True),
         )
 
-        result = cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=False)
+        result = cleanup_stale_sessions(
+            workspace_base=str(tmp_path), active_set={}, dry_run=False
+        )
 
         # Entry should be removed from registry
         assert load_to_be_deleted(str(tmp_path)) == set()
@@ -1886,10 +1898,12 @@ class TestSoftDeleteAndRetry:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [],
+            lambda active_set, cached_issues_by_repo=None: [],
         )
 
-        cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=False)
+        cleanup_stale_sessions(
+            workspace_base=str(tmp_path), active_set={}, dry_run=False
+        )
 
         assert load_to_be_deleted(str(tmp_path)) == set()
 
@@ -1909,10 +1923,12 @@ class TestSoftDeleteAndRetry:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [],
+            lambda active_set, cached_issues_by_repo=None: [],
         )
 
-        cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=True)
+        cleanup_stale_sessions(
+            workspace_base=str(tmp_path), active_set={}, dry_run=True
+        )
 
         # Entry should still be there — not retried in dry run
         assert load_to_be_deleted(str(tmp_path)) == {"pending-session"}
@@ -2135,7 +2151,9 @@ class TestSoftDeleteAndRetry:
         # First pass: stale session with clean status, deletion fails
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [(session, "Clean", "stale")],
+            lambda active_set, cached_issues_by_repo=None: [
+                (session, "Clean", "stale")
+            ],
         )
 
         sessions_file.write_text(
@@ -2147,7 +2165,9 @@ class TestSoftDeleteAndRetry:
             )
         )
 
-        cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=False)
+        cleanup_stale_sessions(
+            workspace_base=str(tmp_path), active_set={}, dry_run=False
+        )
 
         # Entry should be in .to_be_deleted
         assert "retry-session" in load_to_be_deleted(str(tmp_path))
@@ -2155,14 +2175,16 @@ class TestSoftDeleteAndRetry:
         # Second pass: no new stale sessions, retry should pick up the entry
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
-            lambda cached_issues_by_repo=None: [],
+            lambda active_set, cached_issues_by_repo=None: [],
         )
 
         # Re-create folder to simulate it still existing
         folder.mkdir(exist_ok=True)
         (folder / "file.txt").write_text("content")
 
-        cleanup_stale_sessions(workspace_base=str(tmp_path), dry_run=False)
+        cleanup_stale_sessions(
+            workspace_base=str(tmp_path), active_set={}, dry_run=False
+        )
 
         # Entry should be removed after successful retry
         assert load_to_be_deleted(str(tmp_path)) == set()
