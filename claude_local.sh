@@ -15,19 +15,25 @@ if [ ! -f "$PROJECT_VENV/bin/activate" ]; then
     exit 1
 fi
 
-# === Step 1: Tool env discovery ===
-# Determine where mcp-coder is installed (tool env bin dir)
+# === Step 1: Project env activation ===
+# Activate .venv first so its mcp-coder install is discoverable on PATH.
+echo "Activating project environment: $PROJECT_VENV"
+# shellcheck disable=SC1091
+source "$PROJECT_VENV/bin/activate"
+if [ -z "${VIRTUAL_ENV:-}" ]; then
+    echo "ERROR: Failed to activate project virtual environment."
+    echo "Please check $PROJECT_VENV/bin/activate"
+    exit 1
+fi
+
+# === Step 2: Tool env discovery ===
+# Determine where mcp-coder is installed (tool env bin dir).
+# For local dev, the project .venv (just activated) IS the tool env.
 TOOL_VENV_BIN=""
 
-if [ -n "${VIRTUAL_ENV:-}" ] && [ "$VIRTUAL_ENV" != "$PROJECT_VENV" ]; then
-    # VIRTUAL_ENV points to an external env — assume it's the tool env
-    TOOL_VENV_BIN="$VIRTUAL_ENV/bin"
-else
-    # Fall back to PATH lookup
-    MCP_CODER_PATH="$(command -v mcp-coder 2>/dev/null || true)"
-    if [ -n "$MCP_CODER_PATH" ]; then
-        TOOL_VENV_BIN="$(cd "$(dirname "$MCP_CODER_PATH")" && pwd)"
-    fi
+MCP_CODER_PATH="$(command -v mcp-coder 2>/dev/null || true)"
+if [ -n "$MCP_CODER_PATH" ]; then
+    TOOL_VENV_BIN="$(cd "$(dirname "$MCP_CODER_PATH")" && pwd)"
 fi
 
 if [ -z "$TOOL_VENV_BIN" ]; then
@@ -40,19 +46,9 @@ if [ -z "$TOOL_VENV_BIN" ]; then
     exit 1
 fi
 
-# === Step 2: Set tool env variables ===
+# === Step 3: Set tool env variables ===
 MCP_CODER_VENV_PATH="$TOOL_VENV_BIN"
 MCP_CODER_VENV_DIR="$(cd "$MCP_CODER_VENV_PATH/.." && pwd)"
-
-# === Step 3: Project env activation ===
-echo "Activating project environment: $PROJECT_VENV"
-# shellcheck disable=SC1091
-source "$PROJECT_VENV/bin/activate"
-if [ -z "${VIRTUAL_ENV:-}" ]; then
-    echo "ERROR: Failed to activate project virtual environment."
-    echo "Please check $PROJECT_VENV/bin/activate"
-    exit 1
-fi
 
 # === Step 4: Editable install verification ===
 if ! "$PROJECT_VENV/bin/python" -c "from importlib.metadata import distribution as D; u=D('mcp-coder').read_text('direct_url.json') or ''; exit(0 if 'dir_info' in u and 'editable' in u else 1)" 2>/dev/null; then

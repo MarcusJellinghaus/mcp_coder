@@ -8,32 +8,15 @@ clear
 
 PROJECT_VENV="$PWD/.venv"
 
-# Capture any externally-activated venv before we source .venv, so we can
-# still recognise it as a separate tool env in Step 2.
-PRE_ACTIVATION_VENV="${VIRTUAL_ENV:-}"
-
-# === Step 1: Project env activation ===
-# Activate .venv first so its mcp-coder install is discoverable on PATH.
-if [ -f "$PROJECT_VENV/bin/activate" ]; then
-    echo "Activating project environment: $PROJECT_VENV"
-    # shellcheck disable=SC1091
-    source "$PROJECT_VENV/bin/activate"
-    if [ -z "${VIRTUAL_ENV:-}" ]; then
-        echo "ERROR: Failed to activate project virtual environment."
-        echo "Please check $PROJECT_VENV/bin/activate"
-        exit 1
-    fi
-fi
-
-# === Step 2: Tool env discovery ===
+# === Step 1: Tool env discovery ===
 # Determine where mcp-coder is installed (tool env bin dir)
 TOOL_VENV_BIN=""
 
-if [ -n "$PRE_ACTIVATION_VENV" ] && [ "$PRE_ACTIVATION_VENV" != "$PROJECT_VENV" ]; then
-    # An external venv was active before this script ran — assume it's the tool env
-    TOOL_VENV_BIN="$PRE_ACTIVATION_VENV/bin"
+if [ -n "${VIRTUAL_ENV:-}" ] && [ "$VIRTUAL_ENV" != "$PROJECT_VENV" ]; then
+    # VIRTUAL_ENV points to an external env — assume it's the tool env
+    TOOL_VENV_BIN="$VIRTUAL_ENV/bin"
 else
-    # Fall back to PATH lookup (.venv/bin is on PATH if we activated above)
+    # Fall back to PATH lookup
     MCP_CODER_PATH="$(command -v mcp-coder 2>/dev/null || true)"
     if [ -n "$MCP_CODER_PATH" ]; then
         TOOL_VENV_BIN="$(cd "$(dirname "$MCP_CODER_PATH")" && pwd)"
@@ -50,12 +33,22 @@ if [ -z "$TOOL_VENV_BIN" ]; then
     exit 1
 fi
 
-# === Step 3: Set tool env variables ===
+# === Step 2: Set tool env variables ===
 MCP_CODER_VENV_PATH="$TOOL_VENV_BIN"
 MCP_CODER_VENV_DIR="$(cd "$MCP_CODER_VENV_PATH/.." && pwd)"
 
-# Self-hosting fallback: no .venv was activated, so tool env is also the project env
-if [ -z "${VIRTUAL_ENV:-}" ]; then
+# === Step 3: Project env activation ===
+if [ -f "$PROJECT_VENV/bin/activate" ]; then
+    echo "Activating project environment: $PROJECT_VENV"
+    # shellcheck disable=SC1091
+    source "$PROJECT_VENV/bin/activate"
+    if [ -z "${VIRTUAL_ENV:-}" ]; then
+        echo "ERROR: Failed to activate project virtual environment."
+        echo "Please check $PROJECT_VENV/bin/activate"
+        exit 1
+    fi
+else
+    # Self-hosting fallback: no .venv, so tool env is also the project env
     echo "No project .venv found — using tool environment for both."
     export VIRTUAL_ENV="$MCP_CODER_VENV_DIR"
 fi
