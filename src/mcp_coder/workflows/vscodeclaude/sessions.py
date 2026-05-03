@@ -600,6 +600,10 @@ def build_active_session_set(
     Side effects: clears VSCode window/process caches, may call
     update_session_pid for active sessions whose stored PID differs
     from the currently-detected PID.
+
+    Returns:
+        Mapping of each session's folder path to a boolean indicating
+        whether that session is currently active.
     """
     clear_vscode_window_cache()
     clear_vscode_process_cache()
