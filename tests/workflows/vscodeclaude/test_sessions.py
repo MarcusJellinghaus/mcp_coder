@@ -14,7 +14,6 @@ from mcp_coder.workflows.vscodeclaude.sessions import (
     build_active_session_set,
     check_vscode_running,
     clear_vscode_process_cache,
-    get_active_session_count,
     get_session_for_issue,
     get_sessions_file_path,
     is_session_active,
@@ -221,62 +220,6 @@ class TestSessionManagement:
 
         result = remove_session("/nonexistent/folder")
         assert result is False
-
-    def test_get_active_session_count_with_mocked_pid_check(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Counts only sessions with running PIDs and existing artifacts."""
-        sessions_file = tmp_path / "sessions.json"
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
-            lambda: sessions_file,
-        )
-
-        # Disable win32gui so the test exercises the PID fallback path
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
-            False,
-        )
-
-        # Mock check_vscode_running to return True for specific PID
-        def mock_check(pid: int | None) -> bool:
-            return pid == 1111
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.check_vscode_running",
-            mock_check,
-        )
-
-        # Create folder for the active session so its artifacts exist.
-        # Session with PID 2222 has no folder — simulates a zombie VSCode.
-        folder_a = tmp_path / "session_a"
-        folder_a.mkdir()
-
-        sessions = [
-            {
-                "folder": str(folder_a),
-                "repo": "o/r",
-                "issue_number": 1,
-                "status": "s",
-                "vscode_pid": 1111,
-                "started_at": "2024-01-01T00:00:00Z",
-                "is_intervention": False,
-            },
-            {
-                "folder": str(tmp_path / "session_b"),  # folder not created
-                "repo": "o/r",
-                "issue_number": 2,
-                "status": "s",
-                "vscode_pid": 2222,
-                "started_at": "2024-01-01T00:00:00Z",
-                "is_intervention": False,
-            },
-        ]
-        store = {"sessions": sessions, "last_updated": "2024-01-22T10:30:00Z"}
-        sessions_file.write_text(json.dumps(store))
-
-        count = get_active_session_count()
-        assert count == 1  # Only session_a: PID 1111 running + folder exists
 
     def test_build_active_session_set(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

@@ -592,28 +592,6 @@ def is_session_active(session: VSCodeClaudeSession) -> bool:
     return False
 
 
-def get_active_session_count() -> int:
-    """Count sessions with running VSCode processes and existing artifacts.
-
-    Uses the current VSCode detection caches without refreshing them, so the
-    result is consistent with whatever scan ran most recently (e.g. the fresh
-    scan performed by restart_closed_sessions()). Callers that need a
-    guaranteed fresh scan should call clear_vscode_window_cache() and
-    clear_vscode_process_cache() before this function.
-
-    Returns:
-        Number of active sessions according to is_session_active().
-    """
-    store = load_sessions()
-    count = sum(1 for s in store["sessions"] if is_session_active(s))
-    logger.debug(
-        "get_active_session_count: %d/%d sessions active",
-        count,
-        len(store["sessions"]),
-    )
-    return count
-
-
 def build_active_session_set(
     sessions: list[VSCodeClaudeSession],
 ) -> dict[str, bool]:

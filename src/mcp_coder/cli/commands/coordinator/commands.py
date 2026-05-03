@@ -31,7 +31,6 @@ from ....workflows.vscodeclaude import (
     VSCodeClaudeSession,
     build_active_session_set,
     cleanup_stale_sessions,
-    get_active_session_count,
     load_repo_vscodeclaude_config,
     load_sessions,
     load_vscodeclaude_config,
