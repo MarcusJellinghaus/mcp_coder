@@ -9,11 +9,6 @@ from ...mcp_workspace_github import IssueData, IssueManager
 from ...utils.subprocess_runner import CommandOptions, execute_subprocess
 from .helpers import get_issue_status, load_to_be_deleted
 from .issues import is_status_eligible_for_session, status_requires_linked_branch
-from .sessions import (
-    clear_vscode_process_cache,
-    clear_vscode_window_cache,
-    is_session_active,
-)
 from .types import VSCodeClaudeSession
 
 logger = logging.getLogger(__name__)
@@ -250,6 +245,7 @@ def display_status_table(
     sessions: list[VSCodeClaudeSession],
     eligible_issues: list[tuple[str, IssueData]],
     workspace_base: str,
+    active_set: dict[str, bool],
     repo_filter: str | None = None,
     cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
     issues_without_branch: set[tuple[str, int]] | None = None,
@@ -260,6 +256,8 @@ def display_status_table(
         sessions: Current sessions from JSON
         eligible_issues: Eligible issues not yet in sessions (repo_name, issue)
         workspace_base: Path to workspace directory (for soft-delete filtering)
+        active_set: Snapshot mapping session folder -> is_active. Built once
+            at command entry by ``build_active_session_set``.
         repo_filter: Optional repo name filter
         cached_issues_by_repo: Dict mapping repo_full_name to issues dict.
                                If provided, avoids API calls for staleness checks.
@@ -276,10 +274,6 @@ def display_status_table(
     - VSCode
     - Next Action
     """
-    # Refresh caches once for all sessions (window cache is fast, process cache is slow)
-    clear_vscode_window_cache()
-    clear_vscode_process_cache()
-
     # Load soft-delete registry to filter out deleted sessions
     to_be_deleted = load_to_be_deleted(workspace_base)
 
@@ -330,7 +324,7 @@ def display_status_table(
         if is_closed:
             status = f"(Closed) {status}"
 
-        is_running = is_session_active(session)
+        is_running = active_set.get(session["folder"], False)
 
         is_dirty = check_folder_dirty(folder_path) if folder_path.exists() else False
         git_status = (

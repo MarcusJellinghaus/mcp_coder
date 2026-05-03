@@ -217,6 +217,7 @@ class TestClosedIssueIntegration:
                 sessions=sessions,
                 eligible_issues=eligible_issues,
                 workspace_base=str(tmp_path),
+                active_set={s["folder"]: False for s in sessions},
                 cached_issues_by_repo=cached_issues,
             )
 
@@ -458,6 +459,7 @@ class TestClosedIssueIntegration:
                 sessions=sessions,
                 eligible_issues=eligible_issues,
                 workspace_base=str(tmp_path),
+                active_set={s["folder"]: False for s in sessions},
                 cached_issues_by_repo=cached_issues,
             )
 

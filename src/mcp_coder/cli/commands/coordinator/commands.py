@@ -669,6 +669,10 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
     store = load_sessions()
     sessions = store["sessions"]
 
+    # Build active-session snapshot once at command entry. Each session is
+    # checked exactly once per status command via is_session_active.
+    active_set = build_active_session_set(sessions)
+
     # Get repo list for cache building
     config_data = load_config()
     repos_section = config_data.get("coordinator", {}).get("repos", {})
@@ -694,6 +698,7 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
         sessions=sessions,
         eligible_issues=eligible_issues,
         workspace_base=vscodeclaude_config["workspace_base"],
+        active_set=active_set,
         repo_filter=args.repo,
         cached_issues_by_repo=cached_issues_by_repo,
         issues_without_branch=issues_without_branch,
