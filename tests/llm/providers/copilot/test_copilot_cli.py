@@ -125,15 +125,17 @@ class TestConvertSettingsToCopilotTools:
     """Tests for convert_settings_to_copilot_tools."""
 
     def test_convert_mcp_tool_basic(self) -> None:
-        """mcp__workspace__read_file → workspace-read_file."""
-        result = convert_settings_to_copilot_tools(["mcp__workspace__read_file"])
-        assert result["available_tools"] == ["workspace-read_file"]
+        """mcp__mcp-workspace__read_file → mcp-workspace-read_file."""
+        result = convert_settings_to_copilot_tools(["mcp__mcp-workspace__read_file"])
+        assert result["available_tools"] == ["mcp-workspace-read_file"]
         assert result["allow_tools"] == []
 
     def test_convert_mcp_tool_hyphenated_server(self) -> None:
-        """mcp__tools-py__run_pytest_check → tools-py-run_pytest_check."""
-        result = convert_settings_to_copilot_tools(["mcp__tools-py__run_pytest_check"])
-        assert result["available_tools"] == ["tools-py-run_pytest_check"]
+        """mcp__mcp-tools-py__run_pytest_check → mcp-tools-py-run_pytest_check."""
+        result = convert_settings_to_copilot_tools(
+            ["mcp__mcp-tools-py__run_pytest_check"]
+        )
+        assert result["available_tools"] == ["mcp-tools-py-run_pytest_check"]
 
     def test_convert_mcp_tool_hyphenated_server_name(self) -> None:
         """mcp__obsidian-wiki__read-note → obsidian-wiki-read-note."""
@@ -174,9 +176,9 @@ class TestConvertSettingsToCopilotTools:
     def test_convert_mixed_entries(self) -> None:
         """Real-world mix from settings.local.json."""
         entries = [
-            "mcp__workspace__read_file",
-            "mcp__workspace__save_file",
-            "mcp__tools-py__run_pytest_check",
+            "mcp__mcp-workspace__read_file",
+            "mcp__mcp-workspace__save_file",
+            "mcp__mcp-tools-py__run_pytest_check",
             "Bash(git diff:*)",
             "Bash(*)",
             "Skill(commit_push)",
@@ -184,9 +186,9 @@ class TestConvertSettingsToCopilotTools:
         ]
         result = convert_settings_to_copilot_tools(entries)
         assert result["available_tools"] == [
-            "workspace-read_file",
-            "workspace-save_file",
-            "tools-py-run_pytest_check",
+            "mcp-workspace-read_file",
+            "mcp-workspace-save_file",
+            "mcp-tools-py-run_pytest_check",
         ]
         assert result["allow_tools"] == ["shell(git diff:*)", "shell(*)"]
 
@@ -221,9 +223,11 @@ class TestBuildCopilotCommand:
     def test_build_command_with_available_tools(self) -> None:
         """--available-tools= comma-separated."""
         cmd = build_copilot_command(
-            "hello", "copilot", available_tools=["workspace-read_file", "tools-py-run"]
+            "hello",
+            "copilot",
+            available_tools=["mcp-workspace-read_file", "mcp-tools-py-run"],
         )
-        assert "--available-tools=workspace-read_file,tools-py-run" in cmd
+        assert "--available-tools=mcp-workspace-read_file,mcp-tools-py-run" in cmd
 
     def test_build_command_with_allow_tools(self) -> None:
         """Multiple --allow-tool= flags."""
@@ -266,13 +270,15 @@ class TestReadSettingsAllow:
         claude_dir = tmp_path / ".claude"
         claude_dir.mkdir()
         settings = {
-            "permissions": {"allow": ["mcp__workspace__read_file", "Bash(git diff:*)"]}
+            "permissions": {
+                "allow": ["mcp__mcp-workspace__read_file", "Bash(git diff:*)"]
+            }
         }
         (claude_dir / "settings.local.json").write_text(
             json.dumps(settings), encoding="utf-8"
         )
         result = _read_settings_allow(str(tmp_path))
-        assert result == ["mcp__workspace__read_file", "Bash(git diff:*)"]
+        assert result == ["mcp__mcp-workspace__read_file", "Bash(git diff:*)"]
 
     def test_read_settings_allow_file_missing_returns_none(
         self, tmp_path: Path

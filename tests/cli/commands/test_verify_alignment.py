@@ -155,7 +155,7 @@ class TestPerFormatterAlignment:
 
     def test_format_claude_mcp_section(self) -> None:
         statuses = [
-            ClaudeMCPStatus(name="tools-py", status_text="Connected", ok=True),
+            ClaudeMCPStatus(name="mcp-tools-py", status_text="Connected", ok=True),
             ClaudeMCPStatus(
                 name="broken-server", status_text="Failed to start", ok=False
             ),

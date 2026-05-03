@@ -136,7 +136,7 @@ def find_run(conn: sqlite3.Connection, run_id_prefix: str) -> dict[str, Any] | N
 
 def safe_filename(name: str) -> str:
     """Convert a tool name to a safe filename."""
-    # mcp__workspace__edit_file -> tool_edit_file
+    # mcp__mcp-workspace__edit_file -> tool_edit_file
     if name.startswith("mcp__"):
         rest = name[5:]
         _, _, tool = rest.partition("__")

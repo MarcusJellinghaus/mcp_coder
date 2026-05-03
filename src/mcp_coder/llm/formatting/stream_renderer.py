@@ -30,8 +30,8 @@ def _format_tool_name(name: str) -> str:
     """Format tool name for rendered display.
 
     Strip 'mcp__' prefix, split on first remaining '__':
-      mcp__workspace__read_file  → workspace > read_file
-      mcp__tools-py__run_pytest  → tools-py > run_pytest
+      mcp__mcp-workspace__read_file  → mcp-workspace > read_file
+      mcp__mcp-tools-py__run_pytest  → mcp-tools-py > run_pytest
       Bash                       → Bash (unchanged)
 
     Returns:

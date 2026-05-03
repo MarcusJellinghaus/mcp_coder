@@ -47,20 +47,20 @@ class TestStreamEventRenderer:
         action = _RENDERER.render(
             {
                 "type": "tool_use_start",
-                "name": "mcp__workspace__read_file",
+                "name": "mcp__mcp-workspace__read_file",
                 "args": {"file_path": "x.py"},
             }
         )
         assert isinstance(action, ToolStart)
-        assert action.display_name == "workspace > read_file"
-        assert action.raw_name == "mcp__workspace__read_file"
+        assert action.display_name == "mcp-workspace > read_file"
+        assert action.raw_name == "mcp__mcp-workspace__read_file"
         assert action.args == {"file_path": "x.py"}
 
     def test_tool_use_start_many_args(self) -> None:
         action = _RENDERER.render(
             {
                 "type": "tool_use_start",
-                "name": "mcp__workspace__edit_file",
+                "name": "mcp__mcp-workspace__edit_file",
                 "args": {"file_path": "a.py", "old_text": "foo", "new_text": "bar"},
             }
         )
@@ -75,12 +75,12 @@ class TestStreamEventRenderer:
         action = _RENDERER.render(
             {
                 "type": "tool_result",
-                "name": "mcp__workspace__read_file",
+                "name": "mcp__mcp-workspace__read_file",
                 "output": "line1\nline2",
             }
         )
         assert isinstance(action, ToolResult)
-        assert action.name == "workspace > read_file"
+        assert action.name == "mcp-workspace > read_file"
         assert action.output_lines == ["line1", "line2"]
         assert action.total_lines == 2
         assert action.truncated is False
@@ -90,12 +90,12 @@ class TestStreamEventRenderer:
         action = _RENDERER.render(
             {
                 "type": "tool_result",
-                "name": "mcp__workspace__read_file",
+                "name": "mcp__mcp-workspace__read_file",
                 "output": output,
             }
         )
         assert isinstance(action, ToolResult)
-        assert action.name == "workspace > read_file"
+        assert action.name == "mcp-workspace > read_file"
         # head 10 + separator + tail 5 = 16
         assert len(action.output_lines) == 16
         assert action.output_lines[10] == "... (5 lines skipped)"
@@ -119,12 +119,15 @@ class TestFormatToolNameRenderer:
     """Tests for _format_tool_name() in stream_renderer."""
 
     def test_mcp_two_segments(self) -> None:
-        assert _format_tool_name("mcp__workspace__read_file") == "workspace > read_file"
+        assert (
+            _format_tool_name("mcp__mcp-workspace__read_file")
+            == "mcp-workspace > read_file"
+        )
 
     def test_mcp_hyphenated_server(self) -> None:
         assert (
-            _format_tool_name("mcp__tools-py__run_pytest_check")
-            == "tools-py > run_pytest_check"
+            _format_tool_name("mcp__mcp-tools-py__run_pytest_check")
+            == "mcp-tools-py > run_pytest_check"
         )
 
     def test_builtin(self) -> None:
@@ -458,22 +461,22 @@ class TestFormatToolStart:
     def test_no_args(self) -> None:
         """Empty args → single header line, no separator."""
         action = ToolStart(
-            display_name="workspace > read_file",
-            raw_name="mcp__workspace__read_file",
+            display_name="mcp-workspace > read_file",
+            raw_name="mcp__mcp-workspace__read_file",
             args={},
         )
-        assert format_tool_start(action) == ["\u250c workspace > read_file"]
+        assert format_tool_start(action) == ["\u250c mcp-workspace > read_file"]
 
     def test_inline_short_args(self) -> None:
         """Short args fit inline → header line + separator."""
         action = ToolStart(
-            display_name="workspace > read_file",
-            raw_name="mcp__workspace__read_file",
+            display_name="mcp-workspace > read_file",
+            raw_name="mcp__mcp-workspace__read_file",
             args={"file_path": "x.py"},
         )
         result = format_tool_start(action)
         assert result == [
-            "\u250c workspace > read_file(file_path='x.py')",
+            "\u250c mcp-workspace > read_file(file_path='x.py')",
             "\u251c\u2500\u2500",
         ]
 
@@ -484,12 +487,12 @@ class TestFormatToolStart:
         # values easily exceed the 100-char inline threshold.
         val = "x" * 50
         action = ToolStart(
-            display_name="workspace > edit_file",
-            raw_name="mcp__workspace__edit_file",
+            display_name="mcp-workspace > edit_file",
+            raw_name="mcp__mcp-workspace__edit_file",
             args={"file_path": "a.py", "old_text": val, "new_text": val},
         )
         result = format_tool_start(action)
-        assert result[0] == "\u250c workspace > edit_file"
+        assert result[0] == "\u250c mcp-workspace > edit_file"
         assert result[-1] == "\u251c\u2500\u2500"
         # Block lines for each arg with │
         assert any("file_path" in line and line.startswith("\u2502") for line in result)
@@ -529,8 +532,8 @@ class TestFormatToolStart:
     def test_compact_value_summaries(self) -> None:
         """Large list arg → compact mode shows '(N items)'."""
         action = ToolStart(
-            display_name="workspace > edit_file",
-            raw_name="mcp__workspace__edit_file",
+            display_name="mcp-workspace > edit_file",
+            raw_name="mcp__mcp-workspace__edit_file",
             args={"edits": [{"a": 1}] * 5, "file_path": "a.py", "other": "x" * 150},
         )
         result = format_tool_start(action, full=False)
@@ -543,8 +546,8 @@ class TestFormatToolStart:
         """Full mode expands multiline string values as indented blocks."""
         # Use enough args to force block format in compact inline attempt.
         action = ToolStart(
-            display_name="workspace > edit_file",
-            raw_name="mcp__workspace__edit_file",
+            display_name="mcp-workspace > edit_file",
+            raw_name="mcp__mcp-workspace__edit_file",
             args={
                 "file_path": "some/path/to/file.py",
                 "old_text": "line1\nline2\nline3",
@@ -554,7 +557,7 @@ class TestFormatToolStart:
         )
         result = format_tool_start(action, full=True)
         # Should be block mode (exceeds 100 chars inline)
-        assert result[0] == "\u250c workspace > edit_file"
+        assert result[0] == "\u250c mcp-workspace > edit_file"
         # Multi-line string expanded
         assert "\u2502  old_text:" in result
         assert "\u2502    line1" in result
@@ -565,13 +568,13 @@ class TestFormatToolStart:
     def test_full_mode_still_inlines_short(self) -> None:
         """Short args + full=True → still inline (full doesn't force block)."""
         action = ToolStart(
-            display_name="workspace > read_file",
-            raw_name="mcp__workspace__read_file",
+            display_name="mcp-workspace > read_file",
+            raw_name="mcp__mcp-workspace__read_file",
             args={"file_path": "x.py"},
         )
         result = format_tool_start(action, full=True)
         assert result == [
-            "\u250c workspace > read_file(file_path='x.py')",
+            "\u250c mcp-workspace > read_file(file_path='x.py')",
             "\u251c\u2500\u2500",
         ]
 

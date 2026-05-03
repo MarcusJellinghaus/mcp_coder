@@ -155,7 +155,7 @@ def _make_verify_mocks() -> Generator[Dict[str, MagicMock], None, None]:
     }
     mcp_servers_ok: Dict[str, Any] = {
         "servers": {
-            "tools-py": {
+            "mcp-tools-py": {
                 "ok": True,
                 "value": "3 tools",
                 "tool_names": [
@@ -168,7 +168,7 @@ def _make_verify_mocks() -> Generator[Dict[str, MagicMock], None, None]:
         "overall_ok": True,
     }
     claude_mcp_statuses = [
-        ClaudeMCPStatus(name="tools-py", status_text="Connected", ok=True),
+        ClaudeMCPStatus(name="mcp-tools-py", status_text="Connected", ok=True),
     ]
     smoke_row = _format_row("MCP edit smoke test", "[OK]", "edit verified", indent=2)
 

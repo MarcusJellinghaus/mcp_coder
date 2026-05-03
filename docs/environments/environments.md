@@ -134,7 +134,7 @@ The MCP server runs in the tool env but launches pytest/pylint/mypy using the **
 
 ```json
 {
-  "tools-py": {
+  "mcp-tools-py": {
     "command": "${MCP_CODER_VENV_PATH}\\mcp-tools-py.exe",
     "args": [
       "--project-dir", "${MCP_CODER_PROJECT_DIR}",
@@ -142,7 +142,7 @@ The MCP server runs in the tool env but launches pytest/pylint/mypy using the **
       "--python-executable", "${VIRTUAL_ENV}\\Scripts\\python.exe"
     ]
   },
-  "workspace": {
+  "mcp-workspace": {
     "command": "${MCP_CODER_VENV_PATH}\\mcp-workspace.exe",
     "args": ["--project-dir", "${MCP_CODER_PROJECT_DIR}"]
   }

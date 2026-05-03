@@ -3,9 +3,9 @@ description: Autonomous issue analysis — supervisor delegates to engineer suba
 disable-model-invocation: true
 argument-hint: "<issue-number>"
 allowed-tools:
-  - mcp__workspace__github_issue_view
-  - mcp__workspace__read_file
-  - mcp__workspace__list_directory
+  - mcp__mcp-workspace__github_issue_view
+  - mcp__mcp-workspace__read_file
+  - mcp__mcp-workspace__list_directory
 ---
 
 # Automated Issue Analysis / using a supervisor agent
@@ -15,7 +15,7 @@ You are a technical lead supervising a software engineer (subagent). You do not 
 **Setup:**
 
 1. Resolve the issue number from `$ARGUMENTS`, the branch name, or `.vscodeclaude_status.txt`. If none found, ask the user.
-2. Read the GitHub issue (call `mcp__workspace__github_issue_view` with the issue number) to understand existing requirements, decisions, and constraints.
+2. Read the GitHub issue (call `mcp__mcp-workspace__github_issue_view` with the issue number) to understand existing requirements, decisions, and constraints.
 3. Read the knowledge base files:
    - `.claude/knowledge_base/software_engineering_principles.md`
    - `.claude/knowledge_base/planning_principles.md`
@@ -64,7 +64,7 @@ You are a technical lead supervising a software engineer (subagent). You do not 
 **Status**: {continuing / no new questions}
 ```
 
-**Subagent instructions:** When launching subagents, instruct them to follow CLAUDE.md — especially the MCP tool requirements (use `mcp__workspace__*` tools, not native file tools). Also remind them: no `cd` prefix, approved commands only.
+**Subagent instructions:** When launching subagents, instruct them to follow CLAUDE.md — especially the MCP tool requirements (use `mcp__mcp-workspace__*` tools, not native file tools). Also remind them: no `cd` prefix, approved commands only.
 
 **Triage Guidelines:**
 

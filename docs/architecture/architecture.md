@@ -427,7 +427,7 @@ Interactive terminal chat for LLM-assisted coding. Three-layer architecture maxi
 
 ### Quality Gates (Mandatory Pattern)
 - **Always run**: pylint, pytest, mypy after code changes
-- **MCP integration**: Use `mcp__tools-py__*` tools exclusively
+- **MCP integration**: Use `mcp__mcp-tools-py__*` tools exclusively
 - **Architecture access**: `mcp_tools_py.py` - Quality check orchestration with direct API access for mcp_coder workflows
 - **Enforcement**: Documented in `CLAUDE.md` as mandatory requirements
 

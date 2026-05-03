@@ -60,14 +60,14 @@ async def test_tool_output_list_directory(
         app._handle_stream_event(
             {
                 "type": "tool_use_start",
-                "name": "mcp__workspace__list_directory",
+                "name": "mcp__mcp-workspace__list_directory",
                 "args": {},
             }
         )
         app._handle_stream_event(
             {
                 "type": "tool_result",
-                "name": "mcp__workspace__list_directory",
+                "name": "mcp__mcp-workspace__list_directory",
                 "output": '{"result": ["file1.py", "file2.py", "src/"]}',
             }
         )
@@ -89,14 +89,14 @@ async def test_tool_output_read_file(
         app._handle_stream_event(
             {
                 "type": "tool_use_start",
-                "name": "mcp__workspace__read_file",
+                "name": "mcp__mcp-workspace__read_file",
                 "args": {"file_path": "x.py"},
             }
         )
         app._handle_stream_event(
             {
                 "type": "tool_result",
-                "name": "mcp__workspace__read_file",
+                "name": "mcp__mcp-workspace__read_file",
                 "output": '{"result": "line1\\nline2\\nline3"}',
             }
         )
@@ -119,14 +119,14 @@ async def test_tool_output_truncated(
         app._handle_stream_event(
             {
                 "type": "tool_use_start",
-                "name": "mcp__workspace__read_file",
+                "name": "mcp__mcp-workspace__read_file",
                 "args": {"file_path": "big.py"},
             }
         )
         app._handle_stream_event(
             {
                 "type": "tool_result",
-                "name": "mcp__workspace__read_file",
+                "name": "mcp__mcp-workspace__read_file",
                 "output": '{"result": "' + long_content + '"}',
             }
         )
@@ -146,14 +146,14 @@ async def test_tool_output_empty(
         app._handle_stream_event(
             {
                 "type": "tool_use_start",
-                "name": "mcp__workspace__read_file",
+                "name": "mcp__mcp-workspace__read_file",
                 "args": {"file_path": "empty.py"},
             }
         )
         app._handle_stream_event(
             {
                 "type": "tool_result",
-                "name": "mcp__workspace__read_file",
+                "name": "mcp__mcp-workspace__read_file",
                 "output": "",
             }
         )
@@ -172,19 +172,19 @@ async def test_busy_indicator_thinking_after_tool_result(
         app._handle_stream_event(
             {
                 "type": "tool_use_start",
-                "name": "mcp__workspace__read_file",
+                "name": "mcp__mcp-workspace__read_file",
                 "args": {"file_path": "x.py"},
             }
         )
         app._handle_stream_event(
             {
                 "type": "tool_result",
-                "name": "mcp__workspace__read_file",
+                "name": "mcp__mcp-workspace__read_file",
                 "output": '{"result": "hello"}',
             }
         )
         indicator = app.query_one(BusyIndicator)
-        assert "Thinking about workspace > read_file..." in indicator.label_text
+        assert "Thinking about mcp-workspace > read_file..." in indicator.label_text
 
 
 async def test_banner_renders_mcp_coder_utils_version(

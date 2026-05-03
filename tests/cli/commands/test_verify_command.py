@@ -215,7 +215,7 @@ def _mlflow_not_installed() -> dict[str, Any]:
 def _mcp_ok() -> dict[str, Any]:
     return {
         "servers": {
-            "tools-py": {"ok": True, "value": "5 tools available", "tools": 5},
+            "mcp-tools-py": {"ok": True, "value": "5 tools available", "tools": 5},
         },
         "overall_ok": True,
     }

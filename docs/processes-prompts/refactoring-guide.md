@@ -67,9 +67,9 @@ Before moving anything:
 
 Use the MCP refactoring tools — they move code and update all imports automatically:
 
-1. `mcp__tools-py__list_symbols(file=...)` — inventory the source file
-2. `mcp__tools-py__move_symbol(source_file=..., symbol_name=..., dest_file=..., dry_run=true)` — preview
-3. `mcp__tools-py__move_symbol(source_file=..., symbol_name=..., dest_file=...)` — execute
+1. `mcp__mcp-tools-py__list_symbols(file=...)` — inventory the source file
+2. `mcp__mcp-tools-py__move_symbol(source_file=..., symbol_name=..., dest_file=..., dry_run=true)` — preview
+3. `mcp__mcp-tools-py__move_symbol(source_file=..., symbol_name=..., dest_file=...)` — execute
 4. Repeat for each symbol/group
 5. Update `__init__.py` re-exports if needed
 6. Update `.importlinter` layering contracts if the split introduces sub-layers (see [Import Linter](#import-linter) below)
@@ -106,7 +106,7 @@ mcp-coder check file-size --max-lines 750
 **For LLM sessions (MCP tools):**
 
 ```
-mcp__workspace__check_file_size
+mcp__mcp-workspace__check_file_size
 ```
 
 Verifies all tracked Python files are under the line threshold. If split files were previously in `.large-files-allowlist`, remove those entries. Stale entries are reported automatically.
@@ -138,16 +138,16 @@ When splitting a module into sub-modules, the new files may have internal depend
 **For Claude Code (MCP tools):**
 
 ```
-mcp__tools-py__run_format_code
-mcp__tools-py__run_lint_imports_check
-mcp__tools-py__run_vulture_check
-mcp__tools-py__run_pytest_check
-mcp__tools-py__run_pylint_check
-mcp__tools-py__run_mypy_check
+mcp__mcp-tools-py__run_format_code
+mcp__mcp-tools-py__run_lint_imports_check
+mcp__mcp-tools-py__run_vulture_check
+mcp__mcp-tools-py__run_pytest_check
+mcp__mcp-tools-py__run_pylint_check
+mcp__mcp-tools-py__run_mypy_check
 ```
 
 > `tach_check.sh` and `pycycle_check.sh` have no MCP equivalents — run them via Bash when needed.
-> Use `mcp__tools-py__get_library_source` to inspect third-party library APIs when planning refactors.
+> Use `mcp__mcp-tools-py__get_library_source` to inspect third-party library APIs when planning refactors.
 
 ## Common Patterns
 
@@ -175,7 +175,7 @@ Before merging a refactoring PR:
 - [ ] `lint-imports` passes
 - [ ] `tach check` passes
 - [ ] All unit tests pass
-- [ ] File size check passes (`mcp-coder check file-size --max-lines 750` or `mcp__workspace__check_file_size`)
+- [ ] File size check passes (`mcp-coder check file-size --max-lines 750` or `mcp__mcp-workspace__check_file_size`)
 - [ ] `.large-files-allowlist` updated (remove entries for split files)
 - [ ] `.importlinter` updated if modules were split (sub-layers)
 - [ ] PR diff is under 25,000 tokens

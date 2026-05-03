@@ -39,7 +39,7 @@ class TestFormatMcpSection:
         ]
         mcp_results: dict[str, Any] = {
             "servers": {
-                "tools-py": {
+                "mcp-tools-py": {
                     "ok": True,
                     "value": f"{len(long_names)} tools available",
                     "tools": len(long_names),
@@ -63,7 +63,7 @@ class TestFormatMcpSection:
         """Server without tool_names key shows value string."""
         mcp_results: dict[str, Any] = {
             "servers": {
-                "tools-py": {
+                "mcp-tools-py": {
                     "ok": True,
                     "value": "3 tools available",
                     "tools": 3,
@@ -95,7 +95,7 @@ class TestFormatMcpSection:
         """Server with tool_names=[] shows value string (0 tools case)."""
         mcp_results: dict[str, Any] = {
             "servers": {
-                "tools-py": {
+                "mcp-tools-py": {
                     "ok": True,
                     "value": "0 tools available",
                     "tools": 0,

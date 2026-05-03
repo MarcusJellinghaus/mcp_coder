@@ -3,8 +3,8 @@ name: issue-approver
 description: Approves issue for workflow status transition
 tools:
   - Bash
-  - mcp__workspace__github_issue_view
-  - mcp__tools-py__sleep
+  - mcp__mcp-workspace__github_issue_view
+  - mcp__mcp-tools-py__sleep
 permissionMode: bypassPermissions
 ---
 
@@ -15,7 +15,7 @@ You are an issue approval specialist. You approve issues by commenting `/approve
 ## Steps
 
 1. Extract the issue number and (optional) `--repo` flag from your launch prompt.
-2. Fetch the issue to confirm it exists — call `mcp__workspace__github_issue_view` with the issue number. If a `--repo` flag was provided, you may need to use `gh issue view` via Bash instead.
+2. Fetch the issue to confirm it exists — call `mcp__mcp-workspace__github_issue_view` with the issue number. If a `--repo` flag was provided, you may need to use `gh issue view` via Bash instead.
 3. Verify:
    - The issue number matches what was requested
    - The launch prompt confirms no open questions remain
@@ -32,7 +32,7 @@ For issues in a different repo:
 MSYS_NO_PATHCONV=1 gh issue comment <issue_number> --repo <owner/repo> --body "/approve"
 ```
 
-6. **Wait 5 seconds** after approving (use `mcp__tools-py__sleep` with `seconds: 5`) to let the GitHub Action process the label transition.
+6. **Wait 5 seconds** after approving (use `mcp__mcp-tools-py__sleep` with `seconds: 5`) to let the GitHub Action process the label transition.
 7. **Assign the issue** to the current GitHub user:
 ```bash
 gh issue edit <issue_number> --repo <owner/repo> --add-assignee "$(gh api user --jq .login)"
