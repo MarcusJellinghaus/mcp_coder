@@ -167,10 +167,6 @@ class TestBranchHandlingIntegration:
 
         # Test process_eligible_issues skipping
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.get_active_session_count",
-            lambda: 0,
-        )
-        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_github_username",
             lambda: "testuser",
         )
@@ -235,6 +231,7 @@ class TestBranchHandlingIntegration:
                     "max_sessions": 3,
                 },
                 max_sessions=3,
+                current_count=0,
             )
 
         # No sessions should be started

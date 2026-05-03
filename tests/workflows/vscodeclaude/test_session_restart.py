@@ -246,20 +246,16 @@ class TestSessionRestart:
         assert not folder_path.exists()
 
     def test_process_eligible_issues_respects_max_sessions(
-        self, monkeypatch: pytest.MonkeyPatch
+        self,
     ) -> None:
         """Doesn't start sessions beyond max."""
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.get_active_session_count",
-            lambda: 2,
-        )
-
         # Should return empty since already at/above max
         sessions = process_eligible_issues(
             repo_name="test",
             repo_config={"repo_url": "https://github.com/owner/repo.git"},
             vscodeclaude_config={"workspace_base": "/tmp", "max_sessions": 2},
             max_sessions=2,
+            current_count=2,
         )
 
         assert sessions == []

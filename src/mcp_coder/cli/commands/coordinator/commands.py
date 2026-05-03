@@ -565,6 +565,10 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
             return 1
 
         # Step 4: Process each repository
+        # current_count tracks active+restarted+newly-launched sessions across
+        # the per-repo loop. active_set records restarted sessions as inactive
+        # (their snapshot was taken before restart), so add len(restarted).
+        current_count = sum(active_set.values()) + len(restarted)
         skip_github_install = getattr(args, "no_install_from_github", False)
         total_started: List[VSCodeClaudeSession] = []
         for repo_name in repo_names:
@@ -605,10 +609,12 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
                 repo_config=validated_config,
                 vscodeclaude_config=vscodeclaude_config,
                 max_sessions=max_sessions,
+                current_count=current_count,
                 all_cached_issues=all_cached_issues,
                 skip_github_install=skip_github_install,
             )
             total_started.extend(started)
+            current_count += len(started)
 
         # Print summary
         if total_started:
@@ -623,9 +629,11 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
                     session["status"],
                 )
         else:
-            current = get_active_session_count()
             logger.log(
-                OUTPUT, "No new sessions started (active: %d/%d)", current, max_sessions
+                OUTPUT,
+                "No new sessions started (active: %d/%d)",
+                current_count,
+                max_sessions,
             )
 
         return 0
