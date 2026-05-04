@@ -69,13 +69,15 @@ existing `typing` block (or add it if absent).
 - The full worker continues to set/clear `_branch_loading.add("issue")` /
   `_branch_failed` exactly as today. The quick worker does **not**
   manipulate `_branch_loading` (the spinner is a full-tick concern).
-- Doc: in `docs/icoder/icoder.md`, change the `2s` cell in the cadence
-  table to `10s`, and align the surrounding sentence ("2-second ticks"
-  if present in the line about the quick tick).
+- Doc: in `docs/icoder/icoder.md`, update both the cadence value
+  (currently `2s` at line ~52) to `10s`, **and** the prose at line ~60
+  (`The 2s auto-PR fetch...`) to `The 10s auto-PR fetch...`. Both lines
+  must be changed.
 - The startup invocation in `on_mount` continues to call
-  `self.run_worker(self._branch_full_work, thread=True)` directly —
-  unchanged from current code. The `begin_full_tick()` guard inside
-  `_branch_full_work` ensures a racing periodic tick is dropped harmlessly.
+  `self.run_worker(self._tick_branch_full, thread=True)` directly —
+  unchanged from current code (`app.py:142`). The `begin_full_tick()`
+  guard inside `_branch_full_work` ensures a racing periodic tick is
+  dropped harmlessly.
 - `_timed_fetch` is implemented as a method on `ICoderApp` (not a free
   function) for cohesion with the workers that call it.
 

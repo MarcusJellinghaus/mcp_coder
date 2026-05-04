@@ -22,3 +22,19 @@ Issue: icoder: tone down branch-info polling and prefix version label
 **Changes**: See plan files diff for round (Step 2, Step 3, Step 4, Step 5 updates).
 
 **Status**: Plan files updated; ready for next review round.
+
+## Round 2 — 2026-05-04
+
+**Findings**:
+- Step 3: `on_mount` startup text said `_branch_full_work` but actual code at `app.py:142` uses `_tick_branch_full` — Round 1 wording was wrong
+- Step 4: `NoMatches` is not imported in `app.py` today — narrowing requires adding the import
+- Step 3: doc-update wording at `icoder.md` was ambiguous ("if present"); both line 52 and line 60 need `2s` → `10s`
+
+**Decisions**:
+- All three findings are straightforward; auto-applied. Option (a) chosen for the on_mount text — match actual code (preserves minimize-startup-diff intent).
+
+**User decisions**: None — handled autonomously.
+
+**Changes**: step_3.md (on_mount symbol fix + doc-update wording tightened); step_4.md (NoMatches import note added).
+
+**Status**: Plan files updated; ready for next review round.

@@ -44,6 +44,9 @@ and skip the `bar.update_state(...)` call when nothing has changed.
 - Narrow the existing `except Exception` at `app.py:464` (current line;
   verify exact location) to `except NoMatches`. This is the deliberate
   narrowing — do not retain the broader catch.
+- Add `from textual.css.query import NoMatches` to the existing imports
+  in `app.py` (other modules in the codebase already import it from this
+  path).
 
 ## ALGORITHM
 
