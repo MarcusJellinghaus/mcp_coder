@@ -17,6 +17,11 @@
 | `src/mcp_coder/icoder/services/branch_info_service.py` | Add `fetch_branch_only`, two private bool flags, four guard methods |
 | `tests/icoder/test_branch_info_service.py` | Add tests for delegation + guard semantics + 4-way independence |
 
+- Boy Scout: while in `branch_info_service.py`, update the module docstring's
+  stale `"2-second ticks"` phrase to align with the new 10s/30s cadence
+  introduced in Step 3 — simplest fix is to drop the specific number
+  (e.g. `"between periodic ticks"`).
+
 ## WHAT
 
 ```python

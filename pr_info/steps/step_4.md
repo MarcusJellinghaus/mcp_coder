@@ -41,6 +41,9 @@ and skip the `bar.update_state(...)` call when nothing has changed.
 - Update `self._last_view` only when emitting a real `update_state` call.
 - The early-return on `NoMatches` (when `BranchInfoBar` is not yet
   mounted) stays untouched; do not cache `_last_view` in that path.
+- Narrow the existing `except Exception` at `app.py:464` (current line;
+  verify exact location) to `except NoMatches`. This is the deliberate
+  narrowing — do not retain the broader catch.
 
 ## ALGORITHM
 

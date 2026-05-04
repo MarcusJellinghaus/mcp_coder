@@ -72,5 +72,9 @@ are required; the `_get_version()` fallback path is already covered.
   is `width: auto` and no snapshot pins this exact string today). If a
   snapshot regression appears, regenerate it as part of this commit and
   call out the regen in the commit message.
+- Heads-up: if a textual snapshot test fails due to the new label string,
+  regenerate the snapshot in this same commit. Run
+  `mcp__mcp-tools-py__run_pytest_check` with `markers=['textual_integration']`
+  to surface any snapshot regression.
 - Single commit, e.g.
   `feat(icoder): prefix status-bar version label with "mcp-coder"`.

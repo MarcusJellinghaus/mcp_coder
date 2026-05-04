@@ -72,6 +72,12 @@ existing `typing` block (or add it if absent).
 - Doc: in `docs/icoder/icoder.md`, change the `2s` cell in the cadence
   table to `10s`, and align the surrounding sentence ("2-second ticks"
   if present in the line about the quick tick).
+- The startup invocation in `on_mount` continues to call
+  `self.run_worker(self._branch_full_work, thread=True)` directly —
+  unchanged from current code. The `begin_full_tick()` guard inside
+  `_branch_full_work` ensures a racing periodic tick is dropped harmlessly.
+- `_timed_fetch` is implemented as a method on `ICoderApp` (not a free
+  function) for cohesion with the workers that call it.
 
 ## ALGORITHM
 
@@ -168,8 +174,6 @@ In `tests/icoder/ui/test_app.py`:
    `test_quick_and_full_ticks_run_in_parallel`:
    set `_quick_tick_busy = True`, drive `_tick_branch_full()`, assert
    the full worker still ran (`fetch_info` called).
-5. **Existing `test_branch_change_kicks_pr_fetch` keeps passing** without
-   modification — verify it still uses the new merged path.
 
 The doc-update assertion is not unit-tested; it is a textual change in
 the markdown file.
@@ -178,5 +182,8 @@ the markdown file.
 
 - pylint, pytest (with `-n auto` + standard exclusions), mypy all green.
 - Existing `BranchInfoBar` integration tests in `test_app.py` still pass.
+- Regression anchor: existing test `test_branch_change_kicks_pr_fetch`
+  continues to pass — no behavioural change to the branch-change → PR-fetch
+  path.
 - Single commit, e.g.
   `refactor(icoder): split branch-info ticks into quick (10s) and full (30s)`.
