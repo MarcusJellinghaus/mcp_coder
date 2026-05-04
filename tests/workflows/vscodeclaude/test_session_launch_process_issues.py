@@ -66,10 +66,6 @@ class TestProcessEligibleIssuesBranchRequirement:
             lambda *args, **kwargs: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.get_active_session_count",
-            lambda: 0,
-        )
-        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_github_username",
             lambda: "testuser",
         )
@@ -83,6 +79,7 @@ class TestProcessEligibleIssuesBranchRequirement:
             repo_config={"repo_url": "https://github.com/owner/repo"},
             vscodeclaude_config={"workspace_base": "/tmp", "max_sessions": 3},
             max_sessions=3,
+            current_count=0,
         )
 
         # Session should be launched with branch_name=None (defaults to main)
@@ -140,10 +137,6 @@ class TestProcessEligibleIssuesBranchRequirement:
             lambda *args, **kwargs: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.get_active_session_count",
-            lambda: 0,
-        )
-        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_github_username",
             lambda: "testuser",
         )
@@ -158,6 +151,7 @@ class TestProcessEligibleIssuesBranchRequirement:
                 repo_config={"repo_url": "https://github.com/owner/repo"},
                 vscodeclaude_config={"workspace_base": "/tmp", "max_sessions": 3},
                 max_sessions=3,
+                current_count=0,
             )
 
         # Session should NOT be launched
@@ -218,10 +212,6 @@ class TestProcessEligibleIssuesBranchRequirement:
             lambda *args, **kwargs: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.get_active_session_count",
-            lambda: 0,
-        )
-        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_github_username",
             lambda: "testuser",
         )
@@ -236,6 +226,7 @@ class TestProcessEligibleIssuesBranchRequirement:
                 repo_config={"repo_url": "https://github.com/owner/repo"},
                 vscodeclaude_config={"workspace_base": "/tmp", "max_sessions": 3},
                 max_sessions=3,
+                current_count=0,
             )
 
         mock_launch.assert_not_called()
@@ -291,10 +282,6 @@ class TestProcessEligibleIssuesBranchRequirement:
             lambda *args, **kwargs: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.get_active_session_count",
-            lambda: 0,
-        )
-        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_github_username",
             lambda: "testuser",
         )
@@ -308,6 +295,7 @@ class TestProcessEligibleIssuesBranchRequirement:
             repo_config={"repo_url": "https://github.com/owner/repo"},
             vscodeclaude_config={"workspace_base": "/tmp", "max_sessions": 3},
             max_sessions=3,
+            current_count=0,
         )
 
         mock_launch.assert_called_once()
@@ -365,10 +353,6 @@ class TestProcessEligibleIssuesBranchRequirement:
             lambda *args, **kwargs: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.get_active_session_count",
-            lambda: 0,
-        )
-        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_github_username",
             lambda: "testuser",
         )
@@ -383,6 +367,7 @@ class TestProcessEligibleIssuesBranchRequirement:
                 repo_config={"repo_url": "https://github.com/owner/repo"},
                 vscodeclaude_config={"workspace_base": "/tmp", "max_sessions": 3},
                 max_sessions=3,
+                current_count=0,
             )
 
         # Session should NOT be launched
@@ -450,10 +435,6 @@ class TestProcessEligibleIssuesPrefetchedIssues:
             lambda *args, **kwargs: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.get_active_session_count",
-            lambda: 0,
-        )
-        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_github_username",
             lambda: "testuser",
         )
@@ -468,6 +449,7 @@ class TestProcessEligibleIssuesPrefetchedIssues:
             repo_config={"repo_url": "https://github.com/owner/repo"},
             vscodeclaude_config={"workspace_base": "/tmp", "max_sessions": 3},
             max_sessions=3,
+            current_count=0,
             all_cached_issues=[mock_issue],
         )
 

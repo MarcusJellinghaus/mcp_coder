@@ -22,10 +22,15 @@ from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeSession
 def mock_status_checks(monkeypatch: pytest.MonkeyPatch) -> Any:
     """Factory fixture to mock status check functions.
 
+    Returns the configured ``is_running`` value so callers can build the
+    ``active_set`` argument explicitly when invoking ``display_status_table``.
+
     Usage:
         def test_something(mock_status_checks):
-            mock_status_checks(is_closed=False, is_running=False, is_dirty=False, is_stale=True)
-            # ... rest of test
+            is_running = mock_status_checks(
+                is_closed=False, is_running=False, is_dirty=False, is_stale=True
+            )
+            # ... pass active_set={session["folder"]: is_running} to display_status_table
     """
 
     def _mock(
@@ -33,14 +38,10 @@ def mock_status_checks(monkeypatch: pytest.MonkeyPatch) -> Any:
         is_running: bool = False,
         is_dirty: bool = False,
         is_stale: bool = True,
-    ) -> None:
+    ) -> bool:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
             lambda s, cached_issues=None: is_closed,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_active",
-            lambda session: is_running,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
@@ -50,6 +51,7 @@ def mock_status_checks(monkeypatch: pytest.MonkeyPatch) -> Any:
             "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
             lambda s, cached_issues=None: is_stale,
         )
+        return is_running
 
     return _mock
 
@@ -387,6 +389,7 @@ class TestStatusDisplay:
             sessions=[],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={},
             repo_filter=None,
         )
 
@@ -400,7 +403,7 @@ class TestStatusDisplay:
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Displays session information."""
-        mock_status_checks(
+        is_running = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=False
         )
 
@@ -418,6 +421,7 @@ class TestStatusDisplay:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
             repo_filter=None,
         )
 
@@ -452,6 +456,7 @@ class TestStatusDisplay:
             sessions=[],
             eligible_issues=eligible_issues,
             workspace_base=str(tmp_path),
+            active_set={},
             repo_filter=None,
         )
 
@@ -485,6 +490,7 @@ class TestStatusDisplay:
             sessions=[],
             eligible_issues=eligible_issues,
             workspace_base=str(tmp_path),
+            active_set={},
             repo_filter=None,
         )
 
@@ -505,7 +511,7 @@ class TestClosedIssuePrefixDisplay:
         """Closed issue with existing folder shows (Closed) prefix in status column."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        mock_status_checks(
+        is_running = mock_status_checks(
             is_closed=True, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -523,6 +529,7 @@ class TestClosedIssuePrefixDisplay:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
             repo_filter=None,
         )
 
@@ -541,7 +548,7 @@ class TestClosedIssuePrefixDisplay:
         """Closed issue status shows both (Closed) prefix and original status."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        mock_status_checks(
+        is_running = mock_status_checks(
             is_closed=True, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -559,6 +566,7 @@ class TestClosedIssuePrefixDisplay:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
             repo_filter=None,
         )
 
@@ -576,7 +584,7 @@ class TestClosedIssuePrefixDisplay:
         """Closed issue with clean folder shows Delete action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        mock_status_checks(
+        is_running = mock_status_checks(
             is_closed=True, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -594,6 +602,7 @@ class TestClosedIssuePrefixDisplay:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
             repo_filter=None,
         )
 
@@ -610,7 +619,7 @@ class TestClosedIssuePrefixDisplay:
         """Closed issue with dirty folder shows Manual cleanup action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        mock_status_checks(
+        is_running = mock_status_checks(
             is_closed=True, is_running=False, is_dirty=True, is_stale=True
         )
 
@@ -628,6 +637,7 @@ class TestClosedIssuePrefixDisplay:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
             repo_filter=None,
         )
 
@@ -646,7 +656,7 @@ class TestClosedIssuePrefixDisplay:
         """Closed issue with missing folder is not shown in status table."""
         missing_folder = tmp_path / "missing_folder"
         # Do NOT create the folder - it should not exist
-        mock_status_checks(
+        is_running = mock_status_checks(
             is_closed=True, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -664,6 +674,7 @@ class TestClosedIssuePrefixDisplay:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
             repo_filter=None,
         )
 
@@ -682,7 +693,7 @@ class TestClosedIssuePrefixDisplay:
         """Closed issue with existing folder IS shown (contrast to missing folder)."""
         existing_folder = tmp_path / "existing_folder"
         existing_folder.mkdir()
-        mock_status_checks(
+        is_running = mock_status_checks(
             is_closed=True, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -700,6 +711,7 @@ class TestClosedIssuePrefixDisplay:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
             repo_filter=None,
         )
 
@@ -718,7 +730,7 @@ class TestClosedIssuePrefixDisplay:
         """Open issue does not show (Closed) prefix."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        mock_status_checks(
+        is_running = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=False
         )
 
@@ -736,6 +748,7 @@ class TestClosedIssuePrefixDisplay:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
             repo_filter=None,
         )
 
@@ -760,14 +773,10 @@ class TestClosedIssuePrefixDisplay:
         folder = tmp_path / "test_folder"
         folder.mkdir()
 
-        # Mock checks: not closed, not running, not dirty, stale
+        # Mock checks: not closed, not running (via active_set), not dirty, stale
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
             lambda s, cached_issues=None: False,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_active",
-            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
@@ -811,6 +820,7 @@ class TestClosedIssuePrefixDisplay:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={session["folder"]: False},
             repo_filter=None,
             cached_issues_by_repo=cached_issues_by_repo,
         )
@@ -843,7 +853,7 @@ class TestBotStageSessionsDeleteAction:
         """Session at status-02:awaiting-planning shows Delete action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        mock_status_checks(
+        is_running = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -861,6 +871,7 @@ class TestBotStageSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
             repo_filter=None,
         )
 
@@ -881,7 +892,7 @@ class TestBotStageSessionsDeleteAction:
         """Session at status-05:plan-ready shows Delete action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        mock_status_checks(
+        is_running = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -899,6 +910,7 @@ class TestBotStageSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
             repo_filter=None,
         )
 
@@ -915,7 +927,7 @@ class TestBotStageSessionsDeleteAction:
         """Session at status-08:ready-pr shows Delete action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        mock_status_checks(
+        is_running = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -933,6 +945,7 @@ class TestBotStageSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
             repo_filter=None,
         )
 
@@ -949,7 +962,7 @@ class TestBotStageSessionsDeleteAction:
         """Session at status-03:planning shows Delete action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        mock_status_checks(
+        is_running = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -967,6 +980,7 @@ class TestBotStageSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
             repo_filter=None,
         )
 
@@ -983,7 +997,7 @@ class TestBotStageSessionsDeleteAction:
         """Session at status-06:implementing shows Delete action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        mock_status_checks(
+        is_running = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -1001,6 +1015,7 @@ class TestBotStageSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
             repo_filter=None,
         )
 
@@ -1017,7 +1032,7 @@ class TestBotStageSessionsDeleteAction:
         """Session at status-09:pr-creating shows Delete action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        mock_status_checks(
+        is_running = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -1035,6 +1050,7 @@ class TestBotStageSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
             repo_filter=None,
         )
 
@@ -1051,7 +1067,7 @@ class TestBotStageSessionsDeleteAction:
         """Bot stage session with dirty folder shows Manual cleanup."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        mock_status_checks(
+        is_running = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=True, is_stale=True
         )
 
@@ -1069,6 +1085,7 @@ class TestBotStageSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
             repo_filter=None,
         )
 
@@ -1087,7 +1104,7 @@ class TestBotStageSessionsDeleteAction:
         folder = tmp_path / "test_folder"
         folder.mkdir()
         # Status is the same as session (not stale from status change)
-        mock_status_checks(
+        is_running = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=False
         )
 
@@ -1105,6 +1122,7 @@ class TestBotStageSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
             repo_filter=None,
         )
 
@@ -1134,7 +1152,7 @@ class TestPrCreatedSessionsDeleteAction:
         """Session at status-10:pr-created shows Delete action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        mock_status_checks(
+        is_running = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -1152,6 +1170,7 @@ class TestPrCreatedSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
             repo_filter=None,
         )
 
@@ -1172,7 +1191,7 @@ class TestPrCreatedSessionsDeleteAction:
         """PR-created session with dirty folder shows Manual cleanup."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        mock_status_checks(
+        is_running = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=True, is_stale=True
         )
 
@@ -1190,6 +1209,7 @@ class TestPrCreatedSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
             repo_filter=None,
         )
 
@@ -1207,7 +1227,7 @@ class TestPrCreatedSessionsDeleteAction:
         """PR-created session with VSCode running shows (active)."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        mock_status_checks(
+        is_running = mock_status_checks(
             is_closed=False, is_running=True, is_dirty=False, is_stale=True
         )
 
@@ -1225,6 +1245,7 @@ class TestPrCreatedSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
             repo_filter=None,
         )
 
@@ -1242,7 +1263,7 @@ class TestPrCreatedSessionsDeleteAction:
         """PR-created session with closed issue shows (Closed) prefix and Delete."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        mock_status_checks(
+        is_running = mock_status_checks(
             is_closed=True, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -1260,6 +1281,7 @@ class TestPrCreatedSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
             repo_filter=None,
         )
 
@@ -1281,7 +1303,7 @@ class TestDisplayStatusTableSoftDelete:
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Session with folder in .to_be_deleted is not shown in output."""
-        mock_status_checks(
+        is_running = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -1306,6 +1328,7 @@ class TestDisplayStatusTableSoftDelete:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
             repo_filter=None,
         )
 
@@ -1320,7 +1343,7 @@ class TestDisplayStatusTableSoftDelete:
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Session with folder NOT in .to_be_deleted is still shown."""
-        mock_status_checks(
+        is_running = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -1345,6 +1368,7 @@ class TestDisplayStatusTableSoftDelete:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
             repo_filter=None,
         )
 
@@ -1381,6 +1405,7 @@ class TestDisplayStatusTableBranchIndicators:
             sessions=[],
             eligible_issues=eligible_issues,
             workspace_base=str(tmp_path),
+            active_set={},
             issues_without_branch=issues_without_branch,
         )
 
@@ -1413,6 +1438,7 @@ class TestDisplayStatusTableBranchIndicators:
             sessions=[],
             eligible_issues=eligible_issues,
             workspace_base=str(tmp_path),
+            active_set={},
             issues_without_branch=issues_without_branch,
         )
 
@@ -1446,6 +1472,7 @@ class TestDisplayStatusTableBranchIndicators:
             sessions=[],
             eligible_issues=eligible_issues,
             workspace_base=str(tmp_path),
+            active_set={},
             issues_without_branch=issues_without_branch,
         )
 
@@ -1489,6 +1516,7 @@ class TestDisplayStatusTableBranchIndicators:
             sessions=[],
             eligible_issues=eligible_issues,
             workspace_base=str(tmp_path),
+            active_set={},
             issues_without_branch=None,  # Not provided
         )
 
@@ -1521,6 +1549,7 @@ class TestDisplayStatusTableBranchIndicators:
             sessions=[],
             eligible_issues=eligible_issues,
             workspace_base=str(tmp_path),
+            active_set={},
             issues_without_branch=issues_without_branch,
         )
 

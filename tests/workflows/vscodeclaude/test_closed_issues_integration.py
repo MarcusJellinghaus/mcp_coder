@@ -71,13 +71,12 @@ class TestClosedIssueIntegration:
             "updated_at": "2025-12-31T08:00:00Z",
         }
 
+        active_set = {s["folder"]: False for s in sessions}
+
         with (
             patch(
                 "mcp_coder.workflows.vscodeclaude.session_restart.load_sessions"
             ) as mock_load,
-            patch(
-                "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active"
-            ) as mock_active,
             patch(
                 "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos"
             ) as mock_repos,
@@ -91,13 +90,12 @@ class TestClosedIssueIntegration:
         ):
             # Setup mocks
             mock_load.return_value = {"sessions": sessions}
-            mock_active.return_value = False  # VSCode not running
             mock_repos.return_value = {"owner/repo"}
             mock_build_cache.return_value = {"owner/repo": {414: issue_414}}
             mock_exists.return_value = True  # Folder exists
 
             # Call restart_closed_sessions
-            result = restart_closed_sessions()
+            result = restart_closed_sessions(active_set=active_set)
 
             # Verify closed issue was skipped in logs
             assert "Skipping closed issue #414" in caplog.text
@@ -219,6 +217,7 @@ class TestClosedIssueIntegration:
                 sessions=sessions,
                 eligible_issues=eligible_issues,
                 workspace_base=str(tmp_path),
+                active_set={s["folder"]: False for s in sessions},
                 cached_issues_by_repo=cached_issues,
             )
 
@@ -324,13 +323,12 @@ class TestClosedIssueIntegration:
 
         cached_issues = {"owner/repo": {414: issue_414, 408: issue_408, 100: issue_100}}
 
+        active_set = {s["folder"]: False for s in sessions}
+
         with (
             patch(
                 "mcp_coder.workflows.vscodeclaude.session_restart.load_sessions"
             ) as mock_load,
-            patch(
-                "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active"
-            ) as mock_active,
             patch(
                 "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos"
             ) as mock_repos,
@@ -344,13 +342,12 @@ class TestClosedIssueIntegration:
         ):
             # Setup mocks
             mock_load.return_value = {"sessions": sessions}
-            mock_active.return_value = False
             mock_repos.return_value = {"owner/repo"}
             mock_build_cache.return_value = cached_issues
             mock_exists.return_value = True
 
             # Call restart_closed_sessions
-            _ = restart_closed_sessions()
+            _ = restart_closed_sessions(active_set=active_set)
 
             # Verify cache was built with all three issues
             assert 414 in cached_issues["owner/repo"]
@@ -420,14 +417,13 @@ class TestClosedIssueIntegration:
 
         cached_issues = {"owner/repo": {414: issue_414}}
 
+        active_set = {s["folder"]: False for s in sessions}
+
         # Step 1: Test restart_closed_sessions
         with (
             patch(
                 "mcp_coder.workflows.vscodeclaude.session_restart.load_sessions"
             ) as mock_load,
-            patch(
-                "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active"
-            ) as mock_active,
             patch(
                 "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos"
             ) as mock_repos,
@@ -440,13 +436,12 @@ class TestClosedIssueIntegration:
             ) as mock_launch,
         ):
             mock_load.return_value = {"sessions": sessions}
-            mock_active.return_value = False
             mock_repos.return_value = {"owner/repo"}
             mock_build_cache.return_value = cached_issues
             mock_exists.return_value = True
 
             # Call restart
-            result = restart_closed_sessions()
+            result = restart_closed_sessions(active_set=active_set)
 
             # Verify issue #414 was not restarted
             assert len(result) == 0
@@ -464,6 +459,7 @@ class TestClosedIssueIntegration:
                 sessions=sessions,
                 eligible_issues=eligible_issues,
                 workspace_base=str(tmp_path),
+                active_set={s["folder"]: False for s in sessions},
                 cached_issues_by_repo=cached_issues,
             )
 

@@ -592,26 +592,31 @@ def is_session_active(session: VSCodeClaudeSession) -> bool:
     return False
 
 
-def get_active_session_count() -> int:
-    """Count sessions with running VSCode processes and existing artifacts.
+def build_active_session_set(
+    sessions: list[VSCodeClaudeSession],
+) -> dict[str, bool]:
+    """Build active-set snapshot.
 
-    Uses the current VSCode detection caches without refreshing them, so the
-    result is consistent with whatever scan ran most recently (e.g. the fresh
-    scan performed by restart_closed_sessions()). Callers that need a
-    guaranteed fresh scan should call clear_vscode_window_cache() and
-    clear_vscode_process_cache() before this function.
+    Side effects: clears VSCode window/process caches, may call
+    update_session_pid for active sessions whose stored PID differs
+    from the currently-detected PID.
 
     Returns:
-        Number of active sessions according to is_session_active().
+        Mapping of each session's folder path to a boolean indicating
+        whether that session is currently active.
     """
-    store = load_sessions()
-    count = sum(1 for s in store["sessions"] if is_session_active(s))
-    logger.debug(
-        "get_active_session_count: %d/%d sessions active",
-        count,
-        len(store["sessions"]),
-    )
-    return count
+    clear_vscode_window_cache()
+    clear_vscode_process_cache()
+    logger.info("Checking %d session(s)...", len(sessions))
+    active_set: dict[str, bool] = {}
+    for session in sessions:
+        is_active = is_session_active(session)
+        active_set[session["folder"]] = is_active
+        if is_active:
+            _, found_pid = is_vscode_open_for_folder(session["folder"])
+            if found_pid is not None and found_pid != session.get("vscode_pid"):
+                update_session_pid(session["folder"], found_pid)
+    return active_set
 
 
 def update_session_pid(folder: str, pid: int) -> None:

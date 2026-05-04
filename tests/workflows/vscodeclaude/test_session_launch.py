@@ -310,10 +310,6 @@ class TestSkipGithubInstallThreading:
             lambda *args, **kwargs: None,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.get_active_session_count",
-            lambda: 0,
-        )
-        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_github_username",
             lambda: "testuser",
         )
@@ -333,6 +329,7 @@ class TestSkipGithubInstallThreading:
             repo_config={"repo_url": "https://github.com/owner/repo"},
             vscodeclaude_config={"workspace_base": "/tmp", "max_sessions": 3},
             max_sessions=3,
+            current_count=0,
             skip_github_install=True,
         )
 

@@ -26,10 +26,6 @@ class TestRestartClosedSessionsBranchHandling:
             lambda: sessions_file,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
-            lambda session: False,
-        )
-        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
             lambda: {"owner/repo"},
         )
@@ -117,7 +113,10 @@ class TestRestartClosedSessionsBranchHandling:
             "owner/repo": {123: cached_issue}
         }
 
-        restart_closed_sessions(cached_issues_by_repo=cached_issues)
+        restart_closed_sessions(
+            active_set={str(working_folder): False},
+            cached_issues_by_repo=cached_issues,
+        )
 
         # Verify _prepare_restart_branch was called
         assert len(prepare_calls) == 1
@@ -134,10 +133,6 @@ class TestRestartClosedSessionsBranchHandling:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
-            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
@@ -197,7 +192,10 @@ class TestRestartClosedSessionsBranchHandling:
         }
 
         with caplog.at_level(logging.WARNING):
-            result = restart_closed_sessions(cached_issues_by_repo=cached_issues)
+            result = restart_closed_sessions(
+                active_set={str(working_folder): False},
+                cached_issues_by_repo=cached_issues,
+            )
 
         # VSCode should NOT be launched
         assert len(result) == 0
@@ -213,10 +211,6 @@ class TestRestartClosedSessionsBranchHandling:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
-            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
@@ -276,7 +270,10 @@ class TestRestartClosedSessionsBranchHandling:
         }
 
         with caplog.at_level(logging.WARNING):
-            result = restart_closed_sessions(cached_issues_by_repo=cached_issues)
+            result = restart_closed_sessions(
+                active_set={str(working_folder): False},
+                cached_issues_by_repo=cached_issues,
+            )
 
         assert len(result) == 0
         assert "Dirty" in caplog.text
@@ -289,10 +286,6 @@ class TestRestartClosedSessionsBranchHandling:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
-            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
@@ -399,7 +392,10 @@ class TestRestartClosedSessionsBranchHandling:
             "owner/repo": {123: cached_issue}
         }
 
-        result = restart_closed_sessions(cached_issues_by_repo=cached_issues)
+        result = restart_closed_sessions(
+            active_set={str(working_folder): False},
+            cached_issues_by_repo=cached_issues,
+        )
 
         # Session should be restarted
         assert len(result) == 1
@@ -418,10 +414,6 @@ class TestRestartClosedSessionsBranchHandling:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
             lambda: sessions_file,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.is_session_active",
-            lambda session: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart._get_configured_repos",
@@ -465,7 +457,10 @@ class TestRestartClosedSessionsBranchHandling:
         }
 
         with caplog.at_level(logging.WARNING):
-            result = restart_closed_sessions(cached_issues_by_repo=cached_issues)
+            result = restart_closed_sessions(
+                active_set={str(working_folder): False},
+                cached_issues_by_repo=cached_issues,
+            )
 
         # Should skip even for intervention
         assert len(result) == 0

@@ -29,8 +29,8 @@ from ....utils.user_config import (
 from ....workflows.vscodeclaude import (
     VSCodeClaudeConfig,
     VSCodeClaudeSession,
+    build_active_session_set,
     cleanup_stale_sessions,
-    get_active_session_count,
     load_repo_vscodeclaude_config,
     load_sessions,
     load_vscodeclaude_config,
@@ -515,6 +515,10 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         store = load_sessions()
         sessions_list = store["sessions"]
 
+        # Build active-session snapshot once at command entry. Used by cleanup
+        # and restart so each session is checked exactly once per command.
+        active_set = build_active_session_set(sessions_list)
+
         # Build cached issues for all repos (used for staleness checks)
         # Pass sessions so closed session issues are included (mirrors status command)
         cached_issues_by_repo, _ = _build_cached_issues_by_repo(
@@ -527,18 +531,22 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         if args.cleanup:
             cleanup_stale_sessions(
                 workspace_base=vscodeclaude_config["workspace_base"],
+                active_set=active_set,
                 dry_run=False,
                 cached_issues_by_repo=cached_issues_by_repo,
             )
         else:
             cleanup_stale_sessions(
                 workspace_base=vscodeclaude_config["workspace_base"],
+                active_set=active_set,
                 dry_run=True,
                 cached_issues_by_repo=cached_issues_by_repo,
             )
 
         # Step 2: Restart closed sessions (pass cache for staleness checks)
-        restarted = restart_closed_sessions(cached_issues_by_repo=cached_issues_by_repo)
+        restarted = restart_closed_sessions(
+            active_set=active_set, cached_issues_by_repo=cached_issues_by_repo
+        )
         for session in restarted:
             repo_short = session["repo"].split("/")[-1]
             logger.log(
@@ -556,6 +564,10 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
             return 1
 
         # Step 4: Process each repository
+        # current_count tracks active+restarted+newly-launched sessions across
+        # the per-repo loop. active_set records restarted sessions as inactive
+        # (their snapshot was taken before restart), so add len(restarted).
+        current_count = sum(active_set.values()) + len(restarted)
         skip_github_install = getattr(args, "no_install_from_github", False)
         total_started: List[VSCodeClaudeSession] = []
         for repo_name in repo_names:
@@ -596,10 +608,12 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
                 repo_config=validated_config,
                 vscodeclaude_config=vscodeclaude_config,
                 max_sessions=max_sessions,
+                current_count=current_count,
                 all_cached_issues=all_cached_issues,
                 skip_github_install=skip_github_install,
             )
             total_started.extend(started)
+            current_count += len(started)
 
         # Print summary
         if total_started:
@@ -614,9 +628,11 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
                     session["status"],
                 )
         else:
-            current = get_active_session_count()
             logger.log(
-                OUTPUT, "No new sessions started (active: %d/%d)", current, max_sessions
+                OUTPUT,
+                "No new sessions started (active: %d/%d)",
+                current_count,
+                max_sessions,
             )
 
         return 0
@@ -652,6 +668,10 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
     store = load_sessions()
     sessions = store["sessions"]
 
+    # Build active-session snapshot once at command entry. Each session is
+    # checked exactly once per status command via is_session_active.
+    active_set = build_active_session_set(sessions)
+
     # Get repo list for cache building
     config_data = load_config()
     repos_section = config_data.get("coordinator", {}).get("repos", {})
@@ -677,6 +697,7 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
         sessions=sessions,
         eligible_issues=eligible_issues,
         workspace_base=vscodeclaude_config["workspace_base"],
+        active_set=active_set,
         repo_filter=args.repo,
         cached_issues_by_repo=cached_issues_by_repo,
         issues_without_branch=issues_without_branch,

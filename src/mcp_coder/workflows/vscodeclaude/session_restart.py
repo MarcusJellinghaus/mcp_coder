@@ -31,10 +31,6 @@ from .session_launch import (
     regenerate_session_files,
 )
 from .sessions import (
-    clear_vscode_process_cache,
-    clear_vscode_window_cache,
-    is_session_active,
-    is_vscode_open_for_folder,
     load_sessions,
     remove_session,
     update_session_pid,
@@ -210,11 +206,14 @@ def _build_cached_issues_by_repo(
 
 
 def restart_closed_sessions(
+    active_set: dict[str, bool],
     cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
 ) -> list[VSCodeClaudeSession]:
     """Restart sessions where VSCode was closed.
 
     Args:
+        active_set: Snapshot mapping session folder -> is_active. Sessions
+            recorded as active (or removed mid-flow) are skipped.
         cached_issues_by_repo: Dict mapping repo_full_name to issues dict.
                                If provided, avoids API calls for staleness checks
                                and file regeneration.
@@ -244,10 +243,6 @@ def restart_closed_sessions(
 
     restarted: list[VSCodeClaudeSession] = []
 
-    # Refresh caches once for all sessions (window cache is fast, process cache is slow)
-    clear_vscode_window_cache()
-    clear_vscode_process_cache()
-
     # Load configured repos from config file (fresh read on each start)
     configured_repos = _get_configured_repos()
     logger.debug("Configured repos from config: %s", configured_repos)
@@ -258,13 +253,7 @@ def restart_closed_sessions(
     for session in store["sessions"]:
         folder_path = Path(session["folder"])
 
-        # Use is_session_active() for consistent detection across all callers.
-        # Also run cmdline check separately to update stored PID if it changed
-        # (avoids slow scan on next run).
-        if is_session_active(session):
-            _, found_pid = is_vscode_open_for_folder(session["folder"])
-            if found_pid and found_pid != session.get("vscode_pid"):
-                update_session_pid(session["folder"], found_pid)
+        if active_set.get(session["folder"], False):
             continue
 
         # Check if folder exists

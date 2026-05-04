@@ -37,7 +37,6 @@ from .issues import (
 )
 from .sessions import (
     add_session,
-    get_active_session_count,
     get_session_for_issue,
 )
 from .types import (
@@ -261,6 +260,7 @@ def process_eligible_issues(
     repo_config: dict[str, str],
     vscodeclaude_config: VSCodeClaudeConfig,
     max_sessions: int,
+    current_count: int,
     all_cached_issues: list[IssueData] | None = None,
     skip_github_install: bool = False,
 ) -> list[VSCodeClaudeSession]:
@@ -271,6 +271,9 @@ def process_eligible_issues(
         repo_config: Repository config dict containing at minimum ``repo_url``.
         vscodeclaude_config: Global VSCodeClaude config (workspace_base, max_sessions, etc.).
         max_sessions: Maximum number of concurrent sessions allowed across all repos.
+        current_count: Running count of active+restarted+newly-launched sessions across
+            all repos in this command run. Tracked by the caller so capacity decisions
+            are consistent across the per-repo loop.
         all_cached_issues: Pre-fetched list of all issues for the repo. When provided,
             ``get_all_cached_issues`` is not called, avoiding a duplicate-protection
             cache miss. Defaults to ``None``, in which case issues are fetched from
@@ -286,8 +289,6 @@ def process_eligible_issues(
     - Filters eligible issues, skips those with existing sessions or missing branches.
     - Starts new sessions up to the remaining available slot count.
     """
-    # Check current session count
-    current_count = get_active_session_count()
     if current_count >= max_sessions:
         logger.info(
             "Already at max sessions (%d/%d), skipping",
@@ -384,7 +385,6 @@ def process_eligible_issues(
                 skip_github_install=skip_github_install,
             )
             started_sessions.append(session)
-            current_count += 1
 
         except (
             Exception
