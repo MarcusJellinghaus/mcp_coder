@@ -54,3 +54,18 @@ Issue: icoder: tone down branch-info polling and prefix version label
 **Changes**: step_3.md only — Boy Scout docstring bullet added, `Callable` import wording sharpened, `_apply_pr_result` dropped from preservation list.
 
 **Status**: Plan files updated; ready for next review round.
+
+
+## Round 4 — 2026-05-04
+
+**Findings**:
+- Step 3: three stale line-number references in `app.py` citations — `app.py:138` (actual: line 9), `_tick_branch_quick` "around line 432-433" (actual: 309-310), `_branch_quick_work` "around line 441" (actual: 317-318)
+
+**Decisions**:
+- All three are cosmetic line-number fixes; auto-applied. The quoted code strings stayed correct so the intent was never lost — just the line citations.
+
+**User decisions**: None.
+
+**Changes**: step_3.md only — three line-number corrections.
+
+**Status**: Plan files updated; ready for next review round.

@@ -50,7 +50,7 @@ self.set_interval(10.0, self._tick_branch_quick)  # after
 Imports added at the top of `app.py`: `time` and
 `from dataclasses import replace`. Add `Callable` to the existing
 `from typing import Any, Optional` line in `app.py` (currently absent —
-verified at `app.py:138`).
+verified at `app.py:9`).
 
 ## HOW
 
@@ -82,8 +82,8 @@ verified at `app.py:138`).
 - `_timed_fetch` is implemented as a method on `ICoderApp` (not a free
   function) for cohesion with the workers that call it.
 - Boy Scout: update the stale docstrings in `app.py` for the quick-tick
-  path. `_tick_branch_quick` (around line 432-433): change "2-second
-  tick" → "10-second tick". `_branch_quick_work` (around line 441):
+  path. `_tick_branch_quick` (around line 309-310): change "2-second
+  tick" → "10-second tick". `_branch_quick_work` (around line 317-318):
   change "2s branch tick" → "10s branch tick".
 
 ## ALGORITHM
