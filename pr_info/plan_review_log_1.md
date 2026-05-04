@@ -38,3 +38,19 @@ Issue: icoder: tone down branch-info polling and prefix version label
 **Changes**: step_3.md (on_mount symbol fix + doc-update wording tightened); step_4.md (NoMatches import note added).
 
 **Status**: Plan files updated; ready for next review round.
+
+## Round 3 — 2026-05-04
+
+**Findings**:
+- Step 3: stale docstrings in `app.py` (`_tick_branch_quick`, `_branch_quick_work`) say "2-second tick" / "2s branch tick" — parallel to Step 2's Boy Scout note for `branch_info_service.py`
+- Step 3: `Callable` import wording was conditional ("or add it if absent") — sharpened to a definite instruction
+- Step 3: `_apply_pr_result` mentioned in `merge_with_prior=False` preservation list, but it doesn't call `_apply_branch_state` — removed
+
+**Decisions**:
+- All three findings are straightforward and auto-applied. No user input needed.
+
+**User decisions**: None.
+
+**Changes**: step_3.md only — Boy Scout docstring bullet added, `Callable` import wording sharpened, `_apply_pr_result` dropped from preservation list.
+
+**Status**: Plan files updated; ready for next review round.

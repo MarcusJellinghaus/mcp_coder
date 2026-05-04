@@ -48,8 +48,9 @@ self.set_interval(10.0, self._tick_branch_quick)  # after
 ```
 
 Imports added at the top of `app.py`: `time` and
-`from dataclasses import replace`. `Callable` already imported via the
-existing `typing` block (or add it if absent).
+`from dataclasses import replace`. Add `Callable` to the existing
+`from typing import Any, Optional` line in `app.py` (currently absent —
+verified at `app.py:138`).
 
 ## HOW
 
@@ -80,6 +81,10 @@ existing `typing` block (or add it if absent).
   dropped harmlessly.
 - `_timed_fetch` is implemented as a method on `ICoderApp` (not a free
   function) for cohesion with the workers that call it.
+- Boy Scout: update the stale docstrings in `app.py` for the quick-tick
+  path. `_tick_branch_quick` (around line 432-433): change "2-second
+  tick" → "10-second tick". `_branch_quick_work` (around line 441):
+  change "2s branch tick" → "10s branch tick".
 
 ## ALGORITHM
 
@@ -147,7 +152,7 @@ if (info is not None and merge_with_prior
 
 - `_apply_branch_state` accepts a new keyword `merge_with_prior: bool`.
   Default `False` preserves all existing call-site behaviour
-  (`_refresh_issue_work`, `_branch_full_work`, `_apply_pr_result` indirectly).
+  (`_refresh_issue_work`, `_branch_full_work`).
 - `_timed_fetch` returns whatever `fn()` returns; for our two call
   sites that is a `BranchInfo`.
 - No new instance attributes in this step.
