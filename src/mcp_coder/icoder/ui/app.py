@@ -319,7 +319,15 @@ class ICoderApp(App[None]):
         self.run_worker(self._branch_full_work, thread=True)
 
     def _timed_fetch(self, label: str, fn: Callable[[], BranchInfo]) -> BranchInfo:
-        """Wrap a data-layer fetch with debug-level perf timing."""
+        """Wrap a data-layer fetch with debug-level perf timing.
+
+        Args:
+            label: Identifier used in the debug log line.
+            fn: Zero-arg callable returning a ``BranchInfo``.
+
+        Returns:
+            The ``BranchInfo`` produced by ``fn``.
+        """
         start = time.perf_counter()
         try:
             return fn()
