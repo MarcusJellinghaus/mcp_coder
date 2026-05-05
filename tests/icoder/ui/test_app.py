@@ -874,6 +874,29 @@ async def test_render_diff_emits_when_field_changes(
                 assert emitted.pr_number == 99
 
 
+async def test_status_version_label_has_mcp_coder_prefix(
+    make_icoder_app: Callable[..., ICoderApp],
+    tmp_path: Path,
+) -> None:
+    """Status-bar version label is prefixed with 'mcp-coder '."""
+    runtime_info = RuntimeInfo(
+        mcp_coder_version="9.9.9",
+        mcp_coder_utils_version="1.2.3",
+        python_version="3.12.0",
+        claude_code_version="unknown",
+        tool_env_path="/tmp/tool-env",
+        project_venv_path="/tmp/proj-venv",
+        project_dir=str(tmp_path),
+        env_vars={},
+        mcp_servers=[],
+    )
+    app = make_icoder_app(runtime_info=runtime_info)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        widget = app.query_one("#status-version", Static)
+        assert "mcp-coder v9.9.9" in str(widget.render())
+
+
 def _make_runtime_info(project_dir: Path) -> RuntimeInfo:
     return RuntimeInfo(
         mcp_coder_version="9.9.9",
