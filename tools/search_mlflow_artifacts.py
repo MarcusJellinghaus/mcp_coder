@@ -19,22 +19,20 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from mcp_coder.utils.user_app_data import get_user_app_data_dir
+
 
 def get_mlflow_db_path() -> Path:
     """Get the MLflow database path from config or default location."""
-    config_paths = [
-        Path.home() / ".mcp_coder" / "config.toml",
-        Path.home() / ".config" / "mcp-coder" / "config.toml",
-    ]
-    for config_path in config_paths:
-        if config_path.exists():
-            config_text = config_path.read_text()
-            match = re.search(r'tracking_uri\s*=\s*"sqlite:///([^"]+)"', config_text)
-            if match:
-                db_path = match.group(1)
-                if db_path.startswith("~/"):
-                    db_path = str(Path.home() / db_path[2:])
-                return Path(db_path)
+    config_path = get_user_app_data_dir("mcp_coder") / "config.toml"
+    if config_path.exists():
+        config_text = config_path.read_text()
+        match = re.search(r'tracking_uri\s*=\s*"sqlite:///([^"]+)"', config_text)
+        if match:
+            db_path = match.group(1)
+            if db_path.startswith("~/"):
+                db_path = str(Path.home() / db_path[2:])
+            return Path(db_path)
     return Path.home() / "mlflow_data" / "mlflow.db"
 
 
@@ -68,18 +66,17 @@ def get_all_runs(
 
         # Get params for filtering
         pcursor = conn.cursor()
-        pcursor.execute(
-            "SELECT key, value FROM params WHERE run_uuid = ?", (run_id,)
-        )
+        pcursor.execute("SELECT key, value FROM params WHERE run_uuid = ?", (run_id,))
         params = {r[0]: r[1] for r in pcursor.fetchall()}
 
         # Apply filters
         if branch and params.get("branch_name", "") != branch:
             if branch not in params.get("branch_name", ""):
                 continue
-        if working_dir and working_dir.lower() not in params.get(
-            "working_directory", ""
-        ).lower():
+        if (
+            working_dir
+            and working_dir.lower() not in params.get("working_directory", "").lower()
+        ):
             continue
 
         runs.append(
@@ -155,9 +152,7 @@ def load_step_conversations(artifact_uri: str) -> List[Dict[str, Any]]:
     return steps
 
 
-def extract_searchable_text(
-    step: Dict[str, Any], field: str
-) -> List[Dict[str, str]]:
+def extract_searchable_text(step: Dict[str, Any], field: str) -> List[Dict[str, str]]:
     """Extract searchable text blocks from a step conversation."""
     results = []
     conv = step.get("conversation", {})
@@ -197,9 +192,7 @@ def extract_searchable_text(
                 if bt == "text" and field in ("all", "response"):
                     t = block.get("text", "")
                     if t.strip():
-                        results.append(
-                            {"field": "assistant_text", "text": t}
-                        )
+                        results.append({"field": "assistant_text", "text": t})
 
         # Tool results
         tr = msg.get("tool_use_result")
@@ -300,9 +293,7 @@ def main() -> None:
     parser.add_argument(
         "--case-sensitive", action="store_true", help="Case-sensitive search"
     )
-    parser.add_argument(
-        "--db-path", type=str, help="Path to MLflow SQLite database"
-    )
+    parser.add_argument("--db-path", type=str, help="Path to MLflow SQLite database")
 
     args = parser.parse_args()
 

@@ -34,22 +34,20 @@ import urllib.parse
 from pathlib import Path
 from typing import Any
 
+from mcp_coder.utils.user_app_data import get_user_app_data_dir
+
 
 def get_mlflow_db_path() -> Path:
     """Get the MLflow database path from config or default location."""
-    config_paths = [
-        Path.home() / ".mcp_coder" / "config.toml",
-        Path.home() / ".config" / "mcp-coder" / "config.toml",
-    ]
-    for config_path in config_paths:
-        if config_path.exists():
-            config_text = config_path.read_text()
-            match = re.search(r'tracking_uri\s*=\s*"sqlite:///([^"]+)"', config_text)
-            if match:
-                db_path = match.group(1)
-                if db_path.startswith("~/"):
-                    db_path = str(Path.home() / db_path[2:])
-                return Path(db_path)
+    config_path = get_user_app_data_dir("mcp_coder") / "config.toml"
+    if config_path.exists():
+        config_text = config_path.read_text()
+        match = re.search(r'tracking_uri\s*=\s*"sqlite:///([^"]+)"', config_text)
+        if match:
+            db_path = match.group(1)
+            if db_path.startswith("~/"):
+                db_path = str(Path.home() / db_path[2:])
+            return Path(db_path)
     return Path.home() / "mlflow_data" / "mlflow.db"
 
 
@@ -92,17 +90,17 @@ def extract_pairs(msgs: list[dict[str, Any]]) -> list[dict[str, Any]]:
             # Find matching result in next few messages
             for j in range(i + 1, min(i + 3, len(msgs))):
                 if msgs[j].get("type") == "user" and "tool_use_result" in msgs[j]:
-                    pairs.append({
-                        "tool_call": block,
-                        "tool_result": msgs[j]["tool_use_result"],
-                    })
+                    pairs.append(
+                        {
+                            "tool_call": block,
+                            "tool_result": msgs[j]["tool_use_result"],
+                        }
+                    )
                     break
     return pairs
 
 
-def get_recent_runs(
-    conn: sqlite3.Connection, limit: int = 50
-) -> list[dict[str, Any]]:
+def get_recent_runs(conn: sqlite3.Connection, limit: int = 50) -> list[dict[str, Any]]:
     """Get recent runs from database."""
     cursor = conn.cursor()
     cursor.execute(
