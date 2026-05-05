@@ -126,6 +126,13 @@ mcp-coder = "mcp_coder.cli.main:main"
 # greenlet 3.4.0 ships no win_amd64 wheels and no sdist, which breaks `uv sync`
 # on Windows. Constrain transitive versions until upstream publishes Windows wheels.
 constraint-dependencies = ["greenlet<3.4"]
+# Workaround for transitive URL dependency: a recent mcp-workspace build declares
+# mcp-coder-utils as a direct git URL, which uv requires to be re-stated as a
+# top-level override. Remove once mcp-workspace publishes a fix that uses a plain
+# name in [project].dependencies.
+override-dependencies = [
+    "mcp-coder-utils @ git+https://github.com/MarcusJellinghaus/mcp-coder-utils.git",
+]
 
 [tool.uv.sources]
 # Map sibling MCP packages to their GitHub sources so uv can satisfy URL-typed
