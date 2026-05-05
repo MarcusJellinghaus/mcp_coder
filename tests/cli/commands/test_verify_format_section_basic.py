@@ -202,6 +202,12 @@ class TestGitHubLabelMappings:
         "force_push",
         "branch_deletion",
         "auto_delete_branches",
+        "perm_contents_read",
+        "perm_administration_read",
+        "perm_pull_requests_read",
+        "perm_issues_read",
+        "perm_workflows_read",
+        "perm_statuses_read",
     )
 
     def _symbols(self) -> dict[str, str]:
@@ -382,3 +388,128 @@ class TestTokenFingerprintSuffix:
             assert "from ~/.mcp_coder/config.toml (" not in output
         else:
             assert expected_in_suffix in output
+
+
+_PERM_LABELS: tuple[str, ...] = (
+    "Contents: Read",
+    "Administration: Read",
+    "Pull requests: Read",
+    "Issues: Read",
+    "Actions: Read",
+    "Commit statuses: Read",
+)
+
+
+class TestPermissionProbes:
+    """Tests for [Permissions] subsection rendering (#946)."""
+
+    def _symbols(self) -> dict[str, str]:
+        return {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
+
+    def _all_ok_result(self) -> dict[str, Any]:
+        return {
+            "auto_delete_branches": {"ok": True, "value": "enabled"},
+            "perm_contents_read": {"ok": True, "value": "granted"},
+            "perm_administration_read": {"ok": True, "value": "granted"},
+            "perm_pull_requests_read": {"ok": True, "value": "granted"},
+            "perm_issues_read": {"ok": True, "value": "granted"},
+            "perm_workflows_read": {"ok": True, "value": "granted"},
+            "perm_statuses_read": {"ok": True, "value": "granted"},
+            "overall_ok": True,
+        }
+
+    @pytest.mark.parametrize(
+        "scenario",
+        ["all-ok", "one-missing", "repo-inaccessible"],
+    )
+    def test_perm_rows_rendered(self, scenario: str) -> None:
+        """Each parametrized scenario renders the 6 perm_* rows correctly."""
+        if scenario == "all-ok":
+            result = self._all_ok_result()
+            output = _format_section("GITHUB", result, self._symbols())
+            for label in _PERM_LABELS:
+                assert (
+                    _format_row(label, "[OK]", "granted", indent=4) in output
+                ), f"Missing OK row for {label}"
+        elif scenario == "one-missing":
+            result = self._all_ok_result()
+            result["perm_workflows_read"] = {
+                "ok": False,
+                "value": "denied",
+                "error": "https://docs.github.com/...#workflows",
+            }
+            output = _format_section("GITHUB", result, self._symbols())
+            assert "[ERR]" in output
+            assert "https://docs.github.com/...#workflows" in output
+            for label in _PERM_LABELS:
+                if label == "Actions: Read":
+                    continue
+                assert (
+                    _format_row(label, "[OK]", "granted", indent=4) in output
+                ), f"Missing OK row for {label}"
+        else:
+            assert scenario == "repo-inaccessible"
+            err = "repository not accessible"
+            result = {
+                "auto_delete_branches": {"ok": True, "value": "enabled"},
+                "perm_contents_read": {
+                    "ok": False,
+                    "value": "not checked",
+                    "error": err,
+                },
+                "perm_administration_read": {
+                    "ok": False,
+                    "value": "not checked",
+                    "error": err,
+                },
+                "perm_pull_requests_read": {
+                    "ok": False,
+                    "value": "not checked",
+                    "error": err,
+                },
+                "perm_issues_read": {
+                    "ok": False,
+                    "value": "not checked",
+                    "error": err,
+                },
+                "perm_workflows_read": {
+                    "ok": False,
+                    "value": "not checked",
+                    "error": err,
+                },
+                "perm_statuses_read": {
+                    "ok": False,
+                    "value": "not checked",
+                    "error": err,
+                },
+                "overall_ok": False,
+            }
+            output = _format_section("GITHUB", result, self._symbols())
+            for label in _PERM_LABELS:
+                expected = _format_row(label, "[ERR]", f"not checked ({err})", indent=4)
+                assert expected in output, f"Missing ERR row for {label}"
+
+    def test_header_appears_once_and_after_auto_delete_branches(self) -> None:
+        """[Permissions] header appears exactly once and after Auto-delete branches."""
+        result = self._all_ok_result()
+        output = _format_section("GITHUB", result, self._symbols())
+        assert output.count("[Permissions]") == 1
+        auto_idx = output.find("Auto-delete branches")
+        header_idx = output.find("[Permissions]")
+        assert auto_idx >= 0
+        assert header_idx > auto_idx
+        last_perm_idx = max(output.find(label) for label in _PERM_LABELS)
+        assert last_perm_idx > auto_idx
+
+    def test_perm_workflows_read_label_aligns_at_label_width(self) -> None:
+        """perm_* rows are rendered at indent=4 with the standard label width."""
+        result = self._all_ok_result()
+        output = _format_section("GITHUB", result, self._symbols())
+        expected_line = _format_row("Actions: Read", "[OK]", "granted", indent=4)
+        assert expected_line in output
+        for line in output.split("\n"):
+            if "Actions: Read" in line:
+                assert line == expected_line
+                break
+        else:
+            raise AssertionError("Actions: Read row not found in output")
