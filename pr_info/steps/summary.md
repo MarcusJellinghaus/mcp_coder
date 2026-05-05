@@ -24,7 +24,7 @@ Surface git signing misconfigurations through `mcp-coder verify` before they cau
 - `src/mcp_coder/mcp_workspace_git.py` — add `verify_git` import + `__all__` entry
 - `src/mcp_coder/cli/commands/verify.py` — import shim, extend `_LABEL_MAP` (13 keys), extend `_compute_exit_code` signature, insert `0d` GIT section
 - `tests/test_mcp_workspace_git_smoke.py` — bump `__all__` length assertion 28 → 29
-- `tests/cli/commands/test_verify_orchestration.py` — add `_mock_git` autouse fixture so existing tests don't hit real git
+- `tests/cli/commands/conftest.py` — add `_mock_verify_git` autouse fixture so all command tests don't hit real git
 - `tests/cli/commands/test_verify_format_section_basic.py` — add `TestGitLabelMappings` class (unit smoke test for the new section)
 - `tests/cli/commands/test_verify_integration.py` — add `git_integration`-marked test for the gpgsign-without-key scenario
 

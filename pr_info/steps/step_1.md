@@ -21,7 +21,7 @@ In `src/mcp_coder/mcp_workspace_git.py`, add:
 from mcp_workspace.git_operations.verification import verify_git
 ```
 
-Add `"verify_git"` to the `__all__` list (alphabetical position is fine; the existing list has no strict ordering — append after `"detect_parent_branch_via_merge_base"` for minimal diff).
+Add `"verify_git"` to the `__all__` list — append at end of `__all__` under a `# Verification` group, mirroring `mcp_workspace_github.py` (which lists `verify_github` under "Verification").
 
 ## HOW
 
