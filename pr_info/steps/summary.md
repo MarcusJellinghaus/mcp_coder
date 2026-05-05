@@ -24,13 +24,14 @@ Surface git signing misconfigurations through `mcp-coder verify` before they cau
 - `src/mcp_coder/mcp_workspace_git.py` — add `verify_git` import + `__all__` entry
 - `src/mcp_coder/cli/commands/verify.py` — import shim, extend `_LABEL_MAP` (13 keys), extend `_compute_exit_code` signature, insert `0d` GIT section
 - `tests/test_mcp_workspace_git_smoke.py` — bump `__all__` length assertion 28 → 29
-- `tests/cli/commands/conftest.py` — add `_mock_verify_git` autouse fixture so all command tests don't hit real git
-- `tests/cli/commands/test_verify_format_section_basic.py` — add `TestGitLabelMappings` class (unit smoke test for the new section)
+- `tests/cli/commands/conftest.py` — add `_mock_verify_git` autouse fixture (auto-mocks `verify_git` for all command tests, mirrors `_mock_verify_github`)
+- `tests/cli/commands/test_verify_format_section_basic.py` — add `TestGitLabelMappings` class with `test_all_git_keys_in_label_map` + `test_format_section_renders_git_section` (label-map / formatter tests only, parallel to existing `TestGitHubLabelMappings`)
+- `tests/cli/commands/test_verify_orchestration.py` — add `TestGitWiring` class with section-ordering test (`test_git_section_appears_between_project_and_github`) + `actually_sign=True` invocation test (`test_verify_git_called_with_actually_sign_true`)
 - `tests/cli/commands/test_verify_integration.py` — add `git_integration`-marked test for the gpgsign-without-key scenario
 
 ### Created
 
-None — the change is purely additive within existing files.
+- `tests/cli/commands/test_verify_exit_codes_git.py` — focused unit tests for `_compute_exit_code(git_result=...)`, mirrors `test_verify_exit_codes_github.py` (a `TestGitExitCode` class with `test_git_failure_returns_exit_1`, `test_git_ok_does_not_affect_exit`, `test_git_none_does_not_affect_exit`).
 
 ## Step Overview
 

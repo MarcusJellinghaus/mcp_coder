@@ -13,7 +13,9 @@ Add a `=== GIT ===` section to `mcp-coder verify` between PROJECT and GITHUB, ro
 |---|---|
 | `src/mcp_coder/cli/commands/verify.py` | Import `verify_git`; extend `_LABEL_MAP` (13 entries); extend `_compute_exit_code` signature; insert `0d` GIT section in `execute_verify`; renumber GitHub comment `0d`→`0e` |
 | `tests/cli/commands/conftest.py` | Add `_mock_verify_git` autouse fixture (parallel to `_mock_verify_github`) |
-| `tests/cli/commands/test_verify_format_section_basic.py` | Add `TestGitLabelMappings` class |
+| `tests/cli/commands/test_verify_exit_codes_git.py` | **New file** — focused unit tests for `_compute_exit_code(git_result=...)`, mirrors `test_verify_exit_codes_github.py` structure |
+| `tests/cli/commands/test_verify_format_section_basic.py` | Add `TestGitLabelMappings` class — keys-in-label-map test + format-section rendering test only (parallel to existing `TestGitHubLabelMappings`) |
+| `tests/cli/commands/test_verify_orchestration.py` | Add `TestGitWiring` class — section ordering test + `actually_sign=True` invocation test (uses `execute_verify` + `_make_args()` + `_VERIFY` already present in this file) |
 | `tests/cli/commands/test_verify_integration.py` | Add `git_integration`-marked test for gpgsign-without-key |
 
 ## WHAT
@@ -70,7 +72,15 @@ if git_result is not None and not git_result.get("overall_ok"):
 
 Update the docstring:
 - Add `git_result` entry to the `Args:` block (mirror the existing `github_result` line).
-- Update the failure-conditions summary line at the top of the docstring (the "Exit 1 when ..." sentence). Insert "when git verification failed" between the existing "when GitHub verification failed" item and the next condition. Read `verify.py` first to copy the exact phrasing/style.
+- Update the failure-conditions summary line at the top of the docstring (the "Exit 1 when ..." sentence). Insert "when git verification failed" between the existing "when GitHub verification failed" item and the next condition.
+
+  Concrete before/after (from current `src/mcp_coder/cli/commands/verify.py`):
+
+  Before:
+  > `…when GitHub verification failed, when MCP servers failed (langchain only), or when Claude MCP servers failed (claude only).`
+
+  After:
+  > `…when GitHub verification failed, when git verification failed, when MCP servers failed (langchain only), or when Claude MCP servers failed (claude only).`
 
 ### 4. Section wiring in `execute_verify` (between PROJECT and GITHUB)
 
@@ -105,7 +115,9 @@ def _mock_verify_git() -> Generator[MagicMock, None, None]:
         yield mock
 ```
 
-### 6. Unit smoke test (`test_verify_format_section_basic.py`, append a new class)
+### 6. Unit smoke tests — split across two files
+
+**6a. `test_verify_format_section_basic.py` (append a new class — pure label-map / formatter tests, parallel to existing `TestGitHubLabelMappings`):**
 
 ```python
 class TestGitLabelMappings:
@@ -146,6 +158,15 @@ class TestGitLabelMappings:
         assert "[OK]" in output
         assert "[ERR]" in output
         assert "user.signingkey unset" in output
+```
+
+This class only depends on `_format_section` and `_LABEL_MAP` — both already imported in `test_verify_format_section_basic.py`. Do NOT put `execute_verify` / `_make_args()` / `_VERIFY` tests here; that file does not import them.
+
+**6b. `test_verify_orchestration.py` (append a new `TestGitWiring` class — orchestration-level tests that drive `execute_verify`):**
+
+```python
+class TestGitWiring:
+    """Tests pinning the Git section's wiring into execute_verify."""
 
     def test_git_section_appears_between_project_and_github(
         self, capsys: pytest.CaptureFixture[str]
@@ -155,19 +176,26 @@ class TestGitLabelMappings:
         # in tests/cli/commands/conftest.py to keep this hermetic.
         execute_verify(_make_args())
         output = capsys.readouterr().out
-        assert output.find("=== PROJECT") < output.find("=== GIT") < output.find("=== GITHUB")
+        assert (
+            output.find("=== PROJECT")
+            < output.find("=== GIT")
+            < output.find("=== GITHUB")
+        )
 
     def test_verify_git_called_with_actually_sign_true(self) -> None:
         """Decision #3: Tier 3 always runs (actually_sign=True, no flag)."""
-        with patch(f"{_VERIFY}.verify_git", return_value={"overall_ok": True}) as mock:
+        with patch(
+            f"{_VERIFY}.verify_git", return_value={"overall_ok": True}
+        ) as mock_verify_git:
             execute_verify(_make_args())
-        mock.assert_called_once_with(project_dir, actually_sign=True)
-        # NOTE: the test must pass `project_dir` matching the resolved Path
-        # used by execute_verify (use the same _make_args() helper as elsewhere
-        # so the project_dir argument is consistent).
+        # Pin only the load-bearing decision: the kwarg actually_sign=True.
+        # Don't assert on the project_dir positional — execute_verify resolves
+        # it internally and we don't want a brittle Path equality check.
+        mock_verify_git.assert_called_once()
+        assert mock_verify_git.call_args.kwargs["actually_sign"] is True
 ```
 
-(The two new tests reuse `_make_args()` and `_VERIFY` constants already present in the test file/module — wire imports as the existing tests do. The `actually_sign=True` assertion pins Decision #3 in code.)
+This file already defines `_make_args`, `_VERIFY`, and imports `execute_verify` and `patch` — reuse those. The new class can be appended at the end of the file (or merged into an existing relevant class if the implementer prefers — pick whichever yields the smaller diff).
 
 ### 7. Integration test (`tests/cli/commands/test_verify_integration.py`, append)
 
@@ -254,12 +282,16 @@ if active_provider == "claude" and not claude.overall_ok: return 1
 
 ## TDD Order
 
-1. Add the unit smoke test class (`TestGitLabelMappings`) — run pytest → **fails** (keys missing from `_LABEL_MAP`).
-1.5. Add focused unit tests for the new `_compute_exit_code(git_result=...)` branch, mirroring the existing `test_github_failure_causes_exit_1` pattern in `test_verify_orchestration.py` (the test that asserts "exit code is 1 when verify_github returns overall_ok=False"). Two tests:
-   - `test_exit_1_when_git_overall_ok_false` — `git_result={"overall_ok": False}` → return 1.
-   - `test_exit_0_when_git_result_none` — `git_result=None` → not the failing path (other inputs ok → return 0).
+1. Add the unit smoke test class (`TestGitLabelMappings`) to `test_verify_format_section_basic.py` — run pytest → **fails** (keys missing from `_LABEL_MAP`).
+1.5. Add focused unit tests for the new `_compute_exit_code(git_result=...)` branch in a NEW file `tests/cli/commands/test_verify_exit_codes_git.py`, mirroring the structure of the existing `tests/cli/commands/test_verify_exit_codes_github.py`. These tests call `_compute_exit_code(...)` **directly** with `git_result=...` kwargs — they do NOT mock `verify_git` and do NOT call `execute_verify`. Mirror these three tests from `test_verify_exit_codes_github.py` (a `TestGitHubExitCode` class around line 39 of that file) into a parallel `TestGitExitCode` class:
 
-   These can either go in `test_verify_orchestration.py` next to the GitHub equivalents, or in a focused unit-test class for `_compute_exit_code` if one already exists. They will fail until step 3 lands.
+   - `test_github_failure_returns_exit_1` → `test_git_failure_returns_exit_1` (`git_result={"overall_ok": False}` → return 1).
+   - `test_github_ok_does_not_affect_exit` → `test_git_ok_does_not_affect_exit` (`git_result={"overall_ok": True}` → return 0).
+   - `test_github_none_does_not_affect_exit` → `test_git_none_does_not_affect_exit` (`git_result=None` → return 0).
+
+   Reuse the same `_claude_ok()` / `_mlflow_not_installed()` helper patterns as `test_verify_exit_codes_github.py` (or import them; copy the simpler/smaller diff). They will fail until step 3 lands.
+
+   **Rationale for picking a new file over appending to `test_verify_exit_codes_github.py`:** The existing file is named for GitHub specifically, so a parallel `test_verify_exit_codes_git.py` keeps unit-test files single-concern and discoverable. If during implementation appending a `TestGitExitCode` class to the existing file produces a meaningfully smaller diff, that alternative is acceptable — but update WHERE/Acceptance accordingly.
 2. Add the 13 entries to `_LABEL_MAP` → unit smoke test still fails (rendering test needs section wired).
 3. Add the import, `_compute_exit_code` parameter + check (with updated docstring summary line + Args), and the `0d` section in `execute_verify`. Pass `git_result` into the call.
 4. Add the `_mock_verify_git` autouse fixture to `tests/cli/commands/conftest.py` (otherwise tests across multiple files break by hitting real git).
@@ -274,9 +306,9 @@ if active_provider == "claude" and not claude.overall_ok: return 1
 - When no signing flags are set: section reports `Signing enabled  [OK]  not configured`; exit code unaffected.
 - When `commit.gpgsign=true` is set with a broken setup: section shows a clear error row and verify exits non-zero.
 - All existing `test_verify*.py` tests still pass (the conftest-level `_mock_verify_git` autouse fixture protects them).
-- New `_compute_exit_code` unit tests pass: `test_exit_1_when_git_overall_ok_false` and `test_exit_0_when_git_result_none`.
-- New ordering test passes: `test_git_section_appears_between_project_and_github` — pins Decision #2.
-- New invocation test passes: `test_verify_git_called_with_actually_sign_true` — pins Decision #3.
+- New `_compute_exit_code` unit tests pass in `tests/cli/commands/test_verify_exit_codes_git.py` (`TestGitExitCode`): `test_git_failure_returns_exit_1`, `test_git_ok_does_not_affect_exit`, `test_git_none_does_not_affect_exit`.
+- New ordering test passes (in `test_verify_orchestration.py`, `TestGitWiring`): `test_git_section_appears_between_project_and_github` — pins Decision #2.
+- New invocation test passes (in `test_verify_orchestration.py`, `TestGitWiring`): `test_verify_git_called_with_actually_sign_true` — pins Decision #3 by asserting `mock_verify_git.call_args.kwargs["actually_sign"] is True`.
 - pylint, pytest, mypy all green.
 
 ## LLM Prompt
@@ -289,9 +321,20 @@ that `from mcp_coder.mcp_workspace_git import verify_git` succeeds before starti
 Implement Step 2 exactly as specified, in this order (TDD):
 
 1. Append the TestGitLabelMappings class to
-   tests/cli/commands/test_verify_format_section_basic.py (use the code in the
-   step's "Unit smoke test" section verbatim, adjusting only the imports if
-   the file already provides them). Run pytest on that file — confirm failure.
+   tests/cli/commands/test_verify_format_section_basic.py (use the code in
+   step's §6a verbatim — only `test_all_git_keys_in_label_map` and
+   `test_format_section_renders_git_section`). Adjust imports only if the
+   file does not already provide them. Run pytest on that file — confirm
+   failure.
+
+1a. Create a NEW file tests/cli/commands/test_verify_exit_codes_git.py
+   mirroring tests/cli/commands/test_verify_exit_codes_github.py. Add a
+   `TestGitExitCode` class with three tests (`test_git_failure_returns_exit_1`,
+   `test_git_ok_does_not_affect_exit`, `test_git_none_does_not_affect_exit`)
+   that call `_compute_exit_code(...)` directly with `git_result=...` kwargs.
+   Reuse the `_claude_ok()` / `_mlflow_not_installed()` helper structure from
+   the GitHub file. Do NOT mock verify_git; do NOT call execute_verify.
+   Run pytest — confirm failure (parameter doesn't exist yet).
 
 2. Edit src/mcp_coder/cli/commands/verify.py:
    a. Add `from ...mcp_workspace_git import verify_git` near the existing
@@ -317,6 +360,20 @@ Implement Step 2 exactly as specified, in this order (TDD):
    Mirror that fixture's structure exactly: module-level (not class-scoped),
    patches `mcp_coder.cli.commands.verify.verify_git`, default returns
    `{"overall_ok": True}`.
+
+3a. Append a new `TestGitWiring` class to
+   tests/cli/commands/test_verify_orchestration.py (use the code from §6b
+   verbatim). Reuse the existing module-level `_make_args`, `_VERIFY`,
+   `execute_verify`, and `patch` symbols already in that file. The class
+   has two tests:
+   - `test_git_section_appears_between_project_and_github` — runs
+     `execute_verify(_make_args())`, captures stdout, asserts ordering
+     `=== PROJECT < === GIT < === GITHUB` (relies on autouse mocks).
+   - `test_verify_git_called_with_actually_sign_true` — patches
+     `f"{_VERIFY}.verify_git"`, runs `execute_verify(_make_args())`, asserts
+     `mock.call_args.kwargs["actually_sign"] is True` (do NOT use
+     `assert_called_once_with(project_dir, ...)` — `project_dir` is undefined
+     in this test).
 
 4. Run quality checks per .claude/CLAUDE.md:
    - mcp__tools-py__run_pylint_check

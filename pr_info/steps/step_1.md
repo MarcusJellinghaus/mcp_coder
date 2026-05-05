@@ -21,12 +21,12 @@ In `src/mcp_coder/mcp_workspace_git.py`, add:
 from mcp_workspace.git_operations.verification import verify_git
 ```
 
-Add `"verify_git"` to the `__all__` list — append at end of `__all__` under a `# Verification` group, mirroring `mcp_workspace_github.py` (which lists `verify_github` under "Verification").
+Append `"verify_git"` to the END of the `__all__` list. The current `__all__` is a flat list with no category comment blocks — keep it flat. Do not add a `# Verification` group or any other category header.
 
 ## HOW
 
 - Imports use the exact upstream path `mcp_workspace.git_operations.verification` (same pattern as the other category-grouped imports in this file).
-- Group the new import under a `# Verification` comment block to match the file's "category comments" style.
+- Place the new import in a `# Verification` comment block at the top of the import section — this matches the file's existing per-import-group comment style. (The `__all__` list itself stays flat — comment groups appear only above the imports, not inside `__all__`.)
 - Do **not** add any `@log_function_call` decorator or wrapping function — re-export only (Decision #11).
 
 ## ALGORITHM
@@ -64,8 +64,10 @@ Implement Step 1 exactly as specified:
    and confirm it fails.
 3. Edit src/mcp_coder/mcp_workspace_git.py:
    - Add `from mcp_workspace.git_operations.verification import verify_git`
-     in a "# Verification" comment block (mirror the file's existing category style).
-   - Add "verify_git" to the __all__ list.
+     under a new `# Verification` comment block (matching the file's existing
+     per-import-group comment style above each import).
+   - Append "verify_git" to the END of the __all__ list. The list is flat —
+     do not add any category comments inside __all__ itself.
 4. Run all three quality checks per .claude/CLAUDE.md:
    - mcp__tools-py__run_pylint_check
    - mcp__tools-py__run_pytest_check with extra_args=["-n", "auto",
