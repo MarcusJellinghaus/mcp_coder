@@ -21,6 +21,37 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Foundation — shim, importlinter, `get_config_file_path` one-liner ([details](./steps/step_1.md))
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Adopt shim in langchain session storage ([details](./steps/step_2.md))
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Adopt shim in vscodeclaude sessions ([details](./steps/step_3.md))
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Adopt shim in `tools/*.py` MLflow scripts; drop phantom path ([details](./steps/step_4.md))
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: Docs sweep — single `~/.mcp_coder/` path everywhere ([details](./steps/step_5.md))
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review
+- [ ] PR summary
