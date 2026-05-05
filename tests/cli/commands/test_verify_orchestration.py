@@ -1649,3 +1649,28 @@ class TestVerifyGitHubOrchestration:
         result = execute_verify(_make_args())
 
         assert result == 1
+
+
+class TestGitWiring:
+    """Tests pinning the Git section's wiring into execute_verify."""
+
+    def test_git_section_appears_between_project_and_github(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """GIT section is rendered between PROJECT and GITHUB (Decision #2)."""
+        execute_verify(_make_args())
+        output = capsys.readouterr().out
+        assert (
+            output.find("=== PROJECT")
+            < output.find("=== GIT")
+            < output.find("=== GITHUB")
+        )
+
+    def test_verify_git_called_with_actually_sign_true(self) -> None:
+        """Decision #3: Tier 3 always runs (actually_sign=True, no flag)."""
+        with patch(
+            f"{_VERIFY}.verify_git", return_value={"overall_ok": True}
+        ) as mock_verify_git:
+            execute_verify(_make_args())
+        mock_verify_git.assert_called_once()
+        assert mock_verify_git.call_args.kwargs["actually_sign"] is True

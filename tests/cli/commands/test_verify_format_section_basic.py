@@ -248,6 +248,55 @@ class TestGitHubLabelMappings:
         assert "GITHUB_TOKEN not found" in output
 
 
+class TestGitLabelMappings:
+    """Tests for GIT section label mappings and rendering."""
+
+    _GIT_KEYS = (
+        "git_binary",
+        "git_repo",
+        "user_identity",
+        "signing_intent",
+        "signing_consistency",
+        "signing_format",
+        "signing_key",
+        "signing_binary",
+        "signing_key_accessible",
+        "agent_reachable",
+        "allowed_signers",
+        "verify_head",
+        "actual_signature",
+    )
+
+    def _symbols(self) -> dict[str, str]:
+        return {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
+
+    def test_all_git_keys_in_label_map(self) -> None:
+        from mcp_coder.cli.commands.verify import _LABEL_MAP
+
+        for key in self._GIT_KEYS:
+            assert key in _LABEL_MAP, f"Missing key: {key}"
+
+    def test_format_section_renders_git_section(self) -> None:
+        result: dict[str, Any] = {
+            "git_binary": {"ok": True, "value": "git 2.45.0"},
+            "signing_intent": {"ok": True, "value": "not configured"},
+            "signing_key": {
+                "ok": False,
+                "value": "missing",
+                "error": "user.signingkey unset",
+            },
+            "overall_ok": False,
+        }
+        output = _format_section("GIT", result, self._symbols())
+        assert "=== GIT " in output
+        assert "Git binary" in output
+        assert "Signing enabled" in output
+        assert "Signing key" in output
+        assert "[OK]" in output
+        assert "[ERR]" in output
+        assert "user.signingkey unset" in output
+
+
 class TestAutoDeleteBranches:
     """Tests for auto_delete_branches rendering at top level of GITHUB section (#917)."""
 
