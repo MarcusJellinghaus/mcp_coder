@@ -54,7 +54,7 @@ Then render the row at `indent=4` for `perm_*` keys instead of the default `inde
 
 1. Grow `_GITHUB_KEYS` tuple to 17 entries (append the 6 `perm_*` keys at the end). The existing `test_all_github_keys_in_label_map` then enforces that every new key has a label.
 
-2. New class `TestPermissionProbes` with exactly 2 tests:
+2. New class `TestPermissionProbes` with 3 tests:
 
 ```python
 class TestPermissionProbes:
@@ -72,6 +72,22 @@ class TestPermissionProbes:
     def test_header_appears_once_and_after_auto_delete_branches(self) -> None:
         # output.count("[Permissions]") == 1
         # output.find("Auto-delete branches") < output.find("[Permissions]")
+        # AND: probe rows themselves come after auto_delete_branches.
+        # Compute the index of the LAST perm_* row in the output (e.g. via
+        # max(output.find(label) for label in PERM_LABELS)) and assert it is
+        # greater than output.find("Auto-delete branches"). This guards
+        # against a regression where the header lands in the right place
+        # but the rows render earlier in the section.
+
+    def test_perm_workflows_read_label_aligns_at_label_width(self) -> None:
+        # Render with all 6 perm_* rows present.
+        # Locate the line containing "Actions: Read" (the longest perm_* label,
+        # 13 chars; rendered at indent=4 → label occupies columns 4..16).
+        # Assert that the symbol column starts at the _LABEL_WIDTH=22 boundary,
+        # i.e. the gap between the end of "Actions: Read" and the symbol token
+        # ([OK]/[ERR]) is exactly the padding required to align at column 22+4
+        # (indent 4 + label width 22 = column 26 for the symbol). This enforces
+        # issue body item 4's label-width alignment requirement.
 ```
 
 **`tests/cli/commands/test_verify_orchestration.py`:**
@@ -87,6 +103,10 @@ def test_github_section_renders_permission_probes(self, ...) -> None:
 ```
 
 Inline the dict — do **not** add a `_github_ok()` / `_github_fail()` helper. Matches the existing inline pattern at line 534.
+
+## Decisions / Notes
+
+> Deviation from issue body item 3: `_github_ok()` and `_github_fail()` helpers in `tests/cli/commands/test_verify_orchestration.py` (lines 1463 / 1479) are NOT extended. No existing test in `TestVerifyGitHubOrchestration` asserts on probe rows, so leaving the helpers unchanged keeps the diff minimal. The new orchestration test inlines its own dict, matching the existing pattern at `test_github_section_renders_diagnostics` (line 534).
 
 ## HOW (integration points)
 
@@ -119,7 +139,7 @@ for key, entry in result.items():
 
 ## Definition of done
 
-- `mcp__tools-py__run_pylint_check` passes.
-- `mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"])` passes.
-- `mcp__tools-py__run_mypy_check` passes.
+- `mcp__mcp-tools-py__run_pylint_check` passes.
+- `mcp__mcp-tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not jenkins_integration and not langchain_integration and not llm_integration and not textual_integration"])` passes.
+- `mcp__mcp-tools-py__run_mypy_check` passes.
 - One commit covering verify.py + both test files.

@@ -22,7 +22,7 @@ None at the architecture level. This is an additive cosmetic change inside one f
 | Path | Change |
 |---|---|
 | `src/mcp_coder/cli/commands/verify.py` | Add 6 entries to `_LABEL_MAP`. Add `permissions_header_emitted` boolean + header emit + indent=4 row in `_format_section`. |
-| `tests/cli/commands/test_verify_format_section_basic.py` | Grow `TestGitHubLabelMappings._GITHUB_KEYS` from 11 → 17. Add new `TestPermissionProbes` class (~2 tests). |
+| `tests/cli/commands/test_verify_format_section_basic.py` | Grow `TestGitHubLabelMappings._GITHUB_KEYS` from 11 → 17. Add new `TestPermissionProbes` class (3 tests). |
 | `tests/cli/commands/test_verify_orchestration.py` | Add one orchestration test asserting probe rows reach end-to-end output. Inline the GitHub result dict (matches existing pattern at line 520). |
 
 No new files. No deleted files. No moved files.
