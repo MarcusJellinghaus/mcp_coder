@@ -126,13 +126,6 @@ mcp-coder = "mcp_coder.cli.main:main"
 # greenlet 3.4.0 ships no win_amd64 wheels and no sdist, which breaks `uv sync`
 # on Windows. Constrain transitive versions until upstream publishes Windows wheels.
 constraint-dependencies = ["greenlet<3.4"]
-# Workaround for transitive URL dependency: a recent mcp-workspace build declares
-# mcp-coder-utils as a direct git URL, which uv requires to be re-stated as a
-# top-level override. Remove once mcp-workspace publishes a fix that uses a plain
-# name in [project].dependencies.
-override-dependencies = [
-    "mcp-coder-utils @ git+https://github.com/MarcusJellinghaus/mcp-coder-utils.git",
-]
 
 [tool.uv.sources]
 # Map sibling MCP packages to their GitHub sources so uv can satisfy URL-typed
@@ -140,9 +133,9 @@ override-dependencies = [
 # git dep) without listing them as direct URL deps in [project] (which would
 # leak into published metadata and is blocked by tools/check_no_url_deps.py).
 # These keys are uv-specific and stripped from built wheels/sdists.
-mcp-coder-utils = { git = "https://github.com/MarcusJellinghaus/mcp-coder-utils.git" }
-mcp-workspace = { git = "https://github.com/MarcusJellinghaus/mcp-workspace.git" }
 mcp-tools-py = { git = "https://github.com/MarcusJellinghaus/mcp-tools-py.git" }
+mcp-workspace = { git = "https://github.com/MarcusJellinghaus/mcp-workspace.git" }
+mcp-coder-utils = { git = "https://github.com/MarcusJellinghaus/mcp-coder-utils.git" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -351,7 +344,6 @@ convention = "google"
 [tool.mcp-coder.install-from-github]
 # Installed WITH deps (leaves — picks up new external deps)
 packages = [    
-    "mcp-config-tool @ git+https://github.com/MarcusJellinghaus/mcp-config.git",
     "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git",
     "mcp-tools-py @ git+https://github.com/MarcusJellinghaus/mcp-tools-py.git",
     "mcp-coder-utils @ git+https://github.com/MarcusJellinghaus/mcp-coder-utils.git",
