@@ -381,17 +381,9 @@ async def test_branch_change_kicks_pr_fetch(
     make_icoder_app: Callable[..., ICoderApp],
     tmp_path: Path,
 ) -> None:
-    """When branch changes during a 2s tick and toggle is on, PR fetch fires."""
+    """When branch changes during a quick tick and toggle is on, PR fetch fires."""
     runtime_info = _make_runtime_info(tmp_path)
     app = make_icoder_app(runtime_info=runtime_info)
-
-    fetched: list[str] = []
-
-    def varying_fetch(self: BranchInfoService) -> BranchInfo:
-        fetched.append("info")
-        if len(fetched) <= 1:
-            return _make_branch_info(branch="main", issue_number=None)
-        return _make_branch_info(branch="123-foo", issue_number=123, issue_title="Foo")
 
     pr_calls: list[int] = []
 
@@ -400,14 +392,25 @@ async def test_branch_change_kicks_pr_fetch(
         return 99
 
     with (
-        patch.object(BranchInfoService, "fetch_info", varying_fetch),
+        patch.object(
+            BranchInfoService,
+            "fetch_info",
+            return_value=_make_branch_info(branch="main", issue_number=None),
+        ),
+        patch.object(
+            BranchInfoService,
+            "fetch_branch_only",
+            return_value=_make_branch_info(
+                branch="123-foo", issue_number=123, issue_title="Foo"
+            ),
+        ),
         patch.object(BranchInfoService, "fetch_pr", record_pr),
     ):
         async with app.run_test() as pilot:
             await pilot.pause(delay=0.3)
             # Toggle PR on so branch-change triggers PR fetch
             app._branch_service.set_pr_enabled(True)
-            # Drive the 2s tick directly
+            # Drive the quick tick directly
             app._tick_branch_quick()
             await pilot.pause(delay=0.5)
             assert 123 in pr_calls
@@ -682,6 +685,111 @@ async def test_toggle_on_while_worker_in_flight_does_not_duplicate(
             assert pr_call_count["n"] == 2
             block.set()
             await pilot.pause(delay=0.5)
+
+
+async def test_quick_tick_merges_into_prior_branch_info(
+    make_icoder_app: Callable[..., ICoderApp],
+    tmp_path: Path,
+) -> None:
+    """Quick-tick merge preserves issue title/label/cache_last_checked."""
+    runtime_info = _make_runtime_info(tmp_path)
+    app = make_icoder_app(runtime_info=runtime_info)
+    full = _make_branch_info(
+        branch="123-foo",
+        issue_number=123,
+        issue_title="T",
+        status_label="status-04:plan-review",
+    )
+    quick = BranchInfo(
+        is_git_repo=True,
+        branch_name="123-foo",
+        is_dirty=False,
+        issue_number=123,
+        issue_title=None,
+        issue_status_label=None,
+        cache_last_checked=None,
+    )
+    with (
+        patch.object(BranchInfoService, "fetch_info", return_value=full),
+        patch.object(BranchInfoService, "fetch_branch_only", return_value=quick),
+    ):
+        async with app.run_test() as pilot:
+            await pilot.pause(delay=0.3)
+            assert app._last_branch_info is not None
+            assert app._last_branch_info.issue_title == "T"
+            prior_cache = app._last_branch_info.cache_last_checked
+            app._tick_branch_quick()
+            await pilot.pause(delay=0.3)
+            assert app._last_branch_info is not None
+            assert app._last_branch_info.issue_title == "T"
+            assert app._last_branch_info.issue_status_label == "status-04:plan-review"
+            assert app._last_branch_info.cache_last_checked == prior_cache
+
+
+async def test_quick_tick_skipped_while_busy(
+    make_icoder_app: Callable[..., ICoderApp],
+    tmp_path: Path,
+) -> None:
+    """begin_quick_tick False → fetch_branch_only is not called."""
+    runtime_info = _make_runtime_info(tmp_path)
+    app = make_icoder_app(runtime_info=runtime_info)
+    quick = _make_branch_info(branch="main")
+    with (
+        patch.object(BranchInfoService, "fetch_info", return_value=quick),
+        patch.object(
+            BranchInfoService, "fetch_branch_only", return_value=quick
+        ) as quick_mock,
+    ):
+        async with app.run_test() as pilot:
+            await pilot.pause(delay=0.3)
+            quick_mock.reset_mock()
+            # Force the busy flag on, then try to drive a quick tick.
+            app._branch_service._quick_tick_busy = True
+            app._tick_branch_quick()
+            await pilot.pause(delay=0.3)
+            assert quick_mock.call_count == 0
+
+
+async def test_full_tick_skipped_while_busy(
+    make_icoder_app: Callable[..., ICoderApp],
+    tmp_path: Path,
+) -> None:
+    """begin_full_tick False → fetch_info is not called by the full worker."""
+    runtime_info = _make_runtime_info(tmp_path)
+    app = make_icoder_app(runtime_info=runtime_info)
+    info = _make_branch_info(branch="main")
+    with (
+        patch.object(BranchInfoService, "fetch_info", return_value=info) as fetch_mock,
+        patch.object(BranchInfoService, "fetch_branch_only", return_value=info),
+    ):
+        async with app.run_test() as pilot:
+            await pilot.pause(delay=0.3)
+            fetch_mock.reset_mock()
+            app._branch_service._full_tick_busy = True
+            app._tick_branch_full()
+            await pilot.pause(delay=0.3)
+            assert fetch_mock.call_count == 0
+
+
+async def test_quick_and_full_ticks_run_in_parallel(
+    make_icoder_app: Callable[..., ICoderApp],
+    tmp_path: Path,
+) -> None:
+    """Quick-tick busy must not block the full tick from running."""
+    runtime_info = _make_runtime_info(tmp_path)
+    app = make_icoder_app(runtime_info=runtime_info)
+    info = _make_branch_info(branch="main")
+    with (
+        patch.object(BranchInfoService, "fetch_info", return_value=info) as fetch_mock,
+        patch.object(BranchInfoService, "fetch_branch_only", return_value=info),
+    ):
+        async with app.run_test() as pilot:
+            await pilot.pause(delay=0.3)
+            fetch_mock.reset_mock()
+            app._branch_service._quick_tick_busy = True
+            app._tick_branch_full()
+            await pilot.pause(delay=0.3)
+            assert fetch_mock.call_count >= 1
 
 
 def _make_runtime_info(project_dir: Path) -> RuntimeInfo:

@@ -49,7 +49,7 @@ Placeholder semantics across all zones:
 
 | Trigger | What runs |
 |---------|-----------|
-| `2s` | Branch + dirty state refresh; if the branch changed and the PR toggle is on, an automatic PR fetch is kicked. |
+| `10s` | Branch + dirty state refresh; if the branch changed and the PR toggle is on, an automatic PR fetch is kicked. |
 | `30s` | Full issue-cache reload (re-hits the GitHub API past the cache's 50s window). |
 | Branch change | Auto PR fetch (only when toggle is on). |
 | Button click | Manual refresh of issue or PR. |
@@ -57,7 +57,7 @@ Placeholder semantics across all zones:
 ### PR toggle
 
 PR lookup is **off by default** and is **not persisted** between sessions.
-The 2s auto-PR fetch only fires when the toggle is on. The `↻ PR` button,
+The 10s auto-PR fetch only fires when the toggle is on. The `↻ PR` button,
 in contrast, fires regardless of the toggle state — it is a manual
 override.
 
