@@ -6,7 +6,7 @@ Complete configuration documentation for MCP Coder, covering user configuration 
 
 | Topic | Location |
 |-------|----------|
-| **User Config** | `~/.config/mcp_coder/config.toml` (Linux/macOS)<br>`%USERPROFILE%\.mcp_coder\config.toml` (Windows) |
+| **User Config** | `~/.mcp_coder/config.toml` (Linux/macOS)<br>`%USERPROFILE%\.mcp_coder\config.toml` (Windows) |
 | **Environment Variables** | `JENKINS_URL`, `JENKINS_USER`, `JENKINS_TOKEN` |
 | **LLM Provider** | `[llm]` section in `config.toml` |
 | **MCP Config** | `[mcp]` section in `config.toml` |
@@ -38,10 +38,10 @@ Example: `C:\Users\YourName\.mcp_coder\config.toml`
 
 ### Linux / macOS / Containers
 ```
-~/.config/mcp_coder/config.toml
+~/.mcp_coder/config.toml
 ```
 
-Example: `/home/username/.config/mcp_coder/config.toml`
+Example: `/home/username/.mcp_coder/config.toml`
 
 ## Auto-Creation
 
@@ -917,15 +917,10 @@ github_credentials_id = "github-infra-pat"
 - Path separators are handled automatically
 - Use PowerShell or Command Prompt
 
-### Linux/Containers
-- Config path uses `~/.config/mcp_coder/`
-- Follows XDG Base Directory Specification
-- Ideal for containerized coordinator deployments
-
 ### Docker/Containers
 Mount config directory as volume:
 ```bash
-docker run -v ~/.config/mcp_coder:/root/.config/mcp_coder my-container
+docker run -v ~/.mcp_coder:/root/.mcp_coder my-container
 ```
 
 ## Related Documentation

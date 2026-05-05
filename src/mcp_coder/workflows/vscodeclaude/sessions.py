@@ -5,7 +5,6 @@ Handles JSON file I/O for session tracking and VSCode process checking.
 
 import json
 import logging
-import platform
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,6 +12,7 @@ from typing import Any, cast
 
 import psutil
 
+from ...utils.user_app_data import get_user_app_data_dir
 from .config import sanitize_folder_name
 from .helpers import load_to_be_deleted
 from .types import VSCodeClaudeSession, VSCodeClaudeSessionStore
@@ -38,15 +38,13 @@ def get_sessions_file_path() -> Path:
     """Get path to sessions JSON file.
 
     Returns:
-        Path to ~/.mcp_coder/coordinator_cache/vscodeclaude_sessions.json
-        on Windows, or ~/.config/mcp_coder/coordinator_cache/vscodeclaude_sessions.json
-        on Linux/macOS.
+        Path to ~/.mcp_coder/coordinator_cache/vscodeclaude_sessions.json.
     """
-    if platform.system() == "Windows":
-        base = Path.home() / ".mcp_coder"
-    else:
-        base = Path.home() / ".config" / "mcp_coder"
-    return base / "coordinator_cache" / "vscodeclaude_sessions.json"
+    return (
+        get_user_app_data_dir("mcp_coder")
+        / "coordinator_cache"
+        / "vscodeclaude_sessions.json"
+    )
 
 
 def load_sessions() -> VSCodeClaudeSessionStore:

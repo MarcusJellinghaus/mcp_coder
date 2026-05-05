@@ -22,7 +22,7 @@ Before using vscodeclaude, you need to trust the workspace base folder in VS Cod
 
 1. Open VS Code
 2. Go to **File → Open Folder**
-3. Select your workspace base folder as defined in the config file  `~/.config/mcp_coder/config.toml`.
+3. Select your workspace base folder as defined in the config file  `~/.mcp_coder/config.toml`.
 4. Click **"Yes, I trust the authors"** when prompted
 5. Close VS Code
 
@@ -30,7 +30,7 @@ After this one-time setup, all session folders created under this directory will
 
 ### 2. Configuration
 
-Ensure your `~/.config/mcp_coder/config.toml` has the vscodeclaude section:
+Ensure your `~/.mcp_coder/config.toml` has the vscodeclaude section:
 
 ```toml
 [vscodeclaude]
@@ -137,7 +137,7 @@ Each session creates:
 
 Sessions are tracked in:
 - **Windows**: `%USERPROFILE%\.mcp_coder\coordinator_cache\vscodeclaude_sessions.json`
-- **Linux**: `~/.config/mcp_coder/coordinator_cache/vscodeclaude_sessions.json`
+- **Linux**: `~/.mcp_coder/coordinator_cache/vscodeclaude_sessions.json`
 
 ## Troubleshooting
 

@@ -409,7 +409,7 @@ mcp-coder vscodeclaude launch [OPTIONS]
 
 **Prerequisites:**
 1. **Trust workspace folder (one-time):** Open VS Code, go to File → Open Folder, select your workspace base folder (e.g., `C:\Users\YourName\Documents\VSCC`), and click "Yes, I trust the authors"
-2. **Configuration:** Ensure `[vscodeclaude]` section exists in `~/.config/mcp_coder/config.toml`
+2. **Configuration:** Ensure `[vscodeclaude]` section exists in `~/.mcp_coder/config.toml`
 3. **Repository setup:** Each repository needs a `.mcp.json` file
 
 **Examples:**
@@ -933,7 +933,7 @@ Some commands require configuration on first run:
 ```bash
 # Coordinator commands auto-create config template
 mcp-coder coordinator --repo repo_name --dry-run
-# Output: Created default config file at ~/.config/mcp_coder/config.toml
+# Output: Created default config file at ~/.mcp_coder/config.toml
 ```
 
 ### Common Patterns

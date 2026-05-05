@@ -11,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
+from ...utils.user_app_data import get_user_app_data_dir
 from ..types import LLMResponseDict
 
 logger = logging.getLogger(__name__)
@@ -162,7 +163,7 @@ def _langchain_session_path(
     root = (
         Path(base_dir)
         if base_dir
-        else Path.home() / ".mcp_coder" / "sessions" / "langchain"
+        else get_user_app_data_dir("mcp_coder") / "sessions" / "langchain"
     )
     return root / f"{session_id}.json"
 

@@ -6,6 +6,8 @@ import sys
 from pathlib import Path
 from typing import Any, cast
 
+from mcp_coder.utils.user_app_data import get_user_app_data_dir
+
 
 def get_tracking_uri() -> str:
     """Get MLflow tracking URI from config.toml.
@@ -15,7 +17,7 @@ def get_tracking_uri() -> str:
         Handles both SQLite URIs (sqlite:///...) and filesystem paths.
     """
     # Get config file path (matches mcp-coder's logic)
-    config_path = Path.home() / ".mcp_coder" / "config.toml"
+    config_path = get_user_app_data_dir("mcp_coder") / "config.toml"
 
     if not config_path.exists():
         # Return default (SQLite recommended)

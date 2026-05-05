@@ -456,7 +456,7 @@ def _config_warning() -> dict[str, Any]:
             {
                 "label": "Expected path",
                 "status": "info",
-                "value": "/home/user/.config/mcp_coder/config.toml",
+                "value": str(Path.home() / ".mcp_coder" / "config.toml"),
             },
             {
                 "label": "Hint",

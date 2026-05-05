@@ -20,22 +20,20 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from mcp_coder.utils.user_app_data import get_user_app_data_dir
+
 
 def get_mlflow_db_path() -> Path:
     """Get the MLflow database path from config or default location."""
-    config_paths = [
-        Path.home() / ".mcp_coder" / "config.toml",
-        Path.home() / ".config" / "mcp-coder" / "config.toml",
-    ]
-    for config_path in config_paths:
-        if config_path.exists():
-            config_text = config_path.read_text()
-            match = re.search(r'tracking_uri\s*=\s*"sqlite:///([^"]+)"', config_text)
-            if match:
-                db_path = match.group(1)
-                if db_path.startswith("~/"):
-                    db_path = str(Path.home() / db_path[2:])
-                return Path(db_path)
+    config_path = get_user_app_data_dir("mcp_coder") / "config.toml"
+    if config_path.exists():
+        config_text = config_path.read_text()
+        match = re.search(r'tracking_uri\s*=\s*"sqlite:///([^"]+)"', config_text)
+        if match:
+            db_path = match.group(1)
+            if db_path.startswith("~/"):
+                db_path = str(Path.home() / db_path[2:])
+            return Path(db_path)
     return Path.home() / "mlflow_data" / "mlflow.db"
 
 
@@ -199,7 +197,9 @@ def print_tool_trace(
                     continue
 
                 label = "ERROR" if is_error else "RESULT"
-                preview = content_str[:content_limit] if show_content else content_str[:150]
+                preview = (
+                    content_str[:content_limit] if show_content else content_str[:150]
+                )
                 safe_print(f"  [{i}] {label}: {preview}")
             else:
                 # User message
@@ -277,7 +277,9 @@ def print_tool_trace(
             label = "FINAL_ERROR" if is_err else "FINAL"
             safe_print(f"  [{i}] {label}: {result_text[:content_limit]}")
 
-    print(f"\n  Summary: {len(messages)} messages, {tool_count} tool calls, {error_count} errors")
+    print(
+        f"\n  Summary: {len(messages)} messages, {tool_count} tool calls, {error_count} errors"
+    )
 
 
 def main() -> None:
@@ -286,9 +288,7 @@ def main() -> None:
         description="Inspect a single MLflow run's conversation trace",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument(
-        "run_id", help="Run ID (full or prefix)"
-    )
+    parser.add_argument("run_id", help="Run ID (full or prefix)")
     parser.add_argument(
         "--step",
         type=int,
@@ -315,9 +315,7 @@ def main() -> None:
         action="store_true",
         help="Only show the prompt text for each step",
     )
-    parser.add_argument(
-        "--db-path", type=str, help="Path to MLflow SQLite database"
-    )
+    parser.add_argument("--db-path", type=str, help="Path to MLflow SQLite database")
 
     args = parser.parse_args()
 

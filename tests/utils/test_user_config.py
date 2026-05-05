@@ -1,6 +1,5 @@
 """Tests for user_config module."""
 
-import platform
 import tomllib
 from pathlib import Path
 
@@ -176,27 +175,11 @@ executor_os = "linux"
         assert result["coordinator"]["repos"]["mcp_coder"]["executor_os"] == "linux"
 
 
-class TestGetConfigFilePath:
-    """Tests for get_config_file_path function."""
+def test_get_config_file_path_uses_shim() -> None:
+    """get_config_file_path delegates to the user_app_data shim."""
+    from mcp_coder.utils.user_app_data import get_user_app_data_dir
 
-    def test_get_config_file_path_returns_correct_path(self) -> None:
-        """Test that config file path is returned correctly."""
-        # Execute
-        result = get_config_file_path()
-
-        # Verify platform-specific behavior
-        if platform.system() == "Windows":
-            expected = Path.home() / ".mcp_coder" / "config.toml"
-            assert result == expected
-            assert ".mcp_coder" in str(result)
-        else:
-            # Linux/macOS - XDG Base Directory Specification
-            expected = Path.home() / ".config" / "mcp_coder" / "config.toml"
-            assert result == expected
-            assert "mcp_coder" in str(result)
-
-        # Common assertions
-        assert result.name == "config.toml"
+    assert get_config_file_path() == get_user_app_data_dir("mcp_coder") / "config.toml"
 
 
 class TestGetConfigValues:

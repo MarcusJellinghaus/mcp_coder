@@ -25,8 +25,7 @@ See [Optional Dependencies](optional-dependencies.md) for a full list of availab
 Add MLflow settings to your `config.toml` file:
 
 **Location**: 
-- Windows: `%USERPROFILE%\.mcp_coder\config.toml`
-- Linux/macOS: `~/.config/mcp_coder/config.toml`
+- All platforms: `~/.mcp_coder/config.toml`
 
 **Recommended (SQLite backend)**:
 ```toml
