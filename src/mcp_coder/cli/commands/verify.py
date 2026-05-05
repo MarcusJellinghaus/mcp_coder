@@ -261,6 +261,12 @@ _LABEL_MAP: dict[str, str] = {
     "force_push": "Force push",
     "branch_deletion": "Branch deletion",
     "auto_delete_branches": "Auto-delete branches",
+    "perm_contents_read": "Contents: Read",
+    "perm_administration_read": "Administration: Read",
+    "perm_pull_requests_read": "Pull requests: Read",
+    "perm_issues_read": "Issues: Read",
+    "perm_workflows_read": "Actions: Read",
+    "perm_statuses_read": "Commit statuses: Read",
 }
 
 
@@ -282,6 +288,7 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
     """
     lines: list[str] = [_pad(title)]
     bp_ok: bool | None = None  # track branch_protection parent state
+    permissions_header_emitted: bool = False
     # NOTE: relies on dict insertion order — branch_protection must precede its
     # children in the result dict. This is guaranteed by verify_github() in
     # mcp-workspace.
@@ -313,6 +320,10 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
                     row_value = f"{value} ({error})"
                 lines.append(_format_row(label, symbol, row_value, indent=4))
             continue
+        if key.startswith("perm_") and not permissions_header_emitted:
+            lines.append("")
+            lines.append("  [Permissions]")
+            permissions_header_emitted = True
         if ok is True:
             symbol = symbols["success"]
         elif ok is False:
@@ -323,7 +334,8 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
         error = entry.get("error")
         if error and ok is False:
             row_value = f"{value} ({error})"
-        lines.append(_format_row(label, symbol, row_value, indent=2))
+        indent = 4 if key.startswith("perm_") else 2
+        lines.append(_format_row(label, symbol, row_value, indent=indent))
         if key == "token_configured" and entry.get("token_source"):
             src = entry["token_source"]
             suffix = (

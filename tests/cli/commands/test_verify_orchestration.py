@@ -548,6 +548,44 @@ class TestVerifyOrchestration:
         assert "https://api.example.ghe.com" in output
         assert "ghp_...a3f9" in output
 
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    def test_github_section_renders_permission_probes(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """[Permissions] subsection reaches end-to-end rendered output."""
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+        github_with_permissions: dict[str, Any] = {
+            "perm_contents_read": {"ok": True, "value": "granted"},
+            "perm_administration_read": {"ok": True, "value": "granted"},
+            "perm_pull_requests_read": {"ok": True, "value": "granted"},
+            "perm_issues_read": {"ok": True, "value": "granted"},
+            "perm_workflows_read": {
+                "ok": False,
+                "value": "denied",
+                "error": "https://docs.github.com/...#workflows",
+            },
+            "perm_statuses_read": {"ok": True, "value": "granted"},
+            "overall_ok": True,
+        }
+        with patch(f"{_VERIFY}.verify_github", return_value=github_with_permissions):
+            execute_verify(_make_args())
+        output = capsys.readouterr().out
+        assert "[Permissions]" in output
+        assert "Actions: Read" in output
+
 
 class TestVerifyTestPromptFailure:
     """Tests for improved test prompt failure output (Step 5A)."""
