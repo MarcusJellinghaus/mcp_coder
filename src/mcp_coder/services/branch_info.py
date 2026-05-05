@@ -126,6 +126,35 @@ def get_branch_info(project_dir: Path) -> BranchInfo:
     )
 
 
+def get_branch_only(project_dir: Path) -> BranchInfo:
+    """Return a cheap branch-only ``BranchInfo`` snapshot.
+
+    Populates only the fields obtainable without GitHub or cache I/O:
+    ``is_git_repo``, ``branch_name``, ``is_dirty``, and ``issue_number``
+    (parsed from the branch name). The remaining three fields
+    (``issue_title``, ``issue_status_label``, ``cache_last_checked``)
+    are always ``None``.
+    """
+    if not is_git_repository(project_dir):
+        return _EMPTY
+
+    branch = get_current_branch_name(project_dir)
+    is_dirty = not is_working_directory_clean(project_dir)
+    issue_number = (
+        extract_issue_number_from_branch(branch) if branch is not None else None
+    )
+
+    return BranchInfo(
+        is_git_repo=True,
+        branch_name=branch,
+        is_dirty=is_dirty,
+        issue_number=issue_number,
+        issue_title=None,
+        issue_status_label=None,
+        cache_last_checked=None,
+    )
+
+
 def get_pr_for_issue(project_dir: Path, issue_number: int) -> Optional[int]:
     """Resolve the PR number linked to ``issue_number`` (issue → branch → PR).
 

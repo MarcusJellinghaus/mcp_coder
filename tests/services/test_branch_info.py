@@ -12,6 +12,7 @@ import pytest
 from mcp_coder.services.branch_info import (
     BranchInfo,
     get_branch_info,
+    get_branch_only,
     get_pr_for_issue,
 )
 
@@ -310,6 +311,115 @@ def test_status_label_picks_first_status_prefix(
         info = get_branch_info(PROJECT_DIR)
 
     assert info.issue_status_label == expected_label
+
+
+# ---------------------------------------------------------------------------
+# get_branch_only
+# ---------------------------------------------------------------------------
+
+
+def test_get_branch_only_no_git_repo_returns_empty() -> None:
+    with patch(f"{BRANCH_INFO_MODULE}.is_git_repository", return_value=False):
+        info = get_branch_only(PROJECT_DIR)
+
+    assert info == BranchInfo(
+        is_git_repo=False,
+        branch_name=None,
+        is_dirty=False,
+        issue_number=None,
+        issue_title=None,
+        issue_status_label=None,
+        cache_last_checked=None,
+    )
+
+
+def test_get_branch_only_branch_with_issue_number() -> None:
+    with (
+        patch(f"{BRANCH_INFO_MODULE}.is_git_repository", return_value=True),
+        patch(
+            f"{BRANCH_INFO_MODULE}.get_current_branch_name",
+            return_value="42-feature",
+        ),
+        patch(f"{BRANCH_INFO_MODULE}.is_working_directory_clean", return_value=True),
+        patch(
+            f"{BRANCH_INFO_MODULE}.extract_issue_number_from_branch",
+            return_value=42,
+        ),
+    ):
+        info = get_branch_only(PROJECT_DIR)
+
+    assert info.is_git_repo is True
+    assert info.branch_name == "42-feature"
+    assert info.is_dirty is False
+    assert info.issue_number == 42
+    assert info.issue_title is None
+    assert info.issue_status_label is None
+    assert info.cache_last_checked is None
+
+
+def test_get_branch_only_branch_without_issue_number() -> None:
+    with (
+        patch(f"{BRANCH_INFO_MODULE}.is_git_repository", return_value=True),
+        patch(f"{BRANCH_INFO_MODULE}.get_current_branch_name", return_value="main"),
+        patch(f"{BRANCH_INFO_MODULE}.is_working_directory_clean", return_value=True),
+        patch(
+            f"{BRANCH_INFO_MODULE}.extract_issue_number_from_branch",
+            return_value=None,
+        ),
+    ):
+        info = get_branch_only(PROJECT_DIR)
+
+    assert info.is_git_repo is True
+    assert info.branch_name == "main"
+    assert info.issue_number is None
+    assert info.issue_title is None
+    assert info.issue_status_label is None
+    assert info.cache_last_checked is None
+
+
+def test_get_branch_only_skips_github_and_cache_io() -> None:
+    sentinel = Mock(side_effect=AssertionError("must not be called"))
+    with (
+        patch(f"{BRANCH_INFO_MODULE}.is_git_repository", return_value=True),
+        patch(
+            f"{BRANCH_INFO_MODULE}.get_current_branch_name",
+            return_value="42-feature",
+        ),
+        patch(f"{BRANCH_INFO_MODULE}.is_working_directory_clean", return_value=True),
+        patch(
+            f"{BRANCH_INFO_MODULE}.extract_issue_number_from_branch",
+            return_value=42,
+        ),
+        patch(f"{BRANCH_INFO_MODULE}.get_repository_identifier", side_effect=sentinel),
+        patch(f"{BRANCH_INFO_MODULE}.get_cache_file_path", side_effect=sentinel),
+        patch(f"{BRANCH_INFO_MODULE}.load_cache_file", side_effect=sentinel),
+        patch(f"{BRANCH_INFO_MODULE}.IssueManager", side_effect=sentinel),
+        patch(f"{BRANCH_INFO_MODULE}.get_all_cached_issues", side_effect=sentinel),
+    ):
+        info = get_branch_only(PROJECT_DIR)
+
+    assert info.is_git_repo is True
+    assert info.branch_name == "42-feature"
+    assert info.issue_number == 42
+
+
+@pytest.mark.parametrize("clean_flag,expected_is_dirty", [(True, False), (False, True)])
+def test_get_branch_only_dirty_flag(clean_flag: bool, expected_is_dirty: bool) -> None:
+    with (
+        patch(f"{BRANCH_INFO_MODULE}.is_git_repository", return_value=True),
+        patch(f"{BRANCH_INFO_MODULE}.get_current_branch_name", return_value="main"),
+        patch(
+            f"{BRANCH_INFO_MODULE}.is_working_directory_clean",
+            return_value=clean_flag,
+        ),
+        patch(
+            f"{BRANCH_INFO_MODULE}.extract_issue_number_from_branch",
+            return_value=None,
+        ),
+    ):
+        info = get_branch_only(PROJECT_DIR)
+
+    assert info.is_dirty is expected_is_dirty
 
 
 # ---------------------------------------------------------------------------
