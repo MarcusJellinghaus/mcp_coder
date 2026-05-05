@@ -5,12 +5,15 @@ from __future__ import annotations
 import importlib.metadata
 import logging
 import threading
+import time
+from dataclasses import replace
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal
+from textual.css.query import NoMatches
 from textual.widgets import Static
 
 from mcp_coder.icoder.core.app_core import AppCore
@@ -92,6 +95,7 @@ class ICoderApp(App[None]):
         self._branch_failed: set[str] = set()
         self._last_branch_info: Optional[BranchInfo] = None
         self._last_pr_number: Optional[int] = None
+        self._last_view: Optional[BranchInfoView] = None
 
     def compose(self) -> ComposeResult:
         """Vertical layout: OutputLog on top, InputArea at bottom.
@@ -111,7 +115,7 @@ class ICoderApp(App[None]):
         version = self._get_version()
         with Horizontal(id="status-bar"):
             yield Static("↓0 ↑0 | total: ↓0 ↑0", id="status-tokens")
-            yield Static(f"v{version}", id="status-version")
+            yield Static(f"mcp-coder v{version}", id="status-version")
             yield Static(r"\ + Enter = newline", id="status-hint")
         yield BranchInfoBar(self._project_dir)
 
@@ -140,7 +144,7 @@ class ICoderApp(App[None]):
         self.query_one(InputArea).focus()
         self.query_one(BranchInfoBar).update_state(None)
         self.run_worker(self._tick_branch_full, thread=True)
-        self.set_interval(2.0, self._tick_branch_quick)
+        self.set_interval(10.0, self._tick_branch_quick)
         self.set_interval(30.0, self._tick_branch_full)
 
     def on_input_area_input_submitted(self, message: InputArea.InputSubmitted) -> None:
@@ -307,41 +311,63 @@ class ICoderApp(App[None]):
     # ------------------------------------------------------------------
 
     def _tick_branch_quick(self) -> None:
-        """2-second tick: fetch branch state; auto-kick PR fetch on change."""
+        """10-second tick: fetch branch state; auto-kick PR fetch on change."""
         self.run_worker(self._branch_quick_work, thread=True)
 
     def _tick_branch_full(self) -> None:
         """30-second tick: full refresh including issue cache reload."""
         self.run_worker(self._branch_full_work, thread=True)
 
-    def _branch_quick_work(self) -> None:
-        """Worker body for the 2s branch tick."""
+    def _timed_fetch(self, label: str, fn: Callable[[], BranchInfo]) -> BranchInfo:
+        """Wrap a data-layer fetch with debug-level perf timing.
+
+        Args:
+            label: Identifier used in the debug log line.
+            fn: Zero-arg callable returning a ``BranchInfo``.
+
+        Returns:
+            The ``BranchInfo`` produced by ``fn``.
+        """
+        start = time.perf_counter()
         try:
-            info: Optional[BranchInfo] = self._branch_service.fetch_info()
-        except Exception as exc:  # pylint: disable=broad-exception-caught
-            logger.debug("branch_quick fetch_info failed: %s", exc)
-            self._branch_failed.add("issue")
-            info = None
-        else:
+            return fn()
+        finally:
+            elapsed_ms = int((time.perf_counter() - start) * 1000)
+            logger.debug("%s: %dms", label, elapsed_ms)
+
+    def _branch_quick_work(self) -> None:
+        """Worker body for the 10s branch tick."""
+        if not self._branch_service.begin_quick_tick():
+            return
+        info: Optional[BranchInfo] = None
+        try:
+            info = self._timed_fetch(
+                "branch_quick", self._branch_service.fetch_branch_only
+            )
             self._branch_failed.discard("issue")
-        # branch-changed detection and any auto-PR-kick happen on the UI thread
-        # inside _apply_branch_state to avoid racing _last_branch from workers.
-        self.call_from_thread(self._apply_branch_state, info)
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            logger.debug("branch_quick fetch failed: %s", exc)
+            self._branch_failed.add("issue")
+        finally:
+            self._branch_service.end_quick_tick()
+        self.call_from_thread(self._apply_branch_state, info, merge_with_prior=True)
 
     def _branch_full_work(self) -> None:
         """Worker body for the 30s branch tick (with loading marker)."""
+        if not self._branch_service.begin_full_tick():
+            return
         self._branch_loading.add("issue")
         self.call_from_thread(self._render_branch_state)
+        info: Optional[BranchInfo] = None
         try:
-            info: Optional[BranchInfo] = self._branch_service.fetch_info()
-        except Exception as exc:  # pylint: disable=broad-exception-caught
-            logger.debug("branch_full fetch_info failed: %s", exc)
-            self._branch_failed.add("issue")
-            info = None
-        else:
+            info = self._timed_fetch("branch_full", self._branch_service.fetch_info)
             self._branch_failed.discard("issue")
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            logger.debug("branch_full fetch failed: %s", exc)
+            self._branch_failed.add("issue")
         finally:
             self._branch_loading.discard("issue")
+            self._branch_service.end_full_tick()
         self.call_from_thread(self._apply_branch_state, info)
 
     def on_branch_info_bar_refresh_issue(self, _: BranchInfoBar.RefreshIssue) -> None:
@@ -427,6 +453,8 @@ class ICoderApp(App[None]):
     def _apply_branch_state(
         self,
         info: Optional[BranchInfo],
+        *,
+        merge_with_prior: bool = False,
     ) -> None:
         """Store new branch info, re-render, and auto-kick a PR fetch on change.
 
@@ -434,7 +462,18 @@ class ICoderApp(App[None]):
         check and any auto-PR-kick must live here, not in the worker thread,
         so concurrent quick-ticks cannot race ``_last_branch`` or the PR-fetch
         generation token.
+
+        When ``merge_with_prior`` is True (quick-tick path), the issue title,
+        status label, and cache-age timestamp are copied from the prior
+        ``_last_branch_info`` so they are not lost between full ticks.
         """
+        if info is not None and merge_with_prior and self._last_branch_info is not None:
+            info = replace(
+                info,
+                issue_title=self._last_branch_info.issue_title,
+                issue_status_label=self._last_branch_info.issue_status_label,
+                cache_last_checked=self._last_branch_info.cache_last_checked,
+            )
         if info is not None:
             self._last_branch_info = info
         self._render_branch_state()
@@ -461,16 +500,19 @@ class ICoderApp(App[None]):
         """Render current state into the BranchInfoBar."""
         try:
             bar = self.query_one(BranchInfoBar)
-        except Exception:  # pylint: disable=broad-exception-caught
+        except NoMatches:
             return
         if self._last_branch_info is None:
-            bar.update_state(None)
+            new_view: Optional[BranchInfoView] = None
+        else:
+            new_view = BranchInfoView(
+                info=self._last_branch_info,
+                pr_number=self._last_pr_number,
+                pr_enabled=self._branch_service.pr_enabled,
+                loading=frozenset(self._branch_loading),
+                failed=frozenset(self._branch_failed),
+            )
+        if new_view == self._last_view:
             return
-        view = BranchInfoView(
-            info=self._last_branch_info,
-            pr_number=self._last_pr_number,
-            pr_enabled=self._branch_service.pr_enabled,
-            loading=frozenset(self._branch_loading),
-            failed=frozenset(self._branch_failed),
-        )
-        bar.update_state(view)
+        self._last_view = new_view
+        bar.update_state(new_view)

@@ -131,3 +131,61 @@ def test_set_pr_enabled_true_does_not_increment() -> None:
     assert service.current_pr_fetch_generation == gen_before
     service.set_pr_enabled(True)
     assert service.current_pr_fetch_generation == gen_before
+
+
+def test_fetch_branch_only_delegates_to_data_layer() -> None:
+    """fetch_branch_only calls get_branch_only(project_dir) and returns its result."""
+    service = BranchInfoService(PROJECT_DIR)
+    info = _make_info()
+    with patch(f"{ADAPTER_MODULE}.get_branch_only", return_value=info) as mock_fn:
+        result = service.fetch_branch_only()
+    mock_fn.assert_called_once_with(PROJECT_DIR)
+    assert result is info
+
+
+def test_begin_quick_tick_returns_false_when_in_flight() -> None:
+    """Second begin_quick_tick call returns False; resets after end_quick_tick."""
+    service = BranchInfoService(PROJECT_DIR)
+    assert service.begin_quick_tick() is True
+    assert service.begin_quick_tick() is False
+    service.end_quick_tick()
+    assert service.begin_quick_tick() is True
+
+
+def test_begin_full_tick_returns_false_when_in_flight() -> None:
+    """Second begin_full_tick call returns False; resets after end_full_tick."""
+    service = BranchInfoService(PROJECT_DIR)
+    assert service.begin_full_tick() is True
+    assert service.begin_full_tick() is False
+    service.end_full_tick()
+    assert service.begin_full_tick() is True
+
+
+def test_quick_and_full_tick_guards_are_independent() -> None:
+    """Quick tick and full tick guards do not block each other."""
+    service = BranchInfoService(PROJECT_DIR)
+    assert service.begin_quick_tick() is True
+    assert service.begin_full_tick() is True
+
+    service2 = BranchInfoService(PROJECT_DIR)
+    assert service2.begin_full_tick() is True
+    assert service2.begin_quick_tick() is True
+
+
+def test_periodic_tick_guards_independent_of_manual_refresh() -> None:
+    """Tick guards and manual issue/PR fetch flags do not block each other."""
+    service = BranchInfoService(PROJECT_DIR)
+    service.begin_quick_tick()
+    assert service.begin_issue_fetch() is True
+    assert service.begin_pr_fetch() is True
+
+    service2 = BranchInfoService(PROJECT_DIR)
+    service2.begin_full_tick()
+    assert service2.begin_issue_fetch() is True
+    assert service2.begin_pr_fetch() is True
+
+    service3 = BranchInfoService(PROJECT_DIR)
+    service3.begin_issue_fetch()
+    service3.begin_pr_fetch()
+    assert service3.begin_quick_tick() is True
+    assert service3.begin_full_tick() is True
