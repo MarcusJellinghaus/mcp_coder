@@ -35,31 +35,11 @@ from mcp_coder.workflows.vscodeclaude.types import (
 class TestSessionManagement:
     """Test session load/save/check functions."""
 
-    def test_get_sessions_file_path_windows(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Sessions file is in .mcp_coder on Windows."""
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.platform.system",
-            lambda: "Windows",
-        )
+    def test_get_sessions_file_path(self) -> None:
+        """Sessions file is in .mcp_coder on all platforms."""
         path = get_sessions_file_path()
         assert ".mcp_coder" in str(path)
         assert "vscodeclaude_sessions.json" in str(path)
-
-    def test_get_sessions_file_path_linux(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Sessions file is in .config/mcp_coder on Linux."""
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.platform.system",
-            lambda: "Linux",
-        )
-        path = get_sessions_file_path()
-        # Check for either forward or back slashes
-        path_str = str(path)
-        assert ".config" in path_str
-        assert "mcp_coder" in path_str
 
     def test_load_sessions_empty_when_no_file(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
