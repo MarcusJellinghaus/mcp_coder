@@ -12,6 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from ...utils.user_app_data import get_user_app_data_dir
+
 logger = logging.getLogger(__name__)
 
 __all__ = [
@@ -29,7 +31,7 @@ def _find_latest_langchain_session() -> Optional[str]:
     Returns:
         Path to latest langchain session file, or None if none found
     """
-    session_dir = Path.home() / ".mcp_coder" / "sessions" / "langchain"
+    session_dir = get_user_app_data_dir("mcp_coder") / "sessions" / "langchain"
     logger.debug("Searching for langchain sessions in: %s", session_dir)
 
     if not session_dir.exists():
