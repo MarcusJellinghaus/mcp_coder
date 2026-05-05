@@ -32,8 +32,12 @@ __all__ = [
 def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
     """Configure logging with app-specific third-party log suppression."""
     _upstream_setup_logging(log_level, log_file)
-    # App-specific: suppress noisy third-party loggers
-    logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
+    # App-specific third-party suppression, grouped by level
+    # INFO level
     logging.getLogger("github.Requester").setLevel(logging.INFO)
-    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("openai._base_client").setLevel(logging.INFO)
+    logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
+
+    # WARNING level
     logging.getLogger("httpcore").setLevel(logging.WARNING)
+    logging.getLogger("httpx").setLevel(logging.WARNING)

@@ -4,11 +4,17 @@ Bootstrap helper for reinstall_local.bat. Reads
 [tool.mcp-coder.install-from-github] from pyproject.toml and prints one
 `uv pip install` command per line. Self-contained: no internal imports.
 
-Output format (one command per line):
+Default output (one command per line):
     uv pip install "pkg1" "pkg2"
     uv pip install --no-deps "pkg3"
+
+With --specs, prints one spec from `packages` per line, no prefix and no
+quoting, suitable for inlining into a single `uv pip install` invocation
+(e.g. via bash `mapfile`). The `packages-no-deps` group is omitted in
+this mode — those need their own `--no-deps` invocation.
 """
 
+import sys
 import tomllib
 from pathlib import Path
 
@@ -26,6 +32,11 @@ def main() -> None:
     gh = data.get("tool", {}).get("mcp-coder", {}).get("install-from-github", {})
     packages = gh.get("packages", [])
     packages_no_deps = gh.get("packages-no-deps", [])
+
+    if "--specs" in sys.argv[1:]:
+        for spec in packages:
+            print(spec)
+        return
 
     if packages:
         quoted = " ".join(f'"{p}"' for p in packages)
