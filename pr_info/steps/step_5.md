@@ -4,7 +4,7 @@
 > Read `pr_info/steps/summary.md` for context, then implement
 > `pr_info/steps/step_5.md`. Mechanical search-and-replace across four
 > docs files, plus one prose-level edit in
-> `docs/configuration/config.md` and one table collapse in
+> `docs/configuration/config.md` and one bullet-list collapse in
 > `docs/configuration/mlflow-integration.md`. No source code changes.
 > Run all four checks before committing.
 
@@ -16,7 +16,7 @@ file would be churn.
 - `docs/cli-reference.md`
 - `docs/coordinator-vscodeclaude.md`
 - `docs/configuration/config.md` *(also has a prose edit, see below)*
-- `docs/configuration/mlflow-integration.md` *(also has a table collapse, see below)*
+- `docs/configuration/mlflow-integration.md` *(also has a bullet-list collapse, see below)*
 
 These are the only 4 files in `docs/` that contain `.config/mcp_coder`
 patterns (verified by grep). The other 5 files previously listed
@@ -35,8 +35,8 @@ Replace every occurrence of:
 Verify `~/.mcp_coder/config.toml` is the only path shown after.
 
 - `docs/configuration/mlflow-integration.md` contains a Windows / Linux
-  table that collapses from two rows to one ("All platforms:
-  `~/.mcp_coder/config.toml`"), not just a path swap.
+  2-bullet list that collapses from two bullets to a single
+  "All platforms: `~/.mcp_coder/config.toml`" line, not just a path swap.
 
 ### Prose edit — `docs/configuration/config.md` (lines ~915-930)
 Current:

@@ -71,7 +71,7 @@ users yet. Windows users see no change.
 - `docs/cli-reference.md`
 - `docs/coordinator-vscodeclaude.md`
 - `docs/configuration/config.md` — also drop XDG framing in Linux/Containers subsection (~lines 920-930); keep Docker volume-mount example with updated path
-- `docs/configuration/mlflow-integration.md` — also collapse Windows/Linux platform table to a single "All platforms" row
+- `docs/configuration/mlflow-integration.md` — also collapse Windows/Linux platform bullet list to a single "All platforms" line
 
 (The other docs files — `docs/architecture/architecture.md`,
 `docs/configuration/claude-code.md`, `docs/getting-started/label-setup.md`,
@@ -90,7 +90,7 @@ already clean of `.config/mcp_coder` patterns; verified by grep.)
 | 2 | Langchain session storage adopts shim | `session_storage.py`, `session_finder.py`, related tests if any |
 | 3 | vscodeclaude sessions adopts shim | `vscodeclaude/sessions.py`, `tests/workflows/vscodeclaude/test_sessions.py` |
 | 4 | tools/*.py MLflow scripts adopt shim, drop phantom path | 6 files in `tools/`, including line 352 deletion |
-| 5 | Docs sweep | 9 docs files |
+| 5 | Docs sweep | 4 docs files |
 
 Each step is self-contained: tests + implementation + all checks pass before
 proceeding to the next.
