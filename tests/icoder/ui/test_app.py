@@ -18,7 +18,7 @@ from mcp_coder.icoder.env_setup import RuntimeInfo
 from mcp_coder.icoder.services.branch_info_service import BranchInfoService
 from mcp_coder.icoder.services.llm_service import FakeLLMService
 from mcp_coder.icoder.ui.app import ICoderApp
-from mcp_coder.icoder.ui.widgets.branch_info_bar import BranchInfoBar
+from mcp_coder.icoder.ui.widgets.branch_info_bar import BranchInfoBar, BranchInfoView
 from mcp_coder.icoder.ui.widgets.busy_indicator import BusyIndicator
 from mcp_coder.icoder.ui.widgets.output_log import OutputLog
 from mcp_coder.llm.types import StreamEvent
@@ -790,6 +790,88 @@ async def test_quick_and_full_ticks_run_in_parallel(
             app._tick_branch_full()
             await pilot.pause(delay=0.3)
             assert fetch_mock.call_count >= 1
+
+
+async def test_render_diff_skips_unchanged_view(
+    make_icoder_app: Callable[..., ICoderApp],
+    tmp_path: Path,
+) -> None:
+    """Identical consecutive renders must not call update_state twice."""
+    runtime_info = _make_runtime_info(tmp_path)
+    app = make_icoder_app(runtime_info=runtime_info)
+    info = _make_branch_info(branch="main", issue_number=None)
+    with (
+        patch.object(BranchInfoService, "fetch_info", return_value=info),
+        patch.object(BranchInfoService, "fetch_branch_only", return_value=info),
+    ):
+        async with app.run_test() as pilot:
+            await pilot.pause(delay=0.3)
+            with patch.object(BranchInfoBar, "update_state") as update_mock:
+                app._render_branch_state()
+                app._render_branch_state()
+                assert update_mock.call_count == 0
+
+
+async def test_render_diff_emits_first_real_view(
+    make_icoder_app: Callable[..., ICoderApp],
+    tmp_path: Path,
+) -> None:
+    """A None → view transition must emit one update_state call."""
+    runtime_info = _make_runtime_info(tmp_path)
+    app = make_icoder_app(runtime_info=runtime_info)
+    with patch.object(BranchInfoService, "fetch_info", side_effect=RuntimeError):
+        async with app.run_test() as pilot:
+            await pilot.pause(delay=0.3)
+            app._last_branch_info = None
+            app._last_view = None
+            new_info = _make_branch_info(branch="123-foo", issue_number=123)
+            app._last_branch_info = new_info
+            with patch.object(BranchInfoBar, "update_state") as update_mock:
+                app._render_branch_state()
+                assert update_mock.call_count == 1
+                emitted = update_mock.call_args[0][0]
+                assert isinstance(emitted, BranchInfoView)
+                assert emitted.info is new_info
+
+
+async def test_render_diff_emits_when_returning_to_none(
+    make_icoder_app: Callable[..., ICoderApp],
+    tmp_path: Path,
+) -> None:
+    """A view → None transition must emit update_state(None)."""
+    runtime_info = _make_runtime_info(tmp_path)
+    app = make_icoder_app(runtime_info=runtime_info)
+    info = _make_branch_info(branch="main")
+    with patch.object(BranchInfoService, "fetch_info", return_value=info):
+        async with app.run_test() as pilot:
+            await pilot.pause(delay=0.3)
+            assert app._last_view is not None
+            app._last_branch_info = None
+            with patch.object(BranchInfoBar, "update_state") as update_mock:
+                app._render_branch_state()
+                assert update_mock.call_count == 1
+                assert update_mock.call_args[0][0] is None
+
+
+async def test_render_diff_emits_when_field_changes(
+    make_icoder_app: Callable[..., ICoderApp],
+    tmp_path: Path,
+) -> None:
+    """A field change in the view must emit a fresh update_state call."""
+    runtime_info = _make_runtime_info(tmp_path)
+    app = make_icoder_app(runtime_info=runtime_info)
+    info = _make_branch_info(branch="42-x", issue_number=42, issue_title="t")
+    with patch.object(BranchInfoService, "fetch_info", return_value=info):
+        async with app.run_test() as pilot:
+            await pilot.pause(delay=0.3)
+            assert app._last_view is not None
+            app._last_pr_number = 99
+            with patch.object(BranchInfoBar, "update_state") as update_mock:
+                app._render_branch_state()
+                assert update_mock.call_count == 1
+                emitted = update_mock.call_args[0][0]
+                assert isinstance(emitted, BranchInfoView)
+                assert emitted.pr_number == 99
 
 
 def _make_runtime_info(project_dir: Path) -> RuntimeInfo:

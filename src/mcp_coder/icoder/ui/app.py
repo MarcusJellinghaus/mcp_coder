@@ -13,6 +13,7 @@ from typing import Any, Callable, Optional
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal
+from textual.css.query import NoMatches
 from textual.widgets import Static
 
 from mcp_coder.icoder.core.app_core import AppCore
@@ -94,6 +95,7 @@ class ICoderApp(App[None]):
         self._branch_failed: set[str] = set()
         self._last_branch_info: Optional[BranchInfo] = None
         self._last_pr_number: Optional[int] = None
+        self._last_view: Optional[BranchInfoView] = None
 
     def compose(self) -> ComposeResult:
         """Vertical layout: OutputLog on top, InputArea at bottom.
@@ -490,16 +492,19 @@ class ICoderApp(App[None]):
         """Render current state into the BranchInfoBar."""
         try:
             bar = self.query_one(BranchInfoBar)
-        except Exception:  # pylint: disable=broad-exception-caught
+        except NoMatches:
             return
         if self._last_branch_info is None:
-            bar.update_state(None)
+            new_view: Optional[BranchInfoView] = None
+        else:
+            new_view = BranchInfoView(
+                info=self._last_branch_info,
+                pr_number=self._last_pr_number,
+                pr_enabled=self._branch_service.pr_enabled,
+                loading=frozenset(self._branch_loading),
+                failed=frozenset(self._branch_failed),
+            )
+        if new_view == self._last_view:
             return
-        view = BranchInfoView(
-            info=self._last_branch_info,
-            pr_number=self._last_pr_number,
-            pr_enabled=self._branch_service.pr_enabled,
-            loading=frozenset(self._branch_loading),
-            failed=frozenset(self._branch_failed),
-        )
-        bar.update_state(view)
+        self._last_view = new_view
+        bar.update_state(new_view)
