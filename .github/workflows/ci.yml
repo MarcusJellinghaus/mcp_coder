@@ -99,7 +99,7 @@ jobs:
           - {name: "ruff-docstrings", cmd: "ruff version && ruff check src tests"}
           - {name: "unit-tests", cmd: "pytest --version && pytest -m 'not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not langchain_integration and not llm_integration and not textual_integration' --junitxml=unit-tests.xml"}
           - {name: "integration-tests", cmd: "pytest --version && pytest -m 'git_integration or formatter_integration or github_integration' --junitxml=integration-tests.xml"}
-          - {name: "mypy", install: ".[typecheck]", cmd: "mypy --version && mypy --strict src tests"}
+          - {name: "mypy", extras: "typecheck", cmd: "mypy --version && mypy --strict src tests"}
           - {name: "file-size", cmd: "mcp-coder check file-size --max-lines 750 --allowlist-file .large-files-allowlist"}
           - {name: "no-url-deps", cmd: "python tools/check_no_url_deps.py"}
     name: ${{ matrix.check.name }}
@@ -116,16 +116,24 @@ jobs:
           
       - name: Install dependencies
         run: |
-          mapfile -t SPECS < <(python tools/read_github_deps.py --specs)
-          uv pip install --system "${SPECS[@]}" "${{ matrix.check.install || '.[dev,langchain]' }}"
-      
+          if [ -n "${{ matrix.check.extras }}" ]; then
+            uv sync --extra "${{ matrix.check.extras }}"
+          else
+            uv sync --extra dev --extra langchain
+          fi
+
+      - name: Activate venv
+        run: |
+          echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
+          echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
+
       - name: Environment info
         run: |
           uname -a
           python --version
           uv --version
           git --version
-          
+
       - name: Run ${{ matrix.check.name }}
         run: ${{ matrix.check.cmd }}
 
@@ -155,16 +163,19 @@ jobs:
           python-version: 3.11
           
       - name: Install dependencies
+        run: uv sync --extra dev --extra langchain
+
+      - name: Activate venv
         run: |
-          mapfile -t SPECS < <(python tools/read_github_deps.py --specs)
-          uv pip install --system "${SPECS[@]}" ".[dev,langchain]"
-      
+          echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
+          echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
+
       - name: Environment info
         run: |
           uname -a
           python --version
           uv --version
           git --version
-          
+
       - name: Run ${{ matrix.check.name }}
         run: ${{ matrix.check.cmd }}
