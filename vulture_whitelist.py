@@ -151,6 +151,9 @@ _._mock_verify_config
 # cli/commands/conftest.py - Autouse fixture to mock verify_github
 _._mock_verify_github
 
+# cli/commands/conftest.py - Autouse fixture to mock verify_git
+_._mock_verify_git
+
 # test_verify_orchestration.py - Autouse fixture to mock verify_github per class
 _._mock_github
 
@@ -281,4 +284,3 @@ _.started_at
 
 # test_session_restart_branch_integration.py - Unpacked but unused in test assertion
 _.user
-

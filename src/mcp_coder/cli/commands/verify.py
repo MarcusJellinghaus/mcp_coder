@@ -22,6 +22,7 @@ from ...llm.interface import prompt_llm
 from ...llm.mlflow_logger import verify_mlflow
 from ...llm.providers.claude.claude_cli_verification import verify_claude
 from ...llm.providers.claude.claude_executable_finder import find_claude_executable
+from ...mcp_workspace_git import verify_git
 from ...mcp_workspace_github import verify_github
 from ...prompts.prompt_loader import get_project_prompt_path, is_claude_md, load_prompts
 from ...utils.mcp_verification import ClaudeMCPStatus, parse_claude_mcp_list
@@ -267,6 +268,20 @@ _LABEL_MAP: dict[str, str] = {
     "perm_issues_read": "Issues: Read",
     "perm_workflows_read": "Actions: Read",
     "perm_statuses_read": "Commit statuses: Read",
+    # Git section
+    "git_binary": "Git binary",
+    "git_repo": "Repository",
+    "user_identity": "Git identity",
+    "signing_intent": "Signing enabled",
+    "signing_consistency": "Signing config consistent",
+    "signing_format": "Signing format",
+    "signing_key": "Signing key",
+    "signing_binary": "Signing binary",
+    "signing_key_accessible": "Signing key accessible",
+    "agent_reachable": "GPG agent",
+    "allowed_signers": "Allowed signers file",
+    "verify_head": "HEAD signature",
+    "actual_signature": "End-to-end sign test",
 }
 
 
@@ -513,13 +528,14 @@ def _compute_exit_code(
     config_has_error: bool = False,
     claude_mcp_ok: bool | None = None,
     github_result: dict[str, Any] | None = None,
+    git_result: dict[str, Any] | None = None,
 ) -> int:
     """Compute CLI exit code from verification results.
 
     Exit 1 when the config has errors, the active provider fails, when MLflow
     is enabled but broken, when the test prompt failed, when GitHub verification
-    failed, when MCP servers failed (langchain only), or when Claude MCP
-    servers failed (claude only).
+    failed, when git verification failed, when MCP servers failed (langchain
+    only), or when Claude MCP servers failed (claude only).
 
     Args:
         active_provider: The active LLM provider name.
@@ -532,6 +548,7 @@ def _compute_exit_code(
         claude_mcp_ok: Claude MCP server status. None=not checked (no effect),
             True=all ok, False=failure (exit 1 when claude active).
         github_result: GitHub verification result dict, or None.
+        git_result: Git verification result dict, or None.
 
     Returns:
         Exit code (0 if all checks pass, 1 if any critical check failed).
@@ -546,6 +563,10 @@ def _compute_exit_code(
 
     # GitHub failure always means exit 1 (provider-independent)
     if github_result is not None and not github_result.get("overall_ok"):
+        return 1
+
+    # Git failure always means exit 1 (provider-independent)
+    if git_result is not None and not git_result.get("overall_ok"):
         return 1
 
     # Active provider determines primary pass/fail
@@ -695,7 +716,11 @@ def execute_verify(args: argparse.Namespace) -> int:
     # 0c. Project configuration section
     _print_project_section(project_dir, symbols)
 
-    # 0d. GitHub verification section
+    # 0d. Git verification section
+    git_result = verify_git(project_dir, actually_sign=True)
+    print(_format_section("GIT", git_result, symbols))
+
+    # 0e. GitHub verification section
     github_result = verify_github(project_dir)
     print(_format_section("GITHUB", github_result, symbols))
 
@@ -944,6 +969,7 @@ def execute_verify(args: argparse.Namespace) -> int:
         config_has_error=config_result["has_error"],
         claude_mcp_ok=claude_mcp_ok,
         github_result=github_result,
+        git_result=git_result,
     )
     logger.info("Verify command completed with exit code %d", exit_code)
     return exit_code

@@ -122,6 +122,20 @@ def _mock_verify_github() -> Generator[MagicMock, None, None]:
         yield mock
 
 
+@pytest.fixture(autouse=True)
+def _mock_verify_git() -> Generator[MagicMock, None, None]:
+    """Auto-mock verify_git to return a default OK result.
+
+    Tests that need a specific git result can override by patching
+    verify_git explicitly inside the test body.
+    """
+    default = {"overall_ok": True}
+    with patch(
+        "mcp_coder.cli.commands.verify.verify_git", return_value=default
+    ) as mock:
+        yield mock
+
+
 @contextmanager
 def _make_verify_mocks() -> Generator[Dict[str, MagicMock], None, None]:
     """Patch the additional execute_verify mock surface for alignment smoke tests.
