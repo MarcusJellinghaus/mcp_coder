@@ -5,16 +5,16 @@ validating output format, --check-models flag parsing, and exit code matrix.
 """
 
 import argparse
-import subprocess
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from mcp_workspace.git_operations.verification import verify_git as real_verify_git
 
 from mcp_coder.cli.commands.verify import execute_verify
 from mcp_coder.cli.main import main
+from mcp_coder.mcp_workspace_git import verify_git as real_verify_git
+from mcp_coder.utils.subprocess_runner import execute_command
 
 _LC_VERIFY = "mcp_coder.llm.providers.langchain.verification"
 _VERIFY = "mcp_coder.cli.commands.verify"
@@ -578,10 +578,23 @@ def test_verify_flags_gpgsign_without_key(
     """
     repo = tmp_path / "repo"
     repo.mkdir()
-    subprocess.run(["git", "init"], cwd=repo, check=True)
-    subprocess.run(["git", "config", "user.email", "t@t.test"], cwd=repo, check=True)
-    subprocess.run(["git", "config", "user.name", "T"], cwd=repo, check=True)
-    subprocess.run(["git", "config", "commit.gpgsign", "true"], cwd=repo, check=True)
+    assert execute_command(["git", "init"], cwd=str(repo)).return_code == 0
+    assert (
+        execute_command(
+            ["git", "config", "user.email", "t@t.test"], cwd=str(repo)
+        ).return_code
+        == 0
+    )
+    assert (
+        execute_command(["git", "config", "user.name", "T"], cwd=str(repo)).return_code
+        == 0
+    )
+    assert (
+        execute_command(
+            ["git", "config", "commit.gpgsign", "true"], cwd=str(repo)
+        ).return_code
+        == 0
+    )
 
     args = argparse.Namespace(
         check_models=False,
