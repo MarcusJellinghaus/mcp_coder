@@ -116,11 +116,8 @@ jobs:
           
       - name: Install dependencies
         run: |
-          uv pip install --system \
-            "mcp-coder-utils @ git+https://github.com/MarcusJellinghaus/mcp-coder-utils.git" \
-            "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git" \
-            "mcp-tools-py @ git+https://github.com/MarcusJellinghaus/mcp-tools-py.git" \
-            "${{ matrix.check.install || '.[dev,langchain]' }}"
+          mapfile -t SPECS < <(python tools/read_github_deps.py --specs)
+          uv pip install --system "${SPECS[@]}" "${{ matrix.check.install || '.[dev,langchain]' }}"
       
       - name: Environment info
         run: |
@@ -159,11 +156,8 @@ jobs:
           
       - name: Install dependencies
         run: |
-          uv pip install --system \
-            "mcp-coder-utils @ git+https://github.com/MarcusJellinghaus/mcp-coder-utils.git" \
-            "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git" \
-            "mcp-tools-py @ git+https://github.com/MarcusJellinghaus/mcp-tools-py.git" \
-            ".[dev,langchain]"
+          mapfile -t SPECS < <(python tools/read_github_deps.py --specs)
+          uv pip install --system "${SPECS[@]}" ".[dev,langchain]"
       
       - name: Environment info
         run: |
