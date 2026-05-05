@@ -5,7 +5,6 @@ Handles JSON file I/O for session tracking and VSCode process checking.
 
 import json
 import logging
-import platform
 import re
 from datetime import datetime, timezone
 from pathlib import Path
