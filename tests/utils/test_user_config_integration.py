@@ -3,13 +3,12 @@
 These tests use real file operations (no mocking) to verify end-to-end functionality.
 """
 
-import platform
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
-from mcp_coder.utils.user_config import get_config_file_path, get_config_values
+from mcp_coder.utils.user_config import get_config_values
 
 
 class TestRealConfigFileWorkflow:
@@ -73,56 +72,6 @@ port = 5432
             )
             assert result[("nonexistent", "key")] is None
             assert result[("tokens", "missing")] is None
-
-    def test_config_directory_creation_path_verification(self, tmp_path: Path) -> None:
-        """Test that config file path points to correct directory structure."""
-        # Create temporary home directory
-        fake_home = tmp_path / "fake_home"
-        fake_home.mkdir()
-
-        with patch("pathlib.Path.home", return_value=fake_home):
-            config_path = get_config_file_path()
-
-            # Verify path structure is platform-specific
-            if platform.system() == "Windows":
-                assert config_path.parent.name == ".mcp_coder"
-                assert config_path.name == "config.toml"
-                assert config_path.parent.parent == fake_home
-                expected_path = fake_home / ".mcp_coder" / "config.toml"
-            else:
-                # Linux/macOS - XDG Base Directory Specification
-                assert config_path.parent.name == "mcp_coder"
-                assert config_path.name == "config.toml"
-                assert config_path.parent.parent.name == ".config"
-                expected_path = fake_home / ".config" / "mcp_coder" / "config.toml"
-
-            # Verify the full path construction
-            assert config_path == expected_path
-
-    def test_path_consistency(self) -> None:
-        """Test that path generation is consistent across multiple calls."""
-        # Test that multiple calls return the same path
-        path1 = get_config_file_path()
-        path2 = get_config_file_path()
-
-        assert path1 == path2
-        assert path1.name == "config.toml"
-
-        # Verify platform-specific path structure
-        if platform.system() == "Windows":
-            assert path1.parent.name == ".mcp_coder"
-            # Should be relative to user's home directory
-            assert str(path1).endswith(".mcp_coder/config.toml") or str(path1).endswith(
-                ".mcp_coder\\config.toml"
-            )
-        else:
-            # Linux/macOS - XDG Base Directory Specification
-            assert path1.parent.name == "mcp_coder"
-            # Should be in .config directory
-            assert ".config" in str(path1)
-            assert str(path1).endswith("mcp_coder/config.toml") or str(path1).endswith(
-                "mcp_coder\\config.toml"
-            )
 
     def test_malformed_config_file_handling(self, tmp_path: Path) -> None:
         """Test behavior with malformed TOML files.

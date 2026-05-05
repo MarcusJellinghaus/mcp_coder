@@ -11,13 +11,13 @@ For project-level configuration from pyproject.toml, see pyproject_config.py.
 
 import logging
 import os
-import platform
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from .log_utils import log_function_call
+from .user_app_data import get_user_app_data_dir
 
 
 @dataclass(frozen=True, slots=True)
@@ -158,18 +158,12 @@ def _format_toml_error(file_path: Path, error: tomllib.TOMLDecodeError) -> str:
 
 
 def get_config_file_path() -> Path:
-    r"""Get the path to the user configuration file.
+    """Get the path to the user configuration file.
 
     Returns:
-        Path object pointing to platform-specific config location:
-        - Windows: %USERPROFILE%\.mcp_coder\config.toml
-        - Linux/macOS/Containers: ~/.config/mcp_coder/config.toml
+        Path object pointing to ~/.mcp_coder/config.toml on every platform.
     """
-    if platform.system() == "Windows":
-        return Path.home() / ".mcp_coder" / "config.toml"
-    else:
-        # Linux/macOS/Containers - use XDG Base Directory Specification
-        return Path.home() / ".config" / "mcp_coder" / "config.toml"
+    return get_user_app_data_dir("mcp_coder") / "config.toml"
 
 
 def load_config() -> dict[str, Any]:
