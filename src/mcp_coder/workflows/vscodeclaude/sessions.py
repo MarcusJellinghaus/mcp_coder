@@ -12,8 +12,7 @@ from typing import Any, cast
 
 import psutil
 
-from mcp_coder.utils.user_app_data import get_user_app_data_dir
-
+from ...utils.user_app_data import get_user_app_data_dir
 from .config import sanitize_folder_name
 from .helpers import load_to_be_deleted
 from .types import VSCodeClaudeSession, VSCodeClaudeSessionStore
