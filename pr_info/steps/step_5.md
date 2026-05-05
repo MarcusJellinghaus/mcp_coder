@@ -2,35 +2,41 @@
 
 ## LLM Prompt
 > Read `pr_info/steps/summary.md` for context, then implement
-> `pr_info/steps/step_5.md`. Mechanical search-and-replace across nine
+> `pr_info/steps/step_5.md`. Mechanical search-and-replace across four
 > docs files, plus one prose-level edit in
-> `docs/configuration/config.md`. No source code changes. Run all four
-> checks before committing.
+> `docs/configuration/config.md` and one table collapse in
+> `docs/configuration/mlflow-integration.md`. No source code changes.
+> Run all four checks before committing.
 
 ## Why this is one commit
 A single coherent doc sweep reads as one logical change; splitting per
 file would be churn.
 
-## WHERE — 9 files
+## WHERE — 4 files
 - `docs/cli-reference.md`
 - `docs/coordinator-vscodeclaude.md`
-- `docs/architecture/architecture.md`
-- `docs/configuration/claude-code.md`
 - `docs/configuration/config.md` *(also has a prose edit, see below)*
-- `docs/configuration/mlflow-integration.md`
-- `docs/getting-started/label-setup.md`
-- `docs/repository-setup/github.md`
-- `docs/repository-setup/README.md`
+- `docs/configuration/mlflow-integration.md` *(also has a table collapse, see below)*
+
+These are the only 4 files in `docs/` that contain `.config/mcp_coder`
+patterns (verified by grep). The other 5 files previously listed
+(`docs/architecture/architecture.md`, `docs/configuration/claude-code.md`,
+`docs/getting-started/label-setup.md`, `docs/repository-setup/github.md`,
+`docs/repository-setup/README.md`) are already clean and require no edits.
 
 ## WHAT
 
-### Mechanical sweep (all 9 files)
+### Mechanical sweep (all 4 files)
 Replace every occurrence of:
 - `~/.config/mcp_coder/` → `~/.mcp_coder/`
 - `~/.config/mcp_coder` → `~/.mcp_coder`
 - `$HOME/.config/mcp_coder` → `~/.mcp_coder` (if present)
 
 Verify `~/.mcp_coder/config.toml` is the only path shown after.
+
+- `docs/configuration/mlflow-integration.md` contains a Windows / Linux
+  table that collapses from two rows to one ("All platforms:
+  `~/.mcp_coder/config.toml`"), not just a path swap.
 
 ### Prose edit — `docs/configuration/config.md` (lines ~915-930)
 Current:
@@ -64,7 +70,7 @@ docker run -v ~/.mcp_coder:/root/.mcp_coder my-container
 already correct.)
 
 ## HOW
-Use `mcp__workspace__edit_file` per occurrence. For the mechanical
+Use `mcp__mcp-workspace__edit_file` per occurrence. For the mechanical
 parts, search-and-replace each literal one file at a time. For the
 prose section in `config.md`, do the structural delete + targeted edit
 as a separate call.
@@ -79,10 +85,10 @@ N/A — documentation only.
 None.
 
 ## Verification
-1. `mcp__tools-py__run_pytest_check` (fast unit tests must still be green)
-2. `mcp__tools-py__run_pylint_check`
-3. `mcp__tools-py__run_mypy_check`
-4. `mcp__tools-py__run_lint_imports_check`
+1. `mcp__mcp-tools-py__run_pytest_check` (fast unit tests must still be green)
+2. `mcp__mcp-tools-py__run_pylint_check`
+3. `mcp__mcp-tools-py__run_mypy_check`
+4. `mcp__mcp-tools-py__run_lint_imports_check`
 5. Optional: grep for any leftover `\.config[\\/]mcp_coder` occurrences in `docs/` to confirm complete sweep.
 6. Commit message: `docs: unify config path to ~/.mcp_coder across all platforms`
 

@@ -46,6 +46,22 @@ def get_config_file_path() -> Path:
     return get_user_app_data_dir("mcp_coder") / "config.toml"
 ```
 
+**Explicit docstring deletion**: the existing `get_config_file_path`
+docstring contains a platform-bullets block listing each platform's
+target path:
+```
+- Windows: %USERPROFILE%\.mcp_coder\config.toml
+- Linux/macOS/Containers: ~/.config/mcp_coder/config.toml
+```
+**Delete this entire bullet block** (both lines) and replace it with the
+single-platform statement shown above. Do not retain either bullet.
+
+**Also delete the in-body XDG comment**: the function body currently
+contains a comment `# Linux/macOS/Containers - use XDG Base Directory
+Specification`. Remove this comment and any other "XDG Base Directory
+Specification" trace alongside the branch removal. Also remove the
+`r` prefix on the docstring (no backslash escapes remain).
+
 Also: remove `import platform` (no other use in the file).
 
 ### `.importlinter` — extend `mcp_coder_utils_isolation` `ignore_imports`
@@ -80,7 +96,8 @@ N/A — pure delegation.
   entirely.
 - `tests/utils/test_user_config_integration.py` → delete
   `test_config_directory_creation_path_verification` and
-  `test_path_consistency`. Drop `import platform` if otherwise unused.
+  `test_path_consistency`. Delete `import platform` at the top of the
+  file (only the two deleted test methods used it).
 
 ### Add (replacement, in `tests/utils/test_user_config.py`)
 One thin assertion that the shim is wired correctly:
@@ -99,8 +116,8 @@ def test_get_config_file_path_uses_shim() -> None:
   which convention the surrounding fixture uses).
 
 ## Verification
-1. `mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"])`
-2. `mcp__tools-py__run_pylint_check`
-3. `mcp__tools-py__run_mypy_check`
-4. `mcp__tools-py__run_lint_imports_check` — must show `mcp_coder_utils_isolation` passing.
+1. `mcp__mcp-tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"])`
+2. `mcp__mcp-tools-py__run_pylint_check`
+3. `mcp__mcp-tools-py__run_mypy_check`
+4. `mcp__mcp-tools-py__run_lint_imports_check` — must show `mcp_coder_utils_isolation` passing.
 5. Commit message: `user_config: introduce user_app_data shim and reduce get_config_file_path to one-liner`

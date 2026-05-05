@@ -78,8 +78,8 @@ the intended bug fix. File auto-regenerates as VSCode sessions open and
 close; no migration logic needed (no Linux/macOS users).
 
 ## Verification
-1. `mcp__tools-py__run_pytest_check` (fast unit tests)
-2. `mcp__tools-py__run_pylint_check`
-3. `mcp__tools-py__run_mypy_check`
-4. `mcp__tools-py__run_lint_imports_check`
+1. `mcp__mcp-tools-py__run_pytest_check` (fast unit tests)
+2. `mcp__mcp-tools-py__run_pylint_check`
+3. `mcp__mcp-tools-py__run_mypy_check`
+4. `mcp__mcp-tools-py__run_lint_imports_check`
 5. Commit message: `vscodeclaude: route sessions file path through user_app_data shim`

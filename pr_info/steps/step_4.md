@@ -24,6 +24,13 @@ All six tools share the same pattern; bundling them keeps the
 
 ## WHAT
 
+Note: 4 of the 6 tools files collapse a 2-element `config_paths` list
+with the hyphenated phantom fallback (`extract_mlflow_tool_calls.py`,
+`get_latest_mlflow_db_entries.py`, `inspect_mlflow_run.py`,
+`search_mlflow_artifacts.py`) while the other 2 (`get_mlflow_config.py`,
+`get_recent_mlflow_runs.py`) just swap a single hardcoded literal — they
+have no phantom fallback.
+
 ### Common pattern in all 6 files
 Replace any of:
 ```python
@@ -84,8 +91,8 @@ running one (e.g. `python tools/get_mlflow_config.py`) is optional but
 recommended; no automated coverage exists or is being added.
 
 ## Verification
-1. `mcp__tools-py__run_pytest_check` (fast unit tests — won't touch tools/ but must still be green)
-2. `mcp__tools-py__run_pylint_check`
-3. `mcp__tools-py__run_mypy_check`
-4. `mcp__tools-py__run_lint_imports_check`
+1. `mcp__mcp-tools-py__run_pytest_check` (fast unit tests — won't touch tools/ but must still be green)
+2. `mcp__mcp-tools-py__run_pylint_check`
+3. `mcp__mcp-tools-py__run_mypy_check`
+4. `mcp__mcp-tools-py__run_lint_imports_check`
 5. Commit message: `tools: route MLflow scripts through user_app_data shim, drop phantom config path`

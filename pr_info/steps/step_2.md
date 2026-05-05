@@ -44,7 +44,6 @@ With:
 ```python
 session_dir = get_user_app_data_dir("mcp_coder") / "sessions" / "langchain"
 ```
-Also update the function docstring (`"Searches ~/.mcp_coder/sessions/langchain/..."`) — leaves the literal as-is since it's still accurate after this change.
 
 ## HOW
 Both files add:
@@ -69,8 +68,8 @@ None expected — there are no tests asserting these path literals
 fragment if any exists.
 
 ## Verification
-1. `mcp__tools-py__run_pytest_check` (fast unit tests)
-2. `mcp__tools-py__run_pylint_check`
-3. `mcp__tools-py__run_mypy_check`
-4. `mcp__tools-py__run_lint_imports_check`
+1. `mcp__mcp-tools-py__run_pytest_check` (fast unit tests)
+2. `mcp__mcp-tools-py__run_pylint_check`
+3. `mcp__mcp-tools-py__run_mypy_check`
+4. `mcp__mcp-tools-py__run_lint_imports_check`
 5. Commit message: `llm: route langchain session storage through user_app_data shim`

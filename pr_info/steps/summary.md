@@ -50,7 +50,7 @@ users yet. Windows users see no change.
 - `.importlinter` — add `mcp_coder.utils.user_app_data -> mcp_coder_utils` to `mcp_coder_utils_isolation` `ignore_imports`
 - `src/mcp_coder/utils/user_config.py` — `get_config_file_path` → one-liner; drop `import platform`; update its own docstring
 - `src/mcp_coder/llm/storage/session_storage.py` — replace `Path.home() / ".mcp_coder" / "sessions" / "langchain"`
-- `src/mcp_coder/llm/storage/session_finder.py` — replace same path; update docstring
+- `src/mcp_coder/llm/storage/session_finder.py` — replace same path
 - `src/mcp_coder/workflows/vscodeclaude/sessions.py` — `get_sessions_file_path` → single helper call; drop platform branch; update docstring
 
 ### Modified — Tools
@@ -70,13 +70,13 @@ users yet. Windows users see no change.
 ### Modified — Docs (mechanical sweep, replace `~/.config/mcp_coder` → `~/.mcp_coder`)
 - `docs/cli-reference.md`
 - `docs/coordinator-vscodeclaude.md`
-- `docs/architecture/architecture.md`
-- `docs/configuration/claude-code.md`
 - `docs/configuration/config.md` — also drop XDG framing in Linux/Containers subsection (~lines 920-930); keep Docker volume-mount example with updated path
-- `docs/configuration/mlflow-integration.md`
-- `docs/getting-started/label-setup.md`
-- `docs/repository-setup/github.md`
-- `docs/repository-setup/README.md`
+- `docs/configuration/mlflow-integration.md` — also collapse Windows/Linux platform table to a single "All platforms" row
+
+(The other docs files — `docs/architecture/architecture.md`,
+`docs/configuration/claude-code.md`, `docs/getting-started/label-setup.md`,
+`docs/repository-setup/github.md`, `docs/repository-setup/README.md` — are
+already clean of `.config/mcp_coder` patterns; verified by grep.)
 
 ### Sites NOT touched (already correct after the change)
 - `src/mcp_coder/cli/commands/verify.py:330` — string literal already `"~/.mcp_coder/config.toml"`
