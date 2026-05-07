@@ -296,11 +296,15 @@ class ICoderApp(App[None]):
             self._text_buffer = ""
         self.query_one("#streaming-tail", Static).update("")
 
-    def _handle_stream_event(self, event: StreamEvent) -> None:
+    def _handle_stream_event(
+        self, event: StreamEvent, *, replay_mode: bool = False
+    ) -> None:
         """Render a single stream event in the output log.
 
         Args:
             event: StreamEvent dict with a "type" key.
+            replay_mode: When True, skip token-display updates (used during
+                JSONL log replay where token usage should not change).
         """
         output = self.query_one(OutputLog)
         action = self._renderer.render(event)
@@ -322,7 +326,8 @@ class ICoderApp(App[None]):
 
         if isinstance(action, StreamDone):
             self.query_one(BusyIndicator).show_ready()
-            self._update_token_display()
+            if not replay_mode:
+                self._update_token_display()
             self._append_blank_line()
         elif isinstance(action, ToolStart):
             self.query_one(BusyIndicator).show_busy(action.display_name)
