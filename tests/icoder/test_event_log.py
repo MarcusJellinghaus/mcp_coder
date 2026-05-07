@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from mcp_coder.icoder.core.event_log import EventLog
+import pytest
+
+from mcp_coder.icoder.core.event_log import EventLog, iter_events
 
 
 def test_emit_records_event(tmp_path: Path) -> None:
@@ -69,3 +71,89 @@ def test_multiple_events_multiple_lines(tmp_path: Path) -> None:
     jsonl_files = list(tmp_path.glob("icoder_*.jsonl"))
     lines = jsonl_files[0].read_text(encoding="utf-8").strip().split("\n")
     assert len(lines) == 3
+
+
+def test_current_path_matches_initial_file(tmp_path: Path) -> None:
+    with EventLog(logs_dir=tmp_path) as log:
+        log.emit("input_received", text="hello")
+        jsonl_files = list(tmp_path.glob("icoder_*.jsonl"))
+        assert len(jsonl_files) == 1
+        assert log.current_path == jsonl_files[0]
+
+
+def test_rotate_changes_current_path(tmp_path: Path) -> None:
+    with EventLog(logs_dir=tmp_path) as log:
+        original_path = log.current_path
+        new_path = log.rotate()
+        assert new_path != original_path
+        assert log.current_path == new_path
+
+
+def test_rotate_keeps_old_file_on_disk(tmp_path: Path) -> None:
+    with EventLog(logs_dir=tmp_path) as log:
+        log.emit("first")
+        original_path = log.current_path
+        log.rotate()
+        assert original_path.exists()
+        assert log.current_path.exists()
+        assert original_path != log.current_path
+
+
+def test_rotate_redirects_writes_to_new_file(tmp_path: Path) -> None:
+    with EventLog(logs_dir=tmp_path) as log:
+        log.emit("before_rotate", value=1)
+        original_path = log.current_path
+        log.rotate()
+        log.emit("after_rotate", value=2)
+        new_path = log.current_path
+
+    old_lines = original_path.read_text(encoding="utf-8").strip().split("\n")
+    new_lines = new_path.read_text(encoding="utf-8").strip().split("\n")
+    assert len(old_lines) == 1
+    assert json.loads(old_lines[0])["event"] == "before_rotate"
+    assert len(new_lines) == 1
+    assert json.loads(new_lines[0])["event"] == "after_rotate"
+
+
+def test_rotate_clears_entries_and_resets_clock(tmp_path: Path) -> None:
+    with EventLog(logs_dir=tmp_path) as log:
+        log.emit("first")
+        log.emit("second")
+        assert len(log.entries) == 2
+        log.rotate()
+        assert log.entries == []
+        log.emit("after_rotate")
+        assert len(log.entries) == 1
+        # Clock reset means the new emit's t should be very small (~0).
+        assert log.entries[0].t < 1.0
+
+
+def test_iter_events_yields_dicts(tmp_path: Path) -> None:
+    with EventLog(logs_dir=tmp_path) as log:
+        log.emit("first", value=1)
+        log.emit("second", text="hello")
+        path = log.current_path
+    events = list(iter_events(path))
+    assert len(events) == 2
+    assert events[0]["event"] == "first"
+    assert events[0]["value"] == 1
+    assert events[1]["event"] == "second"
+    assert events[1]["text"] == "hello"
+
+
+def test_iter_events_skips_blank_lines(tmp_path: Path) -> None:
+    path = tmp_path / "test.jsonl"
+    path.write_text(
+        '{"t": 0.0, "event": "first"}\n' "\n" "   \n" '{"t": 0.1, "event": "second"}\n',
+        encoding="utf-8",
+    )
+    events = list(iter_events(path))
+    assert len(events) == 2
+    assert events[0]["event"] == "first"
+    assert events[1]["event"] == "second"
+
+
+def test_iter_events_missing_file_raises(tmp_path: Path) -> None:
+    missing = tmp_path / "does_not_exist.jsonl"
+    with pytest.raises(FileNotFoundError):
+        list(iter_events(missing))
