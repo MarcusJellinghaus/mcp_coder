@@ -18,6 +18,7 @@ class Response:
     send_to_llm: bool = False  # True = forward original input to LLM
     llm_text: str | None = None  # When set and send_to_llm=True, send this instead
     reset_session: bool = False  # True = reset LLM session (new conversation)
+    open_picker: bool = False  # True = UI should open SessionPickerScreen
 
 
 @dataclass(frozen=True)

@@ -73,7 +73,7 @@ def test_all_commands_registered() -> None:
     registry = create_default_registry()
     commands = registry.get_all()
     names = {c.name for c in commands}
-    assert names == {"/help", "/clear", "/quit", "/exit"}
+    assert names == {"/help", "/clear", "/load", "/quit", "/exit"}
 
 
 def test_dispatch_case_insensitive() -> None:
@@ -118,7 +118,7 @@ def test_filter_by_input_slash_returns_all() -> None:
     registry = create_default_registry()
     result = registry.filter_by_input("/")
     names = {c.name for c in result}
-    assert names == {"/help", "/clear", "/quit", "/exit"}
+    assert names == {"/help", "/clear", "/load", "/quit", "/exit"}
 
 
 def test_filter_by_input_prefix_match() -> None:

@@ -157,19 +157,23 @@ def execute_icoder(args: argparse.Namespace) -> int:
 
         try:
             with EventLog(logs_dir=project_dir / "logs") as event_log:
-                event_log.emit(
-                    "session_start",
-                    provider=provider,
-                    mcp_coder_version=runtime_info.mcp_coder_version,
-                    tool_env=runtime_info.tool_env_path,
-                    project_venv=runtime_info.project_venv_path,
-                    project_dir=runtime_info.project_dir,
-                    mcp_servers={s.name: s.version for s in runtime_info.mcp_servers},
-                    mcp_connection_status={
+                session_start_payload: dict[str, object] = {
+                    "provider": provider,
+                    "mcp_coder_version": runtime_info.mcp_coder_version,
+                    "tool_env": runtime_info.tool_env_path,
+                    "project_venv": runtime_info.project_venv_path,
+                    "project_dir": runtime_info.project_dir,
+                    "mcp_servers": {
+                        s.name: s.version for s in runtime_info.mcp_servers
+                    },
+                    "mcp_connection_status": {
                         s.name: {"ok": s.ok, "status_text": s.status_text}
                         for s in (runtime_info.mcp_connection_status or [])
                     },
-                )
+                }
+                if session_id is not None:
+                    session_start_payload["session_id"] = session_id
+                event_log.emit("session_start", **session_start_payload)
                 app_core = AppCore(
                     llm_service,
                     event_log,

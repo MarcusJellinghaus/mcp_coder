@@ -8,6 +8,7 @@ import threading
 import time
 from collections.abc import Mapping
 from dataclasses import replace
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -18,6 +19,7 @@ from textual.css.query import NoMatches
 from textual.widgets import Static
 
 from mcp_coder.icoder.core.app_core import AppCore
+from mcp_coder.icoder.core.log_inventory import list_icoder_logs
 from mcp_coder.icoder.services.branch_info_service import BranchInfoService
 from mcp_coder.icoder.ui.styles import CSS
 from mcp_coder.icoder.ui.widgets.branch_info_bar import BranchInfoBar, BranchInfoView
@@ -25,6 +27,7 @@ from mcp_coder.icoder.ui.widgets.busy_indicator import BusyIndicator
 from mcp_coder.icoder.ui.widgets.command_autocomplete import CommandAutocomplete
 from mcp_coder.icoder.ui.widgets.input_area import InputArea
 from mcp_coder.icoder.ui.widgets.output_log import OutputLog
+from mcp_coder.icoder.ui.widgets.session_picker import SessionPickerScreen
 from mcp_coder.llm.formatting.render_actions import (
     ErrorMessage,
     StreamDone,
@@ -240,6 +243,8 @@ class ICoderApp(App[None]):
         elif response.clear_output:
             output.clear()
             output.clear_recorded()
+        elif response.open_picker:
+            self.open_picker_for_load()
         elif response.text:
             output.append_text(response.text)
         elif response.send_to_llm:
@@ -247,6 +252,64 @@ class ICoderApp(App[None]):
             self.query_one(BusyIndicator).show_busy("Querying LLM...")
             llm_input = response.llm_text or text
             self.run_worker(lambda: self._stream_llm(llm_input), thread=True)
+
+    def open_picker_for_load(self) -> None:
+        """Open the SessionPickerScreen for the /load command.
+
+        Lists prior icoder logs in the project's ``logs/`` directory
+        filtered by current provider, pushes a SessionPickerScreen, and
+        on selection invokes ``do_resume(path)``. If no logs exist, a
+        message is appended and the picker is not pushed.
+        """
+        output = self.query_one(OutputLog)
+        logs_dir = self._project_dir / "logs"
+        summaries = list_icoder_logs(logs_dir, provider=self._core.provider)
+        if not summaries:
+            output.append_text("No previous sessions in this project.")
+            return
+
+        def _on_pick(selected: Optional[Path]) -> None:
+            if selected is not None:
+                self.do_resume(selected)
+
+        self.push_screen(SessionPickerScreen(summaries), _on_pick)
+
+    def do_resume(self, log_path: Path) -> None:
+        """Clear screen, prepare for resume, replay log, render markers.
+
+        Workflow:
+          1. Clear the OutputLog and its recorded buffer.
+          2. ``AppCore.prepare_for_resume(log_path)`` — sets session_id
+             on the LLM service and rotates the event log.
+          3. ``replay_log(self, log_path)`` — re-renders prior UI lines.
+          4. Render a dim ``────── Resumed YYYY-MM-DD HH:MM ──────``
+             divider.
+          5. Re-render the live runtime banner from the current
+             ``runtime_info``.
+        """
+        from mcp_coder.icoder.ui.replay import replay_log
+
+        output = self.query_one(OutputLog)
+        output.clear()
+        output.clear_recorded()
+        self._core.prepare_for_resume(log_path)
+        replay_log(self, log_path)
+        now_local = datetime.now().strftime("%Y-%m-%d %H:%M")
+        output.append_text(f"────── Resumed {now_local} ──────", style="dim")
+        if self._core.runtime_info:
+            info = self._core.runtime_info
+            lines = format_runtime_banner(
+                {
+                    "mcp_coder_version": info.mcp_coder_version,
+                    "mcp_coder_utils_version": info.mcp_coder_utils_version,
+                    "tool_env_path": info.tool_env_path,
+                    "project_venv_path": info.project_venv_path,
+                    "project_dir": info.project_dir,
+                    "mcp_servers": info.mcp_servers,
+                    "mcp_connection_status": info.mcp_connection_status,
+                }
+            )
+            output.append_text("\n".join(lines), style="dim")
 
     def action_cancel_stream(self) -> None:
         """Set cancel event if currently streaming. No-op otherwise."""

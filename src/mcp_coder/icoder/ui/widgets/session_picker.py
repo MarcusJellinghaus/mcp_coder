@@ -43,7 +43,7 @@ class SessionPickerScreen(ModalScreen[Optional[Path]]):
         """
         yield Container(
             Static(
-                "Select a session — Up/Down to move, " "Enter to select, Esc to cancel"
+                "Select a session — Up/Down to move, Enter to select, Esc to cancel"
             ),
             OptionList(*[format_picker_row(s) for s in self._summaries]),
         )
