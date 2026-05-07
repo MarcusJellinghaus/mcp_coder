@@ -71,9 +71,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 9: `SessionPickerScreen` (ModalScreen + OptionList) ([details](./steps/step_9.md))
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 10: `/load` command + `AppCore.prepare_for_resume()` + `ICoderApp.do_resume()` ([details](./steps/step_10.md))
 
