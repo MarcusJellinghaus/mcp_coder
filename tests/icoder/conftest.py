@@ -74,10 +74,6 @@ def patch_icoder_deps(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         lambda *a, **_kw: "/fake/.mcp.json",
     )
     monkeypatch.setattr(
-        "mcp_coder.cli.commands.icoder.find_latest_session",
-        lambda **_kw: None,
-    )
-    monkeypatch.setattr(
         "mcp_coder.icoder.skills.load_skills",
         lambda _: [],
     )

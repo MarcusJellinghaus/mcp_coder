@@ -157,13 +157,21 @@ class ICoderApp(App[None]):
     ]
 
     def __init__(
-        self, app_core: AppCore, *, format_tools: bool = True, **kwargs: Any
+        self,
+        app_core: AppCore,
+        *,
+        format_tools: bool = True,
+        resume_log_path: Path | None = None,
+        **kwargs: Any,
     ) -> None:
         """Initialize with injected AppCore.
 
         Args:
             app_core: Central input router.
             format_tools: Enable tool output formatting (default True).
+            resume_log_path: When set, ``on_mount`` calls ``do_resume(path)``
+                instead of rendering the live banner; used by CLI startup
+                resume (``--continue-session*``).
             **kwargs: Passed to App.__init__.
         """
         super().__init__(**kwargs)
@@ -176,6 +184,7 @@ class ICoderApp(App[None]):
             if app_core.runtime_info
             else Path.cwd()
         )
+        self._resume_log_path = resume_log_path
         self._branch_service = BranchInfoService(self._project_dir)
         self._branch_loading: set[str] = set()
         self._branch_failed: set[str] = set()
@@ -207,7 +216,9 @@ class ICoderApp(App[None]):
 
     def on_mount(self) -> None:
         """Display startup info and focus input area."""
-        if self._core.runtime_info:
+        if self._resume_log_path is not None:
+            self.do_resume(self._resume_log_path)
+        elif self._core.runtime_info:
             info = self._core.runtime_info
             output = self.query_one(OutputLog)
             lines = format_runtime_banner(
@@ -281,7 +292,9 @@ class ICoderApp(App[None]):
           1. Clear the OutputLog and its recorded buffer.
           2. ``AppCore.prepare_for_resume(log_path)`` — sets session_id
              on the LLM service and rotates the event log.
-          3. ``replay_log(self, log_path)`` — re-renders prior UI lines.
+          3. ``replay_log(self, log_path, event_log=...)`` — re-renders
+             prior UI lines AND re-emits each event into the new event
+             log so it is self-contained.
           4. Render a dim ``────── Resumed YYYY-MM-DD HH:MM ──────``
              divider.
           5. Re-render the live runtime banner from the current
@@ -293,7 +306,7 @@ class ICoderApp(App[None]):
         output.clear()
         output.clear_recorded()
         self._core.prepare_for_resume(log_path)
-        replay_log(self, log_path)
+        replay_log(self, log_path, event_log=self._core.event_log)
         now_local = datetime.now().strftime("%Y-%m-%d %H:%M")
         output.append_text(f"────── Resumed {now_local} ──────", style="dim")
         if self._core.runtime_info:

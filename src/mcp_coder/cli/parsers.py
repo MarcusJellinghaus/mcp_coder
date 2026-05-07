@@ -691,12 +691,12 @@ def add_icoder_parser(subparsers: Any) -> None:
         "--continue-session-from",
         type=str,
         metavar="FILE",
-        help="Resume conversation from specific stored session file",
+        help="Resume conversation from a specific .jsonl event-log file",
     )
     continue_group.add_argument(
         "--continue-session",
         action="store_true",
-        help="Resume from most recent session (auto-discovers latest file)",
+        help="Open a session picker over prior icoder logs in the project",
     )
 
     icoder_parser.add_argument(

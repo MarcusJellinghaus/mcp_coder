@@ -116,3 +116,28 @@ def iter_events(path: Path | str) -> Iterator[dict[str, Any]]:
             stripped = line.strip()
             if stripped:
                 yield json.loads(stripped)
+
+
+def read_session_id_from_log(path: Path | str) -> str | None:
+    """Resolve the recorded session_id from a JSONL event log.
+
+    Reads ``session_start.session_id`` from ``path``; if absent, falls
+    back to the most recent ``stream_event{type=done}`` entry's
+    ``session_id``. Returns ``None`` when no candidate is found.
+    """
+    session_id: str | None = None
+    last_done_sid: str | None = None
+    for event in iter_events(path):
+        kind = event.get("event")
+        if kind == "session_start":
+            raw = event.get("session_id")
+            if isinstance(raw, str):
+                session_id = raw
+                break
+        elif kind == "stream_event" and event.get("type") == "done":
+            raw = event.get("session_id")
+            if isinstance(raw, str):
+                last_done_sid = raw
+    if session_id is None:
+        session_id = last_done_sid
+    return session_id

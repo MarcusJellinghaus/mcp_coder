@@ -5,16 +5,14 @@ import logging
 from importlib.metadata import PackageNotFoundError
 from pathlib import Path
 
+from ...icoder.core.event_log import read_session_id_from_log
+from ...icoder.core.log_inventory import list_icoder_logs
 from ...icoder.env_setup import setup_icoder_environment
+from ...icoder.ui.widgets.session_picker import run_startup_picker
 from ...llm.providers.langchain.agent import (  # noqa: PLC2701
     _load_mcp_server_config,
 )
 from ...llm.providers.langchain.mcp_manager import MCPManager
-from ...llm.storage import (
-    extract_langchain_session_id,
-    extract_session_id,
-    find_latest_session,
-)
 from ...utils.log_utils import OUTPUT
 from ...utils.tui_preparation import TuiChecker, TuiPreflightAbort
 from ..utils import (
@@ -84,38 +82,12 @@ def execute_icoder(args: argparse.Namespace) -> int:
             server_config = _load_mcp_server_config(mcp_config, env_vars)
             mcp_manager = MCPManager(server_config)
 
-        # Handle continuation from previous session if requested
+        # Resume resolution.
         # Priority: --session-id > --continue-session-from > --continue-session
         resume_session_id = getattr(args, "session_id", None)
-        continue_file_path = None
+        resume_log_path: Path | None = None
 
-        if not resume_session_id:
-            if getattr(args, "continue_session_from", None):
-                continue_file_path = args.continue_session_from
-            elif getattr(args, "continue_session", False):
-                continue_file_path = find_latest_session(provider=provider)
-                if continue_file_path is None:
-                    logger.log(
-                        OUTPUT, "No previous session found, starting new conversation"
-                    )
-
-            if continue_file_path:
-                if provider == "langchain":
-                    resume_session_id = extract_langchain_session_id(continue_file_path)
-                else:
-                    extracted = extract_session_id(continue_file_path)
-                    if extracted:
-                        resume_session_id = extracted
-                if resume_session_id:
-                    logger.log(
-                        OUTPUT, "Resuming session: %s...", resume_session_id[:16]
-                    )
-                else:
-                    logger.log(
-                        OUTPUT,
-                        "Warning: No session_id found in stored response, starting new conversation",
-                    )
-        else:
+        if resume_session_id:
             if getattr(args, "continue_session_from", None) or getattr(
                 args, "continue_session", False
             ):
@@ -123,6 +95,32 @@ def execute_icoder(args: argparse.Namespace) -> int:
                     OUTPUT,
                     "Using explicit session ID (ignoring file-based continuation)",
                 )
+        elif getattr(args, "continue_session_from", None):
+            fp = Path(args.continue_session_from)
+            if fp.suffix.lower() == ".json":
+                logger.error(
+                    "--continue-session-from now expects a .jsonl event-log "
+                    "path, not a response JSON. Refusing to resume."
+                )
+                return 1
+            if fp.suffix.lower() != ".jsonl" or not fp.exists():
+                logger.error("Log file not found or not a .jsonl: %s", fp)
+                return 1
+            resume_log_path = fp
+        elif getattr(args, "continue_session", False):
+            summaries = list_icoder_logs(project_dir / "logs", provider=provider)
+            if not summaries:
+                logger.log(OUTPUT, "No previous sessions in this project.")
+            else:
+                chosen = run_startup_picker(summaries)
+                if chosen is not None:
+                    resume_log_path = chosen
+                # else: Esc → fresh session
+
+        if resume_log_path is not None:
+            resume_session_id = read_session_id_from_log(resume_log_path)
+            if resume_session_id:
+                logger.log(OUTPUT, "Resuming session: %s...", resume_session_id[:16])
 
         session_id = resume_session_id
 
@@ -191,7 +189,11 @@ def execute_icoder(args: argparse.Namespace) -> int:
                         )
                 register_color(registry, app_core)
                 format_tools = not getattr(args, "no_format_tools", False)
-                ICoderApp(app_core, format_tools=format_tools).run()
+                ICoderApp(
+                    app_core,
+                    format_tools=format_tools,
+                    resume_log_path=resume_log_path,
+                ).run()
         finally:
             if mcp_manager is not None:
                 mcp_manager.close()

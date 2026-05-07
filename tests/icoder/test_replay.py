@@ -217,3 +217,63 @@ async def test_replay_empty_log_does_not_raise(
         await pilot.pause()
         replay_log(app, log_path)
         await pilot.pause()
+
+
+async def test_replay_log_re_emits_events_when_event_log_supplied(
+    make_icoder_app: Callable[..., ICoderApp],
+    tmp_path: Path,
+) -> None:
+    """When `event_log` is supplied, replayed events are re-recorded into it."""
+    log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
+    _write_log(
+        log_path,
+        [
+            {"t": 0.0, "event": "session_start", "provider": "claude"},
+            {"t": 0.1, "event": "input_received", "text": "hello"},
+            {"t": 0.2, "event": "llm_request_start", "text": "hello"},
+            {
+                "t": 0.3,
+                "event": "stream_event",
+                "type": "text_delta",
+                "text": "hi",
+            },
+            {"t": 0.4, "event": "stream_event", "type": "done"},
+            {"t": 0.5, "event": "llm_request_end"},
+        ],
+    )
+    app = make_icoder_app(responses=[])
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        new_log = app._core.event_log
+        replay_log(app, log_path, event_log=new_log)
+        await pilot.pause()
+        # session_start is NOT re-emitted; everything else is.
+        recorded = [e.event for e in new_log.entries]
+        assert "session_start" not in recorded
+        assert "input_received" in recorded
+        assert "llm_request_start" in recorded
+        assert "stream_event" in recorded
+        assert "llm_request_end" in recorded
+
+
+async def test_replay_log_no_event_log_does_not_re_emit(
+    make_icoder_app: Callable[..., ICoderApp],
+    tmp_path: Path,
+) -> None:
+    """Without `event_log`, the new event log is unaffected by replay."""
+    log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
+    _write_log(
+        log_path,
+        [
+            {"t": 0.0, "event": "session_start", "provider": "claude"},
+            {"t": 0.1, "event": "input_received", "text": "hello"},
+        ],
+    )
+    app = make_icoder_app(responses=[])
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        new_log = app._core.event_log
+        before = len(new_log.entries)
+        replay_log(app, log_path)
+        await pilot.pause()
+        assert len(new_log.entries) == before

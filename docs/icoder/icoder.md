@@ -73,8 +73,29 @@ its result is silently discarded.
 | `/info` | Show runtime diagnostics (version, venv, MCP servers, env vars) |
 | `/clear` | Clear the output log |
 | `/color [name\|hex]` | Change prompt border color. No args lists available colors. |
+| `/load` | Open a session picker to choose and resume a prior session |
 | `/quit` | Exit iCoder |
 | `/exit` | Exit iCoder (alias for `/quit`) |
+
+### Session Picker
+
+The session picker is a modal list of prior icoder logs in the project's
+`logs/` directory, filtered to the current LLM provider. Each row shows
+the log timestamp, provider, turn count, and the first prompt of that
+session. It is reachable two ways:
+
+- **At startup** via `icoder --continue-session`. The picker runs
+  synchronously before the main TUI starts.
+- **Mid-run** via `/load`.
+
+Up/Down moves the highlight; Enter picks the session and resumes it
+(restores the LLM session id, replays the prior UI history, and renders
+a `────── Resumed ──────` divider followed by the current runtime
+banner). Esc dismisses the picker without resuming.
+
+`--continue-session-from FILE` skips the picker and resumes a specific
+log; `FILE` must be a `.jsonl` event log. A legacy `.json` response file
+is rejected with a hard error.
 
 ### Autocomplete
 

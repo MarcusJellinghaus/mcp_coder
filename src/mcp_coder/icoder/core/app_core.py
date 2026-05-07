@@ -11,7 +11,7 @@ from mcp_coder.icoder.core.command_registry import (
     CommandRegistry,
     create_default_registry,
 )
-from mcp_coder.icoder.core.event_log import EventLog, iter_events
+from mcp_coder.icoder.core.event_log import EventLog, read_session_id_from_log
 from mcp_coder.icoder.core.types import Response, TokenUsage
 from mcp_coder.icoder.env_setup import RuntimeInfo
 from mcp_coder.icoder.services.llm_service import LLMService
@@ -172,31 +172,15 @@ class AppCore:
     def prepare_for_resume(self, log_path: Path) -> str | None:
         """Resolve a session_id from a prior log and rotate the event log.
 
-        Reads ``session_start.session_id`` from ``log_path``; if absent,
-        falls back to the most recent ``stream_event{type=done}`` entry's
-        ``session_id``. The resolved id (or ``None``) is set on the LLM
-        service. The event log is rotated so the new conversation gets
-        its own JSONL file.
+        Delegates id resolution to ``read_session_id_from_log``; the
+        resolved id (or ``None``) is set on the LLM service. The event
+        log is rotated so the new conversation gets its own JSONL file.
 
         Returns:
             The resolved session_id string, or ``None`` if no candidate
             was found in the log.
         """
-        session_id: str | None = None
-        last_done_sid: str | None = None
-        for event in iter_events(log_path):
-            kind = event.get("event")
-            if kind == "session_start":
-                raw = event.get("session_id")
-                if isinstance(raw, str):
-                    session_id = raw
-                    break
-            elif kind == "stream_event" and event.get("type") == "done":
-                raw = event.get("session_id")
-                if isinstance(raw, str):
-                    last_done_sid = raw
-        if session_id is None:
-            session_id = last_done_sid
+        session_id = read_session_id_from_log(log_path)
         self._llm_service.set_session_id(session_id)
         self._event_log.rotate()
         return session_id

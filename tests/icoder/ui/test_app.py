@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 from textual.widgets import Static
 
+from mcp_coder.icoder.core.event_log import EventLog
 from mcp_coder.icoder.env_setup import RuntimeInfo
 from mcp_coder.icoder.ui.app import ICoderApp
 from mcp_coder.icoder.ui.widgets.busy_indicator import BusyIndicator
@@ -458,3 +459,112 @@ async def test_open_picker_escape_does_not_change_state(
         assert app._core.session_id == sid_before
         assert app._core.event_log.current_path == log_path_before
         assert app.query_one(OutputLog).recorded_lines == recorded_before
+
+
+# --- resume_log_path startup behavior (Step 11) ---
+
+
+async def test_on_mount_with_resume_log_path_triggers_do_resume(
+    event_log: EventLog,
+    tmp_path: Path,
+) -> None:
+    """When ICoderApp is constructed with resume_log_path, on_mount calls do_resume."""
+    from mcp_coder.icoder.core.app_core import AppCore
+    from mcp_coder.icoder.services.llm_service import FakeLLMService
+
+    log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
+    _write_log(
+        log_path,
+        [
+            {"t": 0.0, "event": "session_start", "provider": "claude"},
+            {"t": 0.1, "event": "input_received", "text": "old prompt"},
+            {"t": 0.2, "event": "llm_request_start", "text": "old prompt"},
+            {
+                "t": 0.3,
+                "event": "stream_event",
+                "type": "text_delta",
+                "text": "old reply",
+            },
+            {"t": 0.4, "event": "stream_event", "type": "done"},
+            {"t": 0.5, "event": "llm_request_end"},
+        ],
+    )
+    runtime_info = RuntimeInfo(
+        mcp_coder_version="9.9.9",
+        mcp_coder_utils_version="1.2.3",
+        python_version="3.12.0",
+        claude_code_version="unknown",
+        tool_env_path="/tmp/tool-env",
+        project_venv_path="/tmp/proj-venv",
+        project_dir=str(tmp_path),
+        env_vars={},
+        mcp_servers=[],
+    )
+    app = ICoderApp(
+        AppCore(
+            llm_service=FakeLLMService(responses=[]),
+            event_log=event_log,
+            runtime_info=runtime_info,
+        ),
+        resume_log_path=log_path,
+    )
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        joined = "\n".join(app.query_one(OutputLog).recorded_lines)
+        # do_resume effects: prior input is replayed
+        assert "> old prompt" in joined
+        assert "old reply" in joined
+        # Resumed divider rendered
+        assert "Resumed" in joined
+        # Live banner re-rendered after divider
+        assert "mcp-coder 9.9.9" in joined
+
+
+async def test_do_resume_re_records_events_into_new_log(
+    make_icoder_app: Callable[..., ICoderApp],
+    tmp_path: Path,
+) -> None:
+    """do_resume re-records replayed events into the rotated event log file."""
+    log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
+    _write_log(
+        log_path,
+        [
+            {"t": 0.0, "event": "session_start", "provider": "claude"},
+            {"t": 0.1, "event": "input_received", "text": "hello"},
+            {"t": 0.2, "event": "llm_request_start", "text": "hello"},
+            {
+                "t": 0.3,
+                "event": "stream_event",
+                "type": "text_delta",
+                "text": "hi",
+            },
+            {"t": 0.4, "event": "stream_event", "type": "done"},
+            {"t": 0.5, "event": "llm_request_end"},
+        ],
+    )
+    runtime_info = RuntimeInfo(
+        mcp_coder_version="9.9.9",
+        mcp_coder_utils_version="1.2.3",
+        python_version="3.12.0",
+        claude_code_version="unknown",
+        tool_env_path="/tmp/tool-env",
+        project_venv_path="/tmp/proj-venv",
+        project_dir=str(tmp_path),
+        env_vars={},
+        mcp_servers=[],
+    )
+    app = make_icoder_app(responses=[], runtime_info=runtime_info)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        app.do_resume(log_path)
+        await pilot.pause()
+        new_log_path = app._core.event_log.current_path
+        # Read the new log to confirm replay events were re-emitted.
+        from mcp_coder.icoder.core.event_log import iter_events
+
+        events_in_new = list(iter_events(new_log_path))
+        kinds = [e.get("event") for e in events_in_new]
+        # session_start NOT re-emitted; replayed inputs/events ARE.
+        assert "session_start" not in kinds
+        assert "input_received" in kinds
+        assert "stream_event" in kinds
