@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
 from typing import Callable
 
 
@@ -26,6 +28,17 @@ class Command:
     description: str  # Short help text
     handler: Callable[[list[str]], Response]  # handler(args) → Response
     show_in_help: bool = True  # False hides from /help, still in autocomplete
+
+
+@dataclass(frozen=True)
+class LogSummary:
+    """Inventory entry summarising one icoder JSONL log file."""
+
+    path: Path
+    timestamp: datetime
+    provider: str | None
+    n_turns: int
+    first_prompt: str
 
 
 @dataclass
