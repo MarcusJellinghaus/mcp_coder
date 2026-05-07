@@ -15,7 +15,11 @@ from mcp_coder.icoder.core.types import LogSummary
 
 
 def format_picker_row(summary: LogSummary) -> str:
-    """Format a LogSummary as a single picker row."""
+    """Format a LogSummary as a single picker row.
+
+    Returns:
+        A one-line label rendered as the picker row text.
+    """
     when = summary.timestamp.strftime("%Y-%m-%d %H:%M")
     prov = summary.provider or "?"
     return f'{when} · {prov} · {summary.n_turns} turns · "{summary.first_prompt}"'
@@ -81,12 +85,15 @@ def run_startup_picker(
     """Run a tiny modal picker app and return the user's selection.
 
     Used by the icoder CLI to show a session picker synchronously before
-    the main TUI starts. Esc returns ``None``.
+    the main TUI starts.
 
     Args:
         summaries: Log summaries to display.
         app_factory: Optional override that returns the App to run; tests
             substitute a deterministic factory to avoid driving real TUI.
+
+    Returns:
+        Path of the chosen log, or ``None`` if the user cancelled with Esc.
     """
     factory = app_factory or _StartupPickerApp
     app = factory(summaries)

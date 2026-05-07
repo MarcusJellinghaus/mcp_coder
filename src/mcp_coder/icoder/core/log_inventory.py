@@ -20,7 +20,9 @@ def _parse_iso_from_name(path: Path) -> datetime | None:
     """Parse the timestamp embedded in an icoder log filename.
 
     Filenames are of the form ``icoder_<YYYY-MM-DDTHH-MM-SS[-uuuuuu]>.jsonl``.
-    Returns ``None`` if the stem does not match.
+
+    Returns:
+        The parsed UTC-aware datetime, or ``None`` if the stem does not match.
     """
     match = _FILENAME_RE.match(path.stem)
     if match is None:
@@ -48,6 +50,9 @@ def list_icoder_logs(
     If ``provider`` is given, filters out logs whose ``session_start.provider``
     does not match. Logs without a ``session_start`` are included only when
     ``provider`` is ``None``.
+
+    Returns:
+        Log summaries sorted newest first.
     """
     logs_path = Path(logs_dir)
     summaries: list[LogSummary] = []

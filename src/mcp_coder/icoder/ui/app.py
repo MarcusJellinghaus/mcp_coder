@@ -86,8 +86,10 @@ def _normalise_mcp_servers(servers: object) -> list[tuple[str, str]]:
 
     Accepts a list of ``MCPServerInfo`` (live), a list of
     ``{"name": ..., "version": ...}`` dicts, or a mapping of
-    name → version (session_start replay). ``None`` and unknown shapes
-    yield an empty list.
+    name → version (session_start replay).
+
+    Returns:
+        ``[(name, version), ...]`` pairs; empty for ``None`` or unknown shapes.
     """
     if servers is None:
         return []
@@ -120,6 +122,9 @@ def format_runtime_banner(data: Mapping[str, object]) -> list[str]:
     ``project_venv``/``project_venv_path``, ``project_dir``,
     ``mcp_servers``, and ``mcp_connection_status``. Missing keys are
     handled gracefully.
+
+    Returns:
+        Banner lines ready to be joined and rendered with the dim style.
     """
     lines: list[str] = [f"mcp-coder {data.get('mcp_coder_version', 'unknown')}"]
 

@@ -16,6 +16,9 @@ def _make_log_filename() -> str:
     """Build a unique JSONL filename for the current UTC instant.
 
     Microsecond precision keeps rapid rotations from colliding.
+
+    Returns:
+        Filename of the form ``icoder_<ISO_timestamp>.jsonl``.
     """
     timestamp = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H-%M-%S-%f")
     return f"icoder_{timestamp}.jsonl"
@@ -69,8 +72,11 @@ class EventLog:
     def rotate(self) -> Path:
         """Close current JSONL file, open a fresh one with new timestamp.
 
-        Resets monotonic clock and clears in-memory entries. Returns the
-        new file path. Subsequent emit() calls write to the new file.
+        Resets monotonic clock and clears in-memory entries. Subsequent
+        emit() calls write to the new file.
+
+        Returns:
+            Path of the freshly opened JSONL file.
         """
         self._file.flush()
         self._file.close()
@@ -123,7 +129,10 @@ def read_session_id_from_log(path: Path | str) -> str | None:
 
     Reads ``session_start.session_id`` from ``path``; if absent, falls
     back to the most recent ``stream_event{type=done}`` entry's
-    ``session_id``. Returns ``None`` when no candidate is found.
+    ``session_id``.
+
+    Returns:
+        The recovered session id, or ``None`` when no candidate is found.
     """
     session_id: str | None = None
     last_done_sid: str | None = None
