@@ -31,6 +31,7 @@ def store_session(
     store_path: Optional[str] = None,
     step_name: Optional[str] = None,
     branch_name: Optional[str] = None,
+    log_file_path: Optional[str] = None,
 ) -> str:
     """Store complete session data to .mcp-coder/responses/ directory.
 
@@ -40,6 +41,7 @@ def store_session(
         store_path: Optional custom path for storage directory
         step_name: Optional step name; if provided, filename uses {timestamp}_{step_name}.json
         branch_name: Optional branch name added to metadata
+        log_file_path: Optional event-log JSONL path added to metadata
 
     Returns:
         File path of stored session for potential user reference
@@ -83,6 +85,8 @@ def store_session(
         metadata["branch_name"] = branch_name
     if step_name is not None:
         metadata["step_name"] = step_name
+    if log_file_path is not None:
+        metadata["log_file_path"] = log_file_path
 
     # Create complete session JSON structure
     session_data = {

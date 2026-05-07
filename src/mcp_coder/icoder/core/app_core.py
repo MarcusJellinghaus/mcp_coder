@@ -111,7 +111,9 @@ class AppCore:
 
         # Auto-store response for --continue-session
         response_data = assembler.result()
-        store_session(response_data, text)
+        store_session(
+            response_data, text, log_file_path=str(self._event_log.current_path)
+        )
 
     @property
     def command_history(self) -> CommandHistory:

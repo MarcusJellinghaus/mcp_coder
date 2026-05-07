@@ -231,6 +231,26 @@ def test_stream_llm_stores_response(
     assert response_data["provider"] == "claude"
 
 
+def test_stream_llm_passes_log_file_path_to_store_session(
+    app_core: AppCore,
+    event_log: EventLog,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """stream_llm() passes the current event-log path to store_session."""
+    captured_kwargs: dict[str, object] = {}
+
+    def fake_store(response_data: object, prompt: str, **kwargs: object) -> str:
+        captured_kwargs.update(kwargs)
+        return "/fake/path.json"
+
+    monkeypatch.setattr(
+        "mcp_coder.icoder.core.app_core.store_session",
+        fake_store,
+    )
+    list(app_core.stream_llm("hello"))
+    assert captured_kwargs.get("log_file_path") == str(event_log.current_path)
+
+
 def test_token_usage_initial_state(app_core: AppCore) -> None:
     """token_usage property exists and starts at zero."""
     usage = app_core.token_usage

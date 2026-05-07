@@ -217,6 +217,44 @@ class TestStoreSession:
                 data = json.load(f)
             assert "step_name" not in data["metadata"]
 
+    def test_store_session_log_file_path_in_metadata(self) -> None:
+        """Test that log_file_path appears in metadata when provided."""
+        with tempfile.TemporaryDirectory() as tmp_path:
+            response_data: LLMResponseDict = {
+                "version": "1.0",
+                "timestamp": "2025-10-02T14:30:00",
+                "text": "",
+                "session_id": None,
+                "provider": "claude",
+                "raw_response": {},
+            }
+
+            file_path = store_session(
+                response_data, "prompt", tmp_path, log_file_path="/tmp/x.jsonl"
+            )
+
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            assert data["metadata"]["log_file_path"] == "/tmp/x.jsonl"
+
+    def test_store_session_no_log_file_path_not_in_metadata(self) -> None:
+        """Test that log_file_path key is absent from metadata when not provided."""
+        with tempfile.TemporaryDirectory() as tmp_path:
+            response_data: LLMResponseDict = {
+                "version": "1.0",
+                "timestamp": "2025-10-02T14:30:00",
+                "text": "",
+                "session_id": None,
+                "provider": "claude",
+                "raw_response": {},
+            }
+
+            file_path = store_session(response_data, "prompt", tmp_path)
+
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            assert "log_file_path" not in data["metadata"]
+
 
 class TestExtractSessionId:
     """Tests for extract_session_id function."""
