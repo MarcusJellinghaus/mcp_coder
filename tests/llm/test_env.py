@@ -362,3 +362,39 @@ def test_prepare_llm_environment_preserves_existing_disable_autoupdater(
     result = prepare_llm_environment(project_dir)
 
     assert result["DISABLE_AUTOUPDATER"] == "0"
+
+
+def test_prepare_llm_environment_sets_mcp_timeout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test that MCP_TIMEOUT defaults to '30000' when not set."""
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    venv_dir = tmp_path / "runner" / ".venv"
+    venv_dir.mkdir(parents=True)
+
+    monkeypatch.setenv("VIRTUAL_ENV", str(venv_dir))
+    monkeypatch.delenv("CONDA_PREFIX", raising=False)
+    monkeypatch.delenv("MCP_TIMEOUT", raising=False)
+
+    result = prepare_llm_environment(project_dir)
+
+    assert result["MCP_TIMEOUT"] == "30000"
+
+
+def test_prepare_llm_environment_preserves_existing_mcp_timeout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test that an existing MCP_TIMEOUT value is preserved."""
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    venv_dir = tmp_path / "runner" / ".venv"
+    venv_dir.mkdir(parents=True)
+
+    monkeypatch.setenv("VIRTUAL_ENV", str(venv_dir))
+    monkeypatch.delenv("CONDA_PREFIX", raising=False)
+    monkeypatch.setenv("MCP_TIMEOUT", "60000")
+
+    result = prepare_llm_environment(project_dir)
+
+    assert result["MCP_TIMEOUT"] == "60000"

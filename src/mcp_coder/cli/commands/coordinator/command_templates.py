@@ -18,6 +18,7 @@ which mcp-tools-py && mcp-tools-py --help
 which mcp-workspace && mcp-workspace --help
 mcp-coder verify
 export DISABLE_AUTOUPDATER=1
+export MCP_TIMEOUT=30000
 # Environment setup
 export MCP_CODER_PROJECT_DIR='/workspace/repo'
 export MCP_CODER_VENV_DIR='/workspace/.venv'
@@ -77,6 +78,7 @@ where mcp-config
 mcp-config --version
 
 set DISABLE_AUTOUPDATER=1
+set MCP_TIMEOUT=30000
 
 echo Install type stubs in project environment ====================
 uv sync --project %WORKSPACE%\repo --extra types
@@ -132,6 +134,7 @@ TEST_COMMAND_TEMPLATES: dict[str, str] = {
 CREATE_PLAN_COMMAND_TEMPLATE: str = """git checkout main
 git pull
 export DISABLE_AUTOUPDATER=1
+export MCP_TIMEOUT=30000
 which mcp-coder && mcp-coder --version
 which claude && claude --version
 uv sync --extra types
@@ -151,6 +154,7 @@ exit $RC
 IMPLEMENT_COMMAND_TEMPLATE: str = """git checkout {branch_name}
 git pull
 export DISABLE_AUTOUPDATER=1
+export MCP_TIMEOUT=30000
 which mcp-coder && mcp-coder --version
 which claude && claude --version
 uv sync --extra types
@@ -170,6 +174,7 @@ exit $RC
 CREATE_PR_COMMAND_TEMPLATE: str = """git checkout {branch_name}
 git pull
 export DISABLE_AUTOUPDATER=1
+export MCP_TIMEOUT=30000
 which mcp-coder && mcp-coder --version
 which claude && claude --version
 uv sync --extra types
@@ -207,6 +212,7 @@ if "%VIRTUAL_ENV%"=="" (
 )
 
 set DISABLE_AUTOUPDATER=1
+set MCP_TIMEOUT=30000
 
 echo Install type stubs in project environment ====================
 uv sync --project %WORKSPACE%\repo --extra types
@@ -244,6 +250,7 @@ if "%VIRTUAL_ENV%"=="" (
 )
 
 set DISABLE_AUTOUPDATER=1
+set MCP_TIMEOUT=30000
 
 echo Install type stubs in project environment ====================
 uv sync --project %WORKSPACE%\repo --extra types
@@ -281,6 +288,7 @@ if "%VIRTUAL_ENV%"=="" (
 )
 
 set DISABLE_AUTOUPDATER=1
+set MCP_TIMEOUT=30000
 
 echo Install type stubs in project environment ====================
 uv sync --project %WORKSPACE%\repo --extra types

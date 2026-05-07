@@ -30,6 +30,7 @@ Example: `C:\Users\Marcus\Documents\VSCC\mcp_coder_598\.venv`
 | `MCP_CODER_VENV_PATH` | Tool env `Scripts` dir | Added to PATH so MCP server executables are found | `templates.py` (vscodeclaude startup) | PATH resolution, `.mcp.json` `command` fields |
 | `PYTHONPATH` | Project `src/` or tool env `Lib/` | Module discovery for MCP server processes | `.mcp.json` `env` section | Python import system |
 | `DISABLE_AUTOUPDATER` | `1` | Prevents Claude CLI auto-updates during automation | `command_templates.py`, batch launchers | Claude CLI |
+| `MCP_TIMEOUT` | `30000` (ms) | MCP server startup timeout for Claude CLI; raises the default 5 s window so cold-start servers are not marked failed | `claude_settings.py`, `env.py`, `command_templates.py`, `templates.py` (vscodeclaude), batch launchers | Claude CLI |
 
 ### Variable relationships
 

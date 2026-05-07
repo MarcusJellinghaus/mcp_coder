@@ -59,6 +59,8 @@ echo.
 REM Set MCP environment variables (for MCP server configuration)
 set "MCP_CODER_PROJECT_DIR={session_folder_path}"
 set "MCP_CODER_VENV_DIR={session_folder_path}\.venv"
+REM See src/mcp_coder/llm/claude_settings.py for canonical value
+set "MCP_TIMEOUT=30000"
 
 REM Full git clone so setuptools_scm can read tags for version resolution (#817)
 set "UV_GIT_SHALLOW=0"
