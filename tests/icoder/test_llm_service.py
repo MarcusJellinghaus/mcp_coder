@@ -188,6 +188,41 @@ def test_protocol_has_reset_session() -> None:
     assert isinstance(RealLLMService(provider="claude"), LLMService)
 
 
+def test_real_set_session_id_replaces_existing() -> None:
+    """RealLLMService.set_session_id() replaces an existing session_id."""
+    service = RealLLMService(provider="claude", session_id="abc")
+    service.set_session_id("xyz")
+    assert service.session_id == "xyz"
+
+
+def test_fake_set_session_id_sets_value() -> None:
+    """FakeLLMService.set_session_id() sets session_id."""
+    service = FakeLLMService()
+    service.set_session_id("abc")
+    assert service.session_id == "abc"
+
+
+def test_real_set_session_id_to_none() -> None:
+    """RealLLMService.set_session_id(None) clears session_id."""
+    service = RealLLMService(provider="claude", session_id="abc")
+    service.set_session_id(None)
+    assert service.session_id is None
+
+
+def test_fake_set_session_id_to_none() -> None:
+    """FakeLLMService.set_session_id(None) clears session_id."""
+    service = FakeLLMService()
+    service.set_session_id("abc")
+    service.set_session_id(None)
+    assert service.session_id is None
+
+
+def test_protocol_has_set_session_id() -> None:
+    """Both implementations satisfy LLMService protocol after adding set_session_id."""
+    assert isinstance(FakeLLMService(), LLMService)
+    assert isinstance(RealLLMService(provider="claude"), LLMService)
+
+
 def test_fake_provider_property_default() -> None:
     """FakeLLMService.provider defaults to 'claude'."""
     service = FakeLLMService()
