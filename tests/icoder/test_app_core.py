@@ -113,8 +113,10 @@ def test_multiple_inputs(app_core: AppCore, event_log: EventLog) -> None:
     app_core.handle_input("/help")
     app_core.handle_input("question")
     list(app_core.stream_llm("question"))
-    app_core.handle_input("/clear")
     assert len(event_log.entries) >= 4
+    app_core.handle_input("/clear")
+    # /clear rotates the log → in-memory entries are reset
+    assert len(event_log.entries) == 0
 
 
 def test_runtime_info_none_by_default(app_core: AppCore) -> None:
@@ -185,6 +187,43 @@ def test_clear_does_not_emit_session_reset_event(
     """Test /clear no longer emits a session_reset event (rotation replaces it)."""
     app_core.handle_input("/clear")
     assert not any(e.event == "session_reset" for e in event_log.entries)
+
+
+def test_clear_rotates_event_log(fake_llm: FakeLLMService, tmp_path: Path) -> None:
+    """/clear rotates the event log, producing a new JSONL file."""
+    with EventLog(logs_dir=tmp_path) as log:
+        core = AppCore(llm_service=fake_llm, event_log=log)
+        initial_path = log.current_path
+        core.handle_input("/clear")
+        assert log.current_path != initial_path
+        jsonl_files = sorted(tmp_path.glob("icoder_*.jsonl"))
+        assert len(jsonl_files) == 2
+
+
+def test_emit_after_clear_writes_to_new_file(
+    fake_llm: FakeLLMService, tmp_path: Path
+) -> None:
+    """After /clear, new emits land in the rotated file, not the previous one."""
+    with EventLog(logs_dir=tmp_path) as log:
+        core = AppCore(llm_service=fake_llm, event_log=log)
+        old_path = log.current_path
+        core.handle_input("/clear")
+        new_path = log.current_path
+        core.handle_input("x")
+
+    old_content = old_path.read_text(encoding="utf-8")
+    new_content = new_path.read_text(encoding="utf-8")
+    assert '"text": "x"' in new_content
+    assert '"text": "x"' not in old_content
+
+
+def test_non_reset_command_does_not_rotate(
+    app_core: AppCore, event_log: EventLog
+) -> None:
+    """/help (non-reset) leaves current_path unchanged."""
+    initial_path = event_log.current_path
+    app_core.handle_input("/help")
+    assert event_log.current_path == initial_path
 
 
 def test_clear_still_invokes_reset_session(
