@@ -6,6 +6,7 @@ import importlib.metadata
 import logging
 import threading
 import time
+from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -37,7 +38,6 @@ from mcp_coder.llm.formatting.stream_renderer import (
 )
 from mcp_coder.llm.types import StreamEvent
 from mcp_coder.services.branch_info import BranchInfo
-from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 
 logger = logging.getLogger(__name__)
 
@@ -48,17 +48,100 @@ STYLE_CANCELLED = "dim #e8a838"
 
 def _connection_status_suffix(
     server_name: str,
-    statuses: list[ClaudeMCPStatus] | None,
+    statuses: object,
 ) -> str:
-    """Return '✓ Connected' or '✗ <text>' for a server, or '' if not found."""
+    """Return '✓ Connected' or '✗ <text>' for a server, or '' if not found.
+
+    Accepts a list of ``ClaudeMCPStatus``/dicts (live) or a mapping of
+    name → ``{"ok": bool, "status_text": str}`` (session_start replay).
+    """
     if statuses is None:
         return ""
-    for status in statuses:
-        if status.name == server_name:
-            if status.ok:
-                return "✓ Connected"
-            return f"✗ {status.status_text}"
+    if isinstance(statuses, Mapping):
+        entry = statuses.get(server_name)
+        if not isinstance(entry, Mapping):
+            return ""
+        if bool(entry.get("ok", False)):
+            return "✓ Connected"
+        return f"✗ {entry.get('status_text', '')}"
+    if isinstance(statuses, list):
+        for status in statuses:
+            if isinstance(status, Mapping):
+                if status.get("name") == server_name:
+                    if bool(status.get("ok", False)):
+                        return "✓ Connected"
+                    return f"✗ {status.get('status_text', '')}"
+            elif getattr(status, "name", None) == server_name:
+                if getattr(status, "ok", False):
+                    return "✓ Connected"
+                return f"✗ {getattr(status, 'status_text', '')}"
     return ""
+
+
+def _normalise_mcp_servers(servers: object) -> list[tuple[str, str]]:
+    """Normalize the ``mcp_servers`` field to ``[(name, version), ...]``.
+
+    Accepts a list of ``MCPServerInfo`` (live), a list of
+    ``{"name": ..., "version": ...}`` dicts, or a mapping of
+    name → version (session_start replay). ``None`` and unknown shapes
+    yield an empty list.
+    """
+    if servers is None:
+        return []
+    if isinstance(servers, Mapping):
+        return [(str(name), str(version)) for name, version in servers.items()]
+    if isinstance(servers, list):
+        result: list[tuple[str, str]] = []
+        for entry in servers:
+            if isinstance(entry, Mapping):
+                result.append(
+                    (str(entry.get("name", "")), str(entry.get("version", "")))
+                )
+            else:
+                result.append(
+                    (
+                        str(getattr(entry, "name", "")),
+                        str(getattr(entry, "version", "")),
+                    )
+                )
+        return result
+    return []
+
+
+def format_runtime_banner(data: Mapping[str, object]) -> list[str]:
+    """Build the dim banner lines shown at startup and during replay.
+
+    Accepts either a ``RuntimeInfo``-shaped mapping (live) or a
+    ``session_start`` event payload (replay). Both contain
+    ``mcp_coder_version``, ``tool_env``/``tool_env_path``,
+    ``project_venv``/``project_venv_path``, ``project_dir``,
+    ``mcp_servers``, and ``mcp_connection_status``. Missing keys are
+    handled gracefully.
+    """
+    lines: list[str] = [f"mcp-coder {data.get('mcp_coder_version', 'unknown')}"]
+
+    utils_ver = data.get("mcp_coder_utils_version")
+    if utils_ver:
+        lines.append(f"mcp-coder-utils {utils_ver}")
+
+    statuses = data.get("mcp_connection_status")
+    for name, version in _normalise_mcp_servers(data.get("mcp_servers")):
+        suffix = _connection_status_suffix(name, statuses)
+        lines.append(f"{name} {version}  {suffix}".rstrip())
+
+    tool_env = data.get("tool_env_path") or data.get("tool_env")
+    if tool_env:
+        lines.append(f"Tool env:    {tool_env}")
+
+    venv = data.get("project_venv_path") or data.get("project_venv")
+    if venv:
+        lines.append(f"Project env: {venv}")
+
+    project_dir = data.get("project_dir")
+    if project_dir:
+        lines.append(f"Project dir: {project_dir}")
+
+    return lines
 
 
 class ICoderApp(App[None]):
@@ -124,21 +207,17 @@ class ICoderApp(App[None]):
         if self._core.runtime_info:
             info = self._core.runtime_info
             output = self.query_one(OutputLog)
-            lines = [
-                f"mcp-coder {info.mcp_coder_version}",
-                f"mcp-coder-utils {info.mcp_coder_utils_version}",
-                *(
-                    (
-                        f"{s.name} {s.version}  {_connection_status_suffix(s.name, info.mcp_connection_status)}".rstrip()
-                        if info.mcp_connection_status is not None
-                        else f"{s.name} {s.version}"
-                    )
-                    for s in info.mcp_servers
-                ),
-                f"Tool env:    {info.tool_env_path}",
-                f"Project env: {info.project_venv_path}",
-                f"Project dir: {info.project_dir}",
-            ]
+            lines = format_runtime_banner(
+                {
+                    "mcp_coder_version": info.mcp_coder_version,
+                    "mcp_coder_utils_version": info.mcp_coder_utils_version,
+                    "tool_env_path": info.tool_env_path,
+                    "project_venv_path": info.project_venv_path,
+                    "project_dir": info.project_dir,
+                    "mcp_servers": info.mcp_servers,
+                    "mcp_connection_status": info.mcp_connection_status,
+                }
+            )
             output.append_text("\n".join(lines), style="dim")
         self._apply_prompt_border()
         self.query_one(InputArea).focus()
