@@ -49,7 +49,7 @@ See [step_3.md](./steps/step_3.md)
 
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation (tests + production code)
+- [x] Implementation (tests + production code)
 - [ ] Quality checks: pylint, pytest, mypy — fix all issues
 - [ ] Commit message prepared
 
