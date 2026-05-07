@@ -24,6 +24,8 @@ No automated test asserts the template body verbatim. Any existing tests in `tes
 
 Eight templates total. For each, insert the new line **immediately after** the existing `DISABLE_AUTOUPDATER` line, using matching shell syntax. No comment required (these templates already lack comments next to `DISABLE_AUTOUPDATER`).
 
+> **Anchor note:** the test templates (`DEFAULT_TEST_COMMAND`, `DEFAULT_TEST_COMMAND_WINDOWS`) have a different surrounding context than the workflow templates (e.g., they call `claude` directly and may have different setup lines around the env block). The rule is the same — `MCP_TIMEOUT=30000` goes immediately after `DISABLE_AUTOUPDATER=1` — but **do not** assume the surrounding lines are identical to the workflow templates. Anchor on the `DISABLE_AUTOUPDATER` line in each template independently.
+
 ### Linux templates (4) — `export MCP_TIMEOUT=30000`
 
 | Constant | Existing anchor line |

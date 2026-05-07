@@ -18,7 +18,7 @@ This change makes two corrections:
 | **Python single source of truth** | New module `src/mcp_coder/llm/claude_settings.py` exposes `MCP_TIMEOUT_MS = "30000"`. Consumed by `prepare_llm_environment()` in `env.py`. (Positioned for future Claude env knobs but only one constant in this PR — `DISABLE_AUTOUPDATER`'s magic `"1"` stays in `env.py` for now.) |
 | **Override semantics** | **Python (`env.py`)**: parent-env override pattern — `os.environ.get("MCP_TIMEOUT", MCP_TIMEOUT_MS)` — matches the existing `DISABLE_AUTOUPDATER` line. Lets advanced users / CI configs override per-shell. **Launcher scripts and templates**: hard-set, matching the existing `DISABLE_AUTOUPDATER=1` hard-sets in those files. |
 | **Why redundancy across templates** | Workflow templates technically don't need it (they route through `mcp-coder` → Python), but adding it everywhere matches the existing `DISABLE_AUTOUPDATER` pattern in those same templates. **Test templates do need it** — they call `claude` directly, bypassing mcp-coder. |
-| **`alwaysLoad`** | Direct JSON edits to both `.mcp.json` and `.mcp.macos.json` for `mcp-tools-py` and `mcp-workspace` only. No Python constant — it's a static JSON property. `obsidian-dev-wiki` is excluded (lookup-only, lazy load is fine). |
+| **`alwaysLoad`** | Direct JSON edits to both `.mcp.json` and `.mcp.macos.json`. Both files define exactly two MCP servers (`mcp-tools-py` and `mcp-workspace`); both receive `alwaysLoad: true`. No Python constant — it's a static JSON property. (Note: `obsidian-dev-wiki` is **not** an MCP server; it appears only as a `--reference-project` path argument inside the `mcp-workspace` server config in `.mcp.macos.json`. There is no separate server entry to exclude.) |
 | **Timeout value** | 30000 ms (30 s). Generous margin over the 5 s default; revisit if failures continue. |
 | **Out of scope** | Runner / agent host config; Claude CLI version upgrade; sibling-repo propagation. |
 
@@ -27,7 +27,6 @@ This change makes two corrections:
 | File | Purpose |
 |---|---|
 | `src/mcp_coder/llm/claude_settings.py` | Holds `MCP_TIMEOUT_MS` constant. |
-| `pr_info/steps/summary.md`, `pr_info/steps/step_*.md` | This planning artifact (already part of `pr_info/`, not shipped). |
 
 ## Files to Modify
 
@@ -56,7 +55,7 @@ This change makes two corrections:
 | File | Change |
 |---|---|
 | `.mcp.json` | Add `"alwaysLoad": true` to `mcp-tools-py` and `mcp-workspace`. |
-| `.mcp.macos.json` | Same two servers (leave `obsidian-dev-wiki` untouched). |
+| `.mcp.macos.json` | Same two servers — these are the only servers defined in this file. |
 
 ### Documentation
 | File | Change |
@@ -85,9 +84,9 @@ Each step = one commit. Each step is independent of every other step (Python is 
 | Hard-set in 5 launcher scripts | 2 |
 | Hard-set in `VENV_SECTION_WINDOWS` | 3 |
 | Set in every coordinator template | 4 |
-| `alwaysLoad: true` in both `.mcp.json` files (excluding `obsidian-dev-wiki`) | 5 |
+| `alwaysLoad: true` in both `.mcp.json` files (both define only `mcp-tools-py` and `mcp-workspace`) | 5 |
 | Doc table row | 6 |
-| Sibling-repo chore items drafted | Out of this PR's scope (issue says drafts only, propagation separate). |
+| Sibling-repo chore items drafted | **No code change in this repo.** Satisfied by non-code GitHub coordination — drafting reminder comments on sibling-repo chore-tracker issues. Intentionally has no implementation step because nothing in this codebase changes. (Confirmed with the user; consistent with the issue's Decisions table — drafts only, no propagation.) |
 
 ## Quality gates (each step)
 

@@ -4,7 +4,7 @@
 
 ## Goal
 
-Add `"alwaysLoad": true` to the `mcp-tools-py` and `mcp-workspace` server configs in **both** `.mcp.json` and `.mcp.macos.json`. `obsidian-dev-wiki` (in macOS config only) is **deliberately excluded** — it's reference / lookup-only.
+Add `"alwaysLoad": true` to the `mcp-tools-py` and `mcp-workspace` server configs in **both** `.mcp.json` and `.mcp.macos.json`. Both files define exactly these two MCP servers — there is no third server to consider. (`obsidian-dev-wiki` is **not** an MCP server in either file; it appears only as a `--reference-project` path argument inside the `mcp-workspace` server config in `.mcp.macos.json`. It's a path, not a server entry.)
 
 Effective once Claude CLI ≥ 2.1.121 lands on runners; silently ignored on older versions.
 
@@ -18,8 +18,8 @@ No automated test for static JSON config. Verification = JSON parses + the new k
 
 | Path | Action |
 |---|---|
-| `.mcp.json` | Modify (2 server entries) |
-| `.mcp.macos.json` | Modify (2 server entries; `obsidian-dev-wiki` left alone) |
+| `.mcp.json` | Modify (2 server entries — the only servers in the file) |
+| `.mcp.macos.json` | Modify (2 server entries — the only servers in the file) |
 
 ## WHAT
 
@@ -39,7 +39,7 @@ Conventional placement: at the **end** of the server block (after `"env"`), to m
 
 Same pattern for `mcp-workspace` in both files.
 
-**Do not modify `obsidian-dev-wiki`** in `.mcp.macos.json`.
+> **Trailing-comma note (JSON syntax):** when inserting `"alwaysLoad": true` after the existing `"env": {...}` block, the closing `}` line of `"env"` must gain a trailing comma (it currently has none, since `"env"` is presently the last key). The new `"alwaysLoad": true` line itself does **not** get a trailing comma — it becomes the new last key in the server block. Forgetting either rule will break JSON parse.
 
 ## HOW (integration points)
 
@@ -61,11 +61,10 @@ n/a — JSON property addition.
 ## Quality gates before committing
 
 1. Manually verify both JSON files parse: `python -c "import json; json.load(open('.mcp.json'))"` and same for `.mcp.macos.json`. Both must succeed.
-2. Confirm `obsidian-dev-wiki` block in `.mcp.macos.json` is unchanged.
-3. `./tools/format_all.sh` (no-op on JSON, but harmless).
-4. `mcp__tools-py__run_pylint_check`
-5. `mcp__tools-py__run_pytest_check` with `extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"]`
-6. `mcp__tools-py__run_mypy_check`
+2. `./tools/format_all.sh` (no-op on JSON, but harmless).
+3. `mcp__tools-py__run_pylint_check`
+4. `mcp__tools-py__run_pytest_check` with `extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"]`
+5. `mcp__tools-py__run_mypy_check`
 
 All must pass.
 
@@ -75,13 +74,13 @@ All must pass.
 chore(mcp): add alwaysLoad: true to mcp-tools-py and mcp-workspace
 
 Adds "alwaysLoad": true to mcp-tools-py and mcp-workspace in both
-.mcp.json and .mcp.macos.json. Effective on Claude CLI v2.1.121+,
-silently ignored on older versions. obsidian-dev-wiki (macOS only)
-is deliberately excluded — lookup-only server, lazy load is fine.
+.mcp.json and .mcp.macos.json. These are the only MCP servers
+defined in either file. Effective on Claude CLI v2.1.121+, silently
+ignored on older versions.
 
 Refs #944
 ```
 
 ## LLM Prompt
 
-> Read `pr_info/steps/summary.md` and `pr_info/steps/step_5.md`. Implement Step 5 only — add `"alwaysLoad": true` as the last key inside each of the `mcp-tools-py` and `mcp-workspace` server blocks in **both** `.mcp.json` and `.mcp.macos.json`. Do **not** modify the `obsidian-dev-wiki` block in `.mcp.macos.json`. Verify both files parse as valid JSON. Run the quality gates (format, pylint, pytest with standard exclusions, mypy) — all must pass. Make exactly one commit using the message in step_5.md. Do not touch any other files in this step.
+> Read `pr_info/steps/summary.md` and `pr_info/steps/step_5.md`. Implement Step 5 only — add `"alwaysLoad": true` as the last key inside each of the `mcp-tools-py` and `mcp-workspace` server blocks in **both** `.mcp.json` and `.mcp.macos.json`. These are the only MCP servers in either file (`obsidian-dev-wiki` is a `--reference-project` argument, not a server, so there is nothing to leave alone). Mind the trailing-comma note in step_5.md — the previous last key (`"env"`) needs a trailing comma added; `"alwaysLoad"` itself takes none. Verify both files parse as valid JSON. Run the quality gates (format, pylint, pytest with standard exclusions, mypy) — all must pass. Make exactly one commit using the message in step_5.md. Do not touch any other files in this step.

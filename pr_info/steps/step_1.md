@@ -21,7 +21,7 @@ This step satisfies AC #1 and AC #7.
 | Path | Action |
 |---|---|
 | `src/mcp_coder/llm/claude_settings.py` | **Create** |
-| `src/mcp_coder/llm/env.py` | Modify (1 import + 1 line + minor docstring touch) |
+| `src/mcp_coder/llm/env.py` | Modify (1 import + 1 line + docstring update — see "WHAT" for the exact docstring edits) |
 | `tests/llm/test_env.py` | Modify (add 2 tests) |
 
 ## WHAT
@@ -54,7 +54,15 @@ env_vars["DISABLE_AUTOUPDATER"] = os.environ.get("DISABLE_AUTOUPDATER", "1")
 env_vars["MCP_TIMEOUT"] = os.environ.get("MCP_TIMEOUT", MCP_TIMEOUT_MS)
 ```
 
-Update the docstring's "Returns" section to mention `MCP_TIMEOUT` alongside `DISABLE_AUTOUPDATER` (one short sentence — match existing density).
+Update the docstring's `Returns` section in **two** places:
+
+1. **Enumeration of variables.** Add `MCP_TIMEOUT` to the list. Currently reads:
+   `MCP_CODER_PROJECT_DIR, MCP_CODER_VENV_DIR, MCP_CODER_VENV_PATH, and DISABLE_AUTOUPDATER`.
+   Change to:
+   `MCP_CODER_PROJECT_DIR, MCP_CODER_VENV_DIR, MCP_CODER_VENV_PATH, DISABLE_AUTOUPDATER, and MCP_TIMEOUT`.
+2. **Trailing explanatory sentence.** It currently describes only `DISABLE_AUTOUPDATER` (defaults to `"1"`, parent-env preserved). Add a parallel sentence for `MCP_TIMEOUT` (defaults to `"30000"`, parent-env preserved). Match the existing wording density — one short sentence.
+
+Both updates are required.
 
 ### `tests/llm/test_env.py`
 
