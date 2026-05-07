@@ -144,7 +144,7 @@ def test_iter_events_yields_dicts(tmp_path: Path) -> None:
 def test_iter_events_skips_blank_lines(tmp_path: Path) -> None:
     path = tmp_path / "test.jsonl"
     path.write_text(
-        '{"t": 0.0, "event": "first"}\n' "\n" "   \n" '{"t": 0.1, "event": "second"}\n',
+        '{"t": 0.0, "event": "first"}\n\n   \n{"t": 0.1, "event": "second"}\n',
         encoding="utf-8",
     )
     events = list(iter_events(path))

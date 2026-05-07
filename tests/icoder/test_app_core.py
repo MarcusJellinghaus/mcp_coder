@@ -179,12 +179,32 @@ def test_clear_resets_session(
     assert fake_llm.session_id is None
 
 
-def test_clear_emits_session_reset_event(
+def test_clear_does_not_emit_session_reset_event(
     app_core: AppCore, event_log: EventLog
 ) -> None:
-    """Test /clear emits a session_reset event."""
+    """Test /clear no longer emits a session_reset event (rotation replaces it)."""
     app_core.handle_input("/clear")
-    assert any(e.event == "session_reset" for e in event_log.entries)
+    assert not any(e.event == "session_reset" for e in event_log.entries)
+
+
+def test_clear_still_invokes_reset_session(
+    event_log: EventLog,
+) -> None:
+    """Test /clear still calls llm_service.reset_session() on the service."""
+    fake_llm = FakeLLMService(
+        responses=[
+            [
+                {"type": "text_delta", "text": "hello"},
+                {"type": "done", "session_id": "sess-xyz"},
+            ]
+        ]
+    )
+    core = AppCore(llm_service=fake_llm, event_log=event_log)
+    list(core.stream_llm("hi"))
+    assert fake_llm.session_id == "sess-xyz"
+
+    core.handle_input("/clear")
+    assert fake_llm.session_id is None
 
 
 def test_stream_llm_stores_response(

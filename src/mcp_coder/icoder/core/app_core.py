@@ -69,7 +69,6 @@ class AppCore:
                 self._event_log.emit("output_emitted", text=response.text)
             if response.reset_session:
                 self._llm_service.reset_session()
-                self._event_log.emit("session_reset")
             return response
 
         # Not a command → send to LLM

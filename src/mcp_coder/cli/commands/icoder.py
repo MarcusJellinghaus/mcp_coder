@@ -159,6 +159,7 @@ def execute_icoder(args: argparse.Namespace) -> int:
             with EventLog(logs_dir=project_dir / "logs") as event_log:
                 event_log.emit(
                     "session_start",
+                    provider=provider,
                     mcp_coder_version=runtime_info.mcp_coder_version,
                     tool_env=runtime_info.tool_env_path,
                     project_venv=runtime_info.project_venv_path,

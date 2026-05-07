@@ -61,6 +61,7 @@ def test_execute_icoder_emits_session_start(
     session_starts = [e for e in events if e.get("event") == "session_start"]
     assert len(session_starts) == 1
     assert session_starts[0]["mcp_coder_version"] == "0.42.0"
+    assert session_starts[0]["provider"] == "claude"
 
 
 @pytest.mark.parametrize(
