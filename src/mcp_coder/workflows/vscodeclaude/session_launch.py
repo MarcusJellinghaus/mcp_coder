@@ -4,6 +4,7 @@ import logging
 import platform
 import shutil
 from pathlib import Path
+from typing import cast
 
 from ...mcp_workspace_github import (
     IssueBranchManager,
@@ -61,6 +62,12 @@ from .workspace import (
 )
 
 logger = logging.getLogger(__name__)
+
+_SETUP_COMMAND_KEYS: dict[str, tuple[str, ...]] = {
+    "Windows": ("setup_commands_windows",),
+    "Linux": ("setup_commands_linux",),
+    "Darwin": ("setup_commands_macos", "setup_commands_linux"),
+}
 
 __all__ = [
     "launch_vscode",
@@ -158,11 +165,13 @@ def prepare_and_launch_session(
         validate_mcp_json(folder_path)
 
         # Run setup commands if configured
-        is_windows = platform.system() == "Windows"
-        if is_windows:
-            setup_commands = repo_vscodeclaude_config.get("setup_commands_windows", [])
-        else:
-            setup_commands = repo_vscodeclaude_config.get("setup_commands_linux", [])
+        candidate_keys = _SETUP_COMMAND_KEYS.get(platform.system(), ())
+        setup_commands: list[str] = []
+        for key in candidate_keys:
+            value = cast(list[str] | None, repo_vscodeclaude_config.get(key))
+            if value:
+                setup_commands = value
+                break
 
         if setup_commands:
             validate_setup_commands(setup_commands)
