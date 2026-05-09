@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Add `setup_commands_macos` to `RepoVSCodeClaudeConfig` ([detail](./steps/step_1.md))
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Platform-aware `validate_mcp_json` + author `.mcp.linux.json` ([detail](./steps/step_2.md))
 
