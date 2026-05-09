@@ -447,6 +447,37 @@ class TestGetWorkingFolderPathSuffixAware:
 
 
 @pytest.mark.parametrize(
+    "system,script_name,expected_command",
+    [
+        ("Windows", ".vscodeclaude_start.bat", ".vscodeclaude_start.bat"),
+        ("Darwin", ".vscodeclaude_start.sh", "./.vscodeclaude_start.sh"),
+        ("Linux", ".vscodeclaude_start.sh", "./.vscodeclaude_start.sh"),
+    ],
+)
+def test_create_vscode_task_command_per_platform(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    system: str,
+    script_name: str,
+    expected_command: str,
+) -> None:
+    """tasks.json command is platform-aware: bare on Windows, ./<name> on POSIX."""
+    monkeypatch.setattr(
+        "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+        lambda: system,
+    )
+
+    script_path = tmp_path / script_name
+    script_path.touch()
+
+    create_vscode_task(tmp_path, script_path)
+
+    tasks_file = tmp_path / ".vscode" / "tasks.json"
+    content = json.loads(tasks_file.read_text(encoding="utf-8"))
+    assert content["tasks"][0]["command"] == expected_command
+
+
+@pytest.mark.parametrize(
     "system,expected_file",
     [
         ("Windows", ".mcp.json"),

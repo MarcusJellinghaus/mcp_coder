@@ -661,8 +661,14 @@ def create_vscode_task(folder_path: Path, script_path: Path) -> None:
     vscode_dir = folder_path / ".vscode"
     vscode_dir.mkdir(parents=True, exist_ok=True)
 
+    # POSIX shell tasks need ./ prefix to execute a script in the workspace folder.
+    if platform.system() == "Windows":
+        command_str = script_path.name
+    else:
+        command_str = f"./{script_path.name}"
+
     # Format tasks.json
-    content = TASKS_JSON_TEMPLATE.format(script_path=script_path.name)
+    content = TASKS_JSON_TEMPLATE.format(script_path=command_str)
 
     # Write tasks.json
     tasks_file = vscode_dir / "tasks.json"
