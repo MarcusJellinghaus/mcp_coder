@@ -64,13 +64,25 @@ class TestWorkspaceSetup:
         assert result is True
         assert folder.exists()
 
-    def test_validate_mcp_json_exists(self, tmp_path: Path) -> None:
-        """Passes when .mcp.json exists."""
+    def test_validate_mcp_json_exists(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Passes when .mcp.json exists on Windows."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: "Windows",
+        )
         (tmp_path / ".mcp.json").write_text("{}")
         validate_mcp_json(tmp_path)  # Should not raise
 
-    def test_validate_mcp_json_missing(self, tmp_path: Path) -> None:
-        """Raises when .mcp.json missing."""
+    def test_validate_mcp_json_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Raises when .mcp.json missing on Windows."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: "Windows",
+        )
         with pytest.raises(FileNotFoundError, match=".mcp.json"):
             validate_mcp_json(tmp_path)
 
@@ -432,3 +444,66 @@ class TestGetWorkingFolderPathSuffixAware:
             issue_number=456,
         )
         assert path == tmp_path / f"{sanitized}_456-folder2"
+
+
+@pytest.mark.parametrize(
+    "system,expected_file",
+    [
+        ("Windows", ".mcp.json"),
+        ("Darwin", ".mcp.macos.json"),
+        ("Linux", ".mcp.linux.json"),
+    ],
+)
+class TestValidateMcpJsonPerPlatform:
+    """Validate platform-aware MCP config file lookup."""
+
+    def test_passes_when_required_file_present(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        system: str,
+        expected_file: str,
+    ) -> None:
+        """Passes when the required platform file is present."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: system,
+        )
+        (tmp_path / expected_file).write_text("{}")
+        validate_mcp_json(tmp_path)  # Should not raise
+
+    def test_raises_when_required_file_missing(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        system: str,
+        expected_file: str,
+    ) -> None:
+        """Raises with a message naming the expected file when missing."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: system,
+        )
+        with pytest.raises(FileNotFoundError) as exc_info:
+            validate_mcp_json(tmp_path)
+        assert expected_file in str(exc_info.value)
+        assert system in str(exc_info.value)
+
+    def test_does_not_accept_wrong_platform_file(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        system: str,
+        expected_file: str,
+    ) -> None:
+        """Files for other platforms must not satisfy the check."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: system,
+        )
+        all_files = {".mcp.json", ".mcp.macos.json", ".mcp.linux.json"}
+        for other_file in all_files - {expected_file}:
+            (tmp_path / other_file).write_text("{}")
+        with pytest.raises(FileNotFoundError) as exc_info:
+            validate_mcp_json(tmp_path)
+        assert expected_file in str(exc_info.value)

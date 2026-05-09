@@ -27,6 +27,12 @@ from .types import DEFAULT_PROMPT_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
+_MCP_CONFIG_FILES: dict[str, str] = {
+    "Windows": ".mcp.json",
+    "Darwin": ".mcp.macos.json",
+    "Linux": ".mcp.linux.json",
+}
+
 
 def get_mcp_coder_install_path() -> Path | None:
     """Get the mcp-coder installation directory path.
@@ -287,19 +293,21 @@ def setup_git_repo(
 
 
 def validate_mcp_json(folder_path: Path) -> None:
-    """Validate .mcp.json exists in repo.
+    """Validate the platform-appropriate MCP config file exists in repo.
 
     Args:
         folder_path: Working folder path
 
     Raises:
-        FileNotFoundError: If .mcp.json missing
+        FileNotFoundError: If the required config file is missing.
     """
-    mcp_json_path = folder_path / ".mcp.json"
-    if not mcp_json_path.exists():
+    system = platform.system()
+    required_filename = _MCP_CONFIG_FILES.get(system, ".mcp.json")
+    mcp_path = folder_path / required_filename
+    if not mcp_path.exists():
         raise FileNotFoundError(
-            f".mcp.json not found in {folder_path}. "
-            "This file is required for Claude Code integration."
+            f"{required_filename} not found in {folder_path}. "
+            f"This file is required for Claude Code integration on {system}."
         )
 
 
