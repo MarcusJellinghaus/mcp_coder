@@ -4,7 +4,7 @@
 
 ## Goal
 
-Add six POSIX template constants paralleling the existing six Windows ones, and replace the `NotImplementedError` branch in `create_startup_script` with a working POSIX path. After this step, `mcp-coder vscodeclaude launch` works end-to-end on macOS and Linux.
+Add seven POSIX template constants paralleling the existing seven Windows ones, and replace the `NotImplementedError` branch in `create_startup_script` with a working POSIX path. After this step, `mcp-coder vscodeclaude launch` works end-to-end on macOS and Linux.
 
 ## WHERE
 
@@ -14,7 +14,7 @@ Add six POSIX template constants paralleling the existing six Windows ones, and 
 
 ## WHAT
 
-### `templates.py` — six new constants
+### `templates.py` — seven new constants
 
 Each parallels its Windows counterpart in role:
 
@@ -27,8 +27,6 @@ Each parallels its Windows counterpart in role:
 | `AUTOMATED_SECTION_POSIX` | `AUTOMATED_SECTION_WINDOWS` |
 | `AUTOMATED_RESUME_SECTION_POSIX` | `AUTOMATED_RESUME_SECTION_WINDOWS` |
 | `INTERACTIVE_RESUME_WITH_COMMAND_POSIX` | `INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS` |
-
-(Seven total — the table above is paired listing.)
 
 Required content highlights (KISS — POSIX scripts are deliberately shorter than Windows):
 

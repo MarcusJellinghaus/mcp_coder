@@ -30,7 +30,7 @@ The change is small and surgical. No new modules, no new public APIs.
 - **`session_launch.prepare_and_launch_session`**: the binary `is_windows` check for setup-commands becomes a small platform → key-list lookup with a Darwin → Linux fallback.
 - **`types.RepoVSCodeClaudeConfig`**: gains an optional `setup_commands_macos: list[str]` field.
 - **`config.load_repo_vscodeclaude_config`**: parses the new key with the same list / JSON-string / plain-string handling as the existing two keys.
-- **`templates.py`**: gains six POSIX template constants paralleling the six Windows ones. The shared 3-line POSIX header (`#!/usr/bin/env bash`, `set -euo pipefail`, `trap … ERR`) is inlined at the top of `STARTUP_SCRIPT_POSIX` and `INTERVENTION_SCRIPT_POSIX` rather than factored into a separate constant — the duplication is trivial and the constant adds indirection.
+- **`templates.py`**: gains seven POSIX template constants paralleling the seven Windows ones. The shared 3-line POSIX header (`#!/usr/bin/env bash`, `set -euo pipefail`, `trap … ERR`) is inlined at the top of `STARTUP_SCRIPT_POSIX` and `INTERVENTION_SCRIPT_POSIX` rather than factored into a separate constant — the duplication is trivial and the constant adds indirection.
 - **`.mcp.linux.json`** (new file at repo root): literal copy of `.mcp.macos.json`. Required so when the workflow clones *this* repo on Linux, validation passes.
 
 ## Files to create or modify
@@ -44,7 +44,7 @@ The change is small and surgical. No new modules, no new public APIs.
 - `src/mcp_coder/workflows/vscodeclaude/types.py` — add `setup_commands_macos`.
 - `src/mcp_coder/workflows/vscodeclaude/config.py` — parse `setup_commands_macos`.
 - `src/mcp_coder/workflows/vscodeclaude/workspace.py` — `_MCP_CONFIG_FILES` constant; platform-aware `validate_mcp_json`; platform-aware `create_vscode_task`; POSIX path in `create_startup_script`.
-- `src/mcp_coder/workflows/vscodeclaude/templates.py` — six new POSIX template constants.
+- `src/mcp_coder/workflows/vscodeclaude/templates.py` — seven new POSIX template constants.
 - `src/mcp_coder/workflows/vscodeclaude/session_launch.py` — Darwin → Linux fallback in `prepare_and_launch_session`.
 - `tests/workflows/vscodeclaude/test_types.py` — assert new field shape.
 - `tests/workflows/vscodeclaude/test_config.py` — assert parsing of `setup_commands_macos`.
@@ -63,7 +63,7 @@ The change is small and surgical. No new modules, no new public APIs.
 2. **Step 2** — Add `.mcp.linux.json`; introduce `_MCP_CONFIG_FILES`; make `validate_mcp_json` platform-aware. Tests.
 3. **Step 3** — Make `create_vscode_task` emit `./<name>` on POSIX. Tests.
 4. **Step 4** — Wire `prepare_and_launch_session` to resolve setup commands per platform with Darwin → Linux fallback. Tests.
-5. **Step 5** — Add six POSIX templates; replace the `NotImplementedError` branch in `create_startup_script` with the POSIX path. Parametrized tests.
+5. **Step 5** — Add seven POSIX templates; replace the `NotImplementedError` branch in `create_startup_script` with the POSIX path. Parametrized tests.
 
 Steps are ordered by dependency: step 4 uses step 1's new key; step 5 uses step 2's `_MCP_CONFIG_FILES`. Steps 1–3 are independent of each other.
 

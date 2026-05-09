@@ -58,14 +58,15 @@ for key in candidate_keys:
 
 ```
 keys = _SETUP_COMMAND_KEYS.get(platform.system(), ())
+commands: list[str] = []
 for k in keys:
     v = repo_vscodeclaude_config.get(k)
     if v:                 # non-empty list
         commands = v
         break
-else:
-    commands = []
-if commands: validate_setup_commands(commands); run_setup_commands(folder_path, commands)
+if commands:
+    validate_setup_commands(commands)
+    run_setup_commands(folder_path, commands)
 ```
 
 ## DATA
