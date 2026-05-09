@@ -14,6 +14,7 @@ src/mcp_coder/llm/mlflow_logger.py
 src/mcp_coder/prompt_manager.py
 src/mcp_coder/utils/subprocess_runner.py
 src/mcp_coder/workflows/implement/core.py
+src/mcp_coder/workflows/vscodeclaude/workspace.py
 tests/cli/commands/coordinator/test_core.py
 tests/cli/commands/test_commit.py
 tests/icoder/test_app_pilot.py
@@ -40,4 +41,5 @@ tests/workflows/vscodeclaude/test_sessions.py
 tests/workflows/vscodeclaude/test_issues.py
 tests/workflows/vscodeclaude/test_session_restart.py
 tests/workflows/vscodeclaude/test_status_display.py
+tests/workflows/vscodeclaude/test_workspace_startup_script.py
 docs/repository-setup/README.md
