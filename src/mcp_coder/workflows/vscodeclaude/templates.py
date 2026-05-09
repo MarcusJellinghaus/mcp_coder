@@ -226,6 +226,133 @@ echo.
 claude
 """
 
+# Venv setup section for POSIX (macOS / Linux)
+VENV_SECTION_POSIX = r"""echo Setting up environments...
+
+export MCP_CODER_VENV_PATH="{mcp_coder_install_path}/.venv/bin"
+export MCP_CODER_PROJECT_DIR="{session_folder_path}"
+export MCP_CODER_VENV_DIR="{session_folder_path}/.venv"
+export MCP_TIMEOUT=30000
+export UV_GIT_SHALLOW=0
+
+export PATH="$MCP_CODER_VENV_PATH:$PATH"
+
+mcp-coder --version
+echo "  MCP-Coder install:    {mcp_coder_install_path}"
+echo "  Project directory:    $PWD"
+echo
+
+if [ ! -f .venv/bin/activate ]; then
+    echo "Creating project virtual environment..."
+    uv venv
+    echo "Activating project virtual environment..."
+    # shellcheck disable=SC1091
+    source .venv/bin/activate
+    echo "Installing project dependencies..."
+    uv sync --extra dev
+else
+    echo "Activating project virtual environment..."
+    # shellcheck disable=SC1091
+    source .venv/bin/activate
+fi
+
+# Re-prepend MCP-Coder tools to PATH (activate may overwrite PATH)
+export PATH="$MCP_CODER_VENV_PATH:$PATH"
+
+uv pip install -e . --no-deps
+
+echo "Environment setup complete."
+echo
+"""
+
+# Automated analysis section for POSIX (using mcp-coder prompt)
+AUTOMATED_SECTION_POSIX = r"""echo
+echo "=== Step {step_number}: Automated Analysis ==="
+echo "Running: {command} {issue_number}"
+echo
+
+SESSION_ID=$(mcp-coder prompt "{command} {issue_number}" --llm-method claude --output-format session-id --mcp-config {mcp_config} --timeout {timeout})
+if [ -z "$SESSION_ID" ]; then
+    echo "ERROR: Failed to get session ID from automated analysis."
+    exit 1
+fi
+
+echo "Session ID: $SESSION_ID"
+"""
+
+# Single-command flow for POSIX (no step labels, no session ID)
+INTERACTIVE_ONLY_SECTION_POSIX = r"""echo
+echo "Running: {command} {issue_number}"
+echo
+
+claude "{command} {issue_number}"
+"""
+
+# Middle commands in multi-command flow for POSIX (automated session resume)
+AUTOMATED_RESUME_SECTION_POSIX = r"""echo
+echo "=== Step {step_number}: Automated Session ==="
+echo "Running: {command}"
+echo
+
+mcp-coder prompt "{command}" --llm-method claude --session-id "$SESSION_ID" --mcp-config {mcp_config} --timeout {timeout} || echo "WARNING: Step {step_number} encountered an error. Continuing..."
+"""
+
+# Last command in multi-command flow for POSIX (interactive session resume)
+INTERACTIVE_RESUME_WITH_COMMAND_POSIX = r"""echo
+echo "=== Step {step_number}: Interactive Session ==="
+echo "You can now interact with Claude directly."
+echo "The conversation context from previous steps is preserved."
+echo
+
+claude --resume "$SESSION_ID" "{command}"
+"""
+
+# Main startup script for POSIX (with venv and mcp-coder)
+STARTUP_SCRIPT_POSIX = r"""#!/usr/bin/env bash
+set -euo pipefail
+trap 'read -r -p "Script failed (Enter to close)..."' ERR
+
+echo
+echo '=========================================================================='
+echo '{emoji} Issue #{issue_number} - {title}'
+echo 'Repo:   {repo}'
+echo 'Status: {status}'
+echo 'URL:    {issue_url}'
+echo '=========================================================================='
+echo
+
+{venv_section}
+
+{command_sections}
+"""
+
+# Intervention mode for POSIX (with venv activation)
+INTERVENTION_SCRIPT_POSIX = r"""#!/usr/bin/env bash
+set -euo pipefail
+trap 'read -r -p "Script failed (Enter to close)..."' ERR
+
+echo
+echo '=========================================================================='
+echo '{emoji} Issue #{issue_number} - {title}'
+echo 'Repo:   {repo}'
+echo 'Status: {status}'
+echo 'URL:    {issue_url}'
+echo '=========================================================================='
+echo
+
+{venv_section}
+
+echo
+echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+echo '!! INTERVENTION MODE - Automation may be running elsewhere'
+echo '!! Investigate manually. No automated analysis will run.'
+echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+echo
+
+claude
+"""
+
+
 # VSCode workspace file template
 WORKSPACE_FILE_TEMPLATE = """{{
     "folders": [

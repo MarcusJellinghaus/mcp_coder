@@ -248,29 +248,6 @@ class TestWorkspaceSetup:
         assert "claude" in content
         assert "/implementation_review_supervisor" in content
 
-    def test_create_startup_script_linux_raises_not_implemented(
-        self,
-        tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
-        mock_vscodeclaude_config: None,
-    ) -> None:
-        """Linux raises NotImplementedError until Step 17."""
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
-            lambda: "Linux",
-        )
-
-        with pytest.raises(NotImplementedError, match="Linux startup scripts"):
-            create_startup_script(
-                folder_path=tmp_path,
-                issue_number=123,
-                issue_title="Test issue",
-                status="status-07:code-review",
-                repo_name="test-repo",
-                issue_url="https://github.com/owner/test-repo/issues/123",
-                is_intervention=False,
-            )
-
     def test_create_startup_script_intervention(
         self,
         tmp_path: Path,

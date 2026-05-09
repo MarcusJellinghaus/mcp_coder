@@ -506,7 +506,7 @@ def create_startup_script(
         Path to created script (.bat or .sh)
 
     Raises:
-        NotImplementedError: If platform is not Windows.
+        FileNotFoundError: If the platform-specific MCP config file is absent.
         ValueError: If commands config is not a list of strings.
 
     Execution strategy depends on the number of commands in the config:
@@ -521,12 +521,19 @@ def create_startup_script(
     The ``timeout`` parameter is only used for multi-command flows.
     """
     from .templates import (
+        AUTOMATED_RESUME_SECTION_POSIX,
         AUTOMATED_RESUME_SECTION_WINDOWS,
+        AUTOMATED_SECTION_POSIX,
         AUTOMATED_SECTION_WINDOWS,
+        INTERACTIVE_ONLY_SECTION_POSIX,
         INTERACTIVE_ONLY_SECTION_WINDOWS,
+        INTERACTIVE_RESUME_WITH_COMMAND_POSIX,
         INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS,
+        INTERVENTION_SCRIPT_POSIX,
         INTERVENTION_SCRIPT_WINDOWS,
+        STARTUP_SCRIPT_POSIX,
         STARTUP_SCRIPT_WINDOWS,
+        VENV_SECTION_POSIX,
         VENV_SECTION_WINDOWS,
     )
 
@@ -536,9 +543,6 @@ def create_startup_script(
     config = get_vscodeclaude_config(status)
     commands = config.get("commands", []) if config else []
     emoji = config["emoji"] if config else "📋"
-
-    # Default: use raw title (for non-Windows platforms when implemented)
-    title_display = issue_title[:58] if len(issue_title) > 58 else issue_title
 
     if is_windows:
         # Escape first so expansion from escaping is counted in the truncation
@@ -643,9 +647,105 @@ def create_startup_script(
 
         return script_path
     else:
-        # Linux - TODO: Implement in Step 17
-        # For now, raise NotImplementedError
-        raise NotImplementedError("Linux startup scripts are not yet supported.")
+        mcp_config_filename = _MCP_CONFIG_FILES.get(platform.system(), ".mcp.json")
+        mcp_config_path = folder_path / mcp_config_filename
+        if not mcp_config_path.exists():
+            raise FileNotFoundError(
+                f"{mcp_config_filename} not found in {folder_path}. "
+                f"This file is required for Claude Code integration on "
+                f"{platform.system()}."
+            )
+
+        if mcp_coder_install_path is None:
+            mcp_coder_install_path = get_mcp_coder_install_path()
+
+        session_path = session_folder_path or folder_path
+
+        venv_section = VENV_SECTION_POSIX.format(
+            mcp_coder_install_path=mcp_coder_install_path or "",
+            session_folder_path=str(session_path),
+        )
+
+        title_display = (
+            issue_title[:58] if len(issue_title) > 58 else issue_title
+        ).replace("'", r"'\''")
+
+        if is_intervention:
+            script_content = INTERVENTION_SCRIPT_POSIX.format(
+                emoji=emoji,
+                issue_number=issue_number,
+                title=title_display,
+                repo=repo_name,
+                status=status,
+                issue_url=issue_url,
+                venv_section=venv_section,
+            )
+        else:
+            if commands and (
+                not isinstance(commands, list)
+                or not all(isinstance(c, str) for c in commands)
+            ):
+                raise ValueError(
+                    f"Invalid commands config for status '{status}': "
+                    f"expected list of strings, got {commands!r}"
+                )
+
+            if len(commands) == 1:
+                command_sections = INTERACTIVE_ONLY_SECTION_POSIX.format(
+                    command=commands[0],
+                    issue_number=issue_number,
+                )
+            elif len(commands) > 1:
+                sections = []
+                for i, cmd in enumerate(commands):
+                    step_number = i + 1
+                    is_last = i == len(commands) - 1
+                    if i == 0:
+                        sections.append(
+                            AUTOMATED_SECTION_POSIX.format(
+                                command=cmd,
+                                issue_number=issue_number,
+                                timeout=timeout,
+                                step_number=step_number,
+                                mcp_config=mcp_config_filename,
+                            )
+                        )
+                    elif not is_last:
+                        sections.append(
+                            AUTOMATED_RESUME_SECTION_POSIX.format(
+                                command=cmd,
+                                timeout=timeout,
+                                step_number=step_number,
+                                mcp_config=mcp_config_filename,
+                            )
+                        )
+                    if is_last:
+                        sections.append(
+                            INTERACTIVE_RESUME_WITH_COMMAND_POSIX.format(
+                                command=cmd,
+                                step_number=step_number,
+                            )
+                        )
+                command_sections = "\n".join(sections)
+            else:
+                command_sections = ""
+
+            script_content = STARTUP_SCRIPT_POSIX.format(
+                emoji=emoji,
+                issue_number=issue_number,
+                title=title_display,
+                repo=repo_name,
+                status=status,
+                issue_url=issue_url,
+                venv_section=venv_section,
+                command_sections=command_sections,
+            )
+
+        script_path = folder_path / ".vscodeclaude_start.sh"
+        script_path.write_text(script_content, encoding="utf-8")
+        script_path.chmod(0o755)
+
+        return script_path
 
 
 def create_vscode_task(folder_path: Path, script_path: Path) -> None:

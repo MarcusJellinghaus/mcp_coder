@@ -1,11 +1,23 @@
 """Test startup script generation for VSCode Claude workspace."""
 
+import stat
+import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from mcp_coder.workflows.vscodeclaude.workspace import create_startup_script
+
+
+def _seed_mcp_config(tmp_path: Path, system: str) -> None:
+    """Write the platform-appropriate MCP config file into tmp_path."""
+    filenames = {
+        "Windows": ".mcp.json",
+        "Darwin": ".mcp.macos.json",
+        "Linux": ".mcp.linux.json",
+    }
+    (tmp_path / filenames[system]).write_text("{}", encoding="utf-8")
 
 
 class TestCreateStartupScript:
@@ -503,3 +515,420 @@ class TestCreateStartupScript:
                 issue_url="https://github.com/test/repo/issues/1",
                 is_intervention=False,
             )
+
+
+class TestCreateStartupScriptPOSIX:
+    """POSIX-specific tests for startup script generation (Darwin / Linux)."""
+
+    @pytest.mark.parametrize(
+        "system,expected_mcp_config",
+        [
+            ("Darwin", ".mcp.macos.json"),
+            ("Linux", ".mcp.linux.json"),
+        ],
+    )
+    def test_filename_is_sh(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+        system: str,
+        expected_mcp_config: str,
+    ) -> None:
+        """POSIX produces .vscodeclaude_start.sh."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: system,
+        )
+        _seed_mcp_config(tmp_path, system)
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=123,
+            issue_title="Test issue",
+            status="status-07:code-review",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/123",
+            is_intervention=False,
+        )
+
+        assert script_path.name == ".vscodeclaude_start.sh"
+
+    @pytest.mark.parametrize("system", ["Darwin", "Linux"])
+    def test_shebang_is_bash(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+        system: str,
+    ) -> None:
+        """First line of POSIX script is bash shebang."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: system,
+        )
+        _seed_mcp_config(tmp_path, system)
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=1,
+            issue_title="Test",
+            status="status-07:code-review",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/1",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        assert content.splitlines()[0] == "#!/usr/bin/env bash"
+
+    @pytest.mark.parametrize("system", ["Darwin", "Linux"])
+    def test_failure_ux_strict_and_trap(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+        system: str,
+    ) -> None:
+        """POSIX script enables strict mode and traps errors."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: system,
+        )
+        _seed_mcp_config(tmp_path, system)
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=1,
+            issue_title="Test",
+            status="status-07:code-review",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/1",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        assert "set -euo pipefail" in content
+        assert "trap 'read -r -p \"Script failed (Enter to close)...\"' ERR" in content
+
+    @pytest.mark.parametrize(
+        "system,expected_mcp_config",
+        [
+            ("Darwin", ".mcp.macos.json"),
+            ("Linux", ".mcp.linux.json"),
+        ],
+    )
+    def test_mcp_config_baked_into_automated_section(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+        system: str,
+        expected_mcp_config: str,
+    ) -> None:
+        """Multi-command flow bakes the platform-specific MCP config filename."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: system,
+        )
+        _seed_mcp_config(tmp_path, system)
+
+        # status-01:created has 2 commands -> AUTOMATED_SECTION_POSIX is used
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=123,
+            issue_title="Test issue",
+            status="status-01:created",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/123",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        assert f"--mcp-config {expected_mcp_config}" in content
+
+    @pytest.mark.parametrize("system", ["Darwin", "Linux"])
+    def test_uses_source_activate_not_batch(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+        system: str,
+    ) -> None:
+        """POSIX activates via 'source .venv/bin/activate', never activate.bat."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: system,
+        )
+        _seed_mcp_config(tmp_path, system)
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=1,
+            issue_title="Test",
+            status="status-07:code-review",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/1",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        assert "source .venv/bin/activate" in content
+        assert "activate.bat" not in content
+
+    @pytest.mark.parametrize("system", ["Darwin", "Linux"])
+    def test_no_github_install_section_on_posix(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+        system: str,
+    ) -> None:
+        """POSIX scripts must not emit the GitHub override install path."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: system,
+        )
+        _seed_mcp_config(tmp_path, system)
+        # Configure a GitHub install — Windows would emit the section.
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "test"\nversion = "0.1.0"\n\n'
+            "[tool.mcp-coder.install-from-github]\n"
+            'packages = ["pkg1 @ git+https://github.com/org/pkg1.git"]\n',
+            encoding="utf-8",
+        )
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=1,
+            issue_title="Test",
+            status="status-07:code-review",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/1",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        assert "=== GitHub override installs ===" not in content
+        assert "uv pip install --no-deps" not in content
+
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="Windows ignores chmod(0o755) for the executable bit on regular files",
+    )
+    @pytest.mark.parametrize("system", ["Darwin", "Linux"])
+    def test_executable_bit_set(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+        system: str,
+    ) -> None:
+        """Generated POSIX script has the user-executable bit set."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: system,
+        )
+        _seed_mcp_config(tmp_path, system)
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=1,
+            issue_title="Test",
+            status="status-07:code-review",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/1",
+            is_intervention=False,
+        )
+
+        mode = script_path.stat().st_mode
+        assert mode & stat.S_IXUSR
+
+    @pytest.mark.parametrize("system", ["Darwin", "Linux"])
+    def test_single_command_flow_posix(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+        system: str,
+    ) -> None:
+        """Single-command POSIX flow uses interactive `claude` only."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: system,
+        )
+        _seed_mcp_config(tmp_path, system)
+
+        # status-07:code-review has 1 command
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=123,
+            issue_title="Test",
+            status="status-07:code-review",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/123",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        assert 'claude "/implementation_review_supervisor 123"' in content
+        assert "mcp-coder prompt" not in content
+        assert "Step 1" not in content
+        assert "--session-id" not in content
+
+    @pytest.mark.parametrize("system", ["Darwin", "Linux"])
+    def test_multi_command_flow_posix(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+        system: str,
+    ) -> None:
+        """Multi-command POSIX flow captures SESSION_ID and resumes interactively."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: system,
+        )
+        _seed_mcp_config(tmp_path, system)
+
+        # status-01:created has 2 commands
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=123,
+            issue_title="Test",
+            status="status-01:created",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/123",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        assert 'mcp-coder prompt "' in content
+        assert "SESSION_ID=$(" in content
+        assert 'claude --resume "$SESSION_ID"' in content
+
+    @pytest.mark.parametrize("system", ["Darwin", "Linux"])
+    def test_title_single_quote_escaped(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+        system: str,
+    ) -> None:
+        """Issue title containing a single quote is escaped via the POSIX idiom."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: system,
+        )
+        _seed_mcp_config(tmp_path, system)
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=1,
+            issue_title="It's broken",
+            status="status-07:code-review",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/1",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        # Title is escaped via the POSIX idiom '\'' — appears mid-banner.
+        assert "It'\\''s broken'" in content
+        # The banner echo line must end with a closing single quote
+        # (otherwise the final '\'' followed by 's broken' would leave an
+        # unterminated single-quoted string).
+        for line in content.splitlines():
+            if "It" in line and "broken" in line:
+                assert line.rstrip().endswith(
+                    "'"
+                ), f"Banner echo not terminated by quote: {line!r}"
+
+    def test_missing_mcp_config_raises_filenotfound_darwin(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+    ) -> None:
+        """Darwin without .mcp.macos.json raises FileNotFoundError naming the file."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: "Darwin",
+        )
+        # Deliberately do NOT create .mcp.macos.json
+
+        with pytest.raises(FileNotFoundError, match=r"\.mcp\.macos\.json"):
+            create_startup_script(
+                folder_path=tmp_path,
+                issue_number=1,
+                issue_title="Test",
+                status="status-07:code-review",
+                repo_name="test-repo",
+                issue_url="https://github.com/test/repo/issues/1",
+                is_intervention=False,
+            )
+
+    @pytest.mark.parametrize("system", ["Darwin", "Linux"])
+    def test_intervention_mode_posix(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+        system: str,
+    ) -> None:
+        """Intervention mode on POSIX produces a header-correct script with no automation."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: system,
+        )
+        _seed_mcp_config(tmp_path, system)
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=1,
+            issue_title="Test",
+            status="status-06:implementing",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/1",
+            is_intervention=True,
+        )
+
+        assert script_path.name == ".vscodeclaude_start.sh"
+        content = script_path.read_text(encoding="utf-8")
+        lines = content.splitlines()
+        assert lines[0] == "#!/usr/bin/env bash"
+        assert "set -euo pipefail" in content
+        assert "trap 'read -r -p \"Script failed (Enter to close)...\"' ERR" in content
+        assert "INTERVENTION MODE" in content
+        assert "mcp-coder prompt" not in content
+        assert "--session-id" not in content
+        assert "Step 1" not in content
+        assert "{command_sections}" not in content
+
+    @pytest.mark.parametrize("system", ["Darwin", "Linux"])
+    def test_path_re_prepended_after_activation(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+        system: str,
+    ) -> None:
+        """MCP_CODER_VENV_PATH is prepended to PATH twice (before & after activate)."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: system,
+        )
+        _seed_mcp_config(tmp_path, system)
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=1,
+            issue_title="Test",
+            status="status-07:code-review",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/1",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        assert content.count('export PATH="$MCP_CODER_VENV_PATH:$PATH"') == 2
