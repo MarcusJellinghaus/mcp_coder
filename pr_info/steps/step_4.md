@@ -51,6 +51,7 @@ for key in candidate_keys:
 ## HOW
 
 - "First non-empty wins" semantics: an explicit empty list `[]` is treated like a missing key (skipped) so the Darwin fallback to `linux` is reachable when `setup_commands_macos = []`. This matches user intent — `[]` says "I don't want any commands here".
+- Remove the now-unused `is_windows = platform.system() == "Windows"` line — it has no remaining caller after this refactor.
 - No other behavior in the function changes.
 
 ## ALGORITHM
@@ -83,9 +84,11 @@ Cases:
 | Windows | `["choco install foo"]` | `["apt install bar"]` | `["brew install baz"]` | `["choco install foo"]` |
 | Linux   | `["choco install foo"]` | `["apt install bar"]` | `["brew install baz"]` | `["apt install bar"]` |
 | Darwin  | `["choco install foo"]` | `["apt install bar"]` | `["brew install baz"]` | `["brew install baz"]` |
-| Darwin  | (n/a) | `["apt install bar"]` | (absent) | `["apt install bar"]` (fallback) |
-| Darwin  | (n/a) | `[]`                 | (absent) | not called (both empty) |
-| Darwin  | (n/a) | (absent) | (absent) | not called |
+| Darwin  | `["choco install foo"]` | `["apt install bar"]` | (absent) | `["apt install bar"]` (fallback) |
+| Darwin  | `["choco install foo"]` | `[]`                 | (absent) | not called (both empty) |
+| Darwin  | `["choco install foo"]` | (absent) | (absent) | not called |
+
+The `setup_commands_windows` column carries a concrete non-empty value in every Darwin/Linux row to prove platform isolation: the resolver must never look at the Windows key on a non-Windows platform. The "not called" rows similarly assert that a populated `setup_commands_windows` is ignored — its presence-but-non-selection is the actual assertion.
 
 The "not called" assertions verify `run_setup_commands.assert_not_called()`.
 

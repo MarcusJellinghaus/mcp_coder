@@ -70,8 +70,8 @@ Steps are ordered by dependency: step 4 uses step 1's new key; step 5 uses step 
 ## Verification (every step)
 
 After each step, all three checks must pass per `CLAUDE.md`:
-- `mcp__tools-py__run_pylint_check`
-- `mcp__tools-py__run_mypy_check`
-- `mcp__tools-py__run_pytest_check` with `extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"]`
+- `mcp__mcp-tools-py__run_pylint_check`
+- `mcp__mcp-tools-py__run_mypy_check`
+- `mcp__mcp-tools-py__run_pytest_check` with `extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not jenkins_integration and not langchain_integration and not llm_integration and not textual_integration"]`
 
 POSIX-only assertions (e.g. `chmod 0o755` taking effect) must use `pytest.mark.skipif(sys.platform == "win32")`.

@@ -77,7 +77,13 @@ class TestValidateMcpJsonPerPlatform:
     def test_does_not_accept_wrong_platform_file(...)
 ```
 
-The third test verifies strictness: e.g. on Darwin, having only `.mcp.json` (no `.mcp.macos.json`) must still raise.
+The `test_does_not_accept_wrong_platform_file` case verifies strictness for each parametrized platform: only files for *other* platforms are present in the folder, and validation must still raise. Concretely, the fixture must populate the folder as follows per parametrized run:
+
+- **Windows run**: write `.mcp.macos.json` and `.mcp.linux.json` (NOT `.mcp.json`) → must raise.
+- **Darwin run**: write `.mcp.json` and `.mcp.linux.json` (NOT `.mcp.macos.json`) → must raise.
+- **Linux run**: write `.mcp.json` and `.mcp.macos.json` (NOT `.mcp.linux.json`) → must raise.
+
+This proves the validator does not accept any file other than the one mandated for the current platform.
 
 Assert that the `FileNotFoundError` message contains the expected filename.
 

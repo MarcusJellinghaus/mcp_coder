@@ -59,7 +59,7 @@ Add a test that constructs `RepoVSCodeClaudeConfig(setup_commands_macos=["brew i
 
 ### `tests/workflows/vscodeclaude/test_config.py`
 
-Add three test cases for `load_repo_vscodeclaude_config`, paralleling the existing coverage for `setup_commands_linux`:
+Add four test cases for `load_repo_vscodeclaude_config`, paralleling the existing coverage for `setup_commands_linux`:
 
 1. **List form**: TOML config has `setup_commands_macos = ["brew install x", "uv sync"]` → result has the same list.
 2. **JSON-string form**: config returns the value as a JSON-string `'["a", "b"]'` → parsed to `["a", "b"]`.
