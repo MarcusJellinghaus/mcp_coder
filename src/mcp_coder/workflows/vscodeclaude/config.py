@@ -116,6 +116,7 @@ def load_repo_vscodeclaude_config(repo_name: str) -> RepoVSCodeClaudeConfig:
         [
             (section, "setup_commands_windows", None),
             (section, "setup_commands_linux", None),
+            (section, "setup_commands_macos", None),
         ]
     )
 
@@ -144,6 +145,18 @@ def load_repo_vscodeclaude_config(repo_name: str) -> RepoVSCodeClaudeConfig:
                 result["setup_commands_linux"] = parsed
         except json.JSONDecodeError:
             result["setup_commands_linux"] = [linux_commands]
+
+    # Parse setup_commands_macos if present
+    macos_commands = config[(section, "setup_commands_macos")]
+    if isinstance(macos_commands, list):
+        result["setup_commands_macos"] = [str(c) for c in macos_commands]
+    elif isinstance(macos_commands, str):
+        try:
+            parsed = json.loads(macos_commands)
+            if isinstance(parsed, list):
+                result["setup_commands_macos"] = parsed
+        except json.JSONDecodeError:
+            result["setup_commands_macos"] = [macos_commands]
 
     return result
 

@@ -34,6 +34,7 @@ class RepoVSCodeClaudeConfig(TypedDict, total=False):
 
     setup_commands_windows: list[str]
     setup_commands_linux: list[str]
+    setup_commands_macos: list[str]
 
 
 # Default max sessions

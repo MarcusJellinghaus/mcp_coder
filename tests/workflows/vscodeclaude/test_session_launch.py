@@ -335,3 +335,212 @@ class TestSkipGithubInstallThreading:
 
         mock_launch.assert_called_once()
         assert mock_launch.call_args.kwargs["skip_github_install"] is True
+
+
+class TestSetupCommandsResolution:
+    """Resolution-order tests for per-platform setup commands in prepare_and_launch_session."""
+
+    @staticmethod
+    def _mock_session_dependencies(
+        monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """Mock all side-effecting dependencies of prepare_and_launch_session."""
+        folder_path = tmp_path / "repo_42"
+        folder_path.mkdir(exist_ok=True)
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_working_folder_path",
+            lambda *a, **_kw: folder_path,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.create_working_folder",
+            lambda *a, **_kw: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.setup_git_repo",
+            lambda *a, **_kw: None,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.validate_mcp_json",
+            lambda *a, **_kw: None,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.update_gitignore",
+            lambda *a, **_kw: None,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.create_workspace_file",
+            lambda *a, **_kw: tmp_path / "test.code-workspace",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.create_startup_script",
+            lambda *a, **_kw: tmp_path / "script.bat",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.create_vscode_task",
+            lambda *a, **_kw: None,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.create_status_file",
+            lambda *a, **_kw: None,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.launch_vscode",
+            lambda *a, **_kw: 9999,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.add_session",
+            lambda *a, **_kw: None,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_repo_short_name",
+            lambda *a, **_kw: "repo",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_repo_full_name",
+            lambda *a, **_kw: "owner/repo",
+        )
+
+    @staticmethod
+    def _make_issue() -> IssueData:
+        return {
+            "number": 42,
+            "title": "Test",
+            "labels": ["status-01:created"],
+            "assignees": ["testuser"],
+            "state": "open",
+            "url": "https://github.com/owner/repo/issues/42",
+            "body": "",
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "locked": False,
+        }
+
+    @pytest.mark.parametrize(
+        "platform_name,repo_cfg,expected_commands",
+        [
+            (
+                "Windows",
+                {
+                    "setup_commands_windows": ["choco install foo"],
+                    "setup_commands_linux": ["apt install bar"],
+                    "setup_commands_macos": ["brew install baz"],
+                },
+                ["choco install foo"],
+            ),
+            (
+                "Linux",
+                {
+                    "setup_commands_windows": ["choco install foo"],
+                    "setup_commands_linux": ["apt install bar"],
+                    "setup_commands_macos": ["brew install baz"],
+                },
+                ["apt install bar"],
+            ),
+            (
+                "Darwin",
+                {
+                    "setup_commands_windows": ["choco install foo"],
+                    "setup_commands_linux": ["apt install bar"],
+                    "setup_commands_macos": ["brew install baz"],
+                },
+                ["brew install baz"],
+            ),
+            (
+                "Darwin",
+                {
+                    "setup_commands_windows": ["choco install foo"],
+                    "setup_commands_linux": ["apt install bar"],
+                },
+                ["apt install bar"],
+            ),
+        ],
+    )
+    def test_setup_commands_selected_per_platform(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        platform_name: str,
+        repo_cfg: dict[str, list[str]],
+        expected_commands: list[str],
+    ) -> None:
+        """Resolves the right setup-commands key per platform; Darwin falls back to Linux."""
+        self._mock_session_dependencies(monkeypatch, tmp_path)
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.platform.system",
+            lambda: platform_name,
+        )
+
+        mock_validate = MagicMock()
+        mock_run = MagicMock()
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.validate_setup_commands",
+            mock_validate,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.run_setup_commands",
+            mock_run,
+        )
+
+        prepare_and_launch_session(
+            issue=self._make_issue(),
+            repo_config={"repo_url": "https://github.com/owner/repo"},
+            vscodeclaude_config={"workspace_base": str(tmp_path), "max_sessions": 3},
+            repo_vscodeclaude_config=repo_cfg,  # type: ignore[arg-type]
+            branch_name=None,
+        )
+
+        mock_validate.assert_called_once_with(expected_commands)
+        mock_run.assert_called_once()
+        assert mock_run.call_args.args[1] == expected_commands
+
+    @pytest.mark.parametrize(
+        "repo_cfg",
+        [
+            {
+                "setup_commands_windows": ["choco install foo"],
+                "setup_commands_linux": [],
+            },
+            {
+                "setup_commands_windows": ["choco install foo"],
+            },
+        ],
+    )
+    def test_darwin_no_commands_when_macos_and_linux_absent_or_empty(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        repo_cfg: dict[str, list[str]],
+    ) -> None:
+        """On Darwin, run_setup_commands is never called when both macOS and Linux are absent/empty.
+
+        Confirms Windows commands are ignored on Darwin even when populated.
+        """
+        self._mock_session_dependencies(monkeypatch, tmp_path)
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.platform.system",
+            lambda: "Darwin",
+        )
+
+        mock_validate = MagicMock()
+        mock_run = MagicMock()
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.validate_setup_commands",
+            mock_validate,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.run_setup_commands",
+            mock_run,
+        )
+
+        prepare_and_launch_session(
+            issue=self._make_issue(),
+            repo_config={"repo_url": "https://github.com/owner/repo"},
+            vscodeclaude_config={"workspace_base": str(tmp_path), "max_sessions": 3},
+            repo_vscodeclaude_config=repo_cfg,  # type: ignore[arg-type]
+            branch_name=None,
+        )
+
+        mock_run.assert_not_called()
+        mock_validate.assert_not_called()

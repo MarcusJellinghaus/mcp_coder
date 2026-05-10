@@ -64,13 +64,25 @@ class TestWorkspaceSetup:
         assert result is True
         assert folder.exists()
 
-    def test_validate_mcp_json_exists(self, tmp_path: Path) -> None:
-        """Passes when .mcp.json exists."""
+    def test_validate_mcp_json_exists(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Passes when .mcp.json exists on Windows."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: "Windows",
+        )
         (tmp_path / ".mcp.json").write_text("{}")
         validate_mcp_json(tmp_path)  # Should not raise
 
-    def test_validate_mcp_json_missing(self, tmp_path: Path) -> None:
-        """Raises when .mcp.json missing."""
+    def test_validate_mcp_json_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Raises when .mcp.json missing on Windows."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: "Windows",
+        )
         with pytest.raises(FileNotFoundError, match=".mcp.json"):
             validate_mcp_json(tmp_path)
 
@@ -235,29 +247,6 @@ class TestWorkspaceSetup:
         content = script_path.read_text(encoding="utf-8")
         assert "claude" in content
         assert "/implementation_review_supervisor" in content
-
-    def test_create_startup_script_linux_raises_not_implemented(
-        self,
-        tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
-        mock_vscodeclaude_config: None,
-    ) -> None:
-        """Linux raises NotImplementedError until Step 17."""
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
-            lambda: "Linux",
-        )
-
-        with pytest.raises(NotImplementedError, match="Linux startup scripts"):
-            create_startup_script(
-                folder_path=tmp_path,
-                issue_number=123,
-                issue_title="Test issue",
-                status="status-07:code-review",
-                repo_name="test-repo",
-                issue_url="https://github.com/owner/test-repo/issues/123",
-                is_intervention=False,
-            )
 
     def test_create_startup_script_intervention(
         self,
@@ -432,3 +421,97 @@ class TestGetWorkingFolderPathSuffixAware:
             issue_number=456,
         )
         assert path == tmp_path / f"{sanitized}_456-folder2"
+
+
+@pytest.mark.parametrize(
+    "system,script_name,expected_command",
+    [
+        ("Windows", ".vscodeclaude_start.bat", ".vscodeclaude_start.bat"),
+        ("Darwin", ".vscodeclaude_start.sh", "./.vscodeclaude_start.sh"),
+        ("Linux", ".vscodeclaude_start.sh", "./.vscodeclaude_start.sh"),
+    ],
+)
+def test_create_vscode_task_command_per_platform(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    system: str,
+    script_name: str,
+    expected_command: str,
+) -> None:
+    """tasks.json command is platform-aware: bare on Windows, ./<name> on POSIX."""
+    monkeypatch.setattr(
+        "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+        lambda: system,
+    )
+
+    script_path = tmp_path / script_name
+    script_path.touch()
+
+    create_vscode_task(tmp_path, script_path)
+
+    tasks_file = tmp_path / ".vscode" / "tasks.json"
+    content = json.loads(tasks_file.read_text(encoding="utf-8"))
+    assert content["tasks"][0]["command"] == expected_command
+
+
+@pytest.mark.parametrize(
+    "system,expected_file",
+    [
+        ("Windows", ".mcp.json"),
+        ("Darwin", ".mcp.macos.json"),
+        ("Linux", ".mcp.linux.json"),
+    ],
+)
+class TestValidateMcpJsonPerPlatform:
+    """Validate platform-aware MCP config file lookup."""
+
+    def test_passes_when_required_file_present(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        system: str,
+        expected_file: str,
+    ) -> None:
+        """Passes when the required platform file is present."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: system,
+        )
+        (tmp_path / expected_file).write_text("{}")
+        validate_mcp_json(tmp_path)  # Should not raise
+
+    def test_raises_when_required_file_missing(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        system: str,
+        expected_file: str,
+    ) -> None:
+        """Raises with a message naming the expected file when missing."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: system,
+        )
+        with pytest.raises(FileNotFoundError) as exc_info:
+            validate_mcp_json(tmp_path)
+        assert expected_file in str(exc_info.value)
+        assert system in str(exc_info.value)
+
+    def test_does_not_accept_wrong_platform_file(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        system: str,
+        expected_file: str,
+    ) -> None:
+        """Files for other platforms must not satisfy the check."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: system,
+        )
+        all_files = {".mcp.json", ".mcp.macos.json", ".mcp.linux.json"}
+        for other_file in all_files - {expected_file}:
+            (tmp_path / other_file).write_text("{}")
+        with pytest.raises(FileNotFoundError) as exc_info:
+            validate_mcp_json(tmp_path)
+        assert expected_file in str(exc_info.value)

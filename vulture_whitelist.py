@@ -103,6 +103,7 @@ _.last_updated
 # workflows/vscodeclaude/types.py - RepoVSCodeClaudeConfig fields
 _.setup_commands_windows
 _.setup_commands_linux
+_.setup_commands_macos
 
 # llm/types.py - UsageInfo TypedDict field (captured in raw_response but not
 # displayed; see pr_info/steps/Decisions.md D9). Only referenced as a kwarg in

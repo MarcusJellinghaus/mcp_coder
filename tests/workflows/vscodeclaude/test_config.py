@@ -118,6 +118,10 @@ class TestConfiguration:
                 "setup_commands_windows",
             ): ["uv venv", "uv sync"],
             ("coordinator.repos.mcp_coder", "setup_commands_linux"): ["make setup"],
+            ("coordinator.repos.mcp_coder", "setup_commands_macos"): [
+                "brew install x",
+                "uv sync",
+            ],
         }
 
         def mock_get_config_values(
@@ -133,6 +137,73 @@ class TestConfiguration:
         config = load_repo_vscodeclaude_config("mcp_coder")
         assert config["setup_commands_windows"] == ["uv venv", "uv sync"]
         assert config["setup_commands_linux"] == ["make setup"]
+        assert config["setup_commands_macos"] == ["brew install x", "uv sync"]
+
+    def test_load_repo_vscodeclaude_config_macos_json_string(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Parses setup_commands_macos when supplied as a JSON-string list."""
+        _ConfigVal = Union[str, bool, int, list[Any], None]
+        mock_config: dict[tuple[str, str], _ConfigVal] = {
+            ("coordinator.repos.mcp_coder", "setup_commands_macos"): '["a", "b"]',
+        }
+
+        def mock_get_config_values(
+            keys: list[tuple[str, str, str | None]],
+        ) -> dict[tuple[str, str], _ConfigVal]:
+            return {(k[0], k[1]): mock_config.get((k[0], k[1])) for k in keys}
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.config.get_config_values",
+            mock_get_config_values,
+        )
+
+        config = load_repo_vscodeclaude_config("mcp_coder")
+        assert config["setup_commands_macos"] == ["a", "b"]
+
+    def test_load_repo_vscodeclaude_config_macos_plain_string(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Wraps a non-JSON string value for setup_commands_macos as single-item list."""
+        _ConfigVal = Union[str, bool, int, list[Any], None]
+        mock_config: dict[tuple[str, str], _ConfigVal] = {
+            ("coordinator.repos.mcp_coder", "setup_commands_macos"): "brew install x",
+        }
+
+        def mock_get_config_values(
+            keys: list[tuple[str, str, str | None]],
+        ) -> dict[tuple[str, str], _ConfigVal]:
+            return {(k[0], k[1]): mock_config.get((k[0], k[1])) for k in keys}
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.config.get_config_values",
+            mock_get_config_values,
+        )
+
+        config = load_repo_vscodeclaude_config("mcp_coder")
+        assert config["setup_commands_macos"] == ["brew install x"]
+
+    def test_load_repo_vscodeclaude_config_macos_missing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Omits setup_commands_macos from result when not configured."""
+        _ConfigVal = Union[str, bool, int, list[Any], None]
+        mock_config: dict[tuple[str, str], _ConfigVal] = {}
+
+        def mock_get_config_values(
+            keys: list[tuple[str, str, str | None]],
+        ) -> dict[tuple[str, str], _ConfigVal]:
+            return {(k[0], k[1]): mock_config.get((k[0], k[1])) for k in keys}
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.config.get_config_values",
+            mock_get_config_values,
+        )
+
+        config = load_repo_vscodeclaude_config("mcp_coder")
+        assert "setup_commands_macos" not in config
+        assert "setup_commands_windows" not in config
+        assert "setup_commands_linux" not in config
 
     def test_sanitize_folder_name(self) -> None:
         """Removes invalid characters from folder names."""

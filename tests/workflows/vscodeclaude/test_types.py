@@ -53,7 +53,11 @@ class TestTypeHints:
     def test_repo_vscodeclaude_config_type_structure(self) -> None:
         """RepoVSCodeClaudeConfig has all expected fields."""
         annotations = RepoVSCodeClaudeConfig.__annotations__
-        expected_fields = {"setup_commands_windows", "setup_commands_linux"}
+        expected_fields = {
+            "setup_commands_windows",
+            "setup_commands_linux",
+            "setup_commands_macos",
+        }
         assert set(annotations.keys()) == expected_fields
 
     def test_vscodeclaude_session_creation(self) -> None:
@@ -98,14 +102,24 @@ class TestTypeHints:
         config: RepoVSCodeClaudeConfig = {
             "setup_commands_windows": ["cmd1", "cmd2"],
             "setup_commands_linux": ["cmd3", "cmd4"],
+            "setup_commands_macos": ["cmd5", "cmd6"],
         }
         assert isinstance(config["setup_commands_windows"], list)
         assert isinstance(config["setup_commands_linux"], list)
+        assert isinstance(config["setup_commands_macos"], list)
 
     def test_repo_vscodeclaude_config_partial(self) -> None:
         """Can create a partial RepoVSCodeClaudeConfig instance."""
         config: RepoVSCodeClaudeConfig = {"setup_commands_windows": ["cmd1"]}
         assert "setup_commands_windows" in config
+        assert "setup_commands_linux" not in config
+        assert "setup_commands_macos" not in config
+
+    def test_repo_vscodeclaude_config_macos_only(self) -> None:
+        """Can create RepoVSCodeClaudeConfig with only setup_commands_macos."""
+        config: RepoVSCodeClaudeConfig = {"setup_commands_macos": ["brew install foo"]}
+        assert config["setup_commands_macos"] == ["brew install foo"]
+        assert "setup_commands_windows" not in config
         assert "setup_commands_linux" not in config
 
 
