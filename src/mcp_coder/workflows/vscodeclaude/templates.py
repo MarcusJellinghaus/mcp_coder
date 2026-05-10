@@ -6,15 +6,17 @@ TWO-ENVIRONMENT SETUP:
 This system uses two separate Python virtual environments for proper isolation:
 
 1. MCP-CODER ENVIRONMENT:
-   - Location: {MCP_CODER_PROJECT_DIR}\.venv (where coordinator was run from)
+   - Location: {MCP_CODER_PROJECT_DIR}/.venv (where coordinator was run from)
+     (Windows: \.venv\Scripts; POSIX: /.venv/bin)
    - Purpose: Contains mcp-coder executable and dependencies
    - Source: Set by coordinator before launching VS Code
    - Access: Added to PATH so mcp-coder commands work in project context
 
 2. PROJECT ENVIRONMENT:
-   - Location: {Current Directory}\.venv (issue-specific workspace)
+   - Location: {Current Directory}/.venv (issue-specific workspace)
    - Purpose: Contains project dependencies (pytest, etc.)
-   - Activated: Direct activation with 'call .venv\Scripts\activate.bat'
+   - Activated: Windows: 'call .venv\Scripts\activate.bat';
+     POSIX: 'source .venv/bin/activate'
    - Usage: Active Python environment for code execution
 
 WORKFLOW:
@@ -24,6 +26,14 @@ WORKFLOW:
 3. Script creates/activates project venv with dependencies
 4. MCP-Coder tools added to PATH from install location
 5. Automation runs using mcp-coder from PATH, project Python from venv
+
+PLATFORM TEMPLATES:
+-------------------
+Each section has a Windows variant (.bat, %VAR%, backslashes, Scripts/)
+and a POSIX variant (sh, $VAR, forward slashes, bin/) chosen in Python at
+script-creation time. No `case $(uname)` inside the generated shell — all
+platform decisions are baked in by the caller in workspace.py for
+testability.
 
 BENEFITS:
 - Isolation: Each project gets its own dependencies
