@@ -164,6 +164,9 @@ def emit_session_start(
     payload: dict[str, object] = {"provider": provider}
     if runtime_info is not None:
         payload["mcp_coder_version"] = runtime_info.mcp_coder_version
+        payload["mcp_coder_utils_version"] = runtime_info.mcp_coder_utils_version
+        payload["python_version"] = runtime_info.python_version
+        payload["claude_code_version"] = runtime_info.claude_code_version
         payload["tool_env"] = runtime_info.tool_env_path
         payload["project_venv"] = runtime_info.project_venv_path
         payload["project_dir"] = runtime_info.project_dir

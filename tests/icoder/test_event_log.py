@@ -236,8 +236,62 @@ def test_emit_session_start_includes_runtime_info_fields(tmp_path: Path) -> None
     assert payload["provider"] == "langchain"
     assert payload["session_id"] == "sess-99"
     assert payload["mcp_coder_version"] == "9.9.9"
+    assert payload["mcp_coder_utils_version"] == "9.9.9"
+    assert payload["python_version"] == "3.13.0"
+    assert payload["claude_code_version"] == "1.2.3"
     assert payload["tool_env"] == "/fake/tool"
     assert payload["project_venv"] == "/fake/.venv"
     assert payload["project_dir"] == "/fake/proj"
     assert payload["mcp_servers"] == {"srv": "1.0"}
     assert payload["mcp_connection_status"] == {}
+
+
+def test_emit_session_start_payload_covers_live_banner_keys(tmp_path: Path) -> None:
+    """Persisted session_start payload contains every key the live banner uses.
+
+    ``format_runtime_banner`` is invoked from ``on_mount`` with a
+    ``RuntimeInfo``-shaped dict and from ``do_resume`` with the
+    ``session_start`` event payload. For the replayed banner to render
+    the same set of lines as the live banner, every key the renderer
+    reads must be present in the persisted payload (under either the
+    live name or its session_start alias).
+    """
+    from mcp_coder.icoder.env_setup import RuntimeInfo
+    from mcp_coder.utils.mcp_verification import ClaudeMCPStatus, MCPServerInfo
+
+    runtime_info = RuntimeInfo(
+        mcp_coder_version="1.2.3",
+        mcp_coder_utils_version="4.5.6",
+        python_version="3.13.0",
+        claude_code_version="claude 1.0.0",
+        tool_env_path="/tool",
+        project_venv_path="/proj/.venv",
+        project_dir="/proj",
+        env_vars={},
+        mcp_servers=[
+            MCPServerInfo(name="srv-a", path=Path("/srv-a"), version="9.0"),
+        ],
+        mcp_connection_status=[
+            ClaudeMCPStatus(name="srv-a", status_text="Connected", ok=True),
+        ],
+    )
+    with EventLog(logs_dir=tmp_path) as log:
+        emit_session_start(log, provider="claude", runtime_info=runtime_info)
+        path = log.current_path
+
+    events = list(iter_events(path))
+    payload = events[0]
+
+    # Live-banner keys read by format_runtime_banner. The renderer
+    # accepts either the RuntimeInfo name (e.g. tool_env_path) or the
+    # session_start alias (e.g. tool_env); the persisted payload uses
+    # the alias for the path fields.
+    assert "mcp_coder_version" in payload
+    assert "mcp_coder_utils_version" in payload
+    assert "python_version" in payload
+    assert "claude_code_version" in payload
+    assert "tool_env" in payload or "tool_env_path" in payload
+    assert "project_venv" in payload or "project_venv_path" in payload
+    assert "project_dir" in payload
+    assert "mcp_servers" in payload
+    assert "mcp_connection_status" in payload
