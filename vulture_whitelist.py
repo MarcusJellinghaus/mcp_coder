@@ -249,6 +249,7 @@ _.handle_help
 _.handle_info
 _.handle_quit
 _.handle_color
+_.handle_load
 
 # icoder/ui/app.py - Textual styles set programmatically
 _.border
@@ -265,6 +266,10 @@ _.action_noop
 
 # icoder/ui/widgets/branch_info_bar.py - Textual button event handler
 _.on_button_pressed
+
+# icoder/ui/widgets/session_picker.py - Textual event handler + action binding (Esc)
+_.on_option_list_option_selected
+_.action_cancel
 
 # tests/icoder/test_command_registry.py - Test command handler
 _.handle_test
