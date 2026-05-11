@@ -685,7 +685,7 @@ def add_icoder_parser(subparsers: Any) -> None:
         help="Disable tool output formatting (show raw output)",
     )
 
-    # Session continuation options (mutually exclusive with each other)
+    # Session continuation options (all three are mutually exclusive)
     continue_group = icoder_parser.add_mutually_exclusive_group()
     continue_group.add_argument(
         "--continue-session-from",
@@ -698,12 +698,11 @@ def add_icoder_parser(subparsers: Any) -> None:
         action="store_true",
         help="Open a session picker over prior icoder logs in the project",
     )
-
-    icoder_parser.add_argument(
+    continue_group.add_argument(
         "--session-id",
         type=str,
         metavar="ID",
-        help="Direct session ID for continuation (overrides file-based options)",
+        help="Direct session ID for continuation",
     )
     icoder_parser.add_argument(
         "--initial-color",

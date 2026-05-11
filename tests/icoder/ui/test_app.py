@@ -564,7 +564,11 @@ async def test_do_resume_re_records_events_into_new_log(
 
         events_in_new = list(iter_events(new_log_path))
         kinds = [e.get("event") for e in events_in_new]
-        # session_start NOT re-emitted; replayed inputs/events ARE.
-        assert "session_start" not in kinds
+        # The rotated log starts with a freshly-emitted session_start
+        # (so the picker can see it); the source log's session_start is
+        # NOT replayed. Other replayed events ARE re-emitted.
+        assert kinds[0] == "session_start"
+        assert events_in_new[0].get("provider") == "claude"
+        assert kinds.count("session_start") == 1
         assert "input_received" in kinds
         assert "stream_event" in kinds

@@ -5,7 +5,7 @@ import logging
 from importlib.metadata import PackageNotFoundError
 from pathlib import Path
 
-from ...icoder.core.event_log import read_session_id_from_log
+from ...icoder.core.event_log import emit_session_start, read_session_id_from_log
 from ...icoder.core.log_inventory import list_icoder_logs
 from ...icoder.env_setup import setup_icoder_environment
 from ...icoder.ui.widgets.session_picker import run_startup_picker
@@ -83,19 +83,15 @@ def execute_icoder(args: argparse.Namespace) -> int:
             mcp_manager = MCPManager(server_config)
 
         # Resume resolution.
-        # Priority: --session-id > --continue-session-from > --continue-session
+        # The three flags (--session-id / --continue-session-from /
+        # --continue-session) are mutually exclusive at the argparse layer,
+        # so at most one branch fires here. --session-id is consumed
+        # directly via ``resume_session_id`` below; the other two flags
+        # need to resolve to a log path first.
         resume_session_id = getattr(args, "session_id", None)
         resume_log_path: Path | None = None
 
-        if resume_session_id:
-            if getattr(args, "continue_session_from", None) or getattr(
-                args, "continue_session", False
-            ):
-                logger.log(
-                    OUTPUT,
-                    "Using explicit session ID (ignoring file-based continuation)",
-                )
-        elif getattr(args, "continue_session_from", None):
+        if getattr(args, "continue_session_from", None):
             fp = Path(args.continue_session_from)
             if fp.suffix.lower() == ".json":
                 logger.error(
@@ -155,23 +151,12 @@ def execute_icoder(args: argparse.Namespace) -> int:
 
         try:
             with EventLog(logs_dir=project_dir / "logs") as event_log:
-                session_start_payload: dict[str, object] = {
-                    "provider": provider,
-                    "mcp_coder_version": runtime_info.mcp_coder_version,
-                    "tool_env": runtime_info.tool_env_path,
-                    "project_venv": runtime_info.project_venv_path,
-                    "project_dir": runtime_info.project_dir,
-                    "mcp_servers": {
-                        s.name: s.version for s in runtime_info.mcp_servers
-                    },
-                    "mcp_connection_status": {
-                        s.name: {"ok": s.ok, "status_text": s.status_text}
-                        for s in (runtime_info.mcp_connection_status or [])
-                    },
-                }
-                if session_id is not None:
-                    session_start_payload["session_id"] = session_id
-                event_log.emit("session_start", **session_start_payload)
+                emit_session_start(
+                    event_log,
+                    provider=provider,
+                    runtime_info=runtime_info,
+                    session_id=session_id,
+                )
                 app_core = AppCore(
                     llm_service,
                     event_log,

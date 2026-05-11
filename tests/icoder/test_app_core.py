@@ -116,8 +116,9 @@ def test_multiple_inputs(app_core: AppCore, event_log: EventLog) -> None:
     list(app_core.stream_llm("question"))
     assert len(event_log.entries) >= 4
     app_core.handle_input("/clear")
-    # /clear rotates the log → in-memory entries are reset
-    assert len(event_log.entries) == 0
+    # /clear rotates the log → in-memory entries are reset and a fresh
+    # session_start event is emitted into the new file.
+    assert [e.event for e in event_log.entries] == ["session_start"]
 
 
 def test_runtime_info_none_by_default(app_core: AppCore) -> None:
@@ -670,3 +671,79 @@ def test_prepare_for_resume_rotates_event_log(
 def test_provider_property(app_core: AppCore) -> None:
     """AppCore.provider exposes the underlying LLM service provider."""
     assert app_core.provider == "claude"
+
+
+# --- self-contained-rotated-log tests (Decisions #4 + #29) ---
+
+
+def test_prepare_for_resume_emits_session_start_in_new_log(
+    fake_llm: FakeLLMService, tmp_path: Path
+) -> None:
+    """The post-resume rotated log starts with session_start{provider}."""
+    src_log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
+    _write_log(
+        src_log_path,
+        [{"t": 0.0, "event": "session_start", "provider": "claude"}],
+    )
+    with EventLog(logs_dir=tmp_path) as live_log:
+        core = AppCore(llm_service=fake_llm, event_log=live_log)
+        core.prepare_for_resume(src_log_path)
+        rotated_path = live_log.current_path
+
+    from mcp_coder.icoder.core.event_log import iter_events
+
+    events = list(iter_events(rotated_path))
+    assert len(events) >= 1
+    assert events[0]["event"] == "session_start"
+    assert events[0]["provider"] == "claude"
+
+
+def test_prepare_for_resume_log_visible_to_picker(
+    fake_llm: FakeLLMService, tmp_path: Path
+) -> None:
+    """list_icoder_logs (provider-filtered) includes the post-resume log."""
+    src_log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
+    _write_log(
+        src_log_path,
+        [{"t": 0.0, "event": "session_start", "provider": "claude"}],
+    )
+    with EventLog(logs_dir=tmp_path) as live_log:
+        core = AppCore(llm_service=fake_llm, event_log=live_log)
+        core.prepare_for_resume(src_log_path)
+        rotated_path = live_log.current_path
+
+    from mcp_coder.icoder.core.log_inventory import list_icoder_logs
+
+    summaries = list_icoder_logs(tmp_path, provider="claude")
+    paths = [s.path for s in summaries]
+    assert rotated_path in paths
+
+
+def test_clear_emits_session_start_in_new_log(
+    fake_llm: FakeLLMService, tmp_path: Path
+) -> None:
+    """After /clear, the rotated log starts with session_start{provider}."""
+    with EventLog(logs_dir=tmp_path) as live_log:
+        core = AppCore(llm_service=fake_llm, event_log=live_log)
+        core.handle_input("/clear")
+        rotated_path = live_log.current_path
+
+    from mcp_coder.icoder.core.event_log import iter_events
+
+    events = list(iter_events(rotated_path))
+    assert events[0]["event"] == "session_start"
+    assert events[0]["provider"] == "claude"
+
+
+def test_clear_log_visible_to_picker(fake_llm: FakeLLMService, tmp_path: Path) -> None:
+    """list_icoder_logs (provider-filtered) includes the post-/clear log."""
+    with EventLog(logs_dir=tmp_path) as live_log:
+        core = AppCore(llm_service=fake_llm, event_log=live_log)
+        core.handle_input("/clear")
+        rotated_path = live_log.current_path
+
+    from mcp_coder.icoder.core.log_inventory import list_icoder_logs
+
+    summaries = list_icoder_logs(tmp_path, provider="claude")
+    paths = [s.path for s in summaries]
+    assert rotated_path in paths

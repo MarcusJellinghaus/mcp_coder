@@ -107,3 +107,20 @@ def test_icoder_initial_color_default() -> None:
     parser = create_parser()
     args = parser.parse_args(["icoder"])
     assert args.initial_color is None
+
+
+@pytest.mark.parametrize(
+    "flags",
+    [
+        ["--continue-session", "--continue-session-from", "log.jsonl"],
+        ["--continue-session", "--session-id", "sess-1"],
+        ["--continue-session-from", "log.jsonl", "--session-id", "sess-1"],
+    ],
+)
+def test_icoder_session_resume_flags_mutually_exclusive(flags: list[str]) -> None:
+    """Passing two of {--continue-session, --continue-session-from, --session-id}
+    raises an argparse error before any session resolution runs.
+    """
+    parser = create_parser()
+    with pytest.raises(SystemExit):
+        parser.parse_args(["icoder", *flags])

@@ -11,7 +11,11 @@ from mcp_coder.icoder.core.command_registry import (
     CommandRegistry,
     create_default_registry,
 )
-from mcp_coder.icoder.core.event_log import EventLog, read_session_id_from_log
+from mcp_coder.icoder.core.event_log import (
+    EventLog,
+    emit_session_start,
+    read_session_id_from_log,
+)
 from mcp_coder.icoder.core.types import Response, TokenUsage
 from mcp_coder.icoder.env_setup import RuntimeInfo
 from mcp_coder.icoder.services.llm_service import LLMService
@@ -71,6 +75,15 @@ class AppCore:
             if response.reset_session:
                 self._llm_service.reset_session()
                 self._event_log.rotate()
+                # The rotated log starts empty — emit a fresh session_start
+                # so the post-/clear file remains self-contained and visible
+                # to the startup picker (which filters on provider).
+                emit_session_start(
+                    self._event_log,
+                    provider=self._llm_service.provider,
+                    runtime_info=self._runtime_info,
+                    session_id=self._llm_service.session_id,
+                )
             return response
 
         # Not a command → send to LLM
@@ -174,7 +187,10 @@ class AppCore:
 
         Delegates id resolution to ``read_session_id_from_log``; the
         resolved id (or ``None``) is set on the LLM service. The event
-        log is rotated so the new conversation gets its own JSONL file.
+        log is rotated so the new conversation gets its own JSONL file,
+        and a fresh ``session_start`` (with the current provider /
+        runtime_info / session_id) is emitted so the resumed-from log
+        is self-contained and visible to future pickers.
 
         Returns:
             The resolved session_id string, or ``None`` if no candidate
@@ -183,4 +199,10 @@ class AppCore:
         session_id = read_session_id_from_log(log_path)
         self._llm_service.set_session_id(session_id)
         self._event_log.rotate()
+        emit_session_start(
+            self._event_log,
+            provider=self._llm_service.provider,
+            runtime_info=self._runtime_info,
+            session_id=self._llm_service.session_id,
+        )
         return session_id
