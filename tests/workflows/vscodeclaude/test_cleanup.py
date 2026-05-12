@@ -1,6 +1,7 @@
 """Test cleanup functions for VSCode Claude."""
 
 import json
+import logging
 import shutil
 from pathlib import Path
 
@@ -2292,3 +2293,163 @@ class TestSoftDeleteAndRetry:
         # Entry should be removed after successful retry
         assert load_to_be_deleted(str(tmp_path)) == set()
         assert not folder.exists()
+
+    def test_cleanup_reconciles_to_be_deleted_when_vscode_open(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Reconciles .to_be_deleted entry when VSCode is open on the folder.
+
+        Removes entry without invoking safe_delete_folder, emits a
+        reconciliation warning. Closes the loop on prior false-negative
+        soft-deletes (issue #953 Item #8).
+        """
+        from mcp_coder.workflows.vscodeclaude.helpers import (
+            TO_BE_DELETED_FILENAME,
+            load_to_be_deleted,
+        )
+
+        folder_name = "mcp_coder_937"
+        folder = tmp_path / folder_name
+        folder.mkdir()
+        registry = tmp_path / TO_BE_DELETED_FILENAME
+        registry.write_text(f"{folder_name}\n")
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
+            lambda active_set, cached_issues_by_repo=None: [],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_vscode_open_for_folder",
+            lambda path: (True, 12345),
+        )
+
+        safe_delete_calls: list[Path] = []
+
+        def mock_safe_delete(path: Path) -> DeletionResult:
+            safe_delete_calls.append(path)
+            return DeletionResult(success=True)
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.safe_delete_folder",
+            mock_safe_delete,
+        )
+
+        with caplog.at_level(
+            logging.WARNING, logger="mcp_coder.workflows.vscodeclaude.cleanup"
+        ):
+            cleanup_stale_sessions(
+                workspace_base=str(tmp_path), active_set={}, dry_run=False
+            )
+
+        # Registry entry removed
+        assert load_to_be_deleted(str(tmp_path)) == set()
+        # safe_delete_folder was NOT invoked
+        assert safe_delete_calls == []
+        # Folder still exists (we did not delete it)
+        assert folder.exists()
+        # Warning logged
+        assert any(
+            "Reconciled .to_be_deleted entry" in record.getMessage()
+            and folder_name in record.getMessage()
+            for record in caplog.records
+        )
+
+    def test_cleanup_no_reconciliation_runs_existing_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When VSCode is not open, existing safe_delete retry path runs."""
+        from mcp_coder.workflows.vscodeclaude.helpers import (
+            TO_BE_DELETED_FILENAME,
+            load_to_be_deleted,
+        )
+
+        folder_name = "mcp_coder_937"
+        folder = tmp_path / folder_name
+        folder.mkdir()
+        registry = tmp_path / TO_BE_DELETED_FILENAME
+        registry.write_text(f"{folder_name}\n")
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
+            lambda active_set, cached_issues_by_repo=None: [],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_vscode_open_for_folder",
+            lambda path: (False, None),
+        )
+
+        safe_delete_calls: list[Path] = []
+
+        def mock_safe_delete(path: Path) -> DeletionResult:
+            safe_delete_calls.append(path)
+            shutil.rmtree(path)
+            return DeletionResult(success=True)
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.safe_delete_folder",
+            mock_safe_delete,
+        )
+
+        cleanup_stale_sessions(
+            workspace_base=str(tmp_path), active_set={}, dry_run=False
+        )
+
+        # safe_delete_folder was invoked exactly once on the folder
+        assert safe_delete_calls == [folder]
+        # Registry cleared after successful retry
+        assert load_to_be_deleted(str(tmp_path)) == set()
+
+    def test_cleanup_reconciliation_idempotent(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Second cleanup pass after reconciliation emits no spurious warning."""
+        from mcp_coder.workflows.vscodeclaude.helpers import (
+            TO_BE_DELETED_FILENAME,
+            load_to_be_deleted,
+        )
+
+        folder_name = "mcp_coder_937"
+        folder = tmp_path / folder_name
+        folder.mkdir()
+        registry = tmp_path / TO_BE_DELETED_FILENAME
+        registry.write_text(f"{folder_name}\n")
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
+            lambda active_set, cached_issues_by_repo=None: [],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_vscode_open_for_folder",
+            lambda path: (True, 12345),
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.safe_delete_folder",
+            lambda path: DeletionResult(success=True),
+        )
+
+        # First pass — reconciliation fires and entry is removed.
+        cleanup_stale_sessions(
+            workspace_base=str(tmp_path), active_set={}, dry_run=False
+        )
+        assert load_to_be_deleted(str(tmp_path)) == set()
+
+        # Second pass — registry is empty, no reconciliation warning should fire.
+        caplog.clear()
+        with caplog.at_level(
+            logging.WARNING, logger="mcp_coder.workflows.vscodeclaude.cleanup"
+        ):
+            cleanup_stale_sessions(
+                workspace_base=str(tmp_path), active_set={}, dry_run=False
+            )
+
+        assert load_to_be_deleted(str(tmp_path)) == set()
+        assert not any(
+            "Reconciled .to_be_deleted entry" in record.getMessage()
+            for record in caplog.records
+        )

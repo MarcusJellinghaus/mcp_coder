@@ -26,6 +26,7 @@ from .issues import (
     is_status_eligible_for_session,
 )
 from .sessions import (
+    is_vscode_open_for_folder,
     load_sessions,
     remove_session,
     warn_orphan_folders,
@@ -314,6 +315,16 @@ def cleanup_stale_sessions(
             if not folder_path.exists():
                 remove_from_to_be_deleted(workspace_base, folder_name)
                 logger.info("Removed stale .to_be_deleted entry: %s", folder_name)
+                continue
+            is_open, _ = is_vscode_open_for_folder(str(folder_path))
+            if is_open:
+                remove_from_to_be_deleted(workspace_base, folder_name)
+                logger.warning(
+                    "Reconciled .to_be_deleted entry — VSCode is open on %s; "
+                    "removing entry without deletion (prior soft-delete was a "
+                    "false negative).",
+                    folder_name,
+                )
                 continue
             deletion = safe_delete_folder(folder_path)
             if deletion.success:
