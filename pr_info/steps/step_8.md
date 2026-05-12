@@ -21,6 +21,19 @@ Verify that the cross-item flows in the acceptance criteria work end-to-end:
 
 - `tests/workflows/vscodeclaude/test_cleanup.py` (add two new tests; no
   production code changes)
+- `tests/workflows/vscodeclaude/test_status_display.py` (Scenario A's
+  cross-module assertion — see "Cross-module assertion" below)
+
+### Cross-module assertion (Scenario A)
+
+Scenario A asserts that `display_status_table` no longer lists the
+cleaned-up session. **Decision (engineer's call): split that assertion into
+a separate test in `test_status_display.py`** that consumes the same
+fixtures as the cleanup test. Rationale: keeps `test_cleanup.py` focused on
+cleanup semantics and avoids a cross-module import dependency in a cleanup
+test. The new test in `test_status_display.py` re-runs the Scenario A setup
+(or shares fixtures via a `conftest.py` helper) and asserts the post-cleanup
+sessions list renders without the removed session.
 
 ## WHAT — function signatures
 
@@ -60,10 +73,12 @@ run:
     active_set = build_active_session_set(sessions)
     cleanup_stale_sessions(workspace_base, active_set, dry_run=False, cached_issues_by_repo=...)
 
-assert:
+assert (in test_cleanup.py):
     session record removed from sessions.json
     workspace_base/mcp_coder_188.code-workspace does NOT exist
     if .to_be_deleted entry existed: entry removed
+
+assert (in test_status_display.py, separate test):
     subsequent display_status_table does not list session
 ```
 

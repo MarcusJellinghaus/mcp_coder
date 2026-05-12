@@ -17,8 +17,10 @@ sessions are blocking new launches.
 
 The issue prescribes adding a new "At max sessions ..." log *and* keeping the
 existing "No new sessions started (active: N/M)" tail. Single emission is
-simpler — replace the existing tail with one always-emitted summary that
-includes the folder list when at capacity.
+simpler — **extend the existing tail message** rather than replace it with a
+parallel emission. At capacity, the tail gets the new detailed folder-list
+line; below capacity, the tail preserves today's wording verbatim. One log
+site, one emission, branched on `current_count >= max_sessions`.
 
 ## WHERE
 

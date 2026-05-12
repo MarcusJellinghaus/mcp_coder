@@ -23,6 +23,8 @@ single place.
   extend `Missing` branch)
 - `src/mcp_coder/workflows/vscodeclaude/sessions.py` (tighten
   `session_has_artifacts`)
+- `src/mcp_coder/workflows/vscodeclaude/session_restart.py` (refactor one
+  inline construction at line 396 — see HOW)
 - `src/mcp_coder/workflows/vscodeclaude/__init__.py` (re-export the helper if
   needed by tests; otherwise internal)
 - `tests/workflows/vscodeclaude/test_workspace.py`
@@ -45,13 +47,18 @@ def session_has_artifacts(folder: str) -> bool:
 
 ## HOW — integration points
 
-- Refactor three sites to use the helper:
+- Refactor four sites to use the helper:
   - `workspace.py:create_workspace_file` — replace the inline construction
     near line 422.
   - `cleanup.py:delete_session_folder` — replace the inline construction
     near line 230.
   - `cleanup.py:cleanup_stale_sessions` — new use inside the `Missing` branch
     (see below).
+  - `session_restart.py` near line 396 — replace
+    `workspace_file = workspace_base / f"{folder_name}.code-workspace"` with
+    `workspace_file = get_workspace_file_path(str(workspace_base), folder_name)`
+    (or pass `Path` if the helper accepts it — keep signatures consistent).
+    Confirm the exact line via `search_files` before editing.
 - Drop the workspace-file branch in `session_has_artifacts`; update its
   docstring accordingly.
 - Extend the `Missing` branch in `cleanup_stale_sessions`:

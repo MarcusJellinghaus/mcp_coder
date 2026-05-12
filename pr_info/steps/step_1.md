@@ -47,6 +47,11 @@ re-exports unchanged.
   caches results) and the same substring check `is_vscode_open_for_folder`
   uses today (lowercase `folder_str` or `folder_name`).
 - No changes to callers; behavior change only.
+- **Cache semantics preserved**: the change to `_get_vscode_window_titles`
+  (returning `(pid, title)` tuples) must preserve the existing
+  `_vscode_pids_cache` / `_vscode_window_cache` refresh semantics. Only the
+  cached payload type changes — do not modify cache lifetime, refresh
+  triggers, or `clear_vscode_window_cache` behavior.
 
 ## ALGORITHM
 

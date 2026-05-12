@@ -91,7 +91,10 @@ In `tests/workflows/vscodeclaude/test_status_display.py`:
    (`Path(folder).exists() is False`), and
    `active_set[session["folder"]] = True`. Capture `display_status_table`
    output via `capsys`. Assert the row appears with `Running (zombie)`,
-   `Missing`, and `-> Investigate zombie`.
+   `Missing`, and `-> Investigate zombie`. **Also assert the `(Closed)`
+   issue-state prefix on the Status column is preserved on the zombie row**
+   — both facts (issue state + zombie process) are conveyed independently
+   per summary.md's "keep both since they convey different facts" rationale.
 2. **Non-zombie closed + missing still skipped**: same scenario but
    `active_set[folder] = False` → row does NOT appear (existing behavior
    preserved).

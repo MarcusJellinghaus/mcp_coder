@@ -36,7 +36,8 @@ positives.
 
 ### 2. Process identity is verified via `create_time`, not just PID
 
-`VSCodeClaudeSession` gains an optional `vscode_pid_create_time: float | None`.
+`VSCodeClaudeSession` gains a **required** `vscode_pid_create_time: float | None`
+field (Option B; see override note at the bottom of this section).
 **Invariant**: `vscode_pid` and `vscode_pid_create_time` always describe the
 same process. The invariant is self-enforcing because `update_session_pid` is
 the only populator — it captures both fields atomically. No caller can bypass
@@ -45,14 +46,26 @@ field on the first cmdline-match refresh after launch (simpler than the
 two-path scheme in the issue, since launch-time capture on Windows almost
 always returns `None` for the launcher `.cmd` anyway).
 
-No schema migration: all reads use `session.get("vscode_pid_create_time")` so
-missing key → `None` → falls back to today's loose name-only check.
+**Schema migration on load**: `load_sessions` in
+`src/mcp_coder/workflows/vscodeclaude/sessions.py` runs a one-time, read-time
+backfill — any session record missing `vscode_pid_create_time` gets the key
+added in-memory with value `None`. No forced file rewrite; the key persists
+naturally on the next unrelated save (e.g. after `update_session_pid`).
+Because the key is guaranteed present after load, all reads use subscript
+access (`session["vscode_pid_create_time"]`), not `.get()`.
+
+> **Override notice**: this design choice (Option B — required field +
+> migration on load) overrides the issue's "no explicit migration" stance.
+> The override was approved by the user during plan review.
 
 ### 3. Workspace-file path has a single source of truth
 
 `workspace.py:get_workspace_file_path(workspace_base, folder_name) -> Path`
 becomes the only place the `{workspace_base}/{folder_name}.code-workspace`
-pattern is constructed. Three existing/new call sites use it.
+pattern is constructed. Four existing/new call sites use it:
+`workspace.py:create_workspace_file`, `cleanup.py:delete_session_folder`,
+`cleanup.py:cleanup_stale_sessions` (new Missing-branch unlink), and
+`session_restart.py` near line 396.
 
 ### 4. `session_has_artifacts` requires the folder
 
@@ -82,9 +95,10 @@ VSCode cold-start + extension install delays.
 
 ### 8. At-capacity diagnostic is one log line
 
-Replace the existing "No new sessions started (active: N/M)" tail message
-with a single line that always includes the folder basenames consuming the
-slots when at capacity. One log site, no coordination between two emissions.
+Extend the existing "No new sessions started (active: N/M)" tail message:
+at-capacity gets the new detailed folder-list line; below-capacity preserves
+today's wording verbatim. One log site, branched on
+`current_count >= max_sessions`, no coordination between two emissions.
 
 ## Files Created or Modified
 
@@ -114,6 +128,10 @@ slots when at capacity. One log site, no coordination between two emissions.
 - `src/mcp_coder/workflows/vscodeclaude/session_launch.py`
   Drop/downgrade the per-repo "Already at max sessions" log inside
   `process_eligible_issues`.
+- `src/mcp_coder/workflows/vscodeclaude/session_restart.py`
+  Refactor inline `.code-workspace` path construction near line 396 to use
+  `get_workspace_file_path` helper (no behavioral change). Also benefits
+  transparently from the `update_session_pid` invariant.
 
 ### Modified (Tests)
 
@@ -125,12 +143,15 @@ slots when at capacity. One log site, no coordination between two emissions.
 
 ### Not modified
 
-- `src/mcp_coder/workflows/vscodeclaude/session_restart.py` —
-  unchanged; benefits transparently from the `update_session_pid` invariant.
 - `src/mcp_coder/workflows/vscodeclaude/__init__.py` — public re-exports
   unchanged (signatures preserved where possible).
 
 ## Implementation Steps
+
+**Numbering note**: step numbers below differ from the issue's item numbers.
+The mapping is shown in the table's "Title" column (each step file is also
+labeled `(Item #N)` in its title). Cross-references in step files use step
+numbers; cross-references to the issue use item numbers.
 
 Each step is one commit: tests + implementation + checks passing.
 
@@ -153,8 +174,10 @@ Each step is one commit: tests + implementation + checks passing.
   zombies appear with `VSCode: Running (zombie)` and `Git: Missing`.
 - `vscodeclaude launch` at capacity logs the exact folder basenames consuming
   the slots.
-- Old `sessions.json` files load unchanged; missing `vscode_pid_create_time`
-  treated as `None` and self-populates on first `update_session_pid` call.
+- Old `sessions.json` files load via `load_sessions`'s in-memory backfill:
+  records without `vscode_pid_create_time` get the key added with value
+  `None` after JSON parse; the field self-populates on the first
+  `update_session_pid` call and persists on the next save.
 - Composition scenario A — orphan workspace file end-to-end: cleanup hits
   `Missing` branch and removes both records in one pass.
 - Composition scenario B — false-negative reconciliation: `.to_be_deleted`

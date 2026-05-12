@@ -23,6 +23,22 @@ this step uses **`update_session_pid` as the only populator**.
 cmdline-match refresh after launch. Single populator → atomic invariant is
 self-enforcing.
 
+## Schema decision — Option B (overrides issue's "no migration" stance)
+
+The user chose **Option B** during plan review: `vscode_pid_create_time` is a
+**required** key on `VSCodeClaudeSession` (not `NotRequired`). To support
+existing `sessions.json` files written before this change, `load_sessions`
+in `src/mcp_coder/workflows/vscodeclaude/sessions.py` runs a one-time,
+read-time backfill: any session record missing the key gets
+`vscode_pid_create_time = None` added in-memory after JSON parsing. No
+rewrite of `sessions.json` is forced — the file is rewritten on the next
+unrelated save path (e.g. `save_sessions` after `update_session_pid`), at
+which point the backfilled key is persisted naturally.
+
+Because the field is now guaranteed present on every loaded session,
+**reads use subscript access** (`session["vscode_pid_create_time"]`), not
+`.get(...)`. This overrides the issue's "no explicit migration" decision.
+
 ## WHERE
 
 - `src/mcp_coder/workflows/vscodeclaude/types.py`
@@ -59,9 +75,19 @@ def update_session_pid(folder: str, pid: int) -> None:
 
 ## HOW — integration points
 
-- All reads use `session.get("vscode_pid_create_time")` — never subscript.
+- All reads use **subscript access** (`session["vscode_pid_create_time"]`).
+  The `load_sessions` backfill guarantees the key is always present after
+  loading.
+- `load_sessions` (in `src/mcp_coder/workflows/vscodeclaude/sessions.py`,
+  defined near line 53) gains a one-line backfill loop after JSON parse:
+
+  ```python
+  for session in store["sessions"]:
+      session.setdefault("vscode_pid_create_time", None)
+  ```
+
 - `is_session_active` call site at `sessions.py:556` passes
-  `session.get("vscode_pid_create_time")` to `check_vscode_running`.
+  `session["vscode_pid_create_time"]` to `check_vscode_running`.
 - `update_session_pid` callers unchanged (`is_session_active`,
   `build_active_session_set`, `session_restart.py:409`). Atomicity is enforced
   inside the function — no caller can write one field without the other.
@@ -103,9 +129,11 @@ return True
 
 ## Tests (write first)
 
-1. **Migration**: load a `sessions.json` payload missing
-   `vscode_pid_create_time` → no error; session usable;
-   `check_vscode_running(pid, None)` falls back to loose name-only check.
+1. **`load_sessions` migration**: write a `sessions.json` payload whose
+   session records omit `vscode_pid_create_time`. Call `load_sessions()` →
+   no error; every returned session has `vscode_pid_create_time` present
+   with value `None`. Then `check_vscode_running(pid, None)` falls back to
+   loose name-only check.
 2. **Identity mismatch**: stored `create_time = 1000.0`, mock
    `psutil.Process(pid).create_time()` to return `2000.0` →
    `check_vscode_running(pid, 1000.0)` returns `False`.
@@ -121,6 +149,23 @@ return True
    `None`.
 6. **`build_session` defaults**: returned dict has
    `"vscode_pid_create_time": None`.
+
+### Existing tests to update (signature change of `check_vscode_running`)
+
+`check_vscode_running` now takes a second argument
+`expected_create_time: float | None`. Update the 5 existing call sites in
+`tests/workflows/vscodeclaude/test_sessions.py` (grep `check_vscode_running(`
+— currently at approx. lines 88, 93, 566, 584, 602):
+
+- Add a second positional argument: pass `None` to preserve current
+  intent (loose name-only check), e.g.
+  `check_vscode_running(None, None)`, `check_vscode_running(999999999, None)`,
+  `check_vscode_running(12345, None)`.
+- Where a test specifically exercises identity verification, pass a real
+  `create_time` value matching the mock.
+
+Run `grep -n "check_vscode_running("` across `tests/` once changes are
+applied to confirm no callers were missed.
 
 ## Done when
 
