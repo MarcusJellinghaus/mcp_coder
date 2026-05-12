@@ -22,12 +22,12 @@ def test_hidden_when_text_does_not_start_with_slash() -> None:
 
 
 def test_visible_with_all_commands_when_text_is_slash() -> None:
-    """'/' → visible=True, matches contains all 4 commands, highlighted_index=0."""
+    """'/' → visible=True, matches contains all built-in commands, highlighted_index=0."""
     registry = create_default_registry()
     state = compute_next_state("/", registry)
     assert state.visible is True
     names = {c.name for c in state.matches}
-    assert names == {"/help", "/clear", "/quit", "/exit"}
+    assert names == {"/help", "/clear", "/load", "/quit", "/exit"}
     assert state.highlighted_index == 0
 
 

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
 from typing import Callable
 
 
@@ -16,6 +18,7 @@ class Response:
     send_to_llm: bool = False  # True = forward original input to LLM
     llm_text: str | None = None  # When set and send_to_llm=True, send this instead
     reset_session: bool = False  # True = reset LLM session (new conversation)
+    open_picker: bool = False  # True = UI should open SessionPickerScreen
 
 
 @dataclass(frozen=True)
@@ -26,6 +29,17 @@ class Command:
     description: str  # Short help text
     handler: Callable[[list[str]], Response]  # handler(args) → Response
     show_in_help: bool = True  # False hides from /help, still in autocomplete
+
+
+@dataclass(frozen=True)
+class LogSummary:
+    """Inventory entry summarising one icoder JSONL log file."""
+
+    path: Path
+    timestamp: datetime
+    provider: str | None
+    n_turns: int
+    first_prompt: str
 
 
 @dataclass

@@ -99,10 +99,12 @@ def create_default_registry() -> CommandRegistry:
     # Import here to avoid circular imports
     from mcp_coder.icoder.core.commands.clear import register_clear
     from mcp_coder.icoder.core.commands.help import register_help
+    from mcp_coder.icoder.core.commands.load import register_load
     from mcp_coder.icoder.core.commands.quit import register_quit
 
     registry = CommandRegistry()
     register_help(registry)
     register_clear(registry)
+    register_load(registry)
     register_quit(registry)
     return registry

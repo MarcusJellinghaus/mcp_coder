@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Iterator
 
 from mcp_coder.icoder.core.colors import DEFAULT_PROMPT_COLOR, validate_color
@@ -10,7 +11,11 @@ from mcp_coder.icoder.core.command_registry import (
     CommandRegistry,
     create_default_registry,
 )
-from mcp_coder.icoder.core.event_log import EventLog
+from mcp_coder.icoder.core.event_log import (
+    EventLog,
+    emit_session_start,
+    read_session_id_from_log,
+)
 from mcp_coder.icoder.core.types import Response, TokenUsage
 from mcp_coder.icoder.env_setup import RuntimeInfo
 from mcp_coder.icoder.services.llm_service import LLMService
@@ -69,7 +74,16 @@ class AppCore:
                 self._event_log.emit("output_emitted", text=response.text)
             if response.reset_session:
                 self._llm_service.reset_session()
-                self._event_log.emit("session_reset")
+                self._event_log.rotate()
+                # The rotated log starts empty — emit a fresh session_start
+                # so the post-/clear file remains self-contained and visible
+                # to the startup picker (which filters on provider).
+                emit_session_start(
+                    self._event_log,
+                    provider=self._llm_service.provider,
+                    runtime_info=self._runtime_info,
+                    session_id=self._llm_service.session_id,
+                )
             return response
 
         # Not a command → send to LLM
@@ -112,7 +126,9 @@ class AppCore:
 
         # Auto-store response for --continue-session
         response_data = assembler.result()
-        store_session(response_data, text)
+        store_session(
+            response_data, text, log_file_path=str(self._event_log.current_path)
+        )
 
     @property
     def command_history(self) -> CommandHistory:
@@ -160,3 +176,33 @@ class AppCore:
     def session_id(self) -> str | None:
         """Current session ID from LLM service."""
         return self._llm_service.session_id
+
+    @property
+    def provider(self) -> str:
+        """Current LLM provider name from the LLM service."""
+        return self._llm_service.provider
+
+    def prepare_for_resume(self, log_path: Path) -> str | None:
+        """Resolve a session_id from a prior log and rotate the event log.
+
+        Delegates id resolution to ``read_session_id_from_log``; the
+        resolved id (or ``None``) is set on the LLM service. The event
+        log is rotated so the new conversation gets its own JSONL file,
+        and a fresh ``session_start`` (with the current provider /
+        runtime_info / session_id) is emitted so the resumed-from log
+        is self-contained and visible to future pickers.
+
+        Returns:
+            The resolved session_id string, or ``None`` if no candidate
+            was found in the log.
+        """
+        session_id = read_session_id_from_log(log_path)
+        self._llm_service.set_session_id(session_id)
+        self._event_log.rotate()
+        emit_session_start(
+            self._event_log,
+            provider=self._llm_service.provider,
+            runtime_info=self._runtime_info,
+            session_id=self._llm_service.session_id,
+        )
+        return session_id

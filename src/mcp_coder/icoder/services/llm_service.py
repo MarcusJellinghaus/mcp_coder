@@ -23,6 +23,9 @@ class LLMService(Protocol):
     def reset_session(self) -> None:
         """Reset session state to start a new conversation."""
 
+    def set_session_id(self, session_id: str | None) -> None:
+        """Replace the current session_id. None = fresh conversation."""
+
     @property
     def provider(self) -> str:
         """LLM provider name (e.g. 'claude', 'langchain')."""
@@ -85,6 +88,10 @@ class RealLLMService:
         """Reset session state to start a new conversation."""
         self._session_id = None
 
+    def set_session_id(self, session_id: str | None) -> None:
+        """Replace the current session_id. None = fresh conversation."""
+        self._session_id = session_id
+
     @property
     def provider(self) -> str:
         """LLM provider name."""
@@ -132,6 +139,10 @@ class FakeLLMService:
     def reset_session(self) -> None:
         """Reset session state to start a new conversation."""
         self._session_id = None
+
+    def set_session_id(self, session_id: str | None) -> None:
+        """Replace the current session_id. None = fresh conversation."""
+        self._session_id = session_id
 
     @property
     def provider(self) -> str:

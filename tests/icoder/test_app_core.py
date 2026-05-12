@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -113,8 +114,11 @@ def test_multiple_inputs(app_core: AppCore, event_log: EventLog) -> None:
     app_core.handle_input("/help")
     app_core.handle_input("question")
     list(app_core.stream_llm("question"))
-    app_core.handle_input("/clear")
     assert len(event_log.entries) >= 4
+    app_core.handle_input("/clear")
+    # /clear rotates the log → in-memory entries are reset and a fresh
+    # session_start event is emitted into the new file.
+    assert [e.event for e in event_log.entries] == ["session_start"]
 
 
 def test_runtime_info_none_by_default(app_core: AppCore) -> None:
@@ -179,12 +183,69 @@ def test_clear_resets_session(
     assert fake_llm.session_id is None
 
 
-def test_clear_emits_session_reset_event(
+def test_clear_does_not_emit_session_reset_event(
     app_core: AppCore, event_log: EventLog
 ) -> None:
-    """Test /clear emits a session_reset event."""
+    """Test /clear no longer emits a session_reset event (rotation replaces it)."""
     app_core.handle_input("/clear")
-    assert any(e.event == "session_reset" for e in event_log.entries)
+    assert not any(e.event == "session_reset" for e in event_log.entries)
+
+
+def test_clear_rotates_event_log(fake_llm: FakeLLMService, tmp_path: Path) -> None:
+    """/clear rotates the event log, producing a new JSONL file."""
+    with EventLog(logs_dir=tmp_path) as log:
+        core = AppCore(llm_service=fake_llm, event_log=log)
+        initial_path = log.current_path
+        core.handle_input("/clear")
+        assert log.current_path != initial_path
+        jsonl_files = sorted(tmp_path.glob("icoder_*.jsonl"))
+        assert len(jsonl_files) == 2
+
+
+def test_emit_after_clear_writes_to_new_file(
+    fake_llm: FakeLLMService, tmp_path: Path
+) -> None:
+    """After /clear, new emits land in the rotated file, not the previous one."""
+    with EventLog(logs_dir=tmp_path) as log:
+        core = AppCore(llm_service=fake_llm, event_log=log)
+        old_path = log.current_path
+        core.handle_input("/clear")
+        new_path = log.current_path
+        core.handle_input("x")
+
+    old_content = old_path.read_text(encoding="utf-8")
+    new_content = new_path.read_text(encoding="utf-8")
+    assert '"text": "x"' in new_content
+    assert '"text": "x"' not in old_content
+
+
+def test_non_reset_command_does_not_rotate(
+    app_core: AppCore, event_log: EventLog
+) -> None:
+    """/help (non-reset) leaves current_path unchanged."""
+    initial_path = event_log.current_path
+    app_core.handle_input("/help")
+    assert event_log.current_path == initial_path
+
+
+def test_clear_still_invokes_reset_session(
+    event_log: EventLog,
+) -> None:
+    """Test /clear still calls llm_service.reset_session() on the service."""
+    fake_llm = FakeLLMService(
+        responses=[
+            [
+                {"type": "text_delta", "text": "hello"},
+                {"type": "done", "session_id": "sess-xyz"},
+            ]
+        ]
+    )
+    core = AppCore(llm_service=fake_llm, event_log=event_log)
+    list(core.stream_llm("hi"))
+    assert fake_llm.session_id == "sess-xyz"
+
+    core.handle_input("/clear")
+    assert fake_llm.session_id is None
 
 
 def test_stream_llm_stores_response(
@@ -209,6 +270,26 @@ def test_stream_llm_stores_response(
     assert prompt == "hello"
     assert isinstance(response_data, dict)
     assert response_data["provider"] == "claude"
+
+
+def test_stream_llm_passes_log_file_path_to_store_session(
+    app_core: AppCore,
+    event_log: EventLog,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """stream_llm() passes the current event-log path to store_session."""
+    captured_kwargs: dict[str, object] = {}
+
+    def fake_store(response_data: object, prompt: str, **kwargs: object) -> str:
+        captured_kwargs.update(kwargs)
+        return "/fake/path.json"
+
+    monkeypatch.setattr(
+        "mcp_coder.icoder.core.app_core.store_session",
+        fake_store,
+    )
+    list(app_core.stream_llm("hello"))
+    assert captured_kwargs.get("log_file_path") == str(event_log.current_path)
 
 
 def test_token_usage_initial_state(app_core: AppCore) -> None:
@@ -473,3 +554,196 @@ def test_raw_line_events_not_logged(event_log: EventLog) -> None:
     logged_types = [e.data.get("type") for e in stream_entries]
     assert "text_delta" in logged_types
     assert "raw_line" not in logged_types
+
+
+# --- prepare_for_resume tests ---
+
+
+def _write_log(path: Path, events: list[dict[str, object]]) -> None:
+    """Write a JSONL log file containing the given event dicts."""
+    lines = [json.dumps(ev) for ev in events]
+    path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+
+
+def test_prepare_for_resume_reads_session_id_from_session_start(
+    fake_llm: FakeLLMService, tmp_path: Path
+) -> None:
+    """session_start.session_id is read and set on the LLM service."""
+    log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
+    _write_log(
+        log_path,
+        [
+            {"t": 0.0, "event": "session_start", "session_id": "abc"},
+            {"t": 0.1, "event": "input_received", "text": "hello"},
+        ],
+    )
+    with EventLog(logs_dir=tmp_path) as live_log:
+        core = AppCore(llm_service=fake_llm, event_log=live_log)
+        initial_path = live_log.current_path
+        result = core.prepare_for_resume(log_path)
+        assert result == "abc"
+        assert fake_llm.session_id == "abc"
+        # Event log was rotated → new current_path
+        assert live_log.current_path != initial_path
+
+
+def test_prepare_for_resume_falls_back_to_done_event(
+    fake_llm: FakeLLMService, tmp_path: Path
+) -> None:
+    """Without session_start.session_id, last stream_event{type=done} is used."""
+    log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
+    _write_log(
+        log_path,
+        [
+            {"t": 0.0, "event": "session_start", "provider": "claude"},
+            {"t": 0.1, "event": "input_received", "text": "hi"},
+            {
+                "t": 0.2,
+                "event": "stream_event",
+                "type": "done",
+                "session_id": "xyz",
+            },
+        ],
+    )
+    with EventLog(logs_dir=tmp_path) as live_log:
+        core = AppCore(llm_service=fake_llm, event_log=live_log)
+        result = core.prepare_for_resume(log_path)
+        assert result == "xyz"
+        assert fake_llm.session_id == "xyz"
+
+
+def test_prepare_for_resume_uses_last_done_session_id(
+    fake_llm: FakeLLMService, tmp_path: Path
+) -> None:
+    """Multiple done events → most recent session_id wins."""
+    log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
+    _write_log(
+        log_path,
+        [
+            {"t": 0.0, "event": "session_start", "provider": "claude"},
+            {"t": 0.1, "event": "stream_event", "type": "done", "session_id": "old"},
+            {"t": 0.2, "event": "stream_event", "type": "done", "session_id": "new"},
+        ],
+    )
+    with EventLog(logs_dir=tmp_path) as live_log:
+        core = AppCore(llm_service=fake_llm, event_log=live_log)
+        result = core.prepare_for_resume(log_path)
+        assert result == "new"
+        assert fake_llm.session_id == "new"
+
+
+def test_prepare_for_resume_returns_none_when_no_session_id(
+    fake_llm: FakeLLMService, tmp_path: Path
+) -> None:
+    """No session_start.session_id and no done.session_id → None."""
+    log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
+    _write_log(
+        log_path,
+        [
+            {"t": 0.0, "event": "session_start", "provider": "claude"},
+            {"t": 0.1, "event": "input_received", "text": "hi"},
+        ],
+    )
+    fake_llm.set_session_id("preexisting")
+    with EventLog(logs_dir=tmp_path) as live_log:
+        core = AppCore(llm_service=fake_llm, event_log=live_log)
+        result = core.prepare_for_resume(log_path)
+        assert result is None
+        assert fake_llm.session_id is None
+
+
+def test_prepare_for_resume_rotates_event_log(
+    fake_llm: FakeLLMService, tmp_path: Path
+) -> None:
+    """The event log is rotated regardless of session_id presence."""
+    log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
+    _write_log(
+        log_path,
+        [{"t": 0.0, "event": "session_start", "provider": "claude"}],
+    )
+    with EventLog(logs_dir=tmp_path) as live_log:
+        core = AppCore(llm_service=fake_llm, event_log=live_log)
+        initial_path = live_log.current_path
+        core.prepare_for_resume(log_path)
+        assert live_log.current_path != initial_path
+
+
+def test_provider_property(app_core: AppCore) -> None:
+    """AppCore.provider exposes the underlying LLM service provider."""
+    assert app_core.provider == "claude"
+
+
+# --- self-contained-rotated-log tests (Decisions #4 + #29) ---
+
+
+def test_prepare_for_resume_emits_session_start_in_new_log(
+    fake_llm: FakeLLMService, tmp_path: Path
+) -> None:
+    """The post-resume rotated log starts with session_start{provider}."""
+    src_log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
+    _write_log(
+        src_log_path,
+        [{"t": 0.0, "event": "session_start", "provider": "claude"}],
+    )
+    with EventLog(logs_dir=tmp_path) as live_log:
+        core = AppCore(llm_service=fake_llm, event_log=live_log)
+        core.prepare_for_resume(src_log_path)
+        rotated_path = live_log.current_path
+
+    from mcp_coder.icoder.core.event_log import iter_events
+
+    events = list(iter_events(rotated_path))
+    assert len(events) >= 1
+    assert events[0]["event"] == "session_start"
+    assert events[0]["provider"] == "claude"
+
+
+def test_prepare_for_resume_log_visible_to_picker(
+    fake_llm: FakeLLMService, tmp_path: Path
+) -> None:
+    """list_icoder_logs (provider-filtered) includes the post-resume log."""
+    src_log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
+    _write_log(
+        src_log_path,
+        [{"t": 0.0, "event": "session_start", "provider": "claude"}],
+    )
+    with EventLog(logs_dir=tmp_path) as live_log:
+        core = AppCore(llm_service=fake_llm, event_log=live_log)
+        core.prepare_for_resume(src_log_path)
+        rotated_path = live_log.current_path
+
+    from mcp_coder.icoder.core.log_inventory import list_icoder_logs
+
+    summaries = list_icoder_logs(tmp_path, provider="claude")
+    paths = [s.path for s in summaries]
+    assert rotated_path in paths
+
+
+def test_clear_emits_session_start_in_new_log(
+    fake_llm: FakeLLMService, tmp_path: Path
+) -> None:
+    """After /clear, the rotated log starts with session_start{provider}."""
+    with EventLog(logs_dir=tmp_path) as live_log:
+        core = AppCore(llm_service=fake_llm, event_log=live_log)
+        core.handle_input("/clear")
+        rotated_path = live_log.current_path
+
+    from mcp_coder.icoder.core.event_log import iter_events
+
+    events = list(iter_events(rotated_path))
+    assert events[0]["event"] == "session_start"
+    assert events[0]["provider"] == "claude"
+
+
+def test_clear_log_visible_to_picker(fake_llm: FakeLLMService, tmp_path: Path) -> None:
+    """list_icoder_logs (provider-filtered) includes the post-/clear log."""
+    with EventLog(logs_dir=tmp_path) as live_log:
+        core = AppCore(llm_service=fake_llm, event_log=live_log)
+        core.handle_input("/clear")
+        rotated_path = live_log.current_path
+
+    from mcp_coder.icoder.core.log_inventory import list_icoder_logs
+
+    summaries = list_icoder_logs(tmp_path, provider="claude")
+    paths = [s.path for s in summaries]
+    assert rotated_path in paths
