@@ -388,6 +388,174 @@ class TestSkipGithubInstallWiring:
         assert call_kwargs["skip_github_install"] is True
 
 
+class TestAtCapacityDiagnosticLog:
+    """Tests for the at-capacity diagnostic log line in execute_coordinator_vscodeclaude."""
+
+    @patch("mcp_coder.cli.commands.coordinator.commands.process_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.commands.restart_closed_sessions")
+    @patch("mcp_coder.cli.commands.coordinator.commands.cleanup_stale_sessions")
+    @patch("mcp_coder.cli.commands.coordinator.commands.build_active_session_set")
+    @patch("mcp_coder.cli.commands.coordinator.commands._build_cached_issues_by_repo")
+    @patch("mcp_coder.cli.commands.coordinator.commands.load_sessions")
+    @patch("mcp_coder.cli.commands.coordinator.commands.load_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.load_vscodeclaude_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
+    def test_at_capacity_log_includes_folder_basenames(
+        self,
+        mock_create_config: MagicMock,
+        mock_load_repo: MagicMock,
+        mock_load_vsc_config: MagicMock,
+        mock_load_config: MagicMock,
+        mock_load_sessions: MagicMock,
+        mock_build_cache: MagicMock,
+        mock_build_active: MagicMock,
+        mock_cleanup: MagicMock,
+        mock_restart: MagicMock,
+        mock_process: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """At capacity, the tail log line names the folders consuming the slots."""
+        mock_create_config.return_value = False
+        mock_load_vsc_config.return_value = {
+            "workspace_base": "/tmp",
+            "max_sessions": 2,
+        }
+        mock_load_config.return_value = {"coordinator": {"repos": {"mcp_coder": {}}}}
+        mock_load_sessions.return_value = {"sessions": [], "last_updated": ""}
+        mock_build_cache.return_value = (
+            {"owner/mcp_coder": {1: MagicMock()}},
+            set(),
+        )
+        # Two active folders => at capacity for max_sessions=2.
+        mock_build_active.return_value = {
+            "/tmp/repo_111": True,
+            "/tmp/repo_222": True,
+        }
+        mock_restart.return_value = []
+        mock_load_repo.return_value = {
+            "repo_url": "https://github.com/owner/mcp_coder.git",
+        }
+        mock_process.return_value = []  # No new sessions started
+
+        args = argparse.Namespace(
+            repo=None,
+            max_sessions=None,
+            cleanup=False,
+            intervene=False,
+            issue=None,
+            no_install_from_github=False,
+        )
+
+        from mcp_coder.cli.commands.coordinator.commands import (
+            execute_coordinator_vscodeclaude,
+        )
+
+        with caplog.at_level(logging.INFO):
+            execute_coordinator_vscodeclaude(args)
+
+        assert "at capacity (2/2)" in caplog.text
+        assert "repo_111" in caplog.text
+        assert "repo_222" in caplog.text
+
+    @patch("mcp_coder.cli.commands.coordinator.commands.process_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.commands.restart_closed_sessions")
+    @patch("mcp_coder.cli.commands.coordinator.commands.cleanup_stale_sessions")
+    @patch("mcp_coder.cli.commands.coordinator.commands.build_active_session_set")
+    @patch("mcp_coder.cli.commands.coordinator.commands._build_cached_issues_by_repo")
+    @patch("mcp_coder.cli.commands.coordinator.commands.load_sessions")
+    @patch("mcp_coder.cli.commands.coordinator.commands.load_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.load_vscodeclaude_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
+    def test_below_capacity_message_unchanged(
+        self,
+        mock_create_config: MagicMock,
+        mock_load_repo: MagicMock,
+        mock_load_vsc_config: MagicMock,
+        mock_load_config: MagicMock,
+        mock_load_sessions: MagicMock,
+        mock_build_cache: MagicMock,
+        mock_build_active: MagicMock,
+        mock_cleanup: MagicMock,
+        mock_restart: MagicMock,
+        mock_process: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Below capacity with no started sessions preserves the legacy tail format."""
+        mock_create_config.return_value = False
+        mock_load_vsc_config.return_value = {
+            "workspace_base": "/tmp",
+            "max_sessions": 3,
+        }
+        mock_load_config.return_value = {"coordinator": {"repos": {"mcp_coder": {}}}}
+        mock_load_sessions.return_value = {"sessions": [], "last_updated": ""}
+        mock_build_cache.return_value = (
+            {"owner/mcp_coder": {1: MagicMock()}},
+            set(),
+        )
+        mock_build_active.return_value = {}  # No active sessions
+        mock_restart.return_value = []
+        mock_load_repo.return_value = {
+            "repo_url": "https://github.com/owner/mcp_coder.git",
+        }
+        mock_process.return_value = []
+
+        args = argparse.Namespace(
+            repo=None,
+            max_sessions=None,
+            cleanup=False,
+            intervene=False,
+            issue=None,
+            no_install_from_github=False,
+        )
+
+        from mcp_coder.cli.commands.coordinator.commands import (
+            execute_coordinator_vscodeclaude,
+        )
+
+        with caplog.at_level(logging.INFO):
+            execute_coordinator_vscodeclaude(args)
+
+        assert "No new sessions started (active: 0/3)" in caplog.text
+        assert "at capacity" not in caplog.text
+
+    def test_process_eligible_issues_at_capacity_log_is_debug(
+        self,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """The per-repo 'Already at max sessions' log is emitted at DEBUG, not INFO."""
+        from mcp_coder.workflows.vscodeclaude.session_launch import (
+            process_eligible_issues,
+        )
+
+        with caplog.at_level(logging.INFO):
+            result = process_eligible_issues(
+                repo_name="test-repo",
+                repo_config={"repo_url": "https://github.com/owner/repo"},
+                vscodeclaude_config={"workspace_base": "/tmp", "max_sessions": 2},
+                max_sessions=2,
+                current_count=2,
+            )
+
+        assert result == []
+        # At INFO level, the message must NOT appear (downgraded to DEBUG).
+        assert "Already at max sessions" not in caplog.text
+
+        # At DEBUG level, the message should still be present.
+        caplog.clear()
+        with caplog.at_level(logging.DEBUG):
+            process_eligible_issues(
+                repo_name="test-repo",
+                repo_config={"repo_url": "https://github.com/owner/repo"},
+                vscodeclaude_config={"workspace_base": "/tmp", "max_sessions": 2},
+                max_sessions=2,
+                current_count=2,
+            )
+
+        assert "Already at max sessions" in caplog.text
+
+
 class TestTemplateWatchdogLines:
     """Tests for watchdog set-status lines in coordinator templates."""
 
