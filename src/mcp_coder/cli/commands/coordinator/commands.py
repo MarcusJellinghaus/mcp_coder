@@ -6,6 +6,7 @@ labels. Use --dry-run to trigger Jenkins integration tests instead.
 
 import argparse
 import logging
+from pathlib import Path
 from typing import Any, List, Optional
 
 from ....mcp_workspace_github import (
@@ -627,6 +628,18 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
                     session["issue_number"],
                     session["status"],
                 )
+        elif current_count >= max_sessions:
+            active_folders = [Path(f).name for f, alive in active_set.items() if alive]
+            restarted_folders = [Path(s["folder"]).name for s in restarted]
+            logger.log(
+                OUTPUT,
+                "No new sessions started — at capacity (%d/%d). "
+                "Counted: active=%s restarted=%s",
+                current_count,
+                max_sessions,
+                active_folders,
+                restarted_folders,
+            )
         else:
             logger.log(
                 OUTPUT,

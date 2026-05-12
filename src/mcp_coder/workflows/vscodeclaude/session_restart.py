@@ -38,6 +38,7 @@ from .sessions import (
 )
 from .status import get_folder_git_status
 from .types import VSCodeClaudeSession
+from .workspace import get_workspace_file_path
 
 logger = logging.getLogger(__name__)
 
@@ -393,7 +394,7 @@ def restart_closed_sessions(
         # Find the workspace file
         workspace_base = folder_path.parent
         folder_name = folder_path.name
-        workspace_file = workspace_base / f"{folder_name}.code-workspace"
+        workspace_file = get_workspace_file_path(str(workspace_base), folder_name)
 
         if not workspace_file.exists():
             logger.warning(
@@ -413,16 +414,16 @@ def restart_closed_sessions(
                 new_pid,
             )
 
-            # Update session with new PID for return value
-            updated_session: VSCodeClaudeSession = {
-                "folder": session["folder"],
-                "repo": session["repo"],
-                "issue_number": session["issue_number"],
-                "status": session["status"],
-                "vscode_pid": new_pid,
-                "started_at": session["started_at"],
-                "is_intervention": session.get("is_intervention", False),
-            }
+            # Update session with new PID for return value.
+            # update_session_pid() already wrote vscode_pid_create_time
+            # atomically; re-loading ensures the returned dict matches the
+            # persisted store.
+            refreshed_store = load_sessions()
+            updated_session = next(
+                s
+                for s in refreshed_store["sessions"]
+                if s["folder"] == session["folder"]
+            )
             restarted.append(updated_session)
 
         except (

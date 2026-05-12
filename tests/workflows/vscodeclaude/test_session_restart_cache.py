@@ -40,6 +40,7 @@ class TestBuildCachedIssuesByRepo:
                 "issue_number": 414,
                 "status": "status-04:plan-review",
                 "vscode_pid": 1234,
+                "vscode_pid_create_time": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
             },
@@ -49,6 +50,7 @@ class TestBuildCachedIssuesByRepo:
                 "issue_number": 408,
                 "status": "status-04:plan-review",
                 "vscode_pid": 1235,
+                "vscode_pid_create_time": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
             },
@@ -58,6 +60,7 @@ class TestBuildCachedIssuesByRepo:
                 "issue_number": 123,
                 "status": "status-01:created",
                 "vscode_pid": 1236,
+                "vscode_pid_create_time": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
             },
@@ -240,6 +243,7 @@ class TestRestartClosedSessions:
                 "issue_number": 414,
                 "status": "status-04:plan-review",
                 "vscode_pid": 9999,  # Non-existent PID
+                "vscode_pid_create_time": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
             },
@@ -249,6 +253,7 @@ class TestRestartClosedSessions:
                 "issue_number": 100,
                 "status": "status-01:created",
                 "vscode_pid": 9998,  # Non-existent PID
+                "vscode_pid_create_time": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
             },
@@ -333,6 +338,7 @@ class TestRestartClosedSessions:
                 "issue_number": 414,
                 "status": "status-04:plan-review",
                 "vscode_pid": 9999,
+                "vscode_pid_create_time": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
             }
@@ -410,6 +416,7 @@ class TestRestartClosedSessions:
                 "issue_number": 414,
                 "status": "status-04:plan-review",
                 "vscode_pid": 9999,
+                "vscode_pid_create_time": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
             }

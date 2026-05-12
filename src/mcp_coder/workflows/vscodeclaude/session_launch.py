@@ -299,7 +299,7 @@ def process_eligible_issues(
     - Starts new sessions up to the remaining available slot count.
     """
     if current_count >= max_sessions:
-        logger.info(
+        logger.debug(
             "Already at max sessions (%d/%d), skipping",
             current_count,
             max_sessions,

@@ -287,6 +287,7 @@ _.create_github_manager
 
 # workflows/vscodeclaude/types.py - TypedDict field
 _.started_at
+_.vscode_pid_create_time
 
 # test_session_restart_branch_integration.py - Unpacked but unused in test assertion
 _.user

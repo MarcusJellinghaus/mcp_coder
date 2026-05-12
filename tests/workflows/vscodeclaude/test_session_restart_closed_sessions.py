@@ -90,6 +90,7 @@ class TestRestartClosedSessionsBranchHandling:
             "issue_number": 123,
             "status": "status-01:created",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -168,6 +169,7 @@ class TestRestartClosedSessionsBranchHandling:
             "issue_number": 456,
             "status": "status-04:plan-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -246,6 +248,7 @@ class TestRestartClosedSessionsBranchHandling:
             "issue_number": 789,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -368,6 +371,7 @@ class TestRestartClosedSessionsBranchHandling:
             "issue_number": 123,
             "status": "status-01:created",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -483,6 +487,7 @@ class TestRestartClosedSessionsBranchHandling:
             "issue_number": 123,
             "status": "status-04:plan-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }

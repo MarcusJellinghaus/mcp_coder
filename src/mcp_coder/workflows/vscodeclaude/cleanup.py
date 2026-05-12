@@ -26,12 +26,14 @@ from .issues import (
     is_status_eligible_for_session,
 )
 from .sessions import (
+    is_vscode_open_for_folder,
     load_sessions,
     remove_session,
     warn_orphan_folders,
 )
 from .status import get_folder_git_status, is_session_stale
 from .types import VSCodeClaudeSession
+from .workspace import get_workspace_file_path
 
 logger = logging.getLogger(__name__)
 
@@ -227,7 +229,7 @@ def delete_session_folder(
 
     try:
         # Always delete the workspace file before attempting folder deletion
-        workspace_file = Path(workspace_base) / f"{folder_name}.code-workspace"
+        workspace_file = get_workspace_file_path(workspace_base, folder_name)
         if workspace_file.exists():
             try:
                 workspace_file.unlink()
@@ -314,6 +316,16 @@ def cleanup_stale_sessions(
                 remove_from_to_be_deleted(workspace_base, folder_name)
                 logger.info("Removed stale .to_be_deleted entry: %s", folder_name)
                 continue
+            is_open, _ = is_vscode_open_for_folder(str(folder_path))
+            if is_open:
+                remove_from_to_be_deleted(workspace_base, folder_name)
+                logger.warning(
+                    "Reconciled .to_be_deleted entry — VSCode is open on %s; "
+                    "removing entry without deletion (prior soft-delete was a "
+                    "false negative).",
+                    folder_name,
+                )
+                continue
             deletion = safe_delete_folder(folder_path)
             if deletion.success:
                 remove_from_to_be_deleted(workspace_base, folder_name)
@@ -362,10 +374,14 @@ def cleanup_stale_sessions(
                     result["skipped"].append(folder)
 
         elif git_status == "Missing":
-            # Folder gone, just remove session record
+            # Folder gone - also clean up orphan workspace file to break the
+            # orphan-workspace -> false-active -> cleanup-skipped loop.
+            workspace_file = get_workspace_file_path(workspace_base, Path(folder).name)
             if dry_run:
                 print(f"Would remove session (folder missing): {folder}")
             else:
+                if workspace_file.exists():
+                    workspace_file.unlink()
                 remove_session(folder)
                 print(f"Removed session (folder missing): {folder}")
                 result["deleted"].append(folder)

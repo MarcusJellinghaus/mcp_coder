@@ -2,6 +2,7 @@
 
 import json
 import logging
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -68,6 +69,7 @@ class TestSessionManagement:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": 1234,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
         }
@@ -85,12 +87,12 @@ class TestSessionManagement:
 
     def test_check_vscode_running_none_pid(self) -> None:
         """None PID returns False."""
-        assert check_vscode_running(None) is False
+        assert check_vscode_running(None, None) is False
 
     def test_check_vscode_running_nonexistent_pid(self) -> None:
         """Nonexistent PID returns False."""
         # Use a PID that almost certainly doesn't exist
-        assert check_vscode_running(999999999) is False
+        assert check_vscode_running(999999999, None) is False
 
     def test_get_session_for_issue_found(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -148,6 +150,7 @@ class TestSessionManagement:
             "issue_number": 456,
             "status": "status-04:plan-review",
             "vscode_pid": 5678,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-22T11:00:00Z",
             "is_intervention": False,
         }
@@ -376,13 +379,20 @@ class TestSessionHasArtifacts:
         folder.mkdir()
         assert session_has_artifacts(str(folder)) is True
 
-    def test_returns_true_when_workspace_file_exists(self, tmp_path: Path) -> None:
-        """Returns True when only the .code-workspace file exists."""
+    def test_returns_false_when_only_workspace_file_exists(
+        self, tmp_path: Path
+    ) -> None:
+        """Returns False when folder is gone but workspace file lingers (orphan).
+
+        The workspace file is a launcher pointing at the folder; without the
+        folder it points at nothing. Treating the orphan as a live artifact
+        was the bug that produced false-active sessions and blocked cleanup.
+        """
         folder = tmp_path / "mcp_coder_123"
         # Don't create the folder, but create the workspace file
         workspace = tmp_path / "mcp_coder_123.code-workspace"
         workspace.write_text("{}")
-        assert session_has_artifacts(str(folder)) is True
+        assert session_has_artifacts(str(folder)) is False
 
     def test_returns_false_when_neither_exists(self, tmp_path: Path) -> None:
         """Returns False when neither folder nor workspace file exists (zombie session)."""
@@ -563,7 +573,7 @@ class TestVSCodeProcessNameMatching:
             lambda pid: mock_process,
         )
 
-        assert check_vscode_running(12345) is False
+        assert check_vscode_running(12345, None) is False
 
     def test_check_vscode_running_accepts_code_exe(
         self, monkeypatch: pytest.MonkeyPatch
@@ -581,7 +591,7 @@ class TestVSCodeProcessNameMatching:
             lambda pid: mock_process,
         )
 
-        assert check_vscode_running(12345) is True
+        assert check_vscode_running(12345, None) is True
 
     def test_check_vscode_running_accepts_code_linux(
         self, monkeypatch: pytest.MonkeyPatch
@@ -599,7 +609,7 @@ class TestVSCodeProcessNameMatching:
             lambda pid: mock_process,
         )
 
-        assert check_vscode_running(12345) is True
+        assert check_vscode_running(12345, None) is True
 
     def test_get_vscode_processes_excludes_code_substring(self) -> None:
         """_get_vscode_processes does not include processes with 'code' substring."""
@@ -663,10 +673,19 @@ class TestWindowTitleMatching:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Should match window with issue number pattern and repo name."""
-        # Mock window titles to return a workspace window
+        # Mock window titles to return a workspace window owned by pid=100
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
-            lambda: ["[#219 plan-review] Fix bug - mcp_coder - Visual Studio Code"],
+            lambda: [
+                (100, "[#219 plan-review] Fix bug - mcp_coder - Visual Studio Code")
+            ],
+        )
+        # That pid's cmdline references the folder so the title is bound to it
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            lambda: [
+                {"pid": 100, "cmdline_lower": "code.exe /workspace/mcp_coder_219"}
+            ],
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
@@ -688,7 +707,13 @@ class TestWindowTitleMatching:
         # Mock window titles to return only main repo window (no issue number)
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
-            lambda: ["mcp_coder - Visual Studio Code"],
+            lambda: [(100, "mcp_coder - Visual Studio Code")],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            lambda: [
+                {"pid": 100, "cmdline_lower": "code.exe /workspace/mcp_coder_219"}
+            ],
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
@@ -710,7 +735,15 @@ class TestWindowTitleMatching:
         """Should NOT match window for a different issue."""
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
-            lambda: ["[#123 code-review] Other issue - mcp_coder - Visual Studio Code"],
+            lambda: [
+                (100, "[#123 code-review] Other issue - mcp_coder - Visual Studio Code")
+            ],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            lambda: [
+                {"pid": 100, "cmdline_lower": "code.exe /workspace/mcp_coder_219"}
+            ],
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
@@ -731,7 +764,11 @@ class TestWindowTitleMatching:
         """Should extract repo name from owner/repo format."""
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
-            lambda: ["[#219 created] New issue - my_repo - Visual Studio Code"],
+            lambda: [(100, "[#219 created] New issue - my_repo - Visual Studio Code")],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            lambda: [{"pid": 100, "cmdline_lower": "code.exe /workspace/my_repo_219"}],
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
@@ -750,7 +787,13 @@ class TestWindowTitleMatching:
         """Should match case-insensitively."""
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
-            lambda: ["[#219 review] Title - MCP_CODER - Visual Studio Code"],
+            lambda: [(100, "[#219 review] Title - MCP_CODER - Visual Studio Code")],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            lambda: [
+                {"pid": 100, "cmdline_lower": "code.exe /workspace/mcp_coder_219"}
+            ],
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
@@ -774,6 +817,10 @@ class TestWindowTitleMatching:
             lambda: [],
         )
         monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            lambda: [],
+        )
+        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
             True,
         )
@@ -785,6 +832,138 @@ class TestWindowTitleMatching:
         )
 
         assert result is False
+
+    def test_cross_process_title_leak_rejected(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Title from a VSCode that does not have the folder open -> False.
+
+        Regression for the #946/#950 cross-process leak: two VSCode windows
+        are open. Process A (pid=100) has folder mcp_coder_950 open and its
+        title accidentally contains "[#946 ...]" (e.g. the user was browsing
+        issue #946). Process B (pid=200) has folder mcp_coder_946 open but
+        its current title does not match. A lookup for folder
+        mcp_coder_946 must NOT match A's title.
+        """
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            lambda: [
+                {"pid": 100, "cmdline_lower": "code.exe /tmp/mcp_coder_950"},
+                {"pid": 200, "cmdline_lower": "code.exe /tmp/mcp_coder_946"},
+            ],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
+            lambda: [(100, "[#946 stuff] - mcp_coder")],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            True,
+        )
+
+        result = is_vscode_window_open_for_folder(
+            folder_path="/tmp/mcp_coder_946",
+            issue_number=946,
+            repo="owner/mcp_coder",
+        )
+
+        assert result is False
+
+    def test_positive_match_preserved_when_pid_matches(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Same scenario but matching window is on the PID that owns the folder."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            lambda: [
+                {"pid": 100, "cmdline_lower": "code.exe /tmp/mcp_coder_950"},
+                {"pid": 200, "cmdline_lower": "code.exe /tmp/mcp_coder_946"},
+            ],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
+            lambda: [(200, "[#946 stuff] - mcp_coder")],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            True,
+        )
+
+        result = is_vscode_window_open_for_folder(
+            folder_path="/tmp/mcp_coder_946",
+            issue_number=946,
+            repo="owner/mcp_coder",
+        )
+
+        assert result is True
+
+    def test_get_vscode_window_titles_returns_pid_title_tuples(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """_get_vscode_window_titles returns list of (int, str) tuples."""
+        from mcp_coder.workflows.vscodeclaude.sessions import (
+            _get_vscode_window_titles,
+            clear_vscode_window_cache,
+        )
+
+        clear_vscode_window_cache()
+
+        # Force the Windows code path on
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            True,
+        )
+        # PID lookup says pids 100 and 200 are VSCode
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_pids",
+            lambda: {100, 200},
+        )
+
+        mock_win32gui = MagicMock()
+        mock_win32process = MagicMock()
+
+        # Two visible VSCode windows, one each on pid 100 and 200
+        mock_win32gui.IsWindowVisible.return_value = True
+        mock_win32gui.GetWindowText.side_effect = [
+            "window-on-pid-100",
+            "window-on-pid-200",
+        ]
+        mock_win32process.GetWindowThreadProcessId.side_effect = [(0, 100), (0, 200)]
+
+        def enum_windows(callback: object, _: object) -> None:
+            assert callable(callback)
+            callback(1, None)
+            callback(2, None)
+
+        mock_win32gui.EnumWindows.side_effect = enum_windows
+
+        # raising=False so the test works on non-Windows where these
+        # attributes do not exist (the production code only imports them
+        # when HAS_WIN32GUI is True).
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.win32gui",
+            mock_win32gui,
+            raising=False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.win32process",
+            mock_win32process,
+            raising=False,
+        )
+
+        result = _get_vscode_window_titles(refresh=True)
+
+        clear_vscode_window_cache()
+
+        assert isinstance(result, list)
+        assert len(result) == 2
+        for entry in result:
+            assert isinstance(entry, tuple)
+            assert len(entry) == 2
+            assert isinstance(entry[0], int)
+            assert isinstance(entry[1], str)
+        assert result[0][0] == 100
+        assert result[1][0] == 200
 
 
 class TestGetSessionForIssueSoftDelete:
@@ -1063,10 +1242,10 @@ class TestWarnOrphanFolders:
 class TestIsSessionActiveFallbackChain:
     """Tests for is_session_active() fallback chain behaviour.
 
-    These tests verify that is_session_active() uses a window-title ->
-    PID -> cmdline fallback chain (instead of treating the Windows title
-    check as authoritative), and that each call emits exactly one INFO
-    line naming the deciding criterion.
+    Within the launch-grace window, is_session_active() skips the title
+    check and runs the PID -> cmdline fallback chain. These tests use a
+    recent ``started_at`` to stay inside the grace window so the fallback
+    paths are exercised on the Windows path.
     """
 
     def test_windows_title_miss_pid_alive_returns_active(
@@ -1075,7 +1254,8 @@ class TestIsSessionActiveFallbackChain:
         monkeypatch: pytest.MonkeyPatch,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """Title miss + PID alive -> active with INFO noting potentially stale."""
+        """Within grace, PID alive -> active (title check skipped)."""
+        recent = (datetime.now(timezone.utc) - timedelta(seconds=5)).isoformat()
         folder = tmp_path / "mcp_coder_542"
         folder.mkdir()
 
@@ -1085,7 +1265,8 @@ class TestIsSessionActiveFallbackChain:
             "issue_number": 542,
             "status": "s",
             "vscode_pid": 28036,
-            "started_at": "2024-01-01T00:00:00Z",
+            "vscode_pid_create_time": None,
+            "started_at": recent,
             "is_intervention": False,
         }
 
@@ -1097,12 +1278,8 @@ class TestIsSessionActiveFallbackChain:
             lambda f: True,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_window_open_for_folder",
-            lambda folder_path, issue_number=None, repo=None: False,
-        )
-        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.check_vscode_running",
-            lambda pid: True,
+            lambda pid, expected_create_time: True,
         )
 
         with caplog.at_level(
@@ -1112,9 +1289,7 @@ class TestIsSessionActiveFallbackChain:
 
         assert result is True
         assert any(
-            "active (PID 28036 alive, window-title not found \u2014 potentially stale)"
-            in record.message
-            for record in caplog.records
+            "active (PID 28036 alive)" in record.message for record in caplog.records
         )
 
     def test_windows_title_miss_cmdline_match_refreshes_pid(
@@ -1123,7 +1298,8 @@ class TestIsSessionActiveFallbackChain:
         monkeypatch: pytest.MonkeyPatch,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """Title miss + PID dead + cmdline match w/ new PID -> refresh + active."""
+        """Within grace, PID dead + cmdline match w/ new PID -> refresh + active."""
+        recent = (datetime.now(timezone.utc) - timedelta(seconds=5)).isoformat()
         folder = tmp_path / "mcp_coder_542"
         folder.mkdir()
 
@@ -1133,7 +1309,8 @@ class TestIsSessionActiveFallbackChain:
             "issue_number": 542,
             "status": "s",
             "vscode_pid": 28036,
-            "started_at": "2024-01-01T00:00:00Z",
+            "vscode_pid_create_time": None,
+            "started_at": recent,
             "is_intervention": False,
         }
 
@@ -1146,12 +1323,8 @@ class TestIsSessionActiveFallbackChain:
             lambda f: True,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_window_open_for_folder",
-            lambda folder_path, issue_number=None, repo=None: False,
-        )
-        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.check_vscode_running",
-            lambda pid: False,
+            lambda pid, expected_create_time: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_open_for_folder",
@@ -1170,8 +1343,7 @@ class TestIsSessionActiveFallbackChain:
         assert result is True
         update_mock.assert_called_once_with(str(folder), 54321)
         assert any(
-            "active (cmdline match PID=54321, window-title not found \u2014 potentially stale)"
-            in record.message
+            "active (cmdline match PID=54321)" in record.message
             for record in caplog.records
         )
         assert any(
@@ -1185,7 +1357,8 @@ class TestIsSessionActiveFallbackChain:
         monkeypatch: pytest.MonkeyPatch,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """Title miss + PID dead + cmdline miss -> inactive with INFO summary."""
+        """Within grace, PID dead + cmdline miss -> inactive with INFO summary."""
+        recent = (datetime.now(timezone.utc) - timedelta(seconds=5)).isoformat()
         folder = tmp_path / "mcp_coder_542"
         folder.mkdir()
 
@@ -1195,7 +1368,8 @@ class TestIsSessionActiveFallbackChain:
             "issue_number": 542,
             "status": "s",
             "vscode_pid": 28036,
-            "started_at": "2024-01-01T00:00:00Z",
+            "vscode_pid_create_time": None,
+            "started_at": recent,
             "is_intervention": False,
         }
 
@@ -1207,12 +1381,8 @@ class TestIsSessionActiveFallbackChain:
             lambda f: True,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_window_open_for_folder",
-            lambda folder_path, issue_number=None, repo=None: False,
-        )
-        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.check_vscode_running",
-            lambda pid: False,
+            lambda pid, expected_create_time: False,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_open_for_folder",
@@ -1226,7 +1396,7 @@ class TestIsSessionActiveFallbackChain:
 
         assert result is False
         assert any(
-            "inactive (no window / PID 28036 gone / no cmdline match)" in record.message
+            "inactive (PID 28036 gone / no cmdline match)" in record.message
             for record in caplog.records
         )
 
@@ -1246,6 +1416,7 @@ class TestIsSessionActiveFallbackChain:
             "issue_number": 100,
             "status": "s",
             "vscode_pid": 1234,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1259,7 +1430,7 @@ class TestIsSessionActiveFallbackChain:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.check_vscode_running",
-            lambda pid: True,
+            lambda pid, expected_create_time: True,
         )
 
         with caplog.at_level(
@@ -1297,6 +1468,7 @@ class TestIsSessionActiveFallbackChain:
         session: dict[str, object] = {
             "folder": str(folder),
             "status": "s",
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
             **session_data,
@@ -1311,7 +1483,7 @@ class TestIsSessionActiveFallbackChain:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.check_vscode_running",
-            lambda pid: True,
+            lambda pid, expected_create_time: True,
         )
 
         result = is_session_active(session)  # type: ignore[arg-type]
@@ -1333,6 +1505,7 @@ class TestIsSessionActiveFallbackChain:
             "issue_number": 100,
             "status": "s",
             "vscode_pid": 1234,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1346,7 +1519,7 @@ class TestIsSessionActiveFallbackChain:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.check_vscode_running",
-            lambda pid: True,
+            lambda pid, expected_create_time: True,
         )
 
         result = is_session_active(session)
@@ -1377,7 +1550,15 @@ class TestIsSessionActiveFallbackChain:
         # Window has issue number but wrong repo
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
-            lambda: ["[#219 review] Title - different_repo - Visual Studio Code"],
+            lambda: [
+                (100, "[#219 review] Title - different_repo - Visual Studio Code")
+            ],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            lambda: [
+                {"pid": 100, "cmdline_lower": "code.exe /workspace/mcp_coder_219"}
+            ],
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
@@ -1403,7 +1584,13 @@ class TestIsSessionActiveFallbackChain:
         """
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
-            lambda: ["#219 Fix the thing - mcp_coder - Visual Studio Code"],
+            lambda: [(100, "#219 Fix the thing - mcp_coder - Visual Studio Code")],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            lambda: [
+                {"pid": 100, "cmdline_lower": "code.exe /workspace/mcp_coder_219"}
+            ],
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
@@ -1417,3 +1604,443 @@ class TestIsSessionActiveFallbackChain:
         )
 
         assert result is False
+
+
+class TestLaunchGrace:
+    """Tests for launch-grace handling in is_session_active().
+
+    For sessions older than LAUNCH_GRACE_SECONDS, a negative window-title
+    match is authoritative and short-circuits the PID/cmdline fallback.
+    Within the grace window, the title check is skipped to cover VSCode
+    cold-start and extension reinstall delays.
+    """
+
+    @staticmethod
+    def _started_at(seconds_ago: float) -> str:
+        return (datetime.now(timezone.utc) - timedelta(seconds=seconds_ago)).isoformat()
+
+    def test_established_no_title_returns_false_no_fallback(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Age >= grace + title miss -> False, even when PID/cmdline would match."""
+        folder = tmp_path / "mcp_coder_700"
+        folder.mkdir()
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 700,
+            "status": "s",
+            "vscode_pid": 12345,
+            "vscode_pid_create_time": None,
+            "started_at": self._started_at(120.0),
+            "is_intervention": False,
+        }
+
+        check_pid_calls: list[int | None] = []
+        cmdline_calls: list[str] = []
+
+        def mock_check(pid: int | None, expected_create_time: float | None) -> bool:
+            check_pid_calls.append(pid)
+            return True
+
+        def mock_open_for_folder(folder_path: str) -> tuple[bool, int | None]:
+            cmdline_calls.append(folder_path)
+            return True, 99999
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI", True
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.session_has_artifacts",
+            lambda f: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_window_open_for_folder",
+            lambda folder_path, issue_number=None, repo=None: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.check_vscode_running",
+            mock_check,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_open_for_folder",
+            mock_open_for_folder,
+        )
+
+        result = is_session_active(session)
+
+        assert result is False
+        assert check_pid_calls == [], "PID fallback must not run beyond grace"
+        assert cmdline_calls == [], "cmdline fallback must not run beyond grace"
+
+    def test_grace_no_title_cmdline_match_returns_true(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Age < grace + title miss + cmdline match -> True (fallback engaged)."""
+        folder = tmp_path / "mcp_coder_701"
+        folder.mkdir()
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 701,
+            "status": "s",
+            "vscode_pid": 12345,
+            "vscode_pid_create_time": None,
+            "started_at": self._started_at(10.0),
+            "is_intervention": False,
+        }
+
+        title_calls: list[int] = []
+
+        def mock_title(
+            folder_path: str, issue_number: int | None = None, repo: str | None = None
+        ) -> bool:
+            title_calls.append(issue_number or 0)
+            return False
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI", True
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.session_has_artifacts",
+            lambda f: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_window_open_for_folder",
+            mock_title,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.check_vscode_running",
+            lambda pid, expected_create_time: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_open_for_folder",
+            lambda f: (True, 12345),
+        )
+
+        result = is_session_active(session)
+
+        assert result is True
+        assert title_calls == [], "title check must be skipped within grace"
+
+    def test_established_title_match_returns_true(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Age >= grace + title hit -> True without consulting fallback."""
+        folder = tmp_path / "mcp_coder_702"
+        folder.mkdir()
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 702,
+            "status": "s",
+            "vscode_pid": 12345,
+            "vscode_pid_create_time": None,
+            "started_at": self._started_at(120.0),
+            "is_intervention": False,
+        }
+
+        check_pid_calls: list[int | None] = []
+
+        def mock_check(pid: int | None, expected_create_time: float | None) -> bool:
+            check_pid_calls.append(pid)
+            return True
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI", True
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.session_has_artifacts",
+            lambda f: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_window_open_for_folder",
+            lambda folder_path, issue_number=None, repo=None: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.check_vscode_running",
+            mock_check,
+        )
+
+        result = is_session_active(session)
+
+        assert result is True
+        assert check_pid_calls == [], "PID fallback must not run on title match"
+
+    def test_malformed_started_at_treated_as_established(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Unparseable started_at -> age=inf -> established branch (title authoritative)."""
+        folder = tmp_path / "mcp_coder_703"
+        folder.mkdir()
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 703,
+            "status": "s",
+            "vscode_pid": 12345,
+            "vscode_pid_create_time": None,
+            "started_at": "not-a-date",
+            "is_intervention": False,
+        }
+
+        check_pid_calls: list[int | None] = []
+
+        def mock_check(pid: int | None, expected_create_time: float | None) -> bool:
+            check_pid_calls.append(pid)
+            return True
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI", True
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.session_has_artifacts",
+            lambda f: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_window_open_for_folder",
+            lambda folder_path, issue_number=None, repo=None: False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.check_vscode_running",
+            mock_check,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_open_for_folder",
+            lambda f: (True, 12345),
+        )
+
+        result = is_session_active(session)
+
+        assert result is False
+        assert check_pid_calls == [], "fallback must not run when title authoritative"
+
+    def test_non_windows_path_unaffected_by_age(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """HAS_WIN32GUI=False: fallback chain runs regardless of session age."""
+        folder = tmp_path / "mcp_coder_704"
+        folder.mkdir()
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 704,
+            "status": "s",
+            "vscode_pid": 12345,
+            "vscode_pid_create_time": None,
+            "started_at": self._started_at(120.0),
+            "is_intervention": False,
+        }
+
+        title_calls: list[int] = []
+
+        def mock_title(
+            folder_path: str, issue_number: int | None = None, repo: str | None = None
+        ) -> bool:
+            title_calls.append(issue_number or 0)
+            return False
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI", False
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.session_has_artifacts",
+            lambda f: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_window_open_for_folder",
+            mock_title,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.check_vscode_running",
+            lambda pid, expected_create_time: True,
+        )
+
+        result = is_session_active(session)
+
+        assert result is True
+        assert title_calls == [], "title check must be skipped on non-Windows"
+
+
+class TestCreateTimeIdentityVerification:
+    """Tests for create_time-based PID identity verification.
+
+    Closes the PID-reuse hole where an unrelated live process with the same
+    PID as a dead VSCode would falsely pin a session as active.
+    """
+
+    def test_load_sessions_backfills_missing_create_time(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Old payload without vscode_pid_create_time gets backfilled with None."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+        # Write a payload missing the vscode_pid_create_time key
+        legacy_payload = {
+            "sessions": [
+                {
+                    "folder": "/legacy/folder",
+                    "repo": "owner/repo",
+                    "issue_number": 7,
+                    "status": "status-01:created",
+                    "vscode_pid": 1234,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                }
+            ],
+            "last_updated": "2024-01-01T00:00:00Z",
+        }
+        sessions_file.write_text(json.dumps(legacy_payload))
+
+        store = load_sessions()
+
+        assert len(store["sessions"]) == 1
+        session = store["sessions"][0]
+        assert "vscode_pid_create_time" in session
+        assert session["vscode_pid_create_time"] is None
+
+    def test_check_vscode_running_create_time_mismatch_returns_false(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """create_time mismatch beyond tolerance -> False (PID-reuse case)."""
+        mock_process = MagicMock()
+        mock_process.name.return_value = "code.exe"
+        mock_process.create_time.return_value = 2000.0
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.psutil.pid_exists",
+            lambda pid: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.psutil.Process",
+            lambda pid: mock_process,
+        )
+
+        assert check_vscode_running(12345, 1000.0) is False
+
+    def test_check_vscode_running_create_time_match_within_tolerance(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """create_time within 1.0s tolerance -> True."""
+        mock_process = MagicMock()
+        mock_process.name.return_value = "code.exe"
+        mock_process.create_time.return_value = 1000.5
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.psutil.pid_exists",
+            lambda pid: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.psutil.Process",
+            lambda pid: mock_process,
+        )
+
+        assert check_vscode_running(12345, 1000.0) is True
+
+    def test_update_session_pid_writes_both_fields_atomically(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """update_session_pid persists vscode_pid AND vscode_pid_create_time together."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        session = {
+            "folder": "/test/folder",
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": 100,
+            "vscode_pid_create_time": 500.0,
+            "started_at": "2024-01-22T10:30:00Z",
+            "is_intervention": False,
+        }
+        store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
+        sessions_file.write_text(json.dumps(store))
+
+        mock_process = MagicMock()
+        mock_process.create_time.return_value = 999.0
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.psutil.Process",
+            lambda pid: mock_process,
+        )
+
+        update_session_pid("/test/folder", 200)
+
+        reloaded = load_sessions()
+        assert reloaded["sessions"][0]["vscode_pid"] == 200
+        assert reloaded["sessions"][0]["vscode_pid_create_time"] == 999.0
+
+    def test_update_session_pid_dead_pid_stores_none_create_time(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """psutil.NoSuchProcess -> vscode_pid_create_time stored as None."""
+        import psutil
+
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        session = {
+            "folder": "/test/folder",
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": 100,
+            "vscode_pid_create_time": 500.0,
+            "started_at": "2024-01-22T10:30:00Z",
+            "is_intervention": False,
+        }
+        store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
+        sessions_file.write_text(json.dumps(store))
+
+        def raise_no_such(pid: int) -> MagicMock:
+            raise psutil.NoSuchProcess(pid)
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.psutil.Process",
+            raise_no_such,
+        )
+
+        update_session_pid("/test/folder", 200)
+
+        reloaded = load_sessions()
+        assert reloaded["sessions"][0]["vscode_pid"] == 200
+        assert reloaded["sessions"][0]["vscode_pid_create_time"] is None
+
+    def test_build_session_defaults_create_time_to_none(self) -> None:
+        """build_session always sets vscode_pid_create_time to None."""
+        from mcp_coder.workflows.vscodeclaude.helpers import build_session
+
+        session = build_session(
+            folder="/test/folder",
+            repo="owner/repo",
+            issue_number=42,
+            status="status-01:created",
+            vscode_pid=1234,
+            is_intervention=False,
+        )
+
+        assert session["vscode_pid_create_time"] is None

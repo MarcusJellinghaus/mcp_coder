@@ -144,6 +144,7 @@ class TestStatusDisplay:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -175,6 +176,7 @@ class TestStatusDisplay:
             "issue_number": 123,
             "status": "status-07:code-review",  # Original
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -206,6 +208,7 @@ class TestStatusDisplay:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -232,6 +235,7 @@ class TestStatusDisplay:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -264,6 +268,7 @@ class TestStatusDisplay:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -295,6 +300,7 @@ class TestStatusDisplay:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -413,6 +419,7 @@ class TestStatusDisplay:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -521,6 +528,7 @@ class TestClosedIssuePrefixDisplay:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -558,6 +566,7 @@ class TestClosedIssuePrefixDisplay:
             "issue_number": 456,
             "status": "status-04:plan-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -594,6 +603,7 @@ class TestClosedIssuePrefixDisplay:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -629,6 +639,7 @@ class TestClosedIssuePrefixDisplay:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -666,6 +677,7 @@ class TestClosedIssuePrefixDisplay:
             "issue_number": 789,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -703,6 +715,7 @@ class TestClosedIssuePrefixDisplay:
             "issue_number": 789,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -740,6 +753,7 @@ class TestClosedIssuePrefixDisplay:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -793,6 +807,7 @@ class TestClosedIssuePrefixDisplay:
             "issue_number": 458,
             "status": "status-04:plan-review",  # Stored (old) status
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -863,6 +878,7 @@ class TestBotStageSessionsDeleteAction:
             "issue_number": 123,
             "status": "status-02:awaiting-planning",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -902,6 +918,7 @@ class TestBotStageSessionsDeleteAction:
             "issue_number": 456,
             "status": "status-05:plan-ready",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -937,6 +954,7 @@ class TestBotStageSessionsDeleteAction:
             "issue_number": 789,
             "status": "status-08:ready-pr",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -972,6 +990,7 @@ class TestBotStageSessionsDeleteAction:
             "issue_number": 101,
             "status": "status-03:planning",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1007,6 +1026,7 @@ class TestBotStageSessionsDeleteAction:
             "issue_number": 202,
             "status": "status-06:implementing",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1042,6 +1062,7 @@ class TestBotStageSessionsDeleteAction:
             "issue_number": 303,
             "status": "status-09:pr-creating",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1077,6 +1098,7 @@ class TestBotStageSessionsDeleteAction:
             "issue_number": 404,
             "status": "status-02:awaiting-planning",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1114,6 +1136,7 @@ class TestBotStageSessionsDeleteAction:
             "issue_number": 505,
             "status": "status-07:code-review",  # Eligible status
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1162,6 +1185,7 @@ class TestPrCreatedSessionsDeleteAction:
             "issue_number": 123,
             "status": "status-10:pr-created",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1201,6 +1225,7 @@ class TestPrCreatedSessionsDeleteAction:
             "issue_number": 456,
             "status": "status-10:pr-created",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1237,6 +1262,7 @@ class TestPrCreatedSessionsDeleteAction:
             "issue_number": 789,
             "status": "status-10:pr-created",
             "vscode_pid": 12345,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1273,6 +1299,7 @@ class TestPrCreatedSessionsDeleteAction:
             "issue_number": 999,
             "status": "status-10:pr-created",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1320,6 +1347,7 @@ class TestDisplayStatusTableSoftDelete:
             "issue_number": 42,
             "status": "status-04:implementation",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1360,6 +1388,7 @@ class TestDisplayStatusTableSoftDelete:
             "issue_number": 99,
             "status": "status-04:implementation",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1625,3 +1654,252 @@ class TestDisplayStatusTableBranchIndicators:
         )
 
         assert result == "(active)"
+
+
+class TestZombieSessionDisplay:
+    """Tests for zombie session display in status table.
+
+    Zombie state: a session whose folder is missing on disk but whose VSCode
+    process is still considered live. Surface this state so the user can
+    diagnose blocked launches caused by phantom sessions.
+    """
+
+    def test_zombie_session_appears_with_running_zombie_qualifier(
+        self,
+        tmp_path: Path,
+        mock_status_checks: Any,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Closed issue + missing folder + running process appears as zombie."""
+        missing_folder = tmp_path / "zombie_folder"
+        # Do NOT create the folder - it must not exist
+        is_running = mock_status_checks(
+            is_closed=True, is_running=True, is_dirty=False, is_stale=True
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(missing_folder),
+            "repo": "owner/repo",
+            "issue_number": 188,
+            "status": "status-07:code-review",
+            "vscode_pid": 74544,
+            "vscode_pid_create_time": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
+            repo_filter=None,
+        )
+
+        captured = capsys.readouterr()
+        # Zombie row appears
+        assert "#188" in captured.out
+        # Three column literals required by step_5.md
+        assert "Running (zombie)" in captured.out
+        assert "Missing" in captured.out
+        assert "-> Investigate zombie" in captured.out
+        # (Closed) prefix on Status column is preserved on the zombie row
+        assert "(Closed)" in captured.out
+
+    def test_closed_missing_folder_without_running_process_still_skipped(
+        self,
+        tmp_path: Path,
+        mock_status_checks: Any,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Existing behavior preserved when no live process claims the slot."""
+        missing_folder = tmp_path / "missing_folder"
+        # Do NOT create the folder
+        is_running = mock_status_checks(
+            is_closed=True, is_running=False, is_dirty=False, is_stale=True
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(missing_folder),
+            "repo": "owner/repo",
+            "issue_number": 777,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "vscode_pid_create_time": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
+            repo_filter=None,
+        )
+
+        captured = capsys.readouterr()
+        # Row must NOT appear - nothing to show, nothing to clean up
+        assert "#777" not in captured.out
+        assert "Running (zombie)" not in captured.out
+        assert "-> Investigate zombie" not in captured.out
+
+    def test_live_session_with_existing_folder_not_marked_as_zombie(
+        self,
+        tmp_path: Path,
+        mock_status_checks: Any,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Live session with present folder shows plain 'Running', not zombie."""
+        existing_folder = tmp_path / "live_folder"
+        existing_folder.mkdir()
+        is_running = mock_status_checks(
+            is_closed=False, is_running=True, is_dirty=False, is_stale=False
+        )
+
+        session: VSCodeClaudeSession = {
+            "folder": str(existing_folder),
+            "repo": "owner/repo",
+            "issue_number": 949,
+            "status": "status-07:code-review",
+            "vscode_pid": 12345,
+            "vscode_pid_create_time": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            active_set={session["folder"]: is_running},
+            repo_filter=None,
+        )
+
+        captured = capsys.readouterr()
+        # Live session appears with plain "Running" qualifier - not zombie
+        assert "#949" in captured.out
+        assert "Running" in captured.out
+        assert "(zombie)" not in captured.out
+        assert "-> Investigate zombie" not in captured.out
+
+
+class TestScenarioACrossModule:
+    """Composition test — display consistency after Scenario A cleanup.
+
+    Pair of ``test_orphan_workspace_file_end_to_end`` in
+    ``test_cleanup.py``. Runs the same Scenario A setup, executes the
+    cleanup pass, then asserts ``display_status_table`` no longer renders
+    the removed session.
+    """
+
+    def test_display_status_table_omits_cleaned_up_session(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """After Scenario A cleanup, the status table omits the cleaned session."""
+        import json
+
+        from mcp_coder.utils.folder_deletion import DeletionResult
+        from mcp_coder.workflows.vscodeclaude.cleanup import cleanup_stale_sessions
+        from mcp_coder.workflows.vscodeclaude.helpers import TO_BE_DELETED_FILENAME
+        from mcp_coder.workflows.vscodeclaude.sessions import (
+            build_active_session_set,
+            load_sessions,
+        )
+
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        folder_name = "mcp_coder_188"
+        folder = tmp_path / folder_name
+        # Folder absent on disk.
+
+        orphan_workspace = tmp_path / f"{folder_name}.code-workspace"
+        orphan_workspace.write_text("{}")
+
+        (tmp_path / TO_BE_DELETED_FILENAME).write_text(f"{folder_name}\n")
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 188,
+            "status": "status-07:code-review",
+            "vscode_pid": 74544,
+            "vscode_pid_create_time": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+        sessions_file.write_text(
+            json.dumps({"sessions": [session], "last_updated": "2024-01-01T00:00:00Z"})
+        )
+
+        closed_issue: IssueData = {
+            "number": 188,
+            "title": "Closed issue",
+            "body": "",
+            "state": "closed",
+            "labels": ["status-07:code-review"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "locked": False,
+        }
+        cached_issues_by_repo: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {188: closed_issue}
+        }
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_github_username",
+            lambda: "testuser",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_vscode_open_for_folder",
+            lambda path: (False, None),
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_open_for_folder",
+            lambda path: (False, None),
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.safe_delete_folder",
+            lambda path: DeletionResult(success=True),
+        )
+
+        active_set = build_active_session_set(load_sessions()["sessions"])
+
+        cleanup_stale_sessions(
+            workspace_base=str(tmp_path),
+            active_set=active_set,
+            dry_run=False,
+            cached_issues_by_repo=cached_issues_by_repo,
+        )
+
+        post_cleanup_sessions = load_sessions()["sessions"]
+        # Discard captured stdout from cleanup so the assertions only inspect
+        # what display_status_table renders.
+        capsys.readouterr()
+
+        display_status_table(
+            sessions=post_cleanup_sessions,
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            active_set={},
+            repo_filter=None,
+            cached_issues_by_repo=cached_issues_by_repo,
+        )
+
+        captured = capsys.readouterr()
+        assert "#188" not in captured.out
+        assert folder_name not in captured.out

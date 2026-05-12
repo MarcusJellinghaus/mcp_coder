@@ -33,6 +33,11 @@ logger = logging.getLogger(__name__)
 # contain "code" as a substring (e.g. "my-code-tool.exe").
 VSCODE_PROCESS_NAMES = {"code.exe", "code"}  # Windows / Linux+macOS
 
+# Seconds after launch during which a negative window-title check is not
+# trusted (covers VSCode cold-start and extension reinstall delays). Beyond
+# this window the title check is authoritative on Windows.
+LAUNCH_GRACE_SECONDS = 60.0
+
 
 def get_sessions_file_path() -> Path:
     """Get path to sessions JSON file.
@@ -65,6 +70,8 @@ def load_sessions() -> VSCodeClaudeSessionStore:
             data["sessions"] = []
         if "last_updated" not in data:
             data["last_updated"] = ""
+        for session in data["sessions"]:
+            session.setdefault("vscode_pid_create_time", None)
         return cast(VSCodeClaudeSessionStore, data)
     except (json.JSONDecodeError, OSError) as e:
         logger.warning("Failed to load sessions file: %s", e)
@@ -85,18 +92,23 @@ def save_sessions(store: VSCodeClaudeSessionStore) -> None:
     sessions_file.write_text(json.dumps(store, indent=2), encoding="utf-8")
 
 
-def check_vscode_running(pid: int | None) -> bool:
-    """Check if VSCode process is still running.
+def check_vscode_running(
+    pid: int | None,
+    expected_create_time: float | None,
+) -> bool:
+    """Check if VSCode process is still running and is the expected process.
 
     Args:
         pid: Process ID to check (None returns False)
+        expected_create_time: Stored ``create_time`` for the process. When
+            provided, must match the live process's ``create_time`` within
+            one second; otherwise the PID has been reused by a different
+            process and this returns False. Pass ``None`` to skip the
+            identity check (loose name-only behaviour).
 
     Returns:
-        True if process exists and is a running VSCode process, False otherwise.
-
-    Uses psutil for cross-platform compatibility.
-    Note: On Windows, the PID from launch may be a launcher that exits.
-          Use is_vscode_open_for_folder() for more reliable folder-based check.
+        True if process exists, is a running VSCode process, and (when
+        expected_create_time is provided) has a matching create_time.
     """
     if pid is None:
         logger.debug("check_vscode_running: pid=None -> False")
@@ -107,14 +119,30 @@ def check_vscode_running(pid: int | None) -> bool:
         return False
     try:
         process = psutil.Process(pid)
-        result = process.name().lower() in VSCODE_PROCESS_NAMES
+        if process.name().lower() not in VSCODE_PROCESS_NAMES:
+            logger.debug(
+                "check_vscode_running: pid=%d name=%s -> False",
+                pid,
+                process.name(),
+            )
+            return False
+        if expected_create_time is not None:
+            actual_create_time = process.create_time()
+            if abs(actual_create_time - expected_create_time) > 1.0:
+                logger.debug(
+                    "check_vscode_running: pid=%d create_time mismatch "
+                    "(expected=%.3f actual=%.3f) -> False",
+                    pid,
+                    expected_create_time,
+                    actual_create_time,
+                )
+                return False
         logger.debug(
-            "check_vscode_running: pid=%d name=%s -> %s",
+            "check_vscode_running: pid=%d name=%s -> True",
             pid,
             process.name(),
-            result,
         )
-        return result
+        return True
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         logger.debug("check_vscode_running: pid=%d access error -> False", pid)
         return False
@@ -176,8 +204,11 @@ def clear_vscode_process_cache() -> None:
     _vscode_process_cache = None
 
 
-# Cache for VSCode window titles (Windows only)
-_vscode_window_cache: list[str] | None = None
+# Cache for VSCode window titles (Windows only).
+# Each entry is (pid, title) where pid is the PID of the process that owns
+# the window. Storing the PID is what lets is_vscode_window_open_for_folder
+# bind a title match to the specific VSCode that has the folder open.
+_vscode_window_cache: list[tuple[int, str]] | None = None
 
 
 # Cache for VSCode process PIDs to avoid repeated lookups
@@ -207,18 +238,23 @@ def _get_vscode_pids() -> set[int]:
     return pids
 
 
-def _get_vscode_window_titles(refresh: bool = False) -> list[str]:
-    """Get list of VSCode window titles (Windows only).
+def _get_vscode_window_titles(refresh: bool = False) -> list[tuple[int, str]]:
+    """Return list of (pid, title) pairs for visible VSCode windows.
 
     Uses win32gui to enumerate windows owned by Code.exe processes.
     This catches all VSCode windows including integrated terminals
     that don't have "Visual Studio Code" in the title.
 
+    The PID is the owning process so callers can bind a title match to
+    the specific VSCode instance that has the folder open, eliminating
+    cross-process title-leak false positives.
+
     Args:
         refresh: Force refresh of cached titles
 
     Returns:
-        List of VSCode window titles, or empty list on non-Windows
+        List of (pid, title) tuples for visible VSCode-owned windows,
+        or empty list on non-Windows.
     """
     global _vscode_window_cache, _vscode_pids_cache  # pylint: disable=global-statement  # module-level singleton
 
@@ -235,7 +271,7 @@ def _get_vscode_window_titles(refresh: bool = False) -> list[str]:
     vscode_pids = _get_vscode_pids()
     logger.debug("Found %d VSCode processes: %s", len(vscode_pids), vscode_pids)
 
-    titles: list[str] = []
+    entries: list[tuple[int, str]] = []
 
     def enum_callback(hwnd: int, _: Any) -> bool:
         """Callback for EnumWindows.
@@ -250,7 +286,7 @@ def _get_vscode_window_titles(refresh: bool = False) -> list[str]:
                     # Check if window belongs to a VSCode process
                     _, pid = win32process.GetWindowThreadProcessId(hwnd)
                     if pid in vscode_pids:
-                        titles.append(title)
+                        entries.append((pid, title))
         except (
             Exception
         ):  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
@@ -265,9 +301,9 @@ def _get_vscode_window_titles(refresh: bool = False) -> list[str]:
         logger.warning("Failed to enumerate windows: %s", e)
         return []
 
-    _vscode_window_cache = titles
-    logger.debug("Found %d VSCode windows: %s", len(titles), titles)
-    return titles
+    _vscode_window_cache = entries
+    logger.debug("Found %d VSCode windows: %s", len(entries), entries)
+    return entries
 
 
 def clear_vscode_window_cache() -> None:
@@ -288,6 +324,11 @@ def is_vscode_window_open_for_folder(
     the issue number pattern (e.g., '[#219 ...'). This prevents false positives
     from matching the main repo window instead of the issue workspace window.
 
+    The title's owning PID must also belong to a VSCode process whose cmdline
+    references ``folder_path``. This eliminates cross-process title-leak where
+    an unrelated VSCode window's title happens to contain the issue number and
+    repo name.
+
     Args:
         folder_path: Full path to the workspace folder
         issue_number: Optional issue number (required for reliable matching)
@@ -300,6 +341,7 @@ def is_vscode_window_open_for_folder(
         return False
 
     titles = _get_vscode_window_titles()
+    folder_str = str(folder_path).lower()
     folder_name = Path(folder_path).name.lower()
 
     # For vscodeclaude sessions: Only match if issue number is in window title
@@ -313,7 +355,19 @@ def is_vscode_window_open_for_folder(
         # that may show issue numbers without the bracket (e.g. "#458 - mcp_coder")
         issue_pattern = f"[#{issue_number}"
 
-        for title in titles:
+        # Bind the title match to the VSCode process that actually has the
+        # folder open: only accept a title from a PID whose cmdline references
+        # the folder.
+        matching_pids = {
+            proc["pid"]
+            for proc in _get_vscode_processes()
+            if folder_str in proc.get("cmdline_lower", "")
+            or folder_name in proc.get("cmdline_lower", "")
+        }
+
+        for pid, title in titles:
+            if pid not in matching_pids:
+                continue
             title_lower = title.lower()
             # Both issue number (with bracket) AND repo name must be present
             if issue_pattern in title and repo_name in title_lower:
@@ -480,21 +534,21 @@ def remove_session(folder: str) -> bool:
 
 
 def session_has_artifacts(folder: str) -> bool:
-    """Check if session folder or workspace file still exist on disk.
+    """Check if the session working folder still exists on disk.
 
-    A session's artifacts are its working folder and its .code-workspace file.
-    If both are gone, any still-running VSCode process is a zombie for this
-    session (it was launched with artifacts that have since been deleted).
+    A session's only meaningful artifact is its working folder. The
+    `.code-workspace` file is a launcher that points at the folder; without
+    the folder it points at nothing. If the folder is gone, any still-running
+    VSCode process is a zombie for this session and any lingering workspace
+    file is an orphan to be cleaned up.
 
     Args:
         folder: Full path to the session's working folder
 
     Returns:
-        True if the folder or workspace file exists
+        True if the folder exists.
     """
-    folder_path = Path(folder)
-    workspace_file = folder_path.parent / f"{folder_path.name}.code-workspace"
-    return folder_path.exists() or workspace_file.exists()
+    return Path(folder).exists()
 
 
 def is_session_active(session: VSCodeClaudeSession) -> bool:
@@ -503,28 +557,30 @@ def is_session_active(session: VSCodeClaudeSession) -> bool:
     Single entry point for all VSCode detection logic. Callers should always
     use this instead of assembling individual checks themselves.
 
-    Uses a fallback chain that prefers false-positives (skip cleanup) over
-    false-negatives (delete live folder):
+    Detection chain:
 
-    1. On Windows with issue_num + repo: window-title match -> active.
-    2. Stored PID still alive -> active.
-    3. Cmdline match on folder -> active (and refresh stored PID if the
-       found PID differs from the stored one, so subsequent calls can hit
-       the fast PID path).
-    4. Otherwise -> inactive.
-
-    Pre-condition: only runs checks if session artifacts exist. If both the
-    folder and workspace file are gone, any matching process is a zombie
-    and this short-circuits to False with a DEBUG line.
-
-    Every other call emits exactly one INFO line naming the deciding
-    criterion. Windows fallback paths carry a ``window-title not found —
-    potentially stale`` note so silent title-detection degradation surfaces
-    in logs even when a later check succeeds.
+    1. Pre-condition: session artifacts exist (folder on disk).
+    2. On Windows with issue_num + repo:
+       - Once the session is older than ``LAUNCH_GRACE_SECONDS``, the
+         window-title check is authoritative: a positive match returns True,
+         a negative match returns False (no PID/cmdline fallback).
+       - Within the grace window, the title check is skipped to cover
+         VSCode cold-start and extension-install delays; the PID + cmdline
+         fallback chain runs instead.
+    3. Fallback chain (used on non-Windows, when ``issue_num``/``repo`` are
+       missing, or within the launch grace window):
+       a. Stored PID still alive (with create_time identity match) -> active.
+       b. Cmdline match on folder -> active (and refresh the stored PID if
+          the found PID differs from the stored one, so subsequent calls hit
+          the fast PID path).
+       c. Otherwise -> inactive.
 
     Side effect: on cmdline match where the found PID differs from the
     stored ``vscode_pid``, calls ``update_session_pid(folder, found_pid)``,
     which writes ``sessions.json``.
+
+    Subscript access on ``vscode_pid_create_time`` is safe: ``load_sessions``
+    backfills the key on read and ``build_session`` initializes it on create.
 
     Args:
         session: Session to check
@@ -539,26 +595,45 @@ def is_session_active(session: VSCodeClaudeSession) -> bool:
         logger.debug("is_session_active #%s: no artifacts -> False", issue_num)
         return False
 
-    title_checked = False
     if HAS_WIN32GUI and issue_num is not None and repo is not None:
-        title_checked = True
-        if is_vscode_window_open_for_folder(
-            folder,
-            issue_number=issue_num,
-            repo=repo,
-        ):
-            logger.info("is_session_active #%s: active (window-title match)", issue_num)
-            return True
+        started_at_str = session.get("started_at", "")
+        try:
+            age = (
+                datetime.now(timezone.utc) - datetime.fromisoformat(started_at_str)
+            ).total_seconds()
+        except (ValueError, TypeError):
+            age = float("inf")
 
-    stale = ", window-title not found \u2014 potentially stale" if title_checked else ""
+        if age >= LAUNCH_GRACE_SECONDS:
+            if is_vscode_window_open_for_folder(
+                folder,
+                issue_number=issue_num,
+                repo=repo,
+            ):
+                logger.info(
+                    "is_session_active #%s: active (window-title match)", issue_num
+                )
+                return True
+            logger.info(
+                "is_session_active #%s: inactive (no title match, age=%.0fs)",
+                issue_num,
+                age,
+            )
+            return False
+        logger.debug(
+            "is_session_active #%s: within launch grace (age=%.0fs), using fallback chain",
+            issue_num,
+            age,
+        )
+
     stored_pid = session.get("vscode_pid")
+    stored_create_time = session["vscode_pid_create_time"]
 
-    if check_vscode_running(stored_pid):
+    if check_vscode_running(stored_pid, stored_create_time):
         logger.info(
-            "is_session_active #%s: active (PID %s alive%s)",
+            "is_session_active #%s: active (PID %s alive)",
             issue_num,
             stored_pid,
-            stale,
         )
         return True
 
@@ -573,18 +648,15 @@ def is_session_active(session: VSCodeClaudeSession) -> bool:
             )
             update_session_pid(folder, found_pid)
         logger.info(
-            "is_session_active #%s: active (cmdline match PID=%s%s)",
+            "is_session_active #%s: active (cmdline match PID=%s)",
             issue_num,
             found_pid,
-            stale,
         )
         return True
 
-    prefix = "no window / " if title_checked else ""
     logger.info(
-        "is_session_active #%s: inactive (%sPID %s gone / no cmdline match)",
+        "is_session_active #%s: inactive (PID %s gone / no cmdline match)",
         issue_num,
-        prefix,
         stored_pid,
     )
     return False
@@ -618,16 +690,26 @@ def build_active_session_set(
 
 
 def update_session_pid(folder: str, pid: int) -> None:
-    """Update VSCode PID for existing session.
+    """Atomically writes both vscode_pid and vscode_pid_create_time.
+
+    Captures ``psutil.Process(pid).create_time()`` and stores it alongside
+    ``vscode_pid`` in the same persistence step. This is the only populator
+    of ``vscode_pid_create_time``; the field self-populates on the first
+    cmdline-match refresh after launch.
 
     Args:
         folder: Session folder path
         pid: New VSCode process ID
     """
+    try:
+        create_time: float | None = psutil.Process(pid).create_time()
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        create_time = None
     store = load_sessions()
     for session in store["sessions"]:
         if session["folder"] == folder:
             session["vscode_pid"] = pid
+            session["vscode_pid_create_time"] = create_time
             break
     save_sessions(store)
 

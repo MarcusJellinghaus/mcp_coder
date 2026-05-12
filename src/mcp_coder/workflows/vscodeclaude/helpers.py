@@ -86,6 +86,7 @@ def build_session(
         "issue_number": issue_number,
         "status": status,
         "vscode_pid": vscode_pid,
+        "vscode_pid_create_time": None,
         "started_at": datetime.now(timezone.utc).isoformat(),
         "is_intervention": is_intervention,
     }

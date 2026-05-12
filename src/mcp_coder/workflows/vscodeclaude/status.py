@@ -301,9 +301,12 @@ def display_status_table(
             continue
 
         is_closed = is_issue_closed(session, cached_issues=repo_cached_issues)
+        is_running = active_set.get(session["folder"], False)
+        folder_missing = not folder_path.exists()
 
-        # Skip closed issues if folder doesn't exist (nothing to clean up)
-        if is_closed and not folder_path.exists():
+        # Skip closed issues with missing folder UNLESS a process still claims
+        # the slot (zombie state - surface it for diagnosis)
+        if is_closed and folder_missing and not is_running:
             logger.debug(
                 "Skipping closed issue #%d with missing folder",
                 session["issue_number"],
@@ -323,8 +326,6 @@ def display_status_table(
         # Add "(Closed)" prefix for closed issues
         if is_closed:
             status = f"(Closed) {status}"
-
-        is_running = active_set.get(session["folder"], False)
 
         is_dirty = check_folder_dirty(folder_path) if folder_path.exists() else False
         git_status = (
@@ -349,8 +350,13 @@ def display_status_table(
             status_changed = is_session_stale(session, cached_issues=repo_cached_issues)
             stale = not is_eligible or status_changed
 
-        vscode_status = "Running" if is_running else "Closed"
-        action = get_next_action(stale, is_dirty, is_running)
+        # Zombie state: folder missing but process still running - surface for diagnosis
+        if folder_missing and is_running:
+            vscode_status = "Running (zombie)"
+            action = "-> Investigate zombie"
+        else:
+            vscode_status = "Running" if is_running else "Closed"
+            action = get_next_action(stale, is_dirty, is_running)
 
         # Show status change indicator (but not for closed issues which already have prefix)
         # Show current (new) status when stale, not the stored (old) status

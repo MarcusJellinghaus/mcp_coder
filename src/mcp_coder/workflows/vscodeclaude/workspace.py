@@ -143,6 +143,16 @@ def _remove_readonly(
         raise exc_value
 
 
+def get_workspace_file_path(workspace_base: str, folder_name: str) -> Path:
+    """Return the `.code-workspace` file path for a session folder.
+
+    Single source of truth for the `{workspace_base}/{folder_name}.code-workspace`
+    pattern. Callers should use this helper instead of constructing the path
+    inline so the convention lives in one place.
+    """
+    return Path(workspace_base) / f"{folder_name}.code-workspace"
+
+
 def get_working_folder_path(
     workspace_base: str,
     repo_name: str,
@@ -419,7 +429,7 @@ def create_workspace_file(
     )
 
     # Write to workspace_base
-    workspace_file = Path(workspace_base) / f"{folder_name}.code-workspace"
+    workspace_file = get_workspace_file_path(workspace_base, folder_name)
     workspace_file.write_text(content, encoding="utf-8")
 
     return workspace_file

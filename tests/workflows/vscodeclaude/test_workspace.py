@@ -14,11 +14,27 @@ from mcp_coder.workflows.vscodeclaude.workspace import (
     create_working_folder,
     create_workspace_file,
     get_working_folder_path,
+    get_workspace_file_path,
     run_setup_commands,
     update_gitignore,
     validate_mcp_json,
     validate_setup_commands,
 )
+
+
+class TestGetWorkspaceFilePath:
+    """Tests for the get_workspace_file_path helper."""
+
+    def test_returns_expected_path(self) -> None:
+        """Constructs ``{base}/{folder}.code-workspace`` deterministically."""
+        assert get_workspace_file_path("/tmp/ws", "mcp_coder_123") == Path(
+            "/tmp/ws/mcp_coder_123.code-workspace"
+        )
+
+    def test_handles_pathlike_base(self, tmp_path: Path) -> None:
+        """Accepts a real workspace_base and folder_name."""
+        result = get_workspace_file_path(str(tmp_path), "my-repo_42")
+        assert result == tmp_path / "my-repo_42.code-workspace"
 
 
 class TestWorkspaceSetup:
