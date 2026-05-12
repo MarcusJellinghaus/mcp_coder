@@ -43,6 +43,7 @@ Because the field is now guaranteed present on every loaded session,
 
 - `src/mcp_coder/workflows/vscodeclaude/types.py`
 - `src/mcp_coder/workflows/vscodeclaude/sessions.py`
+- `src/mcp_coder/workflows/vscodeclaude/helpers.py`
 - `tests/workflows/vscodeclaude/test_sessions.py`
 - `tests/workflows/vscodeclaude/test_types.py` (if existing migration coverage)
 
@@ -79,12 +80,20 @@ def update_session_pid(folder: str, pid: int) -> None:
   The `load_sessions` backfill guarantees the key is always present after
   loading.
 - `load_sessions` (in `src/mcp_coder/workflows/vscodeclaude/sessions.py`,
-  defined near line 53) gains a one-line backfill loop after JSON parse:
+  defined at line 50) gains a one-line backfill loop placed **after the
+  structure validation block** (after the `if "last_updated" not in data:
+  data["last_updated"] = ""` line, i.e. once `data["sessions"]` is
+  guaranteed to be a list) **and before the final
+  `return cast(VSCodeClaudeSessionStore, data)`**:
 
   ```python
-  for session in store["sessions"]:
+  for session in data["sessions"]:
       session.setdefault("vscode_pid_create_time", None)
   ```
+
+- `save_sessions` requires no changes — it writes `store` whole, so the
+  backfilled `vscode_pid_create_time=None` persists on the first save after
+  `load_sessions` runs.
 
 - `is_session_active` call site at `sessions.py:556` passes
   `session["vscode_pid_create_time"]` to `check_vscode_running`.
