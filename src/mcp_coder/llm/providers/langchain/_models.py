@@ -10,6 +10,7 @@ each function so they only trigger when model listing is actually needed
 from __future__ import annotations
 
 import os
+from typing import Any
 
 from ._exceptions import (
     ANTHROPIC_AUTH_ERRORS,
@@ -143,3 +144,56 @@ def list_anthropic_models(api_key: str | None) -> list[str]:
         raise_auth_error("Anthropic", "ANTHROPIC_API_KEY", exc)
     except CONNECTION_ERRORS as exc:
         raise_connection_error("Anthropic", "ANTHROPIC_API_KEY", exc)
+
+
+def list_ollama_models(
+    api_key: str | None,
+    endpoint: str | None = None,
+) -> list[str]:
+    """Return sorted model names from the Ollama daemon's /api/tags.
+
+    Args:
+        api_key: Optional bearer token for proxy-auth setups (unused by the
+            ``ollama`` Python client directly; reserved for symmetry).
+        endpoint: Optional Ollama host (host:port or full URL); resolved via
+            :func:`_resolve_ollama_host`.
+
+    Returns:
+        Sorted list of model name strings (e.g. ``["llama3:latest", "mistral:7b"]``).
+        Empty list when the daemon returns no models.
+
+    Raises:
+        ImportError: If the ``ollama`` Python client is not installed.
+    """  # Also raises LLMConnectionError via helpers.
+    del api_key  # not consumed by the ollama Python client directly
+    try:
+        import ollama  # pylint: disable=import-outside-toplevel,import-error
+    except ImportError as exc:
+        raise ImportError(
+            "ollama is required to list Ollama models.\n"
+            "Install with: pip install 'mcp-coder[langchain]'"
+        ) from exc
+    host = _resolve_ollama_host(endpoint)
+    try:
+        client = ollama.Client(host=host) if host else ollama.Client()
+        data: Any = client.list()
+        if isinstance(data, dict):
+            models_iter = data.get("models", [])
+        else:
+            models_iter = getattr(data, "models", [])
+        names: list[str] = []
+        for m in models_iter:
+            if isinstance(m, dict):
+                name = m.get("name") or m.get("model")
+            else:
+                name = getattr(m, "name", None) or getattr(m, "model", None)
+            if isinstance(name, str):
+                names.append(name)
+        return sorted(names)
+    except CONNECTION_ERRORS as exc:
+        raise_connection_error(
+            "Ollama",
+            "OLLAMA_API_KEY",
+            exc,
+            endpoint_hint="endpoint/OLLAMA_HOST if not localhost",
+        )

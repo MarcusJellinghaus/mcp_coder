@@ -227,9 +227,9 @@ def _list_models_for_backend(
     """List models for the given backend using existing _models.py functions.
 
     Args:
-        backend: Backend name ("openai", "gemini", or "anthropic").
+        backend: Backend name ("openai", "gemini", "anthropic", or "ollama").
         api_key: API key for the backend, or None.
-        endpoint: Optional custom endpoint URL (used by OpenAI backend).
+        endpoint: Optional custom endpoint URL (used by OpenAI and Ollama backends).
 
     Returns:
         Dict with 'ok' (bool), 'value' (list of model names), and optionally 'error'.
@@ -243,6 +243,8 @@ def _list_models_for_backend(
             models = _models.list_gemini_models(api_key)
         elif backend == "anthropic":
             models = _models.list_anthropic_models(api_key)
+        elif backend == "ollama":
+            models = _models.list_ollama_models(api_key, endpoint)
         else:
             return {"ok": False, "value": [], "error": f"Unknown backend: {backend}"}
         return {"ok": True, "value": models}

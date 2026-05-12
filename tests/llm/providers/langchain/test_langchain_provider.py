@@ -259,12 +259,21 @@ class TestAskTextModelNotFound:
             "api_version": None,
         }
 
-    def test_404_error_raises_value_error_with_model_hint(self) -> None:
-        """404 from model invoke raises ValueError with model name."""
+    @pytest.mark.parametrize(
+        "error_message",
+        [
+            "Error code: 404 - The model 'bad-model' does not exist",
+            "NOT_FOUND: model not registered",
+            "model 'foo' not found",
+            "Model 'foo' Not Found",
+        ],
+    )
+    def test_404_error_raises_value_error_with_model_hint(
+        self, error_message: str
+    ) -> None:
+        """NOT_FOUND-style errors raise ValueError with model name + suggestions."""
         mock_model = MagicMock()
-        mock_model.invoke.side_effect = Exception(
-            "Error code: 404 - The model 'bad-model' does not exist"
-        )
+        mock_model.invoke.side_effect = Exception(error_message)
         with (
             patch(
                 "mcp_coder.llm.providers.langchain._load_langchain_config",

@@ -18,6 +18,7 @@ from mcp_coder.llm.providers.langchain._exceptions import (
 from mcp_coder.llm.providers.langchain._models import (
     list_anthropic_models,
     list_gemini_models,
+    list_ollama_models,
     list_openai_models,
 )
 
@@ -65,6 +66,16 @@ def _openai_mock() -> MagicMock:
 def _anthropic_mock() -> MagicMock:
     """Create a fresh mock anthropic module."""
     return MagicMock()
+
+
+def _ollama_mock() -> MagicMock:
+    """Create a fresh mock ollama module."""
+    return MagicMock()
+
+
+def _make_ollama_model(name: str) -> dict[str, str]:
+    """Create a mock Ollama model entry as returned by client.list()."""
+    return {"name": name}
 
 
 class TestListGeminiModels:
@@ -222,6 +233,98 @@ class TestListAnthropicModels:
             list_anthropic_models(api_key="k")
         _, kwargs = mock_anthropic.Anthropic.call_args
         assert kwargs["http_client"] is sentinel
+
+
+class TestListOllamaModels:
+    """Tests for list_ollama_models function."""
+
+    def test_returns_sorted_model_names(self) -> None:
+        """list_ollama_models returns sorted model names."""
+        mock_ollama = _ollama_mock()
+        mock_ollama.Client.return_value.list.return_value = {
+            "models": [
+                _make_ollama_model("mistral:7b"),
+                _make_ollama_model("llama3:latest"),
+            ]
+        }
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            result = list_ollama_models(api_key=None)
+        assert result == ["llama3:latest", "mistral:7b"]
+
+    def test_passes_normalized_host_to_client(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """endpoint without scheme gets http:// prefix before passing to Client."""
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        mock_ollama = _ollama_mock()
+        mock_ollama.Client.return_value.list.return_value = {"models": []}
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            list_ollama_models(api_key=None, endpoint="127.0.0.1:11434")
+        mock_ollama.Client.assert_called_once_with(host="http://127.0.0.1:11434")
+
+    def test_uses_default_client_when_no_endpoint(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """No env and no endpoint → Client() called without host kwarg."""
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        mock_ollama = _ollama_mock()
+        mock_ollama.Client.return_value.list.return_value = {"models": []}
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            list_ollama_models(api_key=None)
+        mock_ollama.Client.assert_called_once_with()
+
+    def test_ollama_host_env_overrides_endpoint(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """OLLAMA_HOST env var takes precedence over endpoint argument."""
+        monkeypatch.setenv("OLLAMA_HOST", "envhost:9999")
+        mock_ollama = _ollama_mock()
+        mock_ollama.Client.return_value.list.return_value = {"models": []}
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            list_ollama_models(api_key=None, endpoint="confighost:1111")
+        mock_ollama.Client.assert_called_once_with(host="http://envhost:9999")
+
+    def test_returns_empty_list_when_no_models(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Returns empty list when daemon returns no models."""
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        mock_ollama = _ollama_mock()
+        mock_ollama.Client.return_value.list.return_value = {"models": []}
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            result = list_ollama_models(api_key=None)
+        assert result == []
+
+    def test_connection_error_raises_llm_connection_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """ConnectionError from client.list() raises LLMConnectionError."""
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        mock_ollama = _ollama_mock()
+        mock_ollama.Client.return_value.list.side_effect = ConnectionError("refused")
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            with pytest.raises(LLMConnectionError):
+                list_ollama_models(api_key=None)
+
+    def test_connection_error_message_contains_hints(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Connection error message includes OLLAMA_API_KEY and OLLAMA_HOST hints."""
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        mock_ollama = _ollama_mock()
+        mock_ollama.Client.return_value.list.side_effect = ConnectionError("refused")
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            with pytest.raises(LLMConnectionError) as exc_info:
+                list_ollama_models(api_key=None)
+        msg = str(exc_info.value)
+        assert "OLLAMA_API_KEY" in msg
+        assert "OLLAMA_HOST" in msg or "endpoint" in msg.lower()
+
+    def test_import_error_when_sdk_not_installed(self) -> None:
+        """list_ollama_models raises ImportError when ollama SDK missing."""
+        with patch.dict(sys.modules, {"ollama": None}):
+            with pytest.raises(ImportError):
+                list_ollama_models(api_key=None)
 
 
 class TestListModelsCommon:

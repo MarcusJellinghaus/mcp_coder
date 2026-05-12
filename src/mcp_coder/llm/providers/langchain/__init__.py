@@ -328,8 +328,8 @@ def _ask_text(
         ai_msg = chat_model.invoke(lc_messages)
     except Exception as exc:
         _handle_provider_error(exc, backend)
-        exc_str = str(exc)
-        if "404" in exc_str or "not_found" in exc_str.lower() or "NOT_FOUND" in exc_str:
+        exc_lower = str(exc).lower()
+        if "404" in exc_lower or "not_found" in exc_lower or "not found" in exc_lower:
             model = config.get("model", "")
             hint = f"Model {model!r} not found."
             try:
@@ -382,7 +382,12 @@ def _get_model_suggestions(config: dict[str, str | None]) -> str:
     api_key = config.get("api_key")
     endpoint = config.get("endpoint")
 
-    from ._models import list_anthropic_models, list_gemini_models, list_openai_models
+    from ._models import (
+        list_anthropic_models,
+        list_gemini_models,
+        list_ollama_models,
+        list_openai_models,
+    )
 
     models: list[str] = []
     if backend == "openai":
@@ -391,6 +396,8 @@ def _get_model_suggestions(config: dict[str, str | None]) -> str:
         models = list_gemini_models(os.getenv("GEMINI_API_KEY") or api_key)
     elif backend == "anthropic":
         models = list_anthropic_models(os.getenv("ANTHROPIC_API_KEY") or api_key)
+    elif backend == "ollama":
+        models = list_ollama_models(os.getenv("OLLAMA_API_KEY") or api_key, endpoint)
 
     if models:
         return "\n\nAvailable models:\n" + "\n".join(f"  - {m}" for m in models)
@@ -705,8 +712,8 @@ def _ask_text_stream(
     except Exception as exc:
         _handle_provider_error(exc, backend)
         # Handle 404/model-not-found errors (mirrors _ask_text() path)
-        exc_str = str(exc)
-        if "404" in exc_str or "not_found" in exc_str.lower() or "NOT_FOUND" in exc_str:
+        exc_lower = str(exc).lower()
+        if "404" in exc_lower or "not_found" in exc_lower or "not found" in exc_lower:
             model = config.get("model", "")
             hint = f"Model {model!r} not found."
             try:
