@@ -144,6 +144,7 @@ class TestStatusDisplay:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -175,6 +176,7 @@ class TestStatusDisplay:
             "issue_number": 123,
             "status": "status-07:code-review",  # Original
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -206,6 +208,7 @@ class TestStatusDisplay:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -232,6 +235,7 @@ class TestStatusDisplay:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -264,6 +268,7 @@ class TestStatusDisplay:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -295,6 +300,7 @@ class TestStatusDisplay:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -413,6 +419,7 @@ class TestStatusDisplay:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -521,6 +528,7 @@ class TestClosedIssuePrefixDisplay:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -558,6 +566,7 @@ class TestClosedIssuePrefixDisplay:
             "issue_number": 456,
             "status": "status-04:plan-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -594,6 +603,7 @@ class TestClosedIssuePrefixDisplay:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -629,6 +639,7 @@ class TestClosedIssuePrefixDisplay:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -666,6 +677,7 @@ class TestClosedIssuePrefixDisplay:
             "issue_number": 789,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -703,6 +715,7 @@ class TestClosedIssuePrefixDisplay:
             "issue_number": 789,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -740,6 +753,7 @@ class TestClosedIssuePrefixDisplay:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -793,6 +807,7 @@ class TestClosedIssuePrefixDisplay:
             "issue_number": 458,
             "status": "status-04:plan-review",  # Stored (old) status
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -863,6 +878,7 @@ class TestBotStageSessionsDeleteAction:
             "issue_number": 123,
             "status": "status-02:awaiting-planning",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -902,6 +918,7 @@ class TestBotStageSessionsDeleteAction:
             "issue_number": 456,
             "status": "status-05:plan-ready",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -937,6 +954,7 @@ class TestBotStageSessionsDeleteAction:
             "issue_number": 789,
             "status": "status-08:ready-pr",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -972,6 +990,7 @@ class TestBotStageSessionsDeleteAction:
             "issue_number": 101,
             "status": "status-03:planning",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1007,6 +1026,7 @@ class TestBotStageSessionsDeleteAction:
             "issue_number": 202,
             "status": "status-06:implementing",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1042,6 +1062,7 @@ class TestBotStageSessionsDeleteAction:
             "issue_number": 303,
             "status": "status-09:pr-creating",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1077,6 +1098,7 @@ class TestBotStageSessionsDeleteAction:
             "issue_number": 404,
             "status": "status-02:awaiting-planning",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1114,6 +1136,7 @@ class TestBotStageSessionsDeleteAction:
             "issue_number": 505,
             "status": "status-07:code-review",  # Eligible status
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1162,6 +1185,7 @@ class TestPrCreatedSessionsDeleteAction:
             "issue_number": 123,
             "status": "status-10:pr-created",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1201,6 +1225,7 @@ class TestPrCreatedSessionsDeleteAction:
             "issue_number": 456,
             "status": "status-10:pr-created",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1237,6 +1262,7 @@ class TestPrCreatedSessionsDeleteAction:
             "issue_number": 789,
             "status": "status-10:pr-created",
             "vscode_pid": 12345,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1273,6 +1299,7 @@ class TestPrCreatedSessionsDeleteAction:
             "issue_number": 999,
             "status": "status-10:pr-created",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1320,6 +1347,7 @@ class TestDisplayStatusTableSoftDelete:
             "issue_number": 42,
             "status": "status-04:implementation",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1360,6 +1388,7 @@ class TestDisplayStatusTableSoftDelete:
             "issue_number": 99,
             "status": "status-04:implementation",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }

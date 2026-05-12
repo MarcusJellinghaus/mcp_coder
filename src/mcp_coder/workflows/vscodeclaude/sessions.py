@@ -65,6 +65,8 @@ def load_sessions() -> VSCodeClaudeSessionStore:
             data["sessions"] = []
         if "last_updated" not in data:
             data["last_updated"] = ""
+        for session in data["sessions"]:
+            session.setdefault("vscode_pid_create_time", None)
         return cast(VSCodeClaudeSessionStore, data)
     except (json.JSONDecodeError, OSError) as e:
         logger.warning("Failed to load sessions file: %s", e)
@@ -85,18 +87,23 @@ def save_sessions(store: VSCodeClaudeSessionStore) -> None:
     sessions_file.write_text(json.dumps(store, indent=2), encoding="utf-8")
 
 
-def check_vscode_running(pid: int | None) -> bool:
-    """Check if VSCode process is still running.
+def check_vscode_running(
+    pid: int | None,
+    expected_create_time: float | None,
+) -> bool:
+    """Check if VSCode process is still running and is the expected process.
 
     Args:
         pid: Process ID to check (None returns False)
+        expected_create_time: Stored ``create_time`` for the process. When
+            provided, must match the live process's ``create_time`` within
+            one second; otherwise the PID has been reused by a different
+            process and this returns False. Pass ``None`` to skip the
+            identity check (loose name-only behaviour).
 
     Returns:
-        True if process exists and is a running VSCode process, False otherwise.
-
-    Uses psutil for cross-platform compatibility.
-    Note: On Windows, the PID from launch may be a launcher that exits.
-          Use is_vscode_open_for_folder() for more reliable folder-based check.
+        True if process exists, is a running VSCode process, and (when
+        expected_create_time is provided) has a matching create_time.
     """
     if pid is None:
         logger.debug("check_vscode_running: pid=None -> False")
@@ -107,14 +114,30 @@ def check_vscode_running(pid: int | None) -> bool:
         return False
     try:
         process = psutil.Process(pid)
-        result = process.name().lower() in VSCODE_PROCESS_NAMES
+        if process.name().lower() not in VSCODE_PROCESS_NAMES:
+            logger.debug(
+                "check_vscode_running: pid=%d name=%s -> False",
+                pid,
+                process.name(),
+            )
+            return False
+        if expected_create_time is not None:
+            actual_create_time = process.create_time()
+            if abs(actual_create_time - expected_create_time) > 1.0:
+                logger.debug(
+                    "check_vscode_running: pid=%d create_time mismatch "
+                    "(expected=%.3f actual=%.3f) -> False",
+                    pid,
+                    expected_create_time,
+                    actual_create_time,
+                )
+                return False
         logger.debug(
-            "check_vscode_running: pid=%d name=%s -> %s",
+            "check_vscode_running: pid=%d name=%s -> True",
             pid,
             process.name(),
-            result,
         )
-        return result
+        return True
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         logger.debug("check_vscode_running: pid=%d access error -> False", pid)
         return False
@@ -578,8 +601,9 @@ def is_session_active(session: VSCodeClaudeSession) -> bool:
 
     stale = ", window-title not found \u2014 potentially stale" if title_checked else ""
     stored_pid = session.get("vscode_pid")
+    stored_create_time = session["vscode_pid_create_time"]
 
-    if check_vscode_running(stored_pid):
+    if check_vscode_running(stored_pid, stored_create_time):
         logger.info(
             "is_session_active #%s: active (PID %s alive%s)",
             issue_num,
@@ -644,16 +668,26 @@ def build_active_session_set(
 
 
 def update_session_pid(folder: str, pid: int) -> None:
-    """Update VSCode PID for existing session.
+    """Atomically writes both vscode_pid and vscode_pid_create_time.
+
+    Captures ``psutil.Process(pid).create_time()`` and stores it alongside
+    ``vscode_pid`` in the same persistence step. This is the only populator
+    of ``vscode_pid_create_time``; the field self-populates on the first
+    cmdline-match refresh after launch.
 
     Args:
         folder: Session folder path
         pid: New VSCode process ID
     """
+    try:
+        create_time: float | None = psutil.Process(pid).create_time()
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        create_time = None
     store = load_sessions()
     for session in store["sessions"]:
         if session["folder"] == folder:
             session["vscode_pid"] = pid
+            session["vscode_pid_create_time"] = create_time
             break
     save_sessions(store)
 

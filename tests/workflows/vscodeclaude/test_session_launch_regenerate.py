@@ -55,6 +55,7 @@ class TestRegenerateSessionFiles:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": 1234,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
         }

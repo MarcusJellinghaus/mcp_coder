@@ -57,6 +57,7 @@ class TestCleanup:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -95,6 +96,7 @@ class TestCleanup:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -144,6 +146,7 @@ class TestCleanup:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -177,6 +180,7 @@ class TestCleanup:
             "issue_number": 456,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -208,6 +212,7 @@ class TestCleanup:
             "issue_number": 789,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -249,6 +254,7 @@ class TestCleanup:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -275,6 +281,7 @@ class TestCleanup:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -319,6 +326,7 @@ class TestCleanup:
             "issue_number": 123,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -359,6 +367,7 @@ class TestCleanup:
             "issue_number": 999,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -395,6 +404,7 @@ class TestCleanup:
             "issue_number": 888,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -432,6 +442,7 @@ class TestCleanup:
             "issue_number": 777,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -466,6 +477,7 @@ class TestCleanup:
             "issue_number": 888,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -503,6 +515,7 @@ class TestCleanup:
             "issue_number": 888,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -533,6 +546,7 @@ class TestCleanup:
             "issue_number": 777,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -570,6 +584,7 @@ class TestCleanup:
             "issue_number": 777,
             "status": "status-07:code-review",
             "vscode_pid": None,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1950,6 +1965,7 @@ class TestSoftDeleteAndRetry:
             "issue_number": 42,
             "status": "status-01:created",
             "vscode_pid": 0,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1993,6 +2009,7 @@ class TestSoftDeleteAndRetry:
             "issue_number": 43,
             "status": "status-01:created",
             "vscode_pid": 0,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -2033,6 +2050,7 @@ class TestSoftDeleteAndRetry:
             "issue_number": 44,
             "status": "status-01:created",
             "vscode_pid": 0,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -2065,6 +2083,7 @@ class TestSoftDeleteAndRetry:
             "issue_number": 45,
             "status": "status-01:created",
             "vscode_pid": 0,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -2128,6 +2147,7 @@ class TestSoftDeleteAndRetry:
             "issue_number": 50,
             "status": "status-01:created",
             "vscode_pid": 0,
+            "vscode_pid_create_time": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }

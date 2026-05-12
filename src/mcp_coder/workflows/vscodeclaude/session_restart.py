@@ -413,16 +413,16 @@ def restart_closed_sessions(
                 new_pid,
             )
 
-            # Update session with new PID for return value
-            updated_session: VSCodeClaudeSession = {
-                "folder": session["folder"],
-                "repo": session["repo"],
-                "issue_number": session["issue_number"],
-                "status": session["status"],
-                "vscode_pid": new_pid,
-                "started_at": session["started_at"],
-                "is_intervention": session.get("is_intervention", False),
-            }
+            # Update session with new PID for return value.
+            # update_session_pid() already wrote vscode_pid_create_time
+            # atomically; re-loading ensures the returned dict matches the
+            # persisted store.
+            refreshed_store = load_sessions()
+            updated_session = next(
+                s
+                for s in refreshed_store["sessions"]
+                if s["folder"] == session["folder"]
+            )
             restarted.append(updated_session)
 
         except (

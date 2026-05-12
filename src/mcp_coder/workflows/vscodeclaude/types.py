@@ -11,6 +11,7 @@ class VSCodeClaudeSession(TypedDict):
     issue_number: int
     status: str  # e.g., "status-07:code-review"
     vscode_pid: int | None
+    vscode_pid_create_time: float | None  # Unix epoch seconds from psutil
     started_at: str  # ISO 8601
     is_intervention: bool
 
