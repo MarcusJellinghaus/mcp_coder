@@ -20,7 +20,7 @@ project publishes.
 | `langchain-openai` | `[langchain-base]` + OpenAI wrapper (`tiktoken` transitive) | Using OpenAI via LangChain |
 | `langchain-gemini` | `[langchain-base]` + Google GenAI wrapper (`grpcio`, `protobuf` transitive — heavy native wheels) | Using Gemini via LangChain |
 | `langchain-anthropic` | `[langchain-base]` + Anthropic wrapper (pure Python, small) | Using Anthropic via LangChain without OpenAI/Google dependencies |
-| `langchain-ollama` | `[langchain-base]` + Ollama wrapper | Using Ollama via LangChain (backend integration in progress) |
+| `langchain-ollama` | `[langchain-base]` + Ollama wrapper | Using Ollama via LangChain |
 | `langchain` | Meta: all four `[langchain-*]` providers | Full LangChain install (identical to historical `[langchain]`) |
 | `dev` | All of the above (except per-provider langchain splits) + lint/type tooling | Full local development setup |
 
