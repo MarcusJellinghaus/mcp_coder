@@ -32,6 +32,7 @@ from .sessions import (
 )
 from .status import get_folder_git_status, is_session_stale
 from .types import VSCodeClaudeSession
+from .workspace import get_workspace_file_path
 
 logger = logging.getLogger(__name__)
 
@@ -227,7 +228,7 @@ def delete_session_folder(
 
     try:
         # Always delete the workspace file before attempting folder deletion
-        workspace_file = Path(workspace_base) / f"{folder_name}.code-workspace"
+        workspace_file = get_workspace_file_path(workspace_base, folder_name)
         if workspace_file.exists():
             try:
                 workspace_file.unlink()
@@ -362,10 +363,14 @@ def cleanup_stale_sessions(
                     result["skipped"].append(folder)
 
         elif git_status == "Missing":
-            # Folder gone, just remove session record
+            # Folder gone - also clean up orphan workspace file to break the
+            # orphan-workspace -> false-active -> cleanup-skipped loop.
+            workspace_file = get_workspace_file_path(workspace_base, Path(folder).name)
             if dry_run:
                 print(f"Would remove session (folder missing): {folder}")
             else:
+                if workspace_file.exists():
+                    workspace_file.unlink()
                 remove_session(folder)
                 print(f"Removed session (folder missing): {folder}")
                 result["deleted"].append(folder)

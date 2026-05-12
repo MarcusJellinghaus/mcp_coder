@@ -38,6 +38,7 @@ from .sessions import (
 )
 from .status import get_folder_git_status
 from .types import VSCodeClaudeSession
+from .workspace import get_workspace_file_path
 
 logger = logging.getLogger(__name__)
 
@@ -393,7 +394,7 @@ def restart_closed_sessions(
         # Find the workspace file
         workspace_base = folder_path.parent
         folder_name = folder_path.name
-        workspace_file = workspace_base / f"{folder_name}.code-workspace"
+        workspace_file = get_workspace_file_path(str(workspace_base), folder_name)
 
         if not workspace_file.exists():
             logger.warning(

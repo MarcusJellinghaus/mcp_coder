@@ -391,6 +391,89 @@ class TestCleanup:
 
         assert str(tmp_path / "missing_folder") in result.get("deleted", [])
 
+    def test_cleanup_missing_unlinks_orphan_workspace_file(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Missing branch deletes orphan ``.code-workspace`` file and session record.
+
+        Reproduces the orphan-workspace -> false-active -> cleanup-skipped loop
+        from issue #953: a session whose folder was deleted but whose
+        ``.code-workspace`` file lingered in workspace_base. Cleanup must remove
+        both the session record and the orphan workspace file in one pass.
+        """
+        folder_name = "missing_folder"
+        missing_session = {
+            "folder": str(tmp_path / folder_name),
+            "repo": "owner/repo",
+            "issue_number": 999,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "vscode_pid_create_time": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        orphan_workspace = tmp_path / f"{folder_name}.code-workspace"
+        orphan_workspace.write_text("{}")
+
+        removed_folders: list[str] = []
+
+        def mock_remove_session(folder: str) -> bool:
+            removed_folders.append(folder)
+            return True
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
+            lambda active_set, cached_issues_by_repo=None: [
+                (missing_session, "Missing", "closed")
+            ],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.remove_session",
+            mock_remove_session,
+        )
+
+        result = cleanup_stale_sessions(
+            workspace_base=str(tmp_path), active_set={}, dry_run=False
+        )
+
+        assert not orphan_workspace.exists()
+        assert removed_folders == [str(tmp_path / folder_name)]
+        assert str(tmp_path / folder_name) in result.get("deleted", [])
+
+    def test_cleanup_missing_dry_run_keeps_orphan_workspace_file(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Dry run reports Missing branch without unlinking the orphan."""
+        folder_name = "missing_folder"
+        missing_session = {
+            "folder": str(tmp_path / folder_name),
+            "repo": "owner/repo",
+            "issue_number": 999,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "vscode_pid_create_time": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+        orphan_workspace = tmp_path / f"{folder_name}.code-workspace"
+        orphan_workspace.write_text("{}")
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_stale_sessions",
+            lambda active_set, cached_issues_by_repo=None: [
+                (missing_session, "Missing", "closed")
+            ],
+        )
+
+        cleanup_stale_sessions(
+            workspace_base=str(tmp_path), active_set={}, dry_run=True
+        )
+
+        # Dry run must not delete anything on disk.
+        assert orphan_workspace.exists()
+
     def test_cleanup_skips_no_git_folder(
         self,
         tmp_path: Path,

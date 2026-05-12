@@ -529,21 +529,21 @@ def remove_session(folder: str) -> bool:
 
 
 def session_has_artifacts(folder: str) -> bool:
-    """Check if session folder or workspace file still exist on disk.
+    """Check if the session working folder still exists on disk.
 
-    A session's artifacts are its working folder and its .code-workspace file.
-    If both are gone, any still-running VSCode process is a zombie for this
-    session (it was launched with artifacts that have since been deleted).
+    A session's only meaningful artifact is its working folder. The
+    `.code-workspace` file is a launcher that points at the folder; without
+    the folder it points at nothing. If the folder is gone, any still-running
+    VSCode process is a zombie for this session and any lingering workspace
+    file is an orphan to be cleaned up.
 
     Args:
         folder: Full path to the session's working folder
 
     Returns:
-        True if the folder or workspace file exists
+        True if the folder exists.
     """
-    folder_path = Path(folder)
-    workspace_file = folder_path.parent / f"{folder_path.name}.code-workspace"
-    return folder_path.exists() or workspace_file.exists()
+    return Path(folder).exists()
 
 
 def is_session_active(session: VSCodeClaudeSession) -> bool:
