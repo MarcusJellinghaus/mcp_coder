@@ -40,6 +40,68 @@ def _resolve_ollama_host(endpoint: str | None) -> str | None:
     return host
 
 
+def _check_ollama_daemon(
+    api_key: str | None,
+    endpoint: str | None,
+    timeout: float = 5.0,
+) -> dict[str, Any]:
+    """Probe the local Ollama daemon to verify reachability.
+
+    Args:
+        api_key: Optional bearer token for proxy-auth setups.
+        endpoint: Optional Ollama host (host:port or full URL); resolved via
+            :func:`_resolve_ollama_host`.  Falls back to
+            ``http://localhost:11434`` when neither env nor endpoint is set.
+        timeout: Per-request timeout in seconds.
+
+    Returns:
+        Verify-style dict with ``ok: bool`` and ``value: str`` describing the
+        outcome (reachable / auth required / not reachable).
+    """
+    try:
+        import ollama  # pylint: disable=import-outside-toplevel,import-error
+    except ImportError as exc:
+        return {
+            "ok": False,
+            "value": f"ollama Python client not installed: {exc}",
+        }
+
+    host = _resolve_ollama_host(endpoint) or "http://localhost:11434"
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
+    response_error_cls = getattr(ollama, "ResponseError", None)
+
+    client_kwargs: dict[str, Any] = {"host": host, "timeout": timeout}
+    if headers is not None:
+        client_kwargs["headers"] = headers
+
+    try:
+        try:
+            client = ollama.Client(**client_kwargs)
+        except TypeError:
+            client = ollama.Client(host=host)
+        client.list()
+        return {
+            "ok": True,
+            "value": f"local Ollama daemon reachable at {host}",
+        }
+    except Exception as exc:  # pylint: disable=broad-except
+        if response_error_cls is not None and isinstance(exc, response_error_cls):
+            status = getattr(exc, "status_code", None)
+            msg = str(exc)
+            if status in (401, 403) or "401" in msg or "403" in msg:
+                return {
+                    "ok": False,
+                    "value": (
+                        "local Ollama daemon reachable but auth required — "
+                        "set OLLAMA_API_KEY or api_key in config.toml"
+                    ),
+                }
+        return {
+            "ok": False,
+            "value": "local Ollama daemon not reachable — is `ollama serve` running?",
+        }
+
+
 def list_gemini_models(api_key: str | None) -> list[str]:
     """Return model names supporting generateContent for the given Gemini API key.
 

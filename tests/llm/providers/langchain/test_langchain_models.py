@@ -16,6 +16,7 @@ from mcp_coder.llm.providers.langchain._exceptions import (
     LLMConnectionError,
 )
 from mcp_coder.llm.providers.langchain._models import (
+    _check_ollama_daemon,
     list_anthropic_models,
     list_gemini_models,
     list_ollama_models,
@@ -515,6 +516,155 @@ class TestListAnthropicModelsConnectionError:
         with patch.dict(sys.modules, {"anthropic": mock_anthropic}):
             with pytest.raises(LLMConnectionError, match="ANTHROPIC_API_KEY"):
                 list_anthropic_models(api_key="k")
+
+
+class _FakeOllamaResponseError(Exception):
+    """Fake ollama.ResponseError for testing status-code branching."""
+
+    def __init__(self, message: str, status_code: int | None = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+
+
+def _ollama_mock_with_response_error() -> MagicMock:
+    """Create a mock ollama module with a real ResponseError class."""
+    m = MagicMock()
+    m.ResponseError = _FakeOllamaResponseError
+    return m
+
+
+class TestCheckOllamaDaemon:
+    """Tests for _check_ollama_daemon probe function."""
+
+    def test_returns_ok_when_list_succeeds(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        mock_ollama = _ollama_mock_with_response_error()
+        mock_ollama.Client.return_value.list.return_value = {"models": []}
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            result = _check_ollama_daemon(api_key=None, endpoint=None)
+        assert result["ok"] is True
+        assert "reachable" in result["value"].lower()
+        assert "localhost:11434" in result["value"]
+
+    def test_returns_auth_required_on_401(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        mock_ollama = _ollama_mock_with_response_error()
+        mock_ollama.Client.return_value.list.side_effect = _FakeOllamaResponseError(
+            "unauthorized", status_code=401
+        )
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            result = _check_ollama_daemon(api_key=None, endpoint=None)
+        assert result["ok"] is False
+        assert "auth required" in result["value"].lower()
+        assert "OLLAMA_API_KEY" in result["value"]
+
+    def test_returns_auth_required_on_403(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        mock_ollama = _ollama_mock_with_response_error()
+        mock_ollama.Client.return_value.list.side_effect = _FakeOllamaResponseError(
+            "forbidden", status_code=403
+        )
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            result = _check_ollama_daemon(api_key=None, endpoint=None)
+        assert result["ok"] is False
+        assert "auth required" in result["value"].lower()
+
+    def test_returns_auth_required_via_message_when_status_missing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Fall back to substring sniff when status_code is unavailable."""
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        mock_ollama = _ollama_mock_with_response_error()
+        mock_ollama.Client.return_value.list.side_effect = _FakeOllamaResponseError(
+            "HTTP 401 unauthorized", status_code=None
+        )
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            result = _check_ollama_daemon(api_key=None, endpoint=None)
+        assert result["ok"] is False
+        assert "auth required" in result["value"].lower()
+
+    def test_returns_unreachable_on_connection_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        mock_ollama = _ollama_mock_with_response_error()
+        mock_ollama.Client.return_value.list.side_effect = ConnectionError("refused")
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            result = _check_ollama_daemon(api_key=None, endpoint=None)
+        assert result["ok"] is False
+        assert "not reachable" in result["value"].lower()
+        assert "ollama serve" in result["value"]
+
+    def test_returns_unreachable_on_timeout(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        mock_ollama = _ollama_mock_with_response_error()
+        mock_ollama.Client.return_value.list.side_effect = TimeoutError("slow")
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            result = _check_ollama_daemon(api_key=None, endpoint=None)
+        assert result["ok"] is False
+        assert "not reachable" in result["value"].lower()
+
+    def test_uses_default_host_when_neither_env_nor_endpoint_set(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        mock_ollama = _ollama_mock_with_response_error()
+        mock_ollama.Client.return_value.list.return_value = {"models": []}
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            _check_ollama_daemon(api_key=None, endpoint=None)
+        _, kwargs = mock_ollama.Client.call_args
+        assert kwargs["host"] == "http://localhost:11434"
+
+    def test_uses_normalized_host_from_endpoint(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        mock_ollama = _ollama_mock_with_response_error()
+        mock_ollama.Client.return_value.list.return_value = {"models": []}
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            _check_ollama_daemon(api_key=None, endpoint="example.com:11434")
+        _, kwargs = mock_ollama.Client.call_args
+        assert kwargs["host"] == "http://example.com:11434"
+
+    def test_falls_back_when_client_rejects_headers_kwarg(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """If ollama.Client doesn't accept headers/timeout kwargs, retry with host only."""
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        mock_ollama = _ollama_mock_with_response_error()
+        # First call (with headers/timeout) raises TypeError; second (host-only) works
+        client_mock = MagicMock()
+        client_mock.list.return_value = {"models": []}
+        mock_ollama.Client.side_effect = [
+            TypeError("unexpected keyword argument 'headers'"),
+            client_mock,
+        ]
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            result = _check_ollama_daemon(api_key="some-key", endpoint=None)
+        assert result["ok"] is True
+        # Second invocation used host-only kwargs
+        assert mock_ollama.Client.call_count == 2
+        _, last_kwargs = mock_ollama.Client.call_args
+        assert last_kwargs == {"host": "http://localhost:11434"}
+
+    def test_passes_auth_header_when_api_key_set(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        mock_ollama = _ollama_mock_with_response_error()
+        mock_ollama.Client.return_value.list.return_value = {"models": []}
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            _check_ollama_daemon(api_key="my-token", endpoint=None)
+        _, kwargs = mock_ollama.Client.call_args
+        assert kwargs.get("headers") == {"Authorization": "Bearer my-token"}
 
 
 class TestListAnthropicModelsAuthError:

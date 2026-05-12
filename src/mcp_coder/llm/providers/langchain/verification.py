@@ -24,12 +24,14 @@ _BACKEND_ENV_VARS: dict[str, str] = {
     "openai": "OPENAI_API_KEY",
     "gemini": "GEMINI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
+    "ollama": "OLLAMA_API_KEY",
 }
 
 _BACKEND_PACKAGES: dict[str, str] = {
     "openai": "langchain_openai",
     "gemini": "langchain_google_genai",
     "anthropic": "langchain_anthropic",
+    "ollama": "langchain_ollama",
 }
 
 
@@ -162,11 +164,20 @@ def verify_langchain(
 
     # API key resolution
     api_key, key_source = _resolve_api_key(backend, config_api_key)
-    result["api_key"] = {
-        "ok": api_key is not None,
-        "value": _mask_api_key(api_key),
-        "source": key_source,
-    }
+    if backend == "ollama" and api_key is None:
+        # Ollama runs unauthenticated on plain localhost — treat missing key
+        # as optional rather than a failure.
+        result["api_key"] = {
+            "ok": True,
+            "value": "not set (optional)",
+            "source": None,
+        }
+    else:
+        result["api_key"] = {
+            "ok": api_key is not None,
+            "value": _mask_api_key(api_key),
+            "source": key_source,
+        }
 
     # langchain-core package check
     lc_core_installed = _check_package_installed("langchain_core")
@@ -204,6 +215,14 @@ def verify_langchain(
     result["mcp_adapters"] = mcp_pkg_results["mcp_adapters"]
     result["langgraph"] = mcp_pkg_results["langgraph"]
 
+    # Ollama-specific daemon reachability probe
+    if backend == "ollama":
+        from . import _models
+
+        result["ollama_daemon"] = _models._check_ollama_daemon(
+            api_key, config.get("endpoint")
+        )
+
     # Check models (optional)
     if check_models and backend:
         result["available_models"] = _list_models_for_backend(
@@ -211,12 +230,15 @@ def verify_langchain(
         )
 
     # overall_ok: True when backend configured AND all required packages installed
-    result["overall_ok"] = bool(
+    overall_ok = bool(
         backend
         and result["backend_package"]["ok"]
         and result["mcp_adapters"]["ok"]
         and result["langgraph"]["ok"]
     )
+    if backend == "ollama":
+        overall_ok = overall_ok and result["ollama_daemon"]["ok"]
+    result["overall_ok"] = overall_ok
 
     return result
 
