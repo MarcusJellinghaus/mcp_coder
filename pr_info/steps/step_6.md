@@ -111,8 +111,8 @@ No automated tests for documentation. Manual checks:
   `OLLAMA_HOST`.
 - The `optional-dependencies.md` row no longer says "backend
   integration in progress".
-- `mcp-coder check file-size --max-lines 750` does not flag the
-  docs (sanity check; docs are usually fine).
+- `mcp__mcp-workspace__check_file_size` does not flag the docs
+  (sanity check via the canonical MCP tool; docs are usually fine).
 - All three MCP code-quality checks pass on the source tree (the
   doc edits should not affect them, but run them anyway).
 

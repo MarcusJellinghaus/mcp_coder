@@ -56,9 +56,20 @@ def _check_ollama_daemon(
   string-sniffing the exception message for `"401"` / `"403"` if the
   attribute is unavailable.
 - `verify_langchain()`:
-  - Resolves `api_key` as before, but for `backend == "ollama"` sets
-    `result["api_key"] = {"ok": True, "value": "not set (optional)"}`
-    when no key is found anywhere.
+  - Calls the existing `_resolve_api_key(backend, config_api_key)`
+    unchanged. After that call, branches on
+    `backend == "ollama" and api_key is None`.
+  - In that branch, **replaces** `result["api_key"]` with
+    `{"ok": True, "value": "not set (optional)", "source": None}`,
+    preserving the existing dict schema in `verification.py` (which
+    includes the `source` key).
+  - This branch does NOT push `overall_ok` to `False` for Ollama: the
+    missing-key case is treated as `ok: True` for the purposes of
+    `overall_ok` gating.
+  - If `OLLAMA_API_KEY` IS set (env or config), `_resolve_api_key`
+    returns a non-None key and the normal masked-display path runs
+    unchanged (i.e. no branch is taken, `result["api_key"]` keeps the
+    masked value + source as for every other backend).
   - When `backend == "ollama"`: `result["ollama_daemon"] =
     _check_ollama_daemon(api_key, endpoint)`.
   - Updates `overall_ok` to AND in `result["ollama_daemon"]["ok"]`
@@ -87,7 +98,10 @@ def _check_ollama_daemon(api_key, endpoint, timeout=5.0):
 supported (`headers`, `timeout`). If `headers` is not supported, drop
 the proxy-auth header on the probe call and rely on connection-error
 detection only — the probe should always do something useful, even
-when the SDK API is leaner than expected.
+when the SDK API is leaner than expected. Test note: cover the
+SDK-without-`headers`-kwarg path (either via a dedicated test
+asserting the helper falls back gracefully, or via a fallback inside
+the helper that catches a `TypeError` from the constructor).
 
 ## DATA
 
@@ -97,9 +111,11 @@ when the SDK API is leaner than expected.
 
 **`verify_langchain()` additions for `backend == "ollama"`:**
 - `result["ollama_daemon"]` — dict above
-- `result["api_key"]` — `{"ok": True, "value": "not set (optional)"}`
-  when no key found, otherwise unchanged
-- `result["overall_ok"]` — also requires `ollama_daemon["ok"]`
+- `result["api_key"]` — `{"ok": True, "value": "not set (optional)",
+  "source": None}` when no key found (preserves existing schema with
+  `source`); otherwise unchanged from the regular masked-display path.
+- `result["overall_ok"]` — also requires `ollama_daemon["ok"]`. The
+  optional-api_key branch does NOT push `overall_ok` to `False`.
 
 ## Tests (write FIRST, TDD)
 

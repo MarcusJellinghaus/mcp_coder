@@ -36,9 +36,20 @@ def _ollama_preflight(config: dict[str, str | None]) -> None:
 
 ## HOW
 
-- `_ollama_preflight()` is called at the top of `_ask_agent()` AND at
-  the top of `_ask_agent_stream()` (synchronously, before the
-  thread/queue bridge in the stream variant).
+- `_ollama_preflight()` is a **private helper inline in
+  `__init__.py`** — do NOT create a new module for it (keeps the
+  module surface small and matches `summary.md`).
+- It is called at the top of `_ask_agent()` AND at the top of
+  `_ask_agent_stream()` (synchronously, before the thread/queue
+  bridge in the stream variant).
+- **Ordering inside `_ask_agent` / `_ask_agent_stream`:** the
+  pre-flight call is placed **AFTER** the existing
+  `_check_agent_dependencies()` call but **BEFORE**
+  `_create_chat_model(config)` / agent construction. Rationale:
+  otherwise an Ollama-configured user without `langgraph` installed
+  would get the model-tool-capability error rather than the more
+  actionable "install langgraph" `ImportError`. The dependency check
+  always wins on missing-dependency errors.
 - It is a no-op when `config["backend"] != "ollama"`.
 - When `backend == "ollama"`:
   ```python
@@ -54,20 +65,31 @@ def _ollama_preflight(config: dict[str, str | None]) -> None:
 - The raised `ValueError` propagates naturally through the existing
   exception handling in both functions:
   - `_ask_agent` lets `ValueError` propagate out (no wrapping).
-  - `_ask_agent_stream` lets `ValueError` propagate out of the
-    generator before the thread is started.
+  - `_ask_agent_stream` — the function is a generator, so the
+    `ValueError` propagates when iteration begins. This is generator
+    semantics and is intentional: do NOT refactor the function to
+    eager-raise (no eager wrapper is needed). The error surfaces as
+    soon as the caller starts iterating, which is before the
+    thread/queue bridge spins up.
 
 ## ALGORITHM
 
 ```
 def _ask_agent(question, config, ...):
-    _ollama_preflight(config)   # raises ValueError if capability missing
-    # ... existing body unchanged ...
+    _check_agent_dependencies()  # existing — wins on missing langgraph
+    _ollama_preflight(config)    # NEW — raises ValueError if capability missing
+    # ... existing body (model creation, agent construction, run) unchanged ...
 
 def _ask_agent_stream(question, config, ...):
-    _ollama_preflight(config)   # raises ValueError if capability missing
-    # ... existing body unchanged ...
+    _check_agent_dependencies()  # existing — wins on missing langgraph
+    _ollama_preflight(config)    # NEW — raises ValueError if capability missing
+    # ... existing body (model creation, thread/queue bridge, run) unchanged ...
 ```
+
+Ordering matters: `_check_agent_dependencies()` first (so users
+missing `langgraph` get the actionable "install langgraph" error
+rather than a tool-capability error), `_ollama_preflight(config)`
+second, `_create_chat_model(config)` / agent construction third.
 
 ## DATA
 
@@ -103,6 +125,15 @@ def _ask_agent_stream(question, config, ...):
   - Same shape as `_ask_agent` test but consume the iterator
     (`list(...)`); the `ValueError` should propagate when iteration
     begins, before any thread spins up.
+  - **Assert no thread is started.** Patch `threading.Thread` (the
+    name used by the streaming code path) and assert it was NOT
+    called when the generator is iterated and raises. The intent is
+    to verify the capability failure surfaces before any background
+    work begins. Adjust the exact patch target / mechanism to fit the
+    streaming code's actual structure (e.g. `patch(
+    "mcp_coder.llm.providers.langchain.threading.Thread")`), but the
+    assertion semantics remain: generator raises before any thread
+    spins up.
 
 - `test_ask_agent_stream_proceeds_when_ollama_capability_ok`:
   - Patch helper + `run_agent_stream` (or the queue.Queue path) and

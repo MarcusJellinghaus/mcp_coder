@@ -100,7 +100,12 @@ accordingly. The "tools" substring check is library-agnostic.
   returns `{"capabilities": ["tools", "completion"]}` → `ok: True`.
 - `test_returns_not_ok_when_tools_missing` — `{"capabilities":
   ["completion"]}` → `ok: False`, generic wording mentions `"tools"`
-  but no specific model suggestion.
+  but no specific model suggestion. Additionally assert that the
+  message MUST NOT contain a specific model name suggestion: e.g.
+  `assert "llama" not in result["value"].lower()` and
+  `assert "qwen" not in result["value"].lower()` (the configured
+  model name itself MAY appear, since the helper quotes it; this
+  assertion is specifically about hardcoded "use X instead" hints).
 - `test_returns_not_ok_when_capabilities_empty` — `{}` → `ok: False`.
 - `test_returns_not_ok_when_show_raises` — `show()` raises → `ok:
   False`, wording mentions the error.

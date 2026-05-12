@@ -18,6 +18,11 @@ hint is extended to catch Ollama's "model 'X' not found" wording.
   `_list_models_for_backend()` with an `"ollama"` branch.
 - `tests/llm/providers/langchain/test_langchain_models.py` — add
   `TestListOllamaModels` class.
+- `tests/llm/providers/langchain/test_langchain_provider.py` — add the
+  new `"model 'foo' not found"` wording as an additional parametrize
+  case on the existing NOT_FOUND test (at `test_langchain_provider.py:262`,
+  `test_404_error_raises_value_error_with_model_hint`), rather than
+  adding a separate standalone test.
 
 ## WHAT
 
@@ -114,11 +119,14 @@ multi-line string or empty string.
   = None` → `ImportError`.
 
 Add NOT_FOUND-hint tests:
-- In `test_langchain_provider.py` (or wherever `_ask_text`'s NOT_FOUND
-  branch is currently tested): a parameterised test confirming
-  `"model 'foo' not found"` triggers the hint (regardless of case).
-  Mock `_get_model_suggestions` to return a sentinel string and
-  assert it appears in the raised `ValueError`.
+- Extend the existing test in `test_langchain_provider.py:262`
+  (`test_404_error_raises_value_error_with_model_hint`) by adding a
+  new parametrize case for the Ollama wording `"model 'foo' not found"`
+  (regardless of case). Do NOT add a separate standalone test — the
+  existing test already covers the "NOT_FOUND substring triggers
+  `_get_model_suggestions`" path; the new case just exercises the
+  extra substring. Mock `_get_model_suggestions` to return a sentinel
+  string and assert it appears in the raised `ValueError`.
 
 ## Definition of done
 

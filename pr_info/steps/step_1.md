@@ -20,6 +20,9 @@ able to construct a `ChatOllama` instance when
 - `tests/llm/providers/langchain/conftest.py` — mock `langchain_ollama`
   and `ollama` in `_mock_langchain_modules` so unit tests run without
   the optional packages installed.
+- `tests/llm/providers/langchain/test_langchain_provider.py` — the
+  dispatch test for `_create_chat_model({"backend": "ollama", ...})`
+  lives here.
 
 ## WHAT
 
