@@ -176,8 +176,11 @@ def clear_vscode_process_cache() -> None:
     _vscode_process_cache = None
 
 
-# Cache for VSCode window titles (Windows only)
-_vscode_window_cache: list[str] | None = None
+# Cache for VSCode window titles (Windows only).
+# Each entry is (pid, title) where pid is the PID of the process that owns
+# the window. Storing the PID is what lets is_vscode_window_open_for_folder
+# bind a title match to the specific VSCode that has the folder open.
+_vscode_window_cache: list[tuple[int, str]] | None = None
 
 
 # Cache for VSCode process PIDs to avoid repeated lookups
@@ -207,18 +210,23 @@ def _get_vscode_pids() -> set[int]:
     return pids
 
 
-def _get_vscode_window_titles(refresh: bool = False) -> list[str]:
-    """Get list of VSCode window titles (Windows only).
+def _get_vscode_window_titles(refresh: bool = False) -> list[tuple[int, str]]:
+    """Return list of (pid, title) pairs for visible VSCode windows.
 
     Uses win32gui to enumerate windows owned by Code.exe processes.
     This catches all VSCode windows including integrated terminals
     that don't have "Visual Studio Code" in the title.
 
+    The PID is the owning process so callers can bind a title match to
+    the specific VSCode instance that has the folder open, eliminating
+    cross-process title-leak false positives.
+
     Args:
         refresh: Force refresh of cached titles
 
     Returns:
-        List of VSCode window titles, or empty list on non-Windows
+        List of (pid, title) tuples for visible VSCode-owned windows,
+        or empty list on non-Windows.
     """
     global _vscode_window_cache, _vscode_pids_cache  # pylint: disable=global-statement  # module-level singleton
 
@@ -235,7 +243,7 @@ def _get_vscode_window_titles(refresh: bool = False) -> list[str]:
     vscode_pids = _get_vscode_pids()
     logger.debug("Found %d VSCode processes: %s", len(vscode_pids), vscode_pids)
 
-    titles: list[str] = []
+    entries: list[tuple[int, str]] = []
 
     def enum_callback(hwnd: int, _: Any) -> bool:
         """Callback for EnumWindows.
@@ -250,7 +258,7 @@ def _get_vscode_window_titles(refresh: bool = False) -> list[str]:
                     # Check if window belongs to a VSCode process
                     _, pid = win32process.GetWindowThreadProcessId(hwnd)
                     if pid in vscode_pids:
-                        titles.append(title)
+                        entries.append((pid, title))
         except (
             Exception
         ):  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
@@ -265,9 +273,9 @@ def _get_vscode_window_titles(refresh: bool = False) -> list[str]:
         logger.warning("Failed to enumerate windows: %s", e)
         return []
 
-    _vscode_window_cache = titles
-    logger.debug("Found %d VSCode windows: %s", len(titles), titles)
-    return titles
+    _vscode_window_cache = entries
+    logger.debug("Found %d VSCode windows: %s", len(entries), entries)
+    return entries
 
 
 def clear_vscode_window_cache() -> None:
@@ -288,6 +296,11 @@ def is_vscode_window_open_for_folder(
     the issue number pattern (e.g., '[#219 ...'). This prevents false positives
     from matching the main repo window instead of the issue workspace window.
 
+    The title's owning PID must also belong to a VSCode process whose cmdline
+    references ``folder_path``. This eliminates cross-process title-leak where
+    an unrelated VSCode window's title happens to contain the issue number and
+    repo name.
+
     Args:
         folder_path: Full path to the workspace folder
         issue_number: Optional issue number (required for reliable matching)
@@ -300,6 +313,7 @@ def is_vscode_window_open_for_folder(
         return False
 
     titles = _get_vscode_window_titles()
+    folder_str = str(folder_path).lower()
     folder_name = Path(folder_path).name.lower()
 
     # For vscodeclaude sessions: Only match if issue number is in window title
@@ -313,7 +327,19 @@ def is_vscode_window_open_for_folder(
         # that may show issue numbers without the bracket (e.g. "#458 - mcp_coder")
         issue_pattern = f"[#{issue_number}"
 
-        for title in titles:
+        # Bind the title match to the VSCode process that actually has the
+        # folder open: only accept a title from a PID whose cmdline references
+        # the folder.
+        matching_pids = {
+            proc["pid"]
+            for proc in _get_vscode_processes()
+            if folder_str in proc.get("cmdline_lower", "")
+            or folder_name in proc.get("cmdline_lower", "")
+        }
+
+        for pid, title in titles:
+            if pid not in matching_pids:
+                continue
             title_lower = title.lower()
             # Both issue number (with bracket) AND repo name must be present
             if issue_pattern in title and repo_name in title_lower:

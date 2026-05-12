@@ -663,10 +663,19 @@ class TestWindowTitleMatching:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Should match window with issue number pattern and repo name."""
-        # Mock window titles to return a workspace window
+        # Mock window titles to return a workspace window owned by pid=100
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
-            lambda: ["[#219 plan-review] Fix bug - mcp_coder - Visual Studio Code"],
+            lambda: [
+                (100, "[#219 plan-review] Fix bug - mcp_coder - Visual Studio Code")
+            ],
+        )
+        # That pid's cmdline references the folder so the title is bound to it
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            lambda: [
+                {"pid": 100, "cmdline_lower": "code.exe /workspace/mcp_coder_219"}
+            ],
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
@@ -688,7 +697,13 @@ class TestWindowTitleMatching:
         # Mock window titles to return only main repo window (no issue number)
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
-            lambda: ["mcp_coder - Visual Studio Code"],
+            lambda: [(100, "mcp_coder - Visual Studio Code")],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            lambda: [
+                {"pid": 100, "cmdline_lower": "code.exe /workspace/mcp_coder_219"}
+            ],
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
@@ -710,7 +725,15 @@ class TestWindowTitleMatching:
         """Should NOT match window for a different issue."""
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
-            lambda: ["[#123 code-review] Other issue - mcp_coder - Visual Studio Code"],
+            lambda: [
+                (100, "[#123 code-review] Other issue - mcp_coder - Visual Studio Code")
+            ],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            lambda: [
+                {"pid": 100, "cmdline_lower": "code.exe /workspace/mcp_coder_219"}
+            ],
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
@@ -731,7 +754,11 @@ class TestWindowTitleMatching:
         """Should extract repo name from owner/repo format."""
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
-            lambda: ["[#219 created] New issue - my_repo - Visual Studio Code"],
+            lambda: [(100, "[#219 created] New issue - my_repo - Visual Studio Code")],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            lambda: [{"pid": 100, "cmdline_lower": "code.exe /workspace/my_repo_219"}],
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
@@ -750,7 +777,13 @@ class TestWindowTitleMatching:
         """Should match case-insensitively."""
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
-            lambda: ["[#219 review] Title - MCP_CODER - Visual Studio Code"],
+            lambda: [(100, "[#219 review] Title - MCP_CODER - Visual Studio Code")],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            lambda: [
+                {"pid": 100, "cmdline_lower": "code.exe /workspace/mcp_coder_219"}
+            ],
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
@@ -774,6 +807,10 @@ class TestWindowTitleMatching:
             lambda: [],
         )
         monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            lambda: [],
+        )
+        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
             True,
         )
@@ -785,6 +822,138 @@ class TestWindowTitleMatching:
         )
 
         assert result is False
+
+    def test_cross_process_title_leak_rejected(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Title from a VSCode that does not have the folder open -> False.
+
+        Regression for the #946/#950 cross-process leak: two VSCode windows
+        are open. Process A (pid=100) has folder mcp_coder_950 open and its
+        title accidentally contains "[#946 ...]" (e.g. the user was browsing
+        issue #946). Process B (pid=200) has folder mcp_coder_946 open but
+        its current title does not match. A lookup for folder
+        mcp_coder_946 must NOT match A's title.
+        """
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            lambda: [
+                {"pid": 100, "cmdline_lower": "code.exe /tmp/mcp_coder_950"},
+                {"pid": 200, "cmdline_lower": "code.exe /tmp/mcp_coder_946"},
+            ],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
+            lambda: [(100, "[#946 stuff] - mcp_coder")],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            True,
+        )
+
+        result = is_vscode_window_open_for_folder(
+            folder_path="/tmp/mcp_coder_946",
+            issue_number=946,
+            repo="owner/mcp_coder",
+        )
+
+        assert result is False
+
+    def test_positive_match_preserved_when_pid_matches(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Same scenario but matching window is on the PID that owns the folder."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            lambda: [
+                {"pid": 100, "cmdline_lower": "code.exe /tmp/mcp_coder_950"},
+                {"pid": 200, "cmdline_lower": "code.exe /tmp/mcp_coder_946"},
+            ],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
+            lambda: [(200, "[#946 stuff] - mcp_coder")],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            True,
+        )
+
+        result = is_vscode_window_open_for_folder(
+            folder_path="/tmp/mcp_coder_946",
+            issue_number=946,
+            repo="owner/mcp_coder",
+        )
+
+        assert result is True
+
+    def test_get_vscode_window_titles_returns_pid_title_tuples(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """_get_vscode_window_titles returns list of (int, str) tuples."""
+        from mcp_coder.workflows.vscodeclaude.sessions import (
+            _get_vscode_window_titles,
+            clear_vscode_window_cache,
+        )
+
+        clear_vscode_window_cache()
+
+        # Force the Windows code path on
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            True,
+        )
+        # PID lookup says pids 100 and 200 are VSCode
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_pids",
+            lambda: {100, 200},
+        )
+
+        mock_win32gui = MagicMock()
+        mock_win32process = MagicMock()
+
+        # Two visible VSCode windows, one each on pid 100 and 200
+        mock_win32gui.IsWindowVisible.return_value = True
+        mock_win32gui.GetWindowText.side_effect = [
+            "window-on-pid-100",
+            "window-on-pid-200",
+        ]
+        mock_win32process.GetWindowThreadProcessId.side_effect = [(0, 100), (0, 200)]
+
+        def enum_windows(callback: object, _: object) -> None:
+            assert callable(callback)
+            callback(1, None)
+            callback(2, None)
+
+        mock_win32gui.EnumWindows.side_effect = enum_windows
+
+        # raising=False so the test works on non-Windows where these
+        # attributes do not exist (the production code only imports them
+        # when HAS_WIN32GUI is True).
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.win32gui",
+            mock_win32gui,
+            raising=False,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.win32process",
+            mock_win32process,
+            raising=False,
+        )
+
+        result = _get_vscode_window_titles(refresh=True)
+
+        clear_vscode_window_cache()
+
+        assert isinstance(result, list)
+        assert len(result) == 2
+        for entry in result:
+            assert isinstance(entry, tuple)
+            assert len(entry) == 2
+            assert isinstance(entry[0], int)
+            assert isinstance(entry[1], str)
+        assert result[0][0] == 100
+        assert result[1][0] == 200
 
 
 class TestGetSessionForIssueSoftDelete:
@@ -1377,7 +1546,15 @@ class TestIsSessionActiveFallbackChain:
         # Window has issue number but wrong repo
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
-            lambda: ["[#219 review] Title - different_repo - Visual Studio Code"],
+            lambda: [
+                (100, "[#219 review] Title - different_repo - Visual Studio Code")
+            ],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            lambda: [
+                {"pid": 100, "cmdline_lower": "code.exe /workspace/mcp_coder_219"}
+            ],
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
@@ -1403,7 +1580,13 @@ class TestIsSessionActiveFallbackChain:
         """
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
-            lambda: ["#219 Fix the thing - mcp_coder - Visual Studio Code"],
+            lambda: [(100, "#219 Fix the thing - mcp_coder - Visual Studio Code")],
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            lambda: [
+                {"pid": 100, "cmdline_lower": "code.exe /workspace/mcp_coder_219"}
+            ],
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
