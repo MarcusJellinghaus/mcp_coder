@@ -79,6 +79,11 @@ _BACKEND_ERROR_PARAMS: dict[str, tuple[str, str, str]] = {
     ),
     "gemini": ("Gemini", "GEMINI_API_KEY", ""),
     "anthropic": ("Anthropic", "ANTHROPIC_API_KEY", ""),
+    "ollama": (
+        "Ollama",
+        "OLLAMA_API_KEY",
+        "endpoint/OLLAMA_HOST if not localhost",
+    ),
 }
 
 
@@ -200,9 +205,18 @@ def _create_chat_model(
             api_key=config.get("api_key"),
             timeout=timeout,
         )
+    if backend == "ollama":
+        from .ollama_backend import create_ollama_model
+
+        return create_ollama_model(
+            model=config.get("model") or "",
+            api_key=config.get("api_key"),
+            endpoint=config.get("endpoint"),
+            timeout=timeout,
+        )
     raise ValueError(
         f"Unsupported langchain backend: {backend!r}. "
-        "Supported backends: 'openai', 'gemini', 'anthropic'."
+        "Supported backends: 'openai', 'gemini', 'anthropic', 'ollama'."
     )
 
 

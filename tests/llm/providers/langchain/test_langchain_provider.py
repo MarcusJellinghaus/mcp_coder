@@ -399,6 +399,31 @@ class TestCreateChatModel:
             model="claude-sonnet-4-20250514", api_key="k", timeout=30
         )
 
+    def test_dispatches_to_ollama_backend(self) -> None:
+        """Config with backend=ollama calls create_ollama_model."""
+        mock_model = MagicMock()
+        with patch(
+            "mcp_coder.llm.providers.langchain.ollama_backend.create_ollama_model",
+            return_value=mock_model,
+        ) as mock_create:
+            from mcp_coder.llm.providers.langchain import _create_chat_model
+
+            result = _create_chat_model(
+                {
+                    "backend": "ollama",
+                    "model": "llama3.1",
+                    "api_key": "k",
+                    "endpoint": "http://localhost:11434",
+                }
+            )
+        assert result is mock_model
+        mock_create.assert_called_once_with(
+            model="llama3.1",
+            api_key="k",
+            endpoint="http://localhost:11434",
+            timeout=30,
+        )
+
     def test_raises_on_unknown_backend(self) -> None:
         """Unknown backend raises ValueError."""
         from mcp_coder.llm.providers.langchain import _create_chat_model

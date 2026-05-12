@@ -9,6 +9,8 @@ each function so they only trigger when model listing is actually needed
 
 from __future__ import annotations
 
+import os
+
 from ._exceptions import (
     ANTHROPIC_AUTH_ERRORS,
     CONNECTION_ERRORS,
@@ -19,6 +21,22 @@ from ._exceptions import (
     raise_connection_error,
 )
 from ._http import create_http_client
+
+
+def _resolve_ollama_host(endpoint: str | None) -> str | None:
+    """Resolve OLLAMA_HOST env > endpoint config > None, normalize to URL.
+
+    Args:
+        endpoint: Optional endpoint from config (host:port or full URL).
+
+    Returns:
+        Normalized URL string (with http:// prefix if no scheme), or None
+        when neither OLLAMA_HOST nor endpoint is set.
+    """
+    host = os.getenv("OLLAMA_HOST") or endpoint
+    if host and "://" not in host:
+        host = f"http://{host}"
+    return host
 
 
 def list_gemini_models(api_key: str | None) -> list[str]:

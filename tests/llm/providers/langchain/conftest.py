@@ -106,6 +106,12 @@ def _mock_langchain_modules() -> Generator[None, None, None]:
     if "langchain_anthropic" not in sys.modules:
         mocks["langchain_anthropic"] = MagicMock()
 
+    if "langchain_ollama" not in sys.modules:
+        mocks["langchain_ollama"] = MagicMock()
+
+    if "ollama" not in sys.modules:
+        mocks["ollama"] = MagicMock()
+
     if "langchain_mcp_adapters" not in sys.modules:
         mocks["langchain_mcp_adapters"] = MagicMock()
         mocks["langchain_mcp_adapters.client"] = MagicMock()
