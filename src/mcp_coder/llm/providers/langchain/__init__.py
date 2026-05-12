@@ -161,6 +161,32 @@ def _load_langchain_config() -> dict[str, str | None]:
     }
 
 
+def _ollama_preflight(config: dict[str, str | None]) -> None:
+    """Raise ValueError if the configured Ollama model lacks tool support.
+
+    No-op when ``config["backend"] != "ollama"``. The error wording matches
+    the ``mcp-coder verify`` output so users see the same message regardless
+    of how they hit the check.
+
+    Args:
+        config: LangChain configuration dict.
+
+    Raises:
+        ValueError: When the model does not advertise the ``tools`` capability.
+    """
+    if config.get("backend") != "ollama":
+        return
+    from ._models import check_ollama_tool_capability
+
+    cap = check_ollama_tool_capability(
+        model=config.get("model") or "",
+        api_key=os.getenv("OLLAMA_API_KEY") or config.get("api_key"),
+        endpoint=config.get("endpoint"),
+    )
+    if not cap["ok"]:
+        raise ValueError(cap["value"])
+
+
 def _create_chat_model(
     config: dict[str, str | None],
     timeout: int = 30,
@@ -433,6 +459,7 @@ def _ask_agent(
     from .agent import _check_agent_dependencies, run_agent
 
     _check_agent_dependencies()
+    _ollama_preflight(config)
 
     chat_model = _create_chat_model(config, timeout=timeout)
     history: list[dict[str, Any]] = load_langchain_history(session_id)
@@ -511,6 +538,7 @@ def _ask_agent_stream(
     from .agent import _check_agent_dependencies, run_agent_stream
 
     _check_agent_dependencies()
+    _ollama_preflight(config)
     chat_model = _create_chat_model(config, timeout=timeout)
     history: list[dict[str, Any]] = load_langchain_history(session_id)
 
