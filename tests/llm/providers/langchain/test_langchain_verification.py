@@ -461,6 +461,7 @@ class TestInstallHints:
 class TestVerifyLangchainOllama:
     """Tests for verify_langchain() on the ollama backend."""
 
+    @patch("mcp_coder.llm.providers.langchain._models.check_ollama_tool_capability")
     @patch("mcp_coder.llm.providers.langchain._models._check_ollama_daemon")
     @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
@@ -469,6 +470,7 @@ class TestVerifyLangchainOllama:
         mock_config: MagicMock,
         mock_pkg: MagicMock,
         mock_daemon: MagicMock,
+        mock_cap: MagicMock,
     ) -> None:
         mock_config.return_value = {
             "provider": "langchain",
@@ -483,6 +485,7 @@ class TestVerifyLangchainOllama:
             "ok": True,
             "value": "local Ollama daemon reachable at http://localhost:11434",
         }
+        mock_cap.return_value = {"ok": True, "value": "model 'llama3' supports tools"}
         with patch.dict("os.environ", {}, clear=True):
             result = verify_langchain()
         assert result["api_key"]["ok"] is True
@@ -515,6 +518,7 @@ class TestVerifyLangchainOllama:
         assert result["api_key"]["value"] == "olla...1234"
         assert result["api_key"]["source"] == "config.toml"
 
+    @patch("mcp_coder.llm.providers.langchain._models.check_ollama_tool_capability")
     @patch("mcp_coder.llm.providers.langchain._models._check_ollama_daemon")
     @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
@@ -523,6 +527,7 @@ class TestVerifyLangchainOllama:
         mock_config: MagicMock,
         mock_pkg: MagicMock,
         mock_daemon: MagicMock,
+        mock_cap: MagicMock,
     ) -> None:
         mock_config.return_value = {
             "provider": "langchain",
@@ -537,6 +542,7 @@ class TestVerifyLangchainOllama:
             "ok": True,
             "value": "local Ollama daemon reachable at http://localhost:11434",
         }
+        mock_cap.return_value = {"ok": True, "value": "model 'llama3' supports tools"}
         with patch.dict("os.environ", {}, clear=True):
             result = verify_langchain()
         assert "ollama_daemon" in result
@@ -644,6 +650,114 @@ class TestVerifyLangchainOllama:
         assert result["api_key"]["ok"] is True
         assert result["api_key"]["source"] == "OLLAMA_API_KEY env var"
         assert result["api_key"]["value"] == "env-...abcd"
+
+    @patch("mcp_coder.llm.providers.langchain._models.check_ollama_tool_capability")
+    @patch("mcp_coder.llm.providers.langchain._models._check_ollama_daemon")
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
+    def test_ollama_capability_entry_present_when_model_configured(
+        self,
+        mock_config: MagicMock,
+        mock_pkg: MagicMock,
+        mock_daemon: MagicMock,
+        mock_cap: MagicMock,
+    ) -> None:
+        mock_config.return_value = {
+            "provider": "langchain",
+            "backend": "ollama",
+            "model": "llama3",
+            "api_key": None,
+            "endpoint": None,
+            "api_version": None,
+        }
+        mock_pkg.return_value = True
+        mock_daemon.return_value = {"ok": True, "value": "reachable"}
+        mock_cap.return_value = {"ok": True, "value": "model 'llama3' supports tools"}
+        with patch.dict("os.environ", {}, clear=True):
+            result = verify_langchain()
+        assert "ollama_tools_capability" in result
+        assert result["ollama_tools_capability"]["ok"] is True
+
+    @patch("mcp_coder.llm.providers.langchain._models.check_ollama_tool_capability")
+    @patch("mcp_coder.llm.providers.langchain._models._check_ollama_daemon")
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
+    def test_ollama_capability_missing_fails_overall_ok(
+        self,
+        mock_config: MagicMock,
+        mock_pkg: MagicMock,
+        mock_daemon: MagicMock,
+        mock_cap: MagicMock,
+    ) -> None:
+        mock_config.return_value = {
+            "provider": "langchain",
+            "backend": "ollama",
+            "model": "llama3",
+            "api_key": None,
+            "endpoint": None,
+            "api_version": None,
+        }
+        mock_pkg.return_value = True
+        mock_daemon.return_value = {"ok": True, "value": "reachable"}
+        mock_cap.return_value = {
+            "ok": False,
+            "value": "model 'llama3' does not advertise the 'tools' capability",
+        }
+        with patch.dict("os.environ", {}, clear=True):
+            result = verify_langchain()
+        assert result["ollama_tools_capability"]["ok"] is False
+        assert result["overall_ok"] is False
+
+    @patch("mcp_coder.llm.providers.langchain._models.check_ollama_tool_capability")
+    @patch("mcp_coder.llm.providers.langchain._models._check_ollama_daemon")
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
+    def test_ollama_capability_present_does_not_fail_overall_ok(
+        self,
+        mock_config: MagicMock,
+        mock_pkg: MagicMock,
+        mock_daemon: MagicMock,
+        mock_cap: MagicMock,
+    ) -> None:
+        mock_config.return_value = {
+            "provider": "langchain",
+            "backend": "ollama",
+            "model": "llama3",
+            "api_key": None,
+            "endpoint": None,
+            "api_version": None,
+        }
+        mock_pkg.return_value = True
+        mock_daemon.return_value = {"ok": True, "value": "reachable"}
+        mock_cap.return_value = {"ok": True, "value": "model 'llama3' supports tools"}
+        with patch.dict("os.environ", {}, clear=True):
+            result = verify_langchain()
+        assert result["ollama_tools_capability"]["ok"] is True
+        assert result["overall_ok"] is True
+
+    @patch("mcp_coder.llm.providers.langchain._models._check_ollama_daemon")
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
+    def test_ollama_no_model_omits_capability_entry(
+        self,
+        mock_config: MagicMock,
+        mock_pkg: MagicMock,
+        mock_daemon: MagicMock,
+    ) -> None:
+        mock_config.return_value = {
+            "provider": "langchain",
+            "backend": "ollama",
+            "model": None,
+            "api_key": None,
+            "endpoint": None,
+            "api_version": None,
+        }
+        mock_pkg.return_value = True
+        mock_daemon.return_value = {"ok": True, "value": "reachable"}
+        with patch.dict("os.environ", {}, clear=True):
+            result = verify_langchain()
+        assert "ollama_tools_capability" not in result
+        assert result["model"]["ok"] is False
 
 
 class TestListModelsForBackendErrors:

@@ -102,6 +102,78 @@ def _check_ollama_daemon(
         }
 
 
+def check_ollama_tool_capability(
+    model: str,
+    api_key: str | None,
+    endpoint: str | None,
+    timeout: float = 5.0,
+) -> dict[str, Any]:
+    """Probe ``/api/show`` to verify the model advertises the ``tools`` capability.
+
+    Returned dict is the verify-style ``{"ok": bool, "value": str}`` shape so
+    the same value can be rendered by ``mcp-coder verify`` and consumed by
+    the agent pre-flight check, sharing one wording across both call sites.
+
+    Args:
+        model: Configured model name (e.g. ``"llama3"``).  An empty string
+            short-circuits to ``ok: False`` without any network access.
+        api_key: Optional bearer token for proxy-auth setups.
+        endpoint: Optional Ollama host (host:port or full URL); resolved via
+            :func:`_resolve_ollama_host`.  Falls back to
+            ``http://localhost:11434`` when neither env nor endpoint is set.
+        timeout: Per-request timeout in seconds.
+
+    Returns:
+        Verify-style dict with ``ok: bool`` and ``value: str`` describing
+        whether the model supports tool calling.
+    """
+    if not model:
+        return {"ok": False, "value": "no model configured"}
+
+    try:
+        import ollama  # pylint: disable=import-outside-toplevel,import-error
+    except ImportError as exc:
+        return {
+            "ok": False,
+            "value": f"ollama Python client not installed: {exc}",
+        }
+
+    host = _resolve_ollama_host(endpoint) or "http://localhost:11434"
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
+
+    client_kwargs: dict[str, Any] = {"host": host, "timeout": timeout}
+    if headers is not None:
+        client_kwargs["headers"] = headers
+
+    try:
+        try:
+            client = ollama.Client(**client_kwargs)
+        except TypeError:
+            client = ollama.Client(host=host)
+        info: Any = client.show(model=model)
+        if isinstance(info, dict):
+            caps = info.get("capabilities") or []
+        else:
+            caps = getattr(info, "capabilities", None) or []
+        if "tools" in caps:
+            return {
+                "ok": True,
+                "value": f"model {model!r} supports tools",
+            }
+        return {
+            "ok": False,
+            "value": (
+                f"model {model!r} does not advertise the 'tools' capability — "
+                "agent mode requires a tool-calling model"
+            ),
+        }
+    except Exception as exc:  # pylint: disable=broad-except
+        return {
+            "ok": False,
+            "value": f"could not verify tool capability for {model!r}: {exc}",
+        }
+
+
 def list_gemini_models(api_key: str | None) -> list[str]:
     """Return model names supporting generateContent for the given Gemini API key.
 

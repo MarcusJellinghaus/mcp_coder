@@ -17,6 +17,7 @@ from mcp_coder.llm.providers.langchain._exceptions import (
 )
 from mcp_coder.llm.providers.langchain._models import (
     _check_ollama_daemon,
+    check_ollama_tool_capability,
     list_anthropic_models,
     list_gemini_models,
     list_ollama_models,
@@ -665,6 +666,105 @@ class TestCheckOllamaDaemon:
             _check_ollama_daemon(api_key="my-token", endpoint=None)
         _, kwargs = mock_ollama.Client.call_args
         assert kwargs.get("headers") == {"Authorization": "Bearer my-token"}
+
+
+class TestCheckOllamaToolCapability:
+    """Tests for check_ollama_tool_capability helper."""
+
+    def test_returns_ok_when_tools_in_capabilities(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        mock_ollama = _ollama_mock()
+        mock_ollama.Client.return_value.show.return_value = {
+            "capabilities": ["tools", "completion"]
+        }
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            result = check_ollama_tool_capability(
+                model="llama3", api_key=None, endpoint=None
+            )
+        assert result["ok"] is True
+        assert "tools" in result["value"].lower()
+        assert "llama3" in result["value"]
+
+    def test_returns_not_ok_when_tools_missing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        mock_ollama = _ollama_mock()
+        mock_ollama.Client.return_value.show.return_value = {
+            "capabilities": ["completion"]
+        }
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            result = check_ollama_tool_capability(
+                model="some-model", api_key=None, endpoint=None
+            )
+        assert result["ok"] is False
+        assert "tools" in result["value"].lower()
+        # No hardcoded "use X instead" model suggestions — must not leak
+        # specific model names from outside the configured one.
+        assert "llama" not in result["value"].lower()
+        assert "qwen" not in result["value"].lower()
+
+    def test_returns_not_ok_when_capabilities_empty(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        mock_ollama = _ollama_mock()
+        mock_ollama.Client.return_value.show.return_value = {}
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            result = check_ollama_tool_capability(
+                model="llama3", api_key=None, endpoint=None
+            )
+        assert result["ok"] is False
+
+    def test_returns_not_ok_when_show_raises(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        mock_ollama = _ollama_mock()
+        mock_ollama.Client.return_value.show.side_effect = RuntimeError(
+            "model not found"
+        )
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            result = check_ollama_tool_capability(
+                model="llama3", api_key=None, endpoint=None
+            )
+        assert result["ok"] is False
+        assert "model not found" in result["value"]
+
+    def test_returns_not_ok_when_model_is_empty_string(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        mock_ollama = _ollama_mock()
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            result = check_ollama_tool_capability(model="", api_key=None, endpoint=None)
+        assert result["ok"] is False
+        # Network must not be touched when model is empty.
+        mock_ollama.Client.assert_not_called()
+
+    def test_uses_normalized_host(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        mock_ollama = _ollama_mock()
+        mock_ollama.Client.return_value.show.return_value = {"capabilities": ["tools"]}
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            check_ollama_tool_capability(
+                model="llama3", api_key=None, endpoint="example.com:11434"
+            )
+        _, kwargs = mock_ollama.Client.call_args
+        assert kwargs["host"] == "http://example.com:11434"
+
+    def test_uses_default_host_when_no_endpoint(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        mock_ollama = _ollama_mock()
+        mock_ollama.Client.return_value.show.return_value = {"capabilities": ["tools"]}
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            check_ollama_tool_capability(model="llama3", api_key=None, endpoint=None)
+        _, kwargs = mock_ollama.Client.call_args
+        assert kwargs["host"] == "http://localhost:11434"
 
 
 class TestListAnthropicModelsAuthError:

@@ -222,6 +222,10 @@ def verify_langchain(
         result["ollama_daemon"] = _models._check_ollama_daemon(
             api_key, config.get("endpoint")
         )
+        if model:
+            result["ollama_tools_capability"] = _models.check_ollama_tool_capability(
+                model, api_key, config.get("endpoint")
+            )
 
     # Check models (optional)
     if check_models and backend:
@@ -238,6 +242,8 @@ def verify_langchain(
     )
     if backend == "ollama":
         overall_ok = overall_ok and result["ollama_daemon"]["ok"]
+        if "ollama_tools_capability" in result:
+            overall_ok = overall_ok and result["ollama_tools_capability"]["ok"]
     result["overall_ok"] = overall_ok
 
     return result

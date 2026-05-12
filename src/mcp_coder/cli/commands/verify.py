@@ -244,6 +244,7 @@ _LABEL_MAP: dict[str, str] = {
     "langgraph": "LangGraph",
     # Ollama section
     "ollama_daemon": "Local Ollama daemon",
+    "ollama_tools_capability": "Tool-calling capability",
     # MLflow section
     "installed": "MLflow installed",
     "enabled": "MLflow enabled",
