@@ -87,5 +87,5 @@ See [step_8.md](./steps/step_8.md) for details.
 
 ## Pull Request
 
-- [ ] PR review
+- [x] PR review
 - [ ] PR summary
