@@ -2453,3 +2453,210 @@ class TestSoftDeleteAndRetry:
             "Reconciled .to_be_deleted entry" in record.getMessage()
             for record in caplog.records
         )
+
+
+class TestCompositionScenarios:
+    """Cross-item composition tests for issue #953 acceptance criteria.
+
+    Scenario A combines Items #5 + #8 (orphan workspace file + .to_be_deleted
+    entry self-clean in one pass). Scenario B combines Items #1 + #8 (live
+    VSCode plus stale .to_be_deleted entry; reconciliation removes the entry
+    without invoking deletion, idempotent on replay).
+    """
+
+    def test_orphan_workspace_file_end_to_end(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Scenario A — orphan workspace file + closed issue self-clean.
+
+        One cleanup pass over a session whose folder was deleted while the
+        ``.code-workspace`` file and ``.to_be_deleted`` entry lingered must
+        remove all three: session record, orphan workspace file, and
+        registry entry. Wires real ``is_session_active`` (via
+        ``build_active_session_set``) and ``cleanup_stale_sessions`` end-to-end
+        against ``tmp_path``.
+        """
+        from mcp_coder.workflows.vscodeclaude.helpers import (
+            TO_BE_DELETED_FILENAME,
+            load_to_be_deleted,
+        )
+        from mcp_coder.workflows.vscodeclaude.sessions import (
+            build_active_session_set,
+            load_sessions,
+        )
+
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        folder_name = "mcp_coder_188"
+        folder = tmp_path / folder_name
+        # Folder is absent on disk (deleted while VSCode was open).
+
+        # Orphan workspace file lingers in workspace_base.
+        orphan_workspace = tmp_path / f"{folder_name}.code-workspace"
+        orphan_workspace.write_text("{}")
+
+        # Stale .to_be_deleted entry for the same folder name.
+        (tmp_path / TO_BE_DELETED_FILENAME).write_text(f"{folder_name}\n")
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 188,
+            "status": "status-07:code-review",
+            "vscode_pid": 74544,
+            "vscode_pid_create_time": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+        sessions_file.write_text(
+            json.dumps({"sessions": [session], "last_updated": "2024-01-01T00:00:00Z"})
+        )
+
+        closed_issue: IssueData = {
+            "number": 188,
+            "title": "Closed issue",
+            "body": "",
+            "state": "closed",
+            "labels": ["status-07:code-review"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "locked": False,
+        }
+        cached_issues_by_repo: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {188: closed_issue}
+        }
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_github_username",
+            lambda: "testuser",
+        )
+
+        # Boundary mocks: VSCode discovery is deterministic.
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_vscode_open_for_folder",
+            lambda path: (False, None),
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_open_for_folder",
+            lambda path: (False, None),
+        )
+
+        safe_delete_calls: list[Path] = []
+
+        def mock_safe_delete(path: Path) -> DeletionResult:
+            safe_delete_calls.append(path)
+            return DeletionResult(success=True)
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.safe_delete_folder",
+            mock_safe_delete,
+        )
+
+        active_set = build_active_session_set(load_sessions()["sessions"])
+
+        cleanup_stale_sessions(
+            workspace_base=str(tmp_path),
+            active_set=active_set,
+            dry_run=False,
+            cached_issues_by_repo=cached_issues_by_repo,
+        )
+
+        # Session record removed from sessions.json.
+        assert load_sessions()["sessions"] == []
+        # Orphan workspace file unlinked.
+        assert not orphan_workspace.exists()
+        # .to_be_deleted entry cleared (retry loop removes entry when folder
+        # is already gone).
+        assert load_to_be_deleted(str(tmp_path)) == set()
+        # Missing branch must not attempt deletion of an absent folder.
+        assert safe_delete_calls == []
+
+    def test_false_negative_reconciliation(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Scenario B — live VSCode + stale .to_be_deleted entry reconciles.
+
+        A folder still open in VSCode must not be retry-deleted: the
+        ``.to_be_deleted`` entry is removed, a reconciliation warning logged,
+        and ``safe_delete_folder`` is never invoked. A second cleanup pass
+        emits no fresh warning and triggers no retry.
+        """
+        from mcp_coder.workflows.vscodeclaude.helpers import (
+            TO_BE_DELETED_FILENAME,
+            load_to_be_deleted,
+        )
+
+        folder_name = "mcp_coder_937"
+        folder = tmp_path / folder_name
+        folder.mkdir()
+        (tmp_path / TO_BE_DELETED_FILENAME).write_text(f"{folder_name}\n")
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_vscode_open_for_folder",
+            lambda path: (True, 12345),
+        )
+
+        safe_delete_calls: list[Path] = []
+
+        def mock_safe_delete(path: Path) -> DeletionResult:
+            safe_delete_calls.append(path)
+            return DeletionResult(success=True)
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.safe_delete_folder",
+            mock_safe_delete,
+        )
+
+        with caplog.at_level(
+            logging.WARNING, logger="mcp_coder.workflows.vscodeclaude.cleanup"
+        ):
+            cleanup_stale_sessions(
+                workspace_base=str(tmp_path),
+                active_set={},
+                dry_run=False,
+                cached_issues_by_repo={},
+            )
+
+        assert load_to_be_deleted(str(tmp_path)) == set()
+        assert safe_delete_calls == []
+        assert folder.exists()
+        assert any(
+            "Reconciled .to_be_deleted entry" in record.getMessage()
+            and folder_name in record.getMessage()
+            for record in caplog.records
+        )
+
+        # Replay — registry is empty, no new warning, no retry.
+        caplog.clear()
+        with caplog.at_level(
+            logging.WARNING, logger="mcp_coder.workflows.vscodeclaude.cleanup"
+        ):
+            cleanup_stale_sessions(
+                workspace_base=str(tmp_path),
+                active_set={},
+                dry_run=False,
+                cached_issues_by_repo={},
+            )
+
+        assert load_to_be_deleted(str(tmp_path)) == set()
+        assert safe_delete_calls == []
+        assert not any(
+            "Reconciled .to_be_deleted entry" in record.getMessage()
+            for record in caplog.records
+        )

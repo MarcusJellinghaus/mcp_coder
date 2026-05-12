@@ -81,9 +81,9 @@ See [step_7.md](./steps/step_7.md) for details.
 
 See [step_8.md](./steps/step_8.md) for details.
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

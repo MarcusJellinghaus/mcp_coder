@@ -1782,3 +1782,124 @@ class TestZombieSessionDisplay:
         assert "Running" in captured.out
         assert "(zombie)" not in captured.out
         assert "-> Investigate zombie" not in captured.out
+
+
+class TestScenarioACrossModule:
+    """Composition test — display consistency after Scenario A cleanup.
+
+    Pair of ``test_orphan_workspace_file_end_to_end`` in
+    ``test_cleanup.py``. Runs the same Scenario A setup, executes the
+    cleanup pass, then asserts ``display_status_table`` no longer renders
+    the removed session.
+    """
+
+    def test_display_status_table_omits_cleaned_up_session(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """After Scenario A cleanup, the status table omits the cleaned session."""
+        import json
+
+        from mcp_coder.utils.folder_deletion import DeletionResult
+        from mcp_coder.workflows.vscodeclaude.cleanup import cleanup_stale_sessions
+        from mcp_coder.workflows.vscodeclaude.helpers import TO_BE_DELETED_FILENAME
+        from mcp_coder.workflows.vscodeclaude.sessions import (
+            build_active_session_set,
+            load_sessions,
+        )
+
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        folder_name = "mcp_coder_188"
+        folder = tmp_path / folder_name
+        # Folder absent on disk.
+
+        orphan_workspace = tmp_path / f"{folder_name}.code-workspace"
+        orphan_workspace.write_text("{}")
+
+        (tmp_path / TO_BE_DELETED_FILENAME).write_text(f"{folder_name}\n")
+
+        session: VSCodeClaudeSession = {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 188,
+            "status": "status-07:code-review",
+            "vscode_pid": 74544,
+            "vscode_pid_create_time": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+        sessions_file.write_text(
+            json.dumps({"sessions": [session], "last_updated": "2024-01-01T00:00:00Z"})
+        )
+
+        closed_issue: IssueData = {
+            "number": 188,
+            "title": "Closed issue",
+            "body": "",
+            "state": "closed",
+            "labels": ["status-07:code-review"],
+            "assignees": [],
+            "user": None,
+            "created_at": None,
+            "updated_at": None,
+            "url": "",
+            "locked": False,
+        }
+        cached_issues_by_repo: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {188: closed_issue}
+        }
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
+            lambda: {"owner/repo"},
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.get_github_username",
+            lambda: "testuser",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.is_vscode_open_for_folder",
+            lambda path: (False, None),
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_open_for_folder",
+            lambda path: (False, None),
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.cleanup.safe_delete_folder",
+            lambda path: DeletionResult(success=True),
+        )
+
+        active_set = build_active_session_set(load_sessions()["sessions"])
+
+        cleanup_stale_sessions(
+            workspace_base=str(tmp_path),
+            active_set=active_set,
+            dry_run=False,
+            cached_issues_by_repo=cached_issues_by_repo,
+        )
+
+        post_cleanup_sessions = load_sessions()["sessions"]
+        # Discard captured stdout from cleanup so the assertions only inspect
+        # what display_status_table renders.
+        capsys.readouterr()
+
+        display_status_table(
+            sessions=post_cleanup_sessions,
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            active_set={},
+            repo_filter=None,
+            cached_issues_by_repo=cached_issues_by_repo,
+        )
+
+        captured = capsys.readouterr()
+        assert "#188" not in captured.out
+        assert folder_name not in captured.out
