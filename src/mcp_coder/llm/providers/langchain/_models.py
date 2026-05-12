@@ -287,8 +287,11 @@ def list_ollama_models(
     """Return sorted model names from the Ollama daemon's /api/tags.
 
     Args:
-        api_key: Optional bearer token for proxy-auth setups (unused by the
-            ``ollama`` Python client directly; reserved for symmetry).
+        api_key: Optional bearer token for proxy-auth setups. When set, it is
+            forwarded to ``ollama.Client`` as
+            ``headers={"Authorization": f"Bearer {api_key}"}``; when ``None``,
+            no ``headers`` kwarg is passed. Older ``ollama`` SDKs that don't
+            accept ``headers`` fall back to a host-only client.
         endpoint: Optional Ollama host (host:port or full URL); resolved via
             :func:`_resolve_ollama_host`.
 
@@ -299,7 +302,6 @@ def list_ollama_models(
     Raises:
         ImportError: If the ``ollama`` Python client is not installed.
     """  # Also raises LLMConnectionError via helpers.
-    del api_key  # not consumed by the ollama Python client directly
     try:
         import ollama  # pylint: disable=import-outside-toplevel,import-error
     except ImportError as exc:
@@ -308,8 +310,19 @@ def list_ollama_models(
             "Install with: pip install 'mcp-coder[langchain]'"
         ) from exc
     host = _resolve_ollama_host(endpoint)
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
+
+    client_kwargs: dict[str, Any] = {}
+    if host is not None:
+        client_kwargs["host"] = host
+    if headers is not None:
+        client_kwargs["headers"] = headers
+
     try:
-        client = ollama.Client(host=host) if host else ollama.Client()
+        try:
+            client = ollama.Client(**client_kwargs)
+        except TypeError:
+            client = ollama.Client(host=host) if host else ollama.Client()
         data: Any = client.list()
         if isinstance(data, dict):
             models_iter = data.get("models", [])

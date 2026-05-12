@@ -140,6 +140,25 @@ class TestListOllamaModels:
             with pytest.raises(ImportError):
                 list_ollama_models(api_key=None)
 
+    def test_passes_auth_header_when_api_key_set(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """api_key is forwarded as a Bearer header when set, omitted when None."""
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        mock_ollama = _ollama_mock()
+        mock_ollama.Client.return_value.list.return_value = {"models": []}
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            list_ollama_models(api_key="my-token")
+        _, kwargs = mock_ollama.Client.call_args
+        assert kwargs.get("headers") == {"Authorization": "Bearer my-token"}
+
+        mock_ollama.Client.reset_mock()
+        mock_ollama.Client.return_value.list.return_value = {"models": []}
+        with patch.dict(sys.modules, {"ollama": mock_ollama}):
+            list_ollama_models(api_key=None)
+        _, kwargs = mock_ollama.Client.call_args
+        assert "headers" not in kwargs
+
 
 class TestCheckOllamaDaemon:
     """Tests for _check_ollama_daemon probe function."""
