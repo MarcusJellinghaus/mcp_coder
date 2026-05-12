@@ -2602,6 +2602,12 @@ class TestCompositionScenarios:
             load_to_be_deleted,
         )
 
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
         folder_name = "mcp_coder_937"
         folder = tmp_path / folder_name
         folder.mkdir()

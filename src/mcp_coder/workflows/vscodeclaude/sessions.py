@@ -579,6 +579,9 @@ def is_session_active(session: VSCodeClaudeSession) -> bool:
     stored ``vscode_pid``, calls ``update_session_pid(folder, found_pid)``,
     which writes ``sessions.json``.
 
+    Subscript access on ``vscode_pid_create_time`` is safe: ``load_sessions``
+    backfills the key on read and ``build_session`` initializes it on create.
+
     Args:
         session: Session to check
 
