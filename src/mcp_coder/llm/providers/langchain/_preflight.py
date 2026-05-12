@@ -6,20 +6,32 @@ import os
 
 
 def _ollama_preflight(config: dict[str, str | None]) -> None:
-    """Raise ValueError if the configured Ollama model lacks tool support.
+    """Raise if the Ollama backend cannot run agent mode.
 
-    No-op when ``config["backend"] != "ollama"``. The error wording matches
-    the ``mcp-coder verify`` output so users see the same message regardless
-    of how they hit the check.
+    No-op when ``config["backend"] != "ollama"``. Otherwise verifies the
+    ``ollama`` Python client is installed and the configured model
+    advertises the ``tools`` capability. The capability-error wording
+    matches the ``mcp-coder verify`` output so users see the same message
+    regardless of how they hit the check.
 
     Args:
         config: LangChain configuration dict.
 
     Raises:
-        ValueError: When the model does not advertise the ``tools`` capability.
+        ImportError: When the ``ollama`` Python client is not installed.
+        ValueError: When the model does not advertise the ``tools``
+            capability or the daemon is unreachable.
     """
     if config.get("backend") != "ollama":
         return
+    try:
+        import ollama  # noqa: F401  # pylint: disable=import-outside-toplevel,unused-import,import-error
+    except ImportError as exc:
+        raise ImportError(
+            "ollama is required for the Ollama backend.\n"
+            "Install with: pip install 'mcp-coder[langchain-ollama]'"
+        ) from exc
+
     from ._models import check_ollama_tool_capability
 
     cap = check_ollama_tool_capability(

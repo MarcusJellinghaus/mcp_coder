@@ -7,6 +7,7 @@ must raise ValueError immediately, before any model creation or
 agent thread spins up.
 """
 
+import sys
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -92,6 +93,32 @@ class TestAskAgentOllamaPreflight:
         assert result["text"] == "agent answer"
         mock_run_agent.assert_called_once()
         mock_check.assert_called_once()
+
+    def test_ask_agent_raises_import_error_when_ollama_client_missing(self) -> None:
+        """backend='ollama' but ollama client absent -> ImportError with install hint."""
+        mock_check = MagicMock()
+        mock_run_agent = AsyncMock()
+        with (
+            patch.dict(sys.modules, {"ollama": None}),
+            patch(f"{_MODELS_MOD}.check_ollama_tool_capability", mock_check),
+            patch(f"{_PROVIDER_MOD}.agent._check_agent_dependencies"),
+            patch(f"{_PROVIDER_MOD}.agent.run_agent", mock_run_agent),
+            patch(f"{_PROVIDER_MOD}._create_chat_model", return_value=MagicMock()),
+            patch(f"{_PROVIDER_MOD}.load_langchain_history", return_value=[]),
+            patch(f"{_PROVIDER_MOD}.store_langchain_history"),
+        ):
+            from mcp_coder.llm.providers.langchain import _ask_agent
+
+            with pytest.raises(ImportError, match="langchain-ollama"):
+                _ask_agent(
+                    question="x",
+                    config=_make_config(),
+                    session_id="s1",
+                    mcp_config="/path/.mcp.json",
+                )
+
+        mock_check.assert_not_called()
+        mock_run_agent.assert_not_called()
 
     def test_ask_agent_does_not_call_capability_for_non_ollama_backends(self) -> None:
         """backend='openai' -> capability helper never invoked."""
