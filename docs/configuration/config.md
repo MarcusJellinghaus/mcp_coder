@@ -232,7 +232,7 @@ extras (smaller footprints if you only need one backend).
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `backend` | string | LangChain backend: `"openai"`, `"gemini"`, or `"anthropic"` | Yes |
+| `backend` | string | LangChain backend: `"openai"`, `"gemini"`, `"anthropic"`, or `"ollama"` | Yes |
 | `model` | string | Model name (e.g. `"gpt-4o"`, `"gemini-1.5-pro"`). Doubles as `azure_deployment` for Azure | Yes |
 | `api_key` | string | API key (env var takes priority — see below) | No |
 | `endpoint` | string | Custom base URL for OpenAI; `azure_endpoint` for Azure; ignored by Gemini | No |
@@ -284,16 +284,34 @@ model    = "claude-opus-4-6"
 api_key  = "sk-ant-..."   # or set ANTHROPIC_API_KEY env var
 ```
 
-**Example — Local Ollama:**
+**Example — Local Ollama (native backend):**
 ```toml
 [llm]
 provider = "langchain"
 
 [llm.langchain]
-backend  = "openai"       # Ollama is OpenAI-compatible
-model    = "llama3"
-endpoint = "http://localhost:11434/v1"
+backend  = "ollama"
+model    = "llama3:latest"
+# endpoint = "127.0.0.1:11434"  # optional — defaults to localhost:11434
+# api_key  = "..."              # optional — only for proxy-auth setups
 ```
+
+> **First-call slowness.** Ollama lazy-loads model weights from disk
+> on the first request (seconds to minutes for multi-GB models);
+> subsequent calls within `keep_alive` are fast. To work around this
+> use any of:
+>
+> - `--timeout N` on the CLI to extend the request timeout
+> - `OLLAMA_KEEP_ALIVE=-1` on the daemon to keep loaded models in
+>   memory indefinitely
+> - `ollama run <model>` ahead of time to pre-load the model
+>
+> The mcp-coder default timeout (30s) is unchanged.
+>
+> **`OLLAMA_HOST` env var.** Ollama's own convention uses bare
+> `host:port` (e.g. `127.0.0.1:11434`) rather than a URL. mcp-coder
+> normalizes this automatically — set either `endpoint` in
+> config.toml (URL or `host:port`) or `OLLAMA_HOST` env var.
 
 #### Environment Variable Overrides
 
@@ -304,6 +322,8 @@ Environment variables take **highest priority** over config file values.
 | `OPENAI_API_KEY` | `[llm.langchain] api_key` | `openai` |
 | `GEMINI_API_KEY` | `[llm.langchain] api_key` | `gemini` |
 | `ANTHROPIC_API_KEY` | `[llm.langchain] api_key` | `anthropic` |
+| `OLLAMA_API_KEY` | `[llm.langchain] api_key` | `ollama` |
+| `OLLAMA_HOST` | `[llm.langchain] endpoint` | `ollama` |
 | `MCP_CODER_MCP_CONFIG` | `[mcp] default_config_path` | `.mcp.json` |
 
 **Usage in CI/CD:**

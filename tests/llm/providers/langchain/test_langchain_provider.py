@@ -259,12 +259,21 @@ class TestAskTextModelNotFound:
             "api_version": None,
         }
 
-    def test_404_error_raises_value_error_with_model_hint(self) -> None:
-        """404 from model invoke raises ValueError with model name."""
+    @pytest.mark.parametrize(
+        "error_message",
+        [
+            "Error code: 404 - The model 'bad-model' does not exist",
+            "NOT_FOUND: model not registered",
+            "model 'foo' not found",
+            "Model 'foo' Not Found",
+        ],
+    )
+    def test_404_error_raises_value_error_with_model_hint(
+        self, error_message: str
+    ) -> None:
+        """NOT_FOUND-style errors raise ValueError with model name + suggestions."""
         mock_model = MagicMock()
-        mock_model.invoke.side_effect = Exception(
-            "Error code: 404 - The model 'bad-model' does not exist"
-        )
+        mock_model.invoke.side_effect = Exception(error_message)
         with (
             patch(
                 "mcp_coder.llm.providers.langchain._load_langchain_config",
@@ -397,6 +406,31 @@ class TestCreateChatModel:
         assert result is mock_model
         mock_create.assert_called_once_with(
             model="claude-sonnet-4-20250514", api_key="k", timeout=30
+        )
+
+    def test_dispatches_to_ollama_backend(self) -> None:
+        """Config with backend=ollama calls create_ollama_model."""
+        mock_model = MagicMock()
+        with patch(
+            "mcp_coder.llm.providers.langchain.ollama_backend.create_ollama_model",
+            return_value=mock_model,
+        ) as mock_create:
+            from mcp_coder.llm.providers.langchain import _create_chat_model
+
+            result = _create_chat_model(
+                {
+                    "backend": "ollama",
+                    "model": "llama3.1",
+                    "api_key": "k",
+                    "endpoint": "http://localhost:11434",
+                }
+            )
+        assert result is mock_model
+        mock_create.assert_called_once_with(
+            model="llama3.1",
+            api_key="k",
+            endpoint="http://localhost:11434",
+            timeout=30,
         )
 
     def test_raises_on_unknown_backend(self) -> None:

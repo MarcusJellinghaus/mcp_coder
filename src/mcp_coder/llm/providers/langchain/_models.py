@@ -9,6 +9,9 @@ each function so they only trigger when model listing is actually needed
 
 from __future__ import annotations
 
+import os
+from typing import Any
+
 from ._exceptions import (
     ANTHROPIC_AUTH_ERRORS,
     CONNECTION_ERRORS,
@@ -19,6 +22,156 @@ from ._exceptions import (
     raise_connection_error,
 )
 from ._http import create_http_client
+
+
+def _resolve_ollama_host(endpoint: str | None) -> str | None:
+    """Resolve OLLAMA_HOST env > endpoint config > None, normalize to URL.
+
+    Args:
+        endpoint: Optional endpoint from config (host:port or full URL).
+
+    Returns:
+        Normalized URL string (with http:// prefix if no scheme), or None
+        when neither OLLAMA_HOST nor endpoint is set.
+    """
+    host = os.getenv("OLLAMA_HOST") or endpoint
+    if host and "://" not in host:
+        host = f"http://{host}"
+    return host
+
+
+def _check_ollama_daemon(
+    api_key: str | None,
+    endpoint: str | None,
+    timeout: float = 5.0,
+) -> dict[str, Any]:
+    """Probe the local Ollama daemon to verify reachability.
+
+    Args:
+        api_key: Optional bearer token for proxy-auth setups.
+        endpoint: Optional Ollama host (host:port or full URL); resolved via
+            :func:`_resolve_ollama_host`.  Falls back to
+            ``http://localhost:11434`` when neither env nor endpoint is set.
+        timeout: Per-request timeout in seconds.
+
+    Returns:
+        Verify-style dict with ``ok: bool`` and ``value: str`` describing the
+        outcome (reachable / auth required / not reachable).
+    """
+    try:
+        import ollama  # pylint: disable=import-outside-toplevel,import-error
+    except ImportError as exc:
+        return {
+            "ok": False,
+            "value": f"ollama Python client not installed: {exc}",
+        }
+
+    host = _resolve_ollama_host(endpoint) or "http://localhost:11434"
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
+    response_error_cls = getattr(ollama, "ResponseError", None)
+
+    client_kwargs: dict[str, Any] = {"host": host, "timeout": timeout}
+    if headers is not None:
+        client_kwargs["headers"] = headers
+
+    try:
+        try:
+            client = ollama.Client(**client_kwargs)
+        except TypeError:
+            client = ollama.Client(host=host)
+        client.list()
+        return {
+            "ok": True,
+            "value": f"local Ollama daemon reachable at {host}",
+        }
+    except Exception as exc:  # pylint: disable=broad-except
+        if response_error_cls is not None and isinstance(exc, response_error_cls):
+            status = getattr(exc, "status_code", None)
+            msg = str(exc)
+            if status in (401, 403) or "401" in msg or "403" in msg:
+                return {
+                    "ok": False,
+                    "value": (
+                        "local Ollama daemon reachable but auth required — "
+                        "set OLLAMA_API_KEY or api_key in config.toml"
+                    ),
+                }
+        return {
+            "ok": False,
+            "value": "local Ollama daemon not reachable — is `ollama serve` running?",
+        }
+
+
+def check_ollama_tool_capability(
+    model: str,
+    api_key: str | None,
+    endpoint: str | None,
+    timeout: float = 5.0,
+) -> dict[str, Any]:
+    """Probe ``/api/show`` to verify the model advertises the ``tools`` capability.
+
+    Returned dict is the verify-style ``{"ok": bool, "value": str}`` shape so
+    the same value can be rendered by ``mcp-coder verify`` and consumed by
+    the agent pre-flight check, sharing one wording across both call sites.
+
+    Args:
+        model: Configured model name (e.g. ``"llama3"``).  An empty string
+            short-circuits to ``ok: False`` without any network access.
+        api_key: Optional bearer token for proxy-auth setups.
+        endpoint: Optional Ollama host (host:port or full URL); resolved via
+            :func:`_resolve_ollama_host`.  Falls back to
+            ``http://localhost:11434`` when neither env nor endpoint is set.
+        timeout: Per-request timeout in seconds.
+
+    Returns:
+        Verify-style dict with ``ok: bool`` and ``value: str`` describing
+        whether the model supports tool calling.
+    """
+    if not model:
+        return {"ok": False, "value": "no model configured"}
+
+    try:
+        import ollama  # pylint: disable=import-outside-toplevel,import-error
+    except ImportError as exc:
+        return {
+            "ok": False,
+            "value": f"ollama Python client not installed: {exc}",
+        }
+
+    host = _resolve_ollama_host(endpoint) or "http://localhost:11434"
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
+
+    client_kwargs: dict[str, Any] = {"host": host, "timeout": timeout}
+    if headers is not None:
+        client_kwargs["headers"] = headers
+
+    try:
+        try:
+            client = ollama.Client(**client_kwargs)
+        except TypeError:
+            client = ollama.Client(host=host)
+        info: Any = client.show(model=model)
+        if isinstance(info, dict):
+            caps = info.get("capabilities") or []
+        else:
+            caps = getattr(info, "capabilities", None) or []
+        if "tools" in caps:
+            return {
+                "ok": True,
+                "value": f"model {model!r} supports tools",
+            }
+        return {
+            "ok": False,
+            "value": (
+                f"model {model!r} does not advertise the 'tools' capability — "
+                "agent mode requires a tool-calling model"
+            ),
+        }
+    except Exception as exc:  # pylint: disable=broad-except
+        return {
+            "ok": False,
+            "value": f"could not verify tool capability for {model!r}: {exc}",
+        }
 
 
 def list_gemini_models(api_key: str | None) -> list[str]:
@@ -125,3 +278,69 @@ def list_anthropic_models(api_key: str | None) -> list[str]:
         raise_auth_error("Anthropic", "ANTHROPIC_API_KEY", exc)
     except CONNECTION_ERRORS as exc:
         raise_connection_error("Anthropic", "ANTHROPIC_API_KEY", exc)
+
+
+def list_ollama_models(
+    api_key: str | None,
+    endpoint: str | None = None,
+) -> list[str]:
+    """Return sorted model names from the Ollama daemon's /api/tags.
+
+    Args:
+        api_key: Optional bearer token for proxy-auth setups. When set, it is
+            forwarded to ``ollama.Client`` as
+            ``headers={"Authorization": f"Bearer {api_key}"}``; when ``None``,
+            no ``headers`` kwarg is passed. Older ``ollama`` SDKs that don't
+            accept ``headers`` fall back to a host-only client.
+        endpoint: Optional Ollama host (host:port or full URL); resolved via
+            :func:`_resolve_ollama_host`.
+
+    Returns:
+        Sorted list of model name strings (e.g. ``["llama3:latest", "mistral:7b"]``).
+        Empty list when the daemon returns no models.
+
+    Raises:
+        ImportError: If the ``ollama`` Python client is not installed.
+    """  # Also raises LLMConnectionError via helpers.
+    try:
+        import ollama  # pylint: disable=import-outside-toplevel,import-error
+    except ImportError as exc:
+        raise ImportError(
+            "ollama is required to list Ollama models.\n"
+            "Install with: pip install 'mcp-coder[langchain]'"
+        ) from exc
+    host = _resolve_ollama_host(endpoint)
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
+
+    client_kwargs: dict[str, Any] = {}
+    if host is not None:
+        client_kwargs["host"] = host
+    if headers is not None:
+        client_kwargs["headers"] = headers
+
+    try:
+        try:
+            client = ollama.Client(**client_kwargs)
+        except TypeError:
+            client = ollama.Client(host=host) if host else ollama.Client()
+        data: Any = client.list()
+        if isinstance(data, dict):
+            models_iter = data.get("models", [])
+        else:
+            models_iter = getattr(data, "models", [])
+        names: list[str] = []
+        for m in models_iter:
+            if isinstance(m, dict):
+                name = m.get("name") or m.get("model")
+            else:
+                name = getattr(m, "name", None) or getattr(m, "model", None)
+            if isinstance(name, str):
+                names.append(name)
+        return sorted(names)
+    except CONNECTION_ERRORS as exc:
+        raise_connection_error(
+            "Ollama",
+            "OLLAMA_API_KEY",
+            exc,
+            endpoint_hint="endpoint/OLLAMA_HOST if not localhost",
+        )

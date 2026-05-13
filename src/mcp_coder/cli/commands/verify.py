@@ -242,6 +242,9 @@ _LABEL_MAP: dict[str, str] = {
     # MCP adapter section
     "mcp_adapters": "MCP adapters",
     "langgraph": "LangGraph",
+    # Ollama section
+    "ollama_daemon": "Local Ollama daemon",
+    "ollama_tools_capability": "Tool-calling capability",
     # MLflow section
     "installed": "MLflow installed",
     "enabled": "MLflow enabled",

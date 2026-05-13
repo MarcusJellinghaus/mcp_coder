@@ -36,6 +36,7 @@ from ._exceptions import (
     raise_auth_error,
     raise_connection_error,
 )
+from ._preflight import _ollama_preflight
 from ._usage import _extract_usage
 
 if TYPE_CHECKING:
@@ -79,6 +80,11 @@ _BACKEND_ERROR_PARAMS: dict[str, tuple[str, str, str]] = {
     ),
     "gemini": ("Gemini", "GEMINI_API_KEY", ""),
     "anthropic": ("Anthropic", "ANTHROPIC_API_KEY", ""),
+    "ollama": (
+        "Ollama",
+        "OLLAMA_API_KEY",
+        "endpoint/OLLAMA_HOST if not localhost",
+    ),
 }
 
 
@@ -200,9 +206,18 @@ def _create_chat_model(
             api_key=config.get("api_key"),
             timeout=timeout,
         )
+    if backend == "ollama":
+        from .ollama_backend import create_ollama_model
+
+        return create_ollama_model(
+            model=config.get("model") or "",
+            api_key=config.get("api_key"),
+            endpoint=config.get("endpoint"),
+            timeout=timeout,
+        )
     raise ValueError(
         f"Unsupported langchain backend: {backend!r}. "
-        "Supported backends: 'openai', 'gemini', 'anthropic'."
+        "Supported backends: 'openai', 'gemini', 'anthropic', 'ollama'."
     )
 
 
@@ -314,8 +329,8 @@ def _ask_text(
         ai_msg = chat_model.invoke(lc_messages)
     except Exception as exc:
         _handle_provider_error(exc, backend)
-        exc_str = str(exc)
-        if "404" in exc_str or "not_found" in exc_str.lower() or "NOT_FOUND" in exc_str:
+        exc_lower = str(exc).lower()
+        if "404" in exc_lower or "not_found" in exc_lower or "not found" in exc_lower:
             model = config.get("model", "")
             hint = f"Model {model!r} not found."
             try:
@@ -368,7 +383,12 @@ def _get_model_suggestions(config: dict[str, str | None]) -> str:
     api_key = config.get("api_key")
     endpoint = config.get("endpoint")
 
-    from ._models import list_anthropic_models, list_gemini_models, list_openai_models
+    from ._models import (
+        list_anthropic_models,
+        list_gemini_models,
+        list_ollama_models,
+        list_openai_models,
+    )
 
     models: list[str] = []
     if backend == "openai":
@@ -377,6 +397,8 @@ def _get_model_suggestions(config: dict[str, str | None]) -> str:
         models = list_gemini_models(os.getenv("GEMINI_API_KEY") or api_key)
     elif backend == "anthropic":
         models = list_anthropic_models(os.getenv("ANTHROPIC_API_KEY") or api_key)
+    elif backend == "ollama":
+        models = list_ollama_models(os.getenv("OLLAMA_API_KEY") or api_key, endpoint)
 
     if models:
         return "\n\nAvailable models:\n" + "\n".join(f"  - {m}" for m in models)
@@ -412,6 +434,7 @@ def _ask_agent(
     from .agent import _check_agent_dependencies, run_agent
 
     _check_agent_dependencies()
+    _ollama_preflight(config)
 
     chat_model = _create_chat_model(config, timeout=timeout)
     history: list[dict[str, Any]] = load_langchain_history(session_id)
@@ -490,6 +513,7 @@ def _ask_agent_stream(
     from .agent import _check_agent_dependencies, run_agent_stream
 
     _check_agent_dependencies()
+    _ollama_preflight(config)
     chat_model = _create_chat_model(config, timeout=timeout)
     history: list[dict[str, Any]] = load_langchain_history(session_id)
 
@@ -691,8 +715,8 @@ def _ask_text_stream(
     except Exception as exc:
         _handle_provider_error(exc, backend)
         # Handle 404/model-not-found errors (mirrors _ask_text() path)
-        exc_str = str(exc)
-        if "404" in exc_str or "not_found" in exc_str.lower() or "NOT_FOUND" in exc_str:
+        exc_lower = str(exc).lower()
+        if "404" in exc_lower or "not_found" in exc_lower or "not found" in exc_lower:
             model = config.get("model", "")
             hint = f"Model {model!r} not found."
             try:
