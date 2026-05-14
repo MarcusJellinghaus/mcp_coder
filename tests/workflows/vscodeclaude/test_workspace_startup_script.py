@@ -78,7 +78,10 @@ class TestCreateStartupScript:
         # 2-command flow: no middle commands, so no --session-id automated resume
         assert "--session-id %SESSION_ID%" not in content
         # Last command is interactive resume
-        assert "claude --resume %SESSION_ID%" in content
+        assert (
+            "claude --mcp-config .mcp.json --strict-mcp-config --resume %SESSION_ID%"
+            in content
+        )
         assert "/discuss" in content
 
     def test_creates_script_with_claude_resume(
@@ -105,7 +108,10 @@ class TestCreateStartupScript:
 
         content = script_path.read_text(encoding="utf-8")
         # Single command: interactive only with issue number
-        assert 'claude "/implementation_review_supervisor 123"' in content
+        assert (
+            "claude --mcp-config .mcp.json --strict-mcp-config "
+            '"/implementation_review_supervisor 123"' in content
+        )
         # No automated step for single command
         assert "mcp-coder prompt" not in content
         # No step labels for single command
@@ -285,7 +291,10 @@ class TestCreateStartupScript:
         # First command is automated
         assert "mcp-coder prompt" in content
         # Last command is interactive resume
-        assert "claude --resume %SESSION_ID%" in content
+        assert (
+            "claude --mcp-config .mcp.json --strict-mcp-config --resume %SESSION_ID%"
+            in content
+        )
         assert "/discuss" in content
         # Multi-command has step labels
         assert "Step 1" in content
@@ -317,7 +326,10 @@ class TestCreateStartupScript:
         # No automated step for single command
         assert "mcp-coder prompt" not in content
         # Interactive-only with issue number
-        assert 'claude "/implementation_review_supervisor 123"' in content
+        assert (
+            "claude --mcp-config .mcp.json --strict-mcp-config "
+            '"/implementation_review_supervisor 123"' in content
+        )
         # No step labels
         assert "Step 1" not in content
         assert "Step 2" not in content
@@ -398,7 +410,10 @@ class TestCreateStartupScript:
         # Middle command uses automated resume
         assert "--session-id %SESSION_ID%" in content
         # Last command is interactive resume
-        assert "claude --resume %SESSION_ID%" in content
+        assert (
+            "claude --mcp-config .mcp.json --strict-mcp-config --resume %SESSION_ID%"
+            in content
+        )
         assert "/step_three" in content
         # All steps have labels
         assert "Step 1" in content
@@ -744,13 +759,20 @@ class TestCreateStartupScriptPOSIX:
         mode = script_path.stat().st_mode
         assert mode & stat.S_IXUSR
 
-    @pytest.mark.parametrize("system", ["Darwin", "Linux"])
+    @pytest.mark.parametrize(
+        "system,expected_mcp_config",
+        [
+            ("Darwin", ".mcp.macos.json"),
+            ("Linux", ".mcp.linux.json"),
+        ],
+    )
     def test_single_command_flow_posix(
         self,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         mock_vscodeclaude_config: None,
         system: str,
+        expected_mcp_config: str,
     ) -> None:
         """Single-command POSIX flow uses interactive `claude` only."""
         monkeypatch.setattr(
@@ -771,18 +793,28 @@ class TestCreateStartupScriptPOSIX:
         )
 
         content = script_path.read_text(encoding="utf-8")
-        assert 'claude "/implementation_review_supervisor 123"' in content
+        assert (
+            f"claude --mcp-config {expected_mcp_config} --strict-mcp-config "
+            '"/implementation_review_supervisor 123"' in content
+        )
         assert "mcp-coder prompt" not in content
         assert "Step 1" not in content
         assert "--session-id" not in content
 
-    @pytest.mark.parametrize("system", ["Darwin", "Linux"])
+    @pytest.mark.parametrize(
+        "system,expected_mcp_config",
+        [
+            ("Darwin", ".mcp.macos.json"),
+            ("Linux", ".mcp.linux.json"),
+        ],
+    )
     def test_multi_command_flow_posix(
         self,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         mock_vscodeclaude_config: None,
         system: str,
+        expected_mcp_config: str,
     ) -> None:
         """Multi-command POSIX flow captures SESSION_ID and resumes interactively."""
         monkeypatch.setattr(
@@ -805,7 +837,10 @@ class TestCreateStartupScriptPOSIX:
         content = script_path.read_text(encoding="utf-8")
         assert 'mcp-coder prompt "' in content
         assert "SESSION_ID=$(" in content
-        assert 'claude --resume "$SESSION_ID"' in content
+        assert (
+            f"claude --mcp-config {expected_mcp_config} --strict-mcp-config "
+            '--resume "$SESSION_ID"' in content
+        )
 
     @pytest.mark.parametrize("system", ["Darwin", "Linux"])
     def test_title_single_quote_escaped(
@@ -932,3 +967,130 @@ class TestCreateStartupScriptPOSIX:
 
         content = script_path.read_text(encoding="utf-8")
         assert content.count('export PATH="$MCP_CODER_VENV_PATH:$PATH"') == 2
+
+
+class TestMcpConfigFlagsFullMatrix:
+    """Every generated launcher must pass `--mcp-config <file> --strict-mcp-config`.
+
+    Without these flags, Claude falls back to default `.mcp.json` discovery,
+    which is Windows-only. On macOS/Linux the result is silently broken MCP
+    tools (issue #965). The strict flag prevents the same fallback even when
+    a `.mcp.json` is present alongside the platform-specific config.
+    """
+
+    @pytest.mark.parametrize(
+        "system,expected_mcp_config",
+        [
+            ("Windows", ".mcp.json"),
+            ("Darwin", ".mcp.macos.json"),
+            ("Linux", ".mcp.linux.json"),
+        ],
+    )
+    def test_single_command_has_flags(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+        system: str,
+        expected_mcp_config: str,
+    ) -> None:
+        """Single-command flow emits the flag pair on the bare `claude` line."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: system,
+        )
+        _seed_mcp_config(tmp_path, system)
+
+        # status-07:code-review has one command.
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=123,
+            issue_title="Test",
+            status="status-07:code-review",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/123",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        assert f"--mcp-config {expected_mcp_config} --strict-mcp-config" in content
+
+    @pytest.mark.parametrize(
+        "system,expected_mcp_config",
+        [
+            ("Windows", ".mcp.json"),
+            ("Darwin", ".mcp.macos.json"),
+            ("Linux", ".mcp.linux.json"),
+        ],
+    )
+    def test_multi_command_has_flags(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+        system: str,
+        expected_mcp_config: str,
+    ) -> None:
+        """Multi-command flow emits the flag pair on the interactive resume line."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: system,
+        )
+        _seed_mcp_config(tmp_path, system)
+
+        # status-01:created has two commands.
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=123,
+            issue_title="Test",
+            status="status-01:created",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/123",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        # The interactive resume must carry the flags. mcp-coder prompt already
+        # applies --strict-mcp-config internally when --mcp-config is set
+        # (claude_code_cli.py), so this assertion targets the bare claude line.
+        assert f"--mcp-config {expected_mcp_config} --strict-mcp-config" in content
+        # And the automated step must reference the right config file.
+        assert f"--mcp-config {expected_mcp_config}" in content
+
+    @pytest.mark.parametrize(
+        "system,expected_mcp_config",
+        [
+            ("Windows", ".mcp.json"),
+            ("Darwin", ".mcp.macos.json"),
+            ("Linux", ".mcp.linux.json"),
+        ],
+    )
+    def test_intervention_has_flags(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+        system: str,
+        expected_mcp_config: str,
+    ) -> None:
+        """Intervention mode emits the flag pair on the bare `claude` line."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: system,
+        )
+        _seed_mcp_config(tmp_path, system)
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=1,
+            issue_title="Test",
+            status="status-06:implementing",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/1",
+            is_intervention=True,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        assert (
+            f"claude --mcp-config {expected_mcp_config} --strict-mcp-config" in content
+        )

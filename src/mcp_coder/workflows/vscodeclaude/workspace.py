@@ -548,6 +548,7 @@ def create_startup_script(
     )
 
     is_windows = platform.system() == "Windows"
+    mcp_config_filename = _MCP_CONFIG_FILES.get(platform.system(), ".mcp.json")
 
     # Get config for this status
     config = get_vscodeclaude_config(status)
@@ -587,6 +588,7 @@ def create_startup_script(
                 status=status,
                 issue_url=issue_url,
                 venv_section=venv_section,
+                mcp_config=mcp_config_filename,
             )
         else:
             # Validate commands config
@@ -605,6 +607,7 @@ def create_startup_script(
                 command_sections = INTERACTIVE_ONLY_SECTION_WINDOWS.format(
                     command=commands[0],
                     issue_number=issue_number,
+                    mcp_config=mcp_config_filename,
                 )
             elif len(commands) > 1:
                 sections = []
@@ -618,6 +621,7 @@ def create_startup_script(
                                 issue_number=issue_number,
                                 timeout=timeout,
                                 step_number=step_number,
+                                mcp_config=mcp_config_filename,
                             )
                         )
                     elif not is_last:
@@ -626,6 +630,7 @@ def create_startup_script(
                                 command=cmd,
                                 timeout=timeout,
                                 step_number=step_number,
+                                mcp_config=mcp_config_filename,
                             )
                         )
                     if is_last:
@@ -633,6 +638,7 @@ def create_startup_script(
                             INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS.format(
                                 command=cmd,
                                 step_number=step_number,
+                                mcp_config=mcp_config_filename,
                             )
                         )
                 command_sections = "\n".join(sections)
@@ -657,7 +663,6 @@ def create_startup_script(
 
         return script_path
     else:
-        mcp_config_filename = _MCP_CONFIG_FILES.get(platform.system(), ".mcp.json")
         mcp_config_path = folder_path / mcp_config_filename
         if not mcp_config_path.exists():
             raise FileNotFoundError(
@@ -689,6 +694,7 @@ def create_startup_script(
                 status=status,
                 issue_url=issue_url,
                 venv_section=venv_section,
+                mcp_config=mcp_config_filename,
             )
         else:
             if commands and (
@@ -704,6 +710,7 @@ def create_startup_script(
                 command_sections = INTERACTIVE_ONLY_SECTION_POSIX.format(
                     command=commands[0],
                     issue_number=issue_number,
+                    mcp_config=mcp_config_filename,
                 )
             elif len(commands) > 1:
                 sections = []
@@ -734,6 +741,7 @@ def create_startup_script(
                             INTERACTIVE_RESUME_WITH_COMMAND_POSIX.format(
                                 command=cmd,
                                 step_number=step_number,
+                                mcp_config=mcp_config_filename,
                             )
                         )
                 command_sections = "\n".join(sections)

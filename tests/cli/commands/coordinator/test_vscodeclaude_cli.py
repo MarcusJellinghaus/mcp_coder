@@ -40,7 +40,11 @@ class TestTemplates:
 
         assert "{command}" in INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS
         assert "{step_number}" in INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS
-        assert "claude --resume %SESSION_ID%" in INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS
+        assert "{mcp_config}" in INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS
+        assert (
+            "--strict-mcp-config --resume %SESSION_ID%"
+            in INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS
+        )
 
     def test_workspace_file_is_valid_json_template(self) -> None:
         """Workspace template produces valid JSON when formatted."""
@@ -205,7 +209,7 @@ class TestWindowsTemplates:
 
         assert "mcp-coder prompt" in AUTOMATED_SECTION_WINDOWS
         assert "--output-format session-id" in AUTOMATED_SECTION_WINDOWS
-        assert "--mcp-config .mcp.json" in AUTOMATED_SECTION_WINDOWS
+        assert "--mcp-config {mcp_config}" in AUTOMATED_SECTION_WINDOWS
 
     def test_automated_section_captures_session_id(self) -> None:
         """AUTOMATED_SECTION_WINDOWS captures SESSION_ID."""
@@ -231,7 +235,10 @@ class TestWindowsTemplates:
             INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS,
         )
 
-        assert "claude --resume %SESSION_ID%" in INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS
+        assert (
+            "--strict-mcp-config --resume %SESSION_ID%"
+            in INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS
+        )
 
     def test_startup_script_has_all_sections(self) -> None:
         """STARTUP_SCRIPT_WINDOWS includes all section placeholders."""
