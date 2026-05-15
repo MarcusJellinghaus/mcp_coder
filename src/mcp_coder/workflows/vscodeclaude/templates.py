@@ -143,7 +143,7 @@ echo === Step {step_number}: Automated Analysis ===
 echo Running: {command} {issue_number}
 echo.
 
-for /f "delims=" %%i in ('mcp-coder prompt "{command} {issue_number}" --llm-method claude --output-format session-id --mcp-config .mcp.json --timeout {timeout}') do set SESSION_ID=%%i
+for /f "delims=" %%i in ('mcp-coder prompt "{command} {issue_number}" --llm-method claude --output-format session-id --mcp-config {mcp_config} --timeout {timeout}') do set SESSION_ID=%%i
 
 if "%SESSION_ID%"=="" (
     echo.
@@ -163,7 +163,7 @@ INTERACTIVE_ONLY_SECTION_WINDOWS = r"""echo.
 echo Running: {command} {issue_number}
 echo.
 
-claude "{command} {issue_number}"
+claude --mcp-config {mcp_config} --strict-mcp-config "{command} {issue_number}"
 """
 
 # Middle commands in multi-command flow for Windows (automated session resume)
@@ -172,7 +172,7 @@ echo === Step {step_number}: Automated Session ===
 echo Running: {command}
 echo.
 
-mcp-coder prompt "{command}" --llm-method claude --session-id %SESSION_ID% --mcp-config .mcp.json --timeout {timeout}
+mcp-coder prompt "{command}" --llm-method claude --session-id %SESSION_ID% --mcp-config {mcp_config} --timeout {timeout}
 
 if errorlevel 1 (
     echo.
@@ -189,7 +189,7 @@ echo You can now interact with Claude directly.
 echo The conversation context from previous steps is preserved.
 echo.
 
-claude --resume %SESSION_ID% "{command}"
+claude --mcp-config {mcp_config} --strict-mcp-config --resume %SESSION_ID% "{command}"
 """
 
 
@@ -233,7 +233,7 @@ echo !! Investigate manually. No automated analysis will run.
 echo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 echo.
 
-claude
+claude --mcp-config {mcp_config} --strict-mcp-config
 """
 
 # Venv setup section for POSIX (macOS / Linux)
@@ -295,7 +295,7 @@ INTERACTIVE_ONLY_SECTION_POSIX = r"""echo
 echo "Running: {command} {issue_number}"
 echo
 
-claude "{command} {issue_number}"
+claude --mcp-config {mcp_config} --strict-mcp-config "{command} {issue_number}"
 """
 
 # Middle commands in multi-command flow for POSIX (automated session resume)
@@ -314,7 +314,7 @@ echo "You can now interact with Claude directly."
 echo "The conversation context from previous steps is preserved."
 echo
 
-claude --resume "$SESSION_ID" "{command}"
+claude --mcp-config {mcp_config} --strict-mcp-config --resume "$SESSION_ID" "{command}"
 """
 
 # Main startup script for POSIX (with venv and mcp-coder)
@@ -359,7 +359,7 @@ echo '!! Investigate manually. No automated analysis will run.'
 echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
 echo
 
-claude
+claude --mcp-config {mcp_config} --strict-mcp-config
 """
 
 
