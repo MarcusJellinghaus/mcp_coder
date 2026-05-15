@@ -127,16 +127,6 @@ mcp-coder = "mcp_coder.cli.main:main"
 # on Windows. Constrain transitive versions until upstream publishes Windows wheels.
 constraint-dependencies = ["greenlet<3.4"]
 
-[tool.uv.sources]
-# Map sibling MCP packages to their GitHub sources so uv can satisfy URL-typed
-# transitive dependencies (e.g. mcp-workspace declaring mcp-coder-utils as a
-# git dep) without listing them as direct URL deps in [project] (which would
-# leak into published metadata and is blocked by tools/check_no_url_deps.py).
-# These keys are uv-specific and stripped from built wheels/sdists.
-mcp-tools-py = { git = "https://github.com/MarcusJellinghaus/mcp-tools-py.git" }
-mcp-workspace = { git = "https://github.com/MarcusJellinghaus/mcp-workspace.git" }
-mcp-coder-utils = { git = "https://github.com/MarcusJellinghaus/mcp-coder-utils.git" }
-
 [tool.setuptools.packages.find]
 where = ["src"]
 

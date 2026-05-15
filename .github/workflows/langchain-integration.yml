@@ -48,12 +48,9 @@ jobs:
           python-version: 3.11
 
       - name: Install dependencies
-        run: uv sync --extra dev --extra langchain
-
-      - name: Activate venv
         run: |
-          echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
-          echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
+          mapfile -t SPECS < <(python tools/read_github_deps.py --specs)
+          uv pip install --system "${SPECS[@]}" ".[dev,langchain]"
 
       - name: Run LangChain integration tests
         run: |
