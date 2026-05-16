@@ -178,6 +178,9 @@ jobs:
 
           cfg = get_github_install_config(Path("."))
           out = []
+          # NOTE: POSIX-side renderer. Intentionally diverges from workspace.py:_build_github_install_section,
+          # which emits Windows-batch syntax (REM headers, naive "{p}" quoting). Shared seam is the loader
+          # (get_github_install_config), not the renderer.
           if cfg.packages:
               out.append("uv pip install " + " ".join(shlex.quote(p) for p in cfg.packages))
           if cfg.packages_no_deps:
