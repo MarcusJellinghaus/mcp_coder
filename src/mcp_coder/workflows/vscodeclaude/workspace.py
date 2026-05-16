@@ -5,6 +5,7 @@ Handles git operations, folder creation, and file generation.
 
 import logging
 import platform
+import shlex
 import shutil
 import stat
 import sys
@@ -450,7 +451,7 @@ def _escape_batch_title(text: str) -> str:
     return text
 
 
-def _build_github_install_section(folder_path: Path) -> str:
+def _build_github_install_section_windows(folder_path: Path) -> str:
     """Read [tool.mcp-coder.install-from-github] from pyproject.toml and build install commands.
 
     Args:
@@ -478,6 +479,35 @@ def _build_github_install_section(folder_path: Path) -> str:
 
     # NOTE: If stale git cache becomes an issue, add --reinstall to the
     # uv pip install commands above to force re-fetch from GitHub.
+    return "\n".join(lines)
+
+
+def _build_github_install_section_posix(folder_path: Path) -> str:
+    """Read [tool.mcp-coder.install-from-github] and build POSIX install commands.
+
+    Args:
+        folder_path: Path to the cloned repo containing pyproject.toml.
+
+    Returns:
+        Bash script lines to inject, or empty string if no packages configured.
+    """
+    gh_config = get_github_install_config(folder_path)
+    packages = gh_config.packages
+    packages_no_deps = gh_config.packages_no_deps
+
+    if not packages and not packages_no_deps:
+        logger.info("No GitHub override packages configured in pyproject.toml")
+        return ""
+
+    lines = ["", "# === GitHub override installs ==="]
+    if packages:
+        quoted = " ".join(shlex.quote(p) for p in packages)
+        lines.append(f"uv pip install {quoted}")
+    if packages_no_deps:
+        quoted = " ".join(shlex.quote(p) for p in packages_no_deps)
+        lines.append(f"uv pip install --no-deps {quoted}")
+    lines.append("uv pip install -e . --no-deps")
+
     return "\n".join(lines)
 
 
@@ -575,7 +605,7 @@ def create_startup_script(
 
         # Auto-detect GitHub override install commands from pyproject.toml
         if not skip_github_install:
-            github_install_section = _build_github_install_section(folder_path)
+            github_install_section = _build_github_install_section_windows(folder_path)
             venv_section = venv_section + github_install_section
 
         if is_intervention:
@@ -680,6 +710,11 @@ def create_startup_script(
             mcp_coder_install_path=mcp_coder_install_path or "",
             session_folder_path=str(session_path),
         )
+
+        # Auto-detect GitHub override install commands from pyproject.toml
+        if not skip_github_install:
+            github_install_section = _build_github_install_section_posix(folder_path)
+            venv_section = venv_section + github_install_section
 
         title_display = (
             issue_title[:58] if len(issue_title) > 58 else issue_title

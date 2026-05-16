@@ -129,12 +129,12 @@ jobs:
       - name: Run ${{ matrix.check.name }}
         run: ${{ matrix.check.cmd }}
 
-  # Mirrors the install sequence emitted by
-  # src/mcp_coder/workflows/vscodeclaude/templates.py (VENV_SECTION_*) +
-  # workspace.py:_build_github_install_section, so breakage in the user-facing
-  # template surfaces here instead of on a developer machine. Kept independent
-  # of `test` because it uses an activated project venv (not --system) and
-  # pulls siblings at HEAD via [tool.mcp-coder.install-from-github] — see #969.
+  # Exercises the install sequence emitted by the POSIX vscodeclaude template
+  # (src/mcp_coder/workflows/vscodeclaude/templates.py:VENV_SECTION_POSIX +
+  # workspace.py:_build_github_install_section_posix). Calls the shared renderer
+  # directly so a break in the user-facing template surfaces here. Independent
+  # of `test` because it uses an activated project venv (not --system) and pulls
+  # siblings at HEAD via [tool.mcp-coder.install-from-github] — see #969.
   vscodeclaude-template-install:
     runs-on: ubuntu-latest
     steps:
@@ -169,25 +169,15 @@ jobs:
           uv pip install -e . --no-deps
 
           # Step 4: GitHub overrides from [tool.mcp-coder.install-from-github].
-          # Built via the same loader the template uses, so this stays in sync
-          # with workspace.py:_build_github_install_section.
+          # Renders via the same workspace.py:_build_github_install_section_posix
+          # function the POSIX template uses — single source of truth.
           python <<'PY' > github_install.sh
-          import shlex
           from pathlib import Path
-          from mcp_coder.utils.pyproject_config import get_github_install_config
+          from mcp_coder.workflows.vscodeclaude.workspace import (
+              _build_github_install_section_posix,
+          )
 
-          cfg = get_github_install_config(Path("."))
-          out = []
-          # NOTE: POSIX-side renderer. Intentionally diverges from workspace.py:_build_github_install_section,
-          # which emits Windows-batch syntax (REM headers, naive "{p}" quoting). Shared seam is the loader
-          # (get_github_install_config), not the renderer.
-          if cfg.packages:
-              out.append("uv pip install " + " ".join(shlex.quote(p) for p in cfg.packages))
-          if cfg.packages_no_deps:
-              out.append("uv pip install --no-deps " + " ".join(shlex.quote(p) for p in cfg.packages_no_deps))
-          if out:
-              out.append("uv pip install -e . --no-deps")
-          print("\n".join(out))
+          print(_build_github_install_section_posix(Path(".")))
           PY
 
           if [ -s github_install.sh ]; then
