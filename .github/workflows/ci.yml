@@ -129,6 +129,77 @@ jobs:
       - name: Run ${{ matrix.check.name }}
         run: ${{ matrix.check.cmd }}
 
+  # Mirrors the install sequence emitted by
+  # src/mcp_coder/workflows/vscodeclaude/templates.py (VENV_SECTION_*) +
+  # workspace.py:_build_github_install_section, so breakage in the user-facing
+  # template surfaces here instead of on a developer machine. Kept independent
+  # of `test` because it uses an activated project venv (not --system) and
+  # pulls siblings at HEAD via [tool.mcp-coder.install-from-github] — see #969.
+  vscodeclaude-template-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: 3.11
+
+      - name: Run vscodeclaude template install sequence
+        env:
+          # Full clone so setuptools_scm can read tags on sibling repos (#817)
+          UV_GIT_SHALLOW: "0"
+        run: |
+          set -euo pipefail
+
+          # Step 1: create project venv
+          uv venv
+
+          # Activate venv so `uv pip install` targets it (matches template)
+          # shellcheck disable=SC1091
+          source .venv/bin/activate
+
+          # Step 2: install project deps (with dev extra)
+          uv sync --extra dev
+
+          # Step 3: editable install of the project
+          uv pip install -e . --no-deps
+
+          # Step 4: GitHub overrides from [tool.mcp-coder.install-from-github].
+          # Built via the same loader the template uses, so this stays in sync
+          # with workspace.py:_build_github_install_section.
+          python <<'PY' > github_install.sh
+          import shlex
+          from pathlib import Path
+          from mcp_coder.utils.pyproject_config import get_github_install_config
+
+          cfg = get_github_install_config(Path("."))
+          out = []
+          if cfg.packages:
+              out.append("uv pip install " + " ".join(shlex.quote(p) for p in cfg.packages))
+          if cfg.packages_no_deps:
+              out.append("uv pip install --no-deps " + " ".join(shlex.quote(p) for p in cfg.packages_no_deps))
+          if out:
+              out.append("uv pip install -e . --no-deps")
+          print("\n".join(out))
+          PY
+
+          if [ -s github_install.sh ]; then
+            echo "--- GitHub override commands ---"
+            cat github_install.sh
+            echo "--------------------------------"
+            bash github_install.sh
+          else
+            echo "No [tool.mcp-coder.install-from-github] entries configured — skipping step 4."
+          fi
+
+          # Smoke check: prove the venv actually works end-to-end
+          mcp-coder --version
+          python -c "import mcp_coder; print('mcp_coder import OK from', mcp_coder.__file__)"
+
   # Architecture checks - only run on pull requests
   # These validate module boundaries and import structure
   architecture:
