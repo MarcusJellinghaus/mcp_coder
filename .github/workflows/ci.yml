@@ -99,7 +99,7 @@ jobs:
           - {name: "ruff-docstrings", cmd: "ruff version && ruff check src tests"}
           - {name: "unit-tests", cmd: "pytest --version && pytest -m 'not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not langchain_integration and not llm_integration and not textual_integration' --junitxml=unit-tests.xml"}
           - {name: "integration-tests", cmd: "pytest --version && pytest -m 'git_integration or formatter_integration or github_integration' --junitxml=integration-tests.xml"}
-          - {name: "mypy", extras: "typecheck", cmd: "mypy --version && mypy --strict src tests"}
+          - {name: "mypy", install: ".[typecheck]", cmd: "mypy --version && mypy --strict src tests"}
           - {name: "file-size", cmd: "mcp-coder check file-size --max-lines 750 --allowlist-file .large-files-allowlist"}
           - {name: "no-url-deps", cmd: "python tools/check_no_url_deps.py"}
     name: ${{ matrix.check.name }}
@@ -116,26 +116,82 @@ jobs:
           
       - name: Install dependencies
         run: |
-          if [ -n "${{ matrix.check.extras }}" ]; then
-            uv sync --extra "${{ matrix.check.extras }}"
-          else
-            uv sync --extra dev --extra langchain
-          fi
-
-      - name: Activate venv
-        run: |
-          echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
-          echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
-
+          mapfile -t SPECS < <(python tools/read_github_deps.py --specs)
+          uv pip install --system "${SPECS[@]}" "${{ matrix.check.install || '.[dev,langchain]' }}"
+      
       - name: Environment info
         run: |
           uname -a
           python --version
           uv --version
           git --version
-
+          
       - name: Run ${{ matrix.check.name }}
         run: ${{ matrix.check.cmd }}
+
+  # Exercises the install sequence emitted by the POSIX vscodeclaude template
+  # (src/mcp_coder/workflows/vscodeclaude/templates.py:VENV_SECTION_POSIX +
+  # workspace.py:_build_github_install_section_posix). Calls the shared renderer
+  # directly so a break in the user-facing template surfaces here. Independent
+  # of `test` because it uses an activated project venv (not --system) and pulls
+  # siblings at HEAD via [tool.mcp-coder.install-from-github] — see #969.
+  vscodeclaude-template-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: 3.11
+
+      - name: Run vscodeclaude template install sequence
+        env:
+          # Full clone so setuptools_scm can read tags on sibling repos (#817)
+          UV_GIT_SHALLOW: "0"
+        run: |
+          set -euo pipefail
+
+          # Step 1: create project venv
+          uv venv
+
+          # Activate venv so `uv pip install` targets it (matches template)
+          # shellcheck disable=SC1091
+          source .venv/bin/activate
+
+          # Step 2: install project deps (with dev extra)
+          uv sync --extra dev
+
+          # Step 3: editable install of the project
+          uv pip install -e . --no-deps
+
+          # Step 4: GitHub overrides from [tool.mcp-coder.install-from-github].
+          # Renders via the same workspace.py:_build_github_install_section_posix
+          # function the POSIX template uses — single source of truth.
+          python <<'PY' > github_install.sh
+          from pathlib import Path
+          from mcp_coder.workflows.vscodeclaude.workspace import (
+              _build_github_install_section_posix,
+          )
+
+          print(_build_github_install_section_posix(Path(".")))
+          PY
+
+          if [ -s github_install.sh ]; then
+            echo "--- GitHub override commands ---"
+            cat github_install.sh
+            echo "--------------------------------"
+            bash github_install.sh
+          else
+            echo "No [tool.mcp-coder.install-from-github] entries configured — skipping step 4."
+          fi
+
+          # Smoke check: prove the venv actually works end-to-end
+          mcp-coder --version
+          python -c "import mcp_coder; print('mcp_coder import OK from', mcp_coder.__file__)"
 
   # Architecture checks - only run on pull requests
   # These validate module boundaries and import structure
@@ -163,19 +219,16 @@ jobs:
           python-version: 3.11
           
       - name: Install dependencies
-        run: uv sync --extra dev --extra langchain
-
-      - name: Activate venv
         run: |
-          echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
-          echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
-
+          mapfile -t SPECS < <(python tools/read_github_deps.py --specs)
+          uv pip install --system "${SPECS[@]}" ".[dev,langchain]"
+      
       - name: Environment info
         run: |
           uname -a
           python --version
           uv --version
           git --version
-
+          
       - name: Run ${{ matrix.check.name }}
         run: ${{ matrix.check.cmd }}

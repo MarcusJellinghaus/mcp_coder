@@ -692,20 +692,19 @@ class TestCreateStartupScriptPOSIX:
         assert "activate.bat" not in content
 
     @pytest.mark.parametrize("system", ["Darwin", "Linux"])
-    def test_no_github_install_section_on_posix(
+    def test_github_install_section_on_posix(
         self,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         mock_vscodeclaude_config: None,
         system: str,
     ) -> None:
-        """POSIX scripts must not emit the GitHub override install path."""
+        """POSIX scripts emit the GitHub override install section (parity with Windows)."""
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: system,
         )
         _seed_mcp_config(tmp_path, system)
-        # Configure a GitHub install — Windows would emit the section.
         (tmp_path / "pyproject.toml").write_text(
             '[project]\nname = "test"\nversion = "0.1.0"\n\n'
             "[tool.mcp-coder.install-from-github]\n"
@@ -724,8 +723,10 @@ class TestCreateStartupScriptPOSIX:
         )
 
         content = script_path.read_text(encoding="utf-8")
-        assert "=== GitHub override installs ===" not in content
-        assert "uv pip install --no-deps" not in content
+        # POSIX uses '#' comment marker (not 'REM') and shlex single-quoting
+        assert "# === GitHub override installs ===" in content
+        assert "uv pip install 'pkg1 @ git+https://github.com/org/pkg1.git'" in content
+        assert "REM === GitHub override installs ===" not in content
 
     @pytest.mark.skipif(
         sys.platform == "win32",

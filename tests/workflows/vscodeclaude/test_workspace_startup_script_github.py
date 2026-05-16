@@ -249,3 +249,135 @@ class TestCreateStartupScriptFromGithub:
         content = script_path.read_text(encoding="utf-8")
         assert "GitHub override" not in content
         assert "uv pip install" not in content or "uv pip install -e ." in content
+
+
+class TestCreateStartupScriptFromGithubPosix:
+    """POSIX-side parity for GitHub override installs in generated startup script."""
+
+    @staticmethod
+    def _write_pyproject(
+        tmp_path: Path,
+        packages: list[str] | None = None,
+        packages_no_deps: list[str] | None = None,
+    ) -> None:
+        """Write a pyproject.toml with [tool.mcp-coder.install-from-github] section."""
+        lines = ['[project]\nname = "test-project"\nversion = "0.1.0"\n']
+        if packages is not None or packages_no_deps is not None:
+            lines.append("[tool.mcp-coder.install-from-github]\n")
+            if packages is not None:
+                items = ", ".join(f'"{p}"' for p in packages)
+                lines.append(f"packages = [{items}]\n")
+            if packages_no_deps is not None:
+                items = ", ".join(f'"{p}"' for p in packages_no_deps)
+                lines.append(f"packages-no-deps = [{items}]\n")
+        (tmp_path / "pyproject.toml").write_text("\n".join(lines), encoding="utf-8")
+
+    @staticmethod
+    def _write_mcp_config(tmp_path: Path) -> None:
+        """Create the POSIX-required mcp config stub so create_startup_script doesn't raise."""
+        (tmp_path / ".mcp.linux.json").write_text("{}", encoding="utf-8")
+
+    def test_from_github_injects_install_commands_posix(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+    ) -> None:
+        """POSIX startup script includes POSIX-quoted uv pip install commands."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: "Linux",
+        )
+        self._write_mcp_config(tmp_path)
+        self._write_pyproject(
+            tmp_path,
+            packages=[
+                "pkg1 @ git+https://github.com/org/pkg1.git",
+                "pkg2 @ git+https://github.com/org/pkg2.git",
+            ],
+            packages_no_deps=["pkg3 @ git+https://github.com/org/pkg3.git"],
+        )
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=1,
+            issue_title="Test",
+            status="status-07:code-review",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/1",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        # POSIX uses single-quote (shlex.quote), not Windows double-quote
+        assert (
+            "uv pip install 'pkg1 @ git+https://github.com/org/pkg1.git' "
+            "'pkg2 @ git+https://github.com/org/pkg2.git'"
+        ) in content
+        assert (
+            "uv pip install --no-deps 'pkg3 @ git+https://github.com/org/pkg3.git'"
+            in content
+        )
+        # Restore editable at the end of the override block
+        assert content.count("uv pip install -e . --no-deps") >= 2
+        # POSIX comment marker, not Windows batch REM
+        assert "# === GitHub override installs ===" in content
+        assert "REM === GitHub override installs ===" not in content
+
+    def test_skip_github_install_suppresses_section_posix(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+    ) -> None:
+        """skip_github_install=True suppresses POSIX GitHub install commands."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: "Linux",
+        )
+        self._write_mcp_config(tmp_path)
+        self._write_pyproject(
+            tmp_path,
+            packages=["pkg1 @ git+https://github.com/org/pkg1.git"],
+        )
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=1,
+            issue_title="Test",
+            status="status-07:code-review",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/1",
+            is_intervention=False,
+            skip_github_install=True,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        assert "GitHub override" not in content
+
+    def test_from_github_empty_packages_posix(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+    ) -> None:
+        """POSIX startup with empty config produces no GitHub install section."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
+            lambda: "Linux",
+        )
+        self._write_mcp_config(tmp_path)
+        self._write_pyproject(tmp_path, packages=[], packages_no_deps=[])
+
+        script_path = create_startup_script(
+            folder_path=tmp_path,
+            issue_number=1,
+            issue_title="Test",
+            status="status-07:code-review",
+            repo_name="test-repo",
+            issue_url="https://github.com/test/repo/issues/1",
+            is_intervention=False,
+        )
+
+        content = script_path.read_text(encoding="utf-8")
+        assert "GitHub override" not in content
