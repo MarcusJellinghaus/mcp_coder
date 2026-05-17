@@ -566,6 +566,11 @@ def create_startup_script(
         # Get mcp_coder_install_path if not provided
         if mcp_coder_install_path is None:
             mcp_coder_install_path = get_mcp_coder_install_path()
+        if mcp_coder_install_path is None:
+            raise RuntimeError(
+                "mcp-coder install path could not be determined. "
+                "Pass mcp_coder_install_path explicitly."
+            )
 
         # Use session_folder_path if provided, otherwise use folder_path
         session_path = session_folder_path or folder_path
@@ -574,9 +579,9 @@ def create_startup_script(
         # to provision the project venv (single source of truth). GitHub
         # overrides happen inside that script; honor skip_github_install by
         # appending `--skip-overrides` to its argv.
-        install_script_path = _resolve_install_script(Path(mcp_coder_install_path))
+        install_script_path = _resolve_install_script(mcp_coder_install_path)
         venv_section = VENV_SECTION_WINDOWS.format(
-            mcp_coder_install_path=mcp_coder_install_path or "",
+            mcp_coder_install_path=str(mcp_coder_install_path),
             session_folder_path=str(session_path),
             install_script_path=str(install_script_path),
             install_env_extra_flags=" --skip-overrides" if skip_github_install else "",
@@ -677,12 +682,17 @@ def create_startup_script(
 
         if mcp_coder_install_path is None:
             mcp_coder_install_path = get_mcp_coder_install_path()
+        if mcp_coder_install_path is None:
+            raise RuntimeError(
+                "mcp-coder install path could not be determined. "
+                "Pass mcp_coder_install_path explicitly."
+            )
 
         session_path = session_folder_path or folder_path
 
-        install_script_path = _resolve_install_script(Path(mcp_coder_install_path))
+        install_script_path = _resolve_install_script(mcp_coder_install_path)
         venv_section = VENV_SECTION_POSIX.format(
-            mcp_coder_install_path=mcp_coder_install_path or "",
+            mcp_coder_install_path=str(mcp_coder_install_path),
             session_folder_path=str(session_path),
             install_script_path=str(install_script_path),
             install_env_extra_flags=" --skip-overrides" if skip_github_install else "",

@@ -307,11 +307,19 @@ def _phase_venv(target: Path, venv: Path, args: argparse.Namespace) -> None:
 def _phase_bootstrap_pip_uv(py_v: Path, args: argparse.Namespace) -> None:
     """Phase 3: ensure pip and uv exist inside the freshly-built venv.
 
-    Even if ``uv venv`` was used to create the venv, uv itself is not
-    installed *inside* it — bootstrap that here.
+    ``uv venv`` does NOT seed pip into the new venv, so we cannot
+    ``python -m pip install ...`` from inside it. When system ``uv``
+    is on PATH (the normal case — vscodeclaude/CI/reinstall all
+    arrange this), use it with ``--python <venv-py>`` to populate the
+    venv. Falls back to in-venv pip when only a stdlib venv exists.
     """
-    run([str(py_v), "-m", "pip", "install", "--upgrade", "pip", "uv"],
-        dry=args.check)
+    uv_bootstrap = shutil.which("uv")
+    if uv_bootstrap:
+        run([uv_bootstrap, "pip", "install", "--python", str(py_v),
+             "pip", "uv"], dry=args.check)
+    else:
+        run([str(py_v), "-m", "pip", "install", "--upgrade", "pip", "uv"],
+            dry=args.check)
 
 
 def _phase_install_main(
@@ -411,26 +419,55 @@ def _phase_overrides(
 
 
 def _phase_versions(bin_dir: Path, uv_v: Path, py_v: Path, args: argparse.Namespace) -> None:
-    """Phase 7b: print installed versions of CLIs and library-only packages."""
+    """Phase 7b: print installed versions of CLIs and library-only packages.
+
+    Exits non-zero when an expected CLI binary is missing from the venv
+    — that indicates the install silently failed to wire up an entry
+    point. ``--version`` itself is still allowed to fail (a CLI that
+    crashes on ``--version`` is a separate problem worth a separate
+    signal, not a reason to fail the whole install).
+    """
     print("\n--- installed versions")
     if args.check:
         print("  (skipped in --check mode)")
         return
+    missing: list[str] = []
     for name in CLI_BINARIES:
         binp = bin_dir / exe(name)
         if binp.exists():
             run([str(binp), "--version"], check=False)
         else:
             print(f"  (missing CLI: {name})")
+            missing.append(name)
     for pkg in EXTRA_VERSION_QUERIES:
         run([str(uv_v), "pip", "show", "--python", str(py_v), pkg],
             check=False)
+    if missing:
+        sys.exit(
+            f"missing CLI binaries after install: {', '.join(missing)}. "
+            "Entry points were not wired into the venv."
+        )
 
 
 def main(argv: list[str] | None = None) -> None:
     """Drive the install. See module docstring for caller scenarios."""
     args = parse_args(argv)
     target = args.target.resolve()
+
+    # `uv sync` writes its venv to `<cwd>/.venv`, where cwd is forced to
+    # `args.local_path` (it needs that dir's pyproject.toml + uv.lock).
+    # So with --use-sync, target MUST equal local_path; otherwise we'd
+    # provision `target/.venv` in phase 1, then `uv sync` would silently
+    # create a second venv at `local_path/.venv` and leave the original
+    # empty. Codify the invariant — better a clear error than two venvs.
+    if args.use_sync and args.local_path:
+        if args.local_path.resolve() != target:
+            sys.exit(
+                f"--use-sync requires target ({target}) to equal "
+                f"--local-path ({args.local_path.resolve()}). "
+                "uv sync writes to <local-path>/.venv."
+            )
+
     venv = target / ".venv"
     bin_dir = venv_bin(venv)
     py_v = bin_dir / exe("python")
