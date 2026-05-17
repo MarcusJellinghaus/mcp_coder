@@ -155,41 +155,25 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Step 1: create project venv
-          uv venv
+          # Mirror what the vscodeclaude POSIX template emits:
+          #   python <install-prefix>/share/mcp-coder/install.py "$PWD" \
+          #     --source local --local-path "$PWD" --extras dev --use-sync \
+          #     --skip-templates --refresh
+          #
+          # CI runs the script directly from the source tree (tools/install.py)
+          # so we don't need to install mcp-coder first. The template runs
+          # the wheel-deployed copy of the same file.
+          python tools/install.py . \
+            --source local \
+            --local-path . \
+            --extras dev \
+            --use-sync \
+            --skip-templates \
+            --refresh
 
-          # Activate venv so `uv pip install` targets it (matches template)
+          # Activate the venv install-env created and smoke-check end-to-end.
           # shellcheck disable=SC1091
           source .venv/bin/activate
-
-          # Step 2: install project deps (with dev extra)
-          uv sync --extra dev
-
-          # Step 3: editable install of the project
-          uv pip install -e . --no-deps
-
-          # Step 4: GitHub overrides from [tool.mcp-coder.install-from-github].
-          # Renders via the same workspace.py:_build_github_install_section_posix
-          # function the POSIX template uses — single source of truth.
-          python <<'PY' > github_install.sh
-          from pathlib import Path
-          from mcp_coder.workflows.vscodeclaude.workspace import (
-              _build_github_install_section_posix,
-          )
-
-          print(_build_github_install_section_posix(Path(".")))
-          PY
-
-          if [ -s github_install.sh ]; then
-            echo "--- GitHub override commands ---"
-            cat github_install.sh
-            echo "--------------------------------"
-            bash github_install.sh
-          else
-            echo "No [tool.mcp-coder.install-from-github] entries configured — skipping step 4."
-          fi
-
-          # Smoke check: prove the venv actually works end-to-end
           mcp-coder --version
           python -c "import mcp_coder; print('mcp_coder import OK from', mcp_coder.__file__)"
 

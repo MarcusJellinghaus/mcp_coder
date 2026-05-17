@@ -44,6 +44,14 @@ BENEFITS:
 """
 
 # Venv setup section for Windows
+#
+# Provisioning is delegated to `tools/install.py` (canonical, edited in
+# the repo, shipped in the wheel as a data-file at
+# `<install-prefix>/share/mcp-coder/install.py`). It wraps the canonical
+# install sequence — uv venv -> uv sync --extra dev -> GitHub overrides
+# -> uv pip install -e . --no-deps. The same script is exercised by the
+# `vscodeclaude-template-install` CI job to prevent drift between the
+# template and the installer.
 VENV_SECTION_WINDOWS = r"""echo Setting up environments...
 
 REM Store the MCP-Coder environment path (from installation, not session)
@@ -53,11 +61,10 @@ if "{mcp_coder_install_path}" NEQ "" (
 ) else (
     echo ERROR: MCP_CODER_INSTALL_PATH not provided. This is a configuration issue.
     echo SOLUTION: The coordinator needs to determine the mcp-coder installation location.
-    pause
     exit /b 1
 )
 
-REM Add MCP-Coder tools to PATH (needed for the version check below;
+REM Add MCP-Coder tools to PATH (needed for install-env + the version check below;
 REM activate.bat will overwrite PATH, so a second set is required after activation)
 set "PATH=%MCP_CODER_VENV_PATH%;%PATH%"
 
@@ -75,61 +82,26 @@ set "MCP_TIMEOUT=30000"
 REM Full git clone so setuptools_scm can read tags for version resolution (#817)
 set "UV_GIT_SHALLOW=0"
 
-REM Set up the project environment (current directory)
-echo Project directory: %CD%
-if not exist .venv\Scripts\activate.bat (
-    echo Creating project virtual environment...
-    uv venv
-    if errorlevel 1 (
-        echo ERROR: Failed to create virtual environment.
-        pause
-        exit /b 1
-    )
-    echo Activating project virtual environment...
-    call .venv\Scripts\activate.bat
-    if errorlevel 1 (
-        echo ERROR: Failed to activate virtual environment.
-        pause
-        exit /b 1
-    )
-    echo Installing project dependencies...
-    setlocal EnableDelayedExpansion
-    set UV_RETRY=0
-    :retry_uv_sync
-    uv sync --extra dev
-    if errorlevel 1 (
-        set /a UV_RETRY+=1
-        if !UV_RETRY! LSS 3 (
-            echo WARNING: uv sync failed ^(attempt !UV_RETRY! of 3^). Retrying in 5s...
-            echo Common cause: file lock from antivirus or IDE indexing .venv
-            timeout /t 5 /nobreak >nul
-            goto :retry_uv_sync
-        )
-        echo ERROR: Failed to install dependencies after 3 attempts.
-        echo TIP: Close other programs accessing .venv, then run: uv pip install -e ".[dev]"
-        endlocal
-        pause
-        exit /b 1
-    )
-    endlocal
-    set VENV_CREATED=1
-) else (
-    set VENV_CREATED=0
-    echo Activating project virtual environment...
-    call .venv\Scripts\activate.bat
-    if errorlevel 1 (
-        echo ERROR: Failed to activate virtual environment.
-        pause
-        exit /b 1
-    )
+REM Provision the project venv via the shared installer (single source of truth).
+REM tools/install.py is the canonical script; the wheel ships it as a data file
+REM at <install-prefix>/share/mcp-coder/install.py. workspace.py resolves the
+REM path at session-launch time and substitutes it here.
+"{mcp_coder_install_path}\.venv\Scripts\python.exe" "{install_script_path}" "%CD%" --source local --local-path "%CD%" --extras dev --use-sync --skip-templates --refresh{install_env_extra_flags}
+if errorlevel 1 (
+    echo ERROR: install-env failed.
+    exit /b 1
+)
+
+REM Activate the venv that install-env created/refreshed
+call .venv\Scripts\activate.bat
+if errorlevel 1 (
+    echo ERROR: Failed to activate virtual environment.
+    exit /b 1
 )
 
 REM Re-ensure MCP-Coder tools remain in PATH after venv activation
 REM (activate.bat overwrites PATH — do NOT remove this line, see #651/#694)
 set "PATH=%MCP_CODER_VENV_PATH%;%PATH%"
-
-REM Install project in editable mode (ensures current code is always used)
-uv pip install -e . --no-deps
 
 echo Environment setup complete.
 echo - Project Python: %VIRTUAL_ENV%\Scripts\python.exe
@@ -236,7 +208,10 @@ echo.
 claude --mcp-config {mcp_config} --strict-mcp-config
 """
 
-# Venv setup section for POSIX (macOS / Linux)
+# Venv setup section for POSIX (macOS / Linux).
+# See VENV_SECTION_WINDOWS above for the rationale; the install sequence
+# is delegated to tools/install.py so both platforms share the same
+# implementation.
 VENV_SECTION_POSIX = r"""echo Setting up environments...
 
 export MCP_CODER_VENV_PATH="{mcp_coder_install_path}/.venv/bin"
@@ -252,24 +227,18 @@ echo "  MCP-Coder install:    {mcp_coder_install_path}"
 echo "  Project directory:    $PWD"
 echo
 
-if [ ! -f .venv/bin/activate ]; then
-    echo "Creating project virtual environment..."
-    uv venv
-    echo "Activating project virtual environment..."
-    # shellcheck disable=SC1091
-    source .venv/bin/activate
-    echo "Installing project dependencies..."
-    uv sync --extra dev
-else
-    echo "Activating project virtual environment..."
-    # shellcheck disable=SC1091
-    source .venv/bin/activate
-fi
+# Provision the project venv via the shared installer.
+# tools/install.py is the canonical script; the wheel ships it as a data
+# file at <install-prefix>/share/mcp-coder/install.py. workspace.py
+# resolves the path at session-launch time and substitutes it here.
+"{mcp_coder_install_path}/.venv/bin/python" "{install_script_path}" "$PWD" --source local --local-path "$PWD" --extras dev --use-sync --skip-templates --refresh{install_env_extra_flags}
+
+# Activate the venv that install-env created/refreshed
+# shellcheck disable=SC1091
+source .venv/bin/activate
 
 # Re-prepend MCP-Coder tools to PATH (activate may overwrite PATH)
 export PATH="$MCP_CODER_VENV_PATH:$PATH"
-
-uv pip install -e . --no-deps
 
 echo "Environment setup complete."
 echo

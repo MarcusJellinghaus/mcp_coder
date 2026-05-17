@@ -140,6 +140,14 @@ mcp_coder = [
     "resources/claude/**/*"
 ]
 
+# Ship `tools/install.py` as a wheel data-file so vscodeclaude session
+# startup (running inside an installed mcp-coder env) can locate and
+# execute it. Pip places this at <install-prefix>/share/mcp-coder/install.py
+# on `pip install mcp-coder`. The script itself stays canonical in
+# tools/install.py — this just makes it deployable.
+[tool.setuptools.data-files]
+"share/mcp-coder" = ["tools/install.py"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]

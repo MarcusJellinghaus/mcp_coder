@@ -1,74 +1,63 @@
 #!/usr/bin/env python3
-"""Install mcp-coder into a target environment.
+"""Install mcp-coder (and/or related projects) into a target environment.
 
-The single entry point for every mcp-coder install flow. Exists so the
-install logic lives in exactly one place rather than being duplicated
-across AutoRunner's `create-environment.bat`, `tools/reinstall_local.bat`,
-and vscodeclaude's session-startup templates.
+A **standalone script**, not part of mcp-coder's importable API.
+It lives in ``tools/install.py`` (where developers edit it). To make
+it available to callers that have mcp-coder installed from a wheel
+(specifically: vscodeclaude session startup), the wheel is configured
+via ``[tool.setuptools.data-files]`` in ``pyproject.toml`` to ship a
+copy at ``<install-prefix>/share/mcp-coder/install.py``. Vscodeclaude
+resolves that path and invokes it directly with ``python``.
 
-Callers
--------
-1. **AutoRunner / Jenkins CI**
-   Shallow-clones mcp_coder into a temp dir, then calls `install.bat`
-   pointing at `C:\\Jenkins\\environments\\mcp-coder-dev`. Uses
-   `--source git` (default) so the runtime tracks GitHub HEAD.
-   See `AutoRunner/jenkins-windows/setup/create-environment.bat`.
+Three callers:
 
-2. **Developer reinstall** (`tools/reinstall_local.bat`)
-   Reinstalls the developer's local checkout in editable mode. Uses
-   `--source local --local-path <repo> --skip-templates` (the dev
-   checkout already owns its templates) and adds extras: langchain,
-   langchain-anthropic, mlflow.
-
-3. **vscodeclaude session startup** (future refactor)
-   Today, vscodeclaude generates inline install commands in
-   `src/mcp_coder/workflows/vscodeclaude/templates.py`. Those should be
-   replaced by a single call to this script.
+1. **AutoRunner / Jenkins CI** — shallow-clones mcp-coder, then
+   ``python tools/install.py <target>``. Source defaults to ``git``.
+2. **Developer reinstall** (``tools/reinstall_local.bat`` /
+   ``reinstall_local.sh``) — editable install of the local checkout.
+   ``--source local --use-sync``.
+3. **vscodeclaude session startup** — generated startup scripts invoke
+   the deployed copy at ``<install-prefix>/share/mcp-coder/install.py``
+   with ``--source local --use-sync --skip-templates``.
 
 Install sources
 ---------------
 ``--source git`` *(default)*
     Fetch from ``git+https://...mcp_coder.git@<ref>``. Sibling MCP
     packages (mcp-tools-py, mcp-workspace, mcp-coder-utils) come from
-    GitHub HEAD via ``[tool.mcp-coder.install-from-github]`` in
-    ``pyproject.toml``.
+    GitHub HEAD via ``[tool.mcp-coder.install-from-github]``.
 
 ``--source pypi``
-    Plain ``mcp-coder`` from PyPI. The GitHub override step is skipped —
-    every dependency resolves through PyPI.
+    Plain ``mcp-coder`` from PyPI. GitHub override step is skipped.
 
 ``--source local``
     Editable install of a local checkout (``-e <path>[extras]``).
-    Sibling overrides apply so mcp-coder's deps match what CI sees.
+    With ``--use-sync``, switches to the vscodeclaude-compatible flow:
+    ``uv venv`` -> ``uv sync --extra <extras>`` -> GitHub overrides ->
+    ``uv pip install -e . --no-deps``.
 
 Constraints
 -----------
-* **stdlib only** — must run before mcp-coder itself is installed.
-* **idempotent** — safe to re-run. Without ``--clean`` the venv is
-  reused and packages are upgraded in place.
-* **no ``pause``** — CI must never hang on error.
+* stdlib only — must run before mcp-coder is installed.
+* Idempotent. Re-running upgrades in place unless ``--clean``.
+* No ``pause`` calls — CI must never hang.
 
 Examples
 --------
 Jenkins runtime install::
 
-    python tools/install.py C:\\Jenkins\\environments\\mcp-coder-dev --refresh --clean
+    python tools/install.py C:\\Jenkins\\environments\\mcp-coder-dev \\
+        --refresh --clean
 
-Developer editable reinstall (also see ``tools/reinstall_local.bat``)::
+Developer editable reinstall (uv sync flow)::
 
-    python tools/install.py . --source local --local-path . --skip-templates --refresh
+    python tools/install.py . --source local --local-path . \\
+        --use-sync --skip-templates --refresh
 
-Specific git tag::
+Stable PyPI release::
 
-    python tools/install.py /opt/mcp-coder --source git --ref v0.2.0
-
-Stable PyPI release (no GitHub overrides)::
-
-    python tools/install.py /opt/mcp-coder --source pypi --extras "" --skip-templates
-
-Dry-run (print the plan, change nothing)::
-
-    python tools/install.py /tmp/scratch --check
+    python tools/install.py /opt/mcp-coder --source pypi --extras "" \\
+        --skip-templates
 """
 
 from __future__ import annotations
@@ -81,34 +70,49 @@ import sys
 import tomllib
 from pathlib import Path
 
-# install.py lives in tools/, so the repo root is the parent of this
-# file's parent. Templates and pyproject.toml are read from there.
-REPO_ROOT = Path(__file__).resolve().parent.parent
-
 MCP_CODER_REPO = "https://github.com/MarcusJellinghaus/mcp_coder.git"
 
-# Template files copied into <target>. Both items must exist at
-# REPO_ROOT. Plain files are copied as-is; directories are merged into
-# the target so existing user edits in <target>/.claude/ survive a
-# re-install of unrelated files.
+# Items copied from REPO_ROOT into <target> when templates aren't skipped.
 TEMPLATE_PATHS = (".mcp.json", ".claude")
 
-# CLI binaries expected under <venv>/Scripts/ (or bin/) after a
-# successful install. Each is queried with --version at the end as a
-# smoke test and for visibility in CI logs.
 CLI_BINARIES = ("mcp-coder", "mcp-tools-py", "mcp-workspace", "mcp-config")
-
-# Library-only packages (no CLI entry point). We surface their version
-# via `uv pip show` so install logs still show what's installed.
 EXTRA_VERSION_QUERIES = ("mcp-coder-utils",)
 
 
-def parse_args() -> argparse.Namespace:
+def _detect_repo_root() -> Path | None:
+    """Return the mcp-coder repo root if this file lives in a clone.
+
+    Two file layouts are supported:
+
+    * Clone (developer checkout, AutoRunner shallow clone):
+      ``<repo>/tools/install.py``  ->  REPO_ROOT = ``<repo>``
+    * Wheel-deployed copy (vscodeclaude):
+      ``<install-prefix>/share/mcp-coder/install.py``  ->  no repo root.
+
+    Returns ``None`` when no repo root could be detected. Detection is
+    "does the candidate parent directory contain ``pyproject.toml``" —
+    the deployed copy sits next to no pyproject.toml, so it falls
+    through and ``REPO_ROOT`` ends up ``None``.
+    """
+    here = Path(__file__).resolve()
+    # parents[1] = repo root when this file is at <repo>/tools/install.py
+    candidate = here.parents[1]
+    if (candidate / "pyproject.toml").exists():
+        return candidate
+    return None
+
+
+REPO_ROOT: Path | None = _detect_repo_root()
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     """Build the argparse parser and return the parsed namespace.
 
-    See the module docstring for end-to-end examples.
+    ``argv`` defaults to ``sys.argv[1:]`` when not provided; pass an
+    explicit list for testing or when invoking programmatically.
     """
     p = argparse.ArgumentParser(
+        prog="install-env",
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -122,49 +126,60 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument(
         "--ref", default="main",
-        help="Git ref for --source=git: branch, tag, or commit sha. "
-             "Default: main.",
+        help="Git ref (branch/tag/sha) for --source=git. Default: main.",
     )
     p.add_argument(
         "--local-path", type=Path,
-        help="Path to a local mcp-coder checkout. Required for --source=local.",
+        help="Path to a local checkout (required for --source=local). Also "
+             "determines which pyproject.toml is read for GitHub overrides.",
     )
     p.add_argument(
         "--extras", default="dev",
-        help='mcp-coder extras to install, e.g. "dev" or "dev,mlflow". '
-             'Pass "" for no extras (typical with --source=pypi). Default: dev.',
+        help='Extras to install, e.g. "dev" or "dev,mlflow". Pass "" for '
+             'no extras (typical with --source=pypi). Default: dev.',
     )
     p.add_argument(
         "--extra-packages", default="",
-        help="Space-separated list of extra pip packages installed after "
-             "mcp-coder, e.g. \"langchain mlflow\". Used by reinstall_local.bat.",
+        help="Space-separated extra packages installed after the main "
+             "install (e.g. \"langchain mlflow\"). Used by reinstall_local.",
+    )
+    p.add_argument(
+        "--use-sync", action="store_true",
+        help="For --source=local: use the vscodeclaude install sequence "
+             "(uv venv + uv sync --extra <extras> + GitHub overrides + "
+             "uv pip install -e . --no-deps) instead of a single uv pip "
+             "install. Honors the project's uv.lock for reproducibility.",
+    )
+    p.add_argument(
+        "--skip-overrides", action="store_true",
+        help="Skip the [tool.mcp-coder.install-from-github] step entirely. "
+             "Used when the caller wants whatever versions PyPI / the lock "
+             "file provide, not GitHub HEAD (e.g. coordinator's "
+             "--no-install-from-github).",
     )
     p.add_argument(
         "--skip-templates", action="store_true",
         help="Don't copy .mcp.json / .claude/ into <target>. Use when the "
-             "target already owns its templates (e.g. a developer checkout).",
+             "target already owns its templates (developer checkouts, "
+             "vscodeclaude sessions).",
     )
     p.add_argument(
         "--refresh", action="store_true",
-        help="Pass --refresh to uv so cached git clones are bypassed. "
-             "Required when sibling repos have advanced since the last install.",
+        help="Pass --refresh to uv so cached git clones are bypassed.",
     )
     p.add_argument(
         "--clean", action="store_true",
-        help="Delete an existing .venv before creating a fresh one. Without "
-             "this flag, the existing venv is reused and packages are upgraded "
-             "in place (faster, but accumulates dependencies over time).",
+        help="Delete an existing .venv before creating a fresh one.",
     )
     p.add_argument(
         "--python", default=sys.executable,
-        help="Base interpreter for `python -m venv`. Default: the interpreter "
-             "running this script.",
+        help="Base interpreter for `python -m venv`. Default: current.",
     )
     p.add_argument(
         "--check", action="store_true",
         help="Dry-run mode: print every command without executing anything.",
     )
-    return p.parse_args()
+    return p.parse_args(argv)
 
 
 def venv_bin(venv: Path) -> Path:
@@ -177,47 +192,49 @@ def exe(name: str) -> str:
     return f"{name}.exe" if os.name == "nt" else name
 
 
-def run(cmd: list[str], *, check: bool = True, dry: bool = False) -> int:
+def run(
+    cmd: list[str],
+    *,
+    check: bool = True,
+    dry: bool = False,
+    cwd: Path | None = None,
+) -> int:
     """Run a subprocess command, printing it first.
 
     Args:
-        cmd: Command and arguments as a list (no shell interpolation).
-        check: If True (default), exit the script on non-zero return code.
-            Set False for "advisory" calls like ``--version`` checks.
-        dry: If True, print the command but don't execute. Wired to ``--check``.
+        cmd: Command + arguments as a list (no shell interpolation).
+        check: Exit the script on non-zero return code when True.
+        dry: Print only, don't execute. Wired to ``--check``.
+        cwd: Working directory for the subprocess. Required for
+            ``uv sync`` which reads pyproject.toml from cwd.
 
     Returns:
-        The subprocess return code, or 0 when ``dry=True``.
-
-    Args containing whitespace are wrapped in quotes for the printed line
-    so the dry-run output is shell-readable.
+        Subprocess return code, or 0 when ``dry=True``.
     """
     pretty = " ".join(f'"{c}"' if " " in str(c) else str(c) for c in cmd)
-    print(">", pretty)
+    cwd_hint = f" (cwd={cwd})" if cwd else ""
+    print(">", pretty + cwd_hint)
     if dry:
         return 0
-    r = subprocess.run(cmd)
+    r = subprocess.run(cmd, cwd=cwd)
     if check and r.returncode != 0:
         sys.exit(r.returncode)
     return r.returncode
 
 
-def github_overrides() -> tuple[list[str], list[str]]:
-    """Read ``[tool.mcp-coder.install-from-github]`` from REPO_ROOT/pyproject.toml.
+def github_overrides(pyproject_dir: Path) -> tuple[list[str], list[str]]:
+    """Read ``[tool.mcp-coder.install-from-github]`` from ``pyproject_dir``.
 
     Returns:
-        A tuple ``(packages, packages_no_deps)``:
+        ``(packages, packages_no_deps)`` — two lists of install specs.
+        Empty when the section or file is missing.
 
-        * ``packages`` — installed with their dependencies. The common
-          case for leaf packages (mcp-tools-py, mcp-workspace, etc.).
-        * ``packages_no_deps`` — installed with ``--no-deps``. Used for
-          packages that depend on siblings, to avoid downgrading peers
-          back to PyPI versions.
-
-    Returns ``([], [])`` if ``pyproject.toml`` is missing or has no such
-    section (e.g. running from a stripped install).
+    Notes:
+        Same parsing as :mod:`mcp_coder.utils.pyproject_config`, but
+        duplicated here so this module remains importable without any
+        mcp-coder dependencies (bootstrap requirement).
     """
-    pp = REPO_ROOT / "pyproject.toml"
+    pp = pyproject_dir / "pyproject.toml"
     if not pp.exists():
         return [], []
     data = tomllib.loads(pp.read_text(encoding="utf-8"))
@@ -225,36 +242,31 @@ def github_overrides() -> tuple[list[str], list[str]]:
     return list(gh.get("packages", [])), list(gh.get("packages-no-deps", []))
 
 
-def build_source_spec(args: argparse.Namespace) -> tuple[list[str], bool]:
-    """Translate ``--source/--ref/--local-path`` into uv install arguments.
+def _source_dir_for_overrides(args: argparse.Namespace) -> Path | None:
+    """Pick which pyproject.toml is consulted for GitHub overrides.
 
-    Returns:
-        ``(args_after_install, is_editable)`` — the list of arguments that
-        follow ``uv pip install``, and whether this is an editable install
-        (used later to decide whether to re-finalize the editable link).
-
-    Exits the process (via ``sys.exit``) if ``--source local`` was passed
-    without ``--local-path``.
+    Precedence:
+    1. ``--local-path`` when provided (target project's overrides).
+    2. ``REPO_ROOT`` (only set when running from a mcp-coder clone).
+    3. ``None`` — no overrides applied.
     """
-    extras = f"[{args.extras}]" if args.extras else ""
-    if args.source == "git":
-        return [f"mcp-coder{extras} @ git+{MCP_CODER_REPO}@{args.ref}"], False
-    if args.source == "pypi":
-        return [f"mcp-coder{extras}"], False
-    # --source local
-    if not args.local_path:
-        sys.exit("--source local requires --local-path")
-    return ["-e", f"{args.local_path}{extras}"], True
+    if args.local_path:
+        return args.local_path
+    return REPO_ROOT
 
 
 def copy_templates(target: Path, *, dry: bool) -> None:
-    """Copy each item in ``TEMPLATE_PATHS`` from REPO_ROOT into ``<target>``.
+    """Copy template files from REPO_ROOT into ``<target>``.
 
-    Directories are merged with ``dirs_exist_ok=True`` so existing files in
-    the target are overwritten but unrelated files survive. Missing source
-    items are skipped with a warning, not an error — the templates are
-    optional in principle (some callers may pre-populate them).
+    Templates only ship in the repo clone — when running from an
+    installed wheel, REPO_ROOT is None and templates are unavailable.
+    Callers requiring templates should ensure they run from a clone
+    (or pass ``--skip-templates`` and supply templates themselves).
     """
+    if REPO_ROOT is None:
+        print("  (templates unavailable: not running from a clone — "
+              "use --skip-templates)")
+        return
     for name in TEMPLATE_PATHS:
         src, dst = REPO_ROOT / name, target / name
         if not src.exists():
@@ -270,104 +282,184 @@ def copy_templates(target: Path, *, dry: bool) -> None:
             shutil.copy2(src, dst)
 
 
-def main() -> None:
-    """Drive the install in seven phases.
+def _phase_venv(target: Path, venv: Path, args: argparse.Namespace) -> None:
+    """Phase 1+2: prepare the target dir and (re)create the venv.
 
-    1. Resolve target / venv paths and print a banner.
-    2. Wipe + recreate venv (or reuse the existing one).
-    3. Bootstrap pip + uv inside the venv.
-    4. Install mcp-coder per ``--source``.
-    5. Apply GitHub overrides for siblings (git / local only).
-    6. Install ``--extra-packages`` if any.
-    7. Copy templates and print installed versions.
+    With ``--clean``, an existing venv is wiped first. ``uv venv`` is
+    preferred when an existing ``uv`` binary is on PATH (matches the
+    vscodeclaude flow exactly); otherwise the stdlib ``venv`` module
+    is used.
     """
-    args = parse_args()
+    target.mkdir(parents=True, exist_ok=True)
+    if args.clean and venv.exists():
+        print(f"--- wiping {venv}")
+        if not args.check:
+            shutil.rmtree(venv)
+    if venv.exists():
+        return
+    uv_bootstrap = shutil.which("uv")
+    if uv_bootstrap:
+        run([uv_bootstrap, "venv", str(venv)], dry=args.check)
+    else:
+        run([args.python, "-m", "venv", str(venv)], dry=args.check)
+
+
+def _phase_bootstrap_pip_uv(py_v: Path, args: argparse.Namespace) -> None:
+    """Phase 3: ensure pip and uv exist inside the freshly-built venv.
+
+    Even if ``uv venv`` was used to create the venv, uv itself is not
+    installed *inside* it — bootstrap that here.
+    """
+    run([str(py_v), "-m", "pip", "install", "--upgrade", "pip", "uv"],
+        dry=args.check)
+
+
+def _phase_install_main(
+    uv_v: Path, py_v: Path, args: argparse.Namespace
+) -> bool:
+    """Phase 4: install the main package per ``--source``.
+
+    Returns:
+        True when this is an editable install (so phase 5 knows whether
+        to re-finalize the link after applying GitHub overrides).
+    """
+    extras = f"[{args.extras}]" if args.extras else ""
+
+    if args.source == "git":
+        spec = f"mcp-coder{extras} @ git+{MCP_CODER_REPO}@{args.ref}"
+        cmd = [str(uv_v), "pip", "install", "--python", str(py_v)]
+        if args.refresh:
+            cmd.append("--refresh")
+        run(cmd + [spec], dry=args.check)
+        return False
+
+    if args.source == "pypi":
+        spec = f"mcp-coder{extras}"
+        run([str(uv_v), "pip", "install", "--python", str(py_v), spec],
+            dry=args.check)
+        return False
+
+    # --source local
+    if not args.local_path:
+        sys.exit("--source local requires --local-path")
+
+    if args.use_sync:
+        # vscodeclaude-compatible flow: respects uv.lock for reproducibility.
+        # `uv sync` needs to run from the project directory (it reads
+        # pyproject.toml + uv.lock there) and writes to <cwd>/.venv —
+        # the cwd's .venv must equal our target venv. We arrange that by
+        # always passing local_path == target's parent of .venv.
+        sync_cmd = [str(uv_v), "sync"]
+        if args.extras:
+            for extra in args.extras.split(","):
+                extra = extra.strip()
+                if extra:
+                    sync_cmd += ["--extra", extra]
+        if args.refresh:
+            sync_cmd.append("--refresh")
+        run(sync_cmd, dry=args.check, cwd=args.local_path)
+    else:
+        cmd = [str(uv_v), "pip", "install", "--python", str(py_v)]
+        if args.refresh:
+            cmd.append("--refresh")
+        cmd += ["-e", f"{args.local_path}{extras}"]
+        run(cmd, dry=args.check)
+
+    return True
+
+
+def _phase_overrides(
+    uv_v: Path, py_v: Path, args: argparse.Namespace, is_editable: bool
+) -> None:
+    """Phase 5: apply ``[tool.mcp-coder.install-from-github]`` overrides.
+
+    Replaces transient PyPI versions of sibling MCP packages with their
+    GitHub HEAD versions (or whatever revision is specified in the
+    declaring project's pyproject.toml). Always re-finalizes the
+    editable link afterwards when ``is_editable`` is True — a fresh
+    mcp-coder wheel may have been pulled in transitively and shadowed
+    the editable install.
+
+    Skipped entirely for ``--source pypi`` (PyPI-only install) or when
+    ``--skip-overrides`` is set (caller opts out of GitHub HEAD).
+    """
+    if args.source == "pypi" or args.skip_overrides:
+        return
+
+    src_dir = _source_dir_for_overrides(args)
+    if src_dir is None:
+        print("--- skipping GitHub overrides (no pyproject.toml available)")
+        return
+
+    pkgs, pkgs_no_deps = github_overrides(src_dir)
+    if pkgs:
+        cmd = [str(uv_v), "pip", "install", "--python", str(py_v)]
+        if args.refresh:
+            cmd.append("--refresh")
+        run(cmd + pkgs, dry=args.check)
+    if pkgs_no_deps:
+        cmd = [str(uv_v), "pip", "install", "--no-deps", "--python", str(py_v)]
+        if args.refresh:
+            cmd.append("--refresh")
+        run(cmd + pkgs_no_deps, dry=args.check)
+
+    if is_editable:
+        # The override step may have pulled a fresh mcp-coder wheel in
+        # as a transitive dep, replacing the editable install. Re-link.
+        run([str(uv_v), "pip", "install", "-e", str(args.local_path),
+             "--no-deps", "--python", str(py_v)], dry=args.check)
+
+
+def _phase_versions(bin_dir: Path, uv_v: Path, py_v: Path, args: argparse.Namespace) -> None:
+    """Phase 7b: print installed versions of CLIs and library-only packages."""
+    print("\n--- installed versions")
+    if args.check:
+        print("  (skipped in --check mode)")
+        return
+    for name in CLI_BINARIES:
+        binp = bin_dir / exe(name)
+        if binp.exists():
+            run([str(binp), "--version"], check=False)
+        else:
+            print(f"  (missing CLI: {name})")
+    for pkg in EXTRA_VERSION_QUERIES:
+        run([str(uv_v), "pip", "show", "--python", str(py_v), pkg],
+            check=False)
+
+
+def main(argv: list[str] | None = None) -> None:
+    """Drive the install. See module docstring for caller scenarios."""
+    args = parse_args(argv)
     target = args.target.resolve()
     venv = target / ".venv"
     bin_dir = venv_bin(venv)
     py_v = bin_dir / exe("python")
     uv_v = bin_dir / exe("uv")
 
-    # --- Phase 1: banner ----------------------------------------------------
     src_label = args.source
     if args.source == "git":
         src_label += f"@{args.ref}"
     elif args.source == "local":
         src_label += f" ({args.local_path})"
+        if args.use_sync:
+            src_label += " [uv sync]"
     print(f"=== install-env -> {target}")
     print(f"    source: {src_label}")
 
-    # --- Phase 2: target dir + venv ----------------------------------------
-    target.mkdir(parents=True, exist_ok=True)
-    if args.clean and venv.exists():
-        print(f"--- wiping {venv}")
-        if not args.check:
-            shutil.rmtree(venv)
-    if not venv.exists():
-        run([args.python, "-m", "venv", str(venv)], dry=args.check)
+    _phase_venv(target, venv, args)
+    _phase_bootstrap_pip_uv(py_v, args)
+    is_editable = _phase_install_main(uv_v, py_v, args)
+    _phase_overrides(uv_v, py_v, args, is_editable)
 
-    # --- Phase 3: bootstrap pip + uv ---------------------------------------
-    # uv is the actual installer used below; pip is only needed long enough
-    # to fetch uv (uv isn't part of the stdlib).
-    run([str(py_v), "-m", "pip", "install", "--upgrade", "pip", "uv"], dry=args.check)
-
-    # --- Phase 4: install mcp-coder itself ---------------------------------
-    spec_args, is_editable = build_source_spec(args)
-    cmd = [str(uv_v), "pip", "install", "--python", str(py_v)]
-    if args.refresh:
-        cmd.append("--refresh")
-    run(cmd + spec_args, dry=args.check)
-
-    # --- Phase 5: GitHub overrides for sibling MCP packages ----------------
-    # mcp-coder's pyproject.toml lists `mcp-tools-py`, `mcp-workspace`,
-    # `mcp-coder-utils` as plain PyPI deps so published wheels stay portable.
-    # Locally / on CI we want their GitHub HEAD instead — declared under
-    # `[tool.mcp-coder.install-from-github]`. We re-install them here.
-    # This step is skipped for --source pypi where the whole point is
-    # reproducible PyPI-only resolution.
-    if args.source in ("git", "local"):
-        pkgs, pkgs_no_deps = github_overrides()
-        if pkgs:
-            c = [str(uv_v), "pip", "install", "--python", str(py_v)]
-            if args.refresh:
-                c.append("--refresh")
-            run(c + pkgs, dry=args.check)
-        if pkgs_no_deps:
-            c = [str(uv_v), "pip", "install", "--no-deps", "--python", str(py_v)]
-            if args.refresh:
-                c.append("--refresh")
-            run(c + pkgs_no_deps, dry=args.check)
-        # When mcp-coder was installed editable, the override step above may
-        # have pulled in a fresh mcp-coder wheel as a transitive dep and
-        # replaced the editable link. Re-run the editable install so the
-        # developer's source tree wins again.
-        if is_editable:
-            run([str(uv_v), "pip", "install", "-e", str(args.local_path),
-                 "--python", str(py_v)], dry=args.check)
-
-    # --- Phase 6: additional packages --------------------------------------
     if args.extra_packages:
         run([str(uv_v), "pip", "install", "--python", str(py_v),
              *args.extra_packages.split()], dry=args.check)
 
-    # --- Phase 7: templates + version banner -------------------------------
     if not args.skip_templates:
         print("\n--- templates")
         copy_templates(target, dry=args.check)
 
-    print("\n--- installed versions")
-    if args.check:
-        print("  (skipped in --check mode)")
-    else:
-        for name in CLI_BINARIES:
-            binp = bin_dir / exe(name)
-            if binp.exists():
-                run([str(binp), "--version"], check=False)
-            else:
-                print(f"  (missing CLI: {name})")
-        for pkg in EXTRA_VERSION_QUERIES:
-            run([str(uv_v), "pip", "show", "--python", str(py_v), pkg], check=False)
-
+    _phase_versions(bin_dir, uv_v, py_v, args)
     print(f"\nOK  install-env complete: {target}")
 
 

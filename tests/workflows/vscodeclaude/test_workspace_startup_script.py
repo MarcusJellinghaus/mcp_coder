@@ -46,7 +46,10 @@ class TestCreateStartupScript:
         )
 
         content = script_path.read_text(encoding="utf-8")
-        assert "uv venv" in content
+        # Venv provisioning is delegated to tools/install.py; we check
+        # for the script call rather than the raw `uv venv` it now wraps.
+        assert "install.py" in content
+        assert "--source local" in content
         assert "activate.bat" in content
 
     def test_creates_script_with_mcp_coder_prompt(
@@ -168,7 +171,7 @@ class TestCreateStartupScript:
         content = script_path.read_text(encoding="utf-8")
         assert "INTERVENTION MODE" in content
         assert "mcp-coder prompt" not in content
-        assert "uv venv" in content  # Venv still activated
+        assert "install.py" in content  # Venv still provisioned
 
     def test_uses_correct_initial_command_for_status(
         self,
@@ -456,7 +459,7 @@ class TestCreateStartupScript:
 
         content = script_path.read_text(encoding="utf-8")
         # Has venv section but no command sections
-        assert "uv venv" in content
+        assert "install.py" in content
         assert "mcp-coder prompt" not in content
         assert "claude --resume" not in content
         assert "Step 1" not in content
@@ -692,25 +695,25 @@ class TestCreateStartupScriptPOSIX:
         assert "activate.bat" not in content
 
     @pytest.mark.parametrize("system", ["Darwin", "Linux"])
-    def test_github_install_section_on_posix(
+    def test_install_env_invocation_on_posix(
         self,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         mock_vscodeclaude_config: None,
         system: str,
     ) -> None:
-        """POSIX scripts emit the GitHub override install section (parity with Windows)."""
+        """POSIX scripts delegate venv provisioning to ``tools/install.py``.
+
+        GitHub overrides are no longer inlined into the script — they're
+        applied inside the install script itself. We verify the
+        delegation here and rely on the installer's own tests for
+        override semantics.
+        """
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: system,
         )
         _seed_mcp_config(tmp_path, system)
-        (tmp_path / "pyproject.toml").write_text(
-            '[project]\nname = "test"\nversion = "0.1.0"\n\n'
-            "[tool.mcp-coder.install-from-github]\n"
-            'packages = ["pkg1 @ git+https://github.com/org/pkg1.git"]\n',
-            encoding="utf-8",
-        )
 
         script_path = create_startup_script(
             folder_path=tmp_path,
@@ -723,10 +726,11 @@ class TestCreateStartupScriptPOSIX:
         )
 
         content = script_path.read_text(encoding="utf-8")
-        # POSIX uses '#' comment marker (not 'REM') and shlex single-quoting
-        assert "# === GitHub override installs ===" in content
-        assert "uv pip install 'pkg1 @ git+https://github.com/org/pkg1.git'" in content
-        assert "REM === GitHub override installs ===" not in content
+        assert "install.py" in content
+        assert "--source local" in content
+        assert "--use-sync" in content
+        # Old inlined-override marker must not regress back into the script.
+        assert "# === GitHub override installs ===" not in content
 
     @pytest.mark.skipif(
         sys.platform == "win32",
