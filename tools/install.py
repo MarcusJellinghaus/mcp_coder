@@ -2,28 +2,20 @@
 """Install mcp-coder (and/or related projects) into a target environment.
 
 A **standalone script**, not part of mcp-coder's importable API.
-It lives in ``tools/install.py`` (where developers edit it). To make
-it available to callers that have mcp-coder installed from a wheel
-(specifically: vscodeclaude session startup), the wheel is configured
-via ``[tool.setuptools.data-files]`` in ``pyproject.toml`` to ship a
-copy at ``<install-prefix>/share/mcp-coder/install.py``. Vscodeclaude
-resolves that path and invokes it directly with ``python``.
 
-Three callers:
+Distribution
+------------
+The canonical script lives at ``tools/install.py`` in the repo. The
+wheel also ships a copy at ``<install-prefix>/share/mcp-coder/install.py``
+(via ``[tool.setuptools.data-files]`` in ``pyproject.toml``) so
+processes running from an installed mcp-coder env can locate and
+invoke the same script.
 
-1. **AutoRunner / Jenkins CI** — shallow-clones mcp-coder, then
-   ``python tools/install.py <target>``. Source defaults to ``git``.
-2. **Developer reinstall** (``tools/reinstall_local.bat`` /
-   ``reinstall_local.sh``) — editable install of the local checkout.
-   ``--source local --use-sync``.
-3. **vscodeclaude session startup** — generated startup scripts invoke
-   the deployed copy at ``<install-prefix>/share/mcp-coder/install.py``
-   with ``--source local --use-sync``.
-
-This script installs Python packages only. Callers that also need
-project templates (``.mcp.json``, ``.claude/``) staged into the
-target directory must copy those themselves — that's an AutoRunner /
-worker-setup concern, not an install concern.
+Scope
+-----
+Installs Python packages only. Files that need to be staged alongside
+the install (e.g. ``.mcp.json``, ``.claude/``) are the caller's
+responsibility.
 
 Install sources
 ---------------
@@ -37,7 +29,7 @@ Install sources
 
 ``--source local``
     Editable install of a local checkout (``-e <path>[extras]``).
-    With ``--use-sync``, switches to the vscodeclaude-compatible flow:
+    With ``--use-sync``, switches to a uv.lock-honoring flow:
     ``uv venv`` -> ``uv sync --extra <extras>`` -> GitHub overrides ->
     ``uv pip install -e . --no-deps``.
 
@@ -45,16 +37,15 @@ Constraints
 -----------
 * stdlib only — must run before mcp-coder is installed.
 * Idempotent. Re-running upgrades in place unless ``--clean``.
-* No ``pause`` calls — CI must never hang.
+* Never blocks on user input (no ``pause``, no interactive prompts).
 
 Examples
 --------
-Jenkins runtime install::
+Fresh install from git into a target directory::
 
-    python tools/install.py C:\\Jenkins\\environments\\mcp-coder-dev \\
-        --refresh --clean
+    python tools/install.py /path/to/target --refresh --clean
 
-Developer editable reinstall (uv sync flow)::
+Editable install of a local checkout (uv sync flow)::
 
     python tools/install.py . --source local --local-path . \\
         --use-sync --refresh
@@ -85,9 +76,9 @@ def _detect_repo_root() -> Path | None:
 
     Two file layouts are supported:
 
-    * Clone (developer checkout, AutoRunner shallow clone):
+    * Clone (any checkout of the mcp-coder repo):
       ``<repo>/tools/install.py``  ->  REPO_ROOT = ``<repo>``
-    * Wheel-deployed copy (vscodeclaude):
+    * Wheel-deployed copy:
       ``<install-prefix>/share/mcp-coder/install.py``  ->  no repo root.
 
     Returns ``None`` when no repo root could be detected. Detection is
@@ -142,21 +133,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument(
         "--extra-packages", default="",
         help="Space-separated extra packages installed after the main "
-             "install (e.g. \"langchain mlflow\"). Used by reinstall_local.",
+             "install (e.g. \"langchain mlflow\").",
     )
     p.add_argument(
         "--use-sync", action="store_true",
-        help="For --source=local: use the vscodeclaude install sequence "
-             "(uv venv + uv sync --extra <extras> + GitHub overrides + "
-             "uv pip install -e . --no-deps) instead of a single uv pip "
-             "install. Honors the project's uv.lock for reproducibility.",
+        help="For --source=local: use the uv.lock-honoring install "
+             "sequence (uv venv + uv sync --extra <extras> + GitHub "
+             "overrides + uv pip install -e . --no-deps) instead of a "
+             "single uv pip install. Reproducible builds via the "
+             "project's uv.lock.",
     )
     p.add_argument(
         "--skip-overrides", action="store_true",
         help="Skip the [tool.mcp-coder.install-from-github] step entirely. "
-             "Used when the caller wants whatever versions PyPI / the lock "
-             "file provide, not GitHub HEAD (e.g. coordinator's "
-             "--no-install-from-github).",
+             "Use when whatever versions PyPI / the lock file provide are "
+             "preferred over GitHub HEAD.",
     )
     p.add_argument(
         "--refresh", action="store_true",
@@ -254,9 +245,8 @@ def _phase_venv(target: Path, venv: Path, args: argparse.Namespace) -> None:
     """Phase 1+2: prepare the target dir and (re)create the venv.
 
     With ``--clean``, an existing venv is wiped first. ``uv venv`` is
-    preferred when an existing ``uv`` binary is on PATH (matches the
-    vscodeclaude flow exactly); otherwise the stdlib ``venv`` module
-    is used.
+    preferred when an existing ``uv`` binary is on PATH; otherwise the
+    stdlib ``venv`` module is used.
     """
     target.mkdir(parents=True, exist_ok=True)
     if args.clean and venv.exists():
@@ -277,9 +267,9 @@ def _phase_bootstrap_pip_uv(py_v: Path, args: argparse.Namespace) -> None:
 
     ``uv venv`` does NOT seed pip into the new venv, so we cannot
     ``python -m pip install ...`` from inside it. When system ``uv``
-    is on PATH (the normal case — vscodeclaude/CI/reinstall all
-    arrange this), use it with ``--python <venv-py>`` to populate the
-    venv. Falls back to in-venv pip when only a stdlib venv exists.
+    is on PATH (the typical case), use it with ``--python <venv-py>``
+    to populate the venv. Falls back to in-venv pip when only a
+    stdlib venv exists.
     """
     uv_bootstrap = shutil.which("uv")
     if uv_bootstrap:
@@ -320,11 +310,11 @@ def _phase_install_main(
         sys.exit("--source local requires --local-path")
 
     if args.use_sync:
-        # vscodeclaude-compatible flow: respects uv.lock for reproducibility.
-        # `uv sync` needs to run from the project directory (it reads
-        # pyproject.toml + uv.lock there) and writes to <cwd>/.venv —
-        # the cwd's .venv must equal our target venv. We arrange that by
-        # always passing local_path == target's parent of .venv.
+        # uv.lock-honoring flow: reproducible builds via the project's
+        # lockfile. `uv sync` needs to run from the project directory
+        # (it reads pyproject.toml + uv.lock there) and writes to
+        # <cwd>/.venv — the cwd's .venv must equal our target venv.
+        # We arrange that by always passing local_path == target.
         sync_cmd = [str(uv_v), "sync"]
         if args.extras:
             for extra in args.extras.split(","):

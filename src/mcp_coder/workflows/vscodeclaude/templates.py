@@ -49,9 +49,9 @@ BENEFITS:
 # the repo, shipped in the wheel as a data-file at
 # `<install-prefix>/share/mcp-coder/install.py`). It wraps the canonical
 # install sequence — uv venv -> uv sync --extra dev -> GitHub overrides
-# -> uv pip install -e . --no-deps. The same script is exercised by the
-# `vscodeclaude-template-install` CI job to prevent drift between the
-# template and the installer.
+# -> uv pip install -e . --no-deps. The same script is exercised by an
+# integration test in this repo to prevent drift between the template
+# and the installer.
 VENV_SECTION_WINDOWS = r"""echo Setting up environments...
 
 REM Store the MCP-Coder environment path (from installation, not session)
