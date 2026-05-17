@@ -32,8 +32,9 @@ Internal scripts for inspecting mcp-coder's own LLM call history during developm
 
 | File | Purpose |
 |---|---|
-| `tools/reinstall_local.bat` | Reinstall mcp-coder from local source |
-| `tools/read_github_deps.py` | Read GitHub dependency info |
+| `install.py`, `install.bat`, `install.sh` (under `tools/`) | Unified installer; entry point for AutoRunner CI, dev reinstall, and vscodeclaude |
+| `tools/reinstall_local.bat`, `tools/reinstall_local.sh` | Thin wrappers around `install.{bat,sh}` for editable dev reinstall |
+| `tools/read_github_deps.py` | Read GitHub dependency info (still used by CI workflows) |
 | `tools/safe_delete_folder.py` | Safe folder deletion helper |
 | `tools/__init__.py` | Makes `tools/` an importable Python package |
 
