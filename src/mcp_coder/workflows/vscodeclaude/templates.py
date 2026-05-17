@@ -86,7 +86,7 @@ REM Provision the project venv via the shared installer (single source of truth)
 REM tools/install.py is the canonical script; the wheel ships it as a data file
 REM at <install-prefix>/share/mcp-coder/install.py. workspace.py resolves the
 REM path at session-launch time and substitutes it here.
-"{mcp_coder_install_path}\.venv\Scripts\python.exe" "{install_script_path}" "%CD%" --source local --local-path "%CD%" --extras dev --use-sync --skip-templates --refresh{install_env_extra_flags}
+"{mcp_coder_install_path}\.venv\Scripts\python.exe" "{install_script_path}" "%CD%" --source local --local-path "%CD%" --extras dev --use-sync --refresh{install_env_extra_flags}
 if errorlevel 1 (
     echo ERROR: install-env failed.
     exit /b 1
@@ -231,7 +231,7 @@ echo
 # tools/install.py is the canonical script; the wheel ships it as a data
 # file at <install-prefix>/share/mcp-coder/install.py. workspace.py
 # resolves the path at session-launch time and substitutes it here.
-"{mcp_coder_install_path}/.venv/bin/python" "{install_script_path}" "$PWD" --source local --local-path "$PWD" --extras dev --use-sync --skip-templates --refresh{install_env_extra_flags}
+"{mcp_coder_install_path}/.venv/bin/python" "{install_script_path}" "$PWD" --source local --local-path "$PWD" --extras dev --use-sync --refresh{install_env_extra_flags}
 
 # Activate the venv that install-env created/refreshed
 # shellcheck disable=SC1091

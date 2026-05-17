@@ -18,7 +18,12 @@ Three callers:
    ``--source local --use-sync``.
 3. **vscodeclaude session startup** — generated startup scripts invoke
    the deployed copy at ``<install-prefix>/share/mcp-coder/install.py``
-   with ``--source local --use-sync --skip-templates``.
+   with ``--source local --use-sync``.
+
+This script installs Python packages only. Callers that also need
+project templates (``.mcp.json``, ``.claude/``) staged into the
+target directory must copy those themselves — that's an AutoRunner /
+worker-setup concern, not an install concern.
 
 Install sources
 ---------------
@@ -52,12 +57,11 @@ Jenkins runtime install::
 Developer editable reinstall (uv sync flow)::
 
     python tools/install.py . --source local --local-path . \\
-        --use-sync --skip-templates --refresh
+        --use-sync --refresh
 
 Stable PyPI release::
 
-    python tools/install.py /opt/mcp-coder --source pypi --extras "" \\
-        --skip-templates
+    python tools/install.py /opt/mcp-coder --source pypi --extras ""
 """
 
 from __future__ import annotations
@@ -71,9 +75,6 @@ import tomllib
 from pathlib import Path
 
 MCP_CODER_REPO = "https://github.com/MarcusJellinghaus/mcp_coder.git"
-
-# Items copied from REPO_ROOT into <target> when templates aren't skipped.
-TEMPLATE_PATHS = (".mcp.json", ".claude")
 
 CLI_BINARIES = ("mcp-coder", "mcp-tools-py", "mcp-workspace", "mcp-config")
 EXTRA_VERSION_QUERIES = ("mcp-coder-utils",)
@@ -156,12 +157,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
              "Used when the caller wants whatever versions PyPI / the lock "
              "file provide, not GitHub HEAD (e.g. coordinator's "
              "--no-install-from-github).",
-    )
-    p.add_argument(
-        "--skip-templates", action="store_true",
-        help="Don't copy .mcp.json / .claude/ into <target>. Use when the "
-             "target already owns its templates (developer checkouts, "
-             "vscodeclaude sessions).",
     )
     p.add_argument(
         "--refresh", action="store_true",
@@ -253,33 +248,6 @@ def _source_dir_for_overrides(args: argparse.Namespace) -> Path | None:
     if args.local_path:
         return args.local_path
     return REPO_ROOT
-
-
-def copy_templates(target: Path, *, dry: bool) -> None:
-    """Copy template files from REPO_ROOT into ``<target>``.
-
-    Templates only ship in the repo clone — when running from an
-    installed wheel, REPO_ROOT is None and templates are unavailable.
-    Callers requiring templates should ensure they run from a clone
-    (or pass ``--skip-templates`` and supply templates themselves).
-    """
-    if REPO_ROOT is None:
-        print("  (templates unavailable: not running from a clone — "
-              "use --skip-templates)")
-        return
-    for name in TEMPLATE_PATHS:
-        src, dst = REPO_ROOT / name, target / name
-        if not src.exists():
-            print(f"  skip (missing): {name}")
-            continue
-        print(f"  {name}  ->  {dst}")
-        if dry:
-            continue
-        if src.is_dir():
-            shutil.copytree(src, dst, dirs_exist_ok=True)
-        else:
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, dst)
 
 
 def _phase_venv(target: Path, venv: Path, args: argparse.Namespace) -> None:
@@ -491,10 +459,6 @@ def main(argv: list[str] | None = None) -> None:
     if args.extra_packages:
         run([str(uv_v), "pip", "install", "--python", str(py_v),
              *args.extra_packages.split()], dry=args.check)
-
-    if not args.skip_templates:
-        print("\n--- templates")
-        copy_templates(target, dry=args.check)
 
     _phase_versions(bin_dir, uv_v, py_v, args)
     print(f"\nOK  install-env complete: {target}")

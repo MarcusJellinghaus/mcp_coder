@@ -9,7 +9,6 @@ call "%REPO%\install.bat" "%REPO%" ^
     --local-path "%REPO%" ^
     --extras dev ^
     --extra-packages "langchain langchain-anthropic mlflow" ^
-    --skip-templates ^
     --refresh
 if errorlevel 1 (
     echo [FAIL] install.bat failed

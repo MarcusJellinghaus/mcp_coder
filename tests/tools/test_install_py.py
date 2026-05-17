@@ -146,7 +146,6 @@ class TestPhaseOverridesDryRun:
                 str(tmp_path),
                 "--extras",
                 "",
-                "--skip-templates",
             ],
             capsys,
         )
@@ -177,7 +176,6 @@ class TestPhaseOverridesDryRun:
                 str(tmp_path),
                 "--extras",
                 "",
-                "--skip-templates",
             ],
             capsys,
         )
@@ -208,7 +206,6 @@ class TestPhaseOverridesDryRun:
                 str(tmp_path),
                 "--extras",
                 "",
-                "--skip-templates",
             ],
             capsys,
         )
@@ -246,7 +243,6 @@ class TestPhaseOverridesDryRun:
                 str(tmp_path),
                 "--extras",
                 "",
-                "--skip-templates",
                 "--skip-overrides",
             ],
             capsys,
@@ -273,7 +269,6 @@ class TestPhaseOverridesDryRun:
                 str(tmp_path),
                 "--extras",
                 "",
-                "--skip-templates",
             ],
             capsys,
         )
@@ -303,7 +298,6 @@ class TestPhaseOverridesDryRun:
                 "--extras",
                 "dev",
                 "--use-sync",
-                "--skip-templates",
             ],
             capsys,
         )
@@ -330,7 +324,6 @@ class TestUseSyncTargetGuard:
                     "--local-path",
                     str(other),
                     "--use-sync",
-                    "--skip-templates",
                     "--check",
                 ]
             )
@@ -352,7 +345,6 @@ class TestUseSyncTargetGuard:
                 "--local-path",
                 str(tmp_path),
                 "--use-sync",
-                "--skip-templates",
                 "--check",
             ]
         )

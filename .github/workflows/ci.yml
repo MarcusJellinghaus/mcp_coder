@@ -158,7 +158,7 @@ jobs:
           # Mirror what the vscodeclaude POSIX template emits:
           #   python <install-prefix>/share/mcp-coder/install.py "$PWD" \
           #     --source local --local-path "$PWD" --extras dev --use-sync \
-          #     --skip-templates --refresh
+          #     --refresh
           #
           # CI runs the script directly from the source tree (tools/install.py)
           # so we don't need to install mcp-coder first. The template runs
@@ -168,7 +168,6 @@ jobs:
             --local-path . \
             --extras dev \
             --use-sync \
-            --skip-templates \
             --refresh
 
           # Activate the venv install-env created and smoke-check end-to-end.

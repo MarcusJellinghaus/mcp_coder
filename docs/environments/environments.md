@@ -106,7 +106,7 @@ For local development: discovers the tool environment the same way as `claude.ba
 
 ### How `reinstall_local.bat` Does It
 
-`reinstall_local.bat` (and `reinstall_local.sh`) delegates to the unified entry point at `tools/install.py`, invoked as `install.bat <repo> --source local --local-path <repo> --extras dev --skip-templates --refresh`. The installer reads `[tool.mcp-coder.install-from-github]` from `pyproject.toml` to override sibling MCP packages with their GitHub HEAD versions. The same `install.py` script is also used by AutoRunner's Jenkins setup and (eventually) vscodeclaude — see `tools/install.py` for the full design.
+`reinstall_local.bat` (and `reinstall_local.sh`) delegates to the unified entry point at `tools/install.py`, invoked as `install.bat <repo> --source local --local-path <repo> --extras dev --refresh`. The installer reads `[tool.mcp-coder.install-from-github]` from `pyproject.toml` to override sibling MCP packages with their GitHub HEAD versions. The same `install.py` script is also used by AutoRunner's Jenkins setup and vscodeclaude — see `tools/install.py` for the full design. (Note: install.py installs Python packages only; AutoRunner stages `.mcp.json` + `.claude/` into the worker dir itself.)
 
 ## Calling mcp-coder Explicitly
 

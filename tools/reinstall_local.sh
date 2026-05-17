@@ -17,7 +17,6 @@ if ! "$REPO_DIR/install.sh" "$REPO_DIR" \
     --local-path "$REPO_DIR" \
     --extras dev \
     --extra-packages "langchain langchain-anthropic mlflow" \
-    --skip-templates \
     --refresh; then
     echo "[FAIL] install.sh failed"
     [ "$_SOURCED" = "1" ] && return 1 || exit 1

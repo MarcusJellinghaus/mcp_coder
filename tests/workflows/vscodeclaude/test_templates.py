@@ -21,7 +21,6 @@ def test_venv_section_delegates_to_install_script() -> None:
     assert "--source local" in VENV_SECTION_WINDOWS
     assert "--extras dev" in VENV_SECTION_WINDOWS
     assert "--use-sync" in VENV_SECTION_WINDOWS
-    assert "--skip-templates" in VENV_SECTION_WINDOWS
     assert "--refresh" in VENV_SECTION_WINDOWS
 
 
