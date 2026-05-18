@@ -1,6 +1,6 @@
 #!/bin/bash
 # Reinstall mcp-coder in editable mode (developer convenience).
-# Delegates to ../install.sh, then activates the venv if sourced.
+# Delegates to install.sh in the same dir, then activates the venv if sourced.
 #
 # Usage: source tools/reinstall_local.sh   (persists venv activation)
 #    or: bash   tools/reinstall_local.sh   (does not persist activation)
@@ -12,7 +12,7 @@ _SCRIPT_DIR="$( cd "$( dirname "$_SCRIPT_PATH" )" && pwd )"
 REPO_DIR="$( cd "$_SCRIPT_DIR/.." && pwd )"
 VENV_BIN="$REPO_DIR/.venv/bin"
 
-if ! "$REPO_DIR/install.sh" "$REPO_DIR" \
+if ! "$_SCRIPT_DIR/install.sh" "$REPO_DIR" \
     --source local \
     --local-path "$REPO_DIR" \
     --extras dev \

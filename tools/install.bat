@@ -1,4 +1,4 @@
 @echo off
 setlocal enableextensions
-python "%~dp0tools\install.py" %*
+python "%~dp0install.py" %*
 exit /b %errorlevel%

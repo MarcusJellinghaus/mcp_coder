@@ -1,10 +1,11 @@
 @echo off
 REM Reinstall mcp-coder in editable mode (developer convenience).
-REM Delegates to ..\install.bat, then activates the venv in the caller's shell.
+REM Delegates to install.bat in the same dir, then activates the venv in
+REM the caller's shell.
 
 setlocal
 set "REPO=%~dp0.."
-call "%REPO%\install.bat" "%REPO%" ^
+call "%~dp0install.bat" "%REPO%" ^
     --source local ^
     --local-path "%REPO%" ^
     --extras dev ^
