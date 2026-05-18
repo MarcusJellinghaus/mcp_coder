@@ -60,8 +60,10 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
+import stat
 import subprocess
 import sys
+import time
 import tomllib
 from pathlib import Path
 
@@ -241,6 +243,46 @@ def _source_dir_for_overrides(args: argparse.Namespace) -> Path | None:
     return REPO_ROOT
 
 
+def _rmtree_onexc(func, path, _exc):  # type: ignore[no-untyped-def]
+    """rmtree error handler: clear the read-only bit and retry."""
+    try:
+        os.chmod(path, stat.S_IWRITE)
+    except OSError:
+        pass
+    func(path)
+
+
+def _rmtree_with_retry(path: Path, attempts: int = 3, delay: float = 1.0) -> None:
+    """Robust ``shutil.rmtree`` for Windows: handles read-only files and a
+    transient lock (e.g. an antivirus or just-exited process still holding
+    a handle) via a small retry. On final failure, exits with a clear
+    message naming the locked file.
+    """
+    kwargs = (
+        {"onexc": _rmtree_onexc}
+        if sys.version_info >= (3, 12)
+        else {"onerror": _rmtree_onexc}
+    )
+    last_err: PermissionError | None = None
+    for i in range(attempts):
+        try:
+            shutil.rmtree(path, **kwargs)  # type: ignore[arg-type]
+            return
+        except PermissionError as e:
+            last_err = e
+            if i < attempts - 1:
+                time.sleep(delay)
+    assert last_err is not None
+    locked = last_err.filename or "<unknown>"
+    sys.exit(
+        f"ERROR: could not delete {path}\n"
+        f"  locked file: {locked}\n"
+        f"  Another process is holding a file in this directory open.\n"
+        f"  Close any python.exe, mcp-* servers, IDEs, or shells using\n"
+        f"  this venv, then re-run."
+    )
+
+
 def _phase_venv(target: Path, venv: Path, args: argparse.Namespace) -> None:
     """Phase 1+2: prepare the target dir and (re)create the venv.
 
@@ -252,7 +294,7 @@ def _phase_venv(target: Path, venv: Path, args: argparse.Namespace) -> None:
     if args.clean and venv.exists():
         print(f"--- wiping {venv}")
         if not args.check:
-            shutil.rmtree(venv)
+            _rmtree_with_retry(venv)
     if venv.exists():
         return
     uv_bootstrap = shutil.which("uv")
