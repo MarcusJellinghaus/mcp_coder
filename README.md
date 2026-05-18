@@ -138,6 +138,10 @@ cd mcp_coder
 pip install -e ".[dev]"
 ```
 
+For other install paths (PyPI release, pinning a specific GitHub
+ref, provisioning a worker / CI environment) see the
+[Installation Guide](docs/getting-started/installation.md).
+
 #### Optional features
 
 mcp-coder publishes several pip extras for optional integrations
