@@ -16,6 +16,7 @@ Complete documentation for MCP Coder.
 
 ### Setup & Configuration
 
+- **[Installation Guide](getting-started/installation.md)** - Install paths (PyPI, editable dev, pinned GitHub ref, CI / worker provisioning)
 - **[Repository Setup](repository-setup/README.md)** - Complete guide for setting up repositories with MCP Coder workflows
 - **[Configuration Guide](configuration/config.md)** - User configuration, environment variables, platform setup
 - **[Claude Code Configuration](configuration/claude-code.md)** - Claude Code CLI setup and project configuration

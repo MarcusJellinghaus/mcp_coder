@@ -132,11 +132,29 @@ flowchart TD
 
 ### Installation
 
+**Developer install** (editable + dev tooling):
+
 ```bash
 git clone https://github.com/MarcusJellinghaus/mcp_coder.git
 cd mcp_coder
 pip install -e ".[dev]"
 ```
+
+**Clean machine, latest GitHub HEAD** (no clone — pulls mcp-coder plus
+the three sibling MCP packages `mcp-tools-py`, `mcp-workspace`,
+`mcp-coder-utils` straight from GitHub):
+
+```bash
+mkdir mcp-installer && cd mcp-installer
+curl --create-dirs -o tools/install.py https://raw.githubusercontent.com/MarcusJellinghaus/mcp_coder/main/tools/install.py
+curl -O https://raw.githubusercontent.com/MarcusJellinghaus/mcp_coder/main/pyproject.toml
+python tools/install.py ~/mcp-coder-env --source git
+```
+
+Installs everything into `~/mcp-coder-env/.venv`; auto-installs `uv` if
+missing. See the
+[Installation Guide](docs/getting-started/installation.md) for PyPI
+release, pinning a specific ref, and other install paths.
 
 #### Optional features
 

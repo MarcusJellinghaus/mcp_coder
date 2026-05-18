@@ -9,44 +9,19 @@ from mcp_coder.workflows.vscodeclaude.templates import (
 )
 
 
-def test_venv_section_installs_dev_dependencies() -> None:
-    """Test that VENV_SECTION_WINDOWS installs dev dependencies.
+def test_venv_section_delegates_to_install_script() -> None:
+    """VENV_SECTION_WINDOWS provisions the venv via ``tools/install.py``.
 
-    The dev dependencies include:
-    - types: Type stubs for mypy
-    - test: pytest-asyncio, pytest-xdist for running tests
-    - mcp: MCP server dependencies
-    - Architecture tools: import-linter, pycycle, tach, vulture
-
-    This ensures vscodeclaude workspaces have complete development environments.
+    Install logic is centralized in that one script (#972 follow-up);
+    the template's only job is to call it with the right flags. We
+    assert on flags rather than on shell commands so this test isn't
+    coupled to the installer's internal sequence.
     """
-    # Verify correct installation command
-    assert (
-        "uv sync --extra dev" in VENV_SECTION_WINDOWS
-    ), "VENV_SECTION_WINDOWS should install dev dependencies with '--extra dev'"
-
-    # Verify old behavior is removed (prevent regression)
-    assert (
-        "uv sync --extra types" not in VENV_SECTION_WINDOWS
-    ), "VENV_SECTION_WINDOWS should not use '--extra types' (incomplete dependencies)"
-
-
-def test_venv_section_has_uv_sync_retry_logic() -> None:
-    """Test that VENV_SECTION_WINDOWS retries uv sync on failure.
-
-    Windows file locks (antivirus, IDE indexing) can cause transient
-    'Access is denied' errors during uv sync renames. A retry loop
-    handles this reliably.
-    """
-    assert (
-        "EnableDelayedExpansion" in VENV_SECTION_WINDOWS
-    ), "VENV_SECTION_WINDOWS needs EnableDelayedExpansion for retry counter"
-    assert (
-        "retry_uv_sync" in VENV_SECTION_WINDOWS
-    ), "VENV_SECTION_WINDOWS should have a retry label for uv sync"
-    assert (
-        "UV_RETRY" in VENV_SECTION_WINDOWS
-    ), "VENV_SECTION_WINDOWS should track retry attempts"
+    assert "{install_script_path}" in VENV_SECTION_WINDOWS
+    assert "--source local" in VENV_SECTION_WINDOWS
+    assert "--extras dev" in VENV_SECTION_WINDOWS
+    assert "--use-sync" in VENV_SECTION_WINDOWS
+    assert "--refresh" in VENV_SECTION_WINDOWS
 
 
 def test_automated_section_has_llm_method_claude() -> None:
@@ -154,12 +129,20 @@ def test_venv_section_sets_uv_git_shallow() -> None:
     ), "VENV_SECTION_WINDOWS should set UV_GIT_SHALLOW=0 for setuptools_scm"
 
 
-def test_venv_section_runs_editable_install() -> None:
-    """Test that VENV_SECTION_WINDOWS runs editable install on every launch.
+def test_venv_section_extra_flags_placeholder() -> None:
+    """The template carries an `{install_env_extra_flags}` placeholder.
 
-    The editable install ensures the current project code is always used
-    in the session environment, even if the code changes between launches.
+    workspace.py uses it to append `--skip-overrides` when the
+    coordinator's `--no-install-from-github` flag is set. Format on
+    a sample to make sure the placeholder is actually substituted (and
+    not, say, doubled-up or missing).
     """
-    assert (
-        "uv pip install -e . --no-deps" in VENV_SECTION_WINDOWS
-    ), "VENV_SECTION_WINDOWS should run 'uv pip install -e . --no-deps'"
+    sample = VENV_SECTION_WINDOWS.format(
+        mcp_coder_install_path="C:\\tool",
+        session_folder_path="C:\\proj",
+        install_script_path="C:\\tool\\.venv\\share\\mcp-coder\\install.py",
+        install_env_extra_flags=" --skip-overrides",
+    )
+    assert "--skip-overrides" in sample
+    assert "{install_env_extra_flags}" not in sample
+    assert "{install_script_path}" not in sample

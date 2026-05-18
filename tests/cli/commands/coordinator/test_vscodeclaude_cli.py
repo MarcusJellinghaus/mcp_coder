@@ -183,15 +183,19 @@ class TestTemplates:
 class TestWindowsTemplates:
     """Test Windows template strings with venv and mcp-coder."""
 
-    def test_venv_section_creates_venv_if_missing(self) -> None:
-        """VENV_SECTION_WINDOWS creates venv when not present."""
+    def test_venv_section_delegates_to_install_script(self) -> None:
+        """VENV_SECTION_WINDOWS provisions via the bundled install script.
+
+        Venv creation, dep install, and GitHub overrides are all done
+        by ``tools/install.py`` (shipped as a data-file in the wheel)
+        rather than inlined into the generated startup script.
+        """
         from mcp_coder.workflows.vscodeclaude.templates import (
             VENV_SECTION_WINDOWS,
         )
 
-        assert "if not exist .venv" in VENV_SECTION_WINDOWS
-        assert "uv venv" in VENV_SECTION_WINDOWS
-        assert "uv sync" in VENV_SECTION_WINDOWS
+        assert "{install_script_path}" in VENV_SECTION_WINDOWS
+        assert "--use-sync" in VENV_SECTION_WINDOWS
 
     def test_venv_section_activates_existing_venv(self) -> None:
         """VENV_SECTION_WINDOWS activates existing venv."""

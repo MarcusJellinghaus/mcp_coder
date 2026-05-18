@@ -77,7 +77,7 @@ The following files in this repository serve as references/templates for other p
 | `icoder_local.bat` | I | — | — | mcp-coder repo only |
 | `mlflow_implementation.md` / `project_idea.md` | I | — | — | mcp-coder repo only |
 | `tools/start_mlflow.*`, `get_*mlflow*.py`, `inspect_mlflow_run.py`, `search_mlflow_artifacts.py` | I | — | — | mcp-coder repo only |
-| `tools/reinstall_local.bat`, `read_github_deps.py`, `safe_delete_folder.py` | I | — | — | mcp-coder repo only |
+| `tools/install.py`, `tools/install.bat`, `tools/install.sh`, `tools/reinstall_local.*`, `tools/read_github_deps.py`, `tools/safe_delete_folder.py` | I | — | — | mcp-coder repo only |
 | `.run/` | I | — | — | IDE configs, mcp-coder repo only |
 | `.github/workflows/langchain-integration.yml` | I | — | — | mcp-coder repo only |
 | `.github/workflows/publish.yml` | I | — | — | mcp-coder repo only |

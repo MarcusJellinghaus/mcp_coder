@@ -106,7 +106,7 @@ For local development: discovers the tool environment the same way as `claude.ba
 
 ### How `reinstall_local.bat` Does It
 
-`reinstall_local.bat` reads GitHub dependency URLs from `pyproject.toml` via `tools/read_github_deps.py` instead of hardcoding them. This ensures reinstallation always uses the dependencies declared in the project configuration.
+`reinstall_local.bat` (and `reinstall_local.sh`) delegates to the unified entry point at `tools/install.py`, invoked as `tools\install.bat <repo> --source local --local-path <repo> --extras dev --refresh`. The installer reads `[tool.mcp-coder.install-from-github]` from `pyproject.toml` to override sibling MCP packages with their GitHub HEAD versions. The same `install.py` script is also used elsewhere in this repo — see `tools/install.py` for the full design. (Note: install.py installs Python packages only; callers that need `.mcp.json` + `.claude/` in the target stage those themselves.)
 
 ## Calling mcp-coder Explicitly
 

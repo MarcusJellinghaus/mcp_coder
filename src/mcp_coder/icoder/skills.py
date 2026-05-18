@@ -43,6 +43,26 @@ class ICoderSkillCommand:
     command_name: str  # e.g. "/issue_analyse"
 
 
+def _meta_str(meta: dict[str, object], key: str, skill_file: Path) -> str | None:
+    """Return meta[key] as str or None; raise ValueError on type mismatch.
+
+    Returns:
+        The value as a string, or None when the key is absent or value is None.
+
+    Raises:
+        ValueError: If ``meta[key]`` exists but is not a string.
+    """
+    value = meta.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError(
+            f"{skill_file}: frontmatter field '{key}' must be a string, "
+            f"got {type(value).__name__}"
+        )
+    return value
+
+
 def load_skills(project_dir: Path) -> list[ClaudeSkill]:
     """Discover and parse skills from <project_dir>/.claude/skills/*/SKILL.md.
 
@@ -81,21 +101,35 @@ def load_skills(project_dir: Path) -> list[ClaudeSkill]:
         hooks_raw = meta.get("hooks")
         hooks = hooks_raw if isinstance(hooks_raw, dict) else None
 
+        try:
+            description = _meta_str(meta, "description", skill_file) or ""
+            argument_hint = _meta_str(meta, "argument-hint", skill_file)
+            model = _meta_str(meta, "model", skill_file)
+            effort = _meta_str(meta, "effort", skill_file)
+            context = _meta_str(meta, "context", skill_file)
+            agent = _meta_str(meta, "agent", skill_file)
+            shell = _meta_str(meta, "shell", skill_file)
+        except ValueError:
+            logger.warning(
+                "Invalid frontmatter in %s, skipping", skill_file, exc_info=True
+            )
+            continue
+
         skill = ClaudeSkill(
             name=subdir.name,
-            description=meta.get("description", ""),
+            description=description,
             prompt_template=post.content.strip(),
-            argument_hint=meta.get("argument-hint"),
+            argument_hint=argument_hint,
             disable_model_invocation=bool(meta.get("disable-model-invocation", False)),
             user_invocable=bool(user_invocable),
             allowed_tools=allowed_tools,
-            model=meta.get("model"),
-            effort=meta.get("effort"),
-            context=meta.get("context"),
-            agent=meta.get("agent"),
+            model=model,
+            effort=effort,
+            context=context,
+            agent=agent,
             hooks=hooks,
             paths=paths,
-            shell=meta.get("shell"),
+            shell=shell,
         )
         results.append(skill)
 

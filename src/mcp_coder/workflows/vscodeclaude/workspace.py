@@ -5,7 +5,6 @@ Handles git operations, folder creation, and file generation.
 
 import logging
 import platform
-import shlex
 import shutil
 import stat
 import sys
@@ -16,7 +15,6 @@ from typing import Any
 
 from mcp_coder.mcp_workspace_git import checkout_branch, fetch_remote
 
-from ...utils.pyproject_config import get_github_install_config
 from ...utils.subprocess_runner import (
     CalledProcessError,
     CommandOptions,
@@ -451,64 +449,39 @@ def _escape_batch_title(text: str) -> str:
     return text
 
 
-def _build_github_install_section_windows(folder_path: Path) -> str:
-    """Read [tool.mcp-coder.install-from-github] from pyproject.toml and build install commands.
+def _resolve_install_script(install_path: Path) -> Path:
+    """Locate ``tools/install.py`` given the mcp-coder install dir.
 
-    Args:
-        folder_path: Path to the cloned repo containing pyproject.toml.
+    Two layouts are supported:
 
-    Returns:
-        Batch script lines to inject, or empty string if no packages configured.
-    """
-    gh_config = get_github_install_config(folder_path)
-    packages = gh_config.packages
-    packages_no_deps = gh_config.packages_no_deps
-
-    if not packages and not packages_no_deps:
-        logger.info("No GitHub override packages configured in pyproject.toml")
-        return ""
-
-    lines = ["", "REM === GitHub override installs ==="]
-    if packages:
-        quoted = " ".join(f'"{p}"' for p in packages)
-        lines.append(f"uv pip install {quoted}")
-    if packages_no_deps:
-        quoted = " ".join(f'"{p}"' for p in packages_no_deps)
-        lines.append(f"uv pip install --no-deps {quoted}")
-    lines.append("uv pip install -e . --no-deps")
-
-    # NOTE: If stale git cache becomes an issue, add --reinstall to the
-    # uv pip install commands above to force re-fetch from GitHub.
-    return "\n".join(lines)
-
-
-def _build_github_install_section_posix(folder_path: Path) -> str:
-    """Read [tool.mcp-coder.install-from-github] and build POSIX install commands.
-
-    Args:
-        folder_path: Path to the cloned repo containing pyproject.toml.
+    * **Wheel install** (production): mcp-coder was ``pip install``ed
+      from a wheel; ``pyproject.toml`` data-files put a copy at
+      ``<install_path>/.venv/share/mcp-coder/install.py``.
+    * **Editable install** (developer): mcp-coder is installed
+      ``-e <repo>`` and the canonical ``<repo>/tools/install.py`` is
+      reachable from ``install_path``.
 
     Returns:
-        Bash script lines to inject, or empty string if no packages configured.
+        Path to the script. The vscodeclaude template substitutes this
+        into the generated startup script so the session runs it
+        directly with the mcp-coder venv's interpreter.
+
+    Raises:
+        FileNotFoundError: When neither candidate exists — usually
+        means mcp-coder was installed from an older wheel without the
+        data-files entry, or the install layout is unusual.
     """
-    gh_config = get_github_install_config(folder_path)
-    packages = gh_config.packages
-    packages_no_deps = gh_config.packages_no_deps
-
-    if not packages and not packages_no_deps:
-        logger.info("No GitHub override packages configured in pyproject.toml")
-        return ""
-
-    lines = ["", "# === GitHub override installs ==="]
-    if packages:
-        quoted = " ".join(shlex.quote(p) for p in packages)
-        lines.append(f"uv pip install {quoted}")
-    if packages_no_deps:
-        quoted = " ".join(shlex.quote(p) for p in packages_no_deps)
-        lines.append(f"uv pip install --no-deps {quoted}")
-    lines.append("uv pip install -e . --no-deps")
-
-    return "\n".join(lines)
+    candidates = (
+        install_path / ".venv" / "share" / "mcp-coder" / "install.py",
+        install_path / "tools" / "install.py",
+    )
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    raise FileNotFoundError(
+        f"install.py not found under {install_path}. Looked at: "
+        + ", ".join(str(c) for c in candidates)
+    )
 
 
 def create_startup_script(
@@ -546,7 +519,11 @@ def create_startup_script(
         Path to created script (.bat or .sh)
 
     Raises:
-        FileNotFoundError: If the platform-specific MCP config file is absent.
+        FileNotFoundError: If the platform-specific MCP config file is absent,
+            or if ``tools/install.py`` cannot be located under
+            ``mcp_coder_install_path``.
+        RuntimeError: If ``mcp_coder_install_path`` is not provided and cannot
+            be auto-discovered from the running mcp-coder install.
         ValueError: If commands config is not a list of strings.
 
     Execution strategy depends on the number of commands in the config:
@@ -593,20 +570,26 @@ def create_startup_script(
         # Get mcp_coder_install_path if not provided
         if mcp_coder_install_path is None:
             mcp_coder_install_path = get_mcp_coder_install_path()
+        if mcp_coder_install_path is None:
+            raise RuntimeError(
+                "mcp-coder install path could not be determined. "
+                "Pass mcp_coder_install_path explicitly."
+            )
 
         # Use session_folder_path if provided, otherwise use folder_path
         session_path = session_folder_path or folder_path
 
-        # Format VENV section with both paths
+        # Format VENV section. The generated script calls tools/install.py
+        # to provision the project venv (single source of truth). GitHub
+        # overrides happen inside that script; honor skip_github_install by
+        # appending `--skip-overrides` to its argv.
+        install_script_path = _resolve_install_script(mcp_coder_install_path)
         venv_section = VENV_SECTION_WINDOWS.format(
-            mcp_coder_install_path=mcp_coder_install_path or "",
+            mcp_coder_install_path=str(mcp_coder_install_path),
             session_folder_path=str(session_path),
+            install_script_path=str(install_script_path),
+            install_env_extra_flags=" --skip-overrides" if skip_github_install else "",
         )
-
-        # Auto-detect GitHub override install commands from pyproject.toml
-        if not skip_github_install:
-            github_install_section = _build_github_install_section_windows(folder_path)
-            venv_section = venv_section + github_install_section
 
         if is_intervention:
             # Intervention mode - plain claude, no automation
@@ -703,18 +686,21 @@ def create_startup_script(
 
         if mcp_coder_install_path is None:
             mcp_coder_install_path = get_mcp_coder_install_path()
+        if mcp_coder_install_path is None:
+            raise RuntimeError(
+                "mcp-coder install path could not be determined. "
+                "Pass mcp_coder_install_path explicitly."
+            )
 
         session_path = session_folder_path or folder_path
 
+        install_script_path = _resolve_install_script(mcp_coder_install_path)
         venv_section = VENV_SECTION_POSIX.format(
-            mcp_coder_install_path=mcp_coder_install_path or "",
+            mcp_coder_install_path=str(mcp_coder_install_path),
             session_folder_path=str(session_path),
+            install_script_path=str(install_script_path),
+            install_env_extra_flags=" --skip-overrides" if skip_github_install else "",
         )
-
-        # Auto-detect GitHub override install commands from pyproject.toml
-        if not skip_github_install:
-            github_install_section = _build_github_install_section_posix(folder_path)
-            venv_section = venv_section + github_install_section
 
         title_display = (
             issue_title[:58] if len(issue_title) > 58 else issue_title
