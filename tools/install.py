@@ -281,9 +281,15 @@ def _phase_bootstrap_pip_uv(py_v: Path, args: argparse.Namespace) -> None:
 
 
 def _phase_install_main(
-    uv_v: Path, py_v: Path, args: argparse.Namespace
+    uv_bin: str, py_v: Path, args: argparse.Namespace
 ) -> bool:
     """Phase 4: install the main package per ``--source``.
+
+    Uses ``uv_bin`` (system uv) targeted at the venv via
+    ``--python <venv-py>``. We do NOT call the in-venv uv here: `uv sync`
+    rewrites the venv to match the lockfile, which removes pip+uv (they
+    are not project dependencies), so any subsequent in-venv ``uv`` call
+    would FileNotFoundError. System uv side-steps that entirely.
 
     Returns:
         True when this is an editable install (so phase 5 knows whether
@@ -293,7 +299,7 @@ def _phase_install_main(
 
     if args.source == "git":
         spec = f"mcp-coder{extras} @ git+{MCP_CODER_REPO}@{args.ref}"
-        cmd = [str(uv_v), "pip", "install", "--python", str(py_v)]
+        cmd = [uv_bin, "pip", "install", "--python", str(py_v)]
         if args.refresh:
             cmd.append("--refresh")
         run(cmd + [spec], dry=args.check)
@@ -301,7 +307,7 @@ def _phase_install_main(
 
     if args.source == "pypi":
         spec = f"mcp-coder{extras}"
-        run([str(uv_v), "pip", "install", "--python", str(py_v), spec],
+        run([uv_bin, "pip", "install", "--python", str(py_v), spec],
             dry=args.check)
         return False
 
@@ -315,7 +321,7 @@ def _phase_install_main(
         # (it reads pyproject.toml + uv.lock there) and writes to
         # <cwd>/.venv — the cwd's .venv must equal our target venv.
         # We arrange that by always passing local_path == target.
-        sync_cmd = [str(uv_v), "sync"]
+        sync_cmd = [uv_bin, "sync"]
         if args.extras:
             for extra in args.extras.split(","):
                 extra = extra.strip()
@@ -325,7 +331,7 @@ def _phase_install_main(
             sync_cmd.append("--refresh")
         run(sync_cmd, dry=args.check, cwd=args.local_path)
     else:
-        cmd = [str(uv_v), "pip", "install", "--python", str(py_v)]
+        cmd = [uv_bin, "pip", "install", "--python", str(py_v)]
         if args.refresh:
             cmd.append("--refresh")
         cmd += ["-e", f"{args.local_path}{extras}"]
@@ -335,7 +341,7 @@ def _phase_install_main(
 
 
 def _phase_overrides(
-    uv_v: Path, py_v: Path, args: argparse.Namespace, is_editable: bool
+    uv_bin: str, py_v: Path, args: argparse.Namespace, is_editable: bool
 ) -> None:
     """Phase 5: apply ``[tool.mcp-coder.install-from-github]`` overrides.
 
@@ -359,12 +365,12 @@ def _phase_overrides(
 
     pkgs, pkgs_no_deps = github_overrides(src_dir)
     if pkgs:
-        cmd = [str(uv_v), "pip", "install", "--python", str(py_v)]
+        cmd = [uv_bin, "pip", "install", "--python", str(py_v)]
         if args.refresh:
             cmd.append("--refresh")
         run(cmd + pkgs, dry=args.check)
     if pkgs_no_deps:
-        cmd = [str(uv_v), "pip", "install", "--no-deps", "--python", str(py_v)]
+        cmd = [uv_bin, "pip", "install", "--no-deps", "--python", str(py_v)]
         if args.refresh:
             cmd.append("--refresh")
         run(cmd + pkgs_no_deps, dry=args.check)
@@ -372,11 +378,11 @@ def _phase_overrides(
     if is_editable:
         # The override step may have pulled a fresh mcp-coder wheel in
         # as a transitive dep, replacing the editable install. Re-link.
-        run([str(uv_v), "pip", "install", "-e", str(args.local_path),
+        run([uv_bin, "pip", "install", "-e", str(args.local_path),
              "--no-deps", "--python", str(py_v)], dry=args.check)
 
 
-def _phase_versions(bin_dir: Path, uv_v: Path, py_v: Path, args: argparse.Namespace) -> None:
+def _phase_versions(bin_dir: Path, uv_bin: str, py_v: Path, args: argparse.Namespace) -> None:
     """Phase 7b: print installed versions of CLIs and library-only packages.
 
     Exits non-zero when an expected CLI binary is missing from the venv
@@ -398,7 +404,7 @@ def _phase_versions(bin_dir: Path, uv_v: Path, py_v: Path, args: argparse.Namesp
             print(f"  (missing CLI: {name})")
             missing.append(name)
     for pkg in EXTRA_VERSION_QUERIES:
-        run([str(uv_v), "pip", "show", "--python", str(py_v), pkg],
+        run([uv_bin, "pip", "show", "--python", str(py_v), pkg],
             check=False)
     if missing:
         sys.exit(
@@ -408,9 +414,21 @@ def _phase_versions(bin_dir: Path, uv_v: Path, py_v: Path, args: argparse.Namesp
 
 
 def main(argv: list[str] | None = None) -> None:
-    """Drive the install. See module docstring for caller scenarios."""
+    """Drive the install. See module docstring for usage."""
     args = parse_args(argv)
     target = args.target.resolve()
+
+    # System uv is required: install.py uses it (with --python <venv-py>)
+    # for every install command, because the in-venv uv can vanish mid-run
+    # — `uv sync` rewrites the venv to match the lockfile, which removes
+    # uv+pip if they're not project dependencies. System uv side-steps
+    # that fragility entirely.
+    uv_bin = shutil.which("uv")
+    if uv_bin is None:
+        sys.exit(
+            "install-env requires `uv` on PATH. Install it first: "
+            "`pip install uv` or see https://docs.astral.sh/uv/."
+        )
 
     # `uv sync` writes its venv to `<cwd>/.venv`, where cwd is forced to
     # `args.local_path` (it needs that dir's pyproject.toml + uv.lock).
@@ -429,7 +447,6 @@ def main(argv: list[str] | None = None) -> None:
     venv = target / ".venv"
     bin_dir = venv_bin(venv)
     py_v = bin_dir / exe("python")
-    uv_v = bin_dir / exe("uv")
 
     src_label = args.source
     if args.source == "git":
@@ -443,14 +460,14 @@ def main(argv: list[str] | None = None) -> None:
 
     _phase_venv(target, venv, args)
     _phase_bootstrap_pip_uv(py_v, args)
-    is_editable = _phase_install_main(uv_v, py_v, args)
-    _phase_overrides(uv_v, py_v, args, is_editable)
+    is_editable = _phase_install_main(uv_bin, py_v, args)
+    _phase_overrides(uv_bin, py_v, args, is_editable)
 
     if args.extra_packages:
-        run([str(uv_v), "pip", "install", "--python", str(py_v),
+        run([uv_bin, "pip", "install", "--python", str(py_v),
              *args.extra_packages.split()], dry=args.check)
 
-    _phase_versions(bin_dir, uv_v, py_v, args)
+    _phase_versions(bin_dir, uv_bin, py_v, args)
     print(f"\nOK  install-env complete: {target}")
 
 

@@ -519,7 +519,11 @@ def create_startup_script(
         Path to created script (.bat or .sh)
 
     Raises:
-        FileNotFoundError: If the platform-specific MCP config file is absent.
+        FileNotFoundError: If the platform-specific MCP config file is absent,
+            or if ``tools/install.py`` cannot be located under
+            ``mcp_coder_install_path``.
+        RuntimeError: If ``mcp_coder_install_path`` is not provided and cannot
+            be auto-discovered from the running mcp-coder install.
         ValueError: If commands config is not a list of strings.
 
     Execution strategy depends on the number of commands in the config:
