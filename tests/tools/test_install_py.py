@@ -376,7 +376,7 @@ class TestEnsureSystemUv:
 
         called: list[list[str]] = []
 
-        def _fake_run(cmd: list[str], check: bool = False) -> object:
+        def _fake_run(cmd: list[str], **_kwargs: object) -> object:
             called.append(cmd)
             return type("R", (), {"returncode": 0})()
 
@@ -393,7 +393,7 @@ class TestEnsureSystemUv:
         """pip install raises CalledProcessError → SystemExit with the docs URL."""
         monkeypatch.setattr(install.shutil, "which", lambda _: None)
 
-        def _fake_run(cmd: list[str], check: bool = False) -> object:
+        def _fake_run(cmd: list[str], **_kwargs: object) -> object:
             raise install.subprocess.CalledProcessError(returncode=1, cmd=cmd)
 
         monkeypatch.setattr(install.subprocess, "run", _fake_run)
@@ -410,7 +410,7 @@ class TestEnsureSystemUv:
         """FileNotFoundError (pip itself absent) is handled the same way."""
         monkeypatch.setattr(install.shutil, "which", lambda _: None)
 
-        def _fake_run(cmd: list[str], check: bool = False) -> object:
+        def _fake_run(cmd: list[str], **_kwargs: object) -> object:
             raise FileNotFoundError("pip not found")
 
         monkeypatch.setattr(install.subprocess, "run", _fake_run)
