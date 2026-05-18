@@ -348,3 +348,73 @@ class TestUseSyncTargetGuard:
                 "--check",
             ]
         )
+
+
+class TestEnsureSystemUv:
+    """Auto-install fallback for missing system uv."""
+
+    def test_uv_already_on_path_returns_immediately(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Happy path: shutil.which finds uv, no subprocess attempted."""
+        monkeypatch.setattr(install.shutil, "which", lambda _: "/fake/path/to/uv")
+
+        # subprocess.run should NOT be called — fail loudly if it is.
+        def _no_subprocess(*args: object, **kwargs: object) -> None:
+            raise AssertionError("subprocess.run should not be called")
+
+        monkeypatch.setattr(install.subprocess, "run", _no_subprocess)
+        assert install._ensure_system_uv() == "/fake/path/to/uv"
+
+    def test_auto_install_succeeds_and_uv_appears_on_path(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """pip install succeeds, then shutil.which finds the new uv."""
+        # First call: not found. After pip install: found.
+        which_results = iter([None, "/home/user/.venv/bin/uv"])
+        monkeypatch.setattr(install.shutil, "which", lambda _: next(which_results))
+
+        called: list[list[str]] = []
+
+        def _fake_run(cmd: list[str], check: bool = False) -> object:
+            called.append(cmd)
+            return type("R", (), {"returncode": 0})()
+
+        monkeypatch.setattr(install.subprocess, "run", _fake_run)
+
+        result = install._ensure_system_uv()
+        assert result == "/home/user/.venv/bin/uv"
+        # Verify we actually attempted the pip install
+        assert any("pip" in c and "install" in c and "uv" in c for c in called)
+
+    def test_auto_install_fails_exits_with_helpful_message(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """pip install raises CalledProcessError → SystemExit with the docs URL."""
+        monkeypatch.setattr(install.shutil, "which", lambda _: None)
+
+        def _fake_run(cmd: list[str], check: bool = False) -> object:
+            raise install.subprocess.CalledProcessError(returncode=1, cmd=cmd)
+
+        monkeypatch.setattr(install.subprocess, "run", _fake_run)
+
+        with pytest.raises(SystemExit) as exc_info:
+            install._ensure_system_uv()
+        msg = str(exc_info.value)
+        assert "pip install uv" in msg
+        assert "astral.sh" in msg
+
+    def test_pip_missing_also_exits_cleanly(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """FileNotFoundError (pip itself absent) is handled the same way."""
+        monkeypatch.setattr(install.shutil, "which", lambda _: None)
+
+        def _fake_run(cmd: list[str], check: bool = False) -> object:
+            raise FileNotFoundError("pip not found")
+
+        monkeypatch.setattr(install.subprocess, "run", _fake_run)
+
+        with pytest.raises(SystemExit) as exc_info:
+            install._ensure_system_uv()
+        assert "astral.sh" in str(exc_info.value)

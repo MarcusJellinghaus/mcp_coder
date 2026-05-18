@@ -413,6 +413,53 @@ def _phase_versions(bin_dir: Path, uv_bin: str, py_v: Path, args: argparse.Names
         )
 
 
+def _ensure_system_uv() -> str:
+    """Locate system uv; auto-install via ``pip install uv`` if missing.
+
+    Order of attempts:
+
+    1. ``shutil.which("uv")`` — already on PATH, nothing to do.
+    2. ``python -m pip install uv`` — try to install it. Lands in the
+       active venv (if any) or the system Python — both of which put
+       the resulting ``uv`` on PATH for the next lookup.
+    3. ``shutil.which("uv")`` again — pick up the newly-installed uv.
+
+    Returns:
+        Absolute path to a working uv binary.
+
+    Raises:
+        SystemExit: When uv is not on PATH and cannot be installed
+            (e.g. ``pip`` itself is missing, or the install succeeded
+            but the binary still cannot be located on PATH).
+    """
+    uv_bin = shutil.which("uv")
+    if uv_bin:
+        return uv_bin
+
+    print("--- uv not on PATH; attempting `python -m pip install uv`")
+    try:
+        subprocess.run(
+            [sys.executable, "-m", "pip", "install", "uv"],
+            check=True,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+        sys.exit(
+            f"install-env requires `uv` on PATH; auto-install via pip failed "
+            f"({exc}). Install manually: `pip install uv` or see "
+            "https://docs.astral.sh/uv/."
+        )
+
+    uv_bin = shutil.which("uv")
+    if uv_bin:
+        return uv_bin
+
+    sys.exit(
+        "install-env installed uv via `pip install uv` but cannot locate it "
+        "on PATH. Activate the venv it was installed into, or install uv "
+        "system-wide and retry."
+    )
+
+
 def main(argv: list[str] | None = None) -> None:
     """Drive the install. See module docstring for usage."""
     args = parse_args(argv)
@@ -423,12 +470,7 @@ def main(argv: list[str] | None = None) -> None:
     # — `uv sync` rewrites the venv to match the lockfile, which removes
     # uv+pip if they're not project dependencies. System uv side-steps
     # that fragility entirely.
-    uv_bin = shutil.which("uv")
-    if uv_bin is None:
-        sys.exit(
-            "install-env requires `uv` on PATH. Install it first: "
-            "`pip install uv` or see https://docs.astral.sh/uv/."
-        )
+    uv_bin = _ensure_system_uv()
 
     # `uv sync` writes its venv to `<cwd>/.venv`, where cwd is forced to
     # `args.local_path` (it needs that dir's pyproject.toml + uv.lock).
