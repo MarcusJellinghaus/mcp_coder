@@ -154,6 +154,7 @@ def run_planning_prompts(
     issue_data: IssueData,
     provider: str,
     mcp_config: Optional[str] = None,
+    settings_file: str | None = None,
     execution_dir: Optional[Path] = None,
 ) -> tuple[bool, WorkflowFailure | None]:
     """Execute three planning prompts with session continuation.
@@ -163,6 +164,7 @@ def run_planning_prompts(
         issue_data: IssueData object with issue details
         provider: LLM provider name (e.g., "claude" or "langchain")
         mcp_config: Optional path to MCP configuration file
+        settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
         execution_dir: Optional working directory for Claude subprocess
 
     Returns:
@@ -219,6 +221,7 @@ def run_planning_prompts(
             env_vars=env_vars,
             execution_dir=str(execution_dir) if execution_dir else None,
             mcp_config=mcp_config,
+            settings_file=settings_file,
             branch_name=branch_name,
         )
 
@@ -300,6 +303,7 @@ def run_planning_prompts(
             env_vars=env_vars,
             execution_dir=str(execution_dir) if execution_dir else None,
             mcp_config=mcp_config,
+            settings_file=settings_file,
             branch_name=branch_name,
         )
 
@@ -368,6 +372,7 @@ def run_planning_prompts(
             env_vars=env_vars,
             execution_dir=str(execution_dir) if execution_dir else None,
             mcp_config=mcp_config,
+            settings_file=settings_file,
             branch_name=branch_name,
         )
 
@@ -461,6 +466,7 @@ def run_create_plan_workflow(
     project_dir: Path,
     provider: str,
     mcp_config: Optional[str] = None,
+    settings_file: str | None = None,
     execution_dir: Optional[Path] = None,
     update_issue_labels: bool = False,
     post_issue_comments: bool = False,
@@ -472,6 +478,7 @@ def run_create_plan_workflow(
         project_dir: Path to the project directory
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional path to MCP configuration file
+        settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
         execution_dir: Optional working directory for Claude subprocess
         update_issue_labels: If True, update GitHub issue labels on success
         post_issue_comments: If True, post failure comments on the issue when
@@ -622,7 +629,12 @@ def run_create_plan_workflow(
     # Step 6: Generate implementation plan
     logger.info("Step 6/7: Generating implementation plan...")
     prompt_success, prompt_failure = run_planning_prompts(
-        project_dir, issue_data, provider, mcp_config, execution_dir
+        project_dir,
+        issue_data,
+        provider,
+        mcp_config,
+        settings_file,
+        execution_dir,
     )
     if not prompt_success:
         logger.error("Planning prompts execution failed")

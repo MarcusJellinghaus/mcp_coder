@@ -220,6 +220,7 @@ def generate_pr_summary(
     project_dir: Path,
     provider: str,
     mcp_config: str | None = None,
+    settings_file: str | None = None,
     execution_dir: Optional[Path] = None,
 ) -> Tuple[str, str]:
     """Generate PR title and body using LLM and git diff.
@@ -228,6 +229,7 @@ def generate_pr_summary(
         project_dir: Path to project directory
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional path to MCP configuration file
+        settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
         execution_dir: Optional working directory for Claude subprocess
 
     Returns:
@@ -285,6 +287,7 @@ def generate_pr_summary(
             env_vars=env_vars,
             execution_dir=str(execution_dir) if execution_dir else None,
             mcp_config=mcp_config,
+            settings_file=settings_file,
             branch_name=branch_name,
         )["text"]
 
@@ -445,6 +448,7 @@ def run_create_pr_workflow(
     project_dir: Path,
     provider: str,
     mcp_config: str | None = None,
+    settings_file: str | None = None,
     execution_dir: Optional[Path] = None,
     update_issue_labels: bool = False,
     post_issue_comments: bool = False,
@@ -455,6 +459,7 @@ def run_create_pr_workflow(
         project_dir: Path to the project directory
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional path to MCP configuration file
+        settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
         execution_dir: Optional working directory for Claude subprocess
         update_issue_labels: If True, update GitHub issue labels on success
         post_issue_comments: If True, post comments on the issue on failure
@@ -505,7 +510,7 @@ def run_create_pr_workflow(
         logger.log(OUTPUT, "Step 2/5: Generating PR summary...")
         try:
             title, body = generate_pr_summary(
-                project_dir, provider, mcp_config, execution_dir
+                project_dir, provider, mcp_config, settings_file, execution_dir
             )
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error(f"Failed to generate PR summary: {e}")

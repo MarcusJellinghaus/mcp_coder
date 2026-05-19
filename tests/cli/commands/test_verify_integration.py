@@ -599,6 +599,7 @@ def test_verify_flags_gpgsign_without_key(
     args = argparse.Namespace(
         check_models=False,
         mcp_config=None,
+        settings=None,
         llm_method=None,
         project_dir=str(repo),
     )

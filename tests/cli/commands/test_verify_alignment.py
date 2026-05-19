@@ -191,6 +191,7 @@ class TestExecuteVerifyAlignmentSmoke:
         args = argparse.Namespace(
             check_models=False,
             mcp_config=None,
+            settings=None,
             llm_method=None,
             project_dir=None,
             list_mcp_tools=False,

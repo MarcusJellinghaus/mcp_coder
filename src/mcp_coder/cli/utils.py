@@ -23,6 +23,7 @@ __all__ = [
     "resolve_issue_interaction_flags",
     "resolve_llm_method",
     "resolve_mcp_config_path",
+    "resolve_claude_settings_path",
     "resolve_execution_dir",
 ]
 
@@ -239,6 +240,100 @@ def resolve_mcp_config_path(
         return resolved_path
 
     logger.debug(f"No .mcp.json found in {base_dir}")
+    return None
+
+
+def resolve_claude_settings_path(
+    settings_file: str | None,
+    project_dir: str | None = None,
+) -> str | None:
+    """Resolve Claude Code settings file path to absolute path.
+
+    Resolution priority:
+        1. CLI argument (``settings_file``)
+        2. Environment variable ``MCP_CODER_CLAUDE_SETTINGS``
+        3. ``[claude] default_settings_path`` from TOML config
+        4. Auto-detect ``<project_dir>/.claude/settings.local.json``
+        5. Auto-detect ``<project_dir>/.claude/settings.json``
+
+    Relative path semantics (uniform across sources 1-3):
+        - Absolute path → used as-is.
+        - Relative path → resolved against ``project_dir`` (or CWD when None).
+
+    Error semantics:
+        - Source 1 (CLI): strict — missing file raises ``FileNotFoundError``.
+        - Sources 2, 3 (env, config): lenient — missing file logs a warning
+          and falls through.
+        - Sources 4, 5 (auto-detect): silent — fall through if absent.
+
+    Args:
+        settings_file: Settings file path (relative or absolute) or None.
+        project_dir: Project directory used as the base for relative paths
+            (defaults to CWD when None).
+
+    Returns:
+        Absolute path as string, or None if no settings file found.
+
+    Raises:
+        FileNotFoundError: If an explicitly provided settings file does not exist.
+    """
+    base_dir = Path(project_dir).resolve() if project_dir else Path.cwd().resolve()
+
+    def _resolve_relative(path_str: str) -> Path:
+        path = Path(path_str)
+        return path.resolve() if path.is_absolute() else (base_dir / path).resolve()
+
+    if settings_file is not None:
+        # Explicit path: resolve relative to base_dir and validate
+        settings_path = _resolve_relative(settings_file)
+        if not settings_path.exists():
+            raise FileNotFoundError(
+                f"Claude settings file not found: {settings_path}\n"
+                f"  Original path: {settings_file}\n"
+                f"  Project directory: {base_dir}\n"
+                f"  Current directory: {Path.cwd()}"
+            )
+        logger.debug(
+            f"Resolved Claude settings path: {settings_file} -> {settings_path}"
+        )
+        return str(settings_path)
+
+    # Check env var MCP_CODER_CLAUDE_SETTINGS
+    if (env_path := os.environ.get("MCP_CODER_CLAUDE_SETTINGS")) is not None:
+        resolved = _resolve_relative(env_path)
+        if resolved.exists():
+            return str(resolved)
+        logger.warning(
+            "MCP_CODER_CLAUDE_SETTINGS=%s: file not found, falling back to auto-detect",
+            env_path,
+        )
+
+    # Check config file [claude] default_settings_path
+    config = get_config_values([("claude", "default_settings_path", "_NO_ENV_VAR_")])
+    cfg_path = config[("claude", "default_settings_path")]
+    if isinstance(cfg_path, str):
+        resolved = _resolve_relative(cfg_path)
+        if resolved.exists():
+            return str(resolved)
+        logger.warning(
+            "[claude] default_settings_path=%s: file not found, falling back to auto-detect",
+            cfg_path,
+        )
+
+    # Auto-detect <project_dir>/.claude/settings.local.json first, then settings.json
+    local_candidate = base_dir / ".claude" / "settings.local.json"
+    if local_candidate.exists():
+        resolved_path = str(local_candidate.resolve())
+        logger.debug(f"Auto-detected Claude settings: {resolved_path}")
+        return resolved_path
+
+    shared_candidate = base_dir / ".claude" / "settings.json"
+    if shared_candidate.exists():
+        resolved_path = str(shared_candidate.resolve())
+        logger.debug(f"Auto-detected Claude settings: {resolved_path}")
+        return resolved_path
+
+    logger.debug(f"No Claude settings file found in {base_dir / '.claude'}")
     return None
 
 

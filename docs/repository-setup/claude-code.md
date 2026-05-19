@@ -167,6 +167,9 @@ Provides workspace file MCP tools (`read_file`, `save_file`, `edit_file`, `list_
 ```bash
 # Use specific MCP config
 mcp-coder prompt "Analyze code" --mcp-config .mcp.json
+
+# Pin both MCP config and Claude Code settings file
+mcp-coder prompt "Analyze code" --mcp-config .mcp.json --settings .claude/settings.local.json
 ```
 
 ## Launcher Scripts
@@ -186,6 +189,37 @@ Two launcher scripts are provided. Both auto-activate the venv and set the MCP e
 - **Principles:** Only allow tools that change project folder (git-tracked) or read-only commands
 - **Security:** No system-wide edits, no file deletion outside project
 - **Reference:** See `.claude/settings.local.json` in this repository
+
+### Pinning the settings file with `--settings`
+
+Claude Code normally discovers `.claude/settings.local.json` (and
+`.claude/settings.json`) from its current working directory. When the Claude
+subprocess runs outside the project root — for example because
+`--execution-dir` differs from `--project-dir`, or the workflow was invoked
+from a parent directory — that discovery picks the wrong file or none at
+all. The symptom is silent: permissions look enabled in your repo but
+Claude prompts for them anyway, or `enabledMcpjsonServers` / `hooks` /
+`model` from your repo's settings are ignored.
+
+mcp-coder commands that drive Claude Code accept `--settings <path>` to
+forward the settings file explicitly via Claude's native `--settings` flag,
+which overrides cwd-based discovery. The file is not limited to
+permissions — it also controls `enabledMcpjsonServers`, `hooks`, `env`,
+`model`, `outputStyle`, and the rest of the Claude Code settings schema.
+
+```bash
+# Force Claude to use the repo's settings file regardless of cwd
+mcp-coder prompt "Analyze code" \
+    --mcp-config .mcp.json \
+    --settings .claude/settings.local.json
+```
+
+With no `--settings` argument, mcp-coder auto-detects
+`<project_dir>/.claude/settings.local.json` then
+`<project_dir>/.claude/settings.json`. Set a default via
+`MCP_CODER_CLAUDE_SETTINGS` or `[claude] default_settings_path` in
+`config.toml`. See [Configuration Guide](../configuration/config.md#claude)
+for the full resolution chain.
 
 ## Architecture Documentation
 

@@ -17,6 +17,7 @@ from ...utils.log_utils import OUTPUT
 from ...utils.tui_preparation import TuiChecker, TuiPreflightAbort
 from ..utils import (
     parse_llm_method_from_args,
+    resolve_claude_settings_path,
     resolve_execution_dir,
     resolve_llm_method,
     resolve_mcp_config_path,
@@ -74,6 +75,9 @@ def execute_icoder(args: argparse.Namespace) -> int:
         # Resolve MCP config
         mcp_config = resolve_mcp_config_path(
             args.mcp_config, project_dir=args.project_dir
+        )
+        settings_file = resolve_claude_settings_path(
+            args.settings, project_dir=args.project_dir
         )
 
         # Create MCPManager for persistent MCP connections (langchain only)
@@ -140,6 +144,7 @@ def execute_icoder(args: argparse.Namespace) -> int:
             session_id=session_id,
             execution_dir=str(execution_dir),
             mcp_config=mcp_config,
+            settings_file=settings_file,
             env_vars=env_vars,
             timeout=args.timeout,
             mcp_manager=mcp_manager,

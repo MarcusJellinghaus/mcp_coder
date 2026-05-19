@@ -131,6 +131,38 @@ class TestClaudeCodeCliBackwardCompatibility:
             assert options.timeout_seconds == 60
 
     @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.get_stream_log_path")
+    def test_ask_claude_code_cli_passes_settings_file(
+        self,
+        mock_get_path: MagicMock,
+        mock_execute: MagicMock,
+        mock_find: MagicMock,
+        make_stream_json_output: StreamJsonFactory,
+    ) -> None:
+        """Verify ask_claude_code_cli forwards settings_file to build_cli_command."""
+        mock_find.return_value = "claude"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_get_path.return_value = Path(tmpdir) / "test.ndjson"
+            mock_result = CommandResult(
+                return_code=0,
+                stdout=make_stream_json_output("ok", "sess-1"),
+                stderr="",
+                timed_out=False,
+            )
+            mock_execute.return_value = mock_result
+
+            settings_path = "C:/path/.claude/settings.local.json"
+            ask_claude_code_cli("Test question", settings_file=settings_path)
+
+            call_args = mock_execute.call_args
+            command = call_args[0][0]
+            assert "--settings" in command
+            assert settings_path in command
+            idx = command.index("--settings")
+            assert command[idx + 1] == settings_path
+
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
     def test_ask_claude_code_cli_file_not_found(self, mock_find: MagicMock) -> None:
         """Test Claude CLI not found error."""
         mock_find.side_effect = FileNotFoundError(
@@ -371,6 +403,22 @@ class TestPureFunctions:
                 append_system_prompt="append",
                 system_prompt_replace="replace",
             )
+
+    def test_build_cli_command_with_settings_file(self) -> None:
+        """Test --settings flag is present with the provided settings path."""
+        settings_path = "C:/path/.claude/settings.local.json"
+        cmd = build_cli_command(None, "claude", settings_file=settings_path)
+
+        assert "--settings" in cmd
+        assert settings_path in cmd
+        idx = cmd.index("--settings")
+        assert cmd[idx + 1] == settings_path
+
+    def test_build_cli_command_without_settings_file(self) -> None:
+        """Test --settings flag is NOT present when settings_file is omitted."""
+        cmd = build_cli_command(None, "claude")
+
+        assert "--settings" not in cmd
 
 
 class TestFormatStreamJsonInput:
@@ -701,6 +749,37 @@ class TestAskClaudeCodeCliStream:
             list(ask_claude_code_cli_stream(""))
         with pytest.raises(ValueError, match="empty"):
             list(ask_claude_code_cli_stream("   "))
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path"
+    )
+    def test_ask_claude_stream_passes_settings_file(
+        self,
+        mock_get_path: MagicMock,
+        mock_stream: MagicMock,
+        mock_find: MagicMock,
+    ) -> None:
+        """Verify ask_claude_code_cli_stream forwards settings_file to build_cli_command."""
+        mock_find.return_value = "claude"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mock_get_path.return_value = Path(tmpdir) / "test.ndjson"
+            mock_stream.return_value = _make_stream_gen(
+                [json.dumps({"type": "result", "session_id": "s1"})]
+            )
+
+            settings_path = "C:/path/.claude/settings.local.json"
+            list(ask_claude_code_cli_stream("Hello", settings_file=settings_path))
+
+            call_args = mock_stream.call_args
+            command = call_args[0][0]
+            assert "--settings" in command
+            assert settings_path in command
+            idx = command.index("--settings")
+            assert command[idx + 1] == settings_path
 
     @patch(
         "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"

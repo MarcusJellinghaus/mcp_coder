@@ -237,6 +237,7 @@ def check_and_fix_mypy(
     provider: str,
     env_vars: dict[str, str] | None = None,
     mcp_config: str | None = None,
+    settings_file: str | None = None,
     execution_dir: Optional[Path] = None,
 ) -> bool:
     """Run mypy check and attempt fixes if issues found. Returns True if clean.
@@ -247,6 +248,7 @@ def check_and_fix_mypy(
         provider: LLM provider (e.g., 'claude')
         env_vars: Optional environment variables for the subprocess
         mcp_config: Optional path to MCP configuration file
+        settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
         execution_dir: Optional working directory for Claude subprocess
 
     Returns:
@@ -318,6 +320,7 @@ def check_and_fix_mypy(
                         str(execution_dir) if execution_dir else str(project_dir)
                     ),
                     mcp_config=mcp_config,
+                    settings_file=settings_file,
                     branch_name=branch_name,
                 )
                 fix_response = llm_response["text"]
@@ -392,6 +395,7 @@ def process_single_task(
     project_dir: Path,
     provider: str,
     mcp_config: str | None = None,
+    settings_file: str | None = None,
     execution_dir: Optional[Path] = None,
     attempt: int = 1,
     format_code: bool = False,
@@ -403,6 +407,7 @@ def process_single_task(
         project_dir: Path to the project directory
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional path to MCP configuration file
+        settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
         execution_dir: Optional working directory for Claude subprocess
         attempt: 1-based attempt number; appends retry reminder when > 1
         format_code: If True, run code formatters after implementation
@@ -465,6 +470,7 @@ Please implement this task step by step."""
             env_vars=env_vars,
             execution_dir=cwd,
             mcp_config=mcp_config,
+            settings_file=settings_file,
             branch_name=branch_name,
         )
         response = llm_response["text"]
@@ -519,7 +525,13 @@ Please implement this task step by step."""
     # Step 7: Run mypy check and fixes (each fix will be saved separately)
     if check_type_hints and RUN_MYPY_AFTER_EACH_TASK:
         if not check_and_fix_mypy(
-            project_dir, step_num, provider, env_vars, mcp_config, execution_dir
+            project_dir,
+            step_num,
+            provider,
+            env_vars,
+            mcp_config,
+            settings_file,
+            execution_dir,
         ):
             logger.warning(
                 "Mypy check failed or found unresolved issues - continuing anyway"
@@ -550,6 +562,7 @@ def process_task_with_retry(
     project_dir: Path,
     provider: str,
     mcp_config: str | None = None,
+    settings_file: str | None = None,
     execution_dir: Optional[Path] = None,
     format_code: bool = False,
     check_type_hints: bool = False,
@@ -558,6 +571,15 @@ def process_task_with_retry(
 
     Calls process_single_task up to MAX_NO_CHANGE_RETRIES times.
     Retries only on "no_changes" reason. Timeouts and errors propagate immediately.
+
+    Args:
+        project_dir: Path to the project directory
+        provider: LLM provider (e.g., 'claude')
+        mcp_config: Optional path to MCP configuration file
+        settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
+        execution_dir: Optional working directory for Claude subprocess
+        format_code: If True, run code formatters after implementation
+        check_type_hints: If True, run mypy type checking after implementation
 
     Returns:
         Tuple of (success, reason) where reason may be:
@@ -569,6 +591,7 @@ def process_task_with_retry(
             project_dir,
             provider,
             mcp_config=mcp_config,
+            settings_file=settings_file,
             execution_dir=execution_dir,
             attempt=attempt,
             format_code=format_code,

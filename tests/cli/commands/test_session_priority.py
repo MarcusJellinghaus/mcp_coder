@@ -49,6 +49,7 @@ class TestSessionPriority:
             continue_session=False,
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
 
@@ -85,6 +86,7 @@ class TestSessionPriority:
             continue_session=False,
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
 
@@ -127,6 +129,7 @@ class TestSessionPriority:
             continue_session=True,
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
 
@@ -166,6 +169,7 @@ class TestSessionPriority:
             continue_session=False,
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
 
@@ -210,6 +214,7 @@ class TestSessionPriority:
             continue_session=True,
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
 
@@ -245,6 +250,7 @@ class TestSessionPriority:
             continue_session=True,
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
 

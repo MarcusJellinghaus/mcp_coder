@@ -13,6 +13,7 @@ from ...workflows.utils import resolve_project_dir
 from ..utils import (
     log_command_startup,
     parse_llm_method_from_args,
+    resolve_claude_settings_path,
     resolve_execution_dir,
     resolve_issue_interaction_flags,
     resolve_llm_method,
@@ -56,6 +57,9 @@ def execute_create_plan(args: argparse.Namespace) -> int:
         mcp_config = resolve_mcp_config_path(
             args.mcp_config, project_dir=args.project_dir
         )
+        settings_file = resolve_claude_settings_path(
+            args.settings, project_dir=args.project_dir
+        )
 
         # Resolve issue interaction flags (CLI > config > default)
         update_issue_labels, post_issue_comments = resolve_issue_interaction_flags(
@@ -71,6 +75,7 @@ def execute_create_plan(args: argparse.Namespace) -> int:
             project_dir,
             provider,
             mcp_config,
+            settings_file,
             execution_dir,
             update_issue_labels,
             post_issue_comments,

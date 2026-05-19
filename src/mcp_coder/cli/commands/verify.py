@@ -28,7 +28,11 @@ from ...prompts.prompt_loader import get_project_prompt_path, is_claude_md, load
 from ...utils.mcp_verification import ClaudeMCPStatus, parse_claude_mcp_list
 from ...utils.pyproject_config import get_implement_config
 from ...utils.user_config import verify_config
-from ..utils import resolve_llm_method, resolve_mcp_config_path
+from ..utils import (
+    resolve_claude_settings_path,
+    resolve_llm_method,
+    resolve_mcp_config_path,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -473,6 +477,7 @@ def _run_mcp_edit_smoke_test(
     execution_dir: str,
     symbols: dict[str, str],
     env_vars: dict[str, str] | None = None,
+    settings_file: str | None = None,
 ) -> str:
     """Run MCP edit smoke test.
 
@@ -484,6 +489,7 @@ def _run_mcp_edit_smoke_test(
         symbols: Dict with 'success', 'failure', 'warning' keys.
         env_vars: Environment variables passed to the LLM subprocess so
             ``${MCP_CODER_*}`` placeholders in ``.mcp.json`` resolve.
+        settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
 
     Returns:
         Formatted output line for the smoke test result.
@@ -497,6 +503,7 @@ def _run_mcp_edit_smoke_test(
             provider=provider,
             timeout=60,
             mcp_config=mcp_config,
+            settings_file=settings_file,
             execution_dir=execution_dir,
             env_vars=env_vars,
         )
@@ -755,6 +762,9 @@ def execute_verify(args: argparse.Namespace) -> int:
     mcp_config_resolved = resolve_mcp_config_path(
         args.mcp_config, project_dir=args.project_dir
     )
+    settings_file = resolve_claude_settings_path(
+        args.settings, project_dir=args.project_dir
+    )
 
     if active_provider == "langchain":
         check_models = getattr(args, "check_models", False)
@@ -896,6 +906,7 @@ def execute_verify(args: argparse.Namespace) -> int:
             str(project_dir),
             symbols,
             env_vars=env_vars,
+            settings_file=settings_file,
         )
         print(smoke_line)
 
@@ -908,6 +919,7 @@ def execute_verify(args: argparse.Namespace) -> int:
             provider=active_provider,
             timeout=30,
             mcp_config=mcp_config_resolved,
+            settings_file=settings_file,
             execution_dir=str(project_dir),
             env_vars=env_vars,
         )

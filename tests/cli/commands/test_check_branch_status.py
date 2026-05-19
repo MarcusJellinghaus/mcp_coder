@@ -198,6 +198,7 @@ class TestExecuteCheckBranchStatus:
             llm_truncate=False,
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             execution_dir=None,
         )
 
@@ -211,7 +212,8 @@ class TestExecuteCheckBranchStatus:
             failed_ci_report,
             "claude",
             None,
-            exec_dir,
+            settings_file=None,
+            execution_dir=exec_dir,
             fix_attempts=1,
             ci_timeout=0,
             llm_truncate=False,
@@ -255,6 +257,7 @@ class TestExecuteCheckBranchStatus:
             llm_truncate=False,
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             execution_dir=None,
         )
 

@@ -150,6 +150,7 @@ class TestConfigSchema:
             "github",
             "jenkins",
             "mcp",
+            "claude",
             "llm",
             "llm.langchain",
             "coordinator",

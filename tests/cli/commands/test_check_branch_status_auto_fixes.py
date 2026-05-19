@@ -81,12 +81,12 @@ class TestRunAutoFixes:
         mock_check_ci.return_value = True  # Success
 
         result = _run_auto_fixes(
-            project_dir, failed_ci_report, "claude", None, exec_dir
+            project_dir, failed_ci_report, "claude", None, execution_dir=exec_dir
         )
 
         assert result is True
         mock_check_ci.assert_called_once_with(
-            project_dir, "feature/test-branch", "claude", None, exec_dir
+            project_dir, "feature/test-branch", "claude", None, None, exec_dir
         )
 
     @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
@@ -107,7 +107,7 @@ class TestRunAutoFixes:
         mock_check_ci.return_value = False  # Failure
 
         result = _run_auto_fixes(
-            project_dir, failed_ci_report, "claude", None, exec_dir
+            project_dir, failed_ci_report, "claude", None, execution_dir=exec_dir
         )
 
         assert result is False
@@ -143,7 +143,7 @@ class TestRunAutoFixes:
         mock_check_ci.side_effect = Exception("Unexpected CI error")
 
         result = _run_auto_fixes(
-            project_dir, failed_ci_report, "claude", None, exec_dir
+            project_dir, failed_ci_report, "claude", None, execution_dir=exec_dir
         )
 
         assert result is False

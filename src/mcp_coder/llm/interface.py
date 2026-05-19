@@ -78,6 +78,7 @@ def prompt_llm(
     env_vars: dict[str, str] | None = None,
     execution_dir: str | None = None,
     mcp_config: str | None = None,
+    settings_file: str | None = None,
     branch_name: str | None = None,
     project_dir: str | None = None,
 ) -> LLMResponseDict:
@@ -98,6 +99,10 @@ def prompt_llm(
             .mcp.json (and therefore which MCP servers to load) relative to this
             directory. Defaults to the caller's current working directory.
         mcp_config: Optional path to MCP configuration file
+        settings_file: Optional path to Claude Code settings file (.claude/settings.local.json).
+            Forwarded to Claude via --settings when the provider is "claude", overriding
+            matching keys in Claude's cwd-discovered settings. None means Claude uses its
+            cwd-based discovery as today. Ignored for non-Claude providers.
         branch_name: Optional git branch name to include in log filename
         project_dir: Optional project directory for loading system/project prompts.
             When provided, prompts are loaded via prompt_loader and passed to providers.
@@ -254,6 +259,7 @@ def prompt_llm(
                     env_vars=env_vars,
                     cwd=execution_dir,
                     mcp_config=mcp_config,
+                    settings_file=settings_file,
                     branch_name=branch_name,
                     logs_dir=logs_dir,
                     append_system_prompt=claude_append,
@@ -285,6 +291,7 @@ def prompt_llm_stream(
     env_vars: dict[str, str] | None = None,
     execution_dir: str | None = None,
     mcp_config: str | None = None,
+    settings_file: str | None = None,
     branch_name: str | None = None,
     tools: list[Any] | None = None,
     project_dir: str | None = None,
@@ -296,6 +303,22 @@ def prompt_llm_stream(
 
     Does NOT wrap in mlflow_conversation context — the caller should handle
     mlflow logging after assembling the final response.
+
+    Args:
+        question: The question to ask the LLM.
+        provider: The LLM provider to use ("claude", "langchain", or "copilot").
+        session_id: Optional session ID to resume previous conversation.
+        timeout: Timeout in seconds for the request.
+        env_vars: Optional environment variables to pass to the LLM subprocess.
+        execution_dir: Working directory for the LLM subprocess (see prompt_llm).
+        mcp_config: Optional path to MCP configuration file.
+        settings_file: Optional path to Claude Code settings file (.claude/settings.local.json).
+            Forwarded to Claude via --settings when the provider is "claude", overriding
+            matching keys in Claude's cwd-discovered settings. None means Claude uses its
+            cwd-based discovery as today. Ignored for non-Claude providers.
+        branch_name: Optional git branch name to include in log filename.
+        tools: Optional list of langchain tools (langchain provider only).
+        project_dir: Optional project directory for loading system/project prompts.
 
     Yields:
         StreamEvent dicts from the underlying provider.
@@ -394,6 +417,7 @@ def prompt_llm_stream(
             env_vars=env_vars,
             cwd=execution_dir,
             mcp_config=mcp_config,
+            settings_file=settings_file,
             branch_name=branch_name,
             logs_dir=logs_dir,
             append_system_prompt=claude_append,

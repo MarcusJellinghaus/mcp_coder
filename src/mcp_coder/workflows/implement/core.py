@@ -174,6 +174,7 @@ def prepare_task_tracker(
     project_dir: Path,
     provider: str,
     mcp_config: Optional[str] = None,
+    settings_file: str | None = None,
     execution_dir: Optional[Path] = None,
 ) -> bool:
     """Prepare task tracker by populating it if it has no implementation steps.
@@ -182,6 +183,7 @@ def prepare_task_tracker(
         project_dir: Path to the project directory
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional path to MCP configuration file
+        settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
         execution_dir: Optional working directory for Claude subprocess.
             Default: None (uses caller's working directory)
 
@@ -227,6 +229,7 @@ def prepare_task_tracker(
             env_vars=env_vars,
             execution_dir=str(execution_dir) if execution_dir else None,
             mcp_config=mcp_config,
+            settings_file=settings_file,
             branch_name=branch_name,
         )
         response = llm_response["text"]
@@ -368,6 +371,7 @@ def run_finalisation(
     project_dir: Path,
     provider: str,
     mcp_config: Optional[str] = None,
+    settings_file: str | None = None,
     execution_dir: Optional[Path] = None,
 ) -> bool:
     """Run implementation finalisation to verify and complete remaining tasks.
@@ -376,6 +380,7 @@ def run_finalisation(
         project_dir: Path to the project directory
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional path to MCP configuration file
+        settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
         execution_dir: Optional working directory for Claude subprocess
 
     Returns:
@@ -415,6 +420,7 @@ def run_finalisation(
         env_vars=env_vars,
         execution_dir=str(execution_dir) if execution_dir else None,
         mcp_config=mcp_config,
+        settings_file=settings_file,
         branch_name=branch_name,
     )
     response = llm_response["text"]
@@ -495,6 +501,7 @@ def run_implement_workflow(
     project_dir: Path,
     provider: str,
     mcp_config: Optional[str] = None,
+    settings_file: str | None = None,
     execution_dir: Optional[Path] = None,
     update_issue_labels: bool = False,
     post_issue_comments: bool = False,
@@ -505,6 +512,7 @@ def run_implement_workflow(
         project_dir: Path to the project directory
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional path to MCP configuration file
+        settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
         execution_dir: Optional working directory for Claude subprocess
         update_issue_labels: If True, update GitHub issue labels on success/failure
         post_issue_comments: If True, post comments on the issue on failure
@@ -558,7 +566,9 @@ def run_implement_workflow(
         implement_config = get_implement_config(project_dir)
 
         # Step 2: Prepare task tracker if needed
-        if not prepare_task_tracker(project_dir, provider, mcp_config, execution_dir):
+        if not prepare_task_tracker(
+            project_dir, provider, mcp_config, settings_file, execution_dir
+        ):
             _handle_workflow_failure(
                 WorkflowFailure(
                     category=FailureCategory.TASK_TRACKER_PREP_FAILED,
@@ -593,6 +603,7 @@ def run_implement_workflow(
                 project_dir,
                 provider,
                 mcp_config,
+                settings_file,
                 execution_dir,
                 format_code=implement_config.format_code,
                 check_type_hints=implement_config.check_type_hints,
@@ -682,6 +693,7 @@ def run_implement_workflow(
                 provider,
                 env_vars,
                 mcp_config,
+                settings_file,
                 execution_dir=execution_dir,
             ):
                 logger.warning(
@@ -759,6 +771,7 @@ def run_implement_workflow(
             project_dir,
             provider,
             mcp_config,
+            settings_file,
             execution_dir,
         )
         if not finalisation_success:
@@ -773,6 +786,7 @@ def run_implement_workflow(
                 branch=current_branch,
                 provider=provider,
                 mcp_config=mcp_config,
+                settings_file=settings_file,
                 execution_dir=execution_dir,
             )
             if not ci_success:

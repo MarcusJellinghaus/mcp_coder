@@ -44,6 +44,9 @@ _CONFIG_SCHEMA: dict[str, dict[str, FieldDef]] = {
     "mcp": {
         "default_config_path": FieldDef(str, env_var="MCP_CODER_MCP_CONFIG"),
     },
+    "claude": {
+        "default_settings_path": FieldDef(str, env_var="MCP_CODER_CLAUDE_SETTINGS"),
+    },
     "llm": {
         "default_provider": FieldDef(str),
     },

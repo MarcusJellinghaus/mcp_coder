@@ -20,6 +20,7 @@ class TestExecuteCreatePlan:
         args.project_dir = "/test/project"
         args.llm_method = "claude"
         args.mcp_config = None  # Set to None instead of leaving as MagicMock
+        args.settings = None
         args.execution_dir = None  # Add execution_dir attribute
         args.update_issue_labels = None  # Add update_issue_labels attribute
         args.post_issue_comments = None  # Add post_issue_comments attribute
@@ -67,6 +68,7 @@ class TestExecuteCreatePlan:
             test_project_dir,
             "claude",
             mock_args.mcp_config,
+            mock_args.settings,
             test_execution_dir,
             False,
             False,
@@ -173,6 +175,7 @@ class TestCreatePlanExecutionDir:
         args.execution_dir = None  # No explicit execution_dir
         args.llm_method = "claude"
         args.mcp_config = None
+        args.settings = None
         args.update_issue_labels = None
         args.post_issue_comments = None
 
@@ -181,7 +184,7 @@ class TestCreatePlanExecutionDir:
         assert result == 0
         mock_resolve_exec.assert_called_once_with(None)
         mock_run_workflow.assert_called_once_with(
-            123, project_dir, "claude", None, str(execution_dir), False, False
+            123, project_dir, "claude", None, None, str(execution_dir), False, False
         )
 
     @patch("mcp_coder.cli.commands.create_plan.resolve_issue_interaction_flags")
@@ -218,6 +221,7 @@ class TestCreatePlanExecutionDir:
         args.execution_dir = str(execution_dir)
         args.llm_method = "claude"
         args.mcp_config = None
+        args.settings = None
         args.update_issue_labels = None
         args.post_issue_comments = None
 
@@ -226,7 +230,7 @@ class TestCreatePlanExecutionDir:
         assert result == 0
         mock_resolve_exec.assert_called_once_with(str(execution_dir))
         mock_run_workflow.assert_called_once_with(
-            123, project_dir, "claude", None, str(execution_dir), False, False
+            123, project_dir, "claude", None, None, str(execution_dir), False, False
         )
 
     @patch("mcp_coder.cli.commands.create_plan.resolve_execution_dir")

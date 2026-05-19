@@ -107,6 +107,9 @@ mcp-coder gh-tool define-labels --dry-run
 **3. Test MCP integration:**
 ```bash
 mcp-coder prompt "List files in src/" --mcp-config .mcp.json
+
+# Optionally pin the Claude Code settings file too
+mcp-coder prompt "List files in src/" --mcp-config .mcp.json --settings .claude/settings.local.json
 ```
 
 ## Related Documentation

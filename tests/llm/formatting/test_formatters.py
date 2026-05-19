@@ -52,6 +52,7 @@ class TestTextStreamFormat:
             prompt="How do I create a file?",
             output_format="text",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
 
@@ -106,6 +107,7 @@ class TestNdjsonStreamFormat:
             prompt="Read file",
             output_format="ndjson",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
 
@@ -155,6 +157,7 @@ class TestJsonRawStreamFormat:
             prompt="Test",
             output_format="json-raw",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
 
@@ -197,6 +200,7 @@ class TestStreamFormatComparison:
             prompt="Test",
             output_format="text",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
         execute_prompt(args_text)
@@ -208,6 +212,7 @@ class TestStreamFormatComparison:
             prompt="Test",
             output_format="ndjson",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
         execute_prompt(args_ndjson)
@@ -246,6 +251,7 @@ class TestStreamFormatComparison:
             prompt="Test",
             output_format="ndjson",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
         execute_prompt(args_ndjson)
@@ -257,6 +263,7 @@ class TestStreamFormatComparison:
             prompt="Test",
             output_format="json-raw",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
         execute_prompt(args_raw)

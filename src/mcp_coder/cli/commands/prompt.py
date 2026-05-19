@@ -20,6 +20,7 @@ from ...utils.git_utils import get_branch_name_for_logging
 from ...utils.log_utils import OUTPUT
 from ..utils import (
     parse_llm_method_from_args,
+    resolve_claude_settings_path,
     resolve_execution_dir,
     resolve_llm_method,
     resolve_mcp_config_path,
@@ -133,6 +134,9 @@ def execute_prompt(
         mcp_config = resolve_mcp_config_path(
             args.mcp_config, project_dir=args.project_dir
         )
+        settings_file = resolve_claude_settings_path(
+            args.settings, project_dir=args.project_dir
+        )
 
         # Streaming formats use prompt_llm_stream()
         if output_format in ("rendered", "text", "ndjson", "json-raw"):
@@ -146,6 +150,7 @@ def execute_prompt(
                 env_vars=env_vars,
                 execution_dir=str(execution_dir),
                 mcp_config=mcp_config,
+                settings_file=settings_file,
                 branch_name=branch_name,
                 project_dir=prompt_project_dir,
             ):
@@ -185,6 +190,7 @@ def execute_prompt(
                 env_vars=env_vars,
                 execution_dir=str(execution_dir),
                 mcp_config=mcp_config,
+                settings_file=settings_file,
                 project_dir=prompt_project_dir,
             )
 
@@ -207,6 +213,7 @@ def execute_prompt(
                 env_vars=env_vars,
                 execution_dir=str(execution_dir),
                 mcp_config=mcp_config,
+                settings_file=settings_file,
                 branch_name=branch_name,
                 project_dir=prompt_project_dir,
             )

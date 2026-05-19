@@ -89,6 +89,32 @@ def mock_labels_config() -> Dict[str, Any]:
 
 
 @pytest.fixture(autouse=True)
+def _mock_resolve_claude_settings_path() -> Generator[None, None, None]:
+    """Auto-mock resolve_claude_settings_path to return None across CLI command modules.
+
+    Prevents tests from auto-detecting the real project's .claude/settings.local.json
+    when args.settings is None. Tests can override by patching the function explicitly.
+    """
+    modules = [
+        "mcp_coder.cli.commands.check_branch_status",
+        "mcp_coder.cli.commands.create_plan",
+        "mcp_coder.cli.commands.create_pr",
+        "mcp_coder.cli.commands.icoder",
+        "mcp_coder.cli.commands.implement",
+        "mcp_coder.cli.commands.prompt",
+        "mcp_coder.cli.commands.verify",
+    ]
+    from contextlib import ExitStack
+
+    with ExitStack() as stack:
+        for mod in modules:
+            stack.enter_context(
+                patch(f"{mod}.resolve_claude_settings_path", return_value=None)
+            )
+        yield
+
+
+@pytest.fixture(autouse=True)
 def _mock_verify_config() -> Generator[MagicMock, None, None]:
     """Auto-mock verify_config to return a default OK result.
 

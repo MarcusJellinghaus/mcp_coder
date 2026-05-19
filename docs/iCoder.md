@@ -18,6 +18,7 @@ Common options:
 mcp-coder icoder --project-dir /path/to/project
 mcp-coder icoder --llm-method claude-code-cli
 mcp-coder icoder --mcp-config .mcp.json
+mcp-coder icoder --mcp-config .mcp.json --settings .claude/settings.local.json
 ```
 
 On startup iCoder:

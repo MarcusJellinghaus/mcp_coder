@@ -33,6 +33,7 @@ def _make_base_args(**overrides: object) -> argparse.Namespace:
         llm_truncate=False,
         llm_method="claude",
         mcp_config=None,
+        settings=None,
         execution_dir=None,
         wait_for_pr=False,
         pr_timeout=600,

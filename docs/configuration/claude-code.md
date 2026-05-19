@@ -120,6 +120,13 @@ This file configures Claude Code permissions and MCP server settings for your lo
 
 **See mcp-coder's own [settings.local.json](https://github.com/MarcusJellinghaus/mcp_coder/blob/main/.claude/settings.local.json) for a reference.**
 
+> **Pinning the settings file:** mcp-coder commands that drive Claude Code
+> accept `--settings <path>` to forward this file explicitly via Claude's
+> native `--settings` flag, overriding Claude's cwd-based discovery. Useful
+> when `--execution-dir` differs from `--project-dir`. See
+> [Repository Setup — Pinning the settings file](../repository-setup/claude-code.md#pinning-the-settings-file-with---settings)
+> and [Configuration Guide](config.md#claude).
+
 **Key sections:**
 
 ```json

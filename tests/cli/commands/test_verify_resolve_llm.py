@@ -17,6 +17,7 @@ def _make_args(**kwargs: Any) -> argparse.Namespace:
     defaults: dict[str, Any] = {
         "check_models": False,
         "mcp_config": None,
+        "settings": None,
         "llm_method": None,
         "project_dir": None,
     }
