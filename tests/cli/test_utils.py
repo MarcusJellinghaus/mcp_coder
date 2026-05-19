@@ -269,9 +269,15 @@ class TestResolveMcpConfigPath:
         assert result == str(mcp_json.resolve())
 
     def test_resolve_mcp_config_explicit_not_found(self) -> None:
-        """Test that explicit path to non-existent file raises FileNotFoundError."""
-        with pytest.raises(FileNotFoundError):
+        """Test that explicit path to non-existent file raises FileNotFoundError.
+
+        The error message must include both the project directory and the
+        current directory to aid debugging path-resolution issues.
+        """
+        with pytest.raises(FileNotFoundError) as excinfo:
             resolve_mcp_config_path("/nonexistent/path/config.json")
+        assert "Project directory:" in str(excinfo.value)
+        assert "Current directory:" in str(excinfo.value)
 
     def test_resolve_mcp_config_env_var(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -481,8 +487,7 @@ class TestResolveMcpConfigPath:
     ) -> None:
         """Relative [mcp] default_config_path falls back to CWD when project_dir is None."""
         monkeypatch.delenv("MCP_CODER_MCP_CONFIG", raising=False)
-        # Put a sentinel .mcp.json in a sibling dir to ensure autodetect doesn't
-        # accidentally pick it up — the file we want is in CWD.
+        # Use a non-.mcp.json filename so autodetect can't accidentally pick it up.
         mcp_json = tmp_path / "elsewhere.json"
         mcp_json.write_text("{}")
         mock_config.return_value = {("mcp", "default_config_path"): "elsewhere.json"}

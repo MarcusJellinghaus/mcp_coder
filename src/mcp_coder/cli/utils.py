@@ -197,7 +197,7 @@ def resolve_mcp_config_path(
         return path.resolve() if path.is_absolute() else (base_dir / path).resolve()
 
     if mcp_config is not None:
-        # Explicit path: resolve and validate
+        # Explicit path: resolve relative to base_dir and validate
         mcp_config_path = _resolve_relative(mcp_config)
         if not mcp_config_path.exists():
             raise FileNotFoundError(
