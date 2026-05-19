@@ -596,6 +596,18 @@ class TestResolveClaudeSettingsPath:
         result = resolve_claude_settings_path(None, project_dir=str(project_dir))
         assert result == str(settings.resolve())
 
+    def test_relative_env_falls_back_to_cwd_when_no_project_dir(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Relative MCP_CODER_CLAUDE_SETTINGS falls back to CWD when project_dir is None."""
+        settings = tmp_path / "settings.json"
+        settings.write_text("{}")
+        monkeypatch.setenv("MCP_CODER_CLAUDE_SETTINGS", "settings.json")
+        monkeypatch.chdir(tmp_path)
+
+        result = resolve_claude_settings_path(None)
+        assert result == str(settings.resolve())
+
     def test_resolve_claude_settings_env_missing_file_falls_back(
         self,
         tmp_path: Path,
@@ -655,6 +667,26 @@ class TestResolveClaudeSettingsPath:
         monkeypatch.chdir(cwd)
 
         result = resolve_claude_settings_path(None, project_dir=str(project_dir))
+        assert result == str(settings.resolve())
+
+    @patch("mcp_coder.cli.utils.get_config_values")
+    def test_relative_config_falls_back_to_cwd_when_no_project_dir(
+        self,
+        mock_config: MagicMock,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Relative [claude] default_settings_path falls back to CWD when project_dir is None."""
+        monkeypatch.delenv("MCP_CODER_CLAUDE_SETTINGS", raising=False)
+        # Use a non-default filename so autodetect can't accidentally pick it up.
+        settings = tmp_path / "elsewhere.json"
+        settings.write_text("{}")
+        mock_config.return_value = {
+            ("claude", "default_settings_path"): "elsewhere.json"
+        }
+        monkeypatch.chdir(tmp_path)
+
+        result = resolve_claude_settings_path(None)
         assert result == str(settings.resolve())
 
     @patch("mcp_coder.cli.utils.get_config_values")
@@ -738,6 +770,40 @@ class TestResolveClaudeSettingsPath:
 
         result = resolve_claude_settings_path(None, project_dir=str(tmp_path))
         assert result is None
+
+    def test_resolve_claude_settings_autodetect_no_project_dir(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Auto-detect falls back to CWD/.claude/ when project_dir is None.
+
+        Verifies both that settings.local.json is found at <CWD>/.claude/
+        and that settings.json is the fallback when no local variant exists.
+        """
+        monkeypatch.delenv("MCP_CODER_CLAUDE_SETTINGS", raising=False)
+
+        # Scenario 1: settings.local.json at <CWD>/.claude/ is picked up.
+        local_root = tmp_path / "with_local"
+        local_root.mkdir()
+        local_claude = local_root / ".claude"
+        local_claude.mkdir()
+        local_settings = local_claude / "settings.local.json"
+        local_settings.write_text("{}")
+        monkeypatch.chdir(local_root)
+
+        result = resolve_claude_settings_path(None)
+        assert result == str(local_settings.resolve())
+
+        # Scenario 2: only settings.json exists -- falls back to it.
+        shared_root = tmp_path / "shared_only"
+        shared_root.mkdir()
+        shared_claude = shared_root / ".claude"
+        shared_claude.mkdir()
+        shared_settings = shared_claude / "settings.json"
+        shared_settings.write_text("{}")
+        monkeypatch.chdir(shared_root)
+
+        result = resolve_claude_settings_path(None)
+        assert result == str(shared_settings.resolve())
 
     def test_resolve_claude_settings_cli_overrides_env(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
