@@ -40,3 +40,28 @@ Note: `pr_info/` was empty at review start — no formal plan/summary/Decisions/
 **Verification:** format clean (466 files unchanged), full pytest suite 3994 passed / 2 pre-existing skipped, pylint clean, mypy clean.
 
 **Status:** committed (see next git log entry on this branch)
+
+## Round 2 — 2026-05-19
+
+**Findings:** zero new accepted items. Re-flags of round 1's skipped items (falsy `project_dir` check, nested closure), cosmetic notes on non-ASCII `→` arrows and test-name conventions, and a comment on the review log file itself being on the branch (expected per CLAUDE knowledge base — `pr_info/` is process scratch).
+
+**Decisions:** all Skip. No code changes.
+
+**Status:** loop terminates — round produced zero code changes.
+
+## Final Status
+
+**Spec compliance (7 requirements):** all PASS. Req #7 partial in the literal "tighten 2 autodetect tests" reading, but defensible — the second autodetect test exercises `project_dir=None → CWD`, where distinct CWD/project_dir is structurally impossible. The 8 new tests cover that branch explicitly.
+
+**Quality checks:**
+- pytest unit suite: 3994 passed, 2 pre-existing skipped
+- pylint: clean
+- mypy (strict): clean
+- ruff: clean
+- vulture: no output
+- lint-imports: 23 contracts kept, 0 broken
+
+**Commits added on this branch during review:**
+- `392010a5` test(cli): pin error message content and clarify comments
+
+**Verdict:** ready to merge.
