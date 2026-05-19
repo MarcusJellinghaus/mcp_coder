@@ -225,12 +225,17 @@ class TestResolveMcpConfigPath:
     def test_resolve_mcp_config_auto_detect_project_dir(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test that .mcp.json in project_dir is auto-detected when mcp_config is None."""
+        """Auto-detect finds .mcp.json in project_dir even when CWD differs."""
         monkeypatch.delenv("MCP_CODER_MCP_CONFIG", raising=False)
-        mcp_json = tmp_path / ".mcp.json"
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        cwd = tmp_path / "cwd"
+        cwd.mkdir()
+        mcp_json = project_dir / ".mcp.json"
         mcp_json.write_text("{}")
+        monkeypatch.chdir(cwd)
 
-        result = resolve_mcp_config_path(None, project_dir=str(tmp_path))
+        result = resolve_mcp_config_path(None, project_dir=str(project_dir))
         assert result == str(mcp_json.resolve())
 
     def test_resolve_mcp_config_auto_detect_cwd(
@@ -368,6 +373,135 @@ class TestResolveMcpConfigPath:
         assert result == str(mcp_json.resolve())
         assert "default_config_path" in caplog.text
         assert "file not found" in caplog.text
+
+    # ---- Relative path × CWD ≠ project_dir → resolves against project_dir ----
+
+    def test_relative_cli_resolves_against_project_dir(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Relative --mcp-config resolves against project_dir, not CWD."""
+        monkeypatch.delenv("MCP_CODER_MCP_CONFIG", raising=False)
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        cwd = tmp_path / "cwd"
+        cwd.mkdir()
+        mcp_json = project_dir / ".mcp.json"
+        mcp_json.write_text("{}")
+        monkeypatch.chdir(cwd)
+
+        result = resolve_mcp_config_path(".mcp.json", project_dir=str(project_dir))
+        assert result == str(mcp_json.resolve())
+
+    def test_relative_env_resolves_against_project_dir(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Relative MCP_CODER_MCP_CONFIG resolves against project_dir, not CWD."""
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        cwd = tmp_path / "cwd"
+        cwd.mkdir()
+        mcp_json = project_dir / ".mcp.json"
+        mcp_json.write_text("{}")
+        monkeypatch.setenv("MCP_CODER_MCP_CONFIG", ".mcp.json")
+        monkeypatch.chdir(cwd)
+
+        result = resolve_mcp_config_path(None, project_dir=str(project_dir))
+        assert result == str(mcp_json.resolve())
+
+    @patch("mcp_coder.cli.utils.get_config_values")
+    def test_relative_config_resolves_against_project_dir(
+        self,
+        mock_config: MagicMock,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Relative [mcp] default_config_path resolves against project_dir, not CWD."""
+        monkeypatch.delenv("MCP_CODER_MCP_CONFIG", raising=False)
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        cwd = tmp_path / "cwd"
+        cwd.mkdir()
+        mcp_json = project_dir / ".mcp.json"
+        mcp_json.write_text("{}")
+        mock_config.return_value = {("mcp", "default_config_path"): ".mcp.json"}
+        monkeypatch.chdir(cwd)
+
+        result = resolve_mcp_config_path(None, project_dir=str(project_dir))
+        assert result == str(mcp_json.resolve())
+
+    def test_autodetect_resolves_against_project_dir_when_cwd_differs(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Auto-detect uses project_dir as the base, not CWD."""
+        monkeypatch.delenv("MCP_CODER_MCP_CONFIG", raising=False)
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        cwd = tmp_path / "cwd"
+        cwd.mkdir()
+        # .mcp.json only exists in project_dir; CWD has none
+        mcp_json = project_dir / ".mcp.json"
+        mcp_json.write_text("{}")
+        monkeypatch.chdir(cwd)
+
+        result = resolve_mcp_config_path(None, project_dir=str(project_dir))
+        assert result == str(mcp_json.resolve())
+
+    # ---- Relative path × project_dir=None → falls back to CWD ----
+
+    def test_relative_cli_falls_back_to_cwd_when_no_project_dir(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Relative --mcp-config falls back to CWD when project_dir is None."""
+        monkeypatch.delenv("MCP_CODER_MCP_CONFIG", raising=False)
+        mcp_json = tmp_path / ".mcp.json"
+        mcp_json.write_text("{}")
+        monkeypatch.chdir(tmp_path)
+
+        result = resolve_mcp_config_path(".mcp.json")
+        assert result == str(mcp_json.resolve())
+
+    def test_relative_env_falls_back_to_cwd_when_no_project_dir(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Relative MCP_CODER_MCP_CONFIG falls back to CWD when project_dir is None."""
+        mcp_json = tmp_path / ".mcp.json"
+        mcp_json.write_text("{}")
+        monkeypatch.setenv("MCP_CODER_MCP_CONFIG", ".mcp.json")
+        monkeypatch.chdir(tmp_path)
+
+        result = resolve_mcp_config_path(None)
+        assert result == str(mcp_json.resolve())
+
+    @patch("mcp_coder.cli.utils.get_config_values")
+    def test_relative_config_falls_back_to_cwd_when_no_project_dir(
+        self,
+        mock_config: MagicMock,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Relative [mcp] default_config_path falls back to CWD when project_dir is None."""
+        monkeypatch.delenv("MCP_CODER_MCP_CONFIG", raising=False)
+        # Put a sentinel .mcp.json in a sibling dir to ensure autodetect doesn't
+        # accidentally pick it up — the file we want is in CWD.
+        mcp_json = tmp_path / "elsewhere.json"
+        mcp_json.write_text("{}")
+        mock_config.return_value = {("mcp", "default_config_path"): "elsewhere.json"}
+        monkeypatch.chdir(tmp_path)
+
+        result = resolve_mcp_config_path(None)
+        assert result == str(mcp_json.resolve())
+
+    def test_autodetect_falls_back_to_cwd_when_no_project_dir(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Auto-detect falls back to CWD when project_dir is None."""
+        monkeypatch.delenv("MCP_CODER_MCP_CONFIG", raising=False)
+        mcp_json = tmp_path / ".mcp.json"
+        mcp_json.write_text("{}")
+        monkeypatch.chdir(tmp_path)
+
+        result = resolve_mcp_config_path(None)
+        assert result == str(mcp_json.resolve())
 
     def test_schema_has_mcp_config_env_var(self) -> None:
         """Test that schema maps mcp/default_config_path to MCP_CODER_MCP_CONFIG."""
