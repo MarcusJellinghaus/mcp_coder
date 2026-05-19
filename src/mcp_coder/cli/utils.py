@@ -163,12 +163,26 @@ def resolve_mcp_config_path(
 ) -> str | None:
     """Resolve MCP config path to absolute path.
 
-    When mcp_config is explicitly provided, converts to absolute path and validates.
-    When mcp_config is None, auto-detects .mcp.json in project_dir (or CWD).
+    Resolution priority:
+        1. CLI argument (``mcp_config``)
+        2. Environment variable ``MCP_CODER_MCP_CONFIG``
+        3. ``[mcp] default_config_path`` from TOML config
+        4. Auto-detect ``.mcp.json``
+
+    Relative path semantics (uniform across all four sources):
+        - Absolute path → used as-is.
+        - Relative path → resolved against ``project_dir``.
+        - When ``project_dir`` is ``None`` → relative paths fall back to CWD.
+
+    Error semantics:
+        - Source 1 (CLI): strict — missing file raises ``FileNotFoundError``.
+        - Sources 2, 3 (env, config): lenient — missing file logs a warning
+          and falls through to the next source.
 
     Args:
         mcp_config: MCP config path (relative or absolute) or None
-        project_dir: Project directory to search for .mcp.json (defaults to CWD)
+        project_dir: Project directory used as the base for relative paths
+            (defaults to CWD when None)
 
     Returns:
         Absolute path as string, or None if no config found
@@ -176,13 +190,20 @@ def resolve_mcp_config_path(
     Raises:
         FileNotFoundError: If an explicitly provided MCP config file does not exist
     """
+    base_dir = Path(project_dir).resolve() if project_dir else Path.cwd().resolve()
+
+    def _resolve_relative(path_str: str) -> Path:
+        path = Path(path_str)
+        return path.resolve() if path.is_absolute() else (base_dir / path).resolve()
+
     if mcp_config is not None:
-        # Explicit path: resolve and validate
-        mcp_config_path = Path(mcp_config).resolve()
+        # Explicit path: resolve relative to base_dir and validate
+        mcp_config_path = _resolve_relative(mcp_config)
         if not mcp_config_path.exists():
             raise FileNotFoundError(
                 f"MCP config file not found: {mcp_config_path}\n"
                 f"  Original path: {mcp_config}\n"
+                f"  Project directory: {base_dir}\n"
                 f"  Current directory: {Path.cwd()}"
             )
         logger.debug(f"Resolved MCP config path: {mcp_config} -> {mcp_config_path}")
@@ -190,7 +211,7 @@ def resolve_mcp_config_path(
 
     # Check env var MCP_CODER_MCP_CONFIG
     if (env_path := os.environ.get("MCP_CODER_MCP_CONFIG")) is not None:
-        resolved = Path(env_path).resolve()
+        resolved = _resolve_relative(env_path)
         if resolved.exists():
             return str(resolved)
         logger.warning(
@@ -202,7 +223,7 @@ def resolve_mcp_config_path(
     config = get_config_values([("mcp", "default_config_path", "_NO_ENV_VAR_")])
     cfg_path = config[("mcp", "default_config_path")]
     if isinstance(cfg_path, str):
-        resolved = Path(cfg_path).resolve()
+        resolved = _resolve_relative(cfg_path)
         if resolved.exists():
             return str(resolved)
         logger.warning(
@@ -211,14 +232,13 @@ def resolve_mcp_config_path(
         )
 
     # Auto-detect .mcp.json
-    base = Path(project_dir) if project_dir else Path.cwd()
-    candidate = base / ".mcp.json"
+    candidate = base_dir / ".mcp.json"
     if candidate.exists():
         resolved_path = str(candidate.resolve())
         logger.debug(f"Auto-detected MCP config: {resolved_path}")
         return resolved_path
 
-    logger.debug(f"No .mcp.json found in {base}")
+    logger.debug(f"No .mcp.json found in {base_dir}")
     return None
 
 

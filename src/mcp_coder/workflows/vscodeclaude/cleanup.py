@@ -147,11 +147,9 @@ def get_stale_sessions(
                     is_blocked = True
                 # Check if current status is eligible for session
                 # Get status from issue labels (most current)
-                status_labels = (
-                    [  # noqa: PLW2901 – intentional reassignment from [] init above
-                        lbl for lbl in issue["labels"] if lbl.startswith("status-")
-                    ]
-                )
+                status_labels = [  # noqa: PLW2901 – intentional reassignment from [] init above
+                    lbl for lbl in issue["labels"] if lbl.startswith("status-")
+                ]
                 if status_labels:
                     current_status = status_labels[0]
                     is_ineligible = not is_status_eligible_for_session(current_status)

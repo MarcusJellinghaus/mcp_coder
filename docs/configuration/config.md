@@ -170,18 +170,30 @@ Configures the default MCP (Model Context Protocol) configuration file path. Whe
 
 | Field | Type | Description | Required | Default |
 |-------|------|-------------|----------|---------|
-| `default_config_path` | string | Path to MCP config file (relative to CWD or absolute) | No | None |
+| `default_config_path` | string | Path to MCP config file (relative to `--project-dir` or absolute) | No | None |
 
 **Resolution priority:** CLI `--mcp-config` arg > `MCP_CODER_MCP_CONFIG` env var > `[mcp] default_config_path` config > auto-detect
+
+**Relative path resolution (uniform across all four sources):**
+- Absolute path → used as-is.
+- Relative path → resolved against `--project-dir`.
+- When `--project-dir` is not provided → relative paths fall back to CWD.
 
 **Error behavior:**
 - **CLI arg** (`--mcp-config`): strict — raises `FileNotFoundError` if file not found
 - **Env var / config**: lenient — logs warning with source, falls back to auto-detect
 
 **Example:**
+
+The same relative path works from any working directory when `--project-dir` is set:
+```bash
+# Resolves to <repo>/.mcp.json regardless of CWD
+mcp-coder implement --project-dir /workspace/repo --mcp-config .mcp.json
+```
+
 ```toml
 [mcp]
-# Default MCP config file path (relative to CWD or absolute)
+# Default MCP config file path (relative to --project-dir or absolute)
 # Environment variable (higher priority): MCP_CODER_MCP_CONFIG
 default_config_path = ".mcp.json"
 ```
