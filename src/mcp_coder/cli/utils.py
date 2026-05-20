@@ -207,13 +207,14 @@ def resolve_mcp_config_path(
                 f"  Project directory: {base_dir}\n"
                 f"  Current directory: {Path.cwd()}"
             )
-        logger.debug(f"Resolved MCP config path: {mcp_config} -> {mcp_config_path}")
+        logger.info("MCP config (from --mcp-config): %s", mcp_config_path)
         return str(mcp_config_path)
 
     # Check env var MCP_CODER_MCP_CONFIG
     if (env_path := os.environ.get("MCP_CODER_MCP_CONFIG")) is not None:
         resolved = _resolve_relative(env_path)
         if resolved.exists():
+            logger.info("MCP config (from env MCP_CODER_MCP_CONFIG): %s", resolved)
             return str(resolved)
         logger.warning(
             "MCP_CODER_MCP_CONFIG=%s: file not found, falling back to auto-detect",
@@ -226,6 +227,7 @@ def resolve_mcp_config_path(
     if isinstance(cfg_path, str):
         resolved = _resolve_relative(cfg_path)
         if resolved.exists():
+            logger.info("MCP config (from [mcp] default_config_path): %s", resolved)
             return str(resolved)
         logger.warning(
             "[mcp] default_config_path=%s: file not found, falling back to auto-detect",
@@ -236,7 +238,7 @@ def resolve_mcp_config_path(
     candidate = base_dir / ".mcp.json"
     if candidate.exists():
         resolved_path = str(candidate.resolve())
-        logger.debug(f"Auto-detected MCP config: {resolved_path}")
+        logger.info("MCP config (auto-detected): %s", resolved_path)
         return resolved_path
 
     logger.debug(f"No .mcp.json found in {base_dir}")
@@ -293,15 +295,16 @@ def resolve_claude_settings_path(
                 f"  Project directory: {base_dir}\n"
                 f"  Current directory: {Path.cwd()}"
             )
-        logger.debug(
-            f"Resolved Claude settings path: {settings_file} -> {settings_path}"
-        )
+        logger.info("Claude settings (from --settings): %s", settings_path)
         return str(settings_path)
 
     # Check env var MCP_CODER_CLAUDE_SETTINGS
     if (env_path := os.environ.get("MCP_CODER_CLAUDE_SETTINGS")) is not None:
         resolved = _resolve_relative(env_path)
         if resolved.exists():
+            logger.info(
+                "Claude settings (from env MCP_CODER_CLAUDE_SETTINGS): %s", resolved
+            )
             return str(resolved)
         logger.warning(
             "MCP_CODER_CLAUDE_SETTINGS=%s: file not found, falling back to auto-detect",
@@ -314,6 +317,10 @@ def resolve_claude_settings_path(
     if isinstance(cfg_path, str):
         resolved = _resolve_relative(cfg_path)
         if resolved.exists():
+            logger.info(
+                "Claude settings (from [claude] default_settings_path): %s",
+                resolved,
+            )
             return str(resolved)
         logger.warning(
             "[claude] default_settings_path=%s: file not found, falling back to auto-detect",
@@ -324,13 +331,13 @@ def resolve_claude_settings_path(
     local_candidate = base_dir / ".claude" / "settings.local.json"
     if local_candidate.exists():
         resolved_path = str(local_candidate.resolve())
-        logger.debug(f"Auto-detected Claude settings: {resolved_path}")
+        logger.info("Claude settings (auto-detected): %s", resolved_path)
         return resolved_path
 
     shared_candidate = base_dir / ".claude" / "settings.json"
     if shared_candidate.exists():
         resolved_path = str(shared_candidate.resolve())
-        logger.debug(f"Auto-detected Claude settings: {resolved_path}")
+        logger.info("Claude settings (auto-detected): %s", resolved_path)
         return resolved_path
 
     logger.debug(f"No Claude settings file found in {base_dir / '.claude'}")
