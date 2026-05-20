@@ -66,3 +66,16 @@
 - **Accept findings carried forward:** 0
 - **Skipped findings:** documented in round 1 (pre-existing edge cases; resolver DRY refactor deferred; end-to-end CLI smoke test out of scope).
 - **Issue:** #979 — ready for branch-status check + PR.
+
+## CI fix (post-review)
+
+`/check_branch_status` returned CI=FAILED on the file-size check: 3 files over the 750-line limit after #979's additions.
+
+**Triage:**
+- `tests/cli/test_utils.py` (1072, +43%): split required. Moved `TestResolveMcpConfigPath` + `TestResolveClaudeSettingsPath` to new `tests/cli/test_resolver_utils.py`. 76 tests preserved across the two files.
+- `src/mcp_coder/cli/parsers.py` (769, +2.5%): allowlisted — logical single unit (argparse setup).
+- `tests/llm/providers/claude/test_claude_code_cli.py` (807, +8%): allowlisted — cohesive around `build_cli_command` + `ask_claude_code_cli`.
+
+**Fix committed:** `becbc628` — `refactor(tests): split resolver tests; allowlist 2 large files`.
+
+Static checks (post-fix): pylint, mypy, ruff, vulture, lint-imports, file-size — all clean.
