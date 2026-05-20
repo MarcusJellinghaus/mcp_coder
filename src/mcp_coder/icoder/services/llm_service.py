@@ -44,6 +44,7 @@ class RealLLMService:
         session_id: str | None = None,
         execution_dir: str | None = None,
         mcp_config: str | None = None,
+        settings_file: str | None = None,
         env_vars: dict[str, str] | None = None,
         timeout: int = ICODER_LLM_TIMEOUT_SECONDS,
         mcp_manager: MCPManager | None = None,
@@ -53,6 +54,7 @@ class RealLLMService:
         self._session_id = session_id
         self._execution_dir = execution_dir
         self._mcp_config = mcp_config
+        self._settings_file = settings_file
         self._env_vars = env_vars
         self._timeout = timeout
         self._mcp_manager = mcp_manager
@@ -74,6 +76,7 @@ class RealLLMService:
             timeout=self._timeout,
             execution_dir=self._execution_dir,
             mcp_config=self._mcp_config,
+            settings_file=self._settings_file,
             env_vars=self._env_vars,
             tools=tools,
             project_dir=self._project_dir,

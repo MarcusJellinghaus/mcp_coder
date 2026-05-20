@@ -264,6 +264,7 @@ def build_cli_command(
     use_stream_json: bool = True,
     append_system_prompt: str | None = None,
     system_prompt_replace: str | None = None,
+    settings_file: str | None = None,
 ) -> list[str]:
     """Build CLI command arguments for stdin input (pure function).
 
@@ -272,6 +273,7 @@ def build_cli_command(
 
     If session_id is provided, uses --resume flag to continue Claude's native session.
     If mcp_config is provided, uses --mcp-config and --strict-mcp-config flags.
+    If settings_file is provided, uses --settings flag to override cwd-discovered settings.
 
     When use_stream_json is True, enables complete conversation logging:
     - --output-format stream-json: NDJSON output with all messages
@@ -289,6 +291,8 @@ def build_cli_command(
             Mutually exclusive with system_prompt_replace.
         system_prompt_replace: Optional system prompt to replace via --system-prompt.
             Mutually exclusive with append_system_prompt.
+        settings_file: Optional path to Claude settings file passed via --settings,
+            overriding matching keys in lower-precedence settings files for the session.
 
     Returns:
         Command list ready for subprocess execution with stdin
@@ -309,6 +313,11 @@ def build_cli_command(
 
         >>> cmd = build_cli_command(None, "claude", ".mcp.json")
         >>> assert "--mcp-config" in cmd and ".mcp.json" in cmd
+
+        >>> cmd = build_cli_command(
+        ...     None, "claude", settings_file=".claude/settings.local.json"
+        ... )
+        >>> assert "--settings" in cmd and ".claude/settings.local.json" in cmd
 
         >>> cmd = build_cli_command(None, "claude", use_stream_json=False)
         >>> assert "json" in cmd and "stream-json" not in cmd
@@ -345,6 +354,12 @@ def build_cli_command(
     # preventing fallback to default MCP configurations
     if mcp_config:
         command.extend(["--mcp-config", mcp_config, "--strict-mcp-config"])
+
+    # Add Claude settings file if provided
+    # --settings overrides matching keys in lower-precedence settings files
+    # (project / user / managed) for the session.
+    if settings_file:
+        command.extend(["--settings", settings_file])
 
     # System prompt flags (mutually exclusive)
     if append_system_prompt and system_prompt_replace:
@@ -456,6 +471,7 @@ def ask_claude_code_cli(
     env_vars: dict[str, str] | None = None,
     cwd: str | None = None,
     mcp_config: str | None = None,
+    settings_file: str | None = None,
     logs_dir: str | None = None,
     branch_name: str | None = None,
     append_system_prompt: str | None = None,
@@ -483,6 +499,10 @@ def ask_claude_code_cli(
             Note: This is separate from project_dir (which sets MCP_CODER_PROJECT_DIR).
             Default: None (subprocess uses caller's current working directory)
         mcp_config: Optional path to MCP config file
+        settings_file: Optional path to Claude Code settings file (.claude/settings.local.json).
+            When provided, passed to Claude via --settings, overriding matching keys
+            in cwd-discovered settings for the session. None means Claude uses its
+            cwd-based discovery as today.
         logs_dir: Optional logs directory for stream files (default: logs/claude-sessions)
         branch_name: Optional git branch name to include in log filename for context
         append_system_prompt: Optional system prompt to append via --append-system-prompt.
@@ -533,6 +553,7 @@ def ask_claude_code_cli(
         use_stream_json=True,
         append_system_prompt=append_system_prompt,
         system_prompt_replace=system_prompt_replace,
+        settings_file=settings_file,
     )
 
     # Generate stream log file path

@@ -1184,12 +1184,12 @@ class TestRunImplementWorkflow:
         mock_check_prereq.assert_called_once()
         # Verify prepare_task_tracker was called with None for execution_dir
         mock_prepare_tracker.assert_called_once_with(
-            Path("/test/project"), "claude", None, None
+            Path("/test/project"), "claude", None, None, None
         )
         assert mock_process_task.call_count == 2
         # Verify process_task was called with None for execution_dir
         first_call_args = mock_process_task.call_args_list[0][0]
-        assert first_call_args == (Path("/test/project"), "claude", None, None)
+        assert first_call_args == (Path("/test/project"), "claude", None, None, None)
         # Verify config booleans passed (defaults from missing pyproject.toml)
         first_call_kwargs = mock_process_task.call_args_list[0][1]
         assert first_call_kwargs["format_code"] is False

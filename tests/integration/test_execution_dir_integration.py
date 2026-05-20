@@ -351,17 +351,19 @@ class TestSubprocessCwdParameter:
         mock_process_task.return_value = (False, "no_tasks")  # No more tasks
 
         # Execute
-        result = run_implement_workflow(project_dir, "claude", None, execution_dir)
+        result = run_implement_workflow(
+            project_dir, "claude", None, execution_dir=execution_dir
+        )
 
         # Verify
         assert result == 0
         # Check that prepare_task_tracker received execution_dir
         mock_prepare_tracker.assert_called_once_with(
-            project_dir, "claude", None, execution_dir
+            project_dir, "claude", None, None, execution_dir
         )
         # Check that process_single_task received execution_dir
         mock_process_task.assert_called_once_with(
-            project_dir, "claude", None, execution_dir
+            project_dir, "claude", None, None, execution_dir
         )
 
     @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
@@ -432,7 +434,7 @@ class TestSubprocessCwdParameter:
 
         # Execute
         result = run_create_plan_workflow(
-            123, project_dir, "claude", None, execution_dir
+            123, project_dir, "claude", None, execution_dir=execution_dir
         )
 
         # Verify

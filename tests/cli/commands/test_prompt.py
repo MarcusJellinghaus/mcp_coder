@@ -62,6 +62,7 @@ class TestSessionIdOutputFormat:
             project_dir=None,
             execution_dir=None,
             mcp_config=None,
+            settings=None,
         )
 
         result = execute_prompt(args)
@@ -104,6 +105,7 @@ class TestSessionIdOutputFormat:
             project_dir=None,
             execution_dir=None,
             mcp_config=None,
+            settings=None,
         )
 
         with caplog.at_level(logging.DEBUG):
@@ -146,6 +148,7 @@ class TestSessionIdOutputFormat:
             project_dir=None,
             execution_dir=None,
             mcp_config=None,
+            settings=None,
         )
 
         with caplog.at_level(logging.DEBUG):
@@ -188,6 +191,7 @@ class TestSessionIdOutputFormat:
             project_dir=None,
             execution_dir=None,
             mcp_config=None,
+            settings=None,
         )
 
         result = execute_prompt(args)
@@ -227,6 +231,7 @@ class TestExecutePrompt:
             prompt="What is the capital of France?",
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
 
@@ -241,6 +246,7 @@ class TestExecutePrompt:
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
             execution_dir=mock.ANY,
             mcp_config=None,
+            settings_file=None,
             branch_name=mock.ANY,
             project_dir=None,
         )
@@ -268,6 +274,7 @@ class TestExecutePrompt:
             prompt="Test question",
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
 
@@ -318,6 +325,7 @@ class TestExecutePrompt:
             continue_session_from="path/to/previous_response.json",
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
 
@@ -332,6 +340,7 @@ class TestExecutePrompt:
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
             execution_dir=mock.ANY,
             mcp_config=None,
+            settings_file=None,
             branch_name=mock.ANY,
             project_dir=None,
         )
@@ -366,6 +375,7 @@ class TestExecutePrompt:
             continue_session_from="path/to/nonexistent_file.json",
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
 
@@ -380,6 +390,7 @@ class TestExecutePrompt:
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
             execution_dir=mock.ANY,
             mcp_config=None,
+            settings_file=None,
             branch_name=mock.ANY,
             project_dir=None,
         )
@@ -428,6 +439,7 @@ class TestExecutePrompt:
             continue_session_from="path/to/invalid.json",
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
 
@@ -442,6 +454,7 @@ class TestExecutePrompt:
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
             execution_dir=mock.ANY,
             mcp_config=None,
+            settings_file=None,
             branch_name=mock.ANY,
             project_dir=None,
         )
@@ -492,6 +505,7 @@ class TestExecutePrompt:
             continue_session_from="path/to/incomplete.json",
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
 
@@ -506,6 +520,7 @@ class TestExecutePrompt:
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
             execution_dir=mock.ANY,
             mcp_config=None,
+            settings_file=None,
             branch_name=mock.ANY,
             project_dir=None,
         )
@@ -557,6 +572,7 @@ class TestExecutePrompt:
             output_format="ndjson",
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
 
@@ -571,6 +587,7 @@ class TestExecutePrompt:
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
             execution_dir=mock.ANY,
             mcp_config=None,
+            settings_file=None,
             branch_name=mock.ANY,
             project_dir=None,
         )
@@ -606,6 +623,7 @@ class TestExecutePrompt:
             prompt="Test prompt",
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
 
@@ -626,6 +644,7 @@ class TestExecutePrompt:
             env_vars=mock_env_vars,
             execution_dir=mock.ANY,
             mcp_config=None,
+            settings_file=None,
             branch_name=mock.ANY,
             project_dir=None,
         )
@@ -657,6 +676,7 @@ class TestExecutePrompt:
             prompt="Test prompt without venv",
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
 
@@ -675,6 +695,7 @@ class TestExecutePrompt:
             env_vars=None,
             execution_dir=mock.ANY,
             mcp_config=None,
+            settings_file=None,
             branch_name=mock.ANY,
             project_dir=None,
         )
@@ -707,6 +728,7 @@ class TestPromptExecutionDir:
             execution_dir=None,  # No explicit execution_dir
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
 
@@ -747,6 +769,7 @@ class TestPromptExecutionDir:
             execution_dir=str(execution_dir),
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
 
@@ -793,6 +816,7 @@ class TestPromptExecutionDir:
             execution_dir="relative",  # Relative path
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
 
@@ -823,6 +847,7 @@ class TestPromptExecutionDir:
             execution_dir="/nonexistent/invalid/path",
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             project_dir=None,
         )
 
@@ -865,6 +890,7 @@ class TestPromptExecutionDir:
             output_format="text",
             session_id="test-session-123",
             mcp_config=None,
+            settings=None,
         )
 
         result = execute_prompt(args)
@@ -907,6 +933,7 @@ class TestAddSystemPromptsFlag:
             add_system_prompts=True,
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             project_dir=None,
             execution_dir=None,
         )
@@ -944,6 +971,7 @@ class TestAddSystemPromptsFlag:
             add_system_prompts=False,
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             project_dir=None,
             execution_dir=None,
         )
@@ -980,6 +1008,7 @@ class TestAddSystemPromptsFlag:
             add_system_prompts=True,
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             project_dir=str(tmp_path),
             execution_dir=None,
         )
@@ -1025,6 +1054,7 @@ class TestAddSystemPromptsFlag:
             continue_session_from=None,
             continue_session=False,
             mcp_config=None,
+            settings=None,
             project_dir=None,
             execution_dir=None,
         )
@@ -1071,6 +1101,7 @@ class TestAddSystemPromptsFlag:
             continue_session=False,
             store_response=False,
             mcp_config=None,
+            settings=None,
             project_dir=None,
             execution_dir=None,
         )

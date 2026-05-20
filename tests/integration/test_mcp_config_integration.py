@@ -98,6 +98,7 @@ class TestMcpConfigIntegration:
                 project_dir=str(tmp_path),
                 llm_method="claude",
                 mcp_config=temp_mcp_config,
+                settings=None,
                 execution_dir=None,
             )
 
@@ -151,6 +152,7 @@ class TestMcpConfigIntegration:
                 continue_session=False,
                 continue_session_from=None,
                 mcp_config=temp_mcp_config,
+                settings=None,
             )
 
             # Execute command
@@ -213,6 +215,7 @@ class TestMcpConfigIntegration:
                     continue_session=False,
                     continue_session_from=None,
                     mcp_config=None,
+                    settings=None,
                 )
 
                 # Execute command
@@ -278,6 +281,7 @@ class TestMcpConfigIntegration:
                     continue_session=False,
                     continue_session_from=None,
                     mcp_config=relative_config,
+                    settings=None,
                 )
 
                 # Execute command

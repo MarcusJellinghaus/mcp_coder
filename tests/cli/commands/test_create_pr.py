@@ -73,6 +73,7 @@ class TestExecuteCreatePr:
             llm_method="claude",
             execution_dir=None,
             mcp_config=None,
+            settings=None,
             update_issue_labels=None,
             post_issue_comments=None,
         )
@@ -85,7 +86,7 @@ class TestExecuteCreatePr:
         mock_parse_llm.assert_called_once_with("claude")
         mock_resolve_flags.assert_called_once_with(args, project_dir)
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, str(execution_dir), False, False
+            project_dir, "claude", None, None, str(execution_dir), False, False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
@@ -120,6 +121,7 @@ class TestExecuteCreatePr:
             llm_method="claude",
             execution_dir=None,
             mcp_config=None,
+            settings=None,
             update_issue_labels=None,
             post_issue_comments=None,
         )
@@ -129,7 +131,7 @@ class TestExecuteCreatePr:
         assert result == 0
         mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, str(execution_dir), False, False
+            project_dir, "claude", None, None, str(execution_dir), False, False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
@@ -164,6 +166,7 @@ class TestExecuteCreatePr:
             llm_method="claude",
             execution_dir=None,
             mcp_config=None,
+            settings=None,
             update_issue_labels=None,
             post_issue_comments=None,
         )
@@ -175,7 +178,7 @@ class TestExecuteCreatePr:
         mock_resolve_exec.assert_called_once_with(None)
         mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, str(execution_dir), False, False
+            project_dir, "claude", None, None, str(execution_dir), False, False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
@@ -205,8 +208,10 @@ class TestExecuteCreatePr:
     @patch("mcp_coder.cli.commands.create_pr.resolve_llm_method")
     @patch("mcp_coder.cli.commands.create_pr.parse_llm_method_from_args")
     @patch("mcp_coder.cli.commands.create_pr.resolve_mcp_config_path")
+    @patch("mcp_coder.cli.commands.create_pr.resolve_claude_settings_path")
     def test_execute_create_pr_none_project_dir(
         self,
+        mock_resolve_settings: Mock,
         mock_resolve_mcp: Mock,
         mock_parse_llm: Mock,
         mock_resolve_llm: Mock,
@@ -225,6 +230,7 @@ class TestExecuteCreatePr:
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_resolve_mcp.return_value = None
+        mock_resolve_settings.return_value = None
         mock_resolve_flags.return_value = (False, False)
         mock_run_workflow.return_value = 0
 
@@ -233,6 +239,7 @@ class TestExecuteCreatePr:
             llm_method="claude",
             execution_dir=None,
             mcp_config=None,
+            settings=None,
             update_issue_labels=None,
             post_issue_comments=None,
         )
@@ -244,7 +251,7 @@ class TestExecuteCreatePr:
         mock_resolve_exec.assert_called_once_with(None)
         mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, str(execution_dir), False, False
+            project_dir, "claude", None, None, str(execution_dir), False, False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
@@ -280,6 +287,7 @@ class TestExecuteCreatePr:
             llm_method="claude",
             execution_dir=None,
             mcp_config=None,
+            settings=None,
             update_issue_labels=None,
             post_issue_comments=None,
         )
@@ -287,7 +295,7 @@ class TestExecuteCreatePr:
         assert result == 0
         mock_parse_llm.assert_called_with("claude")
         mock_run_workflow.assert_called_with(
-            project_dir, "claude", None, str(execution_dir), False, False
+            project_dir, "claude", None, None, str(execution_dir), False, False
         )
 
         # Reset mocks
@@ -307,6 +315,7 @@ class TestExecuteCreatePr:
             llm_method="langchain",
             execution_dir=None,
             mcp_config=None,
+            settings=None,
             update_issue_labels=None,
             post_issue_comments=None,
         )
@@ -314,7 +323,7 @@ class TestExecuteCreatePr:
         assert result == 0
         mock_parse_llm.assert_called_with("langchain")
         mock_run_workflow.assert_called_with(
-            project_dir, "langchain", None, str(execution_dir), False, False
+            project_dir, "langchain", None, None, str(execution_dir), False, False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
@@ -349,6 +358,7 @@ class TestExecuteCreatePr:
             llm_method="claude",
             execution_dir=None,
             mcp_config=None,
+            settings=None,
             update_issue_labels=None,
             post_issue_comments=None,
         )
@@ -391,6 +401,7 @@ class TestExecuteCreatePr:
             llm_method="claude",
             execution_dir=None,
             mcp_config=None,
+            settings=None,
             update_issue_labels=None,
             post_issue_comments=None,
         )
@@ -433,6 +444,7 @@ class TestExecuteCreatePr:
             llm_method="claude",
             execution_dir=None,
             mcp_config=None,
+            settings=None,
             update_issue_labels=None,
             post_issue_comments=None,
         )
@@ -511,6 +523,7 @@ class TestCreatePrExecutionDir:
             execution_dir=None,  # No explicit execution_dir
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             update_issue_labels=None,
             post_issue_comments=None,
         )
@@ -520,7 +533,7 @@ class TestCreatePrExecutionDir:
         assert result == 0
         mock_resolve_exec.assert_called_once_with(None)
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, str(execution_dir), False, False
+            project_dir, "claude", None, None, str(execution_dir), False, False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
@@ -556,6 +569,7 @@ class TestCreatePrExecutionDir:
             execution_dir=str(execution_dir),
             llm_method="claude",
             mcp_config=None,
+            settings=None,
             update_issue_labels=None,
             post_issue_comments=None,
         )
@@ -565,7 +579,7 @@ class TestCreatePrExecutionDir:
         assert result == 0
         mock_resolve_exec.assert_called_once_with(str(execution_dir))
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, str(execution_dir), False, False
+            project_dir, "claude", None, None, str(execution_dir), False, False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")

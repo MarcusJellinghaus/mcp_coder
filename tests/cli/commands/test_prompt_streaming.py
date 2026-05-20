@@ -49,6 +49,7 @@ def _make_args(**overrides: Any) -> argparse.Namespace:
         "project_dir": None,
         "execution_dir": None,
         "mcp_config": None,
+        "settings": None,
         "store_response": False,
     }
     defaults.update(overrides)

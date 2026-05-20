@@ -77,6 +77,7 @@ def ask_claude_code_cli_stream(
     env_vars: dict[str, str] | None = None,
     cwd: str | None = None,
     mcp_config: str | None = None,
+    settings_file: str | None = None,
     logs_dir: str | None = None,
     branch_name: str | None = None,
     append_system_prompt: str | None = None,
@@ -87,6 +88,9 @@ def ask_claude_code_cli_stream(
     Same parameters as ask_claude_code_cli(). Instead of returning a single
     LLMResponseDict, yields StreamEvent dicts as each NDJSON line arrives
     from the Claude CLI subprocess.
+
+    The ``settings_file`` parameter, when provided, is forwarded via ``--settings``
+    to override matching keys in cwd-discovered Claude settings for the session.
 
     Yields:
         StreamEvent dicts: text_delta, tool_use_start, tool_result, done, error, raw_line
@@ -110,6 +114,7 @@ def ask_claude_code_cli_stream(
         use_stream_json=True,
         append_system_prompt=append_system_prompt,
         system_prompt_replace=system_prompt_replace,
+        settings_file=settings_file,
     )
     stream_file = get_stream_log_path(logs_dir, cwd, branch_name)
     input_data = format_stream_json_input(question)

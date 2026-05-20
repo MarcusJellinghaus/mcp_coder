@@ -418,7 +418,7 @@ class TestWorkflowMainFunction:
 
         # Verify the workflow got to PR creation step
         mock_generate_summary.assert_called_once_with(
-            Path("/test/project"), "claude", None, None
+            Path("/test/project"), "claude", None, None, None
         )
         mock_create_pr.assert_called_once_with(
             Path("/test/project"), "Test PR", "Test body"

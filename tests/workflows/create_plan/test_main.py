@@ -83,7 +83,7 @@ class TestMain:
                 tmp_path,
                 provider,
                 mcp_config,
-                execution_dir,
+                execution_dir=execution_dir,
                 update_issue_labels=update_issue_labels,
                 post_issue_comments=post_issue_comments,
             )
@@ -124,11 +124,13 @@ class TestMain:
             ),
             patch(f"{_CORE}.git_push", return_value={"success": True}),
         ):
-            result = run_create_plan_workflow(123, tmp_path, "claude", None, exec_dir)
+            result = run_create_plan_workflow(
+                123, tmp_path, "claude", None, execution_dir=exec_dir
+            )
 
         assert result == 0
         mock_prompts.assert_called_once_with(
-            tmp_path, mock_issue_data, "claude", None, exec_dir
+            tmp_path, mock_issue_data, "claude", None, None, exec_dir
         )
 
     def test_main_prerequisites_fail(self, tmp_path: Path) -> None:
@@ -345,7 +347,7 @@ class TestMain:
             tmp_path, 123, "Test Issue", base_branch=None
         )
         mock_prompts.assert_called_once_with(
-            tmp_path, mock_issue_data, "claude", None, None
+            tmp_path, mock_issue_data, "claude", None, None, None
         )
         assert result == 0
 

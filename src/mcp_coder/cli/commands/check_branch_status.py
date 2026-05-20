@@ -31,6 +31,7 @@ from ...workflows.implement.ci_operations import check_and_fix_ci
 from ...workflows.utils import resolve_project_dir
 from ..utils import (
     parse_llm_method_from_args,
+    resolve_claude_settings_path,
     resolve_execution_dir,
     resolve_llm_method,
     resolve_mcp_config_path,
@@ -265,6 +266,9 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
             mcp_config = resolve_mcp_config_path(
                 args.mcp_config, project_dir=args.project_dir
             )
+            settings_file = resolve_claude_settings_path(
+                args.settings, project_dir=args.project_dir
+            )
             execution_dir = resolve_execution_dir(args.execution_dir)
 
             # Attempt fixes with retry
@@ -273,7 +277,8 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
                 report,
                 provider,
                 mcp_config,
-                execution_dir,
+                settings_file=settings_file,
+                execution_dir=execution_dir,
                 fix_attempts=args.fix,  # NEW
                 ci_timeout=args.ci_timeout,  # NEW
                 llm_truncate=args.llm_truncate,  # NEW
@@ -307,7 +312,8 @@ def _run_auto_fixes(
     report: BranchStatusReport,
     provider: str,
     mcp_config: Optional[str],
-    execution_dir: Optional[Path],
+    settings_file: str | None = None,
+    execution_dir: Optional[Path] = None,
     fix_attempts: int = 1,
     ci_timeout: int = 180,
     llm_truncate: bool = False,
@@ -319,6 +325,7 @@ def _run_auto_fixes(
         report: Branch status report
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional MCP configuration path
+        settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
         execution_dir: Optional execution directory
         fix_attempts: Number of fix attempts (1 = no retry, N ≥ 2 = retry)
         ci_timeout: Seconds to wait for CI between attempts
@@ -354,7 +361,12 @@ def _run_auto_fixes(
         if fix_attempts == 1:
             logger.info("Single fix attempt (no retry)")
             ci_success = check_and_fix_ci(
-                project_dir, current_branch, provider, mcp_config, execution_dir
+                project_dir,
+                current_branch,
+                provider,
+                mcp_config,
+                settings_file,
+                execution_dir,
             )
 
             if ci_success:
@@ -380,7 +392,12 @@ def _run_auto_fixes(
 
             # Attempt fix
             ci_success = check_and_fix_ci(
-                project_dir, current_branch, provider, mcp_config, execution_dir
+                project_dir,
+                current_branch,
+                provider,
+                mcp_config,
+                settings_file,
+                execution_dir,
             )
 
             if not ci_success:

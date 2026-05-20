@@ -114,6 +114,14 @@ def add_prompt_parser(subparsers: Any) -> None:
         help="Path to MCP configuration file (e.g., .mcp.linux.json)",
     )
     prompt_parser.add_argument(
+        "--settings",
+        type=str,
+        default=None,
+        help="Path to Claude Code settings file (.claude/settings.local.json). "
+        "Auto-detected from <project_dir>/.claude/ if omitted. "
+        "Overrides Claude's cwd-based settings discovery.",
+    )
+    prompt_parser.add_argument(
         "--add-system-prompts",
         action="store_true",
         help="Inject system and project prompts into the LLM request",
@@ -213,6 +221,14 @@ def add_implement_parser(subparsers: Any) -> None:
         help="Path to MCP configuration file (e.g., .mcp.linux.json)",
     )
     implement_parser.add_argument(
+        "--settings",
+        type=str,
+        default=None,
+        help="Path to Claude Code settings file (.claude/settings.local.json). "
+        "Auto-detected from <project_dir>/.claude/ if omitted. "
+        "Overrides Claude's cwd-based settings discovery.",
+    )
+    implement_parser.add_argument(
         "--execution-dir",
         type=str,
         default=None,
@@ -261,6 +277,14 @@ def add_create_plan_parser(subparsers: Any) -> None:
         help="Path to MCP configuration file (e.g., .mcp.linux.json)",
     )
     create_plan_parser.add_argument(
+        "--settings",
+        type=str,
+        default=None,
+        help="Path to Claude Code settings file (.claude/settings.local.json). "
+        "Auto-detected from <project_dir>/.claude/ if omitted. "
+        "Overrides Claude's cwd-based settings discovery.",
+    )
+    create_plan_parser.add_argument(
         "--execution-dir",
         type=str,
         default=None,
@@ -304,6 +328,14 @@ def add_create_pr_parser(subparsers: Any) -> None:
         type=str,
         default=None,
         help="Path to MCP configuration file (e.g., .mcp.linux.json)",
+    )
+    create_pr_parser.add_argument(
+        "--settings",
+        type=str,
+        default=None,
+        help="Path to Claude Code settings file (.claude/settings.local.json). "
+        "Auto-detected from <project_dir>/.claude/ if omitted. "
+        "Overrides Claude's cwd-based settings discovery.",
     )
     create_pr_parser.add_argument(
         "--execution-dir",
@@ -468,6 +500,14 @@ def add_check_parsers(subparsers: Any) -> None:
         help="Path to MCP configuration file (e.g., .mcp.linux.json)",
     )
     branch_status_parser.add_argument(
+        "--settings",
+        type=str,
+        default=None,
+        help="Path to Claude Code settings file (.claude/settings.local.json). "
+        "Auto-detected from <project_dir>/.claude/ if omitted. "
+        "Overrides Claude's cwd-based settings discovery.",
+    )
+    branch_status_parser.add_argument(
         "--execution-dir",
         type=str,
         default=None,
@@ -547,6 +587,14 @@ def add_verify_parser(subparsers: Any) -> None:
         type=str,
         default=None,
         help="Path to .mcp.json for MCP agent smoke test",
+    )
+    verify_parser.add_argument(
+        "--settings",
+        type=str,
+        default=None,
+        help="Path to Claude Code settings file (.claude/settings.local.json). "
+        "Auto-detected from <project_dir>/.claude/ if omitted. "
+        "Overrides Claude's cwd-based settings discovery.",
     )
     verify_parser.add_argument(
         "--list-mcp-tools",
@@ -659,6 +707,14 @@ def add_icoder_parser(subparsers: Any) -> None:
         type=str,
         default=None,
         help="Path to MCP configuration file (e.g., .mcp.linux.json)",
+    )
+    icoder_parser.add_argument(
+        "--settings",
+        type=str,
+        default=None,
+        help="Path to Claude Code settings file (.claude/settings.local.json). "
+        "Auto-detected from <project_dir>/.claude/ if omitted. "
+        "Overrides Claude's cwd-based settings discovery.",
     )
     icoder_parser.add_argument(
         "--project-dir",

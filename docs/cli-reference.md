@@ -104,10 +104,14 @@ mcp-coder help
 Verify Claude CLI installation and configuration.
 
 ```bash
-mcp-coder verify
+mcp-coder verify [OPTIONS]
 ```
 
 **Description:** Check if Claude CLI is properly installed and configured for use with MCP Coder.
+
+**Options:**
+- `--mcp-config PATH` - Path to `.mcp.json` for MCP agent smoke test
+- `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
 
 ---
 
@@ -133,6 +137,7 @@ mcp-coder prompt "Your prompt here" [OPTIONS]
 - `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
 - `--output-format FORMAT` - Output format: `text` (default) or `json` (includes session_id)
 - `--mcp-config PATH` - Path to MCP configuration file (e.g., `.mcp.linux.json`)
+- `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
 - `--execution-dir PATH` - Working directory for Claude subprocess (default: current directory)
 - `--add-system-prompts` - Inject system and project prompts into the LLM request. Loads prompts from `[tool.mcp-coder.prompts]` in `pyproject.toml` (or shipped defaults). See [Prompt Configuration](repository-setup/python.md#prompt-configuration).
 
@@ -153,6 +158,9 @@ mcp-coder prompt "What's next?" --continue-session
 # Use verbose output with MCP config
 mcp-coder prompt "Review my implementation" --verbosity verbose --mcp-config .mcp.linux.json
 
+# Pin a Claude Code settings file explicitly
+mcp-coder prompt "Audit deps" --mcp-config .mcp.json --settings .claude/settings.local.json
+
 # Inject system and project prompts (useful for langchain provider)
 mcp-coder prompt "Analyze code" --add-system-prompts --llm-method langchain
 ```
@@ -172,6 +180,7 @@ mcp-coder icoder [OPTIONS]
 **Options:**
 - `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
 - `--mcp-config PATH` - Path to MCP configuration file
+- `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
 - `--project-dir PATH` - Project directory path (default: current directory)
 - `--execution-dir PATH` - Working directory for Claude subprocess
 - `--initial-color COLOR` - Set prompt border color at startup (named color or hex code)
@@ -198,6 +207,9 @@ mcp-coder icoder --llm-method langchain
 
 # Specify project and MCP config
 mcp-coder icoder --project-dir /path/to/project --mcp-config .mcp.linux.json
+
+# Pin a Claude Code settings file explicitly
+mcp-coder icoder --mcp-config .mcp.json --settings .claude/settings.local.json
 ```
 
 ---
@@ -265,6 +277,7 @@ mcp-coder implement [OPTIONS]
 - `--project-dir PATH` - Project directory path (default: current directory)
 - `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
 - `--mcp-config PATH` - Path to MCP configuration file
+- `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
 - `--execution-dir PATH` - Working directory for Claude subprocess
 - `--update-issue-labels` / `--no-update-issue-labels` - Update GitHub issue labels on success/failure (default: from config.toml, or false)
 - `--post-issue-comments` / `--no-post-issue-comments` - Post GitHub comments on workflow failure (default: from config.toml, or false)
@@ -281,6 +294,9 @@ mcp-coder implement --update-issue-labels --post-issue-comments
 
 # Use langchain provider with MCP config
 mcp-coder implement --llm-method langchain --mcp-config .mcp.linux.json
+
+# Pin both MCP config and Claude settings explicitly
+mcp-coder implement --mcp-config .mcp.json --settings .claude/settings.local.json
 ```
 
 ---
@@ -300,6 +316,7 @@ mcp-coder create-plan ISSUE_NUMBER [OPTIONS]
 - `--project-dir PATH` - Project directory path (default: current directory)
 - `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
 - `--mcp-config PATH` - Path to MCP configuration file
+- `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
 - `--execution-dir PATH` - Working directory for Claude subprocess
 - `--update-issue-labels` / `--no-update-issue-labels` - Update GitHub issue labels on success/failure (default: from config.toml, or false)
 - `--post-issue-comments` / `--no-post-issue-comments` - Post GitHub comments on workflow failure (default: from config.toml, or false)
@@ -332,6 +349,7 @@ mcp-coder create-pr [OPTIONS]
 - `--project-dir PATH` - Project directory path (default: current directory)
 - `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
 - `--mcp-config PATH` - Path to MCP configuration file
+- `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
 - `--execution-dir PATH` - Working directory for Claude subprocess
 - `--update-issue-labels` / `--no-update-issue-labels` - Update GitHub issue labels on success/failure (default: from config.toml, or false)
 - `--post-issue-comments` / `--no-post-issue-comments` - Post GitHub comments on workflow failure (default: from config.toml, or false)
@@ -565,6 +583,7 @@ mcp-coder check branch-status [OPTIONS]
 - `--llm-truncate` - Truncate output for LLM consumption
 - `--llm-method METHOD` - LLM provider for --fix (`claude`, `copilot`, or `langchain`)
 - `--mcp-config PATH` - Path to MCP configuration file
+- `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
 - `--execution-dir PATH` - Working directory for Claude subprocess
 
 #### Exit Codes
@@ -924,6 +943,38 @@ is configured via the `MCP_CODER_MCP_CONFIG` environment variable or
 ```bash
 mcp-coder prompt "Analyze code" --mcp-config .mcp.linux.json
 mcp-coder implement --mcp-config .mcp.windows.json
+```
+
+### Claude Code Settings
+
+Commands that drive Claude Code also accept `--settings <path>` to pin the
+Claude Code settings file (`.claude/settings.local.json` or
+`.claude/settings.json`). The path is forwarded to Claude via its native
+`--settings` flag and overrides cwd-based settings discovery. The file
+controls permissions, `enabledMcpjsonServers`, hooks, env, model, output
+style, and the rest of the Claude Code settings schema.
+
+**Default configuration:** `--settings` is optional when a default is set via
+the `MCP_CODER_CLAUDE_SETTINGS` environment variable or
+`[claude] default_settings_path` in `config.toml`. With no override,
+mcp-coder auto-detects `<project_dir>/.claude/settings.local.json` then
+`<project_dir>/.claude/settings.json`. See
+[Configuration Guide](configuration/config.md#claude) for the full
+resolution chain.
+
+**Commands supporting `--settings`:**
+- `prompt`
+- `icoder`
+- `implement`
+- `create-plan`
+- `create-pr`
+- `check branch-status`
+- `verify`
+
+**Usage:**
+```bash
+mcp-coder prompt "Analyze code" --mcp-config .mcp.json --settings .claude/settings.local.json
+mcp-coder implement --mcp-config .mcp.linux.json --settings .claude/settings.local.json
 ```
 
 ### First Time Setup

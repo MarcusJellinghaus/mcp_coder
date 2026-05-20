@@ -198,6 +198,43 @@ mcp-coder implement --project-dir /workspace/repo --mcp-config .mcp.json
 default_config_path = ".mcp.json"
 ```
 
+### [claude]
+
+Configures the default Claude Code settings file forwarded to Claude via its
+`--settings` flag. The settings file (`.claude/settings.local.json` or
+`.claude/settings.json`) controls Claude Code permissions,
+`enabledMcpjsonServers`, hooks, env, model, output style, and the rest of the
+Claude Code settings schema. Pinning the file prevents Claude from picking
+the wrong file via cwd-based discovery when the subprocess runs outside the
+project directory.
+
+| Field | Type | Description | Required | Default |
+|-------|------|-------------|----------|---------|
+| `default_settings_path` | string | Path to Claude Code settings file (relative to `--project-dir` or absolute) | No | None |
+
+**Resolution priority:** CLI `--settings` arg > `MCP_CODER_CLAUDE_SETTINGS` env var > `[claude] default_settings_path` config > auto-detect `<project_dir>/.claude/settings.local.json` > auto-detect `<project_dir>/.claude/settings.json` > none (fall through to Claude's cwd-based discovery)
+
+**Relative path resolution** mirrors `--mcp-config`: absolute paths are used as-is; relative paths resolve against `--project-dir`, falling back to CWD when `--project-dir` is not provided.
+
+**Error behavior:**
+- **CLI arg** (`--settings`): strict — raises `FileNotFoundError` if file not found
+- **Env var / config**: lenient — logs warning with source, falls back to auto-detect
+
+**Example:**
+
+The same relative path works from any working directory when `--project-dir` is set:
+```bash
+# Resolves to <repo>/.claude/settings.local.json regardless of CWD
+mcp-coder implement --project-dir /workspace/repo --settings .claude/settings.local.json
+```
+
+```toml
+[claude]
+# Default Claude Code settings file (relative to --project-dir or absolute)
+# Environment variable (higher priority): MCP_CODER_CLAUDE_SETTINGS
+default_settings_path = ".claude/settings.local.json"
+```
+
 ### [llm]
 
 Selects the LLM provider. Defaults to `"claude"` when omitted.
@@ -337,6 +374,7 @@ Environment variables take **highest priority** over config file values.
 | `OLLAMA_API_KEY` | `[llm.langchain] api_key` | `ollama` |
 | `OLLAMA_HOST` | `[llm.langchain] endpoint` | `ollama` |
 | `MCP_CODER_MCP_CONFIG` | `[mcp] default_config_path` | `.mcp.json` |
+| `MCP_CODER_CLAUDE_SETTINGS` | `[claude] default_settings_path` | `.claude/settings.local.json` |
 
 **Usage in CI/CD:**
 ```bash

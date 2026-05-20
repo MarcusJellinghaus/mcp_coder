@@ -161,6 +161,9 @@ _._mock_github
 # test_verify_*.py - Autouse fixture to mock resolve_mcp_config_path
 _._mock_resolve_mcp
 
+# cli/commands/conftest.py - Autouse fixture to mock resolve_claude_settings_path
+_._mock_resolve_claude_settings_path
+
 # test_langchain_integration.py - Module-level pytest marker assignment
 _.pytestmark
 

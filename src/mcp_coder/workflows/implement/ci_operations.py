@@ -52,6 +52,7 @@ class CIFixConfig:
     env_vars: dict[str, str]
     cwd: str
     mcp_config: Optional[str]
+    settings_file: str | None = None
 
 
 def _short_sha(sha: str) -> str:
@@ -114,6 +115,7 @@ def _run_ci_analysis(
             env_vars=config.env_vars,
             execution_dir=config.cwd,
             mcp_config=config.mcp_config,
+            settings_file=config.settings_file,
             branch_name=branch_name,
         )
         analysis_response = llm_response["text"]
@@ -186,6 +188,7 @@ def _run_ci_fix(
             env_vars=config.env_vars,
             execution_dir=config.cwd,
             mcp_config=config.mcp_config,
+            settings_file=config.settings_file,
             branch_name=branch_name,
         )
         fix_response = llm_response["text"]
@@ -441,6 +444,7 @@ def check_and_fix_ci(
     branch: str,
     provider: str,
     mcp_config: Optional[str] = None,
+    settings_file: str | None = None,
     execution_dir: Optional[Path] = None,
 ) -> bool:
     """Check CI status after finalisation and attempt fixes if needed.
@@ -450,6 +454,7 @@ def check_and_fix_ci(
         branch: Branch name to check CI for
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional path to MCP configuration file
+        settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
         execution_dir: Optional working directory for Claude subprocess
 
     Returns:
@@ -496,6 +501,7 @@ def check_and_fix_ci(
         env_vars=env_vars,
         cwd=cwd,
         mcp_config=mcp_config,
+        settings_file=settings_file,
     )
 
     for fix_attempt in range(CI_MAX_FIX_ATTEMPTS):
