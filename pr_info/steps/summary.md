@@ -15,7 +15,6 @@ These preserve all issue requirements while reducing complexity:
 
 | Simplification | Rationale |
 |---|---|
-| **Drop `parent_id` from `ContentUnit`** | Issue marks it "always `None` in v1". Project rule: no fields for hypothetical future requirements. Trivially re-addable when v2 needs nesting. |
 | **Disjoint ranges + "first containing range wins"** | Ranges are disjoint by design (turn has gaps where tools sit). "First match" gives same result as "smallest match" but is simpler. |
 | **Per‑unit tier overrides as a separate dict, not a mutable field on `ContentUnit`** | `ContentUnit` stays `frozen=True`; `/display` hard-reset = one-line dict clear. |
 | **`_units` is a single `dict`** (insertion-ordered) | Python dicts preserve order — no separate `_order: list` needed. |
@@ -40,7 +39,7 @@ Mirrors the existing `RenderAction` pattern in `llm/formatting/render_actions.py
 
 ```
 ContentUnit  (frozen dataclass)
-  id, kind, timestamp, tool_name, args, output, duration_ms, is_error, full_text
+  id, kind, timestamp, tool_name, args, output, duration_ms, is_error, full_text, parent_id
 
 OutputLog state additions:
   _units:        dict[str, ContentUnit]              # insertion-ordered
@@ -57,6 +56,8 @@ Two distinct entry points on `OutputLog`:
 - `append_text(text, style=...)` — unchanged behavior; banners/markers/spacers stay on this path.
 - `append_unit(unit)` / `extend_open_unit(unit_id, lines)` / `finalize_open_unit(unit_id)` — registers a clickable unit.
 
+**`last_unit()` semantics**: returns the most recent value in `_units` by dict insertion order. After a mid-turn tool fires, the tool is the most recent unit; `F2` then opens the tool's modal, not the still-streaming assistant turn. This is intentional.
+
 ### Detail modal
 
 New widget: `DetailModal(ModalScreen)` containing `TextArea(read_only=True)`. Closes on `Escape` / `Enter`. `Ctrl+C` overrides the app-level no-op binding (`priority=True`) to copy selection. Layout: header / args / output / footer (or kind / text / footer for non-tool units).
@@ -70,7 +71,7 @@ New widget: `DetailModal(ModalScreen)` containing `TextArea(read_only=True)`. Cl
 Add `is_error: bool` to the `tool_result` event in:
 - `claude_code_cli_streaming.py` — read from `block["is_error"]`
 - `copilot_cli_streaming.py` — derive from `tool.execution_complete` status
-- `langchain/agent.py` — add `on_tool_error` branch emitting `tool_result` with `is_error=True`
+- `langchain/agent.py` — detect tool errors via `on_tool_end`'s `data.output` (`ToolMessage` with `status == 'error'`) and emit `tool_result` with `is_error=True`
 
 Add `is_error: bool = False` to `ToolResult` render-action.
 
@@ -106,13 +107,13 @@ New `core/commands/display.py`. Accepts `oneline` / `compressed`. Updates `AppCo
 | `src/mcp_coder/icoder/core/app_core.py` | `tool_display` field; `handle_input` returns typed actions; `SendToLLM(text=resolved)` |
 | `src/mcp_coder/icoder/ui/app.py` | `match` dispatch over actions; migrate user-input/tool/assistant-turn writes to `append_unit`/`extend_open_unit`; orphan cleanup; `F2` binding; `on_resize` |
 | `src/mcp_coder/icoder/ui/replay.py` | No source changes (delegates to `_handle_stream_event` + `append_text`); migrates "for free" once App migrates |
-| `src/mcp_coder/icoder/ui/widgets/output_log.py` | `ContentUnit`, registry state, `append_unit`/`extend_open_unit`/`finalize_open_unit`, `unit_at_line`, `last_unit`, `toggle_unit_tier`, `rebuild`, `set_tool_display_default`, `on_click`, `on_resize`, `rendered_lines`; `clear_recorded` extended |
+| `src/mcp_coder/icoder/ui/widgets/output_log.py` | `ContentUnit` (incl. `parent_id`), registry state, `append_unit`/`extend_open_unit` (raises for tools)/`finalize_open_unit`/`update_unit_and_rerender`, `unit_at_line`, `last_unit`, `toggle_unit_tier`, `rebuild`, `set_tool_display_default`, `on_click`, `on_resize`, `rendered_lines`; `clear_recorded` renamed to `clear_state` (also wipes `_tool_tier_overrides`) |
 | `src/mcp_coder/llm/formatting/render_actions.py` | `ToolResult.is_error: bool = False` |
-| `src/mcp_coder/llm/formatting/stream_renderer.py` | `format_tool_oneline()`; `StreamEventRenderer` FIFO + `cleanup_pending()`; class docstring update |
+| `src/mcp_coder/llm/formatting/stream_renderer.py` | `format_tool_oneline()`; `format_tool_compressed()`; `StreamEventRenderer` FIFO + `cleanup_pending()`; class docstring update |
 | `src/mcp_coder/llm/types.py` | `StreamEvent` docstring documents `is_error` on `tool_result` |
 | `src/mcp_coder/llm/providers/claude/claude_code_cli_streaming.py` | Propagate `is_error` from `tool_use_result` block |
 | `src/mcp_coder/llm/providers/copilot/copilot_cli_streaming.py` | Propagate `is_error` from `tool.execution_complete` status |
-| `src/mcp_coder/llm/providers/langchain/agent.py` | Add `on_tool_error` branch emitting `tool_result(is_error=True)` instead of raising |
+| `src/mcp_coder/llm/providers/langchain/agent.py` | Detect tool errors via `on_tool_end`'s `data.output` (`ToolMessage` with `status == 'error'`) and emit `tool_result(is_error=True)` instead of raising |
 | `src/mcp_coder/cli/parsers.py` | `--tool-display` option in `add_icoder_parser` |
 | `src/mcp_coder/cli/commands/icoder.py` | Thread `--tool-display` to `AppCore` |
 | `tests/icoder/test_types.py` | Tests for typed-action shape |

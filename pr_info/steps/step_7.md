@@ -17,7 +17,7 @@ Self-contained widget; no click handler / app wiring yet (step 8).
 class DetailModal(ModalScreen[None]):
     BINDINGS = [
         Binding("escape", "dismiss", "Close"),
-        Binding("enter",  "dismiss", "Close"),
+        Binding("enter",  "dismiss", "Close", priority=True),
         Binding("ctrl+c", "copy_selection", "Copy", priority=True),
     ]
 
@@ -84,7 +84,7 @@ output_block = "Output:\n" + "\n".join(output_lines) if output_lines else "Outpu
 status = "error" if unit.is_error else "done"
 dur = f"{unit.duration_ms}ms" if unit.duration_ms is not None else "—"
 footer = f"Status: {status} | Duration: {dur} | {total} lines | {unit.timestamp:%Y-%m-%d %H:%M:%S}"
-return "\n\n".join([header, args_block, output_block]) + "\n\n─" * 1 + "\n" + footer
+return "\n\n".join([header, args_block, output_block]) + "\n\n─\n" + footer
 ```
 
 (Implementer should tighten the algorithm to match the example layout in the issue exactly.)

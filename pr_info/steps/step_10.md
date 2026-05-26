@@ -139,7 +139,7 @@ Add snapshot tests in `tests/icoder/test_snapshots.py`:
 - `test_snapshot_after_display_oneline`
 - `test_snapshot_modal_over_tool`
 
-Re-baseline once authored.
+After authoring the snapshot tests, run `pytest --snapshot-update -k <new tests>` and **visually inspect the generated SVGs before committing**. Auto-blessing snapshots without inspection is forbidden.
 
 ## LLM Prompt
 
@@ -156,6 +156,6 @@ Re-baseline once authored.
 > - `/help` text gets an F2 line.
 > - Docs: `docs/icoder/icoder.md` gets a tier section + `/display` row + F2 row.
 > - TDD: 15 test cases first, then implement.
-> - Add 3 snapshot tests (default, after `/display oneline`, modal-over-tool); re-baseline as needed.
+> - Add 3 snapshot tests (default, after `/display oneline`, modal-over-tool); generate via `--snapshot-update` and **visually inspect the SVGs before committing** — no auto-blessing.
 >
 > All three quality gates green after the change. This is the final step — the feature is complete.

@@ -24,6 +24,7 @@ App-layer integration of `append_unit` (so units actually exist for clicks) land
 ```python
 # OutputLog additions
 _pending_single: Timer | None = None
+_on_unit_event: Callable[[str, dict[str, object]], None] | None = None   # injected via __init__
 
 def on_click(self, event: Click) -> None: ...
 
@@ -36,6 +37,8 @@ def action_open_last_unit_modal(self) -> None: ...
 
 ## HOW
 
+Before writing the click tests, run a 5-line spike: verify that `event.y + self.scroll_offset.y` resolves to the correct index in `self.lines` for the current Textual version. If `event.style.meta` is populated with the unit_id from `Strip` metadata, prefer that path (no coordinate math).
+
 - `on_click`:
   1. If `event.button != 1`: return (left only).
   2. If `event.chain >= 3`: return.
@@ -44,13 +47,13 @@ def action_open_last_unit_modal(self) -> None: ...
   5. If `event.chain == 2`:
      - Cancel any `_pending_single` timer.
      - `self.app.push_screen(DetailModal(unit))`.
-     - Emit `content_detail_opened` event via the App's event log (call up via `self.app` or expose a callback).
+     - Emit `content_detail_opened` via the `on_unit_event` callback (if wired).
      - Return.
   6. `event.chain == 1`: schedule `set_timer(0.25, lambda: self._handle_single(unit))` and store in `_pending_single`.
 - `_handle_single(unit)`:
   1. If `unit.kind != "tool"`: return (only tools toggle).
   2. `new_tier = self.toggle_unit_tier(unit.id)`.
-  3. Emit `tool_tier_toggled` (via app event log) with `unit_id` + `new_tier`.
+  3. Emit `tool_tier_toggled` via the `on_unit_event` callback (if wired) with payload `{"unit_id": unit.id, "new_tier": new_tier}`.
 - `action_open_last_unit_modal()` (on ICoderApp):
   1. `output = self.query_one(OutputLog)`.
   2. `unit = output.last_unit()`.
@@ -59,7 +62,7 @@ def action_open_last_unit_modal(self) -> None: ...
 
 ### Event log wiring
 
-`OutputLog` does NOT own the event log. To emit events from the widget, accept an optional `event_log: EventLog | None = None` argument to a setter method (`set_event_log(event_log)`) or look it up via `self.app` (which is the ICoderApp). Simplest: call `self.app._core.event_log.emit(...)` from the widget. Acceptable coupling for this case.
+`OutputLog` does NOT own the event log. Add an `on_unit_event: Callable[[str, dict[str, object]], None] | None = None` parameter to `OutputLog.__init__` (mirrors the existing `mirror` callback pattern). `ICoderApp.compose` wires it to `self._core.event_log.append` (or equivalent emit method). All event emissions from within `OutputLog` go through `self._on_unit_event(name, payload)` if set. Do NOT access `self.app._core.event_log` directly from `OutputLog`.
 
 ## ALGORITHM (on_click)
 
@@ -72,7 +75,8 @@ if unit is None: return
 if event.chain == 2:
     if self._pending_single: self._pending_single.cancel(); self._pending_single = None
     self.app.push_screen(DetailModal(unit))
-    self._emit_event("content_detail_opened", unit_id=unit.id, kind=unit.kind)
+    if self._on_unit_event:
+        self._on_unit_event("content_detail_opened", {"unit_id": unit.id, "kind": unit.kind})
     return
 # chain == 1
 self._pending_single = self.set_timer(0.25, lambda: self._handle_single(unit))
@@ -117,7 +121,8 @@ Pylint, pytest, mypy — all green.
 > - Left button only; `chain >= 3` ignored; non-tool units ignore single click; clicks on lines outside any range are silent no-ops.
 > - 250 ms debounce timer; cancel on `chain == 2`.
 > - F2 on `ICoderApp` opens modal for `last_unit()`; silent no-op when no content.
-> - `OutputLog` may reach into `self.app._core.event_log` to emit `tool_tier_toggled` and `content_detail_opened`.
+> - `OutputLog` emits events via the `on_unit_event` callback parameter (`__init__`); `ICoderApp.compose` wires it to `self._core.event_log.append`. NO direct access to `self.app._core.event_log` from `OutputLog`. Mirrors the existing `mirror` callback pattern.
+> - Run a 5-line spike against the current Textual version BEFORE writing click tests: confirm `event.y + self.scroll_offset.y` maps to the right index in `self.lines`. Prefer `event.style.meta` if it carries the `unit_id` via `Strip` metadata.
 > - TDD: 10 test cases first, then implement.
 > - Step 9 will wire actual `append_unit` calls in the App; for testing, append units directly via the widget API.
 >

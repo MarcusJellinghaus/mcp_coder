@@ -66,13 +66,15 @@ Each command now returns `Response(actions=(...,))`:
 
 - Keep the `output_emitted` event emission in `AppCore.handle_input()` driven by iteration over `response.actions` (check for `OutputText`), not by a bare `response.text` access.
 - `ResetSession` handling stays in `AppCore.handle_input()` (rotate event log + emit session_start) — triggered when `ResetSession()` is in `response.actions`.
+- Empty `Response(actions=())` is the new "do nothing" sentinel — replaces today's `Response()`. Document this in the dataclass docstring.
+- Ordering: `AppCore.handle_input` performs all state-mutation side effects (rotate event log, emit session_start, color updates) BEFORE returning the typed `Response`. The UI then iterates `response.actions` strictly in tuple order. `case ResetSession(): pass` is a marker case for symmetry with the typed union — the actual reset already happened inside `AppCore`.
 - UI dispatch in `app.py:on_input_area_input_submitted` becomes:
 
 ```python
 for action in response.actions:
     match action:
         case Quit():            self.exit()
-        case ClearOutput():     output.clear(); output.clear_recorded()
+        case ClearOutput():     output.clear(); output.clear_recorded()   # renamed to clear_state() in step 5
         case OpenPicker():      self.open_picker_for_load()
         case OutputText(t):     output.append_text(t)
         case SendToLLM(t):

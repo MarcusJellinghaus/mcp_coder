@@ -26,6 +26,8 @@ class ContentUnit:
     output: str | None = None
     duration_ms: int | None = None
     is_error: bool = False
+    # always None in v1 — reserved for v2 nesting per issue #629 Decision
+    parent_id: str | None = None
 
 class OutputLog(RichLog):
     # existing _recorded stays as APPEND HISTORY (never rebuilt)
@@ -36,12 +38,15 @@ class OutputLog(RichLog):
 
     def append_unit(self, unit: ContentUnit, lines: list[str], style: str | None = None) -> None
     def extend_open_unit(self, unit_id: str, lines: list[str], style: str | None = None) -> None
+        # raises ValueError if unit.kind == "tool" — tools never extend.
     def finalize_open_unit(self, unit_id: str) -> None      # no-op marker (see HOW)
+    def update_unit_and_rerender(self, unit_id: str, **fields: object) -> ContentUnit
+        # rebuilds the unit via dataclasses.replace, writes it back to _units, then rebuild().
     def unit_at_line(self, line: int) -> ContentUnit | None
     def last_unit(self) -> ContentUnit | None
     @property
     def rendered_lines(self) -> list[str]
-    def clear_recorded(self) -> None                  # EXTENDED: also wipes _units/_script/_ranges/_screen_lines
+    def clear_state(self) -> None                     # NEW (renamed from clear_recorded): wipes _recorded/_units/_script/_ranges/_screen_lines/_tool_tier_overrides
 ```
 
 Add a one-line code comment at `__init__` noting `max_lines` must remain `None` (eviction would invalidate `_ranges`).
@@ -50,15 +55,22 @@ Add a one-line code comment at `__init__` noting `max_lines` must remain `None` 
 
 - `append_unit(unit, lines, style=...)`:
   1. Register: `self._units[unit.id] = unit`.
-  2. For each rendered line, append to `_script` as `(unit.id, None)` if kind is `tool` or `user_input` (atomic — write the line and register one range entry per logical block). Implementation choice: **one script entry per logical unit for atomic units**. We use `(unit.id, None)` as a marker meaning "render this unit's full content from raw data". Then on first write we call `_write_unit_atomic(unit, lines, style)` which writes all lines and pushes `(start, end, unit.id)` to `_ranges` and to `_screen_lines`.
-  3. For `assistant_turn`: register the unit but DO NOT append a script entry. Lines arrive via `extend_open_unit`.
+  2. For tools (`kind == "tool"`): write exactly **one** `(unit.id, None)` entry to `_script` (atomic). This is the ONLY script entry for a tool unit — no further `_script` writes ever happen for it. `_render_unit_atomic` reconstructs the full tool block (start lines always; body lines when `unit.output` is set) at render time.
+  3. For `user_input`: write one `(unit.id, None)` entry to `_script` (also atomic). Call `_write_unit_atomic(unit, lines, style)` which writes all lines and pushes `(start, end, unit.id)` to `_ranges` and to `_screen_lines`.
+  4. For `assistant_turn`: register the unit but DO NOT append a script entry. Lines arrive via `extend_open_unit`.
 - `extend_open_unit(unit_id, lines, style=...)`:
-  1. For each line: append `(unit_id, line)` to `_script`, write the line, append `(start, end, unit_id)` to `_ranges`, append to `_screen_lines`.
-- `finalize_open_unit(unit_id)`: no-op in this step. (Marker for clarity / future state; the unit's "openness" is implicit — anyone can still call `extend_open_unit` on a registered unit_id.)
+  1. **Raise `ValueError`** if `self._units[unit_id].kind == "tool"`. Tools never extend; mutations land via `update_unit_and_rerender`.
+  2. For each line: append `(unit_id, line)` to `_script`, write the line, append `(start, end, unit_id)` to `_ranges`, append to `_screen_lines`.
+- `finalize_open_unit(unit_id)`: no-op in this step. (Marker for clarity / future state; the unit's "openness" is implicit — anyone can still call `extend_open_unit` on a registered turn unit_id.)
+- `update_unit_and_rerender(unit_id, **fields)`:
+  1. `new_unit = dataclasses.replace(self._units[unit_id], **fields)`.
+  2. `self._units[unit_id] = new_unit`.
+  3. Call `self.rebuild()` so the new fields take effect (notably tool body / `is_error` / `duration_ms` for atomic tool units).
+  4. Return `new_unit`.
 - `unit_at_line(line)`: linear scan `_ranges`, return `self._units[uid]` for the **first** `(start, end, uid)` with `start <= line < end`. Disjoint ranges by construction → first match wins.
 - `last_unit()`: returns last value in `self._units` (insertion order) or `None` if empty.
 - `rendered_lines`: returns `list(self._screen_lines)`.
-- `clear_recorded()`: clears all of `_recorded`, `_units`, `_script`, `_ranges`, `_screen_lines`.
+- `clear_state()`: clears all of `_recorded`, `_units`, `_script`, `_ranges`, `_screen_lines`, `_tool_tier_overrides`. Note: `clear()` (RichLog's own buffer wipe) is separate and is called first by the app; `clear_state()` then wipes the model. Call sites in `app.py`: `on_input_area_input_submitted` (after `/clear`) and `do_resume`.
 
 Wrap-aware sizing: measure `len(self.lines)` (the RichLog buffer) BEFORE and AFTER each `super().write(...)` to capture the actual rendered span (one logical line may wrap to N buffer lines). The `(start, end)` stored is over `self.lines`, NOT over `_screen_lines`. Also append the logical line to `_screen_lines`. `unit_at_line(line)` interprets `line` against `self.lines` indices (the buffer the click handler will use).
 
@@ -100,8 +112,11 @@ Tests in `tests/icoder/ui/test_output_log.py` (use existing pilot/textual patter
 7. `test_last_unit_none_when_empty`
 8. `test_rendered_lines_reflects_screen_state` — after multiple appends, `rendered_lines` matches the logical lines written.
 9. `test_recorded_lines_independent_of_units` — append units → both `_recorded` and `_screen_lines` grow; calling `append_text` writes only to `_recorded` and screen (no unit / range).
-10. `test_clear_recorded_wipes_all_state` — populate units + ranges; call `clear_recorded()` → `_units`, `_script`, `_ranges`, `_screen_lines`, `_recorded` all empty.
+10. `test_clear_state_wipes_all_state` — populate units + ranges; call `clear_state()` → `_units`, `_script`, `_ranges`, `_screen_lines`, `_recorded`, `_tool_tier_overrides` all empty.
 11. `test_wrapped_line_range_uses_buffer_index` — write a very long line that wraps to N buffer lines → range `end - start == N`.
+12. `test_extend_open_unit_raises_for_tool_kind` — append a tool unit; call `extend_open_unit(tool_id, ["x"])` → `ValueError`.
+13. `test_update_unit_and_rerender_replaces_and_rebuilds` — append a tool unit with `output=None`; call `update_unit_and_rerender(uid, output="X", duration_ms=42, is_error=False)` → `_units[uid].output == "X"`, `rendered_lines` includes the body.
+14. `test_content_unit_parent_id_defaults_none` — `ContentUnit(...)` without `parent_id` argument has `parent_id is None` (v1 invariant).
 
 ### Existing test audit (mandatory sub-step)
 
@@ -125,13 +140,16 @@ Pylint, pytest, mypy — all green.
 > Read `pr_info/steps/summary.md` first for context.
 >
 > Constraints:
-> - **No tier model, no toggle, no rebuild** in this step — those are step 6.
+> - **No tier model, no toggle, no rebuild** in this step — those are step 6 (BUT `update_unit_and_rerender` does call `rebuild()`; the rebuild method body is implemented in step 6 — wire the call here and stub the method to no-op until step 6 if needed for tests).
 > - `append_text()` semantics unchanged.
 > - `ContentUnit` is `frozen=True`; per-unit tier overrides live on `OutputLog`, not on `ContentUnit` (step 6).
+> - `ContentUnit.parent_id: str | None = None` — always `None` in v1, reserved for v2 nesting per issue #629 Decision.
+> - Tools are atomic: `append_unit` writes one `(unit.id, None)` script entry; `extend_open_unit` **raises** for tool kind; mutations go through `update_unit_and_rerender`.
 > - `_ranges` indices are over the RichLog buffer (`self.lines`), wrap-aware (measure before/after write).
 > - First-match wins on `unit_at_line` (ranges are disjoint by construction).
+> - `clear_state()` (renamed from `clear_recorded()`) wipes the full model including `_tool_tier_overrides`. Update call sites in `app.py`.
 > - Audit existing tests using `recorded_lines`; document classification (emission vs. screen).
 > - Add code comment near `__init__` noting `max_lines` must stay `None`.
-> - TDD: write the 11 new test cases first, then implement.
+> - TDD: write the 14 new test cases first, then implement.
 >
 > All three quality gates green after the change.
