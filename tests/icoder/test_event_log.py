@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
+from mcp_coder.icoder.core import event_log as event_log_module
 from mcp_coder.icoder.core.event_log import (
     EventLog,
     emit_session_start,
@@ -295,3 +297,100 @@ def test_emit_session_start_payload_covers_live_banner_keys(tmp_path: Path) -> N
     assert "project_dir" in payload
     assert "mcp_servers" in payload
     assert "mcp_connection_status" in payload
+
+
+def test_chat_sidecar_created_alongside_jsonl(tmp_path: Path) -> None:
+    """Constructor opens both ``.jsonl`` and matching ``_chat.txt``."""
+    with EventLog(logs_dir=tmp_path) as log:
+        assert log.current_chat_path.exists()
+        assert log.current_chat_path.stem == log.current_path.stem + "_chat"
+        assert log.current_chat_path.suffix == ".txt"
+        assert log.current_chat_path.parent == log.current_path.parent
+
+
+def test_write_chat_appends_and_flushes(tmp_path: Path) -> None:
+    """``write_chat`` appends each line plus newline (empty string = bare newline)."""
+    with EventLog(logs_dir=tmp_path) as log:
+        log.write_chat("hello")
+        log.write_chat("")
+        chat_path = log.current_chat_path
+    assert chat_path.read_text(encoding="utf-8") == "hello\n\n"
+
+
+def test_rotate_pairs_files_with_matching_stems(tmp_path: Path) -> None:
+    """``rotate()`` switches both files and they share a stem."""
+    with EventLog(logs_dir=tmp_path) as log:
+        old_jsonl = log.current_path
+        old_chat = log.current_chat_path
+        log.write_chat("before")
+        log.rotate()
+        new_jsonl = log.current_path
+        new_chat = log.current_chat_path
+
+        assert new_jsonl != old_jsonl
+        assert new_chat != old_chat
+        assert new_chat.stem == new_jsonl.stem + "_chat"
+        assert old_jsonl.exists()
+        assert old_chat.exists()
+        assert old_chat.read_text(encoding="utf-8") == "before\n"
+
+
+def test_rotate_preserves_collision_suffix(tmp_path: Path) -> None:
+    """Collision suffix on JSONL carries over to the chat sidecar."""
+    fixed_name = "icoder_2026-05-11T10-00-00-000000.jsonl"
+    with patch(
+        "mcp_coder.icoder.core.event_log._make_log_filename",
+        return_value=fixed_name,
+    ):
+        with EventLog(logs_dir=tmp_path) as log:
+            first_jsonl = log.current_path
+            first_chat = log.current_chat_path
+            log.rotate()
+            second_jsonl = log.current_path
+            second_chat = log.current_chat_path
+
+    assert first_jsonl.name == "icoder_2026-05-11T10-00-00-000000.jsonl"
+    assert first_chat.name == "icoder_2026-05-11T10-00-00-000000_chat.txt"
+    assert second_jsonl.name == "icoder_2026-05-11T10-00-00-000000-2.jsonl"
+    assert second_chat.name == "icoder_2026-05-11T10-00-00-000000-2_chat.txt"
+
+
+def test_close_closes_both_files(tmp_path: Path) -> None:
+    """``close()`` flushes and closes both file handles."""
+    log = EventLog(logs_dir=tmp_path)
+    chat_file = log._chat_file
+    log.close()
+    assert log._file.closed
+    assert chat_file is not None
+    assert chat_file.closed
+
+
+def test_chat_open_failure_is_best_effort(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """When the chat file cannot be opened, JSONL still works and write_chat is a no-op."""
+    real_open = open
+
+    def fake_open(file, *args, **kwargs):  # type: ignore[no-untyped-def]
+        path_str = str(file)
+        if path_str.endswith("_chat.txt"):
+            raise OSError("simulated open failure")
+        return real_open(file, *args, **kwargs)
+
+    monkeypatch.setattr(event_log_module, "open", fake_open, raising=False)
+
+    with caplog.at_level(logging.WARNING, logger="mcp_coder.icoder.core.event_log"):
+        log = EventLog(logs_dir=tmp_path)
+        try:
+            assert log._chat_file is None
+            assert not log._file.closed
+            log.emit("input_received", text="still works")
+            log.write_chat("ignored")
+        finally:
+            log.close()
+
+    assert any(
+        "chat mirror disabled" in record.getMessage() for record in caplog.records
+    )

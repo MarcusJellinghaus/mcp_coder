@@ -138,3 +138,11 @@ The backslash escape handles trailing backslashes via a parity rule:
 
 In all cases exactly one trailing backslash is removed. Odd count → newline;
 even count → submit.
+
+## Log files
+
+Each session writes two files in `logs/`: a structured
+`icoder_<timestamp>.jsonl` (the authoritative replay log) and a sibling
+`icoder_<timestamp>_chat.txt` mirroring the visible conversation in plain
+text for copy/paste. The `.txt` is best-effort — if it cannot be opened
+or written, iCoder continues with only the `.jsonl` and logs a warning.
