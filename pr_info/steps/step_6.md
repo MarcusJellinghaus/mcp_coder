@@ -4,7 +4,8 @@
 
 Layer the tier model on top of the registry from step 5:
 - Track a global default tier (`compressed` initially) and per-unit overrides.
-- Expose `toggle_unit_tier(unit_id)` and `rebuild()`.
+- Expose `toggle_unit_tier(unit_id)`.
+- Extend `_render_unit_atomic` to dispatch on effective tier (oneline vs compressed). The `rebuild()` walk itself does not change — it's already implemented in step 5.
 - Wire `on_resize` to call `rebuild()` (wrap-derived ranges invalidate on resize).
 - `set_tool_display_default(tier)` updates the default AND wipes per-unit overrides (the `/display` hard reset).
 
@@ -13,7 +14,7 @@ Click handlers and the App layer wire-up come in steps 8 and 9.
 ## WHERE
 
 - `src/mcp_coder/icoder/ui/widgets/output_log.py` — tier state + methods + rebuild + on_resize
-- `src/mcp_coder/llm/formatting/stream_renderer.py` — extract `format_tool_compressed(name, args, output_lines, total_lines, truncated, duration_ms, is_error) -> list[str]` (the `│  …` body lines plus the `└ done/error` footer) alongside `format_tool_start` and `format_tool_oneline`. Explicit-fields signature — no `ToolResult` synthesis. Both `_render_unit_atomic` (this step) and step 9's `_handle_stream_event` ToolResult branch call this helper.
+- `src/mcp_coder/llm/formatting/stream_renderer.py` — extract `format_tool_compressed(name, args, output_lines, total_lines, truncated, duration_ms, is_error) -> list[str]` (the `│  …` body lines plus the `└ done/error` footer) alongside `format_tool_start` and `format_tool_oneline`. Explicit-fields signature — no `ToolResult` synthesis. `_render_unit_atomic` (this step) calls this helper directly. Step 9's `_handle_stream_event` ToolResult branch triggers it **indirectly** via `update_unit_and_rerender → rebuild → _render_unit_atomic` (step 9 does NOT call `format_tool_compressed` directly).
 - `tests/icoder/ui/test_output_log.py` — tier and rebuild tests
 - `tests/llm/formatting/test_stream_renderer.py` — tests for `format_tool_compressed`
 
@@ -59,7 +60,7 @@ def format_tool_compressed(
     """
 ```
 
-Both `_render_unit_atomic` (this step, for rebuild) and step 9's `_handle_stream_event` ToolResult branch (live streaming) call this helper. Callers pass explicit fields; no `ToolResult` synthesis required. This guarantees byte-identical output across both paths.
+`_render_unit_atomic` (this step, for rebuild) calls this helper directly. Step 9's `_handle_stream_event` ToolResult branch (live streaming) reaches the same helper **indirectly** via `update_unit_and_rerender → rebuild → _render_unit_atomic` — step 9 itself does NOT call `format_tool_compressed`. Callers pass explicit fields; no `ToolResult` synthesis required. This guarantees byte-identical output: both the initial render and any subsequent rebuilds go through the same code path.
 
 Style constants (STYLE_USER_INPUT, STYLE_TOOL_OUTPUT, STYLE_CANCELLED) currently live in `app.py`. Keep them there but **import from `app.py` is fine** OR copy the constants into `output_log.py` (cleaner). Recommend copy: define them in `output_log.py` and have `app.py` import them.
 
@@ -159,7 +160,7 @@ Pylint, pytest, mypy — all green.
 > - `set_tool_display_default()` is the `/display` hard reset — updates default AND wipes overrides.
 > - `rebuild()` must be idempotent.
 > - `_recorded` is never touched by `rebuild()`.
-> - Extract `format_tool_compressed(name, args, output_lines, total_lines, truncated, duration_ms, is_error) -> list[str]` into `stream_renderer.py` alongside `format_tool_start` and `format_tool_oneline`. Explicit-fields signature — no `ToolResult` synthesis required by callers. Both the live streaming path (step 9) and `_render_unit_atomic` (this step) call it — single source of truth for compressed-tier body output.
+> - Extract `format_tool_compressed(name, args, output_lines, total_lines, truncated, duration_ms, is_error) -> list[str]` into `stream_renderer.py` alongside `format_tool_start` and `format_tool_oneline`. Explicit-fields signature — no `ToolResult` synthesis required by callers. `_render_unit_atomic` (this step) calls it directly. Step 9's live `tool_result` branch reaches it **indirectly** via `update_unit_and_rerender → rebuild → _render_unit_atomic` — single source of truth for compressed-tier body output.
 > - `_render_unit_atomic` for tool kind: start lines always; body lines only when `unit.output_lines` is non-empty.
 > - TDD: 14 test cases first (11 output_log + 3 stream_renderer), then implement.
 >

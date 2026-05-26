@@ -74,3 +74,33 @@ Documented in Step 9's new "Performance note" section: every `tool_result` event
 - Step 4: `test_tool_result_carries_raw_name` (covers live + cancelled paths)
 - Step 5: `test_append_unit_assistant_turn_with_empty_lines_no_script_entry`
 - Step 6: `test_rebuild_with_pending_tool_renders_start_only`
+
+## R3-01 — `_render_tool_output` returns 3-tuple
+
+Extend the helper signature from `(lines, total)` to `(lines, total, truncated)` where `truncated = total > _TRUNCATION_THRESHOLD` (already computed internally). Step 2 owns the change (bundled with the `is_error` propagation work since both touch `stream_renderer.py`). Caller in step 9's `_handle_stream_event` ToolResult branch destructures the 3-tuple to populate `ContentUnit.truncated`. Step 7's modal also updates its destructure (discards the new field with `_truncated`). Existing internal call sites in `stream_renderer.py` are updated to discard the new field where unused.
+
+## R3-02 — `rebuild()` implemented in step 5; tier dispatch added in step 6
+
+Step 5 ships a minimal `rebuild()` (non-tier — tools always render compressed) so `update_unit_and_rerender` is functional from step 5 onward. The rebuild walk re-emits each `_script` entry: atomic entries (`(unit_id, None)`) go through `_render_unit_atomic(unit)`, streamed entries (`(unit_id, line)`) write the line literally. Step 6 then changes `_render_unit_atomic` to **dispatch on effective tier** — reading `_tool_tier_overrides.get(unit_id, _tool_display_default)` and returning `format_tool_oneline(...)` for tier 1 or the existing compressed body for tier 2. The rebuild walk itself does not change.
+
+**Rationale:** the previous "may stub `rebuild()` to no-op until step 6" wording was a footgun — step 5 tests for `update_unit_and_rerender` need rendering to actually happen. Bundling the rebuild walk into step 5 keeps each step's deliverable self-testable.
+
+## R3-03 — `output_lines`-driven body trigger (not full `output`)
+
+Tool body lines in `_render_unit_atomic` are emitted when `unit.output_lines` is non-empty — NOT when `unit.output` is set. The pre-rendered triple (`output_lines`, `total_lines`, `truncated`) is the trigger; `output` is reserved for the modal's tier-3 view. Step 5 HOW updated accordingly.
+
+## R3-04 — `format_tool_compressed` invocation is indirect from step 9
+
+Step 9's `_handle_stream_event` ToolResult branch does NOT call `format_tool_compressed` directly. It calls `update_unit_and_rerender` which invokes `rebuild() → _render_unit_atomic → format_tool_compressed`. Step 6's WHERE / WHAT / LLM-prompt updated to soften the "both call this helper" language and document the indirect path explicitly. Byte-identical output is still guaranteed because the initial render and any rebuild both flow through `_render_unit_atomic`.
+
+## R3-05 — Step 9 test #4 description tightened to dict-insertion-order semantics
+
+The previous test #4 description (`test_tool_inside_turn_keeps_turn_open`) conflated two concerns. Rewritten as `test_last_unit_returns_most_recent_inserted_unit_dict_order` — explicitly locking F2 / "most recent content" to dict insertion order: subsequent `extend_open_unit` calls on a turn do NOT update `last_unit()`; only appending a new unit does. Matches the documented semantics in `summary.md`.
+
+## R3-06 — Step 5 test #15 empty-turn → zero-output invariant
+
+Test `test_append_unit_assistant_turn_with_empty_lines_no_script_entry` gains an explicit assertion: `rebuild()` produces zero buffer lines for an empty assistant_turn. No `(unit_id, None)` entry in `_script` means the rebuild walk skips it entirely. Locks the invariant that registering an empty turn unit costs zero render bytes.
+
+## R3-07 — Step 5 test #13 payload now includes the pre-rendered triple
+
+The example `update_unit_and_rerender` call in test #13 now passes `output_lines=("X",), total_lines=1, truncated=False` alongside `output="X"`, matching the actual call shape used by step 9. Tightens the spec → implementation contract.

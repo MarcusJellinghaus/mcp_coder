@@ -11,7 +11,8 @@ Surface tool-error state from upstream providers so the renderer can show `→ e
 - `src/mcp_coder/llm/providers/claude/claude_code_cli_streaming.py` — propagate `is_error` from `tool_use_result` block
 - `src/mcp_coder/llm/providers/copilot/copilot_cli_streaming.py` — propagate `is_error` from `tool.execution_complete` status
 - `src/mcp_coder/llm/providers/langchain/agent.py` — detect tool errors by inspecting the `on_tool_end` event's `data.output` (a `ToolMessage` with `status == 'error'` indicates a failed tool) and emit `tool_result(is_error=True)` accordingly. Before implementing, run a 5-line spike against `langchain_core.agents` `astream_events` v2 to confirm the exact key path (`event['data']['output'].status` vs `event['data']['output']['status']`).
-- `src/mcp_coder/llm/formatting/stream_renderer.py` — read `is_error` from the event and set it on the returned `ToolResult`
+- `src/mcp_coder/llm/formatting/stream_renderer.py` — read `is_error` from the event and set it on the returned `ToolResult`; also extend `_render_tool_output` return tuple from `(lines, total)` to `(lines, total, truncated)`
+- Also extend `_render_tool_output` return tuple from `(lines, total)` to `(lines, total, truncated)` — internal change, no public API. `truncated = total > _TRUNCATION_THRESHOLD` (the helper already knows this internally). Update the helper's two existing call sites in `stream_renderer.py` to discard or use the new field. The new field is consumed by step 9's `_handle_stream_event` ToolResult branch.
 - Tests in `tests/llm/formatting/test_stream_renderer.py`, `tests/llm/providers/claude/test_claude_cli_stream_parsing.py`, `tests/llm/providers/copilot/test_copilot_cli_streaming.py`, `tests/llm/providers/langchain/test_langchain_agent_streaming.py`
 
 ## WHAT
@@ -34,6 +35,8 @@ Provider emitters: each `yield {"type": "tool_result", ...}` line gains an `"is_
 - **Langchain**: detect tool errors inside the existing `on_tool_end` branch by inspecting `event['data']['output']` — when it is a `ToolMessage` with `status == 'error'`, emit `tool_result` with `is_error=True` and an output string sourced from the message content. Do NOT raise — let the stream continue. Before implementing, run a 5-line spike against `langchain_core.agents` `astream_events` v2 to confirm the exact key path (`event['data']['output'].status` vs `event['data']['output']['status']`).
 
 `StreamEventRenderer.render()`: when handling `tool_result`, read `event.get("is_error", False)` and pass through to `ToolResult(..., is_error=...)`.
+
+`_render_tool_output(output, *, format_tools, full)`: extend the return signature from `(lines, total)` to `(lines, total, truncated)` where `truncated = total > _TRUNCATION_THRESHOLD` (already computed internally — just expose it). Update the helper's two existing call sites in `stream_renderer.py` to destructure the 3-tuple (discard or use `truncated` as appropriate). Step 9 consumes the new `truncated` field when computing the pre-rendered triple at `tool_result` time.
 
 ## HOW
 

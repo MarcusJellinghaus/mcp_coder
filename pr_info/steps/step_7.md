@@ -79,7 +79,7 @@ args_block = "Args:\n" + "\n".join(
     f"  {k}: {_render_value_full(v)[0]}"  # multi-line values: extra indent
     for k, v in (unit.args or {}).items()
 ) if unit.args else "Args: (none)"
-output_lines, total = _render_tool_output(unit.output or "", full=True)
+output_lines, total, _truncated = _render_tool_output(unit.output or "", full=True)
 output_block = "Output:\n" + "\n".join(output_lines) if output_lines else "Output: (none)"
 status = "error" if unit.is_error else "done"
 dur = f"{unit.duration_ms}ms" if unit.duration_ms is not None else "—"

@@ -2,7 +2,7 @@
 
 ## Goal
 
-Add the sidecar `(start, end) → unit_id` registry and the `append_unit` / `extend_open_unit` / `finalize_open_unit` / `unit_at_line` / `last_unit` / `rendered_lines` API. **No tier model yet, no toggle, no rebuild** — those land in step 6.
+Add the sidecar `(start, end) → unit_id` registry and the `append_unit` / `extend_open_unit` / `finalize_open_unit` / `unit_at_line` / `last_unit` / `rendered_lines` API. A minimal `rebuild()` (non-tier — tools always render compressed) ships here so `update_unit_and_rerender` is functional in step 5; step 6 then layers the **tier model and toggle** on top.
 
 Existing `append_text()` semantics unchanged. Banners, spacers, "Resumed" divider, cancelled marker all keep using `append_text()`.
 
@@ -60,7 +60,7 @@ Add a one-line code comment at `__init__` noting `max_lines` must remain `None` 
 
 - `append_unit(unit, lines, style=...)`:
   1. Register: `self._units[unit.id] = unit`.
-  2. For tools (`kind == "tool"`): write exactly **one** `(unit.id, None)` entry to `_script` (atomic). This is the ONLY script entry for a tool unit — no further `_script` writes ever happen for it. `_render_unit_atomic` reconstructs the full tool block (start lines always; body lines when `unit.output` is set) at render time.
+  2. For tools (`kind == "tool"`): write exactly **one** `(unit.id, None)` entry to `_script` (atomic). This is the ONLY script entry for a tool unit — no further `_script` writes ever happen for it. `_render_unit_atomic` reconstructs the full tool block (start lines always; body lines when `unit.output_lines` is non-empty — the pre-rendered triple is the trigger, not the full `output` string) at render time.
   3. For `user_input`: write one `(unit.id, None)` entry to `_script` (also atomic). Call `_write_unit_atomic(unit, lines, style)` which writes all lines and pushes `(start, end, unit.id)` to `_ranges` and to `_screen_lines`.
   4. For `assistant_turn`: register the unit but DO NOT append a script entry. Lines arrive via `extend_open_unit`.
 - `extend_open_unit(unit_id, lines, style=...)`:
@@ -72,6 +72,7 @@ Add a one-line code comment at `__init__` noting `max_lines` must remain `None` 
   2. `self._units[unit_id] = new_unit`.
   3. Call `self.rebuild()` so the new fields take effect (notably tool body / `is_error` / `duration_ms` for atomic tool units).
   4. Return `new_unit`.
+- `rebuild()`: minimal implementation in this step. Walks `_script` and re-renders. For atomic entries (`(unit_id, None)`) calls `_render_unit_atomic(unit)`; for streamed entries (`(unit_id, line)`) writes the literal line. **Step 5's `_render_unit_atomic` is the non-tier version**: for tools it always uses the compressed (tier-2) shape; for `user_input` / `assistant_turn` it uses the kind-specific renderer. Step 6 changes `_render_unit_atomic` to dispatch on tier (oneline vs compressed), but the rebuild walk itself does not change.
 - `unit_at_line(line)`: linear scan `_ranges`, return `self._units[uid]` for the **first** `(start, end, uid)` with `start <= line < end`. Disjoint ranges by construction → first match wins.
 - `last_unit()`: returns last value in `self._units` (insertion order) or `None` if empty.
 - `rendered_lines`: returns `list(self._screen_lines)`.
@@ -100,6 +101,42 @@ self._ranges.append((buffer_start, buffer_end, unit.id))
 
 For `extend_open_unit`, same pattern but one range entry per line.
 
+## ALGORITHM (rebuild — minimal, non-tier)
+
+```python
+def rebuild(self) -> None:
+    super().clear()
+    self._screen_lines = []
+    self._ranges = []
+    for unit_id, line in self._script:
+        if line is None:
+            # atomic entry — render the unit
+            unit = self._units[unit_id]
+            start_idx = len(self.lines)
+            rendered = self._render_unit_atomic(unit)
+            for rln in rendered:
+                super().write(rln)
+                self._screen_lines.append(rln)
+            end_idx = len(self.lines) - 1
+            if end_idx >= start_idx:
+                self._ranges.append((start_idx, end_idx, unit_id))
+        else:
+            # streamed entry — render the line literally
+            start_idx = len(self.lines)
+            super().write(line)
+            self._screen_lines.append(line)
+            end_idx = len(self.lines) - 1
+            if end_idx >= start_idx:
+                self._ranges.append((start_idx, end_idx, unit_id))
+```
+
+`_render_unit_atomic(unit)` in step 5 (non-tier):
+- `unit.kind == "tool"`: always use the compressed (tier-2) shape — `format_tool_start` plus, if `unit.output_lines` is non-empty, the `format_tool_compressed` body.
+- `unit.kind == "user_input"`: `[f"> {unit.full_text}"]`.
+- `unit.kind == "assistant_turn"`: never reached via atomic entry — turns arrive as `(unit_id, line)` script entries.
+
+Step 6 extends `_render_unit_atomic` to dispatch on effective tier (`_tool_tier_overrides.get(unit_id, _tool_display_default)`), returning `format_tool_oneline(...)` for tier 1 or the existing compressed body for tier 2. The rebuild walk above does not change in step 6.
+
 ## DATA
 
 - `ContentUnit` is frozen — fields set at creation, never mutated.
@@ -122,9 +159,9 @@ Tests in `tests/icoder/ui/test_output_log.py` (use existing pilot/textual patter
 10. `test_clear_state_wipes_all_state` — populate units + ranges; call `clear_state()` → `_units`, `_script`, `_ranges`, `_screen_lines`, `_recorded`, `_tool_tier_overrides` all empty.
 11. `test_wrapped_line_range_uses_buffer_index` — write a very long line that wraps to N buffer lines → range `end - start == N`.
 12. `test_extend_open_unit_raises_for_tool_kind` — append a tool unit; call `extend_open_unit(tool_id, ["x"])` → `ValueError`.
-13. `test_update_unit_and_rerender_replaces_and_rebuilds` — append a tool unit with `output=None`; call `update_unit_and_rerender(uid, output="X", duration_ms=42, is_error=False)` → `_units[uid].output == "X"`, `rendered_lines` includes the body.
+13. `test_update_unit_and_rerender_replaces_and_rebuilds` — append a tool unit with `output=None`; call `update_unit_and_rerender(uid, output="X", output_lines=("X",), total_lines=1, truncated=False, duration_ms=42, is_error=False)` → `_units[uid].output == "X"`, `rendered_lines` includes the body.
 14. `test_content_unit_parent_id_defaults_none` — `ContentUnit(...)` without `parent_id` argument has `parent_id is None` (v1 invariant).
-15. `test_append_unit_assistant_turn_with_empty_lines_no_script_entry` — calling `append_unit(unit, [])` with `unit.kind == "assistant_turn"` registers the unit in `_units` but does NOT add a `(unit_id, None)` entry to `_script`. The turn waits for `extend_open_unit` calls before any script entries land; before then, `rebuild()` walks past the turn (no atomic write).
+15. `test_append_unit_assistant_turn_with_empty_lines_no_script_entry` — calling `append_unit(unit, [])` with `unit.kind == "assistant_turn"` registers the unit in `_units` but does NOT add a `(unit_id, None)` entry to `_script`. The turn waits for `extend_open_unit` calls before any script entries land; before then, `rebuild()` walks past the turn (no atomic write). Also assert: `rebuild()` produces zero buffer lines for that empty turn — no `(unit_id, None)` entry in `_script` means the rebuild walk skips it entirely.
 
 ### Existing test audit (mandatory sub-step)
 
@@ -148,7 +185,7 @@ Pylint, pytest, mypy — all green.
 > Read `pr_info/steps/summary.md` first for context.
 >
 > Constraints:
-> - **No tier model, no toggle, no rebuild** in this step — those are step 6 (BUT `update_unit_and_rerender` does call `rebuild()`; the rebuild method body is implemented in step 6 — wire the call here and stub the method to no-op until step 6 if needed for tests).
+> - **No tier model, no toggle** in this step — those are step 6. Step 5 implements a minimal `rebuild()` (see ALGORITHM section) that walks `_script` and re-renders via the non-tier `_render_unit_atomic` (tools always render compressed). Step 6 then changes `_render_unit_atomic` to dispatch on effective tier; the rebuild walk itself does not change.
 > - `append_text()` semantics unchanged.
 > - `ContentUnit` is `frozen=True`; per-unit tier overrides live on `OutputLog`, not on `ContentUnit` (step 6).
 > - `ContentUnit.parent_id: str | None = None` — always `None` in v1, reserved for v2 nesting per issue #629 Decision.
