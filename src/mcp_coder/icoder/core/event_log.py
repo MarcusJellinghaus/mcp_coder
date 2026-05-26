@@ -78,7 +78,11 @@ def _try_open_chat(path: Path) -> IO[str] | None:
 
 
 class EventLog:
-    """Structured event log: in-memory list + JSONL file output."""
+    """Structured event log: in-memory list + JSONL file output.
+
+    ``write_chat`` must be called only from the Textual UI thread; the
+    chat sidecar handle has no locking.
+    """
 
     def __init__(self, logs_dir: str | Path = "logs") -> None:
         """Initialize event log. Creates JSONL file in logs_dir.
@@ -175,8 +179,12 @@ class EventLog:
             try:
                 self._chat_file.flush()
                 self._chat_file.close()
-            except OSError:
-                pass
+            except OSError as exc:
+                logger.warning(
+                    "iCoder chat mirror flush/close failed during rotate (%s): %s",
+                    self._chat_path,
+                    exc,
+                )
             self._chat_file = None
         new_path = _allocate_log_path(self._logs_dir)
         self._file = open(new_path, "a", encoding="utf-8")  # noqa: SIM115
