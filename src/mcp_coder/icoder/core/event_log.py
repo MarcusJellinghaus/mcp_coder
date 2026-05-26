@@ -69,6 +69,9 @@ def _try_open_chat(path: Path) -> IO[str] | None:
 
     Best-effort by design: a missing/locked/read-only chat file must
     not break iCoder. Failures are logged once at warning level.
+
+    Returns:
+        Open file handle in append mode, or ``None`` if the open failed.
     """
     try:
         return open(path, "a", encoding="utf-8")  # noqa: SIM115
@@ -138,7 +141,7 @@ class EventLog:
         return self._chat_path
 
     def write_chat(self, line: str) -> None:
-        """Append ``line + "\\n"`` to the chat sidecar; best-effort.
+        r"""Append ``line + "\n"`` to the chat sidecar; best-effort.
 
         No-op when the sidecar failed to open. On write failure the
         file is closed and further calls become no-ops; the exception
