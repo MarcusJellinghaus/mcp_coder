@@ -104,3 +104,15 @@ Test `test_append_unit_assistant_turn_with_empty_lines_no_script_entry` gains an
 ## R3-07 — Step 5 test #13 payload now includes the pre-rendered triple
 
 The example `update_unit_and_rerender` call in test #13 now passes `output_lines=("X",), total_lines=1, truncated=False` alongside `output="X"`, matching the actual call shape used by step 9. Tightens the spec → implementation contract.
+
+## R4-01 — `format_tool_compressed` extraction moved from step 6 → step 5
+
+Step 5's `_render_unit_atomic` test requires body rendering; the body comes from `format_tool_compressed`. Putting the extraction in step 6 created a backward cross-step dependency that broke "each step = one green commit" independence. The helper is now introduced in step 5; step 6 only adds tier-dispatch to `_render_unit_atomic`.
+
+**Rationale:** preserves step-by-step independence — step 5 ships with all rendering helpers it depends on.
+
+## R4-02 — `_tool_tier_overrides` declared in step 5
+
+Field is introduced empty in step 5 so `clear_state()` can wipe it. Step 6 populates the field via `toggle_unit_tier()` and `set_tool_display_default()`. Step 5 does NOT introduce `_tool_display_default` — that field remains a step 6 addition along with the tier dispatch.
+
+**Rationale:** closes a spec gap — `clear_state()` referenced a field not declared in the state-additions list.

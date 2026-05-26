@@ -112,7 +112,7 @@ New `core/commands/display.py`. Accepts `oneline` / `compressed`. Updates `AppCo
 | `src/mcp_coder/icoder/ui/replay.py` | No source changes (delegates to `_handle_stream_event` + `append_text`); migrates "for free" once App migrates |
 | `src/mcp_coder/icoder/ui/widgets/output_log.py` | `ContentUnit` (incl. `parent_id`), registry state, `append_unit`/`extend_open_unit` (raises for tools)/`finalize_open_unit`/`update_unit_and_rerender`, `unit_at_line`, `last_unit`, `toggle_unit_tier`, `rebuild`, `set_tool_display_default`, `on_click`, `on_resize`, `rendered_lines`; `clear_recorded` renamed to `clear_state` (also wipes `_tool_tier_overrides`) |
 | `src/mcp_coder/llm/formatting/render_actions.py` | `ToolResult.is_error: bool = False` |
-| `src/mcp_coder/llm/formatting/stream_renderer.py` | `format_tool_oneline()`; `format_tool_compressed()`; `StreamEventRenderer` FIFO + `cleanup_pending()`; class docstring update |
+| `src/mcp_coder/llm/formatting/stream_renderer.py` | `format_tool_oneline()` (step 3); `format_tool_compressed()` (added in step 5, NOT step 6); `StreamEventRenderer` FIFO + `cleanup_pending()` (step 4); class docstring update |
 | `src/mcp_coder/llm/types.py` | `StreamEvent` docstring documents `is_error` on `tool_result` |
 | `src/mcp_coder/llm/providers/claude/claude_code_cli_streaming.py` | Propagate `is_error` from `tool_use_result` block |
 | `src/mcp_coder/llm/providers/copilot/copilot_cli_streaming.py` | Propagate `is_error` from `tool.execution_complete` status |
@@ -138,8 +138,8 @@ New `core/commands/display.py`. Accepts `oneline` / `compressed`. Updates `AppCo
 | 2 | `is_error` propagation across providers + `ToolResult.is_error` | 3 streaming files, `render_actions.py`, `llm/types.py`, tests |
 | 3 | `format_tool_oneline()` pure function | `stream_renderer.py`, tests |
 | 4 | `StreamEventRenderer` FIFO + `cleanup_pending()` | `stream_renderer.py`, tests |
-| 5 | `OutputLog` registry data layer | `output_log.py`, tests (audit + new) |
-| 6 | `OutputLog` tier model + `rebuild()` + `on_resize` | `output_log.py`, tests |
+| 5 | `OutputLog` registry data layer | `output_log.py`, `stream_renderer.py` (`format_tool_compressed` extracted), tests (audit + new) |
+| 6 | `OutputLog` tier model + tier dispatch + `on_resize` | `output_log.py`, tests |
 | 7 | `DetailModal` widget | `detail_modal.py` (new), tests |
 | 8 | Click handler + `F2` binding | `output_log.py`, `app.py`, tests |
 | 9 | `ICoderApp` migrates to `append_unit` flow; orphan cleanup | `app.py`, tests (Pilot + replay) |

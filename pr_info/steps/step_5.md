@@ -9,7 +9,9 @@ Existing `append_text()` semantics unchanged. Banners, spacers, "Resumed" divide
 ## WHERE
 
 - `src/mcp_coder/icoder/ui/widgets/output_log.py` — `ContentUnit` dataclass + new state + methods
+- `src/mcp_coder/llm/formatting/stream_renderer.py` — extract `format_tool_compressed(...)` helper (first home of the helper; step 6 only consumes it)
 - `tests/icoder/ui/test_output_log.py` — new tests; **audit existing tests** asserting on `recorded_lines`
+- `tests/llm/formatting/test_stream_renderer.py` — new tests for `format_tool_compressed`
 
 ## WHAT
 
@@ -38,6 +40,10 @@ class OutputLog(RichLog):
     _script: list[tuple[str, str | None]]             # (unit_id, line | None)
     _ranges: list[tuple[int, int, str]]               # (start, end, unit_id)
     _screen_lines: list[str]                          # current screen state
+    _tool_tier_overrides: dict[str, Literal["oneline", "compressed"]] = field(default_factory=dict)
+    # Introduced empty in step 5 so `clear_state()` can wipe it.
+    # Populated by step 6's `toggle_unit_tier()` and `set_tool_display_default()`.
+    # Step 5 does NOT add `_tool_display_default` — that field is introduced by step 6.
 
     def append_unit(self, unit: ContentUnit, lines: list[str], style: str | None = None) -> None
     def extend_open_unit(self, unit_id: str, lines: list[str], style: str | None = None) -> None
@@ -54,7 +60,9 @@ class OutputLog(RichLog):
 
 Add a one-line code comment at `__init__` noting `max_lines` must remain `None` (eviction would invalidate `_ranges`).
 
-**Note on tool fields:** the pre-rendered triple (`output_lines`, `total_lines`, `truncated`) is populated once at `tool_result` time (step 9) and read by `_render_unit_atomic` (step 6); the full `output` field is reserved for the modal's tier-3 view (step 7).
+**Note on tool fields:** the pre-rendered triple (`output_lines`, `total_lines`, `truncated`) is populated once at `tool_result` time (step 9) and read by `_render_unit_atomic`; the full `output` field is reserved for the modal's tier-3 view (step 7).
+
+**Extracted helper:** this step also extracts `format_tool_compressed(name: str, args: dict, output_lines: tuple[str, ...], total_lines: int, truncated: bool, duration_ms: int | None, is_error: bool) -> list[str]` from `app.py`'s current inline rendering of tool result bodies (the `│  …` body lines plus the `└ done` / `└ error` footer) into `src/mcp_coder/llm/formatting/stream_renderer.py`, alongside the existing `format_tool_start` / `format_tool_oneline`. Explicit-fields signature — no `ToolResult` synthesis. **This is the first home of the helper.** Step 5's `_render_unit_atomic` calls it directly for tool units that have a result; step 6 only consumes the helper (tier dispatch is added in step 6 around the same call). Pulling the extraction into step 5 keeps step 5 self-testable: test #13 (`_render_unit_atomic` body rendering) needs body lines to actually render, which means the helper must already exist.
 
 ## HOW
 
@@ -131,7 +139,7 @@ def rebuild(self) -> None:
 ```
 
 `_render_unit_atomic(unit)` in step 5 (non-tier):
-- `unit.kind == "tool"`: always use the compressed (tier-2) shape — `format_tool_start` plus, if `unit.output_lines` is non-empty, the `format_tool_compressed` body.
+- `unit.kind == "tool"`: always use the compressed (tier-2) shape — `format_tool_start(name=unit.tool_name, args=unit.args or {})` for the start lines, plus, **if and only if `unit.output_lines` is non-empty**, append the body via `format_tool_compressed(name=unit.tool_name, args=unit.args or {}, output_lines=unit.output_lines, total_lines=unit.total_lines, truncated=unit.truncated, duration_ms=unit.duration_ms, is_error=unit.is_error)`. The helper itself is introduced in this step (see WHAT — Extracted helper). If `unit.output_lines` is empty (in-flight tool, no result yet), only the start lines are returned — no `└ done` footer.
 - `unit.kind == "user_input"`: `[f"> {unit.full_text}"]`.
 - `unit.kind == "assistant_turn"`: never reached via atomic entry — turns arrive as `(unit_id, line)` script entries.
 
@@ -145,7 +153,7 @@ Step 6 extends `_render_unit_atomic` to dispatch on effective tier (`_tool_tier_
 
 ## TDD
 
-Tests in `tests/icoder/ui/test_output_log.py` (use existing pilot/textual pattern):
+Tests in `tests/icoder/ui/test_output_log.py` (use existing pilot/textual pattern), plus three new `format_tool_compressed` tests in `tests/llm/formatting/test_stream_renderer.py` (migrated from step 6 alongside the helper extraction):
 
 1. `test_append_unit_registers_unit_and_range` — append a tool unit with 3 lines → `_units` has entry; `_ranges` has one tuple covering 3 lines; `unit_at_line(0)` returns it.
 2. `test_unit_at_line_returns_none_outside_range`
@@ -162,6 +170,12 @@ Tests in `tests/icoder/ui/test_output_log.py` (use existing pilot/textual patter
 13. `test_update_unit_and_rerender_replaces_and_rebuilds` — append a tool unit with `output=None`; call `update_unit_and_rerender(uid, output="X", output_lines=("X",), total_lines=1, truncated=False, duration_ms=42, is_error=False)` → `_units[uid].output == "X"`, `rendered_lines` includes the body.
 14. `test_content_unit_parent_id_defaults_none` — `ContentUnit(...)` without `parent_id` argument has `parent_id is None` (v1 invariant).
 15. `test_append_unit_assistant_turn_with_empty_lines_no_script_entry` — calling `append_unit(unit, [])` with `unit.kind == "assistant_turn"` registers the unit in `_units` but does NOT add a `(unit_id, None)` entry to `_script`. The turn waits for `extend_open_unit` calls before any script entries land; before then, `rebuild()` walks past the turn (no atomic write). Also assert: `rebuild()` produces zero buffer lines for that empty turn — no `(unit_id, None)` entry in `_script` means the rebuild walk skips it entirely.
+
+Tests in `tests/llm/formatting/test_stream_renderer.py` (cover the newly extracted helper):
+
+16. `test_format_tool_compressed_done` — pass `output_lines=("a","b")`, `total_lines=2`, `duration_ms=120`, `is_error=False` → body lines start with `│  ` and footer is `└ done (2 lines, 120ms)`.
+17. `test_format_tool_compressed_error` — `is_error=True` → footer is `└ error`.
+18. `test_format_tool_compressed_empty_output` — `output_lines=()`, `total_lines=0` → only footer line returned.
 
 ### Existing test audit (mandatory sub-step)
 
@@ -195,6 +209,8 @@ Pylint, pytest, mypy — all green.
 > - `clear_state()` (renamed from `clear_recorded()`) wipes the full model including `_tool_tier_overrides`. Update call sites in `app.py`.
 > - Audit existing tests using `recorded_lines`; document classification (emission vs. screen).
 > - Add code comment near `__init__` noting `max_lines` must stay `None`.
-> - TDD: write the 15 new test cases first, then implement.
+> - Extract `format_tool_compressed(name, args, output_lines, total_lines, truncated, duration_ms, is_error) -> list[str]` into `src/mcp_coder/llm/formatting/stream_renderer.py` alongside `format_tool_start` / `format_tool_oneline`. Explicit-fields signature — no `ToolResult` synthesis. Step 5's `_render_unit_atomic` calls it directly; step 6 only adds tier dispatch around the call.
+> - Declare `_tool_tier_overrides: dict[str, Literal["oneline", "compressed"]] = field(default_factory=dict)` on `OutputLog`. Field is empty in step 5; step 6 introduces both the populating methods (`toggle_unit_tier`, `set_tool_display_default`) and the `_tool_display_default` companion field. `clear_state()` must wipe `_tool_tier_overrides`.
+> - TDD: write the 18 new test cases first (15 in `tests/icoder/ui/test_output_log.py` + 3 in `tests/llm/formatting/test_stream_renderer.py`), then implement.
 >
 > All three quality gates green after the change.
