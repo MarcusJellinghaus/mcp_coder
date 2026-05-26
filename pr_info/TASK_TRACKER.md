@@ -47,5 +47,5 @@ Details: [step_3.md](./steps/step_3.md)
 
 ## Pull Request
 
-- [ ] PR review (self-review diff, verify all step commits are clean and scoped, confirm CI is green)
+- [x] PR review (self-review diff, verify all step commits are clean and scoped, confirm CI is green)
 - [ ] PR summary (write description referencing issue #982, summarize the three commits and end-to-end behavior)
