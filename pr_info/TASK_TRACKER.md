@@ -33,9 +33,9 @@ Details: [step_1.md](./steps/step_1.md)
 
 Details: [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation (tests + production code): add four TDD tests in `tests/icoder/ui/test_output_log.py`, then add `mirror` parameter and the three `self._mirror(...)` call sites in `src/mcp_coder/icoder/ui/widgets/output_log.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared (`iCoder: add mirror callback to OutputLog (#982)`)
+- [x] Implementation (tests + production code): add four TDD tests in `tests/icoder/ui/test_output_log.py`, then add `mirror` parameter and the three `self._mirror(...)` call sites in `src/mcp_coder/icoder/ui/widgets/output_log.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared (`iCoder: add mirror callback to OutputLog (#982)`)
 
 ### Step 3: Wire the mirror in `ICoderApp`, prove end-to-end, document
 

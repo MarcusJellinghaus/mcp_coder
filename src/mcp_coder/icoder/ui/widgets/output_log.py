@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable
 
 from rich.console import ConsoleRenderable, RichCast
 from rich.text import Text
@@ -12,10 +12,23 @@ from textual.widgets import RichLog
 class OutputLog(RichLog):
     """Scrollable output area for conversation display."""
 
-    def __init__(self, **kwargs: Any) -> None:
-        """Initialize with internal line buffer for testability."""
+    def __init__(
+        self,
+        *,
+        mirror: Callable[[str], None] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Initialize with internal line buffer for testability.
+
+        Args:
+            mirror: Optional one-arg callback invoked with the string that
+                was written to the widget; used to mirror visible output to
+                an external sink (e.g. a plain-text chat log).
+            **kwargs: Keyword args passed through to RichLog.
+        """
         super().__init__(wrap=True, **kwargs)
         self._recorded: list[str] = []
+        self._mirror = mirror
 
     def clear_recorded(self) -> None:
         """Clear the internal recorded-lines buffer."""
@@ -48,14 +61,18 @@ class OutputLog(RichLog):
         """
         if isinstance(content, str):
             # Plain strings are NOT recorded by write(); use append_text() for recorded text.
-            pass
+            if self._mirror is not None:
+                self._mirror(content)
         elif isinstance(content, Text):
             # Text objects are recorded via append_text, skip here
             pass
         else:
             # Rich renderables (e.g. Markdown): record the markup text
             markup = getattr(content, "markup", None)
-            self._recorded.append(markup if markup is not None else str(content))
+            recorded = markup if markup is not None else str(content)
+            self._recorded.append(recorded)
+            if self._mirror is not None:
+                self._mirror(recorded)
         super().write(content, *args, **kwargs)
 
     def append_text(self, text: str, style: str | None = None) -> None:
@@ -66,7 +83,9 @@ class OutputLog(RichLog):
             style: Optional Rich style string.
         """
         self._recorded.append(text)
+        if self._mirror is not None:
+            self._mirror(text)
         if style:
-            self.write(Text(text, style=style))
+            super().write(Text(text, style=style))
         else:
-            self.write(text)
+            super().write(text)
