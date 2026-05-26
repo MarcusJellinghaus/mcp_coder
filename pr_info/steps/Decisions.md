@@ -116,3 +116,15 @@ Step 5's `_render_unit_atomic` test requires body rendering; the body comes from
 Field is introduced empty in step 5 so `clear_state()` can wipe it. Step 6 populates the field via `toggle_unit_tier()` and `set_tool_display_default()`. Step 5 does NOT introduce `_tool_display_default` — that field remains a step 6 addition along with the tier dispatch.
 
 **Rationale:** closes a spec gap — `clear_state()` referenced a field not declared in the state-additions list.
+
+## R5-01 — `format_tool_oneline` switched to explicit-fields signature
+
+Step 3 originally defined `format_tool_oneline(start: ToolStart, result: ToolResult | None, duration_ms: int | None) -> str`. Step 6's atomic `_render_unit_atomic` had no `ToolStart`/`ToolResult` objects available and called it with explicit fields, causing a signature mismatch. Aligned by changing step 3's signature to explicit fields:
+
+```python
+def format_tool_oneline(*, name: str, args: dict[str, object], duration_ms: int | None, is_error: bool) -> str: ...
+```
+
+Status semantics: `duration_ms=None, is_error=False` → running; `duration_ms!=None, is_error=False` → done; `is_error=True` → error.
+
+**Rationale:** Mirrors R2-03 (same fix for `format_tool_compressed`). Atomic rebuild has no upstream events; passing fields directly avoids synthesizing throwaway objects.
