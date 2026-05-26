@@ -61,7 +61,7 @@ Style constants (STYLE_USER_INPUT, STYLE_TOOL_OUTPUT, STYLE_CANCELLED) currently
   - `unit.kind == "tool"`: tier is determined by `_tool_display_default` modified by `_tool_tier_overrides.get(unit.id)`.
     - For `oneline`: call `format_tool_oneline(name=unit.tool_name, args=unit.args, duration_ms=unit.duration_ms, is_error=unit.is_error)`. Return `([oneline], STYLE_TOOL_OUTPUT)`. (Oneline subsumes start + body into one line.)
     - For `compressed`:
-      1. **Start lines** — ALWAYS present, via `format_tool_start(...)` from unit fields (`tool_name`, `args`).
+      1. **Start lines** — ALWAYS present, via `format_tool_start(ToolStart(display_name=unit.tool_name, raw_name="", args=unit.args or {}))`. Synthesizing a throwaway `ToolStart` is the simplest path; `format_tool_start` only reads `display_name` and `args`, so `raw_name=""` is harmless. The function keeps its pre-existing `(action: ToolStart, full: bool = False)` signature (see Decisions R6-01). `ToolStart` lives in `src/mcp_coder/llm/types.py` — `output_log.py` imports it for the synthesis.
       2. **Body lines** — ONLY when `unit.output_lines` is non-empty (i.e., the result has arrived). Append `format_tool_compressed(name=unit.tool_name, args=unit.args or {}, output_lines=unit.output_lines, total_lines=unit.total_lines, truncated=unit.truncated, duration_ms=unit.duration_ms, is_error=unit.is_error)`. If `unit.output_lines` is empty (in-flight tool, no result yet), render start lines only — no `└ done` footer.
   - `unit.kind == "user_input"`: `([f"> {unit.full_text}"], STYLE_USER_INPUT)`.
   - `unit.kind == "assistant_turn"`: never called (turn content arrives as `(unit_id, line)` script entries, not atomic).

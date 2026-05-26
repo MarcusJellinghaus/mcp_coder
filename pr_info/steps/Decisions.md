@@ -128,3 +128,9 @@ def format_tool_oneline(*, name: str, args: dict[str, object], duration_ms: int 
 Status semantics: `duration_ms=None, is_error=False` → running; `duration_ms!=None, is_error=False` → done; `is_error=True` → error.
 
 **Rationale:** Mirrors R2-03 (same fix for `format_tool_compressed`). Atomic rebuild has no upstream events; passing fields directly avoids synthesizing throwaway objects.
+
+## R6-01 — `format_tool_start` call sites synthesize `ToolStart`
+
+Atomic rebuild in steps 5/6 invokes `format_tool_start`, which keeps its pre-existing signature `format_tool_start(action: ToolStart, full: bool = False)`. Call sites synthesize a `ToolStart(display_name=unit.tool_name, raw_name="", args=unit.args or {})`. The function only reads `display_name` / `args`, so the empty `raw_name` is harmless.
+
+**Rationale:** The Round 6 review surfaced an asymmetry between `format_tool_start` (still takes a `ToolStart` action) and its siblings `format_tool_oneline` / `format_tool_compressed` (refactored to explicit-fields per R5-01 / R2-03). Refactoring `format_tool_start` too would create a third entry in the "explicit fields" pattern but is outside the scope of #629 — it would also touch the live tool-start emission paths in `_handle_stream_event` and break the existing `format_tool_start` tests with a wider blast radius than the small ceremony cost at the two atomic-rebuild call sites. Chose the smaller change.
