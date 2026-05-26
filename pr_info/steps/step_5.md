@@ -20,10 +20,13 @@ class ContentUnit:
     kind: Literal["tool", "user_input", "assistant_turn"]
     timestamp: datetime
     full_text: str = ""
-    # tool-only (None for non-tool kinds):
+    # tool-only (None / empty defaults for non-tool kinds):
     tool_name: str | None = None
     args: dict[str, object] | None = None
-    output: str | None = None
+    output: str | None = None             # FULL untruncated output (for the modal, tier 3)
+    output_lines: tuple[str, ...] = ()    # NEW — pre-rendered, already-truncated body lines (tier 2)
+    total_lines: int = 0                  # NEW — total line count (drives `(N lines, …ms)` footer)
+    truncated: bool = False               # NEW — whether head/tail truncation kicked in
     duration_ms: int | None = None
     is_error: bool = False
     # always None in v1 — reserved for v2 nesting per issue #629 Decision
@@ -51,6 +54,8 @@ class OutputLog(RichLog):
 
 Add a one-line code comment at `__init__` noting `max_lines` must remain `None` (eviction would invalidate `_ranges`).
 
+**Note on tool fields:** the pre-rendered triple (`output_lines`, `total_lines`, `truncated`) is populated once at `tool_result` time (step 9) and read by `_render_unit_atomic` (step 6); the full `output` field is reserved for the modal's tier-3 view (step 7).
+
 ## HOW
 
 - `append_unit(unit, lines, style=...)`:
@@ -70,7 +75,9 @@ Add a one-line code comment at `__init__` noting `max_lines` must remain `None` 
 - `unit_at_line(line)`: linear scan `_ranges`, return `self._units[uid]` for the **first** `(start, end, uid)` with `start <= line < end`. Disjoint ranges by construction → first match wins.
 - `last_unit()`: returns last value in `self._units` (insertion order) or `None` if empty.
 - `rendered_lines`: returns `list(self._screen_lines)`.
-- `clear_state()`: clears all of `_recorded`, `_units`, `_script`, `_ranges`, `_screen_lines`, `_tool_tier_overrides`. Note: `clear()` (RichLog's own buffer wipe) is separate and is called first by the app; `clear_state()` then wipes the model. Call sites in `app.py`: `on_input_area_input_submitted` (after `/clear`) and `do_resume`.
+- `clear_state()`: clears all of `_recorded`, `_units`, `_script`, `_ranges`, `_screen_lines`, `_tool_tier_overrides`. Note: `clear()` (RichLog's own buffer wipe) is separate and is called first by the app; `clear_state()` then wipes the model.
+
+**Rename ownership:** Step 5 owns the `clear_recorded() → clear_state()` rename, including updating **both** call sites in `app.py`: `on_input_area_input_submitted` (after `/clear`) and `do_resume`. Step 1's UI dispatch case for `ClearOutput` calls `output.clear_state()` (after step 5 ships). Step 9 does NOT touch this rename — the symbol is already `clear_state` by the time step 9 lands.
 
 Wrap-aware sizing: measure `len(self.lines)` (the RichLog buffer) BEFORE and AFTER each `super().write(...)` to capture the actual rendered span (one logical line may wrap to N buffer lines). The `(start, end)` stored is over `self.lines`, NOT over `_screen_lines`. Also append the logical line to `_screen_lines`. `unit_at_line(line)` interprets `line` against `self.lines` indices (the buffer the click handler will use).
 
@@ -117,6 +124,7 @@ Tests in `tests/icoder/ui/test_output_log.py` (use existing pilot/textual patter
 12. `test_extend_open_unit_raises_for_tool_kind` — append a tool unit; call `extend_open_unit(tool_id, ["x"])` → `ValueError`.
 13. `test_update_unit_and_rerender_replaces_and_rebuilds` — append a tool unit with `output=None`; call `update_unit_and_rerender(uid, output="X", duration_ms=42, is_error=False)` → `_units[uid].output == "X"`, `rendered_lines` includes the body.
 14. `test_content_unit_parent_id_defaults_none` — `ContentUnit(...)` without `parent_id` argument has `parent_id is None` (v1 invariant).
+15. `test_append_unit_assistant_turn_with_empty_lines_no_script_entry` — calling `append_unit(unit, [])` with `unit.kind == "assistant_turn"` registers the unit in `_units` but does NOT add a `(unit_id, None)` entry to `_script`. The turn waits for `extend_open_unit` calls before any script entries land; before then, `rebuild()` walks past the turn (no atomic write).
 
 ### Existing test audit (mandatory sub-step)
 
@@ -150,6 +158,6 @@ Pylint, pytest, mypy — all green.
 > - `clear_state()` (renamed from `clear_recorded()`) wipes the full model including `_tool_tier_overrides`. Update call sites in `app.py`.
 > - Audit existing tests using `recorded_lines`; document classification (emission vs. screen).
 > - Add code comment near `__init__` noting `max_lines` must stay `None`.
-> - TDD: write the 14 new test cases first, then implement.
+> - TDD: write the 15 new test cases first, then implement.
 >
 > All three quality gates green after the change.

@@ -74,7 +74,7 @@ Each command now returns `Response(actions=(...,))`:
 for action in response.actions:
     match action:
         case Quit():            self.exit()
-        case ClearOutput():     output.clear(); output.clear_recorded()   # renamed to clear_state() in step 5
+        case ClearOutput():     output.clear(); output.clear_state()  # see step 5 for the rename
         case OpenPicker():      self.open_picker_for_load()
         case OutputText(t):     output.append_text(t)
         case SendToLLM(t):

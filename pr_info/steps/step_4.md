@@ -7,7 +7,7 @@ Make the renderer pair each `tool_use_start` with its `tool_result` to compute `
 ## WHERE
 
 - `src/mcp_coder/llm/formatting/stream_renderer.py` — add `_pending` FIFO state + `cleanup_pending()`; update class docstring (no longer stateless)
-- `src/mcp_coder/llm/formatting/render_actions.py` — add `duration_ms: int | None = None` to `ToolResult`
+- `src/mcp_coder/llm/formatting/render_actions.py` — add `duration_ms: int | None = None` and `raw_name: str` to `ToolResult`
 - `tests/llm/formatting/test_stream_renderer.py` — pairing and cleanup tests
 
 ## WHAT
@@ -16,7 +16,8 @@ Make the renderer pair each `tool_use_start` with its `tool_result` to compute `
 # render_actions.py
 @dataclass(frozen=True)
 class ToolResult:
-    name: str
+    name: str            # display name (existing)
+    raw_name: str        # NEW — raw tool name (matches ToolStart raw key for FIFO lookup)
     output_lines: list[str]
     total_lines: int
     truncated: bool
@@ -43,9 +44,9 @@ class StreamEventRenderer:
 - On `tool_result`:
   - Walk `self._pending` left-to-right; pop the **first** entry whose name matches `event["name"]`.
   - If found, `duration_ms = int((time.monotonic() - start) * 1000)`; else `None`.
-  - Build and return `ToolResult(..., is_error=..., duration_ms=...)`.
+  - Build and return `ToolResult(..., raw_name=event["name"], is_error=..., duration_ms=...)`. The raw name is propagated so the app layer can FIFO-match results to open tool units (step 9).
 - `cleanup_pending()`:
-  - For each `(name, _start)` left in the FIFO, build `ToolResult(name=_format_tool_name(name), output_lines=["(cancelled)"], total_lines=1, truncated=False, is_error=True, duration_ms=None)`.
+  - For each `(name, _start)` left in the FIFO, build `ToolResult(name=_format_tool_name(name), raw_name=name, output_lines=["(cancelled)"], total_lines=1, truncated=False, is_error=True, duration_ms=None)`. The original raw `name` is preserved on `raw_name` so the caller can locate the matching open tool unit via the per-name FIFO.
   - Clear the FIFO. Return the list (in FIFO order).
 - Update class docstring: state that the renderer is stateful (pending FIFO) and that callers MUST invoke `cleanup_pending()` on cancellation and on `StreamDone`.
 
@@ -63,7 +64,7 @@ on tool_result:
             del pending[i]   # O(N) but N is tiny
             duration = int((monotonic() - t0) * 1000)
             break
-    return ToolResult(..., duration_ms=duration)
+    return ToolResult(..., raw_name=event_name, duration_ms=duration)
 ```
 
 ## DATA
@@ -81,8 +82,11 @@ Tests in `tests/llm/formatting/test_stream_renderer.py`:
 4. `test_cleanup_pending_synthesizes_cancelled_results` — start, no result, call `cleanup_pending()` → returns one `ToolResult(is_error=True, output_lines=["(cancelled)"])`; second call returns `[]`
 5. `test_stream_done_does_not_auto_clean` — calling `render({"type":"done"})` does NOT clear FIFO (app does it explicitly via `cleanup_pending`)
 6. `test_renderer_state_survives_across_turns` — start in turn 1, result in turn 2 → still paired (warns the implementer about the FIFO lifetime risk; documents the explicit need for cleanup on `done`)
+7. `test_tool_result_carries_raw_name` — covers BOTH paths:
+   - Live: feed `tool_use_start(name="Bash")` then `tool_result(name="Bash", ...)` → returned `ToolResult.raw_name == "Bash"` (matches the event's raw name, not the display name).
+   - Cancelled: feed `tool_use_start(name="Bash")`, no result, call `cleanup_pending()` → returned synthesized `ToolResult.raw_name == "Bash"` (preserved from the pending FIFO entry).
 
-Then implement. Update existing tests that constructed `ToolResult` to either accept the new default `duration_ms=None` or pass it explicitly.
+Then implement. Update existing tests that constructed `ToolResult` to either accept the new default `duration_ms=None` and supply `raw_name=...` or pass them explicitly.
 
 ## Code quality gates
 
@@ -98,7 +102,7 @@ Pylint, pytest, mypy — all green.
 > - `StreamEventRenderer` becomes stateful — update its class docstring.
 > - `cleanup_pending()` returns `list[ToolResult]`; does NOT auto-fire — app layer calls it on cancel AND on `StreamDone` in step 9.
 > - Use `time.monotonic()`. Per-tool-name FIFO matching (positional within same name).
-> - Add `duration_ms: int | None = None` to `ToolResult` render-action.
-> - TDD: 6 test cases first, then implement.
+> - Add `duration_ms: int | None = None` and `raw_name: str` to `ToolResult` render-action. Populate `raw_name=event["name"]` for live results and `raw_name=name` (the raw FIFO key) for synthesized cancelled results.
+> - TDD: 7 test cases first, then implement.
 >
 > All three quality gates green after the change.

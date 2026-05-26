@@ -37,12 +37,12 @@ def action_open_last_unit_modal(self) -> None: ...
 
 ## HOW
 
-Before writing the click tests, run a 5-line spike: verify that `event.y + self.scroll_offset.y` resolves to the correct index in `self.lines` for the current Textual version. If `event.style.meta` is populated with the unit_id from `Strip` metadata, prefer that path (no coordinate math).
+**Click coordinate resolution:** use `clicked_line = event.y + self.scroll_offset.y` to map a click to an index into `self.lines`. `RichLog` does not currently set `Strip` metadata; the `event.style.meta`-based path is not viable for this widget. The 5-line spike previously proposed for `event.style.meta` can be skipped — proceed with the coordinate-math approach.
 
 - `on_click`:
   1. If `event.button != 1`: return (left only).
   2. If `event.chain >= 3`: return.
-  3. Resolve clicked logical line: `clicked_line = self.scroll_offset.y + event.y` (verify against current Textual API; alt: `event.style.meta` if Textual exposes it for RichLog).
+  3. Resolve clicked logical line: `clicked_line = event.y + self.scroll_offset.y` (index into `self.lines`).
   4. `unit = self.unit_at_line(clicked_line)`; if `None`: return.
   5. If `event.chain == 2`:
      - Cancel any `_pending_single` timer.
@@ -69,7 +69,7 @@ Before writing the click tests, run a 5-line spike: verify that `event.y + self.
 ```
 if event.button != 1: return
 if event.chain >= 3: return
-line = self.scroll_offset.y + event.y
+line = event.y + self.scroll_offset.y
 unit = self.unit_at_line(line)
 if unit is None: return
 if event.chain == 2:
@@ -122,7 +122,7 @@ Pylint, pytest, mypy — all green.
 > - 250 ms debounce timer; cancel on `chain == 2`.
 > - F2 on `ICoderApp` opens modal for `last_unit()`; silent no-op when no content.
 > - `OutputLog` emits events via the `on_unit_event` callback parameter (`__init__`); `ICoderApp.compose` wires it to `self._core.event_log.append`. NO direct access to `self.app._core.event_log` from `OutputLog`. Mirrors the existing `mirror` callback pattern.
-> - Run a 5-line spike against the current Textual version BEFORE writing click tests: confirm `event.y + self.scroll_offset.y` maps to the right index in `self.lines`. Prefer `event.style.meta` if it carries the `unit_id` via `Strip` metadata.
+> - Use `clicked_line = event.y + self.scroll_offset.y` to map a click to an index into `self.lines`. RichLog does not set Strip metadata, so `event.style.meta` is not a viable alternative — skip the 5-line spike and commit to the coordinate-math approach.
 > - TDD: 10 test cases first, then implement.
 > - Step 9 will wire actual `append_unit` calls in the App; for testing, append units directly via the widget API.
 >

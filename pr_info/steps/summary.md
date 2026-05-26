@@ -39,7 +39,10 @@ Mirrors the existing `RenderAction` pattern in `llm/formatting/render_actions.py
 
 ```
 ContentUnit  (frozen dataclass)
-  id, kind, timestamp, tool_name, args, output, duration_ms, is_error, full_text, parent_id
+  id, kind, timestamp, full_text, parent_id
+  tool-only: tool_name, args, output (FULL, for modal),
+             output_lines (pre-rendered, truncated, for tier-2),
+             total_lines, truncated, duration_ms, is_error
 
 OutputLog state additions:
   _units:        dict[str, ContentUnit]              # insertion-ordered
