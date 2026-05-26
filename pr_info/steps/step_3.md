@@ -53,9 +53,14 @@ the file — follow the existing pattern), pointing the `EventLog` at
 2. After the pilot settles, read
    `event_log.current_chat_path` from disk and assert:
    - The user line `"> hello"` is present.
-   - At least one blank line (`""`) appears between user input and
-     the next turn — the spacer must reach the file.
-   - The fake assistant text is present.
+   - The blank-line spacer falls AFTER the user line and before
+     the assistant text — e.g.
+     `chat_text.index("> hello") < chat_text.index("\n\n")` (or
+     equivalently `re.search(r"> hello\n+\n", chat_text)`). This
+     locks in turn ordering, not just spacer presence.
+   - The fake assistant text `"fake response"` is present (this is
+     `FakeLLMService`'s deterministic default reply, cross-checked
+     in `test_llm_streaming` in the same module).
 
 Keep the test compact; the goal is end-to-end proof, not coverage
 duplication of step 1 / step 2 unit tests.
@@ -99,8 +104,9 @@ async def test_chat_txt_mirrors_visible_conversation(tmp_path):
         await pilot.pause()  # let the worker / call_from_thread settle
     chat_text = event_log.current_chat_path.read_text(encoding="utf-8")
     assert "> hello" in chat_text
-    assert "\n\n" in chat_text  # blank-line spacer survived
-    assert "<fake assistant reply token>" in chat_text
+    # blank-line spacer survived AND falls after the user line
+    assert chat_text.index("> hello") < chat_text.index("\n\n")
+    assert "fake response" in chat_text  # FakeLLMService default reply
 ```
 
 ## DATA

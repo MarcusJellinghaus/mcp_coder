@@ -57,7 +57,10 @@ Update existing methods:
   `jsonl_path.with_name(jsonl_path.stem + "_chat.txt")`. Crucially
   this is derived from the *chosen* `.jsonl` path so the `-2` /
   `-3` collision suffixes from `_allocate_log_path` carry over.
-- **Best-effort policy is centralised in a small private helper:**
+- **Best-effort policy is centralised in a small private helper.**
+  This helper is the single chokepoint for opening the chat file
+  (called from `__init__` and `rotate`), which makes it the patch
+  target for test #6 below:
 
   ```python
   def _try_open_chat(path: Path) -> IO[str] | None:
@@ -143,11 +146,21 @@ Markers: existing module-level markers apply; no new markers.
    `log._chat_file` is not `None`) `log._chat_file.closed`.
 
 6. **`test_chat_open_failure_is_best_effort(tmp_path, monkeypatch, caplog)`**
-   Patch the module-level `open` so that opening a path whose name
-   ends in `_chat.txt` raises `PermissionError`. Construct
-   `EventLog(logs_dir=tmp_path)`. Assert: JSONL is open and usable;
-   `log._chat_file is None`; `log.write_chat("x")` does not raise;
-   a warning was logged.
+   Monkeypatch the private helper
+   `mcp_coder.icoder.core.event_log._try_open_chat` so it simulates
+   a failed open — e.g. replace it with a function that logs the
+   same warning `_try_open_chat` would emit on `OSError` and
+   returns `None` (the simplest form is
+   `monkeypatch.setattr("mcp_coder.icoder.core.event_log._try_open_chat", lambda path: None)`,
+   combined with an explicit `caplog`-level assertion that step 1's
+   implementation logs the warning at the call site, or a patch
+   that raises `OSError` internally and lets the production helper
+   handle it). Because the helper is the single chokepoint for
+   opening the chat file (see HOW section), this patch covers both
+   `__init__` and the post-rotate open path without touching the
+   builtin `open`. Construct `EventLog(logs_dir=tmp_path)`. Assert:
+   JSONL is open and usable; `log._chat_file is None`;
+   `log.write_chat("x")` does not raise; a warning was logged.
 
 ## Implementation order (TDD loop)
 

@@ -102,7 +102,11 @@ and is marked `pytest.mark.textual_integration`). Use
 1. **`test_mirror_called_for_blank_line_spacer`**
    Construct an app yielding `OutputLog(mirror=mock)`. After mount,
    call `output.write("")`. Assert `mock.call_args_list ==
-   [call("")]`. (This is the new behavior — covers the spacer path.)
+   [call("")]` **and** `output.recorded_lines == []` — the blank
+   string is mirrored to the `.txt` but must NOT pollute the
+   in-memory recorded list. Locks in spacer semantics against a
+   future regression that silently records spacers. (This is the
+   new behavior — covers the spacer path.)
 
 2. **`test_mirror_called_for_markdown_write`**
    Same scaffolding. Call `output.write(Markdown("# Hello\n**bold**"))`.
