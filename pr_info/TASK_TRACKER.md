@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Details: [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation (tests + production code): add six TDD tests in `tests/icoder/test_event_log.py`, then implement `_chat_path_for`, `_try_open_chat`, `_chat_file`, `write_chat`, `current_chat_path`, paired rotation, and paired close in `src/mcp_coder/icoder/core/event_log.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared (`iCoder: pair EventLog with plain-text chat sidecar (#982)`)
+- [x] Implementation (tests + production code): add six TDD tests in `tests/icoder/test_event_log.py`, then implement `_chat_path_for`, `_try_open_chat`, `_chat_file`, `write_chat`, `current_chat_path`, paired rotation, and paired close in `src/mcp_coder/icoder/core/event_log.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared (`iCoder: pair EventLog with plain-text chat sidecar (#982)`)
 
 ### Step 2: Add `mirror` callback to `OutputLog`
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import time
 from datetime import datetime, timezone
@@ -13,6 +14,8 @@ from mcp_coder.icoder.core.types import EventEntry
 
 if TYPE_CHECKING:
     from mcp_coder.icoder.env_setup import RuntimeInfo
+
+logger = logging.getLogger(__name__)
 
 
 def _make_log_filename() -> str:
@@ -52,6 +55,28 @@ def _allocate_log_path(logs_dir: Path) -> Path:
         counter += 1
 
 
+def _chat_path_for(jsonl_path: Path) -> Path:
+    """Return the paired ``_chat.txt`` path for a given JSONL log path.
+
+    The chat sidecar shares the JSONL stem (including any ``-2`` /
+    ``-3`` collision suffix), so the pair can never desynchronize.
+    """
+    return jsonl_path.with_name(jsonl_path.stem + "_chat.txt")
+
+
+def _try_open_chat(path: Path) -> IO[str] | None:
+    """Open the chat sidecar for append; return ``None`` on failure.
+
+    Best-effort by design: a missing/locked/read-only chat file must
+    not break iCoder. Failures are logged once at warning level.
+    """
+    try:
+        return open(path, "a", encoding="utf-8")  # noqa: SIM115
+    except OSError as exc:
+        logger.warning("iCoder chat mirror disabled (%s): %s", path, exc)
+        return None
+
+
 class EventLog:
     """Structured event log: in-memory list + JSONL file output."""
 
@@ -69,6 +94,8 @@ class EventLog:
         self._start: float = time.monotonic()
         self._entries: list[EventEntry] = []
         self._file: IO[str] = open(self._path, "a", encoding="utf-8")  # noqa: SIM115
+        self._chat_path: Path = _chat_path_for(self._path)
+        self._chat_file: IO[str] | None = _try_open_chat(self._chat_path)
 
     def emit(self, event: str, **data: object) -> EventEntry:
         """Record a structured event.
@@ -97,6 +124,37 @@ class EventLog:
         """Return the path of the active JSONL file."""
         return self._path
 
+    @property
+    def current_chat_path(self) -> Path:
+        """Return the path of the paired ``_chat.txt`` sidecar.
+
+        Always present (even when the file failed to open); callers
+        must not assume the file exists on disk.
+        """
+        return self._chat_path
+
+    def write_chat(self, line: str) -> None:
+        """Append ``line + "\\n"`` to the chat sidecar; best-effort.
+
+        No-op when the sidecar failed to open. On write failure the
+        file is closed and further calls become no-ops; the exception
+        is swallowed so a broken mirror cannot break iCoder.
+        """
+        if self._chat_file is None:
+            return
+        try:
+            self._chat_file.write(line + "\n")
+            self._chat_file.flush()
+        except OSError as exc:
+            logger.warning(
+                "iCoder chat mirror write failed (%s): %s", self._chat_path, exc
+            )
+            try:
+                self._chat_file.close()
+            except OSError:
+                pass
+            self._chat_file = None
+
     def rotate(self) -> Path:
         """Close current JSONL file, open a fresh one with new timestamp.
 
@@ -104,18 +162,29 @@ class EventLog:
         emit() calls write to the new file. The new file starts empty;
         callers that need a self-contained log (so the picker filter on
         ``session_start.provider`` can see it) must invoke
-        ``emit_session_start`` immediately after.
+        ``emit_session_start`` immediately after. The paired
+        ``_chat.txt`` sidecar is rotated in lock-step so the two files
+        always share a stem.
 
         Returns:
             Path of the freshly opened JSONL file.
         """
         self._file.flush()
         self._file.close()
+        if self._chat_file is not None:
+            try:
+                self._chat_file.flush()
+                self._chat_file.close()
+            except OSError:
+                pass
+            self._chat_file = None
         new_path = _allocate_log_path(self._logs_dir)
         self._file = open(new_path, "a", encoding="utf-8")  # noqa: SIM115
         self._start = time.monotonic()
         self._entries.clear()
         self._path = new_path
+        self._chat_path = _chat_path_for(new_path)
+        self._chat_file = _try_open_chat(self._chat_path)
         return new_path
 
     @property
@@ -124,10 +193,16 @@ class EventLog:
         return list(self._entries)
 
     def close(self) -> None:
-        """Flush and close the JSONL file handle."""
+        """Flush and close the JSONL file handle and the chat sidecar."""
         if not self._file.closed:
             self._file.flush()
             self._file.close()
+        if self._chat_file is not None and not self._chat_file.closed:
+            try:
+                self._chat_file.flush()
+                self._chat_file.close()
+            except OSError:
+                pass
 
     def __enter__(self) -> EventLog:
         """Support context manager usage.
