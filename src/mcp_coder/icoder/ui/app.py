@@ -203,7 +203,7 @@ class ICoderApp(App[None]):
         Yields:
             OutputLog and InputArea widgets.
         """
-        yield OutputLog()
+        yield OutputLog(mirror=self._core.event_log.write_chat)
         yield Static(id="streaming-tail")
         yield CommandAutocomplete()
         yield BusyIndicator()

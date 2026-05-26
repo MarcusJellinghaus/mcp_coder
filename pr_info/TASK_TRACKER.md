@@ -41,9 +41,9 @@ Details: [step_2.md](./steps/step_2.md)
 
 Details: [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation (tests + production code + docs): add `test_chat_txt_mirrors_visible_conversation` in `tests/icoder/test_app_pilot.py`, wire `mirror=self._core.event_log.write_chat` in `ICoderApp.compose()` in `src/mcp_coder/icoder/ui/app.py`, append the "Log files" note to `docs/icoder/icoder.md`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared (`iCoder: mirror conversation to plain-text chat log (#982)`)
+- [x] Implementation (tests + production code + docs): add `test_chat_txt_mirrors_visible_conversation` in `tests/icoder/test_app_pilot.py`, wire `mirror=self._core.event_log.write_chat` in `ICoderApp.compose()` in `src/mcp_coder/icoder/ui/app.py`, append the "Log files" note to `docs/icoder/icoder.md`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared (`iCoder: mirror conversation to plain-text chat log (#982)`)
 
 ## Pull Request
 

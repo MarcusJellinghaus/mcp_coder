@@ -890,3 +890,21 @@ async def test_tool_result_renders_plain_text_when_no_format(
         joined = "\n".join(lines)
         assert "# Header" in joined
         assert "**bold text**" in joined
+
+
+async def test_chat_txt_mirrors_visible_conversation(
+    icoder_app: ICoderApp, event_log: EventLog
+) -> None:
+    """End-to-end: user + assistant lines land in the paired _chat.txt sidecar."""
+    async with icoder_app.run_test() as pilot:
+        input_area = icoder_app.query_one(InputArea)
+        input_area.focus()
+        await pilot.pause()
+        input_area.insert("hello")
+        await pilot.pause()
+        await pilot.press("enter")
+        await pilot.pause(delay=0.5)
+    chat_text = event_log.current_chat_path.read_text(encoding="utf-8")
+    assert "> hello" in chat_text
+    assert chat_text.index("> hello") < chat_text.index("\n\n")
+    assert "fake response" in chat_text
