@@ -26,6 +26,7 @@ from textual.widgets import RichLog
 from mcp_coder.llm.formatting.render_actions import ToolStart
 from mcp_coder.llm.formatting.stream_renderer import (
     format_tool_compressed,
+    format_tool_oneline,
     format_tool_start,
 )
 
@@ -87,8 +88,10 @@ class OutputLog(RichLog):
         self._script: list[tuple[str, str | None]] = []  # (unit_id, line|None)
         self._ranges: list[tuple[int, int, str]] = []  # (start, end, unit_id)
         self._screen_lines: list[str] = []  # current screen state
-        # Empty in step 5; populated by step 6's toggle_unit_tier /
-        # set_tool_display_default. clear_state() must wipe it.
+        # Global default tier and per-unit overrides. ``set_tool_display_default``
+        # (the /display hard reset) updates the default AND wipes the overrides;
+        # ``toggle_unit_tier`` populates the overrides. clear_state() wipes them.
+        self._tool_display_default: Literal["oneline", "compressed"] = "compressed"
         self._tool_tier_overrides: dict[str, Literal["oneline", "compressed"]] = {}
 
     def clear_state(self) -> None:
@@ -302,6 +305,66 @@ class OutputLog(RichLog):
             return None
         return next(reversed(self._units.values()))
 
+    def effective_tier(self, unit_id: str) -> Literal["oneline", "compressed"]:
+        """Return the tier in effect for ``unit_id``.
+
+        An explicit per-unit override (set by :meth:`toggle_unit_tier`) wins;
+        otherwise the global ``_tool_display_default`` applies.
+
+        Args:
+            unit_id: The id of the unit to resolve.
+
+        Returns:
+            The effective tier (``"oneline"`` or ``"compressed"``).
+        """
+        return self._tool_tier_overrides.get(unit_id, self._tool_display_default)
+
+    def toggle_unit_tier(self, unit_id: str) -> Literal["oneline", "compressed"]:
+        """Flip a tool unit's tier and re-render.
+
+        Args:
+            unit_id: The id of the tool unit to toggle.
+
+        Returns:
+            The new effective tier after the flip.
+
+        Raises:
+            ValueError: If the unit is not a tool — only tools toggle.
+        """
+        unit = self._units[unit_id]
+        if unit.kind != "tool":
+            raise ValueError(f"only tool units can toggle tier; got {unit.kind!r}")
+        new_tier: Literal["oneline", "compressed"] = (
+            "oneline" if self.effective_tier(unit_id) == "compressed" else "compressed"
+        )
+        self._tool_tier_overrides[unit_id] = new_tier
+        self.rebuild()
+        return new_tier
+
+    def set_tool_display_default(self, tier: Literal["oneline", "compressed"]) -> None:
+        """Set the global default tier and wipe all per-unit overrides.
+
+        This is the ``/display`` hard reset: every tool reverts to the new
+        default, discarding any individual toggles.
+
+        Args:
+            tier: The new global default tier.
+        """
+        self._tool_display_default = tier
+        self._tool_tier_overrides.clear()
+        self.rebuild()
+
+    def on_resize(self, event: object) -> None:
+        """Re-render on resize so wrap-derived ranges stay valid.
+
+        Idempotent: the script and units are unchanged, so running it twice
+        is safe.
+
+        Args:
+            event: The Textual ``Resize`` event (unused).
+        """
+        self.rebuild()
+
     def rebuild(self) -> None:
         """Re-render the screen from the registry script.
 
@@ -328,8 +391,10 @@ class OutputLog(RichLog):
     def _render_unit_atomic(self, unit: ContentUnit) -> list[str]:
         """Render an atomic unit (tool / user_input) to logical lines.
 
-        Non-tier version (step 5): tools always render the compressed
-        (tier-2) shape. Step 6 layers tier dispatch on top.
+        Tools dispatch on their effective tier: ``oneline`` collapses the
+        invocation to a single tier-1 summary; ``compressed`` renders the
+        tier-2 start header always, plus the body + footer only once a
+        result has arrived (``output_lines`` non-empty).
 
         Args:
             unit: The unit to render.
@@ -339,6 +404,15 @@ class OutputLog(RichLog):
             which is never reached via an atomic script entry).
         """
         if unit.kind == "tool":
+            if self.effective_tier(unit.id) == "oneline":
+                return [
+                    format_tool_oneline(
+                        name=unit.tool_name or "",
+                        args=unit.args or {},
+                        duration_ms=unit.duration_ms,
+                        is_error=unit.is_error,
+                    )
+                ]
             lines = format_tool_start(
                 ToolStart(
                     display_name=unit.tool_name or "",

@@ -445,3 +445,222 @@ async def test_append_unit_assistant_turn_with_empty_lines_no_script_entry() -> 
 
         # No script entry → rebuild walks past the empty turn entirely.
         assert output.rendered_lines == []
+
+
+def _make_user_input_unit(unit_id: str, text: str = "hello") -> ContentUnit:
+    """Build a user_input ContentUnit for tests."""
+    return ContentUnit(
+        id=unit_id,
+        kind="user_input",
+        timestamp=datetime(2026, 6, 24, 12, 0, 0),
+        full_text=text,
+    )
+
+
+async def test_effective_tier_defaults_to_compressed() -> None:
+    """A freshly registered tool unit resolves to the compressed default."""
+    app = _RegistryApp()
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        output.append_unit(_make_tool_unit("A"), ["l1"])
+        await pilot.pause()
+
+        assert output.effective_tier("A") == "compressed"
+
+
+async def test_toggle_unit_tier_flips_state() -> None:
+    """toggle_unit_tier flips compressed → oneline → compressed."""
+    app = _RegistryApp()
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        output.append_unit(_make_tool_unit("A"), ["l1"])
+        await pilot.pause()
+
+        assert output.toggle_unit_tier("A") == "oneline"
+        assert output.effective_tier("A") == "oneline"
+        assert output.toggle_unit_tier("A") == "compressed"
+        assert output.effective_tier("A") == "compressed"
+
+
+async def test_toggle_unit_tier_non_tool_raises_or_noops() -> None:
+    """Toggling a user_input unit raises ValueError (only tools toggle)."""
+    app = _RegistryApp()
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        output.append_unit(_make_user_input_unit("U"), ["> hello"])
+        await pilot.pause()
+
+        with pytest.raises(ValueError):
+            output.toggle_unit_tier("U")
+
+
+async def test_rebuild_is_idempotent() -> None:
+    """Two consecutive rebuilds produce identical ranges."""
+    app = _RegistryApp()
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        output.append_unit(
+            _make_tool_unit("A", output_lines=("o1", "o2"), total_lines=2), ["start"]
+        )
+        output.append_unit(_make_tool_unit("B"), ["s2"])
+        await pilot.pause()
+
+        output.rebuild()
+        ranges1 = list(output._ranges)
+        output.rebuild()
+        ranges2 = list(output._ranges)
+
+        assert ranges1 == ranges2
+
+
+async def test_rebuild_after_toggle_renders_new_tier() -> None:
+    """Toggling to oneline collapses the compressed block to one line."""
+    app = _RegistryApp()
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        unit = _make_tool_unit("A", output_lines=("o1", "o2"), total_lines=2)
+        output.append_unit(unit, ["start"])
+        await pilot.pause()
+
+        output.toggle_unit_tier("A")  # → oneline, triggers rebuild
+        await pilot.pause()
+
+        assert len(output.rendered_lines) == 1
+        assert "read_file" in output.rendered_lines[0]
+
+
+async def test_set_tool_display_default_wipes_overrides() -> None:
+    """set_tool_display_default clears per-unit overrides (hard reset)."""
+    app = _RegistryApp()
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        output.append_unit(
+            _make_tool_unit("A", output_lines=("o1",), total_lines=1), ["s1"]
+        )
+        output.append_unit(
+            _make_tool_unit("B", output_lines=("o2",), total_lines=1), ["s2"]
+        )
+        output.toggle_unit_tier("A")
+        output.toggle_unit_tier("B")
+        await pilot.pause()
+        assert output.effective_tier("A") == "oneline"
+
+        output.set_tool_display_default("compressed")
+        await pilot.pause()
+
+        assert output.effective_tier("A") == "compressed"
+        assert output.effective_tier("B") == "compressed"
+        assert output._tool_tier_overrides == {}
+
+
+async def test_set_tool_display_default_triggers_rebuild() -> None:
+    """Changing the default re-renders the screen, not just the state."""
+    app = _RegistryApp()
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        unit = _make_tool_unit("A", output_lines=("o1", "o2"), total_lines=2)
+        output.append_unit(unit, ["start"])
+        output.toggle_unit_tier("A")  # → oneline
+        await pilot.pause()
+        before = list(output.rendered_lines)
+        assert len(before) == 1
+
+        output.set_tool_display_default("compressed")
+        await pilot.pause()
+        after = list(output.rendered_lines)
+
+        assert after != before
+        assert len(after) > 1
+
+
+async def test_on_resize_triggers_rebuild() -> None:
+    """on_resize re-renders from the registry, picking up unit changes."""
+    app = _RegistryApp()
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        output.append_unit(
+            _make_tool_unit("A", output_lines=("o1",), total_lines=1), ["s"]
+        )
+        output.rebuild()
+        await pilot.pause()
+
+        # Mutate the stored unit directly (bypassing update_unit_and_rerender)
+        # so only a rebuild triggered by on_resize would surface the change.
+        import dataclasses
+
+        output._units["A"] = dataclasses.replace(
+            output._units["A"], output_lines=("CHANGED",), total_lines=1
+        )
+        output.on_resize(object())
+        await pilot.pause()
+
+        assert any("CHANGED" in ln for ln in output.rendered_lines)
+
+
+async def test_rebuild_does_not_mutate_recorded() -> None:
+    """rebuild() leaves the recorded append-history untouched."""
+    app = _RegistryApp()
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        output.append_unit(
+            _make_tool_unit("A", output_lines=("o1",), total_lines=1), ["s1", "s2"]
+        )
+        await pilot.pause()
+        before = list(output.recorded_lines)
+
+        output.rebuild()
+
+        assert output.recorded_lines == before
+
+
+async def test_toggle_for_assistant_turn_unit_noop_or_raise() -> None:
+    """Toggling an assistant_turn unit raises ValueError (only tools toggle)."""
+    app = _RegistryApp()
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        turn = _make_turn_unit("T")
+        output.append_unit(turn, [])
+        await pilot.pause()
+
+        with pytest.raises(ValueError):
+            output.toggle_unit_tier("T")
+
+
+async def test_rebuild_with_pending_tool_renders_start_only() -> None:
+    """An in-flight tool (no output yet) renders start lines without a footer."""
+    app = _RegistryApp()
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        unit = _make_tool_unit("A", output_lines=(), total_lines=0)
+        output.append_unit(unit, ["placeholder"])
+        await pilot.pause()
+
+        output.rebuild()
+        await pilot.pause()
+        assert not any("done" in ln for ln in output.rendered_lines)
+
+        output.update_unit_and_rerender(
+            "A",
+            output_lines=("a", "b"),
+            total_lines=2,
+            truncated=False,
+            duration_ms=42,
+            is_error=False,
+        )
+        await pilot.pause()
+
+        joined = "\n".join(output.rendered_lines)
+        assert "done" in joined
+        assert "a" in joined
+        assert "b" in joined

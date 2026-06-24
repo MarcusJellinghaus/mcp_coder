@@ -53,9 +53,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 6: `OutputLog` tier model + tier dispatch + `on_resize` ([step_6.md](./steps/step_6.md))
 
-- [ ] Implementation (tests + production code): `_tool_display_default`, `effective_tier`/`toggle_unit_tier`/`set_tool_display_default`/`on_resize`, tier dispatch in `_render_unit_atomic`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): `_tool_display_default`, `effective_tier`/`toggle_unit_tier`/`set_tool_display_default`/`on_resize`, tier dispatch in `_render_unit_atomic`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: `DetailModal` widget ([step_7.md](./steps/step_7.md))
 
