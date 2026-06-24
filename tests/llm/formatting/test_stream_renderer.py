@@ -17,6 +17,7 @@ from mcp_coder.llm.formatting.stream_renderer import (
     _render_tool_output,
     _render_value_compact,
     _render_value_full,
+    format_tool_compressed,
     format_tool_oneline,
     format_tool_start,
 )
@@ -728,6 +729,52 @@ class TestFormatToolOneline:
         assert "alpha" in result
         assert "beta" not in result
         assert "gamma" not in result
+
+
+class TestFormatToolCompressed:
+    """Tests for format_tool_compressed()."""
+
+    def test_format_tool_compressed_done(self) -> None:
+        """Successful tool renders body lines and a done footer with ms."""
+        result = format_tool_compressed(
+            name="read_file",
+            args={"path": "src/main.py"},
+            output_lines=("a", "b"),
+            total_lines=2,
+            truncated=False,
+            duration_ms=120,
+            is_error=False,
+        )
+        assert result[0].startswith("│  ")
+        assert result[1].startswith("│  ")
+        assert result[-1] == "└ done (2 lines, 120ms)"
+
+    def test_format_tool_compressed_error(self) -> None:
+        """Errored tool collapses the footer to a bare error marker."""
+        result = format_tool_compressed(
+            name="Bash",
+            args={"command": "git status"},
+            output_lines=("boom",),
+            total_lines=1,
+            truncated=False,
+            duration_ms=50,
+            is_error=True,
+        )
+        assert result[-1] == "└ error"
+
+    def test_format_tool_compressed_empty_output(self) -> None:
+        """Empty output yields only the footer line, no body lines."""
+        result = format_tool_compressed(
+            name="Bash",
+            args={},
+            output_lines=(),
+            total_lines=0,
+            truncated=False,
+            duration_ms=None,
+            is_error=False,
+        )
+        assert len(result) == 1
+        assert result[0].startswith("└")
 
 
 class TestRendererPendingFifo:

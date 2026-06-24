@@ -295,6 +295,54 @@ def format_tool_oneline(
     return oneline
 
 
+def format_tool_compressed(
+    *,
+    name: str,
+    args: dict[str, object],
+    output_lines: tuple[str, ...],
+    total_lines: int,
+    truncated: bool,
+    duration_ms: int | None,
+    is_error: bool,
+) -> list[str]:
+    """Tier-2 compressed body lines for a completed tool invocation.
+
+    Renders the ``│  …`` output body followed by a ``└ done`` /
+    ``└ error`` footer. The footer for a successful tool reports the
+    total line count (with ``truncated`` and ``duration_ms`` suffixes when
+    present); an errored tool collapses to a bare ``└ error``.
+
+    The companion start header (the ``┌`` line) is produced separately
+    by :func:`format_tool_start`; this helper covers only the body + footer
+    that follows it.
+
+    Args:
+        name: Display name of the tool (unused here; kept for signature
+            symmetry with :func:`format_tool_oneline` and future use).
+        args: Tool arguments (unused here; kept for signature symmetry).
+        output_lines: Pre-rendered, already-truncated body lines.
+        total_lines: Total line count of the original output.
+        truncated: Whether head/tail truncation was applied.
+        duration_ms: Elapsed time in milliseconds, or ``None``.
+        is_error: Whether the tool reported an error.
+
+    Returns:
+        Body lines (each prefixed ``│  ``) followed by a footer line.
+    """
+    lines = [f"│  {ln}" for ln in output_lines]
+    if is_error:
+        lines.append("└ error")
+    else:
+        word = "line" if total_lines == 1 else "lines"
+        detail = f"{total_lines} {word}"
+        if truncated:
+            detail += ", truncated"
+        if duration_ms is not None:
+            detail += f", {duration_ms}ms"
+        lines.append(f"└ done ({detail})")
+    return lines
+
+
 class StreamEventRenderer:
     """Converts ``StreamEvent`` dicts into typed ``RenderAction`` dataclasses.
 

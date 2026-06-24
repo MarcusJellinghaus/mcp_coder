@@ -47,9 +47,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 5: `OutputLog` registry data layer ([step_5.md](./steps/step_5.md))
 
-- [ ] Implementation (tests + production code): `ContentUnit`, registry state + `append_unit`/`extend_open_unit`/`finalize_open_unit`/`update_unit_and_rerender`/`unit_at_line`/`last_unit`/`rendered_lines`, minimal `rebuild()`, `clear_recorded`→`clear_state` rename, extract `format_tool_compressed`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): `ContentUnit`, registry state + `append_unit`/`extend_open_unit`/`finalize_open_unit`/`update_unit_and_rerender`/`unit_at_line`/`last_unit`/`rendered_lines`, minimal `rebuild()`, `clear_recorded`→`clear_state` rename, extract `format_tool_compressed`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: `OutputLog` tier model + tier dispatch + `on_resize` ([step_6.md](./steps/step_6.md))
 

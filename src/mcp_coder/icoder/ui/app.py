@@ -268,7 +268,7 @@ class ICoderApp(App[None]):
                     self.exit()
                 case ClearOutput():
                     output.clear()
-                    output.clear_recorded()
+                    output.clear_state()
                 case OpenPicker():
                     self.open_picker_for_load()
                 case OutputText():
@@ -324,7 +324,7 @@ class ICoderApp(App[None]):
 
         output = self.query_one(OutputLog)
         output.clear()
-        output.clear_recorded()
+        output.clear_state()
         self._core.prepare_for_resume(log_path)
         replay_log(self, log_path, event_log=self._core.event_log)
         now_local = datetime.now().strftime("%Y-%m-%d %H:%M")
