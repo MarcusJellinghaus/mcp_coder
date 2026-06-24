@@ -253,6 +253,14 @@ _.handle_info
 _.handle_quit
 _.handle_color
 _.handle_load
+_.handle_display
+
+# icoder/ui/app.py - Textual action binding (F2) invoked by name
+_.action_open_last_unit_modal
+
+# icoder/ui/widgets/detail_modal.py - Textual widget CSS + action binding (Ctrl+C)
+_.DEFAULT_CSS
+_.action_copy_selection
 
 # icoder/ui/app.py - Textual styles set programmatically
 _.border
