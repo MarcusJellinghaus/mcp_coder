@@ -552,8 +552,8 @@ async def run_agent_stream(
                     result_text = str(output)
 
                 # A ToolMessage with status == "error" signals a failed tool.
-                # Surface it via is_error instead of raising so the stream
-                # continues and history reconstruction still sees the tool.
+                # Surface tool errors via is_error so the stream continues
+                # and history reconstruction still sees the tool.
                 is_error = getattr(output, "status", None) == "error"
 
                 tool_results_list.append(

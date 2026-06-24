@@ -464,6 +464,11 @@ class ICoderApp(App[None]):
         elif isinstance(action, ToolResult):
             dq = self._open_tool_units.get(action.raw_name)
             unit_id = dq.popleft() if dq else None
+            if unit_id is None:
+                logger.warning(
+                    "FIFO desync: no open tool unit for ToolResult %s",
+                    action.raw_name,
+                )
             if unit_id is not None:
                 raw_output = str(event.get("output", ""))
                 output.update_unit_and_rerender(
