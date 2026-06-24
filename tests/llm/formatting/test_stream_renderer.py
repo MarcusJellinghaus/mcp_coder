@@ -16,6 +16,7 @@ from mcp_coder.llm.formatting.stream_renderer import (
     _render_tool_output,
     _render_value_compact,
     _render_value_full,
+    format_tool_oneline,
     format_tool_start,
 )
 
@@ -638,3 +639,91 @@ class TestFormatToolStart:
         assert "zebra" in arg_lines[0]
         assert "apple" in arg_lines[1]
         assert "middle" in arg_lines[2]
+
+
+class TestFormatToolOneline:
+    """Tests for format_tool_oneline()."""
+
+    def test_format_tool_oneline_done_with_duration(self) -> None:
+        """Completed tool shows '→ done' and the duration suffix."""
+        result = format_tool_oneline(
+            name="read_file",
+            args={"path": "src/main.py"},
+            duration_ms=120,
+            is_error=False,
+        )
+        assert "→ done" in result
+        assert "(120ms)" in result
+
+    def test_format_tool_oneline_running(self) -> None:
+        """Running tool shows 'running…' with no ms suffix."""
+        result = format_tool_oneline(
+            name="read_file",
+            args={"path": "src/main.py"},
+            duration_ms=None,
+            is_error=False,
+        )
+        assert "running…" in result
+        assert "ms" not in result
+
+    def test_format_tool_oneline_error(self) -> None:
+        """Errored tool with duration shows '→ error' and the duration suffix."""
+        result = format_tool_oneline(
+            name="Bash",
+            args={"command": "git status"},
+            duration_ms=50,
+            is_error=True,
+        )
+        assert "→ error" in result
+        assert "(50ms)" in result
+
+    def test_format_tool_oneline_error_without_duration(self) -> None:
+        """Errored tool cancelled before completion shows '→ error', no ms suffix."""
+        result = format_tool_oneline(
+            name="Bash",
+            args={"command": "git status"},
+            duration_ms=None,
+            is_error=True,
+        )
+        assert "→ error" in result
+        assert "ms" not in result
+
+    def test_format_tool_oneline_no_args(self) -> None:
+        """Empty args render as 'name()' with no inner content."""
+        result = format_tool_oneline(
+            name="Bash",
+            args={},
+            duration_ms=50,
+            is_error=False,
+        )
+        assert result == "⚙ Bash() → done (50ms)"
+
+    def test_format_tool_oneline_truncates_long_arg_value(self) -> None:
+        """A long first-arg rendered value is capped at ~40 chars with ellipsis.
+
+        ``_render_value_compact`` renders strings up to 80 chars verbatim
+        (with quotes), so a 60-char value produces a rendering longer than the
+        40-char oneline cap and triggers truncation.
+        """
+        long_value = "x" * 60
+        result = format_tool_oneline(
+            name="read_file",
+            args={"path": long_value},
+            duration_ms=10,
+            is_error=False,
+        )
+        assert "…" in result
+        # Full 60-char value must not appear verbatim.
+        assert long_value not in result
+
+    def test_format_tool_oneline_uses_first_arg_only(self) -> None:
+        """Only the first arg value (insertion order) appears in the parentheses."""
+        result = format_tool_oneline(
+            name="some_tool",
+            args={"first": "alpha", "second": "beta", "third": "gamma"},
+            duration_ms=10,
+            is_error=False,
+        )
+        assert "alpha" in result
+        assert "beta" not in result
+        assert "gamma" not in result

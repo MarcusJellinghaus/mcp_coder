@@ -35,9 +35,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: `format_tool_oneline()` pure function ([step_3.md](./steps/step_3.md))
 
-- [ ] Implementation (tests + production code): pure tier-1 one-line formatter in `stream_renderer.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): pure tier-1 one-line formatter in `stream_renderer.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: `StreamEventRenderer` FIFO + `cleanup_pending()` ([step_4.md](./steps/step_4.md))
 

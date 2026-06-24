@@ -235,6 +235,58 @@ def format_tool_start(action: ToolStart, full: bool = False) -> list[str]:
     return lines
 
 
+def format_tool_oneline(
+    *,
+    name: str,
+    args: dict[str, object],
+    duration_ms: int | None,
+    is_error: bool,
+) -> str:
+    """One-line tier-1 summary for a tool invocation.
+
+    Status semantics (tri-state -- preserves the issue's running/done/error
+    model without requiring a ToolResult object):
+        - duration_ms is None AND is_error is False -> tool still running
+        - duration_ms is not None AND is_error is False -> done
+        - is_error is True -> error (duration optional; may be None if
+          cancelled before completion)
+
+    Examples::
+
+        format_tool_oneline(name="read_file", args={"path": "src/main.py"},
+                            duration_ms=120, is_error=False)
+            -> read_file("src/main.py") done (120ms)
+
+    Args:
+        name: Display name of the tool (already shortened by the caller).
+        args: Tool arguments; the first entry (insertion order) is summarized.
+        duration_ms: Elapsed time in milliseconds, or ``None`` while running.
+        is_error: Whether the tool invocation failed.
+
+    Returns:
+        A single line (no trailing newline) with status and optional duration.
+    """
+    if is_error:
+        status = "error"
+    elif duration_ms is None:
+        status = "running…"
+    else:
+        status = "done"
+
+    arg_part = ""
+    if args:
+        _key, value = next(iter(args.items()))
+        rendered = _render_value_compact(value)
+        if len(rendered) > 40:
+            rendered = rendered[:37] + "…"
+        arg_part = rendered
+
+    oneline = f"⚙ {name}({arg_part}) → {status}"
+    if duration_ms is not None:
+        oneline += f" ({duration_ms}ms)"
+    return oneline
+
+
 class StreamEventRenderer:
     """Converts ``StreamEvent`` dicts into typed ``RenderAction`` dataclasses.
 
