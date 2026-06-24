@@ -10,62 +10,74 @@ import pytest
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.core.command_history import CommandHistory
 from mcp_coder.icoder.core.event_log import EventLog
-from mcp_coder.icoder.core.types import TokenUsage
+from mcp_coder.icoder.core.types import (
+    ClearOutput,
+    OutputText,
+    Quit,
+    ResetSession,
+    SendToLLM,
+    TokenUsage,
+)
 from mcp_coder.icoder.env_setup import RuntimeInfo
 from mcp_coder.icoder.services.llm_service import FakeLLMService
 from mcp_coder.utils.mcp_verification import MCPServerInfo
 
 
+def _output_text(response: object) -> str:
+    """Join the text of all OutputText actions in a response."""
+    actions = getattr(response, "actions", ())
+    return "\n".join(a.text for a in actions if isinstance(a, OutputText))
+
+
 def test_handle_help(app_core: AppCore) -> None:
-    """Test /help returns help text."""
+    """Test /help returns an OutputText action with help text."""
     response = app_core.handle_input("/help")
-    assert "/help" in response.text
-    assert not response.send_to_llm
+    assert "/help" in _output_text(response)
+    assert not any(isinstance(a, SendToLLM) for a in response.actions)
 
 
 def test_help_includes_keyboard_shortcuts(app_core: AppCore) -> None:
     """Test /help output contains keyboard shortcuts section."""
     response = app_core.handle_input("/help")
-    assert "Keyboard shortcuts:" in response.text
-    assert "Insert newline" in response.text
+    text = _output_text(response)
+    assert "Keyboard shortcuts:" in text
+    assert "Insert newline" in text
 
 
 def test_handle_unknown_command(app_core: AppCore) -> None:
     """Test /unknown returns error."""
     response = app_core.handle_input("/unknown")
-    assert "Unknown command" in response.text
+    assert "Unknown command" in _output_text(response)
 
 
 def test_handle_free_text(app_core: AppCore) -> None:
-    """Test free text returns send_to_llm=True."""
+    """Test free text returns a SendToLLM action with the input text."""
     response = app_core.handle_input("hello world")
-    assert response.send_to_llm is True
+    assert response.actions == (SendToLLM(text="hello world"),)
 
 
 def test_handle_clear(app_core: AppCore) -> None:
-    """Test /clear returns clear_output=True and reset_session=True."""
+    """Test /clear returns ClearOutput and ResetSession actions."""
     response = app_core.handle_input("/clear")
-    assert response.clear_output is True
-    assert response.reset_session is True
+    assert response.actions == (ClearOutput(), ResetSession())
 
 
 def test_handle_quit(app_core: AppCore) -> None:
-    """Test /quit returns quit=True."""
+    """Test /quit returns a Quit action."""
     response = app_core.handle_input("/quit")
-    assert response.quit is True
+    assert response.actions == (Quit(),)
 
 
 def test_handle_empty_input(app_core: AppCore) -> None:
     """Test empty input returns empty Response."""
     response = app_core.handle_input("")
-    assert response.text == ""
-    assert not response.send_to_llm
+    assert response.actions == ()
 
 
 def test_handle_whitespace_input(app_core: AppCore) -> None:
     """Test whitespace-only input returns empty Response."""
     response = app_core.handle_input("   ")
-    assert response.text == ""
+    assert response.actions == ()
 
 
 def test_stream_llm(app_core: AppCore) -> None:
@@ -497,20 +509,34 @@ def test_set_prompt_color_invalid_preserves_current(app_core: AppCore) -> None:
     assert app_core.prompt_color == "#ef4444"
 
 
-def test_handle_input_returns_llm_text(app_core: AppCore) -> None:
-    """When a command sets llm_text, it's available on the response."""
+def test_handle_input_returns_send_to_llm_with_override(app_core: AppCore) -> None:
+    """A command's SendToLLM(text=...) override is preserved through dispatch."""
     from mcp_coder.icoder.core.types import Command, Response
 
     app_core.registry.add_command(
         Command(
             name="/skill_test",
             description="test skill",
-            handler=lambda args: Response(send_to_llm=True, llm_text="override"),
+            handler=lambda args: Response(actions=(SendToLLM(text="override"),)),
         )
     )
     response = app_core.handle_input("/skill_test")
-    assert response.send_to_llm is True
-    assert response.llm_text == "override"
+    assert response.actions == (SendToLLM(text="override"),)
+
+
+def test_handle_input_resolves_empty_send_to_llm_to_input(app_core: AppCore) -> None:
+    """A command's SendToLLM(text="") resolves to the original user input."""
+    from mcp_coder.icoder.core.types import Command, Response
+
+    app_core.registry.add_command(
+        Command(
+            name="/passthrough",
+            description="passthrough skill",
+            handler=lambda args: Response(actions=(SendToLLM(text=""),)),
+        )
+    )
+    response = app_core.handle_input("/passthrough foo bar")
+    assert response.actions == (SendToLLM(text="/passthrough foo bar"),)
 
 
 def test_stream_events_logged(event_log: EventLog) -> None:

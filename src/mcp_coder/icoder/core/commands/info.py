@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from mcp_coder.icoder.core.types import Response
+from mcp_coder.icoder.core.types import OutputText, Response
 from mcp_coder.llm.providers.claude.claude_executable_finder import (
     find_claude_executable,
 )
@@ -126,4 +126,6 @@ def register_info(
 
     @registry.register("/info", "Show runtime diagnostics")
     def handle_info(args: list[str]) -> Response:  # noqa: ARG001
-        return Response(text=_format_info(runtime_info, mcp_manager))
+        return Response(
+            actions=(OutputText(text=_format_info(runtime_info, mcp_manager)),)
+        )

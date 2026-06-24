@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from mcp_coder.icoder.core.types import Response
+from mcp_coder.icoder.core.types import OutputText, Response
 
 if TYPE_CHECKING:
     from mcp_coder.icoder.core.app_core import AppCore
@@ -18,10 +18,14 @@ def register_color(registry: CommandRegistry, app_core: AppCore) -> None:
     def handle_color(args: list[str]) -> Response:
         if not args:
             return Response(
-                text="red, green, blue, yellow, purple, orange, pink, cyan"
-                " (default resets to grey)"
+                actions=(
+                    OutputText(
+                        text="red, green, blue, yellow, purple, orange, pink, cyan"
+                        " (default resets to grey)"
+                    ),
+                )
             )
         error = app_core.set_prompt_color(args[0])
         if error:
-            return Response(text=error)
+            return Response(actions=(OutputText(text=error),))
         return Response()

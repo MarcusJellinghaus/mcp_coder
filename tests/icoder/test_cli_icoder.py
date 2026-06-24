@@ -116,7 +116,7 @@ def test_execute_icoder_creates_registry_with_skills(
     """execute_icoder creates registry, loads skills, and passes to AppCore."""
     from mcp_coder.cli.commands.icoder import execute_icoder
     from mcp_coder.icoder.core.command_registry import CommandRegistry
-    from mcp_coder.icoder.core.types import Command, Response
+    from mcp_coder.icoder.core.types import Command, Response, SendToLLM
 
     (tmp_path / "logs").mkdir()
 
@@ -124,7 +124,7 @@ def test_execute_icoder_creates_registry_with_skills(
     fake_skill_command = Command(
         name="/test_skill",
         description="A test skill",
-        handler=lambda args: Response(send_to_llm=True),
+        handler=lambda args: Response(actions=(SendToLLM(text=""),)),
         show_in_help=False,
     )
 

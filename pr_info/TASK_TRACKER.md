@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: `Response` refactor → typed actions ([step_1.md](./steps/step_1.md))
 
-- [ ] Implementation (tests + production code): Action union in `core/types.py`, command files return `Response(actions=(...,))`, `app_core.py` typed-action dispatch, `app.py` `match` over `response.actions`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): Action union in `core/types.py`, command files return `Response(actions=(...,))`, `app_core.py` typed-action dispatch, `app.py` `match` over `response.actions`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: `is_error` propagation across providers + `ToolResult.is_error` ([step_2.md](./steps/step_2.md))
 

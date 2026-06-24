@@ -20,6 +20,14 @@ from textual.widgets import Static
 
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.core.log_inventory import list_icoder_logs
+from mcp_coder.icoder.core.types import (
+    ClearOutput,
+    OpenPicker,
+    OutputText,
+    Quit,
+    ResetSession,
+    SendToLLM,
+)
 from mcp_coder.icoder.services.branch_info_service import BranchInfoService
 from mcp_coder.icoder.ui.styles import CSS
 from mcp_coder.icoder.ui.widgets.branch_info_bar import BranchInfoBar, BranchInfoView
@@ -254,20 +262,27 @@ class ICoderApp(App[None]):
 
         response = self._core.handle_input(text)
         self._apply_prompt_border()
-        if response.quit:
-            self.exit()
-        elif response.clear_output:
-            output.clear()
-            output.clear_recorded()
-        elif response.open_picker:
-            self.open_picker_for_load()
-        elif response.text:
-            output.append_text(response.text)
-        elif response.send_to_llm:
-            output.write("")
-            self.query_one(BusyIndicator).show_busy("Querying LLM...")
-            llm_input = response.llm_text or text
-            self.run_worker(lambda: self._stream_llm(llm_input), thread=True)
+        for action in response.actions:
+            match action:
+                case Quit():
+                    self.exit()
+                case ClearOutput():
+                    output.clear()
+                    output.clear_recorded()
+                case OpenPicker():
+                    self.open_picker_for_load()
+                case OutputText():
+                    output.append_text(action.text)
+                case SendToLLM():
+                    output.write("")
+                    self.query_one(BusyIndicator).show_busy("Querying LLM...")
+                    llm_input = action.text
+                    self.run_worker(
+                        lambda llm_input=llm_input: self._stream_llm(llm_input),
+                        thread=True,
+                    )
+                case ResetSession():
+                    pass  # already handled by AppCore
 
     def open_picker_for_load(self) -> None:
         """Open the SessionPickerScreen for the /load command.

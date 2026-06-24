@@ -9,16 +9,55 @@ from typing import Callable
 
 
 @dataclass(frozen=True)
-class Response:
-    """Result of handle_input(). Rendered by UI layer."""
+class Quit:
+    """Exit the application."""
 
-    text: str = ""
-    clear_output: bool = False
-    quit: bool = False
-    send_to_llm: bool = False  # True = forward original input to LLM
-    llm_text: str | None = None  # When set and send_to_llm=True, send this instead
-    reset_session: bool = False  # True = reset LLM session (new conversation)
-    open_picker: bool = False  # True = UI should open SessionPickerScreen
+
+@dataclass(frozen=True)
+class ClearOutput:
+    """Clear the output log display."""
+
+
+@dataclass(frozen=True)
+class OpenPicker:
+    """Open the SessionPickerScreen for /load."""
+
+
+@dataclass(frozen=True)
+class ResetSession:
+    """Reset the LLM session (start a new conversation).
+
+    The actual reset (rotate event log, emit session_start) is performed
+    inside ``AppCore.handle_input``; the UI treats this as a marker.
+    """
+
+
+@dataclass(frozen=True)
+class SendToLLM:
+    """Forward ``text`` to the LLM for streaming."""
+
+    text: str
+
+
+@dataclass(frozen=True)
+class OutputText:
+    """Append literal ``text`` to the output log."""
+
+    text: str
+
+
+Action = Quit | ClearOutput | OpenPicker | ResetSession | SendToLLM | OutputText
+
+
+@dataclass(frozen=True)
+class Response:
+    """Result of handle_input(). Rendered by UI layer.
+
+    ``actions`` is a tuple of typed :data:`Action` instances dispatched in
+    tuple order by the UI. An empty tuple (the default) means "do nothing".
+    """
+
+    actions: tuple[Action, ...] = ()
 
 
 @dataclass(frozen=True)

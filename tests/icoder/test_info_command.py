@@ -12,8 +12,15 @@ from mcp_coder.icoder.core.commands.info import (
     _redact_env_vars,
     register_info,
 )
+from mcp_coder.icoder.core.types import OutputText, Response
 from mcp_coder.icoder.env_setup import RuntimeInfo
 from mcp_coder.llm.providers.langchain.mcp_manager import MCPManager, MCPServerStatus
+
+
+def _info_text(response: Response | None) -> str:
+    """Join the text of all OutputText actions in a response."""
+    assert response is not None
+    return "\n".join(a.text for a in response.actions if isinstance(a, OutputText))
 
 
 @pytest.fixture
@@ -91,9 +98,9 @@ def test_info_shows_versions(
 ) -> None:
     register_info(registry, runtime_info)
     result = registry.dispatch("/info")
-    assert result is not None
-    assert "mcp-coder version: 0.1.0" in result.text
-    assert "mcp-coder-utils version: 0.2.0" in result.text
+    text = _info_text(result)
+    assert "mcp-coder version: 0.1.0" in text
+    assert "mcp-coder-utils version: 0.2.0" in text
 
 
 @patch("mcp_coder.icoder.core.commands.info.find_claude_executable", return_value=None)
@@ -104,11 +111,11 @@ def test_info_shows_python(
 ) -> None:
     register_info(registry, runtime_info)
     result = registry.dispatch("/info")
-    assert result is not None
-    assert "Python:" in result.text
+    text = _info_text(result)
+    assert "Python:" in text
     import sys
 
-    assert sys.executable in result.text
+    assert sys.executable in text
 
 
 @patch("mcp_coder.icoder.core.commands.info.find_claude_executable", return_value=None)
@@ -119,13 +126,13 @@ def test_info_shows_environments(
 ) -> None:
     register_info(registry, runtime_info)
     result = registry.dispatch("/info")
-    assert result is not None
-    assert "Tool env:" in result.text
-    assert "Project env:" in result.text
-    assert "Project dir:" in result.text
-    assert "C:\\tool_env" in result.text
-    assert "C:\\project_venv" in result.text
-    assert "C:\\project" in result.text
+    text = _info_text(result)
+    assert "Tool env:" in text
+    assert "Project env:" in text
+    assert "Project dir:" in text
+    assert "C:\\tool_env" in text
+    assert "C:\\project_venv" in text
+    assert "C:\\project" in text
 
 
 @patch("mcp_coder.icoder.core.commands.info.find_claude_executable", return_value=None)
@@ -142,14 +149,14 @@ def test_info_shows_mcp_status(
     )
     register_info(registry, runtime_info, mcp_manager=mock_manager)
     result = registry.dispatch("/info")
-    assert result is not None
-    assert "MCP servers (langchain):" in result.text
-    assert "\u2713" in result.text  # ✓
-    assert "\u2717" in result.text  # ✗
-    assert "mcp-tools-py" in result.text
-    assert "12 tools" in result.text
-    assert "mcp-workspace" in result.text
-    assert "8 tools" in result.text
+    text = _info_text(result)
+    assert "MCP servers (langchain):" in text
+    assert "\u2713" in text  # ✓
+    assert "\u2717" in text  # ✗
+    assert "mcp-tools-py" in text
+    assert "12 tools" in text
+    assert "mcp-workspace" in text
+    assert "8 tools" in text
 
 
 @patch("mcp_coder.icoder.core.commands.info.find_claude_executable", return_value=None)
@@ -160,8 +167,7 @@ def test_info_without_mcp_manager(
 ) -> None:
     register_info(registry, runtime_info, mcp_manager=None)
     result = registry.dispatch("/info")
-    assert result is not None
-    assert "MCP servers (langchain):" not in result.text
+    assert "MCP servers (langchain):" not in _info_text(result)
 
 
 @patch("mcp_coder.icoder.core.commands.info.find_claude_executable", return_value=None)
@@ -177,9 +183,9 @@ def test_info_shows_mcp_coder_env_vars(
 ) -> None:
     register_info(registry, runtime_info)
     result = registry.dispatch("/info")
-    assert result is not None
-    assert "MCP_CODER_* env vars:" in result.text
-    assert "MCP_CODER_PROJECT_DIR=" in result.text
+    text = _info_text(result)
+    assert "MCP_CODER_* env vars:" in text
+    assert "MCP_CODER_PROJECT_DIR=" in text
 
 
 @patch("mcp_coder.icoder.core.commands.info.find_claude_executable", return_value=None)
@@ -193,17 +199,16 @@ def test_info_redacts_secrets_in_env(
 ) -> None:
     register_info(registry, runtime_info)
     result = registry.dispatch("/info")
-    assert result is not None
-    assert "GITHUB_TOKEN=***" in result.text
-    assert "ghp_secret123" not in result.text
+    text = _info_text(result)
+    assert "GITHUB_TOKEN=***" in text
+    assert "ghp_secret123" not in text
 
 
 def test_info_in_help(registry: CommandRegistry, runtime_info: RuntimeInfo) -> None:
     register_help(registry)
     register_info(registry, runtime_info)
     result = registry.dispatch("/help")
-    assert result is not None
-    assert "/info" in result.text
+    assert "/info" in _info_text(result)
 
 
 @patch("mcp_coder.icoder.core.commands.info.parse_claude_mcp_list", return_value=None)
@@ -216,8 +221,7 @@ def test_info_claude_mcp_list_unavailable(
 ) -> None:
     register_info(registry, runtime_info)
     result = registry.dispatch("/info")
-    assert result is not None
-    assert "MCP servers (claude):" not in result.text
+    assert "MCP servers (claude):" not in _info_text(result)
 
 
 # ── helpers ─────────────────────────────────────────────────────────
@@ -264,11 +268,11 @@ def test_info_shows_prompt_paths(
     )
     register_info(registry, runtime_info)
     result = registry.dispatch("/info")
-    assert result is not None
-    assert "Prompts:" in result.text
-    assert "prompts/system.md" in result.text
-    assert "prompts/project.md" in result.text
-    assert "replace" in result.text
+    text = _info_text(result)
+    assert "Prompts:" in text
+    assert "prompts/system.md" in text
+    assert "prompts/project.md" in text
+    assert "replace" in text
 
 
 @patch("mcp_coder.icoder.core.commands.info.load_prompts")
@@ -292,6 +296,6 @@ def test_info_shows_shipped_defaults(
     )
     register_info(registry, runtime_info)
     result = registry.dispatch("/info")
-    assert result is not None
-    assert "(shipped default)" in result.text
-    assert "append" in result.text
+    text = _info_text(result)
+    assert "(shipped default)" in text
+    assert "append" in text
