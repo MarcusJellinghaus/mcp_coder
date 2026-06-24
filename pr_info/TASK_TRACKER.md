@@ -71,9 +71,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 9: `ICoderApp` migrates to `append_unit` flow + orphan cleanup ([step_9.md](./steps/step_9.md))
 
-- [ ] Implementation (tests + production code): migrate user-input/tool/assistant-turn writes to `append_unit`/`extend_open_unit`, per-name FIFO, orphan cleanup on cancel + `StreamDone`, replay migration
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): migrate user-input/tool/assistant-turn writes to `append_unit`/`extend_open_unit`, per-name FIFO, orphan cleanup on cancel + `StreamDone`, replay migration
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 10: `/display` + `--tool-display` + `RebuildOutput` action + `/help` ([step_10.md](./steps/step_10.md))
 

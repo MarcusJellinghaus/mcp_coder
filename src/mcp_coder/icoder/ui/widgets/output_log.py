@@ -221,6 +221,8 @@ class OutputLog(RichLog):
         for line in lines:
             self._recorded.append(line)
             self._screen_lines.append(line)
+            if self._mirror is not None:
+                self._mirror(line)
             if style:
                 super().write(Text(line, style=style))
             else:
@@ -254,6 +256,8 @@ class OutputLog(RichLog):
             buffer_start = len(self.lines)
             self._recorded.append(line)
             self._screen_lines.append(line)
+            if self._mirror is not None:
+                self._mirror(line)
             if style:
                 super().write(Text(line, style=style))
             else:
@@ -459,7 +463,11 @@ class OutputLog(RichLog):
         Tools dispatch on their effective tier: ``oneline`` collapses the
         invocation to a single tier-1 summary; ``compressed`` renders the
         tier-2 start header always, plus the body + footer only once a
-        result has arrived (``output_lines`` non-empty).
+        result has arrived. A result counts as arrived when it produced
+        body lines (``output_lines``) OR an ``output`` string was stored —
+        the latter keeps the ``└ done`` footer for tools that completed
+        with empty output (``output == ""``), while a still-pending tool
+        (``output is None``) stays start-only.
 
         Args:
             unit: The unit to render.
@@ -485,7 +493,7 @@ class OutputLog(RichLog):
                     args=unit.args or {},
                 )
             )
-            if unit.output_lines:
+            if unit.output_lines or unit.output is not None:
                 lines = lines + format_tool_compressed(
                     name=unit.tool_name or "",
                     args=unit.args or {},

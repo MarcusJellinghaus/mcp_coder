@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable, Iterator
 from datetime import datetime
 from pathlib import Path
@@ -737,17 +738,15 @@ async def test_tool_result_renders_plain_text_by_default(
     async with app.run_test() as pilot:
         await _submit_and_wait(app, pilot)
         output = app.query_one(OutputLog)
-        lines = output.recorded_lines
-        # Tool start line should be present
-        tool_start_lines = [ln for ln in lines if "┌" in ln]
-        assert len(tool_start_lines) >= 1
-        # With format_tools=True, tool result goes through append_text (plain text)
+        # Tool start line is append-history; the result body lands on the
+        # rendered screen state once update_unit_and_rerender fires.
+        assert any("┌" in ln for ln in output.recorded_lines)
+        lines = output.rendered_lines
         result_lines = [ln for ln in lines if "done" in ln]
         assert len(result_lines) >= 1
-        # Verify the recorded content includes the tool output body
         joined = "\n".join(lines)
-        assert "│" in joined, "Recorded content should contain box-drawing body lines"
-        assert "# Header" in joined, "Tool output body should be recorded"
+        assert "│" in joined, "Rendered content should contain box-drawing body lines"
+        assert "# Header" in joined, "Tool output body should be rendered"
 
 
 # --- Cancel / Escape key tests ---
@@ -884,11 +883,11 @@ async def test_tool_result_renders_plain_text_when_no_format(
     async with app.run_test() as pilot:
         await _submit_and_wait(app, pilot)
         output = app.query_one(OutputLog)
-        lines = output.recorded_lines
-        # With format_tools=False, tool result goes through append_text (plain text)
+        # With format_tools=False, the raw body renders verbatim onto the
+        # screen state (rendered_lines) after the tool result arrives.
+        lines = output.rendered_lines
         result_lines = [ln for ln in lines if "│" in ln]
         assert len(result_lines) >= 1
-        # The raw pipe-prefixed lines should be in recorded_lines as a single string
         joined = "\n".join(lines)
         assert "# Header" in joined
         assert "**bold text**" in joined
@@ -990,3 +989,230 @@ async def test_single_click_emits_tool_tier_toggled_event(
 
         events = [entry.event for entry in event_log.entries]
         assert "tool_tier_toggled" in events
+
+
+# --- Step 9: append_unit migration (clickable units + orphan cleanup) ---
+
+
+async def test_user_input_creates_clickable_unit(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """Submitting input registers a clickable user_input unit at its line."""
+    app = make_icoder_app(responses=[[{"type": "done"}]])
+    async with app.run_test() as pilot:
+        await _submit_and_wait(app, pilot, text="hello there")
+        output = app.query_one(OutputLog)
+        unit = output.unit_at_line(0)
+        assert unit is not None
+        assert unit.kind == "user_input"
+        assert unit.full_text == "hello there"
+
+
+async def test_tool_block_creates_clickable_unit(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """A ToolStart + ToolResult pair becomes a single clickable tool unit."""
+    app = make_icoder_app(responses=[])
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        app._handle_stream_event(
+            {
+                "type": "tool_use_start",
+                "name": "mcp__mcp-workspace__read_file",
+                "args": {"file_path": "x.py"},
+            }
+        )
+        app._handle_stream_event(
+            {
+                "type": "tool_result",
+                "name": "mcp__mcp-workspace__read_file",
+                "output": "line1\nline2",
+            }
+        )
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        tool_units = [u for u in output._units.values() if u.kind == "tool"]
+        assert len(tool_units) == 1
+        assert tool_units[0].output == "line1\nline2"
+        # Every rendered line of the block resolves to the one tool unit.
+        resolved_ids: set[str] = set()
+        for i in range(len(output.rendered_lines)):
+            resolved = output.unit_at_line(i)
+            if resolved is not None:
+                resolved_ids.add(resolved.id)
+        assert resolved_ids == {tool_units[0].id}
+
+
+async def test_assistant_text_creates_clickable_turn(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """Streamed assistant text registers a single clickable turn unit."""
+    app = make_icoder_app(responses=[])
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        app._handle_stream_event({"type": "text_delta", "text": "hello\nworld\n"})
+        app._handle_stream_event({"type": "done"})
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        turn_units = [u for u in output._units.values() if u.kind == "assistant_turn"]
+        assert len(turn_units) == 1
+        assert output.unit_at_line(0) is turn_units[0]
+        assert "hello" in output.rendered_lines
+        assert "world" in output.rendered_lines
+
+
+async def test_last_unit_returns_most_recent_inserted_unit_dict_order(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """A mid-turn tool becomes last_unit; later turn text does not change it."""
+    app = make_icoder_app(responses=[])
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        app._handle_stream_event({"type": "text_delta", "text": "before\n"})
+        app._handle_stream_event(
+            {
+                "type": "tool_use_start",
+                "name": "mcp__mcp-workspace__read_file",
+                "args": {},
+            }
+        )
+        await pilot.pause()
+        last = output.last_unit()
+        assert last is not None and last.kind == "tool"
+
+        # More turn text arrives, but the tool stays the most-recent unit.
+        app._handle_stream_event({"type": "text_delta", "text": "after\n"})
+        app._handle_stream_event(
+            {
+                "type": "tool_result",
+                "name": "mcp__mcp-workspace__read_file",
+                "output": "out",
+            }
+        )
+        await pilot.pause()
+        last = output.last_unit()
+        assert last is not None and last.kind == "tool"
+
+        turn_id = next(
+            u.id for u in output._units.values() if u.kind == "assistant_turn"
+        )
+        tool_id = next(u.id for u in output._units.values() if u.kind == "tool")
+        turn_ranges = [r for r in output._ranges if r[2] == turn_id]
+        tool_ranges = [r for r in output._ranges if r[2] == tool_id]
+        assert len(turn_ranges) >= 2
+        assert len(tool_ranges) == 1
+        # The tool range sits between the turn's range entries.
+        assert turn_ranges[0][0] < tool_ranges[0][0] < turn_ranges[-1][0]
+
+
+async def test_cancel_synthesizes_cancelled_tool_unit(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """An orphaned tool start resolves to a cancelled tool unit."""
+    app = make_icoder_app(responses=[])
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        app._handle_stream_event(
+            {
+                "type": "tool_use_start",
+                "name": "mcp__mcp-workspace__read_file",
+                "args": {"file_path": "x.py"},
+            }
+        )
+        await pilot.pause()
+
+        # Simulate the cancel-path orphan cleanup.
+        app._cleanup_orphan_tools()
+        await pilot.pause()
+
+        tool = next(u for u in output._units.values() if u.kind == "tool")
+        assert tool.output == "(cancelled)"
+        assert tool.is_error is True
+        assert tool.duration_ms is None
+        assert any("(cancelled)" in ln for ln in output.rendered_lines)
+
+
+async def test_stream_done_clears_renderer_fifo(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """After StreamDone, the renderer FIFO is empty (cleanup_pending → [])."""
+    app = make_icoder_app(responses=[])
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        app._handle_stream_event(
+            {
+                "type": "tool_use_start",
+                "name": "mcp__mcp-workspace__read_file",
+                "args": {},
+            }
+        )
+        app._handle_stream_event(
+            {
+                "type": "tool_result",
+                "name": "mcp__mcp-workspace__read_file",
+                "output": "o",
+            }
+        )
+        app._handle_stream_event({"type": "done"})
+        await pilot.pause()
+
+        assert app._renderer.cleanup_pending() == []
+
+
+async def test_banner_stays_on_append_text(
+    fake_llm: FakeLLMService, event_log: EventLog
+) -> None:
+    """The startup banner is recorded but registers no clickable unit."""
+    info = RuntimeInfo(
+        mcp_coder_version="0.42.0",
+        mcp_coder_utils_version="0.42.0",
+        python_version="3.12.0",
+        claude_code_version="1.2.3",
+        tool_env_path="/fake/tool",
+        project_venv_path="/fake/proj/.venv",
+        project_dir="/fake/proj",
+        env_vars={},
+        mcp_servers=[
+            MCPServerInfo(
+                name="mcp-tools-py",
+                path=Path("/fake/mcp-tools-py"),
+                version="1.0",
+            ),
+        ],
+    )
+    app = ICoderApp(
+        AppCore(llm_service=fake_llm, event_log=event_log, runtime_info=info)
+    )
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        assert any("mcp-coder" in ln for ln in output.recorded_lines)
+        # Banner lines are not part of the clickable registry.
+        assert output.unit_at_line(0) is None
+        assert output._units == {}
+
+
+async def test_resumed_divider_is_not_a_unit(
+    make_icoder_app: Callable[..., ICoderApp],
+    tmp_path: Path,
+) -> None:
+    """The dim 'Resumed' divider written on resume is not a clickable unit."""
+    log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
+    events = [
+        {"t": 0.0, "event": "session_start", "provider": "claude"},
+        {"t": 0.1, "event": "input_received", "text": "prior"},
+    ]
+    log_path.write_text(
+        "\n".join(json.dumps(ev) for ev in events) + "\n", encoding="utf-8"
+    )
+    app = make_icoder_app(responses=[])
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        app.do_resume(log_path)
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        # The divider is in the append history but never on the screen registry.
+        assert any("Resumed" in ln for ln in output.recorded_lines)
+        assert not any("Resumed" in ln for ln in output.rendered_lines)
