@@ -59,9 +59,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 7: `DetailModal` widget ([step_7.md](./steps/step_7.md))
 
-- [ ] Implementation (tests + production code): `detail_modal.py` `DetailModal(ModalScreen)` + `build_detail_text`, escape/enter/ctrl+c bindings
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): `detail_modal.py` `DetailModal(ModalScreen)` + `build_detail_text`, escape/enter/ctrl+c bindings
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 8: Click handler + `F2` binding ([step_8.md](./steps/step_8.md))
 

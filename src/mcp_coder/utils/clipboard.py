@@ -43,6 +43,34 @@ def get_clipboard_text() -> Tuple[bool, str, Optional[str]]:
         return False, "", f"Clipboard access failed: {e}"
 
 
+def set_clipboard_text(text: str) -> Tuple[bool, Optional[str]]:
+    """Copy text to the clipboard using pyperclip.
+
+    Args:
+        text: The text to place on the clipboard.
+
+    Returns:
+        Tuple containing:
+        - bool: True if successful, False otherwise
+        - Optional[str]: Error message if failed, None if successful
+    """
+    try:
+        pyperclip.copy(text)
+        logger.debug("Successfully copied text to clipboard")
+        return True, None
+
+    except pyperclip.PyperclipException as e:
+        error_msg = f"Clipboard access failed: {e}"
+        logger.error(f"Pyperclip error: {error_msg}")
+        return False, error_msg
+
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+        logger.error(f"Unexpected clipboard error: {e}")
+        return False, f"Clipboard access failed: {e}"
+
+
 def validate_commit_message(message: str) -> Tuple[bool, Optional[str]]:
     """Validate commit message format following git conventions.
 
