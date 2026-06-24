@@ -21,6 +21,8 @@ from typing import Any, Callable, Literal
 
 from rich.console import ConsoleRenderable, RichCast
 from rich.text import Text
+from textual.events import Click
+from textual.timer import Timer
 from textual.widgets import RichLog
 
 from mcp_coder.llm.formatting.render_actions import ToolStart
@@ -68,6 +70,7 @@ class OutputLog(RichLog):
         self,
         *,
         mirror: Callable[[str], None] | None = None,
+        on_unit_event: Callable[[str, dict[str, object]], None] | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize with internal line buffer for testability.
@@ -76,6 +79,10 @@ class OutputLog(RichLog):
             mirror: Optional one-arg callback invoked with the string that
                 was written to the widget; used to mirror visible output to
                 an external sink (e.g. a plain-text chat log).
+            on_unit_event: Optional callback invoked as ``(name, payload)``
+                when a unit interaction occurs (tier toggle / detail open).
+                The widget never touches the event log directly; the app
+                wires this to its emit method (mirrors ``mirror``).
             **kwargs: Keyword args passed through to RichLog.
         """
         # NOTE: ``max_lines`` MUST remain None. RichLog eviction would shift
@@ -83,6 +90,9 @@ class OutputLog(RichLog):
         super().__init__(wrap=True, **kwargs)
         self._recorded: list[str] = []
         self._mirror = mirror
+        self._on_unit_event = on_unit_event
+        # Pending single-click debounce timer (cancelled on double click).
+        self._pending_single: Timer | None = None
         # Registry data layer (sidecar to the RichLog buffer).
         self._units: dict[str, ContentUnit] = {}  # insertion-ordered
         self._script: list[tuple[str, str | None]] = []  # (unit_id, line|None)
@@ -364,6 +374,61 @@ class OutputLog(RichLog):
             event: The Textual ``Resize`` event (unused).
         """
         self.rebuild()
+
+    def on_click(self, event: Click) -> None:
+        """Translate a mouse click into a tier toggle or detail modal.
+
+        Left button only; ``chain >= 3`` is ignored. A single click on a
+        tool unit toggles its tier after a ~250 ms debounce; a double
+        click on any unit opens the :class:`DetailModal`. Clicks that
+        resolve to no unit (banners, blanks, gaps) are silent no-ops.
+
+        Args:
+            event: The Textual ``Click`` event.
+        """
+        if event.button != 1:
+            return
+        if event.chain >= 3:
+            return
+        clicked_line = event.y + self.scroll_offset.y
+        unit = self.unit_at_line(clicked_line)
+        if unit is None:
+            return
+        if event.chain == 2:
+            if self._pending_single is not None:
+                self._pending_single.stop()
+                self._pending_single = None
+            # Local import: detail_modal imports this module (ContentUnit),
+            # so a top-level import would be circular.
+            from mcp_coder.icoder.ui.widgets.detail_modal import DetailModal
+
+            self.app.push_screen(DetailModal(unit))
+            if self._on_unit_event is not None:
+                self._on_unit_event(
+                    "content_detail_opened",
+                    {"unit_id": unit.id, "kind": unit.kind},
+                )
+            return
+        self._pending_single = self.set_timer(0.25, lambda: self._handle_single(unit))
+
+    def _handle_single(self, unit: ContentUnit) -> None:
+        """Fire the debounced single-click action for ``unit``.
+
+        Only tool units toggle their tier; other kinds are ignored. Resets
+        the pending-timer reference once the debounce has elapsed.
+
+        Args:
+            unit: The unit the single click resolved to.
+        """
+        self._pending_single = None
+        if unit.kind != "tool":
+            return
+        new_tier = self.toggle_unit_tier(unit.id)
+        if self._on_unit_event is not None:
+            self._on_unit_event(
+                "tool_tier_toggled",
+                {"unit_id": unit.id, "new_tier": new_tier},
+            )
 
     def rebuild(self) -> None:
         """Re-render the screen from the registry script.

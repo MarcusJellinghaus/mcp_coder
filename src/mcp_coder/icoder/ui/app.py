@@ -33,6 +33,7 @@ from mcp_coder.icoder.ui.styles import CSS
 from mcp_coder.icoder.ui.widgets.branch_info_bar import BranchInfoBar, BranchInfoView
 from mcp_coder.icoder.ui.widgets.busy_indicator import BusyIndicator
 from mcp_coder.icoder.ui.widgets.command_autocomplete import CommandAutocomplete
+from mcp_coder.icoder.ui.widgets.detail_modal import DetailModal
 from mcp_coder.icoder.ui.widgets.input_area import InputArea
 from mcp_coder.icoder.ui.widgets.output_log import OutputLog
 from mcp_coder.icoder.ui.widgets.session_picker import SessionPickerScreen
@@ -167,6 +168,7 @@ class ICoderApp(App[None]):
     BINDINGS = [
         Binding("escape", "cancel_stream", "Cancel", show=False),
         Binding("ctrl+c", "noop", "Copy", show=False),
+        Binding("f2", "open_last_unit_modal", "Detail", show=False),
     ]
 
     def __init__(
@@ -211,7 +213,10 @@ class ICoderApp(App[None]):
         Yields:
             OutputLog and InputArea widgets.
         """
-        yield OutputLog(mirror=self._core.event_log.write_chat)
+        yield OutputLog(
+            mirror=self._core.event_log.write_chat,
+            on_unit_event=self._emit_unit_event,
+        )
         yield Static(id="streaming-tail")
         yield CommandAutocomplete()
         yield BusyIndicator()
@@ -350,6 +355,32 @@ class ICoderApp(App[None]):
 
     def action_noop(self) -> None:
         """Suppress Ctrl+C quit dialog."""
+
+    def _emit_unit_event(self, name: str, payload: dict[str, object]) -> None:
+        """Forward an OutputLog unit interaction to the structured event log.
+
+        Wired into ``OutputLog`` via its ``on_unit_event`` callback so the
+        widget never reaches into the event log directly.
+
+        Args:
+            name: The event name (e.g. ``tool_tier_toggled``).
+            payload: Event key-value data.
+        """
+        self._core.event_log.emit(name, **payload)
+
+    def action_open_last_unit_modal(self) -> None:
+        """Open the detail modal for the most recent content unit (F2).
+
+        Silent no-op when no unit has been registered yet.
+        """
+        output = self.query_one(OutputLog)
+        unit = output.last_unit()
+        if unit is None:
+            return
+        self.push_screen(DetailModal(unit))
+        self._core.event_log.emit(
+            "content_detail_opened", unit_id=unit.id, kind=unit.kind
+        )
 
     def _stream_llm(self, text: str) -> None:
         """Worker target: stream LLM response in background thread.

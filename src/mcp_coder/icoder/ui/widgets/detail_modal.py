@@ -12,6 +12,8 @@ underlying unit changes (Decision: snapshot, not live).
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Container
@@ -19,12 +21,16 @@ from textual.css.query import NoMatches
 from textual.screen import ModalScreen
 from textual.widgets import TextArea
 
-from mcp_coder.icoder.ui.widgets.output_log import ContentUnit
 from mcp_coder.llm.formatting.stream_renderer import (
     _render_tool_output,
     _render_value_full,
 )
 from mcp_coder.utils.clipboard import set_clipboard_text
+
+if TYPE_CHECKING:
+    # Runtime import would form a cycle: output_log.on_click imports this
+    # module to push the modal. ContentUnit is only used as an annotation.
+    from mcp_coder.icoder.ui.widgets.output_log import ContentUnit
 
 # A plain horizontal divider above the footer. No box-drawing characters
 # (``│ ┌ └ ├``) appear anywhere in the modal body — only this ``─`` line.

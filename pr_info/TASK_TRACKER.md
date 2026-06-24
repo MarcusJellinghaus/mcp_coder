@@ -65,9 +65,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 8: Click handler + `F2` binding ([step_8.md](./steps/step_8.md))
 
-- [ ] Implementation (tests + production code): `OutputLog.on_click` + debounce timer + `on_unit_event` callback, `ICoderApp` `F2` binding + `action_open_last_unit_modal`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): `OutputLog.on_click` + debounce timer + `on_unit_event` callback, `ICoderApp` `F2` binding + `action_open_last_unit_modal`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 9: `ICoderApp` migrates to `append_unit` flow + orphan cleanup ([step_9.md](./steps/step_9.md))
 

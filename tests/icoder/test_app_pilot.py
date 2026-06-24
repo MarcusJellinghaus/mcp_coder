@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -16,8 +17,9 @@ from mcp_coder.icoder.env_setup import RuntimeInfo
 from mcp_coder.icoder.services.llm_service import FakeLLMService, LLMService
 from mcp_coder.icoder.ui.app import ICoderApp
 from mcp_coder.icoder.ui.widgets.busy_indicator import BusyIndicator
+from mcp_coder.icoder.ui.widgets.detail_modal import DetailModal
 from mcp_coder.icoder.ui.widgets.input_area import InputArea
-from mcp_coder.icoder.ui.widgets.output_log import OutputLog
+from mcp_coder.icoder.ui.widgets.output_log import ContentUnit, OutputLog
 from mcp_coder.llm.types import StreamEvent
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus, MCPServerInfo
 
@@ -908,3 +910,83 @@ async def test_chat_txt_mirrors_visible_conversation(
     assert "> hello" in chat_text
     assert chat_text.index("> hello") < chat_text.index("\n\n")
     assert "fake response" in chat_text
+
+
+def _make_click_tool_unit(
+    unit_id: str = "A",
+    *,
+    output_lines: tuple[str, ...] = (),
+    total_lines: int = 0,
+) -> ContentUnit:
+    """Build a tool ContentUnit for click / F2 pilot tests."""
+    return ContentUnit(
+        id=unit_id,
+        kind="tool",
+        timestamp=datetime(2026, 6, 24, 12, 0, 0),
+        tool_name="read_file",
+        args={"path": "src/main.py"},
+        output_lines=output_lines,
+        total_lines=total_lines,
+    )
+
+
+async def test_f2_with_no_content_is_silent_noop(icoder_app: ICoderApp) -> None:
+    """Pressing F2 with no registered units does nothing (no modal, no crash)."""
+    async with icoder_app.run_test() as pilot:
+        await pilot.pause()
+
+        await pilot.press("f2")
+        await pilot.pause()
+
+        assert len(icoder_app.screen_stack) == 1
+        assert icoder_app.is_running
+
+
+async def test_f2_opens_modal_for_last_unit(icoder_app: ICoderApp) -> None:
+    """Pressing F2 opens a DetailModal for the most recent unit."""
+    async with icoder_app.run_test() as pilot:
+        await pilot.pause()
+        output = icoder_app.query_one(OutputLog)
+        output.append_unit(_make_click_tool_unit("A"), ["line1"])
+        await pilot.pause()
+
+        await pilot.press("f2")
+        await pilot.pause()
+
+        assert isinstance(icoder_app.screen, DetailModal)
+
+
+async def test_double_click_emits_content_detail_opened_event(
+    icoder_app: ICoderApp, event_log: EventLog
+) -> None:
+    """A pilot double click on a unit emits content_detail_opened."""
+    async with icoder_app.run_test() as pilot:
+        await pilot.pause()
+        output = icoder_app.query_one(OutputLog)
+        output.append_unit(_make_click_tool_unit("A"), ["line1"])
+        await pilot.pause()
+
+        await pilot.click(OutputLog, offset=(0, 0), times=2)
+        await pilot.pause()
+
+        events = [entry.event for entry in event_log.entries]
+        assert "content_detail_opened" in events
+
+
+async def test_single_click_emits_tool_tier_toggled_event(
+    icoder_app: ICoderApp, event_log: EventLog
+) -> None:
+    """A pilot single click on a tool unit emits tool_tier_toggled after debounce."""
+    async with icoder_app.run_test() as pilot:
+        await pilot.pause()
+        output = icoder_app.query_one(OutputLog)
+        output.append_unit(
+            _make_click_tool_unit("A", output_lines=("o1",), total_lines=1), ["s"]
+        )
+        await pilot.pause()
+
+        await pilot.click(OutputLog, offset=(0, 0))
+        await pilot.pause(0.6)
+
+        events = [entry.event for entry in event_log.entries]
+        assert "tool_tier_toggled" in events
