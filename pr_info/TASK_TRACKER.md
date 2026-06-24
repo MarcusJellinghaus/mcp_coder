@@ -41,9 +41,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 4: `StreamEventRenderer` FIFO + `cleanup_pending()` ([step_4.md](./steps/step_4.md))
 
-- [ ] Implementation (tests + production code): `_pending` FIFO + `cleanup_pending()`, `ToolResult.raw_name`/`duration_ms`, class docstring update
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): `_pending` FIFO + `cleanup_pending()`, `ToolResult.raw_name`/`duration_ms`, class docstring update
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: `OutputLog` registry data layer ([step_5.md](./steps/step_5.md))
 

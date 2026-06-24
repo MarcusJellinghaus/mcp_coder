@@ -1,14 +1,22 @@
 """StreamEventRenderer — converts stream events into typed RenderActions.
 
-The renderer is stateless: each ``render()`` call maps a single
-``StreamEvent`` to a ``RenderAction`` (or ``None`` for unknown types).
-Consumers do ``isinstance`` dispatch on the returned action to decide
-how to display it.
+Each ``render()`` call maps a single ``StreamEvent`` to a ``RenderAction``
+(or ``None`` for unknown types). Consumers do ``isinstance`` dispatch on the
+returned action to decide how to display it.
+
+The renderer is **stateful**: it keeps a per-instance FIFO of pending tool
+starts so each ``tool_result`` can be paired with its originating
+``tool_use_start`` to compute ``duration_ms``. Because the FIFO survives
+across turns, callers MUST invoke :meth:`StreamEventRenderer.cleanup_pending`
+on cancellation and on ``StreamDone`` to synthesize cancelled results for any
+orphaned tool starts and reset the FIFO.
 """
 
 from __future__ import annotations
 
 import json
+import time
+from collections import deque
 
 from ..types import StreamEvent
 from .render_actions import (
@@ -290,6 +298,12 @@ def format_tool_oneline(
 class StreamEventRenderer:
     """Converts ``StreamEvent`` dicts into typed ``RenderAction`` dataclasses.
 
+    The renderer is stateful: it maintains a FIFO of pending tool starts
+    (``raw_name`` + monotonic start time) so each ``tool_result`` can be
+    paired with its originating ``tool_use_start`` to compute
+    ``duration_ms``. Callers MUST invoke :meth:`cleanup_pending` on
+    cancellation and on ``StreamDone`` to flush orphaned tool starts.
+
     Usage::
 
         renderer = StreamEventRenderer()
@@ -300,6 +314,7 @@ class StreamEventRenderer:
 
     def __init__(self, *, format_tools: bool = True) -> None:
         self._format_tools = format_tools
+        self._pending: deque[tuple[str, float]] = deque()
 
     def render(self, event: StreamEvent) -> RenderAction | None:
         """Map a single stream event to a render action.
@@ -318,6 +333,7 @@ class StreamEventRenderer:
             args = event.get("args", {})
             if not isinstance(args, dict):
                 args = {}
+            self._pending.append((name, time.monotonic()))
             return ToolStart(
                 display_name=_format_tool_name(name),
                 raw_name=name,
@@ -330,12 +346,15 @@ class StreamEventRenderer:
             output_lines, total_lines, truncated = _render_tool_output(
                 output, format_tools=self._format_tools
             )
+            duration_ms = self._pair_pending(name)
             return ToolResult(
                 name=_format_tool_name(name),
+                raw_name=name,
                 output_lines=output_lines,
                 total_lines=total_lines,
                 truncated=truncated,
                 is_error=bool(event.get("is_error", False)),
+                duration_ms=duration_ms,
             )
 
         if event_type == "error":
@@ -345,3 +364,49 @@ class StreamEventRenderer:
             return StreamDone()
 
         return None
+
+    def _pair_pending(self, name: str) -> int | None:
+        """Pop the first pending start matching *name* and compute its duration.
+
+        Walks the FIFO left-to-right and removes the first entry whose raw
+        name equals *name* (positional matching within the same name).
+
+        Returns:
+            Elapsed time in milliseconds for the matched start, or ``None``
+            when no pending start matches (an unpaired result).
+        """
+        for i, (pending_name, start) in enumerate(self._pending):
+            if pending_name == name:
+                del self._pending[i]
+                return int((time.monotonic() - start) * 1000)
+        return None
+
+    def cleanup_pending(self) -> list[ToolResult]:
+        """Synthesize cancelled-result actions for every orphaned tool start.
+
+        Builds one ``ToolResult`` per still-pending ``tool_use_start`` (in
+        FIFO order), each marked ``is_error=True`` with ``output_lines``
+        ``["(cancelled)"]`` and ``duration_ms=None``. The raw tool name is
+        preserved on ``raw_name`` so the caller can locate the matching open
+        tool unit via the per-name FIFO. Clears the FIFO.
+
+        Called by the app layer on cancellation and on ``StreamDone``.
+
+        Returns:
+            The synthesized cancelled results in FIFO order (empty when the
+            FIFO is empty).
+        """
+        results = [
+            ToolResult(
+                name=_format_tool_name(name),
+                raw_name=name,
+                output_lines=["(cancelled)"],
+                total_lines=1,
+                truncated=False,
+                is_error=True,
+                duration_ms=None,
+            )
+            for name, _start in self._pending
+        ]
+        self._pending.clear()
+        return results

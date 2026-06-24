@@ -1,6 +1,7 @@
 """Tests for StreamEventRenderer and private helpers."""
 
 import json
+import time
 
 from mcp_coder.llm.formatting.render_actions import (
     ErrorMessage,
@@ -727,3 +728,90 @@ class TestFormatToolOneline:
         assert "alpha" in result
         assert "beta" not in result
         assert "gamma" not in result
+
+
+class TestRendererPendingFifo:
+    """Tests for pending-tool FIFO pairing and cleanup_pending()."""
+
+    def test_pairs_start_and_result_computes_duration(self) -> None:
+        """Start then result for the same name yields a positive duration_ms."""
+        renderer = StreamEventRenderer()
+        renderer.render({"type": "tool_use_start", "name": "Bash", "args": {}})
+        time.sleep(0.001)
+        action = renderer.render(
+            {"type": "tool_result", "name": "Bash", "output": "ok"}
+        )
+        assert isinstance(action, ToolResult)
+        assert action.duration_ms is not None
+        assert action.duration_ms >= 0
+
+    def test_unmatched_result_has_none_duration(self) -> None:
+        """A tool_result with no matching start has duration_ms is None."""
+        renderer = StreamEventRenderer()
+        action = renderer.render(
+            {"type": "tool_result", "name": "Bash", "output": "ok"}
+        )
+        assert isinstance(action, ToolResult)
+        assert action.duration_ms is None
+
+    def test_interleaved_pairing_by_name(self) -> None:
+        """start_A, start_B, result_B, result_A → both paired by name."""
+        renderer = StreamEventRenderer()
+        renderer.render({"type": "tool_use_start", "name": "A", "args": {}})
+        renderer.render({"type": "tool_use_start", "name": "B", "args": {}})
+        result_b = renderer.render({"type": "tool_result", "name": "B", "output": "ok"})
+        result_a = renderer.render({"type": "tool_result", "name": "A", "output": "ok"})
+        assert isinstance(result_b, ToolResult)
+        assert isinstance(result_a, ToolResult)
+        assert result_b.duration_ms is not None
+        assert result_a.duration_ms is not None
+
+    def test_cleanup_pending_synthesizes_cancelled_results(self) -> None:
+        """Orphaned start → cleanup_pending returns one cancelled ToolResult."""
+        renderer = StreamEventRenderer()
+        renderer.render({"type": "tool_use_start", "name": "Bash", "args": {}})
+        cancelled = renderer.cleanup_pending()
+        assert len(cancelled) == 1
+        result = cancelled[0]
+        assert result.is_error is True
+        assert result.output_lines == ["(cancelled)"]
+        assert result.total_lines == 1
+        assert result.truncated is False
+        assert result.duration_ms is None
+        # Second call returns empty — FIFO was cleared.
+        assert renderer.cleanup_pending() == []
+
+    def test_stream_done_does_not_auto_clean(self) -> None:
+        """render({'type': 'done'}) does NOT clear the pending FIFO."""
+        renderer = StreamEventRenderer()
+        renderer.render({"type": "tool_use_start", "name": "Bash", "args": {}})
+        renderer.render({"type": "done"})
+        # FIFO still holds the orphan — app must call cleanup_pending explicitly.
+        cancelled = renderer.cleanup_pending()
+        assert len(cancelled) == 1
+
+    def test_renderer_state_survives_across_turns(self) -> None:
+        """A start in one turn pairs with a result in a later turn."""
+        renderer = StreamEventRenderer()
+        renderer.render({"type": "tool_use_start", "name": "Bash", "args": {}})
+        renderer.render({"type": "done"})  # turn 1 ends, no cleanup
+        action = renderer.render(
+            {"type": "tool_result", "name": "Bash", "output": "ok"}
+        )
+        assert isinstance(action, ToolResult)
+        assert action.duration_ms is not None
+
+    def test_tool_result_carries_raw_name(self) -> None:
+        """raw_name is the event's raw name for both live and cancelled paths."""
+        # Live path
+        renderer = StreamEventRenderer()
+        renderer.render({"type": "tool_use_start", "name": "Bash", "args": {}})
+        live = renderer.render({"type": "tool_result", "name": "Bash", "output": "ok"})
+        assert isinstance(live, ToolResult)
+        assert live.raw_name == "Bash"
+
+        # Cancelled path
+        renderer2 = StreamEventRenderer()
+        renderer2.render({"type": "tool_use_start", "name": "Bash", "args": {}})
+        cancelled = renderer2.cleanup_pending()
+        assert cancelled[0].raw_name == "Bash"
