@@ -7,9 +7,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from mcp_coder.icoder.core.event_log import EventLog, iter_events
+from mcp_coder.icoder.ui import runtime_banner
 from mcp_coder.icoder.ui.widgets.output_log import ContentUnit, OutputLog
 
-from .app import STYLE_USER_INPUT, format_runtime_banner
+from .app import STYLE_USER_INPUT
 
 if TYPE_CHECKING:
     from .app import ICoderApp
@@ -43,7 +44,9 @@ def replay_log(
     for event in iter_events(path):
         kind = event.get("event")
         if kind == "session_start":
-            output.append_text("\n".join(format_runtime_banner(event)), style="dim")
+            output.append_text(
+                "\n".join(runtime_banner.format_runtime_banner(event)), style="dim"
+            )
         elif kind == "input_received":
             text = event.get("text")
             if isinstance(text, str):

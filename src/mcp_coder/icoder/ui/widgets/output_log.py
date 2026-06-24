@@ -120,7 +120,7 @@ class OutputLog(RichLog):
 
     @property
     def recorded_lines(self) -> list[str]:
-        """Return recorded output lines (append history; survives rebuilds).
+        """Recorded output lines (append history; survives rebuilds).
 
         Returns:
             Copy of all appended lines.
@@ -129,7 +129,7 @@ class OutputLog(RichLog):
 
     @property
     def rendered_lines(self) -> list[str]:
-        """Return the current screen state (reflects toggles/rebuilds).
+        """Current screen state (reflects toggles/rebuilds).
 
         Returns:
             Copy of the logical lines currently displayed (one entry per

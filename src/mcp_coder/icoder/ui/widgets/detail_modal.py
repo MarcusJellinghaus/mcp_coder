@@ -63,7 +63,11 @@ def _format_args(args: dict[str, object] | None) -> str:
 
 
 def _build_tool_text(unit: ContentUnit) -> str:
-    """Build the modal body for a tool unit."""
+    """Build the modal body for a tool unit.
+
+    Returns:
+        Plain-text modal body for the tool unit.
+    """
     header = f"Tool: {unit.tool_name or ''}"
     args_block = _format_args(unit.args)
     output_lines, total, _truncated = _render_tool_output(unit.output or "", full=True)
@@ -82,7 +86,11 @@ def _build_tool_text(unit: ContentUnit) -> str:
 
 
 def _build_simple_text(unit: ContentUnit, header: str, kind_label: str) -> str:
-    """Build the modal body for a non-tool (user_input / assistant_turn) unit."""
+    """Build the modal body for a non-tool (user_input / assistant_turn) unit.
+
+    Returns:
+        Plain-text modal body for the non-tool unit.
+    """
     line_count = len(unit.full_text.splitlines())
     footer = (
         f"Kind: {kind_label} | {line_count} lines | "

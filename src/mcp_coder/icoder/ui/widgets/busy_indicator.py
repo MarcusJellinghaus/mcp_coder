@@ -38,7 +38,7 @@ class BusyIndicator(Static):
 
     @property
     def label_text(self) -> str:
-        """Return the current label text."""
+        """Current label text."""
         return self._label
 
     def show_busy(self, message: str) -> None:
