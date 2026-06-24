@@ -46,7 +46,25 @@ class OutputText:
     text: str
 
 
-Action = Quit | ClearOutput | OpenPicker | ResetSession | SendToLLM | OutputText
+@dataclass(frozen=True)
+class RebuildOutput:
+    """Re-render the output log from the new global tool-display tier.
+
+    Dispatched by ``/display``; the UI applies it via
+    ``OutputLog.set_tool_display_default`` (which both updates the default
+    and wipes per-unit overrides — the "hard reset").
+    """
+
+
+Action = (
+    Quit
+    | ClearOutput
+    | OpenPicker
+    | ResetSession
+    | SendToLLM
+    | OutputText
+    | RebuildOutput
+)
 
 
 @dataclass(frozen=True)

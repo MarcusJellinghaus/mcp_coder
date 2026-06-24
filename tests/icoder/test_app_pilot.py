@@ -1194,6 +1194,92 @@ async def test_banner_stays_on_append_text(
         assert output._units == {}
 
 
+async def test_display_oneline_rebuilds_all_tool_units_as_oneline(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """/display oneline rebuilds existing tool blocks as tier-1 oneline."""
+    from mcp_coder.icoder.core.commands.display import register_display
+
+    app = make_icoder_app(responses=[])
+    async with app.run_test() as pilot:
+        register_display(app._core.registry, app._core)
+        await pilot.pause()
+        app._handle_stream_event(
+            {
+                "type": "tool_use_start",
+                "name": "mcp__mcp-workspace__read_file",
+                "args": {"file_path": "x.py"},
+            }
+        )
+        app._handle_stream_event(
+            {
+                "type": "tool_result",
+                "name": "mcp__mcp-workspace__read_file",
+                "output": "line1\nline2",
+            }
+        )
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        # Default tier is compressed → box-drawing header present.
+        assert any("┌" in ln for ln in output.rendered_lines)
+
+        input_area = app.query_one(InputArea)
+        input_area.focus()
+        await pilot.pause()
+        input_area.insert("/display oneline")
+        await pilot.press("enter")
+        await pilot.pause()
+
+        lines = output.rendered_lines
+        # Tool now renders as a single tier-1 gear summary, no box chars.
+        assert any("⚙" in ln for ln in lines)
+        assert not any("┌" in ln for ln in lines)
+
+
+async def test_display_compressed_wipes_per_unit_overrides(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """/display compressed discards a manual per-tool oneline override."""
+    from mcp_coder.icoder.core.commands.display import register_display
+
+    app = make_icoder_app(responses=[])
+    async with app.run_test() as pilot:
+        register_display(app._core.registry, app._core)
+        await pilot.pause()
+        app._handle_stream_event(
+            {
+                "type": "tool_use_start",
+                "name": "mcp__mcp-workspace__read_file",
+                "args": {"file_path": "x.py"},
+            }
+        )
+        app._handle_stream_event(
+            {
+                "type": "tool_result",
+                "name": "mcp__mcp-workspace__read_file",
+                "output": "line1\nline2",
+            }
+        )
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        tool = next(u for u in output._units.values() if u.kind == "tool")
+        # Manually flip this one tool to oneline.
+        output.toggle_unit_tier(tool.id)
+        await pilot.pause()
+        assert any("⚙" in ln for ln in output.rendered_lines)
+
+        input_area = app.query_one(InputArea)
+        input_area.focus()
+        await pilot.pause()
+        input_area.insert("/display compressed")
+        await pilot.press("enter")
+        await pilot.pause()
+
+        lines = output.rendered_lines
+        # Override wiped → tool back to compressed (box header present).
+        assert any("┌" in ln for ln in lines)
+
+
 async def test_resumed_divider_is_not_a_unit(
     make_icoder_app: Callable[..., ICoderApp],
     tmp_path: Path,

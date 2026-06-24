@@ -73,6 +73,7 @@ its result is silently discarded.
 | `/info` | Show runtime diagnostics (version, venv, MCP servers, env vars) |
 | `/clear` | Clear the output log |
 | `/color [name\|hex]` | Change prompt border color. No args lists available colors. |
+| `/display oneline\|compressed` | Set the default tool-display tier (hard reset: also clears per-block toggles). |
 | `/load` | Open a session picker to choose and resume a prior session |
 | `/quit` | Exit iCoder |
 | `/exit` | Exit iCoder (alias for `/quit`) |
@@ -115,6 +116,32 @@ A single-row line below the output log:
 
 The spinner animates at ~7 fps using braille dot characters.
 
+## Tool Display Tiers
+
+Tool calls are rendered in one of three tiers:
+
+| Tier | Name | What it shows |
+|------|------|---------------|
+| 1 | **oneline** | A single collapsed summary line (tool name, key arg, line/error count). |
+| 2 | **compressed** | A boxed block with the args and a truncated output preview. |
+| 3 | **detail modal** | A full-screen, read-only `TextArea` with the complete args and output. |
+
+Interaction:
+
+- **Left single click** on a tool block toggles it between tier 1 (oneline)
+  and tier 2 (compressed). The toggle is debounced (~250 ms) so a double
+  click never registers as a toggle first.
+- **Double click** on any content block (tool, user input, or assistant
+  turn) opens the tier-3 detail modal.
+- **F2** opens the detail modal for the most recent content block.
+- Inside the modal, **Escape** / **Enter** close it and **Ctrl+C** copies
+  the current selection.
+
+The global default tier is **compressed**. It can be set at startup with
+`--tool-display=oneline|compressed` and changed at runtime with the
+`/display oneline|compressed` slash command. `/display` is a *hard reset*:
+it sets the new default **and** discards every per-block toggle.
+
 ## Input Behaviour
 
 | Shortcut | Action |
@@ -124,6 +151,7 @@ The spinner animates at ~7 fps using braille dot characters.
 | **Shift+Enter** | Insert a newline (terminal support varies) |
 | **Up** | Previous command from history (cursor on first line) |
 | **Down** | Next command from history (cursor on last line) |
+| **F2** | Open the detail modal for the most recent content block |
 
 ### Backslash Escape Details
 

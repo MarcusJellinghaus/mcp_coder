@@ -24,4 +24,5 @@ def register_help(registry: CommandRegistry) -> None:
         lines.append("Keyboard shortcuts:")
         lines.append(r"  \ + Enter   - Insert newline")
         lines.append("  Shift+Enter  - Insert newline (terminal support varies)")
+        lines.append("  F2           - Open detail view for the most recent content")
         return Response(actions=(OutputText(text="\n".join(lines)),))

@@ -127,6 +127,7 @@ def execute_icoder(args: argparse.Namespace) -> int:
         # Create registry and load skills
         from ...icoder.core.command_registry import create_default_registry
         from ...icoder.core.commands.color import register_color
+        from ...icoder.core.commands.display import register_display
         from ...icoder.core.commands.info import register_info
         from ...icoder.skills import load_skills, register_skill_commands
 
@@ -167,6 +168,7 @@ def execute_icoder(args: argparse.Namespace) -> int:
                     event_log,
                     registry=registry,
                     runtime_info=runtime_info,
+                    tool_display=getattr(args, "tool_display", "compressed"),
                 )
                 initial_color = getattr(args, "initial_color", None)
                 if initial_color:
@@ -178,6 +180,7 @@ def execute_icoder(args: argparse.Namespace) -> int:
                             error,
                         )
                 register_color(registry, app_core)
+                register_display(registry, app_core)
                 format_tools = not getattr(args, "no_format_tools", False)
                 ICoderApp(
                     app_core,

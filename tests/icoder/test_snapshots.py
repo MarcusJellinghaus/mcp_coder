@@ -20,11 +20,29 @@ from typing import Any
 import pytest
 
 from mcp_coder.icoder.core.app_core import AppCore
+from mcp_coder.icoder.core.commands.display import register_display
 from mcp_coder.icoder.core.event_log import EventLog
 from mcp_coder.icoder.env_setup import RuntimeInfo
 from mcp_coder.icoder.services.llm_service import FakeLLMService
 from mcp_coder.icoder.ui.app import ICoderApp
 from mcp_coder.icoder.ui.widgets.input_area import InputArea
+
+_TOOL_RESPONSE: list[list[dict[str, object]]] = [
+    [
+        {"type": "text_delta", "text": "Let me read the file.\n"},
+        {
+            "type": "tool_use_start",
+            "name": "mcp__mcp-workspace__read_file",
+            "args": {"file_path": "src/main.py"},
+        },
+        {
+            "type": "tool_result",
+            "name": "mcp__mcp-workspace__read_file",
+            "output": "def main():\n    print('hello')\n    return 0",
+        },
+        {"type": "done"},
+    ]
+]
 
 pytestmark = [
     pytest.mark.skipif(
@@ -173,6 +191,84 @@ def test_snapshot_autocomplete_no_match(
         await pilot.pause()
 
     assert snap_compare(icoder_app, run_before=type_bad_prefix)
+
+
+def test_snapshot_default_tier(snap_compare: Any, tmp_path: Path) -> None:
+    """Snapshot: a completed tool block in the default (compressed) tier."""
+    fake_llm = FakeLLMService(responses=_TOOL_RESPONSE)
+    with EventLog(logs_dir=tmp_path) as event_log:
+        app_core = AppCore(
+            llm_service=fake_llm,
+            event_log=event_log,
+            runtime_info=_test_runtime_info(),
+        )
+        register_display(app_core.registry, app_core)
+        app = ICoderApp(app_core)
+
+        async def run(pilot: Any) -> None:
+            input_area = app.query_one(InputArea)
+            input_area.focus()
+            await pilot.pause()
+            input_area.insert("read main")
+            await pilot.pause()
+            await pilot.press("enter")
+            await pilot.pause(delay=0.5)
+
+        assert snap_compare(app, run_before=run)
+
+
+def test_snapshot_after_display_oneline(snap_compare: Any, tmp_path: Path) -> None:
+    """Snapshot: the same tool block after /display oneline (tier-1)."""
+    fake_llm = FakeLLMService(responses=_TOOL_RESPONSE)
+    with EventLog(logs_dir=tmp_path) as event_log:
+        app_core = AppCore(
+            llm_service=fake_llm,
+            event_log=event_log,
+            runtime_info=_test_runtime_info(),
+        )
+        register_display(app_core.registry, app_core)
+        app = ICoderApp(app_core)
+
+        async def run(pilot: Any) -> None:
+            input_area = app.query_one(InputArea)
+            input_area.focus()
+            await pilot.pause()
+            input_area.insert("read main")
+            await pilot.pause()
+            await pilot.press("enter")
+            await pilot.pause(delay=0.5)
+            input_area.insert("/display oneline")
+            await pilot.pause()
+            await pilot.press("enter")
+            await pilot.pause()
+
+        assert snap_compare(app, run_before=run)
+
+
+def test_snapshot_modal_over_tool(snap_compare: Any, tmp_path: Path) -> None:
+    """Snapshot: the detail modal opened (F2) over a tool block."""
+    fake_llm = FakeLLMService(responses=_TOOL_RESPONSE)
+    with EventLog(logs_dir=tmp_path) as event_log:
+        app_core = AppCore(
+            llm_service=fake_llm,
+            event_log=event_log,
+            runtime_info=_test_runtime_info(),
+        )
+        register_display(app_core.registry, app_core)
+        app = ICoderApp(app_core)
+
+        async def run(pilot: Any) -> None:
+            input_area = app.query_one(InputArea)
+            input_area.focus()
+            await pilot.pause()
+            input_area.insert("read main")
+            await pilot.pause()
+            await pilot.press("enter")
+            await pilot.pause(delay=0.5)
+            await pilot.press("f2")
+            await pilot.pause()
+
+        assert snap_compare(app, run_before=run)
 
 
 def test_snapshot_multi_chunk_streaming(snap_compare: Any, tmp_path: Path) -> None:

@@ -26,6 +26,7 @@ from mcp_coder.icoder.core.types import (
     OpenPicker,
     OutputText,
     Quit,
+    RebuildOutput,
     ResetSession,
     SendToLLM,
 )
@@ -242,6 +243,10 @@ class ICoderApp(App[None]):
 
     def on_mount(self) -> None:
         """Display startup info and focus input area."""
+        # Apply the CLI-provided initial tool-display tier before any output.
+        self.query_one(OutputLog).set_tool_display_default(
+            self._core.tool_display  # type: ignore[arg-type]
+        )
         if self._resume_log_path is not None:
             self.do_resume(self._resume_log_path)
         elif self._core.runtime_info:
@@ -292,6 +297,8 @@ class ICoderApp(App[None]):
                     self.open_picker_for_load()
                 case OutputText():
                     output.append_text(action.text)
+                case RebuildOutput():
+                    output.set_tool_display_default(self._core.tool_display)  # type: ignore[arg-type]
                 case SendToLLM():
                     output.write("")
                     self.query_one(BusyIndicator).show_busy("Querying LLM...")

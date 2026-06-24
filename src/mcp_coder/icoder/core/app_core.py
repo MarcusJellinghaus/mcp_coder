@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Iterator
+from typing import Iterator, Literal
 
 from mcp_coder.icoder.core.colors import DEFAULT_PROMPT_COLOR, validate_color
 from mcp_coder.icoder.core.command_history import CommandHistory
@@ -39,6 +39,7 @@ class AppCore:
         event_log: EventLog,
         registry: CommandRegistry | None = None,
         runtime_info: RuntimeInfo | None = None,
+        tool_display: Literal["oneline", "compressed"] = "compressed",
     ) -> None:
         """Initialize with injected dependencies.
 
@@ -47,6 +48,8 @@ class AppCore:
             event_log: Structured event log
             registry: Command registry (default: create_default_registry())
             runtime_info: Optional runtime environment info from env_setup
+            tool_display: Initial global tool-display tier (default
+                ``"compressed"``). Set by the ``--tool-display`` CLI flag.
         """
         self._llm_service = llm_service
         self._event_log = event_log
@@ -55,6 +58,7 @@ class AppCore:
         self._token_usage = TokenUsage()
         self._command_history = CommandHistory()
         self._prompt_color: str = DEFAULT_PROMPT_COLOR
+        self._tool_display: Literal["oneline", "compressed"] = tool_display
 
     def handle_input(self, text: str) -> Response:
         """Route user input to commands or typed actions for the UI.
@@ -201,6 +205,20 @@ class AppCore:
             return error
         self._prompt_color = hex_color  # type: ignore[assignment]
         return None
+
+    @property
+    def tool_display(self) -> str:
+        """Current global tool-display tier ("oneline" or "compressed")."""
+        return self._tool_display
+
+    def set_tool_display(self, value: Literal["oneline", "compressed"]) -> None:
+        """Set the global tool-display tier and emit a change event.
+
+        Args:
+            value: The new global tier ("oneline" or "compressed").
+        """
+        self._tool_display = value
+        self._event_log.emit("display_mode_changed", to=value)
 
     @property
     def session_id(self) -> str | None:

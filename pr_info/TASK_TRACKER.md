@@ -77,9 +77,16 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 10: `/display` + `--tool-display` + `RebuildOutput` action + `/help` ([step_10.md](./steps/step_10.md))
 
-- [ ] Implementation (tests + production code): `display.py` command, `RebuildOutput` action, `AppCore.tool_display`, CLI `--tool-display` flag, `/help` F2 line, docs, snapshot tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): `display.py` command, `RebuildOutput` action, `AppCore.tool_display`, CLI `--tool-display` flag, `/help` F2 line, docs, snapshot tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
+
+> Note: 3 snapshot tests authored in `test_snapshots.py` (`test_snapshot_default_tier`,
+> `test_snapshot_after_display_oneline`, `test_snapshot_modal_over_tool`). Baselines could
+> NOT be generated/inspected here — `pytest-textual-snapshot` is not installed in this
+> environment's `.venv` (existing snapshot tests are equally unrunnable here). Generate +
+> visually inspect the SVGs with `pytest tests/icoder/test_snapshots.py --snapshot-update`
+> in an environment that has the plugin before merging.
 
 ## Pull Request
 

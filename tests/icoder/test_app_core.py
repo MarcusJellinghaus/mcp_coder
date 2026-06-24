@@ -44,6 +44,42 @@ def test_help_includes_keyboard_shortcuts(app_core: AppCore) -> None:
     assert "Insert newline" in text
 
 
+def test_help_mentions_f2(app_core: AppCore) -> None:
+    """Test /help output mentions the F2 detail-view shortcut."""
+    response = app_core.handle_input("/help")
+    text = _output_text(response)
+    assert "F2" in text
+
+
+def test_app_core_default_tool_display_is_compressed(app_core: AppCore) -> None:
+    """AppCore.tool_display defaults to 'compressed'."""
+    assert app_core.tool_display == "compressed"
+
+
+def test_app_core_set_tool_display_changes_value(app_core: AppCore) -> None:
+    """set_tool_display updates the tool_display property."""
+    app_core.set_tool_display("oneline")
+    assert app_core.tool_display == "oneline"
+
+
+def test_app_core_init_with_tool_display_oneline_sets_field(
+    fake_llm: FakeLLMService, event_log: EventLog
+) -> None:
+    """Constructing AppCore with tool_display='oneline' sets the field."""
+    core = AppCore(llm_service=fake_llm, event_log=event_log, tool_display="oneline")
+    assert core.tool_display == "oneline"
+
+
+def test_app_core_set_tool_display_emits_event(
+    app_core: AppCore, event_log: EventLog
+) -> None:
+    """set_tool_display emits a display_mode_changed event with the new tier."""
+    app_core.set_tool_display("oneline")
+    matching = [e for e in event_log.entries if e.event == "display_mode_changed"]
+    assert len(matching) == 1
+    assert matching[0].data.get("to") == "oneline"
+
+
 def test_handle_unknown_command(app_core: AppCore) -> None:
     """Test /unknown returns error."""
     response = app_core.handle_input("/unknown")
