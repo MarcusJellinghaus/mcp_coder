@@ -13,7 +13,9 @@ Verify regenerated SVGs contain no secrets, env vars, or local paths.
 from __future__ import annotations
 
 import sys
+import time
 from collections.abc import Iterator
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -51,6 +53,50 @@ pytestmark = [
     ),
     pytest.mark.textual_integration,
 ]
+
+
+class _FixedDatetime(datetime):
+    """``datetime`` subclass with a frozen ``now()`` for stable snapshots.
+
+    The detail modal footer renders a unit's wall-clock timestamp, which is
+    captured via ``datetime.now()`` at unit creation. Freezing it keeps the
+    modal snapshot deterministic (mirrors ``_test_runtime_info`` pinning
+    versions for the same reason).
+    """
+
+    @classmethod
+    def now(cls, tz: Any = None) -> "_FixedDatetime":
+        return cls(2026, 1, 1, 12, 0, 0)
+
+
+class _FrozenClock:
+    """Pin ``stream_renderer``'s monotonic clock so tool durations render
+    as a constant ``0ms`` (the wall-clock analogue of ``_FixedDatetime``).
+
+    The renderer reads ``time.monotonic()`` at tool start and at tool result
+    to compute ``duration_ms``; pinning it removes that timing jitter from
+    the snapshot. Non-``monotonic`` attribute access delegates to the real
+    ``time`` module so nothing else in the renderer breaks.
+    """
+
+    @staticmethod
+    def monotonic() -> float:
+        return 1000.0
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(time, name)
+
+
+@pytest.fixture()
+def _frozen_clocks(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Freeze wall-clock and monotonic sources for deterministic snapshots.
+
+    Tool tiers render ``duration_ms`` and the modal footer renders a
+    wall-clock timestamp; both are runtime-variable. Pinning them keeps the
+    rendered SVG stable across runs and environments.
+    """
+    monkeypatch.setattr("mcp_coder.icoder.ui.app.datetime", _FixedDatetime)
+    monkeypatch.setattr("mcp_coder.llm.formatting.stream_renderer.time", _FrozenClock())
 
 
 def _test_runtime_info() -> RuntimeInfo:
@@ -193,7 +239,9 @@ def test_snapshot_autocomplete_no_match(
     assert snap_compare(icoder_app, run_before=type_bad_prefix)
 
 
-def test_snapshot_default_tier(snap_compare: Any, tmp_path: Path) -> None:
+def test_snapshot_default_tier(
+    snap_compare: Any, tmp_path: Path, _frozen_clocks: None
+) -> None:
     """Snapshot: a completed tool block in the default (compressed) tier."""
     fake_llm = FakeLLMService(responses=_TOOL_RESPONSE)
     with EventLog(logs_dir=tmp_path) as event_log:
@@ -217,7 +265,9 @@ def test_snapshot_default_tier(snap_compare: Any, tmp_path: Path) -> None:
         assert snap_compare(app, run_before=run)
 
 
-def test_snapshot_after_display_oneline(snap_compare: Any, tmp_path: Path) -> None:
+def test_snapshot_after_display_oneline(
+    snap_compare: Any, tmp_path: Path, _frozen_clocks: None
+) -> None:
     """Snapshot: the same tool block after /display oneline (tier-1)."""
     fake_llm = FakeLLMService(responses=_TOOL_RESPONSE)
     with EventLog(logs_dir=tmp_path) as event_log:
@@ -245,7 +295,9 @@ def test_snapshot_after_display_oneline(snap_compare: Any, tmp_path: Path) -> No
         assert snap_compare(app, run_before=run)
 
 
-def test_snapshot_modal_over_tool(snap_compare: Any, tmp_path: Path) -> None:
+def test_snapshot_modal_over_tool(
+    snap_compare: Any, tmp_path: Path, _frozen_clocks: None
+) -> None:
     """Snapshot: the detail modal opened (F2) over a tool block."""
     fake_llm = FakeLLMService(responses=_TOOL_RESPONSE)
     with EventLog(logs_dir=tmp_path) as event_log:

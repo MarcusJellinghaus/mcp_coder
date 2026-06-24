@@ -81,12 +81,18 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Quality checks: pylint, pytest, mypy — fix all issues
 - [x] Commit message prepared
 
-> Note: 3 snapshot tests authored in `test_snapshots.py` (`test_snapshot_default_tier`,
-> `test_snapshot_after_display_oneline`, `test_snapshot_modal_over_tool`). Baselines could
-> NOT be generated/inspected here — `pytest-textual-snapshot` is not installed in this
-> environment's `.venv` (existing snapshot tests are equally unrunnable here). Generate +
-> visually inspect the SVGs with `pytest tests/icoder/test_snapshots.py --snapshot-update`
-> in an environment that has the plugin before merging.
+> Note: 3 snapshot tests in `test_snapshots.py` (`test_snapshot_default_tier`,
+> `test_snapshot_after_display_oneline`, `test_snapshot_modal_over_tool`). Baselines are
+> now generated, content-inspected, and verified deterministic on win32 (pass via direct
+> `.venv` and the MCP pytest path). Generating them surfaced a real flakiness defect: the
+> tool tiers render `duration_ms` (monotonic) and the modal footer renders a wall-clock
+> timestamp, so the SVGs differed every run. Fixed with a `_frozen_clocks` fixture that
+> pins `datetime.now()` and the renderer's `time.monotonic()` (mirrors `_test_runtime_info`).
+>
+> Separately, the 9 PRE-EXISTING snapshot tests fail locally against stale baselines
+> (env / Textual-version drift, not caused by #629 — they don't touch the tier feature).
+> Out of scope for this issue; regenerate + visually inspect them as a separate step if
+> desired (they are `textual_integration` + win32-only, excluded from CI).
 
 ## Pull Request
 
