@@ -413,6 +413,8 @@ class OutputLog(RichLog):
                     {"unit_id": unit.id, "kind": unit.kind},
                 )
             return
+        if self._pending_single is not None:
+            self._pending_single.stop()
         self._pending_single = self.set_timer(0.25, lambda: self._handle_single(unit))
 
     def _handle_single(self, unit: ContentUnit) -> None:
