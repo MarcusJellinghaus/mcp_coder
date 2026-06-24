@@ -34,6 +34,7 @@ class ToolResult:
     output_lines: list[str]  # possibly truncated output
     total_lines: int  # original line count
     truncated: bool  # whether output was truncated
+    is_error: bool = False  # whether the tool reported an error
 
 
 @dataclass(frozen=True)

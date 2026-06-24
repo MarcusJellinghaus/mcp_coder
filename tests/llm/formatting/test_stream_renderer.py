@@ -102,6 +102,29 @@ class TestStreamEventRenderer:
         assert action.total_lines == 20
         assert action.truncated is True
 
+    def test_tool_result_propagates_is_error(self) -> None:
+        action = _RENDERER.render(
+            {
+                "type": "tool_result",
+                "name": "mcp__mcp-workspace__read_file",
+                "output": "boom",
+                "is_error": True,
+            }
+        )
+        assert isinstance(action, ToolResult)
+        assert action.is_error is True
+
+    def test_tool_result_defaults_is_error_false(self) -> None:
+        action = _RENDERER.render(
+            {
+                "type": "tool_result",
+                "name": "mcp__mcp-workspace__read_file",
+                "output": "ok",
+            }
+        )
+        assert isinstance(action, ToolResult)
+        assert action.is_error is False
+
     def test_error(self) -> None:
         action = _RENDERER.render({"type": "error", "message": "fail"})
         assert action == ErrorMessage(message="fail")
@@ -141,16 +164,16 @@ class TestRenderToolOutputRenderer:
     """Tests for _render_tool_output() in stream_renderer."""
 
     def test_empty(self) -> None:
-        assert _render_tool_output("") == ([], 0)
+        assert _render_tool_output("") == ([], 0, False)
 
     def test_short_plain(self) -> None:
-        lines, total = _render_tool_output("line one\nline two")
+        lines, total, _truncated = _render_tool_output("line one\nline two")
         assert lines == ["line one", "line two"]
         assert total == 2
 
     def test_long_truncated(self) -> None:
         text = "\n".join(f"line {i}" for i in range(20))
-        lines, total = _render_tool_output(text)
+        lines, total, _truncated = _render_tool_output(text)
         # head 10 + separator + tail 5 = 16
         assert len(lines) == 16
         assert lines[:10] == [f"line {i}" for i in range(10)]
@@ -160,13 +183,13 @@ class TestRenderToolOutputRenderer:
 
     def test_json_dict(self) -> None:
         data = {"success": True, "count": 42}
-        lines, total = _render_tool_output(json.dumps(data))
+        lines, total, _truncated = _render_tool_output(json.dumps(data))
         assert lines == ["success: true", "count: 42"]
         assert total == 2
 
     def test_json_dict_multiline_string(self) -> None:
         data = {"success": True, "diff": "@@ -1 @@\n-foo\n+bar"}
-        lines, total = _render_tool_output(json.dumps(data))
+        lines, total, _truncated = _render_tool_output(json.dumps(data))
         assert lines == [
             "success: true",
             "diff:",
@@ -177,51 +200,51 @@ class TestRenderToolOutputRenderer:
         assert total == 5
 
     def test_non_dict_json(self) -> None:
-        lines, total = _render_tool_output(json.dumps([1, 2, 3]))
+        lines, total, _truncated = _render_tool_output(json.dumps([1, 2, 3]))
         assert lines == ["[1, 2, 3]"]
         assert total == 1
 
     def test_invalid_json(self) -> None:
-        lines, total = _render_tool_output("not json\nsecond line")
+        lines, total, _truncated = _render_tool_output("not json\nsecond line")
         assert lines == ["not json", "second line"]
         assert total == 2
 
     def test_result_envelope_unwrap(self) -> None:
         """`{"result": "hello"}` unwraps to just the value."""
-        lines, total = _render_tool_output(json.dumps({"result": "hello"}))
+        lines, total, _truncated = _render_tool_output(json.dumps({"result": "hello"}))
         assert lines == ["hello"]
         assert total == 1
 
     def test_result_envelope_with_extras(self) -> None:
         """Non-`result` keys render as extras below a blank separator."""
         data = {"result": "ok", "meta": "x"}
-        lines, total = _render_tool_output(json.dumps(data))
+        lines, total, _truncated = _render_tool_output(json.dumps(data))
         assert lines == ["ok", "", "meta: x"]
         assert total == 3
 
     def test_result_dict_with_multiline_diff(self) -> None:
         """Multiline string inside a `result` dict is split into lines."""
         data = {"result": {"diff": "a\nb", "ok": True}}
-        lines, total = _render_tool_output(json.dumps(data))
+        lines, total, _truncated = _render_tool_output(json.dumps(data))
         assert lines == ["diff:", "  a", "  b", "ok: true"]
         assert total == 4
 
     def test_no_text_unwrap(self) -> None:
         """`{"text": ...}` is not treated as an envelope — shown as key/value."""
-        lines, total = _render_tool_output(json.dumps({"text": "hello"}))
+        lines, total, _truncated = _render_tool_output(json.dumps({"text": "hello"}))
         assert lines == ["text: hello"]
         assert total == 1
 
     def test_no_content_unwrap(self) -> None:
         """`{"content": ...}` is not treated as an envelope — shown as key/value."""
-        lines, total = _render_tool_output(json.dumps({"content": "hello"}))
+        lines, total, _truncated = _render_tool_output(json.dumps({"content": "hello"}))
         assert lines == ["content: hello"]
         assert total == 1
 
     def test_full_mode_no_truncation(self) -> None:
         """30-line input with ``full=True`` returns all 30 lines."""
         text = "\n".join(f"line {i}" for i in range(30))
-        lines, total = _render_tool_output(text, full=True)
+        lines, total, _truncated = _render_tool_output(text, full=True)
         assert len(lines) == 30
         assert total == 30
         assert lines == [f"line {i}" for i in range(30)]
@@ -229,7 +252,7 @@ class TestRenderToolOutputRenderer:
     def test_compact_mode_truncates(self) -> None:
         """30-line input with default ``full=False`` is truncated."""
         text = "\n".join(f"line {i}" for i in range(30))
-        lines, total = _render_tool_output(text)
+        lines, total, _truncated = _render_tool_output(text)
         assert total == 30
         assert len(lines) == 16  # 10 head + 1 separator + 5 tail
 
@@ -240,7 +263,7 @@ class TestRenderToolOutputTruncation:
     def test_render_tool_output_head_tail_truncation(self) -> None:
         """Long output: first 10 + separator + last 5 lines."""
         text = "\n".join(f"line {i}" for i in range(30))
-        lines, total = _render_tool_output(text)
+        lines, total, _truncated = _render_tool_output(text)
         assert total == 30
         assert lines[:10] == [f"line {i}" for i in range(10)]
         assert lines[10] == "... (15 lines skipped)"
@@ -249,7 +272,7 @@ class TestRenderToolOutputTruncation:
     def test_render_tool_output_exactly_at_threshold(self) -> None:
         """15 lines = no truncation (threshold is >15)."""
         text = "\n".join(f"line {i}" for i in range(15))
-        lines, total = _render_tool_output(text)
+        lines, total, _truncated = _render_tool_output(text)
         assert total == 15
         assert len(lines) == 15
         assert "skipped" not in "\n".join(lines)
@@ -257,7 +280,7 @@ class TestRenderToolOutputTruncation:
     def test_render_tool_output_just_over_threshold(self) -> None:
         """16 lines = truncated with separator."""
         text = "\n".join(f"line {i}" for i in range(16))
-        lines, total = _render_tool_output(text)
+        lines, total, _truncated = _render_tool_output(text)
         assert total == 16
         # head 10 + separator + tail 5 = 16, but 1 line skipped
         assert lines[10] == "... (1 line skipped)"
@@ -266,7 +289,7 @@ class TestRenderToolOutputTruncation:
     def test_full_mode_skips_truncation(self) -> None:
         """``full=True`` disables truncation regardless of line count."""
         text = "\n".join(f"line {i}" for i in range(30))
-        lines, total = _render_tool_output(text, full=True)
+        lines, total, _truncated = _render_tool_output(text, full=True)
         assert total == 30
         assert len(lines) == 30
         assert "skipped" not in "\n".join(lines)
@@ -279,7 +302,7 @@ class TestRenderToolOutputRawMode:
         """format_tools=False: raw output, no field filtering."""
         data = {"result": "hello", "type": "text", "extra": "val"}
         output = json.dumps(data)
-        lines, total = _render_tool_output(output, format_tools=False)
+        lines, total, _truncated = _render_tool_output(output, format_tools=False)
         # Raw mode returns output.splitlines() — the JSON string as-is
         assert lines == [output]
         assert total == 1
@@ -287,7 +310,7 @@ class TestRenderToolOutputRawMode:
     def test_render_tool_output_raw_mode_no_truncation(self) -> None:
         """format_tools=False: no truncation even for long output."""
         text = "\n".join(f"line {i}" for i in range(50))
-        lines, total = _render_tool_output(text, format_tools=False)
+        lines, total, _truncated = _render_tool_output(text, format_tools=False)
         assert len(lines) == 50
         assert total == 50
         assert "skipped" not in "\n".join(lines)

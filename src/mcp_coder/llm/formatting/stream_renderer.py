@@ -140,7 +140,7 @@ def _render_output_value(value: object) -> list[str]:
 
 def _render_tool_output(
     output: str, *, format_tools: bool = True, full: bool = False
-) -> tuple[list[str], int]:
+) -> tuple[list[str], int, bool]:
     """Render tool output into display lines with optional truncation.
 
     When *format_tools* is ``False``, return the raw output split into lines
@@ -157,14 +157,16 @@ def _render_tool_output(
        exceed the threshold.
 
     Returns:
-        ``(display_lines, total_line_count)``.
+        ``(display_lines, total_line_count, truncated)`` where ``truncated``
+        is ``True`` when the original output exceeded the truncation
+        threshold (independent of whether ``full`` suppressed the trim).
     """
     if not output:
-        return ([], 0)
+        return ([], 0, False)
 
     if not format_tools:
         raw_lines = output.splitlines()
-        return (raw_lines, len(raw_lines))
+        return (raw_lines, len(raw_lines), False)
 
     try:
         parsed = json.loads(output)
@@ -180,14 +182,15 @@ def _render_tool_output(
         lines = output.splitlines()
 
     total = len(lines)
-    if not full and total > _TRUNCATION_THRESHOLD:
+    truncated = total > _TRUNCATION_THRESHOLD
+    if not full and truncated:
         skipped = total - _HEAD_LINES - _TAIL_LINES
         lines = (
             lines[:_HEAD_LINES]
             + [f"... ({skipped} {'line' if skipped == 1 else 'lines'} skipped)"]
             + lines[-_TAIL_LINES:]
         )
-    return (lines, total)
+    return (lines, total, truncated)
 
 
 def format_tool_start(action: ToolStart, full: bool = False) -> list[str]:
@@ -272,14 +275,15 @@ class StreamEventRenderer:
         if event_type == "tool_result":
             name = str(event.get("name", ""))
             output = str(event.get("output", ""))
-            output_lines, total_lines = _render_tool_output(
+            output_lines, total_lines, truncated = _render_tool_output(
                 output, format_tools=self._format_tools
             )
             return ToolResult(
                 name=_format_tool_name(name),
                 output_lines=output_lines,
                 total_lines=total_lines,
-                truncated=len(output_lines) != total_lines,
+                truncated=truncated,
+                is_error=bool(event.get("is_error", False)),
             )
 
         if event_type == "error":

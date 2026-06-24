@@ -80,7 +80,9 @@ StreamEvent = dict[str, object]
 
 - {"type": "text_delta", "text": "..."} — incremental text token
 - {"type": "tool_use_start", "name": "...", "args": {...}} — tool call begins
-- {"type": "tool_result", "name": "...", "output": "..."} — tool call result
+- {"type": "tool_result", "name": "...", "output": "...", "is_error": bool} — tool
+  call result; the optional ``is_error`` flag (default ``False`` when absent)
+  signals the tool reported a failure
 - {"type": "error", "message": "..."} — error during stream
 - {"type": "done", "usage": {...}} — stream complete with optional usage stats
 - {"type": "raw_line", "line": "..."} — raw NDJSON line passthrough (json-raw mode)

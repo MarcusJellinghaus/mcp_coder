@@ -60,6 +60,7 @@ def _map_stream_message_to_event(msg: StreamMessage) -> Iterator[StreamEvent]:
                     "type": "tool_result",
                     "name": block.get("name", ""),
                     "output": block.get("content", ""),
+                    "is_error": block.get("is_error", False),
                 }
     elif msg_type == "result":
         yield {

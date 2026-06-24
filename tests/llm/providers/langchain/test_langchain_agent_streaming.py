@@ -151,6 +151,74 @@ class TestRunAgentStream:
         assert tool_starts[0]["args"] == {"query": "test"}
         assert tool_starts[0]["tool_call_id"] == "run-1"
 
+    async def test_on_tool_end_error_status_emits_tool_result_with_is_error(
+        self,
+    ) -> None:
+        """on_tool_end whose output is a ToolMessage(status='error') →
+        tool_result event with is_error=True; stream continues (no raise)."""
+        from langchain_core.messages import ToolMessage
+
+        tool_msg = ToolMessage(content="boom", status="error", tool_call_id="tc1")
+        events: list[dict[str, object]] = [
+            {
+                "event": "on_tool_end",
+                "data": {"output": tool_msg},
+                "run_id": "run-1",
+                "name": "search_tool",
+            },
+        ]
+        with _patch_run_agent_stream(events):
+            from mcp_coder.llm.providers.langchain.agent import run_agent_stream
+
+            result = [
+                e
+                async for e in run_agent_stream(
+                    question="Hi",
+                    chat_model=MagicMock(),
+                    messages=[],
+                    mcp_config_path="/tmp/mcp.json",
+                    session_id="s1",
+                )
+            ]
+        tool_results = [e for e in result if e["type"] == "tool_result"]
+        assert len(tool_results) == 1
+        assert tool_results[0]["name"] == "search_tool"
+        assert tool_results[0]["output"] == "boom"
+        assert tool_results[0]["is_error"] is True
+        # Stream continues to completion (no raise)
+        done_events = [e for e in result if e["type"] == "done"]
+        assert len(done_events) == 1
+
+    async def test_on_tool_end_success_status_is_error_false(self) -> None:
+        """on_tool_end with a non-error ToolMessage → is_error=False."""
+        from langchain_core.messages import ToolMessage
+
+        tool_msg = ToolMessage(content="ok", status="success", tool_call_id="tc1")
+        events: list[dict[str, object]] = [
+            {
+                "event": "on_tool_end",
+                "data": {"output": tool_msg},
+                "run_id": "run-1",
+                "name": "search_tool",
+            },
+        ]
+        with _patch_run_agent_stream(events):
+            from mcp_coder.llm.providers.langchain.agent import run_agent_stream
+
+            result = [
+                e
+                async for e in run_agent_stream(
+                    question="Hi",
+                    chat_model=MagicMock(),
+                    messages=[],
+                    mcp_config_path="/tmp/mcp.json",
+                    session_id="s1",
+                )
+            ]
+        tool_results = [e for e in result if e["type"] == "tool_result"]
+        assert len(tool_results) == 1
+        assert tool_results[0]["is_error"] is False
+
     async def test_raw_line_emitted_for_every_event(self) -> None:
         """Every astream_events dict is also emitted as raw_line."""
         chunk = MagicMock()
