@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 See [step_1.md](./steps/step_1.md) for details.
 
-- [ ] Implementation: remove `commit clipboard` command, code, tests, and docs (keep `utils/clipboard.py`)
-- [ ] Quality checks: pylint, pytest, mypy, lint-imports, vulture — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: remove `commit clipboard` command, code, tests, and docs (keep `utils/clipboard.py`)
+- [x] Quality checks: pylint, pytest, mypy, lint-imports, vulture — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Migrate icoder to Textual clipboard, delete `clipboard.py`, drop `pyperclip`
 

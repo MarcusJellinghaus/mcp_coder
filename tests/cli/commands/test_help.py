@@ -49,7 +49,6 @@ def test_command_categories_contains_all_commands() -> None:
         "vscodeclaude status",
         "prompt",
         "commit auto",
-        "commit clipboard",
         "gh-tool set-status",
         "check branch-status",
         "check file-size",

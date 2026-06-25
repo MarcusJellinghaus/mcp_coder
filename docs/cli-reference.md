@@ -19,7 +19,6 @@ Commit operations with AI assistance.
 | Command | Description |
 |---------|-------------|
 | [`commit auto`](#commit-auto) | Auto-generate commit message using LLM |
-| [`commit clipboard`](#commit-clipboard) | Use commit message from clipboard |
 
 ### Automated Development Workflow
 End-to-end development automation from planning to pull requests.
@@ -239,28 +238,6 @@ mcp-coder commit auto --preview
 
 # Use langchain provider
 mcp-coder commit auto --llm-method langchain
-```
-
----
-
-### commit clipboard
-
-Use commit message from clipboard.
-
-```bash
-mcp-coder commit clipboard [OPTIONS]
-```
-
-**Options:**
-- `--project-dir PATH` - Project directory path (default: current directory)
-
-**Examples:**
-```bash
-# Commit with message from clipboard
-mcp-coder commit clipboard
-
-# Specify project directory
-mcp-coder commit clipboard --project-dir /path/to/project
 ```
 
 ---
