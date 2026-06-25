@@ -316,33 +316,6 @@ ignore_imports =
     mcp_coder.utils.jenkins_operations.client -> requests
 
 # -----------------------------------------------------------------------------
-# Contract: Structlog Library Isolation
-# -----------------------------------------------------------------------------
-# The 'structlog' library should only be used by log_utils.
-# Other modules should use log_utils for logging setup.
-# -----------------------------------------------------------------------------
-[importlinter:contract:structlog_isolation]
-name = Structlog Library Isolation
-type = forbidden
-source_modules =
-    mcp_coder
-forbidden_modules =
-    structlog
-
-# -----------------------------------------------------------------------------
-# Contract: Python JSON Logger Isolation
-# -----------------------------------------------------------------------------
-# The 'pythonjsonlogger' should only be used by log_utils.
-# -----------------------------------------------------------------------------
-[importlinter:contract:jsonlogger_isolation]
-name = Python JSON Logger Isolation
-type = forbidden
-source_modules =
-    mcp_coder
-forbidden_modules =
-    pythonjsonlogger
-
-# -----------------------------------------------------------------------------
 # Contract: Black Library Isolation
 # -----------------------------------------------------------------------------
 # Only mcp-tools-py should import black directly; guard against future

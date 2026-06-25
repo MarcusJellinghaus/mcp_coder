@@ -57,9 +57,9 @@ See [step_4.md](./steps/step_4.md) for details.
 
 See [step_5.md](./steps/step_5.md) for details.
 
-- [ ] Implementation: drop `GitPython`/`PyGithub`/`structlog`/`python-json-logger`, prune 2 contracts, update + regenerate dependency docs
-- [ ] Quality checks: pylint, pytest, mypy, lint-imports, vulture — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: drop `GitPython`/`PyGithub`/`structlog`/`python-json-logger`, prune 2 contracts, update + regenerate dependency docs
+- [x] Quality checks: pylint, pytest, mypy, lint-imports, vulture — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
