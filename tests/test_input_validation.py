@@ -6,10 +6,6 @@ from typing import Any, Callable
 import pytest
 
 from mcp_coder.llm.interface import prompt_llm
-from mcp_coder.llm.providers.claude.claude_code_api import (
-    ask_claude_code_api,
-    ask_claude_code_api_detailed_sync,
-)
 from mcp_coder.llm.providers.claude.claude_code_cli import ask_claude_code_cli
 
 
@@ -21,8 +17,6 @@ class TestInputValidation:
         [
             ("prompt_llm", prompt_llm),
             ("ask_claude_code_cli", ask_claude_code_cli),
-            ("ask_claude_code_api", ask_claude_code_api),
-            ("ask_claude_code_api_detailed_sync", ask_claude_code_api_detailed_sync),
         ],
     )
     def test_empty_question_raises_error(
@@ -39,8 +33,6 @@ class TestInputValidation:
         [
             ("prompt_llm", prompt_llm),
             ("ask_claude_code_cli", ask_claude_code_cli),
-            ("ask_claude_code_api", ask_claude_code_api),
-            ("ask_claude_code_api_detailed_sync", ask_claude_code_api_detailed_sync),
         ],
     )
     def test_whitespace_only_question_raises_error(
@@ -57,8 +49,6 @@ class TestInputValidation:
         [
             ("prompt_llm", prompt_llm),
             ("ask_claude_code_cli", ask_claude_code_cli),
-            ("ask_claude_code_api", ask_claude_code_api),
-            ("ask_claude_code_api_detailed_sync", ask_claude_code_api_detailed_sync),
         ],
     )
     def test_zero_timeout_raises_error(
@@ -73,8 +63,6 @@ class TestInputValidation:
         [
             ("prompt_llm", prompt_llm),
             ("ask_claude_code_cli", ask_claude_code_cli),
-            ("ask_claude_code_api", ask_claude_code_api),
-            ("ask_claude_code_api_detailed_sync", ask_claude_code_api_detailed_sync),
         ],
     )
     def test_negative_timeout_raises_error(

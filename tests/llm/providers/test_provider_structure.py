@@ -8,12 +8,10 @@ def test_providers_package_structure() -> None:
 
     # Verify claude provider modules importable
     from mcp_coder.llm.providers.claude import (
-        claude_code_api,
         claude_code_cli,
     )
 
     assert hasattr(claude_code_cli, "ask_claude_code_cli")
-    assert hasattr(claude_code_api, "ask_claude_code_api")
 
 
 def test_public_api_provider_exports() -> None:
@@ -25,7 +23,6 @@ def test_public_api_provider_exports() -> None:
 
 def test_claude_provider_functions() -> None:
     """Test that claude provider functions are accessible."""
-    from mcp_coder.llm.providers.claude.claude_code_api import ask_claude_code_api
     from mcp_coder.llm.providers.claude.claude_code_cli import ask_claude_code_cli
     from mcp_coder.llm.providers.claude.claude_executable_finder import (
         find_claude_executable,
@@ -34,7 +31,6 @@ def test_claude_provider_functions() -> None:
 
     # Verify functions are callable
     assert callable(ask_claude_code_cli)
-    assert callable(ask_claude_code_api)
     assert callable(find_claude_executable)
     assert callable(verify_claude_installation)
 

@@ -49,9 +49,9 @@ See [step_3.md](./steps/step_3.md) for details.
 
 See [step_4.md](./steps/step_4.md) for details.
 
-- [ ] Implementation: delete SDK/API modules + tests, trim formatters + importing tests, remove `claude-code-sdk` + contract + docs
-- [ ] Quality checks: pylint, pytest, mypy, lint-imports, vulture — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: delete SDK/API modules + tests, trim formatters + importing tests, remove `claude-code-sdk` + contract + docs
+- [x] Quality checks: pylint, pytest, mypy, lint-imports, vulture — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Remove four unused transitive deps + regenerate dependency docs
 

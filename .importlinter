@@ -199,21 +199,6 @@ ignore_imports =
     mcp_coder.utils.jenkins_operations.** -> jenkins
 
 # -----------------------------------------------------------------------------
-# Contract: Claude Code SDK Isolation
-# -----------------------------------------------------------------------------
-# The 'claude_code_sdk' should only be used by llm.providers.claude.
-# -----------------------------------------------------------------------------
-[importlinter:contract:claude_sdk_isolation]
-name = Claude Code SDK Isolation
-type = forbidden
-source_modules =
-    mcp_coder
-forbidden_modules =
-    claude_code_sdk
-ignore_imports =
-    mcp_coder.llm.providers.claude.** -> claude_code_sdk
-
-# -----------------------------------------------------------------------------
 # Contract: LangChain Library Isolation
 # -----------------------------------------------------------------------------
 # langchain_core, langchain_openai, langchain_google_genai are optional

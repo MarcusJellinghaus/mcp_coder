@@ -79,9 +79,6 @@ _._repo_name
 # mcp_tools_py.py - Convenience function for simple pass/fail checks
 _.has_mypy_errors
 
-# claude_code_api.py - Retry utility for future API retry logic
-_._retry_with_backoff
-
 # task_tracker.py - Convenience function for simple yes/no checks
 _.has_incomplete_work
 

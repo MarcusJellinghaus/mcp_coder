@@ -50,5 +50,4 @@ Complete documentation for MCP Coder.
 
 ### LLM Providers
 
-- **[Claude SDK Response Structure](providers/claude_sdk_response_structure.md)** - Claude Code API response format
 - **[Copilot Response Structure](providers/copilot_response_structure.md)** - Copilot CLI JSONL format
