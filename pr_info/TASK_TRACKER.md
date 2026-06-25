@@ -63,5 +63,5 @@ See [step_5.md](./steps/step_5.md) for details.
 
 ## Pull Request
 
-- [ ] PR review: verify all steps complete and checks pass
+- [x] PR review: verify all steps complete and checks pass
 - [ ] PR summary prepared
