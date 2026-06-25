@@ -16,8 +16,8 @@ class TestCriticalPathIntegration:
     """Critical path integration tests - minimal set covering all major code paths."""
 
     @pytest.mark.claude_cli_integration
-    def test_basic_cli_api_integration(self) -> None:
-        """Test both CLI and API paths work end-to-end.
+    def test_basic_cli_integration(self) -> None:
+        """Test the CLI path works end-to-end.
 
         Note: This is a real integration test that makes actual API calls.
         Uses longer timeouts to accommodate real API response times.
@@ -35,24 +35,6 @@ class TestCriticalPathIntegration:
         assert isinstance(cli_result, dict)
         assert len(cli_result["text"]) > 0
         assert "yes" in cli_result["text"].lower()
-
-        # Test API path: ask_llm → ask_claude_code → ask_claude_code_api
-        # TODO: Commented out due to Claude Code SDK compatibility issues
-        # Will be removed when SDK usage is removed from the codebase
-        # Skip API test if SDK is not working in this environment
-        # if not claude_sdk_working():
-        #     pytest.skip("Claude Code SDK not working in this environment")
-        #
-        # api_result = ask_llm(
-        #     "Yes or no: Is 2+2=4?",
-        #     provider="claude",
-        #     method="api",
-        #     timeout=60,  # Increased for real API calls
-        #     env_vars=env_vars,
-        # )
-        # assert isinstance(api_result, str)
-        # assert len(api_result) > 0
-        # assert "yes" in api_result.lower()
 
     @pytest.mark.claude_cli_integration
     def test_session_continuity(self) -> None:
