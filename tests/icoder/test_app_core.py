@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
@@ -10,62 +9,110 @@ import pytest
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.core.command_history import CommandHistory
 from mcp_coder.icoder.core.event_log import EventLog
-from mcp_coder.icoder.core.types import TokenUsage
+from mcp_coder.icoder.core.types import (
+    ClearOutput,
+    OutputText,
+    Quit,
+    ResetSession,
+    SendToLLM,
+    TokenUsage,
+)
 from mcp_coder.icoder.env_setup import RuntimeInfo
 from mcp_coder.icoder.services.llm_service import FakeLLMService
 from mcp_coder.utils.mcp_verification import MCPServerInfo
 
 
+def _output_text(response: object) -> str:
+    """Join the text of all OutputText actions in a response."""
+    actions = getattr(response, "actions", ())
+    return "\n".join(a.text for a in actions if isinstance(a, OutputText))
+
+
 def test_handle_help(app_core: AppCore) -> None:
-    """Test /help returns help text."""
+    """Test /help returns an OutputText action with help text."""
     response = app_core.handle_input("/help")
-    assert "/help" in response.text
-    assert not response.send_to_llm
+    assert "/help" in _output_text(response)
+    assert not any(isinstance(a, SendToLLM) for a in response.actions)
 
 
 def test_help_includes_keyboard_shortcuts(app_core: AppCore) -> None:
     """Test /help output contains keyboard shortcuts section."""
     response = app_core.handle_input("/help")
-    assert "Keyboard shortcuts:" in response.text
-    assert "Insert newline" in response.text
+    text = _output_text(response)
+    assert "Keyboard shortcuts:" in text
+    assert "Insert newline" in text
+
+
+def test_help_mentions_f2(app_core: AppCore) -> None:
+    """Test /help output mentions the F2 detail-view shortcut."""
+    response = app_core.handle_input("/help")
+    text = _output_text(response)
+    assert "F2" in text
+
+
+def test_app_core_default_tool_display_is_compressed(app_core: AppCore) -> None:
+    """AppCore.tool_display defaults to 'compressed'."""
+    assert app_core.tool_display == "compressed"
+
+
+def test_app_core_set_tool_display_changes_value(app_core: AppCore) -> None:
+    """set_tool_display updates the tool_display property."""
+    app_core.set_tool_display("oneline")
+    assert app_core.tool_display == "oneline"
+
+
+def test_app_core_init_with_tool_display_oneline_sets_field(
+    fake_llm: FakeLLMService, event_log: EventLog
+) -> None:
+    """Constructing AppCore with tool_display='oneline' sets the field."""
+    core = AppCore(llm_service=fake_llm, event_log=event_log, tool_display="oneline")
+    assert core.tool_display == "oneline"
+
+
+def test_app_core_set_tool_display_emits_event(
+    app_core: AppCore, event_log: EventLog
+) -> None:
+    """set_tool_display emits a display_mode_changed event with the new tier."""
+    app_core.set_tool_display("oneline")
+    matching = [e for e in event_log.entries if e.event == "display_mode_changed"]
+    assert len(matching) == 1
+    assert matching[0].data.get("to") == "oneline"
 
 
 def test_handle_unknown_command(app_core: AppCore) -> None:
     """Test /unknown returns error."""
     response = app_core.handle_input("/unknown")
-    assert "Unknown command" in response.text
+    assert "Unknown command" in _output_text(response)
 
 
 def test_handle_free_text(app_core: AppCore) -> None:
-    """Test free text returns send_to_llm=True."""
+    """Test free text returns a SendToLLM action with the input text."""
     response = app_core.handle_input("hello world")
-    assert response.send_to_llm is True
+    assert response.actions == (SendToLLM(text="hello world"),)
 
 
 def test_handle_clear(app_core: AppCore) -> None:
-    """Test /clear returns clear_output=True and reset_session=True."""
+    """Test /clear returns ClearOutput and ResetSession actions."""
     response = app_core.handle_input("/clear")
-    assert response.clear_output is True
-    assert response.reset_session is True
+    assert response.actions == (ClearOutput(), ResetSession())
 
 
 def test_handle_quit(app_core: AppCore) -> None:
-    """Test /quit returns quit=True."""
+    """Test /quit returns a Quit action."""
     response = app_core.handle_input("/quit")
-    assert response.quit is True
+    assert response.actions == (Quit(),)
 
 
 def test_handle_empty_input(app_core: AppCore) -> None:
     """Test empty input returns empty Response."""
     response = app_core.handle_input("")
-    assert response.text == ""
-    assert not response.send_to_llm
+    assert response.actions == ()
 
 
 def test_handle_whitespace_input(app_core: AppCore) -> None:
     """Test whitespace-only input returns empty Response."""
     response = app_core.handle_input("   ")
-    assert response.text == ""
+    assert response.actions == ()
 
 
 def test_stream_llm(app_core: AppCore) -> None:
@@ -497,20 +544,34 @@ def test_set_prompt_color_invalid_preserves_current(app_core: AppCore) -> None:
     assert app_core.prompt_color == "#ef4444"
 
 
-def test_handle_input_returns_llm_text(app_core: AppCore) -> None:
-    """When a command sets llm_text, it's available on the response."""
+def test_handle_input_returns_send_to_llm_with_override(app_core: AppCore) -> None:
+    """A command's SendToLLM(text=...) override is preserved through dispatch."""
     from mcp_coder.icoder.core.types import Command, Response
 
     app_core.registry.add_command(
         Command(
             name="/skill_test",
             description="test skill",
-            handler=lambda args: Response(send_to_llm=True, llm_text="override"),
+            handler=lambda args: Response(actions=(SendToLLM(text="override"),)),
         )
     )
     response = app_core.handle_input("/skill_test")
-    assert response.send_to_llm is True
-    assert response.llm_text == "override"
+    assert response.actions == (SendToLLM(text="override"),)
+
+
+def test_handle_input_resolves_empty_send_to_llm_to_input(app_core: AppCore) -> None:
+    """A command's SendToLLM(text="") resolves to the original user input."""
+    from mcp_coder.icoder.core.types import Command, Response
+
+    app_core.registry.add_command(
+        Command(
+            name="/passthrough",
+            description="passthrough skill",
+            handler=lambda args: Response(actions=(SendToLLM(text=""),)),
+        )
+    )
+    response = app_core.handle_input("/passthrough foo bar")
+    assert response.actions == (SendToLLM(text="/passthrough foo bar"),)
 
 
 def test_stream_events_logged(event_log: EventLog) -> None:
@@ -554,196 +615,3 @@ def test_raw_line_events_not_logged(event_log: EventLog) -> None:
     logged_types = [e.data.get("type") for e in stream_entries]
     assert "text_delta" in logged_types
     assert "raw_line" not in logged_types
-
-
-# --- prepare_for_resume tests ---
-
-
-def _write_log(path: Path, events: list[dict[str, object]]) -> None:
-    """Write a JSONL log file containing the given event dicts."""
-    lines = [json.dumps(ev) for ev in events]
-    path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
-
-
-def test_prepare_for_resume_reads_session_id_from_session_start(
-    fake_llm: FakeLLMService, tmp_path: Path
-) -> None:
-    """session_start.session_id is read and set on the LLM service."""
-    log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
-    _write_log(
-        log_path,
-        [
-            {"t": 0.0, "event": "session_start", "session_id": "abc"},
-            {"t": 0.1, "event": "input_received", "text": "hello"},
-        ],
-    )
-    with EventLog(logs_dir=tmp_path) as live_log:
-        core = AppCore(llm_service=fake_llm, event_log=live_log)
-        initial_path = live_log.current_path
-        result = core.prepare_for_resume(log_path)
-        assert result == "abc"
-        assert fake_llm.session_id == "abc"
-        # Event log was rotated → new current_path
-        assert live_log.current_path != initial_path
-
-
-def test_prepare_for_resume_falls_back_to_done_event(
-    fake_llm: FakeLLMService, tmp_path: Path
-) -> None:
-    """Without session_start.session_id, last stream_event{type=done} is used."""
-    log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
-    _write_log(
-        log_path,
-        [
-            {"t": 0.0, "event": "session_start", "provider": "claude"},
-            {"t": 0.1, "event": "input_received", "text": "hi"},
-            {
-                "t": 0.2,
-                "event": "stream_event",
-                "type": "done",
-                "session_id": "xyz",
-            },
-        ],
-    )
-    with EventLog(logs_dir=tmp_path) as live_log:
-        core = AppCore(llm_service=fake_llm, event_log=live_log)
-        result = core.prepare_for_resume(log_path)
-        assert result == "xyz"
-        assert fake_llm.session_id == "xyz"
-
-
-def test_prepare_for_resume_uses_last_done_session_id(
-    fake_llm: FakeLLMService, tmp_path: Path
-) -> None:
-    """Multiple done events → most recent session_id wins."""
-    log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
-    _write_log(
-        log_path,
-        [
-            {"t": 0.0, "event": "session_start", "provider": "claude"},
-            {"t": 0.1, "event": "stream_event", "type": "done", "session_id": "old"},
-            {"t": 0.2, "event": "stream_event", "type": "done", "session_id": "new"},
-        ],
-    )
-    with EventLog(logs_dir=tmp_path) as live_log:
-        core = AppCore(llm_service=fake_llm, event_log=live_log)
-        result = core.prepare_for_resume(log_path)
-        assert result == "new"
-        assert fake_llm.session_id == "new"
-
-
-def test_prepare_for_resume_returns_none_when_no_session_id(
-    fake_llm: FakeLLMService, tmp_path: Path
-) -> None:
-    """No session_start.session_id and no done.session_id → None."""
-    log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
-    _write_log(
-        log_path,
-        [
-            {"t": 0.0, "event": "session_start", "provider": "claude"},
-            {"t": 0.1, "event": "input_received", "text": "hi"},
-        ],
-    )
-    fake_llm.set_session_id("preexisting")
-    with EventLog(logs_dir=tmp_path) as live_log:
-        core = AppCore(llm_service=fake_llm, event_log=live_log)
-        result = core.prepare_for_resume(log_path)
-        assert result is None
-        assert fake_llm.session_id is None
-
-
-def test_prepare_for_resume_rotates_event_log(
-    fake_llm: FakeLLMService, tmp_path: Path
-) -> None:
-    """The event log is rotated regardless of session_id presence."""
-    log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
-    _write_log(
-        log_path,
-        [{"t": 0.0, "event": "session_start", "provider": "claude"}],
-    )
-    with EventLog(logs_dir=tmp_path) as live_log:
-        core = AppCore(llm_service=fake_llm, event_log=live_log)
-        initial_path = live_log.current_path
-        core.prepare_for_resume(log_path)
-        assert live_log.current_path != initial_path
-
-
-def test_provider_property(app_core: AppCore) -> None:
-    """AppCore.provider exposes the underlying LLM service provider."""
-    assert app_core.provider == "claude"
-
-
-# --- self-contained-rotated-log tests (Decisions #4 + #29) ---
-
-
-def test_prepare_for_resume_emits_session_start_in_new_log(
-    fake_llm: FakeLLMService, tmp_path: Path
-) -> None:
-    """The post-resume rotated log starts with session_start{provider}."""
-    src_log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
-    _write_log(
-        src_log_path,
-        [{"t": 0.0, "event": "session_start", "provider": "claude"}],
-    )
-    with EventLog(logs_dir=tmp_path) as live_log:
-        core = AppCore(llm_service=fake_llm, event_log=live_log)
-        core.prepare_for_resume(src_log_path)
-        rotated_path = live_log.current_path
-
-    from mcp_coder.icoder.core.event_log import iter_events
-
-    events = list(iter_events(rotated_path))
-    assert len(events) >= 1
-    assert events[0]["event"] == "session_start"
-    assert events[0]["provider"] == "claude"
-
-
-def test_prepare_for_resume_log_visible_to_picker(
-    fake_llm: FakeLLMService, tmp_path: Path
-) -> None:
-    """list_icoder_logs (provider-filtered) includes the post-resume log."""
-    src_log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
-    _write_log(
-        src_log_path,
-        [{"t": 0.0, "event": "session_start", "provider": "claude"}],
-    )
-    with EventLog(logs_dir=tmp_path) as live_log:
-        core = AppCore(llm_service=fake_llm, event_log=live_log)
-        core.prepare_for_resume(src_log_path)
-        rotated_path = live_log.current_path
-
-    from mcp_coder.icoder.core.log_inventory import list_icoder_logs
-
-    summaries = list_icoder_logs(tmp_path, provider="claude")
-    paths = [s.path for s in summaries]
-    assert rotated_path in paths
-
-
-def test_clear_emits_session_start_in_new_log(
-    fake_llm: FakeLLMService, tmp_path: Path
-) -> None:
-    """After /clear, the rotated log starts with session_start{provider}."""
-    with EventLog(logs_dir=tmp_path) as live_log:
-        core = AppCore(llm_service=fake_llm, event_log=live_log)
-        core.handle_input("/clear")
-        rotated_path = live_log.current_path
-
-    from mcp_coder.icoder.core.event_log import iter_events
-
-    events = list(iter_events(rotated_path))
-    assert events[0]["event"] == "session_start"
-    assert events[0]["provider"] == "claude"
-
-
-def test_clear_log_visible_to_picker(fake_llm: FakeLLMService, tmp_path: Path) -> None:
-    """list_icoder_logs (provider-filtered) includes the post-/clear log."""
-    with EventLog(logs_dir=tmp_path) as live_log:
-        core = AppCore(llm_service=fake_llm, event_log=live_log)
-        core.handle_input("/clear")
-        rotated_path = live_log.current_path
-
-    from mcp_coder.icoder.core.log_inventory import list_icoder_logs
-
-    summaries = list_icoder_logs(tmp_path, provider="claude")
-    paths = [s.path for s in summaries]
-    assert rotated_path in paths

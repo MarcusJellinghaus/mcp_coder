@@ -140,7 +140,9 @@ async def test_replay_renders_tool_blocks(
         await pilot.pause()
         replay_log(app, log_path)
         await pilot.pause()
-        joined = "\n".join(app.query_one(OutputLog).recorded_lines)
+        # Tool result body renders onto the screen state (rendered_lines),
+        # while the start header is also captured in recorded_lines.
+        joined = "\n".join(app.query_one(OutputLog).rendered_lines)
         assert "file1.py" in joined
         assert "file2.py" in joined
         assert "└ done" in joined
@@ -277,3 +279,68 @@ async def test_replay_log_no_event_log_does_not_re_emit(
         replay_log(app, log_path)
         await pilot.pause()
         assert len(new_log.entries) == before
+
+
+async def test_replay_user_input_creates_unit(
+    make_icoder_app: Callable[..., ICoderApp],
+    tmp_path: Path,
+) -> None:
+    """Replaying an input_received event registers a clickable user_input unit."""
+    log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
+    _write_log(
+        log_path,
+        [
+            {"t": 0.0, "event": "session_start", "provider": "claude"},
+            {"t": 0.1, "event": "input_received", "text": "replayed prompt"},
+        ],
+    )
+    app = make_icoder_app(responses=[])
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        replay_log(app, log_path)
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        user_units = [u for u in output._units.values() if u.kind == "user_input"]
+        assert len(user_units) == 1
+        assert user_units[0].full_text == "replayed prompt"
+
+
+async def test_replay_tool_creates_unit(
+    make_icoder_app: Callable[..., ICoderApp],
+    tmp_path: Path,
+) -> None:
+    """Replaying tool stream events registers a clickable tool unit."""
+    log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
+    _write_log(
+        log_path,
+        [
+            {"t": 0.0, "event": "session_start", "provider": "claude"},
+            {"t": 0.1, "event": "input_received", "text": "list files"},
+            {"t": 0.2, "event": "llm_request_start", "text": "list files"},
+            {
+                "t": 0.3,
+                "event": "stream_event",
+                "type": "tool_use_start",
+                "name": "mcp__mcp-workspace__list_directory",
+                "args": {},
+            },
+            {
+                "t": 0.4,
+                "event": "stream_event",
+                "type": "tool_result",
+                "name": "mcp__mcp-workspace__list_directory",
+                "output": '{"result": ["file1.py"]}',
+            },
+            {"t": 0.5, "event": "stream_event", "type": "done"},
+            {"t": 0.6, "event": "llm_request_end"},
+        ],
+    )
+    app = make_icoder_app(responses=[])
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        replay_log(app, log_path)
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        tool_units = [u for u in output._units.values() if u.kind == "tool"]
+        assert len(tool_units) == 1
+        assert tool_units[0].output == '{"result": ["file1.py"]}'

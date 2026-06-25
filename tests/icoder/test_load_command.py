@@ -1,4 +1,4 @@
-"""Tests for the /load command (returns Response(open_picker=True))."""
+"""Tests for the /load command (returns Response(actions=(OpenPicker(),)))."""
 
 from __future__ import annotations
 
@@ -7,21 +7,16 @@ from mcp_coder.icoder.core.command_registry import (
     create_default_registry,
 )
 from mcp_coder.icoder.core.commands.load import register_load
-from mcp_coder.icoder.core.types import Response
+from mcp_coder.icoder.core.types import OpenPicker, Response
 
 
 def test_load_command_returns_open_picker() -> None:
-    """`/load` returns Response(open_picker=True) and no other side effects."""
+    """`/load` returns a single OpenPicker action and nothing else."""
     registry = CommandRegistry()
     register_load(registry)
     response = registry.dispatch("/load")
     assert isinstance(response, Response)
-    assert response.open_picker is True
-    assert response.text == ""
-    assert response.send_to_llm is False
-    assert response.clear_output is False
-    assert response.quit is False
-    assert response.reset_session is False
+    assert response.actions == (OpenPicker(),)
 
 
 def test_load_registered_in_default_registry() -> None:
@@ -30,7 +25,7 @@ def test_load_registered_in_default_registry() -> None:
     assert registry.has_command("/load")
     response = registry.dispatch("/load")
     assert response is not None
-    assert response.open_picker is True
+    assert response.actions == (OpenPicker(),)
 
 
 def test_load_command_appears_in_help_listing() -> None:

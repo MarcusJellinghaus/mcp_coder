@@ -10,7 +10,7 @@ from pathlib import Path
 import frontmatter
 
 from mcp_coder.icoder.core.command_registry import CommandRegistry
-from mcp_coder.icoder.core.types import Command, Response
+from mcp_coder.icoder.core.types import Command, Response, SendToLLM
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +144,8 @@ def _make_claude_handler(skill: ClaudeSkill) -> Callable[[list[str]], Response]:
     """
 
     def handler(args: list[str]) -> Response:
-        return Response(send_to_llm=True)
+        # Empty text → AppCore resolves it to the original user input.
+        return Response(actions=(SendToLLM(text=""),))
 
     return handler
 
@@ -159,7 +160,7 @@ def _make_langchain_handler(skill: ClaudeSkill) -> Callable[[list[str]], Respons
     def handler(args: list[str]) -> Response:
         arguments = " ".join(args)
         expanded = skill.prompt_template.replace("$ARGUMENTS", arguments).strip()
-        return Response(send_to_llm=True, llm_text=expanded)
+        return Response(actions=(SendToLLM(text=expanded),))
 
     return handler
 

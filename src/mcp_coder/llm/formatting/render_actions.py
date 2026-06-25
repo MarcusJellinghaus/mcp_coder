@@ -31,9 +31,12 @@ class ToolResult:
     """A tool invocation has completed."""
 
     name: str  # display name of the tool
+    raw_name: str  # raw tool name (matches ToolStart raw key for FIFO lookup)
     output_lines: list[str]  # possibly truncated output
     total_lines: int  # original line count
     truncated: bool  # whether output was truncated
+    is_error: bool = False  # whether the tool reported an error
+    duration_ms: int | None = None  # elapsed time in ms, or None if unpaired
 
 
 @dataclass(frozen=True)

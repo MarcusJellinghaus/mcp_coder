@@ -1,8 +1,8 @@
-"""Unit tests for _connection_status_suffix helper in app.py."""
+"""Unit tests for _connection_status_suffix helper in runtime_banner.py."""
 
 from __future__ import annotations
 
-from mcp_coder.icoder.ui.app import _connection_status_suffix
+from mcp_coder.icoder.ui.runtime_banner import _connection_status_suffix
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 
 

@@ -104,7 +104,21 @@ class TestMapToolExecutionComplete:
             "type": "tool_result",
             "name": "t1",
             "output": "file contents here",
+            "is_error": False,
         }
+
+    def test_tool_execution_complete_error_status(self) -> None:
+        """tool.execution_complete with error status -> is_error True."""
+        msg: dict[str, Any] = {
+            "type": "tool.execution_complete",
+            "toolId": "t1",
+            "result": "boom",
+            "status": "error",
+        }
+        events = list(_map_copilot_message_to_event(msg))
+        assert len(events) == 1
+        assert events[0]["type"] == "tool_result"
+        assert events[0]["is_error"] is True
 
 
 class TestMapResultToDone:

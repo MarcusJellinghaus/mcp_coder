@@ -6,7 +6,7 @@ import importlib.metadata
 import logging
 import threading
 import time
-from collections.abc import Mapping
+from collections import deque
 from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
@@ -20,13 +20,24 @@ from textual.widgets import Static
 
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.core.log_inventory import list_icoder_logs
+from mcp_coder.icoder.core.types import (
+    ClearOutput,
+    OpenPicker,
+    OutputText,
+    Quit,
+    RebuildOutput,
+    ResetSession,
+    SendToLLM,
+)
 from mcp_coder.icoder.services.branch_info_service import BranchInfoService
+from mcp_coder.icoder.ui import runtime_banner
 from mcp_coder.icoder.ui.styles import CSS
 from mcp_coder.icoder.ui.widgets.branch_info_bar import BranchInfoBar, BranchInfoView
 from mcp_coder.icoder.ui.widgets.busy_indicator import BusyIndicator
 from mcp_coder.icoder.ui.widgets.command_autocomplete import CommandAutocomplete
+from mcp_coder.icoder.ui.widgets.detail_modal import DetailModal
 from mcp_coder.icoder.ui.widgets.input_area import InputArea
-from mcp_coder.icoder.ui.widgets.output_log import OutputLog
+from mcp_coder.icoder.ui.widgets.output_log import ContentUnit, OutputLog
 from mcp_coder.icoder.ui.widgets.session_picker import SessionPickerScreen
 from mcp_coder.llm.formatting.render_actions import (
     ErrorMessage,
@@ -49,109 +60,6 @@ STYLE_TOOL_OUTPUT = "white on #0a0a2e"
 STYLE_CANCELLED = "dim #e8a838"
 
 
-def _connection_status_suffix(
-    server_name: str,
-    statuses: object,
-) -> str:
-    """Return '✓ Connected' or '✗ <text>' for a server, or '' if not found.
-
-    Accepts a list of ``ClaudeMCPStatus``/dicts (live) or a mapping of
-    name → ``{"ok": bool, "status_text": str}`` (session_start replay).
-    """
-    if statuses is None:
-        return ""
-    if isinstance(statuses, Mapping):
-        entry = statuses.get(server_name)
-        if not isinstance(entry, Mapping):
-            return ""
-        if bool(entry.get("ok", False)):
-            return "✓ Connected"
-        return f"✗ {entry.get('status_text', '')}"
-    if isinstance(statuses, list):
-        for status in statuses:
-            if isinstance(status, Mapping):
-                if status.get("name") == server_name:
-                    if bool(status.get("ok", False)):
-                        return "✓ Connected"
-                    return f"✗ {status.get('status_text', '')}"
-            elif getattr(status, "name", None) == server_name:
-                if getattr(status, "ok", False):
-                    return "✓ Connected"
-                return f"✗ {getattr(status, 'status_text', '')}"
-    return ""
-
-
-def _normalise_mcp_servers(servers: object) -> list[tuple[str, str]]:
-    """Normalize the ``mcp_servers`` field to ``[(name, version), ...]``.
-
-    Accepts a list of ``MCPServerInfo`` (live), a list of
-    ``{"name": ..., "version": ...}`` dicts, or a mapping of
-    name → version (session_start replay).
-
-    Returns:
-        ``[(name, version), ...]`` pairs; empty for ``None`` or unknown shapes.
-    """
-    if servers is None:
-        return []
-    if isinstance(servers, Mapping):
-        return [(str(name), str(version)) for name, version in servers.items()]
-    if isinstance(servers, list):
-        result: list[tuple[str, str]] = []
-        for entry in servers:
-            if isinstance(entry, Mapping):
-                result.append(
-                    (str(entry.get("name", "")), str(entry.get("version", "")))
-                )
-            else:
-                result.append(
-                    (
-                        str(getattr(entry, "name", "")),
-                        str(getattr(entry, "version", "")),
-                    )
-                )
-        return result
-    return []
-
-
-def format_runtime_banner(data: Mapping[str, object]) -> list[str]:
-    """Build the dim banner lines shown at startup and during replay.
-
-    Accepts either a ``RuntimeInfo``-shaped mapping (live) or a
-    ``session_start`` event payload (replay). Both contain
-    ``mcp_coder_version``, ``tool_env``/``tool_env_path``,
-    ``project_venv``/``project_venv_path``, ``project_dir``,
-    ``mcp_servers``, and ``mcp_connection_status``. Missing keys are
-    handled gracefully.
-
-    Returns:
-        Banner lines ready to be joined and rendered with the dim style.
-    """
-    lines: list[str] = [f"mcp-coder {data.get('mcp_coder_version', 'unknown')}"]
-
-    utils_ver = data.get("mcp_coder_utils_version")
-    if utils_ver:
-        lines.append(f"mcp-coder-utils {utils_ver}")
-
-    statuses = data.get("mcp_connection_status")
-    for name, version in _normalise_mcp_servers(data.get("mcp_servers")):
-        suffix = _connection_status_suffix(name, statuses)
-        lines.append(f"{name} {version}  {suffix}".rstrip())
-
-    tool_env = data.get("tool_env_path") or data.get("tool_env")
-    if tool_env:
-        lines.append(f"Tool env:    {tool_env}")
-
-    venv = data.get("project_venv_path") or data.get("project_venv")
-    if venv:
-        lines.append(f"Project env: {venv}")
-
-    project_dir = data.get("project_dir")
-    if project_dir:
-        lines.append(f"Project dir: {project_dir}")
-
-    return lines
-
-
 class ICoderApp(App[None]):
     """Interactive coding TUI. Thin shell over AppCore."""
 
@@ -159,6 +67,7 @@ class ICoderApp(App[None]):
     BINDINGS = [
         Binding("escape", "cancel_stream", "Cancel", show=False),
         Binding("ctrl+c", "noop", "Copy", show=False),
+        Binding("f2", "open_last_unit_modal", "Detail", show=False),
     ]
 
     def __init__(
@@ -183,6 +92,13 @@ class ICoderApp(App[None]):
         self._core = app_core
         self._renderer = StreamEventRenderer(format_tools=format_tools)
         self._text_buffer: str = ""
+        # Open assistant turn (clickable unit) currently accumulating text.
+        self._current_turn_id: str | None = None
+        self._current_turn_text: str = ""
+        # Per raw-tool-name FIFO of open tool unit ids awaiting a result.
+        # Mirrors the renderer's own ``_pending`` FIFO (positional matching).
+        self._open_tool_units: dict[str, deque[str]] = {}
+        self._unit_counter: int = 0
         self._cancel_event = threading.Event()
         self._project_dir: Path = (
             Path(app_core.runtime_info.project_dir)
@@ -203,7 +119,10 @@ class ICoderApp(App[None]):
         Yields:
             OutputLog and InputArea widgets.
         """
-        yield OutputLog(mirror=self._core.event_log.write_chat)
+        yield OutputLog(
+            mirror=self._core.event_log.write_chat,
+            on_unit_event=self._emit_unit_event,
+        )
         yield Static(id="streaming-tail")
         yield CommandAutocomplete()
         yield BusyIndicator()
@@ -221,22 +140,15 @@ class ICoderApp(App[None]):
 
     def on_mount(self) -> None:
         """Display startup info and focus input area."""
+        # Apply the CLI-provided initial tool-display tier before any output.
+        self.query_one(OutputLog).set_tool_display_default(
+            self._core.tool_display  # type: ignore[arg-type]
+        )
         if self._resume_log_path is not None:
             self.do_resume(self._resume_log_path)
         elif self._core.runtime_info:
-            info = self._core.runtime_info
             output = self.query_one(OutputLog)
-            lines = format_runtime_banner(
-                {
-                    "mcp_coder_version": info.mcp_coder_version,
-                    "mcp_coder_utils_version": info.mcp_coder_utils_version,
-                    "tool_env_path": info.tool_env_path,
-                    "project_venv_path": info.project_venv_path,
-                    "project_dir": info.project_dir,
-                    "mcp_servers": info.mcp_servers,
-                    "mcp_connection_status": info.mcp_connection_status,
-                }
-            )
+            lines = runtime_banner.format_runtime_info(self._core.runtime_info)
             output.append_text("\n".join(lines), style="dim")
         self._apply_prompt_border()
         self.query_one(InputArea).focus()
@@ -250,24 +162,39 @@ class ICoderApp(App[None]):
         text = message.text
         self._core.command_history.add(text)
         output = self.query_one(OutputLog)
-        output.append_text(f"> {text}", style=STYLE_USER_INPUT)
+        unit = ContentUnit(
+            id=self._new_unit_id("user_input"),
+            kind="user_input",
+            timestamp=datetime.now(),
+            full_text=text,
+        )
+        output.append_unit(unit, [f"> {text}"], style=STYLE_USER_INPUT)
 
         response = self._core.handle_input(text)
         self._apply_prompt_border()
-        if response.quit:
-            self.exit()
-        elif response.clear_output:
-            output.clear()
-            output.clear_recorded()
-        elif response.open_picker:
-            self.open_picker_for_load()
-        elif response.text:
-            output.append_text(response.text)
-        elif response.send_to_llm:
-            output.write("")
-            self.query_one(BusyIndicator).show_busy("Querying LLM...")
-            llm_input = response.llm_text or text
-            self.run_worker(lambda: self._stream_llm(llm_input), thread=True)
+        for action in response.actions:
+            match action:
+                case Quit():
+                    self.exit()
+                case ClearOutput():
+                    output.clear()
+                    output.clear_state()
+                case OpenPicker():
+                    self.open_picker_for_load()
+                case OutputText():
+                    output.append_text(action.text)
+                case RebuildOutput():
+                    output.set_tool_display_default(self._core.tool_display)  # type: ignore[arg-type]
+                case SendToLLM():
+                    output.write("")
+                    self.query_one(BusyIndicator).show_busy("Querying LLM...")
+                    llm_input = action.text
+                    self.run_worker(
+                        lambda llm_input=llm_input: self._stream_llm(llm_input),
+                        thread=True,
+                    )
+                case ResetSession():
+                    pass  # already handled by AppCore
 
     def open_picker_for_load(self) -> None:
         """Open the SessionPickerScreen for the /load command.
@@ -309,24 +236,13 @@ class ICoderApp(App[None]):
 
         output = self.query_one(OutputLog)
         output.clear()
-        output.clear_recorded()
+        output.clear_state()
         self._core.prepare_for_resume(log_path)
         replay_log(self, log_path, event_log=self._core.event_log)
         now_local = datetime.now().strftime("%Y-%m-%d %H:%M")
         output.append_text(f"────── Resumed {now_local} ──────", style="dim")
         if self._core.runtime_info:
-            info = self._core.runtime_info
-            lines = format_runtime_banner(
-                {
-                    "mcp_coder_version": info.mcp_coder_version,
-                    "mcp_coder_utils_version": info.mcp_coder_utils_version,
-                    "tool_env_path": info.tool_env_path,
-                    "project_venv_path": info.project_venv_path,
-                    "project_dir": info.project_dir,
-                    "mcp_servers": info.mcp_servers,
-                    "mcp_connection_status": info.mcp_connection_status,
-                }
-            )
+            lines = runtime_banner.format_runtime_info(self._core.runtime_info)
             output.append_text("\n".join(lines), style="dim")
 
     def action_cancel_stream(self) -> None:
@@ -335,6 +251,32 @@ class ICoderApp(App[None]):
 
     def action_noop(self) -> None:
         """Suppress Ctrl+C quit dialog."""
+
+    def _emit_unit_event(self, name: str, payload: dict[str, object]) -> None:
+        """Forward an OutputLog unit interaction to the structured event log.
+
+        Wired into ``OutputLog`` via its ``on_unit_event`` callback so the
+        widget never reaches into the event log directly.
+
+        Args:
+            name: The event name (e.g. ``tool_tier_toggled``).
+            payload: Event key-value data.
+        """
+        self._core.event_log.emit(name, **payload)
+
+    def action_open_last_unit_modal(self) -> None:
+        """Open the detail modal for the most recent content unit (F2).
+
+        Silent no-op when no unit has been registered yet.
+        """
+        output = self.query_one(OutputLog)
+        unit = output.last_unit()
+        if unit is None:
+            return
+        self.push_screen(DetailModal(unit))
+        self._core.event_log.emit(
+            "content_detail_opened", unit_id=unit.id, kind=unit.kind
+        )
 
     def _stream_llm(self, text: str) -> None:
         """Worker target: stream LLM response in background thread.
@@ -354,12 +296,19 @@ class ICoderApp(App[None]):
         except Exception as exc:  # pylint: disable=broad-exception-caught
             _error_handled = True
             self.call_from_thread(self._flush_buffer)
+            self.call_from_thread(self._finalize_turn)
+            self.call_from_thread(self._cleanup_orphan_tools)
             self.call_from_thread(self._show_error, str(exc))
             self.call_from_thread(self._reset_busy_indicator)
             self.call_from_thread(self._append_blank_line)
         finally:
             if self._cancel_event.is_set() and not _error_handled:
+                # Strict order: flush partial text, close the turn, then
+                # resolve orphaned tool units as cancelled BEFORE the
+                # cancelled marker (so the marker lands below patched blocks).
                 self.call_from_thread(self._flush_buffer)
+                self.call_from_thread(self._finalize_turn)
+                self.call_from_thread(self._cleanup_orphan_tools)
                 self.call_from_thread(self._append_cancelled_marker)
                 self.call_from_thread(self._reset_busy_indicator)
                 self.call_from_thread(self._append_blank_line)
@@ -371,11 +320,81 @@ class ICoderApp(App[None]):
         self.query_one(OutputLog).write("")
 
     def _flush_buffer(self) -> None:
-        """Flush any buffered text to OutputLog and clear the streaming tail."""
+        """Flush any buffered text to OutputLog and clear the streaming tail.
+
+        The pending partial line is appended to the open assistant turn (so
+        it stays a clickable unit) when one is in progress; otherwise it
+        falls back to ``append_text`` (e.g. a stray flush with no turn).
+        """
         if self._text_buffer:
-            self.query_one(OutputLog).append_text(self._text_buffer)
+            output = self.query_one(OutputLog)
+            if self._current_turn_id is not None:
+                self._current_turn_text += self._text_buffer
+                output.extend_open_unit(self._current_turn_id, [self._text_buffer])
+            else:
+                output.append_text(self._text_buffer)
             self._text_buffer = ""
         self.query_one("#streaming-tail", Static).update("")
+
+    def _new_unit_id(self, kind: str) -> str:
+        """Return a fresh, monotonic unit id for ``kind``.
+
+        Args:
+            kind: Short kind tag used as the id prefix (e.g. ``"tool"``).
+
+        Returns:
+            A unique id of the form ``f"{kind}_{n}"``.
+        """
+        self._unit_counter += 1
+        return f"{kind}_{self._unit_counter}"
+
+    def _finalize_turn(self) -> None:
+        """Close the open assistant turn, persisting its accumulated text.
+
+        Writes the final ``full_text`` onto the turn unit (for the modal)
+        and finalizes it. No-op when no turn is open.
+        """
+        if self._current_turn_id is not None:
+            output = self.query_one(OutputLog)
+            output.update_unit_and_rerender(
+                self._current_turn_id, full_text=self._current_turn_text
+            )
+            output.finalize_open_unit(self._current_turn_id)
+            self._current_turn_id = None
+            self._current_turn_text = ""
+
+    def _cleanup_orphan_tools(self) -> None:
+        """Resolve still-open tool units as cancelled and reset the FIFOs.
+
+        Asks the renderer to synthesize cancelled ``ToolResult``s for any
+        orphaned tool starts, then updates the matching open tool unit (by
+        raw name, positional FIFO) to a cancelled state. Any deque left
+        non-empty after pairing signals a FIFO desync between the renderer
+        and this app: it is WARN-logged (not silently swept) before clearing.
+        """
+        output = self.query_one(OutputLog)
+        for cancelled in self._renderer.cleanup_pending():
+            dq = self._open_tool_units.get(cancelled.raw_name)
+            if dq:
+                unit_id = dq.popleft()
+                output.update_unit_and_rerender(
+                    unit_id,
+                    output="(cancelled)",
+                    output_lines=("(cancelled)",),
+                    total_lines=1,
+                    truncated=False,
+                    duration_ms=None,
+                    is_error=True,
+                    full_text="(cancelled)",
+                )
+        for raw_name, dq in self._open_tool_units.items():
+            if dq:
+                logger.warning(
+                    "FIFO desync: %d open tool units remain for %s after cleanup",
+                    len(dq),
+                    raw_name,
+                )
+                dq.clear()
 
     def _handle_stream_event(
         self, event: StreamEvent, *, replay_mode: bool = False
@@ -394,10 +413,24 @@ class ICoderApp(App[None]):
 
         if isinstance(action, TextChunk):
             self.query_one(BusyIndicator).show_busy("Thinking...")
+            if self._current_turn_id is None:
+                turn_id = self._new_unit_id("turn")
+                output.append_unit(
+                    ContentUnit(
+                        id=turn_id,
+                        kind="assistant_turn",
+                        timestamp=datetime.now(),
+                        full_text="",
+                    ),
+                    [],
+                )
+                self._current_turn_id = turn_id
+                self._current_turn_text = ""
             self._text_buffer += action.text
             lines = self._text_buffer.split("\n")
             for line in lines[:-1]:
-                output.append_text(line)
+                self._current_turn_text += line + "\n"
+                output.extend_open_unit(self._current_turn_id, [line])
             self._text_buffer = lines[-1]
             self.query_one("#streaming-tail", Static).update(self._text_buffer)
             return
@@ -409,22 +442,44 @@ class ICoderApp(App[None]):
             self.query_one(BusyIndicator).show_ready()
             if not replay_mode:
                 self._update_token_display()
+            self._finalize_turn()
+            self._cleanup_orphan_tools()
             self._append_blank_line()
         elif isinstance(action, ToolStart):
             self.query_one(BusyIndicator).show_busy(action.display_name)
-            lines = format_tool_start(action, full=False)
-            output.append_text("\n".join(lines), style=STYLE_TOOL_OUTPUT)
+            start_lines = format_tool_start(action, full=False)
+            tool_id = self._new_unit_id("tool")
+            output.append_unit(
+                ContentUnit(
+                    id=tool_id,
+                    kind="tool",
+                    timestamp=datetime.now(),
+                    tool_name=action.display_name,
+                    args=dict(action.args),
+                ),
+                start_lines,
+                style=STYLE_TOOL_OUTPUT,
+            )
+            self._open_tool_units.setdefault(action.raw_name, deque()).append(tool_id)
         elif isinstance(action, ToolResult):
-            parts = [f"│  {ln}" for ln in action.output_lines]
-            if action.truncated:
-                parts.append(
-                    f"└ done ({action.total_lines} lines, "
-                    f"truncated to {len(action.output_lines)})"
+            dq = self._open_tool_units.get(action.raw_name)
+            unit_id = dq.popleft() if dq else None
+            if unit_id is None:
+                logger.warning(
+                    "FIFO desync: no open tool unit for ToolResult %s",
+                    action.raw_name,
                 )
-            else:
-                parts.append("└ done")
-            body = "\n".join(parts)
-            output.append_text(body, style=STYLE_TOOL_OUTPUT)
+            if unit_id is not None:
+                raw_output = str(event.get("output", ""))
+                output.update_unit_and_rerender(
+                    unit_id,
+                    output=raw_output,
+                    output_lines=tuple(action.output_lines),
+                    total_lines=action.total_lines,
+                    truncated=action.truncated,
+                    duration_ms=action.duration_ms,
+                    is_error=action.is_error,
+                )
             self.query_one(BusyIndicator).show_busy(f"Thinking about {action.name}...")
         elif isinstance(action, ErrorMessage):
             output.append_text(f"Error: {action.message}")

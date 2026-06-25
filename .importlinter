@@ -52,6 +52,7 @@ ignore_imports =
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.skills
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.commands.info
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.commands.color
+    mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.commands.display
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.ui.widgets.session_picker
 
 # -----------------------------------------------------------------------------

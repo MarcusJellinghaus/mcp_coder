@@ -8,41 +8,53 @@ from mcp_coder.icoder.core.command_registry import (
     CommandRegistry,
     create_default_registry,
 )
-from mcp_coder.icoder.core.types import Command, Response
+from mcp_coder.icoder.core.types import (
+    ClearOutput,
+    Command,
+    OutputText,
+    Quit,
+    ResetSession,
+    Response,
+)
+
+
+def _output_text(response: Response | None) -> str:
+    """Join the text of all OutputText actions in a response."""
+    assert response is not None
+    return "\n".join(a.text for a in response.actions if isinstance(a, OutputText))
 
 
 def test_help_command() -> None:
     """Test /help returns expected output listing all commands."""
     registry = create_default_registry()
     response = registry.dispatch("/help")
-    assert response is not None
-    assert "/help" in response.text
-    assert "/clear" in response.text
-    assert "/quit" in response.text
+    text = _output_text(response)
+    assert "/help" in text
+    assert "/clear" in text
+    assert "/quit" in text
 
 
 def test_clear_command() -> None:
-    """Test /clear returns clear_output=True."""
+    """Test /clear returns ClearOutput + ResetSession actions."""
     registry = create_default_registry()
     response = registry.dispatch("/clear")
     assert response is not None
-    assert response.clear_output is True
+    assert response.actions == (ClearOutput(), ResetSession())
 
 
 def test_quit_command() -> None:
-    """Test /quit returns quit=True."""
+    """Test /quit returns a Quit action."""
     registry = create_default_registry()
     response = registry.dispatch("/quit")
     assert response is not None
-    assert response.quit is True
+    assert response.actions == (Quit(),)
 
 
 def test_unknown_command() -> None:
     """Test unknown slash command returns error."""
     registry = create_default_registry()
     response = registry.dispatch("/unknown")
-    assert response is not None
-    assert "Unknown command" in response.text
+    assert "Unknown command" in _output_text(response)
 
 
 def test_non_command_returns_none() -> None:
@@ -53,19 +65,18 @@ def test_non_command_returns_none() -> None:
 
 
 def test_exit_command() -> None:
-    """Test /exit returns quit=True."""
+    """Test /exit returns a Quit action."""
     registry = create_default_registry()
     response = registry.dispatch("/exit")
     assert response is not None
-    assert response.quit is True
+    assert response.actions == (Quit(),)
 
 
 def test_exit_in_help() -> None:
     """Test /exit appears in /help output."""
     registry = create_default_registry()
     response = registry.dispatch("/help")
-    assert response is not None
-    assert "/exit" in response.text
+    assert "/exit" in _output_text(response)
 
 
 def test_all_commands_registered() -> None:
@@ -80,8 +91,7 @@ def test_dispatch_case_insensitive() -> None:
     """Test command dispatch is case-insensitive."""
     registry = create_default_registry()
     response = registry.dispatch("/HELP")
-    assert response is not None
-    assert "/help" in response.text
+    assert "/help" in _output_text(response)
 
 
 def test_empty_input_returns_none() -> None:
@@ -97,11 +107,10 @@ def test_register_custom_command() -> None:
 
     @registry.register("/test", "A test command")
     def handle_test(args: list[str]) -> Response:
-        return Response(text=f"args: {args}")
+        return Response(actions=(OutputText(text=f"args: {args}"),))
 
     response = registry.dispatch("/test foo bar")
-    assert response is not None
-    assert response.text == "args: ['foo', 'bar']"
+    assert _output_text(response) == "args: ['foo', 'bar']"
 
 
 def test_command_with_args() -> None:
@@ -109,8 +118,7 @@ def test_command_with_args() -> None:
     registry = create_default_registry()
     # /help ignores args, but dispatch should still pass them
     response = registry.dispatch("/help extra args")
-    assert response is not None
-    assert "/help" in response.text
+    assert "/help" in _output_text(response)
 
 
 def test_filter_by_input_slash_returns_all() -> None:
@@ -172,12 +180,11 @@ def test_add_command() -> None:
     cmd = Command(
         name="/skill",
         description="A skill command",
-        handler=lambda args: Response(text="skill invoked"),
+        handler=lambda args: Response(actions=(OutputText(text="skill invoked"),)),
     )
     registry.add_command(cmd)
     result = registry.dispatch("/skill")
-    assert result is not None
-    assert result.text == "skill invoked"
+    assert _output_text(result) == "skill invoked"
 
 
 def test_add_command_appears_in_filter() -> None:
@@ -186,7 +193,7 @@ def test_add_command_appears_in_filter() -> None:
     cmd = Command(
         name="/skill",
         description="A skill command",
-        handler=lambda args: Response(text="ok"),
+        handler=lambda args: Response(),
     )
     registry.add_command(cmd)
     result = registry.filter_by_input("/sk")
@@ -205,8 +212,7 @@ def test_help_hides_show_in_help_false() -> None:
     )
     registry.add_command(hidden)
     response = registry.dispatch("/help")
-    assert response is not None
-    assert "/hidden-skill" not in response.text
+    assert "/hidden-skill" not in _output_text(response)
 
 
 def test_help_shows_show_in_help_true() -> None:
@@ -220,8 +226,7 @@ def test_help_shows_show_in_help_true() -> None:
     )
     registry.add_command(visible)
     response = registry.dispatch("/help")
-    assert response is not None
-    assert "/visible-skill" in response.text
+    assert "/visible-skill" in _output_text(response)
 
 
 def test_has_command_returns_true_for_existing() -> None:
@@ -243,7 +248,7 @@ def test_has_command_after_add_command() -> None:
     cmd = Command(
         name="/skill",
         description="A skill",
-        handler=lambda args: Response(text="ok"),
+        handler=lambda args: Response(),
     )
     registry.add_command(cmd)
     assert registry.has_command("/skill") is True
@@ -283,9 +288,9 @@ def test_color_no_args_shows_list() -> None:
     """Test /color with no args shows color list."""
     registry, _ = _make_registry_with_color()
     response = registry.dispatch("/color")
-    assert response is not None
-    assert "red" in response.text
-    assert "default resets to grey" in response.text
+    text = _output_text(response)
+    assert "red" in text
+    assert "default resets to grey" in text
 
 
 def test_color_valid_returns_empty() -> None:
@@ -294,7 +299,7 @@ def test_color_valid_returns_empty() -> None:
     app_core.set_prompt_color.return_value = None
     response = registry.dispatch("/color red")
     assert response is not None
-    assert response.text == ""
+    assert response.actions == ()
 
 
 def test_color_invalid_returns_error() -> None:
@@ -304,5 +309,4 @@ def test_color_invalid_returns_error() -> None:
         "Unknown color 'notacolor'. Use /color for options."
     )
     response = registry.dispatch("/color notacolor")
-    assert response is not None
-    assert "Unknown color" in response.text
+    assert "Unknown color" in _output_text(response)

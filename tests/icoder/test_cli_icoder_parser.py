@@ -109,6 +109,27 @@ def test_icoder_initial_color_default() -> None:
     assert args.initial_color is None
 
 
+def test_tool_display_arg_default_compressed() -> None:
+    """--tool-display defaults to 'compressed'."""
+    parser = create_parser()
+    args = parser.parse_args(["icoder"])
+    assert args.tool_display == "compressed"
+
+
+def test_tool_display_arg_accepts_oneline() -> None:
+    """--tool-display accepts 'oneline'."""
+    parser = create_parser()
+    args = parser.parse_args(["icoder", "--tool-display", "oneline"])
+    assert args.tool_display == "oneline"
+
+
+def test_tool_display_arg_rejects_unknown_value() -> None:
+    """--tool-display rejects values outside the choices."""
+    parser = create_parser()
+    with pytest.raises(SystemExit):
+        parser.parse_args(["icoder", "--tool-display", "verbose"])
+
+
 @pytest.mark.parametrize(
     "flags",
     [

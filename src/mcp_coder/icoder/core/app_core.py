@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Iterator
+from typing import Iterator, Literal
 
 from mcp_coder.icoder.core.colors import DEFAULT_PROMPT_COLOR, validate_color
 from mcp_coder.icoder.core.command_history import CommandHistory
@@ -16,7 +16,14 @@ from mcp_coder.icoder.core.event_log import (
     emit_session_start,
     read_session_id_from_log,
 )
-from mcp_coder.icoder.core.types import Response, TokenUsage
+from mcp_coder.icoder.core.types import (
+    Action,
+    OutputText,
+    ResetSession,
+    Response,
+    SendToLLM,
+    TokenUsage,
+)
 from mcp_coder.icoder.env_setup import RuntimeInfo
 from mcp_coder.icoder.services.llm_service import LLMService
 from mcp_coder.llm.storage import store_session
@@ -32,6 +39,7 @@ class AppCore:
         event_log: EventLog,
         registry: CommandRegistry | None = None,
         runtime_info: RuntimeInfo | None = None,
+        tool_display: Literal["oneline", "compressed"] = "compressed",
     ) -> None:
         """Initialize with injected dependencies.
 
@@ -40,6 +48,8 @@ class AppCore:
             event_log: Structured event log
             registry: Command registry (default: create_default_registry())
             runtime_info: Optional runtime environment info from env_setup
+            tool_display: Initial global tool-display tier (default
+                ``"compressed"``). Set by the ``--tool-display`` CLI flag.
         """
         self._llm_service = llm_service
         self._event_log = event_log
@@ -48,18 +58,28 @@ class AppCore:
         self._token_usage = TokenUsage()
         self._command_history = CommandHistory()
         self._prompt_color: str = DEFAULT_PROMPT_COLOR
+        self._tool_display: Literal["oneline", "compressed"] = tool_display
 
     def handle_input(self, text: str) -> Response:
-        """Route user input to commands or flag for LLM streaming.
+        """Route user input to commands or typed actions for the UI.
 
-        - Slash commands: dispatch via registry, emit events, return Response
-        - Empty input: ignore (return empty Response)
-        - Other text: return Response(send_to_llm=True) so UI can start streaming
+        - Slash commands: dispatch via registry, perform state-mutating
+          side effects (output_emitted events, session reset), and return
+          the command's typed-action Response.
+        - Empty input: ignore (return empty ``Response()``).
+        - Other text: return ``Response(actions=(SendToLLM(text=text),))``
+          so the UI can start streaming.
+
+        All state-mutation side effects (event-log rotation, session reset,
+        output_emitted emission) happen here, BEFORE returning; the UI then
+        iterates ``response.actions`` in tuple order. ``SendToLLM`` actions
+        are resolved here so an empty ``text`` (skill passthrough) becomes
+        the original user input.
 
         Always emits "input_received" event for non-empty input.
 
         Returns:
-            Response with command output or send_to_llm flag.
+            Response whose ``actions`` the UI dispatches in order.
         """
         text = text.strip()
         if not text:
@@ -70,29 +90,43 @@ class AppCore:
         response = self._registry.dispatch(text)
         if response is not None:
             self._event_log.emit("command_matched", command=text.split()[0].lower())
-            if response.text:
-                self._event_log.emit("output_emitted", text=response.text)
-            if response.reset_session:
-                self._llm_service.reset_session()
-                self._event_log.rotate()
-                # The rotated log starts empty — emit a fresh session_start
-                # so the post-/clear file remains self-contained and visible
-                # to the startup picker (which filters on provider).
-                emit_session_start(
-                    self._event_log,
-                    provider=self._llm_service.provider,
-                    runtime_info=self._runtime_info,
-                    session_id=self._llm_service.session_id,
-                )
-            return response
+            resolved: list[Action] = []
+            for action in response.actions:
+                if isinstance(action, OutputText):
+                    self._event_log.emit("output_emitted", text=action.text)
+                    resolved.append(action)
+                elif isinstance(action, ResetSession):
+                    self._reset_session()
+                    resolved.append(action)
+                elif isinstance(action, SendToLLM):
+                    resolved.append(SendToLLM(text=action.text or text))
+                else:
+                    resolved.append(action)
+            return Response(actions=tuple(resolved))
 
         # Not a command → send to LLM
-        return Response(send_to_llm=True)
+        return Response(actions=(SendToLLM(text=text),))
+
+    def _reset_session(self) -> None:
+        """Reset the LLM session and rotate the event log.
+
+        The rotated log starts empty — emit a fresh session_start so the
+        post-/clear file remains self-contained and visible to the startup
+        picker (which filters on provider).
+        """
+        self._llm_service.reset_session()
+        self._event_log.rotate()
+        emit_session_start(
+            self._event_log,
+            provider=self._llm_service.provider,
+            runtime_info=self._runtime_info,
+            session_id=self._llm_service.session_id,
+        )
 
     def stream_llm(self, text: str) -> Iterator[StreamEvent]:
         """Stream LLM response and auto-store for session continuation.
 
-        Called by UI layer after handle_input() returns send_to_llm=True.
+        Called by the UI layer when dispatching a ``SendToLLM`` action.
         Emits events for each stream phase. After streaming completes,
         stores the response so ``--continue-session`` can find it.
 
@@ -171,6 +205,20 @@ class AppCore:
             return error
         self._prompt_color = hex_color  # type: ignore[assignment]
         return None
+
+    @property
+    def tool_display(self) -> str:
+        """Current global tool-display tier ("oneline" or "compressed")."""
+        return self._tool_display
+
+    def set_tool_display(self, value: Literal["oneline", "compressed"]) -> None:
+        """Set the global tool-display tier and emit a change event.
+
+        Args:
+            value: The new global tier ("oneline" or "compressed").
+        """
+        self._tool_display = value
+        self._event_log.emit("display_mode_changed", to=value)
 
     @property
     def session_id(self) -> str | None:

@@ -24,7 +24,7 @@ pytestmark = pytest.mark.textual_integration
 async def test_tool_output_list_directory(
     make_icoder_app: Callable[..., ICoderApp],
 ) -> None:
-    """List directory tool output lines appear in recorded output."""
+    """List directory tool output lines appear in the rendered screen."""
     app = make_icoder_app(responses=[])
     async with app.run_test() as pilot:
         await pilot.pause()
@@ -42,7 +42,7 @@ async def test_tool_output_list_directory(
                 "output": '{"result": ["file1.py", "file2.py", "src/"]}',
             }
         )
-        lines = app.query_one(OutputLog).recorded_lines
+        lines = app.query_one(OutputLog).rendered_lines
         joined = "\n".join(lines)
         assert "file1.py" in joined
         assert "file2.py" in joined
@@ -53,7 +53,7 @@ async def test_tool_output_list_directory(
 async def test_tool_output_read_file(
     make_icoder_app: Callable[..., ICoderApp],
 ) -> None:
-    """Read file tool output lines appear in recorded output."""
+    """Read file tool output lines appear in the rendered screen."""
     app = make_icoder_app(responses=[])
     async with app.run_test() as pilot:
         await pilot.pause()
@@ -71,7 +71,7 @@ async def test_tool_output_read_file(
                 "output": '{"result": "line1\\nline2\\nline3"}',
             }
         )
-        lines = app.query_one(OutputLog).recorded_lines
+        lines = app.query_one(OutputLog).rendered_lines
         joined = "\n".join(lines)
         assert "line1" in joined
         assert "line2" in joined
@@ -101,7 +101,7 @@ async def test_tool_output_truncated(
                 "output": '{"result": "' + long_content + '"}',
             }
         )
-        lines = app.query_one(OutputLog).recorded_lines
+        lines = app.query_one(OutputLog).rendered_lines
         joined = "\n".join(lines)
         assert "truncated" in joined
         assert "skipped" in joined
@@ -128,7 +128,7 @@ async def test_tool_output_empty(
                 "output": "",
             }
         )
-        lines = app.query_one(OutputLog).recorded_lines
+        lines = app.query_one(OutputLog).rendered_lines
         joined = "\n".join(lines)
         assert "└ done" in joined
 

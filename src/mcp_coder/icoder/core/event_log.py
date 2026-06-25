@@ -128,12 +128,12 @@ class EventLog:
 
     @property
     def current_path(self) -> Path:
-        """Return the path of the active JSONL file."""
+        """Path of the active JSONL file."""
         return self._path
 
     @property
     def current_chat_path(self) -> Path:
-        """Return the path of the paired ``_chat.txt`` sidecar.
+        """Path of the paired ``_chat.txt`` sidecar.
 
         Always present (even when the file failed to open); callers
         must not assume the file exists on disk.
@@ -200,7 +200,7 @@ class EventLog:
 
     @property
     def entries(self) -> list[EventEntry]:
-        """Return copy of all recorded events (for testing/inspection)."""
+        """Copy of all recorded events (for testing/inspection)."""
         return list(self._entries)
 
     def close(self) -> None:

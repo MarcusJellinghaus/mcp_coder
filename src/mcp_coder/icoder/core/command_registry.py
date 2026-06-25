@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from mcp_coder.icoder.core.types import Command, Response
+from mcp_coder.icoder.core.types import Command, OutputText, Response
 
 
 class CommandRegistry:
@@ -67,7 +67,12 @@ class CommandRegistry:
             return self._commands[name].handler(args)
 
         return Response(
-            text=f"Unknown command: {name}. Type /help for available commands."
+            actions=(
+                OutputText(
+                    text=f"Unknown command: {name}. "
+                    "Type /help for available commands."
+                ),
+            )
         )
 
     def filter_by_input(self, input_text: str) -> list[Command]:

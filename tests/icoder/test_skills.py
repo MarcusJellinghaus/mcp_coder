@@ -10,6 +10,7 @@ from mcp_coder.icoder.core.command_registry import (
     CommandRegistry,
     create_default_registry,
 )
+from mcp_coder.icoder.core.types import SendToLLM
 from mcp_coder.icoder.skills import (
     ClaudeSkill,
     ICoderSkillCommand,
@@ -177,26 +178,24 @@ def _make_skill(name: str = "my_skill", prompt: str = "Do $ARGUMENTS") -> Claude
 
 
 def test_register_skill_commands_claude_provider() -> None:
-    """Claude provider: handler returns Response(send_to_llm=True) with no llm_text."""
+    """Claude provider: handler returns a passthrough SendToLLM (empty text)."""
     registry = CommandRegistry()
     skill = _make_skill()
     registered = register_skill_commands(registry, [skill], "claude")
     assert len(registered) == 1
     resp = registry.dispatch("/my_skill some args")
     assert resp is not None
-    assert resp.send_to_llm is True
-    assert resp.llm_text is None
+    assert resp.actions == (SendToLLM(text=""),)
 
 
 def test_register_skill_commands_langchain_provider() -> None:
-    """Langchain provider: handler returns Response(send_to_llm=True, llm_text=expanded)."""
+    """Langchain provider: handler returns SendToLLM with the expanded prompt."""
     registry = CommandRegistry()
     skill = _make_skill(prompt="Analyse $ARGUMENTS please")
     register_skill_commands(registry, [skill], "langchain")
     resp = registry.dispatch("/my_skill issue 42")
     assert resp is not None
-    assert resp.send_to_llm is True
-    assert resp.llm_text == "Analyse issue 42 please"
+    assert resp.actions == (SendToLLM(text="Analyse issue 42 please"),)
 
 
 def test_register_skill_commands_langchain_substitutes_arguments() -> None:
@@ -206,7 +205,7 @@ def test_register_skill_commands_langchain_substitutes_arguments() -> None:
     register_skill_commands(registry, [skill], "langchain")
     resp = registry.dispatch("/my_skill bug 123")
     assert resp is not None
-    assert resp.llm_text == "Fix bug 123 now"
+    assert resp.actions == (SendToLLM(text="Fix bug 123 now"),)
 
 
 def test_register_skill_commands_langchain_empty_arguments() -> None:
@@ -216,7 +215,7 @@ def test_register_skill_commands_langchain_empty_arguments() -> None:
     register_skill_commands(registry, [skill], "langchain")
     resp = registry.dispatch("/my_skill")
     assert resp is not None
-    assert resp.llm_text == "Do  stuff"
+    assert resp.actions == (SendToLLM(text="Do  stuff"),)
 
 
 def test_register_skill_commands_skips_builtin_collision(
@@ -275,4 +274,4 @@ def test_register_skill_commands_normalizes_to_lowercase() -> None:
     assert registry.has_command("/myskill")
     resp = registry.dispatch("/myskill some args")
     assert resp is not None
-    assert resp.send_to_llm is True
+    assert resp.actions == (SendToLLM(text=""),)

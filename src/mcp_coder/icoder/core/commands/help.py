@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from mcp_coder.icoder.core.types import Response
+from mcp_coder.icoder.core.types import OutputText, Response
 
 if TYPE_CHECKING:
     from mcp_coder.icoder.core.command_registry import CommandRegistry
@@ -24,4 +24,5 @@ def register_help(registry: CommandRegistry) -> None:
         lines.append("Keyboard shortcuts:")
         lines.append(r"  \ + Enter   - Insert newline")
         lines.append("  Shift+Enter  - Insert newline (terminal support varies)")
-        return Response(text="\n".join(lines))
+        lines.append("  F2           - Open detail view for the most recent content")
+        return Response(actions=(OutputText(text="\n".join(lines)),))

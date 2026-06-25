@@ -8,32 +8,47 @@ from typing import Any
 import pytest
 
 from mcp_coder.icoder.core.types import (
+    ClearOutput,
     Command,
     EventEntry,
+    OpenPicker,
+    OutputText,
+    Quit,
+    ResetSession,
     Response,
+    SendToLLM,
     TokenUsage,
     format_token_count,
 )
 
 
-def test_response_defaults() -> None:
+def test_response_default_empty_actions() -> None:
+    """Response() defaults to an empty actions tuple."""
     r = Response()
-    assert r.text == ""
-    assert r.clear_output is False
-    assert r.quit is False
-    assert r.send_to_llm is False
-    assert r.reset_session is False
+    assert r.actions == ()
 
 
-def test_response_with_text() -> None:
-    r = Response(text="hello")
-    assert r.text == "hello"
+def test_response_with_actions() -> None:
+    """Response stores the provided typed actions in order."""
+    r = Response(actions=(ClearOutput(), ResetSession()))
+    assert r.actions == (ClearOutput(), ResetSession())
 
 
-def test_response_frozen() -> None:
-    r = Response()
+def test_response_with_actions_frozen() -> None:
+    """Response and its action instances are immutable and hashable."""
+    r = Response(actions=(SendToLLM(text="hi"),))
     with pytest.raises(FrozenInstanceError):
-        r.text = "modified"  # type: ignore[misc]
+        r.actions = ()  # type: ignore[misc]
+    # Frozen action dataclasses are hashable
+    assert hash(SendToLLM(text="hi")) == hash(SendToLLM(text="hi"))
+    assert hash(Quit()) == hash(Quit())
+
+
+def test_action_value_equality() -> None:
+    """Same-valued frozen actions compare equal."""
+    assert OutputText(text="x") == OutputText(text="x")
+    assert SendToLLM(text="a") != SendToLLM(text="b")
+    assert OpenPicker() == OpenPicker()
 
 
 def test_command_creation() -> None:
@@ -53,29 +68,6 @@ def test_event_entry() -> None:
 def test_event_entry_default_data() -> None:
     e = EventEntry(t=0.0, event="test")
     assert e.data == {}
-
-
-def test_response_reset_session_default() -> None:
-    r = Response()
-    assert r.reset_session is False
-
-
-def test_response_reset_session_explicit() -> None:
-    r = Response(reset_session=True)
-    assert r.reset_session is True
-
-
-@pytest.mark.parametrize(
-    "kwargs, expected",
-    [
-        ({}, None),
-        ({"llm_text": "override"}, "override"),
-    ],
-)
-def test_response_llm_text(kwargs: dict[str, Any], expected: str | None) -> None:
-    """Response.llm_text defaults to None, can be set."""
-    r = Response(**kwargs)
-    assert r.llm_text == expected
 
 
 @pytest.mark.parametrize(

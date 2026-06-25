@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from mcp_coder.icoder.ui.app import format_runtime_banner
+from mcp_coder.icoder.ui.runtime_banner import format_runtime_banner
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus, MCPServerInfo
 
 

@@ -23,6 +23,7 @@ from mcp_coder.llm.providers.claude.claude_code_cli_log_paths import (
     sanitize_branch_identifier,
 )
 from mcp_coder.llm.providers.claude.claude_code_cli_streaming import (
+    _map_stream_message_to_event,
     ask_claude_code_cli_stream,
 )
 from mcp_coder.utils.subprocess_runner import CalledProcessError, CommandResult
@@ -381,3 +382,52 @@ class TestStreamFileWriting:
             # Content should be written
             content = stream_files[0].read_text(encoding="utf-8")
             assert "partial-sess" in content
+
+
+class TestMapStreamMessageIsError:
+    """Tests for is_error propagation in _map_stream_message_to_event()."""
+
+    def test_tool_use_result_is_error_propagates(self) -> None:
+        """tool_result block with is_error: True surfaces on the event."""
+        msg = cast(
+            StreamMessage,
+            {
+                "type": "assistant",
+                "message": {
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "name": "Bash",
+                            "content": "boom",
+                            "is_error": True,
+                        }
+                    ]
+                },
+            },
+        )
+        events = list(_map_stream_message_to_event(msg))
+        tool_results = [e for e in events if e["type"] == "tool_result"]
+        assert len(tool_results) == 1
+        assert tool_results[0]["is_error"] is True
+
+    def test_tool_use_result_is_error_defaults_false(self) -> None:
+        """tool_result block without is_error defaults to False."""
+        msg = cast(
+            StreamMessage,
+            {
+                "type": "assistant",
+                "message": {
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "name": "Bash",
+                            "content": "ok",
+                        }
+                    ]
+                },
+            },
+        )
+        events = list(_map_stream_message_to_event(msg))
+        tool_results = [e for e in events if e["type"] == "tool_result"]
+        assert len(tool_results) == 1
+        assert tool_results[0]["is_error"] is False

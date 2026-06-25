@@ -70,7 +70,8 @@
       "mcp__obsidian-wiki__remove-tags",
       "mcp__obsidian-wiki__rename-tag",
       "mcp__obsidian-wiki__search-vault",
-      "Bash(git rebase:*)"
+      "Bash(git rebase:*)",
+      "mcp__mcp-tools-py__run_tach_check"
     ]
   },
   "enableAllProjectMcpServers": true,

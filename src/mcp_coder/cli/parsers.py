@@ -767,3 +767,9 @@ def add_icoder_parser(subparsers: Any) -> None:
         metavar="COLOR",
         help="Set prompt border color at startup (named color or hex code)",
     )
+    icoder_parser.add_argument(
+        "--tool-display",
+        choices=["oneline", "compressed"],
+        default="compressed",
+        help="Default tier for tool display blocks (default: compressed)",
+    )

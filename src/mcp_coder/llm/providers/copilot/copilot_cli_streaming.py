@@ -70,6 +70,7 @@ def _map_copilot_message_to_event(
             "type": "tool_result",
             "name": msg.get("toolId", ""),
             "output": msg.get("result", ""),
+            "is_error": msg.get("status") == "error",
         }
 
     elif msg_type == "result":
