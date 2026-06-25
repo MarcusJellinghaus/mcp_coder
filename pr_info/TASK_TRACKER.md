@@ -21,6 +21,47 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Remove the `commit clipboard` command
+
+See [step_1.md](./steps/step_1.md) for details.
+
+- [ ] Implementation: remove `commit clipboard` command, code, tests, and docs (keep `utils/clipboard.py`)
+- [ ] Quality checks: pylint, pytest, mypy, lint-imports, vulture — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Migrate icoder to Textual clipboard, delete `clipboard.py`, drop `pyperclip`
+
+See [step_2.md](./steps/step_2.md) for details.
+
+- [ ] Implementation: migrate icoder to `copy_to_clipboard`, delete `clipboard.py` + test, drop `pyperclip`/`types-pyperclip` + contract
+- [ ] Quality checks: pylint, pytest, mypy, lint-imports, vulture — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Relocate live helpers (errors.py + fold verify), repoint importers
+
+See [step_3.md](./steps/step_3.md) for details.
+
+- [ ] Implementation: create `errors.py`, fold `_verify_claude_before_use`, repoint `ClaudeAPIError` imports, add tests
+- [ ] Quality checks: pylint, pytest, mypy, lint-imports, vulture — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Delete the Claude SDK/API path, formatter chain, and `claude-code-sdk`
+
+See [step_4.md](./steps/step_4.md) for details.
+
+- [ ] Implementation: delete SDK/API modules + tests, trim formatters + importing tests, remove `claude-code-sdk` + contract + docs
+- [ ] Quality checks: pylint, pytest, mypy, lint-imports, vulture — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: Remove four unused transitive deps + regenerate dependency docs
+
+See [step_5.md](./steps/step_5.md) for details.
+
+- [ ] Implementation: drop `GitPython`/`PyGithub`/`structlog`/`python-json-logger`, prune 2 contracts, update + regenerate dependency docs
+- [ ] Quality checks: pylint, pytest, mypy, lint-imports, vulture — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: verify all steps complete and checks pass
+- [ ] PR summary prepared
