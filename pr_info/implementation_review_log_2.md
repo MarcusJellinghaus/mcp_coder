@@ -62,3 +62,27 @@ Post-fix gates: vulture **ZERO findings**; pylint PASS; mypy PASS; format clean.
 - `run_vulture_check`: clean (no findings after whitelist additions)
 
 **Outstanding:** none introduced by this run. The pre-existing 9 win32-only/`textual_integration` snapshot baselines noted in Run 1 remain out of scope (env/Textual-version drift, excluded from CI).
+
+---
+
+## Round 2 — 2026-06-25 (user-directed: startup info / snapshot baselines)
+
+User redirected to the "9 pre-existing snapshot baselines" item and asked: *is there a problem showing the startup information?* Investigation found a **real, significant regression** (not env drift, as Run 1 had assumed).
+
+**Finding 1 (Critical — fixed): `rebuild()` permanently wiped all non-unit content.**
+`OutputLog.rebuild()` re-rendered the buffer by walking `_script`, which only contains registered content units. Content written via `append_text()` — the startup runtime-info banner (`on_mount`: `append_text("\n".join(lines), style="dim")`), `Resumed …`/`— Cancelled —` markers, dim dividers, blank spacers, error lines — was never in `_script`, so every `rebuild()` (`super().clear()` + replay-units) erased it. `rebuild()` fires on the first-paint `on_resize`, on **every** `tool_result` (`update_unit_and_rerender`), on tier toggle, and on `/display`. Net effect: the startup runtime-info block vanished as soon as the layout settled or the first tool ran. The issue spec had *assumed* "rebuild-on-resize heals the startup banner"; the implementation destroyed it instead. Proven via the pre-#629 `test_snapshot_initial_state.svg` (shows `Tool env:` / `Project dir:`) vs current render (omitted).
+
+Fix (`src/mcp_coder/icoder/ui/widgets/output_log.py`): introduced `_ScriptEntry(unit_id, line, style)` so the replay script can carry non-unit literal lines. `append_text()` now records the line in `_script`/`_screen_lines`; `rebuild()` replays literal lines with their style but assigns NO range (banners stay on screen yet non-clickable). Added regression test `test_append_text_banner_survives_rebuild`; updated `test_recorded_lines_independent_of_units` and `test_app_pilot.py::test_resumed_divider_is_not_a_unit` which had encoded the buggy behavior.
+
+**Finding 2 (Accept — fixed): snapshot suite was nondeterministic (the real reason the 9 baselines never stabilized).**
+`ICoderApp.on_mount` kicks background git/gh polling for `BranchInfoBar` (`_tick_branch_full`/`_tick_branch_quick` worker + intervals); snapshots with `pilot.pause(delay=0.5)` captured the bar at a nondeterministic point (failing-test set even changed between `-n 0` and `-n auto`). A second source — the `InputArea` blinking text cursor — was also found. `_frozen_clocks` addressed neither.
+
+Fix (`tests/icoder/test_snapshots.py`): autouse `_freeze_dynamic_ui` fixture no-ops the branch tick/worker/render paths and sets `InputArea.cursor_blink = False`, freezing the bar at its `update_state(None)` placeholder. All 12 baselines regenerated.
+
+**Verification (all via `mcp__mcp-tools-py__run_pytest_check`):**
+- Snapshot suite 12/12 PASSED across repeated runs — `-n auto` ×2 and `-n 0` ×1 (plus engineer's 5 runs) — deterministic.
+- Fast unit subset: 4061 passed / 2 skipped / 0 failed.
+- pylint PASS, mypy PASS.
+- `test_snapshot_initial_state.svg` confirmed to contain `Tool env:` / `Project dir:` again.
+
+**Note on tooling:** the pytest MCP tool works correctly; the earlier red was genuine test flakiness, not a tool fault. Baseline *regeneration* used `--snapshot-update` (the MCP check tool is pass/fail oriented); all verification runs went through the MCP tool.
