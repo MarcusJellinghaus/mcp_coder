@@ -265,7 +265,6 @@ Interactive terminal chat for LLM-assisted coding. Three-layer architecture maxi
 - **Task tracking**: `workflow_utils/task_tracker.py` - Progress management (tests: `workflow_utils/test_task_tracker.py`)
 - **Commit operations**: `workflow_utils/commit_operations.py` - LLM-assisted commit message generation (tests: `workflow_utils/test_commit_operations.py`)
 - **Base branch detection**: `workflow_utils/base_branch.py` - Unified base branch detection (tests: `workflow_utils/test_base_branch.py`)
-- **Clipboard operations**: `utils/clipboard.py` - Commit message clipboard utilities (tests: `utils/test_clipboard.py`)
 - **Data file utilities**: `utils/data_files.py` - Package data file location (tests: `utils/test_data_files.py`)
 - **Subprocess execution**: `utils/subprocess_runner.py` - MCP STDIO isolation support (tests: `utils/test_subprocess_runner.py`)
 - **Git utilities**: `utils/git_utils.py` - Branch name utilities for LLM log correlation (tests: `utils/test_git_utils.py`)

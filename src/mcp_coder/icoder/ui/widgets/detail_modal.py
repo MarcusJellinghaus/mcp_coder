@@ -25,7 +25,6 @@ from mcp_coder.llm.formatting.stream_renderer import (
     _render_tool_output,
     _render_value_full,
 )
-from mcp_coder.utils.clipboard import set_clipboard_text
 
 if TYPE_CHECKING:
     # Runtime import would form a cycle: output_log.on_click imports this
@@ -181,4 +180,4 @@ class DetailModal(ModalScreen[None]):
         except NoMatches:
             return
         selected = text_area.selected_text
-        set_clipboard_text(selected if selected else text_area.text)
+        self.app.copy_to_clipboard(selected if selected else text_area.text)

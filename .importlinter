@@ -301,21 +301,6 @@ ignore_imports =
     mcp_coder.llm.providers.langchain.** -> truststore
 
 # -----------------------------------------------------------------------------
-# Contract: Pyperclip Library Isolation
-# -----------------------------------------------------------------------------
-# The 'pyperclip' package should only be used by utils.clipboard.
-# -----------------------------------------------------------------------------
-[importlinter:contract:pyperclip_isolation]
-name = Pyperclip Library Isolation
-type = forbidden
-source_modules =
-    mcp_coder
-forbidden_modules =
-    pyperclip
-ignore_imports =
-    mcp_coder.utils.clipboard -> pyperclip
-
-# -----------------------------------------------------------------------------
 # Contract: MCP Tools Py Isolation
 # -----------------------------------------------------------------------------
 # The 'mcp_tools_py' external package should only be used by mcp_tools_py module.

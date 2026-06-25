@@ -33,9 +33,9 @@ See [step_1.md](./steps/step_1.md) for details.
 
 See [step_2.md](./steps/step_2.md) for details.
 
-- [ ] Implementation: migrate icoder to `copy_to_clipboard`, delete `clipboard.py` + test, drop `pyperclip`/`types-pyperclip` + contract
-- [ ] Quality checks: pylint, pytest, mypy, lint-imports, vulture — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: migrate icoder to `copy_to_clipboard`, delete `clipboard.py` + test, drop `pyperclip`/`types-pyperclip` + contract
+- [x] Quality checks: pylint, pytest, mypy, lint-imports, vulture — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Relocate live helpers (errors.py + fold verify), repoint importers
 

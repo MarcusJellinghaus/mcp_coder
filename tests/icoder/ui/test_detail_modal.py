@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from datetime import datetime
+from unittest.mock import patch
 
 import pytest
 from textual.app import App
 from textual.widgets import TextArea
 
-from mcp_coder.icoder.ui.widgets import detail_modal
 from mcp_coder.icoder.ui.widgets.detail_modal import DetailModal, build_detail_text
 from mcp_coder.icoder.ui.widgets.output_log import ContentUnit
 
@@ -154,28 +154,18 @@ async def test_modal_enter_dismisses() -> None:
         assert not isinstance(app.screen, DetailModal)
 
 
-async def test_modal_ctrl_c_copy_selection_calls_clipboard(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Ctrl+C copies the selected text via the clipboard module."""
-    captured: dict[str, str] = {}
-
-    def _fake_copy(text: str) -> tuple[bool, str | None]:
-        captured["text"] = text
-        return True, None
-
-    monkeypatch.setattr(detail_modal, "set_clipboard_text", _fake_copy)
-
+async def test_modal_ctrl_c_copy_selection_calls_clipboard() -> None:
+    """Ctrl+C copies the selected text via Textual's clipboard."""
     app = _ModalApp(_tool_unit())
     async with app.run_test() as pilot:
         await pilot.pause()
         text_area = app.screen.query_one(TextArea)
         text_area.select_all()
         await pilot.pause()
-        await pilot.press("ctrl+c")
-        await pilot.pause()
-
-    assert captured["text"] == text_area.text
+        with patch.object(app, "copy_to_clipboard") as mock_copy:
+            await pilot.press("ctrl+c")
+            await pilot.pause()
+    mock_copy.assert_called_once_with(text_area.text)
 
 
 async def test_modal_textarea_is_read_only() -> None:
