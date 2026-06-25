@@ -87,6 +87,54 @@ class _FrozenClock:
         return getattr(time, name)
 
 
+@pytest.fixture(autouse=True)
+def _freeze_dynamic_ui(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Neutralize time-driven UI motion so snapshots are deterministic.
+
+    Two independent runtime-variable sources are frozen here:
+
+    1. **Branch-info polling.** ``ICoderApp.on_mount`` kicks off git/gh polling
+       for the bottom ``BranchInfoBar``: it calls
+       ``run_worker(self._tick_branch_full, ...)`` once and registers
+       ``set_interval`` timers for ``_tick_branch_quick`` /
+       ``_tick_branch_full``. Those worker threads later call
+       ``BranchInfoBar.update_state(view)``, mutating the bottom bar at a
+       nondeterministic point. Tests that ``pilot.pause(delay=0.5)`` give the
+       workers time to fire, so the bar text varies run-to-run.
+
+    2. **Input cursor blink.** ``InputArea`` (a ``TextArea``) has a blinking
+       text cursor driven by an internal timer. With the input focused, the
+       0.5s pauses land the blink at a nondeterministic phase, so the cursor
+       cell flips between drawn and blank between runs.
+
+    Freezing the bar at its deterministic initial placeholder (the
+    ``update_state(None)`` state set in ``on_mount``) requires neutralizing
+    every path that can populate ``_last_branch_info`` without user
+    interaction:
+
+    * the two tick methods (``on_mount`` calls ``run_worker(_tick_branch_full)``
+      once and registers ``set_interval`` timers for both),
+    * the two worker bodies they spawn, and
+    * the ``BranchInfoService`` data-layer fetches the workers call.
+
+    Patching all three layers makes the branch freeze robust regardless of
+    thread scheduling: even if a worker thread is already in flight when a
+    patch is applied, the fetch it performs reaches the bar only via methods
+    that are now no-ops, so the bar can never advance past the ``… … … …``
+    placeholder. The cursor blink is disabled by forcing ``cursor_blink`` off
+    on ``InputArea`` so the cursor cell is always drawn.
+
+    Autouse so it applies to ALL snapshot tests (mirrors the intent of
+    ``_frozen_clocks``, which freezes the wall-clock/monotonic sources).
+    """
+    monkeypatch.setattr(ICoderApp, "_tick_branch_full", lambda self: None)
+    monkeypatch.setattr(ICoderApp, "_tick_branch_quick", lambda self: None)
+    monkeypatch.setattr(ICoderApp, "_branch_full_work", lambda self: None)
+    monkeypatch.setattr(ICoderApp, "_branch_quick_work", lambda self: None)
+    monkeypatch.setattr(ICoderApp, "_render_branch_state", lambda self: None)
+    monkeypatch.setattr(InputArea, "cursor_blink", False)
+
+
 @pytest.fixture()
 def _frozen_clocks(monkeypatch: pytest.MonkeyPatch) -> None:
     """Freeze wall-clock and monotonic sources for deterministic snapshots.
