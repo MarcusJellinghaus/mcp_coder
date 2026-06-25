@@ -41,11 +41,15 @@ Modified:
   - Remove functions `format_text_response`, `format_verbose_response`,
     `format_raw_response`.
   - Remove `from .sdk_serialization import extract_tool_interactions, serialize_message_for_json`.
+  - Keep `json` (used by `print_stream_event` via `json.dumps(...)`); remove only
+    the `sdk_serialization` import.
   - Update module `__all__` to `["print_stream_event"]`.
+  - Update the module docstring: it currently describes "text, verbose, raw"
+    output formats, which are gone. Rewrite it to describe the surviving
+    streaming role (`print_stream_event` emitting/rendering stream events).
   - Keep `print_stream_event`, `_normalize_event_to_ndjson`, and all imports they
     still use (`json`, `sys`, `StreamEvent`, the `render_actions` classes,
-    `stream_renderer` helpers). Vulture will flag any import left unused — drop
-    those if reported.
+    `stream_renderer` helpers).
 - `llm/formatting/__init__.py`:
   - From the `.formatters` import drop `format_raw_response`, `format_text_response`,
     `format_verbose_response` (keep `print_stream_event`).
@@ -91,6 +95,8 @@ Modified:
 - Delete `docs/providers/claude_sdk_response_structure.md`.
 - `docs/architecture/architecture.md`: remove/replace the line
   `- sdk_serialization.py - SDK message object handling (tests: llm/formatting/test_sdk_serialization.py)`.
+  Also remove the now-stale line for the deleted module:
+  `- claude_code_api.py - Claude Code API integration (legacy, not used by interface)`.
 
 ## HOW (integration points)
 
