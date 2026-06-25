@@ -292,6 +292,13 @@ _._mock_externals
 # tests/icoder/conftest.py - Autouse fixture to prevent store_session disk writes
 _._no_store_session
 
+# tests/icoder/test_snapshots.py - Fixture injected by name into snapshot tests
+_._frozen_clocks
+
+# tests/icoder/test_snapshots.py - _FixedDatetime.now() must mirror the real
+# datetime.now(tz=...) signature for monkeypatching; the param is unused.
+_.tz
+
 # conftest.py - Fixtures for GitHub integration test setup
 _.github_test_setup
 _.create_github_manager
