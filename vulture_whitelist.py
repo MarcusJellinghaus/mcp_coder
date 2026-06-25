@@ -295,6 +295,9 @@ _._no_store_session
 # tests/icoder/test_snapshots.py - Fixture injected by name into snapshot tests
 _._frozen_clocks
 
+# tests/icoder/test_snapshots.py - autouse fixture; vulture can't see pytest injection
+_._freeze_dynamic_ui
+
 # tests/icoder/test_snapshots.py - _FixedDatetime.now() must mirror the real
 # datetime.now(tz=...) signature for monkeypatching; the param is unused.
 _.tz
