@@ -29,3 +29,25 @@ Tech lead triaged a plan review and accepted three changes, all scoped to Step 4
    the wording to "Keep `json` (used by `print_stream_event`); remove only the
    `sdk_serialization` import" and removed the misleading "drop if vulture flags
    it" hedge as applied to `json`.
+
+## 2026-06-25 — Step 4 plan-review triage round 2 (1 accepted change)
+
+Tech lead triaged a second plan review and accepted one change, again scoped to
+Step 4. Applied via `/plan_update`.
+
+1. **Refresh the remaining stale doc prose created by Step 4's deletions
+   (accepted).** Step 4 already edits the `sdk_serialization.py` /
+   `claude_code_api.py` lines in `docs/architecture/architecture.md` and rewrites
+   `src/mcp_coder/llm/formatting/__init__.py`, but three parallel prose
+   descriptions go stale from the same deletions and were not yet covered.
+   Extended Step 4 to also handle them:
+   - `docs/architecture/architecture.md` — the `- **Formatting**: llm/formatting/
+     - Response formatters and SDK utilities` line: drop "and SDK utilities"
+     (gone once `sdk_serialization.py` is deleted).
+   - `docs/architecture/architecture.md` — the `- formatters.py - Text/verbose/raw
+     output formatting` line: rewrite to describe the surviving
+     `print_stream_event` streaming role (`formatters.py` is streaming-only after
+     this PR).
+   - `src/mcp_coder/llm/formatting/__init__.py` — the module docstring
+     `"Response formatting and SDK object serialization utilities."`: drop "SDK
+     object serialization".

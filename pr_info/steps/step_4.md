@@ -51,6 +51,10 @@ Modified:
     still use (`json`, `sys`, `StreamEvent`, the `render_actions` classes,
     `stream_renderer` helpers).
 - `llm/formatting/__init__.py`:
+  - Update the module docstring: it currently reads
+    `"Response formatting and SDK object serialization utilities."`; the SDK
+    serialization is gone, so drop "SDK object serialization" (e.g.
+    `"Response formatting utilities."`).
   - From the `.formatters` import drop `format_raw_response`, `format_text_response`,
     `format_verbose_response` (keep `print_stream_event`).
   - Delete the whole `from .sdk_serialization import (...)` block.
@@ -97,6 +101,13 @@ Modified:
   `- sdk_serialization.py - SDK message object handling (tests: llm/formatting/test_sdk_serialization.py)`.
   Also remove the now-stale line for the deleted module:
   `- claude_code_api.py - Claude Code API integration (legacy, not used by interface)`.
+  Also refresh the two parallel prose descriptions in this file that go stale
+  from the same deletions:
+  - `- **Formatting**: \`llm/formatting/\` - Response formatters and SDK utilities`:
+    drop "and SDK utilities" (SDK utilities are gone with `sdk_serialization.py`).
+  - `- \`formatters.py\` - Text/verbose/raw output formatting (tests: \`llm/formatting/test_formatters.py\`)`:
+    `formatters.py` is streaming-only after this PR, so rewrite it to describe the
+    surviving `print_stream_event` streaming role (keep the test reference).
 
 ## HOW (integration points)
 

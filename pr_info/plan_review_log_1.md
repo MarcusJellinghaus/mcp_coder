@@ -30,3 +30,21 @@
 - `pr_info/steps/Decisions.md`: created; logged the three accepted triage decisions.
 
 **Status**: plan changed — committing; loop continues with a fresh review round.
+
+## Round 2 — 2026-06-25
+
+**Findings** (from `/plan_review` engineer):
+- All three Round-1 fixes verified landed correctly (architecture.md:182 line removal, formatters.py docstring refresh, `json`-import clarification).
+- #1 Deletion-induced stale prose siblings not yet covered: `architecture.md:167` ("Response formatters and SDK utilities" — SDK utilities gone), `architecture.md:168` ("formatters.py - Text/verbose/raw output formatting" — now streaming-only), `llm/formatting/__init__.py:1` docstring ("...and SDK object serialization utilities"). (formatting/doc-accuracy)
+- Spot-checks confirmed accurate: Step 2 `detail_modal.py:184` migration, Step 4 `__init__.py` symbol list, Step 5 `dependencies/readme.md:77` third-party count.
+
+**Decisions**:
+- #1 ACCEPT — same deletion-induced staleness as Round-1 fixes, in files Step 4 already edits; no scope drift.
+
+**User decisions**: none — doc-accuracy cleanup handled autonomously.
+
+**Changes** (via `/plan_update` engineer):
+- `pr_info/steps/step_4.md`: extended the `__init__.py` source-edit bullet to refresh its module docstring; extended the architecture.md docs bullet to also fix lines 167 (drop "and SDK utilities") and 168 (rewrite to `print_stream_event` streaming role).
+- `pr_info/steps/Decisions.md`: appended round-2 decision.
+
+**Status**: plan changed — committing; loop continues with Round 3.
