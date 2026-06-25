@@ -34,6 +34,25 @@ from mcp_coder.llm.formatting.stream_renderer import (
 
 
 @dataclass(frozen=True)
+class _ScriptEntry:
+    """One replay-script entry.
+
+    Three kinds, distinguished by which fields are set:
+
+    - atomic unit:   ``_ScriptEntry(unit_id, None)`` — render via
+      :meth:`OutputLog._render_unit_atomic`.
+    - streamed line: ``_ScriptEntry(unit_id, line, style)`` — a literal line
+      that belongs to a unit (gets a clickable range on rebuild).
+    - non-unit line: ``_ScriptEntry(None, text, style)`` — banner / divider /
+      marker / spacer; literal and never clickable (no range on rebuild).
+    """
+
+    unit_id: str | None
+    line: str | None
+    style: str | None = None
+
+
+@dataclass(frozen=True)
 class ContentUnit:
     """A clickable unit of output (one tool, user input, or assistant turn).
 
@@ -95,7 +114,7 @@ class OutputLog(RichLog):
         self._pending_single: Timer | None = None
         # Registry data layer (sidecar to the RichLog buffer).
         self._units: dict[str, ContentUnit] = {}  # insertion-ordered
-        self._script: list[tuple[str, str | None]] = []  # (unit_id, line|None)
+        self._script: list[_ScriptEntry] = []  # replay script (see _ScriptEntry)
         self._ranges: list[tuple[int, int, str]] = []  # (start, end, unit_id)
         self._screen_lines: list[str] = []  # current screen state
         # Global default tier and per-unit overrides. ``set_tool_display_default``
@@ -172,20 +191,35 @@ class OutputLog(RichLog):
     def append_text(self, text: str, style: str | None = None) -> None:
         """Write text to the output log, optionally styled.
 
-        Untouched by the registry layer: writes only to ``_recorded`` and
-        the RichLog buffer. Banners, spacers, dividers and markers use this.
+        Banners, spacers, dividers and markers use this. The text is recorded
+        as a non-unit script entry so it survives ``rebuild()``, but it is
+        NOT clickable (no unit, no range).
 
         Args:
             text: Content to display.
             style: Optional Rich style string.
         """
         self._recorded.append(text)
+        self._screen_lines.append(text)
         if self._mirror is not None:
             self._mirror(text)
+        self._write_line(text, style)
+        # Recorded in the replay script as a non-unit literal line so it
+        # survives rebuild(); unit_id=None keeps it out of _ranges (= not
+        # clickable).
+        self._script.append(_ScriptEntry(None, text, style))
+
+    def _write_line(self, line: str, style: str | None) -> None:
+        """Write one literal line to the RichLog buffer, applying ``style``.
+
+        Args:
+            line: The literal text to write.
+            style: Optional Rich style string.
+        """
         if style:
-            super().write(Text(text, style=style))
+            super().write(Text(line, style=style))
         else:
-            super().write(text)
+            super().write(line)
 
     def append_unit(
         self, unit: ContentUnit, lines: list[str], style: str | None = None
@@ -223,12 +257,9 @@ class OutputLog(RichLog):
             self._screen_lines.append(line)
             if self._mirror is not None:
                 self._mirror(line)
-            if style:
-                super().write(Text(line, style=style))
-            else:
-                super().write(line)
+            self._write_line(line, style)
         buffer_end = len(self.lines)
-        self._script.append((unit.id, None))
+        self._script.append(_ScriptEntry(unit.id, None))
         self._ranges.append((buffer_start, buffer_end, unit.id))
 
     def extend_open_unit(
@@ -258,12 +289,9 @@ class OutputLog(RichLog):
             self._screen_lines.append(line)
             if self._mirror is not None:
                 self._mirror(line)
-            if style:
-                super().write(Text(line, style=style))
-            else:
-                super().write(line)
+            self._write_line(line, style)
             buffer_end = len(self.lines)
-            self._script.append((unit_id, line))
+            self._script.append(_ScriptEntry(unit_id, line, style))
             self._ranges.append((buffer_start, buffer_end, unit_id))
 
     def finalize_open_unit(self, unit_id: str) -> None:
@@ -445,19 +473,23 @@ class OutputLog(RichLog):
         super().clear()
         self._screen_lines = []
         self._ranges = []
-        for unit_id, line in self._script:
+        for entry in self._script:
             start_idx = len(self.lines)
-            if line is None:
-                unit = self._units[unit_id]
+            if entry.line is None:
+                # Atomic unit: re-derive its lines (entry.unit_id is set).
+                unit = self._units[entry.unit_id]  # type: ignore[index]
                 for rln in self._render_unit_atomic(unit):
                     super().write(rln)
                     self._screen_lines.append(rln)
             else:
-                super().write(line)
-                self._screen_lines.append(line)
+                # Literal line (streamed unit line or non-unit banner).
+                self._write_line(entry.line, entry.style)
+                self._screen_lines.append(entry.line)
             end_idx = len(self.lines)
-            if end_idx > start_idx:
-                self._ranges.append((start_idx, end_idx, unit_id))
+            # Only unit-owned entries get a clickable range; non-unit lines
+            # (unit_id is None) stay non-clickable.
+            if entry.unit_id is not None and end_idx > start_idx:
+                self._ranges.append((start_idx, end_idx, entry.unit_id))
 
     def _render_unit_atomic(self, unit: ContentUnit) -> list[str]:
         """Render an atomic unit (tool / user_input) to logical lines.

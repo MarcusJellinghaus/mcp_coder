@@ -1299,6 +1299,11 @@ async def test_resumed_divider_is_not_a_unit(
         app.do_resume(log_path)
         await pilot.pause()
         output = app.query_one(OutputLog)
-        # The divider is in the append history but never on the screen registry.
+        # The divider is in the append history and on screen (it survives
+        # rebuild), but it is not a clickable unit (no range covers it).
         assert any("Resumed" in ln for ln in output.recorded_lines)
-        assert not any("Resumed" in ln for ln in output.rendered_lines)
+        assert any("Resumed" in ln for ln in output.rendered_lines)
+        divider_line = next(
+            i for i, ln in enumerate(output.rendered_lines) if "Resumed" in ln
+        )
+        assert output.unit_at_line(divider_line) is None

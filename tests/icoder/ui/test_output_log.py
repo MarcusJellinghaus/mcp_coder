@@ -322,7 +322,7 @@ async def test_rendered_lines_reflects_screen_state() -> None:
 
 
 async def test_recorded_lines_independent_of_units() -> None:
-    """append_unit grows recorded + screen; append_text adds no unit/range."""
+    """append_unit grows recorded + screen; append_text adds a non-clickable line."""
     app = _RegistryApp()
     async with app.run_test() as pilot:
         await pilot.pause()
@@ -337,10 +337,42 @@ async def test_recorded_lines_independent_of_units() -> None:
         await pilot.pause()
 
         assert "banner" in output.recorded_lines
-        # append_text does NOT create a unit or range or screen line
+        # append_text content IS part of the rendered screen model (it must
+        # survive rebuild), but it creates NO unit and NO range, so it stays
+        # non-clickable.
         assert len(output._units) == 1
         assert len(output._ranges) == 1
-        assert "banner" not in output.rendered_lines
+        assert "banner" in output.rendered_lines
+        banner_line = output.rendered_lines.index("banner")
+        assert output.unit_at_line(banner_line) is None
+
+
+async def test_append_text_banner_survives_rebuild() -> None:
+    """A non-unit banner stays on screen, in position, after a rebuild.
+
+    Regression for #629: rebuild() replayed units only, permanently wiping
+    append_text content (startup runtime-info banner, dividers, markers).
+    """
+    app = _RegistryApp()
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+
+        output.append_text("banner")
+        output.append_unit(_make_tool_unit("A"), ["a1"])
+        await pilot.pause()
+
+        assert output.rendered_lines == ["banner", "a1"]
+
+        # update_unit_and_rerender triggers rebuild() — the bug's trigger.
+        output.update_unit_and_rerender("A", duration_ms=5)
+        await pilot.pause()
+
+        # Banner is still present, still ahead of the unit's line.
+        assert "banner" in output.rendered_lines
+        assert output.rendered_lines[0] == "banner"
+        # Still non-clickable after the rebuild.
+        assert output.unit_at_line(0) is None
 
 
 async def test_clear_state_wipes_all_state() -> None:
