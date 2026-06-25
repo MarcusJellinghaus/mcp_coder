@@ -41,9 +41,9 @@ See [step_2.md](./steps/step_2.md) for details.
 
 See [step_3.md](./steps/step_3.md) for details.
 
-- [ ] Implementation: create `errors.py`, fold `_verify_claude_before_use`, repoint `ClaudeAPIError` imports, add tests
-- [ ] Quality checks: pylint, pytest, mypy, lint-imports, vulture — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `errors.py`, fold `_verify_claude_before_use`, repoint `ClaudeAPIError` imports, add tests
+- [x] Quality checks: pylint, pytest, mypy, lint-imports, vulture — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Delete the Claude SDK/API path, formatter chain, and `claude-code-sdk`
 

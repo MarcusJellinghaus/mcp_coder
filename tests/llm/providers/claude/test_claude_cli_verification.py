@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.llm.providers.claude.claude_cli_verification import (
+    _verify_claude_before_use,
     verify_claude,
 )
 
@@ -175,3 +176,75 @@ class TestVerifyClaude:
         assert "cli_version" not in result  # No version when None
         assert result["cli_works"]["ok"] is False
         assert result["overall_ok"] is False
+
+
+class TestVerifyClaudeBeforeUse:
+    """Test the _verify_claude_before_use function."""
+
+    @patch("mcp_coder.llm.providers.claude.claude_cli_verification.setup_claude_path")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_cli_verification.verify_claude_installation"
+    )
+    def test_successful_verification(
+        self, mock_verify: MagicMock, mock_setup: MagicMock
+    ) -> None:
+        """Test successful Claude verification."""
+        mock_setup.return_value = "/usr/local/bin/claude"
+        mock_verify.return_value = {
+            "found": True,
+            "works": True,
+            "path": "/usr/local/bin/claude",
+            "version": "1.0.0",
+            "error": None,
+        }
+
+        success, path, error = _verify_claude_before_use()
+
+        assert success is True
+        assert path == "/usr/local/bin/claude"
+        assert error is None
+
+    @patch("mcp_coder.llm.providers.claude.claude_cli_verification.setup_claude_path")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_cli_verification.verify_claude_installation"
+    )
+    def test_failed_verification(
+        self, mock_verify: MagicMock, mock_setup: MagicMock
+    ) -> None:
+        """Test failed Claude verification."""
+        mock_setup.return_value = None
+        mock_verify.return_value = {
+            "found": False,
+            "works": False,
+            "path": None,
+            "error": "Claude CLI not found",
+        }
+
+        success, path, error = _verify_claude_before_use()
+
+        assert success is False
+        assert path is None
+        assert error == "Claude CLI not found"
+
+    @patch("mcp_coder.llm.providers.claude.claude_cli_verification.setup_claude_path")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_cli_verification.verify_claude_installation"
+    )
+    def test_setup_path_exception(
+        self, mock_verify: MagicMock, mock_setup: MagicMock
+    ) -> None:
+        """Test behavior when setup_claude_path raises an exception."""
+        mock_setup.side_effect = RuntimeError("Path setup failed")
+        mock_verify.return_value = {
+            "found": True,
+            "works": True,
+            "path": "/usr/local/bin/claude",
+            "error": None,
+        }
+
+        success, path, error = _verify_claude_before_use()
+
+        # Should still succeed if verification works despite path setup failure
+        assert success is True
+        assert path == "/usr/local/bin/claude"
+        assert error is None

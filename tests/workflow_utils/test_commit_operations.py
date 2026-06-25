@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from mcp_coder.llm.providers.claude.claude_code_api import ClaudeAPIError
+from mcp_coder.llm.providers.claude.errors import ClaudeAPIError
 from mcp_coder.workflow_utils.commit_operations import (
     generate_commit_message_with_llm,
     parse_llm_commit_response,
