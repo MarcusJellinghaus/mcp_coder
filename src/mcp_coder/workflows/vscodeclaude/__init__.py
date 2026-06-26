@@ -262,6 +262,13 @@ from .config import (
     sanitize_folder_name,
 )
 
+# Detection (Windows / IO boundary)
+from .detection import (
+    DetectionSnapshot,
+    capture_detection_snapshot,
+    gather_signals,
+)
+
 # Helpers (re-exported for backward compatibility)
 from .helpers import (
     TO_BE_DELETED_FILENAME,
@@ -378,6 +385,10 @@ __all__ = [
     "assess_transition",
     "decide",
     "assess_session",
+    # Detection (Windows / IO boundary)
+    "DetectionSnapshot",
+    "capture_detection_snapshot",
+    "gather_signals",
     # Constants
     "DEFAULT_MAX_SESSIONS",
     "DEFAULT_PROMPT_TIMEOUT",

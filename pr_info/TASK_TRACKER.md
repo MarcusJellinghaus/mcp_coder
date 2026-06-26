@@ -49,9 +49,9 @@ Add `IssueFacts`, `assess_issue_state`, `assess_transition`, `decide` (full git-
 
 Create `detection.py` with `DetectionSnapshot`, `capture_detection_snapshot` (all 3 caches at one instant), `gather_signals` (computes `directory_empty`/`within_grace`); mocked psutil/win32 tests; export. See [step_4.md](./steps/step_4.md).
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: `_issue_facts` helper + `assess_issue_state` wiring
 
