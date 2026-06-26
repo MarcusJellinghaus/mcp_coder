@@ -33,9 +33,9 @@ Enums (`LivenessRule`, `SessionAction`) + frozen dataclasses (`DetectionSignals`
 
 Create `assessment.py` with pure `assess_liveness(signals) -> LivenessVerdict`; full rule-matrix unit tests (no Windows); export. See [step_2.md](./steps/step_2.md).
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Issue-state + transition + decision + composition (`assess_session`) — pure
 

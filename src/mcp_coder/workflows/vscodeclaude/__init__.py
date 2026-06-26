@@ -237,6 +237,11 @@ PR CREATED (status-10:pr-created)
 ```
 """
 
+# Assessment (pure layers)
+from .assessment import (
+    assess_liveness,
+)
+
 # Cleanup
 from .cleanup import (
     cleanup_stale_sessions,
@@ -361,6 +366,8 @@ __all__ = [
     "Transition",
     "Decision",
     "SessionAssessment",
+    # Assessment (pure layers)
+    "assess_liveness",
     # Constants
     "DEFAULT_MAX_SESSIONS",
     "DEFAULT_PROMPT_TIMEOUT",
