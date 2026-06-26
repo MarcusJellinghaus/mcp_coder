@@ -115,6 +115,10 @@ class SessionAssessment:
 
         Single shared source for ``to_audit_record`` and ``to_explain`` so the
         audit trail, ``--explain`` and the enriched VSCode column cannot drift.
+
+        Returns:
+            A JSON-safe dict of the folder, signals, and the four typed
+            sub-results.
         """
         return {
             "folder": self.folder,
@@ -153,7 +157,12 @@ class SessionAssessment:
         }
 
     def to_audit_record(self, session: "VSCodeClaudeSession") -> dict[str, Any]:
-        """ONE serializer feeding audit trail, --explain, and the VSCode column."""
+        """ONE serializer feeding audit trail, --explain, and the VSCode column.
+
+        Returns:
+            The flattened assessment dict enriched with the session's repo,
+            issue number, and status.
+        """
         record = self._flatten()
         record["repo"] = session["repo"]
         record["issue_number"] = session["issue_number"]
@@ -161,7 +170,12 @@ class SessionAssessment:
         return record
 
     def to_explain(self) -> str:
-        """Human-readable single-session dump (delegates to the same flattening)."""
+        """Human-readable single-session dump (delegates to the same flattening).
+
+        Returns:
+            A newline-separated text block of the folder, signals, and the four
+            typed sub-results.
+        """
         data = self._flatten()
         lines = [f"folder: {data['folder']}"]
         for section in ("signals", "verdict", "issue_state", "transition", "decision"):

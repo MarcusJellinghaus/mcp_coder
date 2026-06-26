@@ -78,6 +78,10 @@ def _title_binds(
     numbers (e.g. ``#458 - mcp_coder``). Title-positive is authoritative; it is
     intentionally independent of cmdline/PID so a restored window (no folder in
     cmdline) still reports ``title_match=True``.
+
+    Returns:
+        ``True`` when a snapshot window title binds to this issue + repo,
+        ``False`` otherwise.
     """
     if not HAS_WIN32GUI:
         return False
@@ -111,7 +115,12 @@ def _cmdline_scan(
 
 
 def _session_age_seconds(session: VSCodeClaudeSession, now: datetime) -> float:
-    """Age of the session in seconds, or ``inf`` if ``started_at`` is unusable."""
+    """Age of the session in seconds, or ``inf`` if ``started_at`` is unusable.
+
+    Returns:
+        Seconds since ``started_at``, or ``float("inf")`` when it is missing or
+        unparseable.
+    """
     started_at_str = session.get("started_at", "")
     try:
         return (now - datetime.fromisoformat(started_at_str)).total_seconds()
@@ -130,6 +139,10 @@ def gather_signals(
     short-circuit, so a live process for a deleted folder stays reachable as a
     zombie precursor. ``directory_empty`` and ``within_grace`` are computed
     here as plain bools so the downstream ``types``/``decide`` stay pure.
+
+    Returns:
+        A frozen :class:`DetectionSignals` with the seven raw signals plus
+        ``directory_empty`` and ``within_grace``.
     """
     folder = session["folder"]
     folder_path = Path(folder)

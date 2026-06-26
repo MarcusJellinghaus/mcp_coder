@@ -71,6 +71,10 @@ def assess_liveness(signals: DetectionSignals) -> LivenessVerdict:
     state, so the order is title -> pid -> cmdline -> folder-existence. PID is a
     tie-breaker, NOT a gate, and there is no folder-gone short-circuit (a live
     process for a deleted folder stays reachable as the zombie precursor).
+
+    Returns:
+        A frozen :class:`LivenessVerdict` carrying ``active`` and the winning
+        :class:`LivenessRule`.
     """
     if signals.title_match:
         return LivenessVerdict(active=True, rule=LivenessRule.TITLE)
@@ -89,6 +93,10 @@ def assess_issue_state(issue_facts: IssueFacts) -> IssueState:
     Eligible means none of the disqualifiers (closed/stale/blocked/unassigned/
     ineligible) are set, i.e. the issue is a candidate for keep/restart rather
     than a destruction candidate.
+
+    Returns:
+        A frozen :class:`IssueState` with the per-flag classification and the
+        derived ``is_eligible``.
     """
     is_eligible = not (
         issue_facts.is_closed
@@ -114,13 +122,22 @@ def assess_transition(
 
     A ``None`` prior (never observed under the new system, e.g. a backfilled
     session) is a blind spot, so it can never be a flip.
+
+    Returns:
+        A frozen :class:`Transition` whose ``flipped_to_inactive`` marks an
+        active->inactive flip.
     """
     flipped = prior_last_active is True and not verdict.active
     return Transition(flipped_to_inactive=flipped)
 
 
 def _ineligibility_reasons(issue_state: IssueState) -> str:
-    """Join the reasons an issue is ineligible into one human/audit string."""
+    """Join the reasons an issue is ineligible into one human/audit string.
+
+    Returns:
+        Comma-separated reason string (e.g. ``"stale, blocked"``), defaulting
+        to ``"ineligible"`` when no specific reason applies.
+    """
     reasons: list[str] = []
     if issue_state.is_stale:
         if issue_state.stale_target:
@@ -150,6 +167,10 @@ def decide(
     DELETE is the ONLY destructive branch, and it requires ``git_status == "Clean"``
     OR ``directory_empty`` — never destruction on weak evidence ("No Git"/"Error"
     on a non-empty folder). This single place is covered by the invariant test.
+
+    Returns:
+        A frozen :class:`Decision` carrying the resolved :class:`SessionAction`,
+        a human reason, and the ``destructive`` flag.
     """
     if verdict.active and git_status == "Missing":
         return Decision(
@@ -203,6 +224,10 @@ def assess_session(
     Aggregates the four pure layers into one frozen :class:`SessionAssessment`
     that EMBEDS the typed sub-results, so cleanup and status can never disagree
     on the same snapshot.
+
+    Returns:
+        A frozen :class:`SessionAssessment` embedding the verdict, issue-state,
+        transition, and decision for the session.
     """
     verdict = assess_liveness(signals)
     issue_state = assess_issue_state(issue_facts)
@@ -431,8 +456,11 @@ def _fetch_issue_individually(
 
     Mirrors ``get_stale_sessions``' fallback (cleanup.py): fetches through the
     caching layer with ``additional_issues=[issue_number]`` so the missing issue
-    is populated without a double API round-trip. Returns the fetched issues
-    keyed by number, or ``None`` when the fetch fails.
+    is populated without a double API round-trip.
+
+    Returns:
+        The fetched issues keyed by issue number, or ``None`` when the fetch
+        fails.
     """
     try:
         repo_url = f"https://github.com/{repo_full_name}"
@@ -473,6 +501,10 @@ def _issue_facts(
     ONLY when the issue is not closed/blocked/unassigned/ineligible — calling
     ``is_session_stale`` on such an issue triggers a spurious staleness warning the
     current code explicitly guards against (cleanup.py short-circuit).
+
+    Returns:
+        A frozen :class:`IssueFacts` with the closed/stale/blocked/unassigned/
+        ineligible flags and the optional stale target.
     """
     issue = cached_issue
     stale_cache = cached_for_stale_check
