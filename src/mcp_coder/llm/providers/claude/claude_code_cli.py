@@ -42,6 +42,8 @@ class StreamMessage(TypedDict, total=False):
     total_cost_usd: float
     duration_ms: int
     usage: dict[str, Any]
+    tools: list[Any]
+    mcp_servers: list[dict[str, Any]]
 
 
 class ParsedStreamResponse(TypedDict):
@@ -60,6 +62,50 @@ class ParsedCliResponse(TypedDict):
     text: str
     session_id: str | None
     raw_response: dict[str, Any]
+
+
+# MCP server status (from the init event) that means the server is ready to use.
+_MCP_SERVER_READY_STATUS = "connected"
+
+
+class McpServersUnavailableError(RuntimeError):
+    """Raised when a Claude session starts without its configured MCP servers.
+
+    The session's ``system``/``init`` event reported one or more configured MCP
+    servers that did not reach ``connected`` status (e.g. ``failed`` /
+    ``pending``). Continuing would run the model with no tools, which can
+    silently yield hallucinated results, so the call is aborted instead.
+    """
+
+
+def find_unavailable_mcp_servers(
+    system_message: StreamMessage | None,
+) -> list[tuple[str, str]]:
+    """Return ``(name, status)`` for configured MCP servers that aren't ready.
+
+    Reads the ``mcp_servers`` list from the init event. Returns an empty list
+    when there is no init message or no servers were configured, so sessions
+    that intentionally run without MCP are unaffected.
+
+    Args:
+        system_message: The parsed ``system``/``init`` StreamMessage, or None.
+
+    Returns:
+        List of ``(name, status)`` tuples for servers whose status is not
+        ``connected``; empty when all servers are ready (or none configured).
+    """
+    if not system_message:
+        return []
+    # Typed as list[dict] but really parsed JSON; stay defensive about shape.
+    servers = cast(list[Any], system_message.get("mcp_servers") or [])
+    unavailable: list[tuple[str, str]] = []
+    for server in servers:
+        if not isinstance(server, dict):
+            continue
+        status = str(server.get("status", "")).strip().lower()
+        if status != _MCP_SERVER_READY_STATUS:
+            unavailable.append((str(server.get("name", "?")), status or "unknown"))
+    return unavailable
 
 
 def parse_stream_json_line(line: str) -> StreamMessage | None:
@@ -644,6 +690,24 @@ def ask_claude_code_cli(
             log_llm_error(error=called_process_error, duration_ms=duration_ms)
             raise called_process_error
 
+        # Fail fast: if configured MCP servers did not connect, the session has
+        # no tools and the model may hallucinate. Abort instead of running blind.
+        unavailable_servers = find_unavailable_mcp_servers(parsed["system_message"])
+        if unavailable_servers:
+            detail = ", ".join(
+                f"{name}={status}" for name, status in unavailable_servers
+            )
+            mcp_error_msg = (
+                f"MCP servers not available: {detail}. The session started without "
+                f"its configured tools; aborting before the model runs blind. "
+                f"Stream log: {stream_file_path}"
+            )
+            logger.error(mcp_error_msg)
+            duration_ms = int((time.time() - start_time) * 1000)
+            mcp_error: Exception = McpServersUnavailableError(mcp_error_msg)
+            log_llm_error(error=mcp_error, duration_ms=duration_ms)
+            raise mcp_error
+
         logger.debug(
             f"CLI success: {len(result.stdout)} bytes, session_id={parsed['session_id']}"
         )
@@ -668,7 +732,7 @@ def ask_claude_code_cli(
         # Create response dict from stream data
         return create_response_dict_from_stream(parsed, stream_file_str)
 
-    except (TimeoutExpired, CalledProcessError):
+    except (TimeoutExpired, CalledProcessError, McpServersUnavailableError):
         # Already logged above - re-raise without logging again
         raise
     except (
