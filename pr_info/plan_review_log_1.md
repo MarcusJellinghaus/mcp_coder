@@ -44,3 +44,29 @@ Started: 2026-06-26
 **Changes**: step_3 — zombie/remove-missing tested in-signature via `git_status == "Missing"` (validated vs `status.py:332`), off-contract refs removed; step 5 split into step_5 (`_issue_facts` + `assess_issue_state` wiring, with `is_session_stale` short-circuit note) and new step_5b (build/apply orchestration + thin read-only wrapper + call sites + green shim + `prior_last_active`); step_8 keeps the thin read-only `build_active_session_set` wrapper, retires only the `active_set` shim; summary/Decisions/step cross-refs updated (steps 6–10 not renumbered).
 
 **Status**: plan changed — pending commit; loop continues (fresh review next round).
+
+## Round 3 — 2026-06-26 (convergence check)
+
+**Findings**: All three Round 2 corrections verified clean against source — step_3 zombie/remove-missing in-signature via `git_status == "Missing"` (equivalence to folder-absent confirmed vs `status.py:332`); Step 5 split into step_5 (`_issue_facts`) + step_5b (orchestration) each one-commit-green with correct cross-refs (6–10 not renumbered); step_8 keeps the thin read-only `build_active_session_set` wrapper. End-to-end coherence re-confirmed: explicit layered model consistent; git-status matrix in pure `decide`; destructive invariant gated on `Clean or directory_empty`; status write-free; single serializer feeds all three transparency surfaces; dependency order intact; each step one commit with tests.
+
+**Decisions**: none required.
+
+**User decisions**: none.
+
+**Changes**: none (zero required plan changes → loop terminates).
+
+**Status**: converged.
+
+---
+
+## Final Status
+
+- **Rounds run**: 3 (Round 1 substantive revision, Round 2 corrections, Round 3 convergence check).
+- **Commits produced**: `6211d37` (explicit layered model), `b70a564` (Round 2 corrections), + this log.
+- **Key outcomes**:
+  - Reversed the KISS collapse → **explicit layered assessment model** (frozen `LivenessVerdict`/`IssueState`/`Transition`/`Decision` from per-layer pure functions, embedded in a frozen `SessionAssessment`; `LivenessRule`/`SessionAction` enums; single `to_audit_record`/`to_explain` serializer feeding all three transparency surfaces).
+  - Moved the full git-status safety matrix into the pure `decide` layer (`git_status` + `directory_empty` injected); enforced "DELETE requires Clean-or-empty" with a typed-invariant test — closes a destruction-on-weak-evidence gap.
+  - Fixed the self-contradictory zombie branch (in-signature `git_status == "Missing"`).
+  - Split the heavy Step 5 into step_5 + step_5b for one-commit-green reviewability; kept the read-only `build_active_session_set` wrapper to bound blast radius.
+- **Optional, not applied** (reviewer marked NOT required): name `step_5b.md` in summary.md's file list; add a one-clause cross-note on summary.md's conceptual zombie phrasing.
+- **Plan is ready for approval / implementation.**
