@@ -59,6 +59,8 @@ class TestCleanup:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -98,6 +100,8 @@ class TestCleanup:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -148,6 +152,8 @@ class TestCleanup:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -182,6 +188,8 @@ class TestCleanup:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -214,6 +222,8 @@ class TestCleanup:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -256,6 +266,8 @@ class TestCleanup:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -283,6 +295,8 @@ class TestCleanup:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -328,6 +342,8 @@ class TestCleanup:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -369,6 +385,8 @@ class TestCleanup:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -410,6 +428,8 @@ class TestCleanup:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -454,6 +474,8 @@ class TestCleanup:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -489,6 +511,8 @@ class TestCleanup:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -527,6 +551,8 @@ class TestCleanup:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -562,6 +588,8 @@ class TestCleanup:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -600,6 +628,8 @@ class TestCleanup:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -631,6 +661,8 @@ class TestCleanup:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -669,6 +701,8 @@ class TestCleanup:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -2050,6 +2084,8 @@ class TestSoftDeleteAndRetry:
             "status": "status-01:created",
             "vscode_pid": 0,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -2094,6 +2130,8 @@ class TestSoftDeleteAndRetry:
             "status": "status-01:created",
             "vscode_pid": 0,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -2135,6 +2173,8 @@ class TestSoftDeleteAndRetry:
             "status": "status-01:created",
             "vscode_pid": 0,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -2168,6 +2208,8 @@ class TestSoftDeleteAndRetry:
             "status": "status-01:created",
             "vscode_pid": 0,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -2232,6 +2274,8 @@ class TestSoftDeleteAndRetry:
             "status": "status-01:created",
             "vscode_pid": 0,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -2511,6 +2555,8 @@ class TestCompositionScenarios:
             "status": "status-07:code-review",
             "vscode_pid": 74544,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }

@@ -35,6 +35,8 @@ def _build_sessions(tmp_path: Path, count: int) -> list[VSCodeClaudeSession]:
                 "status": "status-07:code-review",
                 "vscode_pid": 1000 + i,
                 "vscode_pid_create_time": None,
+                "last_active": None,
+                "last_active_rule": None,
                 "started_at": "2024-01-01T00:00:00Z",
                 "is_intervention": False,
             }
@@ -211,6 +213,8 @@ class TestStatusPidRefresh:
             "status": "status-07:code-review",
             "vscode_pid": 1111,  # Stale
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }

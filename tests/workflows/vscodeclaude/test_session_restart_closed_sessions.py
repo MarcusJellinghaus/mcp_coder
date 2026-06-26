@@ -91,6 +91,8 @@ class TestRestartClosedSessionsBranchHandling:
             "status": "status-01:created",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -170,6 +172,8 @@ class TestRestartClosedSessionsBranchHandling:
             "status": "status-04:plan-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -249,6 +253,8 @@ class TestRestartClosedSessionsBranchHandling:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -372,6 +378,8 @@ class TestRestartClosedSessionsBranchHandling:
             "status": "status-01:created",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -488,6 +496,8 @@ class TestRestartClosedSessionsBranchHandling:
             "status": "status-04:plan-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }

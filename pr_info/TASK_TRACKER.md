@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Enums (`LivenessRule`, `SessionAction`) + frozen dataclasses (`DetectionSignals`, `LivenessVerdict`, `IssueState`, `Transition`, `Decision`, `SessionAssessment` with serializer stubs); `VSCodeClaudeSession` gains `last_active`/`last_active_rule`; `load_sessions`/`build_session` backfill; export from `__init__.py`. See [step_1.md](./steps/step_1.md).
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Liveness layer (`assess_liveness`) — pure
 

@@ -70,6 +70,8 @@ class TestSessionManagement:
             "status": "status-07:code-review",
             "vscode_pid": 1234,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
         }
@@ -151,6 +153,8 @@ class TestSessionManagement:
             "status": "status-04:plan-review",
             "vscode_pid": 5678,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-22T11:00:00Z",
             "is_intervention": False,
         }
@@ -1266,6 +1270,8 @@ class TestIsSessionActiveFallbackChain:
             "status": "s",
             "vscode_pid": 28036,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": recent,
             "is_intervention": False,
         }
@@ -1310,6 +1316,8 @@ class TestIsSessionActiveFallbackChain:
             "status": "s",
             "vscode_pid": 28036,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": recent,
             "is_intervention": False,
         }
@@ -1369,6 +1377,8 @@ class TestIsSessionActiveFallbackChain:
             "status": "s",
             "vscode_pid": 28036,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": recent,
             "is_intervention": False,
         }
@@ -1417,6 +1427,8 @@ class TestIsSessionActiveFallbackChain:
             "status": "s",
             "vscode_pid": 1234,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1469,6 +1481,8 @@ class TestIsSessionActiveFallbackChain:
             "folder": str(folder),
             "status": "s",
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
             **session_data,
@@ -1506,6 +1520,8 @@ class TestIsSessionActiveFallbackChain:
             "status": "s",
             "vscode_pid": 1234,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1635,6 +1651,8 @@ class TestLaunchGrace:
             "status": "s",
             "vscode_pid": 12345,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": self._started_at(120.0),
             "is_intervention": False,
         }
@@ -1692,6 +1710,8 @@ class TestLaunchGrace:
             "status": "s",
             "vscode_pid": 12345,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": self._started_at(10.0),
             "is_intervention": False,
         }
@@ -1745,6 +1765,8 @@ class TestLaunchGrace:
             "status": "s",
             "vscode_pid": 12345,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": self._started_at(120.0),
             "is_intervention": False,
         }
@@ -1792,6 +1814,8 @@ class TestLaunchGrace:
             "status": "s",
             "vscode_pid": 12345,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "not-a-date",
             "is_intervention": False,
         }
@@ -1843,6 +1867,8 @@ class TestLaunchGrace:
             "status": "s",
             "vscode_pid": 12345,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": self._started_at(120.0),
             "is_intervention": False,
         }
@@ -1916,6 +1942,41 @@ class TestCreateTimeIdentityVerification:
         session = store["sessions"][0]
         assert "vscode_pid_create_time" in session
         assert session["vscode_pid_create_time"] is None
+
+    def test_load_sessions_backfills_missing_last_active(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Old payload without last_active/last_active_rule gets backfilled None."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+        legacy_payload = {
+            "sessions": [
+                {
+                    "folder": "/legacy/folder",
+                    "repo": "owner/repo",
+                    "issue_number": 7,
+                    "status": "status-01:created",
+                    "vscode_pid": 1234,
+                    "vscode_pid_create_time": None,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                }
+            ],
+            "last_updated": "2024-01-01T00:00:00Z",
+        }
+        sessions_file.write_text(json.dumps(legacy_payload))
+
+        store = load_sessions()
+
+        assert len(store["sessions"]) == 1
+        session = store["sessions"][0]
+        assert "last_active" in session
+        assert session["last_active"] is None
+        assert "last_active_rule" in session
+        assert session["last_active_rule"] is None
 
     def test_check_vscode_running_create_time_mismatch_returns_false(
         self, monkeypatch: pytest.MonkeyPatch
@@ -2044,3 +2105,5 @@ class TestCreateTimeIdentityVerification:
         )
 
         assert session["vscode_pid_create_time"] is None
+        assert session["last_active"] is None
+        assert session["last_active_rule"] is None

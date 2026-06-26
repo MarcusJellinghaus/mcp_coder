@@ -145,6 +145,8 @@ class TestStatusDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -177,6 +179,8 @@ class TestStatusDisplay:
             "status": "status-07:code-review",  # Original
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -209,6 +213,8 @@ class TestStatusDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -236,6 +242,8 @@ class TestStatusDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -269,6 +277,8 @@ class TestStatusDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -301,6 +311,8 @@ class TestStatusDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -420,6 +432,8 @@ class TestStatusDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -529,6 +543,8 @@ class TestClosedIssuePrefixDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -567,6 +583,8 @@ class TestClosedIssuePrefixDisplay:
             "status": "status-04:plan-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -604,6 +622,8 @@ class TestClosedIssuePrefixDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -640,6 +660,8 @@ class TestClosedIssuePrefixDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -678,6 +700,8 @@ class TestClosedIssuePrefixDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -716,6 +740,8 @@ class TestClosedIssuePrefixDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -754,6 +780,8 @@ class TestClosedIssuePrefixDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -808,6 +836,8 @@ class TestClosedIssuePrefixDisplay:
             "status": "status-04:plan-review",  # Stored (old) status
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -879,6 +909,8 @@ class TestBotStageSessionsDeleteAction:
             "status": "status-02:awaiting-planning",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -919,6 +951,8 @@ class TestBotStageSessionsDeleteAction:
             "status": "status-05:plan-ready",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -955,6 +989,8 @@ class TestBotStageSessionsDeleteAction:
             "status": "status-08:ready-pr",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -991,6 +1027,8 @@ class TestBotStageSessionsDeleteAction:
             "status": "status-03:planning",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1027,6 +1065,8 @@ class TestBotStageSessionsDeleteAction:
             "status": "status-06:implementing",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1063,6 +1103,8 @@ class TestBotStageSessionsDeleteAction:
             "status": "status-09:pr-creating",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1099,6 +1141,8 @@ class TestBotStageSessionsDeleteAction:
             "status": "status-02:awaiting-planning",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1137,6 +1181,8 @@ class TestBotStageSessionsDeleteAction:
             "status": "status-07:code-review",  # Eligible status
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1186,6 +1232,8 @@ class TestPrCreatedSessionsDeleteAction:
             "status": "status-10:pr-created",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1226,6 +1274,8 @@ class TestPrCreatedSessionsDeleteAction:
             "status": "status-10:pr-created",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1263,6 +1313,8 @@ class TestPrCreatedSessionsDeleteAction:
             "status": "status-10:pr-created",
             "vscode_pid": 12345,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1300,6 +1352,8 @@ class TestPrCreatedSessionsDeleteAction:
             "status": "status-10:pr-created",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1348,6 +1402,8 @@ class TestDisplayStatusTableSoftDelete:
             "status": "status-04:implementation",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1389,6 +1445,8 @@ class TestDisplayStatusTableSoftDelete:
             "status": "status-04:implementation",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1684,6 +1742,8 @@ class TestZombieSessionDisplay:
             "status": "status-07:code-review",
             "vscode_pid": 74544,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1726,6 +1786,8 @@ class TestZombieSessionDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1764,6 +1826,8 @@ class TestZombieSessionDisplay:
             "status": "status-07:code-review",
             "vscode_pid": 12345,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1832,6 +1896,8 @@ class TestScenarioACrossModule:
             "status": "status-07:code-review",
             "vscode_pid": 74544,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }

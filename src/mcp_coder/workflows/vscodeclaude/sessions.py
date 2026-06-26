@@ -72,6 +72,8 @@ def load_sessions() -> VSCodeClaudeSessionStore:
             data["last_updated"] = ""
         for session in data["sessions"]:
             session.setdefault("vscode_pid_create_time", None)
+            session.setdefault("last_active", None)
+            session.setdefault("last_active_rule", None)
         return cast(VSCodeClaudeSessionStore, data)
     except (json.JSONDecodeError, OSError) as e:
         logger.warning("Failed to load sessions file: %s", e)
