@@ -570,6 +570,7 @@ def ask_claude_code_cli(
         ValueError: If input validation fails or JSON parsing fails
         TimeoutExpired: If command times out
         CalledProcessError: If command fails (includes stream_file path)
+        McpServersUnavailableError: If a configured MCP server did not connect
 
     Examples:
         >>> # Start new conversation - get session_id from Claude
