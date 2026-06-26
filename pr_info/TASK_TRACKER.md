@@ -41,9 +41,9 @@ Create `assessment.py` with pure `assess_liveness(signals) -> LivenessVerdict`; 
 
 Add `IssueFacts`, `assess_issue_state`, `assess_transition`, `decide` (full git-status safety matrix), composer `assess_session`; finalise serializer; typed destructive-invariant test. See [step_3.md](./steps/step_3.md).
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Detection snapshot + `gather_signals` (Windows / IO boundary)
 

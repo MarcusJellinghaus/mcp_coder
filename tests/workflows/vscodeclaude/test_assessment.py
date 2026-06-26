@@ -5,11 +5,24 @@ contract: title -> pid -> cmdline -> folder-existence. PID is a tie-breaker,
 not a gate.
 """
 
-from mcp_coder.workflows.vscodeclaude.assessment import assess_liveness
+from mcp_coder.workflows.vscodeclaude.assessment import (
+    IssueFacts,
+    assess_issue_state,
+    assess_liveness,
+    assess_session,
+    assess_transition,
+    decide,
+)
 from mcp_coder.workflows.vscodeclaude.types import (
+    Decision,
     DetectionSignals,
+    IssueState,
     LivenessRule,
     LivenessVerdict,
+    SessionAction,
+    SessionAssessment,
+    Transition,
+    VSCodeClaudeSession,
 )
 
 
@@ -94,3 +107,299 @@ class TestAssessLiveness:
         """The verdict is a LivenessVerdict instance."""
         verdict = assess_liveness(_signals(title_match=True))
         assert isinstance(verdict, LivenessVerdict)
+
+
+def _issue_facts(
+    *,
+    is_closed: bool = False,
+    is_stale: bool = False,
+    is_blocked: bool = False,
+    is_unassigned: bool = False,
+    is_ineligible: bool = False,
+    stale_target: str | None = None,
+) -> IssueFacts:
+    """Build IssueFacts with everything off (i.e. eligible) by default."""
+    return IssueFacts(
+        is_closed=is_closed,
+        is_stale=is_stale,
+        is_blocked=is_blocked,
+        is_unassigned=is_unassigned,
+        is_ineligible=is_ineligible,
+        stale_target=stale_target,
+    )
+
+
+def _active(rule: LivenessRule = LivenessRule.TITLE) -> LivenessVerdict:
+    """A live verdict."""
+    return LivenessVerdict(active=True, rule=rule)
+
+
+def _inactive(rule: LivenessRule = LivenessRule.NO_MATCH) -> LivenessVerdict:
+    """An inactive verdict."""
+    return LivenessVerdict(active=False, rule=rule)
+
+
+def _eligible_state() -> IssueState:
+    """An eligible (open, not stale/blocked/unassigned) issue state."""
+    return assess_issue_state(_issue_facts())
+
+
+def _stale_state(stale_target: str | None = "status-05:bot-pickup") -> IssueState:
+    """A stale issue state (destruction candidate)."""
+    return assess_issue_state(_issue_facts(is_stale=True, stale_target=stale_target))
+
+
+_NO_FLIP = Transition(flipped_to_inactive=False)
+
+
+def _session() -> VSCodeClaudeSession:
+    """A minimal session for serializer tests."""
+    return VSCodeClaudeSession(
+        folder="C:/work/issue-42",
+        repo="owner/repo",
+        issue_number=42,
+        status="status-07:code-review",
+        vscode_pid=None,
+        vscode_pid_create_time=None,
+        started_at="2026-06-26T00:00:00",
+        is_intervention=False,
+        last_active=None,
+        last_active_rule=None,
+    )
+
+
+class TestAssessIssueState:
+    """Per-fact-combo mapping for the pure issue-state layer."""
+
+    def test_eligible_when_all_clear(self) -> None:
+        state = assess_issue_state(_issue_facts())
+        assert state.is_eligible is True
+        assert state.is_open is True
+        assert state.is_stale is False
+
+    def test_closed_is_not_open_and_ineligible(self) -> None:
+        state = assess_issue_state(_issue_facts(is_closed=True))
+        assert state.is_open is False
+        assert state.is_eligible is False
+
+    def test_stale_carries_target_and_is_ineligible(self) -> None:
+        state = assess_issue_state(
+            _issue_facts(is_stale=True, stale_target="status-05:bot-pickup")
+        )
+        assert state.is_stale is True
+        assert state.stale_target == "status-05:bot-pickup"
+        assert state.is_eligible is False
+
+    def test_blocked_is_ineligible(self) -> None:
+        assert assess_issue_state(_issue_facts(is_blocked=True)).is_eligible is False
+
+    def test_unassigned_is_ineligible(self) -> None:
+        assert assess_issue_state(_issue_facts(is_unassigned=True)).is_eligible is False
+
+    def test_ineligible_flag_is_ineligible(self) -> None:
+        assert assess_issue_state(_issue_facts(is_ineligible=True)).is_eligible is False
+
+
+class TestAssessTransition:
+    """The active->inactive flip flag."""
+
+    def test_prior_active_now_inactive_flips(self) -> None:
+        transition = assess_transition(True, _inactive())
+        assert transition.flipped_to_inactive is True
+
+    def test_prior_active_still_active_no_flip(self) -> None:
+        transition = assess_transition(True, _active())
+        assert transition.flipped_to_inactive is False
+
+    def test_prior_inactive_no_flip(self) -> None:
+        transition = assess_transition(False, _inactive())
+        assert transition.flipped_to_inactive is False
+
+    def test_none_prior_blind_spot_no_flip(self) -> None:
+        transition = assess_transition(None, _inactive())
+        assert transition.flipped_to_inactive is False
+
+
+class TestDecide:
+    """The full git-status safety matrix + zombie/keep/restart actions."""
+
+    def test_zombie_active_pid_folder_missing(self) -> None:
+        decision = decide(
+            _active(LivenessRule.PID), _eligible_state(), _NO_FLIP, "Missing", False
+        )
+        assert decision.action == SessionAction.INVESTIGATE_ZOMBIE
+        assert decision.destructive is False
+
+    def test_remove_missing_inactive_folder_missing(self) -> None:
+        decision = decide(_inactive(), _stale_state(), _NO_FLIP, "Missing", False)
+        assert decision.action == SessionAction.REMOVE_MISSING
+        assert decision.destructive is False
+
+    def test_delete_inactive_stale_clean(self) -> None:
+        decision = decide(_inactive(), _stale_state(), _NO_FLIP, "Clean", False)
+        assert decision.action == SessionAction.DELETE
+        assert decision.destructive is True
+        assert "status-05:bot-pickup" in decision.reason
+
+    def test_skip_dirty(self) -> None:
+        decision = decide(_inactive(), _stale_state(), _NO_FLIP, "Dirty", False)
+        assert decision.action == SessionAction.SKIP
+        assert decision.reason == "dirty"
+        assert decision.destructive is False
+
+    def test_no_git_non_empty_skips_not_deletes(self) -> None:
+        """DECISION 2 fix: weak evidence on a non-empty folder must NOT delete."""
+        decision = decide(_inactive(), _stale_state(), _NO_FLIP, "No Git", False)
+        assert decision.action == SessionAction.SKIP
+        assert decision.destructive is False
+
+    def test_no_git_empty_deletes(self) -> None:
+        decision = decide(_inactive(), _stale_state(), _NO_FLIP, "No Git", True)
+        assert decision.action == SessionAction.DELETE
+        assert decision.destructive is True
+
+    def test_error_non_empty_skips(self) -> None:
+        decision = decide(_inactive(), _stale_state(), _NO_FLIP, "Error", False)
+        assert decision.action == SessionAction.SKIP
+        assert decision.destructive is False
+
+    def test_restart_inactive_clean_eligible(self) -> None:
+        decision = decide(_inactive(), _eligible_state(), _NO_FLIP, "Clean", False)
+        assert decision.action == SessionAction.RESTART
+        assert decision.destructive is False
+
+    def test_keep_active_title_hit(self) -> None:
+        decision = decide(
+            _active(LivenessRule.TITLE), _eligible_state(), _NO_FLIP, "Clean", False
+        )
+        assert decision.action == SessionAction.KEEP_ACTIVE
+        assert decision.destructive is False
+        assert "title" in decision.reason
+
+
+class TestDestructiveInvariant:
+    """No Decision is destructive unless git_status is Clean OR directory_empty."""
+
+    def test_no_destructive_without_clean_or_empty(self) -> None:
+        verdicts = [_active(LivenessRule.PID), _inactive()]
+        states = [
+            _eligible_state(),
+            _stale_state(),
+            assess_issue_state(_issue_facts(is_closed=True)),
+        ]
+        statuses = ["Clean", "Dirty", "Missing", "No Git", "Error"]
+        for verdict in verdicts:
+            for state in states:
+                for git_status in statuses:
+                    for directory_empty in (True, False):
+                        decision = decide(
+                            verdict, state, _NO_FLIP, git_status, directory_empty
+                        )
+                        if decision.destructive:
+                            assert git_status == "Clean" or directory_empty is True, (
+                                f"destructive with git_status={git_status} "
+                                f"empty={directory_empty}"
+                            )
+                            assert decision.action == SessionAction.DELETE
+
+
+class TestAssessSession:
+    """The pure composer aggregating the four layers."""
+
+    def test_transition_flips_via_composer(self) -> None:
+        signals = _signals(title_match=False, folder_exists=True)
+        assessment = assess_session(
+            folder="C:/work/issue-42",
+            signals=signals,
+            issue_facts=_issue_facts(),
+            git_status="Clean",
+            directory_empty=False,
+            prior_last_active=True,
+        )
+        assert assessment.transition.flipped_to_inactive is True
+
+    def test_none_prior_no_flip_via_composer(self) -> None:
+        signals = _signals(title_match=False, folder_exists=True)
+        assessment = assess_session(
+            folder="C:/work/issue-42",
+            signals=signals,
+            issue_facts=_issue_facts(),
+            git_status="Clean",
+            directory_empty=False,
+            prior_last_active=None,
+        )
+        assert assessment.transition.flipped_to_inactive is False
+
+    def test_pid_needs_refresh_on_active_cmdline_match(self) -> None:
+        signals = _signals(cmdline_match=True, found_pid=4321)
+        assessment = assess_session(
+            folder="C:/work/issue-42",
+            signals=signals,
+            issue_facts=_issue_facts(),
+            git_status="Clean",
+            directory_empty=False,
+            prior_last_active=None,
+        )
+        assert assessment.verdict.active is True
+        assert assessment.pid_needs_refresh is True
+        assert assessment.found_pid == 4321
+
+    def test_no_pid_refresh_when_inactive(self) -> None:
+        signals = _signals(found_pid=None)
+        assessment = assess_session(
+            folder="C:/work/issue-42",
+            signals=signals,
+            issue_facts=_issue_facts(),
+            git_status="Clean",
+            directory_empty=False,
+            prior_last_active=None,
+        )
+        assert assessment.pid_needs_refresh is False
+
+    def test_embeds_all_four_sub_results(self) -> None:
+        assessment = assess_session(
+            folder="C:/work/issue-42",
+            signals=_signals(title_match=True),
+            issue_facts=_issue_facts(),
+            git_status="Clean",
+            directory_empty=False,
+            prior_last_active=None,
+        )
+        assert isinstance(assessment, SessionAssessment)
+        assert isinstance(assessment.verdict, LivenessVerdict)
+        assert isinstance(assessment.issue_state, IssueState)
+        assert isinstance(assessment.transition, Transition)
+        assert isinstance(assessment.decision, Decision)
+
+
+class TestSerializer:
+    """The single serializer feeding audit / --explain / VSCode column."""
+
+    def test_to_audit_record_flattens(self) -> None:
+        assessment = assess_session(
+            folder="C:/work/issue-42",
+            signals=_signals(title_match=True, found_pid=99),
+            issue_facts=_issue_facts(),
+            git_status="Clean",
+            directory_empty=False,
+            prior_last_active=None,
+        )
+        record = assessment.to_audit_record(_session())
+        assert record["verdict"]["rule"] == "title"
+        assert record["decision"]["action"] == SessionAction.KEEP_ACTIVE.value
+        assert record["signals"]["found_pid"] == 99
+        assert record["repo"] == "owner/repo"
+        assert record["issue_number"] == 42
+
+    def test_to_explain_contains_rule_and_action(self) -> None:
+        assessment = assess_session(
+            folder="C:/work/issue-42",
+            signals=_signals(title_match=True),
+            issue_facts=_issue_facts(),
+            git_status="Clean",
+            directory_empty=False,
+            prior_last_active=None,
+        )
+        text = assessment.to_explain()
+        assert "title" in text
+        assert SessionAction.KEEP_ACTIVE.value in text

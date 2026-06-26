@@ -239,7 +239,12 @@ PR CREATED (status-10:pr-created)
 
 # Assessment (pure layers)
 from .assessment import (
+    IssueFacts,
+    assess_issue_state,
     assess_liveness,
+    assess_session,
+    assess_transition,
+    decide,
 )
 
 # Cleanup
@@ -367,7 +372,12 @@ __all__ = [
     "Decision",
     "SessionAssessment",
     # Assessment (pure layers)
+    "IssueFacts",
     "assess_liveness",
+    "assess_issue_state",
+    "assess_transition",
+    "decide",
+    "assess_session",
     # Constants
     "DEFAULT_MAX_SESSIONS",
     "DEFAULT_PROMPT_TIMEOUT",
